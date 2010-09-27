@@ -1,0 +1,68 @@
+## This is the makefile for mpdbox 
+## Just type 'make -j 4'
+## Targets: 'mpdbox','clean'
+##
+
+#source dir
+SOURCEDIR=src
+
+#colors
+NO_COLOR=\x1b[0m
+OK_COLOR=\x1b[32;01m
+ERROR_COLOR=\x1b[31;01m
+WARN_COLOR=\x1b[33;01m
+
+#install
+INSTALLPATH=/usr/bin
+
+#Programs 
+ECHO=printf 
+RM=rm -rf
+CAT=cat
+CP=cp
+
+#compiling stuff
+CC=gcc
+ 
+WARN=-Wall -pedantic -std=c99
+OPTI= -march=native -s -Os
+CFLAGS=-c -pipe $(OPTI) $(WARN)
+
+LDFLAGS=-lpthread
+
+SOURCES= \
+	$(SOURCEDIR)/md5.c \
+	$(SOURCEDIR)/mt.c \
+	$(SOURCEDIR)/filter.c \
+	$(SOURCEDIR)/mode.c \
+	$(SOURCEDIR)/list.c \
+	$(SOURCEDIR)/rmlint.c \
+	$(SOURCEDIR)/main.c
+
+
+OBJECTS=$(SOURCES:.c=.o)
+INCLUDE=
+EXECUTABLE=rmlint 
+
+all: $(SOURCES) $(EXECUTABLE)
+
+$(EXECUTABLE):  $(OBJECTS)
+	     @$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+	     @$(ECHO) "$(WARN_COLOR)=> Linking program done.\n" $(NO_COLOR) 
+
+.c.o: 	
+	@$(ECHO) "$(OK_COLOR)-> Compiling $<\n"
+	@$(ECHO) "$(ERROR_COLOR)"
+	@$(CC) $(INCLUDE) $(LDFLAGS)  $(CFLAGS) $< -o $@
+	@$(ECHO) "$(NO_COLOR)" 
+
+clean:
+	@$(ECHO) "$(OK_COLOR)<> Making clean.\n"
+	@$(RM) $(SOURCEDIR)/*.o $(EXECUTABLE) 2> /dev/null
+	@$(ECHO) "$(NO_COLOR)"
+
+install: 
+	@$(ECHO) "$(OK_COLOR)cp <binary> /usr/bin:\n"
+	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
+	@$(ECHO) "$(OK_COLOR)Done.\n"
+	@$(ECHO) "$(NO_COLOR)"
