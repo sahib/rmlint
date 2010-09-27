@@ -1,49 +1,52 @@
-THERE IS NO WARRANTY THAT IT DOES NOT REMOVE ALL YOUR FILES,
-KILLS ALL YOUR KITTENS OR BURNS YOUR HOUSE! 
-USE ON YOUR OWN RISK - it has been developed carefully though, and it should 
-be VERY unlikely that false positives are found, but nevertheless, due to the concept
-of md5 it may be possible if two same sized, different files have the same checksum. 
-But as already mentioned: This is (1 / (62^(16*3))% :-) )
+rmlint is a command line tool to remove various sort of unused files form a Unix filesystem. 
+It comes without any extra depencies, and is build to handle even large filesystems quite fast.  
+It is written in pure C (conforming the ISOC99 Standard), and comes with as size of 32K  
 
-autovac ist a simple command line tool to remove duplicate files on a *nix filesystems. 
-It is written in pure ANSI C and comes with a filesize of 28K. 
-Depencies: None. Just glibc. and pthread (You will have those with a probabilty of 102%).
+DISCLAIMER: 
+THERE IS NO WARRANTY THAT THIS SOFTWARE WON'T KILL YOUR FILES, NOR THAT IT KILLS YOUR KITTEN, BURNS YOUR HOUSE, OR WHATSOEVER. 
+IT WAS written carefully and in the hope it'll will be useful for some messy users. 
 
-How does it work? 
-1) It will go recursively through all dir through the dir you gave it.
-   (If you gave it none, it will the take the working dir)
-2) Filter all files with an unique filesize. 
-   (As those simply can't be the same) 
-3) Calculate a fingerprint of the rest. 
-   (Only read 4 512Byte blocks and compare the checksums) 
-4) Build a full md5 checksum of all files that are still in the list.
-   (This may take a while, as a speed-up you can use multi-threading) 
-5) Comapre them and handle them. By default all files will only be listed. 
-   (Other modes: noask - remove instantly; ask - ask before removing; link - replace file with a hard link;)
 
-Translation: It finds double *.mp3s in 60GB Music in just 2 seconds.
-
-See autovac --help for all options. 
-
+HELP: 
+------------
+- This Readme.
+- rmlint -h 
+- man rmlint  
 
 FEATURES:
 --------
-- Can be aborted at any time. Will display all finds till abort then.
-- Pressing CTRL-C 3x will cause the programm to abort immediately. 
-- Fast. 
-- Colorful :-) 
-- Can handle whole filesystems. 
+- Can be aborted at any time. Will display all finds till abort then. (or abort if user presses CTRL-C once more) 
+- Fast. Handles 60GB of data in 1 second, 
+- Regex filter. 
+- Colorful! :-) (can be compiled without colors support) 
+- Can handle huge amount of files. 
 - Handles the files the way you want: 
    + replace double file by a symboliclink, (-m link)  
-   + move it to an own direcoty where you can look at them carefully (-m move) 
    + Removes the file without asking you. (-m noask) 
    + Simply list all files without doing anything dangerous. (-m list) 
-   + It executes a user specified commando for each file (-m cmd) //TODO//
-   + ..or it asks you for each file what you want. (-m ask)
-- ANSI C - Actually no Unix-only code. 
+   + It executes a user specified commando for each file (-m cmd) 
+   + It asks you for each file what you want. (-m ask)
+   * In all cases a log called rmlint.sh is written. (So you can exec it after having a closer look) 
 - Minimum of I/O, focuses on CPU usage. 
-- Multithreading. 
-- 
-- It has some basic "API" - //TODO//
+- It has some basic "API" (Well.. :-)) 
 
 
+HOW DOES THIS WEIRD THING WORK: 
+-------------------------------
+In contrast to plenty other programs doing the same job, rmlint tries to reduce reading data from the harddrive. 
+Therefore it goes recursively through all directories and pushes all files back to a list. 
+This list is filtered by removing files with a unique filesize. If two files have the same size, 
+it'll build a short fingerprint of the files and compare them. 
+From all files that passed the filter a full md5-checksum is build, and compared afterwards. 
+The resulting files can be considered to be duplicates. 
+
+A NOTE ABOUT FALSE POSITIVES: 
+-----------------------------
+False Positves are actuallly possible, but very unlikely. 
+A so-called collision has about a probability (under best conditions) of 1/(255^16) + 
+They would need to have the same size to be marked as duplicate.  
+=> Very unlikely, but possible (dirty, little word) 
+
+OPTIONS: 
+-------
+More. to. come.
