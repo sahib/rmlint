@@ -38,15 +38,12 @@
 
 /**
  * ToDo: 
- * -man page / README / updated help
- * - binary search
+ * -man page / README / updated help 
  * - some comments.. clean up..
- * - correct handling of symlinks 
- * - md5_async() -- later. 
- * - more than one input path
- * - gettext, to translate msgs 
- * - valgrind everything.
- * - calling rmdup_main for each subdir in rootnode? Crap. 
+ * - proper regex (filertegex and dirregex) 
+ * - gettext, to translate msgs  
+ * - --paranoid option to byte-by-byte compare files. 
+ * - other hash algorithm.. (sha1? Speed?)
  **/
 
 
@@ -132,7 +129,7 @@ void rmlint_set_default_settings(rmlint_settings *set)
 	set->cmd 		 =  NULL;   /* Cmd,if use */
 }
 
-void rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) 
+char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) 
 {
 	   int c,lp=0;
      
@@ -162,7 +159,7 @@ void rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
      
            switch (c)
            {
-			     case '?': return; 
+			     case '?': return 0; 
 				 case 't':
 				  
 					   sets->threads = atoi(optarg);
@@ -193,12 +190,12 @@ void rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 					{
 						error("Invalid value for --mode: \"%s\"\n", argv[argc + 1]); 
 						error("Available modes are: ask | list | link |noask | move\n"); 
-						return; 
+						return 0; 
 					}
 					mode_string = optarg; 
 				 
 				 break;
-				 default: die(-6);
+				 default: return 0;
 			 }
          }
      
@@ -208,7 +205,7 @@ void rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 			if(!p) 
 			{
 				error(YEL" => "RED"Can't open directory "NCO"\"%s\""RED":"NCO" %s\n"NCO, argv[optind], strerror(errno));
-				return; 
+				return 0; 
 			}
 			else
 			{
@@ -221,7 +218,7 @@ void rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 			optind++; 			
          }
          
-         if(sets->paths == NULL) 
+         if(lp == 0) 
          {
 			/* Still no path set? */
 			sets->paths = malloc(sizeof(char*));
@@ -230,11 +227,12 @@ void rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 			{
 				error(RED"Cannot get working directory: %s\n"NCO, strerror(errno));
 				if(sets->paths) free(sets->paths);
-				return; 
+				return 0; 
 			}
 			use_cwd = true; 
-			info(RED" => "NCO"Investigating \"%s\".\n",sets->paths);
+			info(RED" => "NCO"Investigating \"%s\"\n",sets->paths);
 	  }  
+	  return 1; 
 }
 
 

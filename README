@@ -2,6 +2,9 @@ rmlint is a command line tool to remove various sort of unused files form a Unix
 It comes without any extra depencies, and is build to handle even large filesystems quite fast.  
 It is written in pure C (conforming the ISOC99 Standard), and comes with as size of 32K  
 
+At time of writing (28.9.2010) this is still beta software and you should choose on of http://en.wikipedia.org/wiki/Fdupes those. 
+It nevertheless is already usable and owns alternatives in terms of speed :-) (duff: 90sec, rmlint: 0.58sec) 
+
 DISCLAIMER: 
 THERE IS NO WARRANTY THAT THIS SOFTWARE WON'T KILL YOUR FILES, NOR THAT IT KILLS YOUR KITTEN, BURNS YOUR HOUSE, OR WHATSOEVER. 
 IT WAS written carefully and in the hope it'll will be useful for some messy users. 
@@ -16,7 +19,7 @@ HELP:
 FEATURES:
 --------
 - Can be aborted at any time. Will display all finds till abort then. (or abort if user presses CTRL-C once more) 
-- Fast. Handles 60GB of data in 1 second, 
+- Fast. Handles 60GB of data in under 1 second, 
 - Regex filter. 
 - Colorful! :-) (can be compiled without colors support) 
 - Can handle huge amount of files. 
@@ -40,12 +43,14 @@ it'll build a short fingerprint of the files and compare them.
 From all files that passed the filter a full md5-checksum is build, and compared afterwards. 
 The resulting files can be considered to be duplicates. 
 
+
 A NOTE ABOUT FALSE POSITIVES: 
 -----------------------------
 False Positves are actuallly possible, but very unlikely. 
 A so-called collision has about a probability (under best conditions) of 1/(255^16) + 
 They would need to have the same size to be marked as duplicate.  
 => Very unlikely, but possible (dirty, little word) 
+Nevertheless there is/will be a --verify option that double checks by byte-by-byte comparasion.
 
 OPTIONS: 
 -------

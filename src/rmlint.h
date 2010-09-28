@@ -20,7 +20,7 @@ typedef struct
 
 rmlint_settings set;
 
-void rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets);
+char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets);
 void rmlint_set_default_settings(rmlint_settings *set);
 int  rmlint_main(void);
 void die(int status); 

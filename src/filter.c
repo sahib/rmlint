@@ -143,17 +143,21 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 }
 
 /**
- * Takes 2 files and make a fast check if both _seem_ tó be equal (does not build full checksums) 
+ * Takes 2 files and make a fast check if both _seem_ to be equal (does not build full checksums) 
  * If the size of both files is not the same 0 is returned. 
  * If sizes are equal a fingerprint of the first and last 
  **/
 
 static int treshold(iFile *a, iFile *b)
 {
-	int ret = (a&&b) ? (a->fsize==b->fsize) : 0;
 	int i=0,j=0;  
 	
-	if(!ret) return 0; 
+	if(!(a&&b)) 
+		return 0; 
+	
+	/* Double check size so we still can have a progress bar */
+	if(a->fsize !=  b->fsize)
+		return 0; 
 	
 #if USE_MT_FINGERPRINTS == 1 
 
@@ -199,24 +203,57 @@ static int treshold(iFile *a, iFile *b)
 }
 
 
+void prefilter(void)
+{
+	iFile *b = list_begin();
+	UINT4 c =  0;
+	UINT4 l = list_getlen(); 
+
+	if(b == NULL) die(0);
+
+	while(b)
+	{	
+		if(b->last && b->next)
+		{
+			if(b->last->fsize != b->fsize && b->next->fsize != b->fsize)
+			{
+				info("Filtering by Size... "BLU"["NCO"%ld"BLU"]\r"NCO,c++);
+				fflush(stdout);
+				b = list_remove(b);
+				continue;
+			}
+		}
+		b=b->next; 
+	}
+
+	fprintf(stderr,RED" => "NCO"Prefiltered %ld of %ld files.\n",c,l);
+}
+
+
 UINT4 filterlist(void)
 {
 	UINT4 i = 0;
 	bool s = false; 
 	
+	/* Prefilter by size. */
+	prefilter();
+	
 	iFile *ptr_i = list_begin();
 	iFile *ptr_j = ptr_i; 
 	
+#if USE_MT_FINGERPRINTS == 1  
 	pthread_attr_init(&p_attr);
 	pthread_attr_setdetachstate(&p_attr, PTHREAD_CREATE_JOINABLE);
+#endif 
 	
 	while(ptr_i) 
 	{
+		
 		if(i%STATUS_UPDATE_INTERVAL==0)
 		{
 			/* Do some (inaccurate) progress bar */
 			float perc = (float)i / ((float)list_getlen()-1) * 100.0f; 
-			info("Filtering by fingerprint... "GRE"%2.2f"BLU"%% ["NCO"%ld"BLU"|"NCO"%ld"BLU"]\r"NCO, perc >= 100.0f ? 100.0f : perc,i,list_getlen());  
+			info("Filtering by fingerprint... "GRE"%2.2f"BLU"%% ["NCO"%ld"BLU"|"NCO"%ld"BLU"]   \r"NCO, perc >= 100.0f ? 100.0f : perc,i,list_getlen());  
 			fflush(stdout);
 		}
 		i++; 
@@ -262,7 +299,11 @@ UINT4 filterlist(void)
 			ptr_i = ptr_i->next;
 		}
 	}
+	
+#if USE_MT_FINGERPRINTS == 1 
 	pthread_attr_destroy(&p_attr);
+#endif 
+
 	return list_getlen(); 
 }
 
@@ -286,8 +327,8 @@ void pushchanges(void)
 		{
 			/* Make the user happy with some progress */
 			perc = (((float)c) / ((float)list_getlen())) * 100.0f; 
-			info("Building database.. "GRE"%2.1f"BLU"%% "RED"["NCO"%ld"RED"/"NCO"%ld"RED"]"NCO" - [ %s ]         \r"NCO, perc,
-							c, list_getlen(), (i%4 == 0) ? RED"0"NCO : (i%4 == 1) ? BLU"O"NCO : (i%4 == 2) ? YEL"o"NCO : GRE"."NCO );
+			info("Building database.. "GRE"%2.1f"BLU"%% "RED"["NCO"%ld"RED"/"NCO"%ld"RED"]"NCO" - [ %s ]  - ["RED"%ld"NCO" Bytes]      \r"NCO, perc,
+							c, list_getlen(), (i%4 == 0) ? RED"0"NCO : (i%4 == 1) ? BLU"O"NCO : (i%4 == 2) ? YEL"o"NCO : GRE"."NCO , ptr->fsize);
 			fflush(stdout); 
 		}
 		

@@ -149,6 +149,20 @@ static void list_cleardigest(unsigned char* dig)
 		dig[i] = 0; 
 }
 
+
+static void list_filldata(iFile *pointer, const char *n,UINT4 fs) 
+{
+	  /* Fill data */
+      pointer->plen = strlen(n) + 2; 
+      pointer->path = malloc(pointer->plen); 
+      strncpy(pointer->path, n, pointer->plen);
+
+      pointer->fsize = fs;
+      pointer->dupflag = false;
+      pointer->fpc = 0; 
+      list_cleardigest(pointer->md5_digest);
+}
+
 /**
  * list_append()
  * 
@@ -163,11 +177,10 @@ static void list_cleardigest(unsigned char* dig)
 void list_append(const char *n, UINT4 filesize)
 {
    iFile *pointer;
-   
    if(!n) return; 
    
    /* It's empty? Bring life to it! */
-   if(!start) 
+   if(start == NULL) 
    {
       /* Alloc memory */ 
       if((start = malloc(sizeof(iFile))) == NULL) 
@@ -177,51 +190,59 @@ void list_append(const char *n, UINT4 filesize)
       }
       
       /** Copy the data **/
-      start->plen = strlen(n) + 2; 
-      start->path = malloc(start->plen); 
-      strncpy(start->path, n, start->plen);
-      start->fsize = filesize;
-      start->dupflag = false; 
-      start->fpc = 0; 
-	  list_cleardigest(start->md5_digest);
+	  list_filldata(start,n,filesize);
 
 	  /* Set end flag to the next elem */
       start->next=NULL;
       start->last=NULL;
       back = start; 
    }
-
-   /* The list is not empty */
-   else 
-   {  
-	  /* Get to the end of the list */
-      pointer = back; 
-		
-	  /* Alloc some more space */
-      if((pointer->next = malloc(sizeof(iFile))) == NULL) 
-      {
-          error(RED"Not enough memory to append element :-(\n"NCO);
-          return;
-      }
-      
-      /* Go to next */
-      pointer=pointer->next; 
-      
-      /* Fill data */
-      pointer->plen = strlen(n) + 2; 
-      pointer->path = malloc(pointer->plen); 
-      strncpy(pointer->path, n, pointer->plen);
-
-      pointer->fsize = filesize;
-      pointer->dupflag = false;
-      pointer->fpc = 0; 
-      list_cleardigest(pointer->md5_digest);
-            
-      /* finish up */
-      pointer->next = NULL;
-      pointer->last = back;
-      back = pointer;    
-   }
-   
+   else
+   {
+	   /* Start from the beginning */
+	   pointer = start; 
+	   
+	   /* Find a element with bigger size as filesize */	    
+	   while(pointer->next && filesize > pointer->fsize)
+		   pointer = pointer->next; 	
+	   
+	   if(pointer->next == NULL) 
+		back = pointer; 
+	   
+		   if(pointer == start) /* Start */
+		   {   			   
+			   if((pointer->last = malloc(sizeof(iFile))) == NULL) 
+			   {
+				  error(RED"Not enough memory to append element :-(\n"NCO);
+				  return;
+			   }
+			   pointer = pointer->last; 
+			   
+			   list_filldata(pointer,n,filesize);
+			   
+			   pointer->next = start;
+			   pointer->last = NULL;
+			  
+			   start->last = pointer;  
+			   start = pointer; 
+				
+		   }
+		   else if(pointer->fsize) /* Insert somewhere in the middle */
+		   {
+			   iFile *tmp = NULL; 
+			   if((tmp = malloc(sizeof(iFile))) == NULL) 
+			   {
+				  error(RED"Not enough memory to append element :-(\n"NCO);
+				  return;
+			   }		   
+			   list_filldata(tmp,n,filesize); 
+			  
+			   tmp->next = pointer;
+			   tmp->last = pointer->last; 
+			   
+			   pointer->last->next = tmp; 
+			   pointer->last = tmp;		   
+		   }   
+   } 
    list_len++;
 }

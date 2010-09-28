@@ -296,12 +296,12 @@ void findcrap(void)
 			}	
 			sub = sub->next;
 		}
-	
-		ptr = ptr->next;
-		sub = list_begin(); 
 		
 		if(ptr->fpc == 42)
 			break;
+	
+		ptr = ptr->next;
+		sub = list_begin(); 
 	}
 	
 	size_to_human_readable(lintsize,lintbuf);
