@@ -24,8 +24,8 @@ CP=cp
 #compiling stuff
 CC=gcc
  
-WARN=-Wall -pedantic -std=c99
-OPTI= -march=native -s -Os
+WARN=-ansi -Wall -pedantic 
+OPTI= -march=native -Os -s -finline-functions
 CFLAGS=-c -pipe $(OPTI) $(WARN)
 
 LDFLAGS=-lpthread
