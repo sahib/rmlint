@@ -68,12 +68,6 @@
  **/
 #define FP_BLSIZE 512
 
-/** Treshold used to filter files
- * If the sizedifference of two files is higher than this value
- * it is filterd. (In byte)
- * -- This is nonsense. :-) 
- * **/
-#define FILTER_TRESHOLD 0
 
 /** Better dont change this - really ;-) **/
 #define MD5_LEN 16

@@ -40,16 +40,24 @@
  * ToDo: 
  * -man page / README / updated help 
  * - some comments.. clean up..
- * - proper regex (filertegex and dirregex) 
- * - gettext, to translate msgs  
- * - --paranoid option to byte-by-byte compare files. 
+ * - gettext, to translate msgs   
  * - other hash algorithm.. (sha1? Speed?)
+ * - extended ls output --skipped. take -m list -c "ls -lah \"%s\" # == %s" -- bash is so much better than me here.   
  **/
 
+/** 
+ * ToDo2 (for removing other sort of "lint") 
+ * - Write bad symlinks to script 
+ * - Find old tmp data (*~)  
+ * - empty dirs 
+ * - non stripped binaries 
+ * => Should be complete after implementing this. 
+ **/ 
 
 bool do_exit = false; 
 bool use_cwd = false; 
 char *mode_string = NULL; 
+int  cpindex = 0; 
 
 /* If we abort abnormally we'd like to set the color back */
 static void resetcol(void) { printf(NCO); }
@@ -110,23 +118,27 @@ static void print_help(void)
 					"\n"					
 					); 
 					
-	fprintf(stderr, "Version 0.1alpha - Copyright Christopher <Bommel> Pahl\n"); 
+	fprintf(stderr, "Version 0.42beta - Copyright Christopher <Bommel> Pahl\n"); 
 	fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");				
-	fprintf(stderr, "See the manpage for more information.\n");
+	fprintf(stderr, "See the manpage or the README for more information.\n");
 	die(-7);
 }
 
 void rmlint_set_default_settings(rmlint_settings *set)
 {
-	set->mode  		 =  1; 		/* list only  */
-	set->depth 		 =  0; 		/* inf depth  */
-	set->followlinks =  0; 		/* fol. link  */
-	set->threads 	 =  4; 		/* Quad,quad. */
-	set->verbosity 	 =  3; 		/* Everything */
-	set->samepart  	 =  0; 		/* Stay parted*/
-	set->paths  	 =  NULL;   /* Startnode  */
-	set->pattern 	 =  NULL;   /* Regpattern */
-	set->cmd 		 =  NULL;   /* Cmd,if use */
+	set->mode  		 =  1; 		/* list only    */
+	set->casematch   =  0; 		/* Insensitive  */
+	set->invmatch	 =  0;		/* Normal mode  */
+	set->paranoid	 =  0; 		/* dont be bush */
+	set->depth 		 =  0; 		/* inf depth    */
+	set->followlinks =  0; 		/* fol. link    */
+	set->threads 	 =  4; 		/* Quad,quad.   */
+	set->verbosity 	 =  3; 		/* Everything   */
+	set->samepart  	 =  0; 		/* Stay parted  */
+	set->paths  	 =  NULL;   /* Startnode    */
+	set->dpattern 	 =  NULL;   /* DRegpattern  */
+	set->fpattern 	 =  NULL;   /* FRegPattern  */
+	set->cmd 		 =  NULL;   /* Cmd,if used  */
 }
 
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) 
@@ -138,21 +150,30 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
              static struct option long_options[] =
              {
                {"threads",     required_argument, 0, 't'},
-               {"regex",       required_argument, 0, 'r'},
-               {"followlinks", no_argument, 	  0, 'f'},
-               {"maxdepth",	   required_argument, 0, 'd'},
+               {"dir-regex",   required_argument, 0, 'R'},
+               {"file-regex",  required_argument, 0, 'r'},
                {"mode",        required_argument, 0, 'm'},
-               {"samepart",    no_argument,		  0, 's'},
-               {"help",        no_argument, 	  0, 'h'},
+               {"maxdepth",	   required_argument, 0, 'd'},
                {"command",     required_argument, 0, 'c'},
                {"verbosity",   required_argument, 0, 'v'},
+               {"matchcase",   no_argument, 	  0, 'e'},
+               {"ignorecase",  no_argument, 	  0, 'E'},
+               {"followlinks", no_argument, 	  0, 'f'},
+               {"ignorelinks", no_argument, 	  0, 'F'},
+               {"invertmatch", no_argument, 	  0, 'i'}, 
+               {"normalmatch", no_argument, 	  0, 'I'},    
+               {"samepart",    no_argument,		  0, 's'},
+               {"allpart",     no_argument,		  0, 'S'},
+               {"paranoid",    no_argument,		  0, 'p'},
+               {"naive",       no_argument,		  0, 'P'},
+               {"help",        no_argument, 	  0, 'h'},
                {0, 0, 0, 0}
              };
              
            /* getopt_long stores the option index here. */
            int option_index = 0;
      
-           c = getopt_long (argc, argv, "m:r:hsc:t:fd:v:",long_options, &option_index);
+           c = getopt_long (argc, argv, "m:R:r:hpPfFeEsSiIc:t:d:v:",long_options, &option_index);
      
            /* Detect the end of the options. */
            if (c == -1) break;
@@ -167,12 +188,21 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 				   
 				 break;
 				 case 'f': sets->followlinks = 1;      		break;
+				 case 'F': sets->followlinks = 0;      		break;
 				 case 'h': print_help(); 			   		break;
 				 case 'c': sets->cmd = optarg;  			break;
 				 case 'v': sets->verbosity = atoi(optarg);  break;
+				 case 'i': sets->invmatch = 1;			    break;
+				 case 'I': sets->invmatch = 0;			    break;
 				 case 's': sets->samepart = 1;				break;
+				 case 'S': sets->samepart = 0;				break;
+				 case 'e': sets->casematch = 1;				break;
+				 case 'E': sets->casematch = 0;				break;
 				 case 'd': sets->depth = ABS(atoi(optarg));	break;
-				 case 'r': sets->pattern = optarg;			break;
+				 case 'r': sets->fpattern = optarg;			break;
+				 case 'R': sets->dpattern = optarg;			break;
+				 case 'p': sets->paranoid = 1;				break;
+				 case 'P': sets->paranoid = 0;				break;
 				 case 'm':
 				 
 					if(!strcasecmp(optarg, "list"))
@@ -217,6 +247,20 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 			}		
 			optind++; 			
          }
+         
+         if(lp > 1) 
+         {
+			 char sel = 'N'; 
+			 error(YEL" => "NCO"You chose to specify more than one path,\n");
+			 error(YEL" => "NCO"This is possible but NOT recomned, because\n");
+			 error(YEL" => "NCO"one directory may be a subset of another,\n");
+			 error(YEL" => "NCO"what may lead to FALSE POSITIVES! You have been warned!\n"); 
+			 error(YEL" => "NCO"Continue though? [y|N]\n");
+			 error(BLU" =$ "NCO);
+			 do {scanf("%c",&sel);} while ( getchar() != '\n' );
+			 if(sel != 'y') return 0; 
+		 }
+         
          
          if(lp == 0) 
          {
@@ -263,6 +307,11 @@ static void check_cmd(const char *cmd)
 	}
 }
 
+int  get_cpindex(void)
+{
+	return cpindex; 
+}
+
 void die(int status)
 {
 	/* Free mem */
@@ -294,7 +343,6 @@ int rmlint_main(void)
 {
   UINT4 total_files = 0;
   UINT4 use_files   = 0; 
-  int c = 0; 
   
   int retval = setjmp(place);
   if(do_exit != true)
@@ -314,8 +362,8 @@ int rmlint_main(void)
 	  fflush(stdout);
 	 
 	  /* Count files and do some init  */ 	 
-	  while(set.paths[c] != NULL)
-		total_files += countfiles(set.paths[c++]);
+	  while(set.paths[cpindex] != NULL)
+		total_files += countfiles(set.paths[cpindex++]);
 	  
 	  if(total_files == 0)
 	  {

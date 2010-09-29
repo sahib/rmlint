@@ -26,13 +26,9 @@
 
 #include <limits.h>
 #include <stdint.h>
+#include <sys/stat.h>
 #include "defs.h"
 
-#undef PATH_MAX
-
-#ifndef PATH_MAX 
-	#define PATH_MAX 1024
-#endif 
 
 typedef short bool;
 #define false ( 0)
@@ -47,7 +43,7 @@ typedef struct iFile
    char *path;		  	 			   /* absolute path from working dir */
    short plen; 						   /* Length of the path */
    UINT4 fsize; 				  	   /* Size of the file (bytes) */
-   bool dupflag;				  	   /* Is the file marked as duplicate (..needed?) */ 
+   bool dupflag;				  	   /* Is the file marked as duplicate */ 
 
    /* Pointer to next element */
    struct iFile *next;

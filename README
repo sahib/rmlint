@@ -18,7 +18,7 @@ HELP:
 
 FEATURES:
 --------
-- Can be aborted at any time. Will display all finds till abort then. (or abort if user presses CTRL-C once more) 
+- Can be aborted at any time. Will display all finds then. (or abort if user presses CTRL-C once more) 
 - Fast. Handles 60GB of data in under 1 second, 
 - Regex filter. 
 - Colorful! :-) (can be compiled without colors support) 
@@ -55,3 +55,11 @@ Nevertheless there is/will be a --verify option that double checks by byte-by-by
 OPTIONS: 
 -------
 More. to. come.
+
+FAQ: 
+----
+
+Q: Why does the last bit of the "Building database"-step takes so long? 
+A: The list where the suspected files are stored is sorted by size. Therefore at the end the largest files have to built a checksum.  
+   You can see the size in "Building database.. 85.9% [16315/19004] - [ 0 ]  - [31842 Bytes]", here as 31842 Byte. 
+

@@ -60,7 +60,7 @@ static void interrupt(int p)
 		 case 0: warning(RED".. "GRE"aborting... "RED"@ \n"NCO); break; 
 		 case 1: warning(RED":: "GRE"Press "RED"CTRL-C"GRE" to abort immediately.\n"NCO); break;
 		 case 2: warning(RED";; "GRE"Doing a hard abort. "RED":(\n"NCO);  
-				 abort(); 
+				 die(1);
 		 break;
 		 default: error("Yes, Sir. I promise to hurry up - although i wonder a bit how you came to read this.\nDo you get blind right now by reading this \"great\" code perhaps?"NCO); 
 	 }
@@ -68,20 +68,27 @@ static void interrupt(int p)
 	 tint++;  
 }
 
+
 /** 
  * grep the string "string" to see if it contains the pattern.
  * Will return 0 if yes, 1 otherwise.
  */ 
 
 
-static int regfilter(const char* string, const char *pattern)
+static int regfilter(const char* input, const char *pattern)
 {
   int status;
+  int flags = REG_EXTENDED|REG_NOSUB; 
   regex_t re;
+  
+  const char *string = basename(input);
   
   if(!pattern||!string) return 0; 
   
-  if(regcomp(&re, pattern, REG_EXTENDED)) 
+  if(!set.casematch) 
+	flags |= REG_ICASE; 
+  
+  if(regcomp(&re, pattern, flags)) 
     return 0; 
 
   if( (status = regexec(&re, string, (size_t)0, NULL, 0)) != 0)
@@ -95,7 +102,7 @@ static int regfilter(const char* string, const char *pattern)
   }
   
   regfree(&re);
-  return status;
+  return (set.invmatch) ? !(status) : (status);
 }
 
 /** 
@@ -124,7 +131,7 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 	}	
 	if(flag == FTW_F)
 	{
-		if(!regfilter(path, set.pattern))
+		if(!regfilter(path, set.fpattern))
 		{
 			dircount++; 
 			list_append(path, ptr->st_size);
@@ -132,10 +139,9 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 		return 0; 
 	}
 	if(flag == FTW_D)
-	{
-		if(regfilter(path,set.pattern))
+	{	
+		if(regfilter(path,set.dpattern)&& strcmp(path,set.paths[get_cpindex()]) != 0)
 		{
-			/* Does not match - Skip subdir */
 			return FTW_SKIP_SUBTREE;
 		}
 	}
@@ -226,7 +232,7 @@ void prefilter(void)
 		b=b->next; 
 	}
 
-	fprintf(stderr,RED" => "NCO"Prefiltered %ld of %ld files.\n",c,l);
+	info(RED" => "NCO"Prefiltered %ld of %ld files.\n",c,l);
 }
 
 
@@ -235,11 +241,15 @@ UINT4 filterlist(void)
 	UINT4 i = 0;
 	bool s = false; 
 	
+	iFile *ptr_i;
+	iFile *ptr_j; 
+	
 	/* Prefilter by size. */
 	prefilter();
 	
-	iFile *ptr_i = list_begin();
-	iFile *ptr_j = ptr_i; 
+	/* list_begin() may change during prefilter() */
+	ptr_i = list_begin();
+	ptr_j = ptr_i; 
 	
 #if USE_MT_FINGERPRINTS == 1  
 	pthread_attr_init(&p_attr);
@@ -352,7 +362,7 @@ void pushchanges(void)
 			memcpy(ptr->md5_digest,con.digest, MD5_LEN); 
 		}
 		
-		/* Neeeeext! */
+		/* Neeeeext! */    
 		ptr = ptr->next;
 		
 		/* The user told us that we have to hate him now. */
@@ -370,15 +380,15 @@ void pushchanges(void)
 
 int countfiles(const char *path)
 {
-  /* Handle SIGINT */
-  signal(SIGINT, interrupt); 
-
   int flags = FTW_ACTIONRETVAL; 
   if(!set.followlinks) 
 	flags |= FTW_PHYS;
 	
   if(set.samepart)
 	flags |= FTW_MOUNT;
+
+  /* Handle SIGINT */
+  signal(SIGINT, interrupt); 
 
   if( nftw(path, eval_file, _XOPEN_SOURCE, flags) == -1)
   {

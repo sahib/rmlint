@@ -42,7 +42,6 @@ UINT4 duplicates = 0;
 UINT4 lintsize = 0; 
 
 
-
 static void remfile(const char *path)
 {
 	if(path) 
@@ -52,6 +51,61 @@ static void remfile(const char *path)
 	}
 }
 
+/** This is only for extremely paranoid people **/
+static int paranoid(const char *p1, const char *p2) 
+{
+	UINT4 b1=0,b2=0; 
+	FILE *f1,*f2; 
+	
+	char c1[4096],c2[4096]; 
+	
+	f1 = fopen(p1,"rb"); 
+	f2 = fopen(p2,"rb"); 
+	
+	if(p1==NULL||p2==NULL) return 0; 
+	
+	while((b1 = fread(c1,1,4096,f1))&&(b2 = fread(c2,1,4096,f2)))
+	{
+		int i = 0; 
+	
+		if(b1!=b2) return 0; 
+		for(; i < b1; i++)
+		{
+				if(c1[i] != c2[i])
+				{
+					fclose(f1); 
+					fclose(f2); 
+					return 0; 
+				}
+		}
+	}
+
+	/* If byte by byte was succesful print a blue "x" */ 
+	warning(BLU"x\t"NCO);
+	fclose(f1);
+	fclose(f2); 
+	return 1; 
+}
+
+//ToDo: 
+static int cmp_inodes(const char *p1, const char *p2)
+{
+	/* Compare the inodes, so we can sure
+	 * it's not the physically same file 
+	 * (what would lead to dataloss    */
+	struct stat buf1; 
+	struct stat buf2; 
+	stat(p1,&buf1);
+	stat(p2,&buf2); 
+	
+	if(buf1.st_ino == buf2.st_ino && 
+	   buf1.st_dev == buf2.st_dev  )
+	{
+	   puts("Same inode");
+	   return 0; 
+	}
+	return 1; 
+}
 
 static int cmp_f(unsigned char *a, unsigned char *b)
 {
@@ -67,7 +121,7 @@ static int cmp_f(unsigned char *a, unsigned char *b)
 
 
 
-void handle_item(const char *path, const char *orig, FILE *script_out) 
+static void handle_item(const char *path, const char *orig, FILE *script_out) 
 {	
 	if(script_out) 
 	{
@@ -79,7 +133,7 @@ void handle_item(const char *path, const char *orig, FILE *script_out)
 		if(set.cmd) 
 		{
 			  size_t len = strlen(path)+strlen(set.cmd)+strlen(orig)+1; 
-			  char cmd_buff[len]; 
+			  char *cmd_buff = alloca(len);
 			  snprintf(cmd_buff,len,set.cmd,fpath,forig);
 			
 			  fprintf(script_out, cmd_buff);
@@ -184,7 +238,7 @@ void handle_item(const char *path, const char *orig, FILE *script_out)
 		{
 			int ret; 
 			size_t len = strlen(path)+strlen(set.cmd)+strlen(orig)+1; 
-			char cmd_buff[len]; 
+			char *cmd_buff = alloca(len); 
 			
 			fprintf(stderr,NCO);
 			snprintf(cmd_buff,len,set.cmd,path,orig);
@@ -254,9 +308,10 @@ void findcrap(void)
 				
 			fprintf(script_out,
 					"#!/bin/sh\n"
-					"#This file was autowritten by 'rmdub'\n"
-					"#and will remove double files once exec\n"
-					"# %s\n",cwd);
+					"#This file was autowritten by 'rmlint'\n"
+					"#If you removed these files already you can use it as a log\n"
+					"# If not you can execute this script. Have a nice day.\n"
+					"# rmlint was executed from: %s\n\n",cwd);
 					
 			if(cwd) free(cwd); 
 		}
@@ -283,9 +338,12 @@ void findcrap(void)
 				sub = sub->next;
 				continue; 
 			}
-			if(!cmp_f(ptr->md5_digest, sub->md5_digest) && 
-				ptr->fsize == sub->fsize
-			  ) {
+			if(!cmp_f(ptr->md5_digest, sub->md5_digest) 		&& /* Same checksum?      */
+				ptr->fsize == sub->fsize						&& /* Same size? 	 	  */
+				cmp_inodes(ptr->path,sub->path) 				&& /* Not the same inode? */
+				(set.paranoid) ? paranoid(ptr->path,sub->path) : 1 /* BbB needed?	      */ 
+			  ) 
+			  {
 				
 				lintsize += sub->fsize;
 				handle_item(sub->path, ptr->path, script_out); 
