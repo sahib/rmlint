@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
- 
+/* Use colored output? */
 #define USE_COLOR 1
  
 #if USE_COLOR
@@ -63,13 +63,15 @@
  
 #define ABS(a)	(((a) < 0) ? -(a) : (a))
 
-/**
- * FP_BLSIZE = Size of those blocks in bytes
- **/
+/* This sets the size read by the fingerprint filter in bytes*
+ * Setting this higher would slow down the filter but cause more accurate results 
+ * Setting it lower will improve perofrmance, but may lead to more full checksums to calculate 
+ * 512b is safe. 
+ */
 #define FP_BLSIZE 512
 
 
-/** Better dont change this - really ;-) **/
+/* Len of a md5sum in bytes - this is not supposed t be changed */ 
 #define MD5_LEN 16
 
 
@@ -90,12 +92,13 @@
 typedef unsigned long int  UINT4;
 
 
-/** The name of the output script **/
+/** The name of the output script/log **/
 #define SCRIPT_NAME "rmlint.sh"
 
 /** Dont use - slower atm. / buggy **/
 #define USE_MT_FINGERPRINTS 0
 
+/* This will cause some debug code to be compiled. Wont have impact on proram though. */
 #define DEBUG_CODE 0
 
 #endif

@@ -99,29 +99,45 @@ void info(const char* format, ...)
 
 static void print_help(void)
 {
-	fprintf(stderr, "Syntax: rmlint [Target] [Options]\n");
-	fprintf(stderr, "Options:\n"
-					"\t-t --threads\t\tSet the number of threads used in full checksum creation.\n"
-					"\t-p --printhashes\tPrint hashes of each inspected file. (true | false)\n"
-					"\t-d --maxdepth\t\tOnly recurse up to this depth. (default: inf)\n"
-					"\t-f --followlinks\tFollow symblic links? (true | false) (default: true)\n"
+	fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [Options]\n");
+	fprintf(stderr, "\nGeneral options:\n\n"
+					"\t-t --threads <t>\tSet the number of threads to <t> used in full checksum creation.\n"
+					"\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally.\n"
+					"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
+					"\t-f --followlinks\tWether links are followed (None is reported twice)\n"
+					"\t-s --samepart\t\tNever cross mountpoints, stay on the same partition\n"
+					"\t-m --mode <mode>\tTell rmlint how to deal with the files it finds.\n"
 					);
-	fprintf(stderr,"\t-m --mode\t\tTell autovac how to deal with the files it finds.\n"
-					"\n\t\t\t\tWhere modes are:\n\n"
+	fprintf(stderr,	"\n\t\t\t\tWhere modes are:\n\n"
 					"\t\t\t\tlist  - Only list found files and exit.\n"
 					"\t\t\t\tlink  - Replace file with a hard link to original.\n"
-					"\t\t\t\task   - Ask before removal.\n"
+					"\t\t\t\task   - Ask for each file what to do\n"
 					"\t\t\t\tnoask - Full removal without asking.\n"
-					"\t\t\t\tmove  - Move suspected files into new directory called 'autovac_out'.\n\n"
+					"\t\t\t\tcmd   - Takes the command given by -c and executes it on the file.\n\n"
+					"\t-c --command <cmd>\tExecute a shellcommand on found files when used with '-m cmd'\n"
+					"\t\t\t\tExample: rmlint -m cmd -c \"ls -lah %%s %%s\"\n"
+					"\t\t\t\tFirst %%s expands to found duplicate, second to original.\n"
+					);
+	fprintf(stderr,	"Regex options:\n\n"
+					"\t-r --fregex <pat>\tChecks filenames against the pattern <pat>\n"
+					"\t-R --dregex <pat>\tChecks dirnames against the pattern <pat>\n"
+					"\t-i --invmatch\t\tInvert match - Only investigate when npt containing <pat>\n"
+					"\t-e --matchcase\t\tMatches case of paths (not by default)\n");
+	fprintf(stderr,	"\nMisc options:\n\n"
 					"\t-h --help\t\tPrints this text and exits\n"
-					"\t-v --version\t\tPrints version and copyright info and exits\n"
+					"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
+					"\t\t\t\tWhere:\n"
+					"\t\t\t\t0 prints nothing\n" 
+					"\t\t\t\t1 prints only errors\n" 
+					"\t\t\t\t2 prints warning\n" 
+					"\t\t\t\t3 prints everything\n"
 					"\n"					
 					); 
-					
-	fprintf(stderr, "Version 0.42beta - Copyright Christopher <Bommel> Pahl\n"); 
+	fprintf(stderr,"Additionally, the options p,f,s,e and i have a uppercase option (P,F,S,E and I) that inverse it's effect\n");	
+	fprintf(stderr, "\nVersion 0.42 - Copyright Christopher <Sahib Bommelig> Pahl\n"); 
 	fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");				
 	fprintf(stderr, "See the manpage or the README for more information.\n");
-	die(-7);
+	exit(0);
 }
 
 void rmlint_set_default_settings(rmlint_settings *set)
@@ -150,8 +166,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
              static struct option long_options[] =
              {
                {"threads",     required_argument, 0, 't'},
-               {"dir-regex",   required_argument, 0, 'R'},
-               {"file-regex",  required_argument, 0, 'r'},
+               {"dregex",   required_argument, 0, 'R'},
+               {"fregex",  required_argument, 0, 'r'},
                {"mode",        required_argument, 0, 'm'},
                {"maxdepth",	   required_argument, 0, 'd'},
                {"command",     required_argument, 0, 'c'},

@@ -37,6 +37,7 @@
 #include "defs.h"
 #include "list.h"
 
+#define READSIZE 8192
 
 UINT4 duplicates = 0;
 UINT4 lintsize = 0; 
@@ -57,14 +58,14 @@ static int paranoid(const char *p1, const char *p2)
 	UINT4 b1=0,b2=0; 
 	FILE *f1,*f2; 
 	
-	char c1[4096],c2[4096]; 
+	char c1[READSIZE],c2[READSIZE]; 
 	
 	f1 = fopen(p1,"rb"); 
 	f2 = fopen(p2,"rb"); 
 	
 	if(p1==NULL||p2==NULL) return 0; 
 	
-	while((b1 = fread(c1,1,4096,f1))&&(b2 = fread(c2,1,4096,f2)))
+	while((b1 = fread(c1,1,READSIZE,f1))&&(b2 = fread(c2,1,READSIZE,f2)))
 	{
 		int i = 0; 
 	
@@ -87,25 +88,6 @@ static int paranoid(const char *p1, const char *p2)
 	return 1; 
 }
 
-//ToDo: 
-static int cmp_inodes(const char *p1, const char *p2)
-{
-	/* Compare the inodes, so we can sure
-	 * it's not the physically same file 
-	 * (what would lead to dataloss    */
-	struct stat buf1; 
-	struct stat buf2; 
-	stat(p1,&buf1);
-	stat(p2,&buf2); 
-	
-	if(buf1.st_ino == buf2.st_ino && 
-	   buf1.st_dev == buf2.st_dev  )
-	{
-	   puts("Same inode");
-	   return 0; 
-	}
-	return 1; 
-}
 
 static int cmp_f(unsigned char *a, unsigned char *b)
 {
@@ -119,7 +101,15 @@ static int cmp_f(unsigned char *a, unsigned char *b)
 	return 0; 
 }
 
-
+static void print_askhelp(void)
+{
+	error(  RED"\n\nk"YEL" - keep file; \n"
+			RED"d"YEL" - delete file; \n"
+			RED"l"YEL" - replace with link; \n"
+			RED"q"YEL" - Quit.\n"
+			RED"h"YEL" - Help.\n"
+			NCO ); 
+}
 
 static void handle_item(const char *path, const char *orig, FILE *script_out) 
 {	
@@ -163,24 +153,13 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 			/* Ask the user what to do */
 			char sel, block = 0; 					
 		
-			error(  RED"\n\nk"YEL" - keep file; \n"
-					RED"d"YEL" - delete file; \n"
-					RED"l"YEL" - replace with link; \n"
-					RED"q"YEL" - Quit.\n"
-					RED"h"YEL" - Help.\n"
-					NCO); 
+			print_askhelp();
 					
 			do
 			{
-				error(RED"#[%ld] \""YEL"%s"RED"\""GRE
-						 " == "RED"\""YEL"%s"RED"\"\n"
-					  BLU"Remove %s?\n"BLU"=> "NCO, 
-					  duplicates+1,orig, path, path); 
-							
-							
+				error(RED"#[%ld] \""YEL"%s"RED"\""GRE" == "RED"\""YEL"%s"RED"\"\n"BLU"Remove %s?\n"BLU"=> "NCO, duplicates+1,orig, path, path); 
 				do {scanf("%c",&sel);} while ( getchar() != '\n' );
-
-							
+				
 							switch(sel) 
 							{
 								case 'k':  
@@ -197,16 +176,11 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 										  block = 0;
 										  break;
 										
-								case 'q': return;
+								case 'q': die(-42);
 								
-								case 'h': error( RED"\n\nk"YEL" - keep file; \n"
-												 RED"d"YEL" - delete file; \n"
-												 RED"l"YEL" - replace with link; \n"
-												 RED"q"YEL" - Quit.\n"
-												 RED"h"YEL" - Help.\n\n"
-												 NCO); 
-										block = 1;
-										break;
+								case 'h': print_askhelp();
+										  block = 1;
+										  break;
 										
 								default : warning("Invalid input."NCO); 
 										  block = 1;  
@@ -214,6 +188,7 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 							}
 							
 			} while(block);
+			
 		} break; 
 		
 		case 3: 
@@ -255,8 +230,7 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 		} break; 
 		
 		default: error(RED"Invalid set.mode. This is a program error. :("NCO);
-	}			
-					
+	}								
 }
 
 static void size_to_human_readable(UINT4 num, char *in) 
@@ -338,10 +312,10 @@ void findcrap(void)
 				sub = sub->next;
 				continue; 
 			}
-			if(!cmp_f(ptr->md5_digest, sub->md5_digest) 		&& /* Same checksum?      */
-				ptr->fsize == sub->fsize						&& /* Same size? 	 	  */
-				cmp_inodes(ptr->path,sub->path) 				&& /* Not the same inode? */
-				(set.paranoid) ? paranoid(ptr->path,sub->path) : 1 /* BbB needed?	      */ 
+			if( (!cmp_f(ptr->md5_digest, sub->md5_digest))  && /* Same checksum?      */
+				(ptr->fsize == sub->fsize)	&&					   /* Same size? 	 	  */ 
+				((set.paranoid)?paranoid(ptr->path,sub->path):1) && 
+				(strcmp(ptr->path,sub->path)) 
 			  ) 
 			  {
 				

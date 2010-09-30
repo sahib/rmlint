@@ -324,12 +324,15 @@ void pushchanges(void)
 	float perc = 0; 
 	iFile *ptr = list_begin(); 
 		
+		
 	if(ptr == NULL) 
 	{
 		error(YEL" => "NCO"No files in the list after filtering..\n");
 		error(YEL" => "NCO"This means that no duplicates were found. Exiting!\n"); 
 		die(42);
 	}
+		
+	info(RED" => "NCO"Filtered %ld files. Doing cksums. Patience, Sir!\n",list_getlen()); 
 		
 	while(ptr)
 	{

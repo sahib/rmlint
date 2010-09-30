@@ -1,6 +1,6 @@
 rmlint is a command line tool to remove various sort of unused files form a Unix filesystem. 
 It comes without any extra depencies, and is build to handle even large filesystems quite fast.  
-It is written in pure C (conforming the ISOC99 Standard), and comes with as size of 32K  
+It is written in pure ANSI C, and comes with as size of 36K  
 
 At time of writing (28.9.2010) this is still beta software and you should choose on of http://en.wikipedia.org/wiki/Fdupes those. 
 It nevertheless is already usable and owns alternatives in terms of speed :-) (duff: 90sec, rmlint: 0.58sec) 
@@ -9,6 +9,12 @@ DISCLAIMER:
 THERE IS NO WARRANTY THAT THIS SOFTWARE WON'T KILL YOUR FILES, NOR THAT IT KILLS YOUR KITTEN, BURNS YOUR HOUSE, OR WHATSOEVER. 
 IT WAS written carefully and in the hope it'll will be useful for some messy users. 
 
+INSTALL: 
+--------
+The usual mantra: 
+
+./confiure &&  make -j 4
+sudo make install 
 
 HELP: 
 ------------
@@ -16,10 +22,53 @@ HELP:
 - rmlint -h 
 - man rmlint  
 
+OPTIONS:
+---------
+Syntax: rmlint [TargetDir[s]] [Options]
+
+General options:
+
+	-t --threads <t>	Set the number of threads to <t> used in full checksum creation.
+	-p --paranoid		Do a byte-by-byte comparasion additionally.
+	-d --maxdepth <depth>	Only recurse up to this depth. (default: inf)
+	-f --followlinks	Wether links are followed (None is reported twice)
+	-s --samepart		Never cross mountpoints, stay on the same partition
+	-m --mode <mode>	Tell rmlint how to deal with the files it finds.
+
+				Where modes are:
+
+				list  - Only list found files and exit.
+				link  - Replace file with a hard link to original.
+				ask   - Ask for each file what to do
+				noask - Full removal without asking.
+				cmd   - Takes the command given by -c and executes it on the file.
+
+	-c --command <cmd>	Execute a shellcommand on found files when used with '-m cmd'
+				Example: rmlint -m cmd -c "ls -lah %s %s"
+				First %s expands to found duplicate, second to original.
+Regex options:
+
+	-r --fregex <pat>	Checks filenames against the pattern <pat>
+	-R --dregex <pat>	Checks dirnames against the pattern <pat>
+	-i --invmatch		Invert match - Only investigate when npt containing <pat>
+	-e --matchcase		Matches case of paths (not by default)
+
+Misc options:
+
+	-h --help		Prints this text and exits
+	-v --verbosity <v>	Sets the verbosity level to <v>
+				Where:
+				0 prints nothing
+				1 prints only errors
+				2 prints warning
+				3 prints everything
+
+Additionally, the options p,f,s,e and i have a uppercase option (P,F,S,E and I) that inverse it's effect
+
 FEATURES:
 --------
 - Can be aborted at any time. Will display all finds then. (or abort if user presses CTRL-C once more) 
-- Fast. Handles 60GB of data in under 1 second, 
+- Fast. Handles 60GB of data in under 1 second (under certain circumstances :-))  
 - Regex filter. 
 - Colorful! :-) (can be compiled without colors support) 
 - Can handle huge amount of files. 
@@ -32,6 +81,7 @@ FEATURES:
    * In all cases a log called rmlint.sh is written. (So you can exec it after having a closer look) 
 - Minimum of I/O, focuses on CPU usage. 
 - It has some basic "API" (Well.. :-)) 
+- Writes a log of all found files (./rmlint.sh) 
 
 
 HOW DOES THIS WEIRD THING WORK: 
@@ -52,9 +102,7 @@ They would need to have the same size to be marked as duplicate.
 => Very unlikely, but possible (dirty, little word) 
 Nevertheless there is/will be a --verify option that double checks by byte-by-byte comparasion.
 
-OPTIONS: 
--------
-More. to. come.
+
 
 FAQ: 
 ----
@@ -63,3 +111,12 @@ Q: Why does the last bit of the "Building database"-step takes so long?
 A: The list where the suspected files are stored is sorted by size. Therefore at the end the largest files have to built a checksum.  
    You can see the size in "Building database.. 85.9% [16315/19004] - [ 0 ]  - [31842 Bytes]", here as 31842 Byte. 
 
+Q: The "-m list" output is crap! I want more information! 
+A: You can use the command mode to use to run 'ls' on the files: 
+   Example: rmlint . -m cmd -c  "ls -lah \"%s\" --color=auto && echo '=> %s';echo"
+   Where the first %s is the found duplicate, the second the original. 
+   
+Q: I want to use the "-c" option, but I dont want to execute it immediately. 
+A: Use the list mode (-m list). Rmlint will write a file called "rmlint.sh" in all cases, 
+   where "rm" has been replaced by the command given by "-c" 
+   
