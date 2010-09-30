@@ -64,6 +64,6 @@ clean:
 install: 
 	@$(ECHO) "$(OK_COLOR)cp <binary> /usr/bin:\n"
 	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
-	$(CP) doc/rmlint.man /usr/share/man/man1
+	$(CP) doc/rmlint.1.gz /usr/share/man/man1
 	@$(ECHO) "$(OK_COLOR)Done.\n"
 	@$(ECHO) "$(NO_COLOR)"
