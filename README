@@ -99,9 +99,10 @@ A NOTE ABOUT FALSE POSITIVES:
 False Positves are actuallly possible, but very unlikely. 
 A so-called collision has about a probability (under best conditions) of 1/(255^16) + 
 They would need to have the same size to be marked as duplicate.  
-=> Very unlikely, but possible (dirty, little word) 
-Nevertheless there is/will be a --verify option that double checks by byte-by-byte comparasion.
+=> Very unlikely, but possible.
 
+But isn't there a solution? Yes, there is. It's the "--paranoid/-p" option. It does a 
+true byte-by-byte comparasion of each(!) file. Be warned. It's slow. 
 
 
 FAQ: 
@@ -119,4 +120,6 @@ A: You can use the command mode to use to run 'ls' on the files:
 Q: I want to use the "-c" option, but I dont want to execute it immediately. 
 A: Use the list mode (-m list). Rmlint will write a file called "rmlint.sh" in all cases, 
    where "rm" has been replaced by the command given by "-c" 
-   
+  
+Q: I want only the found files to be displayed! Like fdupes does! 
+A: "-v 1" is your friend.

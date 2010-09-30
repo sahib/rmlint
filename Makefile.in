@@ -6,6 +6,9 @@
 #source dir
 SOURCEDIR=src
 
+#MANDIR
+MANDIR=/usr/share/man/man1
+
 #colors
 NO_COLOR=\x1b[0m
 OK_COLOR=\x1b[32;01m
@@ -25,7 +28,7 @@ CP=cp
 CC=gcc
  
 WARN=-ansi -Wall -pedantic 
-OPTI= -march=native -Os -s -finline-functions
+OPTI= -march=native -g -finline-functions
 CFLAGS=-c -pipe $(OPTI) $(WARN)
 
 LDFLAGS=-lpthread
@@ -62,8 +65,5 @@ clean:
 	@$(ECHO) "$(NO_COLOR)"
 
 install: 
-	@$(ECHO) "$(OK_COLOR)cp <binary> /usr/bin:\n"
-	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
-	$(CP) doc/rmlint.1.gz /usr/share/man/man1
-	@$(ECHO) "$(OK_COLOR)Done.\n"
-	@$(ECHO) "$(NO_COLOR)"
+	$(CP) $(EXECUTABLE) $(INSTALLPATH)
+	$(CP) doc/rmlint.1.gz $(MANDIR)

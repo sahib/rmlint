@@ -1,22 +1,22 @@
 /**
-*  This file is part of autovac.
+*  This file is part of rmlint.
 *
-*  autovac is free software: you can redistribute it and/or modify
+*  rmlint is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
 *  the Free Software Foundation, either version 3 of the License, or
 *  (at your option) any later version.
 *
-*  autovac is distributed in the hope that it will be useful,
+*  rmlint is distributed in the hope that it will be useful,
 *  but WITHOUT ANY WARRANTY; without even the implied warranty of
 *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *  GNU General Public License for more details.
 *
 *  You should have received a copy of the GNU General Public License
-*  along with autovac.  If not, see <http://www.gnu.org/licenses/>.
+*  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
 ** Author: Christopher Pahl <sahib@online.de>:
-** Hosted at the time of writing (Mo 30. Aug 14:02:22 CEST 2010): 
-*  http://github.com/sahib/autovac
+** Hosted at the time of writing (Do 30. Sep 18:32:19 CEST 2010): 
+*  http://github.com/sahib/rmlint
 *   
 **/
 
@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <setjmp.h>
 
 #include "rmlint.h"
@@ -41,8 +42,7 @@
  * -man page / README / updated help 
  * - some comments.. clean up..
  * - gettext, to translate msgs   
- * - other hash algorithm.. (sha1? Speed?)
- * - extended ls output --skipped. take -m list -c "ls -lah \"%s\" # == %s" -- bash is so much better than me here.   
+ * - check for double input? PEBKAC-fighting? :-P   
  **/
 
 /** 
@@ -134,7 +134,7 @@ static void print_help(void)
 					"\n"					
 					); 
 	fprintf(stderr,"Additionally, the options p,f,s,e and i have a uppercase option (P,F,S,E and I) that inverse it's effect\n");	
-	fprintf(stderr, "\nVersion 0.42 - Copyright Christopher <Sahib Bommelig> Pahl\n"); 
+	fprintf(stderr, "\nVersion 0.43 - Copyright Christopher <Sahib Bommelig> Pahl\n"); 
 	fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");				
 	fprintf(stderr, "See the manpage or the README for more information.\n");
 	exit(0);
@@ -247,37 +247,22 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
      
          while(optind < argc)
          {
-			DIR *p = opendir(argv[optind]);
-			if(!p) 
+			int p = open(argv[optind],O_RDONLY);
+			if(p == -1) 
 			{
 				error(YEL" => "RED"Can't open directory "NCO"\"%s\""RED":"NCO" %s\n"NCO, argv[optind], strerror(errno));
 				return 0; 
 			}
 			else
 			{
-				closedir(p);
-				sets->paths = realloc(sets->paths, sizeof(char*)*lp+2);
+				close(p);
+				sets->paths		  = realloc(sets->paths,sizeof(char*)*(lp+2));
 				sets->paths[lp++] = argv[optind];  
 				sets->paths[lp  ] = NULL; 
-				info(RED" => "NCO"Investigating \"%s\".\n",argv[optind]);
 			}		
 			optind++; 			
          }
-         
-         if(lp > 1) 
-         {
-			 char sel = 'N'; 
-			 error(YEL" => "NCO"You chose to specify more than one path,\n");
-			 error(YEL" => "NCO"This is possible but NOT recomned, because\n");
-			 error(YEL" => "NCO"one directory may be a subset of another,\n");
-			 error(YEL" => "NCO"what may lead to FALSE POSITIVES! You have been warned!\n"); 
-			 error(YEL" => "NCO"Continue though? [y|N]\n");
-			 error(BLU" =$ "NCO);
-			 do {scanf("%c",&sel);} while ( getchar() != '\n' );
-			 if(sel != 'y') return 0; 
-		 }
-         
-         
+                  
          if(lp == 0) 
          {
 			/* Still no path set? */
@@ -359,6 +344,8 @@ int rmlint_main(void)
 {
   UINT4 total_files = 0;
   UINT4 use_files   = 0; 
+  UINT4 dirc 		= 0; 
+  UINT4 firc		= 0;
   
   int retval = setjmp(place);
   if(do_exit != true)
@@ -379,8 +366,39 @@ int rmlint_main(void)
 	 
 	  /* Count files and do some init  */ 	 
 	  while(set.paths[cpindex] != NULL)
-		total_files += countfiles(set.paths[cpindex++]);
-	  
+	  {
+		DIR *p = opendir(set.paths[cpindex]);
+		if(p == NULL && errno == ENOTDIR)
+		{
+			struct stat buf; 
+			if(stat(set.paths[cpindex],&buf) == -1) 
+				continue; 
+			
+			list_append(set.paths[cpindex],(UINT4)buf.st_size);
+			total_files++; 
+			cpindex++;
+			firc++; 
+		}
+		else
+		{
+			info(RED" => "NCO"Investigating \"%s\".\n",set.paths[cpindex]);
+			if(dirc > 1) 
+			{
+				 char sel = 'N'; 
+				 error(YEL" => "NCO"You chose to specify more than one dir,\n");
+				 error(YEL" => "NCO"This is possible but NOT recomned, because\n");
+				 error(YEL" => "NCO"one directory may be a subset of another,\n");
+				 error(YEL" => "NCO"what may lead to FALSE POSITIVES! You have been warned!\n"); 
+				 error(YEL" => "NCO"Continue though? [y|N]\n");
+				 error(BLU" =$ "NCO);
+				 do {scanf("%c",&sel);} while ( getchar() != '\n' );
+				 if(sel != 'y') return 0; 
+			}
+			dirc++; 
+			total_files += countfiles(set.paths[cpindex++]);
+			closedir(p);
+		}
+	  }
 	  if(total_files == 0)
 	  {
 		  warning(RED" => "NCO"No files to search through"RED" --> "NCO"No duplicates\n"); 

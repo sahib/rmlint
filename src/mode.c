@@ -1,22 +1,22 @@
 /**
-*  This file is part of autovac.
+*  This file is part of rmlint.
 *
-*  autovac is free software: you can redistribute it and/or modify
+*  rmlint is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
 *  the Free Software Foundation, either version 3 of the License, or
 *  (at your option) any later version.
 *
-*  autovac is distributed in the hope that it will be useful,
+*  rmlint is distributed in the hope that it will be useful,
 *  but WITHOUT ANY WARRANTY; without even the implied warranty of
 *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *  GNU General Public License for more details.
 *
 *  You should have received a copy of the GNU General Public License
-*  along with autovac.  If not, see <http://www.gnu.org/licenses/>.
+*  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
 ** Author: Christopher Pahl <sahib@online.de>:
-** Hosted at the time of writing (Mo 30. Aug 14:02:22 CEST 2010): 
-*  http://github.com/sahib/autovac
+** Hosted at the time of writing (Do 30. Sep 18:32:19 CEST 2010):
+*  http://github.com/sahib/rmlint
 *   
 **/
 
@@ -144,8 +144,14 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 		case 1:
 		
 			/* Just list the files */
-			warning(GRE"  ls "NCO": \"%s\" \t"RED"=>"NCO"  \"%s\"\n", path, orig);	
-		 
+			if(set.verbosity > 2)
+			{
+				warning(GRE"  ls "NCO": \"%s\" \t"RED"=>"NCO"  \"%s\"\n", path, orig);	
+			}
+			else
+			{
+				error("%s\n",path);
+			}
 		break; 
 		
 		case 2: 
@@ -313,7 +319,7 @@ void findcrap(void)
 				continue; 
 			}
 			if( (!cmp_f(ptr->md5_digest, sub->md5_digest))  && /* Same checksum?      */
-				(ptr->fsize == sub->fsize)	&&					   /* Same size? 	 	  */ 
+				(ptr->fsize == sub->fsize)	&&					   /* Same size? 	  */ 
 				((set.paranoid)?paranoid(ptr->path,sub->path):1) && 
 				(strcmp(ptr->path,sub->path)) 
 			  ) 
@@ -332,6 +338,9 @@ void findcrap(void)
 		if(ptr->fpc == 42)
 			break;
 	
+		if(ptr->dupflag)
+			putchar('\n');
+		
 		ptr = ptr->next;
 		sub = list_begin(); 
 	}
