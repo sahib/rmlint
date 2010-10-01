@@ -27,6 +27,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include "defs.h"
 
 
@@ -44,6 +45,10 @@ typedef struct iFile
    short plen; 						   /* Length of the path */
    UINT4 fsize; 				  	   /* Size of the file (bytes) */
    bool dupflag;				  	   /* Is the file marked as duplicate */ 
+   
+   /* This is used to find pointers to the same file */
+   ino_t node; 
+   dev_t dev; 
 
    /* Pointer to next element */
    struct iFile *next;
@@ -58,7 +63,7 @@ bool list_isempty(void);
 UINT4 list_getlen(void);
 void list_clear(void);
 void list_pop(void);
-void list_append(const char *n, UINT4 filesize);
+void list_append(const char *n, UINT4 s, dev_t dev, ino_t node);
 iFile *list_end(void);
 iFile *list_begin(void);
 iFile *list_remove(iFile *ptr);

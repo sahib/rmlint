@@ -41,9 +41,19 @@
  * ToDo: 
  * -man page / README / updated help 
  * - some comments.. clean up..
- * - gettext, to translate msgs   
- * - check for double input? PEBKAC-fighting? :-P   
+ * - gettext, to translate msgs   -- on ice, because of gettext being crap
+ * - Make fingerprint step use the sorted list (for the sake of linear complexity) 
+ * - Fix funny blobby progress bar :-P  (Highest Priority!)
+ * - filterlist() rewrite - with sortage
+ * - run the fdupes test! 
+ * - Building the list takes little long on large db.
+ * - Ignore device files
+ * - pusblish. 
+ * - make docs be docs.  
  **/
+
+
+
 
 /** 
  * ToDo2 (for removing other sort of "lint") 
@@ -344,7 +354,6 @@ int rmlint_main(void)
 {
   UINT4 total_files = 0;
   UINT4 use_files   = 0; 
-  UINT4 dirc 		= 0; 
   UINT4 firc		= 0;
   
   int retval = setjmp(place);
@@ -370,31 +379,19 @@ int rmlint_main(void)
 		DIR *p = opendir(set.paths[cpindex]);
 		if(p == NULL && errno == ENOTDIR)
 		{
+			/* The path is a file */
 			struct stat buf; 
 			if(stat(set.paths[cpindex],&buf) == -1) 
 				continue; 
 			
-			list_append(set.paths[cpindex],(UINT4)buf.st_size);
+			list_append(set.paths[cpindex],(UINT4)buf.st_size,buf.st_dev,buf.st_ino);
 			total_files++; 
-			cpindex++;
 			firc++; 
 		}
 		else
 		{
-			info(RED" => "NCO"Investigating \"%s\".\n",set.paths[cpindex]);
-			if(dirc > 1) 
-			{
-				 char sel = 'N'; 
-				 error(YEL" => "NCO"You chose to specify more than one dir,\n");
-				 error(YEL" => "NCO"This is possible but NOT recomned, because\n");
-				 error(YEL" => "NCO"one directory may be a subset of another,\n");
-				 error(YEL" => "NCO"what may lead to FALSE POSITIVES! You have been warned!\n"); 
-				 error(YEL" => "NCO"Continue though? [y|N]\n");
-				 error(BLU" =$ "NCO);
-				 do {scanf("%c",&sel);} while ( getchar() != '\n' );
-				 if(sel != 'y') return 0; 
-			}
-			dirc++; 
+			/* The path points to a dir - recurse it! */
+			info(RED" => "NCO"Investigating \"%s\"\n",set.paths[cpindex]);
 			total_files += countfiles(set.paths[cpindex++]);
 			closedir(p);
 		}

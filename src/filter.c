@@ -129,12 +129,12 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 	{
 		error(RED"Bad symlink: %s\n"NCO,path);
 	}	
-	if(flag == FTW_F)
+	if(flag == FTW_F && ptr->st_rdev == 0)
 	{
 		if(!regfilter(path, set.fpattern))
 		{
 			dircount++; 
-			list_append(path, ptr->st_size);
+			list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino);
 		}
 		return 0; 
 	}
@@ -209,6 +209,35 @@ static int treshold(iFile *a, iFile *b)
 }
 
 
+UINT4 rem_double_paths(void)
+{
+	iFile *b = list_begin();
+	iFile *s = NULL;  
+	
+	UINT4 c = 0;
+	while(b)
+	{	
+		s=list_begin(); 
+		
+		while(s)
+		{
+			if(s->dev == b->dev && s->node == b->node && b!=s)
+			{
+				c++; 
+				s = list_remove(s); 
+			}
+			else
+			{
+				s=s->next; 
+			}
+		}
+		b=b->next; 
+	}
+	info(RED" => "NCO"Ignoring %ld pathdoubles.\n",c);
+	return c;
+}
+
+
 void prefilter(void)
 {
 	iFile *b = list_begin();
@@ -216,9 +245,9 @@ void prefilter(void)
 	UINT4 l = list_getlen(); 
 
 	if(b == NULL) die(0);
-
+	
 	while(b)
-	{	
+	{			
 		if(b->last && b->next)
 		{
 			if(b->last->fsize != b->fsize && b->next->fsize != b->fsize)
@@ -230,9 +259,18 @@ void prefilter(void)
 			}
 		}
 		b=b->next; 
+		
 	}
 
-	info(RED" => "NCO"Prefiltered %ld of %ld files.\n",c,l);
+	/* If we have more than 2 dirs given 
+	 * we should check if the one is a subset of the another
+	 * and remove path-doubles */
+	if(get_cpindex() > 1) 
+	{
+		if(rem_double_paths())
+			info(RED" => "NCO"Prefiltered %ld of %ld files.\n",c,l);
+	}
+	
 }
 
 
