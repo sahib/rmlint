@@ -70,22 +70,22 @@ static unsigned char PADDING[64] = {
 /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4 */
 /* Rotation is separate from addition to prevent recomputation */
 #define FF(a, b, c, d, x, s, ac) \
-  {(a) += F ((b), (c), (d)) + (x) + (UINT4)(ac); \
+  {(a) += F ((b), (c), (d)) + (x) + (uint32)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
 #define GG(a, b, c, d, x, s, ac) \
-  {(a) += G ((b), (c), (d)) + (x) + (UINT4)(ac); \
+  {(a) += G ((b), (c), (d)) + (x) + (uint32)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
 #define HH(a, b, c, d, x, s, ac) \
-  {(a) += H ((b), (c), (d)) + (x) + (UINT4)(ac); \
+  {(a) += H ((b), (c), (d)) + (x) + (uint32)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
 #define II(a, b, c, d, x, s, ac) \
-  {(a) += I ((b), (c), (d)) + (x) + (UINT4)(ac); \
+  {(a) += I ((b), (c), (d)) + (x) + (uint32)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
@@ -93,14 +93,14 @@ static unsigned char PADDING[64] = {
 static void MD5Init (mdContext)
 MD5_CTX *mdContext;
 {
-  mdContext->i[0] = mdContext->i[1] = (UINT4)0;
+  mdContext->i[0] = mdContext->i[1] = (uint32)0;
 
   /* Load magic initialization constants.
    */
-  mdContext->buf[0] = (UINT4)0x67452301;
-  mdContext->buf[1] = (UINT4)0xefcdab89;
-  mdContext->buf[2] = (UINT4)0x98badcfe;
-  mdContext->buf[3] = (UINT4)0x10325476;
+  mdContext->buf[0] = (uint32)0x67452301;
+  mdContext->buf[1] = (uint32)0xefcdab89;
+  mdContext->buf[2] = (uint32)0x98badcfe;
+  mdContext->buf[3] = (uint32)0x10325476;
 }
 
 static void MD5Update (mdContext, inBuf, inLen)
@@ -108,7 +108,7 @@ MD5_CTX *mdContext;
 unsigned char *inBuf;
 unsigned int inLen;
 {
-  UINT4 in[16];
+  uint32 in[16];
   int mdi;
   unsigned int i, ii;
 
@@ -116,10 +116,10 @@ unsigned int inLen;
   mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
 
   /* update number of bits */
-  if ((mdContext->i[0] + ((UINT4)inLen << 3)) < mdContext->i[0])
+  if ((mdContext->i[0] + ((uint32)inLen << 3)) < mdContext->i[0])
     mdContext->i[1]++;
-  mdContext->i[0] += ((UINT4)inLen << 3);
-  mdContext->i[1] += ((UINT4)inLen >> 29);
+  mdContext->i[0] += ((uint32)inLen << 3);
+  mdContext->i[1] += ((uint32)inLen >> 29);
 
   while (inLen--) {
     /* add new character to buffer, increment mdi */
@@ -128,10 +128,10 @@ unsigned int inLen;
     /* transform if necessary */
     if (mdi == 0x40) {
       for (i = 0, ii = 0; i < 16; i++, ii += 4)
-        in[i] = (((UINT4)mdContext->in[ii+3]) << 24) |
-                (((UINT4)mdContext->in[ii+2]) << 16) |
-                (((UINT4)mdContext->in[ii+1]) << 8) |
-                ((UINT4)mdContext->in[ii]);
+        in[i] = (((uint32)mdContext->in[ii+3]) << 24) |
+                (((uint32)mdContext->in[ii+2]) << 16) |
+                (((uint32)mdContext->in[ii+1]) << 8) |
+                ((uint32)mdContext->in[ii]);
       Transform (mdContext->buf, in);
       mdi = 0;
     }
@@ -141,7 +141,7 @@ unsigned int inLen;
 static void MD5Final (mdContext)
 MD5_CTX *mdContext;
 {
-  UINT4 in[16];
+  uint32 in[16];
   int mdi;
   unsigned int i, ii;
   unsigned int padLen;
@@ -159,10 +159,10 @@ MD5_CTX *mdContext;
 
   /* append length in bits and transform */
   for (i = 0, ii = 0; i < 14; i++, ii += 4)
-    in[i] = (((UINT4)mdContext->in[ii+3]) << 24) |
-            (((UINT4)mdContext->in[ii+2]) << 16) |
-            (((UINT4)mdContext->in[ii+1]) << 8) |
-            ((UINT4)mdContext->in[ii]);
+    in[i] = (((uint32)mdContext->in[ii+3]) << 24) |
+            (((uint32)mdContext->in[ii+2]) << 16) |
+            (((uint32)mdContext->in[ii+1]) << 8) |
+            ((uint32)mdContext->in[ii]);
   Transform (mdContext->buf, in);
 
   /* store buffer in digest */
@@ -180,10 +180,10 @@ MD5_CTX *mdContext;
 /* Basic MD5 step. Transform buf based on in.
  */
 static void Transform (buf, in)
-UINT4 *buf;
-UINT4 *in;
+uint32 *buf;
+uint32 *in;
 {
-  UINT4 a = buf[0], b = buf[1], c = buf[2], d = buf[3];
+  uint32 a = buf[0], b = buf[1], c = buf[2], d = buf[3];
 
   /* Round 1 */
 #define S11 7
@@ -315,7 +315,7 @@ void md5_file(const char *filename, MD5_CTX *mdContext)
 	{
 		MD5Update (mdContext, data, bytes);
 	}
-	MD5Final (mdContext);
+	MD5Final (mdContext);	
 	fclose (inFile);
 }
 
@@ -329,6 +329,7 @@ int md5_fingerprint(iFile *file)
 	FILE *pF = fopen(file->path, "rb"); 
 	unsigned char data[FP_BLSIZE]; 
 	MD5_CTX con; 
+	MD5Init (&con);
 				
 	if(!pF) 
 	{
@@ -339,7 +340,6 @@ int md5_fingerprint(iFile *file)
 	bytes = fread(data,1,FP_BLSIZE,pF); 
 	if(bytes) 
 	{
-		MD5Init (&con);
 		MD5Update (&con, data, bytes);
 		MD5Final (&con);
 
@@ -350,7 +350,6 @@ int md5_fingerprint(iFile *file)
 	bytes = fread(data,1,FP_BLSIZE,pF);
 	if(bytes)
 	{
-		MD5Init (&con);
 		MD5Update (&con, data, bytes);
 		MD5Final (&con);
 
@@ -363,6 +362,7 @@ int md5_fingerprint(iFile *file)
 }
 
 
+/* Um... */
 void* fpm(void *vp)
 {
 	iFile *t = (iFile*)vp; 

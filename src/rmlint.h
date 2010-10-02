@@ -7,7 +7,9 @@
 typedef struct 
 {
 	char mode; 
+	char fingerprint; 
 	char samepart;
+	char prefilter; 
 	char followlinks;
 	char casematch; 
 	char paranoid; 

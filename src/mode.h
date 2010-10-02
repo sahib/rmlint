@@ -24,6 +24,7 @@
 #ifndef LIST_H
 #define LIST_H
   
-void findcrap(void);
+void findmatches(void);
+void init_filehandler(void); 
 
 #endif

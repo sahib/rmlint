@@ -39,9 +39,11 @@
 
 #define READSIZE 8192
 
-UINT4 duplicates = 0;
-UINT4 lintsize = 0; 
+uint32 duplicates = 0;
+uint32 lintsize = 0; 
 
+/* Make the stream "public" */
+FILE *script_out = NULL; 
 
 static void remfile(const char *path)
 {
@@ -55,7 +57,7 @@ static void remfile(const char *path)
 /** This is only for extremely paranoid people **/
 static int paranoid(const char *p1, const char *p2) 
 {
-	UINT4 b1=0,b2=0; 
+	uint32 b1=0,b2=0; 
 	FILE *f1,*f2; 
 	
 	char c1[READSIZE],c2[READSIZE]; 
@@ -141,19 +143,8 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 	/* What set.mode are we in? */
 	switch(set.mode)
 	{		
-		case 1:
 		
-			/* Just list the files */
-			if(set.verbosity > 2)
-			{
-				warning(GRE"  ls "NCO": \"%s\" \t"RED"=>"NCO"  \"%s\"\n", path, orig);	
-			}
-			else
-			{
-				error("%s\n",path);
-			}
-		break; 
-		
+		case 1: break; 		
 		case 2: 
 		{
 			/* Ask the user what to do */
@@ -239,7 +230,7 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 	}								
 }
 
-static void size_to_human_readable(UINT4 num, char *in) 
+static void size_to_human_readable(uint32 num, char *in) 
 {	
 		if(num < 1024) 
 		{ 
@@ -260,32 +251,18 @@ static void size_to_human_readable(UINT4 num, char *in)
 }
 
 
-
-void findcrap(void)
+void init_filehandler(void)
 {
-	iFile *ptr = list_begin();
-	iFile *sub = ptr->next; 
-	UINT4 finds = 0; 
-	char lintbuf[256]; 
-	 
-	FILE *script_out = NULL; 
-	  
-	info(RED" => "GRE"Almost done!                                                             \r"NCO);
-	fflush(stdout); 
-	
-	info("\n\n Result:\n"RED" --------\n"NCO);
-	warning("\n"); 
-	
-	/* If we're in set.mode 1 we create a file to save the output */
-	if(set.mode) 
-	{
 		script_out = fopen(SCRIPT_NAME, "w");
 		if(script_out)
 		{
 			char *cwd = getcwd(NULL,0);
+			
+			/* Make the file executable */
 			if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1)
 				perror("Warning, chmod failed on "SCRIPT_NAME);
 				
+			/* Write a basic header */
 			fprintf(script_out,
 					"#!/bin/sh\n"
 					"#This file was autowritten by 'rmlint'\n"
@@ -299,50 +276,82 @@ void findcrap(void)
 		{
 			perror(NULL);
 		}
-	}
-		
-	/* Go through the rest of the list and find double checksums */
+}
+
+void findmatches(void) 
+{
+ 	iFile *ptr = list_begin();
+	iFile *sub = NULL; 
+	
+	uint32 finds = 0; 
+	char lintbuf[256]; 
+	
+	warning(NCO);
+	
 	while(ptr)
 	{
-		if(ptr->dupflag)
+		iFile *i=ptr,*j=ptr;  
+		uint32 fs = ptr->fsize;
+	 
+		sub=ptr;
+	 
+		if(ptr->fpc == 42) 
 		{
-			ptr = ptr->next;
-			continue;
+			break; 
 		}
 	
+		while(ptr && ptr->fsize == fs) 
+		{ 
+			ptr=ptr->next; 
+		}
 		
-		while(sub) 
+		/* Handle one "group" */			
+		while(i && i!=ptr)
 		{
-			if(ptr == sub || sub->dupflag)
+			bool p = true; 
+			j=sub; 
+			
+			
+			while(j && j!=ptr)
 			{
-				sub = sub->next;
-				continue; 
+					if(i==j || j->dupflag) 
+					{
+						j=j->next;
+						continue; 
+					}
+					if( (!cmp_f(i->md5_digest, j->md5_digest))  &&     /* Same checksum?  */
+					    (i->fsize == j->fsize)	&&					   /* Same size? 	  */ 
+						((set.paranoid)?paranoid(i->path,j->path):1)   /* If we're bothering with paranoid users - Take the gatling! */ 
+					)
+					{
+						if(set.mode == 1)
+						{
+							if(p == true) 
+							{
+								error("= %s\n",i->path); 
+								p=false; 
+							}
+							error("X %s\n",j->path); 
+						}
+						
+						lintsize += j->fsize;
+						
+						handle_item(j->path, i->path, script_out);
+						
+						j->dupflag = true;
+						i->dupflag = true; 
+						finds++; 	
+					}
+					
+					j = j->next;
+			} 
+			i=i->next; 
+		
+			if(!p)
+			{
+				error("\n");
 			}
-			if( (!cmp_f(ptr->md5_digest, sub->md5_digest))  && /* Same checksum?      */
-				(ptr->fsize == sub->fsize)	&&					   /* Same size? 	  */ 
-				((set.paranoid)?paranoid(ptr->path,sub->path):1) && 
-				(strcmp(ptr->path,sub->path)) 
-			  ) 
-			  {
-				
-				lintsize += sub->fsize;
-				handle_item(sub->path, ptr->path, script_out); 
-
-				sub->dupflag = true;
-				ptr->dupflag = true; 
-				finds++; 
-			}	
-			sub = sub->next;
 		}
-		
-		if(ptr->fpc == 42)
-			break;
-	
-		if(ptr->dupflag)
-			putchar('\n');
-		
-		ptr = ptr->next;
-		sub = list_begin(); 
 	}
 	
 	size_to_human_readable(lintsize,lintbuf);
@@ -350,6 +359,7 @@ void findcrap(void)
 	warning("In total "RED"%ld"NCO" duplicate%sfound. ("GRE"%s"NCO")\n", finds, (finds) ? " " : "s ",lintbuf);
 	
 	if(script_out)
+	{
 		fclose(script_out);
+	}
 }
-

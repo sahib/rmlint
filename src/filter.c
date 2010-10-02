@@ -41,8 +41,8 @@
 #include "list.h"
 #include "mt.h"
 
-UINT4 dircount = 0;
-UINT4 elems = 0;  
+uint32 dircount = 0;
+uint32 elems = 0;  
 short iinterrupt = 0;
 short tint = 0;  
 pthread_attr_t p_attr; 
@@ -54,15 +54,11 @@ pthread_attr_t p_attr;
 
 static void interrupt(int p) 
 {
-	 /** This was connected with SIGINT (CTRL-C) in countfiles() **/ 
+	 /** This was connected with SIGINT (CTRL-C) in recurse_dir() **/ 
 	 switch(tint)
 	 {
 		 case 0: warning(RED".. "GRE"aborting... "RED"@ \n"NCO); break; 
-		 case 1: warning(RED":: "GRE"Press "RED"CTRL-C"GRE" to abort immediately.\n"NCO); break;
-		 case 2: warning(RED";; "GRE"Doing a hard abort. "RED":(\n"NCO);  
-				 die(1);
-		 break;
-		 default: error("Yes, Sir. I promise to hurry up - although i wonder a bit how you came to read this.\nDo you get blind right now by reading this \"great\" code perhaps?"NCO); 
+		 case 1: die(1);
 	 }
 	 iinterrupt++; 
 	 tint++;  
@@ -73,7 +69,6 @@ static void interrupt(int p)
  * grep the string "string" to see if it contains the pattern.
  * Will return 0 if yes, 1 otherwise.
  */ 
-
 
 static int regfilter(const char* input, const char *pattern)
 {
@@ -134,9 +129,9 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 		if(!regfilter(path, set.fpattern))
 		{
 			dircount++; 
-			list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino);
+			list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
 		}
-		return 0; 
+		return FTW_CONTINUE; 
 	}
 	if(flag == FTW_D)
 	{	
@@ -148,73 +143,14 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 	return FTW_CONTINUE;
 }
 
-/**
- * Takes 2 files and make a fast check if both _seem_ to be equal (does not build full checksums) 
- * If the size of both files is not the same 0 is returned. 
- * If sizes are equal a fingerprint of the first and last 
- **/
-
-static int treshold(iFile *a, iFile *b)
-{
-	int i=0,j=0;  
-	
-	if(!(a&&b)) 
-		return 0; 
-	
-	/* Double check size so we still can have a progress bar */
-	if(a->fsize !=  b->fsize)
-		return 0; 
-	
-#if USE_MT_FINGERPRINTS == 1 
-
-	if(set.threads != 1)
-	{
-		void *status;
-		pthread_t ts[2];
-		/* Start two threads to calc checksum in parallel */ 
-					
-		if(!a->fpc) {
-			pthread_create(&ts[0],&p_attr,fpm,(void*)a); 
-			a->fpc++; 
-		}
-		if(!b->fpc) { 
-			pthread_create(&ts[1],&p_attr,fpm,(void*)b);
-			b->fpc++; 
-		}
-		
-		pthread_join(ts[0],&status);
-		pthread_join(ts[1],&status);
-	}
-	else
-	{
-#endif 
-		if(!a->fpc) { 
-			a->fpc++; 
-			a->fpc = md5_fingerprint(a);
-		}
-		if(!b->fpc) { 
-			b->fpc++; 
-			b->fpc = md5_fingerprint(b);
-		}
-#if USE_MT_FINGERPRINTS == 1 
-	}
-#endif
-	
-	for(; i < 2; i++) 
-		for(j=0; j < MD5_LEN; j++)  
-			if(a->fp[i][j] != b->fp[i][j])
-					return  0; 
-			
-    return 1; 	
-}
 
 
-UINT4 rem_double_paths(void)
+uint32 rem_double_paths(void)
 {
 	iFile *b = list_begin();
 	iFile *s = NULL;  
 	
-	UINT4 c = 0;
+	uint32 c = 0;
 	while(b)
 	{	
 		s=list_begin(); 
@@ -233,7 +169,7 @@ UINT4 rem_double_paths(void)
 		}
 		b=b->next; 
 	}
-	info(RED" => "NCO"Ignoring %ld pathdoubles.\n",c);
+	
 	return c;
 }
 
@@ -241,25 +177,32 @@ UINT4 rem_double_paths(void)
 void prefilter(void)
 {
 	iFile *b = list_begin();
-	UINT4 c =  0;
-	UINT4 l = list_getlen(); 
+	uint32 c =  0;
+	uint32 l = list_getlen(); 
 
 	if(b == NULL) die(0);
 	
 	while(b)
-	{			
+	{					
+		if(iinterrupt)
+		{
+			iinterrupt = 0; 
+			return; 
+		}
+	
 		if(b->last && b->next)
 		{
 			if(b->last->fsize != b->fsize && b->next->fsize != b->fsize)
 			{
-				info("Filtering by Size... "BLU"["NCO"%ld"BLU"]\r"NCO,c++);
-				fflush(stdout);
+				c++; 
 				b = list_remove(b);
 				continue;
 			}
 		}
+		
 		b=b->next; 
 		
+
 	}
 
 	/* If we have more than 2 dirs given 
@@ -267,119 +210,154 @@ void prefilter(void)
 	 * and remove path-doubles */
 	if(get_cpindex() > 1) 
 	{
-		if(rem_double_paths())
-			info(RED" => "NCO"Prefiltered %ld of %ld files.\n",c,l);
+		uint32 cb; 
+		if( (cb=rem_double_paths()) )
+			info(RED" => "NCO"Ignoring %ld pathdoubles.\n",cb);
 	}
-	
-}
-
-
-UINT4 filterlist(void)
-{
-	UINT4 i = 0;
-	bool s = false; 
-	
-	iFile *ptr_i;
-	iFile *ptr_j; 
-	
-	/* Prefilter by size. */
-	prefilter();
-	
-	/* list_begin() may change during prefilter() */
-	ptr_i = list_begin();
-	ptr_j = ptr_i; 
-	
-#if USE_MT_FINGERPRINTS == 1  
-	pthread_attr_init(&p_attr);
-	pthread_attr_setdetachstate(&p_attr, PTHREAD_CREATE_JOINABLE);
-#endif 
-	
-	while(ptr_i) 
+	if(c != 0)
 	{
-		
-		if(i%STATUS_UPDATE_INTERVAL==0)
-		{
-			/* Do some (inaccurate) progress bar */
-			float perc = (float)i / ((float)list_getlen()-1) * 100.0f; 
-			info("Filtering by fingerprint... "GRE"%2.2f"BLU"%% ["NCO"%ld"BLU"|"NCO"%ld"BLU"]   \r"NCO, perc >= 100.0f ? 100.0f : perc,i,list_getlen());  
-			fflush(stdout);
-		}
-		i++; 
-		
-		/* Start from.. the start. */
-		ptr_j = list_begin();
-		
-		s = true; 
-		while(ptr_j)
-		{
-			if(ptr_j == ptr_i)
-			{
-				ptr_j = ptr_j->next;
-				continue;
-			}
-			if(iinterrupt) 
-			{
-				/* Interrupted by user */
-				warning(RED"\nAborting at #%ld.. One second please.\n",i);
-
-				/* Reset the iinterrupt flag, so pushchanges will continue */
-				iinterrupt = 0; 
-				
-				/* Mark this as "end" of the investigated files; 42.. Any questions? :)*/
-				ptr_i->fpc = 42;  
-				return list_getlen(); 
-			}
-			if(treshold(ptr_i, ptr_j))
-			{
-				/* Not passed test - forget ptr_i */
-				s = false;
-				break;  
-			}
-			ptr_j = ptr_j->next; 
-		}
-		if(s)
-		{
-			ptr_i = list_remove(ptr_i);
-			i--;
-		}
-		else 
-		{
-			ptr_i = ptr_i->next;
-		}
+		info(RED" => "NCO"Prefiltered %ld of %ld files.                                        \n",c,l);
 	}
-	
-#if USE_MT_FINGERPRINTS == 1 
-	pthread_attr_destroy(&p_attr);
-#endif 
-
-	return list_getlen(); 
 }
 
-void pushchanges(void)
+static int cmp_fingerprints(iFile *a,iFile *b) 
 {
-	UINT4 i = 0;
-	UINT4 c = 0; 
+	int i,j; 
+	if(!(a&&b))
+		return 0;
+	
+	for(i=0;i<2;i++) 
+	{ 
+		for(j=0;j<MD5_LEN;j++)  
+		{
+			if(a->fp[i][j] != b->fp[i][j])
+			{
+				return  0; 
+			}
+		}
+	}
+	return 1; 
+}
+
+uint32 build_fingerprint(void)
+{
+	iFile *ptr = list_begin();
+	iFile *sub = NULL; 
+	
+	uint32 con = 0;
+	uint32 tol = list_getlen();  
+	
+	while(ptr)
+	{
+		iFile *i=ptr,*j=ptr; 
+		uint32 fs = ptr->fsize;
+		bool del = true; 
+		 
+		sub=ptr;
+		 
+		/** Get to **/
+		while(ptr && ptr->fsize == fs) 
+		{ 
+			if(ptr->fpc == 0)
+			{
+				ptr->fpc = md5_fingerprint(ptr);	
+			}
+			ptr=ptr->next; 
+		}
+				
+		if(iinterrupt) 
+		{
+			iinterrupt = 0; 
+			sub->fpc = 42;
+			return 0; 
+		}
+		
+		if(con % STATUS_UPDATE_INTERVAL == 0) 
+		{
+			info("Filtering by fingerprint.. "BLU"["NCO"%ld"BLU"|"NCO"%ld"BLU"]"NCO"\r",con,tol); 
+			fflush(stdout); 
+		}
+		while(i && i!=ptr)
+		{
+			j=sub; 
+			del=true;
+			
+			while(j && j!=ptr)
+			{
+					if(i==j) 
+					{
+						j=j->next;
+						continue; 
+					}
+					if(cmp_fingerprints(i,j))
+					{
+						del = false; 
+						break; 
+					}
+					j = j->next;
+			} 
+			if(del)
+			{
+				i = list_remove(i); 
+				con++; 
+			}
+			else
+			{
+				i=i->next; 
+			}
+		}
+	}
+	return con; 
+}
+
+/** This function is pointless. **/
+char blob(uint32 i)
+{
+	if(!i) return 'x';
+	switch(i%12) 
+	{
+		case 0: return 'O'; 
+		case 1: return '0';
+		case 2: return 'o'; 
+		case 3: return '*';
+		case 4: return '|';
+		case 5: return ':';
+		case 6: return '.';
+		case 7: return ' '; 
+		case 8: return '-'; 
+		case 9: return '|'; 
+		case 10: return '^';
+		case 11:return '0'; 
+		default: return 'x'; 
+	}
+}
+
+
+void build_checksums(void)
+{
+
+
+	uint32 c = 0; 
 	float perc = 0; 
 	iFile *ptr = list_begin(); 
-		
 		
 	if(ptr == NULL) 
 	{
 		error(YEL" => "NCO"No files in the list after filtering..\n");
 		error(YEL" => "NCO"This means that no duplicates were found. Exiting!\n"); 
-		die(42);
+		die(0);
 	}
-		
-	info(RED" => "NCO"Filtered %ld files. Checksumtime. Patience, Sir!\n",list_getlen()); 
-		
+	
+
 	while(ptr)
 	{
+
 		if(c%STATUS_UPDATE_INTERVAL==0)
 		{
 			/* Make the user happy with some progress */
 			perc = (((float)c) / ((float)list_getlen())) * 100.0f; 
-			info("Building database.. "GRE"%2.1f"BLU"%% "RED"["NCO"%ld"RED"/"NCO"%ld"RED"]"NCO" - [ %s ]  - ["RED"%ld"NCO" Bytes]      \r"NCO, perc,
-							c, list_getlen(), (i%4 == 0) ? RED"0"NCO : (i%4 == 1) ? BLU"O"NCO : (i%4 == 2) ? YEL"o"NCO : GRE"."NCO , ptr->fsize);
+			info("Building checksums.. "GRE"%2.1f"BLU"%% "RED"["NCO"%ld"RED"/"NCO"%ld"RED"]"NCO" - ["BLU"%c"NCO"]  - ["RED"%ld"NCO" Bytes]      \r"NCO, perc,
+							c, list_getlen(), blob(c) , ptr->fsize);
 			fflush(stdout); 
 		}
 		
@@ -415,11 +393,11 @@ void pushchanges(void)
 	}
 	
 	/* Make sure you get 100.0% :-) */
-	info("Building database.. %2.1f%% [%ld/%ld] - [ %s ]\r", 100.0f, c, list_getlen(), (i%4 == 0) ? "0" : (i%4 == 1) ? "O" : (i%4 == 2) ? "o" : "." );
+	info("Building database.. %2.1f%% [%ld/%ld] - [ %c ]\r", 100.0f, c, blob(c) );
 	fflush(stdout); 
 }
 
-int countfiles(const char *path)
+int recurse_dir(const char *path)
 {
   int flags = FTW_ACTIONRETVAL; 
   if(!set.followlinks) 

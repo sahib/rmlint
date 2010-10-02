@@ -48,7 +48,7 @@ static void *pool_exec(void *vp)
 
 
 
-void fillpool(iFile *fp, UINT4 now)
+void fillpool(iFile *fp, uint32 now)
 {
 	if(!init)
 	{

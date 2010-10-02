@@ -28,7 +28,7 @@ CP=cp
 CC=gcc
  
 WARN=-ansi -Wall -pedantic 
-OPTI= -march=native -g -finline-functions
+OPTI= -march=native -s -Os -finline-functions
 CFLAGS=-c -pipe $(OPTI) $(WARN)
 
 LDFLAGS=-lpthread

@@ -68,7 +68,7 @@
  * Setting it lower will improve perofrmance, but may lead to more full checksums to calculate 
  * 512b is safe. 
  */
-#define FP_BLSIZE 512
+#define FP_BLSIZE 128
 
 
 /* Len of a md5sum in bytes - this is not supposed t be changed */ 
@@ -89,7 +89,7 @@
 #define MD5_SYNC_ASYNC_TRESHOLD 8388608
 							
 /** typedef a 32 bit type **/
-typedef unsigned long int  UINT4;
+typedef unsigned long int  uint32;
 
 
 /** The name of the output script/log **/
@@ -99,6 +99,6 @@ typedef unsigned long int  UINT4;
 #define USE_MT_FINGERPRINTS 0
 
 /* This will cause some debug code to be compiled. Wont have impact on proram though. */
-#define DEBUG_CODE 0
+#define DEBUG_CODE 1
 
 #endif

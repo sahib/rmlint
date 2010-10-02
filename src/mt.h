@@ -27,6 +27,6 @@
 #include "md5.h"
 
 void freepool(void);
-void fillpool(iFile *fp, UINT4 now);
+void fillpool(iFile *fp, uint32 now);
 
 #endif

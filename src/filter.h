@@ -26,9 +26,9 @@
 
 #include "md5.h"
 
-int countfiles(const char *path); 
-UINT4 filterlist(void);
-void pushchanges(void);
-
+int   recurse_dir(const char *path); 
+uint32 build_fingerprint(void);
+void  build_checksums(void);
+void  prefilter(void);
 
 #endif

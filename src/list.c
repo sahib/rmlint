@@ -9,7 +9,7 @@
 iFile *start = NULL; /* A pointer to the first element in the list */
 iFile *back  = NULL; /* A pointer to the last  element in the list */
 
-UINT4 list_len = 0; /* The length of the list is stored here. (Not necessary) */
+uint32 list_len = 0; /* The length of the list is stored here. (Not necessary) */
 
 /** list_begin() - returns pointer to start of list **/
 iFile *list_begin(void) { return start; }
@@ -21,7 +21,7 @@ iFile *list_end(void) { return back; }
 bool list_isempty(void) { return (start) ? false : true; } 
 
 /** Returns length of list **/
-UINT4 list_getlen(void) { return list_len; } 
+uint32 list_getlen(void) { return list_len; } 
 
 
 /** 
@@ -150,7 +150,7 @@ static void list_cleardigest(unsigned char* dig)
 }
 
 
-static void list_filldata(iFile *pointer, const char *n,UINT4 fs, dev_t dev, ino_t node) 
+static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, ino_t node, nlink_t l) 
 {
 	  /* Fill data */
       pointer->plen = strlen(n) + 2; 
@@ -159,6 +159,7 @@ static void list_filldata(iFile *pointer, const char *n,UINT4 fs, dev_t dev, ino
 
 	  pointer->node = node;
 	  pointer->dev = dev; 
+	  pointer->links = l; 
       pointer->fsize = fs;
       pointer->dupflag = false;
       pointer->fpc = 0; 
@@ -167,10 +168,10 @@ static void list_filldata(iFile *pointer, const char *n,UINT4 fs, dev_t dev, ino
 
 
 
-void list_append(const char *n, UINT4 s, dev_t dev, ino_t node) 
+void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l)
 {
 	iFile *tmp = malloc(sizeof(iFile));
-	list_filldata(tmp,n,s,dev,node);
+	list_filldata(tmp,n,s,dev,node,l);
 	
 	if(start == NULL) /* INIT */ 
 	{

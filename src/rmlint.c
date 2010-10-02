@@ -42,18 +42,36 @@
  * -man page / README / updated help 
  * - some comments.. clean up..
  * - gettext, to translate msgs   -- on ice, because of gettext being crap
- * - Make fingerprint step use the sorted list (for the sake of linear complexity) 
- * - Fix funny blobby progress bar :-P  (Highest Priority!)
- * - filterlist() rewrite - with sortage
- * - run the fdupes test! 
- * - Building the list takes little long on large db.
- * - Ignore device files
  * - pusblish. 
+ * - allow files as input 
+ * - better prefilter (does not handle start and end of list) 
+ * - print hashes()
  * - make docs be docs.  
  **/
 
 
+/**
+ 
+Result of the testdir run should be (dont run with "-f"!): 
+----------------------------------------------------------
 
+= testdir/recursed_a/one
+X testdir/recursed_b/one
+
+= testdir/recursed_a/two
+X testdir/twice_one
+X testdir/two
+
+= testdir/recursed_b/three
+X testdir/recursed_b/two_plus_one
+
+= testdir/with spaces a
+X testdir/with spaces b
+
+
+Empty files are not shown - they will be 
+handled seperate in future versions. 
+ **/
 
 /** 
  * ToDo2 (for removing other sort of "lint") 
@@ -112,8 +130,11 @@ static void print_help(void)
 	fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [Options]\n");
 	fprintf(stderr, "\nGeneral options:\n\n"
 					"\t-t --threads <t>\tSet the number of threads to <t> used in full checksum creation.\n"
-					"\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally.\n"
-					"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
+					"\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!)\n"
+					"\t-z --skipfp\t\tSkip building fingerprints (good for many small files)\n"
+					"\t-y --skippre\t\tSkip Prefiltering (always bad)\n"
+					); 
+	fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
 					"\t-f --followlinks\tWether links are followed (None is reported twice)\n"
 					"\t-s --samepart\t\tNever cross mountpoints, stay on the same partition\n"
 					"\t-m --mode <mode>\tTell rmlint how to deal with the files it finds.\n"
@@ -124,7 +145,7 @@ static void print_help(void)
 					"\t\t\t\task   - Ask for each file what to do\n"
 					"\t\t\t\tnoask - Full removal without asking.\n"
 					"\t\t\t\tcmd   - Takes the command given by -c and executes it on the file.\n\n"
-					"\t-c --command <cmd>\tExecute a shellcommand on found files when used with '-m cmd'\n"
+					"\t-c --command <cmd>\tExecute a shellcommand on found files when used with '-m cmd'\n" 
 					"\t\t\t\tExample: rmlint -m cmd -c \"ls -lah %%s %%s\"\n"
 					"\t\t\t\tFirst %%s expands to found duplicate, second to original.\n"
 					);
@@ -154,6 +175,8 @@ void rmlint_set_default_settings(rmlint_settings *set)
 {
 	set->mode  		 =  1; 		/* list only    */
 	set->casematch   =  0; 		/* Insensitive  */
+	set->fingerprint =  1; 		/* Do fprints   */ 
+	set->prefilter   =  1;		/* Do prefilter */ 
 	set->invmatch	 =  0;		/* Normal mode  */
 	set->paranoid	 =  0; 		/* dont be bush */
 	set->depth 		 =  0; 		/* inf depth    */
@@ -176,9 +199,13 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
              static struct option long_options[] =
              {
                {"threads",     required_argument, 0, 't'},
-               {"dregex",   required_argument, 0, 'R'},
-               {"fregex",  required_argument, 0, 'r'},
+               {"dregex",      required_argument, 0, 'R'},
+               {"fregex",  	   required_argument, 0, 'r'},
                {"mode",        required_argument, 0, 'm'},
+               {"skippre",     no_argument, 	  0, 'y'},
+               {"dopre",       no_argument, 	  0, 'Y'},
+               {"skipfp",      no_argument, 	  0, 'z'},
+               {"buildfp",     no_argument, 	  0, 'Z'},
                {"maxdepth",	   required_argument, 0, 'd'},
                {"command",     required_argument, 0, 'c'},
                {"verbosity",   required_argument, 0, 'v'},
@@ -199,7 +226,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
            /* getopt_long stores the option index here. */
            int option_index = 0;
      
-           c = getopt_long (argc, argv, "m:R:r:hpPfFeEsSiIc:t:d:v:",long_options, &option_index);
+           c = getopt_long (argc, argv, "m:R:r:zZyYhpPfFeEsSiIc:t:d:v:",long_options, &option_index);
      
            /* Detect the end of the options. */
            if (c == -1) break;
@@ -225,6 +252,10 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 				 case 'e': sets->casematch = 1;				break;
 				 case 'E': sets->casematch = 0;				break;
 				 case 'd': sets->depth = ABS(atoi(optarg));	break;
+				 case 'z': sets->fingerprint = 0;			break;
+				 case 'Z': sets->fingerprint = 1;			break;
+				 case 'y': sets->prefilter = 0;				break;
+				 case 'Y': sets->prefilter = 1;				break;
 				 case 'r': sets->fpattern = optarg;			break;
 				 case 'R': sets->dpattern = optarg;			break;
 				 case 'p': sets->paranoid = 1;				break;
@@ -339,6 +370,10 @@ void die(int status)
 		free(set.paths);
 	}
 	
+	if(status)
+	{
+		info("Abnormal exit\n"); 
+	}
 	
 	/* Make sure NCO is printed */
 	resetcol(); 
@@ -352,9 +387,9 @@ void die(int status)
 /* Have fun reading. ;-) */
 int rmlint_main(void)
 {
-  UINT4 total_files = 0;
-  UINT4 use_files   = 0; 
-  UINT4 firc		= 0;
+  uint32 total_files = 0;
+  uint32 fpfilterd    = 0; 
+  uint32 firc		= 0;
   
   int retval = setjmp(place);
   if(do_exit != true)
@@ -384,7 +419,7 @@ int rmlint_main(void)
 			if(stat(set.paths[cpindex],&buf) == -1) 
 				continue; 
 			
-			list_append(set.paths[cpindex],(UINT4)buf.st_size,buf.st_dev,buf.st_ino);
+			list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino,buf.st_nlink);
 			total_files++; 
 			firc++; 
 		}
@@ -392,7 +427,7 @@ int rmlint_main(void)
 		{
 			/* The path points to a dir - recurse it! */
 			info(RED" => "NCO"Investigating \"%s\"\n",set.paths[cpindex]);
-			total_files += countfiles(set.paths[cpindex++]);
+			total_files += recurse_dir(set.paths[cpindex++]);
 			closedir(p);
 		}
 	  }
@@ -408,15 +443,46 @@ int rmlint_main(void)
 	  /* Set threads to be less than the number of files */
 	  if(set.threads > total_files) 
 		set.threads = total_files;
-	   
-	  /* Go through directories and filter files with a unique size out */
-	  use_files = filterlist();
 	  
+	  if(set.prefilter)
+	  {
+		  /* filter list by sorting unique sizes */
+		  info(RED" => "NCO"Applying Prefilter... \r"); 
+		  fflush(stdout);
+		  
+		  prefilter(); 
+	  }
+	   
+	  if(set.fingerprint)
+	  {
+		  /* Go through directories and filter files with a fingerprint */
+		  fpfilterd  = build_fingerprint();
+		  
+		  if(fpfilterd) 
+		  {
+			  info(RED" => "NCO"Filtered %ld files, %ld remaining.   \n",fpfilterd, list_getlen()); 
+		  }
+	  }
 	  /* Push filtered files to md5-ToDo list */
-	  pushchanges();
+	  build_checksums();
+	  
+	  if(set.prefilter)
+	  {
+		  /* Call prefilter again - because through the fpfilter we might get unique sizes again */
+		  prefilter();
+	  }
+	  
+	  /* Now we're nearly done */
+	  info(RED" => "GRE"Almost done!                                                             \r"NCO);
+	  fflush(stdout); 
+	  
+	  info("\n\n Result:\n"RED" --------\n"NCO);
+	  warning("\n");
 	  
 	  /* Finally find double checksums */
-	  findcrap();
+	  init_filehandler(); 
+	  findmatches();
+	  
 	  die(0);
   }
   return retval; 

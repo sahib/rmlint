@@ -43,12 +43,15 @@ typedef struct iFile
    char fpc; 						   /* Number of fingerprints build */
    char *path;		  	 			   /* absolute path from working dir */
    short plen; 						   /* Length of the path */
-   UINT4 fsize; 				  	   /* Size of the file (bytes) */
+   uint32 fsize; 				  	   /* Size of the file (bytes) */
    bool dupflag;				  	   /* Is the file marked as duplicate */ 
    
    /* This is used to find pointers to the same file */
    ino_t node; 
    dev_t dev; 
+
+   /* The file with the most links pointing too is mostly marked as "original" */ 
+   nlink_t links; 
 
    /* Pointer to next element */
    struct iFile *next;
@@ -60,10 +63,10 @@ typedef struct iFile
 
 /* Prototypes */
 bool list_isempty(void);
-UINT4 list_getlen(void);
+uint32 list_getlen(void);
 void list_clear(void);
 void list_pop(void);
-void list_append(const char *n, UINT4 s, dev_t dev, ino_t node);
+void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l);
 iFile *list_end(void);
 iFile *list_begin(void);
 iFile *list_remove(iFile *ptr);
