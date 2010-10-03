@@ -43,8 +43,11 @@
  * - some comments.. clean up..
  * - gettext, to translate msgs   -- on ice, because of gettext being crap
  * - pusblish. 
+ * - - list_sort() - quicksort 
  * - allow files as input 
+ * - --exclude option and --nohide
  * - better prefilter (does not handle start and end of list) 
+ * - mt.c is some overhead - in build_checksum we already know the number of files. 
  * - print hashes()
  * - make docs be docs.  
  **/
@@ -408,6 +411,8 @@ int rmlint_main(void)
 	  info(YEL"Listing directory... \r"NCO);  
 	  fflush(stdout);
 	 
+	   init_filehandler(); 
+	 
 	  /* Count files and do some init  */ 	 
 	  while(set.paths[cpindex] != NULL)
 	  {
@@ -419,18 +424,25 @@ int rmlint_main(void)
 			if(stat(set.paths[cpindex],&buf) == -1) 
 				continue; 
 			
-			list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino,buf.st_nlink);
-			total_files++; 
-			firc++; 
+			if(!regfilter(set.paths[cpindex],set.fpattern))
+			{
+				list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino,buf.st_nlink);
+				total_files++; 
+				firc++; 
+			}
 		}
 		else
 		{
 			/* The path points to a dir - recurse it! */
 			info(RED" => "NCO"Investigating \"%s\"\n",set.paths[cpindex]);
-			total_files += recurse_dir(set.paths[cpindex++]);
+			total_files += recurse_dir(set.paths[cpindex]);
 			closedir(p);
 		}
+		
+		cpindex++;
 	  }
+	  
+	  
 	  if(total_files == 0)
 	  {
 		  warning(RED" => "NCO"No files to search through"RED" --> "NCO"No duplicates\n"); 
@@ -452,6 +464,18 @@ int rmlint_main(void)
 		  
 		  prefilter(); 
 	  }
+	  
+	  if(1)
+	  {
+		  uint32 bfilt = byte_filter(); 
+		  if(bfilt != 0) 
+		  {
+			  info(RED" => "NCO"Bytefiltered %ld files.          \n",bfilt); 
+		  }
+	  }
+	   
+
+	   
 	   
 	  if(set.fingerprint)
 	  {
@@ -463,14 +487,17 @@ int rmlint_main(void)
 			  info(RED" => "NCO"Filtered %ld files, %ld remaining.   \n",fpfilterd, list_getlen()); 
 		  }
 	  }
-	  /* Push filtered files to md5-ToDo list */
-	  build_checksums();
+
 	  
 	  if(set.prefilter)
 	  {
 		  /* Call prefilter again - because through the fpfilter we might get unique sizes again */
 		  prefilter();
 	  }
+
+
+	  /* Push filtered files to md5-ToDo list */
+	  build_checksums();
 	  
 	  /* Now we're nearly done */
 	  info(RED" => "GRE"Almost done!                                                             \r"NCO);
@@ -480,7 +507,6 @@ int rmlint_main(void)
 	  warning("\n");
 	  
 	  /* Finally find double checksums */
-	  init_filehandler(); 
 	  findmatches();
 	  
 	  die(0);

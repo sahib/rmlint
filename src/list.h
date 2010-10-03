@@ -45,10 +45,11 @@ typedef struct iFile
    short plen; 						   /* Length of the path */
    uint32 fsize; 				  	   /* Size of the file (bytes) */
    bool dupflag;				  	   /* Is the file marked as duplicate */ 
+   char se[4]; 
    
    /* This is used to find pointers to the same file */
    ino_t node; 
-   dev_t dev; 
+   dev_t dev;  
 
    /* The file with the most links pointing too is mostly marked as "original" */ 
    nlink_t links; 

@@ -321,7 +321,7 @@ void md5_file(const char *filename, MD5_CTX *mdContext)
 
 
 
-int md5_fingerprint(iFile *file)
+void md5_fingerprint(iFile *file)
 {
 	int bytes = 0;
 	char ret = 0; 
@@ -334,7 +334,7 @@ int md5_fingerprint(iFile *file)
 	if(!pF) 
 	{
 		warning(YEL"Cannot open: "RED"\""NCO"%s"RED"\""NCO"                                    \n",file->path);
-		return -1; 
+		return; 
 	}
 
 	bytes = fread(data,1,FP_BLSIZE,pF); 
@@ -356,9 +356,9 @@ int md5_fingerprint(iFile *file)
 		memcpy(file->fp[1],con.digest,MD5_LEN);
 		ret++;
 	}
-		
-	fclose(pF);
-	return ret; 
+
+	file->fpc = ret; 
+	fclose(pF); 
 }
 
 

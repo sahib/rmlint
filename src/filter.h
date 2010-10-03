@@ -30,5 +30,7 @@ int   recurse_dir(const char *path);
 uint32 build_fingerprint(void);
 void  build_checksums(void);
 void  prefilter(void);
+int regfilter(const char* input, const char *pattern); 
+uint32 byte_filter(void);
 
 #endif

@@ -26,5 +26,6 @@
   
 void findmatches(void);
 void init_filehandler(void); 
+FILE *get_logstream(void); 
 
 #endif

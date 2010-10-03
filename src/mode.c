@@ -45,6 +45,9 @@ uint32 lintsize = 0;
 /* Make the stream "public" */
 FILE *script_out = NULL; 
 
+
+FILE *get_logstream(void)  {  return script_out;  }
+
 static void remfile(const char *path)
 {
 	if(path) 
