@@ -387,6 +387,7 @@ void die(int status)
 }
 
 
+
 /* Have fun reading. ;-) */
 int rmlint_main(void)
 {
@@ -408,7 +409,7 @@ int rmlint_main(void)
 		check_cmd(set.cmd);
 	  
 	  /* Give the user a status line - you will see this two calls more often */
-	  info(YEL"Listing directory... \r"NCO);  
+	  info(YEL"Setting up db...\r"NCO);  
 	  fflush(stdout);
 	 
 	   init_filehandler(); 
@@ -456,6 +457,18 @@ int rmlint_main(void)
 	  if(set.threads > total_files) 
 		set.threads = total_files;
 	  
+	  
+	  
+	  list_msort(); 
+	  
+ 
+	  iFile *b = list_begin(); 
+	  while(b)
+	  {
+		  fprintf(stderr,"FS %ld\n",b->fsize); 
+		  b=b->next; 
+	  }
+	  
 	  if(set.prefilter)
 	  {
 		  /* filter list by sorting unique sizes */
@@ -465,7 +478,7 @@ int rmlint_main(void)
 		  prefilter(); 
 	  }
 	  
-	  if(1)
+	  if(0)
 	  {
 		  uint32 bfilt = byte_filter(); 
 		  if(bfilt != 0) 

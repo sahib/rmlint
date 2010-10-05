@@ -102,7 +102,11 @@ iFile *list_remove(iFile *ptr)
 					
 			ptr->last->next = ptr->next;  
 			ptr = ptr->next; 
-			ptr->last = tmp2; 
+			
+			if(ptr)
+			{
+				ptr->last = tmp2; 
+			}
 			
 			if(tmp->path) free(tmp->path);
 			tmp->path = NULL;
@@ -168,6 +172,113 @@ static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, in
 
 
 
+int cmp(iFile *a, iFile *b) {
+    return a->fsize - b->fsize;
+}
+
+
+
+
+iFile *listsort(iFile *list, int is_circular, int is_double)
+ {
+    iFile *p, *q, *e, *tail, *oldhead;
+    int insize, nmerges, psize, qsize, i;
+
+    /*
+     * Silly special case: if `list' was passed in as NULL, return
+     * NULL immediately.
+     */
+    if (!list)
+	return NULL;
+
+    insize = 1;
+
+    while (1) {
+        p = list;
+	oldhead = list;		       /* only used for circular linkage */
+        list = NULL;
+        tail = NULL;
+
+        nmerges = 0;  /* count number of merges we do in this pass */
+
+        while (p) {
+            nmerges++;  /* there exists a merge to be done */
+            /* step `insize' places along from p */
+            q = p;
+            psize = 0;
+            for (i = 0; i < insize; i++) {
+                psize++;
+		if (is_circular)
+		    q = (q->next == oldhead ? NULL : q->next);
+		else
+		    q = q->next;
+                if (!q) break;
+            }
+
+            /* if q hasn't fallen off end, we have two lists to merge */
+            qsize = insize;
+
+            /* now we have two lists; merge them */
+            while (psize > 0 || (qsize > 0 && q)) {
+
+                /* decide whether next iFile of merge comes from p or q */
+                if (psize == 0) {
+		    /* p is empty; e must come from q. */
+		    e = q; q = q->next; qsize--;
+		    if (is_circular && q == oldhead) q = NULL;
+		} else if (qsize == 0 || !q) {
+		    /* q is empty; e must come from p. */
+		    e = p; p = p->next; psize--;
+		    if (is_circular && p == oldhead) p = NULL;
+		} else if (cmp(p,q) <= 0) {
+		    /* First iFile of p is lower (or same);
+		     * e must come from p. */
+		    e = p; p = p->next; psize--;
+		    if (is_circular && p == oldhead) p = NULL;
+		} else {
+		    /* First iFile of q is lower; e must come from q. */
+		    e = q; q = q->next; qsize--;
+		    if (is_circular && q == oldhead) q = NULL;
+		}
+
+                /* add the next iFile to the merged list */
+		if (tail) {
+		    tail->next = e;
+		} else {
+		    list = e;
+		}
+		if (is_double) {
+		    /* Maintain reverse pointers in a doubly linked list. */
+		    e->last = tail;
+		}
+		tail = e;
+            }
+
+            /* now p has stepped `insize' places along, and q has too */
+            p = q;
+        }
+	if (is_circular) {
+	    tail->next = list;
+	    if (is_double)
+		list->last = tail;
+	} else
+	    tail->next = NULL;
+
+        /* If we have done only one merge, we're finished. */
+        if (nmerges <= 1)   /* allow for nmerges==0, the empty list case */
+            return list;
+
+        /* Otherwise repeat, merging lists twice the size */
+        insize *= 2;
+    }
+}
+
+void list_msort(void)
+{
+	start = listsort(start,0,1); 
+}
+
+
 void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l)
 {
 	iFile *tmp = malloc(sizeof(iFile));
@@ -183,40 +294,16 @@ void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l)
 	else 
 	{
 		/* Find a elem with bigger/same size, and insert tmp before it */
-		iFile *curr = start; 
-		iFile *prev	= start; 
-		while(curr && curr->fsize < s)
-		{
-			prev=curr; 
-			curr=curr->next; 
-		}
+		iFile *prev	= back; 
+	
 
-		if(curr != NULL)
-		{
-			if(prev==curr)
-			{
-				tmp->last = NULL;
-				tmp->next = start; 
-				start->last = tmp; 
-				start=tmp; 
-			}
-			else
-			{
-				tmp->last=prev;
-				tmp->next=curr;
-				curr->last=tmp;
-				prev->next=tmp; 
-			}
-		}
-		else /* New elem is bigger than everything else */
-		{
 			back=tmp; 
 			
 			prev->next=tmp; 
 			
 			tmp->last=prev; 
 			tmp->next=NULL;  
-		}
+		
 	}
 	list_len++;
 }
