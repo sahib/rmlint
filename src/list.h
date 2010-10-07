@@ -60,13 +60,12 @@ typedef struct iFile
 
 } iFile;
 
-void list_msort(void); 
+
+
+iFile *list_sort(int (*cmp)(iFile*,iFile*));
 
 /* Prototypes */
-bool list_isempty(void);
-uint32 list_getlen(void);
 void list_clear(void);
-void list_pop(void);
 void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l);
 iFile *list_end(void);
 iFile *list_begin(void);

@@ -281,6 +281,73 @@ void init_filehandler(void)
 		}
 }
 
+
+
+void findmatches_(void) 
+{
+	iFile *i = list_begin();
+
+	uint32 finds = 0; 
+	char lintbuf[256]; 
+
+	warning(NCO);
+	
+	while(i)
+	{
+		bool p = true; 
+		iFile *j = list_begin();
+		 
+		while(j)
+		{
+			if(j != i && j->dupflag != 1)
+			{
+					if( (!cmp_f(i->md5_digest, j->md5_digest))  &&     /* Same checksum?  */
+					    (i->fsize == j->fsize)	&&					   /* Same size? 	  */ 
+						((set.paranoid)?paranoid(i->path,j->path):1)   /* If we're bothering with paranoid users - Take the gatling! */ 
+					)
+					{
+						if(set.mode == 1)
+						{
+							if(p == true) 
+							{
+								error("= %s\n",i->path); 
+								p=false; 
+							}
+							error("X %s\n",j->path); 
+						}
+						
+						lintsize += j->fsize;
+						
+						handle_item(j->path, i->path, script_out);
+						
+						j->dupflag = true;
+						i->dupflag = true; 
+						finds++; 
+					}	
+			}
+			j = j->next; 
+
+		}
+		if(!p) error("\n"); 
+		i=i->next; 
+	}
+
+
+	size_to_human_readable(lintsize,lintbuf);
+	warning("\nWrote result to "BLU"./"SCRIPT_NAME NCO" -- ");
+	warning("In total "RED"%ld"NCO" duplicate%sfound. ("GRE"%s"NCO")\n", finds, (finds) ? " " : "s ",lintbuf);
+	
+	if(script_out)
+	{
+		fclose(script_out);
+	}
+	
+}
+
+
+
+
+
 void findmatches(void) 
 {
  	iFile *ptr = list_begin();

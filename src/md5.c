@@ -329,8 +329,11 @@ void md5_fingerprint(iFile *file)
 	FILE *pF = fopen(file->path, "rb"); 
 	unsigned char data[FP_BLSIZE]; 
 	MD5_CTX con; 
+
+	if(file->fpc == 1) return; 
+
 	MD5Init (&con);
-				
+	
 	if(!pF) 
 	{
 		warning(YEL"Cannot open: "RED"\""NCO"%s"RED"\""NCO"                                    \n",file->path);

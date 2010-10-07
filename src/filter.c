@@ -146,7 +146,7 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 	}
 	else
 	{
-		error(NCO"    Empty file: %s\n",path);
+	/*	error(NCO"    Empty file: %s\n",path); */
 		fprintf(get_logstream(), "rm %s # empty file\n",path); 
 	}
 	if(flag == FTW_D)
@@ -194,7 +194,6 @@ void prefilter(void)
 {
 	iFile *b = list_begin();
 	uint32 c =  0;
-	uint32 l = list_getlen(); 
 
 	iFile *s,*e; 
 
@@ -251,7 +250,7 @@ void prefilter(void)
 	}
 	if(c != 0)
 	{
-		info(RED" => "NCO"Prefiltered %ld of %ld files.                                        \n",c,l);
+		info(RED" => "NCO"Prefiltered %ld of %ld files.\n",c);
 	}
 }
 
@@ -282,13 +281,13 @@ static int cmp_sebytes(iFile *i, iFile *j)
 }
 
 
+
 uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), const char *filter_name) 
 {
 	iFile *ptr = list_begin();
 	iFile *sub = NULL; 
 	
 	uint32 con = 0;
-	uint32 tol = list_getlen();  
 	
 	while(ptr)
 	{
@@ -314,7 +313,7 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), const c
 
 		if(con % STATUS_UPDATE_INTERVAL == 0) 
 		{
-			info("Filtering by %s "BLU"["NCO"%ld"BLU"|"NCO"%ld"BLU"]"NCO"\r", filter_name ,con,tol); 
+			info("Filtering by %s "BLU"["NCO"%ld"BLU"|"NCO"%ld"BLU"]"NCO"\r", filter_name ,con); 
 			fflush(stdout); 
 		}
 		while(i && i!=ptr)
@@ -400,61 +399,90 @@ char blob(uint32 i)
 		case 7: return ' '; 
 		case 8: return '-'; 
 		case 9: return '|'; 
-		case 10: return '^';
+		case 10:return '^';
 		case 11:return '0'; 
 		default: return 'x'; 
 	}
 }
 
 
+#define THREAD_PACKSIZE 4
+
+static void *cksum_cb(void * vp)
+{
+	iFile *file = (iFile *)vp; 
+	int i = 0; 
+
+	for(; i < THREAD_PACKSIZE && file != NULL; i++)
+	{
+		MD5_CTX con; 
+		md5_file(file->path, &con);
+		memcpy(file->md5_digest,con.digest, MD5_LEN);
+		file=file->next; 
+	}
+	return NULL;
+}
+
+
+static uint32 get_ckfiles(void)
+{
+	uint32 ret=1;
+	iFile *ptr = list_begin();
+	while(ptr)
+	{
+		ret++; 
+		ptr=ptr->next; 
+	}
+	return ret; 
+}
+
+
 void build_checksums(void)
 {
-
-
-	uint32 c = 0; 
-	float perc = 0; 
+	uint32 c=0,d=0; 
 	iFile *ptr = list_begin(); 
-		
+
+	uint32 max_threads = get_ckfiles() / THREAD_PACKSIZE + 1 ; 
+
+	pthread_t *thr = NULL; 
+
 	if(ptr == NULL) 
 	{
 		error(YEL" => "NCO"No files in the list after filtering..\n");
 		error(YEL" => "NCO"This means that no duplicates were found. Exiting!\n"); 
 		die(0);
 	}
-	
+
+	thr = malloc( max_threads *sizeof(pthread_t));
+	memset(thr,0,max_threads); 
 
 	while(ptr)
-	{
-
-		if(c%STATUS_UPDATE_INTERVAL==0)
-		{
-			/* Make the user happy with some progress */
-			perc = (((float)c) / ((float)list_getlen())) * 100.0f; 
-			info("Building checksums.. "GRE"%2.1f"BLU"%% "RED"["NCO"%ld"RED"/"NCO"%ld"RED"]"NCO" - ["BLU"%c"NCO"]  - ["RED"%ld"NCO" Bytes]      \r"NCO, perc,
-							c, list_getlen(), blob(c) , ptr->fsize);
-			fflush(stdout); 
-		}
-		
-		c++;
-		
+	{		
 		if(set.threads != 1)
 		{
 			/* Fill the threading pool with data
 			 * If the pool is full then checksums are build 
 			 * on $tt threads in parallel */
-			fillpool(ptr,c);
+			/*fillpool(ptr,c);*/
 			
+			if(c % THREAD_PACKSIZE == 0)
+			{
+				if(pthread_create(&thr[d++],NULL,cksum_cb,(void*)ptr))
+				{
+					perror("Pthread");
+				}
+				
+			}
+			c++; 
 		}
 		else
 		{	
 			/* If only 1 thread is specified: 
 			 * Run without the overhead of mt.c 
 			 * and call the routines directly */
-			MD5_CTX con;
-			md5_file(ptr->path, &con);
-			memcpy(ptr->md5_digest,con.digest, MD5_LEN); 
+			cksum_cb(ptr); 
 		}
-		
+	
 		/* Neeeeext! */    
 		ptr = ptr->next;
 		
@@ -466,6 +494,20 @@ void build_checksums(void)
 		}
 	}
 
+	for(c=0;c < max_threads && c < d; c++)
+	{
+		if(thr[c])
+		{
+			if(pthread_join(thr[c],NULL)!=0)
+			{
+				perror("Pthread"); 
+			}
+		}
+	}
+
+	if(thr) free(thr); 
+
+	
 }
 
 int recurse_dir(const char *path)

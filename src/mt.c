@@ -36,47 +36,6 @@ iFile **pool = NULL;
 pthread_t *th = NULL;
 
 
-static void *pool_exec(void *vp)
-{
-	iFile *t = (iFile *)vp; 
-	MD5_CTX con; 
-	
-	md5_file(t->path, &con);
-	memcpy(t->md5_digest,con.digest, MD5_LEN); 
-	return NULL;
-}
-
-
-
-void fillpool(iFile *fp, uint32 now)
-{
-	if(!init)
-	{
-		pool = malloc((set.threads+1) * sizeof(iFile)); 
-		th   = malloc((set.threads+1) * sizeof(pthread_t));
-		set.threads = (set.threads > list_getlen()-1) ? list_getlen() : set.threads; 
-		init = true;
-	}
-	
-	pool[c++] = fp; 
-	if(!(now%set.threads) || !(list_getlen()-now)) 
-	{
-		
-		int i;  
-		for(i = 0; i < set.threads; i++)
-			if(pthread_create(&th[i],NULL,pool_exec,(void*)pool[i]))
-				perror(RED"PThread_create"NCO);
-		
-		for(i = 0; i < set.threads; i++) { 
-			if(pthread_join(th[i],NULL))
-				perror(RED"PThread_join"NCO);
-			
-		}
-		
-		c=0;
-	}
-}
-
 void freepool(void)
 {
 	if(pool) free(pool);

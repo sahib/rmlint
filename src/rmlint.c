@@ -34,6 +34,7 @@
 #include "rmlint.h"
 #include "mode.h" 
 #include "filter.h"
+#include "list.h"
 #include "defs.h"
 #include "mt.h"
 
@@ -388,6 +389,31 @@ void die(int status)
 
 
 
+int cmp_sz(iFile *a, iFile *b)
+{
+    return a->fsize - b->fsize;
+}
+
+int cmp_nd(iFile *a, iFile *b)
+{
+	return a->node - b->node; 
+}
+
+
+
+static void print(void)
+{
+	iFile *p = list_begin();
+	fprintf(stdout,"\n----\n"); 
+	while(p)
+	{
+		MDPrintArr(p->md5_digest); 
+		fprintf(stdout," => %s | %ld\n",p->path,p->fsize); 
+		p=p->next; 
+	}
+	fprintf(stdout,"----\n");
+}
+
 /* Have fun reading. ;-) */
 int rmlint_main(void)
 {
@@ -458,27 +484,24 @@ int rmlint_main(void)
 		set.threads = total_files;
 	  
 	  
+	  /* Till thios point the list is unsorted
+	   * The filter alorithms requires the list to be size-sorted, 
+	   * so it can easily filter unique sizes, and build "groups"  
+	   * */
+	  list_sort(cmp_sz);  
 	  
-	  list_msort(); 
-	  
- 
-	  iFile *b = list_begin(); 
-	  while(b)
-	  {
-		  fprintf(stderr,"FS %ld\n",b->fsize); 
-		  b=b->next; 
-	  }
-	  
+	
+	  /* Apply the prefilter and outsort inique sizes */
 	  if(set.prefilter)
 	  {
-		  /* filter list by sorting unique sizes */
 		  info(RED" => "NCO"Applying Prefilter... \r"); 
 		  fflush(stdout);
-		  
+		 
 		  prefilter(); 
 	  }
-	  
-	  if(0)
+
+	   
+	  if(0) /*TODO*/
 	  {
 		  uint32 bfilt = byte_filter(); 
 		  if(bfilt != 0) 
@@ -486,10 +509,7 @@ int rmlint_main(void)
 			  info(RED" => "NCO"Bytefiltered %ld files.          \n",bfilt); 
 		  }
 	  }
-	   
 
-	   
-	   
 	  if(set.fingerprint)
 	  {
 		  /* Go through directories and filter files with a fingerprint */
@@ -497,20 +517,24 @@ int rmlint_main(void)
 		  
 		  if(fpfilterd) 
 		  {
-			  info(RED" => "NCO"Filtered %ld files, %ld remaining.   \n",fpfilterd, list_getlen()); 
+			  info(RED" => "NCO"Filtered %ld files\n",fpfilterd); 
 		  }
 	  }
 
-	  
+	  /* Apply it once more - There might be new unique sizes now */
 	  if(set.prefilter)
 	  {
-		  /* Call prefilter again - because through the fpfilter we might get unique sizes again */
 		  prefilter();
 	  }
 
 
+	  /* The rest of the list is sorted by their inodes -
+	   *  so the HD doesnt have to jump all day. */
+	  list_sort(cmp_nd); 
+
 	  /* Push filtered files to md5-ToDo list */
 	  build_checksums();
+
 	  
 	  /* Now we're nearly done */
 	  info(RED" => "GRE"Almost done!                                                             \r"NCO);
@@ -518,6 +542,11 @@ int rmlint_main(void)
 	  
 	  info("\n\n Result:\n"RED" --------\n"NCO);
 	  warning("\n");
+
+	  list_sort(cmp_sz); 
+
+	  print();
+
 	  
 	  /* Finally find double checksums */
 	  findmatches();
