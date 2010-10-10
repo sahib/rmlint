@@ -44,7 +44,8 @@ typedef struct iFile
    char *path;		  	 			   /* absolute path from working dir */
    short plen; 						   /* Length of the path */
    uint32 fsize; 				  	   /* Size of the file (bytes) */
-   bool dupflag;				  	   /* Is the file marked as duplicate */ 
+   bool filter; 
+   bool dupflag;				  	   /* Is the file marked as duplicate? */ 
    char se[4]; 
    
    /* This is used to find pointers to the same file */
@@ -70,6 +71,6 @@ void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l);
 iFile *list_end(void);
 iFile *list_begin(void);
 iFile *list_remove(iFile *ptr);
-
+uint32 list_len(void) ; 
 
 #endif

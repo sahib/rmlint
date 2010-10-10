@@ -39,7 +39,7 @@
 #include "mode.h"
 #include "defs.h"
 #include "list.h"
-#include "mt.h"
+
 
 uint32 dircount = 0;
 uint32 elems = 0;  
@@ -237,8 +237,6 @@ void prefilter(void)
 		}
 	}
 	
-
-
 	/* If we have more than 2 dirs given, or links may be followd
 	 * we should check if the one is a subset of the another
 	 * and remove path-doubles */
@@ -281,29 +279,20 @@ static int cmp_sebytes(iFile *i, iFile *j)
 }
 
 
-
-uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), const char *filter_name) 
+uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *start, iFile *stop, const char *filter_name)
 {
-	iFile *ptr = list_begin();
-	iFile *sub = NULL; 
-	
-	uint32 con = 0;
-	
-	while(ptr)
-	{
-		iFile *i=ptr,*j=ptr; 
-		uint32 fs = ptr->fsize;
-		bool del = true; 
-		 
-		sub=ptr;
-		 
-		/** Get to **/
-		while(ptr && ptr->fsize == fs) 
-		{
-			(*create)(ptr); 
-			ptr=ptr->next; 
-		}
-		
+    iFile *ptr = start; 
+    iFile *sub = NULL;
+    uint32 con = 0;
+
+    while(ptr&&ptr!=stop)
+    {
+        iFile *i,*j; 
+        int isle_sz = 0; 
+    
+        /* Save a pointer to the start of the isle */
+        sub=ptr;
+
 		if(iinterrupt) 
 		{
 			iinterrupt = 0; 
@@ -311,44 +300,62 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), const c
 			return 0; 
 		}
 
-		if(con % STATUS_UPDATE_INTERVAL == 0) 
+		if(con % STATUS_UPDATE_INTERVAL == 0 && filter_name) 
 		{
-			info("Filtering by %s "BLU"["NCO"%ld"BLU"|"NCO"%ld"BLU"]"NCO"\r", filter_name ,con); 
+			info("Filtering by %s "BLU"["NCO"%ld"BLU"]"NCO"\r", filter_name ,con); 
 			fflush(stdout); 
 		}
-		while(i && i!=ptr)
-		{
-			j=sub; 
-			del=true;
-			
-			while(j && j!=ptr)
-			{
-					if(i==j) 
-					{
-						j=j->next;
-						continue; 
-					}
-					if((*cmp)(i,j))
-					{
-						del = false; 
-						break; 
-					}
-					j = j->next;
-			} 
-			if(del)
-			{
-				i = list_remove(i); 
-				con++; 
-			}
-			else
-			{
-				i=i->next; 
-			}
-		}
-	}
-	return con; 
 
+        /* Find the start of the next isle (== end of current isle) (or NULL) */
+        while(ptr && ptr->fsize == sub->fsize) 
+        {
+            isle_sz++; 
+            ptr->filter = true;
+            (*create)(ptr);
+            ptr=ptr->next; 
+        }
+                
+        i=sub;
+
+        while(i&&i!=ptr)
+        {
+
+          if(i->filter == false)
+          {
+              i=i->next;
+              continue;
+          }
+          
+          j=sub;
+          while(j&&j!=ptr)
+          {
+              if(i!=j)
+              {
+                  if( (*cmp)(i,j) )
+                  {
+                        j->filter=false;
+                        i->filter=false;
+                        break; 
+                  }
+              }
+              j=j->next;
+
+          }
+          if(i->filter)
+          {
+            i=list_remove(i);
+            con++;
+          }
+          else
+          {
+            i=i->next; 
+          }
+        }
+    }
+    return con; 
 }
+
+
 
 
 static int cmp_fingerprints(iFile *a,iFile *b) 
@@ -374,14 +381,82 @@ static int cmp_fingerprints(iFile *a,iFile *b)
 
 uint32 byte_filter(void) 
 {
-	return filter_template(read_sebytes,cmp_sebytes,"Bytecompare"); 
+	return filter_template(read_sebytes,cmp_sebytes,list_begin(),NULL,"Bytecompare"); 
 }
+
 
 
 uint32 build_fingerprint(void)
 {
-	return filter_template(md5_fingerprint, cmp_fingerprints,"Fingerprint"); 
+    /* Use multithreaded fingerprints if not forbidden */
+    if(set.threads != 1)
+    {
+        iFile *p = list_begin();
+        iFile *s=p;
+
+        uint32 fs = p->fsize; 
+        uint32 ret=0;
+        int pacc = 0;
+        int t_id = 0;  
+
+        /* The number of isles in a group */
+        int pac_sz = list_len()/set.threads;
+
+        pthread_t *thr = malloc(sizeof(pthread_t) * set.threads);
+
+        error("Packsize: %d \n",pac_sz);
+        
+        while(p)
+        {
+            if(p->next == NULL) 
+            {
+                /* Filter from s to NULL (== end) -
+                 * this is only one group => do it without pthreads */
+                ret += filter_template(md5_fingerprint, cmp_fingerprints, s,NULL,NULL);
+                break; 
+            }
+
+            /* New group started? */
+            if(fs != p->fsize)
+            {
+                fs=p->fsize;
+                if( (pacc++) > pac_sz)
+                {
+                    /* Filter from s to p (where p is not inspected) */
+                    ret += filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
+
+                    /*
+                    pthread_create(thr[t_id++],NULL,dummy, s&p&ret) 
+                    */
+                    
+                    /* Next islegroup */
+                    pacc=0;
+                    s = p; 
+                }
+            }
+ 
+            p=p->next; 
+        }
+
+        for(pacc=0; pacc < set.threads; pacc++)
+        {
+            
+        }
+        
+        if(thr != NULL)
+        {
+            free(thr);
+            thr = NULL; 
+        }
+        return ret; 
+    }
+    /* If only one thread is wanted just filter from start to end */
+    else
+    {
+        return filter_template(md5_fingerprint, cmp_fingerprints, list_begin(),NULL,"Fingerprint"); 
+    }
 }
+
 
 /** This function is pointless. **/
 char blob(uint32 i)
@@ -405,15 +480,14 @@ char blob(uint32 i)
 	}
 }
 
-
-#define THREAD_PACKSIZE 4
+int pkg_sz; 
 
 static void *cksum_cb(void * vp)
 {
 	iFile *file = (iFile *)vp; 
 	int i = 0; 
 
-	for(; i < THREAD_PACKSIZE && file != NULL; i++)
+	for(; i < pkg_sz && file != NULL; i++)
 	{
 		MD5_CTX con; 
 		md5_file(file->path, &con);
@@ -424,27 +498,18 @@ static void *cksum_cb(void * vp)
 }
 
 
-static uint32 get_ckfiles(void)
-{
-	uint32 ret=1;
-	iFile *ptr = list_begin();
-	while(ptr)
-	{
-		ret++; 
-		ptr=ptr->next; 
-	}
-	return ret; 
-}
-
 
 void build_checksums(void)
 {
-	uint32 c=0,d=0; 
 	iFile *ptr = list_begin(); 
 
-	uint32 max_threads = get_ckfiles() / THREAD_PACKSIZE + 1 ; 
-
+    uint32 c=0,d=0; 
+	uint32 max_threads; 
 	pthread_t *thr = NULL; 
+
+    pkg_sz = (list_len() / set.threads) > 2 ? (list_len() / set.threads) : 2; 
+    max_threads = list_len() / pkg_sz + 1 ;
+    
 
 	if(ptr == NULL) 
 	{
@@ -453,9 +518,11 @@ void build_checksums(void)
 		die(0);
 	}
 
-	thr = malloc( max_threads *sizeof(pthread_t));
-	memset(thr,0,max_threads); 
-
+	if(set.threads != 1)
+	{
+		thr = malloc( max_threads *sizeof(pthread_t));
+		memset(thr,0,max_threads); 
+	}
 	while(ptr)
 	{		
 		if(set.threads != 1)
@@ -465,13 +532,12 @@ void build_checksums(void)
 			 * on $tt threads in parallel */
 			/*fillpool(ptr,c);*/
 			
-			if(c % THREAD_PACKSIZE == 0)
+			if(c % pkg_sz == 0)
 			{
 				if(pthread_create(&thr[d++],NULL,cksum_cb,(void*)ptr))
 				{
 					perror("Pthread");
 				}
-				
 			}
 			c++; 
 		}
@@ -494,20 +560,22 @@ void build_checksums(void)
 		}
 	}
 
-	for(c=0;c < max_threads && c < d; c++)
+	if(set.threads != 1)
 	{
-		if(thr[c])
+		/* Make sure threads get joined */
+		for(c=0;c < max_threads && c < d; c++)
 		{
-			if(pthread_join(thr[c],NULL)!=0)
+			if(thr[c])
 			{
-				perror("Pthread"); 
+				if(pthread_join(thr[c],NULL)!=0)
+				{
+					perror("Pthread"); 
+				}
 			}
 		}
+
+		if(thr) free(thr); 
 	}
-
-	if(thr) free(thr); 
-
-	
 }
 
 int recurse_dir(const char *path)

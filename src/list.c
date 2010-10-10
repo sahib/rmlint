@@ -9,6 +9,10 @@
 iFile *start = NULL; /* A pointer to the first element in the list */
 iFile *back  = NULL; /* A pointer to the last  element in the list */
 
+/** Length of list stored here. This not needed for the implementation itself,
+ * but for deciding how may threds to spawn / progress and stuff **/
+uint32 len; 
+
 /** list_begin() - returns pointer to start of list **/
 iFile *list_begin(void) { return start; }
 
@@ -17,6 +21,9 @@ iFile *list_end(void) { return back; }
 
 /** Checks if list is empty - Return True if empty. **/
 bool list_isempty(void) { return (start) ? false : true; } 
+
+/** Make len visible to other files **/
+uint32 list_len(void) { return len; }
 
 
 
@@ -46,76 +53,39 @@ void list_clear(void)
 			start = NULL;  
 		}
 	}
+    len=0; 
 	start = NULL;
 }
 
+
+
 iFile *list_remove(iFile *ptr)
 {
-	if(start)
-	{
-		if(ptr == start) /* We're at the first element */
-		{		
-			iFile *tmp = ptr->next; 
-			if(tmp == NULL) 
-			{
-				/* Make list empty */
-				free(start); 
-				start = NULL;
-				back = NULL;
-				return NULL;
-			}
-			/* Free the element */
-			tmp->last = NULL;
-			
-			if(start->path) free(start->path);
-			start->path = NULL;
-			
-			free(start); 
-			start = tmp; 
+    iFile *p,*n; 
+    
+    if(ptr==NULL)
+        return NULL; 
 
-			return start; 
-		}
-		else if(ptr == back)
-		{
-			iFile *tmp = back->last;
-			iFile *tmp2 = back; 
-			 
-			tmp->next = NULL; 
-			tmp2  = back; 
-			back = tmp; 
-			
-			if(tmp2->path) free(tmp2->path);
-			tmp2->path = NULL;
-			
-			free(tmp2); 
-		}
-		else
-		{ 
-			iFile *tmp  = ptr;
-			iFile *tmp2 = ptr->last; 
-					
-			ptr->last->next = ptr->next;  
-			ptr = ptr->next; 
-			
-			if(ptr)
-			{
-				ptr->last = tmp2; 
-			}
-			
-			if(tmp->path) free(tmp->path);
-			tmp->path = NULL;
-			
-			free(tmp); 
-			tmp = NULL;
-					
-			return ptr; 
-		}
-	}
-
-	return NULL; 
+    p=ptr->last;
+    n=ptr->next;
+    if(p&&n)
+    {
+        p->next = n;
+        n->last = p;
+    }
+    else if(p&&!n)
+    {
+        p->next=NULL;
+        back=p; 
+    }
+    else if(!p&&n)
+    {
+        n->last=NULL;
+        start=n; 
+    }
+    len--; 
+    return n; 
 }
-
-
 
 
 static void list_cleardigest(unsigned char* dig) 
@@ -138,6 +108,7 @@ static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, in
 	  pointer->links = l; 
       pointer->fsize = fs;
       pointer->dupflag = false;
+      pointer->filter = true; 
       pointer->fpc = 0; 
       list_cleardigest(pointer->md5_digest);
 }
@@ -255,7 +226,8 @@ void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l)
 		tmp->next=NULL;
 		tmp->last=NULL;
 		start=tmp;
-		back=tmp; 
+		back=tmp;
+        len = 1; 
 	}
 	else 
 	{
@@ -263,8 +235,8 @@ void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l)
 		back=tmp; 
 		prev->next=tmp; 	
 		tmp->last=prev; 
-		tmp->next=NULL;  
-		
+		tmp->next=NULL;
+        len++; 
 	}
 }
 

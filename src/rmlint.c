@@ -36,7 +36,7 @@
 #include "filter.h"
 #include "list.h"
 #include "defs.h"
-#include "mt.h"
+ 
 
 /**
  * ToDo: 
@@ -361,7 +361,6 @@ int  get_cpindex(void)
 void die(int status)
 {
 	/* Free mem */
-	freepool(); 
 	list_clear();
 	
 	if(use_cwd) 
@@ -510,6 +509,7 @@ int rmlint_main(void)
 		  }
 	  }
 
+
 	  if(set.fingerprint)
 	  {
 		  /* Go through directories and filter files with a fingerprint */
@@ -545,9 +545,6 @@ int rmlint_main(void)
 
 	  list_sort(cmp_sz); 
 
-	  print();
-
-	  
 	  /* Finally find double checksums */
 	  findmatches();
 	  
