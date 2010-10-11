@@ -43,10 +43,10 @@
  * -man page / README / updated help 
  * - some comments.. clean up..
  * - gettext, to translate msgs   -- on ice, because of gettext being crap
- * - pusblish. 
- * - --exclude option and --nohide
- * make filter_template() pre sort by inode and dev per isle 
- * - print hashes()
+ * - Review threading stuff and limit threads 
+ * - pusblish.
+ * - crappy regex.. :(
+ * - make filter_template() pre sort by inode and dev per isle 
  * - make docs be docs.  
  **/
 
@@ -122,6 +122,18 @@ void info(const char* format, ...)
 	  va_start (args, format);
 	  vfprintf (stdout, format, args);
 	  va_end (args);
+	}
+}
+
+void status(const char* format, ...)
+{
+	if(set.verbosity > 2)
+	{
+	  va_list args;
+	  va_start (args, format);
+	  vfprintf (stdout, format, args);
+	  va_end (args);
+      fflush(stdout);
 	}
 }
 
@@ -445,12 +457,11 @@ int rmlint_main(void)
 			if(stat(set.paths[cpindex],&buf) == -1) 
 				continue; 
 			
-			if(!regfilter(set.paths[cpindex],set.fpattern))
-			{
+
 				list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino,buf.st_nlink);
 				total_files++; 
 				firc++; 
-			}
+			
 		}
 		else
 		{
@@ -470,14 +481,11 @@ int rmlint_main(void)
 		  warning(RED" => "NCO"No files to search through"RED" --> "NCO"No duplicates\n"); 
 		  die(0);
 	  }
-	/*
-	  info(RED" => "NCO"Using %d thread%c.\n", set.threads, (set.threads != 1) ? 's' : ' '); 
-	*/ 
-	  info(RED" => "NCO"In total %ld usable files.\r", total_files); 
-	  fflush(stdout); 
+
+	  status(RED" => "NCO"In total %ld usable files.\r", total_files); 
         
-	if(set.threads > total_files) 
-		set.threads = total_files;
+	  if(set.threads > total_files) 
+		  set.threads = total_files;
 	  
 	  
 	  /* Till thios point the list is unsorted
@@ -490,13 +498,11 @@ int rmlint_main(void)
 	  /* Apply the prefilter and outsort inique sizes */
 	  if(set.prefilter)
 	  {
-		  info(RED" => "NCO"Applying Prefilter... \r"); 
-		  fflush(stdout);
-		 
+		  status(RED" => "NCO"Applying Prefilter... \r"); 
 		  prefilter(); 
 	  }
 
-	   
+
 	  if(set.fingerprint)
 	  {
 		  /* Go through directories and filter files with a fingerprint */
@@ -514,7 +520,6 @@ int rmlint_main(void)
 		  prefilter();
 	  }
 
-
 	  /* The rest of the list is sorted by their inodes -
 	   *  so the HD doesnt have to jump all day. */
 	  list_sort(cmp_nd); 
@@ -524,12 +529,8 @@ int rmlint_main(void)
 
 	  
 	  /* Now we're nearly done */
-	  info(RED" => "GRE"Almost done!                                                             \r"NCO);
-	  fflush(stdout); 
-/*	  
-	  info("\n\n Result:\n"RED" --------\n"NCO);
-	  warning("\n");
-*/
+	  status(RED" => "GRE"Almost done!                                                             \r"NCO);
+
 	  list_sort(cmp_sz); 
 
 	  /* Finally find double checksums */

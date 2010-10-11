@@ -28,10 +28,11 @@ CP=cp
 CC=gcc
  
 WARN=-ansi -Wall -pedantic 
-OPTI= -march=native -g -finline-functions  -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+OPTI= -march=native -s -O3 -finline-functions
+TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a
 CFLAGS=-c -pipe $(OPTI) $(WARN)
 
-LDFLAGS=-lpthread -L tcmalloc/libtcmalloc_minimal.a
+LDFLAGS=-lpthread 
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \

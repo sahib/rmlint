@@ -132,14 +132,14 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 		error(RED"Bad symlink: %s\n"NCO,path);
 		fprintf(get_logstream(),"rm %s #bad link\n",path); 
 	}	
-	if(ptr->st_size != 0) 
+	if(path && ptr->st_size != 0) 
 	{
 		if(flag == FTW_F && ptr->st_rdev == 0)
 		{
 			if(!regfilter(path, set.fpattern))
 			{
-				dircount++; 
-				list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
+                    dircount++; 
+                    list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
 			}
 			return FTW_CONTINUE; 
 		}	
@@ -260,6 +260,8 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
     iFile *sub = NULL;
     uint32 con = 0;
 
+    if(start && stop)
+    error("From %s to %s\n\n\n",start->path,stop->path); 
 
     while(ptr&&ptr!=stop)
     {
@@ -283,10 +285,9 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
 		}
 
         /* Find the start of the next isle (== end of current isle) (or NULL) */
-        while(ptr && ptr->fsize == sub->fsize) 
+        while(ptr && ptr->fsize == sub->fsize && ptr != stop) 
         {
-        
-	    isle_sz++; 
+            isle_sz++; 
             ptr->filter = true;
             (*create)(ptr);
             ptr=ptr->next; 
@@ -337,8 +338,6 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
 static int cmp_fingerprints(iFile *a,iFile *b) 
 {
 	int i,j; 
-	if(!(a&&b))
-		return 0;
 	
 	for(i=0;i<2;i++) 
 	{ 
@@ -388,7 +387,8 @@ uint32 build_fingerprint(void)
 
         pthread_t *thr = malloc(sizeof(pthread_t) * set.threads);
 
-        /*error("Packsize: %d \n",pac_sz); */
+        error("Packsize: %d                                       \n",pac_sz);
+        error("Length: %ld                  \n",list_len());
         
         while(p)
         {
@@ -406,16 +406,19 @@ uint32 build_fingerprint(void)
                 fs=p->fsize;
                 if( (pacc++) > pac_sz)
                 {
-		    pt_capsule cap; 
-		    cap.start = s; 
-		    cap.stop  = p; 
+                    pt_capsule cap; 
+                    cap.start = s; 
+                    cap.stop  = p; 
 
                     /* Filter from s to p (where p is not inspected) 
                     ret += filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
-			*/ 
+			*/
+            /*
+                    ret += filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
+            */
                     
                     if(pthread_create(&thr[t_id++],NULL, pt_fingerprint, (void*)&cap)) 
-			perror("Pthread"); 
+                        perror("Pthread"); 
                     
                     
                     /* Next islegroup */
@@ -427,9 +430,11 @@ uint32 build_fingerprint(void)
             p=p->next; 
         }
 
-        for(pacc=0; pacc < set.threads; pacc++)
+        /* Join threads before continue */
+        for(pacc=0; pacc < t_id; pacc++)
         {
-            
+            if(pthread_join(thr[pacc],NULL))
+                perror("Pthread_join"); 
         }
         
         if(thr != NULL)
@@ -469,7 +474,7 @@ char blob(uint32 i)
 	}
 }
 
-/* Global, Sorry. */
+/* Global, Sorry =) */
 int pkg_sz; 
 
 static void *cksum_cb(void * vp)
