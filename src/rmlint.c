@@ -44,11 +44,8 @@
  * - some comments.. clean up..
  * - gettext, to translate msgs   -- on ice, because of gettext being crap
  * - pusblish. 
- * - - list_sort() - quicksort 
- * - allow files as input 
  * - --exclude option and --nohide
- * - better prefilter (does not handle start and end of list) 
- * - mt.c is some overhead - in build_checksum we already know the number of files. 
+ * make filter_template() pre sort by inode and dev per isle 
  * - print hashes()
  * - make docs be docs.  
  **/
@@ -88,7 +85,6 @@ handled seperate in future versions.
 
 bool do_exit = false; 
 bool use_cwd = false; 
-char *mode_string = NULL; 
 int  cpindex = 0; 
 
 /* If we abort abnormally we'd like to set the color back */
@@ -283,7 +279,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 						error("Available modes are: ask | list | link |noask | move\n"); 
 						return 0; 
 					}
-					mode_string = optarg; 
 				 
 				 break;
 				 default: return 0;
@@ -301,7 +296,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 			else
 			{
 				close(p);
-				sets->paths		  = realloc(sets->paths,sizeof(char*)*(lp+2));
+				sets->paths	  = realloc(sets->paths,sizeof(char*)*(lp+2));
 				sets->paths[lp++] = argv[optind];  
 				sets->paths[lp  ] = NULL; 
 			}		
@@ -417,8 +412,8 @@ static void print(void)
 int rmlint_main(void)
 {
   uint32 total_files = 0;
-  uint32 fpfilterd    = 0; 
-  uint32 firc		= 0;
+  uint32 fpfilterd   = 0; 
+  uint32 firc	     = 0;
   
   int retval = setjmp(place);
   if(do_exit != true)
@@ -460,7 +455,8 @@ int rmlint_main(void)
 		else
 		{
 			/* The path points to a dir - recurse it! */
-			info(RED" => "NCO"Investigating \"%s\"\n",set.paths[cpindex]);
+			info(RED" => "NCO"Investigating \"%s\"\r",set.paths[cpindex]);
+			fflush(stdout);
 			total_files += recurse_dir(set.paths[cpindex]);
 			closedir(p);
 		}
@@ -474,18 +470,19 @@ int rmlint_main(void)
 		  warning(RED" => "NCO"No files to search through"RED" --> "NCO"No duplicates\n"); 
 		  die(0);
 	  }
+	/*
 	  info(RED" => "NCO"Using %d thread%c.\n", set.threads, (set.threads != 1) ? 's' : ' '); 
-	  info(RED" => "NCO"In total %ld usable files.\n", total_files); 
-	  info(RED" => "NCO"Using mode: \"%s\".\n", (mode_string) ? mode_string : "list"); 
-	 
-	  /* Set threads to be less than the number of files */
-	  if(set.threads > total_files) 
+	*/ 
+	  info(RED" => "NCO"In total %ld usable files.\r", total_files); 
+	  fflush(stdout); 
+        
+	if(set.threads > total_files) 
 		set.threads = total_files;
 	  
 	  
 	  /* Till thios point the list is unsorted
 	   * The filter alorithms requires the list to be size-sorted, 
-	   * so it can easily filter unique sizes, and build "groups"  
+	   * so it can easily filter unique sizes, and build "groupisles"  
 	   * */
 	  list_sort(cmp_sz);  
 	  
@@ -500,16 +497,6 @@ int rmlint_main(void)
 	  }
 
 	   
-	  if(0) /*TODO*/
-	  {
-		  uint32 bfilt = byte_filter(); 
-		  if(bfilt != 0) 
-		  {
-			  info(RED" => "NCO"Bytefiltered %ld files.          \n",bfilt); 
-		  }
-	  }
-
-
 	  if(set.fingerprint)
 	  {
 		  /* Go through directories and filter files with a fingerprint */
@@ -517,10 +504,10 @@ int rmlint_main(void)
 		  
 		  if(fpfilterd) 
 		  {
-			  info(RED" => "NCO"Filtered %ld files\n",fpfilterd); 
+			  info(RED" => "NCO"Filtered %ld files, %ld still in line.\r",fpfilterd, list_len());
+			  fflush(stdout);  
 		  }
 	  }
-
 	  /* Apply it once more - There might be new unique sizes now */
 	  if(set.prefilter)
 	  {
@@ -539,10 +526,10 @@ int rmlint_main(void)
 	  /* Now we're nearly done */
 	  info(RED" => "GRE"Almost done!                                                             \r"NCO);
 	  fflush(stdout); 
-	  
+/*	  
 	  info("\n\n Result:\n"RED" --------\n"NCO);
 	  warning("\n");
-
+*/
 	  list_sort(cmp_sz); 
 
 	  /* Finally find double checksums */

@@ -88,34 +88,35 @@ iFile *list_remove(iFile *ptr)
 }
 
 
-static void list_cleardigest(unsigned char* dig) 
-{
-	int i = 0; 
-	for(; i < MD5_LEN; i++)
-		dig[i] = 0; 
-}
-
-
+/* Init of the element */
 static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, ino_t node, nlink_t l) 
 {
-	  /* Fill data */
+      /* Fill data */
       pointer->plen = strlen(n) + 2; 
       pointer->path = malloc(pointer->plen); 
       strncpy(pointer->path, n, pointer->plen);
 
-	  pointer->node = node;
-	  pointer->dev = dev; 
-	  pointer->links = l; 
+      pointer->node = node;
+      pointer->dev = dev; 
       pointer->fsize = fs;
       pointer->dupflag = false;
       pointer->filter = true; 
-      pointer->fpc = 0; 
-      list_cleardigest(pointer->md5_digest);
+      
+      /* Make sure the fp arrays are filled with 0 
+	 This is important if a file has a smaller size 
+	 than the size read in for the fingerprint - 
+ 	 The backsum might not be calculated then, what might
+ 	 cause inaccurate results. 
+	*/
+      memset(pointer->fp[0],0,MD5_LEN);
+      memset(pointer->fp[1],0,MD5_LEN);
+
+      /* Clear the md5 digest array too */
+      memset(pointer->md5_digest,0,MD5_LEN);
 }
 
 
-
-
+/* Sorts the list after the criteria specified by the (*cmp) callback  */
 iFile *list_sort(int (*cmp)(iFile*,iFile*))
  {
     iFile *p, *q, *e, *tail;
@@ -149,8 +150,8 @@ iFile *list_sort(int (*cmp)(iFile*,iFile*))
             {
                 psize++;
 
-				q = q->next;
-				if (!q) break;
+		q = q->next;
+		if (!q) break;
             }
 
             /* if q hasn't fallen off end, we have two lists to merge */

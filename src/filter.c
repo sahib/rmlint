@@ -248,34 +248,9 @@ void prefilter(void)
 	}
 	if(c != 0)
 	{
-		info(RED" => "NCO"Prefiltered %ld of %ld files.\n",c);
+		info(RED" => "NCO"Prefiltered %ld, %ld still in line..\r",c,list_len());
+		fflush(stdout);
 	}
-}
-
-static void read_sebytes(iFile *file)
-{
-	FILE *a = fopen(file->path,"rb"); 
-	if(a) 
-	{
-		file->se[0]=fgetc(a);
-		file->se[1]=fgetc(a);
-		fseek(a,-2,SEEK_END);
-		file->se[2]=fgetc(a); 
-		file->se[3]=fgetc(a); 
-		fclose(a); 
-	}
-}
-
-
-static int cmp_sebytes(iFile *i, iFile *j) 
-{
-	if((i->se[0]==j->se[0])&&
-	   (i->se[1]==j->se[1])&&
-	   (i->se[2]==j->se[2])&&
-	   (i->se[3]==j->se[3]) )
-	    return 1;
-
-	return 0; 
 }
 
 
@@ -284,6 +259,7 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
     iFile *ptr = start; 
     iFile *sub = NULL;
     uint32 con = 0;
+
 
     while(ptr&&ptr!=stop)
     {
@@ -296,7 +272,7 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
 		if(iinterrupt) 
 		{
 			iinterrupt = 0; 
-			sub->fpc = 42;
+			sub->filter = 42;
 			return 0; 
 		}
 
@@ -309,7 +285,8 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
         /* Find the start of the next isle (== end of current isle) (or NULL) */
         while(ptr && ptr->fsize == sub->fsize) 
         {
-            isle_sz++; 
+        
+	    isle_sz++; 
             ptr->filter = true;
             (*create)(ptr);
             ptr=ptr->next; 
@@ -356,8 +333,7 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
 }
 
 
-
-
+/* Compares the "fp" array of the iFiles a and b */ 
 static int cmp_fingerprints(iFile *a,iFile *b) 
 {
 	int i,j; 
@@ -377,15 +353,23 @@ static int cmp_fingerprints(iFile *a,iFile *b)
 	return 1; 
 }
 
-/*** Calling filter_template() ***/
 
-uint32 byte_filter(void) 
+/* Just exists to pass start/stop to threads */
+typedef struct
 {
-	return filter_template(read_sebytes,cmp_sebytes,list_begin(),NULL,"Bytecompare"); 
+	iFile *start;
+	iFile *stop;
+ 
+} pt_capsule; 
+
+/* Called by build_fingerprint on own thread */
+static void* pt_fingerprint (void* v)
+{
+	pt_capsule *t = v;  
+	filter_template(md5_fingerprint, cmp_fingerprints, t->start, t->stop, NULL); 
+	return NULL; 
 }
-
-
-
+	
 uint32 build_fingerprint(void)
 {
     /* Use multithreaded fingerprints if not forbidden */
@@ -404,7 +388,7 @@ uint32 build_fingerprint(void)
 
         pthread_t *thr = malloc(sizeof(pthread_t) * set.threads);
 
-        error("Packsize: %d \n",pac_sz);
+        /*error("Packsize: %d \n",pac_sz); */
         
         while(p)
         {
@@ -422,12 +406,17 @@ uint32 build_fingerprint(void)
                 fs=p->fsize;
                 if( (pacc++) > pac_sz)
                 {
-                    /* Filter from s to p (where p is not inspected) */
-                    ret += filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
+		    pt_capsule cap; 
+		    cap.start = s; 
+		    cap.stop  = p; 
 
-                    /*
-                    pthread_create(thr[t_id++],NULL,dummy, s&p&ret) 
-                    */
+                    /* Filter from s to p (where p is not inspected) 
+                    ret += filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
+			*/ 
+                    
+                    if(pthread_create(&thr[t_id++],NULL, pt_fingerprint, (void*)&cap)) 
+			perror("Pthread"); 
+                    
                     
                     /* Next islegroup */
                     pacc=0;
@@ -480,6 +469,7 @@ char blob(uint32 i)
 	}
 }
 
+/* Global, Sorry. */
 int pkg_sz; 
 
 static void *cksum_cb(void * vp)
@@ -501,11 +491,11 @@ static void *cksum_cb(void * vp)
 
 void build_checksums(void)
 {
-	iFile *ptr = list_begin(); 
+   iFile *ptr = list_begin(); 
 
     uint32 c=0,d=0; 
-	uint32 max_threads; 
-	pthread_t *thr = NULL; 
+    uint32 max_threads; 
+    pthread_t *thr = NULL; 
 
     pkg_sz = (list_len() / set.threads) > 2 ? (list_len() / set.threads) : 2; 
     max_threads = list_len() / pkg_sz + 1 ;
@@ -520,19 +510,15 @@ void build_checksums(void)
 
 	if(set.threads != 1)
 	{
-		thr = malloc( max_threads *sizeof(pthread_t));
+		thr = alloca( max_threads *sizeof(pthread_t));
 		memset(thr,0,max_threads); 
 	}
 	while(ptr)
-	{		
+	{	
+		ptr->dupflag = 0;	
 		if(set.threads != 1)
-		{
-			/* Fill the threading pool with data
-			 * If the pool is full then checksums are build 
-			 * on $tt threads in parallel */
-			/*fillpool(ptr,c);*/
-			
-			if(c % pkg_sz == 0)
+		{	
+			if(c % pkg_sz == 0 || c == 0)
 			{
 				if(pthread_create(&thr[d++],NULL,cksum_cb,(void*)ptr))
 				{
@@ -549,13 +535,13 @@ void build_checksums(void)
 			cksum_cb(ptr); 
 		}
 	
-		/* Neeeeext! */    
+		/*  Neeeeext! */    
 		ptr = ptr->next;
 		
 		/* The user told us that we have to hate him now. */
 		if(iinterrupt)
 		{
-			 ptr->fpc = 42;
+			 ptr->filter = 42;
 			 break;
 		}
 	}
@@ -573,8 +559,6 @@ void build_checksums(void)
 				}
 			}
 		}
-
-		if(thr) free(thr); 
 	}
 }
 

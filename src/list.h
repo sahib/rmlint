@@ -31,29 +31,24 @@
 #include "defs.h"
 
 
-typedef short bool;
+typedef char bool;
 #define false ( 0)
 #define true  (!0)
 
 
 typedef struct iFile  
 {
-   unsigned char md5_digest[MD5_LEN];  /* md5sum of the file */
-   unsigned char fp[2][MD5_LEN]; 	   /* A short fingerprint of a file - start and back */
-   char fpc; 						   /* Number of fingerprints build */
-   char *path;		  	 			   /* absolute path from working dir */
-   short plen; 						   /* Length of the path */
-   uint32 fsize; 				  	   /* Size of the file (bytes) */
-   bool filter; 
-   bool dupflag;				  	   /* Is the file marked as duplicate? */ 
-   char se[4]; 
+   unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
+   unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
+   char *path;		  	        /* absolute path from working dir */
+   short plen; 				/* Length of the path */
+   uint32 fsize; 		        /* Size of the file (bytes) */
+   bool filter; 			/* Uhm? */
+   bool dupflag;			/* Is the file marked as duplicate? */ 
    
    /* This is used to find pointers to the same file */
    ino_t node; 
    dev_t dev;  
-
-   /* The file with the most links pointing too is mostly marked as "original" */ 
-   nlink_t links; 
 
    /* Pointer to next element */
    struct iFile *next;

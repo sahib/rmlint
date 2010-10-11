@@ -324,13 +324,13 @@ void md5_file(const char *filename, MD5_CTX *mdContext)
 void md5_fingerprint(iFile *file)
 {
 	int bytes = 0;
-	char ret = 0; 
+ 
 	  
 	FILE *pF = fopen(file->path, "rb"); 
 	unsigned char data[FP_BLSIZE]; 
 	MD5_CTX con; 
 
-	if(file->fpc == 1) return; 
+	if(file->dupflag == 1) return; 
 
 	MD5Init (&con);
 	
@@ -346,10 +346,9 @@ void md5_fingerprint(iFile *file)
 		MD5Update (&con, data, bytes);
 		MD5Final (&con);
 
-		memcpy(file->fp[0],con.digest,MD5_LEN);
-		ret++; 
+		memcpy(file->fp[0],con.digest,MD5_LEN); 
 	}
-	fseek(pF,-FP_BLSIZE,SEEK_END);
+	fseek(pF,FP_BLSIZE,SEEK_END);
 	bytes = fread(data,1,FP_BLSIZE,pF);
 	if(bytes)
 	{
@@ -357,10 +356,10 @@ void md5_fingerprint(iFile *file)
 		MD5Final (&con);
 
 		memcpy(file->fp[1],con.digest,MD5_LEN);
-		ret++;
+		MDPrintArr(con.digest); 
 	}
 
-	file->fpc = ret; 
+	file->dupflag = 1; 
 	fclose(pF); 
 }
 

@@ -28,14 +28,13 @@ CP=cp
 CC=gcc
  
 WARN=-ansi -Wall -pedantic 
-OPTI= -march=native -s -Os -finline-functions  -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+OPTI= -march=native -g -finline-functions  -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 CFLAGS=-c -pipe $(OPTI) $(WARN)
 
 LDFLAGS=-lpthread -L tcmalloc/libtcmalloc_minimal.a
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \
-	$(SOURCEDIR)/mt.c \
 	$(SOURCEDIR)/filter.c \
 	$(SOURCEDIR)/mode.c \
 	$(SOURCEDIR)/list.c \

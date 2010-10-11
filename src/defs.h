@@ -55,11 +55,6 @@
 
 #define STATUS_UPDATE_INTERVAL 5
 
-/**
- * Calculates the abolsute value
- * This macro was shamelessly taken 
- * from the glib. =)
- **/ 
  
 #define ABS(a)	(((a) < 0) ? -(a) : (a))
 

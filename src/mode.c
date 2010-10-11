@@ -365,7 +365,7 @@ void findmatches(void)
 	 
 		sub=ptr;
 	 
-		if(ptr->fpc == 42) 
+		if(ptr->filter == 42) 
 		{
 			break; 
 		}
