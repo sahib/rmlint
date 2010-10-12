@@ -55,6 +55,7 @@ void list_clear(void)
 	}
     len=0; 
 	start = NULL;
+	back = NULL;
 }
 
 

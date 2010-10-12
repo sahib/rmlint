@@ -260,9 +260,8 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
     iFile *sub = NULL;
     uint32 con = 0;
 
-    if(start && stop)
-    error("From %s to %s\n\n\n",start->path,stop->path); 
 
+    /* Start with start iterate to stop */
     while(ptr&&ptr!=stop)
     {
         iFile *i,*j; 
@@ -319,6 +318,7 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
               j=j->next;
 
           }
+/*
           if(i->filter)
           {
             i=list_remove(i);
@@ -328,6 +328,8 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
           {
             i=i->next; 
           }
+*/
+	 i=i->next;
         }
     }
     return con; 
@@ -371,6 +373,8 @@ static void* pt_fingerprint (void* v)
 	
 uint32 build_fingerprint(void)
 {
+    iFile *rem;
+
     /* Use multithreaded fingerprints if not forbidden */
     if(set.threads != 1)
     {
@@ -386,10 +390,11 @@ uint32 build_fingerprint(void)
         int pac_sz = list_len()/set.threads;
 
         pthread_t *thr = malloc(sizeof(pthread_t) * set.threads);
-
+	 
+/*
         error("Packsize: %d                                       \n",pac_sz);
         error("Length: %ld                  \n",list_len());
-        
+*/        
         while(p)
         {
             if(p->next == NULL) 
@@ -420,7 +425,8 @@ uint32 build_fingerprint(void)
                     if(pthread_create(&thr[t_id++],NULL, pt_fingerprint, (void*)&cap)) 
                         perror("Pthread"); 
                     
-                    
+		    error("Launxhin thread #%d\n",t_id);        		
+            
                     /* Next islegroup */
                     pacc=0;
                     s = p; 
@@ -449,6 +455,20 @@ uint32 build_fingerprint(void)
     {
         return filter_template(md5_fingerprint, cmp_fingerprints, list_begin(),NULL,"Fingerprint"); 
     }
+
+    /* Remove flagged files */
+    rem = list_begin();
+    while(rem)
+    {
+       if(rem->filter==false)
+       {
+         rem=rem->next; 
+       }
+       else
+       {
+	 rem=list_remove(rem); 
+       }       
+    }    
 }
 
 
@@ -554,7 +574,7 @@ void build_checksums(void)
 	if(set.threads != 1)
 	{
 		/* Make sure threads get joined */
-		for(c=0;c < max_threads && c < d; c++)
+		for(c=0;c < d; c++)
 		{
 			if(thr[c])
 			{
@@ -569,6 +589,7 @@ void build_checksums(void)
 
 int recurse_dir(const char *path)
 {
+  /* Set options */
   int flags = FTW_ACTIONRETVAL; 
   if(!set.followlinks) 
 	flags |= FTW_PHYS;
@@ -579,6 +600,7 @@ int recurse_dir(const char *path)
   /* Handle SIGINT */
   signal(SIGINT, interrupt); 
 
+  /* Start recurse */ 
   if( nftw(path, eval_file, _XOPEN_SOURCE, flags) == -1)
   {
     warning("nftw() failed with: %s\n", strerror(errno));

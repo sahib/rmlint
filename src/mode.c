@@ -87,7 +87,7 @@ static int paranoid(const char *p1, const char *p2)
 	}
 
 	/* If byte by byte was succesful print a blue "x" */ 
-	warning(BLU"x\t"NCO);
+	warning(BLU"x "NCO);
 	fclose(f1);
 	fclose(f2); 
 	return 1; 
@@ -331,7 +331,25 @@ void findmatches_(void)
 		if(!p) error("\n"); 
 		i=i->next; 
 	}
-
+	
+	/* Make sure only dups are left in the list. */
+    i = list_begin(); 
+    if(i==NULL) puts("huh?");
+    
+    
+    while(i) 
+    {
+		if(i->dupflag == false)
+		{
+			puts("lala");
+			i=list_remove(i);
+		}
+		else
+		{
+			puts(i->path);
+			i=i->next; 
+		}
+	}
 
 	size_to_human_readable(lintsize,lintbuf);
 	warning("\nWrote result to "BLU"./"SCRIPT_NAME NCO" -- ");
@@ -343,9 +361,6 @@ void findmatches_(void)
 	}
 	
 }
-
-
-
 
 
 void findmatches(void) 
