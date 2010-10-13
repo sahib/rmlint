@@ -63,7 +63,7 @@
  * Setting it lower will improve perofrmance, but may lead to more full checksums to calculate 
  * 512b is safe. 
  */
-#define FP_BLSIZE 128
+#define FP_BLSIZE 1024
 
 
 /* Len of a md5sum in bytes - this is not supposed t be changed */ 

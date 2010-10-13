@@ -260,7 +260,17 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
     iFile *sub = NULL;
     uint32 con = 0;
 
-
+    /* Here is somewhere a bug. This seems to affect other isles as well - what causes weird unexpected results with some -t arguments */
+/*
+    uint32 tt = 0; 
+    while(ptr && ptr != stop)
+    {
+        tt++; 
+        ptr=ptr->next; 
+    }
+    error("Distnace to next stop: %ld         \n", tt);
+*/
+    ptr=start; 
     /* Start with start iterate to stop */
     while(ptr&&ptr!=stop)
     {
@@ -283,10 +293,13 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
 			fflush(stdout); 
 		}
 
-        /* Find the start of the next isle (== end of current isle) (or NULL) */
+        /* Find the start of the next isle (== end of current isle) (or NULL or stop) */
         while(ptr && ptr->fsize == sub->fsize && ptr != stop) 
         {
-            isle_sz++; 
+            isle_sz++;
+
+            if(ptr->filter == false) puts("WTF?!");
+            
             ptr->filter = true;
             (*create)(ptr);
             ptr=ptr->next; 
@@ -296,7 +309,6 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
 
         while(i&&i!=ptr)
         {
-
           if(i->filter == false)
           {
               i=i->next;
@@ -316,20 +328,8 @@ uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *
                   }
               }
               j=j->next;
-
           }
-/*
-          if(i->filter)
-          {
-            i=list_remove(i);
-            con++;
-          }
-          else
-          {
-            i=i->next; 
-          }
-*/
-	 i=i->next;
+        i=i->next;
         }
     }
     return con; 
@@ -376,7 +376,8 @@ uint32 build_fingerprint(void)
     iFile *rem;
 
     /* Use multithreaded fingerprints if not forbidden */
-    if(set.threads != 1)
+    /* filter_template does not seem to to it's job accurately on multiple threads :/ */
+    if(set.threads != 1 && 1)
     {
         iFile *p = list_begin();
         iFile *s=p;
@@ -390,11 +391,7 @@ uint32 build_fingerprint(void)
         int pac_sz = list_len()/set.threads;
 
         pthread_t *thr = malloc(sizeof(pthread_t) * set.threads);
-	 
-/*
-        error("Packsize: %d                                       \n",pac_sz);
-        error("Length: %ld                  \n",list_len());
-*/        
+      
         while(p)
         {
             if(p->next == NULL) 
@@ -413,19 +410,16 @@ uint32 build_fingerprint(void)
                 {
                     pt_capsule cap; 
                     cap.start = s; 
-                    cap.stop  = p; 
+                    cap.stop  = p;
 
-                    /* Filter from s to p (where p is not inspected) 
-                    ret += filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
-			*/
-            /*
-                    ret += filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
-            */
                     
+                    filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
+                    
+                    /* Filter from s to p (where p is not inspected) */
+                    /*
                     if(pthread_create(&thr[t_id++],NULL, pt_fingerprint, (void*)&cap)) 
                         perror("Pthread"); 
-                    
-		    error("Launxhin thread #%d\n",t_id);        		
+                      */ 		
             
                     /* Next islegroup */
                     pacc=0;
@@ -448,51 +442,23 @@ uint32 build_fingerprint(void)
             free(thr);
             thr = NULL; 
         }
-        return ret; 
     }
     /* If only one thread is wanted just filter from start to end */
     else
     {
-        return filter_template(md5_fingerprint, cmp_fingerprints, list_begin(),NULL,"Fingerprint"); 
+        filter_template(md5_fingerprint, cmp_fingerprints, list_begin(),NULL,"Fingerprint"); 
     }
 
-    /* Remove flagged files */
+    /* Remove flagged files  */
     rem = list_begin();
     while(rem)
     {
-       if(rem->filter==false)
-       {
-         rem=rem->next; 
-       }
-       else
-       {
-	 rem=list_remove(rem); 
-       }       
-    }    
+       if(rem->filter==false) rem=rem->next; 
+       else rem=list_remove(rem); 
+    }
+    return 0;
 }
 
-
-/** This function is pointless. **/
-char blob(uint32 i)
-{
-	if(!i) return 'x';
-	switch(i%12) 
-	{
-		case 0: return 'O'; 
-		case 1: return '0';
-		case 2: return 'o'; 
-		case 3: return '*';
-		case 4: return '|';
-		case 5: return ':';
-		case 6: return '.';
-		case 7: return ' '; 
-		case 8: return '-'; 
-		case 9: return '|'; 
-		case 10:return '^';
-		case 11:return '0'; 
-		default: return 'x'; 
-	}
-}
 
 /* Global, Sorry =) */
 int pkg_sz; 

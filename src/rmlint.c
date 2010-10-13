@@ -133,6 +133,7 @@ void status(const char* format, ...)
 	  va_start (args, format);
 	  vfprintf (stdout, format, args);
 	  va_end (args);
+      putchar('\n');
       fflush(stdout);
 	}
 }
@@ -407,7 +408,7 @@ int cmp_nd(iFile *a, iFile *b)
 
 
 
-static void print(void)
+void print(void)
 {
 	iFile *p = list_begin();
 	fprintf(stdout,"\n----\n"); 
@@ -519,6 +520,7 @@ int rmlint_main(void)
 	  {
 		  prefilter();
 	  }
+
 
 	  /* The rest of the list is sorted by their inodes -
 	   *  so the HD doesnt have to jump all day. */
