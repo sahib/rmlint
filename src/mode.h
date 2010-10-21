@@ -23,8 +23,12 @@
 #pragma once
 #ifndef LIST_H
 #define LIST_H
+
+#include "list.h"
+#include "filter.h"  
+
   
-void findmatches(void);
+uint32 findmatches(file_group *group);
 void init_filehandler(void); 
 FILE *get_logstream(void); 
 

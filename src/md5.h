@@ -56,7 +56,7 @@ typedef struct {
 
 void MDPrint (MD5_CTX *mdContext);
 void MDPrintArr(unsigned char *digest);
-void md5_file (const char *filename, MD5_CTX *mdContext);
+void md5_file (iFile* file);
 void md5_fingerprint(iFile *file);
 void* fpm(void *vp);
 

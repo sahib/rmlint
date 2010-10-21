@@ -87,7 +87,7 @@ static int paranoid(const char *p1, const char *p2)
 	}
 
 	/* If byte by byte was succesful print a blue "x" */ 
-	warning(BLU"x "NCO);
+	warning(BLU"%-3s "NCO,"X");
 	fclose(f1);
 	fclose(f2); 
 	return 1; 
@@ -283,19 +283,18 @@ void init_filehandler(void)
 
 
 
-void findmatches_(void) 
+uint32 findmatches(file_group *grp) 
 {
-	iFile *i = list_begin();
-
-	uint32 finds = 0; 
-	char lintbuf[256]; 
-
+	iFile *i = grp->grp_stp;
+	if(grp->grp_stp == NULL) 
+		return 0; 
+	
 	warning(NCO);
 	
 	while(i)
 	{
-		bool p = true; 
-		iFile *j = list_begin();
+		bool   p = true; 
+		iFile *j = grp->grp_stp;
 		 
 		while(j)
 		{
@@ -322,7 +321,6 @@ void findmatches_(void)
 						
 						j->dupflag = true;
 						i->dupflag = true; 
-						finds++; 
 					}	
 			}
 			j = j->next; 
@@ -333,118 +331,20 @@ void findmatches_(void)
 	}
 	
 	/* Make sure only dups are left in the list. */
-    i = list_begin(); 
-    if(i==NULL) puts("huh?");
-    
-    
-    while(i) 
-    {
-		if(i->dupflag == false)
+    i = grp->grp_stp;
+    while(i)  {
+		if(i->dupflag == false) 
 		{
-			puts("lala");
+			iFile *tmp = i;
 			i=list_remove(i);
+			if(tmp ==  grp->grp_stp)
+				grp->grp_stp = i;
+			if(tmp == grp->grp_enp)
+				grp->grp_enp = i;
 		}
-		else
-		{
-			puts(i->path);
+		else {
 			i=i->next; 
 		}
-	}
-
-	size_to_human_readable(lintsize,lintbuf);
-	warning("\nWrote result to "BLU"./"SCRIPT_NAME NCO" -- ");
-	warning("In total "RED"%ld"NCO" duplicate%sfound. ("GRE"%s"NCO")\n", finds, (finds) ? " " : "s ",lintbuf);
-	
-	if(script_out)
-	{
-		fclose(script_out);
-	}
-	
-}
-
-
-void findmatches(void) 
-{
- 	iFile *ptr = list_begin();
-	iFile *sub = NULL; 
-	
-	uint32 finds = 0; 
-	char lintbuf[256]; 
-	
-	warning(NCO);
-	
-	while(ptr)
-	{
-		iFile *i=ptr,*j=ptr;  
-		uint32 fs = ptr->fsize;
-	 
-		sub=ptr;
-	 
-		if(ptr->filter == 42) 
-		{
-			break; 
-		}
-	
-		while(ptr && ptr->fsize == fs) 
-		{ 
-			ptr=ptr->next; 
-		}
-		
-		/* Handle one "group" */			
-		while(i && i!=ptr)
-		{
-			bool p = true; 
-			j=sub; 
-			
-			
-			while(j && j!=ptr)
-			{
-					if(i==j || j->dupflag) 
-					{
-						j=j->next;
-						continue; 
-					}
-					if( (!cmp_f(i->md5_digest, j->md5_digest))  &&     /* Same checksum?  */
-					    (i->fsize == j->fsize)	&&					   /* Same size? 	  */ 
-						((set.paranoid)?paranoid(i->path,j->path):1)   /* If we're bothering with paranoid users - Take the gatling! */ 
-					)
-					{
-						if(set.mode == 1)
-						{
-							if(p == true) 
-							{
-								error("= %s\n",i->path); 
-								p=false; 
-							}
-							error("X %s\n",j->path); 
-						}
-						
-						lintsize += j->fsize;
-						
-						handle_item(j->path, i->path, script_out);
-						
-						j->dupflag = true;
-						i->dupflag = true; 
-						finds++; 	
-					}
-					
-					j = j->next;
-			} 
-			i=i->next; 
-		
-			if(!p)
-			{
-				error("\n");
-			}
-		}
-	}
-	
-	size_to_human_readable(lintsize,lintbuf);
-	warning("\nWrote result to "BLU"./"SCRIPT_NAME NCO" -- ");
-	warning("In total "RED"%ld"NCO" duplicate%sfound. ("GRE"%s"NCO")\n", finds, (finds) ? " " : "s ",lintbuf);
-	
-	if(script_out)
-	{
-		fclose(script_out);
-	}
+	}	
+	return lintsize; 	
 }

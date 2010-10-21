@@ -118,10 +118,10 @@ static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, in
 
 
 /* Sorts the list after the criteria specified by the (*cmp) callback  */
-iFile *list_sort(int (*cmp)(iFile*,iFile*))
+iFile *list_sort(iFile *begin, int (*cmp)(iFile*,iFile*))
  {
     iFile *p, *q, *e, *tail;
-    iFile *list = start; 
+    iFile *list = begin;
     int insize, nmerges, psize, qsize, i;
 
     /*

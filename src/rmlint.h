@@ -1,8 +1,8 @@
-#pragma once 
 #ifndef rmlint_H
 #define rmlint_H
   
 #include <stdio.h>
+#include "list.h"
   
 typedef struct 
 {
@@ -36,6 +36,6 @@ void error(const char* format, ...);
 void warning(const char* format, ...);
 void info(const char* format, ...);
 int  get_cpindex(void);
-
+void print(iFile *begin);
 
 #endif

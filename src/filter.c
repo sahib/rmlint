@@ -20,9 +20,11 @@
 *   
 **/
 
+
+
 /* Needed for nftw() */ 
 #define _XOPEN_SOURCE 500
-#define _GNU_SOURCE
+#define _GNU_SOURCE 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,8 +45,11 @@
 
 uint32 dircount = 0;
 uint32 elems = 0;  
+
 short iinterrupt = 0;
 short tint = 0;  
+
+int pkg_sz; 
 pthread_attr_t p_attr; 
 
 /**  
@@ -63,7 +68,6 @@ static void interrupt(int p)
 	 iinterrupt++; 
 	 tint++;  
 }
-
 
 /** 
  * grep the string "string" to see if it contains the pattern.
@@ -161,180 +165,70 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
 
 
 
-uint32 rem_double_paths(void)
+int recurse_dir(const char *path)
 {
-	iFile *b = list_begin();
-	iFile *s = NULL;  
+  /* Set options */
+  int flags = FTW_ACTIONRETVAL; 
+  if(!set.followlinks) 
+	flags |= FTW_PHYS;
 	
+  if(set.samepart)
+	flags |= FTW_MOUNT;
+
+  /* Handle SIGINT */
+  signal(SIGINT, interrupt); 
+
+  /* Start recurse */ 
+  if( nftw(path, eval_file, _XOPEN_SOURCE, flags) == -1)
+  {
+    warning("nftw() failed with: %s\n", strerror(errno));
+    return EXIT_FAILURE;
+  } 
+
+  return dircount; 
+}
+
+
+/* If we have more than one path, several iFiles  *
+ *  may point to the same (physically same file.  *
+ *  This woud result in false positves - Kick'em  */
+uint32 rm_double_paths(file_group *fp)
+{
+	iFile *b = fp->grp_stp;	
 	uint32 c = 0;
-	while(b)
-	{	
-		s=list_begin(); 
-		
-		while(s)
-		{
-			if(s->dev == b->dev && s->node == b->node && b!=s)
-			{
-				c++; 
-				s = list_remove(s); 
-			}
-			else
-			{
-				s=s->next; 
-			}
+
+	if(b)
+	{
+		while(b->next)
+		{	
+				if( (b->node == b->next->node) &&
+				    (b->dev  == b->next->dev )  ) 
+				    {
+						iFile *tmp = b;
+						b = list_remove(b); 
+						
+						if(tmp == fp->grp_stp) 
+							fp->grp_stp = b; 
+						if(tmp == fp->grp_enp) 
+							fp->grp_enp = b; 
+						
+						c++;
+					}
+				else
+					{
+						b=b->next; 
+					}
 		}
-		b=b->next; 
 	}
-	
 	return c;
 }
 
-
-void prefilter(void)
+/* Sort criteria */
+static int cmp_nd(iFile *a, iFile *b) 
 {
-	iFile *b = list_begin();
-	uint32 c =  0;
-
-	iFile *s,*e; 
-
-	if(b == NULL) die(0);
-	
-	while(b)
-	{					
-		if(iinterrupt)
-		{
-			iinterrupt = 0; 
-			return; 
-		}
-	
-		if(b->last && b->next)
-		{
-			if(b->last->fsize != b->fsize && b->next->fsize != b->fsize)
-			{
-				c++; 
-				b = list_remove(b);
-				continue;
-			}
-		}
-		b=b->next; 
-	}
-	
-	e=list_end(); 
-	if(e->last)
-	{
-		if(e->fsize != e->last->fsize) 
-		{
-			e=list_remove(e);
-		}
-	}	
-	
-	s=list_begin(); 
-	if(s->next) 
-	{
-		if(s->fsize != s->next->fsize) 
-		{
-			s=list_remove(s); 
-		}
-	}
-	
-	/* If we have more than 2 dirs given, or links may be followd
-	 * we should check if the one is a subset of the another
-	 * and remove path-doubles */
-	if(get_cpindex() > 1 || set.followlinks) 
-	{
-		uint32 cb; 
-		if( (cb=rem_double_paths()) )
-			info(RED" => "NCO"Ignoring %ld pathdoubles.\n",cb);
-	}
-	if(c != 0)
-	{
-		info(RED" => "NCO"Prefiltered %ld, %ld still in line..\r",c,list_len());
-		fflush(stdout);
-	}
+	if(a->dev == b->dev) return a->node - b->node;  
+	else                 return a->dev  - b->dev; 
 }
-
-
-uint32 filter_template(void(*create)(iFile*),  int(*cmp)(iFile*,iFile*), iFile *start, iFile *stop, const char *filter_name)
-{
-    iFile *ptr = start; 
-    iFile *sub = NULL;
-    uint32 con = 0;
-
-    /* Here is somewhere a bug. This seems to affect other isles as well - what causes weird unexpected results with some -t arguments */
-/*
-    uint32 tt = 0; 
-    while(ptr && ptr != stop)
-    {
-        tt++; 
-        ptr=ptr->next; 
-    }
-    error("Distnace to next stop: %ld         \n", tt);
-*/
-    ptr=start; 
-    /* Start with start iterate to stop */
-    while(ptr&&ptr!=stop)
-    {
-        iFile *i,*j; 
-        int isle_sz = 0; 
-    
-        /* Save a pointer to the start of the isle */
-        sub=ptr;
-
-		if(iinterrupt) 
-		{
-			iinterrupt = 0; 
-			sub->filter = 42;
-			return 0; 
-		}
-
-		if(con % STATUS_UPDATE_INTERVAL == 0 && filter_name) 
-		{
-			info("Filtering by %s "BLU"["NCO"%ld"BLU"]"NCO"\r", filter_name ,con); 
-			fflush(stdout); 
-		}
-
-        /* Find the start of the next isle (== end of current isle) (or NULL or stop) */
-        while(ptr && ptr->fsize == sub->fsize && ptr != stop) 
-        {
-            isle_sz++;
-
-            if(ptr->filter == false) puts("WTF?!");
-            
-            ptr->filter = true;
-            (*create)(ptr);
-            ptr=ptr->next; 
-        }
-                
-        i=sub;
-
-        while(i&&i!=ptr)
-        {
-          if(i->filter == false)
-          {
-              i=i->next;
-              continue;
-          }
-          
-          j=sub;
-          while(j&&j!=ptr)
-          {
-              if(i!=j)
-              {
-                  if( (*cmp)(i,j) )
-                  {
-                        j->filter=false;
-                        i->filter=false;
-                        break; 
-                  }
-              }
-              j=j->next;
-          }
-        i=i->next;
-        }
-    }
-    return con; 
-}
-
 
 /* Compares the "fp" array of the iFiles a and b */ 
 static int cmp_fingerprints(iFile *a,iFile *b) 
@@ -354,135 +248,168 @@ static int cmp_fingerprints(iFile *a,iFile *b)
 	return 1; 
 }
 
-
-/* Just exists to pass start/stop to threads */
-typedef struct
+/* Performs a fingerprint check on the group fp */
+static void *group_filter(file_group *fp) 
 {
-	iFile *start;
-	iFile *stop;
- 
-} pt_capsule; 
-
-/* Called by build_fingerprint on own thread */
-static void* pt_fingerprint (void* v)
-{
-	pt_capsule *t = v;  
-	filter_template(md5_fingerprint, cmp_fingerprints, t->start, t->stop, NULL); 
-	return NULL; 
-}
+	iFile *p = fp->grp_stp; 
+	iFile *i,*j; 
 	
-uint32 build_fingerprint(void)
-{
-    iFile *rem;
-
-    /* Use multithreaded fingerprints if not forbidden */
-    /* filter_template does not seem to to it's job accurately on multiple threads :/ */
-    if(set.threads != 1 && 1)
-    {
-        iFile *p = list_begin();
-        iFile *s=p;
-
-        uint32 fs = p->fsize; 
-        uint32 ret=0;
-        int pacc = 0;
-        int t_id = 0;  
-
-        /* The number of isles in a group */
-        int pac_sz = list_len()/set.threads;
-
-        pthread_t *thr = malloc(sizeof(pthread_t) * set.threads);
-      
-        while(p)
-        {
-            if(p->next == NULL) 
-            {
-                /* Filter from s to NULL (== end) -
-                 * this is only one group => do it without pthreads */
-                ret += filter_template(md5_fingerprint, cmp_fingerprints, s,NULL,NULL);
-                break; 
-            }
-
-            /* New group started? */
-            if(fs != p->fsize)
-            {
-                fs=p->fsize;
-                if( (pacc++) > pac_sz)
-                {
-                    pt_capsule cap; 
-                    cap.start = s; 
-                    cap.stop  = p;
-
-                    
-                    filter_template(md5_fingerprint, cmp_fingerprints, s,p,NULL);
-                    
-                    /* Filter from s to p (where p is not inspected) */
-                    /*
-                    if(pthread_create(&thr[t_id++],NULL, pt_fingerprint, (void*)&cap)) 
-                        perror("Pthread"); 
-                      */ 		
-            
-                    /* Next islegroup */
-                    pacc=0;
-                    s = p; 
-                }
-            }
- 
-            p=p->next; 
-        }
-
-        /* Join threads before continue */
-        for(pacc=0; pacc < t_id; pacc++)
-        {
-            if(pthread_join(thr[pacc],NULL))
-                perror("Pthread_join"); 
-        }
-        
-        if(thr != NULL)
-        {
-            free(thr);
-            thr = NULL; 
-        }
-    }
-    /* If only one thread is wanted just filter from start to end */
-    else
-    {
-        filter_template(md5_fingerprint, cmp_fingerprints, list_begin(),NULL,"Fingerprint"); 
-    }
-
-    /* Remove flagged files  */
-    rem = list_begin();
-    while(rem)
-    {
-       if(rem->filter==false) rem=rem->next; 
-       else rem=list_remove(rem); 
-    }
-    return 0;
+	while(p) { 
+		md5_fingerprint(p); 
+		p=p->next; 
+	}
+	
+	/* Compare each other */
+	i = fp->grp_stp; 
+	while(i)
+	{
+		if(i->filter)
+		{
+			j = i;
+			while(j)
+			{
+				if(i==j)
+				{
+					if(cmp_fingerprints(i,j))
+					{
+						i->filter = false;
+						j->filter = false;  
+					}
+				}
+				j=j->next; 
+			}
+		}
+		if(i->filter == false)
+		{
+			i=i->next; 
+		}
+		else
+		{	
+			/* Kick that elem */
+			iFile *tmp = i;
+			i=list_remove(i); 
+			
+			/* Update start&end */
+			if(tmp == fp->grp_stp) 
+				fp->grp_stp = i; 
+			if(tmp == fp->grp_enp)
+				fp->grp_enp = i;
+				
+		}
+	}
+	
+	return NULL;
 }
 
+static void* sheduler_cb(void * group_ptr)
+{
+	file_group *group = group_ptr; 
+	group_filter(group);
+	build_checksums(group->grp_stp);
+	findmatches(group);
+}
 
-/* Global, Sorry =) */
-int pkg_sz; 
+static void start_sheduler(file_group *fp, uint32 nlistlen)
+{
+	uint32 ii, tot_sz = 0;
+	pthread_t tt[nlistlen]; 
+	  
+	for(ii=0; ii < nlistlen; ii++) 
+	{
+		sheduler_cb(&fp[ii]); 
+		/*
+		pthread_create(tt[ii],NULL,sheduler_cb,(void*)&fp[ii]); 
+		*/
+	}
+	/*
+	for(ii=0; ii > nlistlen; ii++)
+		pthread_join(tt[ii],NULL);
+	*/
+}
+
+iFile* prefilter_(iFile *b)
+{
+	file_group *fglist = NULL;
+	
+	uint32 spelen = 0; 
+	uint32 ii = 0;
+	
+	while(b)
+	{
+		iFile *q = b;
+		iFile *prev = NULL; 
+		uint32 islesz = 0;
+	
+		do 
+		{
+			prev = b; 
+			b = b->next; 
+			islesz++;
+			
+		} while(b && q->fsize == b->fsize);
+		
+		if(islesz == 1)
+		{
+			/* This is only a single element        */ 
+			/* We can remove it without feelind bad */
+			q = list_remove(q);
+			if(b) b=q; 
+		}
+		else
+		{
+			/* Mark this isle as 'sublist' */
+			prev->next = NULL; 
+			
+			fglist = realloc(fglist, (spelen+1) * sizeof(file_group));
+			 
+			fglist[spelen].grp_stp = q; 
+			fglist[spelen].grp_enp = prev; 
+			fglist[spelen].grp_sz  = islesz; 
+	
+			/* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
+			list_sort(fglist[spelen].grp_stp,cmp_nd); 	
+			
+			if(get_cpindex() > 1 || set.followlinks)	
+				rm_double_paths(&fglist[spelen]);
+			
+			spelen++; 
+		}
+	}
+	
+	/* Grups are splitted, now give it to the sheduler */ 
+	/* The sheduler will do another filterstep, build checkusm 
+	 *  and compare 'em. The result is printed afterwards */ 
+	start_sheduler(fglist, spelen); 
+	
+	/* Clue list together again (for convinience) */
+	for(ii=0; ii < spelen; ii++)  
+	{			 
+		if(ii + 1 != spelen && 0)
+		{
+			fglist[ii].grp_enp->next   = fglist[ii+1].grp_stp;
+			fglist[ii+1].grp_stp->last = fglist[ii].grp_enp; 			
+		} 
+	}
+	print(list_begin());
+}
+
 
 static void *cksum_cb(void * vp)
-{
+{ 
 	iFile *file = (iFile *)vp; 
 	int i = 0; 
 
 	for(; i < pkg_sz && file != NULL; i++)
 	{
-		MD5_CTX con; 
-		md5_file(file->path, &con);
-		memcpy(file->md5_digest,con.digest, MD5_LEN);
+		md5_file(file);
 		file=file->next; 
 	}
 	return NULL;
 }
 
-
-
-void build_checksums(void)
+void build_checksums(iFile *begin)
 {
-   iFile *ptr = list_begin(); 
+    iFile *ptr = begin; 
 
     uint32 c=0,d=0; 
     uint32 max_threads; 
@@ -520,9 +447,6 @@ void build_checksums(void)
 		}
 		else
 		{	
-			/* If only 1 thread is specified: 
-			 * Run without the overhead of mt.c 
-			 * and call the routines directly */
 			cksum_cb(ptr); 
 		}
 	
@@ -551,27 +475,4 @@ void build_checksums(void)
 			}
 		}
 	}
-}
-
-int recurse_dir(const char *path)
-{
-  /* Set options */
-  int flags = FTW_ACTIONRETVAL; 
-  if(!set.followlinks) 
-	flags |= FTW_PHYS;
-	
-  if(set.samepart)
-	flags |= FTW_MOUNT;
-
-  /* Handle SIGINT */
-  signal(SIGINT, interrupt); 
-
-  /* Start recurse */ 
-  if( nftw(path, eval_file, _XOPEN_SOURCE, flags) == -1)
-  {
-    warning("nftw() failed with: %s\n", strerror(errno));
-    return EXIT_FAILURE;
-  } 
-
-  return dircount; 
 }

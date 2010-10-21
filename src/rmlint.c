@@ -328,7 +328,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 				return 0; 
 			}
 			use_cwd = true; 
-			info(RED" => "NCO"Investigating \"%s\"\n",sets->paths);
+			info(RED" => "NCO"Investigating \"%s\"\n",sets->paths[0]);
 	  }  
 	  return 1; 
 }
@@ -401,21 +401,22 @@ int cmp_sz(iFile *a, iFile *b)
     return a->fsize - b->fsize;
 }
 
-int cmp_nd(iFile *a, iFile *b)
+static int cmp_nd(iFile *a, iFile *b)
 {
 	return a->node - b->node; 
 }
 
 
 
-void print(void)
+void print(iFile *begin)
 {
-	iFile *p = list_begin();
+	iFile *p = begin;
 	fprintf(stdout,"\n----\n"); 
+	
 	while(p)
 	{
 		MDPrintArr(p->md5_digest); 
-		fprintf(stdout," => %s | %ld\n",p->path,p->fsize); 
+		fprintf(stdout," => %-70s | %ld /n: %ld Dev: %ld\n",p->path,p->fsize, p->node,p->dev); 
 		p=p->next; 
 	}
 	fprintf(stdout,"----\n");
@@ -493,51 +494,20 @@ int rmlint_main(void)
 	   * The filter alorithms requires the list to be size-sorted, 
 	   * so it can easily filter unique sizes, and build "groupisles"  
 	   * */
-	  list_sort(cmp_sz);  
+	  list_sort(list_begin(),cmp_sz);  
 	  
 	
 	  /* Apply the prefilter and outsort inique sizes */
 	  if(set.prefilter)
 	  {
-		  status(RED" => "NCO"Applying Prefilter... \r"); 
-		  prefilter(); 
-	  }
-
-
-	  if(set.fingerprint)
-	  {
-		  /* Go through directories and filter files with a fingerprint */
-		  fpfilterd  = build_fingerprint();
-		  
-		  if(fpfilterd) 
-		  {
-			  info(RED" => "NCO"Filtered %ld files, %ld still in line.\r",fpfilterd, list_len());
-			  fflush(stdout);  
-		  }
-	  }
-	  /* Apply it once more - There might be new unique sizes now */
-	  if(set.prefilter)
-	  {
-		  prefilter();
-	  }
-
-
-	  /* The rest of the list is sorted by their inodes -
-	   *  so the HD doesnt have to jump all day. */
-	  list_sort(cmp_nd); 
-
-	  /* Push filtered files to md5-ToDo list */
-	  build_checksums();
-
+		  status(RED" => "NCO"Applying Prefilter... \r"); 		  
+		  prefilter_(list_begin());  
 	  
+	  }
 	  /* Now we're nearly done */
 	  status(RED" => "GRE"Almost done!                                                             \r"NCO);
 
-	  list_sort(cmp_sz); 
-
-	  /* Finally find double checksums */
-	  findmatches();
-	  
+	  /* Exit! */
 	  die(0);
   }
   return retval; 

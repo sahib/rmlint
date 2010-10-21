@@ -1,4 +1,4 @@
-/*
+ /*
  **********************************************************************
  ** md5.c                                                            **
  ** RSA Data Security, Inc. MD5 Message Digest Algorithm             **
@@ -299,23 +299,25 @@ uint32 *in;
 	
 #endif 
 
-		
-void md5_file(const char *filename, MD5_CTX *mdContext)
+/* used to calc the complete checksum of file & save it in File */
+void md5_file(iFile *file)
 {
-	FILE *inFile = fopen (filename, "rb");
+	FILE *inFile = fopen (file->path, "rb");
+	MD5_CTX mdContext; 
 	
-	int bytes;
+   	int bytes;
 	unsigned char data[MD5_IO_BLOCKSIZE];
 
-	if(!inFile || !filename) return;
+	if(!inFile || !file->path) return;
 		 
-	MD5Init (mdContext);
+	MD5Init (&mdContext);
 		  
 	while ((bytes = fread (data, 1, MD5_IO_BLOCKSIZE, inFile)) != 0)
 	{
-		MD5Update (mdContext, data, bytes);
+		MD5Update (&mdContext, data, bytes);
 	}
-	MD5Final (mdContext);	
+	MD5Final (&mdContext);
+	memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
 	fclose (inFile);
 }
 
@@ -325,7 +327,6 @@ void md5_fingerprint(iFile *file)
 {
 	int bytes = 0;
  
-	  
 	FILE *pF = fopen(file->path, "rb"); 
 	unsigned char data[FP_BLSIZE]; 
 	MD5_CTX con; 
@@ -361,13 +362,4 @@ void md5_fingerprint(iFile *file)
 
 	file->dupflag = 1; 
 	fclose(pF); 
-}
-
-
-/* Um... */
-void* fpm(void *vp)
-{
-	iFile *t = (iFile*)vp; 
-	md5_fingerprint(t);
-	pthread_exit(NULL); 
 }

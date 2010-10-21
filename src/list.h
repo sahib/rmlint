@@ -58,7 +58,7 @@ typedef struct iFile
 
 
 
-iFile *list_sort(int (*cmp)(iFile*,iFile*));
+iFile *list_sort(iFile *begin, int (*cmp)(iFile*,iFile*));
 
 /* Prototypes */
 void list_clear(void);
