@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <pthread.h>
 
 #include "rmlint.h"
 #include "mode.h"
@@ -44,7 +45,7 @@ uint32 lintsize = 0;
 
 /* Make the stream "public" */
 FILE *script_out = NULL; 
-
+pthread_mutex_t mutex_printage = PTHREAD_MUTEX_INITIALIZER;
 
 FILE *get_logstream(void)  {  return script_out;  }
 
@@ -77,7 +78,7 @@ static int paranoid(const char *p1, const char *p2)
 		if(b1!=b2) return 0; 
 		for(; i < b1; i++)
 		{
-				if(c1[i] != c2[i])
+				if(c1[i] - c2[i])
 				{
 					fclose(f1); 
 					fclose(f2); 
@@ -86,8 +87,6 @@ static int paranoid(const char *p1, const char *p2)
 		}
 	}
 
-	/* If byte by byte was succesful print a blue "x" */ 
-	warning(BLU"%-3s "NCO,"X");
 	fclose(f1);
 	fclose(f2); 
 	return 1; 
@@ -97,7 +96,6 @@ static int paranoid(const char *p1, const char *p2)
 static int cmp_f(unsigned char *a, unsigned char *b)
 {
 	int i = 0; 
-	
 	for(; i < MD5_LEN; i++)
 	{
 		if(a[i] != b[i])
@@ -116,33 +114,44 @@ static void print_askhelp(void)
 			NCO ); 
 }
 
-static void handle_item(const char *path, const char *orig, FILE *script_out) 
-{	
-	if(script_out) 
+static void write_to_log(const char* path, bool orig, FILE *script_out)
+{
+	if(script_out)
 	{
 		char *fpath = canonicalize_file_name(path);
-		char *forig = canonicalize_file_name(orig);
 		
-		if(!fpath||!forig) perror("Full path");
+		if(!fpath) 
+		{
+			perror("Can't get abs path");
+			fpath = (char*)path;
+		}
 		
 		if(set.cmd) 
 		{
-			  size_t len = strlen(path)+strlen(set.cmd)+strlen(orig)+1; 
+			  size_t len = strlen(path)+strlen(set.cmd)+1; 
 			  char *cmd_buff = alloca(len);
-			  snprintf(cmd_buff,len,set.cmd,fpath,forig);
-			
-			  fprintf(script_out, cmd_buff);
-			  fprintf(script_out, "\n");
+			  snprintf(cmd_buff,len,set.cmd,fpath);
+			  fprintf(script_out, "%s\n", cmd_buff);
 		}
 		else
 		{
-				fprintf(script_out,"rm \"%s\" # == \"%s\"\n", fpath, forig);
+			if(orig != true)
+				fprintf(script_out,"rm \"%s\"\n", fpath);
+			else
+				fprintf(script_out,"\n#  \"%s\"\n", fpath);
 		}
 		
-		if(fpath) free(fpath);
-		if(forig) free(forig);	
+		if(fpath) free(fpath);	
 	}
-	
+	else
+	{
+		error("Unable to write to log\n"); 
+	}
+}
+
+
+static void handle_item(const char *path, const char *orig, FILE *script_out) 
+{	
 	/* What set.mode are we in? */
 	switch(set.mode)
 	{		
@@ -233,11 +242,11 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 	}								
 }
 
-static void size_to_human_readable(uint32 num, char *in) 
+void size_to_human_readable(uint32 num, char *in) 
 {	
 		if(num < 1024) 
 		{ 
-			snprintf(in,256,"%ld B",num); 
+			snprintf(in,256,"%ld B",(unsigned long)num); 
 		}
 		else if(num >= 1024 && num < 1024*1024) 
 		{  
@@ -281,70 +290,100 @@ void init_filehandler(void)
 		}
 }
 
-
-
-uint32 findmatches(file_group *grp) 
+uint32 findmatches(file_group *grp)
 {
-	iFile *i = grp->grp_stp;
-	if(grp->grp_stp == NULL) 
-		return 0; 
+	iFile *i = grp->grp_stp, *j;  
+	uint32 remove_count = 0;
+	char lintbuf[128];
+	memset(lintbuf,0,128);
 	
-	warning(NCO);
+	if(i == NULL)  return 0; 
+
+	warning(NCO); 
 	
 	while(i)
 	{
-		bool   p = true; 
-		iFile *j = grp->grp_stp;
-		 
-		while(j)
+		if(i->dupflag)
 		{
-			if(j != i && j->dupflag != 1)
+			bool printed_original = false;
+			j=i->next;
+			
+			/* Make sure no group is printed / logged at the same time (== chaos) */
+			pthread_mutex_lock(&mutex_printage); 
+			
+			while(j)
 			{
-					if( (!cmp_f(i->md5_digest, j->md5_digest))  &&     /* Same checksum?  */
-					    (i->fsize == j->fsize)	&&					   /* Same size? 	  */ 
+				if(j->dupflag)
+				{
+					if( (!cmp_f(i->md5_digest, j->md5_digest))  &&     /* Same checksum?                                             */
+					    (i->fsize == j->fsize)	&&					   /* Same size? (double check, you never know)             	 */ 
 						((set.paranoid)?paranoid(i->path,j->path):1)   /* If we're bothering with paranoid users - Take the gatling! */ 
 					)
 					{
-						if(set.mode == 1)
-						{
-							if(p == true) 
-							{
-								error("= %s\n",i->path); 
-								p=false; 
-							}
-							error("X %s\n",j->path); 
-						}
-						
+						/* i 'similiar' to j */
+						j->dupflag = false;
+						i->dupflag = false; 
+					
 						lintsize += j->fsize;
+					
+						if(printed_original == false)
+						{
+							error("=>  %s:\n",i->path); 
+							write_to_log(i->path, true, script_out); 
+							handle_item(i->path,i->path,script_out);
+							printed_original = true;
+						}	
 						
-						handle_item(j->path, i->path, script_out);
+						if(set.paranoid)
+						{
+							/* If byte by byte was succesful print a blue "x" */ 
+							warning(BLU"%-3s "NCO,"X");
+						}
+						else
+						{
+							warning(RED"%-3s "NCO,"#");
+						}
+						error("%s\n",j->path);
 						
-						j->dupflag = true;
-						i->dupflag = true; 
-					}	
+						write_to_log(j->path, false, script_out); 
+						handle_item(j->path,i->path,script_out);
+					}
+				}
+				j = j->next; 
 			}
-			j = j->next; 
-
+			
+			/* Get ready for next group */
+			if(printed_original) warning("\n"); 
+			pthread_mutex_unlock(&mutex_printage);
+			
+			/* Now remove if i didn't match in list */
+			if(i->dupflag) 
+			{	
+				iFile *tmp = i;
+				
+				grp->len--;
+				grp->size -= i->fsize; 				
+				i = list_remove(i); 
+				
+				/* Update start / end */
+				if(tmp == grp->grp_stp) 
+					grp->grp_stp = i; 
+				
+				if(tmp == grp->grp_enp)
+					grp->grp_enp = i; 
+				
+				remove_count++;
+				continue; 
+			}
+			else
+			{
+				i=i->next;
+				continue; 
+			}
 		}
-		if(!p) error("\n"); 
 		i=i->next; 
 	}
-	
-	/* Make sure only dups are left in the list. */
-    i = grp->grp_stp;
-    while(i)  {
-		if(i->dupflag == false) 
-		{
-			iFile *tmp = i;
-			i=list_remove(i);
-			if(tmp ==  grp->grp_stp)
-				grp->grp_stp = i;
-			if(tmp == grp->grp_enp)
-				grp->grp_enp = i;
-		}
-		else {
-			i=i->next; 
-		}
-	}	
-	return lintsize; 	
+	size_to_human_readable(grp->size,lintbuf);/* 
+	error("Lint in group: %s [%ld]\n",lintbuf,grp->len);*/
+	return remove_count;
 }

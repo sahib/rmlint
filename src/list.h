@@ -40,11 +40,10 @@ typedef struct iFile
 {
    unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
    unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-   char *path;		  	        /* absolute path from working dir */
-   short plen; 				/* Length of the path */
-   uint32 fsize; 		        /* Size of the file (bytes) */
-   bool filter; 			/* Uhm? */
-   bool dupflag;			/* Is the file marked as duplicate? */ 
+   char *path;		  	                  /* absolute path from working dir */
+   uint32 fsize; 		                  /* Size of the file (bytes) */
+   bool filter; 			              /* Uhm? */
+   bool dupflag;			              /* Is the file marked as duplicate? */ 
    
    /* This is used to find pointers to the same file */
    ino_t node; 
@@ -58,10 +57,10 @@ typedef struct iFile
 
 
 
-iFile *list_sort(iFile *begin, int (*cmp)(iFile*,iFile*));
+iFile *list_sort(iFile *begin, int_fast32_t (*cmp)(iFile*,iFile*));
 
 /* Prototypes */
-void list_clear(void);
+void list_clear(iFile *begin);
 void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l);
 iFile *list_end(void);
 iFile *list_begin(void);

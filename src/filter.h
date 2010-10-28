@@ -26,23 +26,19 @@
 
 #include "md5.h"
 
-
 typedef struct { 
 	
+	/* Start and end pointer of a 'group' */
 	iFile *grp_stp, *grp_enp; 
-	uint32 grp_sz; 
+	
+	/* elems in this list and total size */
+	uint32 len, size; 
 
 } file_group;    
 
 
-
-int   recurse_dir(const char *path); 
-uint32 build_fingerprint(void);
-void build_checksums(iFile *begin);
-void  prefilter(void);
-iFile* prefilter_(iFile *b);
-int regfilter(const char* input, const char *pattern); 
-uint32 byte_filter(void);
-
+int  regfilter(const char* input, const char *pattern); 
+int  recurse_dir(const char *path); 
+void prefilter(iFile *b);
 
 #endif

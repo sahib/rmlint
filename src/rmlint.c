@@ -319,8 +319,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
          if(lp == 0) 
          {
 			/* Still no path set? */
-			sets->paths = malloc(sizeof(char*));
+			sets->paths = malloc(sizeof(char*)*2);
 			sets->paths[0] = getcwd(NULL,0);
+			sets->paths[1] = NULL; 
 			if(!sets->paths[0]) 
 			{
 				error(RED"Cannot get working directory: %s\n"NCO, strerror(errno));
@@ -369,8 +370,6 @@ int  get_cpindex(void)
 void die(int status)
 {
 	/* Free mem */
-	list_clear();
-	
 	if(use_cwd) 
 	{
 		if(set.paths[0])
@@ -396,17 +395,12 @@ void die(int status)
 
 
 
-int cmp_sz(iFile *a, iFile *b)
+static int_fast32_t cmp_sz(iFile *a, iFile *b)
 {
     return a->fsize - b->fsize;
 }
 
-static int cmp_nd(iFile *a, iFile *b)
-{
-	return a->node - b->node; 
-}
-
-
+#if DEBUG_CODE == 1
 
 void print(iFile *begin)
 {
@@ -416,17 +410,18 @@ void print(iFile *begin)
 	while(p)
 	{
 		MDPrintArr(p->md5_digest); 
-		fprintf(stdout," => %-70s | %ld /n: %ld Dev: %ld\n",p->path,p->fsize, p->node,p->dev); 
+		fprintf(stdout," => %-70s | %ld /n: %ld Dev: %ld\n",p->path,p->fsize, p->node, (uint32)p->dev); 
 		p=p->next; 
 	}
 	fprintf(stdout,"----\n");
 }
 
+#endif 
+
 /* Have fun reading. ;-) */
 int rmlint_main(void)
 {
   uint32 total_files = 0;
-  uint32 fpfilterd   = 0; 
   uint32 firc	     = 0;
   
   int retval = setjmp(place);
@@ -459,7 +454,6 @@ int rmlint_main(void)
 			if(stat(set.paths[cpindex],&buf) == -1) 
 				continue; 
 			
-
 				list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino,buf.st_nlink);
 				total_files++; 
 				firc++; 
@@ -473,11 +467,11 @@ int rmlint_main(void)
 			total_files += recurse_dir(set.paths[cpindex]);
 			closedir(p);
 		}
-		
 		cpindex++;
 	  }
 	  
-	  
+	  puts("\n\n\n");
+
 	  if(total_files == 0)
 	  {
 		  warning(RED" => "NCO"No files to search through"RED" --> "NCO"No duplicates\n"); 
@@ -494,15 +488,17 @@ int rmlint_main(void)
 	   * The filter alorithms requires the list to be size-sorted, 
 	   * so it can easily filter unique sizes, and build "groupisles"  
 	   * */
+	  info(RED" =>"NCO" Now sorting list\n");
+	  fflush(stdout);
 	  list_sort(list_begin(),cmp_sz);  
-	  
+	 
+
 	
 	  /* Apply the prefilter and outsort inique sizes */
 	  if(set.prefilter)
 	  {
 		  status(RED" => "NCO"Applying Prefilter... \r"); 		  
-		  prefilter_(list_begin());  
-	  
+		  prefilter(list_begin());  
 	  }
 	  /* Now we're nearly done */
 	  status(RED" => "GRE"Almost done!                                                             \r"NCO);

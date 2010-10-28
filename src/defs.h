@@ -20,7 +20,9 @@
 *   
 **/
 
-
+/*
+ * This needs some clean up 
+*/ 
 #pragma once
 #ifndef DEF_H
 #define DEF_H 
@@ -28,6 +30,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 /* Use colored output? */
 #define USE_COLOR 1
@@ -47,53 +50,24 @@
 	#define GRE "\x1b[0m"
 	#define BLU "\x1b[0m"
 #endif 
-/** 
- * The status interval will cause
- * the progress bar to update 1 times 
- * in x loopruns. Default: 5 
- **/ 
 
 #define STATUS_UPDATE_INTERVAL 5
-
- 
 #define ABS(a)	(((a) < 0) ? -(a) : (a))
-
-/* This sets the size read by the fingerprint filter in bytes*
- * Setting this higher would slow down the filter but cause more accurate results 
- * Setting it lower will improve perofrmance, but may lead to more full checksums to calculate 
- * 512b is safe. 
- */
-#define FP_BLSIZE 1024
-
-
-/* Len of a md5sum in bytes - this is not supposed t be changed */ 
 #define MD5_LEN 16
 
-
 /** IO: **/
-/* Block size in what IO buffers are read (sync) Default:256B */
-#define MD5_IO_BLOCKSIZE 2048
+#define MD5_IO_BLOCKSIZE  2097152   /* Block size in what IO buffers are read. Default:   16MB */
+#define MD5_FP_MAX_RSZ    4096      /* The maximal size read in for fingerprints. Default   4K */
+#define MD5_FP_PERCENT    10		/* Percent of a file read in for fingerprint. Default  10% */
+#define MD5_SERIAL_IO     1			/* Align threads before doing md5 related IO. Default:   1 */
 
-/* Block size in what IO buffers are read (async) Default: 8MB */
-#define MD5_ASYNCBLOCKIZE 8388608
-
-/** If a file is bigger than this value then the async routine is used. 
- *  It is faster for bigger files in general, while the synced one is better suited
- *  for many small files. Default: 8MB 
- * **/
-#define MD5_SYNC_ASYNC_TRESHOLD 8388608
-							
 /** typedef a 32 bit type **/
-typedef unsigned long int  uint32;
-
+typedef uint_fast32_t  uint32;
 
 /** The name of the output script/log **/
 #define SCRIPT_NAME "rmlint.sh"
 
-/** Dont use - slower atm. / buggy **/
-#define USE_MT_FINGERPRINTS 0
-
 /* This will cause some debug code to be compiled. Wont have impact on proram though. */
-#define DEBUG_CODE 1
+#define DEBUG_CODE 0
 
 #endif
