@@ -56,15 +56,16 @@
 #define MD5_LEN 16
 
 /** IO: **/
-#define MD5_IO_BLOCKSIZE  2097152   /* Block size in what IO buffers are read. Default:   16MB */
-#define MD5_FP_MAX_RSZ    4096      /* The maximal size read in for fingerprints. Default   4K */
-#define MD5_FP_PERCENT    10		/* Percent of a file read in for fingerprint. Default  10% */
+#define MD5_IO_BLOCKSIZE  2097152   /* Block size in what IO buffers are read. Default:    2MB */
+#define MD5_FP_MAX_RSZ    8192      /* The maximal size read in for fingerprints. Default   4K */
+#define MD5_FP_PERCENT    10 		/* Percent of a file read in for fingerprint. Default  10% */
 #define MD5_SERIAL_IO     1			/* Align threads before doing md5 related IO. Default:   1 */
+#define MD5_MTHREAD_SIZE  4194304   /* If size of grp > chekcksum are built in parallel.   4MB */
 
 /** typedef a 32 bit type **/
 typedef uint_fast32_t  uint32;
 
-/** The name of the output script/log **/
+/* The name of the output script/log */
 #define SCRIPT_NAME "rmlint.sh"
 
 /* This will cause some debug code to be compiled. Wont have impact on proram though. */

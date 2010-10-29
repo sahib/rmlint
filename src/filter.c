@@ -219,7 +219,7 @@ uint32 rm_double_paths(file_group *fp)
 }
 
 /* Sort criteria for sorting by dev and inode */
-static int_fast32_t cmp_nd(iFile *a, iFile *b)  {  return ((a->dev*a->node) - (b->dev*b->node)); }
+static long cmp_nd(iFile *a, iFile *b)  {  return ((long)(a->dev*a->node) - (long)(b->dev*b->node)); }
 
 /* Compares the "fp" array of the iFiles a and b */ 
 static int cmp_fingerprints(iFile *a,iFile *b) 
@@ -311,17 +311,14 @@ static uint32 group_filter(file_group *fp)
 	return remove_count;
 }
 
-
-/* ToDo :-) */
-#define PACKSIZE 4
-
 /* Callback from build_checksums */ 
 static void *cksum_cb(void * vp)
 { 
-	iFile *file = vp;
+	file_group *gp = vp; 
+	iFile *file = gp->grp_stp;
 	
 	int i = 0; 
-	for(; i < PACKSIZE && file != NULL; i++)
+	for(; i < gp->size && file != NULL; i++)
 	{
 		md5_file(file);
 		file=file->next; 
@@ -331,8 +328,12 @@ static void *cksum_cb(void * vp)
 
 static void build_checksums(file_group *grp)
 {
-	if(set.threads == 1)
+	if(grp == NULL || grp->grp_stp == NULL)
+		return;
+	
+	if(set.threads == 1 || grp->size < MD5_MTHREAD_SIZE)
 	{
+		/* Just loop through this group and built the checksum */ 
 		iFile *p = grp->grp_stp;
 		while(p)
 		{
@@ -342,16 +343,26 @@ static void build_checksums(file_group *grp)
 	}
 	else
 	{
+		/* The Group is a bigger one (over 4MB by default), 
+		 * so it may be more efficient wo work this on more
+		 * than one thread (especially with serial IO */ 
+		 
 		iFile *ptr = grp->grp_stp;
-		pthread_t *tt = alloca((set.threads+1)*sizeof(pthread_t));
-		
 		int ii = 0, jj = 0;
+		int packsize = grp->size / MD5_MTHREAD_SIZE; 
+		
+		pthread_t *tt = alloca((packsize+1)*sizeof(pthread_t));
+		
 		while(ptr)
 		{
-			if(ii == 0 ||  (ii % PACKSIZE) == 0)
+			if(ii == 0 ||  (ii % packsize) == 0)
 			{
-				if(pthread_create(&tt[jj], NULL, cksum_cb, (void*)ptr))
-					perror("Goaaaad, Im an idiot..");
+				file_group group_pass;
+				group_pass.grp_stp = ptr;
+				group_pass.size = packsize;
+				
+				if(pthread_create(&tt[jj], NULL, cksum_cb, (void*)&group_pass))
+					perror("Goaaaad, Im an idiot.. Pthread:");
 				
 				jj++;
 			}		
@@ -378,6 +389,12 @@ static void* sheduler_cb(void *gfp)
 	if(set.fingerprint)
 		group_filter(group);
 	
+	if(group->len == 1) 
+	{
+		list_clear(group->grp_stp); 
+		return NULL; 
+	}
+	
 	build_checksums(group);
 	findmatches(group);
 	list_clear(group->grp_stp);
@@ -389,8 +406,10 @@ static void sheduler_jointhreads(pthread_t *tt, uint32 n)
 {
 	uint32 ii = 0; 
 	for(ii=0; ii < n; ii++)
+	{
 		if(pthread_join(tt[ii],NULL))
 			perror("I even suck at joining threads");
+	}
 }
 
 /* Distributes the groups on the ressources */
@@ -445,6 +464,27 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
 	return -1; 
 }
 
+void size_to_human_readable(uint32 num, char *in) 
+{	
+		if(num < 1024) 
+		{ 
+			snprintf(in,256,"%ld B",(unsigned long)num); 
+		}
+		else if(num >= 1024 && num < 1024*1024) 
+		{  
+			snprintf(in,256,"%.2f KB",(float)(num/1024.0)); 
+		}
+		else if(num >= 1024*1024 && num < 1024*1024*1024) 
+		{ 
+			snprintf(in,256,"%.2f MB",(float)(num/1024.0/1024.0)); 
+		}
+		else 
+		{ 
+			snprintf(in,256,"%.2f GB",(float)(num/1024.0/1024.0/1024.0)); 
+		}
+}
+
+
 
 /* Splits into groups, and does some serious presortage */
 void prefilter(iFile *b)
@@ -453,6 +493,15 @@ void prefilter(iFile *b)
 	
 	uint32 spelen = 0; 
 	uint32 ii = 0;
+
+	/* Logvariables - not relevant to algorithm */ 
+	char lintbuf[128]; 
+	uint32 remaining = 0, original = list_len(); 
+	uint32 lint = 0; 
+	uint32 rem_counter = 0; 
+	uint32 path_doubles = 0; 
+	file_group emptylist; 
+	emptylist.len = 0; 
 	
 	while(b)
 	{
@@ -472,7 +521,8 @@ void prefilter(iFile *b)
 			/* This is only a single element        */ 
 			/* We can remove it without feelind bad */
 			q = list_remove(q);
-			if(b != NULL) b = q; 
+			if(b != NULL) b = q;
+			rem_counter++;  
 		}
 		else
 		{
@@ -484,51 +534,54 @@ void prefilter(iFile *b)
 			}
 					
 			if(q->fsize != 0) 
-			{
+			{	 		
+				/* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
+				q = list_sort(q,cmp_nd); 	
+
 				/* Add this group to the list array */
 				fglist = realloc(fglist, (spelen+1) * sizeof(file_group));
-				 
 				fglist[spelen].grp_stp = q; 
 				fglist[spelen].grp_enp = prev; 
 				fglist[spelen].len     = glen; 
 				fglist[spelen].size    = gsize; 
-		
-				/* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
-				list_sort(fglist[spelen].grp_stp,cmp_nd); 	
 				
-				/* Remove 'path-doubles' (files pointing to SAME file) - this requires a node sorted list */
+				/* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
 				if(get_cpindex() > 1 || set.followlinks)	
-					rm_double_paths(&fglist[spelen]);
+					path_doubles += rm_double_paths(&fglist[spelen]);
 					
 				spelen++; 
 			}
 			else
 			{
-				iFile *ptr = q;		
-				file_group emptylist; 
+				iFile *ptr;		
+				q = list_sort(q,cmp_nd);
 				emptylist.grp_stp = q;
-			
-				list_sort(q,cmp_nd);
 				if(get_cpindex() > 1 || set.followlinks)	
 					rm_double_paths(&emptylist);
 				
 				ptr = emptylist.grp_stp;
+				emptylist.len = 0; 
 				while(ptr)
 				{
-					error("Empy file: %s: %ld %ld %ld\n",ptr->path, ptr->node, ptr->dev, ptr->fsize);
 					fprintf(get_logstream(), "rm %s #Empty file\n",ptr->path); 
 					ptr = list_remove(ptr); 
+					emptylist.len++; 
 				}
 			}	
 			
 		}
 	}
-	error(RED" => "NCO"Prefiltered files\n\n"); 
+	
+	info("%ld files less in list (Removed %ld pathdoubles first)\n",rem_counter, path_doubles); 
+	info("By ignoring %ld empty files, list was split in %ld parts.\n", emptylist.len, spelen); 
+	info("Now sorting groups based on their location on the drive.. "); 
 	
 	/* Now make sure groups are sorted by their location on the disk*/
 	qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
 
-#if DEBUG_CODE == 1
+	info(" done \nNow doing fingerprints and full checksums:\n\n"); 
+
+#if DEBUG_CODE == 2
 	for(ii = 0; ii < spelen; ii++) 
 	{
 		iFile *p = fglist[ii].grp_stp;  
@@ -547,7 +600,19 @@ void prefilter(iFile *b)
 	 *  and compare 'em. The result is printed afterwards */ 
 	start_sheduler(fglist, spelen); 
 	
-	/* Clue list together again (for convinience)
+	/* Gather the total size of removeable data */
+	for(ii=0; ii < spelen; ii++)
+	{
+		lint += fglist[ii].size; 
+		remaining += fglist[ii].len; 
+	}
+	
+	size_to_human_readable(lint, lintbuf); 
+	info("\nIn total %ld (of %ld files as input) files are duplicates.\n",remaining, original);  
+	info("This means: %s [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
+	info("A log has been written to %s.\n", SCRIPT_NAME);  
+	
+	/* Clue list together again (for convinience) */
 	for(ii=0; ii < spelen; ii++)  
 	{			 
 		if((ii + 1) != spelen && fglist[ii].grp_enp)
@@ -557,10 +622,8 @@ void prefilter(iFile *b)
 			if(fglist[ii+1].grp_stp)
 				fglist[ii+1].grp_stp->last  = fglist[ii].grp_enp;
 		}
-	}*/
-	/*
-	for(ii=0; ii < spelen; ii++) list_clear(fglist[ii].grp_stp);
-	*/
-	if(fglist) free(fglist);
+	}; 
+
 	/* End of actual program. Now do some file handling / frees */
+	if(fglist) free(fglist);
 }

@@ -395,7 +395,7 @@ void die(int status)
 
 
 
-static int_fast32_t cmp_sz(iFile *a, iFile *b)
+static long cmp_sz(iFile *a, iFile *b)
 {
     return a->fsize - b->fsize;
 }
@@ -436,12 +436,9 @@ int rmlint_main(void)
 	  
 	  if(set.mode == 5)
 		check_cmd(set.cmd);
-	  
-	  /* Give the user a status line - you will see this two calls more often */
-	  info(YEL"Setting up db...\r"NCO);  
-	  fflush(stdout);
-	 
-	   init_filehandler(); 
+
+	  /* Open logfile */ 
+	  init_filehandler(); 
 	 
 	  /* Count files and do some init  */ 	 
 	  while(set.paths[cpindex] != NULL)
@@ -462,23 +459,22 @@ int rmlint_main(void)
 		else
 		{
 			/* The path points to a dir - recurse it! */
-			info(RED" => "NCO"Investigating \"%s\"\r",set.paths[cpindex]);
+			info("Now scanning \"%s\"..",set.paths[cpindex]);
 			fflush(stdout);
 			total_files += recurse_dir(set.paths[cpindex]);
+			info(" done.\n");
 			closedir(p);
 		}
 		cpindex++;
 	  }
 	  
-	  puts("\n\n\n");
-
 	  if(total_files == 0)
 	  {
 		  warning(RED" => "NCO"No files to search through"RED" --> "NCO"No duplicates\n"); 
 		  die(0);
 	  }
 
-	  status(RED" => "NCO"In total %ld usable files.\r", total_files); 
+	  info("In total %ld usbale files in cache.\n", total_files); 
         
 	  if(set.threads > total_files) 
 		  set.threads = total_files;
@@ -488,20 +484,17 @@ int rmlint_main(void)
 	   * The filter alorithms requires the list to be size-sorted, 
 	   * so it can easily filter unique sizes, and build "groupisles"  
 	   * */
-	  info(RED" =>"NCO" Now sorting list\n");
-	  fflush(stdout);
+	  info("Now mergesorting list based on filesize... ");
 	  list_sort(list_begin(),cmp_sz);  
-	 
+	  info(" done\n"); 
 
 	
 	  /* Apply the prefilter and outsort inique sizes */
 	  if(set.prefilter)
 	  {
-		  status(RED" => "NCO"Applying Prefilter... \r"); 		  
+		  info("Now removing files with unique sizes from list.. "); 		  
 		  prefilter(list_begin());  
 	  }
-	  /* Now we're nearly done */
-	  status(RED" => "GRE"Almost done!                                                             \r"NCO);
 
 	  /* Exit! */
 	  die(0);

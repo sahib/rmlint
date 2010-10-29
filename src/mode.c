@@ -167,7 +167,7 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 			do
 			{
 				error(RED"#[%ld] \""YEL"%s"RED"\""GRE" == "RED"\""YEL"%s"RED"\"\n"BLU"Remove %s?\n"BLU"=> "NCO, duplicates+1,orig, path, path); 
-				do {scanf("%c",&sel);} while ( getchar() != '\n' );
+				do { if(!scanf("%c",&sel)) perror("scanf()");} while ( getchar() != '\n' );
 				
 							switch(sel) 
 							{
@@ -242,26 +242,6 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 	}								
 }
 
-void size_to_human_readable(uint32 num, char *in) 
-{	
-		if(num < 1024) 
-		{ 
-			snprintf(in,256,"%ld B",(unsigned long)num); 
-		}
-		else if(num >= 1024 && num < 1024*1024) 
-		{  
-			snprintf(in,256,"%.2f KB",(float)(num/1024.0)); 
-		}
-		else if(num >= 1024*1024 && num < 1024*1024*1024) 
-		{ 
-			snprintf(in,256,"%.2f MB",(float)(num/1024.0/1024.0)); 
-		}
-		else 
-		{ 
-			snprintf(in,256,"%.2f GB",(float)(num/1024.0/1024.0/1024.0)); 
-		}
-}
-
 
 void init_filehandler(void)
 {
@@ -293,10 +273,7 @@ void init_filehandler(void)
 uint32 findmatches(file_group *grp)
 {
 	iFile *i = grp->grp_stp, *j;  
-	uint32 remove_count = 0;
-	char lintbuf[128];
-	memset(lintbuf,0,128);
-	
+	uint32 remove_count = 0;	
 	if(i == NULL)  return 0; 
 
 	warning(NCO); 
@@ -383,7 +360,6 @@ uint32 findmatches(file_group *grp)
 		}
 		i=i->next; 
 	}
-	size_to_human_readable(grp->size,lintbuf);/* 
-	error("Lint in group: %s [%ld]\n",lintbuf,grp->len);*/
+
 	return remove_count;
 }

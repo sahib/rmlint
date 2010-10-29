@@ -22,7 +22,7 @@ CP=cp
 CC=gcc
  
 WARN=-std=c99 -Wall -pedantic 
-OPTI= -march=native -g 
+OPTI= -march=native -s -O3
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a
 CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC)
 
