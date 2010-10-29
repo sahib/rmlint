@@ -291,7 +291,7 @@ uint32 findmatches(file_group *grp)
                                                 lintsize += j->fsize;
 
                                                 if(printed_original == false) {
-                                                        error("=>  %s:\n",i->path);
+                                                        error("# %s\n",i->path);
                                                         write_to_log(i->path, true, script_out);
                                                         handle_item(i->path,i->path,script_out);
                                                         printed_original = true;
@@ -299,9 +299,9 @@ uint32 findmatches(file_group *grp)
 
                                                 if(set.paranoid) {
                                                         /* If byte by byte was succesful print a blue "x" */
-                                                        warning(BLU"%-3s "NCO,"X");
+                                                        warning(BLU"%-1s "NCO,"X");
                                                 } else {
-                                                        warning(RED"%-3s "NCO,"#");
+                                                        warning(RED"%-1s "NCO,"*");
                                                 }
                                                 error("%s\n",j->path);
 
@@ -313,7 +313,7 @@ uint32 findmatches(file_group *grp)
                         }
 
                         /* Get ready for next group */
-                        if(printed_original) warning("\n");
+                        if(printed_original) error("\n");
                         pthread_mutex_unlock(&mutex_printage);
 
                         /* Now remove if i didn't match in list */

@@ -423,16 +423,17 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
         return -1;
 }
 
+/* Takes num and converts into some human readable string. 1024 -> 1KB */
 void size_to_human_readable(uint32 num, char *in)
 {
         if(num < 1024) {
                 snprintf(in,256,"%ld B",(unsigned long)num);
-        } else if(num >= 1024 && num < 1024*1024) {
+        } else if(num >= 1024 && num < 1048576.0) {
                 snprintf(in,256,"%.2f KB",(float)(num/1024.0));
-        } else if(num >= 1024*1024 && num < 1024*1024*1024) {
-                snprintf(in,256,"%.2f MB",(float)(num/1024.0/1024.0));
+        } else if(num >= 1024*1024 && num < 1073741824) {
+                snprintf(in,256,"%.2f MB",(float)(num/1048576.0));
         } else {
-                snprintf(in,256,"%.2f GB",(float)(num/1024.0/1024.0/1024.0));
+                snprintf(in,256,"%.2f GB",(float)(num/1073741824.0));
         }
 }
 
@@ -542,8 +543,8 @@ void prefilter(iFile *b)
 
         /* Gather the total size of removeable data */
         for(ii=0; ii < spelen; ii++) {
-                lint += fglist[ii].size;
-                remaining += fglist[ii].len;
+                lint += fglist[ii].size - ((fglist[ii].len > 0) ? (fglist[ii].size / fglist[ii].len) : 0);
+                remaining +=  (fglist[ii].len) ? (fglist[ii].len - 1) : 0;
         }
 
         size_to_human_readable(lint, lintbuf);

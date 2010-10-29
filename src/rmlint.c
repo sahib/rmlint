@@ -44,9 +44,8 @@
  * - some comments.. clean up..
  * - better sheduler (only reduce one thread on overflow e.g.) 
  * - get modes back to work 
- * - correct sizes in commandline output.. (684MB in testdir :D)
  * - pusblish..
- * - crappy regex.. :(
+ * - crappy regex.. (-r seems to work, but -R? - little moments of wtf..)
 
  **/
 
@@ -528,4 +527,3 @@ int rmlint_main(void)
         }
         return retval;
 }
-
