@@ -40,14 +40,14 @@
 
 /**
  * ToDo:
- * -man page / README / updated help
+ * - docs
  * - some comments.. clean up..
- * - gettext, to translate msgs   -- on ice, because of gettext being crap
- * - Review threading stuff and limit threads
- * - pusblish.
+ * - better sheduler (only reduce one thread on overflow e.g.) 
+ * - get modes back to work 
+ * - correct sizes in commandline output.. (684MB in testdir :D)
+ * - pusblish..
  * - crappy regex.. :(
- * - make filter_template() pre sort by inode and dev per isle
- * - make docs be docs.
+
  **/
 
 
@@ -92,6 +92,12 @@ static void resetcol(void)
 {
         printf(NCO);
 }
+
+/* If die() is called rmlint will jump back to the end of main 
+ * rmlint does NOT call exit() or abort() on it's own - so you
+ * may use it's methods also in your own programs - see main() 
+ * It still has various problems with calling rmlint_main() twice... :-( //ToDo
+ * */
 jmp_buf place;
 
 /** Messaging **/
@@ -137,6 +143,7 @@ void status(const char* format, ...)
         }
 }
 
+/* Help text */
 static void print_help(void)
 {
         fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [Options]\n");
@@ -183,6 +190,7 @@ static void print_help(void)
         exit(0);
 }
 
+/* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
 void rmlint_set_default_settings(rmlint_settings *set)
 {
         set->mode  		 =  1; 		/* list only    */
@@ -202,6 +210,7 @@ void rmlint_set_default_settings(rmlint_settings *set)
         set->cmd 		 =  NULL;   /* Cmd,if used  */
 }
 
+/* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 {
         int c,lp=0;
@@ -365,7 +374,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         return 1;
 }
 
-
+/* User  may specify in -c a command that get's excuted on every hit - check for being a safe one */
 static void check_cmd(const char *cmd)
 {
         int i = 0, ps = 0;
@@ -388,11 +397,14 @@ static void check_cmd(const char *cmd)
         }
 }
 
+
+/* This is old and should be removed.. */
 int  get_cpindex(void)
 {
         return cpindex;
 }
 
+/* exit and return to calling method */
 void die(int status)
 {
         /* Free mem */
@@ -416,27 +428,28 @@ void die(int status)
         longjmp(place,status);
 }
 
-
-
+/* Sort criteria for sizesort */ 
 static long cmp_sz(iFile *a, iFile *b)
 {
         return a->fsize - b->fsize;
 }
 
+
+/* Print the iFilelist starting with begin and ending with 'NULL' */
 #if DEBUG_CODE == 1
 
-void print(iFile *begin)
-{
-        iFile *p = begin;
-        fprintf(stdout,"\n----\n");
+	void print(iFile *begin)
+	{
+			iFile *p = begin;
+			fprintf(stdout,"\n----\n");
 
-        while(p) {
-                MDPrintArr(p->md5_digest);
-                fprintf(stdout," => %-70s | %ld /n: %ld Dev: %ld\n",p->path,p->fsize, p->node, (uint32)p->dev);
-                p=p->next;
-        }
-        fprintf(stdout,"----\n");
-}
+			while(p) {
+					MDPrintArr(p->md5_digest);
+					fprintf(stdout," => %-70s | %ld /n: %ld Dev: %ld\n",p->path,p->fsize, p->node, (uint32)p->dev);
+					p=p->next;
+			}
+			fprintf(stdout,"----\n");
+	}
 
 #endif
 

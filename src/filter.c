@@ -343,6 +343,8 @@ static void build_checksums(file_group *grp)
                         if(pthread_join(tt[ii],NULL))
                                 perror("Pthread is failing.");
                 }
+                
+                if(tt) free(tt); 
         }
 }
 
