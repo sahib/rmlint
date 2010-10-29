@@ -21,12 +21,12 @@ CP=cp
 #compiling stuff
 CC=gcc
  
-WARN=-std=c99 -Wall -pedantic 
-OPTI= -march=native -s -O3
+WARN=-ansi -Wall -pedantic 
+OPTI= -march=native  -Os -finline-functions -fomit-frame-pointer -s 
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a
-CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC)
+CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) -static
 
-LDFLAGS=-lpthread -lm -pg
+LDFLAGS=-lpthread -lm 
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \
@@ -49,7 +49,7 @@ $(EXECUTABLE):  $(OBJECTS)
 
 .c.o: 	
 	@$(ECHO) "-> Compiling $<"
-	@$(CC) $(INCLUDE) $(LDFLAGS)  $(CFLAGS) $< -o $@
+	@$(CC) $(INCLUDE) $(CFLAGS) $< -o $@
 
 clean:
 	@$(ECHO) "<> Making clean."

@@ -17,7 +17,7 @@
 ** Author: Christopher Pahl <sahib@online.de>:
 ** Hosted at the time of writing (Do 30. Sep 18:32:19 CEST 2010):
 *  http://github.com/sahib/rmlint
-*   
+*
 **/
 
 #pragma once
@@ -26,19 +26,19 @@
 
 #include "md5.h"
 
-typedef struct { 
-	
-	/* Start and end pointer of a 'group' */
-	iFile *grp_stp, *grp_enp; 
-	
-	/* elems in this list and total size */
-	uint32 len, size; 
+typedef struct {
 
-} file_group;    
+        /* Start and end pointer of a 'group' */
+        iFile *grp_stp, *grp_enp;
+
+        /* elems in this list and total size */
+        uint32 len, size;
+
+} file_group;
 
 
-int  regfilter(const char* input, const char *pattern); 
-int  recurse_dir(const char *path); 
+int  regfilter(const char* input, const char *pattern);
+int  recurse_dir(const char *path);
 void prefilter(iFile *b);
 
 #endif

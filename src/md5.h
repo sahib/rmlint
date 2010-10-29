@@ -48,10 +48,10 @@
 
 /* Data structure for MD5 (Message Digest) computation */
 typedef struct {
-  uint32 i[2];                   /* number of _bits_ handled mod 2^64 */
-  uint32 buf[4];                                    /* scratch buffer */
-  unsigned char in[64];                              /* input buffer */
-  unsigned char digest[16];     /* actual digest after MD5Final call */
+        uint32 i[2];                   /* number of _bits_ handled mod 2^64 */
+        uint32 buf[4];                                    /* scratch buffer */
+        unsigned char in[64];                              /* input buffer */
+        unsigned char digest[16];     /* actual digest after MD5Final call */
 } MD5_CTX;
 
 void MDPrint (MD5_CTX *mdContext);

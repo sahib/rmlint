@@ -17,7 +17,7 @@
 ** Author: Christopher Pahl <sahib@online.de>:
 ** Hosted at the time of writing (Do 30. Sep 18:32:19 CEST 2010):
 *  http://github.com/sahib/rmlint
-*   
+*
 **/
 
 #pragma once
@@ -36,22 +36,21 @@ typedef char bool;
 #define true  (!0)
 
 
-typedef struct iFile  
-{
-   unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
-   unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-   char *path;		  	                  /* absolute path from working dir */
-   uint32 fsize; 		                  /* Size of the file (bytes) */
-   bool filter; 			              /* Uhm? */
-   bool dupflag;			              /* Is the file marked as duplicate? */ 
-   
-   /* This is used to find pointers to the same file */
-   ino_t node; 
-   dev_t dev;  
+typedef struct iFile {
+        unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
+        unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
+        char *path;		  	                  /* absolute path from working dir */
+        uint32 fsize; 		                  /* Size of the file (bytes) */
+        bool filter; 			              /* Uhm? */
+        bool dupflag;			              /* Is the file marked as duplicate? */
 
-   /* Pointer to next element */
-   struct iFile *next;
-   struct iFile *last;
+        /* This is used to find pointers to the same file */
+        ino_t node;
+        dev_t dev;
+
+        /* Pointer to next element */
+        struct iFile *next;
+        struct iFile *last;
 
 } iFile;
 
@@ -65,6 +64,6 @@ void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l);
 iFile *list_end(void);
 iFile *list_begin(void);
 iFile *list_remove(iFile *ptr);
-uint32 list_len(void) ; 
+uint32 list_len(void);
 
 #endif

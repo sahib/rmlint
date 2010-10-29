@@ -17,7 +17,7 @@
 ** Author: Christopher Pahl <sahib@online.de>:
 ** Hosted at the time of writing (Do 30. Sep 18:32:19 CEST 2010):
 *  http://github.com/sahib/rmlint
-*   
+*
 **/
 
 #pragma once
@@ -25,11 +25,11 @@
 #define LIST_H
 
 #include "list.h"
-#include "filter.h"  
+#include "filter.h"
 
-  
+
 uint32 findmatches(file_group *group);
-void init_filehandler(void); 
-FILE *get_logstream(void); 
+void init_filehandler(void);
+FILE *get_logstream(void);
 
 #endif
