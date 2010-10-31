@@ -40,6 +40,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <alloca.h>
+#include <math.h>
 
 /* For the md5_file routine */
 
@@ -308,29 +309,37 @@ pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
 /* used to calc the complete checksum of file & save it in File */
 void md5_file(iFile *file)
 {
-        FILE *inFile = fopen (file->path, "rb");
+		/* If the twice the size of the fingerprints read in is bigger than the actual size: 
+		 * return as we don't need this checksum anymore - this reduces silly IO with many small files 
+		 *  */
+		int bytes;
+		FILE *inFile; 
         MD5_CTX mdContext;
-
-        int bytes;
-        unsigned char data[MD5_IO_BLOCKSIZE];
-
-        if(!inFile || !file->path) return;
-
+        unsigned char *data;
+		
+		uint32 already_read = MD5_FPSIZE_FORM(file->fsize);
+		already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read; 
+		if(file->fsize <= (already_read<<1)) { puts("Ignoring due to lazyness.");return; }
+		
+        data = alloca(MD5_IO_BLOCKSIZE);
+        inFile = fopen (file->path, "rb");
+		
+		if(inFile == NULL || file->path == NULL) return; 
         MD5Init (&mdContext);
-
+		fseek(inFile, already_read, SEEK_SET);
+		
         do {
 
 #if (MD5_SERIAL_IO == 1)
                 pthread_mutex_lock(&mutex_ck_IO);
 #endif
                 bytes = fread (data, 1, MD5_IO_BLOCKSIZE, inFile);
-
 #if (MD5_SERIAL_IO == 1)
                 pthread_mutex_unlock(&mutex_ck_IO);
 #endif
 
                 MD5Update (&mdContext, data, bytes);
-        }   while (bytes != 0);
+        }   while (bytes != 0 && (ftell(inFile) < (file->fsize - already_read)));
 
         MD5Final (&mdContext);
         memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
@@ -371,7 +380,11 @@ void md5_fingerprint(iFile *file, const uint32 readsize)
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_fp_IO);
 #endif
-        fseek(pF,readsize,SEEK_END);
+#if BYTE_IN_THE_MIDDLE
+		fseek(pF, file->fsize>>1 ,SEEK_SET);
+		bytes = fread(file->bim, sizeof(char), BYTE_MIDDLE_SIZE, pF);  
+#endif
+        fseek(pF, -readsize,SEEK_END);
         bytes = fread(data,sizeof(char),readsize,pF);
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_unlock(&mutex_fp_IO);

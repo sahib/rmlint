@@ -91,17 +91,6 @@ static int paranoid(const char *p1, const char *p2)
         return 1;
 }
 
-
-static int cmp_f(unsigned char *a, unsigned char *b)
-{
-        int i = 0;
-        for(; i < MD5_LEN; i++) {
-                if(a[i] != b[i])
-                        return 1;
-        }
-        return 0;
-}
-
 static void print_askhelp(void)
 {
         error(  RED"\n\nk"YEL" - keep file; \n"
@@ -112,36 +101,44 @@ static void print_askhelp(void)
                 NCO );
 }
 
-static void write_to_log(const char* path, bool orig, FILE *script_out)
+void write_to_log(const iFile *file, bool orig, FILE *fd)
 {
-        if(script_out) {
-                char *fpath = canonicalize_file_name(path);
+        if(fd && set.output) {
+                char *fpath = canonicalize_file_name(file->path);
 
                 if(!fpath) {
-                        perror("Can't get abs path");
-                        fpath = (char*)path;
+                        perror("Unable to get full path");
+                        fpath = (char*)file->path;
                 }
-
-                if(set.cmd) {
-                        size_t len = strlen(path)+strlen(set.cmd)+1;
-                        char *cmd_buff = alloca(len);
-                        snprintf(cmd_buff,len,set.cmd,fpath);
-                        fprintf(script_out, "%s\n", cmd_buff);
+                if(set.mode == 5) {
+						if(orig) {
+								fprintf(fd, set.cmd_orig, file->path);
+								if(set.cmd_orig) fprintf(fd, SCRIPT_LINE_SUFFIX); 
+						} else { 
+								fprintf(fd, set.cmd_path, file->path);
+								if(set.cmd_path) fprintf(fd, SCRIPT_LINE_SUFFIX); 
+						}
                 } else {
-                        if(orig != true)
-                                fprintf(script_out,"rm \"%s\"\n", fpath);
+						int i; 
+                        if(orig != true) 
+                                fprintf(fd,"1 \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
                         else
-                                fprintf(script_out,"\n#  \"%s\"\n", fpath);
+                                fprintf(fd,"0 \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+                
+					    for (i = 0; i < 16; i++) {
+                                fprintf (fd,"%02x", file->md5_digest[i]);
+                        }
+                        fputc('\n',fd); 
                 }
 
                 if(fpath) free(fpath);
-        } else {
+        } else if(set.output) {
                 error("Unable to write to log\n");
         }
 }
 
 
-static void handle_item(const char *path, const char *orig, FILE *script_out)
+static void handle_item(const char *path, const char *orig)
 {
         /* What set.mode are we in? */
         switch(set.mode) {
@@ -197,14 +194,14 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
 
         case 3: {
                 /* Just remove it */
-                warning(RED" rm "NCO"\"%s\"\n", path);
+                warning(RED"rm "NCO"\"%s\"\n", path);
                 remfile(path);
         }
         break;
 
         case 4: {
                 /* Replace the file with a neat symlink */
-                error(GRE"link "NCO"\"%s\""RED" -> "NCO"\"%s\"\n", orig, path);
+                error(GRE"ln -s "NCO"\"%s\""RED" "NCO"\"%s\"\n", orig, path);
                 if(unlink(path))
                         error("remove failed with %s\n", strerror(errno));
 
@@ -214,53 +211,96 @@ static void handle_item(const char *path, const char *orig, FILE *script_out)
         break;
 
         case 5: {
+				/* Exec a command on it */
                 int ret;
-                size_t len = strlen(path)+strlen(set.cmd)+strlen(orig)+1;
-                char *cmd_buff = alloca(len);
-
-                fprintf(stderr,NCO);
-                snprintf(cmd_buff,len,set.cmd,path,orig);
+                char *cmd_buff;
+                size_t len = (path) ? (strlen(path) + ((set.cmd_path) ? strlen(set.cmd_path) : 0) + 1) :
+						              (strlen(orig) + ((set.cmd_orig) ? strlen(set.cmd_orig) : 0) + 1) ;
+ 
+                cmd_buff = alloca(len); 
+                if(path) snprintf(cmd_buff,len,set.cmd_path,path);
+                else     snprintf(cmd_buff,len,set.cmd_orig,orig);
+                
                 ret = system(cmd_buff);
-                if(ret == -1) {
-                        perror("System()");
-                }
-
+                if(ret == -1) perror("System()");
+             
                 if (WIFSIGNALED(ret) &&
                     (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
                         return;
-
         }
         break;
 
         default:
-                error(RED"Invalid set.mode. This is a program error. :("NCO);
+                error(RED"Invalid set.mode. This is a program error :("NCO);
         }
 }
 
 
 void init_filehandler(void)
 {
-        script_out = fopen(SCRIPT_NAME, "w");
-        if(script_out) {
-                char *cwd = getcwd(NULL,0);
+	if(set.output)
+	{
+			script_out = fopen(set.output, "w");
+			if(script_out) {
+					char *cwd = getcwd(NULL,0);
 
-                /* Make the file executable */
-                if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1)
-                        perror("Warning, chmod failed on "SCRIPT_NAME);
+					/* Make the file executable */
+					if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1)
+							perror("chmod");
 
-                /* Write a basic header */
-                fprintf(script_out,
-                        "#!/bin/sh\n"
-                        "#This file was autowritten by 'rmlint'\n"
-                        "#If you removed these files already you can use it as a log\n"
-                        "# If not you can execute this script. Have a nice day.\n"
-                        "# rmlint was executed from: %s\n\n",cwd);
+					/* Write a basic header */
+					fprintf(script_out,
+							"#!/bin/sh\n"
+							"#This file was autowritten by 'rmlint'\n"
+							"# rmlint was executed from: %s\n",cwd);
 
-                if(cwd) free(cwd);
-        } else {
-                perror(NULL);
-        }
+					if((!set.cmd_orig && !set.cmd_path) || set.mode != 5) {
+							fprintf(get_logstream(), "#\n# Entries are listed like this: \n"); 
+							fprintf(get_logstream(), "# dupf | path | size | devID | inode | md5sum\n"); 
+							fprintf(get_logstream(), "# -------------------------------------------\n"); 
+							fprintf(get_logstream(), "# dupf  : If rmlint thinks this the original, it's marked with '0' otherwise '1'\n"); 
+							fprintf(get_logstream(), "# path  : The full path to the found file\n"); 
+							fprintf(get_logstream(), "# size  : total size in byte as a decimal integer\n"); 
+							fprintf(get_logstream(), "# devID : The ID of the device where the find is stored in hexadecimal form\n"); 
+							fprintf(get_logstream(), "# inode : The Inode of the file (see man 2 stat)\n"); 
+							fprintf(get_logstream(), "# md5sum: The full md5-checksum of the file\n#\n"); 
+						}
+					if(cwd) free(cwd);
+			} else {
+					perror(NULL);
+			}
+		}
 }
+
+static int cmp_f(iFile *a, iFile *b)
+{
+        int i = 0;
+        for(; i < MD5_LEN; i++) {
+                if(a->md5_digest[i] != b->md5_digest[i])
+                        return 1;
+        }
+        for(i = 0; i < MD5_LEN; i++) { 
+				if(a->fp[0][i] != b->fp[0][i])
+					return 1; 
+		}
+		for(i = 0; i < MD5_LEN; i++) { 
+				if(a->fp[1][i] != b->fp[1][i])
+					return 1; 
+		}			
+		
+#if DEBUG_CODE > 1	
+		MDPrintArr(a->md5_digest); putchar('\n');
+		MDPrintArr(b->md5_digest); putchar('\n');
+		
+		MDPrintArr(a->fp[0]); putchar('\n');
+		MDPrintArr(b->fp[0]); putchar('\n');
+			
+		MDPrintArr(a->fp[1]); putchar('\n');
+		MDPrintArr(b->fp[1]); putchar('\n');
+#endif 
+        return 0;
+}
+
 
 uint32 findmatches(file_group *grp)
 {
@@ -280,7 +320,7 @@ uint32 findmatches(file_group *grp)
 
                         while(j) {
                                 if(j->dupflag) {
-                                        if( (!cmp_f(i->md5_digest, j->md5_digest))  &&     /* Same checksum?                                             */
+                                        if( (!cmp_f(i,j))           &&                     /* Same checksum?                                             */
                                             (i->fsize == j->fsize)	&&					   /* Same size? (double check, you never know)             	 */
                                             ((set.paranoid)?paranoid(i->path,j->path):1)   /* If we're bothering with paranoid users - Take the gatling! */
                                           ) {
@@ -291,22 +331,28 @@ uint32 findmatches(file_group *grp)
                                                 lintsize += j->fsize;
 
                                                 if(printed_original == false) {
-                                                        error("# %s\n",i->path);
-                                                        write_to_log(i->path, true, script_out);
-                                                        handle_item(i->path,i->path,script_out);
+														if(set.mode == 1) 
+															error("# %s\n",i->path);
+                                                        
+                                                        write_to_log(i, true, script_out);
+                                                        handle_item(NULL, i->path); 
                                                         printed_original = true;
                                                 }
+												
+												if(set.mode == 1) {
+														if(set.paranoid) {
+																/* If byte by byte was succesful print a blue "x" */
+																warning(BLU"%-1s "NCO,"X");
+														} else {
+																warning(RED"%-1s "NCO,"*");
+														}
+												}
+												
+												if(set.mode == 1) 
+													error("%s\n",j->path);
 
-                                                if(set.paranoid) {
-                                                        /* If byte by byte was succesful print a blue "x" */
-                                                        warning(BLU"%-1s "NCO,"X");
-                                                } else {
-                                                        warning(RED"%-1s "NCO,"*");
-                                                }
-                                                error("%s\n",j->path);
-
-                                                write_to_log(j->path, false, script_out);
-                                                handle_item(j->path,i->path,script_out);
+                                                write_to_log(j, false, script_out);
+                                                handle_item(j->path,i->path);
                                         }
                                 }
                                 j = j->next;

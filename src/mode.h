@@ -30,6 +30,7 @@
 
 uint32 findmatches(file_group *group);
 void init_filehandler(void);
+void write_to_log(const iFile *file, bool orig, FILE *fd);
 FILE *get_logstream(void);
 
 #endif

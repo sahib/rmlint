@@ -42,10 +42,12 @@
  * ToDo:
  * - docs
  * - some comments.. clean up..
+ * - remove fancy colors and better prompt mode
  * - better sheduler (only reduce one thread on overflow e.g.) 
- * - get modes back to work 
+ * - Speed up the database building step.
  * - pusblish..
  * - crappy regex.. (-r seems to work, but -R? - little moments of wtf..)
+ * - goto ToDo2; 
 
  **/
 
@@ -75,7 +77,7 @@ handled seperate in future versions.
 
 /**
  * ToDo2 (for removing other sort of "lint")
- * - Write bad symlinks to script
+ * - Write bad symlinks to script (needs -f)
  * - Find old tmp data (*~)
  * - empty dirs
  * - non stripped binaries
@@ -86,11 +88,10 @@ bool do_exit = false;
 bool use_cwd = false;
 int  cpindex = 0;
 
-/* If we abort abnormally we'd like to set the color back */
-static void resetcol(void)
-{
-        printf(NCO);
-}
+const char *command_C = "ls \"%s\" --color=auto";
+const char *command_c = "ls \"%s\" -lasi --color=auto";
+const char *script_name = "rmlint.sh"; 
+
 
 /* If die() is called rmlint will jump back to the end of main 
  * rmlint does NOT call exit() or abort() on it's own - so you
@@ -130,16 +131,10 @@ void info(const char* format, ...)
         }
 }
 
-void status(const char* format, ...)
+/* If we abort abnormally we'd like to set the color back */
+static void resetcol(void)
 {
-        if(set.verbosity > 2) {
-                va_list args;
-                va_start (args, format);
-                vfprintf (stdout, format, args);
-                va_end (args);
-                putchar('\n');
-                fflush(stdout);
-        }
+        warning(NCO);
 }
 
 /* Help text */
@@ -149,12 +144,11 @@ static void print_help(void)
         fprintf(stderr, "\nGeneral options:\n\n"
                 "\t-t --threads <t>\tSet the number of threads to <t> used in full checksum creation.\n"
                 "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!)\n"
-                "\t-z --skipfp\t\tSkip building fingerprints (good for many small files)\n"
-                "\t-y --skippre\t\tSkip Prefiltering (always bad)\n"
                );
         fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
-                "\t-f --followlinks\tWether links are followed (None is reported twice)\n"
+                "\t-f --followlinks\tWether links are followed (None is reported twice) [Only specify this if you really need to]\n"
                 "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition\n"
+                "\t-G --hidden\t\tAlso search through hidden files / directories (disabled by default)\n"
                 "\t-m --mode <mode>\tTell rmlint how to deal with the files it finds.\n"
                );
         fprintf(stderr,	"\n\t\t\t\tWhere modes are:\n\n"
@@ -163,26 +157,31 @@ static void print_help(void)
                 "\t\t\t\task   - Ask for each file what to do\n"
                 "\t\t\t\tnoask - Full removal without asking.\n"
                 "\t\t\t\tcmd   - Takes the command given by -c and executes it on the file.\n\n"
-                "\t-c --command <cmd>\tExecute a shellcommand on found files when used with '-m cmd'\n"
-                "\t\t\t\tExample: rmlint -m cmd -c \"ls -lah %%s %%s\"\n"
-                "\t\t\t\tFirst %%s expands to found duplicate, second to original.\n"
+                "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n");
+        fprintf(stderr,"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
+                "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '%%s'\" -c \"ls -lasi '%%s'\" -v 1\n" 
+                "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n"
+                "\t\t\t\tThe %%s expands to the found duplicate, second to the 'original'.\n"
                );
         fprintf(stderr,	"Regex options:\n\n"
                 "\t-r --fregex <pat>\tChecks filenames against the pattern <pat>\n"
                 "\t-R --dregex <pat>\tChecks dirnames against the pattern <pat>\n"
-                "\t-i --invmatch\t\tInvert match - Only investigate when npt containing <pat>\n"
+                "\t-i --invmatch\t\tInvert match - Only investigate when not containing <pat>\n"
                 "\t-e --matchcase\t\tMatches case of paths (not by default)\n");
         fprintf(stderr,	"\nMisc options:\n\n"
                 "\t-h --help\t\tPrints this text and exits\n"
+                "\t-o --output [<o>]\tOutputs logfile to <o>. The <o> argument is optional, specify none to write no log.\n"
+                "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o=\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote that you NEED the '=' here.\n\n");
+        fprintf(stderr,"\t-z --dump <id>\t\tOption with various weird meanings, most scientist postulated that it kills kittens.\n"
                 "\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
                 "\t\t\t\tWhere:\n"
                 "\t\t\t\t0 prints nothing\n"
-                "\t\t\t\t1 prints only errors\n"
-                "\t\t\t\t2 prints warning\n"
-                "\t\t\t\t3 prints everything\n"
+                "\t\t\t\t1 prints only errors and results\n"
+                "\t\t\t\t2 + prints warning\n"
+                "\t\t\t\t3 + everything else\n"
                 "\n"
                );
-        fprintf(stderr,"Additionally, the options p,f,s,e and i have a uppercase option (P,F,S,E and I) that inverse it's effect\n");
+        fprintf(stderr,"Additionally, the options p,f,s,e,g,o,i,c have a uppercase option (O,G,P,F,S,E,I,C) that inverse it's effect.\n");
         fprintf(stderr, "\nVersion 0.43 - Copyright Christopher <Sahib Bommelig> Pahl\n");
         fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
         fprintf(stderr, "See the manpage or the README for more information.\n");
@@ -194,8 +193,6 @@ void rmlint_set_default_settings(rmlint_settings *set)
 {
         set->mode  		 =  1; 		/* list only    */
         set->casematch   =  0; 		/* Insensitive  */
-        set->fingerprint =  1; 		/* Do fprints   */
-        set->prefilter   =  1;		/* Do prefilter */
         set->invmatch	 =  0;		/* Normal mode  */
         set->paranoid	 =  0; 		/* dont be bush */
         set->depth 		 =  0; 		/* inf depth    */
@@ -206,7 +203,11 @@ void rmlint_set_default_settings(rmlint_settings *set)
         set->paths  	 =  NULL;   /* Startnode    */
         set->dpattern 	 =  NULL;   /* DRegpattern  */
         set->fpattern 	 =  NULL;   /* FRegPattern  */
-        set->cmd 		 =  NULL;   /* Cmd,if used  */
+        set->cmd_path 	 =  NULL;   /* Cmd,if used  */
+        set->cmd_orig    =  NULL;   /* Origcmd, -"- */ 
+        set->dump        =  0;
+        set->output  =  (char*)script_name; 
+        set->ignore_hidden = 1; 
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
@@ -218,25 +219,26 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 static struct option long_options[] = {
                         {"threads",     required_argument, 0, 't'},
                         {"dregex",      required_argument, 0, 'R'},
-                        {"fregex",  	   required_argument, 0, 'r'},
+                        {"fregex",  	required_argument, 0, 'r'},
                         {"mode",        required_argument, 0, 'm'},
-                        {"skippre",     no_argument, 	  0, 'y'},
-                        {"dopre",       no_argument, 	  0, 'Y'},
-                        {"skipfp",      no_argument, 	  0, 'z'},
-                        {"buildfp",     no_argument, 	  0, 'Z'},
-                        {"maxdepth",	   required_argument, 0, 'd'},
-                        {"command",     required_argument, 0, 'c'},
+                        {"maxdepth",	required_argument, 0, 'd'},
+                        {"cmd_dup",     required_argument, 0, 'c'},
+                        {"cmd_orig",    required_argument, 0, 'C'},
+                        {"dump",        required_argument, 0, 'z'},
                         {"verbosity",   required_argument, 0, 'v'},
+                        {"output",      optional_argument, 0, 'o'},       
+                        {"ignorehidden",no_argument,      0, 'g'},
+                        {"hidden",      no_argument,      0, 'G'},
                         {"matchcase",   no_argument, 	  0, 'e'},
                         {"ignorecase",  no_argument, 	  0, 'E'},
                         {"followlinks", no_argument, 	  0, 'f'},
                         {"ignorelinks", no_argument, 	  0, 'F'},
                         {"invertmatch", no_argument, 	  0, 'i'},
                         {"normalmatch", no_argument, 	  0, 'I'},
-                        {"samepart",    no_argument,		  0, 's'},
-                        {"allpart",     no_argument,		  0, 'S'},
-                        {"paranoid",    no_argument,		  0, 'p'},
-                        {"naive",       no_argument,		  0, 'P'},
+                        {"samepart",    no_argument,	  0, 's'},
+                        {"allpart",     no_argument,	  0, 'S'},
+                        {"paranoid",    no_argument,	  0, 'p'},
+                        {"naive",       no_argument,	  0, 'P'},
                         {"help",        no_argument, 	  0, 'h'},
                         {0, 0, 0, 0}
                 };
@@ -244,7 +246,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 /* getopt_long stores the option index here. */
                 int option_index = 0;
 
-                c = getopt_long (argc, argv, "m:R:r:zZyYhpPfFeEsSiIc:t:d:v:",long_options, &option_index);
+                c = getopt_long (argc, argv, "m:R:r:ho::z:gGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
 
                 /* Detect the end of the options. */
                 if (c == -1) break;
@@ -256,7 +258,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 
                         sets->threads = atoi(optarg);
                         if(!sets->threads || sets->threads < 0)  sets->threads = 4;
-
                         break;
                 case 'f':
                         sets->followlinks = 1;
@@ -267,9 +268,24 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 case 'h':
                         print_help();
                         break;
+                case 'z': 
+						sets->dump = atoi(optarg); 
+						break; 
+                case 'o': 
+				        sets->output = optarg; 
+				        break; 
                 case 'c':
-                        sets->cmd = optarg;
+                        sets->cmd_path = optarg;
                         break;
+                case 'C':
+                        sets->cmd_orig = optarg;
+                        break;
+                case 'g': 
+                        sets->ignore_hidden = 1; 
+                        break; 
+                case 'G': 
+						sets->ignore_hidden = 0; 
+						break; 
                 case 'v':
                         sets->verbosity = atoi(optarg);
                         break;
@@ -293,18 +309,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         break;
                 case 'd':
                         sets->depth = ABS(atoi(optarg));
-                        break;
-                case 'z':
-                        sets->fingerprint = 0;
-                        break;
-                case 'Z':
-                        sets->fingerprint = 1;
-                        break;
-                case 'y':
-                        sets->prefilter = 0;
-                        break;
-                case 'Y':
-                        sets->prefilter = 1;
                         break;
                 case 'r':
                         sets->fpattern = optarg;
@@ -359,7 +363,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 
         if(lp == 0) {
                 /* Still no path set? */
-                sets->paths = malloc(sizeof(char*)*2);
+                sets->paths = malloc(sizeof(char*)<<1);
                 sets->paths[0] = getcwd(NULL,0);
                 sets->paths[1] = NULL;
                 if(!sets->paths[0]) {
@@ -368,7 +372,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         return 0;
                 }
                 use_cwd = true;
-                info(RED" => "NCO"Investigating \"%s\"\n",sets->paths[0]);
         }
         return 1;
 }
@@ -390,14 +393,14 @@ static void check_cmd(const char *cmd)
                         }
                 }
         }
-        if(ps > 2) {
+        if(ps > 1) {
                 error("--command: Format string may only contain two \"%%s\" at the same time!\n");
                 die(-2);
         }
 }
 
 
-/* This is old and should be removed.. */
+/* This is only used to pass the current dir to eval_file */
 int  get_cpindex(void)
 {
         return cpindex;
@@ -422,6 +425,8 @@ void die(int status)
         /* Make sure NCO is printed */
         resetcol();
 
+		if(get_logstream())  fclose(get_logstream());
+
         /* Prepare to jump to return */
         do_exit = true;
         longjmp(place,status);
@@ -435,7 +440,7 @@ static long cmp_sz(iFile *a, iFile *b)
 
 
 /* Print the iFilelist starting with begin and ending with 'NULL' */
-#if DEBUG_CODE == 1
+#if DEBUG_CODE > 0
 
 	void print(iFile *begin)
 	{
@@ -460,15 +465,16 @@ int rmlint_main(void)
 
         int retval = setjmp(place);
         if(do_exit != true) {
-                if(set.cmd == NULL && set.mode == 5) {
-                        error(YEL" => "NCO"\""YEL"-m cmd"NCO"\" needs a command specified by \""YEL"-c <CMD>"NCO"\"!\n");
-                        error(YEL" => Example:"NCO" rmlint . -m cmd -c \"ls -la %%s --color=auto\"\n");
-                        die(-1);
-                }
-
-                if(set.mode == 5)
-                        check_cmd(set.cmd);
-
+			
+                if(set.mode == 5) {
+						if(!set.cmd_orig && !set.cmd_path) {
+							set.cmd_orig = (char*)command_C;
+							set.cmd_path = (char*)command_c; 
+						} else { 
+							if(set.cmd_orig) check_cmd(set.cmd_orig);
+							if(set.cmd_path) check_cmd(set.cmd_path);
+						}
+				}
                 /* Open logfile */
                 init_filehandler();
 
@@ -513,17 +519,14 @@ int rmlint_main(void)
                  * */
                 info("Now mergesorting list based on filesize... ");
                 list_sort(list_begin(),cmp_sz);
-                info(" done\n");
-
+                info("done\n");
 
                 /* Apply the prefilter and outsort inique sizes */
-                if(set.prefilter) {
-                        info("Now removing files with unique sizes from list.. ");
-                        prefilter(list_begin());
-                }
-
+                info("Now removing files with unique sizes from list.. ");
+                start_processing(list_begin());
+               
                 /* Exit! */
-                die(0);
+                die(EXIT_SUCCESS);
         }
         return retval;
 }

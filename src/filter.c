@@ -20,8 +20,6 @@
 *
 **/
 
-
-
 /* Needed for nftw() */
 #define _XOPEN_SOURCE 500
 #define _GNU_SOURCE
@@ -79,15 +77,14 @@ int regfilter(const char* input, const char *pattern)
 {
         int status;
         int flags = REG_EXTENDED|REG_NOSUB;
+        const char *string;
 
-
-        const char *string = basename(input);
-
-        if(!pattern||!string) {
+        if(!pattern) {
                 return 0;
         } else {
                 regex_t re;
-
+				string = basename(input);
+				
                 if(!set.casematch)
                         flags |= REG_ICASE;
 
@@ -115,7 +112,7 @@ int regfilter(const char* input, const char *pattern)
  * - a file: Push it back to the list, if it has "cmp_pattern" in it. (if --regex was given)
  * If the user interrupts, nftw() stops, and the program will do it'S magic.
  */
-int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
+static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
         if(set.depth && ftwbuf->level > set.depth) {
                 /* Do not recurse in this subdir */
@@ -126,21 +123,39 @@ int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ft
         }
         if(flag == FTW_SLN) {
                 error(RED"Bad symlink: %s\n"NCO,path);
+				
+				if(set.output) 
                 fprintf(get_logstream(),"rm %s #bad link\n",path);
         }
         if(path) {
+				/* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
                 if(flag == FTW_F && ptr->st_rdev == 0) {
                         if(!regfilter(path, set.fpattern)) {
-                                dircount++;
-                                list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
+								if(set.ignore_hidden) {
+										char *base = basename(path); 
+										if(*base != '.') { 
+												dircount++;
+												list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
+										}
+								} else {
+										dircount++;
+										list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
+								}
                         }
                         return FTW_CONTINUE;
                 }
         }
         if(flag == FTW_D) {
-                if(regfilter(path,set.dpattern)&& strcmp(path,set.paths[get_cpindex()]) != 0) {
+                if((regfilter(path,set.dpattern) && strcmp(path,set.paths[get_cpindex()]) != 0)) {
                         return FTW_SKIP_SUBTREE;
                 }
+                if(set.ignore_hidden && path) 
+                {
+					char *base = basename(path); 
+					if(*base == '.') { 
+						return FTW_SKIP_SUBTREE;
+					}
+				}
         }
         return FTW_CONTINUE;
 }
@@ -153,7 +168,7 @@ int recurse_dir(const char *path)
         if(!set.followlinks)
                 flags |= FTW_PHYS;
 
-        if(0)
+        if(USE_DEPTH_FIRST)
                 flags |= FTW_DEPTH;
 
         if(set.samepart)
@@ -175,7 +190,7 @@ int recurse_dir(const char *path)
 /* If we have more than one path, several iFiles  *
  *  may point to the same (physically same file.  *
  *  This woud result in false positves - Kick'em  */
-uint32 rm_double_paths(file_group *fp)
+static uint32 rm_double_paths(file_group *fp)
 {
         iFile *b = fp->grp_stp;
         uint32 c = 0;
@@ -218,6 +233,15 @@ static int cmp_fingerprints(iFile *a,iFile *b)
                         }
                 }
         }
+        
+#if BYTE_IN_THE_MIDDLE 
+        for(i=0; i<BYTE_MIDDLE_SIZE; i++) {
+				if(a->bim[i] != b->bim[i]) {
+						return 0; 
+			    }
+		}
+#endif 
+
         return 1;
 }
 
@@ -234,7 +258,7 @@ static uint32 group_filter(file_group *fp)
                 return 0;
 
         /* The size read in to build a fingerprint */
-        fp_sz = sqrt(fp->grp_stp->fsize / MD5_FP_PERCENT) + 1;
+        fp_sz = MD5_FPSIZE_FORM(fp->grp_stp->fsize); 
 
         /* Clamp it to some maximum (4KB) */
         fp_sz = (fp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : fp_sz;
@@ -305,7 +329,7 @@ static void build_checksums(file_group *grp)
         if(grp == NULL || grp->grp_stp == NULL)
                 return;
 
-        if(set.threads == 1 || grp->size < 2*MD5_MTHREAD_SIZE) {
+        if(set.threads == 1 ||  grp->size < MD5_MTHREAD_SIZE) {
                 /* Just loop through this group and built the checksum */
                 iFile *p = grp->grp_stp;
                 while(p) {
@@ -355,8 +379,7 @@ static void* sheduler_cb(void *gfp)
         if(group == NULL || group->grp_stp == NULL)
                 return NULL;
 
-        if(set.fingerprint)
-                group_filter(group);
+        group_filter(group);
 
         if(group->len == 1) {
                 list_clear(group->grp_stp);
@@ -385,26 +408,58 @@ static void start_sheduler(file_group *fp, uint32 nlistlen)
         uint32 ii;
         pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
 
-        if(set.threads == 1) {
+        if(set.threads == 1 || THREAD_SHEDULER == 0) {
                 for(ii = 0; ii < nlistlen; ii++) {
                         sheduler_cb(&fp[ii]);
                 }
-        } else {
+        } else if(THREAD_SHEDULER == 1) {
+			
+				/* Run max set.threads at the same time. */ 
                 int nrun = 0;
                 for(ii = 0; ii < nlistlen; ii++) {
-                        if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii]))
-                                perror("I suck @ pthread.");
+					
+					if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) {
+							if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii]))
+									perror("I suck @ pthread.");
 
-                        if(nrun >= set.threads-1) {
-                                sheduler_jointhreads(tt, nrun + 1);
-                                nrun = 0;
-                                continue;
-                        }
-
-                        nrun++;
+							if(nrun >= set.threads-1) {
+									sheduler_jointhreads(tt, nrun + 1);
+									nrun = 0;
+									continue;
+							}
+					
+							nrun++;
+					} else { 
+					        sheduler_cb(&fp[ii]);
+				    }
+					
                 }
                 sheduler_jointhreads(tt, nrun);
-        }
+        } else if(THREAD_SHEDULER == 2) { 
+				
+				/* experimental.. may be faster quite often, but crahses also quite often */
+				int nrun = 0; 
+		        for(ii = 0; ii < nlistlen; ii++) {
+						if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) 
+						{
+							if(pthread_create(&tt[nrun++],NULL,sheduler_cb,(void*)&fp[ii]))
+                                perror("I suck @ pthread.");
+						
+						} else {
+						        sheduler_cb(&fp[ii]);
+						}
+				}
+				sheduler_jointhreads(tt, nrun); 
+				
+		} else if(THREAD_SHEDULER == 3) {
+			
+				int nrun = 0; 
+		        for(ii = 0; ii < nlistlen; ii++) {
+					if(pthread_create(&tt[nrun++],NULL,sheduler_cb,(void*)&fp[ii]))
+                            perror("I suck @ pthread.");
+				}
+				sheduler_jointhreads(tt, nrun); 
+	    }
         if(tt) free(tt);
 }
 
@@ -416,7 +471,7 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
         if(ap && bp) {
                 if(ap->grp_stp && bp->grp_stp) {
                         return ap->grp_stp->node * ap->grp_stp->dev -
-                               bp->grp_stp->node * bp->grp_stp->dev ;
+                                bp->grp_stp->node * bp->grp_stp->dev ;
                 }
 
         }
@@ -424,38 +479,87 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
 }
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
-void size_to_human_readable(uint32 num, char *in)
+static void size_to_human_readable(uint32 num, char *in, int sz)
 {
         if(num < 1024) {
-                snprintf(in,256,"%ld B",(unsigned long)num);
+                snprintf(in,sz,"%ld B",(unsigned long)num);
         } else if(num >= 1024 && num < 1048576.0) {
-                snprintf(in,256,"%.2f KB",(float)(num/1024.0));
+                snprintf(in,sz,"%.2f KB",(float)(num/1024.0));
         } else if(num >= 1024*1024 && num < 1073741824) {
-                snprintf(in,256,"%.2f MB",(float)(num/1048576.0));
+                snprintf(in,sz,"%.2f MB",(float)(num/1048576.0));
         } else {
-                snprintf(in,256,"%.2f GB",(float)(num/1073741824.0));
+                snprintf(in,sz,"%.2f GB",(float)(num/1073741824.0));
         }
 }
 
 
+static void find_double_bases(iFile *starting) 
+{
+	iFile *i = starting; 
+	iFile *j = NULL;  
+	
+	int  c = 1; 
+	
+	while(i)
+	{
+		bool pr = false;  
+		j=i->next;
+	    while(j) 
+	    {
+			if(!strcmp(basename(i->path), basename(j->path)))
+			{
+				char *tmp2 = canonicalize_file_name(j->path); 
+				if(!pr) 
+				{
+					char * tmp = canonicalize_file_name(i->path); 
+					i->dupflag = false;
+					printf("%d %s %u\n",c,tmp,i->fsize); 
+					pr = true;
+					if(tmp) free(tmp); 
+				}
+				
+				j->dupflag = false; 
+				printf("%d %s %u\n",c,tmp2,i->fsize);
+				if(tmp2) free(tmp2); 
+			}
+			j=j->next; 
+		}
+		if(pr) c++; 
+		i=i->next; 
+    }
+        
+	die(-1); 
+}
+
 
 /* Splits into groups, and does some serious presortage */
-void prefilter(iFile *b)
+void start_processing(iFile *b)
 {
-        file_group *fglist = NULL;
-
-        uint32 spelen = 0;
-        uint32 ii = 0;
+        file_group *fglist = NULL,
+                      emptylist; 
 
         /* Logvariables - not relevant to algorithm */
         char lintbuf[128];
-        uint32 remaining = 0, original = list_len();
-        uint32 lint = 0;
-        uint32 rem_counter = 0;
-        uint32 path_doubles = 0;
-        file_group emptylist;
+        uint32 ii = 0,
+                lint = 0,
+                spelen = 0,
+                remaining = 0,
+                rem_counter = 0,
+                path_doubles = 0,
+                original = list_len();
+
+		if(ABS(set.dump) == 1) { 
+				error("Double basenames: \n");
+				error("----------------\n"); 
+				find_double_bases(b); 
+				if(set.dump == -1) die(0); 
+		}
         emptylist.len = 0;
 
+		if(ABS(set.dump) == 2) {
+			error("Groups sorted by size:\n"); 
+			error("---------------------\n"); 
+		}
         while(b) {
                 iFile *q = b, *prev = NULL;
                 uint32 glen = 0, gsize = 0;
@@ -481,6 +585,8 @@ void prefilter(iFile *b)
                         }
 
                         if(q->fsize != 0) {
+                                
+                                
                                 /* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
                                 q = list_sort(q,cmp_nd);
 
@@ -490,7 +596,17 @@ void prefilter(iFile *b)
                                 fglist[spelen].grp_enp = prev;
                                 fglist[spelen].len     = glen;
                                 fglist[spelen].size    = gsize;
-
+                               
+								if(ABS(set.dump) == 2) {
+									iFile *la = q;
+									while(la) 
+									{
+										char *tmp = canonicalize_file_name(la->path);
+										fprintf(stdout,"%u %s\n",la->fsize, tmp); 
+										la=la->next; 
+										free(tmp); 
+									}
+								}
                                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
                                 if(get_cpindex() > 1 || set.followlinks)
                                         path_doubles += rm_double_paths(&fglist[spelen]);
@@ -506,7 +622,7 @@ void prefilter(iFile *b)
                                 ptr = emptylist.grp_stp;
                                 emptylist.len = 0;
                                 while(ptr) {
-                                        fprintf(get_logstream(), "rm %s #Empty file\n",ptr->path);
+										if(set.output) write_to_log(ptr, false, get_logstream());
                                         ptr = list_remove(ptr);
                                         emptylist.len++;
                                 }
@@ -514,9 +630,14 @@ void prefilter(iFile *b)
 
                 }
         }
-
-        info("%ld files less in list (Removed %ld pathdoubles first)\n",rem_counter, path_doubles);
-        info("By ignoring %ld empty files, list was split in %ld parts.\n", emptylist.len, spelen);
+        
+        if(set.dump == -2) die(0); 
+        
+        info("%ld files less in list",rem_counter);
+        if(path_doubles) {
+	           info(" (removed %ld pathzombies)", path_doubles);  
+	    } 
+        info("\nBy ignoring %ld empty files, list was split in %ld parts.\n", emptylist.len, spelen);
         info("Now sorting groups based on their location on the drive.. ");
 
         /* Now make sure groups are sorted by their location on the disk*/
@@ -524,43 +645,27 @@ void prefilter(iFile *b)
 
         info(" done \nNow doing fingerprints and full checksums:\n\n");
 
-#if DEBUG_CODE == 2
-        for(ii = 0; ii < spelen; ii++) {
-                iFile *p = fglist[ii].grp_stp;
-                error("Group #%2d: ",ii);
-                while(p) {
-                        error(" %ld |",p->node);
-                        p=p->next;
-                }
-                putchar('\n');
-        }
-#endif
-
         /* Grups are splitted, now give it to the sheduler */
         /* The sheduler will do another filterstep, build checkusm
          *  and compare 'em. The result is printed afterwards */
         start_sheduler(fglist, spelen);
 
+		if(set.mode == 5 && set.output) { 
+			fprintf(get_logstream(), SCRIPT_LAST);
+			fprintf(get_logstream(), "\n# End of script. Have a nice day."); 
+		}
         /* Gather the total size of removeable data */
         for(ii=0; ii < spelen; ii++) {
                 lint += fglist[ii].size - ((fglist[ii].len > 0) ? (fglist[ii].size / fglist[ii].len) : 0);
                 remaining +=  (fglist[ii].len) ? (fglist[ii].len - 1) : 0;
         }
 
-        size_to_human_readable(lint, lintbuf);
+        size_to_human_readable(lint, lintbuf, 127);
         info("\nIn total %ld (of %ld files as input) files are duplicates.\n",remaining, original);
         info("This means: %s [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
-        info("A log has been written to %s.\n", SCRIPT_NAME);
-
-        /* Clue list together again (for convinience) */
-        for(ii=0; ii < spelen; ii++) {
-                if((ii + 1) != spelen && fglist[ii].grp_enp) {
-                        fglist[ii].grp_enp->next    = fglist[ii+1].grp_stp;
-
-                        if(fglist[ii+1].grp_stp)
-                                fglist[ii+1].grp_stp->last  = fglist[ii].grp_enp;
-                }
-        };
+        
+        if(set.output)
+				info("A log has been written to %s.\n", set.output);
 
         /* End of actual program. Now do some file handling / frees */
         if(fglist) free(fglist);

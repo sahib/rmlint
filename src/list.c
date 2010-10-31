@@ -5,6 +5,7 @@
 #include "list.h"
 #include "rmlint.h"
 
+
 /*** List global ***/
 iFile *start = NULL; /* A pointer to the first element in the list */
 iFile *back  = NULL; /* A pointer to the last  element in the list */
@@ -38,7 +39,6 @@ uint32 list_len(void)
 }
 
 
-
 /**
  * Free all contents from the list
  * and give back memory.
@@ -55,17 +55,17 @@ void list_clear(iFile *begin)
 
                 /* Next */
                 ptr = ptr->next;
-
+             
+				if(ptr) ptr->last = NULL; 
+             
                 /* free ressources */
-                if(tmp) {
-                        if(tmp->path) {
-                                free(tmp->path);
-                        }
-                        tmp->path = NULL;
-
-                        free(tmp);
-                        tmp = NULL;
+                if(tmp->path) {
+                    free(tmp->path);
+                    tmp->path = NULL; 
                 }
+        
+                free(tmp);
+                tmp = NULL;
         }
 }
 
@@ -74,7 +74,6 @@ void list_clear(iFile *begin)
 iFile *list_remove(iFile *ptr)
 {
         iFile *p,*n;
-
         if(ptr==NULL)
                 return NULL;
 
@@ -85,12 +84,15 @@ iFile *list_remove(iFile *ptr)
                 n->last = p;
         } else if(p&&!n) {
                 p->next=NULL;
-                back=p;
         } else if(!p&&n) {
                 n->last=NULL;
-                start=n;
         }
-        len--;
+    
+        free(ptr->path); 
+		ptr->path = NULL; 
+		free(ptr); 
+		ptr = NULL;
+		
         return n;
 }
 
@@ -119,6 +121,9 @@ static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, in
         memset(pointer->fp[1],0,MD5_LEN);
 
         /* Clear the md5 digest array too */
+#if BYTE_IN_THE_MIDDLE
+		memset(pointer->bim,0,BYTE_MIDDLE_SIZE); 
+#endif
         memset(pointer->md5_digest,0,MD5_LEN);
 }
 

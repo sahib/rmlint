@@ -6,9 +6,9 @@
 
 typedef struct {
         char mode;
-        char fingerprint;
         char samepart;
-        char prefilter;
+        char dump; 
+        char ignore_hidden; 
         char followlinks;
         char casematch;
         char paranoid;
@@ -17,7 +17,9 @@ typedef struct {
         char **paths;
         char *dpattern;
         char *fpattern;
-        char *cmd;
+        char *cmd_path;
+        char *cmd_orig;
+        char *output; 
         int threads;
         int verbosity;
 

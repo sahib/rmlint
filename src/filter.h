@@ -39,6 +39,6 @@ typedef struct {
 
 int  regfilter(const char* input, const char *pattern);
 int  recurse_dir(const char *path);
-void prefilter(iFile *b);
+void start_processing(iFile *b);
 
 #endif

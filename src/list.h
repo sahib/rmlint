@@ -39,10 +39,14 @@ typedef char bool;
 typedef struct iFile {
         unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
         unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-        char *path;		  	                  /* absolute path from working dir */
-        uint32 fsize; 		                  /* Size of the file (bytes) */
-        bool filter; 			              /* Uhm? */
-        bool dupflag;			              /* Is the file marked as duplicate? */
+        
+#if  BYTE_IN_THE_MIDDLE 
+		char bim[BYTE_MIDDLE_SIZE]; 
+#endif
+        char *path;		  	               /* absolute path from working dir */
+        uint32 fsize; 		                   /* Size of the file (bytes) */
+        bool filter; 			               /* Uhm? */
+        bool dupflag;			               /* Is the file marked as duplicate? */
 
         /* This is used to find pointers to the same file */
         ino_t node;

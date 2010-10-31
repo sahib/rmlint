@@ -51,22 +51,40 @@
 #define BLU "\x1b[0m"
 #endif
 
-#define STATUS_UPDATE_INTERVAL 5
 #define ABS(a)	(((a) < 0) ? -(a) : (a))
 #define MD5_LEN 16
 
+/* Whic sheduler to take 
+ * + 1) Always single threaded on each group 
+ * + 2) Run max. n (where n may be max. set.threads) at the same time. 
+ * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded 
+ * */
+#define THREAD_SHEDULER 1
+#define THREAD_SHEDULER_MTLIMIT 8388608
+
 /** IO: **/
-#define MD5_IO_BLOCKSIZE  2097152   /* Block size in what IO buffers are read. Default:    2MB */
-#define MD5_FP_MAX_RSZ    8192      /* The maximal size read in for fingerprints. Default   4K */
-#define MD5_FP_PERCENT    10 		/* Percent of a file read in for fingerprint. Default  10% */
-#define MD5_SERIAL_IO     1			/* Align threads before doing md5 related IO. Default:   1 */
-#define MD5_MTHREAD_SIZE  2097152   /* If size of grp > chekcksum are built in parallel.   4MB */
+#define MD5_IO_BLOCKSIZE   2097152   /* Block size in what IO buffers are read. Default:    2MB */
+#define MD5_FP_MAX_RSZ     8192      /* The maximal size read in for fingerprints. Default   4K */
+#define MD5_FP_PERCENT     5 		 /* Percent of a file read in for fingerprint. Default  10% */
+#define MD5_SERIAL_IO      1		 /* Align threads before doing md5 related IO. Default:   1 */
+#define MD5_MTHREAD_SIZE   2097152   /* If size of grp > chekcksum are built in parallel.   4MB */
+#define MD5_FPSIZE_FORM(X) sqrt(X / MD5_FP_PERCENT) + 1;
 
 /** typedef a 32 bit type **/
 typedef uint_fast32_t  uint32;
 
-/* The name of the output script/log */
-#define SCRIPT_NAME "rmlint.sh"
+/* What to append at the end of a command, Default " ;\n" so script continues also on error*/
+#define SCRIPT_LINE_SUFFIX  " &&\n"
+
+/* Last line in script */
+#define SCRIPT_LAST "echo Done"
+
+/* Investigate directories by a depth first algorithm instead of (mostly) random access */
+#define USE_DEPTH_FIRST 0
+
+/* Reads a short sequence of bytes in the middle of a file  */
+#define BYTE_IN_THE_MIDDLE 1
+#define BYTE_MIDDLE_SIZE 8
 
 /* This will cause some debug code to be compiled. Wont have impact on proram though. */
 #define DEBUG_CODE 0
