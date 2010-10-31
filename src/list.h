@@ -64,7 +64,7 @@ iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*));
 
 /* Prototypes */
 void list_clear(iFile *begin);
-void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l);
+void list_append(const char *n, uint32 s, dev_t dev, ino_t node,  bool dupflag);
 iFile *list_end(void);
 iFile *list_begin(void);
 iFile *list_remove(iFile *ptr);

@@ -43,13 +43,8 @@
 
 
 uint32 dircount = 0;
-uint32 elems = 0;
-
 short iinterrupt = 0;
-short tint = 0;
-
-pthread_attr_t p_attr;
-
+bool db_done = false; 
 
 /*
  * Callbock from signal()
@@ -58,15 +53,19 @@ pthread_attr_t p_attr;
 static void interrupt(int p)
 {
         /** This was connected with SIGINT (CTRL-C) in recurse_dir() **/
-        switch(tint) {
+		if(db_done)  {
+			warning(YEL"\nINFO: "NCO"Received Interrupt.\n");
+			die(0);
+		}
+ 
+        switch(iinterrupt) {
         case 0:
-                warning(RED".. "GRE"aborting... "RED"@ \n"NCO);
+                warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
                 break;
         case 1:
                 die(1);
         }
         iinterrupt++;
-        tint++;
 }
 
 /*
@@ -95,7 +94,7 @@ int regfilter(const char* input, const char *pattern)
                         if(status != REG_NOMATCH) {
                                 char err_buff[100];
                                 regerror(status, &re, err_buff, 100);
-                                warning("Warning: Invalid regex pattern: '%s'\n", err_buff);
+                                warning(YEL"WARN: "NCO" Invalid regex pattern: '%s'\n", err_buff);
                         }
                 }
 
@@ -111,6 +110,13 @@ int regfilter(const char* input, const char *pattern)
  * 	as long the depth doesnt get bigger than max_depth and contains the pattern  cmp_pattern
  * - a file: Push it back to the list, if it has "cmp_pattern" in it. (if --regex was given)
  * If the user interrupts, nftw() stops, and the program will do it'S magic.
+ * 
+ * 
+ * Appendum: rmlint used the Inode to sort the contents before doing any I/O to speed up things. 
+ * 			 This is nevertheless limited to Unix filesystems like ext*, reiserfs.. (might work in MacOSX - don't know) 
+ * 			 If someone likes to port this to Windows he would to replace the inode number by the MFT entry point, or simply disable it 
+ * 			 I personally don't have a Windowsmachine and wn't port it, as I don't found many users knowing what that black window with white 
+ *           lines can do ;-) 
  */
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
@@ -122,24 +128,22 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 return FTW_STOP;
         }
         if(flag == FTW_SLN) {
-                error(RED"Bad symlink: %s\n"NCO,path);
-				
-				if(set.output) 
-                fprintf(get_logstream(),"rm %s #bad link\n",path);
+				list_append(path, 0,ptr->st_dev,ptr->st_ino,42);
+				return FTW_CONTINUE;
         }
         if(path) {
 				/* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
                 if(flag == FTW_F && ptr->st_rdev == 0) {
-                        if(!regfilter(path, set.fpattern)) {
+                        if(!regfilter(path, set.fpattern) && !access(path,R_OK)) {
 								if(set.ignore_hidden) {
 										char *base = basename(path); 
 										if(*base != '.') { 
 												dircount++;
-												list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
+												list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
 										}
 								} else {
 										dircount++;
-										list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino, ptr->st_nlink);
+										list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
 								}
                         }
                         return FTW_CONTINUE;
@@ -179,7 +183,7 @@ int recurse_dir(const char *path)
 
         /* Start recurse */
         if( nftw(path, eval_file, _XOPEN_SOURCE, flags) == -1) {
-                warning("nftw() failed with: %s\n", strerror(errno));
+                warning(YEL"FATAL: "NCO"nftw() failed with: %s\n", strerror(errno));
                 return EXIT_FAILURE;
         }
 
@@ -354,7 +358,7 @@ static void build_checksums(file_group *grp)
                                 group_pass.size = packsize;
 
                                 if(pthread_create(&tt[jj], NULL, cksum_cb, (void*)&group_pass))
-                                        perror("Goaaaad, Im an idiot.. Pthread:");
+                                        perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
 
                                 jj++;
                         }
@@ -365,7 +369,7 @@ static void build_checksums(file_group *grp)
 
                 for(ii = 0; ii < jj; ii++) {
                         if(pthread_join(tt[ii],NULL))
-                                perror("Pthread is failing.");
+                                perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
                 }
                 
                 if(tt) free(tt); 
@@ -398,7 +402,7 @@ static void sheduler_jointhreads(pthread_t *tt, uint32 n)
         uint32 ii = 0;
         for(ii=0; ii < n; ii++) {
                 if(pthread_join(tt[ii],NULL))
-                        perror("I even suck at joining threads");
+                        perror(RED"ERROR: "NCO"pthread_join in sheduler()");
         }
 }
 
@@ -420,7 +424,7 @@ static void start_sheduler(file_group *fp, uint32 nlistlen)
 					
 					if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) {
 							if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii]))
-									perror("I suck @ pthread.");
+									perror(RED"ERROR: "NCO"pthread_create in sheduler()");
 
 							if(nrun >= set.threads-1) {
 									sheduler_jointhreads(tt, nrun + 1);
@@ -443,7 +447,7 @@ static void start_sheduler(file_group *fp, uint32 nlistlen)
 						if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) 
 						{
 							if(pthread_create(&tt[nrun++],NULL,sheduler_cb,(void*)&fp[ii]))
-                                perror("I suck @ pthread.");
+                                perror(RED"ERROR: "NCO"pthread_create in sheduler()");
 						
 						} else {
 						        sheduler_cb(&fp[ii]);
@@ -451,15 +455,7 @@ static void start_sheduler(file_group *fp, uint32 nlistlen)
 				}
 				sheduler_jointhreads(tt, nrun); 
 				
-		} else if(THREAD_SHEDULER == 3) {
-			
-				int nrun = 0; 
-		        for(ii = 0; ii < nlistlen; ii++) {
-					if(pthread_create(&tt[nrun++],NULL,sheduler_cb,(void*)&fp[ii]))
-                            perror("I suck @ pthread.");
-				}
-				sheduler_jointhreads(tt, nrun); 
-	    }
+		} 
         if(tt) free(tt);
 }
 
@@ -548,6 +544,8 @@ void start_processing(iFile *b)
                 path_doubles = 0,
                 original = list_len();
 
+		db_done = true;
+		
 		if(ABS(set.dump) == 1) { 
 				error("Double basenames: \n");
 				error("----------------\n"); 

@@ -56,7 +56,7 @@ static void remfile(const char *path)
 {
         if(path) {
                 if(unlink(path))
-                        warning("remove failed with %s\n", strerror(errno));
+                        warning(YEL"WARN: "NCO"remove(): %s\n", strerror(errno));
         }
 }
 
@@ -93,11 +93,12 @@ static int paranoid(const char *p1, const char *p2)
 
 static void print_askhelp(void)
 {
-        error(  RED"\n\nk"YEL" - keep file; \n"
-                RED"d"YEL" - delete file; \n"
-                RED"l"YEL" - replace with link; \n"
-                RED"q"YEL" - Quit.\n"
-                RED"h"YEL" - Help.\n"
+        error(  GRE"\nk"NCO" - keep file; \n"
+                GRE"d"NCO" - delete file; \n"
+                GRE"i"NCO" - show fileinfo\n"
+                GRE"l"NCO" - replace with link; \n"
+                GRE"q"NCO" - Quit.\n"
+                GRE"h"NCO" - Help.\n"
                 NCO );
 }
 
@@ -107,7 +108,7 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                 char *fpath = canonicalize_file_name(file->path);
 
                 if(!fpath) {
-                        perror("Unable to get full path");
+                        perror(YEL"WARN: "NCO"Unable to get full path");
                         fpath = (char*)file->path;
                 }
                 if(set.mode == 5) {
@@ -133,13 +134,16 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
 
                 if(fpath) free(fpath);
         } else if(set.output) {
-                error("Unable to write to log\n");
+                error(RED"ERROR: "NCO"Unable to write to log\n");
         }
 }
 
 
-static void handle_item(const char *path, const char *orig)
+static void handle_item(iFile *file_path, iFile *file_orig)
 {
+		char *path = (file_path) ? file_path->path : NULL; 
+		char *orig = (file_orig) ? file_orig->path : NULL; 
+	
         /* What set.mode are we in? */
         switch(set.mode) {
 
@@ -148,11 +152,10 @@ static void handle_item(const char *path, const char *orig)
         case 2: {
                 /* Ask the user what to do */
                 char sel, block = 0;
-
-                print_askhelp();
-
-                do {
-                        error(RED"#[%ld] \""YEL"%s"RED"\""GRE" == "RED"\""YEL"%s"RED"\"\n"BLU"Remove %s?\n"BLU"=> "NCO, duplicates+1,orig, path, path);
+				if(path == NULL) break;
+			
+                do { 
+						error(YEL":: "NCO"'%s' same as '%s' [h for help]\n"YEL":: "NCO,path,orig);
                         do {
                                 if(!scanf("%c",&sel)) perror("scanf()");
                         } while ( getchar() != '\n' );
@@ -169,20 +172,27 @@ static void handle_item(const char *path, const char *orig)
 
                         case 'l':
                                 remfile(path);
-                                fprintf(stdout,"link \"%s\"\t-> \"%s\"\n", path, orig);
+                                error(NCO"ln -s "NCO"\"%s\""NCO"\"%s\"\n", orig, path);
                                 block = 0;
                                 break;
-
+						case 'i':
+								info("\nPath: %20s | Size in bytes: %10ld Inode: %ld DevID: %-3u | md5sum: ",file_path->path,file_path->fsize, file_path->node, file_path->dev); 
+								MDPrintArr(file_path->md5_digest); 
+								info("\n"); 
+								
+								info("Path: %20s | Size in bytes: %10ld Inode: %ld DevID: %-3u | md5sum: ",file_orig->path,file_orig->fsize, file_orig->node, file_orig->dev);
+								MDPrintArr(file_orig->md5_digest); 
+								info("\n\n"); 
+								break;
                         case 'q':
-                                die(-42);
-
+                                die(0);
+								break;
                         case 'h':
                                 print_askhelp();
                                 block = 1;
                                 break;
 
                         default :
-                                warning("Invalid input."NCO);
                                 block = 1;
                                 break;
                         }
@@ -201,12 +211,12 @@ static void handle_item(const char *path, const char *orig)
 
         case 4: {
                 /* Replace the file with a neat symlink */
-                error(GRE"ln -s "NCO"\"%s\""RED" "NCO"\"%s\"\n", orig, path);
+                error(NCO"ln -s "NCO"\"%s\""NCO"\"%s\"\n", orig, path);
                 if(unlink(path))
-                        error("remove failed with %s\n", strerror(errno));
+                        warning(YEL"WARN: "NCO"remove(): %s\n", strerror(errno));
 
                 if(link(orig,path))
-                        error("symlink() failed with \"%s\"\n", strerror(errno));
+                        error(YEL"WARN: "NCO"symlink(\"%s\") failed.\n", strerror(errno));
         }
         break;
 
@@ -222,7 +232,7 @@ static void handle_item(const char *path, const char *orig)
                 else     snprintf(cmd_buff,len,set.cmd_orig,orig);
                 
                 ret = system(cmd_buff);
-                if(ret == -1) perror("System()");
+                if(ret == -1) perror(YEL"WARN: "NCO"System()");
              
                 if (WIFSIGNALED(ret) &&
                     (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
@@ -231,7 +241,7 @@ static void handle_item(const char *path, const char *orig)
         break;
 
         default:
-                error(RED"Invalid set.mode. This is a program error :("NCO);
+                error(RED"ERROR: "NCO"Invalid set.mode. This is a program error :(");
         }
 }
 
@@ -246,7 +256,7 @@ void init_filehandler(void)
 
 					/* Make the file executable */
 					if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1)
-							perror("chmod");
+							perror(YEL"WARN: "NCO"chmod");
 
 					/* Write a basic header */
 					fprintf(script_out,
@@ -335,7 +345,7 @@ uint32 findmatches(file_group *grp)
 															error("# %s\n",i->path);
                                                         
                                                         write_to_log(i, true, script_out);
-                                                        handle_item(NULL, i->path); 
+                                                        handle_item(NULL, i); 
                                                         printed_original = true;
                                                 }
 												
@@ -352,7 +362,7 @@ uint32 findmatches(file_group *grp)
 													error("%s\n",j->path);
 
                                                 write_to_log(j, false, script_out);
-                                                handle_item(j->path,i->path);
+                                                handle_item(j,i);
                                         }
                                 }
                                 j = j->next;

@@ -280,17 +280,6 @@ uint32 *in;
         buf[3] += d;
 }
 
-/** Debugging stuff **/
-
-#if DEBUG_CODE == 1
-
-void MDPrint  (MD5_CTX *mdContext)
-{
-        int i;
-        for (i = 0; i < 16; i++)
-                printf ("%02x", mdContext->digest[i]);
-}
-
 void MDPrintArr(unsigned char *digest)
 {
         int i;
@@ -298,7 +287,7 @@ void MDPrintArr(unsigned char *digest)
                 printf ("%02x", digest[i]);
 }
 
-#endif
+
 
 #if (MD5_SERIAL_IO == 1)
 /* Mutexes to serialize IO (avoid unnecessary jumping) */
@@ -319,12 +308,12 @@ void md5_file(iFile *file)
 		
 		uint32 already_read = MD5_FPSIZE_FORM(file->fsize);
 		already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read; 
-		if(file->fsize <= (already_read<<1)) { puts("Ignoring due to lazyness.");return; }
+		if(file->fsize <= (already_read<<1)) { return; } /* This is some quite hyptothetical case ..*/
 		
         data = alloca(MD5_IO_BLOCKSIZE);
         inFile = fopen (file->path, "rb");
 		
-		if(inFile == NULL || file->path == NULL) return; 
+		if(inFile == NULL) return; 
         MD5Init (&mdContext);
 		fseek(inFile, already_read, SEEK_SET);
 		
@@ -359,7 +348,7 @@ void md5_fingerprint(iFile *file, const uint32 readsize)
 
         if(!pF) {
                 if(set.verbosity > 3) {
-                        warning(YEL"Cannot open: "RED"\""NCO"%s"RED"\""NCO"\n",file->path);
+                        warning(YEL"WARN: "NCO"Cannot open %s",file->path);
                 }
                 return;
         }
@@ -396,6 +385,5 @@ void md5_fingerprint(iFile *file, const uint32 readsize)
                 MD5Final (&con);
                 memcpy(file->fp[1],con.digest,MD5_LEN);
         }
-
         fclose(pF);
 }

@@ -98,7 +98,7 @@ iFile *list_remove(iFile *ptr)
 
 
 /* Init of the element */
-static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, ino_t node, nlink_t l)
+static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, ino_t node,  bool flag)
 {
         /* Fill data */
         short   plen = strlen(n) + 2;
@@ -108,7 +108,7 @@ static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, in
         pointer->node    = node;
         pointer->dev     = dev;
         pointer->fsize   = fs;
-        pointer->dupflag = true;
+        pointer->dupflag = flag;
         pointer->filter  = true;
 
         /* Make sure the fp arrays are filled with 0
@@ -226,10 +226,10 @@ iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*))
 
 
 
-void list_append(const char *n, uint32 s, dev_t dev, ino_t node, nlink_t l)
+void list_append(const char *n, uint32 s, dev_t dev, ino_t node,  bool dupflag)
 {
         iFile *tmp = malloc(sizeof(iFile));
-        list_filldata(tmp,n,s,dev,node,l);
+        list_filldata(tmp,n,s,dev,node, dupflag);
 
         if(start == NULL) { /* INIT */
                 tmp->next=NULL;

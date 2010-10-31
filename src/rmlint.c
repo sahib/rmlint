@@ -42,10 +42,10 @@
  * ToDo:
  * - docs
  * - some comments.. clean up..
- * - remove fancy colors and better prompt mode
  * - better sheduler (only reduce one thread on overflow e.g.) 
  * - Speed up the database building step.
- * - pusblish..
+ * - bad symlinks 
+ * - better memory handling on early die
  * - crappy regex.. (-r seems to work, but -R? - little moments of wtf..)
  * - goto ToDo2; 
 
@@ -84,8 +84,9 @@ handled seperate in future versions.
  * => Should be complete after implementing this.
  **/
 
-bool do_exit = false;
-bool use_cwd = false;
+bool do_exit = false,
+      use_cwd = false,
+      jmp_set = false; 
 int  cpindex = 0;
 
 const char *command_C = "ls \"%s\" --color=auto";
@@ -323,6 +324,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         sets->paranoid = 0;
                         break;
                 case 'm':
+						sets->mode = 0;
 
                         if(!strcasecmp(optarg, "list"))
                                 sets->mode = 1;
@@ -336,8 +338,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                                 sets->mode = 5;
 
                         if(!sets->mode) {
-                                error("Invalid value for --mode: \"%s\"\n", argv[argc + 1]);
-                                error("Available modes are: ask | list | link |noask | move\n");
+                                error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
+                                error("       Available modes are: ask | list | link | noask | cmd\n");
+                                die(0);
                                 return 0;
                         }
 
@@ -350,7 +353,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         while(optind < argc) {
                 int p = open(argv[optind],O_RDONLY);
                 if(p == -1) {
-                        error(YEL" => "RED"Can't open directory "NCO"\"%s\""RED":"NCO" %s\n"NCO, argv[optind], strerror(errno));
+                        error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", argv[optind], strerror(errno));
                         return 0;
                 } else {
                         close(p);
@@ -367,7 +370,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 sets->paths[0] = getcwd(NULL,0);
                 sets->paths[1] = NULL;
                 if(!sets->paths[0]) {
-                        error(RED"Cannot get working directory: %s\n"NCO, strerror(errno));
+                        error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
+                        error("       Are you maybe in a dir that just had been removed?\n"); 
                         if(sets->paths) free(sets->paths);
                         return 0;
                 }
@@ -387,15 +391,12 @@ static void check_cmd(const char *cmd)
                                 ps++;
                                 continue;
                         }
-                        if(cmd[i+1] != '%') {
-                                error("--command: Only \"%%s\" is allowed!\n");
-                                die(-3);
-                        }
                 }
         }
         if(ps > 1) {
-                error("--command: Format string may only contain two \"%%s\" at the same time!\n");
-                die(-2);
+                error(YEL"FATAL: "NCO"--command [-c]: Only \"%%s\" is allowed!\n");
+                error("       Example: rmlint -c \"ls '%%s'\"\n"); 
+                die(0);
         }
 }
 
@@ -429,7 +430,7 @@ void die(int status)
 
         /* Prepare to jump to return */
         do_exit = true;
-        longjmp(place,status);
+        if(jmp_set) longjmp(place,status);
 }
 
 /* Sort criteria for sizesort */ 
@@ -449,7 +450,7 @@ static long cmp_sz(iFile *a, iFile *b)
 
 			while(p) {
 					MDPrintArr(p->md5_digest);
-					fprintf(stdout," => %-70s | %ld /n: %ld Dev: %ld\n",p->path,p->fsize, p->node, (uint32)p->dev);
+					fprintf(stdout," => %-70s | %ld /n: %ld Dev: %u\n",p->path,p->fsize, p->node, p->dev);
 					p=p->next;
 			}
 			fprintf(stdout,"----\n");
@@ -464,8 +465,8 @@ int rmlint_main(void)
         uint32 firc	     = 0;
 
         int retval = setjmp(place);
-        if(do_exit != true) {
-			
+        jmp_set = true; 
+        if(do_exit != true) {			
                 if(set.mode == 5) {
 						if(!set.cmd_orig && !set.cmd_path) {
 							set.cmd_orig = (char*)command_C;
@@ -477,7 +478,12 @@ int rmlint_main(void)
 				}
                 /* Open logfile */
                 init_filehandler();
-
+                
+                /* Warn if started with sudo */
+				if(!access("/bin/ls",R_OK|W_OK)) { 
+						warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
+						warning("      Take care of what you're doing!\n\n"); 
+				}
                 /* Count files and do some init  */
                 while(set.paths[cpindex] != NULL) {
                         DIR *p = opendir(set.paths[cpindex]);
@@ -503,7 +509,7 @@ int rmlint_main(void)
                 }
 
                 if(total_files == 0) {
-                        warning(RED" => "NCO"No files to search through"RED" --> "NCO"No duplicates\n");
+                        warning("No files to search through => No duplicates\n");
                         die(0);
                 }
 
