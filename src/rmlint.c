@@ -43,7 +43,6 @@
  * - docs
  * - some comments.. clean up..
  * - better sheduler (only reduce one thread on overflow e.g.) 
- * - Speed up the database building step.
  * - bad symlinks 
  * - better memory handling on early die
  * - crappy regex.. (-r seems to work, but -R? - little moments of wtf..)
@@ -84,12 +83,13 @@ handled seperate in future versions.
  * => Should be complete after implementing this.
  **/
 
+int  cpindex = 0;
 bool do_exit = false,
       use_cwd = false,
-      jmp_set = false; 
-int  cpindex = 0;
+      jmp_set = false,
+	  ex_stat = false; 
 
-const char *command_C = "ls \"%s\" --color=auto";
+const char *command_C = "printf \"\nOrig: \"; ls \"%s\" --color=auto";
 const char *command_c = "ls \"%s\" -lasi --color=auto";
 const char *script_name = "rmlint.sh"; 
 
@@ -132,11 +132,6 @@ void info(const char* format, ...)
         }
 }
 
-/* If we abort abnormally we'd like to set the color back */
-static void resetcol(void)
-{
-        warning(NCO);
-}
 
 /* Help text */
 static void print_help(void)
@@ -423,13 +418,11 @@ void die(int status)
                 info("Abnormal exit\n");
         }
 
-        /* Make sure NCO is printed */
-        resetcol();
-
 		if(get_logstream())  fclose(get_logstream());
 
         /* Prepare to jump to return */
         do_exit = true;
+		ex_stat = status; 
         if(jmp_set) longjmp(place,status);
 }
 
@@ -462,9 +455,8 @@ static long cmp_sz(iFile *a, iFile *b)
 int rmlint_main(void)
 {
         uint32 total_files = 0;
-        uint32 firc	     = 0;
 
-        int retval = setjmp(place);
+        setjmp(place);
         jmp_set = true; 
         if(do_exit != true) {			
                 if(set.mode == 5) {
@@ -478,7 +470,7 @@ int rmlint_main(void)
 				}
                 /* Open logfile */
                 init_filehandler();
-                
+
                 /* Warn if started with sudo */
 				if(!access("/bin/ls",R_OK|W_OK)) { 
 						warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
@@ -493,14 +485,12 @@ int rmlint_main(void)
                                 if(stat(set.paths[cpindex],&buf) == -1)
                                         continue;
 
-                                list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino,buf.st_nlink);
+                                list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino, true);
                                 total_files++;
-                                firc++;
 
                         } else {
                                 /* The path points to a dir - recurse it! */
                                 info("Now scanning \"%s\"..",set.paths[cpindex]);
-                                fflush(stdout);
                                 total_files += recurse_dir(set.paths[cpindex]);
                                 info(" done.\n");
                                 closedir(p);
@@ -508,7 +498,7 @@ int rmlint_main(void)
                         cpindex++;
                 }
 
-                if(total_files == 0) {
+                if(total_files < 2) {
                         warning("No files to search through => No duplicates\n");
                         die(0);
                 }
@@ -534,5 +524,5 @@ int rmlint_main(void)
                 /* Exit! */
                 die(EXIT_SUCCESS);
         }
-        return retval;
+        return ex_stat;
 }

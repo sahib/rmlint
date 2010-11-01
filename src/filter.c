@@ -43,8 +43,8 @@
 
 
 uint32 dircount = 0;
-short iinterrupt = 0;
-bool db_done = false; 
+bool iAbort  = false,
+      db_done = false; 
 
 /*
  * Callbock from signal()
@@ -52,20 +52,28 @@ bool db_done = false;
  */
 static void interrupt(int p)
 {
-        /** This was connected with SIGINT (CTRL-C) in recurse_dir() **/
-		if(db_done)  {
-			warning(YEL"\nINFO: "NCO"Received Interrupt.\n");
-			die(0);
-		}
- 
-        switch(iinterrupt) {
-        case 0:
-                warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
-                break;
-        case 1:
-                die(1);
-        }
-        iinterrupt++;
+	switch(p)
+	{
+		case SIGINT: 
+				if(iAbort == 2) {
+					die(-1);
+				}
+				else if(db_done) { 
+					iAbort = 2;
+					warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
+				} else {
+					iAbort = true; 
+					db_done = true; 
+				}
+			break;
+		case SIGSEGV: 
+			error(RED"FATAL: "NCO"Received SIGSEV; This is the coder's fault.\n"); 
+			die(-1); 
+
+		case SIGFPE: 
+			error(RED"FATAL: "NCO"Received SIGFPE; This the coder's fault.\n"); 
+			die(-1); 
+	}
 }
 
 /*
@@ -77,7 +85,7 @@ int regfilter(const char* input, const char *pattern)
         int status;
         int flags = REG_EXTENDED|REG_NOSUB;
         const char *string;
-
+	
         if(!pattern) {
                 return 0;
         } else {
@@ -124,7 +132,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 /* Do not recurse in this subdir */
                 return FTW_SKIP_SIBLINGS;
         }
-        if(iinterrupt) {
+        if(iAbort) {
                 return FTW_STOP;
         }
         if(flag == FTW_SLN) {
@@ -156,7 +164,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 if(set.ignore_hidden && path) 
                 {
 					char *base = basename(path); 
-					if(*base == '.') { 
+					if(*base == '.' && strcmp(path,".") != 0) { 
 						return FTW_SKIP_SUBTREE;
 					}
 				}
@@ -168,6 +176,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 int recurse_dir(const char *path)
 {
         /* Set options */
+		int ret = 0; 
         int flags = FTW_ACTIONRETVAL;
         if(!set.followlinks)
                 flags |= FTW_PHYS;
@@ -182,9 +191,16 @@ int recurse_dir(const char *path)
         signal(SIGINT, interrupt);
 
         /* Start recurse */
-        if( nftw(path, eval_file, _XOPEN_SOURCE, flags) == -1) {
+        if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags))) {
+			if(ret != FTW_STOP) { 
+				/* Some error occured */
                 warning(YEL"FATAL: "NCO"nftw() failed with: %s\n", strerror(errno));
                 return EXIT_FAILURE;
+			} else { 
+				/* The user pressed SIGINT -> Quit from ntfw() to shutdown in peace. */
+				error(YEL"quitting.\n"NCO); 
+				die(0); 
+			}
         }
 
         return dircount;
@@ -198,7 +214,7 @@ static uint32 rm_double_paths(file_group *fp)
 {
         iFile *b = fp->grp_stp;
         uint32 c = 0;
-
+ 
         if(b) {
                 while(b->next) {
                         if( (b->node == b->next->node) &&
@@ -305,7 +321,7 @@ static uint32 group_filter(file_group *fp)
                                 remove_count++;
                                 continue;
                         } else {
-                                i=i->next;
+                                i=i->next; 
                                 continue;
                         }
                 }
@@ -413,14 +429,14 @@ static void start_sheduler(file_group *fp, uint32 nlistlen)
         pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
 
         if(set.threads == 1 || THREAD_SHEDULER == 0) {
-                for(ii = 0; ii < nlistlen; ii++) {
+			for(ii = 0; ii < nlistlen && !iAbort; ii++) {
                         sheduler_cb(&fp[ii]);
                 }
         } else if(THREAD_SHEDULER == 1) {
 			
 				/* Run max set.threads at the same time. */ 
                 int nrun = 0;
-                for(ii = 0; ii < nlistlen; ii++) {
+                for(ii = 0; ii < nlistlen && !iAbort; ii++) {
 					
 					if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) {
 							if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii]))
@@ -439,23 +455,7 @@ static void start_sheduler(file_group *fp, uint32 nlistlen)
 					
                 }
                 sheduler_jointhreads(tt, nrun);
-        } else if(THREAD_SHEDULER == 2) { 
-				
-				/* experimental.. may be faster quite often, but crahses also quite often */
-				int nrun = 0; 
-		        for(ii = 0; ii < nlistlen; ii++) {
-						if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) 
-						{
-							if(pthread_create(&tt[nrun++],NULL,sheduler_cb,(void*)&fp[ii]))
-                                perror(RED"ERROR: "NCO"pthread_create in sheduler()");
-						
-						} else {
-						        sheduler_cb(&fp[ii]);
-						}
-				}
-				sheduler_jointhreads(tt, nrun); 
-				
-		} 
+        }
         if(tt) free(tt);
 }
 
@@ -543,8 +543,6 @@ void start_processing(iFile *b)
                 rem_counter = 0,
                 path_doubles = 0,
                 original = list_len();
-
-		db_done = true;
 		
 		if(ABS(set.dump) == 1) { 
 				error("Double basenames: \n");
@@ -642,8 +640,9 @@ void start_processing(iFile *b)
         qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
 
         info(" done \nNow doing fingerprints and full checksums:\n\n");
-
-        /* Grups are splitted, now give it to the sheduler */
+		db_done = true;
+	
+        /* Groups are splitted, now give it to the sheduler */
         /* The sheduler will do another filterstep, build checkusm
          *  and compare 'em. The result is printed afterwards */
         start_sheduler(fglist, spelen);

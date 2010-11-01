@@ -74,7 +74,7 @@
 typedef uint_fast32_t  uint32;
 
 /* What to append at the end of a command, Default " ;\n" so script continues also on error*/
-#define SCRIPT_LINE_SUFFIX  " ;\n"
+#define SCRIPT_LINE_SUFFIX  " ;"
 
 /* Last line in script */
 #define SCRIPT_LAST "echo Done"

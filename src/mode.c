@@ -108,23 +108,38 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                 char *fpath = canonicalize_file_name(file->path);
 
                 if(!fpath) {
-                        perror(YEL"WARN: "NCO"Unable to get full path");
+						if(file->dupflag != 42) {
+                        	perror(YEL"WARN: "NCO"Unable to get full path (write_to_log():mode.c)");
+						}
                         fpath = (char*)file->path;
                 }
                 if(set.mode == 5) {
-						if(orig) {
+						if(!orig) {
 								fprintf(fd, set.cmd_orig, file->path);
-								if(set.cmd_orig) fprintf(fd, SCRIPT_LINE_SUFFIX); 
+								if(set.cmd_orig) 
+								{ 
+									fprintf(fd, SCRIPT_LINE_SUFFIX); 
+									if(file->dupflag != 42) { 
+										fprintf(fd, " # Duplicate\n");
+									} else { 
+										fprintf(fd, " # Bad link (pointing nowhere)\n");	
+									}
+								}
 						} else { 
 								fprintf(fd, set.cmd_path, file->path);
-								if(set.cmd_path) fprintf(fd, SCRIPT_LINE_SUFFIX); 
+								if(set.cmd_path) { 
+									fprintf(fd, SCRIPT_LINE_SUFFIX); 
+									fprintf(fd, " # Original\n");
+								}
 						}
                 } else {
-						int i; 
-                        if(orig != true) 
-                                fprintf(fd,"1 \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+						int i;
+						if(file->dupflag == 42) 
+								fprintf(fd,"BLNK \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+                        else if(orig != true) 
+                                fprintf(fd,"DUPL \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
                         else
-                                fprintf(fd,"0 \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+                                fprintf(fd,"ORIG \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
                 
 					    for (i = 0; i < 16; i++) {
                                 fprintf (fd,"%02x", file->md5_digest[i]);
@@ -132,7 +147,7 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                         fputc('\n',fd); 
                 }
 
-                if(fpath) free(fpath);
+                if(fpath && file->dupflag != 42) free(fpath);
         } else if(set.output) {
                 error(RED"ERROR: "NCO"Unable to write to log\n");
         }
