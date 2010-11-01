@@ -1,9 +1,6 @@
-rmlint is a command line tool to remove various sort of unused files form a Unix filesystem. 
-It comes without any extra depencies, and is build to handle even large filesystems quite fast.  
-It is written in pure ANSI C, and comes with as size of 36K  
-
-At time of writing (28.9.2010) this is still beta software and you should choose on of http://en.wikipedia.org/wiki/Fdupes those. 
-It nevertheless is already usable and owns alternatives in terms of speed :-) (duff: 90sec, rmlint: 0.58sec) 
+rmlint is a command line tool to remove various sort of unused files form a Unix filesystem, especially duplicate files.
+It comes without any extra depencies, and is build to handle even large filesystems pretty fast.  
+It is written in pure ANSI C, and comes with as size of 36KB. 
 
 DISCLAIMER: 
 THERE IS NO WARRANTY THAT THIS SOFTWARE WON'T KILL YOUR FILES, NOR THAT IT KILLS YOUR KITTEN, BURNS YOUR HOUSE, OR WHATSOEVER. 
@@ -13,8 +10,38 @@ INSTALL:
 --------
 The usual mantra: 
 
-./confiure &&  make -j 4
+make -j 4 
 sudo make install 
+
+COMPARASION TO OTHER TOOLS: 
+--------------------------
+(this list could get very, very long..) 
+
+compared to... 
+	..fdupes / duff: 
+		+ LOTS faster	
+		+ more options 
+		+ finds also bad links 
+		+ logging
+
+	..rdfind: 
+		+ Live output of finds
+		+ mostly as fast, or faster
+		+ little less buggy ;-) 
+		- handles large folders with lots of files not as good.
+		
+	..fslint: 
+		+ Faster / more options 
+		- finds no stripped binaries, old tmpdata, etc. (ToDo?) 
+		
+Pseudobenchmark on 60GB Music: 
+------------------------------
+rdfind: 8:01  min. | 7:55  min | 7:49  min += 23:45 min
+rmlint: 7:52  min  | 8:33  min | 7:02  min += 23:27 min  
+fdupes: 16:04 min  | 14:24 min | 14:07 min += 44:35 min 
+
+Benchmark was on a EeePc 1015HP ;-) 
+On a recent quadcoremachine things will get lot's faster.
 
 HELP: 
 ------------
@@ -24,15 +51,16 @@ HELP:
 
 OPTIONS:
 ---------
-Syntax: rmlint [TargetDir[s]] [Options]
+Syntax: rmlint [TargetDir[s]] [File[s]] [Options]
 
 General options:
 
 	-t --threads <t>	Set the number of threads to <t> used in full checksum creation.
-	-p --paranoid		Do a byte-by-byte comparasion additionally.
+	-p --paranoid		Do a byte-by-byte comparasion additionally. (Slow!)
 	-d --maxdepth <depth>	Only recurse up to this depth. (default: inf)
-	-f --followlinks	Wether links are followed (None is reported twice)
+	-f --followlinks	Wether links are followed (None is reported twice) [Only specify this if you really need to]
 	-s --samepart		Never cross mountpoints, stay on the same partition
+	-G --hidden		Also search through hidden files / directories (disabled by default)
 	-m --mode <mode>	Tell rmlint how to deal with the files it finds.
 
 				Where modes are:
@@ -43,27 +71,41 @@ General options:
 				noask - Full removal without asking.
 				cmd   - Takes the command given by -c and executes it on the file.
 
-	-c --command <cmd>	Execute a shellcommand on found files when used with '-m cmd'
-				Example: rmlint -m cmd -c "ls -lah %s %s"
-				First %s expands to found duplicate, second to original.
+	-c --cmd_dup  <cmd>	Execute a shellcommand on found duplicates when used with '-m cmd'
+	-C --cmd_orig <cmd>	Execute a shellcommand on original files when used with '-m cmd'
+
+				Example: rmlint testdir -m cmd -C "ls '%s'" -c "ls -lasi '%s'" -v 1
+				This would print all found files (both duplicates and originals via the 'ls' utility
+				The %s expands to the found duplicate, second to the 'original'.
 Regex options:
 
 	-r --fregex <pat>	Checks filenames against the pattern <pat>
 	-R --dregex <pat>	Checks dirnames against the pattern <pat>
-	-i --invmatch		Invert match - Only investigate when npt containing <pat>
+	-i --invmatch		Invert match - Only investigate when not containing <pat>
 	-e --matchcase		Matches case of paths (not by default)
 
 Misc options:
 
 	-h --help		Prints this text and exits
+	-o --output [<o>]	Outputs logfile to <o>. The <o> argument is optional, specify none to write no log.
+				Examples:
+
+				-o => No Logfile
+				-o="la la.txt" => Logfile to "la la.txt"
+
+				Note that you NEED the '=' here.
+
+	-z --dump <id>		Option with various weird meanings, most scientist postulated that it kills kittens.
 	-v --verbosity <v>	Sets the verbosity level to <v>
 				Where:
 				0 prints nothing
-				1 prints only errors
-				2 prints warning
-				3 prints everything
+				1 prints only errors and results
+				2 + prints warning
+				3 + everything else
 
-Additionally, the options p,f,s,e and i have a uppercase option (P,F,S,E and I) that inverse it's effect
+Additionally, the options p,f,s,e,g,o,i,c have a uppercase option (O,G,P,F,S,E,I,C) that inverse it's effect.
+
+
 
 FEATURES:
 --------
@@ -78,20 +120,21 @@ FEATURES:
    + Simply list all files without doing anything dangerous. (-m list) 
    + It executes a user specified commando for each file (-m cmd) 
    + It asks you for each file what you want. (-m ask)
-   * In all cases a log called rmlint.sh is written. (So you can exec it after having a closer look) 
 - Minimum of I/O, focuses on CPU usage. 
-- It has some basic "API" (Well.. :-)) 
-- Writes a log of all found files (./rmlint.sh) 
+- It has some basic "API" (Well, let's just say you can exec it from your program :-)) 
+- Writes a log of all found files (./rmlint.sh or name by --output) or outputs a ready to use script  
 
 
 HOW DOES THIS WEIRD THING WORK: 
 -------------------------------
-In contrast to plenty other programs doing the same job, rmlint tries to reduce reading data from the harddrive. 
-Therefore it goes recursively through all directories and pushes all files back to a list. 
-This list is filtered by removing files with a unique filesize. If two files have the same size, 
-it'll build a short fingerprint of the files and compare them. 
-From all files that passed the filter a full md5-checksum is build, and compared afterwards. 
-The resulting files can be considered to be duplicates. 
+rmlint tries to reduce Input/Output to a minimum and focues on CPU Usage.
+Therefore it goes recursively through all directories and pushes all files back to a doubly linked list. 
+This list is now split in several groups: Every size get's it's own group, and groups with only one element are dropped.
+Empty files and bad links are handled on this way too. (they build a group with a size of 0 ;))  
+Now every group is given to a sheduler which filters each group by portions of the file, and builds md5sum on each survivor.
+Note that several groups may get processed in parallel!  A log of all files is written to a file called 'rmlint.sh' (name changeable with '--output'). 
+Additionally it may handle finds by removeing them, linking them to the original or executing some shellcommand on them. 
+
 
 
 A NOTE ABOUT FALSE POSITIVES: 
@@ -102,24 +145,15 @@ They would need to have the same size to be marked as duplicate.
 => Very unlikely, but possible.
 
 But isn't there a solution? Yes, there is. It's the "--paranoid/-p" option. It does a 
-true byte-by-byte comparasion of each(!) file. Be warned. It's slow. 
+true byte-by-byte comparasion of each(!) file. Be warned. It's incredibly slow. 
 
 
 FAQ: 
 ----
-
-Q: Why does the last bit of the "Building database"-step takes so long? 
-A: The list where the suspected files are stored is sorted by size. Therefore at the end the largest files have to built a checksum.  
-   You can see the size in "Building database.. 85.9% [16315/19004] - [ 0 ]  - [31842 Bytes]", here as 31842 Byte. 
-
 Q: The "-m list" output is crap! I want more information! 
 A: You can use the command mode to use to run 'ls' on the files: 
-   Example: rmlint . -m cmd -c  "ls -lah \"%s\" --color=auto && echo '=> %s';echo"
-   Where the first %s is the found duplicate, the second the original. 
-   
-Q: I want to use the "-c" option, but I dont want to execute it immediately. 
-A: Use the list mode (-m list). Rmlint will write a file called "rmlint.sh" in all cases, 
-   where "rm" has been replaced by the command given by "-c" 
-  
+   Example: time ./rmlint . -m cmd -c "ls -lasi '%s'" -C "ls '%s'" -v 1
+   Where -c executes "ls -lasi" on the found duplicate, -C on the original. 
+     
 Q: I want only the found files to be displayed! Like fdupes does! 
 A: "-v 1" is your friend.

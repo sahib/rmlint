@@ -310,7 +310,8 @@ void md5_file(iFile *file)
 		already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read; 
 		if(file->fsize <= (already_read<<1)) { return; } /* This is some quite hyptothetical case ..*/
 		
-        data = alloca(MD5_IO_BLOCKSIZE);
+       /*data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);*/
+		data = alloca(MD5_IO_BLOCKSIZE); 
         inFile = fopen (file->path, "rb");
 		
 		if(inFile == NULL) return; 
@@ -352,7 +353,7 @@ void md5_fingerprint(iFile *file, const uint32 readsize)
                 }
                 return;
         }
-
+     
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_fp_IO);
 #endif

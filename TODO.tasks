@@ -1,17 +1,6 @@
 <?xml version="1.0"?>
 <gtodo>
-  <category title="Pers&#xF6;nlich" place="0">
-    <item>
-      <attribute id="1288615750" priority="1" done="1" start_date="734077" completed_date="734077" notify="0" last_edited="1288617260"/>
-      <summary>Memory handling on early die</summary>
-      <comment/>
-    </item>
-    <item>
-      <attribute id="1288617274" priority="1" done="1" start_date="734077" completed_date="734077" notify="0" last_edited="1288620612"/>
-      <summary>Check what return value was given...</summary>
-      <comment></comment>
-    </item>
-  </category>
+  <category title="Pers&#xF6;nlich" place="0"/>
   <category title="Gesch&#xE4;ftlich" place="1"/>
   <category title="Nicht einsortiert" place="2"/>
 </gtodo>

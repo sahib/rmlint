@@ -219,6 +219,7 @@ static void handle_item(iFile *file_path, iFile *file_orig)
 
         case 3: {
                 /* Just remove it */
+				if(path == NULL) break; 
                 warning(RED"rm "NCO"\"%s\"\n", path);
                 remfile(path);
         }
@@ -226,6 +227,7 @@ static void handle_item(iFile *file_path, iFile *file_orig)
 
         case 4: {
                 /* Replace the file with a neat symlink */
+				if(path == NULL) break; 
                 error(NCO"ln -s "NCO"\"%s\""NCO"\"%s\"\n", orig, path);
                 if(unlink(path))
                         warning(YEL"WARN: "NCO"remove(): %s\n", strerror(errno));

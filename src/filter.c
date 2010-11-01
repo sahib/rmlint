@@ -515,7 +515,7 @@ static void find_double_bases(iFile *starting)
 				}
 				
 				j->dupflag = false; 
-				printf("%d %s %u\n",c,tmp2,i->fsize);
+				printf("%d %s %u\n",c,tmp2,j->fsize);
 				if(tmp2) free(tmp2); 
 			}
 			j=j->next; 
@@ -524,7 +524,7 @@ static void find_double_bases(iFile *starting)
 		i=i->next; 
     }
         
-	die(-1); 
+	die(0); 
 }
 
 

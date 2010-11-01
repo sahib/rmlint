@@ -136,7 +136,7 @@ void info(const char* format, ...)
 /* Help text */
 static void print_help(void)
 {
-        fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [Options]\n");
+        fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [File[s]] [Options]\n");
         fprintf(stderr, "\nGeneral options:\n\n"
                 "\t-t --threads <t>\tSet the number of threads to <t> used in full checksum creation.\n"
                 "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!)\n"
