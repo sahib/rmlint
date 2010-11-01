@@ -38,10 +38,10 @@
 #include "defs.h"
 #include "list.h"
 
-#define READSIZE 8192
 
 uint32 duplicates = 0;
 uint32 lintsize = 0;
+
 
 /* Make the stream "public" */
 FILE *script_out = NULL;
@@ -66,14 +66,16 @@ static int paranoid(const char *p1, const char *p2)
         uint32 b1=0,b2=0;
         FILE *f1,*f2;
 
-        char c1[READSIZE],c2[READSIZE];
+        char c1[MD5_IO_BLOCKSIZE],c2[MD5_IO_BLOCKSIZE];
 
         f1 = fopen(p1,"rb");
         f2 = fopen(p2,"rb");
 
         if(p1==NULL||p2==NULL) return 0;
 
-        while((b1 = fread(c1,1,READSIZE,f1))&&(b2 = fread(c2,1,READSIZE,f2))) {
+        while(  (b1 = fread(c1,sizeof(char),MD5_IO_BLOCKSIZE,f1))
+              && (b2 = fread(c2,sizeof(char),MD5_IO_BLOCKSIZE,f2))
+              ) {
                 int i = 0;
 
                 if(b1!=b2) return 0;
@@ -93,12 +95,12 @@ static int paranoid(const char *p1, const char *p2)
 
 static void print_askhelp(void)
 {
-        error(  GRE"\nk"NCO" - keep file; \n"
-                GRE"d"NCO" - delete file; \n"
+        error(  GRE"\nk"NCO" - keep file \n"
+                GRE"d"NCO" - delete file \n"
                 GRE"i"NCO" - show fileinfo\n"
-                GRE"l"NCO" - replace with link; \n"
-                GRE"q"NCO" - Quit.\n"
-                GRE"h"NCO" - Help.\n"
+                GRE"l"NCO" - replace with link \n"
+                GRE"q"NCO" - quit all\n"
+                GRE"h"NCO" - show help.\n\n"
                 NCO );
 }
 
@@ -187,15 +189,15 @@ static void handle_item(iFile *file_path, iFile *file_orig)
 
                         case 'l':
                                 remfile(path);
-                                error(NCO"ln -s "NCO"\"%s\""NCO"\"%s\"\n", orig, path);
+                                error(YEL"EXEC: "NCO"ln -s "NCO"\"%s\" \"%s\"\n", orig, path);
                                 block = 0;
                                 break;
 						case 'i':
-								info("\nPath: %20s | Size in bytes: %10ld Inode: %ld DevID: %-3u | md5sum: ",file_path->path,file_path->fsize, file_path->node, file_path->dev); 
+								info("\nPath#1: %s \nSize  : %ld Byte[s]\nInode : %ld\nDevID : %u\nmd5sum: ",file_path->path,file_path->fsize, file_path->node, file_path->dev); 
 								MDPrintArr(file_path->md5_digest); 
 								info("\n"); 
 								
-								info("Path: %20s | Size in bytes: %10ld Inode: %ld DevID: %-3u | md5sum: ",file_orig->path,file_orig->fsize, file_orig->node, file_orig->dev);
+								info("\nPath#2: %s \nSize  : %ld Byte[s]\nInode : %ld\nDevID : %u\nmd5sum: ",file_orig->path,file_orig->fsize, file_orig->node, file_orig->dev);
 								MDPrintArr(file_orig->md5_digest); 
 								info("\n\n"); 
 								break;

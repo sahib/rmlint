@@ -66,6 +66,7 @@ static void interrupt(int p)
 					db_done = true; 
 				}
 			break;
+		case SIGABRT:
 		case SIGSEGV: 
 			error(RED"FATAL: "NCO"Received SIGSEV; This is the coder's fault.\n"); 
 			die(-1); 

@@ -34,6 +34,10 @@ compared to...
 		+ Faster / more options 
 		- finds no stripped binaries, old tmpdata, etc. (ToDo?) 
 		
+	..[other cons] 
+		- does not look into archives (things like those could be performed by some bash script easier)
+		
+		
 Pseudobenchmark on 60GB Music: 
 ------------------------------
 rdfind: 8:01  min. | 7:55  min | 7:49  min += 23:45 min
@@ -109,10 +113,10 @@ Additionally, the options p,f,s,e,g,o,i,c have a uppercase option (O,G,P,F,S,E,I
 
 FEATURES:
 --------
-- Can be aborted at any time. Will display all finds then. (or abort if user presses CTRL-C once more) 
-- Fast. Handles 60GB of data in under 1 second (under certain circumstances :-))  
+- Can be aborted at any time. Will display all finds then. (or abort immediately if user presses CTRL-C once more) 
+- Fast. (Really! :)) 
 - Regex filter. 
-- Colorful! :-) (can be compiled without colors support) 
+- Colorful! :-) (can be compiled without colors support if you like to) 
 - Can handle huge amount of files. 
 - Handles the files the way you want: 
    + replace double file by a symboliclink, (-m link)  
