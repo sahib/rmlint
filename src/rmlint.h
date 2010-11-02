@@ -13,7 +13,9 @@ typedef struct {
         char casematch;
         char paranoid;
         char invmatch;
-        int depth;
+		char oldtmpdata;
+		char findemptydirs;
+        int  depth;
         char **paths;
         char *dpattern;
         char *fpattern;
@@ -25,18 +27,21 @@ typedef struct {
 
 } rmlint_settings;
 
+/* global var storing all settings */
 rmlint_settings set;
 
+/* These method are also useable from 'outside' */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets);
 void rmlint_set_default_settings(rmlint_settings *set);
 int  rmlint_main(void);
 
-/** Misc **/
+/* Misc */
 void die(int status);
+void print(iFile *begin);
+void info(const char* format, ...);
 void error(const char* format, ...);
 void warning(const char* format, ...);
-void info(const char* format, ...);
+int  systemf(const char* format, ...);
 int  get_cpindex(void);
-void print(iFile *begin);
 
 #endif

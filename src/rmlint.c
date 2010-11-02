@@ -20,6 +20,9 @@
 *
 **/
 
+#define _XOPEN_SOURCE 500
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -89,8 +92,8 @@ bool do_exit = false,
       jmp_set = false,
 	  ex_stat = false; 
 
-const char *command_C = "printf \"\nOrig: \"; ls \"%s\" --color=auto";
-const char *command_c = "ls \"%s\" -lasi --color=auto";
+const char *command_C = "ls \"%s\" -lasi";
+const char *command_c = "ls \"%s\"";
 const char *script_name = "rmlint.sh"; 
 
 
@@ -100,6 +103,29 @@ const char *script_name = "rmlint.sh";
  * It still has various problems with calling rmlint_main() twice... :-( //ToDo
  * */
 jmp_buf place;
+
+/* The nightmare of every secure program :))
+ * this is used twice; 1x with a variable format.. 
+ * Please gimme a note if I forgot to check sth. there.
+*/
+int systemf(const char* format, ...)
+{
+	int ret = 0;
+	char cmd_buf[1024];
+
+	/* Build a command  */
+	va_list args;
+	va_start (args, format);
+	vsnprintf (cmd_buf,1024,format, args);
+	va_end (args);
+
+	/* Now execute a shell command */
+	if((ret = system(cmd_buf)) == -1) {
+		perror("systemf(const char* format, ...)");
+	}
+	return ret; 
+}
+
 
 /** Messaging **/
 void error(const char* format, ...)
@@ -138,12 +164,12 @@ static void print_help(void)
 {
         fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [File[s]] [Options]\n");
         fprintf(stderr, "\nGeneral options:\n\n"
-                "\t-t --threads <t>\tSet the number of threads to <t> used in full checksum creation.\n"
+                "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
                 "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!)\n"
                );
         fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
                 "\t-f --followlinks\tWether links are followed (None is reported twice) [Only specify this if you really need to]\n"
-                "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition\n"
+                "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition.\n"
                 "\t-G --hidden\t\tAlso search through hidden files / directories (disabled by default)\n"
                 "\t-m --mode <mode>\tTell rmlint how to deal with the files it finds.\n"
                );
@@ -167,7 +193,7 @@ static void print_help(void)
         fprintf(stderr,	"\nMisc options:\n\n"
                 "\t-h --help\t\tPrints this text and exits\n"
                 "\t-o --output [<o>]\tOutputs logfile to <o>. The <o> argument is optional, specify none to write no log.\n"
-                "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o=\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote that you NEED the '=' here.\n\n");
+                "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace.\n\n");
         fprintf(stderr,"\t-z --dump <id>\t\tOption with various weird meanings, most scientist postulated that it kills kittens.\n"
                 "\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
                 "\t\t\t\tWhere:\n"

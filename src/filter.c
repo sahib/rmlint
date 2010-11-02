@@ -34,6 +34,9 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
+#include <sys/types.h>
+#include <dirent.h>
+
 
 #include "rmlint.h"
 #include "filter.h"
@@ -43,8 +46,9 @@
 
 
 uint32 dircount = 0;
-bool iAbort  = false,
-      db_done = false; 
+bool iAbort   = false,
+      dir_done = false,
+      db_done  = false; 
 
 /*
  * Callbock from signal()
@@ -129,6 +133,7 @@ int regfilter(const char* input, const char *pattern)
  */
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
+	
         if(set.depth && ftwbuf->level > set.depth) {
                 /* Do not recurse in this subdir */
                 return FTW_SKIP_SIBLINGS;
@@ -141,35 +146,84 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 				return FTW_CONTINUE;
         }
         if(path) {
-				/* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
-                if(flag == FTW_F && ptr->st_rdev == 0) {
-                        if(!regfilter(path, set.fpattern) && !access(path,R_OK)) {
-								if(set.ignore_hidden) {
-										char *base = basename(path); 
-										if(*base != '.') { 
-												dircount++;
-												list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
-										}
-								} else {
-										dircount++;
-										list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
-								}
-                        }
-                        return FTW_CONTINUE;
-                }
-        }
-        if(flag == FTW_D) {
-                if((regfilter(path,set.dpattern) && strcmp(path,set.paths[get_cpindex()]) != 0)) {
-                        return FTW_SKIP_SUBTREE;
-                }
-                if(set.ignore_hidden && path) 
-                {
-					char *base = basename(path); 
-					if(*base == '.' && strcmp(path,".") != 0) { 
-						return FTW_SKIP_SUBTREE;
-					}
+
+		if(!dir_done) {
+				if(!strcmp(set.paths[get_cpindex()], path))  {
+					dir_done = true; 
+					return FTW_CONTINUE; 
 				}
-        }
+		}
+			if(flag == FTW_F) { 
+				
+						if(regfilter(path, set.fpattern)) { 
+							return FTW_CONTINUE;
+						}
+						if(set.oldtmpdata || 1) {
+								size_t len = strlen(path); 
+								if(path[len-1] == '~') { 
+									char *cpy = strndup(path,len-1);
+									struct stat stat_buf;
+					
+									if(!stat(cpy, &stat_buf))
+									{
+										if(ABS(stat_buf.st_mtime - ptr->st_mtime) > 30)
+										list_append(path, 0,ptr->st_dev,ptr->st_ino,43);
+										return FTW_CONTINUE;
+									}
+									if(cpy) free(cpy); 
+								}
+						}
+							/* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
+						    if(flag == FTW_F && ptr->st_rdev == 0) {
+						            if(!access(path,R_OK)) {
+											if(set.ignore_hidden) {
+													char *base = basename(path); 
+													if(*base != '.') { 
+															dircount++;
+															list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
+													}
+											} else {
+													dircount++;
+													list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
+											}
+						            }
+						            return FTW_CONTINUE;
+						    }
+				}
+				if(flag == FTW_D) {
+					
+						if(regfilter(path, set.dpattern) && dir_done) { 
+							return FTW_SKIP_SUBTREE;
+						}
+					
+						if(set.findemptydirs || 1) {
+								int dir_counter = 0; 
+								DIR *dir_e = opendir(path); 
+								struct dirent *dir_p = NULL; 
+
+								if(dir_e) {
+									while((dir_p=readdir(dir_e)) && dir_counter < 2) 
+										dir_counter++; 
+		
+									if(dir_counter == 2 && 
+									   dir_p == NULL
+									   ) { 
+										list_append(path, 0,ptr->st_dev,ptr->st_ino,44);
+										return FTW_SKIP_SUBTREE;
+									   }
+									closedir(dir_e); 
+								}
+						}
+
+						if(set.ignore_hidden && path) 
+						{
+							char *base = basename(path); 
+							if(*base == '.' && dir_done) { 
+								return FTW_SKIP_SUBTREE;
+							}
+						}
+				}
+		}
         return FTW_CONTINUE;
 }
 
@@ -191,6 +245,9 @@ int recurse_dir(const char *path)
         /* Handle SIGINT */
         signal(SIGINT, interrupt);
 
+		/* (Re)-Init */ 
+		dir_done = false; 
+	
         /* Start recurse */
         if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags))) {
 			if(ret != FTW_STOP) { 

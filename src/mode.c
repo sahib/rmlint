@@ -106,13 +106,16 @@ static void print_askhelp(void)
 
 void write_to_log(const iFile *file, bool orig, FILE *fd)
 {
+		bool free_fullpath = true;
         if(fd && set.output) {
                 char *fpath = canonicalize_file_name(file->path);
 
                 if(!fpath) {
 						if(file->dupflag != 42) {
-                        	perror(YEL"WARN: "NCO"Unable to get full path (write_to_log():mode.c)");
+							error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
+                        	perror("(write_to_log():mode.c)");
 						}
+						free_fullpath = false;
                         fpath = (char*)file->path;
                 }
                 if(set.mode == 5) {
@@ -138,7 +141,13 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
 						int i;
 						if(file->dupflag == 42) 
 								fprintf(fd,"BLNK \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
-                        else if(orig != true) 
+						else if(file->dupflag == 43) 
+								fprintf(fd,"OTMP \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+						else if(file->dupflag == 44) 
+								fprintf(fd,"EDIR \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+						else if(file->fsize == 0) 
+								fprintf(fd,"ZERO \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+						else if(orig != true) 
                                 fprintf(fd,"DUPL \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
                         else
                                 fprintf(fd,"ORIG \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
@@ -149,7 +158,9 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                         fputc('\n',fd); 
                 }
 
-                if(fpath && file->dupflag != 42) free(fpath);
+                if(free_fullpath && fpath && file->dupflag != 42) 
+					free(fpath);
+			
         } else if(set.output) {
                 error(RED"ERROR: "NCO"Unable to write to log\n");
         }
@@ -193,13 +204,21 @@ static void handle_item(iFile *file_path, iFile *file_orig)
                                 block = 0;
                                 break;
 						case 'i':
-								info("\nPath#1: %s \nSize  : %ld Byte[s]\nInode : %ld\nDevID : %u\nmd5sum: ",file_path->path,file_path->fsize, file_path->node, file_path->dev); 
-								MDPrintArr(file_path->md5_digest); 
-								info("\n"); 
 								
-								info("\nPath#2: %s \nSize  : %ld Byte[s]\nInode : %ld\nDevID : %u\nmd5sum: ",file_orig->path,file_orig->fsize, file_orig->node, file_orig->dev);
-								MDPrintArr(file_orig->md5_digest); 
-								info("\n\n"); 
+								puts("\nOutput of ls -lahi --author:");
+								puts("-----------------------------");
+										
+								MDPrintArr(file_path->md5_digest);
+								printf(" on DevID %d -> ",(unsigned short)file_path->dev);
+								fflush(stdout);
+								systemf("ls -lahi --author --color=auto '%s'",path);
+								MDPrintArr(file_path->md5_digest);
+								printf(" on DevID %d -> ",(unsigned short)file_orig->dev);
+								fflush(stdout);
+								systemf("ls -lahi --author --color=auto '%s'",path);
+
+								puts(" "); 
+								block = 1;
 								break;
                         case 'q':
                                 die(0);
@@ -241,18 +260,10 @@ static void handle_item(iFile *file_path, iFile *file_orig)
 
         case 5: {
 				/* Exec a command on it */
-                int ret;
-                char *cmd_buff;
-                size_t len = (path) ? (strlen(path) + ((set.cmd_path) ? strlen(set.cmd_path) : 0) + 1) :
-						              (strlen(orig) + ((set.cmd_orig) ? strlen(set.cmd_orig) : 0) + 1) ;
- 
-                cmd_buff = alloca(len); 
-                if(path) snprintf(cmd_buff,len,set.cmd_path,path);
-                else     snprintf(cmd_buff,len,set.cmd_orig,orig);
-                
-                ret = system(cmd_buff);
-                if(ret == -1) perror(YEL"WARN: "NCO"System()");
-             
+				int ret = 0; 
+                if(path) ret=systemf(set.cmd_path,path);
+				else     ret=systemf(set.cmd_orig,orig); 
+					
                 if (WIFSIGNALED(ret) &&
                     (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
                         return;

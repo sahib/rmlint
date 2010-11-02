@@ -25,6 +25,7 @@
 #define PROGRESS_H
 
 #include "md5.h"
+#include "list.h"
 
 typedef struct {
 
