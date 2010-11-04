@@ -26,7 +26,7 @@ OPTI= -march=native  -Os -finline-functions -fomit-frame-pointer -s
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a
 CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) -static
 
-LDFLAGS=-lpthread -lm 
+LDFLAGS=-lpthread -lm -flto
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \

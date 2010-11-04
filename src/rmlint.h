@@ -21,6 +21,7 @@ typedef struct {
         char *fpattern;
         char *cmd_path;
         char *cmd_orig;
+		char *junk_chars;
         char *output; 
         int threads;
         int verbosity;

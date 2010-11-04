@@ -104,28 +104,6 @@ const char *script_name = "rmlint.sh";
  * */
 jmp_buf place;
 
-/* The nightmare of every secure program :))
- * this is used twice; 1x with a variable format.. 
- * Please gimme a note if I forgot to check sth. there.
-*/
-int systemf(const char* format, ...)
-{
-	int ret = 0;
-	char cmd_buf[1024];
-
-	/* Build a command  */
-	va_list args;
-	va_start (args, format);
-	vsnprintf (cmd_buf,1024,format, args);
-	va_end (args);
-
-	/* Now execute a shell command */
-	if((ret = system(cmd_buf)) == -1) {
-		perror("systemf(const char* format, ...)");
-	}
-	return ret; 
-}
-
 
 /** Messaging **/
 void error(const char* format, ...)
@@ -158,6 +136,27 @@ void info(const char* format, ...)
         }
 }
 
+/* The nightmare of every secure program :))
+ * this is used twice; 1x with a variable format.. 
+ * Please gimme a note if I forgot to check sth. there.
+*/
+int systemf(const char* format, ...)
+{
+	int ret = 0;
+	char cmd_buf[1024];
+
+	/* Build a command  */
+	va_list args;
+	va_start (args, format);
+	vsnprintf (cmd_buf,1024,format, args);
+	va_end (args);
+
+	/* Now execute a shell command */
+	if((ret = system(cmd_buf)) == -1) {
+		perror("systemf(const char* format, ...)");
+	}
+	return ret; 
+}
 
 /* Help text */
 static void print_help(void)
@@ -227,16 +226,18 @@ void rmlint_set_default_settings(rmlint_settings *set)
         set->fpattern 	 =  NULL;   /* FRegPattern  */
         set->cmd_path 	 =  NULL;   /* Cmd,if used  */
         set->cmd_orig    =  NULL;   /* Origcmd, -"- */ 
-        set->dump        =  0;
-        set->output  =  (char*)script_name; 
-        set->ignore_hidden = 1; 
+		set->junk_chars =   NULL;
+		set->dump          = 0;
+		set->oldtmpdata    = 1; 
+        set->ignore_hidden = 1;
+		set->findemptydirs = 1; 
+        set->output        =  (char*)script_name;
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 {
         int c,lp=0;
-
         while (1) {
                 static struct option long_options[] = {
                         {"threads",     required_argument, 0, 't'},
@@ -247,28 +248,33 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         {"cmd_dup",     required_argument, 0, 'c'},
                         {"cmd_orig",    required_argument, 0, 'C'},
                         {"dump",        required_argument, 0, 'z'},
+						{"junk",        required_argument, 0, 'j'},
                         {"verbosity",   required_argument, 0, 'v'},
                         {"output",      optional_argument, 0, 'o'},       
-                        {"ignorehidden",no_argument,      0, 'g'},
-                        {"hidden",      no_argument,      0, 'G'},
-                        {"matchcase",   no_argument, 	  0, 'e'},
-                        {"ignorecase",  no_argument, 	  0, 'E'},
-                        {"followlinks", no_argument, 	  0, 'f'},
-                        {"ignorelinks", no_argument, 	  0, 'F'},
-                        {"invertmatch", no_argument, 	  0, 'i'},
-                        {"normalmatch", no_argument, 	  0, 'I'},
-                        {"samepart",    no_argument,	  0, 's'},
-                        {"allpart",     no_argument,	  0, 'S'},
-                        {"paranoid",    no_argument,	  0, 'p'},
-                        {"naive",       no_argument,	  0, 'P'},
-                        {"help",        no_argument, 	  0, 'h'},
+						{"emptydirs",   no_argument,       0, 'y'},
+						{"no-emptydirs",no_argument,       0, 'Y'},
+						{"oldtmp",      no_argument,       0, 'x'},
+						{"no-oldtmp",   no_argument,       0, 'X'},
+						{"ignorehidden",no_argument,       0, 'g'},
+                        {"hidden",      no_argument,       0, 'G'},
+                        {"matchcase",   no_argument, 	   0, 'e'},
+                        {"ignorecase",  no_argument, 	   0, 'E'},
+                        {"followlinks", no_argument, 	   0, 'f'},
+                        {"ignorelinks", no_argument, 	   0, 'F'},
+                        {"invertmatch", no_argument, 	   0, 'i'},
+                        {"normalmatch", no_argument, 	   0, 'I'},
+                        {"samepart",    no_argument,	   0, 's'},
+                        {"allpart",     no_argument,	   0, 'S'},
+                        {"paranoid",    no_argument,	   0, 'p'},
+                        {"naive",       no_argument,	   0, 'P'},
+                        {"help",        no_argument, 	   0, 'h'},
                         {0, 0, 0, 0}
                 };
 
                 /* getopt_long stores the option index here. */
                 int option_index = 0;
 
-                c = getopt_long (argc, argv, "m:R:r:ho::z:gGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
+                c = getopt_long (argc, argv, "m:R:r:o::z:j:yhYxXgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
 
                 /* Detect the end of the options. */
                 if (c == -1) break;
@@ -277,7 +283,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 case '?':
                         return 0;
                 case 't':
-
                         sets->threads = atoi(optarg);
                         if(!sets->threads || sets->threads < 0)  sets->threads = 4;
                         break;
@@ -290,6 +295,21 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 case 'h':
                         print_help();
                         break;
+				case 'j': 
+						sets->junk_chars = optarg; 
+						break; 
+				case 'y': 
+						sets->findemptydirs = 1;
+						break;
+				case 'Y': 
+						sets->findemptydirs = 0;
+						break;
+				case 'x':
+						sets->oldtmpdata = 1;
+						break;
+				case 'X': 
+						sets->oldtmpdata = 0; 
+						break;
                 case 'z': 
 						sets->dump = atoi(optarg); 
 						break; 
@@ -486,10 +506,11 @@ int rmlint_main(void)
         jmp_set = true; 
         if(do_exit != true) {			
                 if(set.mode == 5) {
+						
 						if(!set.cmd_orig && !set.cmd_path) {
 							set.cmd_orig = (char*)command_C;
 							set.cmd_path = (char*)command_c; 
-						} else { 
+					} else { 
 							if(set.cmd_orig) check_cmd(set.cmd_orig);
 							if(set.cmd_path) check_cmd(set.cmd_path);
 						}
@@ -535,7 +556,7 @@ int rmlint_main(void)
                         set.threads = total_files;
 
 
-                /* Till thios point the list is unsorted
+                /* Till this point the list is unsorted
                  * The filter alorithms requires the list to be size-sorted,
                  * so it can easily filter unique sizes, and build "groupisles"
                  * */
@@ -543,8 +564,9 @@ int rmlint_main(void)
                 list_sort(list_begin(),cmp_sz);
                 info("done\n");
 
+				info("Now finding easy lint: \n"); 
+			
                 /* Apply the prefilter and outsort inique sizes */
-                info("Now removing files with unique sizes from list.. ");
                 start_processing(list_begin());
                
                 /* Exit! */

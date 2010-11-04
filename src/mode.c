@@ -111,7 +111,7 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                 char *fpath = canonicalize_file_name(file->path);
 
                 if(!fpath) {
-						if(file->dupflag != 42) {
+						if(file->dupflag != TYPE_BLNK) {
 							error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
                         	perror("(write_to_log():mode.c)");
 						}
@@ -119,19 +119,26 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                         fpath = (char*)file->path;
                 }
                 if(set.mode == 5) {
-						if(!orig) {
-								fprintf(fd, set.cmd_orig, file->path);
+
+						     if(file->dupflag == TYPE_BLNK)
+							fprintf(fd, "rm \"%s\" # Bad link pointing nowhere.\n", fpath); 
+						else if(file->dupflag == TYPE_OTMP) 
+							fprintf(fd, "rm \"%s\" # Tempdata that is older than the actual file.\n", fpath);
+						else if(file->dupflag == TYPE_EDIR)
+							fprintf(fd, "rmdir \"%s\" # Empty directory\n", fpath);
+						else if(file->dupflag == TYPE_JNK_DIRNAME)
+							fprintf(fd, "echo \"%s\" # Direcotryname containing one char of the string \"%s\"\n", fpath, set.junk_chars);
+						else if(file->dupflag == TYPE_JNK_FILENAME)
+							fprintf(fd, "ls -ls \"%s\" # Filename containing one char of the string \"%s\"\n", fpath, set.junk_chars);
+						else if(!orig) {
+								fprintf(fd, set.cmd_orig, fpath);
 								if(set.cmd_orig) 
 								{ 
 									fprintf(fd, SCRIPT_LINE_SUFFIX); 
-									if(file->dupflag != 42) { 
-										fprintf(fd, " # Duplicate\n");
-									} else { 
-										fprintf(fd, " # Bad link (pointing nowhere)\n");	
-									}
+										fprintf(fd, " # Duplicate\n");	
 								}
 						} else { 
-								fprintf(fd, set.cmd_path, file->path);
+								fprintf(fd, set.cmd_path, fpath);
 								if(set.cmd_path) { 
 									fprintf(fd, SCRIPT_LINE_SUFFIX); 
 									fprintf(fd, " # Original\n");
@@ -139,12 +146,16 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
 						}
                 } else {
 						int i;
-						if(file->dupflag == 42) 
+						if(file->dupflag == TYPE_BLNK) 
 								fprintf(fd,"BLNK \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
-						else if(file->dupflag == 43) 
+						else if(file->dupflag == TYPE_OTMP) 
 								fprintf(fd,"OTMP \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
-						else if(file->dupflag == 44) 
+						else if(file->dupflag == TYPE_EDIR) 
 								fprintf(fd,"EDIR \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+						else if(file->dupflag == TYPE_JNK_DIRNAME) 
+								fprintf(fd,"JNKD \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+						else if(file->dupflag == TYPE_JNK_FILENAME)
+								fprintf(fd,"JNKN \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->fsize == 0) 
 								fprintf(fd,"ZERO \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(orig != true) 
@@ -158,7 +169,7 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                         fputc('\n',fd); 
                 }
 
-                if(free_fullpath && fpath && file->dupflag != 42) 
+                if(free_fullpath && fpath && file->dupflag != TYPE_BLNK) 
 					free(fpath);
 			
         } else if(set.output) {
@@ -259,15 +270,15 @@ static void handle_item(iFile *file_path, iFile *file_orig)
         break;
 
         case 5: {
-				/* Exec a command on it */
-				int ret = 0; 
-                if(path) ret=systemf(set.cmd_path,path);
-				else     ret=systemf(set.cmd_orig,orig); 
-					
-                if (WIFSIGNALED(ret) &&
-                    (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
-                        return;
-        }
+			/* Exec a command on it */
+			int ret = 0; 
+			if(path) ret=systemf(set.cmd_path,path);
+			else     ret=systemf(set.cmd_orig,orig); 
+
+			if (WIFSIGNALED(ret) &&
+			    (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+				return;
+		}
         break;
 
         default:
@@ -379,18 +390,17 @@ uint32 findmatches(file_group *grp)
                                                         printed_original = true;
                                                 }
 												
-												if(set.mode == 1) {
+												if(set.mode == 1 || (set.mode == 5 && !set.cmd_orig && !set.cmd_path)) {
 														if(set.paranoid) {
 																/* If byte by byte was succesful print a blue "x" */
 																warning(BLU"%-1s "NCO,"X");
 														} else {
 																warning(RED"%-1s "NCO,"*");
 														}
-												}
-												
-												if(set.mode == 1) 
-													error("%s\n",j->path);
 
+													      
+													error("%s\n",j->path);
+												}
                                                 write_to_log(j, false, script_out);
                                                 handle_item(j,i);
                                         }

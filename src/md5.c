@@ -309,8 +309,9 @@ void md5_file(iFile *file)
 		uint32 already_read = MD5_FPSIZE_FORM(file->fsize);
 		already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read; 
 		if(file->fsize <= (already_read<<1)) { return; } /* This is some quite hyptothetical case ..*/
-		
-       /*data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);*/
+
+		/* This seems to cause trouble in valgrind, it gives a little speedup though..  (rmlint works normally)*/
+        /*data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);*/
 		data = alloca(MD5_IO_BLOCKSIZE); 
         inFile = fopen (file->path, "rb");
 		

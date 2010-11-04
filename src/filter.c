@@ -66,19 +66,38 @@ static void interrupt(int p)
 					iAbort = 2;
 					warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
 				} else {
-					iAbort = true; 
+					iAbort = 1; 
 					db_done = true; 
 				}
 			break;
-		case SIGABRT:
-		case SIGSEGV: 
-			error(RED"FATAL: "NCO"Received SIGSEV; This is the coder's fault.\n"); 
-			die(-1); 
-
-		case SIGFPE: 
-			error(RED"FATAL: "NCO"Received SIGFPE; This the coder's fault.\n"); 
+		case SIGFPE  : 
+		case SIGABRT :
+			error(RED"FATAL: "NCO"Aborting due to internal error.\n"); 
+			die(-1);  
+		case SIGSEGV : 
+			error(RED"FATAL: "NCO"o hai. I haz segfault. Can I haz backtrace? Kthxbai.\n");
 			die(-1); 
 	}
+}
+
+/* Cheap function to check if c is a char in str */
+static int junkinstr(const char *str) 
+{
+	int i = 0, j = 0; 
+	if(set.junk_chars == NULL) 
+		return 0;
+	
+	for(;set.junk_chars[i];i++)
+	{
+			for(j=0;str[j];j++) 
+			{
+					if(str[j] == set.junk_chars[i]) 
+					{
+						return true;
+					}
+			}
+	}
+	return 0;
 }
 
 /*
@@ -142,19 +161,24 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 return FTW_STOP;
         }
         if(flag == FTW_SLN) {
-				list_append(path, 0,ptr->st_dev,ptr->st_ino,42);
+				list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_BLNK);
 				return FTW_CONTINUE;
         }
         if(path) {
 
-		if(!dir_done) {
-				if(!strcmp(set.paths[get_cpindex()], path))  {
-					dir_done = true; 
-					return FTW_CONTINUE; 
-				}
-		}
+			if(!dir_done) {
+					if(!strcmp(set.paths[get_cpindex()], path))  {
+						dir_done = true; 
+						return FTW_CONTINUE; 
+					}
+			}
 			if(flag == FTW_F) { 
-				
+
+						if(junkinstr(basename(path))) 
+						{
+							list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
+							return FTW_CONTINUE;	
+						}
 						if(regfilter(path, set.fpattern)) { 
 							return FTW_CONTINUE;
 						}
@@ -167,7 +191,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 									if(!stat(cpy, &stat_buf))
 									{
 										if(ABS(stat_buf.st_mtime - ptr->st_mtime) > 30)
-										list_append(path, 0,ptr->st_dev,ptr->st_ino,43);
+										list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
 										return FTW_CONTINUE;
 									}
 									if(cpy) free(cpy); 
@@ -195,12 +219,17 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 						if(regfilter(path, set.dpattern) && dir_done) { 
 							return FTW_SKIP_SUBTREE;
 						}
-					
-						if(set.findemptydirs || 1) {
+						if(junkinstr(basename(path))) 
+						{
+							list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
+							return FTW_SKIP_SUBTREE;
+						}
+						if(set.findemptydirs) {
 								int dir_counter = 0; 
 								DIR *dir_e = opendir(path); 
 								struct dirent *dir_p = NULL; 
 
+							
 								if(dir_e) {
 									while((dir_p=readdir(dir_e)) && dir_counter < 2) 
 										dir_counter++; 
@@ -208,7 +237,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 									if(dir_counter == 2 && 
 									   dir_p == NULL
 									   ) { 
-										list_append(path, 0,ptr->st_dev,ptr->st_ino,44);
+										list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR);
 										return FTW_SKIP_SUBTREE;
 									   }
 									closedir(dir_e); 
@@ -297,7 +326,7 @@ static uint32 rm_double_paths(file_group *fp)
 /* Sort criteria for sorting by dev and inode */
 static long cmp_nd(iFile *a, iFile *b)
 {
-        return ((long)(a->dev*a->node) - (long)(b->dev*b->node));
+        return ((long)(a->node) - (long)(b->node));
 }
 
 /* Compares the "fp" array of the iFiles a and b */
@@ -524,8 +553,7 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
         const file_group *bp = b;
         if(ap && bp) {
                 if(ap->grp_stp && bp->grp_stp) {
-                        return ap->grp_stp->node * ap->grp_stp->dev -
-                                bp->grp_stp->node * bp->grp_stp->dev ;
+                        return ap->grp_stp->node - bp->grp_stp->node;
                 }
 
         }
@@ -581,8 +609,6 @@ static void find_double_bases(iFile *starting)
 		if(pr) c++; 
 		i=i->next; 
     }
-        
-	die(0); 
 }
 
 
@@ -590,7 +616,7 @@ static void find_double_bases(iFile *starting)
 void start_processing(iFile *b)
 {
         file_group *fglist = NULL,
-                      emptylist; 
+        emptylist; 
 
         /* Logvariables - not relevant to algorithm */
         char lintbuf[128];
@@ -676,6 +702,11 @@ void start_processing(iFile *b)
                                 ptr = emptylist.grp_stp;
                                 emptylist.len = 0;
                                 while(ptr) {
+
+										      if(ptr->dupflag == TYPE_BLNK) error("blnk: %s\n",ptr->path);
+										else if(ptr->dupflag == TYPE_OTMP) error("otmp: %s\n",ptr->path);
+										else if(ptr->dupflag == TYPE_EDIR) error("edir: %s\n",ptr->path);
+									
 										if(set.output) write_to_log(ptr, false, get_logstream());
                                         ptr = list_remove(ptr);
                                         emptylist.len++;
@@ -685,8 +716,11 @@ void start_processing(iFile *b)
                 }
         }
         
-        if(set.dump == -2) die(0); 
-        
+        if(set.dump == -2) die(0); 	
+
+
+		info("\nNow attempting to find duplicates. This may take a while...\n");
+		info("Now removing files with unique sizes from list.. ");
         info("%ld files less in list",rem_counter);
         if(path_doubles) {
 	           info(" (removed %ld pathzombies)", path_doubles);  

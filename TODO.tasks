@@ -19,6 +19,21 @@
     <item>
       <attribute id="1288736711" priority="1" done="0" start_date="734078" enddate="99999999" notify="0" endtime="-60" last_edited="1288736711"/>
       <summary>-m cmd script improve</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288767909" priority="1" done="0" start_date="734079" enddate="99999999" notify="0" endtime="-60" last_edited="1288767909"/>
+      <summary>command line options</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288768479" priority="1" done="0" start_date="734079" enddate="99999999" notify="0" endtime="-60" last_edited="1288768479"/>
+      <summary>name clusters</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288888037" priority="1" done="0" start_date="734080" enddate="99999999" notify="0" endtime="-60" last_edited="1288888037"/>
+      <summary>intelligent commands for every type</summary>
       <comment></comment>
     </item>
   </category>
