@@ -52,13 +52,13 @@
       <comment/>
     </item>
     <item>
-      <attribute id="1288913772" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913772"/>
-      <summary>fix compilation warnings on 64 bit</summary>
+      <attribute id="1288913834" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913834"/>
+      <summary>non stripped binaries</summary>
       <comment/>
     </item>
     <item>
-      <attribute id="1288913834" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913834"/>
-      <summary>non stripped binaries</summary>
+      <attribute id="1288913772" priority="1" done="1" start_date="734081" completed_date="734081" notify="0" last_edited="1288961317"/>
+      <summary>fix compilation warnings on 64 bit</summary>
       <comment></comment>
     </item>
   </category>

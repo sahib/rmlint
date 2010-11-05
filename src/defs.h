@@ -72,7 +72,7 @@
 #define MD5_FPSIZE_FORM(X) sqrt(X / MD5_FP_PERCENT) + 1;
 
 /** typedef a 32 bit type **/
-typedef uint_fast32_t  uint32;
+typedef unsigned int uint32;
 
 /* What to append at the end of a command, Default " ;\n" so script continues also on error*/
 #define SCRIPT_LINE_SUFFIX  " ;"
