@@ -608,7 +608,7 @@ static void find_double_bases(iFile *starting)
 						{
 							char * tmp = canonicalize_file_name(i->path); 
 							i->dupflag = false;
-							printf("\n%d %s %u\n",c,tmp,i->fsize); 
+							printf("\n%d %s %lu\n",c,tmp,i->fsize); 
 							pr = true;
 							if(tmp) free(tmp); 
 
@@ -624,7 +624,7 @@ static void find_double_bases(iFile *starting)
 							}
 						}
 						j->dupflag = false; 
-						printf("%d %s %u\n",c,tmp2,j->fsize);
+						printf("%d %s %lu\n",c,tmp2,j->fsize);
 						if(tmp2) free(tmp2); 
 							
 							
@@ -709,7 +709,7 @@ void start_processing(iFile *b)
 									while(la) 
 									{
 										char *tmp = canonicalize_file_name(la->path);
-										fprintf(stdout,"%u %s\n",la->fsize, tmp); 
+										fprintf(stdout,"%lu %s\n",la->fsize, tmp); 
 										la=la->next; 
 										free(tmp); 
 									}

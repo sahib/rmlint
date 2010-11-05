@@ -148,21 +148,21 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
                 } else {
 						int i;
 						if(file->dupflag == TYPE_BLNK) 
-								fprintf(fd,"BLNK \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+								fprintf(fd,"BLNK \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->dupflag == TYPE_OTMP) 
-								fprintf(fd,"OTMP \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+								fprintf(fd,"OTMP \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->dupflag == TYPE_EDIR) 
-								fprintf(fd,"EDIR \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+								fprintf(fd,"EDIR \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->dupflag == TYPE_JNK_DIRNAME) 
-								fprintf(fd,"JNKD \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+								fprintf(fd,"JNKD \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->dupflag == TYPE_JNK_FILENAME)
-								fprintf(fd,"JNKN \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+								fprintf(fd,"JNKN \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->fsize == 0) 
-								fprintf(fd,"ZERO \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+								fprintf(fd,"ZERO \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(orig != true) 
-                                fprintf(fd,"DUPL \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+                                fprintf(fd,"DUPL \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
                         else
-                                fprintf(fd,"ORIG \"%s\" %u 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+                                fprintf(fd,"ORIG \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
                 
 					    for (i = 0; i < 16; i++) {
                                 fprintf (fd,"%02x", file->md5_digest[i]);
