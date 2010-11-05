@@ -192,6 +192,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 									{
 										if(ABS(stat_buf.st_mtime - ptr->st_mtime) > 30)
 										list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
+										if(cpy) free(cpy); 
 										return FTW_CONTINUE;
 									}
 									if(cpy) free(cpy); 
@@ -233,14 +234,14 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 								if(dir_e) {
 									while((dir_p=readdir(dir_e)) && dir_counter < 2) 
 										dir_counter++; 
-		
+
+									closedir(dir_e);
 									if(dir_counter == 2 && 
 									   dir_p == NULL
 									   ) { 
 										list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR);
 										return FTW_SKIP_SUBTREE;
 									   }
-									closedir(dir_e); 
 								}
 						}
 
@@ -307,6 +308,9 @@ static uint32 rm_double_paths(file_group *fp)
                         if( (b->node == b->next->node) &&
                             (b->dev  == b->next->dev )  ) {
                                 iFile *tmp = b;
+								fp->size -= b->fsize; 
+								fp->len--;
+								
                                 b = list_remove(b);
 
                                 if(tmp == fp->grp_stp)
@@ -494,9 +498,13 @@ static void* sheduler_cb(void *gfp)
         }
 
         build_checksums(group);
-        findmatches(group);
+        if(findmatches(group)) 
+		{
+			list_clear(group->grp_stp);
+			die(0); 
+		}
         list_clear(group->grp_stp);
-        return NULL;
+		return NULL; 
 }
 
 /* Joins the threads launched by sheduler */
@@ -584,49 +592,67 @@ static void find_double_bases(iFile *starting)
 	
 	while(i)
 	{
-		bool pr = false;  
-		j=i->next;
-	    while(j) 
-	    {
-			if(!strcmp(basename(i->path), basename(j->path)))
-			{
-				char *tmp2 = canonicalize_file_name(j->path); 
-				if(!pr) 
+		if(i->dupflag) 
+		{
+				bool pr = false;  
+				j=i->next;
+				while(j) 
 				{
-					char * tmp = canonicalize_file_name(i->path); 
-					i->dupflag = false;
-					printf("%d %s %u\n",c,tmp,i->fsize); 
-					pr = true;
-					if(tmp) free(tmp); 
+					if(!strcmp(basename(i->path), basename(j->path)) && 
+						i->node != j->node && j->dupflag
+					   )
+					{
+						iFile *x = j; 
+						char *tmp2 = canonicalize_file_name(j->path); 
+						if(!pr) 
+						{
+							char * tmp = canonicalize_file_name(i->path); 
+							i->dupflag = false;
+							printf("\n%d %s %u\n",c,tmp,i->fsize); 
+							pr = true;
+							if(tmp) free(tmp); 
+
+							/* At this point files with same inode and device are NOT handled yet. 
+							   Therefore this foolish, but well working approach is made. 
+							   (So it works also with more than one dir in the cmd)  */
+							while(x) 
+							{
+								if(x->node == j->node) 
+									x->dupflag = false; 
+									
+								x=x->next; 
+							}
+						}
+						j->dupflag = false; 
+						printf("%d %s %u\n",c,tmp2,j->fsize);
+						if(tmp2) free(tmp2); 
+							
+							
+					}
+					j=j->next; 
 				}
-				
-				j->dupflag = false; 
-				printf("%d %s %u\n",c,tmp2,j->fsize);
-				if(tmp2) free(tmp2); 
-			}
-			j=j->next; 
+				if(pr) c++; 
 		}
-		if(pr) c++; 
 		i=i->next; 
     }
+
+	
 }
 
 
-/* Splits into groups, and does some serious presortage */
 void start_processing(iFile *b)
 {
         file_group *fglist = NULL,
-        emptylist; 
-
-        /* Logvariables - not relevant to algorithm */
+                    emptylist;           
+	
         char lintbuf[128];
-        uint32 ii = 0,
-                lint = 0,
-                spelen = 0,
-                remaining = 0,
-                rem_counter = 0,
+        uint32  ii           = 0,
+                lint         = 0,
+                spelen       = 0,
+                remaining    = 0,
+                rem_counter  = 0,
                 path_doubles = 0,
-                original = list_len();
+                original     = list_len();
 		
 		if(ABS(set.dump) == 1) { 
 				error("Double basenames: \n");
@@ -646,6 +672,7 @@ void start_processing(iFile *b)
 
                 while(b && q->fsize == b->fsize) {
                         prev = b;
+						b->dupflag = true; 
                         gsize += b->fsize;
                         glen++;
                         b = b->next;
@@ -717,15 +744,15 @@ void start_processing(iFile *b)
         }
         
         if(set.dump == -2) die(0); 	
-
-
-		info("\nNow attempting to find duplicates. This may take a while...\n");
-		info("Now removing files with unique sizes from list.. ");
-        info("%ld files less in list",rem_counter);
+		if(emptylist.len == 0) info("None.");
+	
+		info("\nNow attempting to find duplicates. This may take a while...\n");			
+		info("Now removing files with unique sizes from list.. ");	                 
+		info(""YEL"%ld elem%c less"NCO" in list",rem_counter,(rem_counter > 1) ? 's' : ' ');
         if(path_doubles) {
-	           info(" (removed %ld pathzombies)", path_doubles);  
+	           info(" (removed "YEL"%ld pathzombies"NCO")", path_doubles);  
 	    } 
-        info("\nBy ignoring %ld empty files, list was split in %ld parts.\n", emptylist.len, spelen);
+        info("\nBy ignoring "YEL"%ld empty files "NCO"/"YEL" bad links "NCO"/"YEL" junk names"NCO", list was split in %ld parts.\n", emptylist.len, spelen);
         info("Now sorting groups based on their location on the drive.. ");
 
         /* Now make sure groups are sorted by their location on the disk*/
@@ -745,16 +772,18 @@ void start_processing(iFile *b)
 		}
         /* Gather the total size of removeable data */
         for(ii=0; ii < spelen; ii++) {
-                lint += fglist[ii].size - ((fglist[ii].len > 0) ? (fglist[ii].size / fglist[ii].len) : 0);
-                remaining +=  (fglist[ii].len) ? (fglist[ii].len - 1) : 0;
+			if(fglist[ii].grp_stp != NULL) { 
+		            lint += fglist[ii].size - ((fglist[ii].len > 0) ? (fglist[ii].size / fglist[ii].len) : 0);
+		            remaining +=  (fglist[ii].len) ? (fglist[ii].len - 1) : 0;
+			}
         }
 
         size_to_human_readable(lint, lintbuf, 127);
-        info("\nIn total %ld (of %ld files as input) files are duplicates.\n",remaining, original);
-        info("This means: %s [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
+        info("\nIn total "GRE"%ld"NCO" (of %ld files as input) files are duplicates.\n",remaining, original);
+        info("This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
         
         if(set.output)
-				info("A log has been written to %s.\n", set.output);
+				info("A log has been written to "BLU"%s"NCO".\n", set.output);
 
         /* End of actual program. Now do some file handling / frees */
         if(fglist) free(fglist);

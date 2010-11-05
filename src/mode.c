@@ -61,12 +61,13 @@ static void remfile(const char *path)
 }
 
 /** This is only for extremely paranoid people **/
-static int paranoid(const char *p1, const char *p2)
+static int paranoid(const char *p1, const char *p2, uint32 size)
 {
         uint32 b1=0,b2=0;
         FILE *f1,*f2;
 
-        char c1[MD5_IO_BLOCKSIZE],c2[MD5_IO_BLOCKSIZE];
+        char *c1 = alloca((MD5_IO_BLOCKSIZE>size) ? size+1 : MD5_IO_BLOCKSIZE),
+		      *c2 = alloca((MD5_IO_BLOCKSIZE>size) ? size+1 : MD5_IO_BLOCKSIZE);
 
         f1 = fopen(p1,"rb");
         f2 = fopen(p2,"rb");
@@ -178,7 +179,7 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
 }
 
 
-static void handle_item(iFile *file_path, iFile *file_orig)
+static bool handle_item(iFile *file_path, iFile *file_orig)
 {
 		char *path = (file_path) ? file_path->path : NULL; 
 		char *orig = (file_orig) ? file_orig->path : NULL; 
@@ -216,13 +217,11 @@ static void handle_item(iFile *file_path, iFile *file_orig)
                                 break;
 						case 'i':
 								
-								puts("\nOutput of ls -lahi --author:");
-								puts("-----------------------------");
-										
 								MDPrintArr(file_path->md5_digest);
 								printf(" on DevID %d -> ",(unsigned short)file_path->dev);
 								fflush(stdout);
 								systemf("ls -lahi --author --color=auto '%s'",path);
+
 								MDPrintArr(file_path->md5_digest);
 								printf(" on DevID %d -> ",(unsigned short)file_orig->dev);
 								fflush(stdout);
@@ -232,7 +231,7 @@ static void handle_item(iFile *file_path, iFile *file_orig)
 								block = 1;
 								break;
                         case 'q':
-                                die(0);
+                                return true; 
 								break;
                         case 'h':
                                 print_askhelp();
@@ -277,13 +276,15 @@ static void handle_item(iFile *file_path, iFile *file_orig)
 
 			if (WIFSIGNALED(ret) &&
 			    (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
-				return;
+				return true;
 		}
         break;
 
         default:
                 error(RED"ERROR: "NCO"Invalid set.mode. This is a program error :(");
-        }
+				return true; 
+		}
+		return false; 
 }
 
 
@@ -353,11 +354,10 @@ static int cmp_f(iFile *a, iFile *b)
 }
 
 
-uint32 findmatches(file_group *grp)
+bool findmatches(file_group *grp)
 {
         iFile *i = grp->grp_stp, *j;
-        uint32 remove_count = 0;
-        if(i == NULL)  return 0;
+        if(i == NULL)  return false;
 
         warning(NCO);
 
@@ -371,9 +371,9 @@ uint32 findmatches(file_group *grp)
 
                         while(j) {
                                 if(j->dupflag) {
-                                        if( (!cmp_f(i,j))           &&                     /* Same checksum?                                             */
-                                            (i->fsize == j->fsize)	&&					   /* Same size? (double check, you never know)             	 */
-                                            ((set.paranoid)?paranoid(i->path,j->path):1)   /* If we're bothering with paranoid users - Take the gatling! */
+                                        if( (!cmp_f(i,j))           &&                              /* Same checksum?                                             */
+                                            (i->fsize == j->fsize)	&&					            /* Same size? (double check, you never know)             	 */
+                                            ((set.paranoid)?paranoid(i->path,j->path,i->fsize):1)   /* If we're bothering with paranoid users - Take the gatling! */
                                           ) {
                                                 /* i 'similiar' to j */
                                                 j->dupflag = false;
@@ -402,8 +402,9 @@ uint32 findmatches(file_group *grp)
 													error("%s\n",j->path);
 												}
                                                 write_to_log(j, false, script_out);
-                                                handle_item(j,i);
-                                        }
+                                                if(handle_item(j,i))
+												  return true; 
+										 }
                                 }
                                 j = j->next;
                         }
@@ -427,7 +428,6 @@ uint32 findmatches(file_group *grp)
                                 if(tmp == grp->grp_enp)
                                         grp->grp_enp = i;
 
-                                remove_count++;
                                 continue;
                         } else {
                                 i=i->next;
@@ -437,5 +437,5 @@ uint32 findmatches(file_group *grp)
                 i=i->next;
         }
 
-        return remove_count;
+        return false;
 }

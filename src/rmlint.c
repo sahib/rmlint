@@ -46,11 +46,6 @@
  * - docs
  * - some comments.. clean up..
  * - better sheduler (only reduce one thread on overflow e.g.) 
- * - bad symlinks 
- * - better memory handling on early die
- * - crappy regex.. (-r seems to work, but -R? - little moments of wtf..)
- * - goto ToDo2; 
-
  **/
 
 
@@ -73,18 +68,7 @@ X testdir/recursed_b/two_plus_one
 X testdir/with spaces b
 
 
-Empty files are not shown - they will be
-handled seperate in future versions.
- **/
-
-/**
- * ToDo2 (for removing other sort of "lint")
- * - Write bad symlinks to script (needs -f)
- * - Find old tmp data (*~)
- * - empty dirs
- * - non stripped binaries
- * => Should be complete after implementing this.
- **/
+*/
 
 int  cpindex = 0;
 bool do_exit = false,
@@ -206,7 +190,14 @@ static void print_help(void)
         fprintf(stderr, "\nVersion 0.43 - Copyright Christopher <Sahib Bommelig> Pahl\n");
         fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
         fprintf(stderr, "See the manpage or the README for more information.\n");
-        exit(0);
+		die(0); 
+}
+
+static void print_version(void)
+{
+	fprintf(stderr, "o hai! U choze to haz verzion.\n"); 
+	fprintf(stderr, "Verzion be 0.7b (!stable). Srsly. Kthxbai.\n"); 
+	die(0); 
 }
 
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
@@ -233,6 +224,9 @@ void rmlint_set_default_settings(rmlint_settings *set)
 		set->findemptydirs = 1; 
         set->output        =  (char*)script_name;
 }
+
+
+
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
@@ -268,13 +262,14 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         {"paranoid",    no_argument,	   0, 'p'},
                         {"naive",       no_argument,	   0, 'P'},
                         {"help",        no_argument, 	   0, 'h'},
+						{"version",     no_argument,       0, 'V'},
                         {0, 0, 0, 0}
                 };
 
                 /* getopt_long stores the option index here. */
                 int option_index = 0;
 
-                c = getopt_long (argc, argv, "m:R:r:o::z:j:yhYxXgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
+                c = getopt_long (argc, argv, "m:R:r:o::z:j:VyhYxXgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
 
                 /* Detect the end of the options. */
                 if (c == -1) break;
@@ -292,6 +287,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 case 'F':
                         sets->followlinks = 0;
                         break;
+				case 'V': 
+						print_version(); 
+						break;
                 case 'h':
                         print_help();
                         break;
@@ -537,7 +535,7 @@ int rmlint_main(void)
 
                         } else {
                                 /* The path points to a dir - recurse it! */
-                                info("Now scanning \"%s\"..",set.paths[cpindex]);
+                                info("Now scanning "YEL"\"%s\""NCO"..",set.paths[cpindex]);
                                 total_files += recurse_dir(set.paths[cpindex]);
                                 info(" done.\n");
                                 closedir(p);
@@ -546,11 +544,11 @@ int rmlint_main(void)
                 }
 
                 if(total_files < 2) {
-                        warning("No files to search through => No duplicates\n");
+                        warning("No files to search through => No duplicates.\n");
                         die(0);
                 }
 
-                info("In total %ld usbale files in cache.\n", total_files);
+                info("In total "YEL"%ld useable files"NCO" in cache.\n", total_files);
 
                 if(set.threads > total_files)
                         set.threads = total_files;

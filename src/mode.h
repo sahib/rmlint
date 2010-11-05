@@ -28,7 +28,7 @@
 #include "filter.h"
 
 
-uint32 findmatches(file_group *group);
+bool findmatches(file_group *grp);
 void init_filehandler(void);
 void write_to_log(const iFile *file, bool orig, FILE *fd);
 FILE *get_logstream(void);

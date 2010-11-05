@@ -2,11 +2,6 @@
 <gtodo>
   <category title="Pers&#xF6;nlich" place="0">
     <item>
-      <attribute id="1288730472" priority="1" done="1" start_date="734078" completed_date="734078" notify="0" last_edited="1288730689"/>
-      <summary>repair regex (I want to say Graaaah!)</summary>
-      <comment/>
-    </item>
-    <item>
       <attribute id="1288726440" priority="1" done="1" start_date="734078" completed_date="734078" notify="0" last_edited="1288736694"/>
       <summary>find emptdirs </summary>
       <comment/>
@@ -17,23 +12,53 @@
       <comment/>
     </item>
     <item>
-      <attribute id="1288736711" priority="1" done="0" start_date="734078" enddate="99999999" notify="0" endtime="-60" last_edited="1288736711"/>
+      <attribute id="1288888037" priority="1" done="0" start_date="734080" enddate="99999999" notify="0" endtime="-60" last_edited="1288888037"/>
+      <summary>intelligent commands for every type</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288736711" priority="1" done="1" start_date="734078" completed_date="734080" notify="0" last_edited="1288908454"/>
       <summary>-m cmd script improve</summary>
       <comment/>
     </item>
     <item>
-      <attribute id="1288767909" priority="1" done="0" start_date="734079" enddate="99999999" notify="0" endtime="-60" last_edited="1288767909"/>
-      <summary>command line options</summary>
+      <attribute id="1288908573" priority="1" done="0" start_date="734080" enddate="99999999" notify="0" endtime="-60" last_edited="1288908573"/>
+      <summary>new sheduler</summary>
       <comment/>
     </item>
     <item>
-      <attribute id="1288768479" priority="1" done="0" start_date="734079" enddate="99999999" notify="0" endtime="-60" last_edited="1288768479"/>
+      <attribute id="1288730472" priority="1" done="1" start_date="734078" completed_date="734080" notify="0" last_edited="1288910253"/>
+      <summary>lil more color</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288911765" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288911765"/>
+      <summary>more comments.. I doubt anyone is able to understand it yet :-P</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288908598" priority="1" done="1" start_date="734080" completed_date="734081" notify="0" last_edited="1288913533"/>
+      <summary>valgrinding again</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288768479" priority="1" done="1" start_date="734079" completed_date="734081" notify="0" last_edited="1288913536"/>
       <summary>name clusters</summary>
       <comment/>
     </item>
     <item>
-      <attribute id="1288888037" priority="1" done="0" start_date="734080" enddate="99999999" notify="0" endtime="-60" last_edited="1288888037"/>
-      <summary>intelligent commands for every type</summary>
+      <attribute id="1288913760" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913760"/>
+      <summary>profiling...</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288913772" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913772"/>
+      <summary>fix compilation warnings on 64 bit</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288913834" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913834"/>
+      <summary>non stripped binaries</summary>
       <comment></comment>
     </item>
   </category>
