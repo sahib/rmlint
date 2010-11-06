@@ -37,11 +37,6 @@
       <comment/>
     </item>
     <item>
-      <attribute id="1288913760" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913760"/>
-      <summary>profiling...</summary>
-      <comment/>
-    </item>
-    <item>
       <attribute id="1288913772" priority="1" done="1" start_date="734081" completed_date="734081" notify="0" last_edited="1288961317"/>
       <summary>fix compilation warnings on 64 bit</summary>
       <comment/>
@@ -69,6 +64,11 @@
     <item>
       <attribute id="1289067196" priority="1" done="0" start_date="734082" enddate="99999999" notify="0" endtime="-60" last_edited="1289067196"/>
       <summary>more docs</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288913760" priority="1" done="1" start_date="734081" completed_date="734082" notify="0" last_edited="1289070775"/>
+      <summary>profiling...</summary>
       <comment></comment>
     </item>
   </category>

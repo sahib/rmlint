@@ -15,14 +15,11 @@
 *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
 ** Author: Christopher Pahl <sahib@online.de>:
-** Hosted at the time of writing (Do 30. Sep 18:32:19 CEST 2010):
-*  http://github.com/sahib/rmlint
+** Hosted on http://github.com/sahib/rmlint
 *
 **/
 
-/*
- * This needs some clean up
-*/
+
 #pragma once
 #ifndef DEF_H
 #define DEF_H

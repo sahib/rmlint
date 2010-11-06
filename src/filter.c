@@ -15,8 +15,7 @@
 *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
 ** Author: Christopher Pahl <sahib@online.de>:
-** Hosted at the time of writing (Do 30. Sep 18:32:19 CEST 2010):
-*  on http://github.com/sahib/rmlint
+** Hosted on http://github.com/sahib/rmlint
 *
 **/
 
@@ -651,8 +650,8 @@ static void find_double_bases(iFile *starting)
 						iFile *x = j; 
 						char *tmp2 = canonicalize_file_name(j->path); 
 						if(phead) { 
-							error("\nDouble basenames: \n");
-							error("-----------------"); 
+							info("\nDouble basenames: \n");
+							info("-----------------"); 
 							phead = false; 
 						}
 						if(!pr) 
@@ -781,8 +780,9 @@ void start_processing(iFile *b)
                 }
         }
 
-		if(emptylist.len == 0) info("None.");
-
+		if(emptylist.len == 0) info("None."); 
+		error("\n");
+	
 		if(set.searchdup == 0) {
 			int i = 0; 
 
