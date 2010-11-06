@@ -12,18 +12,8 @@
       <comment/>
     </item>
     <item>
-      <attribute id="1288888037" priority="1" done="0" start_date="734080" enddate="99999999" notify="0" endtime="-60" last_edited="1288888037"/>
-      <summary>intelligent commands for every type</summary>
-      <comment/>
-    </item>
-    <item>
       <attribute id="1288736711" priority="1" done="1" start_date="734078" completed_date="734080" notify="0" last_edited="1288908454"/>
       <summary>-m cmd script improve</summary>
-      <comment/>
-    </item>
-    <item>
-      <attribute id="1288908573" priority="1" done="0" start_date="734080" enddate="99999999" notify="0" endtime="-60" last_edited="1288908573"/>
-      <summary>new sheduler</summary>
       <comment/>
     </item>
     <item>
@@ -52,13 +42,33 @@
       <comment/>
     </item>
     <item>
-      <attribute id="1288913834" priority="1" done="0" start_date="734081" enddate="99999999" notify="0" endtime="-60" last_edited="1288913834"/>
+      <attribute id="1288913772" priority="1" done="1" start_date="734081" completed_date="734081" notify="0" last_edited="1288961317"/>
+      <summary>fix compilation warnings on 64 bit</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288908573" priority="1" done="1" start_date="734080" completed_date="734082" notify="0" last_edited="1289002089"/>
+      <summary>new sheduler</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1288913834" priority="1" done="1" start_date="734081" completed_date="734082" notify="0" last_edited="1289066868"/>
       <summary>non stripped binaries</summary>
       <comment/>
     </item>
     <item>
-      <attribute id="1288913772" priority="1" done="1" start_date="734081" completed_date="734081" notify="0" last_edited="1288961317"/>
-      <summary>fix compilation warnings on 64 bit</summary>
+      <attribute id="1288888037" priority="1" done="1" start_date="734080" completed_date="734082" notify="0" last_edited="1289066874"/>
+      <summary>intelligent commands for every type</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1289066889" priority="1" done="0" start_date="734082" enddate="99999999" notify="0" endtime="-60" last_edited="1289066889"/>
+      <summary>fix all bugs :-)</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1289067196" priority="1" done="0" start_date="734082" enddate="99999999" notify="0" endtime="-60" last_edited="1289067196"/>
+      <summary>more docs</summary>
       <comment></comment>
     </item>
   </category>

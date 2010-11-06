@@ -131,6 +131,8 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
 							fprintf(fd, "echo \"%s\" # Direcotryname containing one char of the string \"%s\"\n", fpath, set.junk_chars);
 						else if(file->dupflag == TYPE_JNK_FILENAME)
 							fprintf(fd, "ls -ls \"%s\" # Filename containing one char of the string \"%s\"\n", fpath, set.junk_chars);
+						else if(file->dupflag == TYPE_NBIN)
+							fprintf(fd, "strip -s \"%s\" # Binary containg debug-symbols\n", fpath);
 						else if(!orig) {
 								fprintf(fd, set.cmd_orig, fpath);
 								if(set.cmd_orig) 
@@ -157,6 +159,8 @@ void write_to_log(const iFile *file, bool orig, FILE *fd)
 								fprintf(fd,"JNKD \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->dupflag == TYPE_JNK_FILENAME)
 								fprintf(fd,"JNKN \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
+						else if(file->dupflag == TYPE_NBIN)
+								fprintf(fd,"NBIN \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(file->fsize == 0) 
 								fprintf(fd,"ZERO \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
 						else if(orig != true) 
@@ -308,14 +312,24 @@ void init_filehandler(void)
 
 					if((!set.cmd_orig && !set.cmd_path) || set.mode != 5) {
 							fprintf(get_logstream(), "#\n# Entries are listed like this: \n"); 
-							fprintf(get_logstream(), "# dupf | path | size | devID | inode | md5sum\n"); 
+							fprintf(get_logstream(), "# dupflag | path | size | devID | inode | md5sum\n"); 
 							fprintf(get_logstream(), "# -------------------------------------------\n"); 
-							fprintf(get_logstream(), "# dupf  : If rmlint thinks this the original, it's marked with '0' otherwise '1'\n"); 
-							fprintf(get_logstream(), "# path  : The full path to the found file\n"); 
-							fprintf(get_logstream(), "# size  : total size in byte as a decimal integer\n"); 
-							fprintf(get_logstream(), "# devID : The ID of the device where the find is stored in hexadecimal form\n"); 
-							fprintf(get_logstream(), "# inode : The Inode of the file (see man 2 stat)\n"); 
-							fprintf(get_logstream(), "# md5sum: The full md5-checksum of the file\n#\n"); 
+							fprintf(get_logstream(), "# dupflag : What type of lint found:\n"); 
+							fprintf(get_logstream(), "#           BLNK: Bad link pointing nowhere\n"
+							                         "#           OTMP: Old tmp data (e.g: test.txt~)\n"
+							                         "#           EDIR: Empty directory\n" 
+							                         "#           JNKD: Dirname containg one a char of a user defined string\n"
+							                         "#           JNKF: Filename containg one a char of a user defined string\n"
+							                         "#           ZERO: Empty file\n"
+							                         "#           NBIN: Nonstripped binary\n"
+							                         "#           ORIG: File that has a duplicate, but supposed to be a original\n"
+							                         "#           DUPL: File that is supposed to be a duplicate\n"
+							                         "#\n"); 
+							fprintf(get_logstream(), "# path    : The full path to the found file\n"); 
+							fprintf(get_logstream(), "# size    : total size in byte as a decimal integer\n"); 
+							fprintf(get_logstream(), "# devID   : The ID of the device where the find is stored in hexadecimal form\n"); 
+							fprintf(get_logstream(), "# inode   : The Inode of the file (see man 2 stat)\n"); 
+							fprintf(get_logstream(), "# md5sum  : The full md5-checksum of the file\n#\n"); 
 						}
 					if(cwd) free(cwd);
 			} else {

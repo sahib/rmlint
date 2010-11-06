@@ -74,7 +74,7 @@ int  cpindex = 0;
 bool do_exit = false,
       use_cwd = false,
       jmp_set = false,
-	  ex_stat = false; 
+      ex_stat = false; 
 
 const char *command_C = "ls \"%s\" -lasi";
 const char *command_c = "ls \"%s\"";
@@ -148,12 +148,19 @@ static void print_help(void)
         fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [File[s]] [Options]\n");
         fprintf(stderr, "\nGeneral options:\n\n"
                 "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
-                "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!)\n"
+                "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!) (Default: No.)\n"
+                "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!')\n"
                );
+		fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Default: No.)\n"
+		        		"\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
+		        		"\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes.)\n"
+		        		"\t-x --oldtmp\t\tSearch for files with a '~' suffix being older than the corresponding file without the '~' (Default: Yes.);\n"
+		        		"\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
+		        );
         fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
-                "\t-f --followlinks\tWether links are followed (None is reported twice) [Only specify this if you really need to]\n"
-                "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition.\n"
-                "\t-G --hidden\t\tAlso search through hidden files / directories (disabled by default)\n"
+                "\t-f --followlinks\tWether links are followed (None is reported twice) [Only specify this if you really need to, Default: No.]\n"
+                "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: No.)\n"
+                "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
                 "\t-m --mode <mode>\tTell rmlint how to deal with the files it finds.\n"
                );
         fprintf(stderr,	"\n\t\t\t\tWhere modes are:\n\n"
@@ -161,7 +168,8 @@ static void print_help(void)
                 "\t\t\t\tlink  - Replace file with a hard link to original.\n"
                 "\t\t\t\task   - Ask for each file what to do\n"
                 "\t\t\t\tnoask - Full removal without asking.\n"
-                "\t\t\t\tcmd   - Takes the command given by -c and executes it on the file.\n\n"
+                "\t\t\t\tcmd   - Takes the command given by -c and executes it on the file.\n"
+                "\t\t\t\tDefault: list\n\n"
                 "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n");
         fprintf(stderr,"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
                 "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '%%s'\" -c \"ls -lasi '%%s'\" -v 1\n" 
@@ -171,13 +179,13 @@ static void print_help(void)
         fprintf(stderr,	"Regex options:\n\n"
                 "\t-r --fregex <pat>\tChecks filenames against the pattern <pat>\n"
                 "\t-R --dregex <pat>\tChecks dirnames against the pattern <pat>\n"
-                "\t-i --invmatch\t\tInvert match - Only investigate when not containing <pat>\n"
-                "\t-e --matchcase\t\tMatches case of paths (not by default)\n");
+                "\t-i --invmatch\t\tInvert match - Only investigate when not containing <pat> (Default: No.)\n"
+                "\t-e --matchcase\t\tMatches case of paths (Default: No.)\n");
         fprintf(stderr,	"\nMisc options:\n\n"
                 "\t-h --help\t\tPrints this text and exits\n"
                 "\t-o --output [<o>]\tOutputs logfile to <o>. The <o> argument is optional, specify none to write no log.\n"
-                "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace.\n\n");
-        fprintf(stderr,"\t-z --dump <id>\t\tOption with various weird meanings, most scientist postulated that it kills kittens.\n"
+                "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace. (Default \"rmlint.sh\")\n\n");
+        fprintf(stderr,"\t-z --dump <id>\t\tOption with various weird meanings, most scientist postulated that it kills kittens (-> Some debug option).\n"
                 "\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
                 "\t\t\t\tWhere:\n"
                 "\t\t\t\t0 prints nothing\n"
@@ -186,8 +194,10 @@ static void print_help(void)
                 "\t\t\t\t3 + everything else\n"
                 "\n"
                );
-        fprintf(stderr,"Additionally, the options p,f,s,e,g,o,i,c have a uppercase option (O,G,P,F,S,E,I,C) that inverse it's effect.\n");
-        fprintf(stderr, "\nVersion 0.43 - Copyright Christopher <Sahib Bommelig> Pahl\n");
+        fprintf(stderr,"Additionally, the options p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
+					   "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n"
+                );
+        fprintf(stderr, "\nVersion 0.43 (Compiled on %s @ %s) - Copyright Christopher <Sahib Bommelig> Pahl\n",__DATE__,__TIME__);
         fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
         fprintf(stderr, "See the manpage or the README for more information.\n");
 		die(0); 
@@ -195,8 +205,7 @@ static void print_help(void)
 
 static void print_version(void)
 {
-	fprintf(stderr, "o hai! U choze to haz verzion.\n"); 
-	fprintf(stderr, "Verzion be 0.7b (!stable). Srsly. Kthxbai.\n"); 
+	fprintf(stderr, "Version 0.76b Compiled: %s @ %s\n",__DATE__,__TIME__); 
 	die(0); 
 }
 
@@ -218,10 +227,12 @@ void rmlint_set_default_settings(rmlint_settings *set)
         set->cmd_path 	 =  NULL;   /* Cmd,if used  */
         set->cmd_orig    =  NULL;   /* Origcmd, -"- */ 
 		set->junk_chars =   NULL;
-		set->dump          = 0;
 		set->oldtmpdata    = 1; 
         set->ignore_hidden = 1;
 		set->findemptydirs = 1; 
+		set->namecluster   = 0; 
+		set->nonstripped   = 0; 
+		set->searchdup     = 1;
         set->output        =  (char*)script_name;
 }
 
@@ -234,42 +245,47 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         int c,lp=0;
         while (1) {
                 static struct option long_options[] = {
-                        {"threads",     required_argument, 0, 't'},
-                        {"dregex",      required_argument, 0, 'R'},
-                        {"fregex",  	required_argument, 0, 'r'},
-                        {"mode",        required_argument, 0, 'm'},
-                        {"maxdepth",	required_argument, 0, 'd'},
-                        {"cmd_dup",     required_argument, 0, 'c'},
-                        {"cmd_orig",    required_argument, 0, 'C'},
-                        {"dump",        required_argument, 0, 'z'},
-						{"junk",        required_argument, 0, 'j'},
-                        {"verbosity",   required_argument, 0, 'v'},
-                        {"output",      optional_argument, 0, 'o'},       
-						{"emptydirs",   no_argument,       0, 'y'},
-						{"no-emptydirs",no_argument,       0, 'Y'},
-						{"oldtmp",      no_argument,       0, 'x'},
-						{"no-oldtmp",   no_argument,       0, 'X'},
-						{"ignorehidden",no_argument,       0, 'g'},
-                        {"hidden",      no_argument,       0, 'G'},
-                        {"matchcase",   no_argument, 	   0, 'e'},
-                        {"ignorecase",  no_argument, 	   0, 'E'},
-                        {"followlinks", no_argument, 	   0, 'f'},
-                        {"ignorelinks", no_argument, 	   0, 'F'},
-                        {"invertmatch", no_argument, 	   0, 'i'},
-                        {"normalmatch", no_argument, 	   0, 'I'},
-                        {"samepart",    no_argument,	   0, 's'},
-                        {"allpart",     no_argument,	   0, 'S'},
-                        {"paranoid",    no_argument,	   0, 'p'},
-                        {"naive",       no_argument,	   0, 'P'},
-                        {"help",        no_argument, 	   0, 'h'},
-						{"version",     no_argument,       0, 'V'},
+                        {"threads",        required_argument, 0, 't'},
+                        {"dregex",         required_argument, 0, 'R'},
+                        {"fregex",  	   required_argument, 0, 'r'},
+                        {"mode",           required_argument, 0, 'm'},
+                        {"maxdepth",	   required_argument, 0, 'd'},
+                        {"cmd_dup",        required_argument, 0, 'c'},
+                        {"cmd_orig",       required_argument, 0, 'C'},
+						{"junk",           required_argument, 0, 'j'},
+                        {"verbosity",      required_argument, 0, 'v'},
+                        {"output",         optional_argument, 0, 'o'},       
+						{"emptydirs",      no_argument,       0, 'y'},
+						{"no-emptydirs",   no_argument,       0, 'Y'},
+				     	{"namecluster",    no_argument, 	  0, 'n'},
+						{"no-namecluster", no_argument, 	  0, 'N'},					
+						{"nonstripped",    no_argument,       0, 'a'},
+						{"no-nonstripped", no_argument,       0, 'A'},
+						{"oldtmp",         no_argument,       0, 'x'},
+						{"no-oldtmp",      no_argument,       0, 'X'},
+						{"ignorehidden",   no_argument,       0, 'g'},
+                        {"hidden",         no_argument,       0, 'G'},
+						{"dups",		   no_argument, 	  0, 'u'},
+						{"no-dups",        no_argument,       0, 'U'},					
+                        {"matchcase",      no_argument, 	  0, 'e'},
+                        {"ignorecase",     no_argument, 	  0, 'E'},
+                        {"followlinks",    no_argument, 	  0, 'f'},
+                        {"ignorelinks",    no_argument, 	  0, 'F'},
+                        {"invertmatch",    no_argument, 	  0, 'i'},
+                        {"normalmatch",    no_argument, 	  0, 'I'},
+                        {"samepart",       no_argument,	      0, 's'},
+                        {"allpart",        no_argument,	      0, 'S'},
+                        {"paranoid",       no_argument,	      0, 'p'},
+                        {"naive",          no_argument,	      0, 'P'},
+                        {"help",           no_argument, 	  0, 'h'},
+						{"version",        no_argument,       0, 'V'},
                         {0, 0, 0, 0}
                 };
 
                 /* getopt_long stores the option index here. */
                 int option_index = 0;
 
-                c = getopt_long (argc, argv, "m:R:r:o::z:j:VyhYxXgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
+                c = getopt_long (argc, argv, "m:R:r:o::j:uUVyhYnNaAxXgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
 
                 /* Detect the end of the options. */
                 if (c == -1) break;
@@ -287,6 +303,18 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 case 'F':
                         sets->followlinks = 0;
                         break;
+				case 'u': 
+						sets->searchdup = 1; 
+						break; 
+				case 'U': 
+						sets->searchdup = 0; 
+						break; 
+				case 'n': 
+						sets->namecluster = 1; 
+						break; 
+				case 'N': 
+						sets->namecluster = 0; 
+						break; 
 				case 'V': 
 						print_version(); 
 						break;
@@ -302,15 +330,18 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 				case 'Y': 
 						sets->findemptydirs = 0;
 						break;
+				case 'a': 
+						sets->nonstripped = 1; 
+						break;
+				case 'A': 
+						sets->nonstripped = 0; 
+						break; 
 				case 'x':
 						sets->oldtmpdata = 1;
 						break;
 				case 'X': 
 						sets->oldtmpdata = 0; 
 						break;
-                case 'z': 
-						sets->dump = atoi(optarg); 
-						break; 
                 case 'o': 
 				        sets->output = optarg; 
 				        break; 

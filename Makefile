@@ -22,7 +22,7 @@ CP=cp
 CC=gcc
  
 WARN=-ansi -Wall -pedantic 
-OPTI= -march=native  -Os -finline-functions -fomit-frame-pointer -s 
+OPTI= -march=native -Os -finline-functions -fomit-frame-pointer -s 
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a
 CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) -static
 
@@ -56,5 +56,7 @@ clean:
 	@$(RM) $(SOURCEDIR)/*.o $(EXECUTABLE) 2> /dev/null
 
 install: 
-	$(CP) $(EXECUTABLE) $(INSTALLPATH)
-	$(CP) doc/rmlint.1.gz $(MANDIR)
+	@$(ECHO) "++ Copying executable to /usr/bin."
+	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
+	@$(ECHO) "++ Copying manpage to /usr/share/man/man1"
+	@$(CP) doc/rmlint.1.gz $(MANDIR)

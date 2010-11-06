@@ -59,7 +59,6 @@
  * + 2) Run max. n (where n may be max. set.threads) at the same time. 
  * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded 
  * */
-#define THREAD_SHEDULER 1
 #define THREAD_SHEDULER_MTLIMIT 8388608
 
 /** IO: **/
@@ -97,4 +96,5 @@ typedef unsigned long uint32;
 #define TYPE_EDIR 44
 #define TYPE_JNK_DIRNAME  45
 #define TYPE_JNK_FILENAME 46
+#define TYPE_NBIN 47
 #endif

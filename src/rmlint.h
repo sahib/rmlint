@@ -7,14 +7,16 @@
 typedef struct {
         char mode;
         char samepart;
-        char dump; 
         char ignore_hidden; 
         char followlinks;
         char casematch;
         char paranoid;
         char invmatch;
+		char namecluster; 
 		char oldtmpdata;
+		char searchdup;
 		char findemptydirs;
+		char nonstripped; 
         int  depth;
         char **paths;
         char *dpattern;

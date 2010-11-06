@@ -100,6 +100,46 @@ static int junkinstr(const char *str)
 	return 0;
 }
 
+
+/* A simply method to test if a file is non stripped binary. 
+
+
+ */
+
+static int check_binary_to_be_stripped(const char *path) 
+{
+	FILE *pipe = NULL;
+
+	int bytes = 0, 
+	    len = 0; 
+
+	char dummy_buf = 0, 
+	     *cmd = NULL; 
+
+	if(path == NULL) { 
+		return 0; 
+	}
+
+	len = strlen(path) + 42; 
+	cmd = alloca(len);  
+	snprintf(cmd, len,"file %s | grep 'not stripped'", path); 
+
+	pipe = popen(cmd,"r"); 
+	if(pipe == NULL) {
+		 return 0; 
+	}
+
+	bytes = fread(&dummy_buf, sizeof(char), 1, pipe); 
+	pclose(pipe); 
+
+	if(bytes) {	
+		return 1;  
+	}
+	return 0;  
+}
+
+
+
 /*
  * grep the string "string" to see if it contains the pattern.
  * Will return 0 if yes, 1 otherwise.
@@ -174,15 +214,20 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 			}
 			if(flag == FTW_F) { 
 
+						if(regfilter(path, set.fpattern)) { 
+							return FTW_CONTINUE;
+						}
 						if(junkinstr(basename(path))) 
 						{
 							list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
 							return FTW_CONTINUE;	
 						}
-						if(regfilter(path, set.fpattern)) { 
-							return FTW_CONTINUE;
+						if(set.nonstripped) {
+							if(check_binary_to_be_stripped(path)) {
+									list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
+							}
 						}
-						if(set.oldtmpdata || 1) {
+						if(set.oldtmpdata) {
 								size_t len = strlen(path); 
 								if(path[len-1] == '~') { 
 									char *cpy = strndup(path,len-1);
@@ -523,11 +568,11 @@ static void start_sheduler(file_group *fp, uint32 nlistlen)
         uint32 ii;
         pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
 
-        if(set.threads == 1 || THREAD_SHEDULER == 0) {
+        if(set.threads == 1) {
 			for(ii = 0; ii < nlistlen && !iAbort; ii++) {
                         sheduler_cb(&fp[ii]);
                 }
-        } else if(THREAD_SHEDULER == 1) {
+        } else {
 			
 				/* Run max set.threads at the same time. */ 
                 int nrun = 0;
@@ -589,6 +634,7 @@ static void find_double_bases(iFile *starting)
 	iFile *j = NULL;  
 	
 	int  c = 1; 
+	bool phead = true; 
 	
 	while(i)
 	{
@@ -604,6 +650,11 @@ static void find_double_bases(iFile *starting)
 					{
 						iFile *x = j; 
 						char *tmp2 = canonicalize_file_name(j->path); 
+						if(phead) { 
+							error("\nDouble basenames: \n");
+							error("-----------------"); 
+							phead = false; 
+						}
 						if(!pr) 
 						{
 							char * tmp = canonicalize_file_name(i->path); 
@@ -625,18 +676,14 @@ static void find_double_bases(iFile *starting)
 						}
 						j->dupflag = false; 
 						printf("%d %s %lu\n",c,tmp2,j->fsize);
-						if(tmp2) free(tmp2); 
-							
-							
+						if(tmp2) free(tmp2); 						
 					}
 					j=j->next; 
 				}
 				if(pr) c++; 
 		}
 		i=i->next; 
-    }
-
-	
+    }	
 }
 
 
@@ -654,26 +701,23 @@ void start_processing(iFile *b)
                 path_doubles = 0,
                 original     = list_len();
 		
-		if(ABS(set.dump) == 1) { 
-				error("Double basenames: \n");
-				error("----------------\n"); 
+		if(set.namecluster) { 
 				find_double_bases(b); 
-				if(set.dump == -1) die(0); 
+				error("\n");
 		}
-        emptylist.len = 0;
+        emptylist.len = 1;
 
-		if(ABS(set.dump) == 2) {
-			error("Groups sorted by size:\n"); 
-			error("---------------------\n"); 
-		}
         while(b) {
                 iFile *q = b, *prev = NULL;
                 uint32 glen = 0, gsize = 0;
 
                 while(b && q->fsize == b->fsize) {
                         prev = b;
-						b->dupflag = true; 
-                        gsize += b->fsize;
+
+						if(b->dupflag == false) 
+							b->dupflag = true; 
+
+						gsize += b->fsize;
                         glen++;
                         b = b->next;
                 }
@@ -704,16 +748,6 @@ void start_processing(iFile *b)
                                 fglist[spelen].len     = glen;
                                 fglist[spelen].size    = gsize;
                                
-								if(ABS(set.dump) == 2) {
-									iFile *la = q;
-									while(la) 
-									{
-										char *tmp = canonicalize_file_name(la->path);
-										fprintf(stdout,"%lu %s\n",la->fsize, tmp); 
-										la=la->next; 
-										free(tmp); 
-									}
-								}
                                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
                                 if(get_cpindex() > 1 || set.followlinks)
                                         path_doubles += rm_double_paths(&fglist[spelen]);
@@ -730,9 +764,13 @@ void start_processing(iFile *b)
                                 emptylist.len = 0;
                                 while(ptr) {
 
-										      if(ptr->dupflag == TYPE_BLNK) error("blnk: %s\n",ptr->path);
-										else if(ptr->dupflag == TYPE_OTMP) error("otmp: %s\n",ptr->path);
-										else if(ptr->dupflag == TYPE_EDIR) error("edir: %s\n",ptr->path);
+										      if(ptr->dupflag == TYPE_BLNK) error("BLNK: %s\n",ptr->path);
+										else if(ptr->dupflag == TYPE_OTMP) error("ODIR: %s\n",ptr->path);
+										else if(ptr->dupflag == TYPE_EDIR) error("EDIR: %s\n",ptr->path);
+										else if(ptr->dupflag == TYPE_JNK_DIRNAME)  error("JNKD: %s\n",ptr->path);
+										else if(ptr->dupflag == TYPE_JNK_FILENAME) error("JNKF: %s\n",ptr->path);
+										else if(ptr->dupflag == TYPE_NBIN) error("NBIN: %s\n",ptr->path);
+										else if(ptr->fsize   == 0) error("ZERO: %s\n",ptr->path);
 									
 										if(set.output) write_to_log(ptr, false, get_logstream());
                                         ptr = list_remove(ptr);
@@ -742,23 +780,36 @@ void start_processing(iFile *b)
 
                 }
         }
-        
-        if(set.dump == -2) die(0); 	
+
 		if(emptylist.len == 0) info("None.");
-	
+
+		if(set.searchdup == 0) {
+			int i = 0; 
+
+			/* rmlint was originally supposed to find duplicates only 
+			   So we have to free list that whould have been used for 
+			   dup search before dieing */
+
+			for(; i < spelen; i++) {
+				list_clear(fglist[i].grp_stp);
+			}
+			if(fglist) free(fglist); 
+			error("Done.\n"); 
+			die(0); 
+		}
 		info("\nNow attempting to find duplicates. This may take a while...\n");			
 		info("Now removing files with unique sizes from list.. ");	                 
-		info(""YEL"%ld elem%c less"NCO" in list",rem_counter,(rem_counter > 1) ? 's' : ' ');
+		info(""YEL"%ld elem%c less"NCO" in list.",rem_counter,(rem_counter > 1) ? 's' : ' ');
         if(path_doubles) {
 	           info(" (removed "YEL"%ld pathzombies"NCO")", path_doubles);  
 	    } 
         info("\nBy ignoring "YEL"%ld empty files "NCO"/"YEL" bad links "NCO"/"YEL" junk names"NCO", list was split in %ld parts.\n", emptylist.len, spelen);
-        info("Now sorting groups based on their location on the drive.. ");
+        info("Now sorting groups based on their location on the drive... ");
 
         /* Now make sure groups are sorted by their location on the disk*/
         qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
 
-        info(" done \nNow doing fingerprints and full checksums:\n\n");
+        info(" done. \nNow doing fingerprints and full checksums:\n\n");
 		db_done = true;
 	
         /* Groups are splitted, now give it to the sheduler */
