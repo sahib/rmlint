@@ -117,8 +117,9 @@ unsigned int inLen;
         mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
 
         /* update number of bits */
-        if ((mdContext->i[0] + ((uint32)inLen << 3)) < mdContext->i[0])
+        if ((mdContext->i[0] + ((uint32)inLen << 3)) < mdContext->i[0]) {
                 mdContext->i[1]++;
+        }
         mdContext->i[0] += ((uint32)inLen << 3);
         mdContext->i[1] += ((uint32)inLen >> 29);
 
@@ -283,8 +284,9 @@ uint32 *in;
 void MDPrintArr(unsigned char *digest)
 {
         int i;
-        for (i = 0; i < 16; i++)
+        for (i = 0; i < 16; i++) {
                 printf ("%02x", digest[i]);
+        }
 }
 
 
@@ -298,27 +300,31 @@ pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
 /* used to calc the complete checksum of file & save it in File */
 void md5_file(iFile *file)
 {
-		/* If the twice the size of the fingerprints read in is bigger than the actual size: 
-		 * return as we don't need this checksum anymore - this reduces silly IO with many small files 
-		 *  */
-		int bytes;
-		FILE *inFile; 
+        /* If the twice the size of the fingerprints read in is bigger than the actual size:
+         * return as we don't need this checksum anymore - this reduces silly IO with many small files
+         *  */
+        int bytes;
+        FILE *inFile;
         MD5_CTX mdContext;
         unsigned char *data;
-		
-		uint32 already_read = MD5_FPSIZE_FORM(file->fsize);
-		already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read; 
-		if(file->fsize <= (already_read<<1)) { return; } /* This is some quite hyptothetical case ..*/
 
-		/* This seems to cause trouble in valgrind, it gives a little speedup though..  (rmlint works normally)*/
+        uint32 already_read = MD5_FPSIZE_FORM(file->fsize);
+        already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read;
+        if(file->fsize <= (already_read<<1)) {
+                return;    /* This is some quite hyptothetical case ..*/
+        }
+
+        /* This seems to cause trouble in valgrind, it gives a little speedup though..  (rmlint works normally)*/
         /*data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);*/
-		data = alloca(MD5_IO_BLOCKSIZE); 
+        data = alloca(MD5_IO_BLOCKSIZE);
         inFile = fopen (file->path, "rb");
-		
-		if(inFile == NULL) return; 
+
+        if(inFile == NULL) {
+                return;
+        }
         MD5Init (&mdContext);
-		fseek(inFile, already_read, SEEK_SET);
-		
+        fseek(inFile, already_read, SEEK_SET);
+
         do {
 
 #if (MD5_SERIAL_IO == 1)
@@ -330,7 +336,7 @@ void md5_file(iFile *file)
 #endif
 
                 MD5Update (&mdContext, data, bytes);
-        }   while (bytes != 0 && (ftell(inFile) < (file->fsize - already_read)));
+        } while (bytes != 0 && (ftell(inFile) < (file->fsize - already_read)));
 
         MD5Final (&mdContext);
         memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
@@ -354,7 +360,7 @@ void md5_fingerprint(iFile *file, const uint32 readsize)
                 }
                 return;
         }
-     
+
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_fp_IO);
 #endif
@@ -372,8 +378,8 @@ void md5_fingerprint(iFile *file, const uint32 readsize)
         pthread_mutex_lock(&mutex_fp_IO);
 #endif
 #if BYTE_IN_THE_MIDDLE
-		fseek(pF, file->fsize>>1 ,SEEK_SET);
-		bytes = fread(file->bim, sizeof(char), BYTE_MIDDLE_SIZE, pF);  
+        fseek(pF, file->fsize>>1 ,SEEK_SET);
+        bytes = fread(file->bim, sizeof(char), BYTE_MIDDLE_SIZE, pF);
 #endif
         fseek(pF, -readsize,SEEK_END);
         bytes = fread(data,sizeof(char),readsize,pF);

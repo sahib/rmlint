@@ -69,6 +69,11 @@
     <item>
       <attribute id="1288913760" priority="1" done="1" start_date="734081" completed_date="734082" notify="0" last_edited="1289070775"/>
       <summary>profiling...</summary>
+      <comment/>
+    </item>
+    <item>
+      <attribute id="1289071880" priority="1" done="1" start_date="734082" completed_date="734082" notify="0" last_edited="1289072536"/>
+      <summary>-n needs a timeout option</summary>
       <comment></comment>
     </item>
   </category>

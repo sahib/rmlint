@@ -76,15 +76,17 @@ void list_clear(iFile *begin)
 
                 /* Next */
                 ptr = ptr->next;
-             
-				if(ptr) ptr->last = NULL; 
-             
+
+                if(ptr) {
+                        ptr->last = NULL;
+                }
+
                 /* free ressources */
                 if(tmp->path) {
-                    free(tmp->path);
-                    tmp->path = NULL; 
+                        free(tmp->path);
+                        tmp->path = NULL;
                 }
-        
+
                 free(tmp);
                 tmp = NULL;
         }
@@ -95,8 +97,9 @@ void list_clear(iFile *begin)
 iFile *list_remove(iFile *ptr)
 {
         iFile *p,*n;
-        if(ptr==NULL)
+        if(ptr==NULL) {
                 return NULL;
+        }
 
         p=ptr->last;
         n=ptr->next;
@@ -108,12 +111,12 @@ iFile *list_remove(iFile *ptr)
         } else if(!p&&n) {
                 n->last=NULL;
         }
-    
-        free(ptr->path); 
-		ptr->path = NULL; 
-		free(ptr); 
-		ptr = NULL;
-		
+
+        free(ptr->path);
+        ptr->path = NULL;
+        free(ptr);
+        ptr = NULL;
+
         return n;
 }
 
@@ -143,7 +146,7 @@ static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, in
 
         /* Clear the md5 digest array too */
 #if BYTE_IN_THE_MIDDLE
-		memset(pointer->bim,0,BYTE_MIDDLE_SIZE); 
+        memset(pointer->bim,0,BYTE_MIDDLE_SIZE);
 #endif
         memset(pointer->md5_digest,0,MD5_LEN);
 }
@@ -160,8 +163,9 @@ iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*))
          * Silly special case: if `list' was passed in as NULL, return
          * NULL immediately.
          */
-        if (!list)
+        if (!list) {
                 return NULL;
+        }
 
         insize = 1;
 
@@ -180,7 +184,9 @@ iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*))
                         for (i = 0; i < insize; i++) {
                                 psize++;
                                 q = q->next;
-                                if (!q) break;
+                                if (!q) {
+                                        break;
+                                }
                         }
 
                         /* if q hasn't fallen off end, we have two lists to merge */

@@ -40,49 +40,45 @@
 #include "defs.h"
 
 
-/**
- * ToDo:
- * - docs
- * - some comments.. clean up..
- * - better sheduler (only reduce one thread on overflow e.g.) 
- **/
-
 
 /**
 
 Result of the testdir run should be (dont run with "-f"!):
 ----------------------------------------------------------
 
-= testdir/recursed_a/one
+# testdir/recursed_a/one
 X testdir/recursed_b/one
 
-= testdir/recursed_a/two
+# testdir/recursed_a/two
 X testdir/twice_one
 X testdir/two
 
-= testdir/recursed_b/three
+# testdir/recursed_b/three
 X testdir/recursed_b/two_plus_one
 
-= testdir/with spaces a
+# testdir/with spaces a
 X testdir/with spaces b
-
 
 */
 
+/* If more that one path given increment */
 int  cpindex = 0;
-bool do_exit = false,
-      use_cwd = false,
-      jmp_set = false,
-      ex_stat = false; 
 
+/* Control flags */
+bool do_exit = false,
+     use_cwd = false,
+     jmp_set = false,
+     ex_stat = false;
+
+/* Default commands */
 const char *command_C = "ls \"%s\" -lasi";
 const char *command_c = "ls \"%s\"";
-const char *script_name = "rmlint.sh"; 
+const char *script_name = "rmlint.sh";
 
 
-/* If die() is called rmlint will jump back to the end of main 
+/* If die() is called rmlint will jump back to the end of main
  * rmlint does NOT call exit() or abort() on it's own - so you
- * may use it's methods also in your own programs - see main() 
+ * may use it's methods also in your own programs - see main()
  * It still has various problems with calling rmlint_main() twice... :-( //ToDo
  * */
 jmp_buf place;
@@ -120,25 +116,25 @@ void info(const char* format, ...)
 }
 
 /* The nightmare of every secure program :))
- * this is used twice; 1x with a variable format.. 
- * Please gimme a note if I forgot to check sth. there.
+ * this is used twice; 1x with a variable format..
+ * Please gimme a note if I forgot to check sth. there. ;)
 */
 int systemf(const char* format, ...)
 {
-	int ret = 0;
-	char cmd_buf[1024];
+        int ret = 0;
+        char cmd_buf[1024];
 
-	/* Build a command  */
-	va_list args;
-	va_start (args, format);
-	vsnprintf (cmd_buf,1024,format, args);
-	va_end (args);
+        /* Build a command  */
+        va_list args;
+        va_start (args, format);
+        vsnprintf (cmd_buf,1024,format, args);
+        va_end (args);
 
-	/* Now execute a shell command */
-	if((ret = system(cmd_buf)) == -1) {
-		perror("systemf(const char* format, ...)");
-	}
-	return ret; 
+        /* Now execute a shell command */
+        if((ret = system(cmd_buf)) == -1) {
+                perror("systemf(const char* format, ...)");
+        }
+        return ret;
 }
 
 /* Help text */
@@ -150,17 +146,17 @@ static void print_help(void)
                 "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!) (Default: No.)\n"
                 "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!')\n"
                );
-		fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Default: No.)\n"
-		        		"\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
-		        		"\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes.)\n"
-		        		"\t-x --oldtmp\t\tSearch for files with a '~' suffix being older than the corresponding file without the '~' (Default: Yes.);\n"
-		        		"\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
-		        );
+        fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
+                "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
+                "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes.)\n"
+                "\t-x --oldtmp <sec>\tSearch for files with a '~' suffix being min. <sec> seconds older than the corresponding file without the '~' (Default: 60);\n"
+                "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
+               );
         fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
                 "\t-f --followlinks\tWether links are followed (None is reported twice) [Only specify this if you really need to, Default: No.]\n"
                 "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: No.)\n"
                 "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
-                "\t-m --mode <mode>\tTell rmlint how to deal with the files it finds.\n"
+                "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
                );
         fprintf(stderr,	"\n\t\t\t\tWhere modes are:\n\n"
                 "\t\t\t\tlist  - Only list found files and exit.\n"
@@ -171,7 +167,7 @@ static void print_help(void)
                 "\t\t\t\tDefault: list\n\n"
                 "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n");
         fprintf(stderr,"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
-                "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '%%s'\" -c \"ls -lasi '%%s'\" -v 1\n" 
+                "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '%%s'\" -c \"ls -lasi '%%s'\" -v 1\n"
                 "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n"
                 "\t\t\t\tThe %%s expands to the found duplicate, second to the 'original'.\n"
                );
@@ -194,18 +190,19 @@ static void print_help(void)
                 "\n"
                );
         fprintf(stderr,"Additionally, the options p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
-					   "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n"
-                );
+                "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n"
+               );
         fprintf(stderr, "\nVersion 0.43 (Compiled on %s @ %s) - Copyright Christopher <Sahib Bommelig> Pahl\n",__DATE__,__TIME__);
         fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
         fprintf(stderr, "See the manpage or the README for more information.\n");
-		die(0); 
+        die(0);
 }
 
+/* Version string */
 static void print_version(void)
 {
-	fprintf(stderr, "Version 0.76b Compiled: %s @ %s\n",__DATE__,__TIME__); 
-	die(0); 
+        fprintf(stderr, "Version 0.76b Compiled: %s @ %s\n",__DATE__,__TIME__);
+        die(0);
 }
 
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
@@ -224,18 +221,16 @@ void rmlint_set_default_settings(rmlint_settings *set)
         set->dpattern 	 =  NULL;   /* DRegpattern  */
         set->fpattern 	 =  NULL;   /* FRegPattern  */
         set->cmd_path 	 =  NULL;   /* Cmd,if used  */
-        set->cmd_orig    =  NULL;   /* Origcmd, -"- */ 
-		set->junk_chars =   NULL;
-		set->oldtmpdata    = 1; 
+        set->cmd_orig    =  NULL;   /* Origcmd, -"- */
+        set->junk_chars =   NULL;
+        set->oldtmpdata    = 60;
         set->ignore_hidden = 1;
-		set->findemptydirs = 1; 
-		set->namecluster   = 0; 
-		set->nonstripped   = 0; 
-		set->searchdup     = 1;
-        set->output        =  (char*)script_name;
+        set->findemptydirs = 1;
+        set->namecluster   = 0;
+        set->nonstripped   = 0;
+        set->searchdup     = 1;
+        set->output        = (char*)script_name;
 }
-
-
 
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
@@ -251,21 +246,21 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         {"maxdepth",	   required_argument, 0, 'd'},
                         {"cmd_dup",        required_argument, 0, 'c'},
                         {"cmd_orig",       required_argument, 0, 'C'},
-						{"junk",           required_argument, 0, 'j'},
+                        {"junk",           required_argument, 0, 'j'},
                         {"verbosity",      required_argument, 0, 'v'},
-                        {"output",         optional_argument, 0, 'o'},       
-						{"emptydirs",      no_argument,       0, 'y'},
-						{"no-emptydirs",   no_argument,       0, 'Y'},
-				     	{"namecluster",    no_argument, 	  0, 'n'},
-						{"no-namecluster", no_argument, 	  0, 'N'},					
-						{"nonstripped",    no_argument,       0, 'a'},
-						{"no-nonstripped", no_argument,       0, 'A'},
-						{"oldtmp",         no_argument,       0, 'x'},
-						{"no-oldtmp",      no_argument,       0, 'X'},
-						{"ignorehidden",   no_argument,       0, 'g'},
+                        {"output",         optional_argument, 0, 'o'},
+                        {"emptydirs",      no_argument,       0, 'y'},
+                        {"no-emptydirs",   no_argument,       0, 'Y'},
+                        {"namecluster",    no_argument, 	  0, 'n'},
+                        {"no-namecluster", no_argument, 	  0, 'N'},
+                        {"nonstripped",    no_argument,       0, 'a'},
+                        {"no-nonstripped", no_argument,       0, 'A'},
+                        {"oldtmp",         required_argument, 0, 'x'},
+                        {"no-oldtmp",      no_argument,       0, 'X'},
+                        {"no-hidden",      no_argument,       0, 'g'},
                         {"hidden",         no_argument,       0, 'G'},
-						{"dups",		   no_argument, 	  0, 'u'},
-						{"no-dups",        no_argument,       0, 'U'},					
+                        {"dups",		   no_argument, 	  0, 'u'},
+                        {"no-dups",        no_argument,       0, 'U'},
                         {"matchcase",      no_argument, 	  0, 'e'},
                         {"ignorecase",     no_argument, 	  0, 'E'},
                         {"followlinks",    no_argument, 	  0, 'f'},
@@ -277,24 +272,28 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         {"paranoid",       no_argument,	      0, 'p'},
                         {"naive",          no_argument,	      0, 'P'},
                         {"help",           no_argument, 	  0, 'h'},
-						{"version",        no_argument,       0, 'V'},
+                        {"version",        no_argument,       0, 'V'},
                         {0, 0, 0, 0}
                 };
 
                 /* getopt_long stores the option index here. */
                 int option_index = 0;
 
-                c = getopt_long (argc, argv, "m:R:r:o::j:uUVyhYnNaAxXgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
+                c = getopt_long (argc, argv, "m:R:r:o::j:uUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
 
                 /* Detect the end of the options. */
-                if (c == -1) break;
+                if (c == -1) {
+                        break;
+                }
 
                 switch (c) {
                 case '?':
                         return 0;
                 case 't':
                         sets->threads = atoi(optarg);
-                        if(!sets->threads || sets->threads < 0)  sets->threads = 4;
+                        if(!sets->threads || sets->threads < 0) {
+                                sets->threads = 4;
+                        }
                         break;
                 case 'f':
                         sets->followlinks = 1;
@@ -302,60 +301,60 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 case 'F':
                         sets->followlinks = 0;
                         break;
-				case 'u': 
-						sets->searchdup = 1; 
-						break; 
-				case 'U': 
-						sets->searchdup = 0; 
-						break; 
-				case 'n': 
-						sets->namecluster = 1; 
-						break; 
-				case 'N': 
-						sets->namecluster = 0; 
-						break; 
-				case 'V': 
-						print_version(); 
-						break;
+                case 'u':
+                        sets->searchdup = 1;
+                        break;
+                case 'U':
+                        sets->searchdup = 0;
+                        break;
+                case 'n':
+                        sets->namecluster = 1;
+                        break;
+                case 'N':
+                        sets->namecluster = 0;
+                        break;
+                case 'V':
+                        print_version();
+                        break;
                 case 'h':
                         print_help();
                         break;
-				case 'j': 
-						sets->junk_chars = optarg; 
-						break; 
-				case 'y': 
-						sets->findemptydirs = 1;
-						break;
-				case 'Y': 
-						sets->findemptydirs = 0;
-						break;
-				case 'a': 
-						sets->nonstripped = 1; 
-						break;
-				case 'A': 
-						sets->nonstripped = 0; 
-						break; 
-				case 'x':
-						sets->oldtmpdata = 1;
-						break;
-				case 'X': 
-						sets->oldtmpdata = 0; 
-						break;
-                case 'o': 
-				        sets->output = optarg; 
-				        break; 
+                case 'j':
+                        sets->junk_chars = optarg;
+                        break;
+                case 'y':
+                        sets->findemptydirs = 1;
+                        break;
+                case 'Y':
+                        sets->findemptydirs = 0;
+                        break;
+                case 'a':
+                        sets->nonstripped = 1;
+                        break;
+                case 'A':
+                        sets->nonstripped = 0;
+                        break;
+                case 'x':
+                        sets->oldtmpdata = atoi(optarg);
+                        break;
+                case 'X':
+                        sets->oldtmpdata = 0;
+                        break;
+                case 'o':
+                        sets->output = optarg;
+                        break;
                 case 'c':
                         sets->cmd_path = optarg;
                         break;
                 case 'C':
                         sets->cmd_orig = optarg;
                         break;
-                case 'g': 
-                        sets->ignore_hidden = 1; 
-                        break; 
-                case 'G': 
-						sets->ignore_hidden = 0; 
-						break; 
+                case 'g':
+                        sets->ignore_hidden = 1;
+                        break;
+                case 'G':
+                        sets->ignore_hidden = 0;
+                        break;
                 case 'v':
                         sets->verbosity = atoi(optarg);
                         break;
@@ -393,18 +392,23 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                         sets->paranoid = 0;
                         break;
                 case 'm':
-						sets->mode = 0;
+                        sets->mode = 0;
 
-                        if(!strcasecmp(optarg, "list"))
+                        if(!strcasecmp(optarg, "list")) {
                                 sets->mode = 1;
-                        if(!strcasecmp(optarg, "ask"))
+                        }
+                        if(!strcasecmp(optarg, "ask")) {
                                 sets->mode = 2;
-                        if(!strcasecmp(optarg, "noask"))
+                        }
+                        if(!strcasecmp(optarg, "noask")) {
                                 sets->mode = 3;
-                        if(!strcasecmp(optarg, "link"))
+                        }
+                        if(!strcasecmp(optarg, "link")) {
                                 sets->mode = 4;
-                        if(!strcasecmp(optarg, "cmd"))
+                        }
+                        if(!strcasecmp(optarg, "cmd")) {
                                 sets->mode = 5;
+                        }
 
                         if(!sets->mode) {
                                 error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
@@ -440,8 +444,10 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
                 sets->paths[1] = NULL;
                 if(!sets->paths[0]) {
                         error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
-                        error("       Are you maybe in a dir that just had been removed?\n"); 
-                        if(sets->paths) free(sets->paths);
+                        error("       Are you maybe in a dir that just had been removed?\n");
+                        if(sets->paths) {
+                                free(sets->paths);
+                        }
                         return 0;
                 }
                 use_cwd = true;
@@ -449,7 +455,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         return 1;
 }
 
-/* User  may specify in -c a command that get's excuted on every hit - check for being a safe one */
+/* User  may specify in -c/-C a command that get's excuted on every hit - check for being a safe one */
 static void check_cmd(const char *cmd)
 {
         int i = 0, ps = 0;
@@ -464,7 +470,7 @@ static void check_cmd(const char *cmd)
         }
         if(ps > 1) {
                 error(YEL"FATAL: "NCO"--command [-c]: Only \"%%s\" is allowed!\n");
-                error("       Example: rmlint -c \"ls '%%s'\"\n"); 
+                error("       Example: rmlint -c \"ls '%%s'\"\n");
                 die(0);
         }
 }
@@ -481,84 +487,79 @@ void die(int status)
 {
         /* Free mem */
         if(use_cwd) {
-                if(set.paths[0])
+                if(set.paths[0]) {
                         free(set.paths[0]);
+                }
         }
         if(set.paths) {
                 free(set.paths);
         }
-
+	
         if(status) {
                 info("Abnormal exit\n");
         }
 
-		if(get_logstream())  fclose(get_logstream());
+		/* Close logfile */
+        if(get_logstream()) {
+                fclose(get_logstream());
+        }
 
         /* Prepare to jump to return */
         do_exit = true;
-		ex_stat = status; 
-        if(jmp_set) longjmp(place,status);
+        ex_stat = status;
+        if(jmp_set) {
+                longjmp(place,status);
+        }
 }
 
-/* Sort criteria for sizesort */ 
+/* Sort criteria for sizesort */
 static long cmp_sz(iFile *a, iFile *b)
 {
         return a->fsize - b->fsize;
 }
 
 
-/* Print the iFilelist starting with begin and ending with 'NULL' */
-#if DEBUG_CODE > 0
-
-	void print(iFile *begin)
-	{
-			iFile *p = begin;
-			fprintf(stdout,"\n----\n");
-
-			while(p) {
-					MDPrintArr(p->md5_digest);
-					fprintf(stdout," => %-70s | %ld /n: %ld Dev: %u\n",p->path,p->fsize, p->node, p->dev);
-					p=p->next;
-			}
-			fprintf(stdout,"----\n");
-	}
-
-#endif
-
-/* Have fun reading. ;-) */
+/* Actual entry point */
 int rmlint_main(void)
 {
+		/* Used only for infomessage */
         uint32 total_files = 0;
 
+		/* Jump to this location on exit (with do_exit=true) */
         setjmp(place);
-        jmp_set = true; 
-        if(do_exit != true) {			
+        jmp_set = true;
+        if(do_exit != true) {
                 if(set.mode == 5) {
-						
-						if(!set.cmd_orig && !set.cmd_path) {
-							set.cmd_orig = (char*)command_C;
-							set.cmd_path = (char*)command_c; 
-					} else { 
-							if(set.cmd_orig) check_cmd(set.cmd_orig);
-							if(set.cmd_path) check_cmd(set.cmd_path);
-						}
-				}
+
+                        if(!set.cmd_orig && !set.cmd_path) {
+                                set.cmd_orig = (char*)command_C;
+                                set.cmd_path = (char*)command_c;
+                        } else {
+                                if(set.cmd_orig) {
+                                        check_cmd(set.cmd_orig);
+                                }
+                                if(set.cmd_path) {
+                                        check_cmd(set.cmd_path);
+                                }
+                        }
+                }
                 /* Open logfile */
                 init_filehandler();
 
                 /* Warn if started with sudo */
-				if(!access("/bin/ls",R_OK|W_OK)) { 
-						warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
-						warning("      Take care of what you're doing!\n\n"); 
-				}
+                if(!access("/bin/ls",R_OK|W_OK)) {
+                        warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
+                        warning("      Take care of what you're doing!\n\n");
+                }
                 /* Count files and do some init  */
                 while(set.paths[cpindex] != NULL) {
                         DIR *p = opendir(set.paths[cpindex]);
                         if(p == NULL && errno == ENOTDIR) {
                                 /* The path is a file */
                                 struct stat buf;
-                                if(stat(set.paths[cpindex],&buf) == -1)
+                                if(stat(set.paths[cpindex],&buf) == -1) {
                                         continue;
+                                }
 
                                 list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino, true);
                                 total_files++;
@@ -574,15 +575,16 @@ int rmlint_main(void)
                 }
 
                 if(total_files < 2) {
-                        warning("No files to search through => No duplicates.\n");
+                        warning("No files in cache to search through => No duplicates.\n");
                         die(0);
                 }
 
                 info("In total "YEL"%ld useable files"NCO" in cache.\n", total_files);
 
-                if(set.threads > total_files)
+                if(set.threads > total_files) {
                         set.threads = total_files;
-
+                }
+			
 
                 /* Till this point the list is unsorted
                  * The filter alorithms requires the list to be size-sorted,
@@ -590,13 +592,13 @@ int rmlint_main(void)
                  * */
                 info("Now mergesorting list based on filesize... ");
                 list_sort(list_begin(),cmp_sz);
-                info("done\n");
+                info("done.\n");
 
-				info("Now finding easy lint: \n"); 
-			
+                info("Now finding easy lint: \n");
+
                 /* Apply the prefilter and outsort inique sizes */
                 start_processing(list_begin());
-               
+
                 /* Exit! */
                 die(EXIT_SUCCESS);
         }

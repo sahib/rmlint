@@ -51,10 +51,10 @@
 #define ABS(a)	(((a) < 0) ? -(a) : (a))
 #define MD5_LEN 16
 
-/* Whic sheduler to take 
- * + 1) Always single threaded on each group 
- * + 2) Run max. n (where n may be max. set.threads) at the same time. 
- * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded 
+/* Whic sheduler to take
+ * + 1) Always single threaded on each group
+ * + 2) Run max. n (where n may be max. set.threads) at the same time.
+ * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded
  * */
 #define THREAD_SHEDULER_MTLIMIT 8388608
 
@@ -83,15 +83,12 @@ typedef unsigned long uint32;
 #define BYTE_IN_THE_MIDDLE 1
 #define BYTE_MIDDLE_SIZE 8
 
-/* This will cause some debug code to be compiled. Wont have impact on proram though. */
-#define DEBUG_CODE 0
-
 
 /* types of lint */
-#define TYPE_BLNK 42
-#define TYPE_OTMP 43
-#define TYPE_EDIR 44
-#define TYPE_JNK_DIRNAME  45
-#define TYPE_JNK_FILENAME 46
-#define TYPE_NBIN 47
+#define TYPE_BLNK 3
+#define TYPE_OTMP 4
+#define TYPE_EDIR 5
+#define TYPE_JNK_DIRNAME  6
+#define TYPE_JNK_FILENAME 7
+#define TYPE_NBIN 8
 #endif

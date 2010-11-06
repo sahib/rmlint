@@ -28,24 +28,24 @@
 typedef struct {
         char mode;
         char samepart;
-        char ignore_hidden; 
+        char ignore_hidden;
         char followlinks;
         char casematch;
         char paranoid;
         char invmatch;
-		char namecluster; 
-		char oldtmpdata;
-		char searchdup;
-		char findemptydirs;
-		char nonstripped; 
+        char namecluster;
+        char oldtmpdata;
+        char searchdup;
+        char findemptydirs;
+        char nonstripped;
         int  depth;
         char **paths;
         char *dpattern;
         char *fpattern;
         char *cmd_path;
         char *cmd_orig;
-		char *junk_chars;
-        char *output; 
+        char *junk_chars;
+        char *output;
         int threads;
         int verbosity;
 
