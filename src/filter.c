@@ -100,10 +100,7 @@ static int junkinstr(const char *str)
 static int check_binary_to_be_stripped(const char *path)
 {
     FILE *pipe = NULL;
-
-    int bytes = 0,
-        len = 0;
-
+    int bytes = 0;
     char dummy_buf = 0,
          *cmd = NULL;
 
@@ -111,9 +108,8 @@ static int check_binary_to_be_stripped(const char *path)
         return 0;
     }
 
-    len = strlen(path) + 42;
-    cmd = alloca(len);
-    snprintf(cmd, len,"file %s | grep 'not stripped'", path);
+    cmd = strdup_printf("file '%s' | grep 'not stripped'", path);
+    puts(cmd);
 
     pipe = popen(cmd,"r");
     if(pipe == NULL) {
