@@ -34,22 +34,22 @@ typedef char bool;
 
 /* The structure used from now on to handle nearly everything */
 typedef struct lint_t {
-        unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
-        unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-        char bim[BYTE_MIDDLE_SIZE];
+    unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
+    unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
+    char bim[BYTE_MIDDLE_SIZE];
 
-        char *path;		  	                   /* absolute path from working dir */
-        nuint_t fsize; 		                   /* Size of the file (bytes) */
-        bool filter; 			               /* Uhm? */
-        bool dupflag;			               /* Is the file marked as duplicate? */
+    char *path;		  	                   /* absolute path from working dir */
+    nuint_t fsize; 		                   /* Size of the file (bytes) */
+    bool filter; 			               /* Uhm? */
+    bool dupflag;			               /* Is the file marked as duplicate? */
 
-        /* This is used to find pointers to the same file */
-        ino_t node;
-        dev_t dev;
+    /* This is used to find pointers to the same file */
+    ino_t node;
+    dev_t dev;
 
-        /* Pointer to next element */
-        struct lint_t *next;
-        struct lint_t *last;
+    /* Pointer to next element */
+    struct lint_t *next;
+    struct lint_t *last;
 
 } lint_t;
 

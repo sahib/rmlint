@@ -27,28 +27,28 @@
 
 /* all available settings see rmlint -h */
 typedef struct {
-        char mode;
-        char samepart;
-        char ignore_hidden;
-        char followlinks;
-        char casematch;
-        char paranoid;
-        char invmatch;
-        char namecluster;
-        char oldtmpdata;
-        char searchdup;
-        char findemptydirs;
-        char nonstripped;
-        char **paths;
-        char *dpattern;
-        char *fpattern;
-        char *cmd_path;
-        char *cmd_orig;
-        char *junk_chars;
-        char *output;
-        int threads;
-        int  depth;
-        int verbosity;
+    char mode;
+    char samepart;
+    char ignore_hidden;
+    char followlinks;
+    char casematch;
+    char paranoid;
+    char invmatch;
+    char namecluster;
+    char oldtmpdata;
+    char searchdup;
+    char findemptydirs;
+    char nonstripped;
+    char **paths;
+    char *dpattern;
+    char *fpattern;
+    char *cmd_path;
+    char *cmd_orig;
+    char *junk_chars;
+    char *output;
+    int threads;
+    int  depth;
+    int verbosity;
 
 } rmlint_settings;
 

@@ -51,44 +51,44 @@ bool iAbort   = false,
  */
 static void interrupt(int p)
 {
-        switch(p) {
-        case SIGINT:
-                if(iAbort == 2) {
-                        die(-1);
-                } else if(db_done) {
-                        iAbort = 2;
-                        warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
-                } else {
-                        iAbort = 1;
-                        db_done = true;
-                }
-                break;
-        case SIGFPE  :
-        case SIGABRT :
-                error(RED"FATAL: "NCO"Aborting due to internal error.\n");
-                die(-1);
-        case SIGSEGV :
-                error(RED"FATAL: "NCO"o hai. I haz segfault. Can I haz backtrace? Kthxbai.\n");
-                die(-1);
+    switch(p) {
+    case SIGINT:
+        if(iAbort == 2) {
+            die(-1);
+        } else if(db_done) {
+            iAbort = 2;
+            warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
+        } else {
+            iAbort = 1;
+            db_done = true;
         }
+        break;
+    case SIGFPE  :
+    case SIGABRT :
+        error(RED"FATAL: "NCO"Aborting due to internal error.\n");
+        die(-1);
+    case SIGSEGV :
+        error(RED"FATAL: "NCO"o hai. I haz segfault. Can I haz backtrace? Kthxbai.\n");
+        die(-1);
+    }
 }
 
 /* Cheap function to check if c is a char in str */
 static int junkinstr(const char *str)
 {
-        int i = 0, j = 0;
-        if(set.junk_chars == NULL) {
-                return 0;
-        }
-
-        for(; set.junk_chars[i]; i++) {
-                for(j=0; str[j]; j++) {
-                        if(str[j] == set.junk_chars[i]) {
-                                return true;
-                        }
-                }
-        }
+    int i = 0, j = 0;
+    if(set.junk_chars == NULL) {
         return 0;
+    }
+
+    for(; set.junk_chars[i]; i++) {
+        for(j=0; str[j]; j++) {
+            if(str[j] == set.junk_chars[i]) {
+                return true;
+            }
+        }
+    }
+    return 0;
 }
 
 
@@ -99,34 +99,34 @@ static int junkinstr(const char *str)
 
 static int check_binary_to_be_stripped(const char *path)
 {
-        FILE *pipe = NULL;
+    FILE *pipe = NULL;
 
-        int bytes = 0,
-            len = 0;
+    int bytes = 0,
+        len = 0;
 
-        char dummy_buf = 0,
-             *cmd = NULL;
+    char dummy_buf = 0,
+         *cmd = NULL;
 
-        if(path == NULL) {
-                return 0;
-        }
-
-        len = strlen(path) + 42;
-        cmd = alloca(len);
-        snprintf(cmd, len,"file %s | grep 'not stripped'", path);
-
-        pipe = popen(cmd,"r");
-        if(pipe == NULL) {
-                return 0;
-        }
-
-        bytes = fread(&dummy_buf, sizeof(char), 1, pipe);
-        pclose(pipe);
-
-        if(bytes) {
-                return 1;
-        }
+    if(path == NULL) {
         return 0;
+    }
+
+    len = strlen(path) + 42;
+    cmd = alloca(len);
+    snprintf(cmd, len,"file %s | grep 'not stripped'", path);
+
+    pipe = popen(cmd,"r");
+    if(pipe == NULL) {
+        return 0;
+    }
+
+    bytes = fread(&dummy_buf, sizeof(char), 1, pipe);
+    pclose(pipe);
+
+    if(bytes) {
+        return 1;
+    }
+    return 0;
 }
 
 
@@ -137,35 +137,35 @@ static int check_binary_to_be_stripped(const char *path)
  */
 int regfilter(const char* input, const char *pattern)
 {
-        int status;
-        int flags = REG_EXTENDED|REG_NOSUB;
-        const char *string;
+    int status;
+    int flags = REG_EXTENDED|REG_NOSUB;
+    const char *string;
 
-        if(!pattern) {
-                return 0;
-        } else {
-                regex_t re;
-                string = basename(input);
+    if(!pattern) {
+        return 0;
+    } else {
+        regex_t re;
+        string = basename(input);
 
-                if(!set.casematch) {
-                        flags |= REG_ICASE;
-                }
-
-                if(regcomp(&re, pattern, flags)) {
-                        return 0;
-                }
-
-                if( (status = regexec(&re, string, (size_t)0, NULL, 0)) != 0) {
-                        if(status != REG_NOMATCH) {
-                                char err_buff[100];
-                                regerror(status, &re, err_buff, 100);
-                                warning(YEL"WARN: "NCO" Invalid regex pattern: '%s'\n", err_buff);
-                        }
-                }
-
-                regfree(&re);
-                return (set.invmatch) ? !(status) : (status);
+        if(!set.casematch) {
+            flags |= REG_ICASE;
         }
+
+        if(regcomp(&re, pattern, flags)) {
+            return 0;
+        }
+
+        if( (status = regexec(&re, string, (size_t)0, NULL, 0)) != 0) {
+            if(status != REG_NOMATCH) {
+                char err_buff[100];
+                regerror(status, &re, err_buff, 100);
+                warning(YEL"WARN: "NCO" Invalid regex pattern: '%s'\n", err_buff);
+            }
+        }
+
+        regfree(&re);
+        return (set.invmatch) ? !(status) : (status);
+    }
 }
 
 /*
@@ -186,155 +186,155 @@ int regfilter(const char* input, const char *pattern)
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
 
-        if(set.depth && ftwbuf->level > set.depth) {
-                /* Do not recurse in this subdir */
-                return FTW_SKIP_SIBLINGS;
-        }
-        if(iAbort) {
-                return FTW_STOP;
-        }
-        if(flag == FTW_SLN) {
-                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_BLNK);
-                return FTW_CONTINUE;
-        }
-        if(path) {
-
-                if(!dir_done) {
-                        if(!strcmp(set.paths[get_cpindex()], path)) {
-                                dir_done = true;
-                                return FTW_CONTINUE;
-                        }
-                }
-                if(flag == FTW_F) {
-
-                        if(regfilter(path, set.fpattern)) {
-                                return FTW_CONTINUE;
-                        }
-                        if(junkinstr(basename(path))) {
-                                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
-                                return FTW_CONTINUE;
-                        }
-                        if(set.nonstripped) {
-                                if(check_binary_to_be_stripped(path)) {
-                                        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
-                                }
-                        }
-                        if(set.oldtmpdata) {
-                                size_t len = strlen(path);
-                                if(path[len-1] == '~') {
-                                        char *cpy = strndup(path,len-1);
-                                        struct stat stat_buf;
-
-                                        if(!stat(cpy, &stat_buf)) {
-                                                if(ABS(stat_buf.st_mtime - ptr->st_mtime) > set.oldtmpdata) {
-                                                        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
-                                                }
-                                                if(cpy) {
-                                                        free(cpy);
-                                                }
-                                                return FTW_CONTINUE;
-                                        }
-                                        if(cpy) {
-                                                free(cpy);
-                                        }
-                                }
-                        }
-                        /* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
-                        if(flag == FTW_F && ptr->st_rdev == 0) {
-                                if(!access(path,R_OK)) {
-                                        if(set.ignore_hidden) {
-                                                char *base = basename(path);
-                                                if(*base != '.') {
-                                                        dircount++;
-                                                        list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
-                                                }
-                                        } else {
-                                                dircount++;
-                                                list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
-                                        }
-                                }
-                                return FTW_CONTINUE;
-                        }
-                }
-                if(flag == FTW_D) {
-
-                        if(regfilter(path, set.dpattern) && dir_done) {
-                                return FTW_SKIP_SUBTREE;
-                        }
-                        if(junkinstr(basename(path))) {
-                                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
-                                return FTW_SKIP_SUBTREE;
-                        }
-                        if(set.findemptydirs) {
-                                int dir_counter = 0;
-                                DIR *dir_e = opendir(path);
-                                struct dirent *dir_p = NULL;
-
-
-                                if(dir_e) {
-                                        while((dir_p=readdir(dir_e)) && dir_counter < 2) {
-                                                dir_counter++;
-                                        }
-
-                                        closedir(dir_e);
-                                        if(dir_counter == 2 &&
-                                            dir_p == NULL
-                                          ) {
-                                                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR);
-                                                return FTW_SKIP_SUBTREE;
-                                        }
-                                }
-                        }
-
-                        if(set.ignore_hidden && path) {
-                                char *base = basename(path);
-                                if(*base == '.' && dir_done) {
-                                        return FTW_SKIP_SUBTREE;
-                                }
-                        }
-                }
-        }
+    if(set.depth && ftwbuf->level > set.depth) {
+        /* Do not recurse in this subdir */
+        return FTW_SKIP_SIBLINGS;
+    }
+    if(iAbort) {
+        return FTW_STOP;
+    }
+    if(flag == FTW_SLN) {
+        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_BLNK);
         return FTW_CONTINUE;
+    }
+    if(path) {
+
+        if(!dir_done) {
+            if(!strcmp(set.paths[get_cpindex()], path)) {
+                dir_done = true;
+                return FTW_CONTINUE;
+            }
+        }
+        if(flag == FTW_F) {
+
+            if(regfilter(path, set.fpattern)) {
+                return FTW_CONTINUE;
+            }
+            if(junkinstr(basename(path))) {
+                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
+                return FTW_CONTINUE;
+            }
+            if(set.nonstripped) {
+                if(check_binary_to_be_stripped(path)) {
+                    list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
+                }
+            }
+            if(set.oldtmpdata) {
+                size_t len = strlen(path);
+                if(path[len-1] == '~') {
+                    char *cpy = strndup(path,len-1);
+                    struct stat stat_buf;
+
+                    if(!stat(cpy, &stat_buf)) {
+                        if(ABS(stat_buf.st_mtime - ptr->st_mtime) > set.oldtmpdata) {
+                            list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
+                        }
+                        if(cpy) {
+                            free(cpy);
+                        }
+                        return FTW_CONTINUE;
+                    }
+                    if(cpy) {
+                        free(cpy);
+                    }
+                }
+            }
+            /* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
+            if(flag == FTW_F && ptr->st_rdev == 0) {
+                if(!access(path,R_OK)) {
+                    if(set.ignore_hidden) {
+                        char *base = basename(path);
+                        if(*base != '.') {
+                            dircount++;
+                            list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
+                        }
+                    } else {
+                        dircount++;
+                        list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
+                    }
+                }
+                return FTW_CONTINUE;
+            }
+        }
+        if(flag == FTW_D) {
+
+            if(regfilter(path, set.dpattern) && dir_done) {
+                return FTW_SKIP_SUBTREE;
+            }
+            if(junkinstr(basename(path))) {
+                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
+                return FTW_SKIP_SUBTREE;
+            }
+            if(set.findemptydirs) {
+                int dir_counter = 0;
+                DIR *dir_e = opendir(path);
+                struct dirent *dir_p = NULL;
+
+
+                if(dir_e) {
+                    while((dir_p=readdir(dir_e)) && dir_counter < 2) {
+                        dir_counter++;
+                    }
+
+                    closedir(dir_e);
+                    if(dir_counter == 2 &&
+                            dir_p == NULL
+                      ) {
+                        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR);
+                        return FTW_SKIP_SUBTREE;
+                    }
+                }
+            }
+
+            if(set.ignore_hidden && path) {
+                char *base = basename(path);
+                if(*base == '.' && dir_done) {
+                    return FTW_SKIP_SUBTREE;
+                }
+            }
+        }
+    }
+    return FTW_CONTINUE;
 }
 
 /* This calls basically nftw() and sets some options */
 int recurse_dir(const char *path)
 {
-        /* Set options */
-        int ret = 0;
-        int flags = FTW_ACTIONRETVAL;
-        if(!set.followlinks) {
-                flags |= FTW_PHYS;
+    /* Set options */
+    int ret = 0;
+    int flags = FTW_ACTIONRETVAL;
+    if(!set.followlinks) {
+        flags |= FTW_PHYS;
+    }
+
+    if(USE_DEPTH_FIRST) {
+        flags |= FTW_DEPTH;
+    }
+
+    if(set.samepart) {
+        flags |= FTW_MOUNT;
+    }
+
+    /* Handle SIGINT */
+    signal(SIGINT, interrupt);
+
+    /* (Re)-Init */
+    dir_done = false;
+
+    /* Start recurse */
+    if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags))) {
+        if(ret != FTW_STOP) {
+            /* Some error occured */
+            perror(YEL"FATAL: "NCO"nftw():");
+            return EXIT_FAILURE;
+        } else {
+            /* The user pressed SIGINT -> Quit from ntfw() to shutdown in peace. */
+            error(YEL"quitting.\n"NCO);
+            die(0);
         }
+    }
 
-        if(USE_DEPTH_FIRST) {
-                flags |= FTW_DEPTH;
-        }
-
-        if(set.samepart) {
-                flags |= FTW_MOUNT;
-        }
-
-        /* Handle SIGINT */
-        signal(SIGINT, interrupt);
-
-        /* (Re)-Init */
-        dir_done = false;
-
-        /* Start recurse */
-        if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags))) {
-                if(ret != FTW_STOP) {
-                        /* Some error occured */
-                        perror(YEL"FATAL: "NCO"nftw():");
-                        return EXIT_FAILURE;
-                } else {
-                        /* The user pressed SIGINT -> Quit from ntfw() to shutdown in peace. */
-                        error(YEL"quitting.\n"NCO);
-                        die(0);
-                }
-        }
-
-        return dircount;
+    return dircount;
 }
 
 
@@ -343,550 +343,550 @@ int recurse_dir(const char *path)
  *  This woud result in false positves - Kick'em  */
 static nuint_t rm_double_paths(file_group *fp)
 {
-        lint_t *b = fp->grp_stp;
-        nuint_t c = 0;
+    lint_t *b = fp->grp_stp;
+    nuint_t c = 0;
 
-        if(b) {
-                while(b->next) {
-                        if( (b->node == b->next->node) &&
-                            (b->dev  == b->next->dev )  ) {
-                                lint_t *tmp = b;
-                                fp->size -= b->fsize;
-                                fp->len--;
+    if(b) {
+        while(b->next) {
+            if( (b->node == b->next->node) &&
+                    (b->dev  == b->next->dev )  ) {
+                lint_t *tmp = b;
+                fp->size -= b->fsize;
+                fp->len--;
 
-                                b = list_remove(b);
+                b = list_remove(b);
 
-                                if(tmp == fp->grp_stp) {
-                                        fp->grp_stp = b;
-                                }
-                                if(tmp == fp->grp_enp) {
-                                        fp->grp_enp = b;
-                                }
-
-                                c++;
-                        } else {
-                                b=b->next;
-                        }
+                if(tmp == fp->grp_stp) {
+                    fp->grp_stp = b;
                 }
+                if(tmp == fp->grp_enp) {
+                    fp->grp_enp = b;
+                }
+
+                c++;
+            } else {
+                b=b->next;
+            }
         }
-        return c;
+    }
+    return c;
 }
 
 /* Sort criteria for sorting by dev and inode */
 static long cmp_nd(lint_t *a, lint_t *b)
 {
-        return ((long)(a->node) - (long)(b->node));
+    return ((long)(a->node) - (long)(b->node));
 }
 
 /* Compares the "fp" array of the lint_ts a and b */
 static int cmp_fingerprints(lint_t *a,lint_t *b)
 {
-        int i,j;
-        for(i=0; i<2; i++) {
-                for(j=0; j<MD5_LEN; j++) {
-                        if(a->fp[i][j] != b->fp[i][j]) {
-                                return  0;
-                        }
-                }
+    int i,j;
+    for(i=0; i<2; i++) {
+        for(j=0; j<MD5_LEN; j++) {
+            if(a->fp[i][j] != b->fp[i][j]) {
+                return  0;
+            }
         }
+    }
 
-        for(i=0; i<BYTE_MIDDLE_SIZE; i++) {
-                if(a->bim[i] != b->bim[i]) {
-                        return 0;
-                }
+    for(i=0; i<BYTE_MIDDLE_SIZE; i++) {
+        if(a->bim[i] != b->bim[i]) {
+            return 0;
         }
+    }
 
-        return 1;
+    return 1;
 }
 
 /* Performs a fingerprint check on the group fp */
 static nuint_t group_filter(file_group *fp)
 {
-        lint_t *p = fp->grp_stp;
-        lint_t *i,*j;
+    lint_t *p = fp->grp_stp;
+    lint_t *i,*j;
 
-        nuint_t remove_count = 0;
-        nuint_t fp_sz;
+    nuint_t remove_count = 0;
+    nuint_t fp_sz;
 
-        if(!fp || fp->grp_stp == NULL) {
-                return 0;
-        }
+    if(!fp || fp->grp_stp == NULL) {
+        return 0;
+    }
 
-        /* The size read in to build a fingerprint */
-        fp_sz = MD5_FPSIZE_FORM(fp->grp_stp->fsize);
+    /* The size read in to build a fingerprint */
+    fp_sz = MD5_FPSIZE_FORM(fp->grp_stp->fsize);
 
-        /* Clamp it to some maximum (4KB) */
-        fp_sz = (fp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : fp_sz;
+    /* Clamp it to some maximum (4KB) */
+    fp_sz = (fp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : fp_sz;
 
-        while(p) {
-                md5_fingerprint(p, fp_sz);
-                p=p->next;
-        }
+    while(p) {
+        md5_fingerprint(p, fp_sz);
+        p=p->next;
+    }
 
-        /* Compare each other */
-        i = fp->grp_stp;
+    /* Compare each other */
+    i = fp->grp_stp;
 
-        while(i) {
-                if(i->filter) {
-                        j=i->next;
-                        while(j) {
-                                if(j->filter) {
-                                        if(cmp_fingerprints(i,j)) {
-                                                /* i 'similiar' to j */
-                                                j->filter = false;
-                                                i->filter = false;
-                                        }
-                                }
-                                j = j->next;
-                        }
-                        if(i->filter) {
-                                lint_t *tmp = i;
-                                fp->len--;
-                                fp->size -= i->fsize;
-
-                                i = list_remove(i);
-
-                                /* Update start / end */
-                                if(tmp == fp->grp_stp) {
-                                        fp->grp_stp = i;
-                                }
-
-                                if(tmp == fp->grp_enp) {
-                                        fp->grp_enp = i;
-                                }
-
-                                remove_count++;
-                                continue;
-                        } else {
-                                i=i->next;
-                                continue;
-                        }
+    while(i) {
+        if(i->filter) {
+            j=i->next;
+            while(j) {
+                if(j->filter) {
+                    if(cmp_fingerprints(i,j)) {
+                        /* i 'similiar' to j */
+                        j->filter = false;
+                        i->filter = false;
+                    }
                 }
+                j = j->next;
+            }
+            if(i->filter) {
+                lint_t *tmp = i;
+                fp->len--;
+                fp->size -= i->fsize;
+
+                i = list_remove(i);
+
+                /* Update start / end */
+                if(tmp == fp->grp_stp) {
+                    fp->grp_stp = i;
+                }
+
+                if(tmp == fp->grp_enp) {
+                    fp->grp_enp = i;
+                }
+
+                remove_count++;
+                continue;
+            } else {
                 i=i->next;
+                continue;
+            }
         }
-        return remove_count;
+        i=i->next;
+    }
+    return remove_count;
 }
 
 /* Callback from build_checksums */
 static void *cksum_cb(void * vp)
 {
-        file_group *gp = vp;
-        lint_t *file = gp->grp_stp;
+    file_group *gp = vp;
+    lint_t *file = gp->grp_stp;
 
-        int i = 0;
-        for(; i < gp->size && file != NULL; i++) {
-                md5_file(file);
-                file=file->next;
-        }
-        return NULL;
+    int i = 0;
+    for(; i < gp->size && file != NULL; i++) {
+        md5_file(file);
+        file=file->next;
+    }
+    return NULL;
 }
 
 static void build_checksums(file_group *grp)
 {
-        if(grp == NULL || grp->grp_stp == NULL) {
-                return;
+    if(grp == NULL || grp->grp_stp == NULL) {
+        return;
+    }
+
+    if(set.threads == 1 ||  grp->size < MD5_MTHREAD_SIZE) {
+        /* Just loop through this group and built the checksum */
+        lint_t *p = grp->grp_stp;
+        while(p) {
+            md5_file(p);
+            p=p->next;
+        }
+    } else {
+        /* The Group is a bigger one (over 4MB by default),
+         * so it may be more efficient wo work this on more
+         * than one thread (especially with serial IO */
+
+        lint_t *ptr = grp->grp_stp;
+        int ii = 0, jj = 0;
+        int packsize = grp->size / MD5_MTHREAD_SIZE;
+
+        pthread_t *tt = malloc( (grp->len / packsize + 2) * sizeof(pthread_t));
+
+        while(ptr) {
+            if(ii == 0 ||  (ii % packsize) == 0) {
+                file_group group_pass;
+                group_pass.grp_stp = ptr;
+                group_pass.size = packsize;
+
+                if(pthread_create(&tt[jj], NULL, cksum_cb, (void*)&group_pass)) {
+                    perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
+                }
+
+                jj++;
+            }
+
+            ii++;
+            ptr=ptr->next;
         }
 
-        if(set.threads == 1 ||  grp->size < MD5_MTHREAD_SIZE) {
-                /* Just loop through this group and built the checksum */
-                lint_t *p = grp->grp_stp;
-                while(p) {
-                        md5_file(p);
-                        p=p->next;
-                }
-        } else {
-                /* The Group is a bigger one (over 4MB by default),
-                 * so it may be more efficient wo work this on more
-                 * than one thread (especially with serial IO */
-
-                lint_t *ptr = grp->grp_stp;
-                int ii = 0, jj = 0;
-                int packsize = grp->size / MD5_MTHREAD_SIZE;
-
-                pthread_t *tt = malloc( (grp->len / packsize + 2) * sizeof(pthread_t));
-
-                while(ptr) {
-                        if(ii == 0 ||  (ii % packsize) == 0) {
-                                file_group group_pass;
-                                group_pass.grp_stp = ptr;
-                                group_pass.size = packsize;
-
-                                if(pthread_create(&tt[jj], NULL, cksum_cb, (void*)&group_pass)) {
-                                        perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
-                                }
-
-                                jj++;
-                        }
-
-                        ii++;
-                        ptr=ptr->next;
-                }
-
-                for(ii = 0; ii < jj; ii++) {
-                        if(pthread_join(tt[ii],NULL)) {
-                                perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
-                        }
-                }
-
-                if(tt) {
-                        free(tt);
-                }
+        for(ii = 0; ii < jj; ii++) {
+            if(pthread_join(tt[ii],NULL)) {
+                perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
+            }
         }
+
+        if(tt) {
+            free(tt);
+        }
+    }
 }
 
 /* Callback that actually does the work for ONE group */
 static void* sheduler_cb(void *gfp)
 {
-        file_group *group = gfp;
-        if(group == NULL || group->grp_stp == NULL) {
-                return NULL;
-        }
+    file_group *group = gfp;
+    if(group == NULL || group->grp_stp == NULL) {
+        return NULL;
+    }
 
-        group_filter(group);
+    group_filter(group);
 
-        if(group->len == 1) {
-                list_clear(group->grp_stp);
-                return NULL;
-        }
-
-        build_checksums(group);
-        if(findmatches(group)) {
-                list_clear(group->grp_stp);
-                die(0);
-        }
+    if(group->len == 1) {
         list_clear(group->grp_stp);
         return NULL;
+    }
+
+    build_checksums(group);
+    if(findmatches(group)) {
+        list_clear(group->grp_stp);
+        die(0);
+    }
+    list_clear(group->grp_stp);
+    return NULL;
 }
 
 /* Joins the threads launched by sheduler */
 static void sheduler_jointhreads(pthread_t *tt, nuint_t n)
 {
-        nuint_t ii = 0;
-        for(ii=0; ii < n; ii++) {
-                if(pthread_join(tt[ii],NULL)) {
-                        perror(RED"ERROR: "NCO"pthread_join in sheduler()");
-                }
+    nuint_t ii = 0;
+    for(ii=0; ii < n; ii++) {
+        if(pthread_join(tt[ii],NULL)) {
+            perror(RED"ERROR: "NCO"pthread_join in sheduler()");
         }
+    }
 }
 
 /* Distributes the groups on the ressources */
 static void start_sheduler(file_group *fp, nuint_t nlistlen)
 {
-        nuint_t ii;
-        pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
+    nuint_t ii;
+    pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
 
-        if(set.threads == 1) {
-                for(ii = 0; ii < nlistlen && !iAbort; ii++) {
-                        sheduler_cb(&fp[ii]);
-                }
-        } else {
-
-                /* Run max set.threads at the same time. */
-                int nrun = 0;
-                for(ii = 0; ii < nlistlen && !iAbort; ii++) {
-
-                        if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) {
-                                if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii])) {
-                                        perror(RED"ERROR: "NCO"pthread_create in sheduler()");
-                                }
-
-                                if(nrun >= set.threads-1) {
-                                        sheduler_jointhreads(tt, nrun + 1);
-                                        nrun = 0;
-                                        continue;
-                                }
-
-                                nrun++;
-                        } else {
-                                sheduler_cb(&fp[ii]);
-                        }
-
-                }
-                sheduler_jointhreads(tt, nrun);
+    if(set.threads == 1) {
+        for(ii = 0; ii < nlistlen && !iAbort; ii++) {
+            sheduler_cb(&fp[ii]);
         }
-        if(tt) {
-                free(tt);
+    } else {
+
+        /* Run max set.threads at the same time. */
+        int nrun = 0;
+        for(ii = 0; ii < nlistlen && !iAbort; ii++) {
+
+            if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT) {
+                if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii])) {
+                    perror(RED"ERROR: "NCO"pthread_create in sheduler()");
+                }
+
+                if(nrun >= set.threads-1) {
+                    sheduler_jointhreads(tt, nrun + 1);
+                    nrun = 0;
+                    continue;
+                }
+
+                nrun++;
+            } else {
+                sheduler_cb(&fp[ii]);
+            }
+
         }
+        sheduler_jointhreads(tt, nrun);
+    }
+    if(tt) {
+        free(tt);
+    }
 }
 
 /* Sort group array via qsort() */
 static int cmp_grplist_bynodes(const void *a,const void *b)
 {
-        const file_group *ap = a;
-        const file_group *bp = b;
-        if(ap && bp) {
-                if(ap->grp_stp && bp->grp_stp) {
-                        return ap->grp_stp->node - bp->grp_stp->node;
-                }
-
+    const file_group *ap = a;
+    const file_group *bp = b;
+    if(ap && bp) {
+        if(ap->grp_stp && bp->grp_stp) {
+            return ap->grp_stp->node - bp->grp_stp->node;
         }
-        return -1;
+
+    }
+    return -1;
 }
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
 static void size_to_human_readable(nuint_t num, char *in, int sz)
 {
-        if(num < 1024) {
-                snprintf(in,sz,"%ld B",(unsigned long)num);
-        } else if(num >= 1024 && num < 1048576.0) {
-                snprintf(in,sz,"%.2f KB",(float)(num/1024.0));
-        } else if(num >= 1024*1024 && num < 1073741824) {
-                snprintf(in,sz,"%.2f MB",(float)(num/1048576.0));
-        } else {
-                snprintf(in,sz,"%.2f GB",(float)(num/1073741824.0));
-        }
+    if(num < 1024) {
+        snprintf(in,sz,"%ld B",(unsigned long)num);
+    } else if(num >= 1024 && num < 1048576.0) {
+        snprintf(in,sz,"%.2f KB",(float)(num/1024.0));
+    } else if(num >= 1024*1024 && num < 1073741824) {
+        snprintf(in,sz,"%.2f MB",(float)(num/1048576.0));
+    } else {
+        snprintf(in,sz,"%.2f GB",(float)(num/1073741824.0));
+    }
 }
 
 
 static void find_double_bases(lint_t *starting)
 {
-        lint_t *i = starting;
-        lint_t *j = NULL;
+    lint_t *i = starting;
+    lint_t *j = NULL;
 
-        bool phead = true;
+    bool phead = true;
 
-        while(i) {
-                if(i->dupflag) {
-                        bool pr = false;
-                        j=i->next;
-                        while(j) {
-                                if(!strcmp(basename(i->path), basename(j->path)) &&
-                                    i->node != j->node && j->dupflag
-                                  ) {
-                                        lint_t *x = j;
-                                        char *tmp2 = canonicalize_file_name(j->path);
+    while(i) {
+        if(i->dupflag) {
+            bool pr = false;
+            j=i->next;
+            while(j) {
+                if(!strcmp(basename(i->path), basename(j->path)) &&
+                        i->node != j->node && j->dupflag
+                  ) {
+                    lint_t *x = j;
+                    char *tmp2 = canonicalize_file_name(j->path);
 
-                                        if(phead) {
-                                                error("\n%s#"NCO" Double basenames: \n", (set.verbosity > 1) ? GRE : NCO);
-                                                phead = false;
-                                        }
+                    if(phead) {
+                        error("\n%s#"NCO" Double basenames: \n", (set.verbosity > 1) ? GRE : NCO);
+                        phead = false;
+                    }
 
-                                        if(!pr) {
-                                                char * tmp = canonicalize_file_name(i->path);
-                                                i->dupflag = false;
-                                                printf("\n%s #Size: %lu\n",tmp,i->fsize);
-                                                pr = true;
-                                                if(tmp) {
-                                                        free(tmp);
-                                                }
-
-                                                /* At this point files with same inode and device are NOT handled yet.
-                                                   Therefore this foolish, but well working approach is made.
-                                                   (So it works also with more than one dir in the cmd)  */
-                                                while(x) {
-                                                        if(x->node == j->node) {
-                                                                x->dupflag = false;
-                                                        }
-
-                                                        x=x->next;
-                                                }
-                                        }
-                                        j->dupflag = false;
-                                        printf("%s #Size %lu\n",tmp2,j->fsize);
-                                        if(tmp2) {
-                                                free(tmp2);
-                                        }
-                                }
-                                j=j->next;
+                    if(!pr) {
+                        char * tmp = canonicalize_file_name(i->path);
+                        i->dupflag = false;
+                        printf("\n%s #Size: %lu\n",tmp,i->fsize);
+                        pr = true;
+                        if(tmp) {
+                            free(tmp);
                         }
-                        if(pr) {
+
+                        /* At this point files with same inode and device are NOT handled yet.
+                           Therefore this foolish, but well working approach is made.
+                           (So it works also with more than one dir in the cmd)  */
+                        while(x) {
+                            if(x->node == j->node) {
+                                x->dupflag = false;
+                            }
+
+                            x=x->next;
                         }
+                    }
+                    j->dupflag = false;
+                    printf("%s #Size %lu\n",tmp2,j->fsize);
+                    if(tmp2) {
+                        free(tmp2);
+                    }
                 }
-                i=i->next;
+                j=j->next;
+            }
+            if(pr) {
+            }
         }
+        i=i->next;
+    }
 }
 
 static long cmp_sort_dupID(lint_t* a, lint_t* b)
 {
-        return ((long)a->dupflag-(long)b->dupflag);
+    return ((long)a->dupflag-(long)b->dupflag);
 }
 
 void start_processing(lint_t *b)
 {
-        file_group *fglist = NULL,
-                    emptylist;
+    file_group *fglist = NULL,
+                emptylist;
 
-        char lintbuf[128];
-        nuint_t ii           = 0,
-                lint         = 0,
-                spelen       = 0,
-                remaining    = 0,
-                rem_counter  = 0,
-                path_doubles = 0,
-                original     = list_len();
+    char lintbuf[128];
+    nuint_t ii           = 0,
+            lint         = 0,
+            spelen       = 0,
+            remaining    = 0,
+            rem_counter  = 0,
+            path_doubles = 0,
+            original     = list_len();
 
-        if(set.namecluster) {
-                find_double_bases(b);
-                error("\n");
-        }
-        emptylist.len = 1;
-
-        while(b) {
-                lint_t *q = b, *prev = NULL;
-                nuint_t glen = 0, gsize = 0;
-
-                while(b && q->fsize == b->fsize) {
-                        prev = b;
-
-                        if(b->dupflag == false) {
-                                b->dupflag = true;
-                        }
-
-                        gsize += b->fsize;
-                        glen++;
-                        b = b->next;
-                }
-
-                if(glen == 1) {
-                        /* This is only a single element        */
-                        /* We can remove it without feelind bad */
-                        q = list_remove(q);
-                        if(b != NULL) {
-                                b = q;
-                        }
-                        rem_counter++;
-                } else {
-                        /* Mark this isle as 'sublist' by setting next/last pointers */
-                        if(b != NULL) {
-                                prev->next = NULL;
-                                b->last = NULL;
-                        }
-
-                        if(q->fsize != 0) {
-                                /* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
-                                q = list_sort(q,cmp_nd);
-
-                                /* Add this group to the list array */
-                                fglist = realloc(fglist, (spelen+1) * sizeof(file_group));
-                                fglist[spelen].grp_stp = q;
-                                fglist[spelen].grp_enp = prev;
-                                fglist[spelen].len     = glen;
-                                fglist[spelen].size    = gsize;
-
-                                /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
-                                if(get_cpindex() > 1 || set.followlinks) {
-                                        path_doubles += rm_double_paths(&fglist[spelen]);
-                                }
-
-                                spelen++;
-                        } else {
-                                lint_t *ptr;
-                                bool flag = 42;
-
-                                q = list_sort(q,cmp_nd);
-                                emptylist.grp_stp = q;
-
-                                if(get_cpindex() > 1 || set.followlinks) {
-                                        rm_double_paths(&emptylist);
-                                }
-
-                                ptr = emptylist.grp_stp;
-                                ptr = list_sort(ptr,cmp_sort_dupID);
-                                emptylist.grp_stp = ptr;
-                                emptylist.len = 0;
-                                while(ptr) {
-
-                                        if(flag != ptr->dupflag) {
-											    if(set.verbosity > 1) {
-													error(GRE"\n#"NCO); 
-												} else {
-													error("\n#");
-												}
-                                                if(ptr->dupflag == TYPE_BLNK) {
-                                                        error(" Bad link(s): \n");
-                                                } else if(ptr->dupflag == TYPE_OTMP) {
-                                                        error(" Old Tempfile(s): \n");
-                                                } else if(ptr->dupflag == TYPE_EDIR) {
-                                                        error(" Empty dir(s): \n");
-                                                } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
-                                                        error(" Junk dirname(s): \n");
-                                                } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
-                                                        error(" Junk filename(s): \n");
-                                                } else if(ptr->dupflag == TYPE_NBIN) {
-                                                        error(" Non stripped binarie(s): \n");
-                                                } else if(ptr->fsize   == 0) {
-                                                        error(" Empty file(s): \n");
-                                                }
-                                                flag = ptr->dupflag;
-                                        }
-
-                                        error("%s\n",ptr->path);
-
-                                        if(set.output) {
-                                                write_to_log(ptr, false);
-                                        }
-                                        ptr = list_remove(ptr);
-                                        emptylist.len++;
-                                }
-                        }
-                }
-        }
-
-        if(emptylist.len == 0) {
-                info("None.");
-        }
+    if(set.namecluster) {
+        find_double_bases(b);
         error("\n");
+    }
+    emptylist.len = 1;
 
-        if(set.searchdup == 0) {
-                int i = 0;
+    while(b) {
+        lint_t *q = b, *prev = NULL;
+        nuint_t glen = 0, gsize = 0;
 
-                /* rmlint was originally supposed to find duplicates only
-                   So we have to free list that whould have been used for
-                   dup search before dieing */
+        while(b && q->fsize == b->fsize) {
+            prev = b;
 
-                for(; i < spelen; i++) {
-                        list_clear(fglist[i].grp_stp);
+            if(b->dupflag == false) {
+                b->dupflag = true;
+            }
+
+            gsize += b->fsize;
+            glen++;
+            b = b->next;
+        }
+
+        if(glen == 1) {
+            /* This is only a single element        */
+            /* We can remove it without feelind bad */
+            q = list_remove(q);
+            if(b != NULL) {
+                b = q;
+            }
+            rem_counter++;
+        } else {
+            /* Mark this isle as 'sublist' by setting next/last pointers */
+            if(b != NULL) {
+                prev->next = NULL;
+                b->last = NULL;
+            }
+
+            if(q->fsize != 0) {
+                /* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
+                q = list_sort(q,cmp_nd);
+
+                /* Add this group to the list array */
+                fglist = realloc(fglist, (spelen+1) * sizeof(file_group));
+                fglist[spelen].grp_stp = q;
+                fglist[spelen].grp_enp = prev;
+                fglist[spelen].len     = glen;
+                fglist[spelen].size    = gsize;
+
+                /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
+                if(get_cpindex() > 1 || set.followlinks) {
+                    path_doubles += rm_double_paths(&fglist[spelen]);
                 }
-                if(fglist) {
-                        free(fglist);
+
+                spelen++;
+            } else {
+                lint_t *ptr;
+                bool flag = 42;
+
+                q = list_sort(q,cmp_nd);
+                emptylist.grp_stp = q;
+
+                if(get_cpindex() > 1 || set.followlinks) {
+                    rm_double_paths(&emptylist);
                 }
-                error("Done.\n");
-                die(0);
-        }
-        info("\nNow attempting to find duplicates. This may take a while...\n");
-        info("Now removing files with unique sizes from list.. ");
-        info(""YEL"%ld elem%c less"NCO" in list.",rem_counter,(rem_counter > 1) ? 's' : ' ');
-        if(path_doubles) {
-                info(" (removed "YEL"%ld pathzombies"NCO")", path_doubles);
-        }
-        info("\nBy ignoring "YEL"%ld empty files "NCO"/"YEL" bad links "NCO"/"YEL" junk names"NCO", list was split in %ld parts.\n", emptylist.len, spelen);
-        info("Now sorting groups based on their location on the drive... ");
 
-        /* Now make sure groups are sorted by their location on the disk*/
-        qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
+                ptr = emptylist.grp_stp;
+                ptr = list_sort(ptr,cmp_sort_dupID);
+                emptylist.grp_stp = ptr;
+                emptylist.len = 0;
+                while(ptr) {
 
-        info(" done. \nNow doing fingerprints and full checksums:\n\n");
-        db_done = true;
+                    if(flag != ptr->dupflag) {
+                        if(set.verbosity > 1) {
+                            error(GRE"\n#"NCO);
+                        } else {
+                            error("\n#");
+                        }
+                        if(ptr->dupflag == TYPE_BLNK) {
+                            error(" Bad link(s): \n");
+                        } else if(ptr->dupflag == TYPE_OTMP) {
+                            error(" Old Tempfile(s): \n");
+                        } else if(ptr->dupflag == TYPE_EDIR) {
+                            error(" Empty dir(s): \n");
+                        } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
+                            error(" Junk dirname(s): \n");
+                        } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
+                            error(" Junk filename(s): \n");
+                        } else if(ptr->dupflag == TYPE_NBIN) {
+                            error(" Non stripped binarie(s): \n");
+                        } else if(ptr->fsize   == 0) {
+                            error(" Empty file(s): \n");
+                        }
+                        flag = ptr->dupflag;
+                    }
 
-        error("%s Duplicate(s):\n",(set.verbosity > 1) ? GRE"#"NCO : "#");
-        /* Groups are splitted, now give it to the sheduler */
-        /* The sheduler will do another filterstep, build checkusm
-         *  and compare 'em. The result is printed afterwards */
-        start_sheduler(fglist, spelen);
+                    error("%s\n",ptr->path);
 
-        if(set.mode == 5 && set.output) {
-                fprintf(get_logstream(), SCRIPT_LAST);
-                fprintf(get_logstream(), "\n# End of script. Have a nice day.");
-        }
-        /* Gather the total size of removeable data */
-        for(ii=0; ii < spelen; ii++) {
-                if(fglist[ii].grp_stp != NULL) {
-                        lint += fglist[ii].size - ((fglist[ii].len > 0) ? (fglist[ii].size / fglist[ii].len) : 0);
-                        remaining +=  (fglist[ii].len) ? (fglist[ii].len - 1) : 0;
+                    if(set.output) {
+                        write_to_log(ptr, false);
+                    }
+                    ptr = list_remove(ptr);
+                    emptylist.len++;
                 }
+            }
         }
+    }
 
-        size_to_human_readable(lint, lintbuf, 127);
-        warning("\nIn total "GRE"%ld"NCO" (of %ld files as input) files are duplicates.\n",remaining, original);
-        warning("This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
+    if(emptylist.len == 0) {
+        info("None.");
+    }
+    error("\n");
 
-        if(set.output) {
-                warning("A log has been written to "BLU"%s.log"NCO".\n", set.output);
-			    warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set.output);
+    if(set.searchdup == 0) {
+        int i = 0;
+
+        /* rmlint was originally supposed to find duplicates only
+           So we have to free list that whould have been used for
+           dup search before dieing */
+
+        for(; i < spelen; i++) {
+            list_clear(fglist[i].grp_stp);
         }
-
-        /* End of actual program. Now do some file handling / frees */
         if(fglist) {
-                free(fglist);
+            free(fglist);
         }
+        error("Done.\n");
+        die(0);
+    }
+    info("\nNow attempting to find duplicates. This may take a while...\n");
+    info("Now removing files with unique sizes from list.. ");
+    info(""YEL"%ld elem%c less"NCO" in list.",rem_counter,(rem_counter > 1) ? 's' : ' ');
+    if(path_doubles) {
+        info(" (removed "YEL"%ld pathzombies"NCO")", path_doubles);
+    }
+    info("\nBy ignoring "YEL"%ld empty files "NCO"/"YEL" bad links "NCO"/"YEL" junk names"NCO", list was split in %ld parts.\n", emptylist.len, spelen);
+    info("Now sorting groups based on their location on the drive... ");
+
+    /* Now make sure groups are sorted by their location on the disk*/
+    qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
+
+    info(" done. \nNow doing fingerprints and full checksums:\n\n");
+    db_done = true;
+
+    error("%s Duplicate(s):\n",(set.verbosity > 1) ? GRE"#"NCO : "#");
+    /* Groups are splitted, now give it to the sheduler */
+    /* The sheduler will do another filterstep, build checkusm
+     *  and compare 'em. The result is printed afterwards */
+    start_sheduler(fglist, spelen);
+
+    if(set.mode == 5 && set.output) {
+        fprintf(get_logstream(), SCRIPT_LAST);
+        fprintf(get_logstream(), "\n# End of script. Have a nice day.");
+    }
+    /* Gather the total size of removeable data */
+    for(ii=0; ii < spelen; ii++) {
+        if(fglist[ii].grp_stp != NULL) {
+            lint += fglist[ii].size - ((fglist[ii].len > 0) ? (fglist[ii].size / fglist[ii].len) : 0);
+            remaining +=  (fglist[ii].len) ? (fglist[ii].len - 1) : 0;
+        }
+    }
+
+    size_to_human_readable(lint, lintbuf, 127);
+    warning("\nIn total "GRE"%ld"NCO" (of %ld files as input) files are duplicates.\n",remaining, original);
+    warning("This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
+
+    if(set.output) {
+        warning("A log has been written to "BLU"%s.log"NCO".\n", set.output);
+        warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set.output);
+    }
+
+    /* End of actual program. Now do some file handling / frees */
+    if(fglist) {
+        free(fglist);
+    }
 }

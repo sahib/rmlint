@@ -26,8 +26,8 @@
 #include "list.h"
 #include "rmlint.h"
 
-/* list.c: 
-   1) Append, sort, ... 
+/* list.c:
+   1) Append, sort, ...
 */
 
 lint_t *start = NULL; /* A pointer to the first element in the list */
@@ -40,14 +40,14 @@ nuint_t len;
 /** list_begin() - returns pointer to start of list **/
 lint_t *list_begin(void)
 {
-        return start;
+    return start;
 }
 
 
 /** Make len visible to other files **/
 nuint_t list_len(void)
 {
-        return len;
+    return len;
 }
 
 
@@ -58,209 +58,209 @@ nuint_t list_len(void)
 
 void list_clear(lint_t *begin)
 {
-        lint_t *ptr = begin;
-        lint_t *tmp;
+    lint_t *ptr = begin;
+    lint_t *tmp;
 
-        while(ptr) {
-                /* Save ptr to ftm */
-                tmp = ptr;
+    while(ptr) {
+        /* Save ptr to ftm */
+        tmp = ptr;
 
-                /* Next */
-                ptr = ptr->next;
+        /* Next */
+        ptr = ptr->next;
 
-                if(ptr) {
-                        ptr->last = NULL;
-                }
-
-                /* free ressources */
-                if(tmp->path) {
-                        free(tmp->path);
-                        tmp->path = NULL;
-                }
-
-                free(tmp);
-                tmp = NULL;
+        if(ptr) {
+            ptr->last = NULL;
         }
+
+        /* free ressources */
+        if(tmp->path) {
+            free(tmp->path);
+            tmp->path = NULL;
+        }
+
+        free(tmp);
+        tmp = NULL;
+    }
 }
 
 
 
 lint_t *list_remove(lint_t *ptr)
 {
-        lint_t *p,*n;
-        if(ptr==NULL) {
-                return NULL;
-        }
+    lint_t *p,*n;
+    if(ptr==NULL) {
+        return NULL;
+    }
 
-        p=ptr->last;
-        n=ptr->next;
-        if(p&&n) {
-                p->next = n;
-                n->last = p;
-        } else if(p&&!n) {
-                p->next=NULL;
-        } else if(!p&&n) {
-                n->last=NULL;
-        }
+    p=ptr->last;
+    n=ptr->next;
+    if(p&&n) {
+        p->next = n;
+        n->last = p;
+    } else if(p&&!n) {
+        p->next=NULL;
+    } else if(!p&&n) {
+        n->last=NULL;
+    }
 
-        free(ptr->path);
-        ptr->path = NULL;
-        free(ptr);
-        ptr = NULL;
+    free(ptr->path);
+    ptr->path = NULL;
+    free(ptr);
+    ptr = NULL;
 
-        return n;
+    return n;
 }
 
 
 /* Init of the element */
 static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, dev_t dev, ino_t node,  bool flag)
 {
-        /* Fill data */
-        short   plen = strlen(n) + 2;
-        pointer->path = malloc(plen);
-        strncpy(pointer->path, n, plen);
+    /* Fill data */
+    short   plen = strlen(n) + 2;
+    pointer->path = malloc(plen);
+    strncpy(pointer->path, n, plen);
 
-        pointer->node    = node;
-        pointer->dev     = dev;
-        pointer->fsize   = fs;
-        pointer->dupflag = flag;
-        pointer->filter  = true;
+    pointer->node    = node;
+    pointer->dev     = dev;
+    pointer->fsize   = fs;
+    pointer->dupflag = flag;
+    pointer->filter  = true;
 
-        /* Make sure the fp arrays are filled with 0
-         This is important if a file has a smaller size
-         than the size read in for the fingerprint -
-         The backsum might not be calculated then, what might
-         cause inaccurate results.
-        */
-        memset(pointer->fp[0],0,MD5_LEN);
-        memset(pointer->fp[1],0,MD5_LEN);
+    /* Make sure the fp arrays are filled with 0
+     This is important if a file has a smaller size
+     than the size read in for the fingerprint -
+     The backsum might not be calculated then, what might
+     cause inaccurate results.
+    */
+    memset(pointer->fp[0],0,MD5_LEN);
+    memset(pointer->fp[1],0,MD5_LEN);
 
-        /* Clear the md5 digest array too */
+    /* Clear the md5 digest array too */
 #if BYTE_IN_THE_MIDDLE
-        memset(pointer->bim,0,BYTE_MIDDLE_SIZE);
+    memset(pointer->bim,0,BYTE_MIDDLE_SIZE);
 #endif
-        memset(pointer->md5_digest,0,MD5_LEN);
+    memset(pointer->md5_digest,0,MD5_LEN);
 }
 
 
 /* Sorts the list after the criteria specified by the (*cmp) callback  */
 lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
 {
-        lint_t *p, *q, *e, *tail;
-        lint_t *list = begin;
-        int insize, nmerges, psize, qsize, i;
+    lint_t *p, *q, *e, *tail;
+    lint_t *list = begin;
+    int insize, nmerges, psize, qsize, i;
 
-        /*
-         * Silly special case: if `list' was passed in as NULL, return
-         * NULL immediately.
-         */
-        if (!list) {
-                return NULL;
-        }
+    /*
+     * Silly special case: if `list' was passed in as NULL, return
+     * NULL immediately.
+     */
+    if (!list) {
+        return NULL;
+    }
 
-        insize = 1;
+    insize = 1;
 
-        while (1) {
-                p = list;
-                list = NULL;
-                tail = NULL;
+    while (1) {
+        p = list;
+        list = NULL;
+        tail = NULL;
 
-                nmerges = 0;  /* count number of merges we do in this pass */
+        nmerges = 0;  /* count number of merges we do in this pass */
 
-                while (p) {
-                        nmerges++;  /* there exists a merge to be done */
-                        /* step `insize' places along from p */
-                        q = p;
-                        psize = 0;
-                        for (i = 0; i < insize; i++) {
-                                psize++;
-                                q = q->next;
-                                if (!q) {
-                                        break;
-                                }
-                        }
+        while (p) {
+            nmerges++;  /* there exists a merge to be done */
+            /* step `insize' places along from p */
+            q = p;
+            psize = 0;
+            for (i = 0; i < insize; i++) {
+                psize++;
+                q = q->next;
+                if (!q) {
+                    break;
+                }
+            }
 
-                        /* if q hasn't fallen off end, we have two lists to merge */
-                        qsize = insize;
+            /* if q hasn't fallen off end, we have two lists to merge */
+            qsize = insize;
 
-                        /* now we have two lists; merge them */
-                        while (psize > 0 || (qsize > 0 && q)) {
+            /* now we have two lists; merge them */
+            while (psize > 0 || (qsize > 0 && q)) {
 
-                                /* decide whether next lint_t of merge comes from p or q */
-                                if (psize == 0) {
-                                        /* p is empty; e must come from q. */
-                                        e = q;
-                                        q = q->next;
-                                        qsize--;
+                /* decide whether next lint_t of merge comes from p or q */
+                if (psize == 0) {
+                    /* p is empty; e must come from q. */
+                    e = q;
+                    q = q->next;
+                    qsize--;
 
-                                } else if (qsize == 0 || !q) {
-                                        /* q is empty; e must come from p. */
-                                        e = p;
-                                        p = p->next;
-                                        psize--;
+                } else if (qsize == 0 || !q) {
+                    /* q is empty; e must come from p. */
+                    e = p;
+                    p = p->next;
+                    psize--;
 
-                                } else if (cmp(p,q) <= 0) {
-                                        /* First lint_t of p is lower (or same);
-                                         * e must come from p. */
-                                        e = p;
-                                        p = p->next;
-                                        psize--;
+                } else if (cmp(p,q) <= 0) {
+                    /* First lint_t of p is lower (or same);
+                     * e must come from p. */
+                    e = p;
+                    p = p->next;
+                    psize--;
 
-                                } else {
-                                        /* First lint_t of q is lower; e must come from q. */
-                                        e = q;
-                                        q = q->next;
-                                        qsize--;
+                } else {
+                    /* First lint_t of q is lower; e must come from q. */
+                    e = q;
+                    q = q->next;
+                    qsize--;
 
-                                }
-                                /* add the next lint_t to the merged list */
-                                if (tail) {
-                                        tail->next = e;
-                                } else {
-                                        list = e;
-                                }
-
-                                e->last = tail;
-
-                                tail = e;
-                        }
-
-                        /* now p has stepped `insize' places along, and q has too */
-                        p = q;
+                }
+                /* add the next lint_t to the merged list */
+                if (tail) {
+                    tail->next = e;
+                } else {
+                    list = e;
                 }
 
-                tail->next = NULL;
+                e->last = tail;
 
-                /* If we have done only one merge, we're finished. */
-                if (nmerges <= 1) {
-                        /* allow for nmerges==0, the empty list case */
-                        start=list;
-                        return list;
-                }
-                /* Otherwise repeat, merging lists twice the size */
-                insize *= 2;
+                tail = e;
+            }
+
+            /* now p has stepped `insize' places along, and q has too */
+            p = q;
         }
+
+        tail->next = NULL;
+
+        /* If we have done only one merge, we're finished. */
+        if (nmerges <= 1) {
+            /* allow for nmerges==0, the empty list case */
+            start=list;
+            return list;
+        }
+        /* Otherwise repeat, merging lists twice the size */
+        insize *= 2;
+    }
 }
 
 
 
 void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
 {
-        lint_t *tmp = malloc(sizeof(lint_t));
-        list_filldata(tmp,n,s,dev,node, dupflag);
+    lint_t *tmp = malloc(sizeof(lint_t));
+    list_filldata(tmp,n,s,dev,node, dupflag);
 
-        if(start == NULL) { /* INIT */
-                tmp->next=NULL;
-                tmp->last=NULL;
-                start=tmp;
-                back=tmp;
-                len = 1;
-        } else {
-                lint_t *prev	= back;
-                back=tmp;
-                prev->next=tmp;
-                tmp->last=prev;
-                tmp->next=NULL;
-                len++;
-        }
+    if(start == NULL) { /* INIT */
+        tmp->next=NULL;
+        tmp->last=NULL;
+        start=tmp;
+        back=tmp;
+        len = 1;
+    } else {
+        lint_t *prev	= back;
+        back=tmp;
+        prev->next=tmp;
+        tmp->last=prev;
+        tmp->next=NULL;
+        len++;
+    }
 }

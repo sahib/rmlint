@@ -28,11 +28,11 @@
 
 typedef struct {
 
-        /* Start and end pointer of a 'group' */
-        lint_t *grp_stp, *grp_enp;
+    /* Start and end pointer of a 'group' */
+    lint_t *grp_stp, *grp_enp;
 
-        /* elems in this list and total size */
-        nuint_t len, size;
+    /* elems in this list and total size */
+    nuint_t len, size;
 
 } file_group;
 
