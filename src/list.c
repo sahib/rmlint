@@ -26,35 +26,26 @@
 #include "list.h"
 #include "rmlint.h"
 
+/* list.c: 
+   1) Append, sort, ... 
+*/
 
-/*** List global ***/
-iFile *start = NULL; /* A pointer to the first element in the list */
-iFile *back  = NULL; /* A pointer to the last  element in the list */
+lint_t *start = NULL; /* A pointer to the first element in the list */
+lint_t *back  = NULL; /* A pointer to the last  element in the list */
 
 /** Length of list stored here. This not needed for the implementation itself,
  * but for deciding how may threds to spawn / progress and stuff **/
-uint32 len;
+nuint_t len;
 
 /** list_begin() - returns pointer to start of list **/
-iFile *list_begin(void)
+lint_t *list_begin(void)
 {
         return start;
 }
 
-/** list_end() - returns pointer to start of list **/
-iFile *list_end(void)
-{
-        return back;
-}
-
-/** Checks if list is empty - Return True if empty. **/
-bool list_isempty(void)
-{
-        return (start) ? false : true;
-}
 
 /** Make len visible to other files **/
-uint32 list_len(void)
+nuint_t list_len(void)
 {
         return len;
 }
@@ -65,10 +56,10 @@ uint32 list_len(void)
  * and give back memory.
  **/
 
-void list_clear(iFile *begin)
+void list_clear(lint_t *begin)
 {
-        iFile *ptr = begin;
-        iFile *tmp;
+        lint_t *ptr = begin;
+        lint_t *tmp;
 
         while(ptr) {
                 /* Save ptr to ftm */
@@ -94,9 +85,9 @@ void list_clear(iFile *begin)
 
 
 
-iFile *list_remove(iFile *ptr)
+lint_t *list_remove(lint_t *ptr)
 {
-        iFile *p,*n;
+        lint_t *p,*n;
         if(ptr==NULL) {
                 return NULL;
         }
@@ -122,7 +113,7 @@ iFile *list_remove(iFile *ptr)
 
 
 /* Init of the element */
-static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, ino_t node,  bool flag)
+static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, dev_t dev, ino_t node,  bool flag)
 {
         /* Fill data */
         short   plen = strlen(n) + 2;
@@ -153,10 +144,10 @@ static void list_filldata(iFile *pointer, const char *n,uint32 fs, dev_t dev, in
 
 
 /* Sorts the list after the criteria specified by the (*cmp) callback  */
-iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*))
+lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
 {
-        iFile *p, *q, *e, *tail;
-        iFile *list = begin;
+        lint_t *p, *q, *e, *tail;
+        lint_t *list = begin;
         int insize, nmerges, psize, qsize, i;
 
         /*
@@ -195,7 +186,7 @@ iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*))
                         /* now we have two lists; merge them */
                         while (psize > 0 || (qsize > 0 && q)) {
 
-                                /* decide whether next iFile of merge comes from p or q */
+                                /* decide whether next lint_t of merge comes from p or q */
                                 if (psize == 0) {
                                         /* p is empty; e must come from q. */
                                         e = q;
@@ -209,20 +200,20 @@ iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*))
                                         psize--;
 
                                 } else if (cmp(p,q) <= 0) {
-                                        /* First iFile of p is lower (or same);
+                                        /* First lint_t of p is lower (or same);
                                          * e must come from p. */
                                         e = p;
                                         p = p->next;
                                         psize--;
 
                                 } else {
-                                        /* First iFile of q is lower; e must come from q. */
+                                        /* First lint_t of q is lower; e must come from q. */
                                         e = q;
                                         q = q->next;
                                         qsize--;
 
                                 }
-                                /* add the next iFile to the merged list */
+                                /* add the next lint_t to the merged list */
                                 if (tail) {
                                         tail->next = e;
                                 } else {
@@ -253,9 +244,9 @@ iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*))
 
 
 
-void list_append(const char *n, uint32 s, dev_t dev, ino_t node,  bool dupflag)
+void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
 {
-        iFile *tmp = malloc(sizeof(iFile));
+        lint_t *tmp = malloc(sizeof(lint_t));
         list_filldata(tmp,n,s,dev,node, dupflag);
 
         if(start == NULL) { /* INIT */
@@ -265,7 +256,7 @@ void list_append(const char *n, uint32 s, dev_t dev, ino_t node,  bool dupflag)
                 back=tmp;
                 len = 1;
         } else {
-                iFile *prev	= back;
+                lint_t *prev	= back;
                 back=tmp;
                 prev->next=tmp;
                 tmp->last=prev;

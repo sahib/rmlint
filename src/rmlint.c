@@ -19,6 +19,12 @@
 *
 **/
 
+
+
+/* 
+ rmlint.c: 
+ 1) Methods to parse arguments and set vars accordingly 
+*/ 
 #define _XOPEN_SOURCE 500
 #define _GNU_SOURCE
 
@@ -26,7 +32,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <strings.h>
+
+#include <sys/stat.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <getopt.h>
 #include <dirent.h>
@@ -35,14 +43,8 @@
 
 #include "rmlint.h"
 #include "mode.h"
-#include "filter.h"
-#include "list.h"
-#include "defs.h"
-
-
 
 /**
-
 Result of the testdir run should be (dont run with "-f"!):
 ----------------------------------------------------------
 
@@ -58,7 +60,6 @@ X testdir/recursed_b/two_plus_one
 
 # testdir/with spaces a
 X testdir/with spaces b
-
 */
 
 /* If more that one path given increment */
@@ -71,9 +72,7 @@ bool do_exit = false,
      ex_stat = false;
 
 /* Default commands */
-const char *command_C = "ls \"%s\" -lasi";
-const char *command_c = "ls \"%s\"";
-const char *script_name = "rmlint.sh";
+const char *script_name = "rmlint";
 
 
 /* If die() is called rmlint will jump back to the end of main
@@ -83,6 +82,20 @@ const char *script_name = "rmlint.sh";
  * */
 jmp_buf place;
 
+/* Don't forget to free retvalue */
+char *strdup_printf (const char *format, ...)
+{
+		va_list arg;
+		char *tmp;
+
+		va_start (arg, format);
+		if(vasprintf (&tmp, format, arg) == -1) 
+			return NULL; 
+	
+		va_end (arg);
+
+		return tmp;
+}
 
 /** Messaging **/
 void error(const char* format, ...)
@@ -90,7 +103,7 @@ void error(const char* format, ...)
         if(set.verbosity > 0) {
                 va_list args;
                 va_start (args, format);
-                vfprintf (stderr, format, args);
+                vfprintf (stdout, format, args);
                 va_end (args);
         }
 }
@@ -121,19 +134,21 @@ void info(const char* format, ...)
 */
 int systemf(const char* format, ...)
 {
-        int ret = 0;
-        char cmd_buf[1024];
-
-        /* Build a command  */
-        va_list args;
-        va_start (args, format);
-        vsnprintf (cmd_buf,1024,format, args);
-        va_end (args);
-
+		va_list arg;
+		char *cmd;
+		int ret = 0;
+	
+		va_start (arg, format);
+		if(vasprintf (&cmd, format, arg) == -1) 
+			return -1; 
+	
+		va_end (arg);
+	
         /* Now execute a shell command */
-        if((ret = system(cmd_buf)) == -1) {
+        if((ret = system(cmd)) == -1) {
                 perror("systemf(const char* format, ...)");
         }
+		if(cmd) free(cmd); 
         return ret;
 }
 
@@ -143,7 +158,7 @@ static void print_help(void)
         fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [File[s]] [Options]\n");
         fprintf(stderr, "\nGeneral options:\n\n"
                 "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
-                "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally. (Slow!) (Default: No.)\n"
+                "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally for duplicates. (Slow!) (Default: No.)\n"
                 "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!')\n"
                );
         fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
@@ -161,9 +176,9 @@ static void print_help(void)
         fprintf(stderr,	"\n\t\t\t\tWhere modes are:\n\n"
                 "\t\t\t\tlist  - Only list found files and exit.\n"
                 "\t\t\t\tlink  - Replace file with a hard link to original.\n"
-                "\t\t\t\task   - Ask for each file what to do\n"
+                "\t\t\t\task   - Ask for each file what to do.\n"
                 "\t\t\t\tnoask - Full removal without asking.\n"
-                "\t\t\t\tcmd   - Takes the command given by -c and executes it on the file.\n"
+                "\t\t\t\tcmd   - Takes the command given by -c/-C and executes it on the duplicate/original.\n"
                 "\t\t\t\tDefault: list\n\n"
                 "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n");
         fprintf(stderr,"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
@@ -180,13 +195,14 @@ static void print_help(void)
                 "\t-h --help\t\tPrints this text and exits\n"
                 "\t-o --output [<o>]\tOutputs logfile to <o>. The <o> argument is optional, specify none to write no log.\n"
                 "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace. (Default \"rmlint.sh\")\n\n");
-        fprintf(stderr,"\t-z --dump <id>\t\tOption with various weird meanings, most scientist postulated that it kills kittens (-> Some debug option).\n"
-                "\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
+        fprintf(stderr,"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
                 "\t\t\t\tWhere:\n"
                 "\t\t\t\t0 prints nothing\n"
                 "\t\t\t\t1 prints only errors and results\n"
                 "\t\t\t\t2 + prints warning\n"
-                "\t\t\t\t3 + everything else\n"
+                "\t\t\t\t3 + info and statistics\n\n"
+                "\t\t\t\tDefault is 2.\n"
+				"\t\t\t\tUse 3 to get an idea what's happening internally, 1 to get raw output without colors.\n"
                 "\n"
                );
         fprintf(stderr,"Additionally, the options p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
@@ -201,7 +217,7 @@ static void print_help(void)
 /* Version string */
 static void print_version(void)
 {
-        fprintf(stderr, "Version 0.76b Compiled: %s @ %s\n",__DATE__,__TIME__);
+        fprintf(stderr, "Version 0.76b Compiled: [%s]-[%s]\n",__DATE__,__TIME__);
         die(0);
 }
 
@@ -215,15 +231,15 @@ void rmlint_set_default_settings(rmlint_settings *set)
         set->depth 		 =  0; 		/* inf depth    */
         set->followlinks =  0; 		/* fol. link    */
         set->threads 	 =  4; 		/* Quad,quad.   */
-        set->verbosity 	 =  3; 		/* Everything   */
+        set->verbosity 	 =  2; 		/* Most relev.  */
         set->samepart  	 =  0; 		/* Stay parted  */
         set->paths  	 =  NULL;   /* Startnode    */
         set->dpattern 	 =  NULL;   /* DRegpattern  */
         set->fpattern 	 =  NULL;   /* FRegPattern  */
         set->cmd_path 	 =  NULL;   /* Cmd,if used  */
         set->cmd_orig    =  NULL;   /* Origcmd, -"- */
-        set->junk_chars =   NULL;
-        set->oldtmpdata    = 60;
+        set->junk_chars  =  NULL;   /* You have to set this   */
+        set->oldtmpdata    = 60;    /* Remove 1min old buffer */
         set->ignore_hidden = 1;
         set->findemptydirs = 1;
         set->namecluster   = 0;
@@ -494,16 +510,20 @@ void die(int status)
         if(set.paths) {
                 free(set.paths);
         }
-	
+
         if(status) {
                 info("Abnormal exit\n");
         }
 
-		/* Close logfile */
+        /* Close logfile */
         if(get_logstream()) {
                 fclose(get_logstream());
         }
-
+        /* Close scriptfile */
+        if(get_scriptstream()) {
+                fclose(get_scriptstream());
+        }
+	
         /* Prepare to jump to return */
         do_exit = true;
         ex_stat = status;
@@ -513,7 +533,7 @@ void die(int status)
 }
 
 /* Sort criteria for sizesort */
-static long cmp_sz(iFile *a, iFile *b)
+static long cmp_sz(lint_t *a, lint_t *b)
 {
         return a->fsize - b->fsize;
 }
@@ -522,25 +542,19 @@ static long cmp_sz(iFile *a, iFile *b)
 /* Actual entry point */
 int rmlint_main(void)
 {
-		/* Used only for infomessage */
-        uint32 total_files = 0;
+        /* Used only for infomessage */
+        nuint_t total_files = 0;
 
-		/* Jump to this location on exit (with do_exit=true) */
+        /* Jump to this location on exit (with do_exit=true) */
         setjmp(place);
         jmp_set = true;
         if(do_exit != true) {
                 if(set.mode == 5) {
-
-                        if(!set.cmd_orig && !set.cmd_path) {
-                                set.cmd_orig = (char*)command_C;
-                                set.cmd_path = (char*)command_c;
-                        } else {
-                                if(set.cmd_orig) {
-                                        check_cmd(set.cmd_orig);
-                                }
-                                if(set.cmd_path) {
-                                        check_cmd(set.cmd_path);
-                                }
+                        if(set.cmd_orig) {
+                            check_cmd(set.cmd_orig);
+                        }
+                        if(set.cmd_path) {
+                            check_cmd(set.cmd_path);
                         }
                 }
                 /* Open logfile */
@@ -561,7 +575,7 @@ int rmlint_main(void)
                                         continue;
                                 }
 
-                                list_append(set.paths[cpindex],(uint32)buf.st_size,buf.st_dev,buf.st_ino, true);
+                                list_append(set.paths[cpindex],(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true);
                                 total_files++;
 
                         } else {
@@ -584,7 +598,7 @@ int rmlint_main(void)
                 if(set.threads > total_files) {
                         set.threads = total_files;
                 }
-			
+
 
                 /* Till this point the list is unsorted
                  * The filter alorithms requires the list to be size-sorted,

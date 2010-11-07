@@ -31,20 +31,22 @@
  **********************************************************************
  */
 
+
+/* #include changed */
 #include "md5.h"
-#include "defs.h"
 #include "rmlint.h"
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include <alloca.h>
 #include <math.h>
-
-/* For the md5_file routine */
-
-
+/* Till MDPrintArr no change */
+/* md5.c: 
+   1) Methods to calculate md5sums 
+   2) Method to build a short fingerprint of a file
+   3) Method to build a 'full' (not quite) md5sum of a file 
+*/ 
 /* forward declaration */
 static void Transform ();
 
@@ -71,22 +73,22 @@ static unsigned char PADDING[64] = {
 /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4 */
 /* Rotation is separate from addition to prevent recomputation */
 #define FF(a, b, c, d, x, s, ac) \
-  {(a) += F ((b), (c), (d)) + (x) + (uint32)(ac); \
+  {(a) += F ((b), (c), (d)) + (x) + (nuint_t)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
 #define GG(a, b, c, d, x, s, ac) \
-  {(a) += G ((b), (c), (d)) + (x) + (uint32)(ac); \
+  {(a) += G ((b), (c), (d)) + (x) + (nuint_t)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
 #define HH(a, b, c, d, x, s, ac) \
-  {(a) += H ((b), (c), (d)) + (x) + (uint32)(ac); \
+  {(a) += H ((b), (c), (d)) + (x) + (nuint_t)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
 #define II(a, b, c, d, x, s, ac) \
-  {(a) += I ((b), (c), (d)) + (x) + (uint32)(ac); \
+  {(a) += I ((b), (c), (d)) + (x) + (nuint_t)(ac); \
    (a) = ROTATE_LEFT ((a), (s)); \
    (a) += (b); \
   }
@@ -94,14 +96,14 @@ static unsigned char PADDING[64] = {
 static void MD5Init (mdContext)
 MD5_CTX *mdContext;
 {
-        mdContext->i[0] = mdContext->i[1] = (uint32)0;
+        mdContext->i[0] = mdContext->i[1] = (nuint_t)0;
 
         /* Load magic initialization constants.
          */
-        mdContext->buf[0] = (uint32)0x67452301;
-        mdContext->buf[1] = (uint32)0xefcdab89;
-        mdContext->buf[2] = (uint32)0x98badcfe;
-        mdContext->buf[3] = (uint32)0x10325476;
+        mdContext->buf[0] = (nuint_t)0x67452301;
+        mdContext->buf[1] = (nuint_t)0xefcdab89;
+        mdContext->buf[2] = (nuint_t)0x98badcfe;
+        mdContext->buf[3] = (nuint_t)0x10325476;
 }
 
 static void MD5Update (mdContext, inBuf, inLen)
@@ -109,7 +111,7 @@ MD5_CTX *mdContext;
 unsigned char *inBuf;
 unsigned int inLen;
 {
-        uint32 in[16];
+        nuint_t in[16];
         int mdi;
         unsigned int i, ii;
 
@@ -117,11 +119,11 @@ unsigned int inLen;
         mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
 
         /* update number of bits */
-        if ((mdContext->i[0] + ((uint32)inLen << 3)) < mdContext->i[0]) {
+        if ((mdContext->i[0] + ((nuint_t)inLen << 3)) < mdContext->i[0]) {
                 mdContext->i[1]++;
         }
-        mdContext->i[0] += ((uint32)inLen << 3);
-        mdContext->i[1] += ((uint32)inLen >> 29);
+        mdContext->i[0] += ((nuint_t)inLen << 3);
+        mdContext->i[1] += ((nuint_t)inLen >> 29);
 
         while (inLen--) {
                 /* add new character to buffer, increment mdi */
@@ -130,10 +132,10 @@ unsigned int inLen;
                 /* transform if necessary */
                 if (mdi == 0x40) {
                         for (i = 0, ii = 0; i < 16; i++, ii += 4)
-                                in[i] = (((uint32)mdContext->in[ii+3]) << 24) |
-                                        (((uint32)mdContext->in[ii+2]) << 16) |
-                                        (((uint32)mdContext->in[ii+1]) << 8) |
-                                        ((uint32)mdContext->in[ii]);
+                                in[i] = (((nuint_t)mdContext->in[ii+3]) << 24) |
+                                        (((nuint_t)mdContext->in[ii+2]) << 16) |
+                                        (((nuint_t)mdContext->in[ii+1]) << 8) |
+                                        ((nuint_t)mdContext->in[ii]);
                         Transform (mdContext->buf, in);
                         mdi = 0;
                 }
@@ -143,7 +145,7 @@ unsigned int inLen;
 static void MD5Final (mdContext)
 MD5_CTX *mdContext;
 {
-        uint32 in[16];
+        nuint_t in[16];
         int mdi;
         unsigned int i, ii;
         unsigned int padLen;
@@ -161,10 +163,10 @@ MD5_CTX *mdContext;
 
         /* append length in bits and transform */
         for (i = 0, ii = 0; i < 14; i++, ii += 4)
-                in[i] = (((uint32)mdContext->in[ii+3]) << 24) |
-                        (((uint32)mdContext->in[ii+2]) << 16) |
-                        (((uint32)mdContext->in[ii+1]) << 8) |
-                        ((uint32)mdContext->in[ii]);
+                in[i] = (((nuint_t)mdContext->in[ii+3]) << 24) |
+                        (((nuint_t)mdContext->in[ii+2]) << 16) |
+                        (((nuint_t)mdContext->in[ii+1]) << 8) |
+                        ((nuint_t)mdContext->in[ii]);
         Transform (mdContext->buf, in);
 
         /* store buffer in digest */
@@ -182,10 +184,10 @@ MD5_CTX *mdContext;
 /* Basic MD5 step. Transform buf based on in.
  */
 static void Transform (buf, in)
-uint32 *buf;
-uint32 *in;
+nuint_t *buf;
+nuint_t *in;
 {
-        uint32 a = buf[0], b = buf[1], c = buf[2], d = buf[3];
+        nuint_t a = buf[0], b = buf[1], c = buf[2], d = buf[3];
 
         /* Round 1 */
 #define S11 7
@@ -281,6 +283,12 @@ uint32 *in;
         buf[3] += d;
 }
 
+
+/*********************************************/
+/** Original md5.c modified from now on ~CP **/
+/*********************************************/
+
+/* Prints a md5digest in human readable representation */
 void MDPrintArr(unsigned char *digest)
 {
         int i;
@@ -298,7 +306,7 @@ pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 /* used to calc the complete checksum of file & save it in File */
-void md5_file(iFile *file)
+void md5_file(lint_t *file)
 {
         /* If the twice the size of the fingerprints read in is bigger than the actual size:
          * return as we don't need this checksum anymore - this reduces silly IO with many small files
@@ -308,7 +316,7 @@ void md5_file(iFile *file)
         MD5_CTX mdContext;
         unsigned char *data;
 
-        uint32 already_read = MD5_FPSIZE_FORM(file->fsize);
+        nuint_t already_read = MD5_FPSIZE_FORM(file->fsize);
         already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read;
         if(file->fsize <= (already_read<<1)) {
                 return;    /* This is some quite hyptothetical case ..*/
@@ -344,8 +352,12 @@ void md5_file(iFile *file)
 }
 
 
+/* Reads <readsize> bytes from each start and end + 8 bytes in the middle
+   start and end gets converted into a 128bit md5sum and are written in <file>
+   the 8 byte are stored in raw form
+*/
 
-void md5_fingerprint(iFile *file, const uint32 readsize)
+void md5_fingerprint(lint_t *file, const nuint_t readsize)
 {
         int bytes = 0;
 
@@ -377,10 +389,9 @@ void md5_fingerprint(iFile *file, const uint32 readsize)
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_fp_IO);
 #endif
-#if BYTE_IN_THE_MIDDLE
         fseek(pF, file->fsize>>1 ,SEEK_SET);
         bytes = fread(file->bim, sizeof(char), BYTE_MIDDLE_SIZE, pF);
-#endif
+
         fseek(pF, -readsize,SEEK_END);
         bytes = fread(data,sizeof(char),readsize,pF);
 #if (MD5_SERIAL_IO == 1)

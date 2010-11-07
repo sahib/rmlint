@@ -24,11 +24,6 @@
 #ifndef DEF_H
 #define DEF_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdint.h>
-
 /* Use colored output? */
 #define USE_COLOR 1
 
@@ -67,11 +62,8 @@
 
 #define MD5_FPSIZE_FORM(X) sqrt(X / MD5_FP_PERCENT) + 1;
 
-/** typedef a 32 bit type **/
-typedef unsigned long uint32;
-
-/* What to append at the end of a command, Default " ;\n" so script continues also on error*/
-#define SCRIPT_LINE_SUFFIX  " ;"
+/** nuint_t = normal unsigned integer type :-) **/
+typedef unsigned long nuint_t;
 
 /* Last line in script */
 #define SCRIPT_LAST "echo Done"
@@ -80,7 +72,6 @@ typedef unsigned long uint32;
 #define USE_DEPTH_FIRST 0
 
 /* Reads a short sequence of bytes in the middle of a file  */
-#define BYTE_IN_THE_MIDDLE 1
 #define BYTE_MIDDLE_SIZE 8
 
 

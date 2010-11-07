@@ -23,22 +23,22 @@
 #ifndef PROGRESS_H
 #define PROGRESS_H
 
-#include "md5.h"
+
 #include "list.h"
 
 typedef struct {
 
         /* Start and end pointer of a 'group' */
-        iFile *grp_stp, *grp_enp;
+        lint_t *grp_stp, *grp_enp;
 
         /* elems in this list and total size */
-        uint32 len, size;
+        nuint_t len, size;
 
 } file_group;
 
 
 int  regfilter(const char* input, const char *pattern);
 int  recurse_dir(const char *path);
-void start_processing(iFile *b);
+void start_processing(lint_t *b);
 
 #endif

@@ -23,27 +23,23 @@
 #ifndef SLIST_H
 #define SLIST_H
 
-#include <limits.h>
-#include <stdint.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include "defs.h"
 
 
+/* I can haz bool? */
 typedef char bool;
 #define false ( 0)
 #define true  (!0)
 
-
-typedef struct iFile {
+/* The structure used from now on to handle nearly everything */
+typedef struct lint_t {
         unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
         unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-
-#if  BYTE_IN_THE_MIDDLE
         char bim[BYTE_MIDDLE_SIZE];
-#endif
-        char *path;		  	               /* absolute path from working dir */
-        uint32 fsize; 		                   /* Size of the file (bytes) */
+
+        char *path;		  	                   /* absolute path from working dir */
+        nuint_t fsize; 		                   /* Size of the file (bytes) */
         bool filter; 			               /* Uhm? */
         bool dupflag;			               /* Is the file marked as duplicate? */
 
@@ -52,21 +48,28 @@ typedef struct iFile {
         dev_t dev;
 
         /* Pointer to next element */
-        struct iFile *next;
-        struct iFile *last;
+        struct lint_t *next;
+        struct lint_t *last;
 
-} iFile;
+} lint_t;
 
 
+/* Sort method; begins with '*begin' ends with NULL, cmp as sort criteria */
+lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*));
 
-iFile *list_sort(iFile *begin, long (*cmp)(iFile*,iFile*));
+/* Returns start pointer (only used before splitting list in groups) */
+lint_t *list_begin(void);
 
-/* Prototypes */
-void list_clear(iFile *begin);
-void list_append(const char *n, uint32 s, dev_t dev, ino_t node,  bool dupflag);
-iFile *list_end(void);
-iFile *list_begin(void);
-iFile *list_remove(iFile *ptr);
-uint32 list_len(void);
+/* Removes the element 'ptr' */
+lint_t *list_remove(lint_t *ptr);
+
+/* Clears list from begin till NULL */
+void list_clear(lint_t *begin);
+
+/* Appends lint_t with those datafields at end of list */
+void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag);
+
+/* Returns len of list */
+nuint_t list_len(void);
 
 #endif

@@ -24,27 +24,23 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+#include <alloca.h>
+
 #include <ftw.h>
 #include <signal.h>
 #include <regex.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
-#include <sys/types.h>
 #include <dirent.h>
-
 
 #include "rmlint.h"
 #include "filter.h"
 #include "mode.h"
-#include "defs.h"
-#include "list.h"
+#include "md5.h"
 
-
-uint32 dircount = 0;
+nuint_t dircount = 0;
 bool iAbort   = false,
      dir_done = false,
      db_done  = false;
@@ -329,7 +325,7 @@ int recurse_dir(const char *path)
         if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags))) {
                 if(ret != FTW_STOP) {
                         /* Some error occured */
-                        warning(YEL"FATAL: "NCO"nftw() failed with: %s\n", strerror(errno));
+                        perror(YEL"FATAL: "NCO"nftw():");
                         return EXIT_FAILURE;
                 } else {
                         /* The user pressed SIGINT -> Quit from ntfw() to shutdown in peace. */
@@ -342,19 +338,19 @@ int recurse_dir(const char *path)
 }
 
 
-/* If we have more than one path, several iFiles  *
+/* If we have more than one path, several lint_ts  *
  *  may point to the same (physically same file.  *
  *  This woud result in false positves - Kick'em  */
-static uint32 rm_double_paths(file_group *fp)
+static nuint_t rm_double_paths(file_group *fp)
 {
-        iFile *b = fp->grp_stp;
-        uint32 c = 0;
+        lint_t *b = fp->grp_stp;
+        nuint_t c = 0;
 
         if(b) {
                 while(b->next) {
                         if( (b->node == b->next->node) &&
                             (b->dev  == b->next->dev )  ) {
-                                iFile *tmp = b;
+                                lint_t *tmp = b;
                                 fp->size -= b->fsize;
                                 fp->len--;
 
@@ -377,13 +373,13 @@ static uint32 rm_double_paths(file_group *fp)
 }
 
 /* Sort criteria for sorting by dev and inode */
-static long cmp_nd(iFile *a, iFile *b)
+static long cmp_nd(lint_t *a, lint_t *b)
 {
         return ((long)(a->node) - (long)(b->node));
 }
 
-/* Compares the "fp" array of the iFiles a and b */
-static int cmp_fingerprints(iFile *a,iFile *b)
+/* Compares the "fp" array of the lint_ts a and b */
+static int cmp_fingerprints(lint_t *a,lint_t *b)
 {
         int i,j;
         for(i=0; i<2; i++) {
@@ -394,25 +390,23 @@ static int cmp_fingerprints(iFile *a,iFile *b)
                 }
         }
 
-#if BYTE_IN_THE_MIDDLE
         for(i=0; i<BYTE_MIDDLE_SIZE; i++) {
                 if(a->bim[i] != b->bim[i]) {
                         return 0;
                 }
         }
-#endif
 
         return 1;
 }
 
 /* Performs a fingerprint check on the group fp */
-static uint32 group_filter(file_group *fp)
+static nuint_t group_filter(file_group *fp)
 {
-        iFile *p = fp->grp_stp;
-        iFile *i,*j;
+        lint_t *p = fp->grp_stp;
+        lint_t *i,*j;
 
-        uint32 remove_count = 0;
-        uint32 fp_sz;
+        nuint_t remove_count = 0;
+        nuint_t fp_sz;
 
         if(!fp || fp->grp_stp == NULL) {
                 return 0;
@@ -446,7 +440,7 @@ static uint32 group_filter(file_group *fp)
                                 j = j->next;
                         }
                         if(i->filter) {
-                                iFile *tmp = i;
+                                lint_t *tmp = i;
                                 fp->len--;
                                 fp->size -= i->fsize;
 
@@ -477,7 +471,7 @@ static uint32 group_filter(file_group *fp)
 static void *cksum_cb(void * vp)
 {
         file_group *gp = vp;
-        iFile *file = gp->grp_stp;
+        lint_t *file = gp->grp_stp;
 
         int i = 0;
         for(; i < gp->size && file != NULL; i++) {
@@ -495,7 +489,7 @@ static void build_checksums(file_group *grp)
 
         if(set.threads == 1 ||  grp->size < MD5_MTHREAD_SIZE) {
                 /* Just loop through this group and built the checksum */
-                iFile *p = grp->grp_stp;
+                lint_t *p = grp->grp_stp;
                 while(p) {
                         md5_file(p);
                         p=p->next;
@@ -505,7 +499,7 @@ static void build_checksums(file_group *grp)
                  * so it may be more efficient wo work this on more
                  * than one thread (especially with serial IO */
 
-                iFile *ptr = grp->grp_stp;
+                lint_t *ptr = grp->grp_stp;
                 int ii = 0, jj = 0;
                 int packsize = grp->size / MD5_MTHREAD_SIZE;
 
@@ -565,9 +559,9 @@ static void* sheduler_cb(void *gfp)
 }
 
 /* Joins the threads launched by sheduler */
-static void sheduler_jointhreads(pthread_t *tt, uint32 n)
+static void sheduler_jointhreads(pthread_t *tt, nuint_t n)
 {
-        uint32 ii = 0;
+        nuint_t ii = 0;
         for(ii=0; ii < n; ii++) {
                 if(pthread_join(tt[ii],NULL)) {
                         perror(RED"ERROR: "NCO"pthread_join in sheduler()");
@@ -576,9 +570,9 @@ static void sheduler_jointhreads(pthread_t *tt, uint32 n)
 }
 
 /* Distributes the groups on the ressources */
-static void start_sheduler(file_group *fp, uint32 nlistlen)
+static void start_sheduler(file_group *fp, nuint_t nlistlen)
 {
-        uint32 ii;
+        nuint_t ii;
         pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
 
         if(set.threads == 1) {
@@ -630,7 +624,7 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
 }
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
-static void size_to_human_readable(uint32 num, char *in, int sz)
+static void size_to_human_readable(nuint_t num, char *in, int sz)
 {
         if(num < 1024) {
                 snprintf(in,sz,"%ld B",(unsigned long)num);
@@ -644,13 +638,13 @@ static void size_to_human_readable(uint32 num, char *in, int sz)
 }
 
 
-static void find_double_bases(iFile *starting)
+static void find_double_bases(lint_t *starting)
 {
-        iFile *i = starting;
-        iFile *j = NULL;
+        lint_t *i = starting;
+        lint_t *j = NULL;
 
-		bool phead = true; 
-		
+        bool phead = true;
+
         while(i) {
                 if(i->dupflag) {
                         bool pr = false;
@@ -659,14 +653,14 @@ static void find_double_bases(iFile *starting)
                                 if(!strcmp(basename(i->path), basename(j->path)) &&
                                     i->node != j->node && j->dupflag
                                   ) {
-                                        iFile *x = j;
+                                        lint_t *x = j;
                                         char *tmp2 = canonicalize_file_name(j->path);
 
-								        if(phead) {
-											 error("\n"GRE"#"NCO" Double basenames: \n");
-									         phead = false; 		
-										}
-									  
+                                        if(phead) {
+                                                error("\n%s#"NCO" Double basenames: \n", (set.verbosity > 1) ? GRE : NCO);
+                                                phead = false;
+                                        }
+
                                         if(!pr) {
                                                 char * tmp = canonicalize_file_name(i->path);
                                                 i->dupflag = false;
@@ -702,18 +696,18 @@ static void find_double_bases(iFile *starting)
         }
 }
 
-static long cmp_sort_dupID(iFile* a, iFile* b) 
+static long cmp_sort_dupID(lint_t* a, lint_t* b)
 {
         return ((long)a->dupflag-(long)b->dupflag);
 }
 
-void start_processing(iFile *b)
+void start_processing(lint_t *b)
 {
         file_group *fglist = NULL,
                     emptylist;
 
         char lintbuf[128];
-        uint32  ii           = 0,
+        nuint_t ii           = 0,
                 lint         = 0,
                 spelen       = 0,
                 remaining    = 0,
@@ -728,8 +722,8 @@ void start_processing(iFile *b)
         emptylist.len = 1;
 
         while(b) {
-                iFile *q = b, *prev = NULL;
-                uint32 glen = 0, gsize = 0;
+                lint_t *q = b, *prev = NULL;
+                nuint_t glen = 0, gsize = 0;
 
                 while(b && q->fsize == b->fsize) {
                         prev = b;
@@ -776,8 +770,8 @@ void start_processing(iFile *b)
 
                                 spelen++;
                         } else {
-                                iFile *ptr;
-							    bool flag = 42; 
+                                lint_t *ptr;
+                                bool flag = 42;
 
                                 q = list_sort(q,cmp_nd);
                                 emptylist.grp_stp = q;
@@ -787,34 +781,39 @@ void start_processing(iFile *b)
                                 }
 
                                 ptr = emptylist.grp_stp;
-								ptr = list_sort(ptr,cmp_sort_dupID);
+                                ptr = list_sort(ptr,cmp_sort_dupID);
                                 emptylist.grp_stp = ptr;
                                 emptylist.len = 0;
                                 while(ptr) {
 
-										if(flag != ptr->dupflag) {
+                                        if(flag != ptr->dupflag) {
+											    if(set.verbosity > 1) {
+													error(GRE"\n#"NCO); 
+												} else {
+													error("\n#");
+												}
                                                 if(ptr->dupflag == TYPE_BLNK) {
-				                                        error("\n"GRE"#"NCO" Bad link(s): \n"); 
-				                                } else if(ptr->dupflag == TYPE_OTMP) {
-				                                        error("\n"GRE"#"NCO" Old Tempfile(s): \n");
-				                                } else if(ptr->dupflag == TYPE_EDIR) {
-				                                        error("\n"GRE"#"NCO" Empty dir(s): \n");
-				                                } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
-				                                        error("\n"GRE"#"NCO" Junk dirname(s): \n");
-				                                } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
-				                                        error("\n"GRE"#"NCO" Junk filename(s): \n");
-				                                } else if(ptr->dupflag == TYPE_NBIN) {
-				                                        error("\n"GRE"#"NCO" Non stripped binarie(s): \n");
-				                                } else if(ptr->fsize   == 0) {
-				                                        error("\n"GRE"#"NCO" Empty file(s): \n");
-				                                }
-											flag = ptr->dupflag; 
-										}
-                                            
-										error("%s\n",ptr->path);
+                                                        error(" Bad link(s): \n");
+                                                } else if(ptr->dupflag == TYPE_OTMP) {
+                                                        error(" Old Tempfile(s): \n");
+                                                } else if(ptr->dupflag == TYPE_EDIR) {
+                                                        error(" Empty dir(s): \n");
+                                                } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
+                                                        error(" Junk dirname(s): \n");
+                                                } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
+                                                        error(" Junk filename(s): \n");
+                                                } else if(ptr->dupflag == TYPE_NBIN) {
+                                                        error(" Non stripped binarie(s): \n");
+                                                } else if(ptr->fsize   == 0) {
+                                                        error(" Empty file(s): \n");
+                                                }
+                                                flag = ptr->dupflag;
+                                        }
+
+                                        error("%s\n",ptr->path);
 
                                         if(set.output) {
-                                                write_to_log(ptr, false, get_logstream());
+                                                write_to_log(ptr, false);
                                         }
                                         ptr = list_remove(ptr);
                                         emptylist.len++;
@@ -859,7 +858,7 @@ void start_processing(iFile *b)
         info(" done. \nNow doing fingerprints and full checksums:\n\n");
         db_done = true;
 
-        error("# Duplicate(s):\n"); 
+        error("%s Duplicate(s):\n",(set.verbosity > 1) ? GRE"#"NCO : "#");
         /* Groups are splitted, now give it to the sheduler */
         /* The sheduler will do another filterstep, build checkusm
          *  and compare 'em. The result is printed afterwards */
@@ -878,11 +877,12 @@ void start_processing(iFile *b)
         }
 
         size_to_human_readable(lint, lintbuf, 127);
-        info("\nIn total "GRE"%ld"NCO" (of %ld files as input) files are duplicates.\n",remaining, original);
-        info("This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
+        warning("\nIn total "GRE"%ld"NCO" (of %ld files as input) files are duplicates.\n",remaining, original);
+        warning("This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
 
         if(set.output) {
-                info("A log has been written to "BLU"%s"NCO".\n", set.output);
+                warning("A log has been written to "BLU"%s.log"NCO".\n", set.output);
+			    warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set.output);
         }
 
         /* End of actual program. Now do some file handling / frees */

@@ -42,23 +42,19 @@
 #define MD5_H
 
 #include <stdlib.h>
-
-#include "defs.h"
 #include "list.h"
 
 /* Data structure for MD5 (Message Digest) computation */
 typedef struct {
-        uint32 i[2];                   /* number of _bits_ handled mod 2^64 */
-        uint32 buf[4];                                    /* scratch buffer */
+        nuint_t i[2];                   /* number of _bits_ handled mod 2^64 */
+        nuint_t buf[4];                                    /* scratch buffer */
         unsigned char in[64];                              /* input buffer */
         unsigned char digest[16];     /* actual digest after MD5Final call */
 } MD5_CTX;
 
-void MDPrint (MD5_CTX *mdContext);
 void MDPrintArr(unsigned char *digest);
-void md5_file (iFile* file);
-void md5_fingerprint(iFile *file, const uint32 readsize);
-void* fpm(void *vp);
+void md5_file (lint_t* file);
+void md5_fingerprint(lint_t *file, const nuint_t readsize);
 
 #endif
 

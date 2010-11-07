@@ -22,9 +22,10 @@
 #ifndef rmlint_H
 #define rmlint_H
 
-#include <stdio.h>
+
 #include "list.h"
 
+/* all available settings see rmlint -h */
 typedef struct {
         char mode;
         char samepart;
@@ -38,7 +39,6 @@ typedef struct {
         char searchdup;
         char findemptydirs;
         char nonstripped;
-        int  depth;
         char **paths;
         char *dpattern;
         char *fpattern;
@@ -47,6 +47,7 @@ typedef struct {
         char *junk_chars;
         char *output;
         int threads;
+        int  depth;
         int verbosity;
 
 } rmlint_settings;
@@ -61,10 +62,11 @@ int  rmlint_main(void);
 
 /* Misc */
 void die(int status);
-void print(iFile *begin);
+void print(lint_t *begin);
 void info(const char* format, ...);
 void error(const char* format, ...);
 void warning(const char* format, ...);
+char *strdup_printf (const char *format, ...);
 int  systemf(const char* format, ...);
 int  get_cpindex(void);
 

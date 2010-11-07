@@ -29,7 +29,9 @@
 
 bool findmatches(file_group *grp);
 void init_filehandler(void);
-void write_to_log(const iFile *file, bool orig, FILE *fd);
+void write_to_log(const lint_t *file, bool orig);
+
 FILE *get_logstream(void);
+FILE *get_scriptstream(void);
 
 #endif

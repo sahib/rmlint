@@ -19,7 +19,7 @@
 *
 **/
 
-#include <stdlib.h>
+
 #include "rmlint.h"
 
 int main(int argc, char **argv)
