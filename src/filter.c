@@ -712,9 +712,7 @@ void start_processing(lint_t *b)
             spelen       = 0,
             remaining    = 0,
             rem_counter  = 0,
-            path_doubles = 0,
-            original     = list_len();
-
+            path_doubles = 0; 
     if(set.namecluster) {
         find_double_bases(b);
         error("\n");
@@ -810,7 +808,31 @@ void start_processing(lint_t *b)
                         flag = ptr->dupflag;
                     }
 
-                    error("%s\n",ptr->path);
+                    if(set.verbosity > 1) {
+                            error(GRE); 
+                    } 
+
+                        if(ptr->dupflag == TYPE_BLNK) {
+                            error("   rm -rf");
+                        } else if(ptr->dupflag == TYPE_OTMP) {
+                            error("   rm -rf");
+                        } else if(ptr->dupflag == TYPE_EDIR) {
+                            error("   rmdir");
+                        } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
+                            error("   ls");
+                        } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
+                            error("   ls");
+                        } else if(ptr->dupflag == TYPE_NBIN) {
+                            error("   strip -s");
+                        } else if(ptr->fsize   == 0) {
+                            error("   rm");
+                        }
+
+                    if(set.verbosity > 1) {
+                            error(NCO); 
+                    } 
+
+                    error(" %s\n",ptr->path);
 
                     if(set.output) {
                         write_to_log(ptr, false);
@@ -877,8 +899,10 @@ void start_processing(lint_t *b)
     }
 
     size_to_human_readable(lint, lintbuf, 127);
-    warning("\nIn total "GRE"%ld"NCO" (of %ld files as input) files are duplicates.\n",remaining, original);
-    warning("This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n", lintbuf, lint);
+    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" duplicates found%s\n",remaining,
+            (set.mode == 1 || set.mode == 2) ? " (Nothing removed yet!)." : ".");
+            
+    warning(RED"=> "NCO"This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n\n", lintbuf, lint);
 
     if(set.output) {
         warning("A log has been written to "BLU"%s.log"NCO".\n", set.output);

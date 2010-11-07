@@ -137,25 +137,25 @@ void write_to_log(const lint_t *file, bool orig)
         }
 
         if(file->dupflag == TYPE_BLNK) {
-            fprintf(get_scriptstream(), "rm '%s' # Bad link pointing nowhere.\n", fpath);
+            fprintf(get_scriptstream(), "rm \"%s\" # Bad link pointing nowhere.\n", fpath);
             fprintf(get_logstream(),"BLNK \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
         } else if(file->dupflag == TYPE_OTMP) {
-            fprintf(get_scriptstream(), "rm '%s' # Tempdata that is older than the actual file.\n", fpath);
+            fprintf(get_scriptstream(), "rm \"%s\" # Tempdata that is older than the actual file.\n", fpath);
             fprintf(get_logstream(),"OTMP \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
         } else if(file->dupflag == TYPE_EDIR) {
-            fprintf(get_scriptstream(), "rmdir '%s' # Empty directory\n", fpath);
+            fprintf(get_scriptstream(), "rmdir \"%s\" # Empty directory\n", fpath);
             fprintf(get_logstream(),"EDIR \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
         } else if(file->dupflag == TYPE_JNK_DIRNAME) {
-            fprintf(get_scriptstream(), "echo '%s' # Direcotryname containing one char of the string \"%s\"\n", fpath, set.junk_chars);
+            fprintf(get_scriptstream(), "echo \"%s\" # Direcotryname containing one char of the string \"%s\"\n", fpath, set.junk_chars);
             fprintf(get_logstream(),"JNKD \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
         } else if(file->dupflag == TYPE_JNK_FILENAME) {
-            fprintf(get_scriptstream(), "ls -ls '%s' # Filename containing one char of the string \"%s\"\n", fpath, set.junk_chars);
+            fprintf(get_scriptstream(), "ls -ls \"%s\" # Filename containing one char of the string \"%s\"\n", fpath, set.junk_chars);
             fprintf(get_logstream(),"JNKN \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
         } else if(file->dupflag == TYPE_NBIN) {
-            fprintf(get_scriptstream(), "strip -s '%s' # Binary containg debug-symbols\n", fpath);
+            fprintf(get_scriptstream(), "strip -s \"%s\" # Binary containg debug-symbols\n", fpath);
             fprintf(get_logstream(),"NBIN \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
         } else if(file->fsize == 0) {
-            fprintf(get_scriptstream(), "rm -rf '%s' # Empty file\n", fpath);
+            fprintf(get_scriptstream(), "rm -rf \"%s\" # Empty file\n", fpath);
             fprintf(get_logstream(),"ZERO \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
         } else if(orig==false) {
 
@@ -164,16 +164,16 @@ void write_to_log(const lint_t *file, bool orig)
                 fprintf(get_scriptstream(),set.cmd_path,fpath);
                 fprintf(get_scriptstream()," &&\n");
             } else {
-                fprintf(get_scriptstream(),"rm -rf '%s' # Duplicate\n",fpath);
+                fprintf(get_scriptstream(),"rm -rf \"%s\" # Duplicate\n",fpath);
             }
         } else {
 
             fprintf(get_logstream(),"ORIG \"%s\" %lu 0x%x %ld ", fpath, file->fsize, (unsigned short)file->dev, file->node);
             if(set.cmd_orig) {
                 fprintf(get_scriptstream(),set.cmd_orig,fpath);
-                fprintf(get_scriptstream()," &&\n");
+                fprintf(get_scriptstream()," \n");
             } else {
-                fprintf(get_scriptstream(),"rm -rf '%s' # Original\n",fpath);
+                fprintf(get_scriptstream(),"rm -rf \"%s\" # Original\n",fpath);
             }
         }
         for (i = 0; i < 16; i++) {
@@ -269,7 +269,7 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
         if(path == NULL) {
             break;
         }
-        warning(RED"rm "NCO"\"%s\"\n", path);
+        warning(RED"   rm -rf "NCO"\"%s\"\n", path);
         remfile(path);
     }
     break;
@@ -279,7 +279,7 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
         if(path == NULL) {
             break;
         }
-        error(NCO"ln -s "NCO"\"%s\""NCO"\"%s\"\n", orig, path);
+        error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", orig, path);
         remfile(path);
 
         if(link(orig,path)) {
@@ -411,7 +411,7 @@ bool findmatches(file_group *grp)
             pthread_mutex_lock(&mutex_printage);
 
             while(j) {
-                if(j->dupflag) {
+                if(j->dupflag) {   
                     if( (!cmp_f(i,j))           &&                              /* Same checksum?                                             */
                             (i->fsize == j->fsize)	&&					            /* Same size? (double check, you never know)             	 */
                             ((set.paranoid)?paranoid(i->path,j->path,i->fsize):1)   /* If we're bothering with paranoid users - Take the gatling! */
@@ -423,8 +423,8 @@ bool findmatches(file_group *grp)
                         lintsize += j->fsize;
 
                         if(printed_original == false) {
-                            if(set.mode == 1 || (set.mode == 5 && set.cmd_orig == NULL && set.cmd_path == NULL)) {
-                                error("# %s\n",i->path);
+                            if((set.mode == 1 || (set.mode == 5 && set.cmd_orig == NULL && set.cmd_path == NULL)) && set.verbosity > 2) {
+                                error("   #  %s\n",i->path); 
                             }
 
                             write_to_log(i, true);
@@ -435,13 +435,17 @@ bool findmatches(file_group *grp)
                         if(set.mode == 1 || (set.mode == 5 && !set.cmd_orig && !set.cmd_path)) {
                             if(set.paranoid) {
                                 /* If byte by byte was succesful print a blue "x" */
-                                warning(BLU"%-1s "NCO,"X");
+                                warning(BLU"   %-1s "NCO,"rm");
                             } else {
-                                warning(YEL"%-1s "NCO,"*");
+                                warning(GRE"   %-1s "NCO,"rm");
                             }
 
-
-                            error("%s\n",j->path);
+                            if(set.verbosity > 1) {
+                                error("%s\n",j->path);
+                            } else {
+                                error("   rm %s\n",j->path); 
+                            }
+                            
                         }
                         write_to_log(j, false);
                         if(handle_item(j,i)) {
@@ -453,7 +457,7 @@ bool findmatches(file_group *grp)
             }
 
             /* Get ready for next group */
-            if(printed_original) {
+            if(printed_original && set.verbosity > 2) {
                 error("\n");
             }
             pthread_mutex_unlock(&mutex_printage);

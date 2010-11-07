@@ -33,22 +33,12 @@
 lint_t *start = NULL; /* A pointer to the first element in the list */
 lint_t *back  = NULL; /* A pointer to the last  element in the list */
 
-/** Length of list stored here. This not needed for the implementation itself,
- * but for deciding how may threds to spawn / progress and stuff **/
-nuint_t len;
-
 /** list_begin() - returns pointer to start of list **/
 lint_t *list_begin(void)
 {
     return start;
 }
 
-
-/** Make len visible to other files **/
-nuint_t list_len(void)
-{
-    return len;
-}
 
 
 /**
@@ -254,13 +244,11 @@ void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
         tmp->last=NULL;
         start=tmp;
         back=tmp;
-        len = 1;
     } else {
         lint_t *prev	= back;
         back=tmp;
         prev->next=tmp;
         tmp->last=prev;
         tmp->next=NULL;
-        len++;
     }
 }
