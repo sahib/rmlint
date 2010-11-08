@@ -49,66 +49,9 @@ On a recent quadcoremachine things will get lot's faster.
 
 HELP: 
 ------------
-- This Readme.
-- rmlint -h 
-- man rmlint  
-
-OPTIONS:
----------
-Syntax: rmlint [TargetDir[s]] [File[s]] [Options]
-
-General options:
-
-	-t --threads <t>	Set the number of threads to <t> used in full checksum creation.
-	-p --paranoid		Do a byte-by-byte comparasion additionally. (Slow!)
-	-d --maxdepth <depth>	Only recurse up to this depth. (default: inf)
-	-f --followlinks	Wether links are followed (None is reported twice) [Only specify this if you really need to]
-	-s --samepart		Never cross mountpoints, stay on the same partition
-	-G --hidden		Also search through hidden files / directories (disabled by default)
-	-m --mode <mode>	Tell rmlint how to deal with the files it finds.
-
-				Where modes are:
-
-				list  - Only list found files and exit.
-				link  - Replace file with a hard link to original.
-				ask   - Ask for each file what to do
-				noask - Full removal without asking.
-				cmd   - Takes the command given by -c and executes it on the file.
-
-	-c --cmd_dup  <cmd>	Execute a shellcommand on found duplicates when used with '-m cmd'
-	-C --cmd_orig <cmd>	Execute a shellcommand on original files when used with '-m cmd'
-
-				Example: rmlint testdir -m cmd -C "ls '%s'" -c "ls -lasi '%s'" -v 1
-				This would print all found files (both duplicates and originals via the 'ls' utility
-				The %s expands to the found duplicate, second to the 'original'.
-Regex options:
-
-	-r --fregex <pat>	Checks filenames against the pattern <pat>
-	-R --dregex <pat>	Checks dirnames against the pattern <pat>
-	-i --invmatch		Invert match - Only investigate when not containing <pat>
-	-e --matchcase		Matches case of paths (not by default)
-
-Misc options:
-
-	-h --help		Prints this text and exits
-	-o --output [<o>]	Outputs logfile to <o>. The <o> argument is optional, specify none to write no log.
-				Examples:
-
-				-o => No Logfile
-				-o="la la.txt" => Logfile to "la la.txt"
-
-				Note that you NEED the '=' here.
-
-	-z --dump <id>		Option with various weird meanings, most scientist postulated that it kills kittens.
-	-v --verbosity <v>	Sets the verbosity level to <v>
-				Where:
-				0 prints nothing
-				1 prints only errors and results
-				2 + prints warning
-				3 + everything else
-
-Additionally, the options p,f,s,e,g,o,i,c have a uppercase option (O,G,P,F,S,E,I,C) that inverse it's effect.
-
+Use: 
+- 'rmlint -h'
+- 'man rmlint' 
 
 
 FEATURES:
@@ -129,7 +72,7 @@ FEATURES:
 - Writes a log of all found files (./rmlint.sh or name by --output) or outputs a ready to use script  
 
 
-HOW DOES THIS WEIRD THING WORK: 
+HOW DOES THIS THING WORK (ALGORITHM): 
 -------------------------------
 rmlint tries to reduce Input/Output to a minimum and focues on CPU Usage.
 Therefore it goes recursively through all directories and pushes all files back to a doubly linked list. 
