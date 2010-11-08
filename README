@@ -10,42 +10,9 @@ INSTALL:
 --------
 The usual mantra: 
 
+./configure
 make -j 4 
 sudo make install 
-
-COMPARASION TO OTHER TOOLS: 
---------------------------
-(this list could get very, very long..) 
-
-compared to... 
-	..fdupes / duff: 
-		+ LOTS faster	
-		+ more options 
-		+ finds also bad links 
-		+ logging
-
-	..rdfind: 
-		+ Live output of finds
-		+ mostly as fast, or faster
-		+ little less buggy ;-) 
-		- handles large folders with lots of files not as good.
-		
-	..fslint: 
-		+ Faster / more options 
-		- finds no stripped binaries, old tmpdata, etc. (ToDo?) 
-		
-	..[other cons] 
-		- does not look into archives (things like those could be performed by some bash script easier)
-		
-		
-Pseudobenchmark on 60GB Music: 
-------------------------------
-rdfind: 8:01  min. | 7:55  min | 7:49  min += 23:45 min
-rmlint: 7:52  min  | 8:33  min | 7:02  min += 23:27 min  
-fdupes: 16:04 min  | 14:24 min | 14:07 min += 44:35 min 
-
-Benchmark was on a EeePc 1015HP ;-) 
-On a recent quadcoremachine things will get lot's faster.
 
 HELP: 
 ------------
@@ -83,7 +50,6 @@ Note that several groups may get processed in parallel!  A log of all files is w
 Additionally it may handle finds by removeing them, linking them to the original or executing some shellcommand on them. 
 
 
-
 A NOTE ABOUT FALSE POSITIVES: 
 -----------------------------
 False Positves are actuallly possible, but very unlikely. 
@@ -94,6 +60,40 @@ They would need to have the same size to be marked as duplicate.
 But isn't there a solution? Yes, there is. It's the "--paranoid/-p" option. It does a 
 true byte-by-byte comparasion of each(!) file. Be warned. It's incredibly slow. 
 
+
+COMPARASION TO OTHER TOOLS: 
+--------------------------
+(this list could get very, very long..) 
+
+compared to... 
+	..fdupes / duff: 
+		+ LOTS faster	
+		+ more options 
+		+ finds also bad links 
+		+ logging
+
+	..rdfind: 
+		+ Live output of finds
+		+ mostly as fast, or faster
+		+ little less buggy ;-) 
+		- handles large folders with lots of files not as good.
+		
+	..fslint: 
+		+ Faster / more options 
+		- finds no stripped binaries, old tmpdata, etc. (ToDo?) 
+		
+	..[other cons] 
+		- does not look into archives (things like those could be performed by some bash script easier)
+		
+		
+Pseudobenchmark on 60GB Music: 
+------------------------------
+rdfind: 8:01  min. | 7:55  min | 7:49  min += 23:45 min
+rmlint: 7:52  min  | 8:33  min | 7:02  min += 23:27 min  
+fdupes: 16:04 min  | 14:24 min | 14:07 min += 44:35 min 
+
+Benchmark was on a EeePc 1015HP ;-) 
+On a recent quadcoremachine things will get lot's faster.
 
 FAQ: 
 ----
