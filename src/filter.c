@@ -45,6 +45,9 @@ bool iAbort   = false,
      dir_done = false,
      db_done  = false;
 
+/* Counter for additional lint (!= duplicates) (lazy) */
+nuint_t addlint = 0;  
+
 /*
  * Callbock from signal()
  * Counts number of CTRL-Cs and reacts
@@ -109,7 +112,6 @@ static int check_binary_to_be_stripped(const char *path)
     }
 
     cmd = strdup_printf("file '%s' | grep 'not stripped'", path);
-    puts(cmd);
 
     pipe = popen(cmd,"r");
     if(pipe == NULL) {
@@ -208,11 +210,13 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             }
             if(junkinstr(basename(path))) {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
+		addlint += ptr->st_dev;
                 return FTW_CONTINUE;
             }
             if(set.nonstripped) {
                 if(check_binary_to_be_stripped(path)) {
                     list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
+		    addlint += ptr->st_dev;
                 }
             }
             if(set.oldtmpdata) {
@@ -224,6 +228,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     if(!stat(cpy, &stat_buf)) {
                         if(ABS(stat_buf.st_mtime - ptr->st_mtime) > set.oldtmpdata) {
                             list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
+			    addlint += ptr->st_dev;
                         }
                         if(cpy) {
                             free(cpy);
@@ -714,6 +719,7 @@ void start_processing(lint_t *b)
         error("\n");
     }
     emptylist.len = 1;
+    emptylist.size = 0;
 
     while(b) {
         lint_t *q = b, *prev = NULL;
@@ -765,7 +771,7 @@ void start_processing(lint_t *b)
                 spelen++;
             } else {
                 lint_t *ptr;
-                bool flag = 42;
+                bool flag = 42; /* This is necessary to deliver correct answers on nonexitent questions */
 
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
@@ -833,6 +839,8 @@ void start_processing(lint_t *b)
                     if(set.output) {
                         write_to_log(ptr, false);
                     }
+
+		    emptylist.size += ptr->fsize;
                     ptr = list_remove(ptr);
                     emptylist.len++;
                 }
@@ -840,9 +848,6 @@ void start_processing(lint_t *b)
         }
     }
 
-    if(emptylist.len == 0) {
-        info("None.");
-    }
     error("\n");
 
     if(set.searchdup == 0) {
@@ -858,7 +863,6 @@ void start_processing(lint_t *b)
         if(fglist) {
             free(fglist);
         }
-        error("Done.\n");
         die(0);
     }
     info("\nNow attempting to find duplicates. This may take a while...\n");
@@ -883,9 +887,12 @@ void start_processing(lint_t *b)
     start_sheduler(fglist, spelen);
 
     if(set.mode == 5 && set.output) {
-        fprintf(get_logstream(), SCRIPT_LAST);
-        fprintf(get_logstream(), "\n# End of script. Have a nice day.");
-    }
+		if(get_logstream()) {
+        		fprintf(get_logstream(), SCRIPT_LAST);
+        		fprintf(get_logstream(), "\n# End of script. Have a nice day.");
+	}
+    }	
+    
     /* Gather the total size of removeable data */
     for(ii=0; ii < spelen; ii++) {
         if(fglist[ii].grp_stp != NULL) {
@@ -894,13 +901,18 @@ void start_processing(lint_t *b)
         }
     }
 
-    size_to_human_readable(lint, lintbuf, 127);
-    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" duplicates found%s\n",remaining,
+    size_to_human_readable(lint+emptylist.size, lintbuf, 127);
+    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files (%d duplicates) found%s\n",remaining + emptylist.len, remaining,
             (set.mode == 1 || set.mode == 2) ? " (Nothing removed yet!)." : ".");
             
-    warning(RED"=> "NCO"This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n\n", lintbuf, lint);
+    warning(RED"=> "NCO"This means:"GRE" %s "NCO" [%ld Bytes] seems to be useless lint.\n\n", lintbuf, lint + emptylist.size);
 
-    if(set.output) {
+    if(get_logstream() == NULL) {
+    	error(RED"\nERROR: "NCO);
+	fflush(stdout);
+    	perror("Unable to write log");
+	putchar('\n');
+    } else if(set.output) {
         warning("A log has been written to "BLU"%s.log"NCO".\n", set.output);
         warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set.output);
     }

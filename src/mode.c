@@ -185,8 +185,6 @@ void write_to_log(const lint_t *file, bool orig)
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK) {
             free(fpath);
         }
-    } else if(set.output) {
-        error(RED"ERROR: "NCO"Unable to write to log\n");
     }
 }
 
@@ -321,8 +319,6 @@ void init_filehandler(void)
         script_out = fopen(sc_name, "w");
         log_out    = fopen(lg_name, "w");
 
-        if(sc_name) free(sc_name);
-        if(lg_name) free(lg_name);
 
         if(script_out && log_out) {
             char *cwd = getcwd(NULL,0);
@@ -367,6 +363,20 @@ void init_filehandler(void)
         } else {
             perror(NULL);
         }
+
+	/* Now close and reopen the stream. 
+	   Why that? Because you get rmlint.sh 
+           rmlint.log shown as lint (empty files) 
+	   otherwise. What isn't quite what we're
+	   looking for. If theres a neater solution
+           I would be pleased to hear it! 
+ 	*/	
+	if(script_out) fclose(script_out);
+	if(log_out) fclose(log_out);	
+        script_out = fopen(sc_name, "a");
+        log_out    = fopen(lg_name, "a");
+        if(sc_name) free(sc_name);
+        if(lg_name) free(lg_name);
     }
 }
 
@@ -423,7 +433,7 @@ bool findmatches(file_group *grp)
                         lintsize += j->fsize;
 
                         if(printed_original == false) {
-                            if((set.mode == 1 || (set.mode == 5 && set.cmd_orig == NULL && set.cmd_path == NULL)) && set.verbosity > 2) {
+                            if((set.mode == 1 || (set.mode == 5 && set.cmd_orig == NULL && set.cmd_path == NULL)) && set.verbosity > 1) {
                                 error("   #  %s\n",i->path); 
                             }
 
@@ -457,7 +467,7 @@ bool findmatches(file_group *grp)
             }
 
             /* Get ready for next group */
-            if(printed_original && set.verbosity > 2) {
+            if(printed_original && set.verbosity > 1) {
                 error("\n");
             }
             pthread_mutex_unlock(&mutex_printage);
