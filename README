@@ -10,6 +10,11 @@ INSTALL:
 --------
 The usual mantra: 
 
+# if you didn't download it yet 
+(git clone https://github.com/sahib/rmlint.git ) 
+(cd rmlint )
+
+# compile
 ./configure
 make -j 4 
 sudo make install 

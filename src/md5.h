@@ -45,7 +45,8 @@
 #include "list.h"
 
 /* Data structure for MD5 (Message Digest) computation */
-typedef struct {
+typedef struct
+{
     nuint_t i[2];                   /* number of _bits_ handled mod 2^64 */
     nuint_t buf[4];                                    /* scratch buffer */
     unsigned char in[64];                              /* input buffer */

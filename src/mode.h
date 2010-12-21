@@ -30,6 +30,7 @@
 bool findmatches(file_group *grp);
 void init_filehandler(void);
 void write_to_log(const lint_t *file, bool orig);
+nuint_t get_dupcounter();
 
 FILE *get_logstream(void);
 FILE *get_scriptstream(void);

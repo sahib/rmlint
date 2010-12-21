@@ -50,7 +50,8 @@
 /* forward declaration */
 static void Transform ();
 
-static unsigned char PADDING[64] = {
+static unsigned char PADDING[64] =
+{
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -119,18 +120,21 @@ unsigned int inLen;
     mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
 
     /* update number of bits */
-    if ((mdContext->i[0] + ((nuint_t)inLen << 3)) < mdContext->i[0]) {
+    if ((mdContext->i[0] + ((nuint_t)inLen << 3)) < mdContext->i[0])
+    {
         mdContext->i[1]++;
     }
     mdContext->i[0] += ((nuint_t)inLen << 3);
     mdContext->i[1] += ((nuint_t)inLen >> 29);
 
-    while (inLen--) {
+    while (inLen--)
+    {
         /* add new character to buffer, increment mdi */
         mdContext->in[mdi++] = *inBuf++;
 
         /* transform if necessary */
-        if (mdi == 0x40) {
+        if (mdi == 0x40)
+        {
             for (i = 0, ii = 0; i < 16; i++, ii += 4)
                 in[i] = (((nuint_t)mdContext->in[ii+3]) << 24) |
                         (((nuint_t)mdContext->in[ii+2]) << 16) |
@@ -170,7 +174,8 @@ MD5_CTX *mdContext;
     Transform (mdContext->buf, in);
 
     /* store buffer in digest */
-    for (i = 0, ii = 0; i < 4; i++, ii += 4) {
+    for (i = 0, ii = 0; i < 4; i++, ii += 4)
+    {
         mdContext->digest[ii] = (unsigned char)(mdContext->buf[i] & 0xFF);
         mdContext->digest[ii+1] =
             (unsigned char)((mdContext->buf[i] >> 8) & 0xFF);
@@ -292,7 +297,8 @@ nuint_t *in;
 void MDPrintArr(unsigned char *digest)
 {
     int i;
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < 16; i++)
+    {
         printf ("%02x", digest[i]);
     }
 }
@@ -317,23 +323,29 @@ void md5_file(lint_t *file)
     unsigned char *data;
 
     nuint_t already_read = MD5_FPSIZE_FORM(file->fsize);
+
+
     already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read;
-    if(file->fsize <= (already_read<<1)) {
+    if(file->fsize <= (already_read<<1))
+    {
         return;    /* This is some quite hyptothetical case ..*/
     }
 
     /* This seems to cause trouble in valgrind, it gives a little speedup though..  (rmlint works normally)*/
-    /*data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);*/
-    data = alloca(MD5_IO_BLOCKSIZE);
+    data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);
+    /* Use this in trouble... */
+    /*data = alloca(MD5_IO_BLOCKSIZE);*/
     inFile = fopen (file->path, "rb");
 
-    if(inFile == NULL) {
+    if(inFile == NULL)
+    {
         return;
     }
     MD5Init (&mdContext);
     fseek(inFile, already_read, SEEK_SET);
 
-    do {
+    do
+    {
 
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_ck_IO);
@@ -344,7 +356,8 @@ void md5_file(lint_t *file)
 #endif
 
         MD5Update (&mdContext, data, bytes);
-    } while (bytes != 0 && (ftell(inFile) < (file->fsize - already_read)));
+    }
+    while (bytes != 0 && (ftell(inFile) < (file->fsize - already_read)));
 
     MD5Final (&mdContext);
     memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
@@ -360,14 +373,15 @@ void md5_file(lint_t *file)
 void md5_fingerprint(lint_t *file, const nuint_t readsize)
 {
     int bytes = 0;
-
     FILE *pF = fopen(file->path, "rb");
     unsigned char *data = alloca(readsize);
     MD5_CTX con;
     MD5Init (&con);
 
-    if(!pF) {
-        if(set.verbosity > 3) {
+    if(!pF)
+    {
+        if(set.verbosity > 3)
+        {
             warning(YEL"WARN: "NCO"Cannot open %s",file->path);
         }
         return;
@@ -380,7 +394,8 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif
-    if(bytes) {
+    if(bytes)
+    {
         MD5Update (&con, data, bytes);
         MD5Final (&con);
         memcpy(file->fp[0],con.digest,MD5_LEN);
@@ -398,11 +413,12 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif
 
-    if(bytes) {
+    if(bytes)
+    {
         MD5Init (&con);
         MD5Update (&con, data, bytes);
         MD5Final (&con);
         memcpy(file->fp[1],con.digest,MD5_LEN);
-    }
+    }    
     fclose(pF);
 }

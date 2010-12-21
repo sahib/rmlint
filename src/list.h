@@ -33,7 +33,8 @@ typedef char bool;
 #define true  (!0)
 
 /* The structure used from now on to handle nearly everything */
-typedef struct lint_t {
+typedef struct lint_t
+{
     unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
     unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
     char bim[BYTE_MIDDLE_SIZE];

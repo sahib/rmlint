@@ -100,7 +100,8 @@ char *strdup_printf (const char *format, ...)
 /** Messaging **/
 void error(const char* format, ...)
 {
-    if(set.verbosity > 0) {
+    if(set.verbosity > 0)
+    {
         va_list args;
         va_start (args, format);
         vfprintf (stdout, format, args);
@@ -110,7 +111,8 @@ void error(const char* format, ...)
 
 void warning(const char* format, ...)
 {
-    if(set.verbosity > 1) {
+    if(set.verbosity > 1)
+    {
         va_list args;
         va_start (args, format);
         vfprintf (stderr, format, args);
@@ -120,7 +122,8 @@ void warning(const char* format, ...)
 
 void info(const char* format, ...)
 {
-    if(set.verbosity > 2) {
+    if(set.verbosity > 2)
+    {
         va_list args;
         va_start (args, format);
         vfprintf (stdout, format, args);
@@ -145,7 +148,8 @@ int systemf(const char* format, ...)
     va_end (arg);
 
     /* Now execute a shell command */
-    if((ret = system(cmd)) == -1) {
+    if((ret = system(cmd)) == -1)
+    {
         perror("systemf(const char* format, ...)");
     }
     if(cmd) free(cmd);
@@ -230,7 +234,7 @@ void rmlint_set_default_settings(rmlint_settings *set)
     set->paranoid	 =  0; 		/* dont be bush */
     set->depth 		 =  0; 		/* inf depth    */
     set->followlinks =  0; 		/* fol. link    */
-    set->threads 	 =  4; 		/* Quad,quad.   */
+    set->threads 	 =  16;     /* Quad*quad.   */
     set->verbosity 	 =  2; 		/* Most relev.  */
     set->samepart  	 =  0; 		/* Stay parted  */
     set->paths  	 =  NULL;   /* Startnode    */
@@ -253,8 +257,10 @@ void rmlint_set_default_settings(rmlint_settings *set)
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 {
     int c,lp=0;
-    while (1) {
-        static struct option long_options[] = {
+    while (1)
+    {
+        static struct option long_options[] =
+        {
             {"threads",        required_argument, 0, 't'},
             {"dregex",         required_argument, 0, 'R'},
             {"fregex",  	   required_argument, 0, 'r'},
@@ -298,16 +304,19 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         c = getopt_long (argc, argv, "m:R:r:o::j:uUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
 
         /* Detect the end of the options. */
-        if (c == -1) {
+        if (c == -1)
+        {
             break;
         }
 
-        switch (c) {
+        switch (c)
+        {
         case '?':
             return 0;
         case 't':
             sets->threads = atoi(optarg);
-            if(!sets->threads || sets->threads < 0) {
+            if(!sets->threads || sets->threads < 0)
+            {
                 sets->threads = 4;
             }
             break;
@@ -410,23 +419,29 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         case 'm':
             sets->mode = 0;
 
-            if(!strcasecmp(optarg, "list")) {
+            if(!strcasecmp(optarg, "list"))
+            {
                 sets->mode = 1;
             }
-            if(!strcasecmp(optarg, "ask")) {
+            if(!strcasecmp(optarg, "ask"))
+            {
                 sets->mode = 2;
             }
-            if(!strcasecmp(optarg, "noask")) {
+            if(!strcasecmp(optarg, "noask"))
+            {
                 sets->mode = 3;
             }
-            if(!strcasecmp(optarg, "link")) {
+            if(!strcasecmp(optarg, "link"))
+            {
                 sets->mode = 4;
             }
-            if(!strcasecmp(optarg, "cmd")) {
+            if(!strcasecmp(optarg, "cmd"))
+            {
                 sets->mode = 5;
             }
 
-            if(!sets->mode) {
+            if(!sets->mode)
+            {
                 error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
                 error("       Available modes are: ask | list | link | noask | cmd\n");
                 die(0);
@@ -439,12 +454,16 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         }
     }
 
-    while(optind < argc) {
+    while(optind < argc)
+    {
         int p = open(argv[optind],O_RDONLY);
-        if(p == -1) {
+        if(p == -1)
+        {
             error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", argv[optind], strerror(errno));
             return 0;
-        } else {
+        }
+        else
+        {
             close(p);
             sets->paths	  = realloc(sets->paths,sizeof(char*)*(lp+2));
             sets->paths[lp++] = argv[optind];
@@ -453,15 +472,18 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         optind++;
     }
 
-    if(lp == 0) {
+    if(lp == 0)
+    {
         /* Still no path set? */
         sets->paths = malloc(sizeof(char*)<<1);
         sets->paths[0] = getcwd(NULL,0);
         sets->paths[1] = NULL;
-        if(!sets->paths[0]) {
+        if(!sets->paths[0])
+        {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
-            if(sets->paths) {
+            if(sets->paths)
+            {
                 free(sets->paths);
             }
             return 0;
@@ -476,15 +498,19 @@ static void check_cmd(const char *cmd)
 {
     int i = 0, ps = 0;
     int len = strlen(cmd);
-    for(; i < len; i++) {
-        if(cmd[i] == '%' && i+1 != len) {
-            if(cmd[i+1] == 's') {
+    for(; i < len; i++)
+    {
+        if(cmd[i] == '%' && i+1 != len)
+        {
+            if(cmd[i+1] == 's')
+            {
                 ps++;
                 continue;
             }
         }
     }
-    if(ps > 1) {
+    if(ps > 1)
+    {
         error(YEL"FATAL: "NCO"--command [-c]: Only \"%%s\" is allowed!\n");
         error("       Example: rmlint -c \"ls '%%s'\"\n");
         die(0);
@@ -502,32 +528,39 @@ int  get_cpindex(void)
 void die(int status)
 {
     /* Free mem */
-    if(use_cwd) {
-        if(set.paths[0]) {
+    if(use_cwd)
+    {
+        if(set.paths[0])
+        {
             free(set.paths[0]);
         }
     }
-    if(set.paths) {
+    if(set.paths)
+    {
         free(set.paths);
     }
 
-    if(status) {
+    if(status)
+    {
         info("Abnormal exit\n");
     }
 
     /* Close logfile */
-    if(get_logstream()) {
+    if(get_logstream())
+    {
         fclose(get_logstream());
     }
     /* Close scriptfile */
-    if(get_scriptstream()) {
+    if(get_scriptstream())
+    {
         fclose(get_scriptstream());
     }
 
     /* Prepare to jump to return */
     do_exit = true;
     ex_stat = status;
-    if(jmp_set) {
+    if(jmp_set)
+    {
         longjmp(place,status);
     }
 }
@@ -548,12 +581,16 @@ int rmlint_main(void)
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
     jmp_set = true;
-    if(do_exit != true) {
-        if(set.mode == 5) {
-            if(set.cmd_orig) {
+    if(do_exit != true)
+    {
+        if(set.mode == 5)
+        {
+            if(set.cmd_orig)
+            {
                 check_cmd(set.cmd_orig);
             }
-            if(set.cmd_path) {
+            if(set.cmd_path)
+            {
                 check_cmd(set.cmd_path);
             }
         }
@@ -561,24 +598,30 @@ int rmlint_main(void)
         init_filehandler();
 
         /* Warn if started with sudo */
-        if(!access("/bin/ls",R_OK|W_OK)) {
+        if(!access("/bin/ls",R_OK|W_OK))
+        {
             warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
             warning("      Take care of what you're doing!\n\n");
         }
         /* Count files and do some init  */
-        while(set.paths[cpindex] != NULL) {
+        while(set.paths[cpindex] != NULL)
+        {
             DIR *p = opendir(set.paths[cpindex]);
-            if(p == NULL && errno == ENOTDIR) {
+            if(p == NULL && errno == ENOTDIR)
+            {
                 /* The path is a file */
                 struct stat buf;
-                if(stat(set.paths[cpindex],&buf) == -1) {
+                if(stat(set.paths[cpindex],&buf) == -1)
+                {
                     continue;
                 }
 
                 list_append(set.paths[cpindex],(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true);
                 total_files++;
 
-            } else {
+            }
+            else
+            {
                 /* The path points to a dir - recurse it! */
                 info("Now scanning "YEL"\"%s\""NCO"..",set.paths[cpindex]);
                 total_files += recurse_dir(set.paths[cpindex]);
@@ -588,14 +631,16 @@ int rmlint_main(void)
             cpindex++;
         }
 
-        if(total_files < 2) {
+        if(total_files < 2)
+        {
             warning("No files in cache to search through => No duplicates.\n");
             die(0);
         }
 
         info("In total "YEL"%ld useable files"NCO" in cache.\n", total_files);
 
-        if(set.threads > total_files) {
+        if(set.threads > total_files)
+        {
             set.threads = total_files;
         }
 

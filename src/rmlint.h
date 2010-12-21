@@ -26,7 +26,8 @@
 #include "list.h"
 
 /* all available settings see rmlint -h */
-typedef struct {
+typedef struct
+{
     char mode;
     char samepart;
     char ignore_hidden;

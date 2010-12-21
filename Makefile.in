@@ -1,16 +1,11 @@
-## This is the makefile for mpdbox 
-## Just type 'make -j 4'
-## Targets: 'mpdbox','clean'
-##
-
 #source dir
 SOURCEDIR=src
 
 #MANDIR
-MANDIR=/usr/share/man/man1
+MANDIR=$(DESTDIR)/usr/share/man/man1
 
 #install
-INSTALLPATH=/usr/bin
+INSTALLPATH=$(DESTDIR)/usr/bin
 
 #Programs 
 ECHO=echo
@@ -18,6 +13,8 @@ RM=rm -rf
 CAT=cat
 CP=cp
 STRIP=strip -s
+MKDIR=mkdir -p
+
 
 #compiling stuff
 CC=gcc
@@ -28,14 +25,14 @@ WARN=-ansi -Wall -pedantic
 #Quite heavy optimization 
 OPTI=-march=native -Os -finline-functions -fomit-frame-pointer -s  
 
-#Link with google's malloc 
+#Link with google's malloc
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a
 
 #also use -pipe 
 CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) 
 
 #Link flags 
-LDFLAGS=-lpthread -lm -flala
+LDFLAGS=-lpthread -lm
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \
@@ -67,7 +64,9 @@ clean:
 	@$(RM) $(SOURCEDIR)/*.o $(EXECUTABLE) 2> /dev/null
 
 install: 
-	@$(ECHO) "++ Copying executable to /usr/bin."
+	@$(MKDIR) $(INSTALLPATH)
+	@$(ECHO) "++ Copying executable to $(INSTALLPATH)"
 	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
-	@$(ECHO) "++ Copying manpage to /usr/share/man/man1."
+	@$(MKDIR) $(MANDIR)
+	@$(ECHO) "++ Copying manpage to $(MANDIR)."
 	@$(CP) doc/rmlint.1.gz $(MANDIR)

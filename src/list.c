@@ -51,19 +51,22 @@ void list_clear(lint_t *begin)
     lint_t *ptr = begin;
     lint_t *tmp;
 
-    while(ptr) {
+    while(ptr)
+    {
         /* Save ptr to ftm */
         tmp = ptr;
 
         /* Next */
         ptr = ptr->next;
 
-        if(ptr) {
+        if(ptr)
+        {
             ptr->last = NULL;
         }
 
         /* free ressources */
-        if(tmp->path) {
+        if(tmp->path)
+        {
             free(tmp->path);
             tmp->path = NULL;
         }
@@ -78,18 +81,24 @@ void list_clear(lint_t *begin)
 lint_t *list_remove(lint_t *ptr)
 {
     lint_t *p,*n;
-    if(ptr==NULL) {
+    if(ptr==NULL)
+    {
         return NULL;
     }
 
     p=ptr->last;
     n=ptr->next;
-    if(p&&n) {
+    if(p&&n)
+    {
         p->next = n;
         n->last = p;
-    } else if(p&&!n) {
+    }
+    else if(p&&!n)
+    {
         p->next=NULL;
-    } else if(!p&&n) {
+    }
+    else if(!p&&n)
+    {
         n->last=NULL;
     }
 
@@ -144,28 +153,33 @@ lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
      * Silly special case: if `list' was passed in as NULL, return
      * NULL immediately.
      */
-    if (!list) {
+    if (!list)
+    {
         return NULL;
     }
 
     insize = 1;
 
-    while (1) {
+    while (1)
+    {
         p = list;
         list = NULL;
         tail = NULL;
 
         nmerges = 0;  /* count number of merges we do in this pass */
 
-        while (p) {
+        while (p)
+        {
             nmerges++;  /* there exists a merge to be done */
             /* step `insize' places along from p */
             q = p;
             psize = 0;
-            for (i = 0; i < insize; i++) {
+            for (i = 0; i < insize; i++)
+            {
                 psize++;
                 q = q->next;
-                if (!q) {
+                if (!q)
+                {
                     break;
                 }
             }
@@ -174,29 +188,37 @@ lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
             qsize = insize;
 
             /* now we have two lists; merge them */
-            while (psize > 0 || (qsize > 0 && q)) {
+            while (psize > 0 || (qsize > 0 && q))
+            {
 
                 /* decide whether next lint_t of merge comes from p or q */
-                if (psize == 0) {
+                if (psize == 0)
+                {
                     /* p is empty; e must come from q. */
                     e = q;
                     q = q->next;
                     qsize--;
 
-                } else if (qsize == 0 || !q) {
+                }
+                else if (qsize == 0 || !q)
+                {
                     /* q is empty; e must come from p. */
                     e = p;
                     p = p->next;
                     psize--;
 
-                } else if (cmp(p,q) <= 0) {
+                }
+                else if (cmp(p,q) <= 0)
+                {
                     /* First lint_t of p is lower (or same);
                      * e must come from p. */
                     e = p;
                     p = p->next;
                     psize--;
 
-                } else {
+                }
+                else
+                {
                     /* First lint_t of q is lower; e must come from q. */
                     e = q;
                     q = q->next;
@@ -204,9 +226,12 @@ lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
 
                 }
                 /* add the next lint_t to the merged list */
-                if (tail) {
+                if (tail)
+                {
                     tail->next = e;
-                } else {
+                }
+                else
+                {
                     list = e;
                 }
 
@@ -222,7 +247,8 @@ lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
         tail->next = NULL;
 
         /* If we have done only one merge, we're finished. */
-        if (nmerges <= 1) {
+        if (nmerges <= 1)
+        {
             /* allow for nmerges==0, the empty list case */
             start=list;
             return list;
@@ -239,12 +265,15 @@ void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
     lint_t *tmp = malloc(sizeof(lint_t));
     list_filldata(tmp,n,s,dev,node, dupflag);
 
-    if(start == NULL) { /* INIT */
+    if(start == NULL)   /* INIT */
+    {
         tmp->next=NULL;
         tmp->last=NULL;
         start=tmp;
         back=tmp;
-    } else {
+    }
+    else
+    {
         lint_t *prev	= back;
         back=tmp;
         prev->next=tmp;
