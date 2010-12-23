@@ -73,4 +73,7 @@ void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
 /* Returns len of list */
 nuint_t list_len(void);
 
+/* Set vars.. (bad design :/)*/
+void list_c_init(void);
+
 #endif

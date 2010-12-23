@@ -288,6 +288,8 @@ nuint_t *in;
     buf[3] += d;
 }
 
+/* ------------------------------------------------------------- */
+
 
 /*********************************************/
 /** Original md5.c modified from now on ~CP **/
@@ -303,67 +305,117 @@ void MDPrintArr(unsigned char *digest)
     }
 }
 
+/* ------------------------------------------------------------- */
 
-
-#if (MD5_SERIAL_IO == 1)
-/* Mutexes to serialize IO (avoid unnecessary jumping) */
+/* Mutexes to (pseudo-)"serialize" IO (avoid unnecessary jumping) */
 pthread_mutex_t mutex_fp_IO = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
-#endif
+
+/* Some init call */
+void md5c_c_init(void)
+{
+    pthread_mutex_init(&mutex_ck_IO,NULL);
+    pthread_mutex_init(&mutex_fp_IO,NULL);
+}
+
+/* ------------------------------------------------------------- */
 
 /* used to calc the complete checksum of file & save it in File */
 void md5_file(lint_t *file)
 {
-    /* If the twice the size of the fingerprints read in is bigger than the actual size:
-     * return as we don't need this checksum anymore - this reduces silly IO with many small files
-     *  */
-    int bytes;
-    FILE *inFile;
+    /* Number of bytes read in */
+    int bytes=0;
+
+    /* Input stream */
+    FILE *inFile=NULL;
+
+    /* the md5buf */
     MD5_CTX mdContext;
-    unsigned char *data;
 
-    nuint_t already_read = MD5_FPSIZE_FORM(file->fsize);
+    /* tmp buffer */
+    unsigned char *data=NULL;
 
-
-    already_read = (already_read > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : already_read;
-    if(file->fsize <= (already_read<<1))
+    /* Don't read the $already_read amount of bytes read by md5_fingerprint */
+    nuint_t already_read = MD5_FPSIZE_FORM(file->fsize); 
+    
+    /* This is some rather seldom case, but skip checksum building here */
+    if(file->fsize <= (already_read*2))
     {
-        return;    /* This is some quite hyptothetical case ..*/
+        return;    
     }
 
-    /* This seems to cause trouble in valgrind, it gives a little speedup though..  (rmlint works normally)*/
-    data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);
-    /* Use this in trouble... */
-    /*data = alloca(MD5_IO_BLOCKSIZE);*/
-    inFile = fopen (file->path, "rb");
+    /*
+     * Little note: valgrind might record 'data' as 'not stack'd, malloc'd or (recently) free'd',
+     *              I guess (no, Im not 100% sure) this is just because of the normal stacksize of
+     *              a thread, valgrind seems not to take note that thread's stacksize might enlarge,
+     *              as this is what iirc alloca() does (incrementing the stackframe pointer)
+     *              So for now I will ignore this one, just to let you know.
+     *
+     * Exact message valgrind's giving me:
 
+            ==3118== Syscall param read(buf) points to unaddressable byte(s)
+            ==3118==    at 0x538B7ED: read (in /lib/libc-2.12.1.so)
+            ==3118==    by 0x53379C2: ??? (in /lib/libc-2.12.1.so)
+            ==3118==    by 0x532C3B2: fread (in /lib/libc-2.12.1.so)
+            ==3118==    by 0x403C63: md5_file (md5.c:357)
+            ==3118==    by 0x404E93: cksum_cb (filter.c:567)
+            ==3118==    by 0x404FAF: build_checksums (filter.c:595)
+            ==3118==    by 0x4051EB: sheduler_cb (filter.c:667)
+            ==3118==    by 0x4053CF: start_sheduler (filter.c:730)
+            ==3118==    by 0x40613B: start_processing (filter.c:1090)
+            ==3118==    by 0x4095E5: rmlint_main (rmlint.c:738)
+            ==3118==    by 0x409643: main (main.c:32)
+            ==3118==  Address 0x7ff001000 is not stack'd, malloc'd or (recently) free'd
+            ==3118==
+     * 
+     */
+
+    /* Allocate buffer on the thread's stack */
+    data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);
+
+    /*data = alloca(MD5_IO_BLOCKSIZE);*/
+    inFile = fopen (file->path, "rq");
+
+    /* Can't open file? */
     if(inFile == NULL)
     {
         return;
     }
+
+    /* Init md5sum & jump to start */
     MD5Init (&mdContext);
     fseek(inFile, already_read, SEEK_SET);
 
     do
     {
 
+/* If (pseudo-)serialized IO is requested lock a mutex, so other threads have to wait here
+ * This is to prevent that several threads call fread() at the same time, what would case the
+ * HD to jump a lot around without doing anything intelligent..
+ * */
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_ck_IO);
 #endif
+        /* The call to fread */
         bytes = fread (data, 1, MD5_IO_BLOCKSIZE, inFile);
+
+/* Unlock */
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_unlock(&mutex_ck_IO);
 #endif
 
+        /* Update the checksum with the current contents of &data */
         MD5Update (&mdContext, data, bytes);
     }
-    while (bytes != 0 && (ftell(inFile) < (file->fsize - already_read)));
+    while (bytes && (ftell(inFile) < (file->fsize - already_read)));
 
+    /* Finalize, copy and close */
     MD5Final (&mdContext);
     memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
     fclose (inFile);
 }
 
+/* ------------------------------------------------------------- */
 
 /* Reads <readsize> bytes from each start and end + 8 bytes in the middle
    start and end gets converted into a 128bit md5sum and are written in <file>
@@ -373,14 +425,14 @@ void md5_file(lint_t *file)
 void md5_fingerprint(lint_t *file, const nuint_t readsize)
 {
     int bytes = 0;
-    FILE *pF = fopen(file->path, "rb");
+    FILE *pF = fopen(file->path, "r");
     unsigned char *data = alloca(readsize);
     MD5_CTX con;
-    MD5Init (&con);
 
+    /* empty? */
     if(!pF)
     {
-        if(set.verbosity > 3)
+        if(set->verbosity > 3)
         {
             warning(YEL"WARN: "NCO"Cannot open %s",file->path);
         }
@@ -390,12 +442,18 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_lock(&mutex_fp_IO);
 #endif
+
+    /* Read the first block */
     bytes = fread(data,sizeof(char),readsize,pF);
+    
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif
+
+    /* Compute md5sum of this block */
     if(bytes)
     {
+        MD5Init (&con);
         MD5Update (&con, data, bytes);
         MD5Final (&con);
         memcpy(file->fp[0],con.digest,MD5_LEN);
@@ -404,21 +462,28 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_lock(&mutex_fp_IO);
 #endif
-    fseek(pF, file->fsize>>1 ,SEEK_SET);
+
+    /* Jump to middle of file and read a couple of bytes there s*/
+    fseek(pF, file->fsize/2 ,SEEK_SET);
     bytes = fread(file->bim, sizeof(char), BYTE_MIDDLE_SIZE, pF);
 
+    /* Jump to end and read final block */
     fseek(pF, -readsize,SEEK_END);
     bytes = fread(data,sizeof(char),readsize,pF);
+    
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif
 
+    /* Compute checksum of this last block */
     if(bytes)
     {
         MD5Init (&con);
         MD5Update (&con, data, bytes);
         MD5Final (&con);
         memcpy(file->fp[1],con.digest,MD5_LEN);
-    }    
+    }
+
+    /* kthxbai */
     fclose(pF);
 }

@@ -42,19 +42,25 @@
 #include "md5.h"
 
 
-nuint_t duplicates = 0;
-nuint_t lintsize = 0;
-
-
-nuint_t dup_counter = 1;
+nuint_t dup_counter=0;
 nuint_t get_dupcounter() { return dup_counter; }
 void set_dupcounter(nuint_t new) { dup_counter = new; }
 
 /* Make the stream "public" */
-FILE *script_out = NULL;
-FILE *log_out    = NULL;
+FILE *script_out;
+FILE *log_out;
 
-pthread_mutex_t mutex_printage = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_printage =  PTHREAD_MUTEX_INITIALIZER;
+
+void mode_c_init(void)
+{
+    script_out = NULL;
+    log_out    = NULL;
+
+    dup_counter = 0;
+    pthread_mutex_init(&mutex_printage, NULL);
+}
+
 
 FILE *get_logstream(void)
 {
@@ -67,7 +73,7 @@ FILE *get_scriptstream(void)
 }
 
 
-char * __strsubs(char * string, const char * subs, size_t subs_len, const char * with, size_t with_len, long offset)
+static char * __strsubs(char * string, const char * subs, size_t subs_len, const char * with, size_t with_len, long offset)
 {
 	char * new, * occ = strstr(string+offset,subs);
 	size_t strn_len = 0;
@@ -116,7 +122,7 @@ char * strsubs(const char * string, const char * subs, const char * with)
 	return __strsubs(strdup(string), subs, subs_len, with, with_len,0);
 }
 
-/* Simple wrapper ariund unlink() syscall */
+/* Simple wrapper around unlink() syscall */
 static void remfile(const char *path)
 {
     if(path)
@@ -185,7 +191,7 @@ static void print_askhelp(void)
 void write_to_log(const lint_t *file, bool orig)
 {
     bool free_fullpath = true;
-    if(get_logstream() && get_scriptstream() && set.output)
+    if(get_logstream() && get_scriptstream() && set->output)
     {
         int i = 0;
         char *fpath = canonicalize_file_name(file->path);
@@ -224,12 +230,12 @@ void write_to_log(const lint_t *file, bool orig)
         }
         else if(file->dupflag == TYPE_JNK_DIRNAME)
         {
-            fprintf(get_scriptstream(), "echo '%s' # Direcotryname containing one char of the string \"%s\"\n", fpath, set.junk_chars);
+            fprintf(get_scriptstream(), "echo '%s' # Direcotryname containing one char of the string \"%s\"\n", fpath, set->junk_chars);
             fprintf(get_logstream(),"JNKD '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
         }
         else if(file->dupflag == TYPE_JNK_FILENAME)
         {
-            fprintf(get_scriptstream(), "ls -ls '%s' # Filename containing one char of the string \"%s\"\n", fpath, set.junk_chars);
+            fprintf(get_scriptstream(), "ls -ls '%s' # Filename containing one char of the string \"%s\"\n", fpath, set->junk_chars);
             fprintf(get_logstream(),"JNKN '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
         }
         else if(file->dupflag == TYPE_NBIN)
@@ -246,9 +252,9 @@ void write_to_log(const lint_t *file, bool orig)
         {
 
             fprintf(get_logstream(),"DUPL '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
-            if(set.cmd_path)
+            if(set->cmd_path)
             {
-                fprintf(get_scriptstream(),set.cmd_path,fpath);
+                fprintf(get_scriptstream(),set->cmd_path,fpath);
                 fprintf(get_scriptstream()," &&\n");
             }
             else
@@ -260,9 +266,9 @@ void write_to_log(const lint_t *file, bool orig)
         {
 
             fprintf(get_logstream(),"ORIG '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
-            if(set.cmd_orig)
+            if(set->cmd_orig)
             {
-                fprintf(get_scriptstream(),set.cmd_orig,fpath);
+                fprintf(get_scriptstream(),set->cmd_orig,fpath);
                 fprintf(get_scriptstream()," \n");
             }
             else
@@ -290,8 +296,8 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
     char *path = (file_path) ? file_path->path : NULL;
     char *orig = (file_orig) ? file_orig->path : NULL;
 
-    /* What set.mode are we in? */
-    switch(set.mode)
+    /* What set->mode are we in? */
+    switch(set->mode)
     {
 
     case 1:
@@ -403,11 +409,11 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
 
         if(path)
         {
-            ret=systemf(set.cmd_path,path);
+            ret=systemf(set->cmd_path,path);
         }
         else
         {
-            ret=systemf(set.cmd_orig,orig);
+            ret=systemf(set->cmd_orig,orig);
         }
 
         if (WIFSIGNALED(ret) &&
@@ -419,7 +425,7 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
     break;
 
     default:
-        error(RED"ERROR: "NCO"Invalid set.mode. This is a program error :(");
+        error(RED"ERROR: "NCO"Invalid set->mode. This is a program error :(");
         return true;
     }
     return false;
@@ -428,10 +434,10 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
 
 void init_filehandler(void)
 {
-    if(set.output)
+    if(set->output)
     {
-        char *sc_name = strdup_printf("%s.sh", set.output);
-        char *lg_name = strdup_printf("%s.log",set.output);
+        char *sc_name = strdup_printf("%s.sh", set->output);
+        char *lg_name = strdup_printf("%s.log",set->output);
         script_out = fopen(sc_name, "w");
         log_out    = fopen(lg_name, "w");
 
@@ -451,7 +457,7 @@ void init_filehandler(void)
                     "#This file was autowritten by 'rmlint'\n"
                     "# rmlint was executed from: %s\n",cwd);
 
-            if((!set.cmd_orig && !set.cmd_path) || set.mode != 5 || 1)
+            if((!set->cmd_orig && !set->cmd_path) || set->mode != 5 || 1)
             {
                 fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
                 fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
@@ -588,18 +594,16 @@ bool findmatches(file_group *grp)
                 {
                     if( (!cmp_f(i,j))           &&                              /* Same checksum?                                             */
                             (i->fsize == j->fsize)	&&					            /* Same size? (double check, you never know)             	 */
-                            ((set.paranoid)?paranoid(i->path,j->path,i->fsize):1)   /* If we're bothering with paranoid users - Take the gatling! */
+                            ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)   /* If we're bothering with paranoid users - Take the gatling! */
                       )
                     {
                         /* i 'similiar' to j */
                         j->dupflag = false;
                         i->dupflag = false;
 
-                        lintsize += j->fsize;
-
                         if(printed_original == false)
                         {
-                            if((set.mode == 1 || (set.mode == 5 && set.cmd_orig == NULL && set.cmd_path == NULL)) && set.verbosity > 1)
+                            if((set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
                             {
                                 error("   #  %s\n",i->path);
                             }
@@ -609,9 +613,9 @@ bool findmatches(file_group *grp)
                             printed_original = true;
                         }
 
-                        if(set.mode == 1 || (set.mode == 5 && !set.cmd_orig && !set.cmd_path))
+                        if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
                         {
-                            if(set.paranoid)
+                            if(set->paranoid)
                             {
                                 /* If byte by byte was succesful print a blue "x" */
                                 warning(BLU"   %-1s "NCO,"rm");
@@ -621,7 +625,7 @@ bool findmatches(file_group *grp)
                                 warning(GRE"   %-1s "NCO,"rm");
                             }
 
-                            if(set.verbosity > 1)
+                            if(set->verbosity > 1)
                             {
                                 error("%s\n",j->path);
                             }
@@ -642,7 +646,7 @@ bool findmatches(file_group *grp)
             }
 
             /* Get ready for next group */
-            if(printed_original && set.verbosity > 1)
+            if(printed_original && set->verbosity > 1)
             {
                 error("\n");
             }

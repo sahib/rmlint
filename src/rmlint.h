@@ -22,13 +22,13 @@
 #ifndef rmlint_H
 #define rmlint_H
 
-
 #include "list.h"
 
 /* all available settings see rmlint -h */
 typedef struct
 {
     char mode;
+    char color;
     char samepart;
     char ignore_hidden;
     char followlinks;
@@ -53,8 +53,8 @@ typedef struct
 
 } rmlint_settings;
 
-/* global var storing all settings */
-rmlint_settings set;
+/* pointer to settings */
+rmlint_settings * set;
 
 /* These method are also useable from 'outside' */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets);

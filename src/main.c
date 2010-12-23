@@ -19,13 +19,13 @@
 *
 **/
 
-
 #include "rmlint.h"
 
 int main(int argc, char **argv)
 {
-    rmlint_set_default_settings(&set);
-    if(rmlint_parse_arguments(argc,argv,&set) == 0)
+    rmlint_settings mySettings; 
+    rmlint_set_default_settings(&mySettings);
+    if(rmlint_parse_arguments(argc,argv,&mySettings) == 0)
     {
         return -1;
     }

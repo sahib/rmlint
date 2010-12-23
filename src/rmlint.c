@@ -43,24 +43,7 @@
 
 #include "rmlint.h"
 #include "mode.h"
-
-/**
-Result of the testdir run should be (dont run with "-f"!):
-----------------------------------------------------------
-
-# testdir/recursed_a/one
-X testdir/recursed_b/one
-
-# testdir/recursed_a/two
-X testdir/twice_one
-X testdir/two
-
-# testdir/recursed_b/three
-X testdir/recursed_b/two_plus_one
-
-# testdir/with spaces a
-X testdir/with spaces b
-*/
+#include "md5.h"
 
 /* If more that one path given increment */
 int  cpindex = 0;
@@ -82,6 +65,18 @@ const char *script_name = "rmlint";
  * */
 jmp_buf place;
 
+/* ------------------------------------------------------------- */
+
+void rmlint_init(void)
+{
+        do_exit = false;
+        use_cwd = false;
+        jmp_set = false;
+        ex_stat = false;
+}
+
+/* ------------------------------------------------------------- */
+
 /* Don't forget to free retvalue */
 char *strdup_printf (const char *format, ...)
 {
@@ -90,46 +85,125 @@ char *strdup_printf (const char *format, ...)
 
     va_start (arg, format);
     if(vasprintf (&tmp, format, arg) == -1)
+    {
         return NULL;
-
+    }
     va_end (arg);
-
     return tmp;
 }
+
+/* ------------------------------------------------------------- */
+
+/* Make chained calls possible */
+char * rm_col(char * string, const char * COL)
+{
+    char * new = strsubs(string,COL,NULL);
+    if(string)
+    {
+        free(string);
+        string = NULL;
+    }
+    return new;
+}
+
+/* ------------------------------------------------------------- */
+
+void msg_macro_print(FILE * stream, const char * string)
+{
+    if(stream && string)
+    {
+        char * tmp = strdup(string);
+        
+        if(!set->color)
+        {
+            tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
+        }
+
+        fprintf(stream, tmp);
+        fflush(stream);
+
+        if(tmp)
+        {
+            free(tmp);
+            tmp = NULL;
+        }
+    }
+}
+
+/* ------------------------------------------------------------- */
 
 /** Messaging **/
 void error(const char* format, ...)
 {
-    if(set.verbosity > 0)
+    if(set->verbosity > 0)
     {
+        char * tmp;
+        
         va_list args;
         va_start (args, format);
-        vfprintf (stdout, format, args);
+        if(vasprintf (&tmp, format, args) == -1)
+        {
+            return;
+        }
+        msg_macro_print(stdout,tmp);
         va_end (args);
+
+        if(tmp)
+        {
+            free(tmp);
+        }
     }
 }
+
+/* ------------------------------------------------------------- */
 
 void warning(const char* format, ...)
 {
-    if(set.verbosity > 1)
+    if(set->verbosity > 1)
     {
+        char * tmp;
+        
         va_list args;
         va_start (args, format);
-        vfprintf (stderr, format, args);
+        if(vasprintf (&tmp, format, args) == -1)
+        {
+            return;
+        }
+        msg_macro_print(stderr,tmp);
         va_end (args);
+
+        if(tmp)
+        {
+            free(tmp);
+        }
     }
 }
 
+/* ------------------------------------------------------------- */
+
 void info(const char* format, ...)
 {
-    if(set.verbosity > 2)
+    if(set->verbosity > 2)
     {
+        char * tmp;
+        
         va_list args;
         va_start (args, format);
-        vfprintf (stdout, format, args);
+        if(vasprintf (&tmp, format, args) == -1)
+        {
+            return;
+        }
+        msg_macro_print(stdout,tmp);
         va_end (args);
+
+        if(tmp)
+        {
+            free(tmp);
+        }
     }
 }
+
+/* ------------------------------------------------------------- */
 
 /* The nightmare of every secure program :))
  * this is used twice; 1x with a variable format..
@@ -155,6 +229,8 @@ int systemf(const char* format, ...)
     if(cmd) free(cmd);
     return ret;
 }
+
+/* ------------------------------------------------------------- */
 
 /* Help text */
 static void print_help(void)
@@ -207,9 +283,9 @@ static void print_help(void)
             "\t\t\t\t3 + info and statistics\n\n"
             "\t\t\t\tDefault is 2.\n"
             "\t\t\t\tUse 3 to get an idea what's happening internally, 1 to get raw output without colors.\n"
-            "\n"
            );
-    fprintf(stderr,"Additionally, the options p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
+    fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n\n"); 
+    fprintf(stderr,"Additionally, the options b,p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (B,O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
             "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n"
            );
     fprintf(stderr, "\nVersion 0.43 (Compiled on %s @ %s) - Copyright Christopher <Sahib Bommelig> Pahl\n",__DATE__,__TIME__);
@@ -218,45 +294,55 @@ static void print_help(void)
     die(0);
 }
 
+/* ------------------------------------------------------------- */
+
 /* Version string */
 static void print_version(void)
 {
-    fprintf(stderr, "Version 0.76b Compiled: [%s]-[%s]\n",__DATE__,__TIME__);
+    fprintf(stderr, "Version 0.86 Compiled: [%s]-[%s]\n",__DATE__,__TIME__);
     die(0);
 }
 
+/* ------------------------------------------------------------- */
+
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
-void rmlint_set_default_settings(rmlint_settings *set)
+void rmlint_set_default_settings(rmlint_settings *pset)
 {
-    set->mode  		 =  1; 		/* list only    */
-    set->casematch   =  0; 		/* Insensitive  */
-    set->invmatch	 =  0;		/* Normal mode  */
-    set->paranoid	 =  0; 		/* dont be bush */
-    set->depth 		 =  0; 		/* inf depth    */
-    set->followlinks =  0; 		/* fol. link    */
-    set->threads 	 =  16;     /* Quad*quad.   */
-    set->verbosity 	 =  2; 		/* Most relev.  */
-    set->samepart  	 =  0; 		/* Stay parted  */
-    set->paths  	 =  NULL;   /* Startnode    */
-    set->dpattern 	 =  NULL;   /* DRegpattern  */
-    set->fpattern 	 =  NULL;   /* FRegPattern  */
-    set->cmd_path 	 =  NULL;   /* Cmd,if used  */
-    set->cmd_orig    =  NULL;   /* Origcmd, -"- */
-    set->junk_chars  =  NULL;   /* You have to set this   */
-    set->oldtmpdata    = 60;    /* Remove 1min old buffer */
-    set->ignore_hidden = 1;
-    set->findemptydirs = 1;
-    set->namecluster   = 0;
-    set->nonstripped   = 0;
-    set->searchdup     = 1;
-    set->output        = (char*)script_name;
+    set = pset;
+    
+    pset->mode  	    =  1; 		/* list only    */
+    pset->casematch     =  0; 		/* Insensitive  */
+    pset->invmatch	    =  0;		/* Normal mode  */
+    pset->paranoid	    =  0; 		/* dont be bush */
+    pset->depth 		=  0; 		/* inf depth    */
+    pset->followlinks   =  0; 		/* fol. link    */
+    pset->threads 	    = 16;       /* Quad*quad.   */
+    pset->verbosity 	=  2; 		/* Most relev.  */
+    pset->samepart  	=  0; 		/* Stay parted  */
+    pset->paths  	    =  NULL;    /* Startnode    */
+    pset->dpattern 	    =  NULL;    /* DRegpattern  */
+    pset->fpattern 	    =  NULL;    /* FRegPattern  */
+    pset->cmd_path 	    =  NULL;    /* Cmd,if used  */
+    pset->cmd_orig      =  NULL;    /* Origcmd, -"- */
+    pset->junk_chars    =  NULL;    /* You have to set this   */
+    pset->oldtmpdata    = 60;       /* Remove 1min old buffers */
+    pset->ignore_hidden = 1;
+    pset->findemptydirs = 1;
+    pset->namecluster   = 0;
+    pset->nonstripped   = 0;
+    pset->searchdup     = 1;
+    pset->color         = 1;
+    pset->output        = (char*)script_name;
 }
 
+/* ------------------------------------------------------------- */
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 {
     int c,lp=0;
+
+    rmlint_init();
     while (1)
     {
         static struct option long_options[] =
@@ -272,6 +358,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"verbosity",      required_argument, 0, 'v'},
             {"output",         optional_argument, 0, 'o'},
             {"emptydirs",      no_argument,       0, 'y'},
+            {"color",          no_argument,       0, 'b'},
+            {"no-color",       no_argument,       0, 'B'},
             {"no-emptydirs",   no_argument,       0, 'Y'},
             {"namecluster",    no_argument, 	  0, 'n'},
             {"no-namecluster", no_argument, 	  0, 'N'},
@@ -301,7 +389,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "m:R:r:o::j:uUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
+        c = getopt_long (argc, argv, "m:R:r:o::j:bBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
 
         /* Detect the end of the options. */
         if (c == -1)
@@ -317,7 +405,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             sets->threads = atoi(optarg);
             if(!sets->threads || sets->threads < 0)
             {
-                sets->threads = 4;
+                sets->threads = 8;
             }
             break;
         case 'f':
@@ -337,6 +425,12 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             break;
         case 'N':
             sets->namecluster = 0;
+            break;
+        case 'b':
+            sets->color = 1;
+            break;
+        case 'B':
+            sets->color = 0;
             break;
         case 'V':
             print_version();
@@ -493,6 +587,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
     return 1;
 }
 
+/* ------------------------------------------------------------- */
+
 /* User  may specify in -c/-C a command that get's excuted on every hit - check for being a safe one */
 static void check_cmd(const char *cmd)
 {
@@ -517,6 +613,7 @@ static void check_cmd(const char *cmd)
     }
 }
 
+/* ------------------------------------------------------------- */
 
 /* This is only used to pass the current dir to eval_file */
 int  get_cpindex(void)
@@ -524,20 +621,22 @@ int  get_cpindex(void)
     return cpindex;
 }
 
+/* ------------------------------------------------------------- */
+
 /* exit and return to calling method */
 void die(int status)
 {
     /* Free mem */
     if(use_cwd)
     {
-        if(set.paths[0])
+        if(set->paths[0])
         {
-            free(set.paths[0]);
+            free(set->paths[0]);
         }
     }
-    if(set.paths)
+    if(set->paths)
     {
-        free(set.paths);
+        free(set->paths);
     }
 
     if(status)
@@ -565,12 +664,15 @@ void die(int status)
     }
 }
 
+/* ------------------------------------------------------------- */
+
 /* Sort criteria for sizesort */
 static long cmp_sz(lint_t *a, lint_t *b)
 {
     return a->fsize - b->fsize;
 }
 
+/* ------------------------------------------------------------- */
 
 /* Actual entry point */
 int rmlint_main(void)
@@ -578,20 +680,28 @@ int rmlint_main(void)
     /* Used only for infomessage */
     nuint_t total_files = 0;
 
+    /* Init all modules that use global variables.. */
+    rmlint_init();
+    
+    md5c_c_init();
+    list_c_init();
+    filt_c_init();
+    mode_c_init();
+    
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
     jmp_set = true;
     if(do_exit != true)
     {
-        if(set.mode == 5)
+        if(set->mode == 5)
         {
-            if(set.cmd_orig)
+            if(set->cmd_orig)
             {
-                check_cmd(set.cmd_orig);
+                check_cmd(set->cmd_orig);
             }
-            if(set.cmd_path)
+            if(set->cmd_path)
             {
-                check_cmd(set.cmd_path);
+                check_cmd(set->cmd_path);
             }
         }
         /* Open logfile */
@@ -604,27 +714,27 @@ int rmlint_main(void)
             warning("      Take care of what you're doing!\n\n");
         }
         /* Count files and do some init  */
-        while(set.paths[cpindex] != NULL)
+        while(set->paths[cpindex] != NULL)
         {
-            DIR *p = opendir(set.paths[cpindex]);
+            DIR *p = opendir(set->paths[cpindex]);
             if(p == NULL && errno == ENOTDIR)
             {
                 /* The path is a file */
                 struct stat buf;
-                if(stat(set.paths[cpindex],&buf) == -1)
+                if(stat(set->paths[cpindex],&buf) == -1)
                 {
                     continue;
                 }
 
-                list_append(set.paths[cpindex],(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true);
+                list_append(set->paths[cpindex],(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true);
                 total_files++;
 
             }
             else
             {
                 /* The path points to a dir - recurse it! */
-                info("Now scanning "YEL"\"%s\""NCO"..",set.paths[cpindex]);
-                total_files += recurse_dir(set.paths[cpindex]);
+                info("Now scanning "YEL"\"%s\""NCO"..",set->paths[cpindex]);
+                total_files += recurse_dir(set->paths[cpindex]);
                 info(" done.\n");
                 closedir(p);
             }
@@ -639,9 +749,9 @@ int rmlint_main(void)
 
         info("In total "YEL"%ld useable files"NCO" in cache.\n", total_files);
 
-        if(set.threads > total_files)
+        if(set->threads > total_files)
         {
-            set.threads = total_files;
+            set->threads = total_files;
         }
 
 

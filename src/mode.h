@@ -35,4 +35,8 @@ nuint_t get_dupcounter();
 FILE *get_logstream(void);
 FILE *get_scriptstream(void);
 
+char * strsubs(const char * string, const char * subs, const char * with);
+
+void mode_c_init(void);
+
 #endif

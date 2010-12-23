@@ -24,7 +24,7 @@
 #ifndef DEF_H
 #define DEF_H
 
-/* Use colored output? */
+/* Use colored output? Note: there's also a -b option */
 #define USE_COLOR 1
 
 #if USE_COLOR
@@ -48,10 +48,12 @@
 
 /* Whic sheduler to take
  * + 1) Always single threaded on each group
- * + 2) Run max. n (where n may be max. set.threads) at the same time.
+ * + 2) Run max. n (where n may be max. set->threads) at the same time.
  * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded
  * */
 #define THREAD_SHEDULER_MTLIMIT 8388608
+
+/* ------------------------------------------------------------- */
 
 /** IO: **/
 #define MD5_MTHREAD_SIZE   2097152   /* If size of grp > chekcksum are built in parallel.   2MB */
@@ -74,6 +76,8 @@ typedef unsigned long nuint_t;
 /* Reads a short sequence of bytes in the middle of a file  */
 #define BYTE_MIDDLE_SIZE 8
 
+
+/* ------------------------------------------------------------- */
 
 /* types of lint */
 #define TYPE_BLNK 3

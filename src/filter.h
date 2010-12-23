@@ -42,4 +42,6 @@ int  regfilter(const char* input, const char *pattern);
 int  recurse_dir(const char *path);
 void start_processing(lint_t *b);
 
+void filt_c_init(void);
+
 #endif

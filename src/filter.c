@@ -40,13 +40,24 @@
 #include "mode.h"
 #include "md5.h"
 
-nuint_t dircount = 0;
-bool iAbort   = false,
-     dir_done = false,
-     db_done  = false;
+/* global vars, but initialized by filt_c_init() */ 
+nuint_t dircount;
+bool iAbort, dir_done, db_done;
 
 /* Counter for additional lint (!= duplicates) (lazy) */
 nuint_t addlint = 0;
+
+/* ------------------------------------------------------------- */
+
+void filt_c_init(void)
+{
+    dircount = 0;
+    iAbort   = false;
+    dir_done = false;
+    db_done  = false;
+}
+
+/* ------------------------------------------------------------- */
 
 /*
  * Callbock from signal()
@@ -82,20 +93,22 @@ static void interrupt(int p)
     }
 }
 
+/* ------------------------------------------------------------- */
+
 /* Cheap function to check if c is a char in str */
 static int junkinstr(const char *str)
 {
     int i = 0, j = 0;
-    if(set.junk_chars == NULL)
+    if(set->junk_chars == NULL)
     {
         return 0;
     }
 
-    for(; set.junk_chars[i]; i++)
+    for(; set->junk_chars[i]; i++)
     {
         for(j=0; str[j]; j++)
         {
-            if(str[j] == set.junk_chars[i])
+            if(str[j] == set->junk_chars[i])
             {
                 return true;
             }
@@ -105,11 +118,9 @@ static int junkinstr(const char *str)
 }
 
 
-/* A simply method to test if a file is non stripped binary.
+/* ------------------------------------------------------------- */
 
-
- */
-
+/* A simply method to test if a file is non stripped binary. Uses popen() */
 static int check_binary_to_be_stripped(const char *path)
 {
     FILE *pipe = NULL;
@@ -140,7 +151,7 @@ static int check_binary_to_be_stripped(const char *path)
     return 0;
 }
 
-
+/* ------------------------------------------------------------- */
 
 /*
  * grep the string "string" to see if it contains the pattern.
@@ -161,7 +172,7 @@ int regfilter(const char* input, const char *pattern)
         regex_t re;
         string = basename(input);
 
-        if(!set.casematch)
+        if(!set->casematch)
         {
             flags |= REG_ICASE;
         }
@@ -182,9 +193,11 @@ int regfilter(const char* input, const char *pattern)
         }
 
         regfree(&re);
-        return (set.invmatch) ? !(status) : (status);
+        return (set->invmatch) ? !(status) : (status);
     }
 }
+
+/* ------------------------------------------------------------- */
 
 /*
  * Callbock from nftw()
@@ -204,7 +217,7 @@ int regfilter(const char* input, const char *pattern)
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
 
-    if(set.depth && ftwbuf->level > set.depth)
+    if(set->depth && ftwbuf->level > set->depth)
     {
         /* Do not recurse in this subdir */
         return FTW_SKIP_SIBLINGS;
@@ -223,7 +236,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 
         if(!dir_done)
         {
-            if(!strcmp(set.paths[get_cpindex()], path))
+            if(!strcmp(set->paths[get_cpindex()], path))
             {
                 dir_done = true;
                 return FTW_CONTINUE;
@@ -232,7 +245,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
         if(flag == FTW_F)
         {
 
-            if(regfilter(path, set.fpattern))
+            if(regfilter(path, set->fpattern))
             {
                 return FTW_CONTINUE;
             }
@@ -242,7 +255,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 addlint += ptr->st_dev;
                 return FTW_CONTINUE;
             }
-            if(set.nonstripped)
+            if(set->nonstripped)
             {
                 if(check_binary_to_be_stripped(path))
                 {
@@ -250,7 +263,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     addlint += ptr->st_dev;
                 }
             }
-            if(set.oldtmpdata)
+            if(set->oldtmpdata)
             {
                 size_t len = strlen(path);
                 if(path[len-1] == '~')
@@ -260,7 +273,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 
                     if(!stat(cpy, &stat_buf))
                     {
-                        if(ABS(stat_buf.st_mtime - ptr->st_mtime) > set.oldtmpdata)
+                        if(ABS(stat_buf.st_mtime - ptr->st_mtime) > set->oldtmpdata)
                         {
                             list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
                             addlint += ptr->st_dev;
@@ -282,7 +295,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             {
                 if(!access(path,R_OK))
                 {
-                    if(set.ignore_hidden)
+                    if(set->ignore_hidden)
                     {
                         char *base = basename(path);
                         if(*base != '.')
@@ -303,7 +316,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
         if(flag == FTW_D)
         {
 
-            if(regfilter(path, set.dpattern) && dir_done)
+            if(regfilter(path, set->dpattern) && dir_done)
             {
                 return FTW_SKIP_SUBTREE;
             }
@@ -312,7 +325,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
                 return FTW_SKIP_SUBTREE;
             }
-            if(set.findemptydirs)
+            if(set->findemptydirs)
             {
                 int dir_counter = 0;
                 DIR *dir_e = opendir(path);
@@ -337,7 +350,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 }
             }
 
-            if(set.ignore_hidden && path)
+            if(set->ignore_hidden && path)
             {
                 char *base = basename(path);
                 if(*base == '.' && dir_done)
@@ -350,13 +363,15 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
     return FTW_CONTINUE;
 }
 
+/* ------------------------------------------------------------- */
+
 /* This calls basically nftw() and sets some options */
 int recurse_dir(const char *path)
 {
     /* Set options */
     int ret = 0;
     int flags = FTW_ACTIONRETVAL;
-    if(!set.followlinks)
+    if(!set->followlinks)
     {
         flags |= FTW_PHYS;
     }
@@ -366,7 +381,7 @@ int recurse_dir(const char *path)
         flags |= FTW_DEPTH;
     }
 
-    if(set.samepart)
+    if(set->samepart)
     {
         flags |= FTW_MOUNT;
     }
@@ -397,6 +412,7 @@ int recurse_dir(const char *path)
     return dircount;
 }
 
+/* ------------------------------------------------------------- */
 
 /* If we have more than one path, several lint_ts  *
  *  may point to the same (physically same file.  *
@@ -439,11 +455,15 @@ static nuint_t rm_double_paths(file_group *fp)
     return c;
 }
 
+/* ------------------------------------------------------------- */
+
 /* Sort criteria for sorting by dev and inode */
 static long cmp_nd(lint_t *a, lint_t *b)
 {
     return ((long)(a->node) - (long)(b->node));
 }
+
+/* ------------------------------------------------------------- */
 
 /* Compares the "fp" array of the lint_t a and b */
 static int cmp_fingerprints(lint_t *a,lint_t *b)
@@ -470,6 +490,8 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
 
     return 1;
 }
+
+/* ------------------------------------------------------------- */
 
 /* Performs a fingerprint check on the group fp */
 static nuint_t group_filter(file_group *fp)
@@ -553,6 +575,8 @@ static nuint_t group_filter(file_group *fp)
     return remove_count;
 }
 
+/* ------------------------------------------------------------- */
+
 /* Callback from build_checksums */
 static void *cksum_cb(void * vp)
 {
@@ -565,8 +589,14 @@ static void *cksum_cb(void * vp)
         file=file->next;
     }
 
+    if(gp)
+    {
+        free(gp);
+    }
     return NULL;
 }
+
+/* ------------------------------------------------------------- */
 
 static void build_checksums(file_group *grp)
 {
@@ -579,13 +609,13 @@ static void build_checksums(file_group *grp)
         return;
     }
 
-    if(set.threads == 1 ||  grp->size < (2 * MD5_MTHREAD_SIZE))
+    if(set->threads == 1 ||  grp->size < (2 * MD5_MTHREAD_SIZE))
     {
         /* Just loop through this group and built the checksum */
-        file_group whole_grp;
-        whole_grp.grp_stp = grp->grp_stp;
-        whole_grp.grp_enp = NULL;
-        cksum_cb((void*)&whole_grp);
+        file_group * whole_grp = malloc(sizeof(file_group));
+        whole_grp->grp_stp = grp->grp_stp;
+        whole_grp->grp_enp = NULL;
+        cksum_cb((void*)whole_grp);
     }
     else
     {
@@ -637,6 +667,8 @@ static void build_checksums(file_group *grp)
     }
 }
 
+/* ------------------------------------------------------------- */
+
 /* Callback that actually does the work for ONE group */
 static void* sheduler_cb(void *gfp)
 {
@@ -669,6 +701,8 @@ static void* sheduler_cb(void *gfp)
     return NULL;
 }
 
+/* ------------------------------------------------------------- */
+
 /* Joins the threads launched by sheduler */
 static void sheduler_jointhreads(pthread_t *tt, nuint_t n)
 {
@@ -682,13 +716,15 @@ static void sheduler_jointhreads(pthread_t *tt, nuint_t n)
     }
 }
 
+/* ------------------------------------------------------------- */
+
 /* Distributes the groups on the ressources */
 static void start_sheduler(file_group *fp, nuint_t nlistlen)
 {
     nuint_t ii;
     pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
 
-    if(set.threads == 1)
+    if(set->threads == 1)
     {
         for(ii = 0; ii < nlistlen && !iAbort; ii++)
         {
@@ -697,7 +733,7 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
     }
     else
     {
-        /* Run max set.threads at the same time. */
+        /* Run max set->threads at the same time. */
         int nrun = 0;
         for(ii = 0; ii < nlistlen && !iAbort; ii++)
         {
@@ -709,7 +745,7 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
                     perror(RED"ERROR: "NCO"pthread_create in sheduler()");
                 }
 
-                if(nrun >= set.threads-1)
+                if(nrun >= set->threads-1)
                 {
                     sheduler_jointhreads(tt, nrun + 1);
                     nrun = 0;
@@ -732,6 +768,8 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
     }
 }
 
+/* ------------------------------------------------------------- */
+
 /* Sort group array via qsort() */
 static int cmp_grplist_bynodes(const void *a,const void *b)
 {
@@ -747,6 +785,8 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
     }
     return -1;
 }
+
+/* ------------------------------------------------------------- */
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
 static void size_to_human_readable(nuint_t num, char *in, int sz)
@@ -769,6 +809,7 @@ static void size_to_human_readable(nuint_t num, char *in, int sz)
     }
 }
 
+/* ------------------------------------------------------------- */
 
 static void find_double_bases(lint_t *starting)
 {
@@ -794,7 +835,7 @@ static void find_double_bases(lint_t *starting)
 
                     if(phead)
                     {
-                        error("\n%s#"NCO" Double basenames: \n", (set.verbosity > 1) ? GRE : NCO);
+                        error("\n%s#"NCO" Double basenames: \n", (set->verbosity > 1) ? GRE : NCO);
                         phead = false;
                     }
 
@@ -839,10 +880,14 @@ static void find_double_bases(lint_t *starting)
     }
 }
 
+/* ------------------------------------------------------------- */
+
 static long cmp_sort_dupID(lint_t* a, lint_t* b)
 {
     return ((long)a->dupflag-(long)b->dupflag);
 }
+
+/* ------------------------------------------------------------- */
 
 void start_processing(lint_t *b)
 {
@@ -857,7 +902,7 @@ void start_processing(lint_t *b)
             rem_counter  = 0,
             path_doubles = 0;
             
-    if(set.namecluster)
+    if(set->namecluster)
     {
         find_double_bases(b);
         error("\n");
@@ -918,7 +963,7 @@ void start_processing(lint_t *b)
                 fglist[spelen].size    = gsize;
 
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
-                if(get_cpindex() > 1 || set.followlinks)
+                if(get_cpindex() > 1 || set->followlinks)
                 {
                     path_doubles += rm_double_paths(&fglist[spelen]);
                 }
@@ -933,7 +978,7 @@ void start_processing(lint_t *b)
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
 
-                if(get_cpindex() > 1 || set.followlinks)
+                if(get_cpindex() > 1 || set->followlinks)
                 {
                     rm_double_paths(&emptylist);
                 }
@@ -947,7 +992,7 @@ void start_processing(lint_t *b)
 
                     if(flag != ptr->dupflag)
                     {
-                        if(set.verbosity > 1)
+                        if(set->verbosity > 1)
                         {
                             error(GRE"\n#"NCO);
                         }
@@ -986,7 +1031,7 @@ void start_processing(lint_t *b)
                         flag = ptr->dupflag;
                     }
 
-                    if(set.verbosity > 1)
+                    if(set->verbosity > 1)
                     {
                         error(GRE);
                     }
@@ -1020,14 +1065,14 @@ void start_processing(lint_t *b)
                         error("   rm");
                     }
 
-                    if(set.verbosity > 1)
+                    if(set->verbosity > 1)
                     {
                         error(NCO);
                     }
 
                     error(" %s\n",ptr->path);
 
-                    if(set.output)
+                    if(set->output)
                     {
                         write_to_log(ptr, false);
                     }
@@ -1042,7 +1087,7 @@ void start_processing(lint_t *b)
 
     error("\n");
 
-    if(set.searchdup == 0)
+    if(set->searchdup == 0)
     {
         int i = 0;
 
@@ -1076,13 +1121,13 @@ void start_processing(lint_t *b)
     info(" done. \nNow doing fingerprints and full checksums:\n\n");
     db_done = true;
 
-    error("%s Duplicate(s):\n",(set.verbosity > 1) ? GRE"#"NCO : "#");
+    error("%s Duplicate(s):\n",(set->verbosity > 1) ? GRE"#"NCO : "#");
     /* Groups are splitted, now give it to the sheduler */
     /* The sheduler will do another filterstep, build checkusm
      *  and compare 'em. The result is printed afterwards */
     start_sheduler(fglist, spelen);
 
-    if(set.mode == 5 && set.output)
+    if(set->mode == 5 && set->output)
     {
         if(get_logstream())
         {
@@ -1105,7 +1150,7 @@ void start_processing(lint_t *b)
     warning("\n"RED"=> "NCO"In total "RED"%ld"NCO
             " files (whereof %d are duplicates) found%s\n",
             remaining + emptylist.len, get_dupcounter(),
-            (set.mode == 1 || set.mode == 2) ? ". (Nothing removed yet!)" : ".");
+            (set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
 
     warning(RED"=> "NCO"Totally "GRE" ~%s "NCO" [%ld Bytes] can be removed.\n\n", lintbuf, lint + emptylist.size);
 
@@ -1116,10 +1161,10 @@ void start_processing(lint_t *b)
         perror("Unable to write log");
         putchar('\n');
     }
-    else if(set.output)
+    else if(set->output)
     {
-        warning("A log has been written to "BLU"%s.log"NCO".\n", set.output);
-        warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set.output);
+        warning("A log has been written to "BLU"%s.log"NCO".\n", set->output);
+        warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set->output);
     }
 
     /* End of actual program. Now do some file handling / frees */

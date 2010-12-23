@@ -30,8 +30,18 @@
    1) Append, sort, ...
 */
 
-lint_t *start = NULL; /* A pointer to the first element in the list */
-lint_t *back  = NULL; /* A pointer to the last  element in the list */
+lint_t *start; /* A pointer to the first element in the list */
+lint_t *back ; /* A pointer to the last  element in the list */
+
+/* ------------------------------------------------------------- */
+
+void list_c_init(void)
+{
+    start = NULL;
+    back  = NULL;
+}
+
+/* ------------------------------------------------------------- */
 
 /** list_begin() - returns pointer to start of list **/
 lint_t *list_begin(void)
@@ -39,7 +49,7 @@ lint_t *list_begin(void)
     return start;
 }
 
-
+/* ------------------------------------------------------------- */
 
 /**
  * Free all contents from the list
@@ -76,7 +86,7 @@ void list_clear(lint_t *begin)
     }
 }
 
-
+/* ------------------------------------------------------------- */
 
 lint_t *list_remove(lint_t *ptr)
 {
@@ -110,6 +120,7 @@ lint_t *list_remove(lint_t *ptr)
     return n;
 }
 
+/* ------------------------------------------------------------- */
 
 /* Init of the element */
 static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, dev_t dev, ino_t node,  bool flag)
@@ -141,6 +152,7 @@ static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, dev_t dev, 
     memset(pointer->md5_digest,0,MD5_LEN);
 }
 
+/* ------------------------------------------------------------- */
 
 /* Sorts the list after the criteria specified by the (*cmp) callback  */
 lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
@@ -258,7 +270,7 @@ lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*))
     }
 }
 
-
+/* ------------------------------------------------------------- */
 
 void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
 {
@@ -274,7 +286,7 @@ void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
     }
     else
     {
-        lint_t *prev	= back;
+        lint_t *prev = back;
         back=tmp;
         prev->next=tmp;
         tmp->last=prev;
