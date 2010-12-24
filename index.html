@@ -18,23 +18,25 @@ background-repeat:repeat-x;
 	<style type="text/css">
 		body {
   		margin-top: 1.0em;
+		font-size: 0.85em;
+		color: #43b1de;
   		background-color: #373737;
 		  font-family: "Helvetica,Arial,FreeSans";
   		color: #ffffff;
     }
     #container {
       margin: 0 auto;
-      width: 1920px;
+      width: 1080px;
     }
-		h1 { font-size: 3.8em; color: #43b1de; margin-bottom: 3px; }
+		h1 { font-size: 2.8em; color: #000000; margin-bottom: 3px; }
 		h1 .small { font-size: 0.4em; }
-		h1 a { text-decoration: none }
-		h2 { font-size: 1.5em; color: #43b1de; }
+		h1 a { text-decoration: none; color: #32a0cd }
+		h2 { font-size: 1.0em; color: #43b1de; }
     h3 { text-align: center; color: #43b1de; }
     a { color: #b8a8cc; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 50px; font-style: italic;}
+    .description { font-size: 1.0em; margin-bottom: 30px; margin-top: 50px; font-style: italic;}
     .download { float: right; }
-		pre { background: #000; color: #fff; padding: 15px;}
+		pre { background: #222222; color: #fff; padding: 15px;}
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
 	</style>
@@ -55,6 +57,8 @@ background-repeat:repeat-x;
 
     <br>
     <br>
+    <br>
+    <br>
     <h1><a href="http://github.com/sahib/rmlint">rmlint</a>
       <span class="small">by <a href="http://github.com/sahib">sahib</a></span></h1>
 
@@ -62,20 +66,25 @@ background-repeat:repeat-x;
       A commandline tool to find unnecessary files (duplicates, tmpfiles..) 
     </div>
 
-    <p>See README.</p><h2>Dependencies</h2>
-<p>None. </p>
+
+    <h2>Dependencies</h2>
+<p>Only requirement is a POSIX-compilant Operating System.</p>
 <h2>Install</h2>
-<p>./configure 
-make -j 2 
-sudo make install</p>
+    <pre style=width:50%>
+	# download
+	git clone https://github.com/sahib/rmlint.git 
+	cd rmlint
+
+	# compile
+	./configure 
+	make -j 4
+	sudo make install
+    </pre>
 <h2>License</h2>
-<p>GPLv3</p>
-<h2>Authors</h2>
-<p>Chris Pahl (sahib@online.de)
+<p>rmlint is licensed under the terms of the <a href="http://www.gnu.org/licenses/gpl.html">GPLv3</a></p>
+<h2>Author</h2>
+<p>Christopher &lt;Sahib&gt; Pahl (sahib@online.de)
 <br/>
-<br/>      </p>
-<h2>Contact</h2>
-<p>Chris Pahl (sahib@online.de)
 <br/>      </p>
 
 
@@ -91,9 +100,10 @@ sudo make install</p>
     </p>
 
     <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/sahib/rmlint">sahib/rmlint</a>
+      get the developement version on GitHub : <a href="http://github.com/sahib/rmlint">sahib/rmlint</a>
     </div>
 
   </div> 
 </body>
 </html>
+
