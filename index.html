@@ -20,7 +20,7 @@ background-repeat:repeat-x;
   		margin-top: 1.0em;
 		font-size: 0.85em;
 		color: #43b1de;
-  		background-color: #373737;
+  		background-color: #333333;
 		  font-family: "Helvetica,Arial,FreeSans";
   		color: #ffffff;
     }
@@ -28,7 +28,7 @@ background-repeat:repeat-x;
       margin: 0 auto;
       width: 1080px;
     }
-		h1 { font-size: 2.8em; color: #000000; margin-bottom: 3px; }
+		h1 { font-size: 2.8em; color: #000000; background-color: #333333; margin-bottom: 3px; }
 		h1 .small { font-size: 0.4em; }
 		h1 a { text-decoration: none; color: #32a0cd }
 		h2 { font-size: 1.0em; color: #43b1de; }
@@ -40,35 +40,44 @@ background-repeat:repeat-x;
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
 	</style>
-	
 </head>
-
 <body>
   <a href="http://github.com/sahib/rmlint"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
-
   <div id="container">
-
     <div class="download">
       <a href="http://github.com/sahib/rmlint/zipball/master">
         <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
       <a href="http://github.com/sahib/rmlint/tarball/master">
         <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
     </div>
-
     <br>
     <br>
     <br>
     <br>
-    <h1><a href="http://github.com/sahib/rmlint">rmlint</a>
-      <span class="small">by <a href="http://github.com/sahib">sahib</a></span></h1>
-
+    <br>
+    <br>
+    <br>
+    <img src="http://ompldr.org/vNnExMg/rmlint_screen.png" alt="rmlint monsta" />
+    <br>
+    <br>
+    <h1><img src="http://ompldr.org/vNnExOQ/rmlint_text.png" alt="rmlint"/></h1>
     <div class="description">
-      A commandline tool to find unnecessary files (duplicates, tmpfiles..) 
+      A commandline tool to find unnecessary files (duplicates, tmpfiles, unstripped binaries and more) 
     </div>
-
-
+	 <h2>Features</h2>
+	     <UL>
+	     <LI>Very fast (in many cases faster than rdfind, and always magnitudes faster than fdupes).
+        <LI>Output of both a ready to use script to handle finds and a easy-to-parse logfile.
+        <LI>Tries to minimize I/O as muchs as possible (focus on CPU-usage).
+        <LI>Displays find in realtime.
+        <LI>Safely abortable at any time (will write log & script).
+        <LI>No extra dependencies at all (glib and pthread is something you have).
+        <LI>Colorful output (can be disabled via -B).
+        <LI>...and some more goodies to find for you :-)
+        </UL>
     <h2>Dependencies</h2>
 <p>Only requirement is a POSIX-compilant Operating System.</p>
+<p>Till now it has been succesfully tested on Linux 32/64bit OS.</p>
 <h2>Install</h2>
     <pre style=width:50%>
 	# download
@@ -80,25 +89,24 @@ background-repeat:repeat-x;
 	make -j 4
 	sudo make install
     </pre>
-<h2>License</h2>
-<p>rmlint is licensed under the terms of the <a href="http://www.gnu.org/licenses/gpl.html">GPLv3</a></p>
-<h2>Author</h2>
-<p>Christopher &lt;Sahib&gt; Pahl (sahib@online.de)
-<br/>
-<br/>      </p>
-
-
-    <h2>Download</h2>
     <p>
-      You can download this project in either
+      You can also download this project in either
       <a href="http://github.com/sahib/rmlint/zipball/master">zip</a> or
       <a href="http://github.com/sahib/rmlint/tarball/master">tar</a> formats.
     </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/sahib/rmlint</pre>
-    </p>
-
+<br>
+<h2>Usage</h2>
+Please see 'man rmlint' or 'rmlint -h' for detailed information.<br>
+Note that rmlint will <strong>*never*</strong> delete anything without your confirmation.
+<br>
+<br>
+<h2>License</h2>
+<p>rmlint is licensed under the terms of the <a href="http://www.gnu.org/licenses/gpl.html">GPLv3</a></p>
+<br>
+<h2>Author</h2>
+<p>Christopher &lt;Sahib&gt; Pahl (sahib@online.de)
+<p> See also my <a href="http://sahib.github.com">github-page</a> for more info on me.<p>
+<br/>      </p>
     <div class="footer">
       get the developement version on GitHub : <a href="http://github.com/sahib/rmlint">sahib/rmlint</a>
     </div>
