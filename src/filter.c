@@ -994,7 +994,7 @@ void start_processing(lint_t *b)
                     {
                         if(set->verbosity > 1)
                         {
-                            error(GRE"\n#"NCO);
+                            error(YEL"\n#"NCO);
                         }
                         else
                         {
@@ -1038,11 +1038,11 @@ void start_processing(lint_t *b)
 
                     if(ptr->dupflag == TYPE_BLNK)
                     {
-                        error("   rm -rf");
+                        error("   rm");
                     }
                     else if(ptr->dupflag == TYPE_OTMP)
                     {
-                        error("   rm -rf");
+                        error("   rm");
                     }
                     else if(ptr->dupflag == TYPE_EDIR)
                     {
@@ -1121,7 +1121,7 @@ void start_processing(lint_t *b)
     info(" done. \nNow doing fingerprints and full checksums:\n\n");
     db_done = true;
 
-    error("%s Duplicate(s):\n",(set->verbosity > 1) ? GRE"#"NCO : "#");
+    error("%s Duplicate(s):\n",(set->verbosity > 1) ? YEL"#"NCO : "#");
     /* Groups are splitted, now give it to the sheduler */
     /* The sheduler will do another filterstep, build checkusm
      *  and compare 'em. The result is printed afterwards */

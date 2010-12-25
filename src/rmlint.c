@@ -20,7 +20,6 @@
 **/
 
 
-
 /*
  rmlint.c:
  1) Methods to parse arguments and set vars accordingly
@@ -757,7 +756,7 @@ int rmlint_main(void)
 
         /* Till this point the list is unsorted
          * The filter alorithms requires the list to be size-sorted,
-         * so it can easily filter unique sizes, and build "groupisles"
+         * so it can easily filter unique sizes, and build "groups"
          * */
         info("Now mergesorting list based on filesize... ");
         list_sort(list_begin(),cmp_sz);

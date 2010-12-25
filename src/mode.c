@@ -225,6 +225,7 @@ void write_to_log(const lint_t *file, bool orig)
         }
         else if(file->dupflag == TYPE_EDIR)
         {
+	    /* rmdir assures that dir is empty (it fails otherwise)  */
             fprintf(get_scriptstream(), "rmdir '%s' # Empty directory\n", fpath);
             fprintf(get_logstream(),"EDIR '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
         }
@@ -245,7 +246,7 @@ void write_to_log(const lint_t *file, bool orig)
         }
         else if(file->fsize == 0)
         {
-            fprintf(get_scriptstream(), "rm -rf '%s' # Empty file\n", fpath);
+            fprintf(get_scriptstream(), "rm -f '%s' # Empty file\n", fpath);
             fprintf(get_logstream(),"ZERO '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
         }
         else if(orig==false)
@@ -259,7 +260,7 @@ void write_to_log(const lint_t *file, bool orig)
             }
             else
             {
-                fprintf(get_scriptstream(),"rm -rf '%s' # Duplicate\n",fpath);
+                fprintf(get_scriptstream(),"rm -f '%s' # Duplicate\n",fpath);
             }
         }
         else
@@ -605,7 +606,7 @@ bool findmatches(file_group *grp)
                         {
                             if((set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
                             {
-                                error("   #  %s\n",i->path);
+                                error(GRE"   ls "NCO"%s\n",i->path);
                             }
 
                             write_to_log(i, true);
@@ -622,7 +623,7 @@ bool findmatches(file_group *grp)
                             }
                             else
                             {
-                                warning(GRE"   %-1s "NCO,"rm");
+                                warning(YEL"   %-1s "NCO,"rm");
                             }
 
                             if(set->verbosity > 1)
@@ -648,7 +649,6 @@ bool findmatches(file_group *grp)
             /* Get ready for next group */
             if(printed_original && set->verbosity > 1)
             {
-                error("\n");
             }
             pthread_mutex_unlock(&mutex_printage);
 
