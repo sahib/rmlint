@@ -126,14 +126,20 @@ static int check_binary_to_be_stripped(const char *path)
     FILE *pipe = NULL;
     int bytes = 0;
     char dummy_buf = 0,
-         *cmd = NULL;
+         * cmd = NULL,
+	 * escaped = NULL;
 
     if(path == NULL)
     {
         return 0;
     }
 
-    cmd = strdup_printf("file '%s' | grep 'not stripped'", path);
+    escaped = strsubs(path,"'","'\"'\"'");
+    cmd = strdup_printf("file '%s' | grep 'not stripped'", escaped);
+    if(escaped)
+    {
+	free(escaped);
+    }
 
     pipe = popen(cmd,"r");
     if(pipe == NULL)
@@ -143,6 +149,11 @@ static int check_binary_to_be_stripped(const char *path)
 
     bytes = fread(&dummy_buf, sizeof(char), 1, pipe);
     pclose(pipe);
+
+    if(cmd)
+    {
+	free(cmd);
+    }
 
     if(bytes)
     {

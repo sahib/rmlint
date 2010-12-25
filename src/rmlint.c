@@ -51,7 +51,8 @@ int  cpindex = 0;
 bool do_exit = false,
      use_cwd = false,
      jmp_set = false,
-     ex_stat = false;
+     ex_stat = false,
+     abort_n = true;
 
 /* Default commands */
 const char *script_name = "rmlint";
@@ -72,6 +73,7 @@ void rmlint_init(void)
         use_cwd = false;
         jmp_set = false;
         ex_stat = false;
+	abort_n = true;
 }
 
 /* ------------------------------------------------------------- */
@@ -568,7 +570,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
     if(lp == 0)
     {
         /* Still no path set? */
-        sets->paths = malloc(sizeof(char*)<<1);
+        sets->paths = malloc(sizeof(char*)*2);
         sets->paths[0] = getcwd(NULL,0);
         sets->paths[1] = NULL;
         if(!sets->paths[0])
@@ -633,6 +635,7 @@ void die(int status)
             free(set->paths[0]);
         }
     }
+
     if(set->paths)
     {
         free(set->paths);
@@ -661,6 +664,11 @@ void die(int status)
     {
         longjmp(place,status);
     }
+
+    if(abort_n) 
+    {
+	exit(status);
+    }
 }
 
 /* ------------------------------------------------------------- */
@@ -678,14 +686,21 @@ int rmlint_main(void)
 {
     /* Used only for infomessage */
     nuint_t total_files = 0;
+    abort_n = false;
 
-    /* Init all modules that use global variables.. */
-    rmlint_init();
-    
-    md5c_c_init();
-    list_c_init();
-    filt_c_init();
-    mode_c_init();
+    if(do_exit != true)
+    {
+    	/* Init all modules that use global variables.. */
+	if(!use_cwd) 
+	{ 
+		rmlint_init();
+	}
+
+	md5c_c_init();
+	list_c_init();
+	filt_c_init();
+	mode_c_init();
+    }
     
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
