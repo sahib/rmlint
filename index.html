@@ -68,9 +68,10 @@ background-repeat:repeat-x;
 	     <LI>Very fast (written in pure C, in many cases faster than rdfind, and always magnitudes faster than fdupes).
         <LI>Output of both a ready to use script to handle finds and a easy-to-parse logfile.
         <LI>Tries to minimize I/O as much as possible (focus on CPU-usage).
-        <LI>Displays find in realtime.
-        <LI>Safely abortable at any time (will write log & script).
-        <LI>No extra dependencies at all (glibc and pthread is something you have already).
+	<LI>Finds duplictes, nonstripped binaries, files with same basenames (nameclusters), empty files/directories, old tempdata, strange filenames
+        <LI>Displays finds in realtime.
+        <LI>Safely abortable at any time (will write 5log & script).
+        <LI>No extra dependencies at all (glib and pthread is something you have).
         <LI>Colorful output (can be disabled via -B).
         <LI>...and some more goodies to find for you :-)
         </UL>
