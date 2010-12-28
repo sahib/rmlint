@@ -46,6 +46,10 @@
    1) Methods to calculate md5sums
    2) Method to build a short fingerprint of a file
    3) Method to build a 'full' (not quite) md5sum of a file
+
+   For doc. on the md5 routines themselves:
+   Go to some library, with lots of time.
+   I don't understand the code myself...
 */
 /* forward declaration */
 static void Transform ();
@@ -336,12 +340,12 @@ void md5_file(lint_t *file)
     unsigned char *data=NULL;
 
     /* Don't read the $already_read amount of bytes read by md5_fingerprint */
-    nuint_t already_read = MD5_FPSIZE_FORM(file->fsize); 
-    
+    nuint_t already_read = MD5_FPSIZE_FORM(file->fsize);
+
     /* This is some rather seldom case, but skip checksum building here */
     if(file->fsize <= (already_read*2))
     {
-        return;    
+        return;
     }
 
     /*
@@ -367,7 +371,7 @@ void md5_file(lint_t *file)
             ==3118==    by 0x409643: main (main.c:32)
             ==3118==  Address 0x7ff001000 is not stack'd, malloc'd or (recently) free'd
             ==3118==
-     * 
+     *
      */
 
     /* Allocate buffer on the thread's stack */
@@ -389,17 +393,17 @@ void md5_file(lint_t *file)
     do
     {
 
-/* If (pseudo-)serialized IO is requested lock a mutex, so other threads have to wait here
- * This is to prevent that several threads call fread() at the same time, what would case the
- * HD to jump a lot around without doing anything intelligent..
- * */
+        /* If (pseudo-)serialized IO is requested lock a mutex, so other threads have to wait here
+         * This is to prevent that several threads call fread() at the same time, what would case the
+         * HD to jump a lot around without doing anything intelligent..
+         * */
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_ck_IO);
 #endif
         /* The call to fread */
         bytes = fread (data, 1, MD5_IO_BLOCKSIZE, inFile);
 
-/* Unlock */
+        /* Unlock */
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_unlock(&mutex_ck_IO);
 #endif
@@ -445,7 +449,7 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
 
     /* Read the first block */
     bytes = fread(data,sizeof(char),readsize,pF);
-    
+
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif
@@ -470,7 +474,7 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
     /* Jump to end and read final block */
     fseek(pF, -readsize,SEEK_END);
     bytes = fread(data,sizeof(char),readsize,pF);
-    
+
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif

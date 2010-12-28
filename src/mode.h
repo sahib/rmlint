@@ -26,15 +26,19 @@
 #include "list.h"
 #include "filter.h"
 
-
+/* Mostly used by filter.c  */
 bool findmatches(file_group *grp);
 void init_filehandler(void);
 void write_to_log(const lint_t *file, bool orig);
 nuint_t get_dupcounter();
 
+/* ------------------------------------------------------------- */
+
 FILE *get_logstream(void);
 FILE *get_scriptstream(void);
 
+/* Method to substitute $subs in $string with $with */
+/* Something should really get a std method */
 char * strsubs(const char * string, const char * subs, const char * with);
 
 void mode_c_init(void);

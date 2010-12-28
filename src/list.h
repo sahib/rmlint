@@ -26,25 +26,19 @@
 #include <sys/types.h>
 #include "defs.h"
 
-
-/* I can haz bool? */
-typedef char bool;
-#define false ( 0)
-#define true  (!0)
-
 /* The structure used from now on to handle nearly everything */
 typedef struct lint_t
 {
     unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
     unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-    char bim[BYTE_MIDDLE_SIZE];
+    char bim[BYTE_MIDDLE_SIZE];		 /* Place where the infamouse byInThMiddle are stored */
 
-    char *path;		  	                   /* absolute path from working dir */
-    nuint_t fsize; 		                   /* Size of the file (bytes) */
-    bool filter; 			               /* Uhm? */
-    bool dupflag;			               /* Is the file marked as duplicate? */
+    char *path;		  	         /* absolute path from working dir */
+    nuint_t fsize; 		         /* Size of the file (bytes) */
+    bool filter; 			 /* this is used in calculations  */
+    bool dupflag;			 /* Is the file marked as duplicate? */
 
-    /* This is used to find pointers to the same file */
+    /* This is used to find pointers to the physically same file */
     ino_t node;
     dev_t dev;
 
@@ -73,7 +67,7 @@ void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
 /* Returns len of list */
 nuint_t list_len(void);
 
-/* Set vars.. (bad design :/)*/
+/* Set vars.. (bad design to be honest)*/
 void list_c_init(void);
 
 #endif

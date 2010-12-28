@@ -43,14 +43,22 @@
 
 
 nuint_t dup_counter=0;
-nuint_t get_dupcounter() { return dup_counter; }
-void set_dupcounter(nuint_t new) { dup_counter = new; }
+nuint_t get_dupcounter()
+{
+    return dup_counter;
+}
+void set_dupcounter(nuint_t new)
+{
+    dup_counter = new;
+}
 
 /* Make the stream "public" */
 FILE *script_out;
 FILE *log_out;
 
 pthread_mutex_t mutex_printage =  PTHREAD_MUTEX_INITIALIZER;
+
+/* ------------------------------------------------------------- */
 
 void mode_c_init(void)
 {
@@ -61,66 +69,73 @@ void mode_c_init(void)
     pthread_mutex_init(&mutex_printage, NULL);
 }
 
+/* ------------------------------------------------------------- */
 
 FILE *get_logstream(void)
 {
     return log_out;
 }
+/* ------------------------------------------------------------- */
 
 FILE *get_scriptstream(void)
 {
     return script_out;
 }
 
+/* ------------------------------------------------------------- */
 
 static char * __strsubs(char * string, const char * subs, size_t subs_len, const char * with, size_t with_len, long offset)
 {
-	char * new, * occ = strstr(string+offset,subs);
-	size_t strn_len = 0;
+    char * new, * occ = strstr(string+offset,subs);
+    size_t strn_len = 0;
 
-	/* Terminate when no occurences left */
-	if(occ == NULL)
-	{
-		return string;
-	}
+    /* Terminate when no occurences left */
+    if(occ == NULL)
+    {
+        return string;
+    }
 
-	/* string has a variable length */
-	strn_len = strlen(string);
-	new = calloc(strn_len + with_len - subs_len + 1,sizeof(char));
-	
-	/* Split & copy */
-	strncat(new, string, occ-string);
-	strncat(new, with, with_len);
-	strncat(new, occ+subs_len, strn_len - subs_len - (occ-string));
+    /* string has a variable length */
+    strn_len = strlen(string);
+    new = calloc(strn_len + with_len - subs_len + 1,sizeof(char));
 
-	/* free previous pointer */
-	free(string);
-	return __strsubs(new,subs,subs_len,with,with_len,(occ-string)+with_len);
+    /* Split & copy */
+    strncat(new, string, occ-string);
+    strncat(new, with, with_len);
+    strncat(new, occ+subs_len, strn_len - subs_len - (occ-string));
+
+    /* free previous pointer */
+    free(string);
+    return __strsubs(new,subs,subs_len,with,with_len,(occ-string)+with_len);
 }
+
+/* ------------------------------------------------------------- */
 
 /* Return always a newly allocated string - wraps around __strsubs() */
 char * strsubs(const char * string, const char * subs, const char * with)
 {
-	size_t subs_len, with_len;
+    size_t subs_len, with_len;
 
-	/* Handle special cases (where __strsubs would return weird things) */
-	if(string == NULL || *string == 0)
-	{
-		return NULL;
-	}
+    /* Handle special cases (where __strsubs would return weird things) */
+    if(string == NULL || *string == 0)
+    {
+        return NULL;
+    }
 
-	if(subs == NULL || (subs == NULL && with == NULL) || *subs == 0)
-	{
-		return strdup(string);
-	}
+    if(subs == NULL || (subs == NULL && with == NULL) || *subs == 0)
+    {
+        return strdup(string);
+    }
 
-	/* Call strlen() only once */
-	subs_len = strlen(subs);
-	with_len = (with) ? strlen(with) : 0;
+    /* Call strlen() only once */
+    subs_len = strlen(subs);
+    with_len = (with) ? strlen(with) : 0;
 
-	/* Replace all occurenced recursevely */
-	return __strsubs(strdup(string), subs, subs_len, with, with_len,0);
+    /* Replace all occurenced recursevely */
+    return __strsubs(strdup(string), subs, subs_len, with, with_len,0);
 }
+
+/* ------------------------------------------------------------- */
 
 /* Simple wrapper around unlink() syscall */
 static void remfile(const char *path)
@@ -133,6 +148,8 @@ static void remfile(const char *path)
         }
     }
 }
+
+/* ------------------------------------------------------------- */
 
 /** This is only for extremely paranoid people **/
 static int paranoid(const char *p1, const char *p2, nuint_t size)
@@ -177,6 +194,8 @@ static int paranoid(const char *p1, const char *p2, nuint_t size)
     return 1;
 }
 
+/* ------------------------------------------------------------- */
+
 static void print_askhelp(void)
 {
     error(  GRE"\nk"NCO" - keep file \n"
@@ -188,6 +207,8 @@ static void print_askhelp(void)
             NCO );
 }
 
+/* ------------------------------------------------------------- */
+
 void write_to_log(const lint_t *file, bool orig)
 {
     bool free_fullpath = true;
@@ -195,7 +216,7 @@ void write_to_log(const lint_t *file, bool orig)
     {
         int i = 0;
         char *fpath = canonicalize_file_name(file->path);
-        
+
         if(!fpath)
         {
             if(file->dupflag != TYPE_BLNK)
@@ -208,7 +229,7 @@ void write_to_log(const lint_t *file, bool orig)
         }
         else
         {
-            char *tmp_copy = fpath; 
+            char *tmp_copy = fpath;
             fpath = strsubs(fpath,"'","'\"'\"'");
             free(tmp_copy);
         }
@@ -225,7 +246,7 @@ void write_to_log(const lint_t *file, bool orig)
         }
         else if(file->dupflag == TYPE_EDIR)
         {
-	    /* rmdir assures that dir is empty (it fails otherwise)  */
+            /* rmdir assures that dir is empty (it fails otherwise)  */
             fprintf(get_scriptstream(), "rmdir '%s' # Empty directory\n", fpath);
             fprintf(get_logstream(),"EDIR '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
         }
@@ -291,6 +312,7 @@ void write_to_log(const lint_t *file, bool orig)
     }
 }
 
+/* ------------------------------------------------------------- */
 
 static bool handle_item(lint_t *file_path, lint_t *file_orig)
 {
@@ -432,6 +454,7 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
     return false;
 }
 
+/* ------------------------------------------------------------- */
 
 void init_filehandler(void)
 {
@@ -508,6 +531,7 @@ void init_filehandler(void)
     }
 }
 
+/* ------------------------------------------------------------- */
 
 /* Compare criteria of checksums */
 static int cmp_f(lint_t *a, lint_t *b)
@@ -516,7 +540,7 @@ static int cmp_f(lint_t *a, lint_t *b)
     int is_empty[2][3];
     memset(is_empty[0],1,3);
     memset(is_empty[1],1,3);
-    
+
     for(i = 0; i < MD5_LEN; i++)
     {
         if(a->md5_digest[i] != b->md5_digest[i])
@@ -561,13 +585,14 @@ static int cmp_f(lint_t *a, lint_t *b)
             warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint - This may be a bug!\n");
             return 1;
         }
-        
+
     }
 
     set_dupcounter(get_dupcounter()+1);
     return 0;
 }
 
+/* ------------------------------------------------------------- */
 
 bool findmatches(file_group *grp)
 {
@@ -594,8 +619,8 @@ bool findmatches(file_group *grp)
                 if(j->dupflag)
                 {
                     if( (!cmp_f(i,j))           &&                              /* Same checksum?                                             */
-                            (i->fsize == j->fsize)	&&					            /* Same size? (double check, you never know)             	 */
-                            ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)   /* If we're bothering with paranoid users - Take the gatling! */
+                            (i->fsize == j->fsize)	&&			        /* Same size? (double check, you never know)                  */
+                            ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)  /* If we're bothering with paranoid users - Take the gatling! */
                       )
                     {
                         /* i 'similiar' to j */
@@ -646,13 +671,9 @@ bool findmatches(file_group *grp)
                 j = j->next;
             }
 
-            /* Get ready for next group */
-            if(printed_original && set->verbosity > 1)
-            {
-            }
             pthread_mutex_unlock(&mutex_printage);
 
-            /* Now remove if i didn't match in list */
+            /* Now remove if $i didn't match in list */
             if(i->dupflag)
             {
                 lint_t *tmp = i;
@@ -685,3 +706,5 @@ bool findmatches(file_group *grp)
 
     return false;
 }
+
+/* ------------------------------------------------------------- */

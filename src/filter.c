@@ -40,7 +40,7 @@
 #include "mode.h"
 #include "md5.h"
 
-/* global vars, but initialized by filt_c_init() */ 
+/* global vars, but initialized by filt_c_init() */
 nuint_t dircount;
 bool iAbort, dir_done, db_done;
 
@@ -121,44 +121,56 @@ static int junkinstr(const char *str)
 /* ------------------------------------------------------------- */
 
 /* A simply method to test if a file is non stripped binary. Uses popen() */
+/* It's a bit slow, because it has to call fork() internally */
 static int check_binary_to_be_stripped(const char *path)
 {
     FILE *pipe = NULL;
     int bytes = 0;
     char dummy_buf = 0,
          * cmd = NULL,
-	 * escaped = NULL;
+           * escaped = NULL;
 
     if(path == NULL)
     {
         return 0;
     }
 
+    /* Escape ' so the shell does not get confused */
     escaped = strsubs(path,"'","'\"'\"'");
+
+    /* The command we're using */
     cmd = strdup_printf("file '%s' | grep 'not stripped'", escaped);
+
     if(escaped)
     {
-	free(escaped);
+        free(escaped);
     }
 
-    pipe = popen(cmd,"r");
+    /* Pipe  */
+    pipe = popen(cmd,"re");
     if(pipe == NULL)
     {
         return 0;
     }
 
+    /* If one byte can be read, the file is a nonstripped binary */
     bytes = fread(&dummy_buf, sizeof(char), 1, pipe);
+
+    /* close pipe */
     pclose(pipe);
 
+    /* clean up */
     if(cmd)
     {
-	free(cmd);
+        free(cmd);
     }
 
     if(bytes)
     {
         return 1;
     }
+
+    /* not a nsb  */
     return 0;
 }
 
@@ -181,20 +193,26 @@ int regfilter(const char* input, const char *pattern)
     else
     {
         regex_t re;
+
+        /* Only grep basename */
         string = basename(input);
 
+        /* forget about case by default */
         if(!set->casematch)
         {
             flags |= REG_ICASE;
         }
 
+        /* compile pattern */
         if(regcomp(&re, pattern, flags))
         {
             return 0;
         }
 
+        /* do the actual work */
         if( (status = regexec(&re, string, (size_t)0, NULL, 0)) != 0)
         {
+            /* catch errors */
             if(status != REG_NOMATCH)
             {
                 char err_buff[100];
@@ -203,6 +221,7 @@ int regfilter(const char* input, const char *pattern)
             }
         }
 
+        /* finalize */
         regfree(&re);
         return (set->invmatch) ? !(status) : (status);
     }
@@ -218,12 +237,13 @@ int regfilter(const char* input, const char *pattern)
  * - a file: Push it back to the list, if it has "cmp_pattern" in it. (if --regex was given)
  * If the user interrupts, nftw() stops, and the program will do it'S magic.
  *
+ * Not many comments, because man page of nftw will explain everything you'll need to understand
  *
  * Appendum: rmlint uses the inode to sort the contents before doing any I/O to speed up things.
  * 			 This is nevertheless limited to Unix filesystems like ext*, reiserfs.. (might work in MacOSX - don't know)
  * 			 If someone likes to port this to Windows he would to replace the inode number by the MFT entry point, or simply disable it
  * 			 I personally don't have a win comp and won't port it, as I don't found many users knowing what that black window with white
- *           lines can do ;-)
+ *                       lines can do ;-)
  */
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
@@ -425,13 +445,16 @@ int recurse_dir(const char *path)
 
 /* ------------------------------------------------------------- */
 
-/* If we have more than one path, several lint_ts  *
- *  may point to the same (physically same file.  *
- *  This woud result in false positves - Kick'em  */
+/* If we have more than one path, several lint_ts   *
+ *  may point to the same (physically same!) file.  *
+ *  This would result in false positves - Kick'em   */
 static nuint_t rm_double_paths(file_group *fp)
 {
-    lint_t *b = fp->grp_stp;
+    lint_t *b = (fp) ? fp->grp_stp : NULL;
     nuint_t c = 0;
+
+    /* This compares inode and devID */
+    /* This a little bruteforce, but works just fine :-) */
 
     if(b)
     {
@@ -440,12 +463,15 @@ static nuint_t rm_double_paths(file_group *fp)
             if( (b->node == b->next->node) &&
                     (b->dev  == b->next->dev )  )
             {
+                /* adjust grp */
                 lint_t *tmp = b;
                 fp->size -= b->fsize;
                 fp->len--;
 
+                /* Remove this one  */
                 b = list_remove(b);
 
+                /* Update group info */
                 if(tmp == fp->grp_stp)
                 {
                     fp->grp_stp = b;
@@ -469,6 +495,7 @@ static nuint_t rm_double_paths(file_group *fp)
 /* ------------------------------------------------------------- */
 
 /* Sort criteria for sorting by dev and inode */
+/* This does not take care of the device, because Linux can read several disks in parallel */
 static long cmp_nd(lint_t *a, lint_t *b)
 {
     return ((long)(a->node) - (long)(b->node));
@@ -480,6 +507,7 @@ static long cmp_nd(lint_t *a, lint_t *b)
 static int cmp_fingerprints(lint_t *a,lint_t *b)
 {
     int i,j;
+    /* compare both fp-arrays */
     for(i=0; i<2; i++)
     {
         for(j=0; j<MD5_LEN; j++)
@@ -491,6 +519,7 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
         }
     }
 
+    /* Also compare the bytes which were read 'on the fly' */
     for(i=0; i<BYTE_MIDDLE_SIZE; i++)
     {
         if(a->bim[i] != b->bim[i])
@@ -499,6 +528,7 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
         }
     }
 
+    /* Let it pass! */
     return 1;
 }
 
@@ -513,6 +543,7 @@ static nuint_t group_filter(file_group *fp)
     nuint_t remove_count = 0;
     nuint_t fp_sz;
 
+    /* Prevent crashes (should not happen too often) */
     if(!fp || fp->grp_stp == NULL)
     {
         return 0;
@@ -524,8 +555,12 @@ static nuint_t group_filter(file_group *fp)
     /* Clamp it to some maximum (4KB) */
     fp_sz = (fp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : fp_sz;
 
+    /* Calc fingerprints  */
+    /* Note: this is already multithreaded, because large groups get their own thread */
+    /* No need for additional threading code here */
     while(p)
     {
+        /* see md5.c for explanations */
         md5_fingerprint(p, fp_sz);
         p=p->next;
     }
@@ -582,7 +617,6 @@ static nuint_t group_filter(file_group *fp)
         i=i->next;
     }
 
-
     return remove_count;
 }
 
@@ -594,16 +628,21 @@ static void *cksum_cb(void * vp)
     file_group *gp = vp;
     lint_t *file = gp->grp_stp;
 
+    /* Iterate over all files in group */
     while( file && file != gp->grp_enp )
     {
+        /* See md5.c */
         md5_file(file);
         file=file->next;
     }
 
+    /* free group, for each thread */
     if(gp)
     {
         free(gp);
     }
+
+    /* same as pthread_exit() */
     return NULL;
 }
 
@@ -628,12 +667,13 @@ static void build_checksums(file_group *grp)
         whole_grp->grp_enp = NULL;
         cksum_cb((void*)whole_grp);
     }
-    else
+    else /* split group in subgroups and start a seperate thread for each */
     {
         nuint_t  sz = 0;
         lint_t * ptr = grp->grp_stp;
         lint_t * lst = grp->grp_stp;
 
+        /* The refereces to all threads */
         pthread_t * thread_queue = malloc( (grp->size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t));
         int thread_counter = 0, ii = 0;
 
@@ -642,6 +682,15 @@ static void build_checksums(file_group *grp)
             sz += ptr->fsize;
             if(sz >= MD5_MTHREAD_SIZE || ptr->next == NULL)
             {
+                /* This part here was bugging me quite a while
+                   In previous versions I passed a non-dynamically-allocated file_group to the thread.
+                   From what I understood at this time, this shoudl work, becuase C/gcc would take care, or at least warn me.
+                   Well, It didn't. Neither I was warned, nor it crashed, nor it worked, because the local variable wasn't
+                   valid after the 'if'-statement ended. So the thread was a bit clueless what happened and just continued with
+                   building checksums. So about 300% too many checksums where build for nothiing.
+
+                   Short version: Never pass local variables (or stackallocated buffers) in general to threads.
+                */
                 file_group * sub_grp = malloc(sizeof(file_group));
                 sub_grp->grp_stp = lst;
                 sub_grp->grp_enp = ptr->next;
@@ -652,6 +701,7 @@ static void build_checksums(file_group *grp)
                 lst = ptr;
                 sz  = 0;
 
+                /* Now create the thread */
                 if(pthread_create(&thread_queue[thread_counter++], NULL, cksum_cb, sub_grp))
                 {
                     perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
@@ -663,6 +713,7 @@ static void build_checksums(file_group *grp)
             }
         }
 
+        /* Make sure all threads are joined */
         for(ii = 0; ii < thread_counter; ii++)
         {
             if(pthread_join(thread_queue[ii],NULL))
@@ -671,6 +722,7 @@ static void build_checksums(file_group *grp)
             }
         }
 
+        /* free */
         if(thread_queue)
         {
             free(thread_queue);
@@ -680,18 +732,20 @@ static void build_checksums(file_group *grp)
 
 /* ------------------------------------------------------------- */
 
-/* Callback that actually does the work for ONE group */
+/* Callback from sheduler that actually does the work for ONE group */
 static void* sheduler_cb(void *gfp)
 {
+    /* cast from *void */
     file_group *group = gfp;
     if(group == NULL || group->grp_stp == NULL)
     {
         return NULL;
     }
 
+    /* do the fingerprint filter */
     group_filter(group);
 
-
+    /* Kick empty groups, or groups with 1 elem */
     if(group->grp_stp == NULL || group->len <= 1)
     {
         list_clear(group->grp_stp);
@@ -699,11 +753,14 @@ static void* sheduler_cb(void *gfp)
         group->grp_enp = NULL;
         return NULL;
     }
-    
+
+    /* build checksum for the rest */
     build_checksums(group);
 
+    /* Finalize and free sublist */
     if(findmatches(group))
     {
+        /* when 'q' was selected in askmode */
         list_clear(group->grp_stp);
         die(0);
     }
@@ -742,14 +799,14 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
             sheduler_cb(&fp[ii]);
         }
     }
-    else
+    else /* if size of certain group exceeds limit start an own thread, else run in 'foreground' */
     {
         /* Run max set->threads at the same time. */
         int nrun = 0;
         for(ii = 0; ii < nlistlen && !iAbort; ii++)
         {
 
-            if(fp[ii].size >  THREAD_SHEDULER_MTLIMIT)
+            if(fp[ii].size > THREAD_SHEDULER_MTLIMIT) /* Group exceeds limit */
             {
                 if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii]))
                 {
@@ -765,7 +822,7 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
 
                 nrun++;
             }
-            else
+            else /* run in fg */
             {
                 sheduler_cb(&fp[ii]);
             }
@@ -837,6 +894,7 @@ static void find_double_bases(lint_t *starting)
             j=i->next;
             while(j)
             {
+                /* compare basenames */
                 if(!strcmp(basename(i->path), basename(j->path)) &&
                         i->node != j->node && j->dupflag
                   )
@@ -846,7 +904,7 @@ static void find_double_bases(lint_t *starting)
 
                     if(phead)
                     {
-                        error("\n%s#"NCO" Double basenames: \n", (set->verbosity > 1) ? GRE : NCO);
+                        error("\n%s#"NCO" Double basenames:", (set->verbosity > 1) ? GRE : NCO);
                         phead = false;
                     }
 
@@ -854,8 +912,9 @@ static void find_double_bases(lint_t *starting)
                     {
                         char * tmp = canonicalize_file_name(i->path);
                         i->dupflag = false;
-                        printf("\n%s #Size: %lu\n",tmp,i->fsize);
+                        error("\n   ls %s #Size: %lu\n",tmp,i->fsize);
                         pr = true;
+
                         if(tmp)
                         {
                             free(tmp);
@@ -874,8 +933,9 @@ static void find_double_bases(lint_t *starting)
                             x=x->next;
                         }
                     }
+
                     j->dupflag = false;
-                    printf("%s #Size %lu\n",tmp2,j->fsize);
+                    error("   ls %s #Size %lu\n",tmp2,j->fsize);
                     if(tmp2)
                     {
                         free(tmp2);
@@ -893,6 +953,8 @@ static void find_double_bases(lint_t *starting)
 
 /* ------------------------------------------------------------- */
 
+/* You don't have to understand this really - don't worry. */
+/* Only used in conjuction with qsort to make output a lil nicer */
 static long cmp_sort_dupID(lint_t* a, lint_t* b)
 {
     return ((long)a->dupflag-(long)b->dupflag);
@@ -900,6 +962,7 @@ static long cmp_sort_dupID(lint_t* a, lint_t* b)
 
 /* ------------------------------------------------------------- */
 
+/* This the actual main() of rmlint */
 void start_processing(lint_t *b)
 {
     file_group *fglist = NULL,
@@ -912,13 +975,13 @@ void start_processing(lint_t *b)
             remaining    = 0,
             rem_counter  = 0,
             path_doubles = 0;
-            
+
     if(set->namecluster)
     {
         find_double_bases(b);
         error("\n");
     }
-    emptylist.len = 1;
+    emptylist.len  = 1;
     emptylist.size = 0;
 
     /* Split into groups, based by size */
@@ -979,9 +1042,10 @@ void start_processing(lint_t *b)
                     path_doubles += rm_double_paths(&fglist[spelen]);
                 }
 
+                /* number_of_groups++ */
                 spelen++;
             }
-            else
+            else /* this is some other sort of lint (indicated by a size of 0) */
             {
                 lint_t *ptr;
                 bool flag = 42;
@@ -994,10 +1058,12 @@ void start_processing(lint_t *b)
                     rm_double_paths(&emptylist);
                 }
 
+                /* sort by lint_ID (== dupID) */
                 ptr = emptylist.grp_stp;
                 ptr = list_sort(ptr,cmp_sort_dupID);
                 emptylist.grp_stp = ptr;
                 emptylist.len = 0;
+
                 while(ptr)
                 {
 
@@ -1157,7 +1223,10 @@ void start_processing(lint_t *b)
         }
     }
 
+    /* now process the ouptput we gonna print */
     size_to_human_readable(lint+emptylist.size, lintbuf, 127);
+
+    /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%ld"NCO
             " files (whereof %d are duplicates) found%s\n",
             remaining + emptylist.len, get_dupcounter(),

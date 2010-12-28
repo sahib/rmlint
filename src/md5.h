@@ -53,10 +53,13 @@ typedef struct
     unsigned char digest[16];     /* actual digest after MD5Final call */
 } MD5_CTX;
 
+/* ------------------------------------------------------------- */
+
+/* Additional functions not in original md5.c */
 void MDPrintArr(unsigned char *digest);
-void md5_file (lint_t* file);
 void md5_fingerprint(lint_t *file, const nuint_t readsize);
 
+void md5_file (lint_t* file);
 void md5c_c_init(void);
 
 #endif

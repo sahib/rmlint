@@ -69,11 +69,11 @@ jmp_buf place;
 
 void rmlint_init(void)
 {
-        do_exit = false;
-        use_cwd = false;
-        jmp_set = false;
-        ex_stat = false;
-	abort_n = true;
+    do_exit = false;
+    use_cwd = false;
+    jmp_set = false;
+    ex_stat = false;
+    abort_n = true;
 }
 
 /* ------------------------------------------------------------- */
@@ -114,7 +114,7 @@ void msg_macro_print(FILE * stream, const char * string)
     if(stream && string)
     {
         char * tmp = strdup(string);
-        
+
         if(!set->color)
         {
             tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
@@ -139,7 +139,7 @@ void error(const char* format, ...)
     if(set->verbosity > 0)
     {
         char * tmp;
-        
+
         va_list args;
         va_start (args, format);
         if(vasprintf (&tmp, format, args) == -1)
@@ -163,7 +163,7 @@ void warning(const char* format, ...)
     if(set->verbosity > 1)
     {
         char * tmp;
-        
+
         va_list args;
         va_start (args, format);
         if(vasprintf (&tmp, format, args) == -1)
@@ -187,7 +187,7 @@ void info(const char* format, ...)
     if(set->verbosity > 2)
     {
         char * tmp;
-        
+
         va_list args;
         va_start (args, format);
         if(vasprintf (&tmp, format, args) == -1)
@@ -285,7 +285,7 @@ static void print_help(void)
             "\t\t\t\tDefault is 2.\n"
             "\t\t\t\tUse 3 to get an idea what's happening internally, 1 to get raw output without colors.\n"
            );
-    fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n\n"); 
+    fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n\n");
     fprintf(stderr,"Additionally, the options b,p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (B,O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
             "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n"
            );
@@ -310,23 +310,23 @@ static void print_version(void)
 void rmlint_set_default_settings(rmlint_settings *pset)
 {
     set = pset;
-    
-    pset->mode  	    =  1; 		/* list only    */
+
+    pset->mode  	=  1; 		/* list only    */
     pset->casematch     =  0; 		/* Insensitive  */
-    pset->invmatch	    =  0;		/* Normal mode  */
-    pset->paranoid	    =  0; 		/* dont be bush */
-    pset->depth 		=  0; 		/* inf depth    */
+    pset->invmatch	=  0;		/* Normal mode  */
+    pset->paranoid      =  0; 		/* dont be bush */
+    pset->depth         =  0; 		/* inf depth    */
     pset->followlinks   =  0; 		/* fol. link    */
-    pset->threads 	    = 16;       /* Quad*quad.   */
+    pset->threads       = 16;           /* Quad*quad.   */
     pset->verbosity 	=  2; 		/* Most relev.  */
     pset->samepart  	=  0; 		/* Stay parted  */
-    pset->paths  	    =  NULL;    /* Startnode    */
-    pset->dpattern 	    =  NULL;    /* DRegpattern  */
-    pset->fpattern 	    =  NULL;    /* FRegPattern  */
-    pset->cmd_path 	    =  NULL;    /* Cmd,if used  */
-    pset->cmd_orig      =  NULL;    /* Origcmd, -"- */
-    pset->junk_chars    =  NULL;    /* You have to set this   */
-    pset->oldtmpdata    = 60;       /* Remove 1min old buffers */
+    pset->paths         =  NULL;        /* Startnode    */
+    pset->dpattern      =  NULL;        /* DRegpattern  */
+    pset->fpattern 	=  NULL;        /* FRegPattern  */
+    pset->cmd_path      =  NULL;        /* Cmd,if used  */
+    pset->cmd_orig      =  NULL;        /* Origcmd, -"- */
+    pset->junk_chars    =  NULL;        /* You have to set this   */
+    pset->oldtmpdata    = 60;           /* Remove 1min old buffers */
     pset->ignore_hidden = 1;
     pset->findemptydirs = 1;
     pset->namecluster   = 0;
@@ -549,6 +549,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         }
     }
 
+    /* Check the directory to be valid */
     while(optind < argc)
     {
         int p = open(argv[optind],O_RDONLY);
@@ -569,7 +570,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 
     if(lp == 0)
     {
-        /* Still no path set? */
+        /* Still no path set? - use `pwd` */
         sets->paths = malloc(sizeof(char*)*2);
         sets->paths[0] = getcwd(NULL,0);
         sets->paths[1] = NULL;
@@ -577,6 +578,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
+
             if(sets->paths)
             {
                 free(sets->paths);
@@ -665,9 +667,9 @@ void die(int status)
         longjmp(place,status);
     }
 
-    if(abort_n) 
+    if(abort_n)
     {
-	exit(status);
+        exit(status);
     }
 }
 
@@ -690,18 +692,18 @@ int rmlint_main(void)
 
     if(do_exit != true)
     {
-    	/* Init all modules that use global variables.. */
-	if(!use_cwd) 
-	{ 
-		rmlint_init();
-	}
+        /* Init all modules that use global variables.. */
+        if(!use_cwd)
+        {
+            rmlint_init();
+        }
 
-	md5c_c_init();
-	list_c_init();
-	filt_c_init();
-	mode_c_init();
+        md5c_c_init();
+        list_c_init();
+        filt_c_init();
+        mode_c_init();
     }
-    
+
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
     jmp_set = true;

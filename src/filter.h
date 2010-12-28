@@ -23,12 +23,11 @@
 #ifndef PROGRESS_H
 #define PROGRESS_H
 
-
 #include "list.h"
 
+/* file_group; models a 'sublist' */
 typedef struct
 {
-
     /* Start and end pointer of a 'group' */
     lint_t *grp_stp, *grp_enp;
 
@@ -37,11 +36,13 @@ typedef struct
 
 } file_group;
 
+/* ------------------------------------------------------------- */
 
+/* Used in rmlint.c only  */
 int  regfilter(const char* input, const char *pattern);
 int  recurse_dir(const char *path);
-void start_processing(lint_t *b);
 
+void start_processing(lint_t *b);
 void filt_c_init(void);
 
 #endif

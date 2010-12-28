@@ -27,7 +27,14 @@
 #include "rmlint.h"
 
 /* list.c:
-   1) Append, sort, ...
+   1) Append, sort, primitive implementation of simple doubly linked list
+*/
+
+/*
+Please note:
+This implementation is quite simple, mostly because it's my first time that I use Linked Lists in C,
+Therefore the list is global (simply because only one is needed), and may accesed to the list_begin()
+Later in the program the list is handled by file_groups, which are actually some sort of sublists
 */
 
 lint_t *start; /* A pointer to the first element in the list */
@@ -63,7 +70,7 @@ void list_clear(lint_t *begin)
 
     while(ptr)
     {
-        /* Save ptr to ftm */
+        /* Save ptr to tmp */
         tmp = ptr;
 
         /* Next */
