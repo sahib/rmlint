@@ -340,45 +340,23 @@ void md5_file(lint_t *file)
     unsigned char *data=NULL;
 
     /* Don't read the $already_read amount of bytes read by md5_fingerprint */
-    nuint_t already_read = MD5_FPSIZE_FORM(file->fsize);
+    nuint_t already_read=0,actual_size=0; 
 
+    already_read = MD5_FPSIZE_FORM(file->fsize);
+ 
     /* This is some rather seldom case, but skip checksum building here */
     if(file->fsize <= (already_read*2))
     {
         return;
     }
 
-    /*
-     * Little note: valgrind might record 'data' as 'not stack'd, malloc'd or (recently) free'd',
-     *              I guess (no, Im not 100% sure) this is just because of the normal stacksize of
-     *              a thread, valgrind seems not to take note that thread's stacksize might enlarge,
-     *              as this is what iirc alloca() does (incrementing the stackframe pointer)
-     *              So for now I will ignore this one, just to let you know.
-     *
-     * Exact message valgrind's giving me:
-
-            ==3118== Syscall param read(buf) points to unaddressable byte(s)
-            ==3118==    at 0x538B7ED: read (in /lib/libc-2.12.1.so)
-            ==3118==    by 0x53379C2: ??? (in /lib/libc-2.12.1.so)
-            ==3118==    by 0x532C3B2: fread (in /lib/libc-2.12.1.so)
-            ==3118==    by 0x403C63: md5_file (md5.c:357)
-            ==3118==    by 0x404E93: cksum_cb (filter.c:567)
-            ==3118==    by 0x404FAF: build_checksums (filter.c:595)
-            ==3118==    by 0x4051EB: sheduler_cb (filter.c:667)
-            ==3118==    by 0x4053CF: start_sheduler (filter.c:730)
-            ==3118==    by 0x40613B: start_processing (filter.c:1090)
-            ==3118==    by 0x4095E5: rmlint_main (rmlint.c:738)
-            ==3118==    by 0x409643: main (main.c:32)
-            ==3118==  Address 0x7ff001000 is not stack'd, malloc'd or (recently) free'd
-            ==3118==
-     *
-     */
+    actual_size  = (MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE;
 
     /* Allocate buffer on the thread's stack */
-    data = alloca((MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE);
+    data = alloca(actual_size+1); 
 
     /*data = alloca(MD5_IO_BLOCKSIZE);*/
-    inFile = fopen (file->path, "rq");
+    inFile = fopen (file->path, "re");
 
     /* Can't open file? */
     if(inFile == NULL)
@@ -401,7 +379,7 @@ void md5_file(lint_t *file)
         pthread_mutex_lock(&mutex_ck_IO);
 #endif
         /* The call to fread */
-        bytes = fread (data, 1, MD5_IO_BLOCKSIZE, inFile);
+        bytes = fread (data, sizeof(unsigned char), actual_size, inFile);
 
         /* Unlock */
 #if (MD5_SERIAL_IO == 1)
@@ -429,7 +407,8 @@ void md5_file(lint_t *file)
 void md5_fingerprint(lint_t *file, const nuint_t readsize)
 {
     int bytes = 0;
-    FILE *pF = fopen(file->path, "r");
+    bool unlock = true;
+    FILE *pF = fopen(file->path, "re");
     unsigned char *data = alloca(readsize);
     MD5_CTX con;
 
@@ -467,26 +446,40 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
     pthread_mutex_lock(&mutex_fp_IO);
 #endif
 
-    /* Jump to middle of file and read a couple of bytes there s*/
-    fseek(pF, file->fsize/2 ,SEEK_SET);
-    bytes = fread(file->bim, sizeof(char), BYTE_MIDDLE_SIZE, pF);
+    if(readsize <= file->fsize) 
+    {
+	    /* Jump to middle of file and read a couple of bytes there s*/
+	    fseek(pF, file->fsize/2 ,SEEK_SET);
+	    bytes = fread(file->bim, sizeof(unsigned char), BYTE_MIDDLE_SIZE, pF);
 
-    /* Jump to end and read final block */
-    fseek(pF, -readsize,SEEK_END);
-    bytes = fread(data,sizeof(char),readsize,pF);
+	    if(readsize + BYTE_MIDDLE_SIZE <= file->fsize)
+	    {
+		    /* Jump to end and read final block */
+		    fseek(pF, -readsize,SEEK_END);
+		    bytes = fread(data,sizeof(char),readsize,pF);
 
 #if (MD5_SERIAL_IO == 1)
-    pthread_mutex_unlock(&mutex_fp_IO);
+		    pthread_mutex_unlock(&mutex_fp_IO);
+		    unlock = false;
 #endif
 
-    /* Compute checksum of this last block */
-    if(bytes)
-    {
-        MD5Init (&con);
-        MD5Update (&con, data, bytes);
-        MD5Final (&con);
-        memcpy(file->fp[1],con.digest,MD5_LEN);
+		    /* Compute checksum of this last block */
+		    if(bytes)
+		    {
+			MD5Init (&con);
+			MD5Update (&con, data, bytes);
+			MD5Final (&con);
+			memcpy(file->fp[1],con.digest,MD5_LEN);
+		    }
+	    }
     }
+
+#if (MD5_SERIAL_IO == 1)
+    if(unlock)
+    {
+    	pthread_mutex_unlock(&mutex_fp_IO);
+    }
+#endif
 
     /* kthxbai */
     fclose(pF);

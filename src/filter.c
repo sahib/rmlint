@@ -44,9 +44,6 @@
 nuint_t dircount;
 bool iAbort, dir_done, db_done;
 
-/* Counter for additional lint (!= duplicates) (lazy) */
-nuint_t addlint = 0;
-
 /* ------------------------------------------------------------- */
 
 void filt_c_init(void)
@@ -85,10 +82,12 @@ static void interrupt(int p)
         break;
     case SIGFPE  :
     case SIGABRT :
-        error(RED"FATAL: "NCO"Aborting due to internal error.\n");
+        error(RED"FATAL: "NCO"Aborting due to internal error!\n");
+        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
         die(-1);
     case SIGSEGV :
-        error(RED"FATAL: "NCO"o hai. I haz segfault. Can I haz backtrace? Kthxbai.\n");
+        error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
+        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
         die(-1);
     }
 }
@@ -283,7 +282,6 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             if(junkinstr(basename(path)))
             {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
-                addlint += ptr->st_dev;
                 return FTW_CONTINUE;
             }
             if(set->nonstripped)
@@ -291,30 +289,39 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 if(check_binary_to_be_stripped(path))
                 {
                     list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
-                    addlint += ptr->st_dev;
                 }
             }
             if(set->oldtmpdata)
             {
+		/* This checks only for *~ and .*.swp */
                 size_t len = strlen(path);
-                if(path[len-1] == '~')
+                if(path[len-1] == '~' || (len>3&&path[len-1] == 'p'&&path[len-2] == 'w'&&path[len-3] == 's'&&path[len-4] == '.'))
                 {
-                    char *cpy = strndup(path,len-1);
+                    char *cpy = NULL;
                     struct stat stat_buf;
+
+		    if(path[len - 1] == '~')
+ 		    {
+		    	cpy = strndup(path,len-1);
+  		    }
+		    else
+		    {
+			char * p = strrchr(path,'/');
+			size_t p_len = p-path;
+			char * front = alloca(p_len+1);
+			memset(front, '\0', p_len+1);	
+			strncpy(front, path, p_len);
+			cpy = strdup_printf("%s/%s",front,p+2);
+			cpy[strlen(cpy)-4] = 0;
+		    }
 
                     if(!stat(cpy, &stat_buf))
                     {
-                        if(ABS(stat_buf.st_mtime - ptr->st_mtime) > set->oldtmpdata)
+                        if(ptr->st_mtime - stat_buf.st_mtime >= set->oldtmpdata)
                         {
                             list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
-                            addlint += ptr->st_dev;
                         }
-                        if(cpy)
-                        {
-                            free(cpy);
-                        }
-                        return FTW_CONTINUE;
-                    }
+                    } 
                     if(cpy)
                     {
                         free(cpy);
@@ -417,8 +424,11 @@ int recurse_dir(const char *path)
         flags |= FTW_MOUNT;
     }
 
-    /* Handle SIGINT */
-    signal(SIGINT, interrupt);
+    /* Handle SIGs */
+    signal(SIGINT,  interrupt);
+    signal(SIGSEGV, interrupt);
+    signal(SIGFPE,  interrupt);
+    signal(SIGABRT, interrupt);
 
     /* (Re)-Init */
     dir_done = false;
@@ -520,14 +530,14 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
     }
 
     /* Also compare the bytes which were read 'on the fly' */
-    for(i=0; i<BYTE_MIDDLE_SIZE; i++)
+   /* for(i=0; i<BYTE_MIDDLE_SIZE; i++)
     {
         if(a->bim[i] != b->bim[i])
         {
             return 0;
         }
-    }
-
+    }*/
+    
     /* Let it pass! */
     return 1;
 }
@@ -570,6 +580,21 @@ static nuint_t group_filter(file_group *fp)
 
     while(i)
     {
+
+/* Useful debugging stuff: */
+/* 
+	int z = 0;
+	MDPrintArr(i->fp[0]);
+	printf("|#|");
+	MDPrintArr(i->fp[1]);
+	printf("|#|");
+	for(; z < BYTE_MIDDLE_SIZE; z++)
+	{
+		printf("%2x",i->bim[z]);
+	}
+	fflush(stdout);
+*/
+	
         if(i->filter)
         {
             j=i->next;
@@ -591,6 +616,7 @@ static nuint_t group_filter(file_group *fp)
                 lint_t *tmp = i;
                 fp->len--;
                 fp->size -= i->fsize;
+
 
                 i = list_remove(i);
 
@@ -741,7 +767,7 @@ static void* sheduler_cb(void *gfp)
     {
         return NULL;
     }
-
+   
     /* do the fingerprint filter */
     group_filter(group);
 
@@ -1041,6 +1067,7 @@ void start_processing(lint_t *b)
                 {
                     path_doubles += rm_double_paths(&fglist[spelen]);
                 }
+
 
                 /* number_of_groups++ */
                 spelen++;

@@ -136,7 +136,7 @@ void msg_macro_print(FILE * stream, const char * string)
 /** Messaging **/
 void error(const char* format, ...)
 {
-    if(set->verbosity > 0)
+    if(set->verbosity > 0 && set->verbosity < 4)
     {
         char * tmp;
 
@@ -160,7 +160,7 @@ void error(const char* format, ...)
 
 void warning(const char* format, ...)
 {
-    if(set->verbosity > 1)
+    if(set->verbosity > 1 && set->verbosity < 4)
     {
         char * tmp;
 
@@ -184,7 +184,7 @@ void warning(const char* format, ...)
 
 void info(const char* format, ...)
 {
-    if(set->verbosity > 2)
+    if(set->verbosity > 2 && set->verbosity < 4)
     {
         char * tmp;
 
@@ -240,12 +240,12 @@ static void print_help(void)
     fprintf(stderr, "\nGeneral options:\n\n"
             "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
             "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally for duplicates. (Slow!) (Default: No.)\n"
-            "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!')\n"
+            "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!'')\n"
            );
     fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
             "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
             "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes.)\n"
-            "\t-x --oldtmp <sec>\tSearch for files with a '~' suffix being min. <sec> seconds older than the corresponding file without the '~' (Default: 60);\n"
+            "\t-x --oldtmp <sec>\tSearch for files with a '~'/'.swp' suffix being min. <sec> seconds older than the corresponding file without the '~'/'.swp'; (Default: 60)\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
            );
     fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
@@ -256,7 +256,7 @@ static void print_help(void)
            );
     fprintf(stderr,	"\n\t\t\t\tWhere modes are:\n\n"
             "\t\t\t\tlist  - Only list found files and exit.\n"
-            "\t\t\t\tlink  - Replace file with a hard link to original.\n"
+            "\t\t\t\tlink  - Replace file with a symlink to original.\n"
             "\t\t\t\task   - Ask for each file what to do.\n"
             "\t\t\t\tnoask - Full removal without asking.\n"
             "\t\t\t\tcmd   - Takes the command given by -c/-C and executes it on the duplicate/original.\n"
@@ -275,13 +275,14 @@ static void print_help(void)
     fprintf(stderr,	"\nMisc options:\n\n"
             "\t-h --help\t\tPrints this text and exits\n"
             "\t-o --output [<o>]\tOutputs logfile to <o>. The <o> argument is optional, specify none to write no log.\n"
-            "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace. (Default \"rmlint.sh\")\n\n");
+            "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace. (Default \"rmlint\")\n\n");
     fprintf(stderr,"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
             "\t\t\t\tWhere:\n"
             "\t\t\t\t0 prints nothing\n"
             "\t\t\t\t1 prints only errors and results\n"
             "\t\t\t\t2 + prints warning\n"
             "\t\t\t\t3 + info and statistics\n\n"
+            "\t\t\t\t4 + dumps log to stdout\n\n"
             "\t\t\t\tDefault is 2.\n"
             "\t\t\t\tUse 3 to get an idea what's happening internally, 1 to get raw output without colors.\n"
            );
@@ -300,7 +301,7 @@ static void print_help(void)
 /* Version string */
 static void print_version(void)
 {
-    fprintf(stderr, "Version 0.86 Compiled: [%s]-[%s]\n",__DATE__,__TIME__);
+    fprintf(stderr, "Version 0.97 Compiled: [%s]-[%s]\n",__DATE__,__TIME__);
     die(0);
 }
 

@@ -41,6 +41,8 @@
 #include "mode.h"
 #include "md5.h"
 
+/* Use double slashes, so we can easily split the line to an array */
+#define LOGSEP "//"
 
 nuint_t dup_counter=0;
 nuint_t get_dupcounter()
@@ -207,6 +209,17 @@ static void print_askhelp(void)
             NCO );
 }
 
+void tmpprint(FILE * stream, const char * string)
+{
+	if(set->verbosity == 4)
+	{
+		fprintf(stdout,string);
+	}
+	
+	fprintf(stream,string);
+}
+
+
 /* ------------------------------------------------------------- */
 
 void write_to_log(const lint_t *file, bool orig)
@@ -237,43 +250,43 @@ void write_to_log(const lint_t *file, bool orig)
         if(file->dupflag == TYPE_BLNK)
         {
             fprintf(get_scriptstream(), "rm '%s' # Bad link pointing nowhere.\n", fpath);
-            fprintf(get_logstream(),"BLNK '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"BLNK");
         }
         else if(file->dupflag == TYPE_OTMP)
         {
             fprintf(get_scriptstream(), "rm '%s' # Tempdata that is older than the actual file.\n", fpath);
-            fprintf(get_logstream(),"OTMP '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"OTMP");
         }
         else if(file->dupflag == TYPE_EDIR)
         {
             /* rmdir assures that dir is empty (it fails otherwise)  */
             fprintf(get_scriptstream(), "rmdir '%s' # Empty directory\n", fpath);
-            fprintf(get_logstream(),"EDIR '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"EDIR");
         }
         else if(file->dupflag == TYPE_JNK_DIRNAME)
         {
             fprintf(get_scriptstream(), "echo '%s' # Direcotryname containing one char of the string \"%s\"\n", fpath, set->junk_chars);
-            fprintf(get_logstream(),"JNKD '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"JNKD");
         }
         else if(file->dupflag == TYPE_JNK_FILENAME)
         {
             fprintf(get_scriptstream(), "ls -ls '%s' # Filename containing one char of the string \"%s\"\n", fpath, set->junk_chars);
-            fprintf(get_logstream(),"JNKN '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"JNKN");
         }
         else if(file->dupflag == TYPE_NBIN)
         {
             fprintf(get_scriptstream(), "strip -s '%s' # Binary containg debug-symbols\n", fpath);
-            fprintf(get_logstream(),"NBIN '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"NBIN");
         }
         else if(file->fsize == 0)
         {
             fprintf(get_scriptstream(), "rm -f '%s' # Empty file\n", fpath);
-            fprintf(get_logstream(),"ZERO '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"ZERO");
         }
         else if(orig==false)
         {
 
-            fprintf(get_logstream(),"DUPL '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"DUPL");
             if(set->cmd_path)
             {
                 fprintf(get_scriptstream(),set->cmd_path,fpath);
@@ -287,7 +300,7 @@ void write_to_log(const lint_t *file, bool orig)
         else
         {
 
-            fprintf(get_logstream(),"ORIG '%s' %lu %ld %ld ", fpath, file->fsize, file->dev, file->node);
+            tmpprint(get_logstream(),"ORIG");
             if(set->cmd_orig)
             {
                 fprintf(get_scriptstream(),set->cmd_orig,fpath);
@@ -298,12 +311,22 @@ void write_to_log(const lint_t *file, bool orig)
                 fprintf(get_scriptstream(),"ls -lisa '%s' # Original\n",fpath);
             }
         }
+	
+	tmpprint(get_logstream(),LOGSEP);
         for (i = 0; i < 16; i++)
         {
-            fprintf (get_logstream(),"%02x", file->md5_digest[i]);
+	    if(set->verbosity == 4) 
+	    {
+            	fprintf(stdout,"%02x", file->md5_digest[i]);
+	    }
+            fprintf(get_logstream(),"%02x", file->md5_digest[i]);
         }
-        fputc('\n',get_logstream());
-
+	if(set->verbosity == 4)
+	{
+        	fprintf(stdout,"%s%s%s%lu%s%ld%s%ld\n", LOGSEP,fpath, LOGSEP, file->fsize, LOGSEP, file->dev, LOGSEP, file->node);
+	}
+        fprintf(get_logstream(),"%s%s%s%lu%s%ld%s%ld\n", LOGSEP,fpath, LOGSEP, file->fsize, LOGSEP, file->dev, LOGSEP, file->node);
+	
 
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK)
         {
@@ -486,24 +509,25 @@ void init_filehandler(void)
                 fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
                 fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
                 fprintf(get_logstream(), "#\n# Entries are listed like this: \n");
-                fprintf(get_logstream(), "# dupflag | path | size | devID | inode | md5sum\n");
+                fprintf(get_logstream(), "# dupflag | md5sum | path | size | devID | inode | md5sum\n");
                 fprintf(get_logstream(), "# -------------------------------------------\n");
                 fprintf(get_logstream(), "# dupflag : What type of lint found:\n");
                 fprintf(get_logstream(), "#           BLNK: Bad link pointing nowhere\n"
                         "#           OTMP: Old tmp data (e.g: test.txt~)\n"
                         "#           EDIR: Empty directory\n"
-                        "#           JNKD: Dirname containg one a char of a user defined string\n"
-                        "#           JNKF: Filename containg one a char of a user defined string\n"
+                        "#           JNKD: Dirname containg one char of a user defined string\n"
+                        "#           JNKF: Filename containg one char of a user defined string\n"
                         "#           ZERO: Empty file\n"
                         "#           NBIN: Nonstripped binary\n"
                         "#           ORIG: File that has a duplicate, but supposed to be a original\n"
                         "#           DUPL: File that is supposed to be a duplicate\n"
                         "#\n");
+                fprintf(get_logstream(), "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`!)\n");
                 fprintf(get_logstream(), "# path    : The full path to the found file\n");
                 fprintf(get_logstream(), "# size    : total size in byte as a decimal integer\n");
                 fprintf(get_logstream(), "# devID   : The ID of the device where the file is located\n");
                 fprintf(get_logstream(), "# inode   : The Inode of the file (see man 2 stat)\n");
-                fprintf(get_logstream(), "# md5sum  : The full md5-checksum of the file\n#\n");
+		fprintf(get_logstream(), "#The '//' inbetween each word is the seperator.\n");
             }
             if(cwd)
             {

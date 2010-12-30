@@ -151,11 +151,9 @@ static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, dev_t dev, 
     */
     memset(pointer->fp[0],0,MD5_LEN);
     memset(pointer->fp[1],0,MD5_LEN);
+    memset(pointer->bim,0,BYTE_MIDDLE_SIZE);
 
     /* Clear the md5 digest array too */
-#if BYTE_IN_THE_MIDDLE
-    memset(pointer->bim,0,BYTE_MIDDLE_SIZE);
-#endif
     memset(pointer->md5_digest,0,MD5_LEN);
 }
 

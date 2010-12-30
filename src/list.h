@@ -31,7 +31,7 @@ typedef struct lint_t
 {
     unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
     unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-    char bim[BYTE_MIDDLE_SIZE];		 /* Place where the infamouse byInThMiddle are stored */
+    unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
 
     char *path;		  	         /* absolute path from working dir */
     nuint_t fsize; 		         /* Size of the file (bytes) */
