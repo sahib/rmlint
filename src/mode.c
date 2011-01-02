@@ -41,18 +41,21 @@
 #include "mode.h"
 #include "md5.h"
 
-/* Use double slashes, so we can easily split the line to an array */
-#define LOGSEP "//"
 
 nuint_t dup_counter=0;
 nuint_t get_dupcounter()
 {
     return dup_counter;
 }
+
+/* ------------------------------------------------------------- */
+
 void set_dupcounter(nuint_t new)
 {
     dup_counter = new;
 }
+
+/* ------------------------------------------------------------- */
 
 /* Make the stream "public" */
 FILE *script_out;
@@ -209,7 +212,9 @@ static void print_askhelp(void)
             NCO );
 }
 
-void tmpprint(FILE * stream, const char * string)
+/* ------------------------------------------------------------- */
+
+void log_print(FILE * stream, const char * string)
 {
 	if(set->verbosity == 4)
 	{
@@ -219,6 +224,26 @@ void tmpprint(FILE * stream, const char * string)
 	fprintf(stream,string);
 }
 
+/* ------------------------------------------------------------- */
+
+void script_print(char * string)
+{
+	if(set->verbosity == 5)
+	{
+		fprintf(stdout, string);
+	}
+
+	fprintf(get_scriptstream(),string);
+	
+	if(string)
+	{
+		free(string);
+	}
+}
+
+/* ------------------------------------------------------------- */
+
+#define _sd_ strdup_printf
 
 /* ------------------------------------------------------------- */
 
@@ -242,6 +267,8 @@ void write_to_log(const lint_t *file, bool orig)
         }
         else
         {
+	    /* This is so scary. */
+	    /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings for more info on this */
             char *tmp_copy = fpath;
             fpath = strsubs(fpath,"'","'\"'\"'");
             free(tmp_copy);
@@ -249,70 +276,74 @@ void write_to_log(const lint_t *file, bool orig)
 
         if(file->dupflag == TYPE_BLNK)
         {
-            fprintf(get_scriptstream(), "rm '%s' # Bad link pointing nowhere.\n", fpath);
-            tmpprint(get_logstream(),"BLNK");
+	    script_print(_sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath ));
+            log_print(get_logstream(),"BLNK");
+        }
+        else if(file->dupflag == TYPE_BASE)
+        {
+            log_print(get_logstream(),"BASE");
+	    script_print(_sd_("echo  '%s' # double basename.\n", fpath ));
         }
         else if(file->dupflag == TYPE_OTMP)
         {
-            fprintf(get_scriptstream(), "rm '%s' # Tempdata that is older than the actual file.\n", fpath);
-            tmpprint(get_logstream(),"OTMP");
+	    script_print(_sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, set->oldtmpdata ));
+            log_print(get_logstream(),"OTMP");
         }
         else if(file->dupflag == TYPE_EDIR)
         {
-            /* rmdir assures that dir is empty (it fails otherwise)  */
-            fprintf(get_scriptstream(), "rmdir '%s' # Empty directory\n", fpath);
-            tmpprint(get_logstream(),"EDIR");
+	    script_print(_sd_("rm -f '%s' # empty folder.\n", fpath));
+            log_print(get_logstream(),"EDIR");
         }
         else if(file->dupflag == TYPE_JNK_DIRNAME)
         {
-            fprintf(get_scriptstream(), "echo '%s' # Direcotryname containing one char of the string \"%s\"\n", fpath, set->junk_chars);
-            tmpprint(get_logstream(),"JNKD");
+	    script_print(_sd_("echo  '%s' # dirname containing one char of the string \"%s\"\n", fpath, set->junk_chars));
+            log_print(get_logstream(),"JNKD");
         }
         else if(file->dupflag == TYPE_JNK_FILENAME)
         {
-            fprintf(get_scriptstream(), "ls -ls '%s' # Filename containing one char of the string \"%s\"\n", fpath, set->junk_chars);
-            tmpprint(get_logstream(),"JNKN");
+	    script_print(_sd_("echo  '%s' # filename containing one char of the string \"%s\"\n", fpath, set->junk_chars));
+            log_print(get_logstream(),"JNKN");
         }
         else if(file->dupflag == TYPE_NBIN)
         {
-            fprintf(get_scriptstream(), "strip -s '%s' # Binary containg debug-symbols\n", fpath);
-            tmpprint(get_logstream(),"NBIN");
+	    script_print(_sd_("strip -s '%s' # binary with debugsymbols.\n", fpath));
+            log_print(get_logstream(),"NBIN");
         }
         else if(file->fsize == 0)
         {
-            fprintf(get_scriptstream(), "rm -f '%s' # Empty file\n", fpath);
-            tmpprint(get_logstream(),"ZERO");
+	    script_print(_sd_("rm -f '%s' # empty file.\n", fpath));
+            log_print(get_logstream(),"ZERO");
         }
         else if(orig==false)
         {
 
-            tmpprint(get_logstream(),"DUPL");
+            log_print(get_logstream(),"DUPL");
             if(set->cmd_path)
             {
-                fprintf(get_scriptstream(),set->cmd_path,fpath);
-                fprintf(get_scriptstream()," &&\n");
+                script_print(_sd_(set->cmd_path,fpath));
+                script_print(_sd_(" &&\n"));
             }
             else
             {
-                fprintf(get_scriptstream(),"rm -f '%s' # Duplicate\n",fpath);
+		script_print(_sd_("rm -f '%s' # duplicate\n",fpath));
             }
         }
         else
         {
 
-            tmpprint(get_logstream(),"ORIG");
+            log_print(get_logstream(),"ORIG");
             if(set->cmd_orig)
             {
-                fprintf(get_scriptstream(),set->cmd_orig,fpath);
-                fprintf(get_scriptstream()," \n");
+                script_print(_sd_(set->cmd_orig,fpath));
+                script_print(_sd_(" \n"));
             }
             else
             {
-                fprintf(get_scriptstream(),"ls -lisa '%s' # Original\n",fpath);
+		script_print(_sd_("echo  '%s' # original\n",fpath));
             }
         }
 	
-	tmpprint(get_logstream(),LOGSEP);
+	log_print(get_logstream(),LOGSEP);
         for (i = 0; i < 16; i++)
         {
 	    if(set->verbosity == 4) 
@@ -334,6 +365,10 @@ void write_to_log(const lint_t *file, bool orig)
         }
     }
 }
+
+/* ------------------------------------------------------------- */
+
+#undef _sd_
 
 /* ------------------------------------------------------------- */
 
@@ -504,16 +539,15 @@ void init_filehandler(void)
                     "#This file was autowritten by 'rmlint'\n"
                     "# rmlint was executed from: %s\n",cwd);
 
-            if((!set->cmd_orig && !set->cmd_path) || set->mode != 5 || 1)
-            {
                 fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
                 fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
                 fprintf(get_logstream(), "#\n# Entries are listed like this: \n");
-                fprintf(get_logstream(), "# dupflag | md5sum | path | size | devID | inode | md5sum\n");
+                fprintf(get_logstream(), "# dupflag | md5sum | path | size | devID | inode\n");
                 fprintf(get_logstream(), "# -------------------------------------------\n");
                 fprintf(get_logstream(), "# dupflag : What type of lint found:\n");
                 fprintf(get_logstream(), "#           BLNK: Bad link pointing nowhere\n"
                         "#           OTMP: Old tmp data (e.g: test.txt~)\n"
+                        "#           BASE: Double basename\n"
                         "#           EDIR: Empty directory\n"
                         "#           JNKD: Dirname containg one char of a user defined string\n"
                         "#           JNKF: Filename containg one char of a user defined string\n"
@@ -522,14 +556,14 @@ void init_filehandler(void)
                         "#           ORIG: File that has a duplicate, but supposed to be a original\n"
                         "#           DUPL: File that is supposed to be a duplicate\n"
                         "#\n");
-                fprintf(get_logstream(), "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`!)\n");
+                fprintf(get_logstream(), "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`, because only parts are read!)\n");
                 fprintf(get_logstream(), "# path    : The full path to the found file\n");
                 fprintf(get_logstream(), "# size    : total size in byte as a decimal integer\n");
                 fprintf(get_logstream(), "# devID   : The ID of the device where the file is located\n");
                 fprintf(get_logstream(), "# inode   : The Inode of the file (see man 2 stat)\n");
-		fprintf(get_logstream(), "#The '//' inbetween each word is the seperator.\n");
-            }
-            if(cwd)
+		fprintf(get_logstream(), "# The '//' inbetween each word is the seperator.\n");
+           
+	    if(cwd)
             {
                 free(cwd);
             }
@@ -539,17 +573,9 @@ void init_filehandler(void)
             perror(NULL);
         }
 
-        /* Now close and reopen the stream.
-           Why that? Because you get rmlint.sh
-           rmlint.log shown as lint (empty files)
-           otherwise. What isn't quite what we're
-           looking for. If theres a neater solution
-           I would be pleased to hear it!
-        */
-        if(script_out) fclose(script_out);
-        if(log_out) fclose(log_out);
-        script_out = fopen(sc_name, "a");
-        log_out    = fopen(lg_name, "a");
+	fflush(script_out);
+	fflush(log_out);
+
         if(sc_name) free(sc_name);
         if(lg_name) free(lg_name);
     }
@@ -561,9 +587,7 @@ void init_filehandler(void)
 static int cmp_f(lint_t *a, lint_t *b)
 {
     int i, fp_i, x;
-    int is_empty[2][3];
-    memset(is_empty[0],1,3);
-    memset(is_empty[1],1,3);
+    int is_empty[2][3] = { {1,1,1}, {1,1,1} };
 
     for(i = 0; i < MD5_LEN; i++)
     {
@@ -642,8 +666,8 @@ bool findmatches(file_group *grp)
             {
                 if(j->dupflag)
                 {
-                    if( (!cmp_f(i,j))           &&                              /* Same checksum?                                             */
-                            (i->fsize == j->fsize)	&&			        /* Same size? (double check, you never know)                  */
+                    if(     (!cmp_f(i,j))          &&  /* Same checksum?                            */
+                            (i->fsize == j->fsize) &&  /* Same size? (double check, you never know) */
                             ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)  /* If we're bothering with paranoid users - Take the gatling! */
                       )
                     {
@@ -653,6 +677,16 @@ bool findmatches(file_group *grp)
 
                         if(printed_original == false)
                         {
+   			    if(grp->len == 2)
+			    {
+				size_t len = strlen(i->path);
+				if(j->path[len-1] == '~')
+			        {
+					puts(i->path);
+					puts(j->path);
+				}
+			    }
+
                             if((set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
                             {
                                 error(GRE"   ls "NCO"%s\n",i->path);

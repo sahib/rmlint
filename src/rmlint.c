@@ -54,9 +54,10 @@ bool do_exit = false,
      ex_stat = false,
      abort_n = true;
 
+nuint_t total_files = 0;
+
 /* Default commands */
 const char *script_name = "rmlint";
-
 
 /* If die() is called rmlint will jump back to the end of main
  * rmlint does NOT call exit() or abort() on it's own - so you
@@ -74,6 +75,14 @@ void rmlint_init(void)
     jmp_set = false;
     ex_stat = false;
     abort_n = true;
+    total_files = 0;
+}
+
+/* ------------------------------------------------------------- */
+
+nuint_t get_totalfiles(void)
+{
+	return total_files;
 }
 
 /* ------------------------------------------------------------- */
@@ -184,7 +193,7 @@ void warning(const char* format, ...)
 
 void info(const char* format, ...)
 {
-    if(set->verbosity > 2 && set->verbosity < 4)
+    if((set->verbosity > 2 && set->verbosity < 4) || set->verbosity == 6)
     {
         char * tmp;
 
@@ -233,6 +242,21 @@ int systemf(const char* format, ...)
 
 /* ------------------------------------------------------------- */
 
+/* Version string */
+static void print_version(bool exit)
+{
+    fprintf(stderr, "Version 0.97a compiled: [%s]-[%s]\n",__DATE__,__TIME__);
+    fprintf(stderr, "Author Christopher Pahl; Report bugs to <sahib@online.de>\n");
+    fprintf(stderr, "or use the Issuetracker at https://github.com/sahib/rmlint/issues\n");
+    if( exit )
+    {
+    	die(0);
+    }
+}
+
+/* ------------------------------------------------------------- */
+
+
 /* Help text */
 static void print_help(void)
 {
@@ -245,7 +269,8 @@ static void print_help(void)
     fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
             "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
             "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes.)\n"
-            "\t-x --oldtmp <sec>\tSearch for files with a '~'/'.swp' suffix being min. <sec> seconds older than the corresponding file without the '~'/'.swp'; (Default: 60)\n"
+            "\t-x --oldtmp <sec>\tSearch for files with a '~'/'.swp' suffix being min. <sec> seconds older than the corresponding file without the '~'/'.swp'; (Default: 60)\n");
+    fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
            );
     fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
@@ -281,27 +306,20 @@ static void print_help(void)
             "\t\t\t\t0 prints nothing\n"
             "\t\t\t\t1 prints only errors and results\n"
             "\t\t\t\t2 + prints warning\n"
-            "\t\t\t\t3 + info and statistics\n\n"
-            "\t\t\t\t4 + dumps log to stdout\n\n"
+            "\t\t\t\t3 + info and statistics\n"
+            "\t\t\t\t4 + dumps log to stdout (still writes to HD)\n"
+            "\t\t\t\t5 + dumps script to stdout (still writes to HD)\n"
+            "\t\t\t\t6 + rdfind-like informative output\n\n"
             "\t\t\t\tDefault is 2.\n"
-            "\t\t\t\tUse 3 to get an idea what's happening internally, 1 to get raw output without colors.\n"
+            "\t\t\t\tUse 6 to get an idea what's happening internally, 1 to get raw output without colors, 4 for liveparsing purpose.\n"
            );
     fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n\n");
     fprintf(stderr,"Additionally, the options b,p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (B,O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
-            "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n"
+            "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n\n"
            );
-    fprintf(stderr, "\nVersion 0.43 (Compiled on %s @ %s) - Copyright Christopher <Sahib Bommelig> Pahl\n",__DATE__,__TIME__);
-    fprintf(stderr, "Licensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
-    fprintf(stderr, "See the manpage or the README for more information.\n");
-    die(0);
-}
-
-/* ------------------------------------------------------------- */
-
-/* Version string */
-static void print_version(void)
-{
-    fprintf(stderr, "Version 0.97 Compiled: [%s]-[%s]\n",__DATE__,__TIME__);
+    print_version(false);
+    fprintf(stderr, "\nLicensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
+    fprintf(stderr, "See the manpage, README or <http://sahib.github.com/rmlint/> for more information.\n");
     die(0);
 }
 
@@ -328,6 +346,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->cmd_orig      =  NULL;        /* Origcmd, -"- */
     pset->junk_chars    =  NULL;        /* You have to set this   */
     pset->oldtmpdata    = 60;           /* Remove 1min old buffers */
+    pset->doldtmp       = true;         /* Remove 1min old buffers */
     pset->ignore_hidden = 1;
     pset->findemptydirs = 1;
     pset->namecluster   = 0;
@@ -335,6 +354,11 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->searchdup     = 1;
     pset->color         = 1;
     pset->output        = (char*)script_name;
+
+    /* There is no cmdline option for this one    * 
+     * It controls wether 'other lint' is also    *
+     * investigated to be replicas of other files */
+    pset->collide = 0; 		
 }
 
 /* ------------------------------------------------------------- */
@@ -371,7 +395,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"no-oldtmp",      no_argument,       0, 'X'},
             {"no-hidden",      no_argument,       0, 'g'},
             {"hidden",         no_argument,       0, 'G'},
-            {"dups",		   no_argument, 	  0, 'u'},
+            {"dups",	       no_argument, 	  0, 'u'},
             {"no-dups",        no_argument,       0, 'U'},
             {"matchcase",      no_argument, 	  0, 'e'},
             {"ignorecase",     no_argument, 	  0, 'E'},
@@ -379,10 +403,10 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"ignorelinks",    no_argument, 	  0, 'F'},
             {"invertmatch",    no_argument, 	  0, 'i'},
             {"normalmatch",    no_argument, 	  0, 'I'},
-            {"samepart",       no_argument,	      0, 's'},
-            {"allpart",        no_argument,	      0, 'S'},
-            {"paranoid",       no_argument,	      0, 'p'},
-            {"naive",          no_argument,	      0, 'P'},
+            {"samepart",       no_argument,	  0, 's'},
+            {"allpart",        no_argument,	  0, 'S'},
+            {"paranoid",       no_argument,	  0, 'p'},
+            {"naive",          no_argument,	  0, 'P'},
             {"help",           no_argument, 	  0, 'h'},
             {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
@@ -435,7 +459,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             sets->color = 0;
             break;
         case 'V':
-            print_version();
+            print_version( true );
             break;
         case 'h':
             print_help();
@@ -459,7 +483,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             sets->oldtmpdata = atoi(optarg);
             break;
         case 'X':
-            sets->oldtmpdata = 0;
+            sets->doldtmp = false;
             break;
         case 'o':
             sets->output = optarg;
@@ -688,7 +712,7 @@ static long cmp_sz(lint_t *a, lint_t *b)
 int rmlint_main(void)
 {
     /* Used only for infomessage */
-    nuint_t total_files = 0;
+    total_files = 0;
     abort_n = false;
 
     if(do_exit != true)
@@ -764,7 +788,7 @@ int rmlint_main(void)
             die(0);
         }
 
-        info("In total "YEL"%ld useable files"NCO" in cache.\n", total_files);
+        info("Now in total "YEL"%ld useable files"NCO" in cache.\n", total_files);
 
         if(set->threads > total_files)
         {
@@ -780,7 +804,7 @@ int rmlint_main(void)
         list_sort(list_begin(),cmp_sz);
         info("done.\n");
 
-        info("Now finding easy lint: \n");
+        info("Now finding easy lint..%c",set->verbosity > 4 ? '.' : '\n');
 
         /* Apply the prefilter and outsort inique sizes */
         start_processing(list_begin());

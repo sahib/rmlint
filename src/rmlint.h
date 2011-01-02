@@ -29,6 +29,7 @@ typedef struct
 {
     char mode;
     char color;
+    char collide;
     char samepart;
     char ignore_hidden;
     char followlinks;
@@ -36,10 +37,11 @@ typedef struct
     char paranoid;
     char invmatch;
     char namecluster;
-    char oldtmpdata;
+    char doldtmp;
     char searchdup;
     char findemptydirs;
     char nonstripped;
+    char verbosity;
     char **paths;
     char *dpattern;
     char *fpattern;
@@ -47,9 +49,9 @@ typedef struct
     char *cmd_orig;
     char *junk_chars;
     char *output;
-    int threads;
-    int  depth;
-    int verbosity;
+    nuint_t threads;
+    nuint_t depth;
+    nuint_t oldtmpdata;
 
 } rmlint_settings;
 
@@ -70,5 +72,7 @@ void warning(const char* format, ...);
 char *strdup_printf (const char *format, ...);
 int  systemf(const char* format, ...);
 int  get_cpindex(void);
+nuint_t get_totalfiles(void);
+bool get_doldtmp(void);
 
 #endif

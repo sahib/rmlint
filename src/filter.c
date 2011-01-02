@@ -41,14 +41,15 @@
 #include "md5.h"
 
 /* global vars, but initialized by filt_c_init() */
-nuint_t dircount;
+nuint_t dircount, dbase_ctr;
 bool iAbort, dir_done, db_done;
 
 /* ------------------------------------------------------------- */
 
 void filt_c_init(void)
 {
-    dircount = 0;
+    dircount  = 0;
+    dbase_ctr = 0;
     iAbort   = false;
     dir_done = false;
     db_done  = false;
@@ -263,7 +264,6 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
     }
     if(path)
     {
-
         if(!dir_done)
         {
             if(!strcmp(set->paths[get_cpindex()], path))
@@ -274,7 +274,6 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
         }
         if(flag == FTW_F)
         {
-
             if(regfilter(path, set->fpattern))
             {
                 return FTW_CONTINUE;
@@ -282,16 +281,23 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             if(junkinstr(basename(path)))
             {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
-                return FTW_CONTINUE;
+		if(set->collide)
+		{
+                	return FTW_CONTINUE;
+		}
             }
             if(set->nonstripped)
             {
                 if(check_binary_to_be_stripped(path))
                 {
                     list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
+	            if(set->collide)
+		    {
+			return FTW_CONTINUE;
+		    }
                 }
             }
-            if(set->oldtmpdata)
+            if(set->doldtmp)
             {
 		/* This checks only for *~ and .*.swp */
                 size_t len = strlen(path);
@@ -326,6 +332,10 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     {
                         free(cpy);
                     }
+		    if(set->collide)
+		    {
+			return FTW_CONTINUE;
+		    }
                 }
             }
             /* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
@@ -361,14 +371,16 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             if(junkinstr(basename(path)))
             {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
-                return FTW_SKIP_SUBTREE;
+		if(set->collide)
+		{
+                	return FTW_SKIP_SUBTREE;
+		}
             }
             if(set->findemptydirs)
             {
                 int dir_counter = 0;
                 DIR *dir_e = opendir(path);
                 struct dirent *dir_p = NULL;
-
 
                 if(dir_e)
                 {
@@ -378,9 +390,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     }
 
                     closedir(dir_e);
-                    if(dir_counter == 2 &&
-                            dir_p == NULL
-                      )
+                    if(dir_counter == 2 && dir_p == NULL)
                     {
                         list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR);
                         return FTW_SKIP_SUBTREE;
@@ -529,14 +539,14 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
         }
     }
 
-    /* Also compare the bytes which were read 'on the fly' */
-   /* for(i=0; i<BYTE_MIDDLE_SIZE; i++)
+   /* Also compare the bytes which were read 'on the fly' */
+    for(i=0; i<BYTE_MIDDLE_SIZE; i++)
     {
         if(a->bim[i] != b->bim[i])
         {
             return 0;
         }
-    }*/
+    }
     
     /* Let it pass! */
     return 1;
@@ -786,8 +796,10 @@ static void* sheduler_cb(void *gfp)
     /* Finalize and free sublist */
     if(findmatches(group))
     {
-        /* when 'q' was selected in askmode */
+        /* this happens when 'q' was selected in askmode */
         list_clear(group->grp_stp);
+        group->grp_stp = NULL;
+        group->grp_enp = NULL;
         die(0);
     }
 
@@ -914,31 +926,30 @@ static void find_double_bases(lint_t *starting)
 
     while(i)
     {
-        if(i->dupflag)
+        if(i->dupflag != TYPE_BASE)
         {
             bool pr = false;
             j=i->next;
             while(j)
             {
                 /* compare basenames */
-                if(!strcmp(basename(i->path), basename(j->path)) &&
-                        i->node != j->node && j->dupflag
-                  )
+                if(!strcmp(basename(i->path), basename(j->path)) && i->node != j->node && j->dupflag != TYPE_BASE)
                 {
                     lint_t *x = j;
                     char *tmp2 = canonicalize_file_name(j->path);
 
                     if(phead)
                     {
-                        error("\n%s#"NCO" Double basenames:", (set->verbosity > 1) ? GRE : NCO);
+                        error("\n%s#"NCO" Double basename(s):\n", (set->verbosity > 1) ? GRE : NCO);
                         phead = false;
                     }
 
                     if(!pr)
                     {
                         char * tmp = canonicalize_file_name(i->path);
-                        i->dupflag = false;
-                        error("\n   ls %s #Size: %lu\n",tmp,i->fsize);
+                        i->dupflag = TYPE_BASE;
+                        error("   %sls"NCO" %s\n", (set->verbosity!=1) ? GRE : "", tmp,i->fsize);
+			write_to_log(i,false);
                         pr = true;
 
                         if(tmp)
@@ -953,24 +964,23 @@ static void find_double_bases(lint_t *starting)
                         {
                             if(x->node == j->node)
                             {
-                                x->dupflag = false;
+                                x->dupflag = TYPE_BASE;
                             }
 
                             x=x->next;
                         }
                     }
 
-                    j->dupflag = false;
-                    error("   ls %s #Size %lu\n",tmp2,j->fsize);
+                    j->dupflag = TYPE_BASE;
+                    error("   %sls"NCO" %s\n",(set->verbosity!=1) ? GRE : "",tmp2);
+		    dbase_ctr++;
+		    write_to_log(j,false);
                     if(tmp2)
                     {
                         free(tmp2);
                     }
                 }
                 j=j->next;
-            }
-            if(pr)
-            {
             }
         }
         i=i->next;
@@ -1210,35 +1220,26 @@ void start_processing(lint_t *b)
         die(0);
     }
     info("\nNow attempting to find duplicates. This may take a while...\n");
-    info("Now removing files with unique sizes from list.. ");
+    info("Now removing files with unique sizes from list...");
     info(""YEL"%ld elem%c less"NCO" in list.",rem_counter,(rem_counter > 1) ? 's' : ' ');
     if(path_doubles)
     {
         info(" (removed "YEL"%ld pathzombies"NCO")", path_doubles);
     }
-    info("\nBy ignoring "YEL"%ld empty files "NCO"/"YEL" bad links "NCO"/"YEL" junk names"NCO", list was split in %ld parts.\n", emptylist.len, spelen);
-    info("Now sorting groups based on their location on the drive... ");
+    info("\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\nNow list is split in "GRE"%ld"NCO" parts.\n", emptylist.len, spelen);
+    info("Now sorting groups based on their location on the drive...");
 
     /* Now make sure groups are sorted by their location on the disk*/
     qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
 
-    info(" done. \nNow doing fingerprints and full checksums:\n\n");
+    info(" done. \nNow doing fingerprints and full checksums.%c\n",set->verbosity > 4 ? '.' : '\n' );
     db_done = true;
 
     error("%s Duplicate(s):\n",(set->verbosity > 1) ? YEL"#"NCO : "#");
-    /* Groups are splitted, now give it to the sheduler */
-    /* The sheduler will do another filterstep, build checkusm
-     *  and compare 'em. The result is printed afterwards */
+    /* Groups are splitted, now give it to the sheduler 
+     * The sheduler will do another filterstep, build checkusm
+     * and compare 'em. The result is printed afterwards */
     start_sheduler(fglist, spelen);
-
-    if(set->mode == 5 && set->output)
-    {
-        if(get_logstream())
-        {
-            fprintf(get_logstream(), SCRIPT_LAST);
-            fprintf(get_logstream(), "\n# End of script. Have a nice day.");
-        }
-    }
 
     /* Gather the total size of removeable data */
     for(ii=0; ii < spelen; ii++)
@@ -1254,14 +1255,18 @@ void start_processing(lint_t *b)
     size_to_human_readable(lint+emptylist.size, lintbuf, 127);
 
     /* Now announce */
-    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO
-            " files (whereof %d are duplicates) found%s\n",
-            remaining + emptylist.len, get_dupcounter(),
-            (set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
-
+    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates + "RED"%ld"NCO" other suspicious files found%s\n",get_totalfiles(), get_dupcounter(), emptylist.len + dbase_ctr,(set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
     warning(RED"=> "NCO"Totally "GRE" ~%s "NCO" [%ld Bytes] can be removed.\n\n", lintbuf, lint + emptylist.size);
 
-    if(get_logstream() == NULL)
+
+    if(set->verbosity == 6)
+    {
+	info("Now calculation finished.. now writing end of log...\n");
+	info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%ld"NCO" replicas + "RED"%ld"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
+    	info(RED"=> "NCO"In total "GRE" ~%s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint + emptylist.size);
+    }
+
+    if(get_logstream() == NULL && set->output)
     {
         error(RED"\nERROR: "NCO);
         fflush(stdout);
@@ -1274,7 +1279,7 @@ void start_processing(lint_t *b)
         warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set->output);
     }
 
-    /* End of actual program. Now do some file handling / frees */
+    /* End of actual program. Now do some finalizing */
     if(fglist)
     {
         free(fglist);

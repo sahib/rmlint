@@ -92,6 +92,8 @@ typedef char bool;
 /* This almost cost nothing, but helps a lot with lots of similiar datasets */
 #define BYTE_MIDDLE_SIZE 8
 
+/* Use double slashes, so we can easily split the line to an array */
+#define LOGSEP "//"
 
 /* ------------------------------------------------------------- */
 
@@ -102,5 +104,6 @@ typedef char bool;
 #define TYPE_JNK_DIRNAME  6
 #define TYPE_JNK_FILENAME 7
 #define TYPE_NBIN 8
+#define TYPE_BASE 9
 
 #endif

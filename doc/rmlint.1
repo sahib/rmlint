@@ -8,31 +8,44 @@ rmlint \- tool to find/eliminate lint on your filesystem
 .B  rmlint [TargetDir[s]] [File[s]] [Options]
 .SH DESCRIPTION
 rmlint is a command line tool to remove various sort of unused files form a Unix filesystem, especially duplicate files.
+.br
 It can take several directories or raw files as input and finds empty files/directories, duplicates, nonstripped binaries, bad links, old tempdata and broken filenames.
+.br
 It offers lots of options and writes both a ready-to-use shellscript and a easy-to-parse logfile.
+.br
 Additional features in a nutshell: Pretty fast, handy & stable.
 .SH GETTING STARTED 
-You probably don't want to read long man pages (and I don't want to write them). 
 If you just want to clean your Musicarchive you simply can run "rmlint /path/to/Music".
+.br
 Rmlint WON'T REMOVE ANYTHING BY DEFAULT, it justs outputs a neat script (and a log) 
+.br
 that you may have a look at first, and execute afterwards. 
+.br
 If you don't want to execute a script you may add the "-m noask" option to remove the 
+.br
 duplicates directly. 
 
 .SH GENERAL OPTIONS
 .IP "-t --threads <t>" 
 Set the number of threads used maximally during processing. 
+.br
 Note that this may have only minor impact on actual speed.
-By default 4 threads are used.
+.br
+By default 16 threads are used, what should be a sane default for most machines.
 .IP "-p --paranoid"
 Compare each found duplicate byte-by-byte with original. 
-This is only for paranoid people that want to be 100% sure
-that found duplicate are really duplicates. Be aware that this is 
-awefully slow (and is not enabled by default therefore). (See also the FALSE POSITIVES section) 
+.br
+This is only for paranoid people that want to be 100% sure,
+.br
+that found duplicate are really replicas. Be aware that this is 
+.br
+awfully slow (and is not enabled by default therefore).
+.br
+(See also the FALSE POSITIVES section) 
 .IP "-j --junkchars <chars>"
 Looks on each file/dir if it contains one letter of <chars> 
-This is useful to find 'dangerous' filenames like "me@++rbat!"
-By default no name is marked as dangerous. 
+This is useful to find unwanted filenames like "me@++rbat'!"
+By default no name is marked as unwanted. 
 .IP "-a --nonstripped"
 Search for non-stripped binaries (i.e. binaries with debug symbols) 
 This is quite slow so it's not enabled by default.
@@ -48,10 +61,14 @@ The default value is 60 seconds.
 .IP "-d --maxdepth <depth>"
 Only recurse to a max. depth of <depth> in directories.
 If you want to have only the files of a folder, but not of it's subfolders set this to 1.
+.br
+By default rmlint will recurse to infinity.
 .IP "-f --followlinks" 
 If set links are followed. This can cause rmlint to search through 90% of your files though.
+.br
 That's why it's disabled by default, and you're supposed to never need to use it.
-(No file is reported twice though!)
+.br
+No file is reported twice though!
 .IP "-s --samepart" 
 Never cross mountpoints. (Default: No.)
 .IP "-G --hidden" 
@@ -59,22 +76,24 @@ Also search through hidden files / directories. (Disabled by default)
 .IP "-m --mode" 
 Tell rmlint what to do with found duplicates (duplicates only! does not apply to empty dirs etc. *) )
 .IP " " 16
-"--mode list": Only list files, w.o any change. 
-               This is the default.
+"--mode list":  Only list files, w.o any change. 
+                This is the default.
 .IP " " 16
-"--mode ask": Ask for each file what to do.  
+"--mode ask":   Ask for each file what to do.  
 .IP " " 16
 "--mode noask": Remove files without asking.  
 .IP " " 16
-"--mode link": Symlink duplicates with original **) 
+"--mode link":  Symlink duplicates with original **) 
 .IP " " 16
-"--mode cmd": Execute a command give with -c / -C on 
-              duplicate / original. (See -c / -C) 
+"--mode cmd":   Execute a command give with -c / -C on 
+                duplicate / original. (See -c / -C) 
 
 .IP " " 16
-*)  Simply because you duplicates are the thing you gonna find. Everything else is a neat addition. 
+*)  Simply because you duplicates are the thing you gonna find. Everything else can be done more comfortable with the log/script. 
 .IP " " 16
-**) rmlint does not know for sure what the duplicate and what the original is. It takes the one with the lowest inode number.
+**) rmlint does not know for sure what the duplicate and what the original is (It would need to ask yoU). 
+.br
+    It takes the one with the lowest inode number, because in most cases this is the file which was created first on the HD.
 
 .IP "-c --cmd_dup <cmd>" 
 Execute a shellcommand on found duplicates when used with '-m cmd'
@@ -82,15 +101,19 @@ Execute a shellcommand on found duplicates when used with '-m cmd'
 Execute a shellcommand on original files when used with '-m cmd'
 
 
-Example: rmlint . -m cmd -C "ls '%s'" -c "ls -lasi '%s'"
+Example: rmlint -m cmd -C "ls '%s'" -c "ls -lasi '%s'"
+.br
 This would print all found files (both duplicates and originals via the 'ls' utility
-The %s expands to the found duplicate, second to the 'original'.
+.br
+The first (of -C) '%s' expands to the original, second (of '-c') to the duplicate.
+.br
+Note: Only one '%s' is allowed in a <cmd>.
 
 .SH REGEX OPTIONS
 .IP "-r --fregex <pat>"
-Checks filenames against the pattern <pat>
+Checks basenames against the pattern <pat>
 .IP "-R --dregex <pat>"
-Checks dirnames against the pattern <pat>
+Checks dir-basenames against the pattern <pat>
 Note that the Input directory gets not checked agains <pat>
 .IP "-i --invmatch"
 Invert match - Only investigate when not containing <pat> (Default: No.)
@@ -99,13 +122,18 @@ Matches case of paths ("A_FILE" != "a_file") (disabled by default)
 
 .SH MISC OPTIONS
 .IP "-h --help" 
-Prints a short helptext.
+Prints a short version of this manpage.
 
 .IP "-o --output [<out>]" 
 Outputs log/scriptfile to <out>.sh/<out>.log
+.br
 Specify no argument to write no script/log.
+.br
 Note: You have to write the name directly after the "-o" option.
-e.g: -omyoutput will give myoutput.sh and myoutput.log (This is because of some quirks with getopt, Sorry.)
+.br
+e.g: -omyoutput will give myoutput.sh and myoutput.log 
+.br
+This is due to some quirks with getopt, Sorry..
 
 .IP "-B --no-color"
 Don't use colored output.
@@ -114,21 +142,32 @@ Don't use colored output.
 Set the verbosity level to <v> 
 Where: 
 0: print nothing.
+.br
 1: + prints errors (if any) and results (without colors) 
+.br
 2: + prints warnings (if any) 
+.br
 3: + Additional info. 
-4: * Dumps the log to stdout.
+.br
+4: * Dumps the log to stdout (rmlint will write also a log to HD)
+.br
+5: * Dumps the script to stdout (rmlint will write also a log to HD)
+.br
+6: * rdfind-like informative output.
+.br
 
 Set to 2 by default. 
-Use 1 to get raw output (for use with the '>' operator) and 3 to get a clue what rmlint is doing internally.
+.br
 
-.IP Notes: 
+.SH GENERAL NOTES 
 1) All boolean options (B,p,f,s,e,G,o,i,n,a,y,x,u) have a counterpart as upper-case option (b,P,F,S,E,g,O,I,N,A,Y,X,U) doing the exact opposite.
-The corresponding long options have a "no-" in front of them: 
---emptydirs <-> --no-emptydirs
-
-2) If no path is given the actual working direcoty is scanned. 
+.br
+   The corresponding long options have a "no-" in front of them: --emptydirs <-> --no-emptydirs
+.br
+2) If no path is given the actual working directory is scanned. 
+.br
 3) If multiple paths are given a consistency check is done, so no path is given twice. 
+.br
 
 .SH EXAMPLES
 
@@ -137,7 +176,7 @@ The corresponding long options have a "no-" in front of them:
 .IP 
 "rmlint"                
 
-# Search for non stripped binaries, namclusters, old tmp data and duplicates in /bin.
+# Search for non stripped binaries, nameclusters, old tmp data and duplicates in /bin.
 .IP
 "rmlint -nayxp /bin"     
 
@@ -149,13 +188,21 @@ The corresponding long options have a "no-" in front of them:
 .IP
 "rmlint -r "a" -R "b"    
 
-# Output log to "mylog.log" and be verbose. 
+# Output log/script to "mylog.log"/"mylog.sh" and the log also to stdout. 
 .IP
-"rmlint -omylog -v 3"    
+"rmlint -omylog -v 4"    
 
 # Remove duplicates without asking.
 .IP 
-"rmlint --mode noask"    
+"rmlint --mode noask"  
+
+# Write no log/script and only search for duplicates in ALL subdirs 
+.IP
+"rmlint -o -GYX" 
+
+# Doing your own layout with 'echo'
+.IP
+rmlint ~/HD/Documents -v1 -G -t 16 -c "echo '   %s'" -m cmd -Y -C "echo '=> %s'"
 
 .SH FILES
 rmlint writes two files (by default in the working directory):
@@ -163,13 +210,22 @@ rmlint writes two files (by default in the working directory):
 .I rmlint.sh
 .RS
 A ready to execute shellscript to remove the found lint.
+.br
 rmlint will choose appropiate commands for every file.
+.br
+Note: paths are enclosed with singlequotes,
+.br
+pathnames that contain a singlequote themselves, are escaped with ''"'"'' 
 .RE
 
 .I rmlint.log
 .RS
 A not-executable log in an easy-to-parse form.
+.br
 You can find information on how each row is formatted in the logfile itself.
+.br
+Please note: The md5sums there do not match the md5sums calculated by the md5sum utility!
+.br
 A short method or this in ruby would look like this: 
 
 .RS
@@ -179,7 +235,7 @@ Inside a terminal:
 .br
 .nf
 
-	ruby -e "File.new(\\"/tmp/rmlint.log\\",\\"r\\").each {|c| print c.split(/\\/\\//),\\"\n\\" unless c[0] == '#'}"
+	ruby -e "File.new(\\"/tmp/rmlint.log\\",\\"r\\").each {|c| print c.split(/\\/\\//),\\"\\n\\" unless c[0] == '#'}"
 
 .fi
 .br
@@ -193,7 +249,7 @@ Inside a clean ruby program:
 		
 			if  line[0] != '#'
 				splitline = line.split(/\\/\\//)
-				print "Type: ",splitline[0],"=",splitline[2],"\n"
+				print "Type: ",splitline[0],"=",splitline[2],"\\n"
 			end
 		end
 		puts "-------------------------------------"
@@ -204,27 +260,42 @@ Inside a clean ruby program:
 To cut a long story short: None.
 .RE
 rmlint uses md5sums internally to decide wether a file is a duplicate or not (and lots of other dirty tricks). 
+.br
 One disadvantage of md5sums are the occurence of 'collisions' (i.e.: two different files have the same md5sum). 
+.br
 This nevertheless happens very rarely + rmlint also checks the first/last/middle bytes + the size of a file.
+.br
 So the resulting propability of having a collsions resulting in a false positive is lots lower than having a bug somewhere in the program.
-Still being scared? 
-You can use the -p option to do a true byte by byte comparasion of each file, at the cost of a extreme slowdown.
+.br
 
+.br
+Still being scared? 
+.br
+You can use the -p option to do a true byte by byte comparasion of each file, at the cost of a extreme slowdown.
+.br
+.SH VERSION
+Use rmlint -V
 .SH BUGS
-Please elp me if you found one, so offers donÄt suffer from it:
+Please help me if you found one, so offers don't suffer from it:
+.br
 Please email your find to <sahib@online.de>, 
+.br
+or alternatively submit an issue on https://github.com/sahib/rmlint/issues
+.br
 with a detailed description and/or backtrace. 
+.br
 Patches are welcome too of course! 
+.br
 .SH AUTHOR
 Christopher Pahl <sahib@online.de>
 
 .SH THANKS TO
 Attila Toth - Patches, suggestions and warm words
-
+.br
 Sebastian Pahl - Surprisingly fast answer on complex questions
 
 .SH "SEE ALSO"
-.BR sunlight (1),
 .BR md5sum (1),
 .BR find(1),
 .BR symlink(2)
+.BR sunlight (7),

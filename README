@@ -64,7 +64,7 @@ FEATURES:
    + It executes a user specified commando for each file (-m cmd) 
    + It asks you for each file what you want (added for convinience only to be honest). (-m ask)
 
-HOW DOES THIS THING WORK (ALGORITHM): 
+What it does internally (Algorithm): 
 -------------------------------------
 The algorithm tries to mimize IO as far as possible, thus focusing on CPU usage. (can get up to 390% on a quadcore)
 1) Go through all directories and catch all files conformig to regexpattern / dirpattern / hiddenstatus
@@ -95,19 +95,19 @@ RMLINT IS KNOWN FINE TO RUN ON THOSE PLATFORMS:
 - Solaris
 
 Note1: It is written in ANSI C, so every ANSI C compiler should be happily compile it. 
-Note2: rmlint uses alloca(), if you want to port it you may need to replace it with malloc() (and free())
+Note2: rmlint uses alloca(), if you want to port it you may need to replace it with malloc() (and a corresponding free())
 
 A NOTE ABOUT FALSE POSITIVES: 
 -----------------------------
-Short: False Positves are actuallly possible, but very unlikely. 
+Short: False Positves are actuallly possible, but very, very, very unlikely. 
 They would need to have the same size, fingerprint and checksums to be marked as twins.
-md5 is not perfect, but the probability of getting false positves is the same as lim(1/x) : x -> +inf = 0 + h
+md5 is not perfect, but the probability of getting false positves on a normal set of data is the same as lim(1/x) : x -> +inf = 0 + h; where h ~ 0
 
 But isn't there a solution to be 100% sure? Yes, there is. It's the "--paranoid/-p" option. It does a 
-true byte-by-byte comparasion of each(!) file. Be warned. It's incredibly slow. 
+true byte-by-byte comparasion of each(!) file. Be warned, because it's incredibly slow. 
 
-If you find false-positives, those are most likely a bug on rmlint, please make a bugreport to sahib@online.de in this case.
-So others won't suffer from it.
+If you find false-positives, those are most likely a bug on rmlint, please make a bugreport to sahib@online.de in this case,
+so others won't suffer from it.
 
 
 COMPARASION TO OTHER TOOLS: 
@@ -168,6 +168,6 @@ A: Great! Write me an email (sahib@online.de), with a nifty problem description 
    a patch and/or any suggestions and/or a backtrace (if it was a crash)
 
 Q: Why is there no GUI?
-A: I simply never was a big friend of the mouse (tip: learn ruby, parse log, write your own, and I'll happily host it =))
+A: This may be on the ToDos. Perhaps. :-)
 
 To be continued...
