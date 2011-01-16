@@ -680,7 +680,7 @@ bool findmatches(file_group *grp)
    			    if(grp->len == 2)
 			    {
 				size_t len = strlen(i->path);
-				if(j->path[len-1] == '~')
+				if(len && i->path[len-1] == '~')
 			        {
 					puts(i->path);
 					puts(j->path);
