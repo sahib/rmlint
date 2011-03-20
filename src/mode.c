@@ -291,7 +291,7 @@ void write_to_log(const lint_t *file, bool orig)
         }
         else if(file->dupflag == TYPE_EDIR)
         {
-	    script_print(_sd_("rm -f '%s' # empty folder.\n", fpath));
+	    script_print(_sd_("rm -r '%s' # empty folder.\n", fpath));
             log_print(get_logstream(),"EDIR");
         }
         else if(file->dupflag == TYPE_JNK_DIRNAME)
