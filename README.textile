@@ -12,19 +12,28 @@ NONETHELESS IT WAS WRITTEN VERY CAREFULLY AND SHOULD DO WHAT IT IS SUPPOSED TO D
 h2. INSTALL 
 
 <h3>Download</h3>
-__download the sources by one of the following ways__
+__download the sources by one of the following ways:__
+
+h4.
+
 <h4>Git way</h4>
 @git clone https://github.com/sahib/rmlint.git@
+
+h4.
 
 <h4>Zip way</h4>
 @wget --no-check-certificate http://github.com/sahib/rmlint/zipball/master -O rmlint.zip@
 @unzip rmlint.zip@
 
+h4.
+
 <h4>Tar way</h4>
 @wget --no-check-certificate http://github.com/sahib/rmlint/tarball/master -O rmlint.tar@
 @tar xfv rmlint.tar@
 
-<h3>Compile</h3>
+h2.
+
+<h3>Now compile</h3>
 @cd <name_of_the_dir>@
 @./configure --prefix=/usr@
 @make -j 4  && sudo make install@
@@ -93,7 +102,7 @@ md5 is not perfect, but the probability of getting false positves on a normal se
 But isn't there a solution to be 100% sure? Yes, there is. It's the "--paranoid/-p" option. It does a 
 true byte-by-byte comparasion of each(!) file. Be warned, because it's incredibly slow. 
 
-If you find false-positives, those are most likely a bug on rmlint, please make a bugreport to sahib@online.de in this case,
+If you find false positives, those are most likely a bug on rmlint, please make a bugreport to sahib@online.de in this case,
 so others won't suffer from it.
 
 
