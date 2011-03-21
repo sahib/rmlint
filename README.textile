@@ -82,8 +82,8 @@ __Note1__: It is written in ANSI C, so every ANSI C compiler should be happily c
 __Note2__: rmlint uses alloca(), if you want to port it you may need to replace it with malloc() (and a corresponding free())
 
 <h2>NOTE ABOUT FALSE POSITIVES</h2> 
-Short: False Positves are actuallly possible, but very, very, very unlikely. 
-They would need to have the same size, fingerprint and checksums to be marked as twins.
+__Short:__ False Positves are actuallly possible, but very, very, very unlikely. 
+__Longer:__They would need to have the same size, fingerprint and checksums to be marked as twins.
 md5 is not perfect, but the probability of getting false positves on a normal set of data is the same as lim(1/x) : x -> +inf = 0 + h; where h ~ 0
 
 But isn't there a solution to be 100% sure? Yes, there is. It's the "--paranoid/-p" option. It does a 
@@ -96,57 +96,78 @@ so others won't suffer from it.
 <h2>COMPARASION TO OTHER TOOLS</h2>
 (this list could get very, very long, but never accurate) 
 
-compared to... 
-	..fdupes / duff: 
-		+ LOTS faster 	
-		+ more options 
-		+ finds also bad links and other stuff 
-		+ logging
-                - did find one file more once. :-)
+__compared to...__ 
+* ..fdupes / duff: 
+** + LOTS faster 	
+** + more options 
+** + finds also bad links and other stuff 
+** + logging
+** - did find one file more once. :-)
 
-	..rdfind: 
-		+ Live output of finds
-		+ mostly as fast, or faster
-		+ little less buggy ;-) 
-		- rdfind is faster with many small files (like Sourcedirs)
+* ..rdfind: 
+** + Live output of finds
+** + mostly as fast, or faster
+** + little less buggy ;-) 
+** - rdfind is faster with many small files (like Sourcedirs)
 		
-	..fslint: 
-		+ Faster / more options 
-		- fslint finds also borken UID/GIDs (this never happened to me, anyone?)
+* ..fslint: 
+** + Faster / more options 
+** - fslint finds also borken UID/GIDs (this never happened to me, anyone?)
 		
-	..[other cons] 
-		- does not look into archives (things like those could be performed by some bash script easier)
-		- no gui (some people mark this as a clear '+')
+* ..[other disadvantages] 
+** - does not look into archives (things like those could be performed by some bash script easier)
+** - no gui (some people mark this as a clear '+')
 		
 		
 <h2>Pseudobenchmark</h2>
 Machine was my maindesktop, quadcore, running Linx x86_64
 measured was with the 2nd,3rd & 4th run of the programs
 
-approx. time in seconds  : |   rdfind  |  rmlint |  fdupes |
----------------------------+-----------+---------+---------+
-88GB of various Documents: |   1,430   |  0.656  |  8.317  | (note: rmlint's CPU Usage was 310%, rdind's 99%)
----------------------------+-----------+---------+---------+
-2,2G of Source / Trees  :  |   12,03   |  1.641  |  30.552 | (note: on first run rdfind was faster) 
----------------------------+-----------+---------+---------+
-50G of Music (mp3/ogg)  :  |   0.097   +  0.089  | 1:54.08 | (note: this dir did not contain any twins ;-))
--------------------------------------------------+---------+
+<table >
+  <colgroup width="100" span="5"></colgroup>
+  <tr>
+    <td></td>
+    <td><h2>rdfind</h2></td>
+    <td><h2>fdupes</h2></td>
+    <td><h2>rmlint</h2></td>
+    <td><h2>notes:</h2></td>
+  </tr>
+  <tr>
+    <td><h2>88GB Documents:</h2></td>
+    <td>1,430s</td>
+    <td>8,137s</td>
+    <td>0.656s</td>
+    <td>rmlint CPU usage was 310%, rdfind's 99%</td>
+  </tr>
+  <tr>
+    <td><h2>2,2GB of Source:</h2></td>
+    <td>12.030s</td>
+    <td>30.552s</td>
+    <td>1.641s</td>
+    <td>rdfind was faster on the first run.</td>
+  </tr>
+  <tr>
+    <td><h2>50GB of Music:</h2></td>
+    <td>0.089s</td>
+    <td>1:54min</td>
+    <td>0.097s</td>
+    <td>Dir did not contain any twins.</td>
+  </tr>
+</table>
 
 
 <h2>FAQ</h2>
-Q: The "-m list" output is crap! I want more information! 
-A: You can use the command mode to use to run 'ls' on the files: 
+*Q:* The "-m list" output is crap! I want more information! 
+*A:* You can use the command mode to use to run 'ls' on the files: 
    Example: ./rmlint . -m cmd -c "ls -lasi '%s'" -C "ls '%s'" -v 1
    Where -c executes "ls -lasi" on the found duplicate, -C on the original. 
      
-Q: I want only the found files to be displayed! Like fdupes does! 
-A: "-v 1" is your friend.
+*Q:* I want only the found files to be displayed! Like fdupes does! 
+*A:* "-v 1" is your friend.
 
-Q: I guess I found a bug, what now?
-A: Great! Write me an email (sahib@online.de), with a nifty problem description and/or 
-   a patch and/or any suggestions and/or a backtrace (if it was a crash)
+*Q:* I guess I found a bug, what now?
+*A:* Great! Write me an email (sahib@online.de), with a nifty problem description and/or 
+     a patch and/or any suggestions and/or a backtrace (if it was a crash)
 
-Q: Why is there no GUI?
-A: This may be on the ToDos. Perhaps. :-)
-
-To be continued...
+*Q:* Why is there no GUI?
+*A:* This may be on the ToDos. Perhaps. :-)
