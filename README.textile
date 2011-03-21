@@ -172,5 +172,5 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *Q:* __Why is there no GUI?__
 *A:* This may be on the ToDos. Perhaps. :-)
 
-*Q:* __Can I set a 'preferred dir' when specifying more than one dir, which picks the orig from the preferred one?
+*Q:* __Can I set a 'preferred dir' when specifying more than one dir, which picks the orig from the preferred one?__
 *A:* Im sorry, no. This may implemented in future, but can be done by parsing the rmlint.log..
