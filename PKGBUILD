@@ -11,7 +11,7 @@ depends=(glibc)
 
 makedepends=('git')
 license=('GPL3')
-url=("http://sahib.github.com/rmlint/")
+url=("https://github.com/sahib/rmlint")
 
 _gitroot="git://github.com/sahib/rmlint.git"
 _gitname="rmlint"

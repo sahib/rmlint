@@ -12,6 +12,7 @@ NONETHELESS IT WAS WRITTEN VERY CAREFULLY AND SHOULD DO WHAT IT IS SUPPOSED TO D
 h2. INSTALL 
 
 <h3>Download</h3>
+__download the sources by one of the following ways__
 <h4>Git way</h4>
 @git clone https://github.com/sahib/rmlint.git@
 
@@ -28,8 +29,11 @@ h2. INSTALL
 @./configure --prefix=/usr@
 @make -j 4  && sudo make install@
 
+<h4>Packages</h4>
+A PKGBUILD is available in the AUR.
+
 <h2>HELP:</h2>
-Use: 
+<h4>Use:</h4>
 * @'rmlint -h'@
 * @'man rmlint'@
 
@@ -74,7 +78,7 @@ The algorithm tries to mimize IO as far as possible, thus focusing on CPU usage.
 #) Do for every group, and print statistics
 
 
-<h3>RMLINT IS KNOWN FINE TO RUN ON THOSE PLATFORMS:</h3>
+<h3>RMLINT IS KNOWN RUN TO FINE ON THOSE PLATFORMS:</h3>
 * Linux 32/64
 * Solaris
 
@@ -83,7 +87,7 @@ __Note2__: rmlint uses alloca(), if you want to port it you may need to replace 
 
 <h2>NOTE ABOUT FALSE POSITIVES</h2> 
 __Short:__ False Positves are actuallly possible, but very, very, very unlikely. 
-__Longer:__They would need to have the same size, fingerprint and checksums to be marked as twins.
+__Longer:__ They would need to have the same size, fingerprint and checksums to be marked as twins.
 md5 is not perfect, but the probability of getting false positves on a normal set of data is the same as lim(1/x) : x -> +inf = 0 + h; where h ~ 0
 
 But isn't there a solution to be 100% sure? Yes, there is. It's the "--paranoid/-p" option. It does a 
@@ -112,7 +116,7 @@ __compared to...__
 		
 * ..fslint: 
 ** + Faster / more options 
-** - fslint finds also borken UID/GIDs (this never happened to me, anyone?)
+** - fslint finds also broken UID/GIDs (this never happened to me, anyone?)
 		
 * ..[other disadvantages] 
 ** - does not look into archives (things like those could be performed by some bash script easier)
