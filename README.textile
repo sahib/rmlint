@@ -120,8 +120,8 @@ __compared to...__
 		
 		
 <h2>Pseudobenchmark</h2>
-Machine was my maindesktop, quadcore, running Linx x86_64
-measured was with the 2nd,3rd & 4th run of the programs
+Machine was a regular quadcore with a even more regular HDD and an absolutely Linux x86_64.
+measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 
 <table >
   <colgroup width="100" span="5"></colgroup>
@@ -151,23 +151,26 @@ measured was with the 2nd,3rd & 4th run of the programs
     <td>0.089s</td>
     <td>1:54min</td>
     <td>0.097s</td>
-    <td>Dir did not contain any twins.</td>
+    <td>Dir did not contain any twins. :-)</td>
   </tr>
 </table>
 
 
 <h2>FAQ</h2>
-*Q:* The "-m list" output is crap! I want more information! 
+*Q:* __The "-m list" output is crap! I want more information!__
 *A:* You can use the command mode to use to run 'ls' on the files: 
    Example: ./rmlint . -m cmd -c "ls -lasi '%s'" -C "ls '%s'" -v 1
    Where -c executes "ls -lasi" on the found duplicate, -C on the original. 
      
-*Q:* I want only the found files to be displayed! Like fdupes does! 
+*Q:* __I want only the found files to be displayed! Like fdupes does!__
 *A:* "-v 1" is your friend.
 
-*Q:* I guess I found a bug, what now?
+*Q:* __I guess I found a bug, what now?__
 *A:* Great! Write me an email (sahib@online.de), with a nifty problem description and/or 
      a patch and/or any suggestions and/or a backtrace (if it was a crash)
 
-*Q:* Why is there no GUI?
+*Q:* __Why is there no GUI?__
 *A:* This may be on the ToDos. Perhaps. :-)
+
+*Q:* __Can I set a 'preferred dir' when specifying more than one dir, which picks the orig from the preferred one?
+*A:* Im sorry, no. This may implemented in future, but can be done by parsing the rmlint.log..
