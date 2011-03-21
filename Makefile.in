@@ -1,8 +1,11 @@
 #source dir
 SOURCEDIR=src
+DOCDIR=doc
 
 #MANDIR
 MANDIR=$(DESTDIR)/usr/share/man/man1
+#MANUAL
+MANDOC=rmlint.1.gz
 
 #install
 INSTALLPATH=$(DESTDIR)/usr/bin
@@ -59,14 +62,22 @@ $(EXECUTABLE):  $(OBJECTS)
 	@$(ECHO) "-> Compiling $<"
 	@$(CC) $(INCLUDE) $(CFLAGS) $< -o $@
 
+.PHONY : clean
 clean:
 	@$(ECHO) "<> Making clean."
 	@$(RM) $(SOURCEDIR)/*.o $(EXECUTABLE) 2> /dev/null
 
+.PHONY : install
 install: 
 	@$(MKDIR) $(INSTALLPATH)
 	@$(ECHO) "++ Copying executable to $(INSTALLPATH)"
 	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
 	@$(MKDIR) $(MANDIR)
 	@$(ECHO) "++ Copying manpage to $(MANDIR)."
-	@$(CP) doc/rmlint.1.gz $(MANDIR)
+	@$(CP) "$(DOCDIR)/$(MANDOC)" $(MANDIR)
+
+.PHONY : uninstall
+uninstall:
+	@$(ECHO) "-- Removing the lint of rmlint" 
+	$(RM) "$(INSTALLPATH)/$(EXECUTABLE)"
+	$(RM) "$(MANDIR)/$(MANDOC)"
