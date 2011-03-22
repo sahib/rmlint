@@ -24,7 +24,6 @@
   1) log routines
   2) finding double checksums
   3) implementation of different modes
-
 */
 
 #define _GNU_SOURCE
@@ -777,7 +776,7 @@ bool findmatches(file_group *grp)
 
 		}
 		write_to_log(i, false);
-		if(handle_item(NULL,i))
+		if(handle_item(i,pref_file))
 		{
 		    pthread_mutex_unlock(&mutex_printage);
 		    return true;
