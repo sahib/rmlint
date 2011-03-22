@@ -347,6 +347,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->junk_chars    =  NULL;        /* You have to set this   */
     pset->oldtmpdata    = 60;           /* Remove 1min old buffers */
     pset->doldtmp       = true;         /* Remove 1min old buffers */
+    pset->preferID      = -1; 
     pset->ignore_hidden = 1;
     pset->findemptydirs = 1;
     pset->namecluster   = 0;
@@ -362,6 +363,18 @@ void rmlint_set_default_settings(rmlint_settings *pset)
 }
 
 /* ------------------------------------------------------------- */
+
+/* Check if this is the 'preferred' dir */
+int check_if_preferred(const char * dir)
+{
+    if(dir != NULL)
+    {
+	size_t length = strlen(dir);
+	if(length >= 2 && dir[0] == '/' && dir[1] == '/')
+	  return 1;	
+    }
+    return 0;
+}
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
@@ -577,17 +590,26 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
     /* Check the directory to be valid */
     while(optind < argc)
     {
-        int p = open(argv[optind],O_RDONLY);
+	char * theDir = argv[optind];
+	int p,isPref = check_if_preferred(theDir);
+	if(isPref)
+	{
+	  theDir += 2;
+	}
+
+        p = open(theDir,O_RDONLY);
         if(p == -1)
         {
-            error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", argv[optind], strerror(errno));
+            error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", theDir, strerror(errno));
             return 0;
         }
         else
         {
             close(p);
             sets->paths	  = realloc(sets->paths,sizeof(char*)*(lp+2));
-            sets->paths[lp++] = argv[optind];
+		
+	    if(isPref) sets->preferID = lp;
+            sets->paths[lp++] = theDir;
             sets->paths[lp  ] = NULL;
         }
         optind++;

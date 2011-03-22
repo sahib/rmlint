@@ -298,3 +298,5 @@ void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag)
         tmp->next=NULL;
     }
 }
+
+/* ------------------------------------------------------------- */

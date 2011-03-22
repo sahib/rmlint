@@ -31,7 +31,7 @@ typedef struct
     /* Start and end pointer of a 'group' */
     lint_t *grp_stp, *grp_enp;
 
-    /* elems in this list and total size */
+    /* elems in this list and total size in bytes */
     nuint_t len, size;
 
 } file_group;

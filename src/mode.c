@@ -41,6 +41,9 @@
 #include "mode.h"
 #include "md5.h"
 
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 nuint_t dup_counter=0;
 nuint_t get_dupcounter()
@@ -157,46 +160,45 @@ static void remfile(const char *path)
 /* ------------------------------------------------------------- */
 
 /** This is only for extremely paranoid people **/
+
 static int paranoid(const char *p1, const char *p2, nuint_t size)
 {
-    nuint_t b1=0,b2=0;
-    FILE *f1,*f2;
+    int result = 0,file_a,file_b;
+    char * file_map_a, * file_map_b;
 
-    char *c1 = alloca((MD5_IO_BLOCKSIZE>size) ? size+1 : MD5_IO_BLOCKSIZE);
-    char *c2 = alloca((MD5_IO_BLOCKSIZE>size) ? size+1 : MD5_IO_BLOCKSIZE);
+    if(!p1 || !p2)
+      return 0;
 
-    f1 = fopen(p1,"rb");
-    f2 = fopen(p2,"rb");
-
-    if(p1==NULL||p2==NULL)
+    if( (file_a = open (p1, MD5_FILE_FLAGS)) == -1)
     {
-        return 0;
+	perror(RED"ERROR:"NCO"sys:open()");
+	return 0;
     }
 
-    while( (b1 = fread(c1,sizeof(char),MD5_IO_BLOCKSIZE,f1))
-            && (b2 = fread(c2,sizeof(char),MD5_IO_BLOCKSIZE,f2))
-         )
+    if( (file_b = open (p1, MD5_FILE_FLAGS)) == -1)
     {
-        int i = 0;
-
-        if(b1!=b2)
-        {
-            return 0;
-        }
-        for(; i < b1; i++)
-        {
-            if(c1[i] - c2[i])
-            {
-                fclose(f1);
-                fclose(f2);
-                return 0;
-            }
-        }
+	perror(RED"ERROR:"NCO"sys:open()");
+	return 0;
     }
 
-    fclose(f1);
-    fclose(f2);
-    return 1;
+    file_map_a = mmap(NULL, (size_t)size, PROT_READ, MAP_PRIVATE, file_a, 0);
+    if(file_map_a != MAP_FAILED)
+    {
+       file_map_b = mmap(NULL, (size_t)size, PROT_READ, MAP_PRIVATE, file_a, 0);
+       if(file_map_b != MAP_FAILED)
+       {
+	  result = !memcmp(file_map_a, file_map_b, size);
+	  munmap(file_map_b,size);
+       }
+       munmap(file_map_a,size);
+    }
+
+    if(close (file_a) == -1)
+      perror(RED"ERROR:"NCO"close()");
+    if(close (file_b) == -1)
+      perror(RED"ERROR:"NCO"close()");
+
+    return result;
 }
 
 /* ------------------------------------------------------------- */
@@ -645,6 +647,7 @@ static int cmp_f(lint_t *a, lint_t *b)
 bool findmatches(file_group *grp)
 {
     lint_t *i = grp->grp_stp, *j;
+    lint_t * pref_file = NULL;
     if(i == NULL)
     {
         return false;
@@ -656,11 +659,8 @@ bool findmatches(file_group *grp)
     {
         if(i->dupflag)
         {
-            bool printed_original = false;
             j=i->next;
 
-            /* Make sure no group is printed / logged at the same time (== chaos) */
-            pthread_mutex_lock(&mutex_printage);
 
             while(j)
             {
@@ -671,65 +671,13 @@ bool findmatches(file_group *grp)
                             ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)  /* If we're bothering with paranoid users - Take the gatling! */
                       )
                     {
-                        /* i 'similiar' to j */
+                        /* i twin of j */
                         j->dupflag = false;
                         i->dupflag = false;
-
-                        if(printed_original == false)
-                        {
-   			    if(grp->len == 2)
-			    {
-				size_t len = strlen(i->path);
-				if(len && i->path[len-1] == '~')
-			        {
-					puts(i->path);
-					puts(j->path);
-				}
-			    }
-
-                            if((set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
-                            {
-                                error(GRE"   ls "NCO"%s\n",i->path);
-                            }
-
-                            write_to_log(i, true);
-                            handle_item(NULL, i);
-                            printed_original = true;
-                        }
-
-                        if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
-                        {
-                            if(set->paranoid)
-                            {
-                                /* If byte by byte was succesful print a blue "x" */
-                                warning(BLU"   %-1s "NCO,"rm");
-                            }
-                            else
-                            {
-                                warning(YEL"   %-1s "NCO,"rm");
-                            }
-
-                            if(set->verbosity > 1)
-                            {
-                                error("%s\n",j->path);
-                            }
-                            else
-                            {
-                                error("   rm %s\n",j->path);
-                            }
-
-                        }
-                        write_to_log(j, false);
-                        if(handle_item(j,i))
-                        {
-                            return true;
-                        }
                     }
                 }
                 j = j->next;
             }
-
-            pthread_mutex_unlock(&mutex_printage);
 
             /* Now remove if $i didn't match in list */
             if(i->dupflag)
@@ -762,6 +710,82 @@ bool findmatches(file_group *grp)
         i=i->next;
     }
 
+    if(grp->len == 0)
+    {
+	return false;
+    }
+
+    /* If a specific directory is specified to have the 'originals':  */
+    /* Find the (first) element being in this directory and swap it with the first */
+    /* --> First one is the original */
+    if(set->preferID != -1)
+    {
+	    char * pPath  = set->paths[set->preferID];
+	    size_t length = strlen(pPath);
+
+	    i = grp->grp_stp;
+	    while(i)
+	    {
+		if(!strncmp(pPath,i->path,length))
+		{
+			pref_file = i;
+			break;
+		}		
+		i = i->next;
+	    }
+    }
+
+    /* Make sure no group is printed / logged at the same time (== chaos) */
+    pthread_mutex_lock(&mutex_printage);
+   
+    /* Start again with first element (it may have changed) */
+    if(!pref_file) pref_file = grp->grp_stp;
+
+    if(   (set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
+    {
+	error(GRE"   ls "NCO"%s\n",pref_file->path);
+    }
+    write_to_log(pref_file, true);
+    handle_item(NULL, pref_file);
+
+    i = grp->grp_stp;
+
+    while(i)
+    {
+	if(i != pref_file)
+	{
+		if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
+		{
+		    if(set->paranoid)
+		    {
+			/* If byte by byte was succesful print a blue "x" */
+			warning(BLU"   %-1s "NCO,"rm");
+		    }
+		    else
+		    {
+			warning(YEL"   %-1s "NCO,"rm");
+		    }
+
+		    if(set->verbosity > 1)
+		    {
+			error("%s\n",i->path);
+		    }
+		    else
+		    {
+			error("   rm %s\n",i->path);
+		    }
+
+		}
+		write_to_log(i, false);
+		if(handle_item(NULL,i))
+		{
+		    pthread_mutex_unlock(&mutex_printage);
+		    return true;
+		}
+	}
+	i = i->next;
+    }
+    pthread_mutex_unlock(&mutex_printage);
     return false;
 }
 

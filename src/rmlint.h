@@ -36,7 +36,7 @@ typedef struct
     char casematch;
     char paranoid;
     char invmatch;
-    char namecluster;
+    char namecluster; 
     char doldtmp;
     char searchdup;
     char findemptydirs;
@@ -49,6 +49,7 @@ typedef struct
     char *cmd_orig;
     char *junk_chars;
     char *output;
+    int preferID;
     nuint_t threads;
     nuint_t depth;
     nuint_t oldtmpdata;
