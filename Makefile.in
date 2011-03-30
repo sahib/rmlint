@@ -32,7 +32,7 @@ OPTI=-march=native -O3 -s -finline-functions -fomit-frame-pointer
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a -D_THREAD_SAFE
 
 #also use -pipe 
-CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) 
+CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) -D_FILE_OFFSET_BITS=64
 
 #Link flags 
 LDFLAGS=-lpthread -lm
