@@ -690,7 +690,7 @@ static void build_checksums(file_group *grp)
     {
         if(grp->grp_stp==NULL)
         {
-            printf("WARN: Empty group received: (end_pointer: %s) len: %ld\n",(grp->grp_enp) ? grp->grp_enp->path : "null",grp->len);
+            printf("WARN: Empty group received: (end_pointer: %s) len: %ld bsize: %ld\n",(grp->grp_enp) ? grp->grp_enp->path : "null",grp->len, grp->size);
         }
         return;
     }
@@ -705,7 +705,7 @@ static void build_checksums(file_group *grp)
     }
     else /* split group in subgroups and start a seperate thread for each */
     {
-        off_t  sz = 0;
+        nuint_t  sz = 0;
         lint_t * ptr = grp->grp_stp;
         lint_t * lst = grp->grp_stp;
 
@@ -1024,8 +1024,7 @@ void start_processing(lint_t *b)
     while(b)
     {
         lint_t *q = b, *prev = NULL;
-        nuint_t glen = 0;
-	off_t gsize = 0;
+        nuint_t glen = 0, gsize = 0;
 
         while(b && q->fsize == b->fsize)
         {
