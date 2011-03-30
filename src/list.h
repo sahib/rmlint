@@ -34,7 +34,7 @@ typedef struct lint_t
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
 
     char *path;		  	         /* absolute path from working dir */
-    nuint_t fsize; 		         /* Size of the file (bytes) */
+    off_t fsize; 		         /* Size of the file (bytes) */
     bool filter; 			 /* this is used in calculations  */
     bool dupflag;			 /* Is the file marked as duplicate? */
 

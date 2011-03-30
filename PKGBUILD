@@ -1,42 +1,26 @@
 # Maintainer: SahibBommelig <sahib@online.de>
 # rmlint PKBUILD for ArchLinux 
 pkgname=rmlint
-pkgver=20110321
+pkgver=20110330
 pkgrel=1
 pkgdesc="Tool to remove duplicates and other lint, being much faster than fdupes"
-arch=(any)
+arch=('i686' 'x86_64')
 
-# Only because namcap said it:
-depends=(glibc)
-
-makedepends=('git')
 license=('GPL3')
 url=("https://github.com/sahib/rmlint")
+depends=('glibc')
 
-_gitroot="git://github.com/sahib/rmlint.git"
-_gitname="rmlint"
+source=('https://github.com/downloads/sahib/rmlint/rmlint_1.0.0.tar.gz')
+md5sums=('17cf1deff9aa5f7d89c8fa0ee8e2fc30')
 
 build() 
 {
-    cd ${srcdir}/
-
-    msg "Connecting to the GIT server...."
-    if [[ -d ${srcdir}/${_gitname} ]] ; then
-        cd ${_gitname}
-        git pull origin
-	msg "Updating existing repo..."
-    else
-        git clone ${_gitroot}
-    fi
-    
-    msg "GIT checkout done."
-    cd ${srcdir}/${_gitname}
-    
+    cd ${srcdir}/${pkgname}
     ./configure --prefix=/usr
     make || return 1
 }
 
 package() {
-  cd "$srcdir/${_gitname}"
+  cd ${srcdir}/${pkgname}
   make DESTDIR=$pkgdir install || return 1
 }

@@ -32,7 +32,8 @@ typedef struct
     lint_t *grp_stp, *grp_enp;
 
     /* elems in this list and total size in bytes */
-    nuint_t len, size;
+    nuint_t len;
+    off_t size;
 
 } file_group;
 

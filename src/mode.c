@@ -355,9 +355,9 @@ void write_to_log(const lint_t *file, bool orig)
         }
 	if(set->verbosity == 4)
 	{
-        	fprintf(stdout,"%s%s%s%lu%s%ld%s%ld\n", LOGSEP,fpath, LOGSEP, file->fsize, LOGSEP, file->dev, LOGSEP, file->node);
+        	fprintf(stdout,"%s%s%s%lu%s%ld%s%ld\n", LOGSEP,fpath, LOGSEP, (unsigned long)file->fsize, LOGSEP, (long)file->dev, LOGSEP, (long)file->node);
 	}
-        fprintf(get_logstream(),"%s%s%s%lu%s%ld%s%ld\n", LOGSEP,fpath, LOGSEP, file->fsize, LOGSEP, file->dev, LOGSEP, file->node);
+        fprintf(get_logstream(),"%s%s%s%lu%s%ld%s%ld\n",LOGSEP,fpath, LOGSEP, (unsigned long)file->fsize, LOGSEP, (long)file->dev, LOGSEP, (long)file->node);
 	
 
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK)
