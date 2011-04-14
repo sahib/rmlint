@@ -322,7 +322,7 @@ void write_to_log(const lint_t *file, bool orig)
             if(set->cmd_path)
             {
                 script_print(_sd_(set->cmd_path,fpath));
-                script_print(_sd_(" &&\n"));
+                script_print(_sd_("\n"));
             }
             else
             {
@@ -498,8 +498,7 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
             ret=systemf(set->cmd_orig,orig);
         }
 
-        if (WIFSIGNALED(ret) &&
-                (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+        if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
         {
             return true;
         }

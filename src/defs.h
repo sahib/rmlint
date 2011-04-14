@@ -117,5 +117,4 @@ typedef char bool;
 #define TYPE_JNK_FILENAME 7
 #define TYPE_NBIN 8
 #define TYPE_BASE 9
-
 #endif

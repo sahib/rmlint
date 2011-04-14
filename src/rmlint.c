@@ -639,7 +639,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 
 /* ------------------------------------------------------------- */
 
-/* User  may specify in -c/-C a command that get's excuted on every hit - check for being a safe one */
+/* User  may specify in -cC a command that get's excuted on every hit - check for being a safe one */
 static void check_cmd(const char *cmd)
 {
     int i = 0, ps = 0;
