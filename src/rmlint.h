@@ -36,7 +36,7 @@ typedef struct
     char casematch;
     char paranoid;
     char invmatch;
-    char namecluster; 
+    char namecluster;
     char doldtmp;
     char searchdup;
     char findemptydirs;

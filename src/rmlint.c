@@ -82,7 +82,7 @@ void rmlint_init(void)
 
 nuint_t get_totalfiles(void)
 {
-	return total_files;
+    return total_files;
 }
 
 /* ------------------------------------------------------------- */
@@ -245,12 +245,12 @@ int systemf(const char* format, ...)
 /* Version string */
 static void print_version(bool exit)
 {
-    fprintf(stderr, "Version 0.97a compiled: [%s]-[%s]\n",__DATE__,__TIME__);
+    fprintf(stderr, "Version 1.0.3 compiled: [%s]-[%s]\n",__DATE__,__TIME__);
     fprintf(stderr, "Author Christopher Pahl; Report bugs to <sahib@online.de>\n");
     fprintf(stderr, "or use the Issuetracker at https://github.com/sahib/rmlint/issues\n");
     if( exit )
     {
-    	die(0);
+        die(0);
     }
 }
 
@@ -347,7 +347,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->junk_chars    =  NULL;        /* You have to set this   */
     pset->oldtmpdata    = 60;           /* Remove 1min old buffers */
     pset->doldtmp       = true;         /* Remove 1min old buffers */
-    pset->preferID      = -1; 
+    pset->preferID      = -1;
     pset->ignore_hidden = 1;
     pset->findemptydirs = 1;
     pset->namecluster   = 0;
@@ -356,10 +356,10 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->color         = 1;
     pset->output        = (char*)script_name;
 
-    /* There is no cmdline option for this one    * 
+    /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
      * investigated to be replicas of other files */
-    pset->collide = 0; 		
+    pset->collide = 0;
 }
 
 /* ------------------------------------------------------------- */
@@ -369,9 +369,9 @@ int check_if_preferred(const char * dir)
 {
     if(dir != NULL)
     {
-	size_t length = strlen(dir);
-	if(length >= 2 && dir[0] == '/' && dir[1] == '/')
-	  return 1;	
+        size_t length = strlen(dir);
+        if(length >= 2 && dir[0] == '/' && dir[1] == '/')
+            return 1;
     }
     return 0;
 }
@@ -590,12 +590,12 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
     /* Check the directory to be valid */
     while(optind < argc)
     {
-	char * theDir = argv[optind];
-	int p,isPref = check_if_preferred(theDir);
-	if(isPref)
-	{
-	  theDir += 2;
-	}
+        char * theDir = argv[optind];
+        int p,isPref = check_if_preferred(theDir);
+        if(isPref)
+        {
+            theDir += 2;
+        }
 
         p = open(theDir,O_RDONLY);
         if(p == -1)
@@ -607,8 +607,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         {
             close(p);
             sets->paths	  = realloc(sets->paths,sizeof(char*)*(lp+2));
-		
-	    if(isPref) sets->preferID = lp;
+
+            if(isPref) sets->preferID = lp;
             sets->paths[lp++] = theDir;
             sets->paths[lp  ] = NULL;
         }
@@ -657,8 +657,7 @@ static void check_cmd(const char *cmd)
     }
     if(ps > 1)
     {
-        error(YEL"FATAL: "NCO"--command [-c]: Only \"%%s\" is allowed!\n");
-        error("       Example: rmlint -c \"ls '%%s'\"\n");
+        error(YEL"FATAL: "NCO"--command [-cC]: Only one markup is allowed!\n");
         die(0);
     }
 }
@@ -810,7 +809,7 @@ int rmlint_main(void)
             die(0);
         }
 
-        info("Now in total "YEL"%ld useable files"NCO" in cache.\n", total_files);
+        info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", total_files);
 
         if(set->threads > total_files)
         {

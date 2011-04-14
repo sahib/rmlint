@@ -117,7 +117,6 @@ static int junkinstr(const char *str)
     return 0;
 }
 
-
 /* ------------------------------------------------------------- */
 
 /* A simply method to test if a file is non stripped binary. Uses popen() */
@@ -243,7 +242,7 @@ int regfilter(const char* input, const char *pattern)
  * 			 This is nevertheless limited to Unix filesystems like ext*, reiserfs.. (might work in MacOSX - don't know)
  * 			 If someone likes to port this to Windows he would to replace the inode number by the MFT entry point, or simply disable it
  * 			 I personally don't have a win comp and won't port it, as I don't found many users knowing what that black window with white
- *                       lines can do ;-)
+ *           white letters can do ;-)
  */
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
@@ -281,45 +280,45 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             if(junkinstr(basename(path)))
             {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
-		if(set->collide)
-		{
-                	return FTW_CONTINUE;
-		}
+                if(set->collide)
+                {
+                    return FTW_CONTINUE;
+                }
             }
             if(set->nonstripped)
             {
                 if(check_binary_to_be_stripped(path))
                 {
                     list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
-	            if(set->collide)
-		    {
-			return FTW_CONTINUE;
-		    }
+                    if(set->collide)
+                    {
+                        return FTW_CONTINUE;
+                    }
                 }
             }
             if(set->doldtmp)
             {
-		/* This checks only for *~ and .*.swp */
+                /* This checks only for *~ and .*.swp */
                 size_t len = strlen(path);
                 if(path[len-1] == '~' || (len>3&&path[len-1] == 'p'&&path[len-2] == 'w'&&path[len-3] == 's'&&path[len-4] == '.'))
                 {
                     char *cpy = NULL;
                     struct stat stat_buf;
 
-		    if(path[len - 1] == '~')
- 		    {
-		    	cpy = strndup(path,len-1);
-  		    }
-		    else
-		    {
-			char * p = strrchr(path,'/');
-			size_t p_len = p-path;
-			char * front = alloca(p_len+1);
-			memset(front, '\0', p_len+1);	
-			strncpy(front, path, p_len);
-			cpy = strdup_printf("%s/%s",front,p+2);
-			cpy[strlen(cpy)-4] = 0;
-		    }
+                    if(path[len - 1] == '~')
+                    {
+                        cpy = strndup(path,len-1);
+                    }
+                    else
+                    {
+                        char * p = strrchr(path,'/');
+                        size_t p_len = p-path;
+                        char * front = alloca(p_len+1);
+                        memset(front, '\0', p_len+1);
+                        strncpy(front, path, p_len);
+                        cpy = strdup_printf("%s/%s",front,p+2);
+                        cpy[strlen(cpy)-4] = 0;
+                    }
 
                     if(!stat(cpy, &stat_buf))
                     {
@@ -327,15 +326,15 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                         {
                             list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
                         }
-                    } 
+                    }
                     if(cpy)
                     {
                         free(cpy);
                     }
-		    if(set->collide)
-		    {
-			return FTW_CONTINUE;
-		    }
+                    if(set->collide)
+                    {
+                        return FTW_CONTINUE;
+                    }
                 }
             }
             /* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
@@ -371,10 +370,10 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             if(junkinstr(basename(path)))
             {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
-		if(set->collide)
-		{
-                	return FTW_SKIP_SUBTREE;
-		}
+                if(set->collide)
+                {
+                    return FTW_SKIP_SUBTREE;
+                }
             }
             if(set->findemptydirs)
             {
@@ -539,7 +538,7 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
         }
     }
 
-   /* Also compare the bytes which were read 'on the fly' */
+    /* Also compare the bytes which were read 'on the fly' */
     for(i=0; i<BYTE_MIDDLE_SIZE; i++)
     {
         if(a->bim[i] != b->bim[i])
@@ -547,7 +546,7 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
             return 0;
         }
     }
-    
+
     /* Let it pass! */
     return 1;
 }
@@ -591,20 +590,20 @@ static nuint_t group_filter(file_group *fp)
     while(i)
     {
 
-/* Useful debugging stuff: */
-/* 
-	int z = 0;
-	MDPrintArr(i->fp[0]);
-	printf("|#|");
-	MDPrintArr(i->fp[1]);
-	printf("|#|");
-	for(; z < BYTE_MIDDLE_SIZE; z++)
-	{
-		printf("%2x",i->bim[z]);
-	}
-	fflush(stdout);
-*/
-	
+        /* Useful debugging stuff: */
+        /*
+        	int z = 0;
+        	MDPrintArr(i->fp[0]);
+        	printf("|#|");
+        	MDPrintArr(i->fp[1]);
+        	printf("|#|");
+        	for(; z < BYTE_MIDDLE_SIZE; z++)
+        	{
+        		printf("%2x",i->bim[z]);
+        	}
+        	fflush(stdout);
+        */
+
         if(i->filter)
         {
             j=i->next;
@@ -777,7 +776,7 @@ static void* sheduler_cb(void *gfp)
     {
         return NULL;
     }
-   
+
     /* do the fingerprint filter */
     group_filter(group);
 
@@ -949,7 +948,7 @@ static void find_double_bases(lint_t *starting)
                         char * tmp = canonicalize_file_name(i->path);
                         i->dupflag = TYPE_BASE;
                         error("   %sls"NCO" %s\n", (set->verbosity!=1) ? GRE : "", tmp,i->fsize);
-			write_to_log(i,false);
+                        write_to_log(i,false);
                         pr = true;
 
                         if(tmp)
@@ -973,8 +972,8 @@ static void find_double_bases(lint_t *starting)
 
                     j->dupflag = TYPE_BASE;
                     error("   %sls"NCO" %s\n",(set->verbosity!=1) ? GRE : "",tmp2);
-		    dbase_ctr++;
-		    write_to_log(j,false);
+                    dbase_ctr++;
+                    write_to_log(j,false);
                     if(tmp2)
                     {
                         free(tmp2);
@@ -1236,7 +1235,7 @@ void start_processing(lint_t *b)
     db_done = true;
 
     error("%s Duplicate(s):\n",(set->verbosity > 1) ? YEL"#"NCO : "#");
-    /* Groups are splitted, now give it to the sheduler 
+    /* Groups are splitted, now give it to the sheduler
      * The sheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
     start_sheduler(fglist, spelen);
@@ -1255,15 +1254,15 @@ void start_processing(lint_t *b)
     size_to_human_readable(lint+emptylist.size, lintbuf, 127);
 
     /* Now announce */
-    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates + "RED"%ld"NCO" other suspicious files found%s\n",get_totalfiles(), get_dupcounter(), emptylist.len + dbase_ctr,(set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
+    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates + "RED"%ld"NCO" other suspicious files found%s\n",get_totalfiles(), get_dupcounter(), emptylist.len + dbase_ctr - 1,(set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
     warning(RED"=> "NCO"Totally "GRE" ~%s "NCO" [%ld Bytes] can be removed.\n\n", lintbuf, lint + emptylist.size);
 
 
     if(set->verbosity == 6)
     {
-	info("Now calculation finished.. now writing end of log...\n");
-	info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%ld"NCO" replicas + "RED"%ld"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
-    	info(RED"=> "NCO"In total "GRE" ~%s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint + emptylist.size);
+        info("Now calculation finished.. now writing end of log...\n");
+        info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%ld"NCO" replicas + "RED"%ld"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
+        info(RED"=> "NCO"In total "GRE" ~%s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint + emptylist.size);
     }
 
     if(get_logstream() == NULL && set->output)

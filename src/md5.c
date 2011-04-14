@@ -338,52 +338,52 @@ void md5c_c_init(void)
 
 #if (MD5_USE_MMAP)
 
-	void md5_file(lint_t *file)
-	{
-	    int inFile=0;
-	    MD5_CTX mdContext;
-	    unsigned char *f_map=NULL;
+void md5_file(lint_t *file)
+{
+    int inFile=0;
+    MD5_CTX mdContext;
+    unsigned char *f_map=NULL;
 
-	    /* Don't read the $already_read amount of bytes read by md5_fingerprint */
-	    nuint_t already_read = (MD5_FPSIZE_FORM(file->fsize) - 1);
-	 
-	    /* This is some rather seldom case, but skip checksum building here */
-	    if(file->fsize <= (already_read*2))
-		return;
+    /* Don't read the $already_read amount of bytes read by md5_fingerprint */
+    nuint_t already_read = (MD5_FPSIZE_FORM(file->fsize) - 1);
 
-	    if( (inFile = open (file->path, MD5_FILE_FLAGS)) == -1)
-	    {
-		perror(RED"ERROR:"NCO"sys:open()");
-		return;
-	    }
+    /* This is some rather seldom case, but skip checksum building here */
+    if(file->fsize <= (already_read*2))
+        return;
 
-	    /* Init md5sum & jump to start */
-	    MD5Init (&mdContext);
+    if( (inFile = open (file->path, MD5_FILE_FLAGS)) == -1)
+    {
+        perror(RED"ERROR:"NCO"sys:open()");
+        return;
+    }
 
-	    f_map = mmap(NULL, (size_t)file->fsize, PROT_READ, MAP_PRIVATE, inFile, 0);
+    /* Init md5sum & jump to start */
+    MD5Init (&mdContext);
 
-	    if(f_map != MAP_FAILED)
-	    {
-		nuint_t f_offset = already_read;
-		
-		/* Shut your eyes and go through, leave out start & end of fp */
-		MD5Update (&mdContext, f_map + f_offset, file->fsize - already_read);
+    f_map = mmap(NULL, (size_t)file->fsize, PROT_READ, MAP_PRIVATE, inFile, 0);
 
-		/* Unmap this file */
-		munmap(f_map,file->fsize);
+    if(f_map != MAP_FAILED)
+    {
+        nuint_t f_offset = already_read;
 
-		/* Finalize, copy and close */
-		MD5Final (&mdContext);
-		memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
-	    }
-	    else
-	    {
-		perror(RED"ERROR:"NCO"mmap()");
-	    }
+        /* Shut your eyes and go through, leave out start & end of fp */
+        MD5Update (&mdContext, f_map + f_offset, file->fsize - already_read);
 
-	    if(close (inFile) == -1)
-		perror(RED"ERROR:"NCO"close()");
-	}
+        /* Unmap this file */
+        munmap(f_map,file->fsize);
+
+        /* Finalize, copy and close */
+        MD5Final (&mdContext);
+        memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
+    }
+    else
+    {
+        perror(RED"ERROR:"NCO"mmap()");
+    }
+
+    if(close (inFile) == -1)
+        perror(RED"ERROR:"NCO"close()");
+}
 
 #endif
 
@@ -391,92 +391,92 @@ void md5c_c_init(void)
 
 #if (!MD5_USE_MMAP)
 
-	/* used to calc the complete checksum of file & save it in File */
-	void md5_file(lint_t *file)
-	{
-	    /* Number of bytes read in */
-	    ssize_t bytes=0;
-	    ssize_t offset=0;
+/* used to calc the complete checksum of file & save it in File */
+void md5_file(lint_t *file)
+{
+    /* Number of bytes read in */
+    ssize_t bytes=0;
+    ssize_t offset=0;
 
-	    /* Input stream */
-	    int inFile=0;
+    /* Input stream */
+    int inFile=0;
 
-	    /* the md5buf */
-	    MD5_CTX mdContext;
+    /* the md5buf */
+    MD5_CTX mdContext;
 
-	    /* tmp buffer */
-	    unsigned char *data=NULL;
+    /* tmp buffer */
+    unsigned char *data=NULL;
 
-	    /* Don't read the $already_read amount of bytes read by md5_fingerprint */
-	    nuint_t already_read = 0;
-	    nuint_t actual_size  = 0; 
+    /* Don't read the $already_read amount of bytes read by md5_fingerprint */
+    nuint_t already_read = 0;
+    nuint_t actual_size  = 0;
 
-	    already_read = MD5_FPSIZE_FORM(file->fsize);
-	 
-	    /* This is some rather seldom case, but skip checksum building here */
-	    if(file->fsize <= (already_read*2))
-	    {
-		return;
-	    }
+    already_read = MD5_FPSIZE_FORM(file->fsize);
 
-	    actual_size  = (MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE;
+    /* This is some rather seldom case, but skip checksum building here */
+    if(file->fsize <= (already_read*2))
+    {
+        return;
+    }
 
-	    /* Allocate buffer on the thread's stack */
-	    data = alloca(actual_size+1); 
+    actual_size  = (MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE;
 
-	    inFile = open (file->path, MD5_FILE_FLAGS);
+    /* Allocate buffer on the thread's stack */
+    data = alloca(actual_size+1);
 
-	    /* Can't open file? */
-	    if(inFile == -1)
-	    {
-		return;
-	    }
+    inFile = open (file->path, MD5_FILE_FLAGS);
 
-	    /* Init md5sum & jump to start */
-	    MD5Init (&mdContext);
-	    lseek(inFile, already_read, SEEK_SET);
+    /* Can't open file? */
+    if(inFile == -1)
+    {
+        return;
+    }
 
-	    do
-	    {
+    /* Init md5sum & jump to start */
+    MD5Init (&mdContext);
+    lseek(inFile, already_read, SEEK_SET);
 
-		/* If (pseudo-)serialized IO is requested lock a mutex, so other threads have to wait here
-		 * This is to prevent that several threads call fread() at the same time, what would case the
-		 * HD to jump a lot around without doing anything intelligent..
-		 * */
-	#if (MD5_SERIAL_IO == 1)
-		pthread_mutex_lock(&mutex_ck_IO);
-	#endif
-		/* The call to fread */
-		if( (bytes = read (inFile, data, actual_size)) == -1)
-		{
-			perror(RED"ERROR:"NCO"read()");
-		}
+    do
+    {
 
-		/* Unlock */
-	#if (MD5_SERIAL_IO == 1)
-		pthread_mutex_unlock(&mutex_ck_IO);
-	#endif
+        /* If (pseudo-)serialized IO is requested lock a mutex, so other threads have to wait here
+         * This is to prevent that several threads call fread() at the same time, what would case the
+         * HD to jump a lot around without doing anything intelligent..
+         * */
+#if (MD5_SERIAL_IO == 1)
+        pthread_mutex_lock(&mutex_ck_IO);
+#endif
+        /* The call to fread */
+        if( (bytes = read (inFile, data, actual_size)) == -1)
+        {
+            perror(RED"ERROR:"NCO"read()");
+        }
 
-		if(bytes != -1)
-		{
-			offset += bytes;
+        /* Unlock */
+#if (MD5_SERIAL_IO == 1)
+        pthread_mutex_unlock(&mutex_ck_IO);
+#endif
 
-			/* Update the checksum with the current contents of &data */
-			MD5Update (&mdContext, data, bytes);
-		}
-	    }
-	    while (bytes != -1 && bytes && (offset < (file->fsize - already_read)));
+        if(bytes != -1)
+        {
+            offset += bytes;
 
-	    /* Finalize, copy and close */
-	    MD5Final (&mdContext);
-	    memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
+            /* Update the checksum with the current contents of &data */
+            MD5Update (&mdContext, data, bytes);
+        }
+    }
+    while (bytes != -1 && bytes && (offset < (file->fsize - already_read)));
 
-	
-	    if(close (inFile) == -1)
-	    {
-		perror(RED"ERROR:"NCO"close()");
-	    }
-	}
+    /* Finalize, copy and close */
+    MD5Final (&mdContext);
+    memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
+
+
+    if(close (inFile) == -1)
+    {
+        perror(RED"ERROR:"NCO"close()");
+    }
+}
 
 #endif
 
@@ -489,59 +489,59 @@ void md5c_c_init(void)
 
 #if(MD5_USE_MMAP)
 
-	void md5_fingerprint(lint_t *file, const nuint_t readsize)
-	{
-	    int bytes = 0;
-	    int pF = open(file->path, MD5_FILE_FLAGS);
-	    unsigned char *f_map = NULL; 
-	    MD5_CTX con;
+void md5_fingerprint(lint_t *file, const nuint_t readsize)
+{
+    int bytes = 0;
+    int pF = open(file->path, MD5_FILE_FLAGS);
+    unsigned char *f_map = NULL;
+    MD5_CTX con;
 
-	    /* empty? */
-	    if(pF == -1)
-	    {
-		if(set->verbosity > 3)
-		{
-		    warning(YEL"WARN: "NCO"Cannot open %s",file->path);
-		}
-		return;
-	    }
+    /* empty? */
+    if(pF == -1)
+    {
+        if(set->verbosity > 3)
+        {
+            warning(YEL"WARN: "NCO"Cannot open %s",file->path);
+        }
+        return;
+    }
 
-	    f_map = mmap(0,file->fsize,PROT_READ,MAP_PRIVATE,pF,0);
-	    if(f_map == MAP_FAILED)
-	    {
-		perror(RED"ERROR:"NCO"mmap()");
-		close(pF);
-		return;
-	    }
+    f_map = mmap(0,file->fsize,PROT_READ,MAP_PRIVATE,pF,0);
+    if(f_map == MAP_FAILED)
+    {
+        perror(RED"ERROR:"NCO"mmap()");
+        close(pF);
+        return;
+    }
 
-	    MD5Init (&con);
-	    MD5Update (&con, f_map, readsize);
-	    MD5Final (&con);
-	    memcpy(file->fp[0],con.digest,MD5_LEN);
+    MD5Init (&con);
+    MD5Update (&con, f_map, readsize);
+    MD5Final (&con);
+    memcpy(file->fp[0],con.digest,MD5_LEN);
 
-	    if(readsize*2 <= file->fsize) 
-	    {
-		    /* Jump to middle of file and read a couple of bytes there s*/
-		    lseek(pF, file->fsize/2 ,SEEK_SET);
-		    memcpy(file->bim,f_map,BYTE_MIDDLE_SIZE);
+    if(readsize*2 <= file->fsize)
+    {
+        /* Jump to middle of file and read a couple of bytes there s*/
+        lseek(pF, file->fsize/2 ,SEEK_SET);
+        memcpy(file->bim,f_map,BYTE_MIDDLE_SIZE);
 
-		    if(readsize*2 + BYTE_MIDDLE_SIZE <= file->fsize)
-		    {
-			    /* Jump to end and read final block */
-			    lseek(pF, -readsize,SEEK_END);
+        if(readsize*2 + BYTE_MIDDLE_SIZE <= file->fsize)
+        {
+            /* Jump to end and read final block */
+            lseek(pF, -readsize,SEEK_END);
 
-			    /* Compute checksum of this last block */
-			    MD5Init (&con);
-			    MD5Update (&con, f_map, bytes);
-			    MD5Final (&con);
-			    memcpy(file->fp[1],con.digest,MD5_LEN);
-		    }
-	    }
+            /* Compute checksum of this last block */
+            MD5Init (&con);
+            MD5Update (&con, f_map, bytes);
+            MD5Final (&con);
+            memcpy(file->fp[1],con.digest,MD5_LEN);
+        }
+    }
 
-	    /* kthxbai */
-	    close(pF);
-	    munmap(f_map,file->fsize);
-	}
+    /* kthxbai */
+    close(pF);
+    munmap(f_map,file->fsize);
+}
 
 #endif
 #if(!MD5_USE_MMAP)
@@ -588,38 +588,38 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
     pthread_mutex_lock(&mutex_fp_IO);
 #endif
 
-    if(readsize <= file->fsize) 
+    if(readsize <= file->fsize)
     {
-	    /* Jump to middle of file and read a couple of bytes there s*/
-	    fseek(pF, file->fsize/2 ,SEEK_SET);
-	    bytes = fread(file->bim, sizeof(unsigned char), BYTE_MIDDLE_SIZE, pF);
+        /* Jump to middle of file and read a couple of bytes there s*/
+        fseek(pF, file->fsize/2 ,SEEK_SET);
+        bytes = fread(file->bim, sizeof(unsigned char), BYTE_MIDDLE_SIZE, pF);
 
-	    if(readsize + BYTE_MIDDLE_SIZE <= file->fsize)
-	    {
-		    /* Jump to end and read final block */
-		    fseek(pF, -readsize,SEEK_END);
-		    bytes = fread(data,sizeof(char),readsize,pF);
+        if(readsize + BYTE_MIDDLE_SIZE <= file->fsize)
+        {
+            /* Jump to end and read final block */
+            fseek(pF, -readsize,SEEK_END);
+            bytes = fread(data,sizeof(char),readsize,pF);
 
 #if (MD5_SERIAL_IO == 1)
-		    pthread_mutex_unlock(&mutex_fp_IO);
-		    unlock = false;
+            pthread_mutex_unlock(&mutex_fp_IO);
+            unlock = false;
 #endif
 
-		    /* Compute checksum of this last block */
-		    if(bytes)
-		    {
-			MD5Init (&con);
-			MD5Update (&con, data, bytes);
-			MD5Final (&con);
-			memcpy(file->fp[1],con.digest,MD5_LEN);
-		    }
-	    }
+            /* Compute checksum of this last block */
+            if(bytes)
+            {
+                MD5Init (&con);
+                MD5Update (&con, data, bytes);
+                MD5Final (&con);
+                memcpy(file->fp[1],con.digest,MD5_LEN);
+            }
+        }
     }
 
 #if (MD5_SERIAL_IO == 1)
     if(unlock)
     {
-    	pthread_mutex_unlock(&mutex_fp_IO);
+        pthread_mutex_unlock(&mutex_fp_IO);
     }
 #endif
 

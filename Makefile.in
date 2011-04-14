@@ -18,7 +18,6 @@ CP=cp
 STRIP=strip -s
 MKDIR=mkdir -p
 
-
 #compiling stuff
 CC=gcc
 
