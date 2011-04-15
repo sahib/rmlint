@@ -129,7 +129,7 @@ __compared to...__
 		
 		
 <h2>Pseudobenchmark</h2>
-Machine was a regular quadcore with a even more regular HDD and an absolutely Linux x86_64.
+Machine was a regular quadcore with a even more regular HDD and an absolutely regular Linux x86_64.
 measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 
 <table >
@@ -166,11 +166,6 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 
 
 <h2>FAQ</h2>
-*Q:* __The "-m list" output is crap! I want more information!__
-*A:* You can use the command mode to use to run 'ls' on the files: 
-   Example: ./rmlint . -m cmd -c "ls -lasi '%s'" -C "ls '%s'" -v 1
-   Where -c executes "ls -lasi" on the found duplicate, -C on the original. 
-     
 *Q:* __I want only the found files to be displayed! Like fdupes does!__
 *A:* "-v 1" is your friend.
 
@@ -182,4 +177,9 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *A:* This may be on the ToDos. Perhaps. :-)
 
 *Q:* __Can I set a 'preferred dir' when specifying more than one dir, which picks the orig from the preferred one?__
-*A:* Im sorry, no. This may implemented in future, but can be done by parsing the rmlint.log..
+*A:* Yes, prepend the preferred directory with a '//', originals will come from there now.
+
+*Q:* __None of the -m options satisfy my needs. What can I do?__
+*A:* You can specify your own commands by -c/-C, those get also replaced in the script.
+     You can for example pipe rmlint's find directly to sh:
+     rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh

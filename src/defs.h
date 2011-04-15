@@ -109,6 +109,12 @@ typedef char bool;
 
 /* ------------------------------------------------------------- */
 
+/* -cC */
+#define CMD_DUPL "<dupl>"
+#define CMD_ORIG "<orig>"
+
+/* ------------------------------------------------------------- */
+
 /* types of lint */
 #define TYPE_BLNK 3
 #define TYPE_OTMP 4

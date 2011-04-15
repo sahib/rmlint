@@ -227,18 +227,39 @@ void log_print(FILE * stream, const char * string)
 
 /* ------------------------------------------------------------- */
 
+static char * make_cmd_ready(bool is_orig, const char * orig, const char * dupl)
+{
+	char * repl_orig = NULL;
+	if(!is_orig)
+	    repl_orig = strsubs(set->cmd_path,CMD_ORIG,orig);
+	else
+	    repl_orig = strsubs(set->cmd_orig,CMD_ORIG,orig);
+
+	if(repl_orig != NULL && !is_orig)
+	{
+	    char * repl_dups = strsubs(repl_orig,CMD_DUPL,dupl);
+	    if(repl_dups != NULL)
+	    {
+		free(repl_orig);
+		repl_orig = repl_dups;
+	    }
+	}
+	return repl_orig;
+}
+
+/* ------------------------------------------------------------- */
+
 void script_print(char * string)
 {
-    if(set->verbosity == 5)
+    if(string != NULL)
     {
-        fprintf(stdout, string);
-    }
+	    if(set->verbosity == 5)
+	    {
+	         fprintf(stdout, string);
+	    }
 
-    fprintf(get_scriptstream(),string);
-
-    if(string)
-    {
-        free(string);
+ 	    fprintf(get_scriptstream(),string);
+	    free(string);
     }
 }
 
@@ -248,7 +269,7 @@ void script_print(char * string)
 
 /* ------------------------------------------------------------- */
 
-void write_to_log(const lint_t *file, bool orig)
+void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
 {
     bool free_fullpath = true;
     if(get_logstream() && get_scriptstream() && set->output)
@@ -321,8 +342,15 @@ void write_to_log(const lint_t *file, bool orig)
             log_print(get_logstream(),"DUPL");
             if(set->cmd_path)
             {
-                script_print(_sd_(set->cmd_path,fpath));
-                script_print(_sd_("\n"));
+        	char *opath = canonicalize_file_name(p_to_orig->path);
+		if(opath != NULL)
+		{
+                	/*script_print(_sd_(set->cmd_path,fpath,opath));*/
+			script_print(make_cmd_ready(false,opath,fpath));
+                	script_print(_sd_("\n"));
+
+			free(opath);
+		}
             }
             else
             {
@@ -335,7 +363,8 @@ void write_to_log(const lint_t *file, bool orig)
             log_print(get_logstream(),"ORIG");
             if(set->cmd_orig)
             {
-                script_print(_sd_(set->cmd_orig,fpath));
+                /*//script_print(_sd_(set->cmd_orig,fpath));*/
+		script_print(make_cmd_ready(true,fpath,NULL));
                 script_print(_sd_(" \n"));
             }
             else
@@ -489,19 +518,28 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
         /* Exec a command on it */
         int ret = 0;
 
+	const char * cmd = NULL;
         if(path)
         {
-            ret=systemf(set->cmd_path,path);
+	    cmd = make_cmd_ready(false,orig,path);
         }
         else
         {
-            ret=systemf(set->cmd_orig,orig);
+	    cmd = make_cmd_ready(true,orig,NULL);
         }
 
-        if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
-        {
-            return true;
-        }
+
+	if(cmd != NULL)
+	{
+		ret = system(cmd);
+
+		if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+		{
+		    return true;
+		}
+		free((char*)cmd);
+		cmd = NULL;
+	}
     }
     break;
 
@@ -743,7 +781,7 @@ bool findmatches(file_group *grp)
     {
         error(GRE"   ls "NCO"%s\n",pref_file->path);
     }
-    write_to_log(pref_file, true);
+    write_to_log(pref_file, true, NULL);
     handle_item(NULL, pref_file);
 
     i = grp->grp_stp;
@@ -774,7 +812,7 @@ bool findmatches(file_group *grp)
                 }
 
             }
-            write_to_log(i, false);
+            write_to_log(i, false, pref_file);
             if(handle_item(i,pref_file))
             {
                 pthread_mutex_unlock(&mutex_printage);

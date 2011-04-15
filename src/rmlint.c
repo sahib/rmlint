@@ -288,9 +288,11 @@ static void print_help(void)
             "\t\t\t\tDefault: list\n\n"
             "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n");
     fprintf(stderr,"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
-            "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '%%s'\" -c \"ls -lasi '%%s'\" -v 1\n"
-            "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n"
-            "\t\t\t\tThe %%s expands to the found duplicate, second to the 'original'.\n"
+	    "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
+            "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n");
+    fprintf(stderr,"\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
+	    "\t\t\t\tNote: If '-m cmd' is not given, rmlint's deault commands are replaced with the ones from -cC\n"
+	    "\t\t\t\t      This is especially useful with -v5, so you can pipe your commands to sh in realtime.\n"
            );
     fprintf(stderr,	"Regex options:\n\n"
             "\t-r --fregex <pat>\tChecks filenames against the pattern <pat>\n"
@@ -648,16 +650,17 @@ static void check_cmd(const char *cmd)
     {
         if(cmd[i] == '%' && i+1 != len)
         {
-            if(cmd[i+1] == 's')
+            if(cmd[i+1] != '%')
             {
                 ps++;
                 continue;
             }
         }
     }
-    if(ps > 1)
+    if(ps > 0)
     {
-        error(YEL"FATAL: "NCO"--command [-cC]: Only one markup is allowed!\n");
+        puts(YEL"FATAL: "NCO"--command [-cC]: printfstyle markups (e.g. %s) are not allowed!");
+	puts(YEL"       "NCO"                 Escape '%' with '%%' to get around.");
         die(0);
     }
 }

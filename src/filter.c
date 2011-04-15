@@ -948,7 +948,7 @@ static void find_double_bases(lint_t *starting)
                         char * tmp = canonicalize_file_name(i->path);
                         i->dupflag = TYPE_BASE;
                         error("   %sls"NCO" %s\n", (set->verbosity!=1) ? GRE : "", tmp,i->fsize);
-                        write_to_log(i,false);
+                        write_to_log(i,false,NULL);
                         pr = true;
 
                         if(tmp)
@@ -973,7 +973,7 @@ static void find_double_bases(lint_t *starting)
                     j->dupflag = TYPE_BASE;
                     error("   %sls"NCO" %s\n",(set->verbosity!=1) ? GRE : "",tmp2);
                     dbase_ctr++;
-                    write_to_log(j,false);
+                    write_to_log(j,false,NULL);
                     if(tmp2)
                     {
                         free(tmp2);
@@ -1009,6 +1009,7 @@ void start_processing(lint_t *b)
             spelen       = 0,
             remaining    = 0,
             rem_counter  = 0,
+	    suspicious   = 0,
             path_doubles = 0;
 
     if(set->namecluster)
@@ -1187,7 +1188,7 @@ void start_processing(lint_t *b)
 
                     if(set->output)
                     {
-                        write_to_log(ptr, false);
+                        write_to_log(ptr, false,NULL);
                     }
 
                     emptylist.size += ptr->fsize;
@@ -1254,7 +1255,14 @@ void start_processing(lint_t *b)
     size_to_human_readable(lint+emptylist.size, lintbuf, 127);
 
     /* Now announce */
-    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates + "RED"%ld"NCO" other suspicious files found%s\n",get_totalfiles(), get_dupcounter(), emptylist.len + dbase_ctr - 1,(set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
+    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates",get_totalfiles(), get_dupcounter());
+
+    suspicious = emptylist.len + dbase_ctr - 1;
+    if(suspicious > 0)
+    {
+    	warning("+ "RED"%ld"NCO" other suspicious files found%s",emptylist.len + dbase_ctr - 1,(set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
+    }
+    warning("\n");
     warning(RED"=> "NCO"Totally "GRE" ~%s "NCO" [%ld Bytes] can be removed.\n\n", lintbuf, lint + emptylist.size);
 
 
