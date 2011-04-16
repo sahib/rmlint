@@ -258,7 +258,7 @@ void script_print(char * string)
 	         fprintf(stdout, string);
 	    }
 
- 	    fprintf(get_scriptstream(),string);
+ 	    fprintf(get_scriptstream(),"%s",string);
 	    free(string);
     }
 }
@@ -359,7 +359,6 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
         }
         else
         {
-
             log_print(get_logstream(),"ORIG");
             if(set->cmd_orig)
             {
@@ -753,7 +752,7 @@ bool findmatches(file_group *grp)
 
     /* If a specific directory is specified to have the 'originals':  */
     /* Find the (first) element being in this directory and swap it with the first */
-    /* --> First one is the original */
+    /* --> First one is the original otherwise */
     if(set->preferID != -1)
     {
         char * pPath  = set->paths[set->preferID];
@@ -776,13 +775,6 @@ bool findmatches(file_group *grp)
 
     /* Start again with first element (it may have changed) */
     if(!pref_file) pref_file = grp->grp_stp;
-
-    if(   (set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
-    {
-        error(GRE"   ls "NCO"%s\n",pref_file->path);
-    }
-    write_to_log(pref_file, true, NULL);
-    handle_item(NULL, pref_file);
 
     i = grp->grp_stp;
 
@@ -819,6 +811,16 @@ bool findmatches(file_group *grp)
                 return true;
             }
         }
+	else 
+	{
+	    if( (set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
+	    {
+		error(GRE"   ls "NCO"%s\n",pref_file->path);
+		/*printf(GRE"  ls "NCO"%s\n",pref_file->path);*/
+	    }
+	    write_to_log(pref_file, true, NULL);
+	    handle_item(NULL, pref_file);
+	}
         i = i->next;
     }
     pthread_mutex_unlock(&mutex_printage);

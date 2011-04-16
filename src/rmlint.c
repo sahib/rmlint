@@ -129,7 +129,7 @@ void msg_macro_print(FILE * stream, const char * string)
             tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
         }
 
-        fprintf(stream, tmp);
+        fprintf(stream,"%s",tmp);
         fflush(stream);
 
         if(tmp)
@@ -149,12 +149,15 @@ void error(const char* format, ...)
     {
         char * tmp;
 
+
         va_list args;
         va_start (args, format);
         if(vasprintf (&tmp, format, args) == -1)
         {
             return;
         }
+
+	/* print, respect -B */
         msg_macro_print(stdout,tmp);
         va_end (args);
 
