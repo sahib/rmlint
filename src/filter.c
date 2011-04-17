@@ -1257,8 +1257,8 @@ void start_processing(lint_t *b)
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates",get_totalfiles(), get_dupcounter());
 
-    suspicious = emptylist.len + dbase_ctr - 1;
-    if(suspicious > 0)
+    suspicious = emptylist.len + dbase_ctr;
+    if(suspicious > 1)
     {
     	warning("+ "RED"%ld"NCO" other suspicious files found%s",emptylist.len + dbase_ctr - 1,(set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
     }

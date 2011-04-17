@@ -679,43 +679,49 @@ static int cmp_f(lint_t *a, lint_t *b)
 
 /* ------------------------------------------------------------- */
 
+#define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false) 
+
 bool findmatches(file_group *grp)
 {
     lint_t *i = grp->grp_stp, *j;
-    lint_t * pref_file = NULL;
+    int class_ctr = -1;
+
     if(i == NULL)
     {
         return false;
     }
 
     warning(NCO);
-
     while(i)
     {
-        if(i->dupflag)
+        if(NOT_DUP_FLAGGED(i))
         {
             j=i->next;
 
 
             while(j)
             {
-                if(j->dupflag)
+                if(NOT_DUP_FLAGGED(j))
                 {
-                    if(     (!cmp_f(i,j))          &&  /* Same checksum?                            */
-                            (i->fsize == j->fsize) &&  /* Same size? (double check, you never know) */
-                            ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)  /* If we're bothering with paranoid users - Take the gatling! */
-                      )
+                    if((!cmp_f(i,j))          &&  /* Same checksum?                            */
+                       (i->fsize == j->fsize) &&  /* Same size? (double check, you never know) */
+                       ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)  /* If we're bothering with paranoid users - Take the gatling! */
+                       )
                     {
-                        /* i twin of j */
-                        j->dupflag = false;
-                        i->dupflag = false;
+                        /* i twin of j - question of origin is decided later */
+                        i->dupflag = class_ctr;
+			i->filter  = false;
+ 
+                        j->dupflag = class_ctr;
+			j->filter = true;
                     }
                 }
                 j = j->next;
             }
+	    class_ctr--;
 
             /* Now remove if $i didn't match in list */
-            if(i->dupflag)
+            if(NOT_DUP_FLAGGED(i))
             {
                 lint_t *tmp = i;
 
@@ -761,10 +767,20 @@ bool findmatches(file_group *grp)
         i = grp->grp_stp;
         while(i)
         {
-            if(!strncmp(pPath,i->path,length))
+            if(!strncmp(pPath,i->path,length) && i->filter)
             {
-                pref_file = i;
-                break;
+		j = grp->grp_stp;
+		while(j)
+		{
+		    if(j->dupflag == i->dupflag && i != j)
+		    {
+			/* Swap */
+			i->filter = false;
+			j->filter = true;
+			break;
+		    }
+		    j = j->next;
+		}
             }
             i = i->next;
         }
@@ -772,54 +788,57 @@ bool findmatches(file_group *grp)
 
     /* Make sure no group is printed / logged at the same time (== chaos) */
     pthread_mutex_lock(&mutex_printage);
-
-    /* Start again with first element (it may have changed) */
-    if(!pref_file) pref_file = grp->grp_stp;
-
     i = grp->grp_stp;
 
+    /* Now do the actual printout.. */
     while(i)
     {
-        if(i != pref_file)
-        {
-            if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
-            {
-                if(set->paranoid)
-                {
-                    /* If byte by byte was succesful print a blue "x" */
-                    warning(BLU"   %-1s "NCO,"rm");
-                }
-                else
-                {
-                    warning(YEL"   %-1s "NCO,"rm");
-                }
-
-                if(set->verbosity > 1)
-                {
-                    error("%s\n",i->path);
-                }
-                else
-                {
-                    error("   rm %s\n",i->path);
-                }
-
-            }
-            write_to_log(i, false, pref_file);
-            if(handle_item(i,pref_file))
-            {
-                pthread_mutex_unlock(&mutex_printage);
-                return true;
-            }
-        }
-	else 
+	if(!i->filter)
 	{
-	    if( (set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
-	    {
-		error(GRE"   ls "NCO"%s\n",pref_file->path);
-		/*printf(GRE"  ls "NCO"%s\n",pref_file->path);*/
-	    }
-	    write_to_log(pref_file, true, NULL);
-	    handle_item(NULL, pref_file);
+	     lint_t * from = grp->grp_stp;
+
+	     if( (set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
+	     {
+		 error(GRE"   ls "NCO"%s\n",i->path);
+	     }
+	     write_to_log(i, true, NULL);
+	     handle_item(NULL, i);
+
+	     while(from)
+	     {
+		    if(from->dupflag == i->dupflag && from != i)
+		    {
+			    if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
+			    {
+				if(set->paranoid)
+				{
+				    /* If byte by byte was succesful print a blue "x" */
+				    warning(BLU"   %-1s "NCO,"rm");
+				}
+				else
+				{
+				    warning(YEL"   %-1s "NCO,"rm");
+				}
+
+				if(set->verbosity > 1)
+				{
+				    error("%s\n",from->path);
+				}
+				else
+				{
+				    error("   rm %s\n",from->path);
+				}
+
+			    }
+			    write_to_log(from, false, i);
+			    if(handle_item(from,i))
+			    {
+				pthread_mutex_unlock(&mutex_printage);
+				return true;
+			    }
+		    }
+		    from = from->next;
+	     }
 	}
         i = i->next;
     }

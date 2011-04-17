@@ -73,7 +73,7 @@ From man 2 open:
 
  "The thing that has always disturbed me about O_DIRECT is that the whole interface is just stupid,
   and was probably designed by a deranged monkey on some serious mind-controlling substances."
-   — Linus
+  - Linus Torvalds
 
 */
 #define MD5_FILE_FLAGS  (O_RDONLY | O_CLOEXEC)

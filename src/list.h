@@ -36,7 +36,7 @@ typedef struct lint_t
     char *path;		  	         /* absolute path from working dir */
     nuint_t fsize; 		         /* Size of the file (bytes) */
     bool filter; 			 /* this is used in calculations  */
-    bool dupflag;			 /* Is the file marked as duplicate? */
+    int dupflag;			 /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
     ino_t node;
