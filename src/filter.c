@@ -1004,6 +1004,7 @@ void start_processing(lint_t *b)
                 emptylist;
 
     char lintbuf[128];
+    char suspbuf[128];
     nuint_t ii           = 0,
             lint         = 0,
             spelen       = 0,
@@ -1250,7 +1251,8 @@ void start_processing(lint_t *b)
     }
 
     /* now process the ouptput we gonna print */
-    size_to_human_readable(lint+emptylist.size, lintbuf, 127 /* bufsize */);
+    size_to_human_readable(lint, lintbuf, 127 /* bufsize */);
+    size_to_human_readable(emptylist.size, suspbuf, 127 );
 
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates",get_totalfiles(), get_dupcounter());
@@ -1258,17 +1260,21 @@ void start_processing(lint_t *b)
     suspicious = emptylist.len + dbase_ctr;
     if(suspicious > 1)
     {
-    	warning("+ "RED"%ld"NCO" other suspicious files found%s",emptylist.len + dbase_ctr - 1,(set->mode == 1 || set->mode == 2) ? ". (Nothing removed yet!)" : ".");
+    	warning(RED"\n=> %ld"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
     }
     warning("\n");
-    warning(RED"=> "NCO"Totally "GRE" ~%s "NCO" [%ld Bytes] can be removed.\n\n", lintbuf, lint + emptylist.size);
+    warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%ld Bytes] can be removed.\n", lintbuf, lint + emptylist.size);
 
+    if(set->mode == 1 || set->mode == 2)
+    {
+    	warning(RED"=> "NCO"Nothing removed yet!\n\n");
+    }
 
     if(set->verbosity == 6)
     {
         info("Now calculation finished.. now writing end of log...\n");
         info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%ld"NCO" replicas + "RED"%ld"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
-        info(RED"=> "NCO"In total "GRE" ~%s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint + emptylist.size);
+        info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
     }
 
     if(get_logstream() == NULL && set->output)
