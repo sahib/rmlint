@@ -8,3 +8,4 @@
 + Fixed crash that occured when having '%' in filenames (shame-on-me) (thanks Micheal)
 + Fixed (critical) issue that flagged files with the same size, in the same group as duplicates (thanks Micheal)
 + Fixed issue with the removeable-size printed (thanks Micheal)
++ Segfault with -B (d'oh)

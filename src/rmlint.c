@@ -129,13 +129,13 @@ void msg_macro_print(FILE * stream, const char * string)
             tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
         }
 
-        fprintf(stream,"%s",tmp);
-        fflush(stream);
+	if(stream != NULL && tmp != NULL)
+	{
+        	fprintf(stream,"%s",tmp);
+        	fflush(stream);
 
-        if(tmp)
-        {
-            free(tmp);
-            tmp = NULL;
+            	free(tmp);
+            	tmp = NULL;
         }
     }
 }
