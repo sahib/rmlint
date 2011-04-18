@@ -31,7 +31,12 @@ OPTI=-march=native -O3 -s -finline-functions -fomit-frame-pointer
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a -D_THREAD_SAFE
 
 #also use -pipe 
-CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) -D_FILE_OFFSET_BITS=64
+
+ifdef DEBUG
+  CFLAGS=-c -pipe -ggdb3 $(WARN) $(TCMALLOC) -D_FILE_OFFSET_BITS=64
+else
+  CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) -D_FILE_OFFSET_BITS=64
+endif
 
 #Link flags 
 LDFLAGS=-lpthread -lm
@@ -53,8 +58,12 @@ all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE):  $(OBJECTS)
 	     @$(CC) $(LDFLAGS) $(OBJECTS) -o $@ 
+ifdef DEBUG
+	     @$(ECHO) "=> Building debug target."
+else
 	     @$(STRIP) $(EXECUTABLE)
 	     @$(ECHO) "=> Stripping program done."
+endif
 	     @$(ECHO) "=> Linking program done."  
 
 .c.o: 	
