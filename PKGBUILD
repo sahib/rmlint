@@ -1,14 +1,13 @@
 # Maintainer: SahibBommelig <sahib@online.de>
 # rmlint PKBUILD for ArchLinux 
-pkgname=rmlint
-pkgver=20110321
+pkgname=rmlint-git
+pkgver=1.0.5
 pkgrel=1
 pkgdesc="Tool to remove duplicates and other lint, being much faster than fdupes"
-arch=(any)
-
-# Only because namcap said it:
+arch=('i686' 'x86_64')
 depends=(glibc)
-
+provides=('rmlint')
+conflicts=('rmlint')
 makedepends=('git')
 license=('GPL3')
 url=("https://github.com/sahib/rmlint")
