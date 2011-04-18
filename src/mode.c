@@ -217,12 +217,15 @@ static void print_askhelp(void)
 
 void log_print(FILE * stream, const char * string)
 {
-    if(set->verbosity == 4)
-    {
-        fprintf(stdout,string);
-    }
+	if(stream && string)
+	{
+	    if(set->verbosity == 4)
+	    {
+		fprintf(stdout,"%s",string);
+	    }
 
-    fprintf(stream,string);
+	    fprintf(stream,"%s",string);
+	}
 }
 
 /* ------------------------------------------------------------- */
@@ -255,7 +258,7 @@ void script_print(char * string)
     {
 	    if(set->verbosity == 5)
 	    {
-	         fprintf(stdout, string);
+	         fprintf(stdout,"%s",string);
 	    }
 
  	    fprintf(get_scriptstream(),"%s",string);
@@ -383,9 +386,9 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
         }
         if(set->verbosity == 4)
         {
-            fprintf(stdout,"%s%s%s%lu%s%ld%s%ld%s\n", LOGSEP,fpath, LOGSEP, file->fsize, LOGSEP, file->dev, LOGSEP, file->node,LOGSEP);
+            fprintf(stdout,"%s%s%s%lu%s%ld%s%ld%s\n", LOGSEP,fpath, LOGSEP, (long int)file->fsize, LOGSEP, (long int)file->dev, LOGSEP, (long int)file->node,LOGSEP);
         }
-        fprintf(get_logstream(),"%s%s%s%lu%s%ld%s%ld%s\n", LOGSEP,fpath, LOGSEP, file->fsize, LOGSEP, file->dev, LOGSEP, file->node,LOGSEP);
+        fprintf(get_logstream(),"%s%s%s%lu%s%ld%s%ld%s\n", LOGSEP,fpath, LOGSEP, (long int)file->fsize, LOGSEP, (long int)file->dev, LOGSEP, (long int)file->node,LOGSEP);
 
 
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK)
