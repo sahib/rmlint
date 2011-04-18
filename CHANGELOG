@@ -1,0 +1,10 @@
+16/04/2011
+----------
++ Added '//' at end of line in log (for names that contain '\n' this may be a bit easier)
++ -cC now works with '<dupl>' and '<orig>' as replacement pattern instead of '%s' /which makes ln -s <orig> <dupl> possible'
+
+18/04/2011
+----------
++ Fixed crash that occured when having '%' in filenames (shame-on-me) (thanks Micheal)
++ Fixed (critical) issue that flagged files with the same size, in the same group as duplicates (thanks Micheal)
++ Fixed issue with the removeable-size printed (thanks Micheal)

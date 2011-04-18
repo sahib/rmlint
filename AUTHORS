@@ -1,7 +1,13 @@
 rmlint was written by:
 Christopher <sahib> Pahl <sahib@online.de>
 
-Contributors (thanks a lot!):
-Attila Toth - Makefilepatch and valueable feedback
-
-..and all people finding bugs.
+THANKS TO:
+----------
++ Attila Toth - Makefilepatch and valueable feedback and bug reports.
++ bencahill - The '//' feature was his idea.
++ gdkags - Found the large-file problem on 32bit.
++ Micheal Butow - Found a segfault, a critical false positive bug and my mind that I lost ealier the day.
++ My Brother: For spending my cookies and answering questions that I didn't ask yet.
++ rider: -m link works now really with symlinks. Thanks.
++ SanskritFritz: typo in manpage and pushed me to make a PKGBUILD. 
++ people that I forgot to mention (sorry!): being there.

@@ -793,6 +793,7 @@ bool findmatches(file_group *grp)
     /* Now do the actual printout.. */
     while(i)
     {
+	/* not a duplicate */
 	if(!i->filter)
 	{
 	     lint_t * from = grp->grp_stp;
@@ -804,6 +805,10 @@ bool findmatches(file_group *grp)
 	     write_to_log(i, true, NULL);
 	     handle_item(NULL, i);
 
+	     /* Subtract size of the original , so we can gather it later */
+	     grp->size -= i->fsize;
+	
+	     /* print all duplicates belonging to this orig. */
 	     while(from)
 	     {
 		    if(from->dupflag == i->dupflag && from != i)

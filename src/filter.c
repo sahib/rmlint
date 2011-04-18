@@ -896,15 +896,15 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
 static void size_to_human_readable(nuint_t num, char *in, int sz)
 {
-    if(num < 1024)
+    if(num < 1024 / 2)
     {
         snprintf(in,sz,"%ld B",(unsigned long)num);
     }
-    else if(num >= 1024 && num < 1048576.0)
+    else if(num < 1048576 / 2)
     {
         snprintf(in,sz,"%.2f KB",(float)(num/1024.0));
     }
-    else if(num >= 1024*1024 && num < 1073741824)
+    else if(num < 1073741824 / 2)
     {
         snprintf(in,sz,"%.2f MB",(float)(num/1048576.0));
     }
@@ -1007,7 +1007,6 @@ void start_processing(lint_t *b)
     nuint_t ii           = 0,
             lint         = 0,
             spelen       = 0,
-            remaining    = 0,
             rem_counter  = 0,
 	    suspicious   = 0,
             path_doubles = 0;
@@ -1244,15 +1243,14 @@ void start_processing(lint_t *b)
     /* Gather the total size of removeable data */
     for(ii=0; ii < spelen; ii++)
     {
-        if(fglist[ii].grp_stp != NULL)
+        if(fglist[ii].grp_stp != NULL )
         {
-            lint += fglist[ii].size - ((fglist[ii].len > 0) ? (fglist[ii].size / fglist[ii].len) : 0);
-            remaining += (fglist[ii].len > 1) ? fglist[ii].len - 1 : 0;
+	    lint += fglist[ii].size;
         }
     }
 
     /* now process the ouptput we gonna print */
-    size_to_human_readable(lint+emptylist.size, lintbuf, 127);
+    size_to_human_readable(lint+emptylist.size, lintbuf, 127 /* bufsize */);
 
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates",get_totalfiles(), get_dupcounter());
