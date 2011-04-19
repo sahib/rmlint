@@ -900,7 +900,7 @@ static void size_to_human_readable(nuint_t num, char *in, int sz)
     {
         snprintf(in,sz,"%ld B",(unsigned long)num);
     }
-    else if(num < 1048576 / 2)
+    else if(num < 1048576)
     {
         snprintf(in,sz,"%.2f KB",(float)(num/1024.0));
     }
@@ -1073,7 +1073,7 @@ void start_processing(lint_t *b)
                 fglist[spelen].size    = gsize;
 
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
-                if(get_cpindex() > 1 || set->followlinks)
+                if(set->followlinks)
                 {
                     path_doubles += rm_double_paths(&fglist[spelen]);
                 }
@@ -1086,11 +1086,12 @@ void start_processing(lint_t *b)
             {
                 lint_t *ptr;
                 bool flag = 42;
+		bool e_file_printed = false;
 
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
 
-                if(get_cpindex() > 1 || set->followlinks)
+                if(set->followlinks)
                 {
                     rm_double_paths(&emptylist);
                 }
@@ -1098,6 +1099,7 @@ void start_processing(lint_t *b)
                 /* sort by lint_ID (== dupID) */
                 ptr = emptylist.grp_stp;
                 ptr = list_sort(ptr,cmp_sort_dupID);
+	
                 emptylist.grp_stp = ptr;
                 emptylist.len = 0;
 
@@ -1114,6 +1116,7 @@ void start_processing(lint_t *b)
                         {
                             error("\n#");
                         }
+			/* -- */
                         if(ptr->dupflag == TYPE_BLNK)
                         {
                             error(" Bad link(s): \n");
@@ -1138,9 +1141,10 @@ void start_processing(lint_t *b)
                         {
                             error(" Non stripped binarie(s): \n");
                         }
-                        else if(ptr->fsize   == 0)
+                        else if(ptr->fsize == 0 && !e_file_printed)
                         {
                             error(" Empty file(s): \n");
+			    e_file_printed = true;
                         }
                         flag = ptr->dupflag;
                     }
@@ -1255,7 +1259,7 @@ void start_processing(lint_t *b)
     size_to_human_readable(emptylist.size, suspbuf, 127 );
 
     /* Now announce */
-    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicates",get_totalfiles(), get_dupcounter());
+    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
 
     suspicious = emptylist.len + dbase_ctr;
     if(suspicious > 1)
@@ -1263,7 +1267,11 @@ void start_processing(lint_t *b)
     	warning(RED"\n=> %ld"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
     }
     warning("\n");
-    warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%ld Bytes] can be removed.\n", lintbuf, lint + emptylist.size);
+
+    if(!iAbort)
+    {
+        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%ld Bytes] can be removed.\n", lintbuf, lint );
+    }
 
     if(set->mode == 1 || set->mode == 2)
     {
@@ -1274,7 +1282,10 @@ void start_processing(lint_t *b)
     {
         info("Now calculation finished.. now writing end of log...\n");
         info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%ld"NCO" replicas + "RED"%ld"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
-        info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
+    	if(!iAbort)
+    	{
+            info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
+	}
     }
 
     if(get_logstream() == NULL && set->output)

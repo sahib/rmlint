@@ -80,6 +80,10 @@ From man 2 open:
 
 /* ------------------------------------------------------------- */
 
+#define MMAP_LIMIT      (MD5_MTHREAD_SIZE << 4)
+
+/* ------------------------------------------------------------- */
+
 #define MD5_FPSIZE_FORM(X) sqrt(X / MD5_FP_PERCENT) + 1
 
 /** nuint_t = normal unsigned integer type :-) **/

@@ -158,9 +158,7 @@ static void remfile(const char *r_path)
 
 /* ------------------------------------------------------------- */
 
-/** This is only for extremely paranoid people **/
-
-static int paranoid(const char *p1, const char *p2, nuint_t size)
+static int paranoid(const lint_t *p1, const lint_t *p2)
 {
     int result = 0,file_a,file_b;
     char * file_map_a, * file_map_b;
@@ -168,28 +166,79 @@ static int paranoid(const char *p1, const char *p2, nuint_t size)
     if(!p1 || !p2)
         return 0;
 
-    if( (file_a = open (p1, MD5_FILE_FLAGS)) == -1)
+    if(p1->fsize != p2->fsize)
+	return 0;
+
+    if( (file_a = open (p1->path, MD5_FILE_FLAGS)) == -1)
     {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
 
-    if( (file_b = open (p1, MD5_FILE_FLAGS)) == -1)
+    if( (file_b = open (p2->path, MD5_FILE_FLAGS)) == -1)
     {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
 
-    file_map_a = mmap(NULL, (size_t)size, PROT_READ, MAP_PRIVATE, file_a, 0);
-    if(file_map_a != MAP_FAILED)
+    if(0 && p1->fsize < MMAP_LIMIT)
     {
-        file_map_b = mmap(NULL, (size_t)size, PROT_READ, MAP_PRIVATE, file_a, 0);
-        if(file_map_b != MAP_FAILED)
-        {
-            result = !memcmp(file_map_a, file_map_b, size);
-            munmap(file_map_b,size);
-        }
-        munmap(file_map_a,size);
+	    file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
+	    if(file_map_a != MAP_FAILED)
+	    {
+		file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
+		if(file_map_b != MAP_FAILED)
+		{
+		    result = !memcmp(file_map_a, file_map_b, p1->fsize);
+		    munmap(file_map_b,p1->fsize);
+		} 
+		else
+		{
+		    perror("paranoid->mmap");
+		    result = 0;
+		}
+		munmap(file_map_a,p1->fsize);
+	    }
+	    else
+	    {
+		perror("paranoid->mmap");
+		result = 0;
+	    }
+    }
+    else
+    {
+	nuint_t blocksize = MD5_IO_BLOCKSIZE/2;
+	char * read_buf_a = alloca(blocksize);
+	char * read_buf_b = alloca(blocksize);
+
+	int read_a=-1,read_b=-1;
+	while(read_a && read_b)
+	{
+	    if( (read_a=read(file_a,read_buf_a,blocksize) == -1))
+	    {
+		result = 0;
+		break;
+	    }
+
+	    if( (read_b=read(file_b,read_buf_b,blocksize) == -1))
+	    {
+		result = 0;
+		break;
+	    }
+
+	    if(read_a == read_b)
+	    {
+		if( (result = !memcmp(read_buf_a,read_buf_b,read_a)) == 0)
+		{
+			break;
+		}
+	    }
+	    else
+	    {
+		result = 0;
+		break;
+	    }
+	}
     }
 
     if(close (file_a) == -1)
@@ -670,7 +719,7 @@ static int cmp_f(lint_t *a, lint_t *b)
     {
         if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2])
         {
-            warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint - This may be a bug!\n");
+            warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n");
             return 1;
         }
 
@@ -706,9 +755,9 @@ bool findmatches(file_group *grp)
             {
                 if(NOT_DUP_FLAGGED(j))
                 {
-                    if((!cmp_f(i,j))          &&  /* Same checksum?                            */
-                       (i->fsize == j->fsize) &&  /* Same size? (double check, you never know) */
-                       ((set->paranoid)?paranoid(i->path,j->path,i->fsize):1)  /* If we're bothering with paranoid users - Take the gatling! */
+                    if((!cmp_f(i,j))              &&     /* Same checksum?                            */
+                       (i->fsize == j->fsize)     &&     /* Same size? (double check, you never know) */
+                       ((set->paranoid)?paranoid(i,j):1) /* If we're bothering with paranoid users - Take the gatling! */
                        )
                     {
                         /* i twin of j - question of origin is decided later */

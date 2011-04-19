@@ -277,7 +277,7 @@ static void print_help(void)
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
            );
     fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
-            "\t-f --followlinks\tWether links are followed (None is reported twice) [Only specify this if you really need to, Default: No.]\n"
+            "\t-f --followlinks\tWether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
             "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: No.)\n"
             "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
             "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"

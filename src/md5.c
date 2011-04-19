@@ -336,9 +336,7 @@ void md5c_c_init(void)
     pthread_mutex_init(&mutex_fp_IO,NULL);
 }
 
-#if (MD5_USE_MMAP)
-
-void md5_file(lint_t *file)
+void md5_file_mmap(lint_t *file)
 {
     int inFile=0;
     MD5_CTX mdContext;
@@ -359,7 +357,6 @@ void md5_file(lint_t *file)
 
     /* Init md5sum & jump to start */
     MD5Init (&mdContext);
-
     f_map = mmap(NULL, (size_t)file->fsize, PROT_READ, MAP_PRIVATE, inFile, 0);
 
     if(f_map != MAP_FAILED)
@@ -378,21 +375,17 @@ void md5_file(lint_t *file)
     }
     else
     {
-        perror(RED"ERROR:"NCO"mmap()");
+        perror(RED"ERROR:"NCO"md5_file->mmap:");
     }
 
     if(close (inFile) == -1)
         perror(RED"ERROR:"NCO"close()");
 }
 
-#endif
-
 /* ------------------------------------------------------------- */
 
-#if (!MD5_USE_MMAP)
-
 /* used to calc the complete checksum of file & save it in File */
-void md5_file(lint_t *file)
+void md5_file_fread(lint_t *file)
 {
     /* Number of bytes read in */
     ssize_t bytes=0;
@@ -478,8 +471,6 @@ void md5_file(lint_t *file)
     }
 }
 
-#endif
-
 /* ------------------------------------------------------------- */
 
 /* Reads <readsize> bytes from each start and end + 8 bytes in the middle
@@ -487,9 +478,7 @@ void md5_file(lint_t *file)
    the 8 byte are stored in raw form
 */
 
-#if(MD5_USE_MMAP)
-
-void md5_fingerprint(lint_t *file, const nuint_t readsize)
+void md5_fingerprint_mmap(lint_t *file, const nuint_t readsize)
 {
     int bytes = 0;
     int pF = open(file->path, MD5_FILE_FLAGS);
@@ -543,10 +532,9 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
     munmap(f_map,file->fsize);
 }
 
-#endif
-#if(!MD5_USE_MMAP)
+/* ------------------------------ */
 
-void md5_fingerprint(lint_t *file, const nuint_t readsize)
+void md5_fingerprint_fread(lint_t *file, const nuint_t readsize)
 {
     int bytes = 0;
     bool unlock = true;
@@ -627,4 +615,42 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
     fclose(pF);
 }
 
+/* ------------------------------ */
+
+void md5_fingerprint(lint_t *file, const nuint_t readsize)
+{
+#if MD5_USE_MMAP == -1
+	if(file->fsize > MMAP_LIMIT)
+	{
+		md5_fingerprint_fread(file,readsize);
+	}
+	else
+	{
+		md5_fingerprint_mmap(file,readsize);
+	}
+#elif MD5_USE_MMAP == 1
+	md5_fingerprint_mmap(file,readsize);
+#else
+	md5_fingerprint_fread(file,readsize);
 #endif
+}
+
+/* ------------------------------ */
+
+void md5_file(lint_t *file)
+{
+#if MD5_USE_MMAP == -1
+	if(file->fsize > MMAP_LIMIT || !MD5_USE_MMAP)
+	{
+		md5_file_fread(file);
+	}
+	else
+	{
+		md5_file_mmap(file);
+	}
+#elif MD5_USE_MMAP == 1
+	md5_file_mmap(file);
+#else
+	md5_file_fread(file);
+#endif
+}
