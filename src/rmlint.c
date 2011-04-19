@@ -248,7 +248,7 @@ int systemf(const char* format, ...)
 /* Version string */
 static void print_version(bool exit)
 {
-    fprintf(stderr, "Version 1.0.5 compiled: [%s]-[%s]\n",__DATE__,__TIME__);
+    fprintf(stderr, "Version 1.0.6a compiled: [%s]-[%s]\n",__DATE__,__TIME__);
     fprintf(stderr, "Author Christopher Pahl; Report bugs to <sahib@online.de>\n");
     fprintf(stderr, "or use the Issuetracker at https://github.com/sahib/rmlint/issues\n");
     if( exit )

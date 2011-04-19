@@ -36,11 +36,11 @@
 #endif
 
 #if !USE_COLOR
-#define RED ""
-#define YEL ""
-#define NCO ""
-#define GRE ""
-#define BLU ""
+ #define RED ""
+ #define YEL ""
+ #define NCO ""
+ #define GRE ""
+ #define BLU ""
 #endif
 
 /* not supposed to be changed */
@@ -65,8 +65,13 @@
 #define MD5_FP_MAX_RSZ     8192      /* The maximal size read in for fingerprints. Default   4K */
 #define MD5_FP_PERCENT     10 	     /* Percent of a file read in for fingerprint. Default  10% */
 #define MD5_SERIAL_IO      1         /* Align threads before doing md5 related IO. Default:   1 */
-#define MD5_USE_MMAP      -1         /* Use mmap() instead of fread() EXPERIMENTAL! Use = risk! */
-
+#define MD5_USE_MMAP       -1        /* Use mmap() instead of fread() EXPERIMENTAL! Use = risk! */
+				     /*
+					0 = fread only
+					1 = mmap only
+				       -1 = autochoice (which is best mostly) 
+				      */
+		
 /* Do not use O_DIRECT! read() will do weird things */
 /*
 From man 2 open:
@@ -86,6 +91,8 @@ From man 2 open:
 
 #define MD5_FPSIZE_FORM(X) sqrt(X / MD5_FP_PERCENT) + 1
 
+/* ------------------------------------------------------------- */
+
 /** nuint_t = normal unsigned integer type :-) **/
 typedef unsigned long nuint_t;
 
@@ -96,9 +103,6 @@ typedef char bool;
 
 /* ------------------------------------------------------------- */
 
-/* Last line in script */
-#define SCRIPT_LAST "echo '--- end ---'"
-
 /* Investigate directories by a depth first algorithm instead of (mostly) random access */
 /* found no advantage in depth first + it's just a paramter of ntwf() */
 /* Just have it here for convienience */
@@ -106,7 +110,7 @@ typedef char bool;
 
 /* Reads a short sequence of bytes in the middle of a file, while doing fingerprints */
 /* This almost cost nothing, but helps a lot with lots of similiar datasets */
-#define BYTE_MIDDLE_SIZE 8
+#define BYTE_MIDDLE_SIZE 16
 
 /* Use double slashes, so we can easily split the line to an array */
 #define LOGSEP "//"

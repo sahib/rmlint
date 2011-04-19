@@ -181,14 +181,21 @@ static int paranoid(const lint_t *p1, const lint_t *p2)
         return 0;
     }
 
-    if(0 && p1->fsize < MMAP_LIMIT)
+    if(p1->fsize < MMAP_LIMIT && p1->fsize > MD5_IO_BLOCKSIZE>>1)
     {
+
 	    file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
 	    if(file_map_a != MAP_FAILED)
 	    {
+		if(madvise(file_map_a,p1->fsize, MADV_SEQUENTIAL) == -1)
+		    perror("madvise");
+
 		file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
 		if(file_map_b != MAP_FAILED)
 		{
+		    if(madvise(file_map_b,p2->fsize, MADV_SEQUENTIAL) == -1)
+		        perror("madvise");
+
 		    result = !memcmp(file_map_a, file_map_b, p1->fsize);
 		    munmap(file_map_b,p1->fsize);
 		} 
@@ -205,7 +212,7 @@ static int paranoid(const lint_t *p1, const lint_t *p2)
 		result = 0;
 	    }
     }
-    else
+    else /* use fread() */
     {
 	nuint_t blocksize = MD5_IO_BLOCKSIZE/2;
 	char * read_buf_a = alloca(blocksize);

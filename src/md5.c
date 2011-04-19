@@ -329,11 +329,15 @@ void MDPrintArr(unsigned char *digest)
 pthread_mutex_t mutex_fp_IO = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
 
+/* Some sort of 32/64 bit comparasion */
+bool large_range_pointers = sizeof(int *) > 4;
+
 /* Some init call */
 void md5c_c_init(void)
 {
     pthread_mutex_init(&mutex_ck_IO,NULL);
     pthread_mutex_init(&mutex_fp_IO,NULL);
+    
 }
 
 void md5_file_mmap(lint_t *file)
@@ -358,10 +362,16 @@ void md5_file_mmap(lint_t *file)
     /* Init md5sum & jump to start */
     MD5Init (&mdContext);
     f_map = mmap(NULL, (size_t)file->fsize, PROT_READ, MAP_PRIVATE, inFile, 0);
+    
 
     if(f_map != MAP_FAILED)
     {
         nuint_t f_offset = already_read;
+
+        if(madvise(f_map,file->fsize - already_read, MADV_WILLNEED) == -1)
+        {
+  	    perror("madvise");
+        }
 
         /* Shut your eyes and go through, leave out start & end of fp */
         MD5Update (&mdContext, f_map + f_offset, file->fsize - already_read);
@@ -375,7 +385,7 @@ void md5_file_mmap(lint_t *file)
     }
     else
     {
-        perror(RED"ERROR:"NCO"md5_file->mmap:");
+        perror(RED"ERROR:"NCO"md5_file->mmap");
     }
 
     if(close (inFile) == -1)
@@ -620,7 +630,7 @@ void md5_fingerprint_fread(lint_t *file, const nuint_t readsize)
 void md5_fingerprint(lint_t *file, const nuint_t readsize)
 {
 #if MD5_USE_MMAP == -1
-	if(file->fsize > MMAP_LIMIT)
+	if((file->fsize > MMAP_LIMIT) || file->fsize < MD5_IO_BLOCKSIZE>>1)
 	{
 		md5_fingerprint_fread(file,readsize);
 	}
@@ -640,13 +650,19 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize)
 void md5_file(lint_t *file)
 {
 #if MD5_USE_MMAP == -1
-	if(file->fsize > MMAP_LIMIT || !MD5_USE_MMAP)
+	if((!large_range_pointers && file->fsize > MMAP_LIMIT) || file->fsize < MD5_IO_BLOCKSIZE>>1 || file->fsize > MMAP_LIMIT<<4)
 	{
 		md5_file_fread(file);
+#ifdef PRINT_CHOICE
+		printf("f->%ld\n",file->fsize);
+#endif
 	}
 	else
 	{
 		md5_file_mmap(file);
+#ifdef PRINT_CHOICE
+		printf("m->%ld\n",file->fsize);
+#endif
 	}
 #elif MD5_USE_MMAP == 1
 	md5_file_mmap(file);
