@@ -1230,7 +1230,7 @@ void start_processing(lint_t *b)
     {
         info(" (removed "YEL"%ld pathzombies"NCO")", path_doubles);
     }
-    info("\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\nNow list is split in "GRE"%ld"NCO" parts.\n", emptylist.len, spelen);
+    info("\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\nNow list is split in "GRE"%llu"NCO" parts.\n", emptylist.len, spelen);
     info("Now sorting groups based on their location on the drive...");
 
     /* Now make sure groups are sorted by their location on the disk*/
@@ -1259,18 +1259,18 @@ void start_processing(lint_t *b)
     size_to_human_readable(emptylist.size, suspbuf, 127 );
 
     /* Now announce */
-    warning("\n"RED"=> "NCO"In total "RED"%ld"NCO" files, whereof "RED"%d"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
+    warning("\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
 
     suspicious = emptylist.len + dbase_ctr;
     if(suspicious > 1)
     {
-    	warning(RED"\n=> %ld"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
+    	warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
     }
     warning("\n");
 
     if(!iAbort)
     {
-        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%ld Bytes] can be removed.\n", lintbuf, lint );
+        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, lint );
     }
 
     if(set->mode == 1 || set->mode == 2)
@@ -1281,10 +1281,10 @@ void start_processing(lint_t *b)
     if(set->verbosity == 6)
     {
         info("Now calculation finished.. now writing end of log...\n");
-        info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%ld"NCO" replicas + "RED"%ld"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
+        info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%llu"NCO" replicas + "RED"%llu"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
     	if(!iAbort)
     	{
-            info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%ld"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
+            info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
 	}
     }
 

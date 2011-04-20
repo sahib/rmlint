@@ -24,6 +24,8 @@
 #ifndef DEF_H
 #define DEF_H
 
+#include <stdint.h>
+
 /* Use colored output? Note: there's also a -Bb option */
 #define USE_COLOR 1
 
@@ -94,7 +96,7 @@ From man 2 open:
 /* ------------------------------------------------------------- */
 
 /** nuint_t = normal unsigned integer type :-) **/
-typedef unsigned long nuint_t;
+typedef uint64_t nuint_t;
 
 /* I can haz bool? */
 typedef char bool;

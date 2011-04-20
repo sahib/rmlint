@@ -442,9 +442,9 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
         }
         if(set->verbosity == 4)
         {
-            fprintf(stdout,"%s%s%s%lu%s%ld%s%ld%s\n", LOGSEP,fpath, LOGSEP, (long int)file->fsize, LOGSEP, (long int)file->dev, LOGSEP, (long int)file->node,LOGSEP);
+            fprintf(stdout,"%s%s%s%llu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (long long unsigned int)file->fsize, LOGSEP, (uint64_t)file->dev, LOGSEP, (uint64_t)file->node,LOGSEP);
         }
-        fprintf(get_logstream(),"%s%s%s%lu%s%ld%s%ld%s\n", LOGSEP,fpath, LOGSEP, (long int)file->fsize, LOGSEP, (long int)file->dev, LOGSEP, (long int)file->node,LOGSEP);
+        fprintf(get_logstream(),"%s%s%s%llu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (long long unsigned int)file->fsize, LOGSEP, (uint64_t)file->dev, LOGSEP, (uint64_t)file->node,LOGSEP);
 
 
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK)
@@ -732,7 +732,6 @@ static int cmp_f(lint_t *a, lint_t *b)
 
     }
 
-    set_dupcounter(get_dupcounter()+1);
     return 0;
 }
 
@@ -895,6 +894,7 @@ bool findmatches(file_group *grp)
 
 			    }
 			    write_to_log(from, false, i);
+			    set_dupcounter(get_dupcounter()+1);
 			    if(handle_item(from,i))
 			    {
 				pthread_mutex_unlock(&mutex_printage);
