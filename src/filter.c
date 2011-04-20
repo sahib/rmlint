@@ -689,7 +689,10 @@ static void build_checksums(file_group *grp)
     {
         if(grp->grp_stp==NULL)
         {
-            printf("WARN: Empty group received: (end_pointer: %s) len: %ld bsize: %ld\n",(grp->grp_enp) ? grp->grp_enp->path : "null",grp->len, grp->size);
+            printf("WARN: Empty group received: (end_pointer: %s) len: %llu bsize: %llu\n",(grp->grp_enp) ? grp->grp_enp->path : "null",
+	           (long long unsigned int)grp->len,
+		   (long long unsigned int)grp->size
+		  );
         }
         return;
     }
