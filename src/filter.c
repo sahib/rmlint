@@ -1228,12 +1228,12 @@ void start_processing(lint_t *b)
     }
     info("\nNow attempting to find duplicates. This may take a while...\n");
     info("Now removing files with unique sizes from list...");
-    info(""YEL"%ld elem%c less"NCO" in list.",rem_counter,(rem_counter > 1) ? 's' : ' ');
+    info(""YEL"%ld item(s) less"NCO" in list.",rem_counter);
     if(path_doubles)
     {
-        info(" (removed "YEL"%ld pathzombies"NCO")", path_doubles);
+        info(" (removed "YEL"%ld pathzombie(s)"NCO")", path_doubles);
     }
-    info("\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\nNow list is split in "GRE"%llu"NCO" parts.\n", emptylist.len, spelen);
+    info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
     info("Now sorting groups based on their location on the drive...");
 
     /* Now make sure groups are sorted by their location on the disk*/
@@ -1284,7 +1284,8 @@ void start_processing(lint_t *b)
     if(set->verbosity == 6)
     {
         info("Now calculation finished.. now writing end of log...\n");
-        info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%llu"NCO" replicas + "RED"%llu"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
+        //info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%llu"NCO" replicas + "RED"%llu"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
+        info(RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",get_totalfiles(), get_dupcounter());
     	if(!iAbort)
     	{
             info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
