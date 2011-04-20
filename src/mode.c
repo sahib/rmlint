@@ -440,12 +440,14 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
             }
             fprintf(get_logstream(),"%02x", file->md5_digest[i]);
         }
+
+#define INT_CAST long long unsigned int
         if(set->verbosity == 4)
         {
-            fprintf(stdout,"%s%s%s%llu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (long long unsigned int)file->fsize, LOGSEP, (uint64_t)file->dev, LOGSEP, (uint64_t)file->node,LOGSEP);
+            fprintf(stdout,"%s%s%s%llu%s%llu%s%llu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
         }
-        fprintf(get_logstream(),"%s%s%s%llu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (long long unsigned int)file->fsize, LOGSEP, (uint64_t)file->dev, LOGSEP, (uint64_t)file->node,LOGSEP);
-
+        fprintf(get_logstream(),"%s%s%s%llu%s%llu%s%llu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
+#undef INT_CAST
 
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK)
         {

@@ -22,7 +22,7 @@ MKDIR=mkdir -p
 CC=gcc
 
 #Heavy Warnlevel 
-WARN=-ansi -Wall -pedantic 
+WARN=-Wall -pedantic -std=c99 
 
 #Quite heavy optimization 
 OPTI=-march=native -O3 -s -finline-functions -fomit-frame-pointer 
