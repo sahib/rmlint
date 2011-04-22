@@ -563,13 +563,26 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
         {
             break;
         }
-        error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", orig, path);
-        remfile(path);
+	else
+	{
+		char * full_orig_path = canonicalize_file_name(orig);
+		if(full_orig_path)
+		{
+			char * full_dupl_path = canonicalize_file_name(path);
+			if(full_dupl_path)
+			{
+				error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
+				remfile(full_dupl_path);
 
-        if(symlink(orig,path) == -1)
-        {
-            perror(YEL"WARN: "NCO"symlink(\"%s\"):");
-        }
+				if(symlink(full_orig_path ,full_dupl_path) == -1)
+				{
+				    perror(YEL"WARN: "NCO"symlink:");
+				}
+				free(full_dupl_path);
+			}
+			free(full_orig_path);
+		}
+	}
     }
     break;
 
@@ -883,14 +896,18 @@ bool findmatches(file_group *grp)
 	{
 	     lint_t * from = grp->grp_stp;
 
-	     if( (set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
+	     if( (set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
 	     {
 		 if(print_newline)
 		 {
-		     print_newline = false;
 		     warning("\n");
+		     print_newline = false;
 		 }
-		 error(GRE"   ls "NCO"%s\n",i->path);
+
+		 if(set->mode != 4)
+		 {
+		     error(GRE"   ls "NCO"%s\n",i->path);
+	 	 }
 	     }
 	     write_to_log(i, true, NULL);
 	     handle_item(NULL, i);
