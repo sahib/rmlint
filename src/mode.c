@@ -635,7 +635,31 @@ void init_filehandler(void)
             fprintf(get_scriptstream(),
                     "#!/bin/sh\n"
                     "#This file was autowritten by 'rmlint'\n"
-                    "#rmlint was executed from: %s\n",cwd);
+                    "#rmlint was executed from: %s\n"
+		     "\n"
+  		     "help() {\n"
+		     " echo \"-d   Do not ask to continue\"\n"
+		     " echo \"-h   This text\"\n"
+		     " echo \"This file was autowritten by rmlint.\"\n"
+		     " exit\n"
+		     "}\n"
+		     "\n"
+		     "ask() {\n"
+		     " echo \"# This script will delete certain files rmlint found.\"\n"
+		     " echo \"# It is highly advisable to view the script (or log) first!\"\n"
+		     " echo \"# Execute this script with -d to disable this message.\"\n"
+		     " echo \"# Hit enter to continue; CTRL-C to abort immediately.\"\n"
+		     " read\n"
+		     "}\n"
+		     "\n"
+		     "if [ $# != \"0\" ] && [ $1  = \"-h\" ]; then\n"
+		     "  help\n"
+	 	     "fi\n"
+		     "\n"
+		     "if [ $# == \"0\" ] || [ $1 != \"-d\" ]; then\n"
+		     "  ask\n"
+		     "fi\n\n",
+		    cwd);
 
             fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
             fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
