@@ -1076,6 +1076,7 @@ void start_processing(lint_t *b)
                 fglist[spelen].size    = gsize;
 
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
+		if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
                 path_doubles += rm_double_paths(&fglist[spelen]);
 
 
@@ -1091,6 +1092,7 @@ void start_processing(lint_t *b)
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
 
+		if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
                 rm_double_paths(&emptylist);
 
                 /* sort by lint_ID (== dupID) */
