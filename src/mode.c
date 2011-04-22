@@ -635,7 +635,7 @@ void init_filehandler(void)
             fprintf(get_scriptstream(),
                     "#!/bin/sh\n"
                     "#This file was autowritten by 'rmlint'\n"
-                    "# rmlint was executed from: %s\n",cwd);
+                    "#rmlint was executed from: %s\n",cwd);
 
             fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
             fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
@@ -740,6 +740,7 @@ static int cmp_f(lint_t *a, lint_t *b)
 /* ------------------------------------------------------------- */
 
 #define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false) 
+bool print_newline = true;
 
 bool findmatches(file_group *grp)
 {
@@ -816,6 +817,7 @@ bool findmatches(file_group *grp)
         return false;
     }
 
+
     /* If a specific directory is specified to have the 'originals':  */
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
@@ -834,10 +836,9 @@ bool findmatches(file_group *grp)
 		{
 		    if(j->dupflag == i->dupflag && i != j)
 		    {
-			/* Swap */
+			/* Swap as long as possible */
 			i->filter = false;
 			j->filter = true;
-			break;
 		    }
 		    j = j->next;
 		}
@@ -860,6 +861,11 @@ bool findmatches(file_group *grp)
 
 	     if( (set->mode == 1 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
 	     {
+		 if(print_newline)
+		 {
+		     print_newline = false;
+		     warning("\n");
+		 }
 		 error(GRE"   ls "NCO"%s\n",i->path);
 	     }
 	     write_to_log(i, true, NULL);

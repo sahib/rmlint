@@ -1076,10 +1076,7 @@ void start_processing(lint_t *b)
                 fglist[spelen].size    = gsize;
 
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
-                if(set->followlinks)
-                {
-                    path_doubles += rm_double_paths(&fglist[spelen]);
-                }
+                path_doubles += rm_double_paths(&fglist[spelen]);
 
 
                 /* number_of_groups++ */
@@ -1094,10 +1091,7 @@ void start_processing(lint_t *b)
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
 
-                if(set->followlinks)
-                {
-                    rm_double_paths(&emptylist);
-                }
+                rm_double_paths(&emptylist);
 
                 /* sort by lint_ID (== dupID) */
                 ptr = emptylist.grp_stp;
@@ -1242,11 +1236,21 @@ void start_processing(lint_t *b)
     info(" done. \nNow doing fingerprints and full checksums.%c\n",set->verbosity > 4 ? '.' : '\n' );
     db_done = true;
 
-    error("%s Duplicate(s):\n",(set->verbosity > 1) ? YEL"#"NCO : "#");
+    error("%s Duplicate(s):",(set->verbosity > 1) ? YEL"#"NCO : "#");
     /* Groups are splitted, now give it to the sheduler
      * The sheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
     start_sheduler(fglist, spelen);
+
+    if(get_dupcounter() == 0)
+    {
+	error("\r                    ");
+    }
+    else
+    {
+	error("\n");
+    }
+    
 
     /* Gather the total size of removeable data */
     for(ii=0; ii < spelen; ii++)
@@ -1276,10 +1280,11 @@ void start_processing(lint_t *b)
         warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, lint );
     }
 
-    if(set->mode == 1 || set->mode == 2)
+    if((set->mode == 1 || set->mode == 2) && get_dupcounter())
     {
-    	warning(RED"=> "NCO"Nothing removed yet!\n\n");
+    	warning(RED"=> "NCO"Nothing removed yet!\n");
     }
+    warning("\n");
 
     if(set->verbosity == 6)
     {
