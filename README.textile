@@ -183,3 +183,9 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *A:* You can specify your own commands by -c/-C, those get also replaced in the script.
      You can for example pipe rmlint's find directly to sh:
      rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh
+
+<h2>DONATE</h2>
+You also might consider a small (CS-Students are already motivated by 1 Cent <img src="http://www.blendpolis.de/images/smilies/icon_wink.gif"/>) donation if you use any of my software in a commercial environement:<a class="FlattrButton" style="display:none;" rev="flattr;button:compact;" href="https://github.com/sahib/glyr"></a>
+<noscript><a href="http://flattr.com/thing/302682/libglyr" target="_blank">
+<img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a></noscript>
+(For now only possible via Flattr, you gonna need an account there - Sorry)
