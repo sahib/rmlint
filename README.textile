@@ -52,7 +52,8 @@ A PKGBUILD is available in the AUR.
 * Safely abortable at any time (will write log & script).
 * No extra dependencies at all (glibc2 and pthread is something you already have).
 * Colorful output (can be disabled via -B).
-* Regex filter for both files and directories. 
+* Regex filter for both files and directories.
+* It has been tested with very large filesets, with a record of finding 166GB dupes, with a logsize of 82MB (cheers Christoph)
 * Handles the files the way you want: 
    ** replace double file by a symboliclink, (-m link)  
    ** Removes the file without asking you. (-m noask) 
@@ -173,9 +174,6 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *A:* Great! Write me an email (sahib@online.de), with a nifty problem description and/or 
      a patch and/or any suggestions and/or a backtrace (if it was a crash)
 
-*Q:* __Why is there no GUI?__
-*A:* This may be on the ToDos. Perhaps. :-)
-
 *Q:* __Can I set a 'preferred dir' when specifying more than one dir, which picks the orig from the preferred one?__
 *A:* Yes, prepend the preferred directory with a '//', originals will come from there now.
 
@@ -183,6 +181,12 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *A:* You can specify your own commands by -c/-C, those get also replaced in the script.
      You can for example pipe rmlint's find directly to sh:
      rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh
+
+*Q:* __Are there bugs I should know off?__
+*A:* None that are really known, only some strange output formatting sometimes.
+
+*Q:* __Room for improvement?__
+*A:* Of course. Finding non-stripped binaries is slow (should use libmagic), a progress bar should be added maybe.
 
 <h2>DONATE</h2>
 You also might consider a small (CS-Students are already motivated by 1 Cent <img src="http://www.blendpolis.de/images/smilies/icon_wink.gif"/>) donation if you use any of my software in a commercial environement:<a class="FlattrButton" style="display:none;" rev="flattr;button:compact;" href="https://github.com/sahib/glyr"></a>
