@@ -83,7 +83,11 @@ From man 2 open:
   - Linus Torvalds
 
 */
-#define MD5_FILE_FLAGS  (O_RDONLY | O_CLOEXEC)
+#ifdef O_CLOEXEC
+  #define MD5_FILE_FLAGS  (O_RDONLY | O_CLOEXEC)
+#else
+  #define MD5_FILE_FLAGS  (O_RDONLY)
+#endif
 
 /* ------------------------------------------------------------- */
 
