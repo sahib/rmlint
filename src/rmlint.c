@@ -269,6 +269,7 @@ static void print_help(void)
             "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally for duplicates. (Slow!) (Default: No.)\n"
             "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!'')\n"
            );
+    fprintf(stderr,"\t-z --limit\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")");
     fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
             "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
             "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes.)\n"
@@ -360,12 +361,34 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->searchdup     = 1;
     pset->color         = 1;
     pset->output        = (char*)script_name;
+    pset->minsize       = -1;
+    pset->maxsize       = -1;
 
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
      * investigated to be replicas of other files */
     pset->collide = 0;
 }
+
+/* ------------------------------------------------------------- */
+
+void parse_limit_sizes(char * limit_string)
+{
+	char * ptr = limit_string;
+	if(ptr != NULL)
+	{
+		char * semicol = strchr(ptr,';');
+		if(semicol != NULL)
+		{
+			semicol[0] = '\0';
+			semicol++;
+
+			set->maxsize = strtol(semicol,NULL,10);
+		}
+		set->minsize = strtol(ptr,NULL,10);
+	}
+}
+
 
 /* ------------------------------------------------------------- */
 
@@ -393,13 +416,15 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         {
             {"threads",        required_argument, 0, 't'},
             {"dregex",         required_argument, 0, 'R'},
-            {"fregex",  	   required_argument, 0, 'r'},
+            {"fregex",         required_argument, 0, 'r'},
             {"mode",           required_argument, 0, 'm'},
-            {"maxdepth",	   required_argument, 0, 'd'},
+            {"maxdepth",       required_argument, 0, 'd'},
             {"cmd_dup",        required_argument, 0, 'c'},
             {"cmd_orig",       required_argument, 0, 'C'},
             {"junk",           required_argument, 0, 'j'},
             {"verbosity",      required_argument, 0, 'v'},
+            {"oldtmp",         required_argument, 0, 'x'},
+            {"limit",          required_argument, 0, 'z'},
             {"output",         optional_argument, 0, 'o'},
             {"emptydirs",      no_argument,       0, 'y'},
             {"color",          no_argument,       0, 'b'},
@@ -409,7 +434,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"no-namecluster", no_argument, 	  0, 'N'},
             {"nonstripped",    no_argument,       0, 'a'},
             {"no-nonstripped", no_argument,       0, 'A'},
-            {"oldtmp",         required_argument, 0, 'x'},
             {"no-oldtmp",      no_argument,       0, 'X'},
             {"no-hidden",      no_argument,       0, 'g'},
             {"hidden",         no_argument,       0, 'G'},
@@ -433,7 +457,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "m:R:r:o::j:bBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:",long_options, &option_index);
+        c = getopt_long (argc, argv, "m:R:r:o::j:bBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
 
         /* Detect the end of the options. */
         if (c == -1)
@@ -477,7 +501,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             sets->color = 0;
             break;
         case 'V':
-            print_version( true );
+            print_version(true);
             break;
         case 'h':
             print_help();
@@ -551,6 +575,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         case 'p':
             sets->paranoid = 1;
             break;
+	case 'z':
+	    parse_limit_sizes(optarg);
+	    break;
         case 'P':
             sets->paranoid = 0;
             break;

@@ -271,7 +271,9 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 return FTW_CONTINUE;
             }
         }
-        if(flag == FTW_F)
+        if(flag == FTW_F && 
+	  (set->minsize <= ptr->st_size || set->minsize < 0) &&
+	  (set->maxsize >= ptr->st_size || set->maxsize < 0))
         {
             if(regfilter(path, set->fpattern))
             {

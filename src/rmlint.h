@@ -50,6 +50,8 @@ typedef struct
     char *junk_chars;
     char *output;
     int preferID;
+    int minsize;
+    int maxsize;
     nuint_t threads;
     nuint_t depth;
     nuint_t oldtmpdata;
