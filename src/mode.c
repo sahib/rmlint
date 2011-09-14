@@ -405,9 +405,14 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
 		if(opath != NULL)
 		{
                 	/*script_print(_sd_(set->cmd_path,fpath,opath));*/
-			script_print(make_cmd_ready(false,opath,fpath));
-                	script_print(_sd_("\n"));
-
+			char * tmp_opath = strsubs(opath,"'","'\"'\"'");
+			if(tmp_opath != NULL)
+			{
+			  script_print(make_cmd_ready(false,tmp_opath,fpath));
+                	  script_print(_sd_("\n"));
+			  free(tmp_opath);
+			}
+	
 			free(opath);
 		}
             }
@@ -591,27 +596,34 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
         /* Exec a command on it */
         int ret = 0;
 
-	const char * cmd = NULL;
-        if(path)
-        {
-	    cmd = make_cmd_ready(false,orig,path);
-        }
-        else
-        {
-	    cmd = make_cmd_ready(true,orig,NULL);
-        }
+	char * tmp_opath = strsubs(orig,"'","'\"'\"'");
+	char * tmp_fpath = strsubs(path,"'","'\"'\"'");
 
-
-	if(cmd != NULL)
+	if(tmp_opath && tmp_fpath)
 	{
-		ret = system(cmd);
-
-		if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+		const char * cmd = NULL;
+		if(path)
 		{
-		    return true;
+		    cmd = make_cmd_ready(false,tmp_opath,tmp_fpath);
 		}
-		free((char*)cmd);
-		cmd = NULL;
+		else
+		{
+		    cmd = make_cmd_ready(true,tmp_opath,NULL);
+		}
+
+		if(cmd != NULL)
+		{
+			ret = system(cmd);
+
+			if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+			{
+			    return true;
+			}
+			free((char*)cmd);
+			cmd = NULL;
+		}
+		free(tmp_opath);
+		free(tmp_fpath);
 	}
     }
     break;

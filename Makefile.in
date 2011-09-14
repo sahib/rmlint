@@ -25,7 +25,7 @@ CC=gcc
 WARN=-Wall -pedantic -std=c99 
 
 #Quite heavy optimization 
-OPTI=-march=generic -O3 -s -finline-functions -fomit-frame-pointer 
+OPTI=-march=native -O3 -s -finline-functions -fomit-frame-pointer 
 
 #Link with google's malloc
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a -D_THREAD_SAFE
