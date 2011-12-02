@@ -175,7 +175,8 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
      a patch and/or any suggestions and/or a backtrace (if it was a crash)
 
 *Q:* __Can I set a 'preferred dir' when specifying more than one dir, which picks the orig from the preferred one?__
-*A:* Yes, prepend the preferred directory with a '//', originals will come from there now.
+*A:* Yes, prepend the preferred directory with a '//', the first found file in this directory is tagged as original.
+     Future versions might tag all files in the //-dir as original.
 
 *Q:* __None of the -m options satisfy my needs. What can I do?__
 *A:* You can specify your own commands by -c/-C, those get also replaced in the script.
