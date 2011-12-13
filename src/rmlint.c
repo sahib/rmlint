@@ -735,6 +735,15 @@ void die(int status)
     /* Close scriptfile */
     if(get_scriptstream())
     {
+        fprintf(get_scriptstream(),
+                "                      \n"
+                "if [[ -z $DO_REMOVE ]]\n"
+                "then                  \n"
+                "  rm -f rmlint.log    \n"
+                "  rm -f rmlint.sh     \n"
+                "fi                    \n"
+               );
+
         fclose(get_scriptstream());
     }
 
