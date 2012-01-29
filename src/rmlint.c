@@ -1,29 +1,29 @@
 /**
-*  This file is part of rmlint.
-*
-*  rmlint is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
-*
-*  rmlint is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public License
-*  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
-*
-** Author: Christopher Pahl <sahib@online.de>:
-** Hosted on http://github.com/sahib/rmlint
-*
-**/
+ *  This file is part of rmlint.
+ *
+ *  rmlint is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  rmlint is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ ** Author: Christopher Pahl <sahib@online.de>:
+ ** Hosted on http://github.com/sahib/rmlint
+ *
+ **/
 
 
 /*
- rmlint.c:
- 1) Methods to parse arguments and set vars accordingly
-*/
+   rmlint.c:
+   1) Methods to parse arguments and set vars accordingly
+   */
 #define _XOPEN_SOURCE 500
 #define _GNU_SOURCE
 
@@ -129,13 +129,13 @@ void msg_macro_print(FILE * stream, const char * string)
             tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
         }
 
-	if(stream != NULL && tmp != NULL)
-	{
-        	fprintf(stream,"%s",tmp);
-        	fflush(stream);
+        if(stream != NULL && tmp != NULL)
+        {
+            fprintf(stream,"%s",tmp);
+            fflush(stream);
 
-            	free(tmp);
-            	tmp = NULL;
+            free(tmp);
+            tmp = NULL;
         }
     }
 }
@@ -157,7 +157,7 @@ void error(const char* format, ...)
             return;
         }
 
-	/* print, respect -B */
+        /* print, respect -B */
         msg_macro_print(stdout,tmp);
         va_end (args);
 
@@ -221,7 +221,7 @@ void info(const char* format, ...)
 /* The nightmare of every secure program :))
  * this is used twice; 1x with a variable format..
  * Please gimme a note if I forgot to check sth. there. ;)
-*/
+ */
 int systemf(const char* format, ...)
 {
     va_list arg;
@@ -277,13 +277,13 @@ static void print_help(void)
     fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
            );
-    fprintf(stderr,	"\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
+    fprintf(stderr, "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
             "\t-f --followlinks\tWether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
             "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: No.)\n"
             "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
             "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
            );
-    fprintf(stderr,	"\n\t\t\t\tWhere modes are:\n\n"
+    fprintf(stderr, "\n\t\t\t\tWhere modes are:\n\n"
             "\t\t\t\tlist  - Only list found files and exit.\n"
             "\t\t\t\tlink  - Replace file with a symlink to original.\n"
             "\t\t\t\task   - Ask for each file what to do.\n"
@@ -292,18 +292,18 @@ static void print_help(void)
             "\t\t\t\tDefault: list\n\n"
             "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n");
     fprintf(stderr,"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
-	    "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
+            "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
             "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n");
     fprintf(stderr,"\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
-	    "\t\t\t\tNote: If '-m cmd' is not given, rmlint's deault commands are replaced with the ones from -cC\n"
-	    "\t\t\t\t      This is especially useful with -v5, so you can pipe your commands to sh in realtime.\n"
+            "\t\t\t\tNote: If '-m cmd' is not given, rmlint's deault commands are replaced with the ones from -cC\n"
+            "\t\t\t\t      This is especially useful with -v5, so you can pipe your commands to sh in realtime.\n"
            );
-    fprintf(stderr,	"Regex options:\n\n"
+    fprintf(stderr, "Regex options:\n\n"
             "\t-r --fregex <pat>\tChecks filenames against the pattern <pat>\n"
             "\t-R --dregex <pat>\tChecks dirnames against the pattern <pat>\n"
             "\t-i --invmatch\t\tInvert match - Only investigate when not containing <pat> (Default: No.)\n"
             "\t-e --matchcase\t\tMatches case of paths (Default: No.)\n");
-    fprintf(stderr,	"\nMisc options:\n\n"
+    fprintf(stderr, "\nMisc options:\n\n"
             "\t-h --help\t\tPrints this text and exits\n"
             "\t-o --output [<o>]\tOutputs logfile to <o>. The <o> argument is optional, specify none to write no log.\n"
             "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace. (Default \"rmlint\")\n\n");
@@ -336,18 +336,18 @@ void rmlint_set_default_settings(rmlint_settings *pset)
 {
     set = pset;
 
-    pset->mode  	=  1; 		/* list only    */
-    pset->casematch     =  0; 		/* Insensitive  */
-    pset->invmatch	=  0;		/* Normal mode  */
-    pset->paranoid      =  0; 		/* dont be bush */
-    pset->depth         =  0; 		/* inf depth    */
-    pset->followlinks   =  0; 		/* fol. link    */
+    pset->mode      =  1;       /* list only    */
+    pset->casematch     =  0;       /* Insensitive  */
+    pset->invmatch  =  0;       /* Normal mode  */
+    pset->paranoid      =  0;       /* dont be bush */
+    pset->depth         =  0;       /* inf depth    */
+    pset->followlinks   =  0;       /* fol. link    */
     pset->threads       = 16;           /* Quad*quad.   */
-    pset->verbosity 	=  2; 		/* Most relev.  */
-    pset->samepart  	=  0; 		/* Stay parted  */
+    pset->verbosity     =  2;       /* Most relev.  */
+    pset->samepart      =  0;       /* Stay parted  */
     pset->paths         =  NULL;        /* Startnode    */
     pset->dpattern      =  NULL;        /* DRegpattern  */
-    pset->fpattern 	=  NULL;        /* FRegPattern  */
+    pset->fpattern  =  NULL;        /* FRegPattern  */
     pset->cmd_path      =  NULL;        /* Cmd,if used  */
     pset->cmd_orig      =  NULL;        /* Origcmd, -"- */
     pset->junk_chars    =  NULL;        /* You have to set this   */
@@ -363,6 +363,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->output        = (char*)script_name;
     pset->minsize       = -1;
     pset->maxsize       = -1;
+    pset->listemptyfiles = 1;
 
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
@@ -374,19 +375,19 @@ void rmlint_set_default_settings(rmlint_settings *pset)
 
 void parse_limit_sizes(char * limit_string)
 {
-	char * ptr = limit_string;
-	if(ptr != NULL)
-	{
-		char * semicol = strchr(ptr,';');
-		if(semicol != NULL)
-		{
-			semicol[0] = '\0';
-			semicol++;
+    char * ptr = limit_string;
+    if(ptr != NULL)
+    {
+        char * semicol = strchr(ptr,';');
+        if(semicol != NULL)
+        {
+            semicol[0] = '\0';
+            semicol++;
 
-			set->maxsize = strtol(semicol,NULL,10);
-		}
-		set->minsize = strtol(ptr,NULL,10);
-	}
+            set->maxsize = strtol(semicol,NULL,10);
+        }
+        set->minsize = strtol(ptr,NULL,10);
+    }
 }
 
 
@@ -426,30 +427,32 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"oldtmp",         required_argument, 0, 'x'},
             {"limit",          required_argument, 0, 'z'},
             {"output",         optional_argument, 0, 'o'},
+            {"emptyfiles",     no_argument,       0, 'k'},
+            {"no-emptyfiles",  no_argument,       0, 'k'},
             {"emptydirs",      no_argument,       0, 'y'},
             {"color",          no_argument,       0, 'b'},
             {"no-color",       no_argument,       0, 'B'},
             {"no-emptydirs",   no_argument,       0, 'Y'},
-            {"namecluster",    no_argument, 	  0, 'n'},
-            {"no-namecluster", no_argument, 	  0, 'N'},
+            {"namecluster",    no_argument,       0, 'n'},
+            {"no-namecluster", no_argument,       0, 'N'},
             {"nonstripped",    no_argument,       0, 'a'},
             {"no-nonstripped", no_argument,       0, 'A'},
             {"no-oldtmp",      no_argument,       0, 'X'},
             {"no-hidden",      no_argument,       0, 'g'},
             {"hidden",         no_argument,       0, 'G'},
-            {"dups",	       no_argument, 	  0, 'u'},
+            {"dups",           no_argument,       0, 'u'},
             {"no-dups",        no_argument,       0, 'U'},
-            {"matchcase",      no_argument, 	  0, 'e'},
-            {"ignorecase",     no_argument, 	  0, 'E'},
-            {"followlinks",    no_argument, 	  0, 'f'},
-            {"ignorelinks",    no_argument, 	  0, 'F'},
-            {"invertmatch",    no_argument, 	  0, 'i'},
-            {"normalmatch",    no_argument, 	  0, 'I'},
-            {"samepart",       no_argument,	  0, 's'},
-            {"allpart",        no_argument,	  0, 'S'},
-            {"paranoid",       no_argument,	  0, 'p'},
-            {"naive",          no_argument,	  0, 'P'},
-            {"help",           no_argument, 	  0, 'h'},
+            {"matchcase",      no_argument,       0, 'e'},
+            {"ignorecase",     no_argument,       0, 'E'},
+            {"followlinks",    no_argument,       0, 'f'},
+            {"ignorelinks",    no_argument,       0, 'F'},
+            {"invertmatch",    no_argument,       0, 'i'},
+            {"normalmatch",    no_argument,       0, 'I'},
+            {"samepart",       no_argument,   0, 's'},
+            {"allpart",        no_argument,   0, 'S'},
+            {"paranoid",       no_argument,   0, 'p'},
+            {"naive",          no_argument,   0, 'P'},
+            {"help",           no_argument,       0, 'h'},
             {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
         };
@@ -457,7 +460,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "m:R:r:o::j:bBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
+        c = getopt_long (argc, argv, "m:R:r:o::j:kKbBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
 
         /* Detect the end of the options. */
         if (c == -1)
@@ -467,155 +470,161 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 
         switch (c)
         {
-        case '?':
-            return 0;
-        case 't':
-            sets->threads = atoi(optarg);
-            if(!sets->threads || sets->threads < 0)
-            {
-                sets->threads = 8;
-            }
-            break;
-        case 'f':
-            sets->followlinks = 1;
-            break;
-        case 'F':
-            sets->followlinks = 0;
-            break;
-        case 'u':
-            sets->searchdup = 1;
-            break;
-        case 'U':
-            sets->searchdup = 0;
-            break;
-        case 'n':
-            sets->namecluster = 1;
-            break;
-        case 'N':
-            sets->namecluster = 0;
-            break;
-        case 'b':
-            sets->color = 1;
-            break;
-        case 'B':
-            sets->color = 0;
-            break;
-        case 'V':
-            print_version(true);
-            break;
-        case 'h':
-            print_help();
-            break;
-        case 'j':
-            sets->junk_chars = optarg;
-            break;
-        case 'y':
-            sets->findemptydirs = 1;
-            break;
-        case 'Y':
-            sets->findemptydirs = 0;
-            break;
-        case 'a':
-            sets->nonstripped = 1;
-            break;
-        case 'A':
-            sets->nonstripped = 0;
-            break;
-        case 'x':
-            sets->oldtmpdata = atoi(optarg);
-            break;
-        case 'X':
-            sets->doldtmp = false;
-            break;
-        case 'o':
-            sets->output = optarg;
-            break;
-        case 'c':
-            sets->cmd_path = optarg;
-            break;
-        case 'C':
-            sets->cmd_orig = optarg;
-            break;
-        case 'g':
-            sets->ignore_hidden = 1;
-            break;
-        case 'G':
-            sets->ignore_hidden = 0;
-            break;
-        case 'v':
-            sets->verbosity = atoi(optarg);
-            break;
-        case 'i':
-            sets->invmatch = 1;
-            break;
-        case 'I':
-            sets->invmatch = 0;
-            break;
-        case 's':
-            sets->samepart = 1;
-            break;
-        case 'S':
-            sets->samepart = 0;
-            break;
-        case 'e':
-            sets->casematch = 1;
-            break;
-        case 'E':
-            sets->casematch = 0;
-            break;
-        case 'd':
-            sets->depth = ABS(atoi(optarg));
-            break;
-        case 'r':
-            sets->fpattern = optarg;
-            break;
-        case 'R':
-            sets->dpattern = optarg;
-            break;
-        case 'p':
-            sets->paranoid = 1;
-            break;
-	case 'z':
-	    parse_limit_sizes(optarg);
-	    break;
-        case 'P':
-            sets->paranoid = 0;
-            break;
-        case 'm':
-            sets->mode = 0;
-
-            if(!strcasecmp(optarg, "list"))
-            {
-                sets->mode = 1;
-            }
-            if(!strcasecmp(optarg, "ask"))
-            {
-                sets->mode = 2;
-            }
-            if(!strcasecmp(optarg, "noask"))
-            {
-                sets->mode = 3;
-            }
-            if(!strcasecmp(optarg, "link"))
-            {
-                sets->mode = 4;
-            }
-            if(!strcasecmp(optarg, "cmd"))
-            {
-                sets->mode = 5;
-            }
-
-            if(!sets->mode)
-            {
-                error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
-                error("       Available modes are: ask | list | link | noask | cmd\n");
-                die(0);
+            case '?':
                 return 0;
-            }
+            case 't':
+                sets->threads = atoi(optarg);
+                if(!sets->threads || sets->threads < 0)
+                {
+                    sets->threads = 8;
+                }
+                break;
+            case 'k':
+                sets->listemptyfiles = 1;
+                break;
+            case 'K':
+                sets->listemptyfiles = 0;
+                break;
+            case 'f':
+                sets->followlinks = 1;
+                break;
+            case 'F':
+                sets->followlinks = 0;
+                break;
+            case 'u':
+                sets->searchdup = 1;
+                break;
+            case 'U':
+                sets->searchdup = 0;
+                break;
+            case 'n':
+                sets->namecluster = 1;
+                break;
+            case 'N':
+                sets->namecluster = 0;
+                break;
+            case 'b':
+                sets->color = 1;
+                break;
+            case 'B':
+                sets->color = 0;
+                break;
+            case 'V':
+                print_version(true);
+                break;
+            case 'h':
+                print_help();
+                break;
+            case 'j':
+                sets->junk_chars = optarg;
+                break;
+            case 'y':
+                sets->findemptydirs = 1;
+                break;
+            case 'Y':
+                sets->findemptydirs = 0;
+                break;
+            case 'a':
+                sets->nonstripped = 1;
+                break;
+            case 'A':
+                sets->nonstripped = 0;
+                break;
+            case 'x':
+                sets->oldtmpdata = atoi(optarg);
+                break;
+            case 'X':
+                sets->doldtmp = false;
+                break;
+            case 'o':
+                sets->output = optarg;
+                break;
+            case 'c':
+                sets->cmd_path = optarg;
+                break;
+            case 'C':
+                sets->cmd_orig = optarg;
+                break;
+            case 'g':
+                sets->ignore_hidden = 1;
+                break;
+            case 'G':
+                sets->ignore_hidden = 0;
+                break;
+            case 'v':
+                sets->verbosity = atoi(optarg);
+                break;
+            case 'i':
+                sets->invmatch = 1;
+                break;
+            case 'I':
+                sets->invmatch = 0;
+                break;
+            case 's':
+                sets->samepart = 1;
+                break;
+            case 'S':
+                sets->samepart = 0;
+                break;
+            case 'e':
+                sets->casematch = 1;
+                break;
+            case 'E':
+                sets->casematch = 0;
+                break;
+            case 'd':
+                sets->depth = ABS(atoi(optarg));
+                break;
+            case 'r':
+                sets->fpattern = optarg;
+                break;
+            case 'R':
+                sets->dpattern = optarg;
+                break;
+            case 'p':
+                sets->paranoid = 1;
+                break;
+            case 'z':
+                parse_limit_sizes(optarg);
+                break;
+            case 'P':
+                sets->paranoid = 0;
+                break;
+            case 'm':
+                sets->mode = 0;
 
-            break;
-        default:
-            return 0;
+                if(!strcasecmp(optarg, "list"))
+                {
+                    sets->mode = 1;
+                }
+                if(!strcasecmp(optarg, "ask"))
+                {
+                    sets->mode = 2;
+                }
+                if(!strcasecmp(optarg, "noask"))
+                {
+                    sets->mode = 3;
+                }
+                if(!strcasecmp(optarg, "link"))
+                {
+                    sets->mode = 4;
+                }
+                if(!strcasecmp(optarg, "cmd"))
+                {
+                    sets->mode = 5;
+                }
+
+                if(!sets->mode)
+                {
+                    error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
+                    error("       Available modes are: ask | list | link | noask | cmd\n");
+                    die(0);
+                    return 0;
+                }
+
+                break;
+            default:
+                return 0;
         }
     }
 
@@ -638,7 +647,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         else
         {
             close(p);
-            sets->paths	  = realloc(sets->paths,sizeof(char*)*(lp+2));
+            sets->paths   = realloc(sets->paths,sizeof(char*)*(lp+2));
 
             if(isPref) sets->preferID = lp;
             sets->paths[lp++] = theDir;
@@ -690,7 +699,7 @@ static void check_cmd(const char *cmd)
     if(ps > 0)
     {
         puts(YEL"FATAL: "NCO"--command [-cC]: printfstyle markups (e.g. %s) are not allowed!");
-	puts(YEL"       "NCO"                 Escape '%' with '%%' to get around.");
+        puts(YEL"       "NCO"                 Escape '%' with '%%' to get around.");
         die(0);
     }
 }

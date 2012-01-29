@@ -42,6 +42,7 @@ typedef struct
     char findemptydirs;
     char nonstripped;
     char verbosity;
+    char listemptyfiles;
     char **paths;
     char *dpattern;
     char *fpattern;

@@ -1,23 +1,23 @@
 /**
-*  This file is part of rmlint.
-*
-*  rmlint is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
-*
-*  rmlint is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public License
-*  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
-*
-** Author: Christopher Pahl <sahib@online.de>:
-** Hosted on http://github.com/sahib/rmlint
-*
-**/
+ *  This file is part of rmlint.
+ *
+ *  rmlint is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  rmlint is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ ** Author: Christopher Pahl <sahib@online.de>:
+ ** Hosted on http://github.com/sahib/rmlint
+ *
+ **/
 
 /* Needed for nftw() */
 #define _XOPEN_SOURCE 500
@@ -65,31 +65,31 @@ static void interrupt(int p)
 {
     switch(p)
     {
-    case SIGINT:
-        if(iAbort == 2)
-        {
+        case SIGINT:
+            if(iAbort == 2)
+            {
+                die(-1);
+            }
+            else if(db_done)
+            {
+                iAbort = 2;
+                warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
+            }
+            else
+            {
+                iAbort = 1;
+                db_done = true;
+            }
+            break;
+        case SIGFPE  :
+        case SIGABRT :
+            error(RED"FATAL: "NCO"Aborting due to internal error!\n");
+            error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
             die(-1);
-        }
-        else if(db_done)
-        {
-            iAbort = 2;
-            warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
-        }
-        else
-        {
-            iAbort = 1;
-            db_done = true;
-        }
-        break;
-    case SIGFPE  :
-    case SIGABRT :
-        error(RED"FATAL: "NCO"Aborting due to internal error!\n");
-        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-        die(-1);
-    case SIGSEGV :
-        error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
-        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-        die(-1);
+        case SIGSEGV :
+            error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
+            error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
+            die(-1);
     }
 }
 
@@ -127,7 +127,7 @@ static int check_binary_to_be_stripped(const char *path)
     int bytes = 0;
     char dummy_buf = 0,
          * cmd = NULL,
-           * escaped = NULL;
+         * escaped = NULL;
 
     if(path == NULL)
     {
@@ -232,16 +232,16 @@ int regfilter(const char* input, const char *pattern)
  * Callbock from nftw()
  * If the file given from nftw by "path":
  * - is a directory: recurs into it and catch the files there,
- * 	as long the depth doesnt get bigger than max_depth and contains the pattern  cmp_pattern
+ *  as long the depth doesnt get bigger than max_depth and contains the pattern  cmp_pattern
  * - a file: Push it back to the list, if it has "cmp_pattern" in it. (if --regex was given)
  * If the user interrupts, nftw() stops, and the program will do it'S magic.
  *
  * Not many comments, because man page of nftw will explain everything you'll need to understand
  *
  * Appendum: rmlint uses the inode to sort the contents before doing any I/O to speed up things.
- * 			 This is nevertheless limited to Unix filesystems like ext*, reiserfs.. (might work in MacOSX - don't know)
- * 			 If someone likes to port this to Windows he would to replace the inode number by the MFT entry point, or simply disable it
- * 			 I personally don't have a win comp and won't port it, as I don't found many users knowing what that black window with white
+ *           This is nevertheless limited to Unix filesystems like ext*, reiserfs.. (might work in MacOSX - don't know)
+ *           If someone likes to port this to Windows he would to replace the inode number by the MFT entry point, or simply disable it
+ *           I personally don't have a win comp and won't port it, as I don't found many users knowing what that black window with white
  *           white letters can do ;-)
  */
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
@@ -272,8 +272,8 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             }
         }
         if(flag == FTW_F && 
-	  (set->minsize <= ptr->st_size || set->minsize < 0) &&
-	  (set->maxsize >= ptr->st_size || set->maxsize < 0))
+                (set->minsize <= ptr->st_size || set->minsize < 0) &&
+                (set->maxsize >= ptr->st_size || set->maxsize < 0))
         {
             if(regfilter(path, set->fpattern))
             {
@@ -340,7 +340,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 }
             }
             /* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
-            if(flag == FTW_F && ptr->st_rdev == 0)
+            if(flag == FTW_F && ptr->st_rdev == 0 && (set->listemptyfiles || ptr->st_size != 0))
             {
                 if(!access(path,R_OK))
                 {
@@ -594,17 +594,17 @@ static nuint_t group_filter(file_group *fp)
 
         /* Useful debugging stuff: */
         /*
-        	int z = 0;
-        	MDPrintArr(i->fp[0]);
-        	printf("|#|");
-        	MDPrintArr(i->fp[1]);
-        	printf("|#|");
-        	for(; z < BYTE_MIDDLE_SIZE; z++)
-        	{
-        		printf("%2x",i->bim[z]);
-        	}
-        	fflush(stdout);
-        */
+           int z = 0;
+           MDPrintArr(i->fp[0]);
+           printf("|#|");
+           MDPrintArr(i->fp[1]);
+           printf("|#|");
+           for(; z < BYTE_MIDDLE_SIZE; z++)
+           {
+           printf("%2x",i->bim[z]);
+           }
+           fflush(stdout);
+           */
 
         if(i->filter)
         {
@@ -692,9 +692,9 @@ static void build_checksums(file_group *grp)
         if(grp->grp_stp==NULL)
         {
             printf("WARN: Empty group received: (end_pointer: %s) len: %llu bsize: %llu\n",(grp->grp_enp) ? grp->grp_enp->path : "null",
-	           (long long unsigned int)grp->len,
-		   (long long unsigned int)grp->size
-		  );
+                    (long long unsigned int)grp->len,
+                    (long long unsigned int)grp->size
+                  );
         }
         return;
     }
@@ -730,7 +730,7 @@ static void build_checksums(file_group *grp)
                    building checksums. So about 300% too many checksums where build for nothiing.
 
                    Short version: Never pass local variables (or stackallocated buffers) in general to threads.
-                */
+                   */
                 file_group * sub_grp = malloc(sizeof(file_group));
                 sub_grp->grp_stp = lst;
                 sub_grp->grp_enp = ptr->next;
@@ -1006,7 +1006,7 @@ static long cmp_sort_dupID(lint_t* a, lint_t* b)
 void start_processing(lint_t *b)
 {
     file_group *fglist = NULL,
-                emptylist;
+               emptylist;
 
     char lintbuf[128];
     char suspbuf[128];
@@ -1014,7 +1014,7 @@ void start_processing(lint_t *b)
             lint         = 0,
             spelen       = 0,
             rem_counter  = 0,
-	    suspicious   = 0,
+            suspicious   = 0,
             path_doubles = 0;
 
     if(set->namecluster)
@@ -1078,8 +1078,8 @@ void start_processing(lint_t *b)
                 fglist[spelen].size    = gsize;
 
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
-		if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
-                path_doubles += rm_double_paths(&fglist[spelen]);
+                if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
+                    path_doubles += rm_double_paths(&fglist[spelen]);
 
 
                 /* number_of_groups++ */
@@ -1089,24 +1089,23 @@ void start_processing(lint_t *b)
             {
                 lint_t *ptr;
                 bool flag = 42;
-		bool e_file_printed = false;
+                bool e_file_printed = false;
 
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
 
-		if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
-                rm_double_paths(&emptylist);
+                if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
+                    rm_double_paths(&emptylist);
 
                 /* sort by lint_ID (== dupID) */
                 ptr = emptylist.grp_stp;
                 ptr = list_sort(ptr,cmp_sort_dupID);
-	
+
                 emptylist.grp_stp = ptr;
                 emptylist.len = 0;
 
                 while(ptr)
                 {
-
                     if(flag != ptr->dupflag)
                     {
                         if(set->verbosity > 1)
@@ -1117,7 +1116,7 @@ void start_processing(lint_t *b)
                         {
                             error("\n#");
                         }
-			/* -- */
+                        /* -- */
                         if(ptr->dupflag == TYPE_BLNK)
                         {
                             error(" Bad link(s): \n");
@@ -1145,7 +1144,7 @@ void start_processing(lint_t *b)
                         else if(ptr->fsize == 0 && !e_file_printed)
                         {
                             error(" Empty file(s): \n");
-			    e_file_printed = true;
+                            e_file_printed = true;
                         }
                         flag = ptr->dupflag;
                     }
@@ -1248,20 +1247,20 @@ void start_processing(lint_t *b)
 
     if(get_dupcounter() == 0)
     {
-	error("\r                    ");
+        error("\r                    ");
     }
     else
     {
-	error("\n");
+        error("\n");
     }
-    
+
 
     /* Gather the total size of removeable data */
     for(ii=0; ii < spelen; ii++)
     {
         if(fglist[ii].grp_stp != NULL )
         {
-	    lint += fglist[ii].size;
+            lint += fglist[ii].size;
         }
     }
 
@@ -1275,7 +1274,7 @@ void start_processing(lint_t *b)
     suspicious = emptylist.len + dbase_ctr;
     if(suspicious > 1)
     {
-    	warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
+        warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
     }
     warning("\n");
 
@@ -1286,7 +1285,7 @@ void start_processing(lint_t *b)
 
     if((set->mode == 1 || set->mode == 2) && get_dupcounter())
     {
-    	warning(RED"=> "NCO"Nothing removed yet!\n");
+        warning(RED"=> "NCO"Nothing removed yet!\n");
     }
     warning("\n");
 
@@ -1295,10 +1294,10 @@ void start_processing(lint_t *b)
         info("Now calculation finished.. now writing end of log...\n");
         //info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%llu"NCO" replicas + "RED"%llu"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
         info(RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",get_totalfiles(), get_dupcounter());
-    	if(!iAbort)
-    	{
+        if(!iAbort)
+        {
             info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
-	}
+        }
     }
 
     if(get_logstream() == NULL && set->output)
