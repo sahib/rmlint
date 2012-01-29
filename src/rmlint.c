@@ -272,7 +272,8 @@ static void print_help(void)
     fprintf(stderr,"\t-z --limit\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")");
     fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
             "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
-            "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes.)\n"
+            "\t-k --emptyfiles\t\tSearch for empty files (Default: Yes, use -K to disable)\n"
+            "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes, use -Y to disable)\n"
             "\t-x --oldtmp <sec>\tSearch for files with a '~'/'.swp' suffix being min. <sec> seconds older than the corresponding file without the '~'/'.swp'; (Default: 60)\n");
     fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
