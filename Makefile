@@ -57,7 +57,7 @@ EXECUTABLE=rmlint
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE):  $(OBJECTS)
-	     @$(CC) $(LDFLAGS) $(OBJECTS) -o $@ 
+		 @$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 ifdef DEBUG
 	     @$(ECHO) "=> Building debug target."
 else

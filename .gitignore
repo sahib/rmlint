@@ -1,0 +1,6 @@
+*.o
+*.swp
+*.log
+*.status
+rmlint
+rmlint.sh
