@@ -24,8 +24,11 @@ CC=gcc
 #Heavy Warnlevel 
 WARN=-Wall -pedantic -std=c99 
 
-#Quite heavy optimization 
-OPTI=-march=native -Os -s -finline-functions
+ifeq ($(CC),gcc)
+  OPTI=-march=native -O0 -s -finline-functions
+else
+  OPTI=-march=native -Os -s -finline-functions
+endif
 
 #Link with google's malloc
 TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a -D_THREAD_SAFE
