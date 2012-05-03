@@ -25,7 +25,7 @@ CC=gcc
 WARN=-Wall -pedantic -std=c99 
 
 ifeq ($(CC),gcc)
-  OPTI=-march=native -O0 -s -finline-functions
+  OPTI=-march=native -Os -s -finline-functions
 else
   OPTI=-march=native -Os -s -finline-functions
 endif
