@@ -28,13 +28,11 @@ int main(int argc, char **argv)
     /* Init */
     rmlint_settings mySettings;
     rmlint_set_default_settings(&mySettings);
-
     /* Parse commandline */
     if(rmlint_parse_arguments(argc,argv,&mySettings) == 0)
     {
         return -1;
     }
-
     /* do all the real work */
     return rmlint_main();
 }

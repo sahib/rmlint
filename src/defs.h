@@ -38,15 +38,15 @@
 #endif
 
 #if !USE_COLOR
- #define RED ""
- #define YEL ""
- #define NCO ""
- #define GRE ""
- #define BLU ""
+#define RED ""
+#define YEL ""
+#define NCO ""
+#define GRE ""
+#define BLU ""
 #endif
 
 /* not supposed to be changed */
-#define ABS(a)	(((a) < 0) ? -(a) : (a))
+#define ABS(a)  (((a) < 0) ? -(a) : (a))
 #define MD5_LEN 16
 
 /* Which sheduler to take
@@ -65,15 +65,15 @@
 #define MD5_MTHREAD_SIZE   2097152   /* If size of grp > chekcksum are built in parallel.   2MB */
 #define MD5_IO_BLOCKSIZE   1048576   /* Block size in what IO buffers are read. Default:    1MB */
 #define MD5_FP_MAX_RSZ     8192      /* The maximal size read in for fingerprints. Default   4K */
-#define MD5_FP_PERCENT     10 	     /* Percent of a file read in for fingerprint. Default  10% */
+#define MD5_FP_PERCENT     10        /* Percent of a file read in for fingerprint. Default  10% */
 #define MD5_SERIAL_IO      1         /* Align threads before doing md5 related IO. Default:   1 */
 #define MD5_USE_MMAP       -1        /* Use mmap() instead of fread() EXPERIMENTAL! Use = risk! */
-				     /*
-					0 = fread only
-					1 = mmap only
-				       -1 = autochoice (which is best mostly) 
-				      */
-		
+/*
+0 = fread only
+1 = mmap only
+      -1 = autochoice (which is best mostly)
+     */
+
 /* Do not use O_DIRECT! read() will do weird things */
 /*
 From man 2 open:
@@ -84,9 +84,9 @@ From man 2 open:
 
 */
 #ifdef O_CLOEXEC
-  #define MD5_FILE_FLAGS  (O_RDONLY | O_CLOEXEC)
+#define MD5_FILE_FLAGS  (O_RDONLY | O_CLOEXEC)
 #else
-  #define MD5_FILE_FLAGS  (O_RDONLY)
+#define MD5_FILE_FLAGS  (O_RDONLY)
 #endif
 
 /* ------------------------------------------------------------- */
@@ -130,11 +130,16 @@ typedef char bool;
 /* ------------------------------------------------------------- */
 
 /* types of lint */
-#define TYPE_BLNK 3
-#define TYPE_OTMP 4
-#define TYPE_EDIR 5
-#define TYPE_JNK_DIRNAME  6
-#define TYPE_JNK_FILENAME 7
-#define TYPE_NBIN 8
-#define TYPE_BASE 9
+enum {
+    TYPE_BLNK = 3,
+    TYPE_OTMP,
+    TYPE_EDIR,
+    TYPE_JNK_DIRNAME,
+    TYPE_JNK_FILENAME,
+    TYPE_NBIN,
+    TYPE_BASE,
+    TYPE_BADUID,
+    TYPE_BADGID
+} LintType;
+
 #endif

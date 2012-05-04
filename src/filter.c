@@ -39,10 +39,20 @@
 #include "filter.h"
 #include "mode.h"
 #include "md5.h"
+#include "useridcheck.h"
 
 /* global vars, but initialized by filt_c_init() */
 nuint_t dircount, dbase_ctr;
 bool iAbort, dir_done, db_done;
+
+UserGroupList ** global_ug_list = NULL;
+
+/* ------------------------------------------------------------- */
+
+void delete_userlist(void)
+{
+    userlist_destroy(global_ug_list);
+}
 
 /* ------------------------------------------------------------- */
 
@@ -53,6 +63,9 @@ void filt_c_init(void)
     iAbort   = false;
     dir_done = false;
     db_done  = false;
+
+    global_ug_list = userlist_new();
+    atexit(delete_userlist);
 }
 
 /* ------------------------------------------------------------- */
@@ -65,31 +78,31 @@ static void interrupt(int p)
 {
     switch(p)
     {
-        case SIGINT:
-            if(iAbort == 2)
-            {
-                die(-1);
-            }
-            else if(db_done)
-            {
-                iAbort = 2;
-                warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
-            }
-            else
-            {
-                iAbort = 1;
-                db_done = true;
-            }
-            break;
-        case SIGFPE  :
-        case SIGABRT :
-            error(RED"FATAL: "NCO"Aborting due to internal error!\n");
-            error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
+    case SIGINT:
+        if(iAbort == 2)
+        {
             die(-1);
-        case SIGSEGV :
-            error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
-            error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-            die(-1);
+        }
+        else if(db_done)
+        {
+            iAbort = 2;
+            warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
+        }
+        else
+        {
+            iAbort = 1;
+            db_done = true;
+        }
+        break;
+    case SIGFPE  :
+    case SIGABRT :
+        error(RED"FATAL: "NCO"Aborting due to internal error!\n");
+        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
+        die(-1);
+    case SIGSEGV :
+        error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
+        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
+        die(-1);
     }
 }
 
@@ -103,7 +116,6 @@ static int junkinstr(const char *str)
     {
         return 0;
     }
-
     for(; set->junk_chars[i]; i++)
     {
         for(j=0; str[j]; j++)
@@ -127,48 +139,38 @@ static int check_binary_to_be_stripped(const char *path)
     int bytes = 0;
     char dummy_buf = 0,
          * cmd = NULL,
-         * escaped = NULL;
-
+           * escaped = NULL;
     if(path == NULL)
     {
         return 0;
     }
-
     /* Escape ' so the shell does not get confused */
     escaped = strsubs(path,"'","'\"'\"'");
-
     /* The command we're using */
     cmd = strdup_printf("file '%s' | grep 'not stripped'", escaped);
-
     if(escaped)
     {
         free(escaped);
     }
-
     /* Pipe  */
     pipe = popen(cmd,"re");
     if(pipe == NULL)
     {
         return 0;
     }
-
     /* If one byte can be read, the file is a nonstripped binary */
     bytes = fread(&dummy_buf, sizeof(char), 1, pipe);
-
     /* close pipe */
     pclose(pipe);
-
     /* clean up */
     if(cmd)
     {
         free(cmd);
     }
-
     if(bytes)
     {
         return 1;
     }
-
     /* not a nsb  */
     return 0;
 }
@@ -184,7 +186,6 @@ int regfilter(const char* input, const char *pattern)
     int status;
     int flags = REG_EXTENDED|REG_NOSUB;
     const char *string;
-
     if(!pattern)
     {
         return 0;
@@ -192,24 +193,20 @@ int regfilter(const char* input, const char *pattern)
     else
     {
         regex_t re;
-
         /* Only grep basename */
         string = basename(input);
-
         /* forget about case by default */
         if(!set->casematch)
         {
             flags |= REG_ICASE;
         }
-
         /* compile pattern */
         if(regcomp(&re, pattern, flags))
         {
             return 0;
         }
-
         /* do the actual work */
-        if( (status = regexec(&re, string, (size_t)0, NULL, 0)) != 0)
+        if((status = regexec(&re, string, (size_t)0, NULL, 0)) != 0)
         {
             /* catch errors */
             if(status != REG_NOMATCH)
@@ -219,7 +216,6 @@ int regfilter(const char* input, const char *pattern)
                 warning(YEL"WARN: "NCO" Invalid regex pattern: '%s'\n", err_buff);
             }
         }
-
         /* finalize */
         regfree(&re);
         return (set->invmatch) ? !(status) : (status);
@@ -246,7 +242,6 @@ int regfilter(const char* input, const char *pattern)
  */
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
-
     if(set->depth && ftwbuf->level > set->depth)
     {
         /* Do not recurse in this subdir */
@@ -271,7 +266,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 return FTW_CONTINUE;
             }
         }
-        if(flag == FTW_F && 
+        if(flag == FTW_F &&
                 (set->minsize <= ptr->st_size || set->minsize < 0) &&
                 (set->maxsize >= ptr->st_size || set->maxsize < 0))
         {
@@ -285,6 +280,22 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 if(set->collide)
                 {
                     return FTW_CONTINUE;
+                }
+            }
+            if(set->findbadids)
+            {
+                bool has_gid, has_uid;
+                if(userlist_contains(global_ug_list,ptr->st_uid,ptr->st_gid,&has_uid,&has_gid) == false)
+                {
+                    if(has_gid == false)
+                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADGID);
+                    if(has_uid == false)
+                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADUID);
+
+                    if(set->collide)
+                    {
+                        return FTW_CONTINUE;
+                    }
                 }
             }
             if(set->nonstripped)
@@ -306,7 +317,6 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 {
                     char *cpy = NULL;
                     struct stat stat_buf;
-
                     if(path[len - 1] == '~')
                     {
                         cpy = strndup(path,len-1);
@@ -321,7 +331,6 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                         cpy = strdup_printf("%s/%s",front,p+2);
                         cpy[strlen(cpy)-4] = 0;
                     }
-
                     if(!stat(cpy, &stat_buf))
                     {
                         if(ptr->st_mtime - stat_buf.st_mtime >= set->oldtmpdata)
@@ -364,7 +373,6 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
         }
         if(flag == FTW_D)
         {
-
             if(regfilter(path, set->dpattern) && dir_done)
             {
                 return FTW_SKIP_SUBTREE;
@@ -382,14 +390,12 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 int dir_counter = 0;
                 DIR *dir_e = opendir(path);
                 struct dirent *dir_p = NULL;
-
                 if(dir_e)
                 {
                     while((dir_p=readdir(dir_e)) && dir_counter < 2)
                     {
                         dir_counter++;
                     }
-
                     closedir(dir_e);
                     if(dir_counter == 2 && dir_p == NULL)
                     {
@@ -398,7 +404,6 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     }
                 }
             }
-
             if(set->ignore_hidden && path)
             {
                 char *base = basename(path);
@@ -424,26 +429,21 @@ int recurse_dir(const char *path)
     {
         flags |= FTW_PHYS;
     }
-
     if(USE_DEPTH_FIRST)
     {
         flags |= FTW_DEPTH;
     }
-
     if(set->samepart)
     {
         flags |= FTW_MOUNT;
     }
-
     /* Handle SIGs */
     signal(SIGINT,  interrupt);
     signal(SIGSEGV, interrupt);
     signal(SIGFPE,  interrupt);
     signal(SIGABRT, interrupt);
-
     /* (Re)-Init */
     dir_done = false;
-
     /* Start recurse */
     if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags)))
     {
@@ -460,7 +460,6 @@ int recurse_dir(const char *path)
             die(0);
         }
     }
-
     return dircount;
 }
 
@@ -473,25 +472,21 @@ static nuint_t rm_double_paths(file_group *fp)
 {
     lint_t *b = (fp) ? fp->grp_stp : NULL;
     nuint_t c = 0;
-
     /* This compares inode and devID */
     /* This a little bruteforce, but works just fine :-) */
-
     if(b)
     {
         while(b->next)
         {
-            if( (b->node == b->next->node) &&
-                    (b->dev  == b->next->dev )  )
+            if((b->node == b->next->node) &&
+                    (b->dev  == b->next->dev))
             {
                 /* adjust grp */
                 lint_t *tmp = b;
                 fp->size -= b->fsize;
                 fp->len--;
-
                 /* Remove this one  */
                 b = list_remove(b);
-
                 /* Update group info */
                 if(tmp == fp->grp_stp)
                 {
@@ -501,7 +496,6 @@ static nuint_t rm_double_paths(file_group *fp)
                 {
                     fp->grp_enp = b;
                 }
-
                 c++;
             }
             else
@@ -539,7 +533,6 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
             }
         }
     }
-
     /* Also compare the bytes which were read 'on the fly' */
     for(i=0; i<BYTE_MIDDLE_SIZE; i++)
     {
@@ -548,7 +541,6 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
             return 0;
         }
     }
-
     /* Let it pass! */
     return 1;
 }
@@ -560,22 +552,17 @@ static nuint_t group_filter(file_group *fp)
 {
     lint_t *p = fp->grp_stp;
     lint_t *i,*j;
-
     nuint_t remove_count = 0;
     nuint_t fp_sz;
-
     /* Prevent crashes (should not happen too often) */
     if(!fp || fp->grp_stp == NULL)
     {
         return 0;
     }
-
     /* The size read in to build a fingerprint */
     fp_sz = MD5_FPSIZE_FORM(fp->grp_stp->fsize);
-
     /* Clamp it to some maximum (4KB) */
     fp_sz = (fp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : fp_sz;
-
     /* Calc fingerprints  */
     /* Note: this is already multithreaded, because large groups get their own thread */
     /* No need for additional threading code here */
@@ -585,13 +572,10 @@ static nuint_t group_filter(file_group *fp)
         md5_fingerprint(p, fp_sz);
         p=p->next;
     }
-
     /* Compare each other */
     i = fp->grp_stp;
-
     while(i)
     {
-
         /* Useful debugging stuff: */
         /*
            int z = 0;
@@ -605,7 +589,6 @@ static nuint_t group_filter(file_group *fp)
            }
            fflush(stdout);
            */
-
         if(i->filter)
         {
             j=i->next;
@@ -627,21 +610,16 @@ static nuint_t group_filter(file_group *fp)
                 lint_t *tmp = i;
                 fp->len--;
                 fp->size -= i->fsize;
-
-
                 i = list_remove(i);
-
                 /* Update start / end */
                 if(tmp == fp->grp_stp)
                 {
                     fp->grp_stp = i;
                 }
-
                 if(tmp == fp->grp_enp)
                 {
                     fp->grp_enp = i;
                 }
-
                 remove_count++;
                 continue;
             }
@@ -653,7 +631,6 @@ static nuint_t group_filter(file_group *fp)
         }
         i=i->next;
     }
-
     return remove_count;
 }
 
@@ -664,21 +641,18 @@ static void *cksum_cb(void * vp)
 {
     file_group *gp = vp;
     lint_t *file = gp->grp_stp;
-
     /* Iterate over all files in group */
-    while( file && file != gp->grp_enp )
+    while(file && file != gp->grp_enp)
     {
         /* See md5.c */
         md5_file(file);
         file=file->next;
     }
-
     /* free group, for each thread */
     if(gp)
     {
         free(gp);
     }
-
     /* same as pthread_exit() */
     return NULL;
 }
@@ -691,14 +665,13 @@ static void build_checksums(file_group *grp)
     {
         if(grp->grp_stp==NULL)
         {
-            printf("WARN: Empty group received: (end_pointer: %s) len: %llu bsize: %llu\n",(grp->grp_enp) ? grp->grp_enp->path : "null",
-                    (long long unsigned int)grp->len,
-                    (long long unsigned int)grp->size
+            printf("WARN: Empty group received: (end_pointer: %s) len: %lu bsize: %lu\n",(grp->grp_enp) ? grp->grp_enp->path : "null",
+                   (long unsigned)grp->len,
+                   (long unsigned)grp->size
                   );
         }
         return;
     }
-
     if(set->threads == 1 ||  grp->size < (2 * MD5_MTHREAD_SIZE))
     {
         /* Just loop through this group and built the checksum */
@@ -712,12 +685,10 @@ static void build_checksums(file_group *grp)
         nuint_t  sz = 0;
         lint_t * ptr = grp->grp_stp;
         lint_t * lst = grp->grp_stp;
-
         /* The refereces to all threads */
-        pthread_t * thread_queue = malloc( (grp->size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t));
+        pthread_t * thread_queue = malloc((grp->size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t));
         int thread_counter = 0, ii = 0;
-
-        while( ptr )
+        while(ptr)
         {
             sz += ptr->fsize;
             if(sz >= MD5_MTHREAD_SIZE || ptr->next == NULL)
@@ -735,12 +706,10 @@ static void build_checksums(file_group *grp)
                 sub_grp->grp_stp = lst;
                 sub_grp->grp_enp = ptr->next;
                 sub_grp->size = sz;
-
                 /* Update */
                 ptr = ptr->next;
                 lst = ptr;
                 sz  = 0;
-
                 /* Now create the thread */
                 if(pthread_create(&thread_queue[thread_counter++], NULL, cksum_cb, sub_grp))
                 {
@@ -752,7 +721,6 @@ static void build_checksums(file_group *grp)
                 ptr = ptr->next;
             }
         }
-
         /* Make sure all threads are joined */
         for(ii = 0; ii < thread_counter; ii++)
         {
@@ -761,7 +729,6 @@ static void build_checksums(file_group *grp)
                 perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
             }
         }
-
         /* free */
         if(thread_queue)
         {
@@ -781,10 +748,8 @@ static void* sheduler_cb(void *gfp)
     {
         return NULL;
     }
-
     /* do the fingerprint filter */
     group_filter(group);
-
     /* Kick empty groups, or groups with 1 elem */
     if(group->grp_stp == NULL || group->len <= 1)
     {
@@ -793,10 +758,8 @@ static void* sheduler_cb(void *gfp)
         group->grp_enp = NULL;
         return NULL;
     }
-
     /* build checksum for the rest */
     build_checksums(group);
-
     /* Finalize and free sublist */
     if(findmatches(group))
     {
@@ -806,7 +769,6 @@ static void* sheduler_cb(void *gfp)
         group->grp_enp = NULL;
         die(0);
     }
-
     list_clear(group->grp_stp);
     return NULL;
 }
@@ -833,7 +795,6 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
 {
     nuint_t ii;
     pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
-
     if(set->threads == 1)
     {
         for(ii = 0; ii < nlistlen && !iAbort; ii++)
@@ -847,28 +808,24 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
         int nrun = 0;
         for(ii = 0; ii < nlistlen && !iAbort; ii++)
         {
-
             if(fp[ii].size > THREAD_SHEDULER_MTLIMIT) /* Group exceeds limit */
             {
                 if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii]))
                 {
                     perror(RED"ERROR: "NCO"pthread_create in sheduler()");
                 }
-
                 if(nrun >= set->threads-1)
                 {
                     sheduler_jointhreads(tt, nrun + 1);
                     nrun = 0;
                     continue;
                 }
-
                 nrun++;
             }
             else /* run in fg */
             {
                 sheduler_cb(&fp[ii]);
             }
-
         }
         sheduler_jointhreads(tt, nrun);
     }
@@ -891,7 +848,6 @@ static int cmp_grplist_bynodes(const void *a,const void *b)
         {
             return ap->grp_stp->node - bp->grp_stp->node;
         }
-
     }
     return -1;
 }
@@ -925,9 +881,7 @@ static void find_double_bases(lint_t *starting)
 {
     lint_t *i = starting;
     lint_t *j = NULL;
-
     bool phead = true;
-
     while(i)
     {
         if(i->dupflag != TYPE_BASE)
@@ -941,13 +895,11 @@ static void find_double_bases(lint_t *starting)
                 {
                     lint_t *x = j;
                     char *tmp2 = canonicalize_file_name(j->path);
-
                     if(phead)
                     {
                         error("\n%s#"NCO" Double basename(s):\n", (set->verbosity > 1) ? GRE : NCO);
                         phead = false;
                     }
-
                     if(!pr)
                     {
                         char * tmp = canonicalize_file_name(i->path);
@@ -955,12 +907,10 @@ static void find_double_bases(lint_t *starting)
                         error("   %sls"NCO" %s\n", (set->verbosity!=1) ? GRE : "", tmp,i->fsize);
                         write_to_log(i,false,NULL);
                         pr = true;
-
                         if(tmp)
                         {
                             free(tmp);
                         }
-
                         /* At this point files with same inode and device are NOT handled yet.
                            Therefore this foolish, but well working approach is made.
                            (So it works also with more than one dir in the cmd)  */
@@ -970,11 +920,9 @@ static void find_double_bases(lint_t *starting)
                             {
                                 x->dupflag = TYPE_BASE;
                             }
-
                             x=x->next;
                         }
                     }
-
                     j->dupflag = TYPE_BASE;
                     error("   %sls"NCO" %s\n",(set->verbosity!=1) ? GRE : "",tmp2);
                     dbase_ctr++;
@@ -1006,8 +954,7 @@ static long cmp_sort_dupID(lint_t* a, lint_t* b)
 void start_processing(lint_t *b)
 {
     file_group *fglist = NULL,
-               emptylist;
-
+                emptylist;
     char lintbuf[128];
     char suspbuf[128];
     nuint_t ii           = 0,
@@ -1016,7 +963,6 @@ void start_processing(lint_t *b)
             rem_counter  = 0,
             suspicious   = 0,
             path_doubles = 0;
-
     if(set->namecluster)
     {
         find_double_bases(b);
@@ -1024,27 +970,22 @@ void start_processing(lint_t *b)
     }
     emptylist.len  = 1;
     emptylist.size = 0;
-
     /* Split into groups, based by size */
     while(b)
     {
         lint_t *q = b, *prev = NULL;
         nuint_t glen = 0, gsize = 0;
-
         while(b && q->fsize == b->fsize)
         {
             prev = b;
-
             if(b->dupflag == false)
             {
                 b->dupflag = true;
             }
-
             gsize += b->fsize;
             glen++;
             b = b->next;
         }
-
         if(glen == 1)
         {
             /* This is only a single element        */
@@ -1064,43 +1005,35 @@ void start_processing(lint_t *b)
                 prev->next = NULL;
                 b->last = NULL;
             }
-
             if(q->fsize != 0)
             {
                 /* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
                 q = list_sort(q,cmp_nd);
-
                 /* Add this group to the list array */
                 fglist = realloc(fglist, (spelen+1) * sizeof(file_group));
                 fglist[spelen].grp_stp = q;
                 fglist[spelen].grp_enp = prev;
                 fglist[spelen].len     = glen;
                 fglist[spelen].size    = gsize;
-
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
                 if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
                     path_doubles += rm_double_paths(&fglist[spelen]);
-
-
                 /* number_of_groups++ */
                 spelen++;
             }
             else /* this is some other sort of lint (indicated by a size of 0) */
             {
                 lint_t *ptr;
-                bool flag = 42;
+                char flag = 42;
                 bool e_file_printed = false;
-
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
-
                 if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
                     rm_double_paths(&emptylist);
 
                 /* sort by lint_ID (== dupID) */
                 ptr = emptylist.grp_stp;
                 ptr = list_sort(ptr,cmp_sort_dupID);
-
                 emptylist.grp_stp = ptr;
                 emptylist.len = 0;
 
@@ -1141,19 +1074,25 @@ void start_processing(lint_t *b)
                         {
                             error(" Non stripped binarie(s): \n");
                         }
-                        else if(ptr->fsize == 0 && !e_file_printed)
+                        else if(ptr->dupflag == TYPE_BADUID)
+                        {
+                            error(" Bad UID: \n");
+                        }
+                        else if(ptr->dupflag == TYPE_BADGID)
+                        {
+                            error(" Bad GID: \n");
+                        }
+                        else if(ptr->fsize == 0 && e_file_printed == false)
                         {
                             error(" Empty file(s): \n");
                             e_file_printed = true;
                         }
                         flag = ptr->dupflag;
                     }
-
                     if(set->verbosity > 1)
                     {
                         error(GRE);
                     }
-
                     if(ptr->dupflag == TYPE_BLNK)
                     {
                         error("   rm");
@@ -1178,23 +1117,27 @@ void start_processing(lint_t *b)
                     {
                         error("   strip -s");
                     }
+                    else if(ptr->dupflag == TYPE_BADUID)
+                    {
+                        error("   ls");
+                    }
+                    else if(ptr->dupflag == TYPE_BADGID)
+                    {
+                        error("   ls");
+                    }
                     else if(ptr->fsize   == 0)
                     {
                         error("   rm");
                     }
-
                     if(set->verbosity > 1)
                     {
                         error(NCO);
                     }
-
                     error(" %s\n",ptr->path);
-
                     if(set->output)
                     {
                         write_to_log(ptr, false,NULL);
                     }
-
                     emptylist.size += ptr->fsize;
                     ptr = list_remove(ptr);
                     emptylist.len++;
@@ -1202,17 +1145,13 @@ void start_processing(lint_t *b)
             }
         }
     }
-
     error("\n");
-
     if(set->searchdup == 0)
     {
         int i = 0;
-
         /* rmlint was originally supposed to find duplicates only
            So we have to free list that whould have been used for
            dup search before dieing */
-
         for(; i < spelen; i++)
         {
             list_clear(fglist[i].grp_stp);
@@ -1232,19 +1171,15 @@ void start_processing(lint_t *b)
     }
     info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
     info("Now sorting groups based on their location on the drive...");
-
     /* Now make sure groups are sorted by their location on the disk*/
     qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
-
-    info(" done. \nNow doing fingerprints and full checksums.%c\n",set->verbosity > 4 ? '.' : '\n' );
+    info(" done. \nNow doing fingerprints and full checksums.%c\n",set->verbosity > 4 ? '.' : '\n');
     db_done = true;
-
     error("%s Duplicate(s):",(set->verbosity > 1) ? YEL"#"NCO : "#");
     /* Groups are splitted, now give it to the sheduler
      * The sheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
     start_sheduler(fglist, spelen);
-
     if(get_dupcounter() == 0)
     {
         error("\r                    ");
@@ -1253,53 +1188,43 @@ void start_processing(lint_t *b)
     {
         error("\n");
     }
-
-
     /* Gather the total size of removeable data */
     for(ii=0; ii < spelen; ii++)
     {
-        if(fglist[ii].grp_stp != NULL )
+        if(fglist[ii].grp_stp != NULL)
         {
             lint += fglist[ii].size;
         }
     }
-
     /* now process the ouptput we gonna print */
     size_to_human_readable(lint, lintbuf, 127 /* bufsize */);
-    size_to_human_readable(emptylist.size, suspbuf, 127 );
-
+    size_to_human_readable(emptylist.size, suspbuf, 127);
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
-
     suspicious = emptylist.len + dbase_ctr;
     if(suspicious > 1)
     {
         warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
     }
     warning("\n");
-
     if(!iAbort)
     {
-        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, lint );
+        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, lint);
     }
-
     if((set->mode == 1 || set->mode == 2) && get_dupcounter())
     {
         warning(RED"=> "NCO"Nothing removed yet!\n");
     }
     warning("\n");
-
     if(set->verbosity == 6)
     {
         info("Now calculation finished.. now writing end of log...\n");
-        //info(RED"=> "NCO"Searched through "GRE"%ld"NCO" files, and found "RED"%llu"NCO" replicas + "RED"%llu"NCO" other suspicious files.\n",get_totalfiles(),get_dupcounter(),emptylist.len + dbase_ctr);
         info(RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",get_totalfiles(), get_dupcounter());
         if(!iAbort)
         {
             info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
         }
     }
-
     if(get_logstream() == NULL && set->output)
     {
         error(RED"\nERROR: "NCO);
@@ -1312,7 +1237,6 @@ void start_processing(lint_t *b)
         warning("A log has been written to "BLU"%s.log"NCO".\n", set->output);
         warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set->output);
     }
-
     /* End of actual program. Now do some finalizing */
     if(fglist)
     {

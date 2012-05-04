@@ -38,6 +38,7 @@ typedef struct
     char invmatch;
     char namecluster;
     char doldtmp;
+    char findbadids;
     char searchdup;
     char findemptydirs;
     char nonstripped;
@@ -73,7 +74,7 @@ void print(lint_t *begin);
 void info(const char* format, ...);
 void error(const char* format, ...);
 void warning(const char* format, ...);
-char *strdup_printf (const char *format, ...);
+char *strdup_printf(const char *format, ...);
 int  systemf(const char* format, ...);
 int  get_cpindex(void);
 nuint_t get_totalfiles(void);

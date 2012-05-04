@@ -22,7 +22,7 @@ MKDIR=mkdir -p
 CC=gcc
 
 #Heavy Warnlevel 
-WARN=-Wall -pedantic -std=c99 
+WARN=-Wall -pedantic
 
 ifeq ($(CC),gcc)
   OPTI=-march=native -Os -s -finline-functions
@@ -30,15 +30,10 @@ else
   OPTI=-march=native -Os -s -finline-functions
 endif
 
-#Link with google's malloc
-TCMALLOC=-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -L tcmalloc/libtcmalloc_minimal.a -D_THREAD_SAFE
-
-#also use -pipe 
-
 ifdef DEBUG
-  CFLAGS=-c -pipe -ggdb3 $(WARN) $(TCMALLOC) -D_FILE_OFFSET_BITS=64
+  CFLAGS=-c -pipe -ggdb3 $(WARN) -D_FILE_OFFSET_BITS=64
 else
-  CFLAGS=-c -pipe $(OPTI) $(WARN) $(TCMALLOC) -D_FILE_OFFSET_BITS=64
+  CFLAGS=-c -pipe $(OPTI) $(WARN) -D_FILE_OFFSET_BITS=64
 endif
 
 #Link flags 
@@ -46,6 +41,7 @@ LDFLAGS=-lpthread -lm
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \
+	$(SOURCEDIR)/useridcheck.c \
 	$(SOURCEDIR)/filter.c \
 	$(SOURCEDIR)/mode.c \
 	$(SOURCEDIR)/list.c \

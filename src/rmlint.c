@@ -88,17 +88,16 @@ nuint_t get_totalfiles(void)
 /* ------------------------------------------------------------- */
 
 /* Don't forget to free retvalue */
-char *strdup_printf (const char *format, ...)
+char *strdup_printf(const char *format, ...)
 {
     va_list arg;
     char *tmp;
-
-    va_start (arg, format);
-    if(vasprintf (&tmp, format, arg) == -1)
+    va_start(arg, format);
+    if(vasprintf(&tmp, format, arg) == -1)
     {
         return NULL;
     }
-    va_end (arg);
+    va_end(arg);
     return tmp;
 }
 
@@ -123,17 +122,14 @@ void msg_macro_print(FILE * stream, const char * string)
     if(stream && string)
     {
         char * tmp = strdup(string);
-
         if(!set->color)
         {
             tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
         }
-
         if(stream != NULL && tmp != NULL)
         {
             fprintf(stream,"%s",tmp);
             fflush(stream);
-
             free(tmp);
             tmp = NULL;
         }
@@ -148,19 +144,15 @@ void error(const char* format, ...)
     if(set->verbosity > 0 && set->verbosity < 4)
     {
         char * tmp;
-
-
         va_list args;
-        va_start (args, format);
-        if(vasprintf (&tmp, format, args) == -1)
+        va_start(args, format);
+        if(vasprintf(&tmp, format, args) == -1)
         {
             return;
         }
-
         /* print, respect -B */
         msg_macro_print(stdout,tmp);
-        va_end (args);
-
+        va_end(args);
         if(tmp)
         {
             free(tmp);
@@ -175,16 +167,14 @@ void warning(const char* format, ...)
     if(set->verbosity > 1 && set->verbosity < 4)
     {
         char * tmp;
-
         va_list args;
-        va_start (args, format);
-        if(vasprintf (&tmp, format, args) == -1)
+        va_start(args, format);
+        if(vasprintf(&tmp, format, args) == -1)
         {
             return;
         }
         msg_macro_print(stderr,tmp);
-        va_end (args);
-
+        va_end(args);
         if(tmp)
         {
             free(tmp);
@@ -199,16 +189,14 @@ void info(const char* format, ...)
     if((set->verbosity > 2 && set->verbosity < 4) || set->verbosity == 6)
     {
         char * tmp;
-
         va_list args;
-        va_start (args, format);
-        if(vasprintf (&tmp, format, args) == -1)
+        va_start(args, format);
+        if(vasprintf(&tmp, format, args) == -1)
         {
             return;
         }
         msg_macro_print(stdout,tmp);
-        va_end (args);
-
+        va_end(args);
         if(tmp)
         {
             free(tmp);
@@ -227,13 +215,10 @@ int systemf(const char* format, ...)
     va_list arg;
     char *cmd;
     int ret = 0;
-
-    va_start (arg, format);
-    if(vasprintf (&cmd, format, arg) == -1)
+    va_start(arg, format);
+    if(vasprintf(&cmd, format, arg) == -1)
         return -1;
-
-    va_end (arg);
-
+    va_end(arg);
     /* Now execute a shell command */
     if((ret = system(cmd)) == -1)
     {
@@ -251,7 +236,7 @@ static void print_version(bool exit)
     fprintf(stderr, "Version 1.0.6b compiled: [%s]-[%s]\n",__DATE__,__TIME__);
     fprintf(stderr, "Author Christopher Pahl; Report bugs to <sahib@online.de>\n");
     fprintf(stderr, "or use the Issuetracker at https://github.com/sahib/rmlint/issues\n");
-    if( exit )
+    if(exit)
     {
         die(0);
     }
@@ -336,7 +321,6 @@ static void print_help(void)
 void rmlint_set_default_settings(rmlint_settings *pset)
 {
     set = pset;
-
     pset->mode      =  1;       /* list only    */
     pset->casematch     =  0;       /* Insensitive  */
     pset->invmatch  =  0;       /* Normal mode  */
@@ -361,11 +345,11 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->nonstripped   = 0;
     pset->searchdup     = 1;
     pset->color         = 1;
+    pset->findbadids    = 1;
     pset->output        = (char*)script_name;
     pset->minsize       = -1;
     pset->maxsize       = -1;
     pset->listemptyfiles = 1;
-
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
      * investigated to be replicas of other files */
@@ -384,7 +368,6 @@ void parse_limit_sizes(char * limit_string)
         {
             semicol[0] = '\0';
             semicol++;
-
             set->maxsize = strtol(semicol,NULL,10);
         }
         set->minsize = strtol(ptr,NULL,10);
@@ -410,9 +393,8 @@ int check_if_preferred(const char * dir)
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 {
     int c,lp=0;
-
     rmlint_init();
-    while (1)
+    while(1)
     {
         static struct option long_options[] =
         {
@@ -441,6 +423,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"no-oldtmp",      no_argument,       0, 'X'},
             {"no-hidden",      no_argument,       0, 'g'},
             {"hidden",         no_argument,       0, 'G'},
+            {"badids",         no_argument,       0, 'l'},
+            {"no-badids",      no_argument,       0, 'L'},
             {"dups",           no_argument,       0, 'u'},
             {"no-dups",        no_argument,       0, 'U'},
             {"matchcase",      no_argument,       0, 'e'},
@@ -449,186 +433,178 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"ignorelinks",    no_argument,       0, 'F'},
             {"invertmatch",    no_argument,       0, 'i'},
             {"normalmatch",    no_argument,       0, 'I'},
-            {"samepart",       no_argument,   0, 's'},
-            {"allpart",        no_argument,   0, 'S'},
-            {"paranoid",       no_argument,   0, 'p'},
-            {"naive",          no_argument,   0, 'P'},
+            {"samepart",       no_argument,       0, 's'},
+            {"allpart",        no_argument,       0, 'S'},
+            {"paranoid",       no_argument,       0, 'p'},
+            {"naive",          no_argument,       0, 'P'},
             {"help",           no_argument,       0, 'h'},
             {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
         };
-
         /* getopt_long stores the option index here. */
         int option_index = 0;
-
-        c = getopt_long (argc, argv, "m:R:r:o::j:kKbBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
-
+        c = getopt_long(argc, argv, "m:R:r:o::j:kKbBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
         /* Detect the end of the options. */
-        if (c == -1)
+        if(c == -1)
         {
             break;
         }
-
-        switch (c)
+        switch(c)
         {
-            case '?':
+        case '?':
+            return 0;
+        case 't':
+            sets->threads = atoi(optarg);
+            if(!sets->threads || sets->threads < 0)
+            {
+                sets->threads = 8;
+            }
+            break;
+        case 'k':
+            sets->listemptyfiles = 1;
+            break;
+        case 'K':
+            sets->listemptyfiles = 0;
+            break;
+        case 'f':
+            sets->followlinks = 1;
+            break;
+        case 'F':
+            sets->followlinks = 0;
+            break;
+        case 'u':
+            sets->searchdup = 1;
+            break;
+        case 'U':
+            sets->searchdup = 0;
+            break;
+        case 'n':
+            sets->namecluster = 1;
+            break;
+        case 'N':
+            sets->namecluster = 0;
+            break;
+        case 'b':
+            sets->color = 1;
+            break;
+        case 'B':
+            sets->color = 0;
+            break;
+        case 'V':
+            print_version(true);
+            break;
+        case 'h':
+            print_help();
+            break;
+        case 'j':
+            sets->junk_chars = optarg;
+            break;
+        case 'y':
+            sets->findemptydirs = 1;
+            break;
+        case 'Y':
+            sets->findemptydirs = 0;
+            break;
+        case 'a':
+            sets->nonstripped = 1;
+            break;
+        case 'A':
+            sets->nonstripped = 0;
+            break;
+        case 'x':
+            sets->oldtmpdata = atoi(optarg);
+            break;
+        case 'X':
+            sets->doldtmp = false;
+            break;
+        case 'o':
+            sets->output = optarg;
+            break;
+        case 'c':
+            sets->cmd_path = optarg;
+            break;
+        case 'C':
+            sets->cmd_orig = optarg;
+            break;
+        case 'g':
+            sets->ignore_hidden = 1;
+            break;
+        case 'G':
+            sets->ignore_hidden = 0;
+            break;
+        case 'v':
+            sets->verbosity = atoi(optarg);
+            break;
+        case 'i':
+            sets->invmatch = 1;
+            break;
+        case 'I':
+            sets->invmatch = 0;
+            break;
+        case 's':
+            sets->samepart = 1;
+            break;
+        case 'S':
+            sets->samepart = 0;
+            break;
+        case 'e':
+            sets->casematch = 1;
+            break;
+        case 'E':
+            sets->casematch = 0;
+            break;
+        case 'd':
+            sets->depth = ABS(atoi(optarg));
+            break;
+        case 'r':
+            sets->fpattern = optarg;
+            break;
+        case 'R':
+            sets->dpattern = optarg;
+            break;
+        case 'p':
+            sets->paranoid = 1;
+            break;
+        case 'z':
+            parse_limit_sizes(optarg);
+            break;
+        case 'P':
+            sets->paranoid = 0;
+            break;
+        case 'm':
+            sets->mode = 0;
+            if(!strcasecmp(optarg, "list"))
+            {
+                sets->mode = 1;
+            }
+            if(!strcasecmp(optarg, "ask"))
+            {
+                sets->mode = 2;
+            }
+            if(!strcasecmp(optarg, "noask"))
+            {
+                sets->mode = 3;
+            }
+            if(!strcasecmp(optarg, "link"))
+            {
+                sets->mode = 4;
+            }
+            if(!strcasecmp(optarg, "cmd"))
+            {
+                sets->mode = 5;
+            }
+            if(!sets->mode)
+            {
+                error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
+                error("       Available modes are: ask | list | link | noask | cmd\n");
+                die(0);
                 return 0;
-            case 't':
-                sets->threads = atoi(optarg);
-                if(!sets->threads || sets->threads < 0)
-                {
-                    sets->threads = 8;
-                }
-                break;
-            case 'k':
-                sets->listemptyfiles = 1;
-                break;
-            case 'K':
-                sets->listemptyfiles = 0;
-                break;
-            case 'f':
-                sets->followlinks = 1;
-                break;
-            case 'F':
-                sets->followlinks = 0;
-                break;
-            case 'u':
-                sets->searchdup = 1;
-                break;
-            case 'U':
-                sets->searchdup = 0;
-                break;
-            case 'n':
-                sets->namecluster = 1;
-                break;
-            case 'N':
-                sets->namecluster = 0;
-                break;
-            case 'b':
-                sets->color = 1;
-                break;
-            case 'B':
-                sets->color = 0;
-                break;
-            case 'V':
-                print_version(true);
-                break;
-            case 'h':
-                print_help();
-                break;
-            case 'j':
-                sets->junk_chars = optarg;
-                break;
-            case 'y':
-                sets->findemptydirs = 1;
-                break;
-            case 'Y':
-                sets->findemptydirs = 0;
-                break;
-            case 'a':
-                sets->nonstripped = 1;
-                break;
-            case 'A':
-                sets->nonstripped = 0;
-                break;
-            case 'x':
-                sets->oldtmpdata = atoi(optarg);
-                break;
-            case 'X':
-                sets->doldtmp = false;
-                break;
-            case 'o':
-                sets->output = optarg;
-                break;
-            case 'c':
-                sets->cmd_path = optarg;
-                break;
-            case 'C':
-                sets->cmd_orig = optarg;
-                break;
-            case 'g':
-                sets->ignore_hidden = 1;
-                break;
-            case 'G':
-                sets->ignore_hidden = 0;
-                break;
-            case 'v':
-                sets->verbosity = atoi(optarg);
-                break;
-            case 'i':
-                sets->invmatch = 1;
-                break;
-            case 'I':
-                sets->invmatch = 0;
-                break;
-            case 's':
-                sets->samepart = 1;
-                break;
-            case 'S':
-                sets->samepart = 0;
-                break;
-            case 'e':
-                sets->casematch = 1;
-                break;
-            case 'E':
-                sets->casematch = 0;
-                break;
-            case 'd':
-                sets->depth = ABS(atoi(optarg));
-                break;
-            case 'r':
-                sets->fpattern = optarg;
-                break;
-            case 'R':
-                sets->dpattern = optarg;
-                break;
-            case 'p':
-                sets->paranoid = 1;
-                break;
-            case 'z':
-                parse_limit_sizes(optarg);
-                break;
-            case 'P':
-                sets->paranoid = 0;
-                break;
-            case 'm':
-                sets->mode = 0;
-
-                if(!strcasecmp(optarg, "list"))
-                {
-                    sets->mode = 1;
-                }
-                if(!strcasecmp(optarg, "ask"))
-                {
-                    sets->mode = 2;
-                }
-                if(!strcasecmp(optarg, "noask"))
-                {
-                    sets->mode = 3;
-                }
-                if(!strcasecmp(optarg, "link"))
-                {
-                    sets->mode = 4;
-                }
-                if(!strcasecmp(optarg, "cmd"))
-                {
-                    sets->mode = 5;
-                }
-
-                if(!sets->mode)
-                {
-                    error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
-                    error("       Available modes are: ask | list | link | noask | cmd\n");
-                    die(0);
-                    return 0;
-                }
-
-                break;
-            default:
-                return 0;
+            }
+            break;
+        default:
+            return 0;
         }
     }
-
     /* Check the directory to be valid */
     while(optind < argc)
     {
@@ -638,7 +614,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         {
             theDir += 2;
         }
-
         p = open(theDir,O_RDONLY);
         if(p == -1)
         {
@@ -649,14 +624,12 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         {
             close(p);
             sets->paths   = realloc(sets->paths,sizeof(char*)*(lp+2));
-
             if(isPref) sets->preferID = lp;
             sets->paths[lp++] = theDir;
             sets->paths[lp  ] = NULL;
         }
         optind++;
     }
-
     if(lp == 0)
     {
         /* Still no path set? - use `pwd` */
@@ -667,7 +640,6 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
-
             if(sets->paths)
             {
                 free(sets->paths);
@@ -726,17 +698,14 @@ void die(int status)
             free(set->paths[0]);
         }
     }
-
     if(set->paths)
     {
         free(set->paths);
     }
-
     if(status)
     {
         info("Abnormal exit\n");
     }
-
     /* Close logfile */
     if(get_logstream())
     {
@@ -753,10 +722,8 @@ void die(int status)
                 "  rm -f rmlint.sh     \n"
                 "fi                    \n"
                );
-
         fclose(get_scriptstream());
     }
-
     /* Prepare to jump to return */
     do_exit = true;
     ex_stat = status;
@@ -764,7 +731,6 @@ void die(int status)
     {
         longjmp(place,status);
     }
-
     if(abort_n)
     {
         exit(status);
@@ -787,7 +753,6 @@ int rmlint_main(void)
     /* Used only for infomessage */
     total_files = 0;
     abort_n = false;
-
     if(do_exit != true)
     {
         /* Init all modules that use global variables.. */
@@ -795,13 +760,11 @@ int rmlint_main(void)
         {
             rmlint_init();
         }
-
         md5c_c_init();
         list_c_init();
         filt_c_init();
         mode_c_init();
     }
-
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
     jmp_set = true;
@@ -820,7 +783,6 @@ int rmlint_main(void)
         }
         /* Open logfile */
         init_filehandler();
-
         /* Warn if started with sudo */
         if(!access("/bin/ls",R_OK|W_OK))
         {
@@ -839,10 +801,8 @@ int rmlint_main(void)
                 {
                     continue;
                 }
-
                 list_append(set->paths[cpindex],(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true);
                 total_files++;
-
             }
             else
             {
@@ -854,21 +814,16 @@ int rmlint_main(void)
             }
             cpindex++;
         }
-
         if(total_files < 2)
         {
             warning("No files in cache to search through => No duplicates.\n");
             die(0);
         }
-
         info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", total_files);
-
         if(set->threads > total_files)
         {
             set->threads = total_files;
         }
-
-
         /* Till this point the list is unsorted
          * The filter alorithms requires the list to be size-sorted,
          * so it can easily filter unique sizes, and build "groups"
@@ -876,12 +831,9 @@ int rmlint_main(void)
         info("Now mergesorting list based on filesize... ");
         list_sort(list_begin(),cmp_sz);
         info("done.\n");
-
         info("Now finding easy lint..%c",set->verbosity > 4 ? '.' : '\n');
-
         /* Apply the prefilter and outsort inique sizes */
         start_processing(list_begin());
-
         /* Exit! */
         die(EXIT_SUCCESS);
     }

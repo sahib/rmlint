@@ -71,7 +71,6 @@ void mode_c_init(void)
 {
     script_out = NULL;
     log_out    = NULL;
-
     dup_counter = 0;
     pthread_mutex_init(&mutex_printage, NULL);
 }
@@ -95,22 +94,18 @@ static char * __strsubs(char * string, const char * subs, size_t subs_len, const
 {
     char * new, * occ = strstr(string+offset,subs);
     size_t strn_len = 0;
-
     /* Terminate when no occurences left */
     if(occ == NULL)
     {
         return string;
     }
-
     /* string has a variable length */
     strn_len = strlen(string);
     new = calloc(strn_len + with_len - subs_len + 1,sizeof(char));
-
     /* Split & copy */
     strncat(new, string, occ-string);
     strncat(new, with, with_len);
     strncat(new, occ+subs_len, strn_len - subs_len - (occ-string));
-
     /* free previous pointer */
     free(string);
     return __strsubs(new,subs,subs_len,with,with_len,(occ-string)+with_len);
@@ -122,22 +117,18 @@ static char * __strsubs(char * string, const char * subs, size_t subs_len, const
 char * strsubs(const char * string, const char * subs, const char * with)
 {
     size_t subs_len, with_len;
-
     /* Handle special cases (where __strsubs would return weird things) */
     if(string == NULL || *string == 0)
     {
         return NULL;
     }
-
     if(subs == NULL || (subs == NULL && with == NULL) || *subs == 0)
     {
         return strdup(string);
     }
-
     /* Call strlen() only once */
     subs_len = strlen(subs);
     with_len = (with) ? strlen(with) : 0;
-
     /* Replace all occurenced recursevely */
     return __strsubs(strdup(string), subs, subs_len, with, with_len,0);
 }
@@ -162,43 +153,35 @@ static int paranoid(const lint_t *p1, const lint_t *p2)
 {
     int result = 0,file_a,file_b;
     char * file_map_a, * file_map_b;
-
     if(!p1 || !p2)
         return 0;
-
     if(p1->fsize != p2->fsize)
         return 0;
-
-    if( (file_a = open (p1->path, MD5_FILE_FLAGS)) == -1)
+    if((file_a = open(p1->path, MD5_FILE_FLAGS)) == -1)
     {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
-
-    if( (file_b = open (p2->path, MD5_FILE_FLAGS)) == -1)
+    if((file_b = open(p2->path, MD5_FILE_FLAGS)) == -1)
     {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
-
     if(p1->fsize < MMAP_LIMIT && p1->fsize > MD5_IO_BLOCKSIZE>>1)
     {
-
         file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
         if(file_map_a != MAP_FAILED)
         {
             if(madvise(file_map_a,p1->fsize, MADV_SEQUENTIAL) == -1)
                 perror("madvise");
-
             file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
             if(file_map_b != MAP_FAILED)
             {
                 if(madvise(file_map_b,p2->fsize, MADV_SEQUENTIAL) == -1)
                     perror("madvise");
-
                 result = !memcmp(file_map_a, file_map_b, p1->fsize);
                 munmap(file_map_b,p1->fsize);
-            } 
+            }
             else
             {
                 perror("paranoid->mmap");
@@ -217,25 +200,22 @@ static int paranoid(const lint_t *p1, const lint_t *p2)
         nuint_t blocksize = MD5_IO_BLOCKSIZE/2;
         char * read_buf_a = alloca(blocksize);
         char * read_buf_b = alloca(blocksize);
-
         int read_a=-1,read_b=-1;
         while(read_a && read_b)
         {
-            if( (read_a=read(file_a,read_buf_a,blocksize) == -1))
+            if((read_a=read(file_a,read_buf_a,blocksize) == -1))
             {
                 result = 0;
                 break;
             }
-
-            if( (read_b=read(file_b,read_buf_b,blocksize) == -1))
+            if((read_b=read(file_b,read_buf_b,blocksize) == -1))
             {
                 result = 0;
                 break;
             }
-
             if(read_a == read_b)
             {
-                if( (result = !memcmp(read_buf_a,read_buf_b,read_a)) == 0)
+                if((result = !memcmp(read_buf_a,read_buf_b,read_a)) == 0)
                 {
                     break;
                 }
@@ -247,12 +227,10 @@ static int paranoid(const lint_t *p1, const lint_t *p2)
             }
         }
     }
-
-    if(close (file_a) == -1)
+    if(close(file_a) == -1)
         perror(RED"ERROR:"NCO"close()");
-    if(close (file_b) == -1)
+    if(close(file_b) == -1)
         perror(RED"ERROR:"NCO"close()");
-
     return result;
 }
 
@@ -260,13 +238,13 @@ static int paranoid(const lint_t *p1, const lint_t *p2)
 
 static void print_askhelp(void)
 {
-    error(  GRE"\nk"NCO" - keep file \n"
-            GRE"d"NCO" - delete file \n"
-            GRE"i"NCO" - show fileinfo\n"
-            GRE"l"NCO" - replace with link \n"
-            GRE"q"NCO" - quit all\n"
-            GRE"h"NCO" - show help.\n\n"
-            NCO );
+    error(GRE"\nk"NCO" - keep file \n"
+          GRE"d"NCO" - delete file \n"
+          GRE"i"NCO" - show fileinfo\n"
+          GRE"l"NCO" - replace with link \n"
+          GRE"q"NCO" - quit all\n"
+          GRE"h"NCO" - show help.\n\n"
+          NCO);
 }
 
 /* ------------------------------------------------------------- */
@@ -279,7 +257,6 @@ void log_print(FILE * stream, const char * string)
         {
             fprintf(stdout,"%s",string);
         }
-
         fprintf(stream,"%s",string);
     }
 }
@@ -293,7 +270,6 @@ static char * make_cmd_ready(bool is_orig, const char * orig, const char * dupl)
         repl_orig = strsubs(set->cmd_path,CMD_ORIG,orig);
     else
         repl_orig = strsubs(set->cmd_orig,CMD_ORIG,orig);
-
     if(repl_orig != NULL && !is_orig)
     {
         char * repl_dups = strsubs(repl_orig,CMD_DUPL,dupl);
@@ -316,7 +292,6 @@ void script_print(char * string)
         {
             fprintf(stdout,"%s",string);
         }
-
         fprintf(get_scriptstream(),"%s",string);
         free(string);
     }
@@ -335,7 +310,6 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
     {
         int i = 0;
         char *fpath = canonicalize_file_name(file->path);
-
         if(!fpath)
         {
             if(file->dupflag != TYPE_BLNK)
@@ -354,20 +328,19 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
             fpath = strsubs(fpath,"'","'\"'\"'");
             free(tmp_copy);
         }
-
         if(file->dupflag == TYPE_BLNK)
         {
-            script_print(_sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath ));
+            script_print(_sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
             log_print(get_logstream(),"BLNK");
         }
         else if(file->dupflag == TYPE_BASE)
         {
             log_print(get_logstream(),"BASE");
-            script_print(_sd_("echo  '%s' # double basename.\n", fpath ));
+            script_print(_sd_("echo  '%s' # double basename.\n", fpath));
         }
         else if(file->dupflag == TYPE_OTMP)
         {
-            script_print(_sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, set->oldtmpdata ));
+            script_print(_sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, set->oldtmpdata));
             log_print(get_logstream(),"OTMP");
         }
         else if(file->dupflag == TYPE_EDIR)
@@ -390,6 +363,16 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
             script_print(_sd_("strip -s '%s' # binary with debugsymbols.\n", fpath));
             log_print(get_logstream(),"NBIN");
         }
+        else if(file->dupflag == TYPE_BADUID)
+        {
+            script_print(_sd_("ls '%s' # bad uid\n", fpath));
+            log_print(get_logstream(),"BUID");
+        }
+        else if(file->dupflag == TYPE_BADGID)
+        {
+            script_print(_sd_("ls '%s' # bad gid\n", fpath));
+            log_print(get_logstream(),"BGID");
+        }
         else if(file->fsize == 0)
         {
             script_print(_sd_("rm -f '%s' # empty file.\n", fpath));
@@ -397,7 +380,6 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
         }
         else if(orig==false)
         {
-
             log_print(get_logstream(),"DUPL");
             if(set->cmd_path)
             {
@@ -412,7 +394,6 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
                         script_print(_sd_("\n"));
                         free(tmp_opath);
                     }
-
                     free(opath);
                 }
             }
@@ -435,9 +416,8 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
                 script_print(_sd_("echo  '%s' # original\n",fpath));
             }
         }
-
         log_print(get_logstream(),LOGSEP);
-        for (i = 0; i < 16; i++)
+        for(i = 0; i < 16; i++)
         {
             if(set->verbosity == 4)
             {
@@ -445,15 +425,13 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
             }
             fprintf(get_logstream(),"%02x", file->md5_digest[i]);
         }
-
-#define INT_CAST long long unsigned int
+#define INT_CAST long unsigned
         if(set->verbosity == 4)
         {
-            fprintf(stdout,"%s%s%s%llu%s%llu%s%llu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
+            fprintf(stdout,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
         }
-        fprintf(get_logstream(),"%s%s%s%llu%s%llu%s%llu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
+        fprintf(get_logstream(),"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
 #undef INT_CAST
-
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK)
         {
             free(fpath);
@@ -471,166 +449,145 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
 {
     char *path = (file_path) ? file_path->path : NULL;
     char *orig = (file_orig) ? file_orig->path : NULL;
-
     /* What set->mode are we in? */
     switch(set->mode)
     {
-
-        case 1:
+    case 1:
+        break;
+    case 2:
+    {
+        /* Ask the user what to do */
+        char sel, block = 0;
+        if(path == NULL)
+        {
             break;
-        case 2:
+        }
+        do
+        {
+            error(YEL":: "NCO"'%s' same as '%s' [h for help]\n"YEL":: "NCO,path,orig);
+            do
             {
-                /* Ask the user what to do */
-                char sel, block = 0;
-                if(path == NULL)
+                if(!scanf("%c",&sel))
                 {
-                    break;
+                    perror("scanf()");
                 }
-
-                do
-                {
-                    error(YEL":: "NCO"'%s' same as '%s' [h for help]\n"YEL":: "NCO,path,orig);
-                    do
-                    {
-                        if(!scanf("%c",&sel))
-                        {
-                            perror("scanf()");
-                        }
-                    }
-                    while ( getchar() != '\n' );
-
-                    switch(sel)
-                    {
-                        case 'k':
-                            block = 0;
-                            break;
-
-                        case 'd':
-                            remfile(path);
-                            block = 0;
-                            break;
-
-                        case 'l':
-                            remfile(path);
-                            error(YEL"EXEC: "NCO"ln -s "NCO"\"%s\" \"%s\"\n", orig, path);
-                            block = 0;
-                            break;
-                        case 'i':
-
-                            MDPrintArr(file_path->md5_digest);
-                            printf(" on DevID %d -> ",(unsigned short)file_path->dev);
-                            fflush(stdout);
-                            systemf("ls -lahi --author --color=auto '%s'",path);
-
-                            MDPrintArr(file_path->md5_digest);
-                            printf(" on DevID %d -> ",(unsigned short)file_orig->dev);
-                            fflush(stdout);
-                            systemf("ls -lahi --author --color=auto '%s'",path);
-
-                            puts(" ");
-                            block = 1;
-                            break;
-                        case 'q':
-                            return true;
-                            break;
-                        case 'h':
-                            print_askhelp();
-                            block = 1;
-                            break;
-
-                        default :
-                            block = 1;
-                            break;
-                    }
-
-                }
-                while(block);
-
             }
-            break;
-
-        case 3:
+            while(getchar() != '\n');
+            switch(sel)
             {
-                /* Just remove it */
-                if(path == NULL)
-                {
-                    break;
-                }
-                warning(RED"   rm -rf "NCO"\"%s\"\n", path);
+            case 'k':
+                block = 0;
+                break;
+            case 'd':
                 remfile(path);
+                block = 0;
+                break;
+            case 'l':
+                remfile(path);
+                error(YEL"EXEC: "NCO"ln -s "NCO"\"%s\" \"%s\"\n", orig, path);
+                block = 0;
+                break;
+            case 'i':
+                MDPrintArr(file_path->md5_digest);
+                printf(" on DevID %d -> ",(unsigned short)file_path->dev);
+                fflush(stdout);
+                systemf("ls -lahi --author --color=auto '%s'",path);
+                MDPrintArr(file_path->md5_digest);
+                printf(" on DevID %d -> ",(unsigned short)file_orig->dev);
+                fflush(stdout);
+                systemf("ls -lahi --author --color=auto '%s'",path);
+                puts(" ");
+                block = 1;
+                break;
+            case 'q':
+                return true;
+                break;
+            case 'h':
+                print_askhelp();
+                block = 1;
+                break;
+            default :
+                block = 1;
+                break;
             }
+        }
+        while(block);
+    }
+    break;
+    case 3:
+    {
+        /* Just remove it */
+        if(path == NULL)
+        {
             break;
-
-        case 4:
+        }
+        warning(RED"   rm -rf "NCO"\"%s\"\n", path);
+        remfile(path);
+    }
+    break;
+    case 4:
+    {
+        /* Replace the file with a neat symlink */
+        if(path == NULL)
+        {
+            break;
+        }
+        else
+        {
+            char * full_orig_path = canonicalize_file_name(orig);
+            if(full_orig_path)
             {
-                /* Replace the file with a neat symlink */
-                if(path == NULL)
+                char * full_dupl_path = canonicalize_file_name(path);
+                if(full_dupl_path)
                 {
-                    break;
-                }
-                else
-                {
-                    char * full_orig_path = canonicalize_file_name(orig);
-                    if(full_orig_path)
+                    error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
+                    remfile(full_dupl_path);
+                    if(symlink(full_orig_path ,full_dupl_path) == -1)
                     {
-                        char * full_dupl_path = canonicalize_file_name(path);
-                        if(full_dupl_path)
-                        {
-                            error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
-                            remfile(full_dupl_path);
-
-                            if(symlink(full_orig_path ,full_dupl_path) == -1)
-                            {
-                                perror(YEL"WARN: "NCO"symlink:");
-                            }
-                            free(full_dupl_path);
-                        }
-                        free(full_orig_path);
+                        perror(YEL"WARN: "NCO"symlink:");
                     }
+                    free(full_dupl_path);
                 }
+                free(full_orig_path);
             }
-            break;
-
-        case 5:
+        }
+    }
+    break;
+    case 5:
+    {
+        /* Exec a command on it */
+        int ret = 0;
+        char * tmp_opath = strsubs(orig,"'","'\"'\"'");
+        char * tmp_fpath = strsubs(path,"'","'\"'\"'");
+        if(tmp_opath && tmp_fpath)
+        {
+            const char * cmd = NULL;
+            if(path)
             {
-                /* Exec a command on it */
-                int ret = 0;
-
-                char * tmp_opath = strsubs(orig,"'","'\"'\"'");
-                char * tmp_fpath = strsubs(path,"'","'\"'\"'");
-
-                if(tmp_opath && tmp_fpath)
-                {
-                    const char * cmd = NULL;
-                    if(path)
-                    {
-                        cmd = make_cmd_ready(false,tmp_opath,tmp_fpath);
-                    }
-                    else
-                    {
-                        cmd = make_cmd_ready(true,tmp_opath,NULL);
-                    }
-
-                    if(cmd != NULL)
-                    {
-                        ret = system(cmd);
-
-                        if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
-                        {
-                            return true;
-                        }
-                        free((char*)cmd);
-                        cmd = NULL;
-                    }
-                    free(tmp_opath);
-                    free(tmp_fpath);
-                }
+                cmd = make_cmd_ready(false,tmp_opath,tmp_fpath);
             }
-            break;
-
-        default:
-            error(RED"ERROR: "NCO"Invalid set->mode. This is a program error :(");
-            return true;
+            else
+            {
+                cmd = make_cmd_ready(true,tmp_opath,NULL);
+            }
+            if(cmd != NULL)
+            {
+                ret = system(cmd);
+                if(WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+                {
+                    return true;
+                }
+                free((char*)cmd);
+                cmd = NULL;
+            }
+            free(tmp_opath);
+            free(tmp_fpath);
+        }
+    }
+    break;
+    default:
+        error(RED"ERROR: "NCO"Invalid set->mode. This is a program error :(");
+        return true;
     }
     return false;
 }
@@ -645,17 +602,14 @@ void init_filehandler(void)
         char *lg_name = strdup_printf("%s.log",set->output);
         script_out = fopen(sc_name, "w");
         log_out    = fopen(lg_name, "w");
-
         if(script_out && log_out)
         {
             char *cwd = getcwd(NULL,0);
-
             /* Make the file executable */
             if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1)
             {
                 perror(YEL"WARN: "NCO"chmod");
             }
-
             /* Write a basic header */
             fprintf(get_scriptstream(),
                     "#!/bin/sh\n"
@@ -680,7 +634,8 @@ void init_filehandler(void)
                     "\n"
                     "This script run the test1 or test2 over a machine.\n"
                     "\n"
-                    "OPTIONS:\n"
+                    "OPTIONS:\n",cwd);
+            fprintf(get_scriptstream(),
                     "-h      Show this message\n"
                     "-d      Do not ask before running\n"
                     "-x      Keep rmlint.sh and rmlint.log\n"
@@ -710,9 +665,7 @@ void init_filehandler(void)
                     "then\n"
                     "  usage\n"
                     "  ask \n"
-                    "fi\n",
-                cwd);
-
+                    "fi\n");
             fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
             fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
             fprintf(get_logstream(), "#\n# Entries are listed like this: \n");
@@ -722,11 +675,15 @@ void init_filehandler(void)
             fprintf(get_logstream(), "#           BLNK: Bad link pointing nowhere\n"
                     "#           OTMP: Old tmp data (e.g: test.txt~)\n"
                     "#           BASE: Double basename\n"
-                    "#           EDIR: Empty directory\n"
+                    "#           EDIR: Empty directory\n");
+            fprintf(get_logstream(),
+                    "#           BLNK: Bad link pointing nowhere\n"
                     "#           JNKD: Dirname containg one char of a user defined string\n"
                     "#           JNKF: Filename containg one char of a user defined string\n"
                     "#           ZERO: Empty file\n"
                     "#           NBIN: Nonstripped binary\n"
+                    "#           BGID: File with Bad GroupID\n"
+                    "#           BUID: File with Bad UserID\n"
                     "#           ORIG: File that has a duplicate, but supposed to be a original\n"
                     "#           DUPL: File that is supposed to be a duplicate\n"
                     "#\n");
@@ -736,23 +693,20 @@ void init_filehandler(void)
             fprintf(get_logstream(), "# devID   : The ID of the device where the file is located\n");
             fprintf(get_logstream(), "# inode   : The Inode of the file (see man 2 stat)\n");
             fprintf(get_logstream(), "# The '//' inbetween each word is the seperator.\n");
-
             if(cwd)
             {
                 free(cwd);
             }
+        }
+        else
+        {
+            perror(NULL);
+        }
+        fflush(script_out);
+        fflush(log_out);
+        if(sc_name) free(sc_name);
+        if(lg_name) free(lg_name);
     }
-    else
-    {
-        perror(NULL);
-    }
-
-    fflush(script_out);
-    fflush(log_out);
-
-    if(sc_name) free(sc_name);
-    if(lg_name) free(lg_name);
-}
 }
 
 /* ------------------------------------------------------------- */
@@ -762,7 +716,6 @@ static int cmp_f(lint_t *a, lint_t *b)
 {
     int i, fp_i, x;
     int is_empty[2][3] = { {1,1,1}, {1,1,1} };
-
     for(i = 0; i < MD5_LEN; i++)
     {
         if(a->md5_digest[i] != b->md5_digest[i])
@@ -778,7 +731,6 @@ static int cmp_f(lint_t *a, lint_t *b)
             is_empty[1][0] = 0;
         }
     }
-
     for(fp_i = 0; fp_i < 2; fp_i++)
     {
         for(i = 0; i < MD5_LEN; i++)
@@ -787,7 +739,6 @@ static int cmp_f(lint_t *a, lint_t *b)
             {
                 return 1;
             }
-
             if(a->fp[fp_i][i] != 0)
             {
                 is_empty[0][fp_i+1] = 0;
@@ -798,7 +749,6 @@ static int cmp_f(lint_t *a, lint_t *b)
             }
         }
     }
-
     /* check for empty checkusm AND fingerprints - refuse and warn */
     for(x=0; x<2; x++)
     {
@@ -807,35 +757,29 @@ static int cmp_f(lint_t *a, lint_t *b)
             warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n");
             return 1;
         }
-
     }
-
     return 0;
 }
 
 /* ------------------------------------------------------------- */
 
-#define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false) 
+#define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false)
 bool print_newline = true;
 
 bool findmatches(file_group *grp)
 {
     lint_t *i = grp->grp_stp, *j;
     int class_ctr = -1;
-
     if(i == NULL)
     {
         return false;
     }
-
     warning(NCO);
     while(i)
     {
         if(NOT_DUP_FLAGGED(i))
         {
             j=i->next;
-
-
             while(j)
             {
                 if(NOT_DUP_FLAGGED(j))
@@ -848,7 +792,6 @@ bool findmatches(file_group *grp)
                         /* i twin of j - question of origin is decided later */
                         i->dupflag = class_ctr;
                         i->filter  = false;
-
                         j->dupflag = class_ctr;
                         j->filter = true;
                     }
@@ -856,27 +799,22 @@ bool findmatches(file_group *grp)
                 j = j->next;
             }
             class_ctr--;
-
             /* Now remove if $i didn't match in list */
             if(NOT_DUP_FLAGGED(i))
             {
                 lint_t *tmp = i;
-
                 grp->len--;
                 grp->size -= i->fsize;
                 i = list_remove(i);
-
                 /* Update start / end */
                 if(tmp == grp->grp_stp)
                 {
                     grp->grp_stp = i;
                 }
-
                 if(tmp == grp->grp_enp)
                 {
                     grp->grp_enp = i;
                 }
-
                 continue;
             }
             else
@@ -887,13 +825,10 @@ bool findmatches(file_group *grp)
         }
         i=i->next;
     }
-
     if(grp->len == 0)
     {
         return false;
     }
-
-
     /* If a specific directory is specified to have the 'originals':  */
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
@@ -901,7 +836,6 @@ bool findmatches(file_group *grp)
     {
         char * pPath  = set->paths[set->preferID];
         size_t length = strlen(pPath);
-
         i = grp->grp_stp;
         while(i)
         {
@@ -922,11 +856,9 @@ bool findmatches(file_group *grp)
             i = i->next;
         }
     }
-
     /* Make sure no group is printed / logged at the same time (== chaos) */
     pthread_mutex_lock(&mutex_printage);
     i = grp->grp_stp;
-
     /* Now do the actual printout.. */
     while(i)
     {
@@ -934,15 +866,13 @@ bool findmatches(file_group *grp)
         if(!i->filter)
         {
             lint_t * from = grp->grp_stp;
-
-            if( (set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
+            if((set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
             {
                 if(print_newline)
                 {
                     warning("\n");
                     print_newline = false;
                 }
-
                 if(set->mode != 4)
                 {
                     error(GRE"   ls "NCO"%s\n",i->path);
@@ -950,10 +880,8 @@ bool findmatches(file_group *grp)
             }
             write_to_log(i, true, NULL);
             handle_item(NULL, i);
-
             /* Subtract size of the original , so we can gather it later */
             grp->size -= i->fsize;
-
             /* print all duplicates belonging to this orig. */
             while(from)
             {
@@ -970,7 +898,6 @@ bool findmatches(file_group *grp)
                         {
                             warning(YEL"   %-1s "NCO,"rm");
                         }
-
                         if(set->verbosity > 1)
                         {
                             error("%s\n",from->path);
@@ -979,7 +906,6 @@ bool findmatches(file_group *grp)
                         {
                             error("   rm %s\n",from->path);
                         }
-
                     }
                     write_to_log(from, false, i);
                     set_dupcounter(get_dupcounter()+1);

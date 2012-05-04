@@ -33,10 +33,10 @@ typedef struct lint_t
     unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
 
-    char *path;		  	         /* absolute path from working dir */
-    nuint_t fsize; 		         /* Size of the file (bytes) */
-    bool filter; 			 /* this is used in calculations  */
-    long dupflag;			 /* Is the file marked as duplicate? */
+    char *path;                  /* absolute path from working dir */
+    nuint_t fsize;               /* Size of the file (bytes) */
+    bool filter;             /* this is used in calculations  */
+    long dupflag;            /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
     ino_t node;
@@ -50,7 +50,7 @@ typedef struct lint_t
 
 
 /* Sort method; begins with '*begin' ends with NULL, cmp as sort criteria */
-lint_t *list_sort(lint_t *begin, long (*cmp)(lint_t*,lint_t*));
+lint_t *list_sort(lint_t *begin, long(*cmp)(lint_t*,lint_t*));
 
 /* Returns start pointer (only used before splitting list in groups) */
 lint_t *list_begin(void);
