@@ -262,6 +262,7 @@ static void print_help(void)
             "\t-x --oldtmp <sec>\tSearch for files with a '~'/'.swp' suffix being min. <sec> seconds older than the corresponding file without the '~'/'.swp'; (Default: 60)\n");
     fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
+            "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
            );
     fprintf(stderr, "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
             "\t-f --followlinks\tWether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
@@ -443,7 +444,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        c = getopt_long(argc, argv, "m:R:r:o::j:kKbBuUVyhYnNaAx:XgGpPfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
+        c = getopt_long(argc, argv, "m:R:r:o::j:kKbBuUVyhYnNaAx:XgGpPlLfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
         /* Detect the end of the options. */
         if(c == -1)
         {
@@ -567,6 +568,12 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             break;
         case 'z':
             parse_limit_sizes(optarg);
+            break;
+        case 'l':
+            sets->findbadids = true;
+            break;
+        case 'L':
+            sets->findbadids = false;
             break;
         case 'P':
             sets->paranoid = 0;
