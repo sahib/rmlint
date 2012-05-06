@@ -1026,6 +1026,7 @@ void start_processing(lint_t *b)
                 lint_t *ptr;
                 char flag = 42;
                 bool e_file_printed = false;
+                const char * chown_cmd = "   chown $(whoami):$(id -gn)";
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
                 if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
@@ -1036,6 +1037,7 @@ void start_processing(lint_t *b)
                 ptr = list_sort(ptr,cmp_sort_dupID);
                 emptylist.grp_stp = ptr;
                 emptylist.len = 0;
+
 
                 while(ptr)
                 {
@@ -1119,11 +1121,11 @@ void start_processing(lint_t *b)
                     }
                     else if(ptr->dupflag == TYPE_BADUID)
                     {
-                        error("   ls");
+                        error(chown_cmd);
                     }
                     else if(ptr->dupflag == TYPE_BADGID)
                     {
-                        error("   ls");
+                        error(chown_cmd);
                     }
                     else if(ptr->fsize   == 0)
                     {

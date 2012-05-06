@@ -310,6 +310,7 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
     {
         int i = 0;
         char *fpath = canonicalize_file_name(file->path);
+        const char * chown_cmd = "chown $(whoami):$(id -gn)";
         if(!fpath)
         {
             if(file->dupflag != TYPE_BLNK)
@@ -365,12 +366,12 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
         }
         else if(file->dupflag == TYPE_BADUID)
         {
-            script_print(_sd_("ls '%s' # bad uid\n", fpath));
+            script_print(_sd_("%s '%s' # bad uid\n",chown_cmd, fpath));
             log_print(get_logstream(),"BUID");
         }
         else if(file->dupflag == TYPE_BADGID)
         {
-            script_print(_sd_("ls '%s' # bad gid\n", fpath));
+            script_print(_sd_("%s '%s' # bad gid\n",chown_cmd, fpath));
             log_print(get_logstream(),"BGID");
         }
         else if(file->fsize == 0)

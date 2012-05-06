@@ -24,11 +24,7 @@ CC=gcc
 #Heavy Warnlevel 
 WARN=-Wall -pedantic
 
-ifeq ($(CC),gcc)
-  OPTI=-march=native -Os -s -finline-functions
-else
-  OPTI=-march=native -Os -s -finline-functions
-endif
+OPTI=-march=native -O3 -s -finline-functions
 
 ifdef DEBUG
   CFLAGS=-c -pipe -ggdb3 $(WARN) -D_FILE_OFFSET_BITS=64
