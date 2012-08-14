@@ -739,8 +739,8 @@ static void build_checksums(file_group *grp)
 
 /* ------------------------------------------------------------- */
 
-/* Callback from sheduler that actually does the work for ONE group */
-static void* sheduler_cb(void *gfp)
+/* Callback from scheduler that actually does the work for ONE group */
+static void* scheduler_cb(void *gfp)
 {
     /* cast from *void */
     file_group *group = gfp;
@@ -775,15 +775,15 @@ static void* sheduler_cb(void *gfp)
 
 /* ------------------------------------------------------------- */
 
-/* Joins the threads launched by sheduler */
-static void sheduler_jointhreads(pthread_t *tt, nuint_t n)
+/* Joins the threads launched by scheduler */
+static void scheduler_jointhreads(pthread_t *tt, nuint_t n)
 {
     nuint_t ii = 0;
     for(ii=0; ii < n; ii++)
     {
         if(pthread_join(tt[ii],NULL))
         {
-            perror(RED"ERROR: "NCO"pthread_join in sheduler()");
+            perror(RED"ERROR: "NCO"pthread_join in scheduler()");
         }
     }
 }
@@ -791,7 +791,7 @@ static void sheduler_jointhreads(pthread_t *tt, nuint_t n)
 /* ------------------------------------------------------------- */
 
 /* Distributes the groups on the ressources */
-static void start_sheduler(file_group *fp, nuint_t nlistlen)
+static void start_scheduler(file_group *fp, nuint_t nlistlen)
 {
     nuint_t ii;
     pthread_t *tt = malloc(sizeof(pthread_t)*(nlistlen+1));
@@ -799,7 +799,7 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
     {
         for(ii = 0; ii < nlistlen && !iAbort; ii++)
         {
-            sheduler_cb(&fp[ii]);
+            scheduler_cb(&fp[ii]);
         }
     }
     else /* if size of certain group exceeds limit start an own thread, else run in 'foreground' */
@@ -810,13 +810,13 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
         {
             if(fp[ii].size > THREAD_SHEDULER_MTLIMIT) /* Group exceeds limit */
             {
-                if(pthread_create(&tt[nrun],NULL,sheduler_cb,(void*)&fp[ii]))
+                if(pthread_create(&tt[nrun],NULL,scheduler_cb,(void*)&fp[ii]))
                 {
-                    perror(RED"ERROR: "NCO"pthread_create in sheduler()");
+                    perror(RED"ERROR: "NCO"pthread_create in scheduler()");
                 }
                 if(nrun >= set->threads-1)
                 {
-                    sheduler_jointhreads(tt, nrun + 1);
+                    scheduler_jointhreads(tt, nrun + 1);
                     nrun = 0;
                     continue;
                 }
@@ -824,10 +824,10 @@ static void start_sheduler(file_group *fp, nuint_t nlistlen)
             }
             else /* run in fg */
             {
-                sheduler_cb(&fp[ii]);
+                scheduler_cb(&fp[ii]);
             }
         }
-        sheduler_jointhreads(tt, nrun);
+        scheduler_jointhreads(tt, nrun);
     }
     if(tt)
     {
@@ -1178,10 +1178,10 @@ void start_processing(lint_t *b)
     info(" done. \nNow doing fingerprints and full checksums.%c\n",set->verbosity > 4 ? '.' : '\n');
     db_done = true;
     error("%s Duplicate(s):",(set->verbosity > 1) ? YEL"#"NCO : "#");
-    /* Groups are splitted, now give it to the sheduler
-     * The sheduler will do another filterstep, build checkusm
+    /* Groups are splitted, now give it to the scheduler
+     * The scheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
-    start_sheduler(fglist, spelen);
+    start_scheduler(fglist, spelen);
     if(get_dupcounter() == 0)
     {
         error("\r                    ");

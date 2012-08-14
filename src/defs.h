@@ -49,7 +49,7 @@
 #define ABS(a)  (((a) < 0) ? -(a) : (a))
 #define MD5_LEN 16
 
-/* Which sheduler to take
+/* Which scheduler to take
  * + 1) Always single threaded on each group
  * + 2) Run max. n (where n may be max. set->threads) at the same time.
  * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded
