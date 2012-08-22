@@ -330,7 +330,8 @@ void md5_file_mmap(lint_t *file)
     MD5_CTX mdContext;
     unsigned char *f_map=NULL;
     /* Don't read the $already_read amount of bytes read by md5_fingerprint */
-    nuint_t already_read = (MD5_FPSIZE_FORM(file->fsize) - 1);
+    nuint_t already_read = MD5_FPSIZE_FORM(file->fsize);
+    already_read = already_read ?  already_read - 1 : 0;
     /* This is some rather seldom case, but skip checksum building here */
     if(file->fsize <= (already_read*2))
         return;
@@ -383,6 +384,8 @@ void md5_file_fread(lint_t *file)
     nuint_t already_read = 0;
     nuint_t actual_size  = 0;
     already_read = MD5_FPSIZE_FORM(file->fsize);
+    already_read = already_read ?  already_read - 1 : 0;
+
     /* This is some rather seldom case, but skip checksum building here */
     if(file->fsize <= (already_read*2))
     {
