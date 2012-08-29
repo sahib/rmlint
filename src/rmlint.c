@@ -723,7 +723,7 @@ void die(int status)
     {
         fprintf(get_scriptstream(),
                 "                      \n"
-                "if [[ -z $DO_REMOVE ]]\n"
+                "if [ -z $DO_REMOVE ]  \n"
                 "then                  \n"
                 "  rm -f rmlint.log    \n"
                 "  rm -f rmlint.sh     \n"
