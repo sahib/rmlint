@@ -52,7 +52,7 @@ EXECUTABLE=rmlint
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE):  $(OBJECTS)
-		 @$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+		 @$(CC) $(LDFLAGS) $(OBJECTS) -o $@ 
 ifdef DEBUG
 	     @$(ECHO) "=> Building debug target."
 else
@@ -63,7 +63,7 @@ endif
 
 .c.o: 	
 	@$(ECHO) "-> Compiling $<"
-	@$(CC) $(INCLUDE) $(CFLAGS) $< -o $@
+	@$(CC) $(LDFLAGS) $(INCLUDE) $(CFLAGS) $< -o $@
 
 .PHONY : clean
 clean:
