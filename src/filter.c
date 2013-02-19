@@ -1117,7 +1117,7 @@ void start_processing(lint_t *b)
                     }
                     else if(ptr->dupflag == TYPE_NBIN)
                     {
-                        error("   strip -s");
+                        error("   strip --strip-debug");
                     }
                     else if(ptr->dupflag == TYPE_BADUID)
                     {

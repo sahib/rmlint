@@ -361,7 +361,7 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
         }
         else if(file->dupflag == TYPE_NBIN)
         {
-            script_print(_sd_("strip -s '%s' # binary with debugsymbols.\n", fpath));
+            script_print(_sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
             log_print(get_logstream(),"NBIN");
         }
         else if(file->dupflag == TYPE_BADUID)
