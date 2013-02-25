@@ -43,7 +43,8 @@
 
 /* global vars, but initialized by filt_c_init() */
 nuint_t dircount, dbase_ctr;
-bool iAbort, dir_done, db_done;
+bool dir_done, db_done;
+int iAbort;
 
 UserGroupList ** global_ug_list = NULL;
 
@@ -1150,7 +1151,7 @@ void start_processing(lint_t *b)
     error("\n");
     if(set->searchdup == 0)
     {
-        int i = 0;
+        nuint_t i = 0;
         /* rmlint was originally supposed to find duplicates only
            So we have to free list that whould have been used for
            dup search before dieing */
