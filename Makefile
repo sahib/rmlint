@@ -19,7 +19,7 @@ STRIP=strip -s
 MKDIR=mkdir -p
 
 #compiling stuff
-CC=gcc
+CC?=gcc
 
 #Heavy Warnlevel 
 WARN=-Wall -pedantic
@@ -27,13 +27,13 @@ WARN=-Wall -pedantic
 OPTI=-march=native -O3 -s -finline-functions
 
 ifdef DEBUG
-  CFLAGS=-c -pipe -ggdb3 $(WARN) -D_FILE_OFFSET_BITS=64
+	CFLAGS?=-pipe -ggdb3 $(WARN)
 else
-  CFLAGS=-c -pipe $(OPTI) $(WARN) -D_FILE_OFFSET_BITS=64
+	CFLAGS?=-pipe $(OPTI) $(WARN)
 endif
 
 #Link flags 
-LDFLAGS=-lpthread -lm
+LDFLAGS+=-lpthread -lm
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \
@@ -63,7 +63,7 @@ endif
 
 .c.o: 	
 	@$(ECHO) "-> Compiling $<"
-	@$(CC) $(LDFLAGS) $(INCLUDE) $(CFLAGS) $< -o $@
+	@$(CC) $(LDFLAGS) $(INCLUDE) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -c $< -o $@
 
 .PHONY : clean
 clean:
