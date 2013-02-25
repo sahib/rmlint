@@ -71,7 +71,7 @@ clean:
 	@$(RM) $(SOURCEDIR)/*.o $(EXECUTABLE) 2> /dev/null
 
 .PHONY : install
-install: 
+install: rmlint
 	@$(MKDIR) $(INSTALLPATH)
 	@$(ECHO) "++ Copying executable to $(INSTALLPATH)"
 	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
