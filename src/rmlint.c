@@ -456,7 +456,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             return 0;
         case 't':
             sets->threads = atoi(optarg);
-            if(!sets->threads || sets->threads < 0)
+            if(!sets->threads)
             {
                 sets->threads = 8;
             }
