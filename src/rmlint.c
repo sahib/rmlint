@@ -254,7 +254,7 @@ static void print_help(void)
             "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally for duplicates. (Slow!) (Default: No.)\n"
             "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!'')\n"
            );
-    fprintf(stderr,"\t-z --limit\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")");
+    fprintf(stderr,"\t-z --limit\t\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")\n");
     fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
             "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
             "\t-k --emptyfiles\t\tSearch for empty files (Default: Yes, use -K to disable)\n"
