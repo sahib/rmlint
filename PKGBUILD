@@ -25,7 +25,7 @@ build()
         git pull origin
     msg "Updating existing repo..."
     else
-        git clone ${_gitroot}
+        git clone --depth=1 ${_gitroot}
     fi
     
     msg "GIT checkout done."
