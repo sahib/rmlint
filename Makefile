@@ -5,7 +5,8 @@ DOCDIR=doc
 #MANDIR
 MANDIR=$(DESTDIR)/usr/share/man/man1
 #MANUAL
-MANDOC=rmlint.1.gz
+MANDOC=rmlint.1
+MANDOC_COMPRESSED=rmlint.1.gz
 
 #install
 INSTALLPATH=$(DESTDIR)/usr/bin
@@ -17,6 +18,7 @@ CAT=cat
 CP=cp
 STRIP=strip -s
 MKDIR=mkdir -p
+GZIP=gzip -c -f
 
 #compiling stuff
 CC?=gcc
@@ -76,8 +78,10 @@ install: rmlint
 	@$(ECHO) "++ Copying executable to $(INSTALLPATH)"
 	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
 	@$(MKDIR) $(MANDIR)
+	@$(ECHO) "++ Zipping manpage"
+	@$(GZIP) "$(DOCDIR)/$(MANDOC)" > "$(DOCDIR)/$(MANDOC_COMPRESSED)"
 	@$(ECHO) "++ Copying manpage to $(MANDIR)."
-	@$(CP) "$(DOCDIR)/$(MANDOC)" $(MANDIR)
+	@$(CP) "$(DOCDIR)/$(MANDOC_COMPRESSED)" $(MANDIR)
 
 .PHONY : uninstall
 uninstall:
