@@ -262,7 +262,12 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
     {
         if(!dir_done)
         {
-            if(!strcmp(set->paths[get_cpindex()], path))
+            char *orig_path = set->paths[get_cpindex()];
+            size_t orig_path_len = strlen(set->paths[get_cpindex()]);
+            if(orig_path[orig_path_len - 1] == '/') {
+                orig_path_len -= 1;
+            }
+            if(!strncmp(set->paths[get_cpindex()], path, orig_path_len))
             {
                 dir_done = true;
                 return FTW_CONTINUE;
