@@ -26,16 +26,18 @@ CC?=gcc
 #Heavy Warnlevel 
 WARN=-Wall -pedantic
 
-OPTI=-march=native -O3 -s -finline-functions
+OPTI=-march=native -O3 -finline-functions
+
+#Link flags 
+LDFLAGS+=-lpthread -lm
 
 ifdef DEBUG
 	CFLAGS?=-pipe -ggdb3 $(WARN)
 else
 	CFLAGS?=-pipe $(OPTI) $(WARN)
+	LDFLAGS+=-s
 endif
 
-#Link flags 
-LDFLAGS+=-lpthread -lm
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \
@@ -65,7 +67,7 @@ endif
 
 .c.o: 	
 	@$(ECHO) "-> Compiling $<"
-	@$(CC) $(LDFLAGS) $(INCLUDE) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -c $< -o $@
+	@$(CC) $(INCLUDE) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -c $< -o $@
 
 .PHONY : clean
 clean:

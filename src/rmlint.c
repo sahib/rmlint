@@ -1,4 +1,4 @@
-/**
+
  *  This file is part of rmlint.
  *
  *  rmlint is free software: you can redistribute it and/or modify
@@ -251,7 +251,7 @@ static void print_help(void)
     fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [File[s]] [Options]\n");
     fprintf(stderr, "\nGeneral options:\n\n"
             "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
-            "\t-p --paranoid\t\tDo a byte-by-byte comparasion additionally for duplicates. (Slow!) (Default: No.)\n"
+            "\t-p --paranoid\t\tDo a byte-by-byte comparison additionally for duplicates. (Slow!) (Default: No.)\n"
             "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!'')\n"
            );
     fprintf(stderr,"\t-z --limit\t\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")\n");
@@ -265,7 +265,7 @@ static void print_help(void)
             "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
            );
     fprintf(stderr, "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
-            "\t-f --followlinks\tWether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
+            "\t-f --followlinks\tWhether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
             "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: No.)\n"
             "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
             "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
@@ -282,7 +282,7 @@ static void print_help(void)
             "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
             "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n");
     fprintf(stderr,"\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
-            "\t\t\t\tNote: If '-m cmd' is not given, rmlint's deault commands are replaced with the ones from -cC\n"
+            "\t\t\t\tNote: If '-m cmd' is not given, rmlint's default commands are replaced with the ones from -cC\n"
             "\t\t\t\t      This is especially useful with -v5, so you can pipe your commands to sh in realtime.\n"
            );
     fprintf(stderr, "Regex options:\n\n"

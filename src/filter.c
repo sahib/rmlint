@@ -22,6 +22,7 @@
 /* Needed for nftw() */
 #define _XOPEN_SOURCE 500
 #define _GNU_SOURCE
+#define __USE_GNU
 
 #include <stdio.h>
 #include <string.h>
