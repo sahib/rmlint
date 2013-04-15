@@ -226,6 +226,27 @@ int regfilter(const char* input, const char *pattern)
 
 /* ------------------------------------------------------------- */
 
+/* Mac OSX hackery */
+#ifndef FTW_STOP
+    /* Non-zero value terminates ftw() */
+    #define FTW_STOP 1
+#endif
+
+#ifndef FTW_CONTINUE
+    #define FTW_CONTINUE 0
+#endif
+
+#ifndef FTW_SKIP_SIBLINGS
+    #define FTW_SKIP_SIBLINGS 0
+#endif
+
+#ifndef FTW_SKIP_SUBTREE
+    #define FTW_SKIP_SUBTREE 0 
+#endif
+
+#ifndef FTW_ACTIONRETVAL
+    #define FTW_ACTIONRETVAL 0
+#endif
 /*
  * Callbock from nftw()
  * If the file given from nftw by "path":
@@ -454,6 +475,7 @@ int recurse_dir(const char *path)
     /* Start recurse */
     if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags)))
     {
+        printf("Nftw: %d\n", ret);
         if(ret != FTW_STOP)
         {
             /* Some error occured */
