@@ -309,7 +309,7 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
     if(get_logstream() && get_scriptstream() && set->output)
     {
         int i = 0;
-        char *fpath = canonicalize_file_name(file->path);
+        char *fpath = realpath(file->path, NULL);
         const char * chown_cmd = "chown $(whoami):$(id -gn)";
         if(!fpath)
         {
@@ -384,7 +384,7 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
             log_print(get_logstream(),"DUPL");
             if(set->cmd_path)
             {
-                char *opath = canonicalize_file_name(p_to_orig->path);
+                char *opath = realpath(p_to_orig->path, NULL);
                 if(opath != NULL)
                 {
                     /*script_print(_sd_(set->cmd_path,fpath,opath));*/
@@ -535,10 +535,10 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
         }
         else
         {
-            char * full_orig_path = canonicalize_file_name(orig);
+            char * full_orig_path = realpath(orig, NULL);
             if(full_orig_path)
             {
-                char * full_dupl_path = canonicalize_file_name(path);
+                char * full_dupl_path = realpath(path, NULL);
                 if(full_dupl_path)
                 {
                     error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);

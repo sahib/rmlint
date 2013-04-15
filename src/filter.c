@@ -923,7 +923,7 @@ static void find_double_bases(lint_t *starting)
                 if(!strcmp(basename(i->path), basename(j->path)) && i->node != j->node && j->dupflag != TYPE_BASE)
                 {
                     lint_t *x = j;
-                    char *tmp2 = canonicalize_file_name(j->path);
+                    char *tmp2 = realpath(j->path, NULL);
                     if(phead)
                     {
                         error("\n%s#"NCO" Double basename(s):\n", (set->verbosity > 1) ? GRE : NCO);
@@ -931,7 +931,7 @@ static void find_double_bases(lint_t *starting)
                     }
                     if(!pr)
                     {
-                        char * tmp = canonicalize_file_name(i->path);
+                        char * tmp = realpath(i->path, NULL);
                         i->dupflag = TYPE_BASE;
                         error("   %sls"NCO" %s\n", (set->verbosity!=1) ? GRE : "", tmp,i->fsize);
                         write_to_log(i,false,NULL);
