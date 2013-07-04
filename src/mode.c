@@ -30,11 +30,12 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <pthread.h>
-#include <alloca.h>
+#include <stdlib.h>
 
 #include "rmlint.h"
 #include "mode.h"

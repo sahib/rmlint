@@ -39,7 +39,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include <alloca.h>
+#include <stdlib.h>
 #include <math.h>
 
 #include <sys/mman.h>

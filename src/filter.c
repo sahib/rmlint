@@ -26,7 +26,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <alloca.h>
+#include <stdlib.h>
 
 #include <ftw.h>
 #include <signal.h>
@@ -888,19 +888,19 @@ static void size_to_human_readable(nuint_t num, char *in, int sz)
 {
     if(num < 1024 / 2)
     {
-        snprintf(in,sz,"%ld B",(unsigned long)num);
+        sprintf(in,"%ld B",(unsigned long)num);
     }
     else if(num < 1048576)
     {
-        snprintf(in,sz,"%.2f KB",(float)(num/1024.0));
+        sprintf(in,"%.2f KB",(float)(num/1024.0));
     }
     else if(num < 1073741824 / 2)
     {
-        snprintf(in,sz,"%.2f MB",(float)(num/1048576.0));
+        sprintf(in,"%.2f MB",(float)(num/1048576.0));
     }
     else
     {
-        snprintf(in,sz,"%.2f GB",(float)(num/1073741824.0));
+        sprintf(in,"%.2f GB",(float)(num/1073741824.0));
     }
 }
 
