@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <libgen.h>
+#include <alloca.h>
 
 #include <ftw.h>
 #include <signal.h>
