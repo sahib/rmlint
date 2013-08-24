@@ -10,13 +10,25 @@ MANDOC_COMPRESSED=rmlint.1.gz
 
 #install
 INSTALLPATH=$(DESTDIR)/usr/bin
+UNAME := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 #Programs 
 ECHO=echo
 RM=rm -rf
 CAT=cat
 CP=cp
-STRIP=strip -s
+
+ifeq ($(UNAME),Darwin)
+	STRIP=strip
+	OPTI=-O4
+	CC?=clang
+else
+	STRIP=strip -s
+	OPTI=-march=native -O3 -finline-functions
+	CC?=gcc
+endif
+
+
 MKDIR=mkdir -p
 GZIP=gzip -c -f
 
@@ -25,8 +37,6 @@ CC?=gcc
 
 #Heavy Warnlevel 
 WARN=-Wall -pedantic
-
-OPTI=-march=native -O3 -finline-functions
 
 #Link flags 
 LDFLAGS+=-lpthread -lm
