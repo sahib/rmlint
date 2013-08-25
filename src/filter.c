@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <libgen.h>
 #include <alloca.h>
 
 #include <ftw.h>
@@ -43,6 +42,21 @@
 #include "mode.h"
 #include "md5.h"
 #include "useridcheck.h"
+
+
+char * rmlint_basename(const char *filename)
+{
+    char * base = strrchr(filename, '/');
+    if(base != NULL) {
+        /* Return a pointer to the part behind it 
+         * (which may be the empty string */
+        return base + 1;
+    }
+
+    /* It's the full path anyway */
+    return (char *)filename;
+}
+
 
 /* global vars, but initialized by filt_c_init() */
 nuint_t dircount, dbase_ctr;
@@ -198,7 +212,7 @@ int regfilter(const char* input, const char *pattern)
     {
         regex_t re;
         /* Only grep basename */
-        string = basename(input);
+        string = rmlint_basename((char *)input);
         /* forget about case by default */
         if(!set->casematch)
         {
@@ -304,7 +318,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             {
                 return FTW_CONTINUE;
             }
-            if(junkinstr(basename(path)))
+            if(junkinstr(rmlint_basename(path)))
             {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
                 if(set->collide)
@@ -385,7 +399,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 {
                     if(set->ignore_hidden)
                     {
-                        char *base = basename(path);
+                        char *base = rmlint_basename(path);
                         if(*base != '.')
                         {
                             dircount++;
@@ -407,7 +421,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             {
                 return FTW_SKIP_SUBTREE;
             }
-            if(junkinstr(basename(path)))
+            if(junkinstr(rmlint_basename(path)))
             {
                 list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
                 if(set->collide)
@@ -436,7 +450,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             }
             if(set->ignore_hidden && path)
             {
-                char *base = basename(path);
+                char *base = rmlint_basename(path);
                 if(*base == '.' && dir_done)
                 {
                     return FTW_SKIP_SUBTREE;
@@ -922,7 +936,7 @@ static void find_double_bases(lint_t *starting)
             while(j)
             {
                 /* compare basenames */
-                if(!strcmp(basename(i->path), basename(j->path)) && i->node != j->node && j->dupflag != TYPE_BASE)
+                if(!strcmp(rmlint_basename(i->path), rmlint_basename(j->path)) && i->node != j->node && j->dupflag != TYPE_BASE)
                 {
                     lint_t *x = j;
                     char *tmp2 = realpath(j->path, NULL);
