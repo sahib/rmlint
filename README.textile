@@ -16,25 +16,25 @@ __download the sources by one of the following ways:__
 
 
 <h4>Git way</h4>
-@git clone https://github.com/sahib/rmlint.git@
+bc. git clone https://github.com/sahib/rmlint.git
 
 
 <h4>Zip way</h4>
-@wget --no-check-certificate http://github.com/sahib/rmlint/zipball/master -O rmlint.zip@
-@unzip rmlint.zip@
+bc. wget --no-check-certificate http://github.com/sahib/rmlint/zipball/master -O rmlint.zip
+unzip rmlint.zip
 
 
 <h4>Tar way</h4>
-@wget --no-check-certificate http://github.com/sahib/rmlint/tarball/master -O rmlint.tar@
-@tar xfv rmlint.tar@
+bc. wget --no-check-certificate http://github.com/sahib/rmlint/tarball/master -O rmlint.tar
+tar xfv rmlint.tar
 
 
 <h3>Now compile</h3>
-@cd <name_of_the_dir>@
-@make -j 2  && sudo make install@
+bc. cd <name_of_the_dir>
+make -j 2  && sudo make install
 
 <h4>Packages</h4>
-A PKGBUILD is available in the AUR.
+A PKGBUILD is available in the AUR: "@rmlint-git@":https://aur.archlinux.org/packages/rmlint-git/
 
 <h2>HELP:</h2>
 <h4>Use:</h4>
@@ -95,7 +95,7 @@ __Short:__ False Positves are actuallly possible, but very, very, very unlikely.
 __Longer:__ They would need to have the same size, fingerprint and checksums to be marked as twins.
 md5 is not perfect, but the probability of getting false positves on a normal set of data is the same as lim(1/x) : x -> +inf = 0 + h; where h ~ 0
 
-But isn't there a solution to be 100% sure? Yes, there is. It's the "--paranoid/-p" option. It does a 
+But isn't there a solution to be 100% sure? Yes, there is. It's the @--paranoid/-p@ option. It does a 
 true byte-by-byte comparasion of each(!) file. Be warned, because it's incredibly slow. 
 
 If you find false positives, those are most likely a bug on rmlint, please make a bugreport to sahib@online.de in this case,
@@ -180,10 +180,10 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *Q:* __None of the -m options satisfy my needs. What can I do?__
 *A:* You can specify your own commands by -c/-C, those get also replaced in the script.
      You can for example pipe rmlint's find directly to sh:
-     rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh
+     @rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh@
 
 *Q:* __I want hardlinks instead of symlinks (as with -m link), how can I do this?__
-*A:* rmlint -c "rm -f '<dupl>' && ln '<orig>' '<dupl>'" YOUR_TARGET_DIR_HERE
+*A:* @rmlint -c "rm -f '<dupl>' && ln '<orig>' '<dupl>'" YOUR_TARGET_DIR_HERE@
 
 *Q:* __Are there bugs I should know off?__
 *A:* None that are really known, only some strange output formatting sometimes.
