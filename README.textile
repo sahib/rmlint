@@ -54,7 +54,7 @@ A PKGBUILD is available in the AUR.
 * Regex filter for both files and directories.
 * It has been tested with very large filesets, with a record of finding 166GB dupes, with a logsize of 82MB (cheers Christoph)
 * Handles the files the way you want: 
-   ** replace double file by a symboliclink, (-m link)  
+   ** replace double file by a Symlink (-m link)  
    ** Removes the file without asking you. (-m noask) 
    ** Simply list all files without doing anything dangerous. (-m list) 
    ** It executes a user specified commando for each file (-m cmd) 
@@ -181,6 +181,9 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *A:* You can specify your own commands by -c/-C, those get also replaced in the script.
      You can for example pipe rmlint's find directly to sh:
      rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh
+
+*Q:* __I want hardlinks instead of symlinks (as with -m link), how can I do this?__
+*A:* rmlint -c "rm -f '<dupl>' && ln '<orig>' '<dupl>'" YOUR_TARGET_DIR_HERE
 
 *Q:* __Are there bugs I should know off?__
 *A:* None that are really known, only some strange output formatting sometimes.

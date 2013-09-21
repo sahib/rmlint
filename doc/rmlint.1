@@ -91,6 +91,11 @@ Tell rmlint what to do with found duplicates (duplicates only! does not apply to
 "--mode noask": Remove files without asking.  
 .IP " " 16
 "--mode link":  Symlink duplicates with original **) 
+
+                If you want to make hardlinks instead, you can go with this:
+
+                    rmlint -c "rm -f '<dupl>' && ln '<orig>' '<dupl>'" YOUR_TARGET_DIR_HERE
+
 .IP " " 16
 "--mode cmd":   Execute a command give with -c / -C on 
                 duplicate / original. (See -c / -C) 
