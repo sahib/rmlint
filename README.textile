@@ -34,7 +34,7 @@ bc. cd <name_of_the_dir>
 make -j 2  && sudo make install
 
 <h4>Packages</h4>
-A PKGBUILD is available in the AUR.
+A PKGBUILD is available in the AUR: "@rmlint-git@":https://aur.archlinux.org/packages/rmlint-git/
 
 <h2>HELP:</h2>
 <h4>Use:</h4>
