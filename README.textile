@@ -46,7 +46,7 @@ A PKGBUILD is available in the AUR: "@rmlint-git@":https://aur.archlinux.org/pac
 * Very fast (written in pure C, in many cases faster than rdfind, and always magnitudes faster than fdupes).
 * Output of both a ready to use script to handle finds and a easy-to-parse logfile.
 * Tries to minimize I/O as much as possible (focus on CPU-usage).
-* Finds duplictes, nonstripped binaries, files with same basenames (nameclusters), empty files/directories, old tempdata, strange filenames and bad links.
+* Finds duplicates, nonstripped binaries, files with same basenames (nameclusters), empty files/directories, old tempdata, strange filenames and bad links.
 * Displays finds in realtime. (like 'duff' or 'fdupes')
 * Safely abortable at any time (will write log & script).
 * No extra dependencies at all (glibc2 and pthread is something you already have).
