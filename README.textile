@@ -44,7 +44,7 @@ A PKGBUILD is available in the AUR: "@rmlint-git@":https://aur.archlinux.org/pac
 
 <h2>FEATURES</h2>
 * Very fast (written in pure C, in many cases faster than rdfind, and always magnitudes faster than fdupes).
-* Output of both a ready to use script to handle finds and a easy-to-parse logfile.
+* Output of both a ready to use script to handle finds and an easy-to-parse logfile.
 * Tries to minimize I/O as much as possible (focus on CPU-usage).
 * Finds duplicates, nonstripped binaries, files with same basenames (nameclusters), empty files/directories, old tempdata, strange filenames and bad links.
 * Displays finds in realtime. (like 'duff' or 'fdupes')
@@ -65,20 +65,20 @@ The algorithm tries to mimize IO as far as possible, thus focusing on CPU usage.
 #) Go through all directories and catch all files conformig to regexpattern / dirpattern / hiddenstatus
 #) lint other than duplicates get detected here on the fly (like nonstripped binaries - every file is checked)
 #) the rest of the list (all files without files from 2)) gets sorted by their filesize
-#) elements with a unique filesize gets kicked out (because they can't have a twin)
-#) list gets divided isn sublist, each size one sublist
-#) each sublist gets sort by inode (to speed up reading from HD)
-#) Each group is processed seperately:
-  ##) if the size of group exceeds a certain limit then it's processed on an own thread
-  ##) else the group gets processed within the main thread
+#) elements with a unique filesize get kicked out (because they can't have a twin)
+#) list gets divided in sublists, each size one sublist
+#) each sublist gets sorted by inode (to speed up reading from HD)
+#) Each group is processed separately:
+  ##) if the size of a group exceeds a certain limit then it's processed in it's own thread
+  ##) otherwise the group gets processed within the main thread
 #) Processing: For each file of a group..
-  ##) A short fingerprint from the start/end + some bytes in the middle of the file is read and stored
+  ##) A short fingerprint from the start/end + some bytes in the middle of the file are read and stored
   ##) Nonmatching files get kicked out, if the group consists of 1 elem or less, rmlint forgets about it
-  ##) a md5sums are calculated for the rest of the group (only the part of the file that hasnt been read, is used fo md5sum calculation)
-  ##) if the groupssize exceeds a certain limit, the group gets splitted into several equalsized subgroups
+  ##) md5sums are calculated for the rest of the group (only the part of the file that hasnt been read, is used for md5sum calculation)
+  ##) if the group's size exceeds a certain limit, the group gets splitted into several equally sized subgroups
      ###) The whole file is read blockwise, while other threads have wait (so no useless jumping is done)
-     ###) After a block is read (blocksize is about 2MB) md5 is updated, while at the same time another thread is reading, back to 8.3.1)
-  ##) md5sums, filesize, fingerprint and bytes in the middle get checked each other (to double check and prevent false positives) 
+     ###) After a block is read (blocksize is about 2MB) the md5 is updated, while at the same time another thread is reading, back to 8.3.1)
+  ##) md5sums, filesize, fingerprint and bytes in the middle get checked against each other (to double check and prevent false positives) 
   ##) log/handle result to script / log / screen (let other threads wait for this short time, so no chaos is created)
 #) Do for every group, and print statistics
 
@@ -87,7 +87,7 @@ The algorithm tries to mimize IO as far as possible, thus focusing on CPU usage.
 * Linux 32/64
 * Solaris
 
-__Note1__: It is written in ANSI C, so every ANSI C compiler should be happily compile it. 
+__Note1__: It is written in ANSI C, so every ANSI C compiler should happily compile it. 
 __Note2__: rmlint uses alloca(), if you want to port it you may need to replace it with malloc() (and a corresponding free())
 
 <h2>NOTE ABOUT FALSE POSITIVES</h2> 
@@ -102,14 +102,14 @@ If you find false positives, those are most likely a bug on rmlint, please make 
 so others won't suffer from it.
 
 
-<h2>COMPARASION TO OTHER TOOLS</h2>
+<h2>COMPARISON TO OTHER TOOLS</h2>
 (this list could get very, very long, but never accurate) 
 
 __compared to...__ 
 * ..fdupes / duff: 
 ** + LOTS faster 	
 ** + more options 
-** + finds also bad links and other stuff 
+** + also finds bad links and other stuff 
 ** + logging
 ** - did find one file more once. :-)
 
@@ -129,7 +129,7 @@ __compared to...__
 		
 		
 <h2>Pseudobenchmark</h2>
-Machine was a regular quadcore with a even more regular HDD and an absolutely regular Linux x86_64.
+Machine was a regular quadcore with an even more regular HDD and an absolutely regular Linux x86_64.
 measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 
 <table >
