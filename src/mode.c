@@ -19,6 +19,7 @@
 *
 **/
 
+
 /*
   mode.c:
   1) log routines
@@ -44,6 +45,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <fcntl.h>
+
 
 nuint_t dup_counter=0;
 nuint_t get_dupcounter()
@@ -150,92 +152,6 @@ static void remfile(const char *r_path)
 
 /* ------------------------------------------------------------- */
 
-static int paranoid(const lint_t *p1, const lint_t *p2)
-{
-    int result = 0,file_a,file_b;
-    char * file_map_a, * file_map_b;
-    if(!p1 || !p2)
-        return 0;
-    if(p1->fsize != p2->fsize)
-        return 0;
-    if((file_a = open(p1->path, MD5_FILE_FLAGS)) == -1)
-    {
-        perror(RED"ERROR:"NCO"sys:open()");
-        return 0;
-    }
-    if((file_b = open(p2->path, MD5_FILE_FLAGS)) == -1)
-    {
-        perror(RED"ERROR:"NCO"sys:open()");
-        return 0;
-    }
-    if(p1->fsize < MMAP_LIMIT && p1->fsize > MD5_IO_BLOCKSIZE>>1)
-    {
-        file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
-        if(file_map_a != MAP_FAILED)
-        {
-            if(madvise(file_map_a,p1->fsize, MADV_SEQUENTIAL) == -1)
-                perror("madvise");
-            file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
-            if(file_map_b != MAP_FAILED)
-            {
-                if(madvise(file_map_b,p2->fsize, MADV_SEQUENTIAL) == -1)
-                    perror("madvise");
-                result = !memcmp(file_map_a, file_map_b, p1->fsize);
-                munmap(file_map_b,p1->fsize);
-            }
-            else
-            {
-                perror("paranoid->mmap");
-                result = 0;
-            }
-            munmap(file_map_a,p1->fsize);
-        }
-        else
-        {
-            perror("paranoid->mmap");
-            result = 0;
-        }
-    }
-    else /* use fread() */
-    {
-        nuint_t blocksize = MD5_IO_BLOCKSIZE/2;
-        char * read_buf_a = alloca(blocksize);
-        char * read_buf_b = alloca(blocksize);
-        int read_a=-1,read_b=-1;
-        while(read_a && read_b)
-        {
-            if((read_a=read(file_a,read_buf_a,blocksize) == -1))
-            {
-                result = 0;
-                break;
-            }
-            if((read_b=read(file_b,read_buf_b,blocksize) == -1))
-            {
-                result = 0;
-                break;
-            }
-            if(read_a == read_b)
-            {
-                if((result = !memcmp(read_buf_a,read_buf_b,read_a)) == 0)
-                {
-                    break;
-                }
-            }
-            else
-            {
-                result = 0;
-                break;
-            }
-        }
-    }
-    if(close(file_a) == -1)
-        perror(RED"ERROR:"NCO"close()");
-    if(close(file_b) == -1)
-        perror(RED"ERROR:"NCO"close()");
-    return result;
-}
-
-/* ------------------------------------------------------------- */
 
 static void print_askhelp(void)
 {
@@ -711,161 +627,63 @@ void init_filehandler(void)
 
 /* ------------------------------------------------------------- */
 
-/* Compare criteria of checksums */
-static int cmp_f(lint_t *a, lint_t *b)
-{
-    int i, fp_i, x;
-    int is_empty[2][3] = { {1,1,1}, {1,1,1} };
-    for(i = 0; i < MD5_LEN; i++)
-    {
-        if(a->md5_digest[i] != b->md5_digest[i])
-        {
-            return 1;
-        }
-        if(a->md5_digest[i] != 0)
-        {
-            is_empty[0][0] = 0;
-        }
-        if(b->md5_digest[i] != 0)
-        {
-            is_empty[1][0] = 0;
-        }
-    }
-    for(fp_i = 0; fp_i < 2; fp_i++)
-    {
-        for(i = 0; i < MD5_LEN; i++)
-        {
-            if(a->fp[fp_i][i] != b->fp[fp_i][i])
-            {
-                return 1;
-            }
-            if(a->fp[fp_i][i] != 0)
-            {
-                is_empty[0][fp_i+1] = 0;
-            }
-            if(b->fp[fp_i][i] != 0)
-            {
-                is_empty[1][fp_i+1] = 0;
-            }
-        }
-    }
-    /* check for empty checkusm AND fingerprints - refuse and warn */
-    for(x=0; x<2; x++)
-    {
-        if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2])
-        {
-            warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* ------------------------------------------------------------- */
 
 #define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false)
 bool print_newline = true;
 
-bool findmatches(file_group *grp)
-{
-    lint_t *i = grp->grp_stp, *j;
-    int class_ctr = -1;
-    if(i == NULL)
-    {
-        return false;
-    }
-    warning(NCO);
-    while(i)
-    {
-        if(NOT_DUP_FLAGGED(i))
-        {
-            j=i->next;
-            while(j)
-            {
-                if(NOT_DUP_FLAGGED(j))
-                {
-                    if((!cmp_f(i,j))              &&     /* Same checksum?                            */
-                            (i->fsize == j->fsize)     &&     /* Same size? (double check, you never know) */
-                            ((set->paranoid)?paranoid(i,j):1) /* If we're bothering with paranoid users - Take the gatling! */
-                      )
-                    {
-                        /* i twin of j - question of origin is decided later */
-                        i->dupflag = class_ctr;
-                        i->filter  = false;
-                        j->dupflag = class_ctr;
-                        j->filter = true;
-                    }
-                }
-                j = j->next;
-            }
-            class_ctr--;
-            /* Now remove if $i didn't match in list */
-            if(NOT_DUP_FLAGGED(i))
-            {
-                lint_t *tmp = i;
-                grp->len--;
-                grp->size -= i->fsize;
-                i = list_remove(i);
-                /* Update start / end */
-                if(tmp == grp->grp_stp)
-                {
-                    grp->grp_stp = i;
-                }
-                if(tmp == grp->grp_enp)
-                {
-                    grp->grp_enp = i;
-                }
-                continue;
-            }
-            else
-            {
-                i=i->next;
-                continue;
-            }
-        }
-        i=i->next;
-    }
-    if(grp->len == 0)
-    {
-        return false;
-    }
+
+bool process_doop_groop(file_group *grp)
+{   /* This does the final processing on a dupe group. All required   */
+	/* comparisons have been done (including paranoid if required) so */
+	/* now it's just a matter of deciding which originals to keep and */
+	/* which files to delete.                                         */
+	    
     /* If a specific directory is specified to have the 'originals':  */
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
-    if(set->preferID != -1)
-    {
-        char * pPath  = set->paths[set->preferID];
-        size_t length = strlen(pPath);
-        i = grp->grp_stp;
-        while(i)
+    
+    
+	lint_t *i = grp->grp_stp;
+	bool tagged_original = false;
+	lint_t *original;
+	
+	while(i)
+	{
+		if ( ( (i->in_ppath) && (set->keep_all_originals) ) ||
+			 /* tag all originals*/
+		     ( (i->in_ppath) && (!tagged_original) ) )
+			/*tag first original only*/
+		{
+			i->filter = false;
+			if (!tagged_original)
+			{
+				tagged_original = true;
+				original = i;
+			}
+		}
+        else
         {
-            if(!strncmp(pPath,i->path,length) && i->filter)
-            {
-                j = grp->grp_stp;
-                while(j)
-                {
-                    if(j->dupflag == i->dupflag && i != j)
-                    {
-                        /* Swap as long as possible */
-                        i->filter = false;
-                        j->filter = true;
-                    }
-                    j = j->next;
-                }
-            }
-            i = i->next;
-        }
+			/*tag as duplicate*/
+			i->filter = true;
+		}
+        i = i->next;
     }
+    if (!tagged_original)
+    {
+		/* tag first file as the original*/
+		grp->grp_stp->filter = false;
+		original = grp->grp_stp;
+	}
+	
     /* Make sure no group is printed / logged at the same time (== chaos) */
     pthread_mutex_lock(&mutex_printage);
-    i = grp->grp_stp;
+    
     /* Now do the actual printout.. */
+    i = grp->grp_stp;
     while(i)
     {
-        /* not a duplicate */
         if(!i->filter)
-        {
-            lint_t * from = grp->grp_stp;
+        {   /* original(s) of a duplicate set*/
             if((set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
             {
                 if(print_newline)
@@ -882,45 +700,46 @@ bool findmatches(file_group *grp)
             handle_item(NULL, i);
             /* Subtract size of the original , so we can gather it later */
             grp->size -= i->fsize;
-            /* print all duplicates belonging to this orig. */
-            while(from)
-            {
-                if(from->dupflag == i->dupflag && from != i)
-                {
-                    if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
-                    {
-                        if(set->paranoid)
-                        {
-                            /* If byte by byte was succesful print a blue "x" */
-                            warning(BLU"   %-1s "NCO,"rm");
-                        }
-                        else
-                        {
-                            warning(YEL"   %-1s "NCO,"rm");
-                        }
-                        if(set->verbosity > 1)
-                        {
-                            error("%s\n",from->path);
-                        }
-                        else
-                        {
-                            error("   rm %s\n",from->path);
-                        }
-                    }
-                    write_to_log(from, false, i);
-                    set_dupcounter(get_dupcounter()+1);
-                    if(handle_item(from,i))
-                    {
-                        pthread_mutex_unlock(&mutex_printage);
-                        return true;
-                    }
-                }
-                from = from->next;
-            }
         }
         i = i->next;
     }
-    pthread_mutex_unlock(&mutex_printage);
+    i = grp->grp_stp;
+    while(i)
+    {
+        if(i->filter)
+        {   /* duplicates(s) of a duplicate set*/
+			if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
+			{
+				if(set->paranoid)
+				{
+					/* If byte by byte was succesful print a blue "x" */
+					warning(BLU"   %-1s "NCO,"rm");
+				}
+				else
+				{
+					warning(YEL"   %-1s "NCO,"rm");
+				}
+				if(set->verbosity > 1)
+				{
+					error("%s\n",i->path);
+				}
+				else
+				{
+					error("   rm %s\n",i->path);
+				}
+			}
+			write_to_log(i, false, original);
+			set_dupcounter(get_dupcounter()+1);
+			add_total_lint(i->fsize);
+			if(handle_item(i,original))
+			{
+				pthread_mutex_unlock(&mutex_printage);
+				return true;
+			}
+		}
+		i = i->next;
+	}
+	pthread_mutex_unlock(&mutex_printage);
     return false;
 }
 

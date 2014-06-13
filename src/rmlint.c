@@ -248,7 +248,7 @@ static void print_version(bool exit)
 /* Help text */
 static void print_help(void)
 {
-    fprintf(stderr, "Syntax: rmlint [TargetDir[s]] [File[s]] [Options]\n");
+    fprintf(stderr, "Syntax: rmlint [[//]TargetDir[s]] [File[s]] [Options]\n");
     fprintf(stderr, "\nGeneral options:\n\n"
             "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
             "\t-p --paranoid\t\tDo a byte-by-byte comparison additionally for duplicates. (Slow!) (Default: No.)\n"
@@ -263,6 +263,9 @@ static void print_help(void)
     fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
             "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
+           );
+    fprintf(stderr, "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
+            "\t-O --keepallorig\Don't delete any files that are in 'originals' paths. (Default - just keep one)\n"
            );
     fprintf(stderr, "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
             "\t-f --followlinks\tWhether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
@@ -292,8 +295,8 @@ static void print_help(void)
             "\t-e --matchcase\t\tMatches case of paths (Default: No.)\n");
     fprintf(stderr, "\nMisc options:\n\n"
             "\t-h --help\t\tPrints this text and exits\n"
-            "\t-o --output [<o>]\tOutputs logfile to <o>. The <o> argument is optional, specify none to write no log.\n"
-            "\t\t\t\tExamples:\n\n\t\t\t\t-o => No Logfile\n\t\t\t\t-o\"la la.txt\" => Logfile to \"la la.txt\"\n\n\t\t\t\tNote the missing whitespace. (Default \"rmlint\")\n\n");
+            "\t-o --output <o>\tOutputs logfile to <o>.log and script to <o>.sh\n"
+            );
     fprintf(stderr,"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
             "\t\t\t\tWhere:\n"
             "\t\t\t\t0 prints nothing\n"
@@ -307,7 +310,7 @@ static void print_help(void)
             "\t\t\t\tUse 6 to get an idea what's happening internally, 1 to get raw output without colors, 4 for liveparsing purpose.\n"
            );
     fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n\n");
-    fprintf(stderr,"Additionally, the options b,p,f,s,e,g,o,i,c,n,a,y,x,u have a uppercase option (B,O,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
+    fprintf(stderr,"Additionally, the options b,p,f,s,e,g,i,c,n,a,y,x,u have a uppercase option (B,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
             "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n\n"
            );
     print_version(false);
@@ -339,7 +342,6 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->junk_chars    =  NULL;        /* You have to set this   */
     pset->oldtmpdata    = 60;           /* Remove 1min old buffers */
     pset->doldtmp       = true;         /* Remove 1min old buffers */
-    pset->preferID      = -1;
     pset->ignore_hidden = 1;
     pset->findemptydirs = 1;
     pset->namecluster   = 0;
@@ -351,10 +353,15 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->minsize       = -1;
     pset->maxsize       = -1;
     pset->listemptyfiles = 1;
+    pset->keep_all_originals = 0;    /* Keep just one file from ppath "originals" indicated by "//" */
+    pset->must_match_original = 0;   /* search for any dupes, not just ones which include ppath members*/
+    
+
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
      * investigated to be replicas of other files */
     pset->collide = 0;
+
 }
 
 /* ------------------------------------------------------------- */
@@ -410,9 +417,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"verbosity",      required_argument, 0, 'v'},
             {"oldtmp",         required_argument, 0, 'x'},
             {"limit",          required_argument, 0, 'z'},
-            {"output",         optional_argument, 0, 'o'},
+            {"output",         required_argument, 0, 'o'},
             {"emptyfiles",     no_argument,       0, 'k'},
-            {"no-emptyfiles",  no_argument,       0, 'k'},
+            {"no-emptyfiles",  no_argument,       0, 'K'},
             {"emptydirs",      no_argument,       0, 'y'},
             {"color",          no_argument,       0, 'b'},
             {"no-color",       no_argument,       0, 'B'},
@@ -438,13 +445,15 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"allpart",        no_argument,       0, 'S'},
             {"paranoid",       no_argument,       0, 'p'},
             {"naive",          no_argument,       0, 'P'},
+            {"keepallorig",    no_argument,       0, 'O'},
+            {"mustmatchorig",  no_argument,       0, 'M'},
             {"help",           no_argument,       0, 'h'},
             {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        c = getopt_long(argc, argv, "m:R:r:o::j:kKbBuUVyhYnNaAx:XgGpPlLfFeEsSiIc:C:t:d:v:z:",long_options, &option_index);
+        c = getopt_long(argc, argv, "aAbBcC:d:eEfFgGhiIj:kKlLm:MnNo:pPOr:R:t:uUv:Vx:XyYsSz:Z",long_options, &option_index);
         /* Detect the end of the options. */
         if(c == -1)
         {
@@ -566,6 +575,12 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         case 'p':
             sets->paranoid = 1;
             break;
+        case 'O':
+            sets->keep_all_originals = 1;
+            break;
+        case 'M':
+            sets->must_match_original = 1;
+            break;
         case 'z':
             parse_limit_sizes(optarg);
             break;
@@ -630,20 +645,23 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         else
         {
             close(p);
-            sets->paths   = realloc(sets->paths,sizeof(char*)*(lp+2));
-            if(isPref) sets->preferID = lp;
-            sets->paths[lp++] = theDir;
-            sets->paths[lp  ] = NULL;
+            sets->paths   = realloc(sets->paths,sizeof(rmlint_path)*(lp+2));
+            sets->paths[lp].is_ppath = isPref;
+            sets->paths[lp++].path = theDir;
+            sets->paths[lp].path = NULL;
         }
         optind++;
     }
     if(lp == 0)
     {
         /* Still no path set? - use `pwd` */
-        sets->paths = malloc(sizeof(char*)*2);
-        sets->paths[0] = getcwd(NULL,0);
-        sets->paths[1] = NULL;
-        if(!sets->paths[0])
+        sets->paths = malloc(sizeof(rmlint_path)*2);
+        sets->paths[0].path = getcwd(NULL,0);
+        sets->paths[0].is_ppath = 0;
+        sets->paths[1].path = NULL;
+        /*sets->ppath_flags = malloc(sizeof(char)*2);
+        sets->ppath_flags[0] = 0;*/
+        if(!sets->paths[0].path)
         {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
@@ -700,9 +718,9 @@ void die(int status)
     /* Free mem */
     if(use_cwd)
     {
-        if(set->paths[0])
+        if(set->paths[0].path)
         {
-            free(set->paths[0]);
+            free(set->paths[0].path);
         }
     }
     if(set->paths)
@@ -788,6 +806,7 @@ int rmlint_main(void)
                 check_cmd(set->cmd_path);
             }
         }
+        
         /* Open logfile */
         init_filehandler();
         /* Warn if started with sudo */
@@ -797,31 +816,32 @@ int rmlint_main(void)
             warning("      Take care of what you're doing!\n\n");
         }
         /* Count files and do some init  */
-        while(set->paths[cpindex] != NULL)
+        while(set->paths[cpindex].path != NULL)
         {
-            DIR *p = opendir(set->paths[cpindex]);
+            DIR *p = opendir(set->paths[cpindex].path);
             if(p == NULL && errno == ENOTDIR)
             {
                 /* The path is a file */
                 struct stat buf;
-                if(stat(set->paths[cpindex],&buf) == -1)
+                if(stat(set->paths[cpindex].path,&buf) == -1)
                 {
                     continue;
                 }
-                list_append(set->paths[cpindex],(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true);
+                list_append(set->paths[cpindex].path,(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true, 0 );
                 total_files++;
             }
             else
             {
                 /* The path points to a dir - recurse it! */
-                info("Now scanning "YEL"\"%s\""NCO"..",set->paths[cpindex]);
-                total_files += recurse_dir(set->paths[cpindex]);
+                info("Now scanning "YEL"\"%s\""NCO"..",set->paths[cpindex].path);
+                if (set->paths[cpindex].is_ppath ) info("(preferred path)");
+                total_files += recurse_dir(set->paths[cpindex].path);
                 info(" done.\n");
                 closedir(p);
             }
             cpindex++;
         }
-        if(total_files < 2)
+		if(total_files < 2)
         {
             warning("No files in cache to search through => No duplicates.\n");
             die(0);
