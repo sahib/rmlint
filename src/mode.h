@@ -19,6 +19,7 @@
 *
 **/
 
+
 #pragma once
 #ifndef LIST_H
 #define LIST_H
@@ -27,10 +28,11 @@
 #include "filter.h"
 
 /* Mostly used by filter.c  */
-bool findmatches(file_group *grp);
+bool process_doop_groop(file_group *grp);
 void init_filehandler(void);
 void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig);
 nuint_t get_dupcounter();
+
 
 /* ------------------------------------------------------------- */
 

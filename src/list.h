@@ -34,6 +34,7 @@ typedef struct lint_t
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
 
     char *path;                  /* absolute path from working dir */
+    bool in_ppath;               /* set if this file is in one of the preferred (originals) paths */
     nuint_t fsize;               /* Size of the file (bytes) */
     bool filter;             /* this is used in calculations  */
     long dupflag;            /* Is the file marked as duplicate? */
@@ -62,7 +63,7 @@ lint_t *list_remove(lint_t *ptr);
 void list_clear(lint_t *begin);
 
 /* Appends lint_t with those datafields at end of list */
-void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag);
+void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool q, bool is_ppath);
 
 /* Returns len of list */
 nuint_t list_len(void);
