@@ -555,8 +555,16 @@ static nuint_t rm_double_paths(file_group *fp)
                 lint_t *tmp = b;
                 fp->size -= b->fsize;
                 fp->len--;
-                /* Remove this one  */
-                b = list_remove(b);
+                if(!b->in_ppath)
+                {
+					/* Remove this one  */
+					b = list_remove(b);
+				}
+				else
+				{
+					/* b is in preferred path; remove next one */
+					b = list_remove(b->next);
+				}
                 /* Update group info */
                 if(tmp == fp->grp_stp)
                 {
