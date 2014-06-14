@@ -293,6 +293,9 @@ int regfilter(const char* input, const char *pattern)
  */
 static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf)
 {
+    unsigned int pnum = get_cpindex();
+    bool is_ppath = set->paths[pnum].is_ppath;
+    
     if(set->depth && ftwbuf->level > set->depth)
     {
         /* Do not recurse in this subdir */
@@ -304,7 +307,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
     }
     if(flag == FTW_SLN) /*fpath is a symbolic link pointing to a nonexistent file*/
     {
-        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_BLNK, is_ppath );
+        list_append(path, 0, 0, ptr->st_dev,ptr->st_ino,TYPE_BLNK, is_ppath, pnum);
         return FTW_CONTINUE;
     }
     if(path)
@@ -312,12 +315,11 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
         if(!dir_done)
         {
             char *orig_path = set->paths[get_cpindex()].path;
-            size_t orig_path_len = strlen(set->paths[get_cpindex()].path);
-            is_ppath = set->paths[get_cpindex()].is_ppath;
+            size_t orig_path_len = strlen(set->paths[pnum].path);
             if(orig_path[orig_path_len - 1] == '/') {
                 orig_path_len -= 1;
             }
-            if(!strncmp(set->paths[get_cpindex()].path, path, orig_path_len))
+            if(!strncmp(set->paths[pnum].path, path, orig_path_len))
             {
                 dir_done = true;
                 return FTW_CONTINUE;
@@ -333,7 +335,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             }
             if(junkinstr(rmlint_basename(path)))
             {
-                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME, is_ppath);
+                list_append(path, 0, 0, ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME, is_ppath, pnum);
                 if(set->collide)
                 {
                     return FTW_CONTINUE;
@@ -345,9 +347,9 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 if(userlist_contains(global_ug_list,ptr->st_uid,ptr->st_gid,&has_uid,&has_gid) == false)
                 {
                     if(has_gid == false)
-                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADGID, is_ppath);
+                        list_append(path,0,0,ptr->st_dev,ptr->st_ino,TYPE_BADGID, is_ppath, pnum);
                     if(has_uid == false)
-                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADUID, is_ppath);
+                        list_append(path,0,0,ptr->st_dev,ptr->st_ino,TYPE_BADUID, is_ppath, pnum);
 
                     if(set->collide)
                     {
@@ -359,7 +361,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             {
                 if(check_binary_to_be_stripped(path))
                 {
-                    list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN, is_ppath);
+                    list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_NBIN, is_ppath, pnum);
                     if(set->collide)
                     {
                         return FTW_CONTINUE;
@@ -392,7 +394,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     {
                         if(ptr->st_mtime - stat_buf.st_mtime >= set->oldtmpdata)
                         {
-                            list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP, is_ppath);
+                            list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_OTMP, is_ppath, pnum);
                         }
                     }
                     if(cpy)
@@ -416,13 +418,13 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                         if(*base != '.')
                         {
                             dircount++;
-                            list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1, is_ppath);
+                            list_append(path, ptr->st_size,ptr->st_mtime,ptr->st_dev,ptr->st_ino,1, is_ppath, pnum);
                         }
                     }
                     else
                     {
                         dircount++;
-                        list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1, is_ppath);
+                        list_append(path, ptr->st_size,ptr->st_mtime,ptr->st_dev,ptr->st_ino,1, is_ppath, pnum);
                     }
                 }
                 return FTW_CONTINUE;
@@ -436,7 +438,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             }
             if(junkinstr(rmlint_basename(path)))
             {
-                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME, is_ppath);
+                list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME, is_ppath, pnum);
                 if(set->collide)
                 {
                     return FTW_SKIP_SUBTREE;
@@ -456,7 +458,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     closedir(dir_e);
                     if(dir_counter == 2 && dir_p == NULL)
                     {
-                        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR, is_ppath);
+                        list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_EDIR, is_ppath, pnum);
                         return FTW_SKIP_SUBTREE;
                     }
                 }
@@ -594,6 +596,47 @@ static nuint_t rm_double_paths(file_group *fp)
 static long cmp_nd(lint_t *a, lint_t *b)
 {
     return ((long)(a->node) - (long)(b->node));
+}
+
+/* ------------------------------------------------------------- */
+
+/* Sort criteria for sorting by preferred path (first) then user-input criteria */
+static long cmp_orig_criteria(lint_t *a, lint_t *b)
+{
+	
+	if (a->in_ppath != b->in_ppath)
+		return a->in_ppath - b->in_ppath;
+	else 
+	{
+		int i=0;
+		while (i < strlen(set->sort_criteria))
+		{
+			long cmp=0;
+			switch (set->sort_criteria[i])
+			{
+			case 'm':
+				cmp = (long)(a->mtime) - (long)(b->mtime);
+				break;
+			case 'M':
+				cmp = (long)(b->mtime) - (long)(a->mtime);
+				break;
+			case 'a':
+				cmp = strcmp (rmlint_basename(a->path),rmlint_basename (b->path));
+			case 'A':
+				cmp = strcmp (rmlint_basename(b->path),rmlint_basename (a->path));
+				break;
+			case 'p':
+				cmp = (long)a->pnum - (long)b->pnum;
+				break;
+			case 'P':
+				cmp = (long)b->pnum - (long)a->pnum;
+				break;
+			}
+			if (cmp !=0) return cmp;
+			i++;
+		}
+	}
+	return 0;
 }
 
 /* ------------------------------------------------------------- */
@@ -1056,6 +1099,7 @@ bool findmatches(file_group *grp, int testlevel)
 				 (!set->paranoid && (testlevel == 2) ) )
 			{
 				/* done testing; process the island */
+				island->grp_stp=list_sort(island->grp_stp, cmp_orig_criteria);
 				returnval = ( returnval || process_doop_groop(island) );
 			}
 			else

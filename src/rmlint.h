@@ -59,6 +59,7 @@ typedef struct
     char *cmd_orig;
     char *junk_chars;
     char *output;
+    char *sort_criteria;
     int minsize;
     int maxsize;
     char keep_all_originals;   /*NEW - if set, will ONLY delete dupes that are not in ppath */
