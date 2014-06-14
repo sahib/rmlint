@@ -265,7 +265,8 @@ static void print_help(void)
             "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
            );
     fprintf(stderr, "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
-            "\t-O --keepallorig\Don't delete any files that are in 'originals' paths. (Default - just keep one)\n"
+            "\t-O --keepallorig\tDon't delete any files that are in 'originals' paths. (Default - just keep one)\n"
+            "\t-Q --invertorig\tPaths prefixed with // are non-originals and all other paths are originals\n"
            );
     fprintf(stderr, "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
             "\t-f --followlinks\tWhether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
@@ -355,6 +356,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->listemptyfiles = 1;
     pset->keep_all_originals = 0;    /* Keep just one file from ppath "originals" indicated by "//" */
     pset->must_match_original = 0;   /* search for any dupes, not just ones which include ppath members*/
+    pset->invert_original = 0;   /* search for any dupes, not just ones which include ppath members*/
     
 
     /* There is no cmdline option for this one    *
@@ -447,13 +449,14 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"naive",          no_argument,       0, 'P'},
             {"keepallorig",    no_argument,       0, 'O'},
             {"mustmatchorig",  no_argument,       0, 'M'},
+            {"invertorig",     no_argument,       0, 'Q'},
             {"help",           no_argument,       0, 'h'},
             {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        c = getopt_long(argc, argv, "aAbBcC:d:eEfFgGhiIj:kKlLm:MnNo:pPOr:R:t:uUv:Vx:XyYsSz:Z",long_options, &option_index);
+        c = getopt_long(argc, argv, "aAbBcC:d:eEfFgGhiIj:kKlLm:MnNo:OpPQr:R:t:uUv:Vx:XyYsSz:Z",long_options, &option_index);
         /* Detect the end of the options. */
         if(c == -1)
         {
@@ -581,6 +584,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         case 'M':
             sets->must_match_original = 1;
             break;
+        case 'Q':
+            sets->invert_original = 1;
+            break;
         case 'z':
             parse_limit_sizes(optarg);
             break;
@@ -646,7 +652,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         {
             close(p);
             sets->paths   = realloc(sets->paths,sizeof(rmlint_path)*(lp+2));
-            sets->paths[lp].is_ppath = isPref;
+            if (sets->invert_original==0) sets->paths[lp].is_ppath = isPref;
+            else sets->paths[lp].is_ppath = !isPref;
             sets->paths[lp++].path = theDir;
             sets->paths[lp].path = NULL;
         }
