@@ -35,7 +35,9 @@ typedef struct lint_t
 
     char *path;                  /* absolute path from working dir */
     bool in_ppath;               /* set if this file is in one of the preferred (originals) paths */
+    unsigned int pnum;           /* numerical index of user-input paths */
     nuint_t fsize;               /* Size of the file (bytes) */
+    time_t mtime;				 /* File modification date/time */
     bool filter;             /* this is used in calculations  */
     long dupflag;            /* Is the file marked as duplicate? */
 
@@ -63,7 +65,8 @@ lint_t *list_remove(lint_t *ptr);
 void list_clear(lint_t *begin);
 
 /* Appends lint_t with those datafields at end of list */
-void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool q, bool is_ppath);
+void list_append(const char *n, nuint_t s, time_t t, dev_t dev, 
+		ino_t node,  bool q, bool is_ppath, unsigned int pnum);
 
 /* Returns len of list */
 nuint_t list_len(void);

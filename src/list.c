@@ -122,7 +122,8 @@ lint_t *list_remove(lint_t *ptr)
 /* ------------------------------------------------------------- */
 
 /* Init of the element */
-static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, dev_t dev, ino_t node,  bool flag, bool is_ppath)
+static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, time_t mt, dev_t dev, ino_t node,
+						bool flag, bool is_ppath, unsigned int pnum)
 {
     /* Fill data */
     short   plen = strlen(n) + 2;
@@ -131,9 +132,11 @@ static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, dev_t dev, 
     pointer->node    = node;
     pointer->dev     = dev;
     pointer->fsize   = fs;
+    pointer->mtime   = mt;
     pointer->dupflag = flag;
     pointer->filter  = true;
 	pointer->in_ppath = is_ppath;
+	pointer->pnum = pnum;
     /* Make sure the fp arrays are filled with 0
      This is important if a file has a smaller size
      than the size read in for the fingerprint -
@@ -250,10 +253,11 @@ lint_t *list_sort(lint_t *begin, long(*cmp)(lint_t*,lint_t*))
 
 /* ------------------------------------------------------------- */
 
-void list_append(const char *n, nuint_t s, dev_t dev, ino_t node,  bool dupflag, bool is_ppath)
+void list_append(const char *n, nuint_t s, time_t t, dev_t dev, 
+		ino_t node, bool dupflag, bool is_ppath, unsigned int pnum)
 {
     lint_t *tmp = malloc(sizeof(lint_t));
-    list_filldata(tmp,n,s,dev,node, dupflag, is_ppath);
+    list_filldata(tmp,n,s,t,dev,node, dupflag, is_ppath, pnum);
     if(start == NULL)   /* INIT */
     {
         tmp->next=NULL;

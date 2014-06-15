@@ -263,10 +263,16 @@ static void print_help(void)
     fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
             "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
-           );
-    fprintf(stderr, "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
+            "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
             "\t-O --keepallorig\tDon't delete any files that are in 'originals' paths. (Default - just keep one)\n"
             "\t-Q --invertorig\tPaths prefixed with // are non-originals and all other paths are originals\n"
+           );
+    fprintf(stderr, "\t-D --sortcriteria <criteria>\twhen selecting original, sort in order of <criteria>:\n"
+            "\t\t\t\tm=keep lowest mtime (oldest), M=keep highest mtime (newest)\n"
+            "\t\t\t\ta=keep first alphabetically,  A=keep last alphabetically\n"
+            "\t\t\t\tp=keep first named path,      P=keep last named path\n"
+            "\t\t\t\tNote: can have multiple criteria, eg \"-D am\" will choose first alphabetically; if tied then by mtime.\n"
+            "\t\t\t\tNote also: original path criteria (specified using //) will always take first priority over \"-D\" options.\n"
            );
     fprintf(stderr, "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
             "\t-f --followlinks\tWhether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
@@ -296,7 +302,10 @@ static void print_help(void)
             "\t-e --matchcase\t\tMatches case of paths (Default: No.)\n");
     fprintf(stderr, "\nMisc options:\n\n"
             "\t-h --help\t\tPrints this text and exits\n"
-            "\t-o --output <o>\tOutputs logfile to <o>.log and script to <o>.sh\n"
+            "\t-o --output <o>\tOutputs logfile to <o>.log and script to <o>.sh   (use -o \"\" or \'\' to disable output files)\n"
+            "\t\t\t\tExamples:\n"
+   			"\t\t\t\t\t-o \"\" => No Logfile\n"
+			"\t\t\t\t\t-o \"la la.txt\" => Logfile to \"la la.txt.log\"\n"
             );
     fprintf(stderr,"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
             "\t\t\t\tWhere:\n"
@@ -357,6 +366,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->keep_all_originals = 0;    /* Keep just one file from ppath "originals" indicated by "//" */
     pset->must_match_original = 0;   /* search for any dupes, not just ones which include ppath members*/
     pset->invert_original = 0;   /* search for any dupes, not just ones which include ppath members*/
+    pset->sort_criteria = "m";  /* default ranking order for choosing originals - keep oldest mtime*/
     
 
     /* There is no cmdline option for this one    *
@@ -420,6 +430,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"oldtmp",         required_argument, 0, 'x'},
             {"limit",          required_argument, 0, 'z'},
             {"output",         required_argument, 0, 'o'},
+            {"sortcriteria",   required_argument, 0, 'D'},
             {"emptyfiles",     no_argument,       0, 'k'},
             {"no-emptyfiles",  no_argument,       0, 'K'},
             {"emptydirs",      no_argument,       0, 'y'},
@@ -456,7 +467,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        c = getopt_long(argc, argv, "aAbBcC:d:eEfFgGhiIj:kKlLm:MnNo:OpPQr:R:t:uUv:Vx:XyYsSz:Z",long_options, &option_index);
+        c = getopt_long(argc, argv, "aAbBcC:d:D:eEfFgGhiIj:kKlLm:MnNo:OpPQr:R:sSt:uUv:Vx:XyYz:Z",long_options, &option_index);
         /* Detect the end of the options. */
         if(c == -1)
         {
@@ -531,7 +542,10 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             sets->doldtmp = false;
             break;
         case 'o':
-            sets->output = optarg;
+            if (strlen(optarg) != 0)
+				sets->output = optarg;
+			else
+				sets->output = NULL;
             break;
         case 'c':
             sets->cmd_path = optarg;
@@ -568,6 +582,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             break;
         case 'd':
             sets->depth = ABS(atoi(optarg));
+            break;
+        case 'D':
+            sets->sort_criteria = optarg;
             break;
         case 'r':
             sets->fpattern = optarg;
@@ -750,7 +767,7 @@ void die(int status)
                 "                      \n"
                 "if [ -z $DO_REMOVE ]  \n"
                 "then                  \n"
-                "  rm -f rmlint.log    \n"
+                "  rm -f rmlint.log    \n"  /*TODO: fix this to match "-o" command line options*/
                 "  rm -f rmlint.sh     \n"
                 "fi                    \n"
                );
@@ -834,7 +851,7 @@ int rmlint_main(void)
                 {
                     continue;
                 }
-                list_append(set->paths[cpindex].path,(nuint_t)buf.st_size,buf.st_dev,buf.st_ino, true, 0 );
+                list_append(set->paths[cpindex].path,(nuint_t)buf.st_size,buf.st_mtime,buf.st_dev,buf.st_ino, true, 0, cpindex );
                 total_files++;
             }
             else

@@ -59,6 +59,7 @@ typedef struct
     char *cmd_orig;
     char *junk_chars;
     char *output;
+    char *sort_criteria;
     int minsize;
     int maxsize;
     char keep_all_originals;   /*NEW - if set, will ONLY delete dupes that are not in ppath */
@@ -75,7 +76,6 @@ rmlint_settings * set;
 /* global var for flagging whether current path being walked is */
 /* a "preferred" path                                           */
 bool is_ppath;
-/*nuint_t total_lint = 0;*/
 
 
 /* These method are also useable from 'outside' */
