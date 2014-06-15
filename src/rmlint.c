@@ -275,20 +275,27 @@ static void print_help(void)
             "\t\t\t\tNote also: original path criteria (specified using //) will always take first priority over \"-D\" options.\n"
            );
     fprintf(stderr, "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
-            "\t-f --followlinks\tWhether links are followed (None is reported twice, set to false if hardlinks are counted as duplicates) (Default: no)\n"
-            "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: No.)\n"
+            "\t-f --followlinks\tWhether symlinks are followed (Default: no). Note that rmlint will try to detect if symlinks\n"
+            "\t\t\t\tresult in the same physical file being encountered twice and will ignore the second one.\n"
+            "\t-H --findhardlinked\tFind hardlinked duplicates.  Default is to ignore duplicates which are hardlinked to each other.\n"
+            );
+    fprintf(stderr,"\t\t\t\tNote: currently, hardlinked files with the same basename are _always_ ignored, due to possible error with bind\n"
+			"\t\t\t\tmounts pointing to the same physical file\n"
+			"\t\t\t\tNote also: hardlinked duplicates _will_ be reported as part of GB count that can be freed up.\n"
+            "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: off, ie do cross mountpoints)\n"
             "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
-            "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
            );
-    fprintf(stderr, "\n\t\t\t\tWhere modes are:\n\n"
+    fprintf(stderr,             "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
+            "\n\t\t\t\tWhere modes are:\n\n"
             "\t\t\t\tlist  - Only list found files and exit.\n"
             "\t\t\t\tlink  - Replace file with a symlink to original.\n"
             "\t\t\t\task   - Ask for each file what to do.\n"
             "\t\t\t\tnoask - Full removal without asking.\n"
             "\t\t\t\tcmd   - Takes the command given by -c/-C and executes it on the duplicate/original.\n"
             "\t\t\t\tDefault: list\n\n"
-            "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n");
-    fprintf(stderr,"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
+            );
+    fprintf(stderr,"\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n"
+			"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
             "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
             "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n");
     fprintf(stderr,"\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
@@ -366,6 +373,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->keep_all_originals = 0;    /* Keep just one file from ppath "originals" indicated by "//" */
     pset->must_match_original = 0;   /* search for any dupes, not just ones which include ppath members*/
     pset->invert_original = 0;   /* search for any dupes, not just ones which include ppath members*/
+    pset->find_hardlinked_dupes = 0;   /* ignore hardlinked dupes*/
     pset->sort_criteria = "m";  /* default ranking order for choosing originals - keep oldest mtime*/
     
 
@@ -461,13 +469,14 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             {"keepallorig",    no_argument,       0, 'O'},
             {"mustmatchorig",  no_argument,       0, 'M'},
             {"invertorig",     no_argument,       0, 'Q'},
+            {"findhardlinked", no_argument,      0, 'H'},
             {"help",           no_argument,       0, 'h'},
             {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        c = getopt_long(argc, argv, "aAbBcC:d:D:eEfFgGhiIj:kKlLm:MnNo:OpPQr:R:sSt:uUv:Vx:XyYz:Z",long_options, &option_index);
+        c = getopt_long(argc, argv, "aAbBcC:d:D:eEfFgGhHiIj:kKlLm:MnNo:OpPQr:R:sSt:uUv:Vx:XyYz:Z",long_options, &option_index);
         /* Detect the end of the options. */
         if(c == -1)
         {
@@ -520,6 +529,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         case 'h':
             print_help();
             break;
+        case 'H':
+			sets->find_hardlinked_dupes = 1;
+			break;
         case 'j':
             sets->junk_chars = optarg;
             break;
