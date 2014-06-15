@@ -551,7 +551,9 @@ static nuint_t rm_double_paths(file_group *fp)
         while(b->next)
         {
             if((b->node == b->next->node) &&
-                    (b->dev  == b->next->dev))
+               (b->dev  == b->next->dev) &&
+                ((set->find_hardlinked_dupes==0) || 
+                (strcmp(rmlint_basename(b->path),rmlint_basename(b->next->path))==0)) )
             {
                 /* adjust grp */
                 lint_t *tmp = b;
@@ -565,9 +567,9 @@ static nuint_t rm_double_paths(file_group *fp)
 				else
 				{
 					/* b is in preferred path; remove next one */
-					lint_t *tmp2 = b->next;
-					tmp2 = list_remove(tmp2);
-					b=b->next;
+					b = b->next;
+					tmp = b;
+					b = list_remove(b);
 				}
                 /* Update group info */
                 if(tmp == fp->grp_stp)
@@ -592,10 +594,16 @@ static nuint_t rm_double_paths(file_group *fp)
 /* ------------------------------------------------------------- */
 
 /* Sort criteria for sorting by dev and inode */
-/* This does not take care of the device, because Linux can read several disks in parallel */
+/* This sorts by device second then basename (important later for
+ * find_double_bases) */
 static long cmp_nd(lint_t *a, lint_t *b)
 {
-    return ((long)(a->node) - (long)(b->node));
+	if (a->node != b->node)
+		return ((long)(a->node) - (long)(b->node));
+	else if (a->dev != b->dev)
+		return ((long)(a->dev) - (long)(b->dev));
+	else
+		return (long)(strcmp(rmlint_basename(a->path),rmlint_basename(b->path)));
 }
 
 /* ------------------------------------------------------------- */
@@ -1421,7 +1429,7 @@ void start_processing(lint_t *b)
                 const char * chown_cmd = "   chown $(whoami):$(id -gn)";
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
-                if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
+                if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1 || 1)
                     rm_double_paths(&emptylist);
 
                 /* sort by lint_ID (== dupID) */
