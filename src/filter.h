@@ -38,11 +38,13 @@ typedef struct
 
 /* ------------------------------------------------------------- */
 
+
 /* Used in rmlint.c only  */
 int  regfilter(const char* input, const char *pattern);
 int  recurse_dir(const char *path);
 
 void start_processing(lint_t *b);
 void filt_c_init(void);
+void add_total_lint(nuint_t lint_to_add);
 
 #endif

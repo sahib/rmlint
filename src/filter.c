@@ -24,6 +24,10 @@
 #define _GNU_SOURCE
 #define __USE_GNU
 
+
+#include <sys/mman.h>
+#include <fcntl.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -42,7 +46,6 @@
 #include "mode.h"
 #include "md5.h"
 #include "useridcheck.h"
-
 
 char * rmlint_basename(const char *filename)
 {
@@ -65,6 +68,13 @@ int iAbort;
 
 UserGroupList ** global_ug_list = NULL;
 
+nuint_t total_lint = 0;
+
+void add_total_lint(nuint_t lint_to_add)
+{
+	total_lint += lint_to_add;
+}
+
 /* ------------------------------------------------------------- */
 
 void delete_userlist(void)
@@ -81,7 +91,7 @@ void filt_c_init(void)
     iAbort   = false;
     dir_done = false;
     db_done  = false;
-
+    
     global_ug_list = userlist_new();
     atexit(delete_userlist);
 }
@@ -275,7 +285,9 @@ int regfilter(const char* input, const char *pattern)
  *
  * Appendum: rmlint uses the inode to sort the contents before doing any I/O to speed up things.
  *           This is nevertheless limited to Unix filesystems like ext*, reiserfs.. (might work in MacOSX - don't know)
- *           If someone likes to port this to Windows he would to replace the inode number by the MFT entry point, or simply disable it
+ *           note that for btrfs, the inode numbers probably don't map very well to disk block numbers;
+ *           TODO:sort by first physical block number (from FIBMAP ioctl) - should be faster?
+ *           TODO:If someone likes to port this to Windows he would to replace the inode number by the MFT entry point, or simply disable it
  *           I personally don't have a win comp and won't port it, as I don't found many users knowing what that black window with white
  *           white letters can do ;-)
  */
@@ -290,27 +302,28 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
     {
         return FTW_STOP;
     }
-    if(flag == FTW_SLN)
+    if(flag == FTW_SLN) /*fpath is a symbolic link pointing to a nonexistent file*/
     {
-        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_BLNK);
+        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_BLNK, is_ppath );
         return FTW_CONTINUE;
     }
     if(path)
     {
         if(!dir_done)
         {
-            char *orig_path = set->paths[get_cpindex()];
-            size_t orig_path_len = strlen(set->paths[get_cpindex()]);
+            char *orig_path = set->paths[get_cpindex()].path;
+            size_t orig_path_len = strlen(set->paths[get_cpindex()].path);
+            is_ppath = set->paths[get_cpindex()].is_ppath;
             if(orig_path[orig_path_len - 1] == '/') {
                 orig_path_len -= 1;
             }
-            if(!strncmp(set->paths[get_cpindex()], path, orig_path_len))
+            if(!strncmp(set->paths[get_cpindex()].path, path, orig_path_len))
             {
                 dir_done = true;
                 return FTW_CONTINUE;
             }
         }
-        if(flag == FTW_F &&
+        if(flag == FTW_F &&     /*fpath is a regular file*/
                 (set->minsize <= ptr->st_size || set->minsize < 0) &&
                 (set->maxsize >= ptr->st_size || set->maxsize < 0))
         {
@@ -320,7 +333,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             }
             if(junkinstr(rmlint_basename(path)))
             {
-                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME);
+                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME, is_ppath);
                 if(set->collide)
                 {
                     return FTW_CONTINUE;
@@ -332,9 +345,9 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 if(userlist_contains(global_ug_list,ptr->st_uid,ptr->st_gid,&has_uid,&has_gid) == false)
                 {
                     if(has_gid == false)
-                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADGID);
+                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADGID, is_ppath);
                     if(has_uid == false)
-                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADUID);
+                        list_append(path,0,ptr->st_dev,ptr->st_ino,TYPE_BADUID, is_ppath);
 
                     if(set->collide)
                     {
@@ -346,7 +359,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             {
                 if(check_binary_to_be_stripped(path))
                 {
-                    list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN);
+                    list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_NBIN, is_ppath);
                     if(set->collide)
                     {
                         return FTW_CONTINUE;
@@ -379,7 +392,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     {
                         if(ptr->st_mtime - stat_buf.st_mtime >= set->oldtmpdata)
                         {
-                            list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP);
+                            list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_OTMP, is_ppath);
                         }
                     }
                     if(cpy)
@@ -403,19 +416,19 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                         if(*base != '.')
                         {
                             dircount++;
-                            list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
+                            list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1, is_ppath);
                         }
                     }
                     else
                     {
                         dircount++;
-                        list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1);
+                        list_append(path, ptr->st_size,ptr->st_dev,ptr->st_ino,1, is_ppath);
                     }
                 }
                 return FTW_CONTINUE;
             }
         }
-        if(flag == FTW_D)
+        if(flag == FTW_D)   /*fpath is a directory*/
         {
             if(regfilter(path, set->dpattern) && dir_done)
             {
@@ -423,7 +436,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
             }
             if(junkinstr(rmlint_basename(path)))
             {
-                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME);
+                list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME, is_ppath);
                 if(set->collide)
                 {
                     return FTW_SKIP_SUBTREE;
@@ -443,7 +456,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                     closedir(dir_e);
                     if(dir_counter == 2 && dir_p == NULL)
                     {
-                        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR);
+                        list_append(path, 0,ptr->st_dev,ptr->st_ino,TYPE_EDIR, is_ppath);
                         return FTW_SKIP_SUBTREE;
                     }
                 }
@@ -464,7 +477,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
 /* ------------------------------------------------------------- */
 
 /* This calls basically nftw() and sets some options */
-int recurse_dir(const char *path)
+int  recurse_dir(const char *path)
 {
     /* Set options */
     int ret = 0;
@@ -512,13 +525,25 @@ int recurse_dir(const char *path)
 
 /* If we have more than one path, several lint_ts   *
  *  may point to the same (physically same!) file.  *
- *  This would result in false positves - Kick'em   */
+ *  This would result in potentially dangerous false *
+ * positives where the "duplicate" gets deleted but it*
+ * was physically the same as the original so now there*
+ * is no original. - Kick'em   */
 static nuint_t rm_double_paths(file_group *fp)
 {
     lint_t *b = (fp) ? fp->grp_stp : NULL;
     nuint_t c = 0;
-    /* This compares inode and devID */
-    /* This a little bruteforce, but works just fine :-) */
+    /* This compares inode and devID
+     * This a little bruteforce, but works just fine :-)
+     * Note it *will* also kick hardlinked duplicates out (but since 
+     * they occupy no space anyway it is not such a big deal).
+     * TODO: A workaround to keep hardlinked dupes in the search 
+     * would have to distinguish between hard links (which are 
+     * safe to include) and bind mounts pointing to 
+     * the same file (which are dangerous to include).
+     * The coreutil df.c has code for this so may be a
+     * good start point */
+    
     if(b)
     {
         while(b->next)
@@ -530,8 +555,18 @@ static nuint_t rm_double_paths(file_group *fp)
                 lint_t *tmp = b;
                 fp->size -= b->fsize;
                 fp->len--;
-                /* Remove this one  */
-                b = list_remove(b);
+                if(b->next->in_ppath || !b->in_ppath)
+                {
+					/* Remove this one  */
+					b = list_remove(b);
+				}
+				else
+				{
+					/* b is in preferred path; remove next one */
+					lint_t *tmp2 = b->next;
+					tmp2 = list_remove(tmp2);
+					b=b->next;
+				}
                 /* Update group info */
                 if(tmp == fp->grp_stp)
                 {
@@ -592,94 +627,144 @@ static int cmp_fingerprints(lint_t *a,lint_t *b)
 
 /* ------------------------------------------------------------- */
 
-/* Performs a fingerprint check on the group fp */
-static nuint_t group_filter(file_group *fp)
+/* Compare criteria of checksums */
+static int cmp_f(lint_t *a, lint_t *b)
 {
-    lint_t *p = fp->grp_stp;
-    lint_t *i,*j;
-    nuint_t remove_count = 0;
-    nuint_t fp_sz;
-    /* Prevent crashes (should not happen too often) */
-    if(!fp || fp->grp_stp == NULL)
+    int i, fp_i, x;
+    int is_empty[2][3] = { {1,1,1}, {1,1,1} };
+    for(i = 0; i < MD5_LEN; i++)
     {
-        return 0;
-    }
-    /* The size read in to build a fingerprint */
-    fp_sz = MD5_FPSIZE_FORM(fp->grp_stp->fsize);
-    /* Clamp it to some maximum (4KB) */
-    fp_sz = (fp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : fp_sz;
-    /* Calc fingerprints  */
-    /* Note: this is already multithreaded, because large groups get their own thread */
-    /* No need for additional threading code here */
-    while(p)
-    {
-        /* see md5.c for explanations */
-        md5_fingerprint(p, fp_sz);
-        p=p->next;
-    }
-    /* Compare each other */
-    i = fp->grp_stp;
-    while(i)
-    {
-        /* Useful debugging stuff: */
-        /*
-           int z = 0;
-           MDPrintArr(i->fp[0]);
-           printf("|#|");
-           MDPrintArr(i->fp[1]);
-           printf("|#|");
-           for(; z < BYTE_MIDDLE_SIZE; z++)
-           {
-           printf("%2x",i->bim[z]);
-           }
-           fflush(stdout);
-           */
-        if(i->filter)
+        if(a->md5_digest[i] != b->md5_digest[i])
         {
-            j=i->next;
-            while(j)
+            return 1;
+        }
+        if(a->md5_digest[i] != 0)
+        {
+            is_empty[0][0] = 0;
+        }
+        if(b->md5_digest[i] != 0)
+        {
+            is_empty[1][0] = 0;
+        }
+    }
+    for(fp_i = 0; fp_i < 2; fp_i++)
+    {
+        for(i = 0; i < MD5_LEN; i++)
+        {
+            if(a->fp[fp_i][i] != b->fp[fp_i][i])
             {
-                if(j->filter)
-                {
-                    if(cmp_fingerprints(i,j))
-                    {
-                        /* i 'similiar' to j */
-                        j->filter = false;
-                        i->filter = false;
-                    }
-                }
-                j = j->next;
+                return 1;
             }
-            if(i->filter)
+            if(a->fp[fp_i][i] != 0)
             {
-                lint_t *tmp = i;
-                fp->len--;
-                fp->size -= i->fsize;
-                i = list_remove(i);
-                /* Update start / end */
-                if(tmp == fp->grp_stp)
-                {
-                    fp->grp_stp = i;
-                }
-                if(tmp == fp->grp_enp)
-                {
-                    fp->grp_enp = i;
-                }
-                remove_count++;
-                continue;
+                is_empty[0][fp_i+1] = 0;
             }
-            else
+            if(b->fp[fp_i][i] != 0)
             {
-                i=i->next;
-                continue;
+                is_empty[1][fp_i+1] = 0;
             }
         }
-        i=i->next;
     }
-    return remove_count;
+    /* check for empty checkusm AND fingerprints - refuse and warn */
+    for(x=0; x<2; x++)
+    {
+        if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2])
+        {
+            warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n");
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* ------------------------------------------------------------- */
+static int paranoid(const lint_t *p1, const lint_t *p2)
+{
+    int result = 0,file_a,file_b;
+    char * file_map_a, * file_map_b;
+    if(!p1 || !p2)
+        return 0;
+    if(p1->fsize != p2->fsize)
+        return 0;
+    if((file_a = open(p1->path, MD5_FILE_FLAGS)) == -1)
+    {
+        perror(RED"ERROR:"NCO"sys:open()");
+        return 0;
+    }
+    if((file_b = open(p2->path, MD5_FILE_FLAGS)) == -1)
+    {
+        perror(RED"ERROR:"NCO"sys:open()");
+        return 0;
+    }
+    if(p1->fsize < MMAP_LIMIT && p1->fsize > MD5_IO_BLOCKSIZE>>1)
+    {
+        file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
+        if(file_map_a != MAP_FAILED)
+        {
+            if(madvise(file_map_a,p1->fsize, MADV_SEQUENTIAL) == -1)
+                perror("madvise");
+            file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
+            if(file_map_b != MAP_FAILED)
+            {
+                if(madvise(file_map_b,p2->fsize, MADV_SEQUENTIAL) == -1)
+                    perror("madvise");
+                result = !memcmp(file_map_a, file_map_b, p1->fsize);
+                munmap(file_map_b,p1->fsize);
+            }
+            else
+            {
+                perror("paranoid->mmap");
+                result = 0;
+            }
+            munmap(file_map_a,p1->fsize);
+        }
+        else
+        {
+            perror("paranoid->mmap");
+            result = 0;
+        }
+    }
+    else /* use fread() */
+    {
+        nuint_t blocksize = MD5_IO_BLOCKSIZE/2;
+        char * read_buf_a = alloca(blocksize);
+        char * read_buf_b = alloca(blocksize);
+        int read_a=-1,read_b=-1;
+        while(read_a && read_b)
+        {
+            if((read_a=read(file_a,read_buf_a,blocksize) == -1))
+            {
+                result = 0;
+                break;
+            }
+            if((read_b=read(file_b,read_buf_b,blocksize) == -1))
+            {
+                result = 0;
+                break;
+            }
+            if(read_a == read_b)
+            {
+                if((result = !memcmp(read_buf_a,read_buf_b,read_a)) == 0)
+                {
+                    break;
+                }
+            }
+            else
+            {
+                result = 0;
+                break;
+            }
+        }
+    }
+    if(close(file_a) == -1)
+        perror(RED"ERROR:"NCO"close()");
+    if(close(file_b) == -1)
+        perror(RED"ERROR:"NCO"close()");
+    return result;
+}
+
+/* ------------------------------------------------------------- */
+
 
 /* Callback from build_checksums */
 static void *cksum_cb(void * vp)
@@ -702,6 +787,32 @@ static void *cksum_cb(void * vp)
     return NULL;
 }
 
+/* ------------------------------------------------------------- */
+
+static void build_fingerprints (file_group *grp)
+{
+    lint_t *p = grp->grp_stp;
+
+    nuint_t grp_sz;
+    /* Prevent crashes (should not happen too often) */
+    if(!grp || grp->grp_stp == NULL)
+    {
+        return;
+    }
+    /* The size read in to build a fingerprint */
+    grp_sz = MD5_FPSIZE_FORM(grp->grp_stp->fsize);
+    /* Clamp it to some maximum (4KB) */
+    grp_sz = (grp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : grp_sz;
+    /* Calc fingerprints  */
+    /* Note: this is already multithreaded, because large groups get their own thread */
+    /* No need for additional threading code here */
+    while(p)
+    {
+        /* see md5.c for explanations */
+        md5_fingerprint(p, grp_sz);
+        p=p->next;
+    }
+}
 /* ------------------------------------------------------------- */
 
 static void build_checksums(file_group *grp)
@@ -784,6 +895,185 @@ static void build_checksums(file_group *grp)
 
 /* ------------------------------------------------------------- */
 
+bool findmatches(file_group *grp, int testlevel)
+{
+    lint_t *i = grp->grp_stp, *j;
+    file_group * island = malloc(sizeof(file_group));
+    file_group * mainland = malloc(sizeof(file_group));
+    int returnval = 0;  /* not sure what we are using this for */
+					    /* but for now it will be 1 if any dupes found*/
+    mainland->grp_stp=grp->grp_stp;
+    mainland->grp_enp=grp->grp_enp;
+    mainland->len=grp->len;
+    mainland->size=grp->size;
+    
+    
+    
+    if(i == NULL)
+    {
+        return false;
+    }
+	switch (testlevel)
+	{
+	case 1:
+		/*fingerprint compare - calculate fingerprints*/
+		build_fingerprints(mainland);
+		break;
+	case 2:
+		/*md5 compare - calculate checksums*/
+		build_checksums(mainland);
+        break;
+	case 3:
+		break;
+	default:
+		break;
+	}
+
+    warning(NCO);
+    while(i)
+    {
+		int num_orig = 0;
+		int num_non_orig = 0;
+		
+		/*start new island of matched files  */
+		/* first remove i from mainland */
+		mainland->grp_stp = i->next;
+		if (mainland->grp_stp) mainland->grp_stp->last=NULL;
+		mainland->len--;
+		mainland->size -= i->fsize;
+
+		/*now add i to island as first and only member*/
+		island->grp_stp = i;
+		island->grp_enp = i;
+        island->len     = 1;
+        island->size    = i->fsize;
+        num_orig += i->in_ppath;
+        num_non_orig += !i->in_ppath;
+		i->next=NULL;
+		i->last=NULL;
+		
+		j=mainland->grp_stp;
+		while(j)
+		{
+			int match = 0;
+			switch (testlevel)
+			{
+			case 1:
+				/*fingerprint compare*/
+				match = (cmp_fingerprints(i,j) == 1);
+				break;
+			case 2:
+				/*md5 compare*/
+				match = ( cmp_f(i,j) == 0 );
+				break;
+			case 3:
+				 /* If we're bothering with paranoid users - Take the gatling! */
+				match = ((set->paranoid)?paranoid(i,j):1);
+				break;
+			default:
+			    match = 0;
+				break;
+			}
+			if (match)
+			{
+				/* move j from grp onto island*/
+				/* first get pointer to j before we start messing with j*/
+				lint_t *tmp = j;
+				/* now remove j from grp */
+				if(j->last&&j->next)
+				{
+					j->last->next = j->next;
+					j->next->last = j->last;
+				}
+				else if(j->last&&!j->next)
+				{
+					j->last->next=NULL;
+				}
+				else if(!j->last&&j->next)
+				{
+					j->next->last=NULL;
+				}
+				
+				if (mainland->grp_stp == j)
+				{   
+					if (j->next)
+					{
+						mainland->grp_stp = j->next;
+					}
+					else
+					{
+						mainland->grp_stp = NULL;
+					}
+				}
+				if (mainland->grp_enp == j)
+				{
+					/*removing j from end of grp*/
+					if (j->last) mainland->grp_enp = j->last;
+					else mainland->grp_enp = NULL;
+				}
+					
+				mainland->len --;
+				mainland->size -= j->fsize;
+				j = j->next;
+				
+				/* now add j to island, at the end */
+				island->grp_enp->next = tmp;
+				tmp->last=island->grp_enp;
+				tmp->next=NULL;
+				island->grp_enp = tmp;
+				island->len ++;
+				island->size += tmp->fsize;
+				num_orig += tmp->in_ppath;
+				num_non_orig += !tmp->in_ppath;
+			}
+			else
+			{
+				j = j->next;
+			}
+		}
+		
+		/* So we have created an island of everything that matched i. */
+		/* Now check if it is singleton or if it fails the other      */
+		/* criteria related to setting must_match_original or 		  */
+		/* keep_all_originals										  */
+		if ( (island->len == 1) ||
+		   ((set->keep_all_originals==1) && (num_non_orig==0) ) ||
+		   ((set->must_match_original==1) && (num_orig==0) ) )
+		{
+			/* cast island adrift */
+            i = island->grp_stp;
+			while (i)
+			{
+				i = list_remove(i);
+			}
+			/*list_clear(island->grp_stp);*/
+            island->grp_stp = NULL;
+			island->grp_enp = NULL;
+		}
+		else
+		{
+			if ( (testlevel == 3) ||
+				 (!set->paranoid && (testlevel == 2) ) )
+			{
+				/* done testing; process the island */
+				returnval = ( returnval || process_doop_groop(island) );
+			}
+			else
+			{
+				/* go to next level */
+				returnval = ( returnval ||
+							  findmatches ( island, testlevel + 1 ) );
+			}
+		}
+			
+		i = mainland->grp_stp;
+    }
+    return returnval;
+}
+    
+
+/* ------------------------------------------------------------- */
+
 /* Callback from scheduler that actually does the work for ONE group */
 static void* scheduler_cb(void *gfp)
 {
@@ -793,28 +1083,20 @@ static void* scheduler_cb(void *gfp)
     {
         return NULL;
     }
-    /* do the fingerprint filter */
-    group_filter(group);
-    /* Kick empty groups, or groups with 1 elem */
-    if(group->grp_stp == NULL || group->len <= 1)
-    {
-        list_clear(group->grp_stp);
-        group->grp_stp = NULL;
-        group->grp_enp = NULL;
-        return NULL;
-    }
-    /* build checksum for the rest */
-    build_checksums(group);
-    /* Finalize and free sublist */
-    if(findmatches(group))
+    /* start matching (start at level 1 (fingerprint filter)) then */
+    /* recursively escalates to higher levels                      */
+    if(findmatches(group, 1))
     {
         /* this happens when 'q' was selected in askmode */
-        list_clear(group->grp_stp);
+        /* note: group should be empty by now so following not needed?*/
+        /*list_clear(group->grp_stp);
         group->grp_stp = NULL;
         group->grp_enp = NULL;
-        die(0);
+        die(0);*/
     }
-    list_clear(group->grp_stp);
+/* note: group should be empty by now so following not needed?*/
+    /*list_clear(group->grp_stp);*/
+    
     return NULL;
 }
 
@@ -1020,6 +1302,8 @@ void start_processing(lint_t *b)
     {
         lint_t *q = b, *prev = NULL;
         nuint_t glen = 0, gsize = 0;
+        nuint_t num_pref = 0;
+        nuint_t num_nonpref = 0;
         while(b && q->fsize == b->fsize)
         {
             prev = b;
@@ -1027,6 +1311,9 @@ void start_processing(lint_t *b)
             {
                 b->dupflag = true;
             }
+            if(b->in_ppath) num_pref++;
+			else num_nonpref++;
+
             gsize += b->fsize;
             glen++;
             b = b->next;
@@ -1034,13 +1321,29 @@ void start_processing(lint_t *b)
         if(glen == 1)
         {
             /* This is only a single element        */
-            /* We can remove it without feelind bad */
+            /* We can remove it without feeling bad */
             q = list_remove(q);
             if(b != NULL)
             {
                 b = q;
             }
             rem_counter++;
+        }
+        else if (((set->must_match_original) && (num_pref == 0) ) || 
+             /* isle doesn't contain any ppath original entries, but options
+              * require ppath entry; or...*/
+                ((set->keep_all_originals) && (num_nonpref == 0) ))
+             /* isle contains only ppath original entries, but options
+              * don't allow deleting any ppath files so no point searching*/
+        {
+             /* delete this isle */
+              
+            while (q != b)
+            {
+                q = list_remove(q);
+                rem_counter++;
+            }
+            
         }
         else
         {
@@ -1061,7 +1364,8 @@ void start_processing(lint_t *b)
                 fglist[spelen].len     = glen;
                 fglist[spelen].size    = gsize;
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
-                if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1)
+                if((set->followlinks && get_cpindex() == 1) || ( get_cpindex() > 1 ) || 1 )  
+                    /* actually need this even for a single path because of possible bind mounts */
                     path_doubles += rm_double_paths(&fglist[spelen]);
                 /* number_of_groups++ */
                 spelen++;
@@ -1210,15 +1514,16 @@ void start_processing(lint_t *b)
         die(0);
     }
     info("\nNow attempting to find duplicates. This may take a while...\n");
-    info("Now removing files with unique sizes from list...");
+    info("Now removing files with unique sizes from list...");  /*actually this was done already above while building the list*/
     info(""YEL"%ld item(s) less"NCO" in list.",rem_counter);
     if(path_doubles)
     {
         info(" (removed "YEL"%ld pathzombie(s)"NCO")", path_doubles);
     }
     info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
+           /*actually this was done already above while building the list*/
     info("Now sorting groups based on their location on the drive...");
-    /* Now make sure groups are sorted by their location on the disk*/
+    /* Now make sure groups are sorted by their location on the disk - TODO? can remove this because was already sorted above?*/
     qsort(fglist, spelen, sizeof(file_group), cmp_grplist_bynodes);
     info(" done. \nNow doing fingerprints and full checksums.%c\n",set->verbosity > 4 ? '.' : '\n');
     db_done = true;
@@ -1269,14 +1574,15 @@ void start_processing(lint_t *b)
         info(RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",get_totalfiles(), get_dupcounter());
         if(!iAbort)
         {
-            info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n", lintbuf, lint);
+            info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n", lintbuf, total_lint);
         }
     }
     if(get_logstream() == NULL && set->output)
     {
         error(RED"\nERROR: "NCO);
         fflush(stdout);
-        perror("Unable to write log");
+        perror("Unable to write log - target file:");
+        perror(set->output);
         putchar('\n');
     }
     else if(set->output)

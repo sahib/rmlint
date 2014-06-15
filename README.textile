@@ -16,25 +16,25 @@ __download the sources by one of the following ways:__
 
 
 <h4>Git way</h4>
-@git clone https://github.com/sahib/rmlint.git@
+bc. git clone https://github.com/sahib/rmlint.git
 
 
 <h4>Zip way</h4>
-@wget --no-check-certificate http://github.com/sahib/rmlint/zipball/master -O rmlint.zip@
-@unzip rmlint.zip@
+bc. wget --no-check-certificate http://github.com/sahib/rmlint/zipball/master -O rmlint.zip
+unzip rmlint.zip
 
 
 <h4>Tar way</h4>
-@wget --no-check-certificate http://github.com/sahib/rmlint/tarball/master -O rmlint.tar@
-@tar xfv rmlint.tar@
+bc. wget --no-check-certificate http://github.com/sahib/rmlint/tarball/master -O rmlint.tar
+tar xfv rmlint.tar
 
 
 <h3>Now compile</h3>
-@cd <name_of_the_dir>@
-@make -j 2  && sudo make install@
+bc. cd <name_of_the_dir>
+make -j 2  && sudo make install
 
 <h4>Packages</h4>
-A PKGBUILD is available in the AUR.
+A PKGBUILD is available in the AUR: "@rmlint-git@":https://aur.archlinux.org/packages/rmlint-git/
 
 <h2>HELP:</h2>
 <h4>Use:</h4>
@@ -44,9 +44,9 @@ A PKGBUILD is available in the AUR.
 
 <h2>FEATURES</h2>
 * Very fast (written in pure C, in many cases faster than rdfind, and always magnitudes faster than fdupes).
-* Output of both a ready to use script to handle finds and a easy-to-parse logfile.
+* Output of both a ready to use script to handle finds and an easy-to-parse logfile.
 * Tries to minimize I/O as much as possible (focus on CPU-usage).
-* Finds duplictes, nonstripped binaries, files with same basenames (nameclusters), empty files/directories, old tempdata, strange filenames and bad links.
+* Finds duplicates, nonstripped binaries, files with same basenames (nameclusters), empty files/directories, old tempdata, strange filenames and bad links.
 * Displays finds in realtime. (like 'duff' or 'fdupes')
 * Safely abortable at any time (will write log & script).
 * No extra dependencies at all (glibc2 and pthread is something you already have).
@@ -65,20 +65,20 @@ The algorithm tries to mimize IO as far as possible, thus focusing on CPU usage.
 #) Go through all directories and catch all files conformig to regexpattern / dirpattern / hiddenstatus
 #) lint other than duplicates get detected here on the fly (like nonstripped binaries - every file is checked)
 #) the rest of the list (all files without files from 2)) gets sorted by their filesize
-#) elements with a unique filesize gets kicked out (because they can't have a twin)
-#) list gets divided isn sublist, each size one sublist
-#) each sublist gets sort by inode (to speed up reading from HD)
-#) Each group is processed seperately:
-  ##) if the size of group exceeds a certain limit then it's processed on an own thread
-  ##) else the group gets processed within the main thread
+#) elements with a unique filesize get kicked out (because they can't have a twin)
+#) list gets divided in sublists, each size one sublist
+#) each sublist gets sorted by inode (to speed up reading from HD)
+#) Each group is processed separately:
+  ##) if the size of a group exceeds a certain limit then it's processed in it's own thread
+  ##) otherwise the group gets processed within the main thread
 #) Processing: For each file of a group..
-  ##) A short fingerprint from the start/end + some bytes in the middle of the file is read and stored
+  ##) A short fingerprint from the start/end + some bytes in the middle of the file are read and stored
   ##) Nonmatching files get kicked out, if the group consists of 1 elem or less, rmlint forgets about it
-  ##) a md5sums are calculated for the rest of the group (only the part of the file that hasnt been read, is used fo md5sum calculation)
-  ##) if the groupssize exceeds a certain limit, the group gets splitted into several equalsized subgroups
+  ##) md5sums are calculated for the rest of the group (only the part of the file that hasnt been read, is used for md5sum calculation)
+  ##) if the group's size exceeds a certain limit, the group gets splitted into several equally sized subgroups
      ###) The whole file is read blockwise, while other threads have wait (so no useless jumping is done)
-     ###) After a block is read (blocksize is about 2MB) md5 is updated, while at the same time another thread is reading, back to 8.3.1)
-  ##) md5sums, filesize, fingerprint and bytes in the middle get checked each other (to double check and prevent false positives) 
+     ###) After a block is read (blocksize is about 2MB) the md5 is updated, while at the same time another thread is reading, back to 8.3.1)
+  ##) md5sums, filesize, fingerprint and bytes in the middle get checked against each other (to double check and prevent false positives) 
   ##) log/handle result to script / log / screen (let other threads wait for this short time, so no chaos is created)
 #) Do for every group, and print statistics
 
@@ -87,7 +87,7 @@ The algorithm tries to mimize IO as far as possible, thus focusing on CPU usage.
 * Linux 32/64
 * Solaris
 
-__Note1__: It is written in ANSI C, so every ANSI C compiler should be happily compile it. 
+__Note1__: It is written in ANSI C, so every ANSI C compiler should happily compile it. 
 __Note2__: rmlint uses alloca(), if you want to port it you may need to replace it with malloc() (and a corresponding free())
 
 <h2>NOTE ABOUT FALSE POSITIVES</h2> 
@@ -95,21 +95,21 @@ __Short:__ False Positves are actuallly possible, but very, very, very unlikely.
 __Longer:__ They would need to have the same size, fingerprint and checksums to be marked as twins.
 md5 is not perfect, but the probability of getting false positves on a normal set of data is the same as lim(1/x) : x -> +inf = 0 + h; where h ~ 0
 
-But isn't there a solution to be 100% sure? Yes, there is. It's the "--paranoid/-p" option. It does a 
+But isn't there a solution to be 100% sure? Yes, there is. It's the @--paranoid/-p@ option. It does a 
 true byte-by-byte comparasion of each(!) file. Be warned, because it's incredibly slow. 
 
 If you find false positives, those are most likely a bug on rmlint, please make a bugreport to sahib@online.de in this case,
 so others won't suffer from it.
 
 
-<h2>COMPARASION TO OTHER TOOLS</h2>
+<h2>COMPARISON TO OTHER TOOLS</h2>
 (this list could get very, very long, but never accurate) 
 
 __compared to...__ 
 * ..fdupes / duff: 
 ** + LOTS faster 	
 ** + more options 
-** + finds also bad links and other stuff 
+** + also finds bad links and other stuff 
 ** + logging
 ** - did find one file more once. :-)
 
@@ -129,7 +129,7 @@ __compared to...__
 		
 		
 <h2>Pseudobenchmark</h2>
-Machine was a regular quadcore with a even more regular HDD and an absolutely regular Linux x86_64.
+Machine was a regular quadcore with an even more regular HDD and an absolutely regular Linux x86_64.
 measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 
 <table >
@@ -180,10 +180,10 @@ measured was with the __2nd__,__3rd__ & __4th__ run of the programs.
 *Q:* __None of the -m options satisfy my needs. What can I do?__
 *A:* You can specify your own commands by -c/-C, those get also replaced in the script.
      You can for example pipe rmlint's find directly to sh:
-     rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh
+     @rmlint -c "echo '<dupl>' # same as '<orig>'" -C "ls -la '<orig>'" -v 5 | sh@
 
 *Q:* __I want hardlinks instead of symlinks (as with -m link), how can I do this?__
-*A:* rmlint -c "rm -f '<dupl>' && ln '<orig>' '<dupl>'" YOUR_TARGET_DIR_HERE
+*A:* @rmlint -c "rm -f '<dupl>' && ln '<orig>' '<dupl>'" YOUR_TARGET_DIR_HERE@
 
 *Q:* __Are there bugs I should know off?__
 *A:* None that are really known, only some strange output formatting sometimes.
