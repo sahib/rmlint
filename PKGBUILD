@@ -12,7 +12,7 @@ makedepends=('git')
 license=('GPL3')
 url=("https://github.com/sahib/rmlint")
 
-_gitroot="git://github.com/sahib/rmlint.git"
+_gitroot="https://github.com/sahib/rmlint.git"
 _gitname="rmlint"
 
 build() 
