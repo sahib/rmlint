@@ -622,6 +622,7 @@ static long cmp_orig_criteria(lint_t *a, lint_t *b)
 				break;
 			case 'a':
 				cmp = strcmp (rmlint_basename(a->path),rmlint_basename (b->path));
+				break;
 			case 'A':
 				cmp = strcmp (rmlint_basename(b->path),rmlint_basename (a->path));
 				break;
