@@ -302,7 +302,10 @@ static void print_help(void)
             "\t-e --matchcase\t\tMatches case of paths (Default: No.)\n");
     fprintf(stderr, "\nMisc options:\n\n"
             "\t-h --help\t\tPrints this text and exits\n"
-            "\t-o --output <o>\tOutputs logfile to <o>.log and script to <o>.sh\n"
+            "\t-o --output <o>\tOutputs logfile to <o>.log and script to <o>.sh   (use -o \"\" or \'\' to disable output files)\n"
+            "\t\t\t\tExamples:\n"
+   			"\t\t\t\t\t-o \"\" => No Logfile\n"
+			"\t\t\t\t\t-o \"la la.txt\" => Logfile to \"la la.txt.log\"\n"
             );
     fprintf(stderr,"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
             "\t\t\t\tWhere:\n"
@@ -539,7 +542,10 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             sets->doldtmp = false;
             break;
         case 'o':
-            sets->output = optarg;
+            if (strlen(optarg) != 0)
+				sets->output = optarg;
+			else
+				sets->output = NULL;
             break;
         case 'c':
             sets->cmd_path = optarg;
@@ -761,7 +767,7 @@ void die(int status)
                 "                      \n"
                 "if [ -z $DO_REMOVE ]  \n"
                 "then                  \n"
-                "  rm -f rmlint.log    \n"
+                "  rm -f rmlint.log    \n"  /*TODO: fix this to match "-o" command line options*/
                 "  rm -f rmlint.sh     \n"
                 "fi                    \n"
                );
