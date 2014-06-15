@@ -1329,9 +1329,7 @@ void start_processing(lint_t *b)
                 emptylist;
     char lintbuf[128];
     char suspbuf[128];
-    nuint_t ii           = 0,
-            lint         = 0,
-            spelen       = 0,
+    nuint_t spelen       = 0,
             rem_counter  = 0,
             suspicious   = 0,
             path_doubles = 0;
@@ -1585,16 +1583,8 @@ void start_processing(lint_t *b)
     {
         error("\n");
     }
-    /* Gather the total size of removeable data */
-    for(ii=0; ii < spelen; ii++)
-    {
-        if(fglist[ii].grp_stp != NULL)
-        {
-            lint += fglist[ii].size;
-        }
-    }
     /* now process the ouptput we gonna print */
-    size_to_human_readable(lint, lintbuf, 127 /* bufsize */);
+    size_to_human_readable(total_lint, lintbuf, 127 /* bufsize */);
     size_to_human_readable(emptylist.size, suspbuf, 127);
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
@@ -1606,7 +1596,7 @@ void start_processing(lint_t *b)
     warning("\n");
     if(!iAbort)
     {
-        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, lint);
+        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, total_lint);
     }
     if((set->mode == 1 || set->mode == 2) && get_dupcounter())
     {
