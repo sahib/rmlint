@@ -76,7 +76,6 @@ rmlint_settings * set;
 /* global var for flagging whether current path being walked is */
 /* a "preferred" path                                           */
 bool is_ppath;
-/*nuint_t total_lint = 0;*/
 
 
 /* These method are also useable from 'outside' */
