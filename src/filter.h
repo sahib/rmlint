@@ -26,8 +26,7 @@
 #include "list.h"
 
 /* file_group; models a 'sublist' */
-typedef struct
-{
+typedef struct {
     /* Start and end pointer of a 'group' */
     lint_t *grp_stp, *grp_enp;
 

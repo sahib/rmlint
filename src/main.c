@@ -23,14 +23,12 @@
 
 /* Only call the methods */
 /* Original plan was to provide an API, but this would need some work */
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     /* Init */
     rmlint_settings mySettings;
     rmlint_set_default_settings(&mySettings);
     /* Parse commandline */
-    if(rmlint_parse_arguments(argc,argv,&mySettings) == 0)
-    {
+    if(rmlint_parse_arguments(argc,argv,&mySettings) == 0) {
         return -1;
     }
     /* do all the real work */

@@ -48,15 +48,13 @@
 
 
 nuint_t dup_counter=0;
-nuint_t get_dupcounter()
-{
+nuint_t get_dupcounter() {
     return dup_counter;
 }
 
 /* ------------------------------------------------------------- */
 
-void set_dupcounter(nuint_t new)
-{
+void set_dupcounter(nuint_t new) {
     dup_counter = new;
 }
 
@@ -70,8 +68,7 @@ pthread_mutex_t mutex_printage =  PTHREAD_MUTEX_INITIALIZER;
 
 /* ------------------------------------------------------------- */
 
-void mode_c_init(void)
-{
+void mode_c_init(void) {
     script_out = NULL;
     log_out    = NULL;
     dup_counter = 0;
@@ -80,26 +77,22 @@ void mode_c_init(void)
 
 /* ------------------------------------------------------------- */
 
-FILE *get_logstream(void)
-{
+FILE *get_logstream(void) {
     return log_out;
 }
 /* ------------------------------------------------------------- */
 
-FILE *get_scriptstream(void)
-{
+FILE *get_scriptstream(void) {
     return script_out;
 }
 
 /* ------------------------------------------------------------- */
 
-static char * __strsubs(char * string, const char * subs, size_t subs_len, const char * with, size_t with_len, long offset)
-{
+static char * __strsubs(char * string, const char * subs, size_t subs_len, const char * with, size_t with_len, long offset) {
     char * new, * occ = strstr(string+offset,subs);
     size_t strn_len = 0;
     /* Terminate when no occurences left */
-    if(occ == NULL)
-    {
+    if(occ == NULL) {
         return string;
     }
     /* string has a variable length */
@@ -117,16 +110,13 @@ static char * __strsubs(char * string, const char * subs, size_t subs_len, const
 /* ------------------------------------------------------------- */
 
 /* Return always a newly allocated string - wraps around __strsubs() */
-char * strsubs(const char * string, const char * subs, const char * with)
-{
+char * strsubs(const char * string, const char * subs, const char * with) {
     size_t subs_len, with_len;
     /* Handle special cases (where __strsubs would return weird things) */
-    if(string == NULL || *string == 0)
-    {
+    if(string == NULL || *string == 0) {
         return NULL;
     }
-    if(subs == NULL || (subs == NULL && with == NULL) || *subs == 0)
-    {
+    if(subs == NULL || (subs == NULL && with == NULL) || *subs == 0) {
         return strdup(string);
     }
     /* Call strlen() only once */
@@ -139,12 +129,9 @@ char * strsubs(const char * string, const char * subs, const char * with)
 /* ------------------------------------------------------------- */
 
 /* Simple wrapper around unlink() syscall */
-static void remfile(const char *r_path)
-{
-    if(r_path)
-    {
-        if(unlink(r_path) == -1)
-        {
+static void remfile(const char *r_path) {
+    if(r_path) {
+        if(unlink(r_path) == -1) {
             perror(YEL"WARN:"NCO" unlink():");
         }
     }
@@ -153,8 +140,7 @@ static void remfile(const char *r_path)
 /* ------------------------------------------------------------- */
 
 
-static void print_askhelp(void)
-{
+static void print_askhelp(void) {
     error(GRE"\nk"NCO" - keep file \n"
           GRE"d"NCO" - delete file \n"
           GRE"i"NCO" - show fileinfo\n"
@@ -166,12 +152,9 @@ static void print_askhelp(void)
 
 /* ------------------------------------------------------------- */
 
-void log_print(FILE * stream, const char * string)
-{
-    if(stream && string)
-    {
-        if(set->verbosity == 4)
-        {
+void log_print(FILE * stream, const char * string) {
+    if(stream && string) {
+        if(set->verbosity == 4) {
             fprintf(stdout,"%s",string);
         }
         fprintf(stream,"%s",string);
@@ -180,18 +163,15 @@ void log_print(FILE * stream, const char * string)
 
 /* ------------------------------------------------------------- */
 
-static char * make_cmd_ready(bool is_orig, const char * orig, const char * dupl)
-{
+static char * make_cmd_ready(bool is_orig, const char * orig, const char * dupl) {
     char * repl_orig = NULL;
     if(!is_orig)
         repl_orig = strsubs(set->cmd_path,CMD_ORIG,orig);
     else
         repl_orig = strsubs(set->cmd_orig,CMD_ORIG,orig);
-    if(repl_orig != NULL && !is_orig)
-    {
+    if(repl_orig != NULL && !is_orig) {
         char * repl_dups = strsubs(repl_orig,CMD_DUPL,dupl);
-        if(repl_dups != NULL)
-        {
+        if(repl_dups != NULL) {
             free(repl_orig);
             repl_orig = repl_dups;
         }
@@ -201,12 +181,9 @@ static char * make_cmd_ready(bool is_orig, const char * orig, const char * dupl)
 
 /* ------------------------------------------------------------- */
 
-void script_print(char * string)
-{
-    if(string != NULL)
-    {
-        if(set->verbosity == 5)
-        {
+void script_print(char * string) {
+    if(string != NULL) {
+        if(set->verbosity == 5) {
             fprintf(stdout,"%s",string);
         }
         fprintf(get_scriptstream(),"%s",string);
@@ -220,138 +197,97 @@ void script_print(char * string)
 
 /* ------------------------------------------------------------- */
 
-void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
-{
+void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig) {
     bool free_fullpath = true;
-    if(get_logstream() && get_scriptstream() && set->output)
-    {
+    if(get_logstream() && get_scriptstream() && set->output) {
         int i = 0;
         char *fpath = realpath(file->path, NULL);
         const char * chown_cmd = "chown $(whoami):$(id -gn)";
-        if(!fpath)
-        {
-            if(file->dupflag != TYPE_BLNK)
-            {
+        if(!fpath) {
+            if(file->dupflag != TYPE_BLNK) {
                 error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
                 perror("(write_to_log():mode.c)");
             }
             free_fullpath = false;
             fpath = (char*)file->path;
-        }
-        else
-        {
+        } else {
             /* This is so scary. */
             /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings for more info on this */
             char *tmp_copy = fpath;
             fpath = strsubs(fpath,"'","'\"'\"'");
             free(tmp_copy);
         }
-        if(file->dupflag == TYPE_BLNK)
-        {
+        if(file->dupflag == TYPE_BLNK) {
             script_print(_sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
             log_print(get_logstream(),"BLNK");
-        }
-        else if(file->dupflag == TYPE_BASE)
-        {
+        } else if(file->dupflag == TYPE_BASE) {
             log_print(get_logstream(),"BASE");
             script_print(_sd_("echo  '%s' # double basename.\n", fpath));
-        }
-        else if(file->dupflag == TYPE_OTMP)
-        {
+        } else if(file->dupflag == TYPE_OTMP) {
             script_print(_sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, set->oldtmpdata));
             log_print(get_logstream(),"OTMP");
-        }
-        else if(file->dupflag == TYPE_EDIR)
-        {
+        } else if(file->dupflag == TYPE_EDIR) {
             script_print(_sd_("rmdir '%s' # empty folder.\n", fpath));
             log_print(get_logstream(),"EDIR");
-        }
-        else if(file->dupflag == TYPE_JNK_DIRNAME)
-        {
+        } else if(file->dupflag == TYPE_JNK_DIRNAME) {
             script_print(_sd_("echo  '%s' # dirname containing one char of the string \"%s\"\n", fpath, set->junk_chars));
             log_print(get_logstream(),"JNKD");
-        }
-        else if(file->dupflag == TYPE_JNK_FILENAME)
-        {
+        } else if(file->dupflag == TYPE_JNK_FILENAME) {
             script_print(_sd_("echo  '%s' # filename containing one char of the string \"%s\"\n", fpath, set->junk_chars));
             log_print(get_logstream(),"JNKN");
-        }
-        else if(file->dupflag == TYPE_NBIN)
-        {
+        } else if(file->dupflag == TYPE_NBIN) {
             script_print(_sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
             log_print(get_logstream(),"NBIN");
-        }
-        else if(file->dupflag == TYPE_BADUID)
-        {
+        } else if(file->dupflag == TYPE_BADUID) {
             script_print(_sd_("%s '%s' # bad uid\n",chown_cmd, fpath));
             log_print(get_logstream(),"BUID");
-        }
-        else if(file->dupflag == TYPE_BADGID)
-        {
+        } else if(file->dupflag == TYPE_BADGID) {
             script_print(_sd_("%s '%s' # bad gid\n",chown_cmd, fpath));
             log_print(get_logstream(),"BGID");
-        }
-        else if(file->fsize == 0)
-        {
+        } else if(file->fsize == 0) {
             script_print(_sd_("rm -f '%s' # empty file.\n", fpath));
             log_print(get_logstream(),"ZERO");
-        }
-        else if(orig==false)
-        {
+        } else if(orig==false) {
             log_print(get_logstream(),"DUPL");
-            if(set->cmd_path)
-            {
+            if(set->cmd_path) {
                 char *opath = realpath(p_to_orig->path, NULL);
-                if(opath != NULL)
-                {
+                if(opath != NULL) {
                     /*script_print(_sd_(set->cmd_path,fpath,opath));*/
                     char * tmp_opath = strsubs(opath,"'","'\"'\"'");
-                    if(tmp_opath != NULL)
-                    {
+                    if(tmp_opath != NULL) {
                         script_print(make_cmd_ready(false,tmp_opath,fpath));
                         script_print(_sd_("\n"));
                         free(tmp_opath);
                     }
                     free(opath);
                 }
-            }
-            else
-            {
+            } else {
                 script_print(_sd_("rm -f '%s' # duplicate\n",fpath));
             }
-        }
-        else
-        {
+        } else {
             log_print(get_logstream(),"ORIG");
-            if(set->cmd_orig)
-            {
+            if(set->cmd_orig) {
                 /*//script_print(_sd_(set->cmd_orig,fpath));*/
                 script_print(make_cmd_ready(true,fpath,NULL));
                 script_print(_sd_(" \n"));
-            }
-            else
-            {
+            } else {
                 script_print(_sd_("echo  '%s' # original\n",fpath));
             }
         }
         log_print(get_logstream(),LOGSEP);
-        for(i = 0; i < 16; i++)
-        {
-            if(set->verbosity == 4)
-            {
+        for(i = 0; i < 16; i++) {
+            if(set->verbosity == 4) {
                 fprintf(stdout,"%02x", file->md5_digest[i]);
             }
             fprintf(get_logstream(),"%02x", file->md5_digest[i]);
         }
 #define INT_CAST long unsigned
-        if(set->verbosity == 4)
-        {
+        if(set->verbosity == 4) {
             fprintf(stdout,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
         }
         fprintf(get_logstream(),"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
 #undef INT_CAST
-        if(free_fullpath && fpath && file->dupflag != TYPE_BLNK)
-        {
+        if(free_fullpath && fpath && file->dupflag != TYPE_BLNK) {
             free(fpath);
         }
     }
@@ -363,36 +299,27 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig)
 
 /* ------------------------------------------------------------- */
 
-static bool handle_item(lint_t *file_path, lint_t *file_orig)
-{
+static bool handle_item(lint_t *file_path, lint_t *file_orig) {
     char *path = (file_path) ? file_path->path : NULL;
     char *orig = (file_orig) ? file_orig->path : NULL;
     /* What set->mode are we in? */
-    switch(set->mode)
-    {
+    switch(set->mode) {
     case 1:
         break;
-    case 2:
-    {
+    case 2: {
         /* Ask the user what to do */
         char sel, block = 0;
-        if(path == NULL)
-        {
+        if(path == NULL) {
             break;
         }
-        do
-        {
+        do {
             error(YEL":: "NCO"'%s' same as '%s' [h for help]\n"YEL":: "NCO,path,orig);
-            do
-            {
-                if(!scanf("%c",&sel))
-                {
+            do {
+                if(!scanf("%c",&sel)) {
                     perror("scanf()");
                 }
-            }
-            while(getchar() != '\n');
-            switch(sel)
-            {
+            } while(getchar() != '\n');
+            switch(sel) {
             case 'k':
                 block = 0;
                 break;
@@ -428,40 +355,30 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
                 block = 1;
                 break;
             }
-        }
-        while(block);
+        } while(block);
     }
     break;
-    case 3:
-    {
+    case 3: {
         /* Just remove it */
-        if(path == NULL)
-        {
+        if(path == NULL) {
             break;
         }
         warning(RED"   rm -rf "NCO"\"%s\"\n", path);
         remfile(path);
     }
     break;
-    case 4:
-    {
+    case 4: {
         /* Replace the file with a neat symlink */
-        if(path == NULL)
-        {
+        if(path == NULL) {
             break;
-        }
-        else
-        {
+        } else {
             char * full_orig_path = realpath(orig, NULL);
-            if(full_orig_path)
-            {
+            if(full_orig_path) {
                 char * full_dupl_path = realpath(path, NULL);
-                if(full_dupl_path)
-                {
+                if(full_dupl_path) {
                     error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
                     remfile(full_dupl_path);
-                    if(symlink(full_orig_path ,full_dupl_path) == -1)
-                    {
+                    if(symlink(full_orig_path ,full_dupl_path) == -1) {
                         perror(YEL"WARN: "NCO"symlink:");
                     }
                     free(full_dupl_path);
@@ -471,28 +388,21 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
         }
     }
     break;
-    case 5:
-    {
+    case 5: {
         /* Exec a command on it */
         int ret = 0;
         char * tmp_opath = strsubs(orig,"'","'\"'\"'");
         char * tmp_fpath = strsubs(path,"'","'\"'\"'");
-        if(tmp_opath && tmp_fpath)
-        {
+        if(tmp_opath && tmp_fpath) {
             const char * cmd = NULL;
-            if(path)
-            {
+            if(path) {
                 cmd = make_cmd_ready(false,tmp_opath,tmp_fpath);
-            }
-            else
-            {
+            } else {
                 cmd = make_cmd_ready(true,tmp_opath,NULL);
             }
-            if(cmd != NULL)
-            {
+            if(cmd != NULL) {
                 ret = system(cmd);
-                if(WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
-                {
+                if(WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
                     return true;
                 }
                 free((char*)cmd);
@@ -512,20 +422,16 @@ static bool handle_item(lint_t *file_path, lint_t *file_orig)
 
 /* ------------------------------------------------------------- */
 
-void init_filehandler(void)
-{
-    if(set->output)
-    {
+void init_filehandler(void) {
+    if(set->output) {
         char *sc_name = strdup_printf("%s.sh", set->output);
         char *lg_name = strdup_printf("%s.log",set->output);
         script_out = fopen(sc_name, "w");
         log_out    = fopen(lg_name, "w");
-        if(script_out && log_out)
-        {
+        if(script_out && log_out) {
             char *cwd = getcwd(NULL,0);
             /* Make the file executable */
-            if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1)
-            {
+            if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1) {
                 perror(YEL"WARN: "NCO"chmod");
             }
             /* Write a basic header */
@@ -609,13 +515,10 @@ void init_filehandler(void)
             fprintf(get_logstream(), "# devID   : The ID of the device where the file is located\n");
             fprintf(get_logstream(), "# inode   : The Inode of the file (see man 2 stat)\n");
             fprintf(get_logstream(), "# The '//' inbetween each word is the seperator.\n");
-            if(cwd)
-            {
+            if(cwd) {
                 free(cwd);
             }
-        }
-        else
-        {
+        } else {
             perror(NULL);
         }
         fflush(script_out);
@@ -632,67 +535,58 @@ void init_filehandler(void)
 bool print_newline = true;
 
 
-bool process_doop_groop(file_group *grp)
-{   /* This does the final processing on a dupe group. All required   */
-	/* comparisons have been done (including paranoid if required) so */
-	/* now it's just a matter of deciding which originals to keep and */
-	/* which files to delete.                                         */
-	    
+bool process_doop_groop(file_group *grp) {
+    /* This does the final processing on a dupe group. All required   */
+    /* comparisons have been done (including paranoid if required) so */
+    /* now it's just a matter of deciding which originals to keep and */
+    /* which files to delete.                                         */
+
     /* If a specific directory is specified to have the 'originals':  */
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
-    
-    
-	lint_t *i = grp->grp_stp;
-	bool tagged_original = false;
-	lint_t *original;
-	
-	while(i)
-	{
-		if ( ( (i->in_ppath) && (set->keep_all_originals) ) ||
-			 /* tag all originals*/
-		     ( (i->in_ppath) && (!tagged_original) ) )
-			/*tag first original only*/
-		{
-			i->filter = false;
-			if (!tagged_original)
-			{
-				tagged_original = true;
-				original = i;
-			}
-		}
-        else
+
+
+    lint_t *i = grp->grp_stp;
+    bool tagged_original = false;
+    lint_t *original;
+
+    while(i) {
+        if ( ( (i->in_ppath) && (set->keep_all_originals) ) ||
+                /* tag all originals*/
+                ( (i->in_ppath) && (!tagged_original) ) )
+            /*tag first original only*/
         {
-			/*tag as duplicate*/
-			i->filter = true;
-		}
+            i->filter = false;
+            if (!tagged_original) {
+                tagged_original = true;
+                original = i;
+            }
+        } else {
+            /*tag as duplicate*/
+            i->filter = true;
+        }
         i = i->next;
     }
-    if (!tagged_original)
-    {
-		/* tag first file as the original*/
-		grp->grp_stp->filter = false;
-		original = grp->grp_stp;
-	}
-	
+    if (!tagged_original) {
+        /* tag first file as the original*/
+        grp->grp_stp->filter = false;
+        original = grp->grp_stp;
+    }
+
     /* Make sure no group is printed / logged at the same time (== chaos) */
     pthread_mutex_lock(&mutex_printage);
-    
+
     /* Now do the actual printout.. */
     i = grp->grp_stp;
-    while(i)
-    {
-        if(!i->filter)
-        {   /* original(s) of a duplicate set*/
-            if((set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1)
-            {
-                if(print_newline)
-                {
+    while(i) {
+        if(!i->filter) {
+            /* original(s) of a duplicate set*/
+            if((set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1) {
+                if(print_newline) {
                     warning("\n");
                     print_newline = false;
                 }
-                if(set->mode != 4)
-                {
+                if(set->mode != 4) {
                     error(GRE"   ls "NCO"%s\n",i->path);
                 }
             }
@@ -704,42 +598,33 @@ bool process_doop_groop(file_group *grp)
         i = i->next;
     }
     i = grp->grp_stp;
-    while(i)
-    {
-        if(i->filter)
-        {   /* duplicates(s) of a duplicate set*/
-			if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path))
-			{
-				if(set->paranoid)
-				{
-					/* If byte by byte was succesful print a blue "x" */
-					warning(BLU"   %-1s "NCO,"rm");
-				}
-				else
-				{
-					warning(YEL"   %-1s "NCO,"rm");
-				}
-				if(set->verbosity > 1)
-				{
-					error("%s\n",i->path);
-				}
-				else
-				{
-					error("   rm %s\n",i->path);
-				}
-			}
-			write_to_log(i, false, original);
-			set_dupcounter(get_dupcounter()+1);
-			add_total_lint(i->fsize);
-			if(handle_item(i,original))
-			{
-				pthread_mutex_unlock(&mutex_printage);
-				return true;
-			}
-		}
-		i = i->next;
-	}
-	pthread_mutex_unlock(&mutex_printage);
+    while(i) {
+        if(i->filter) {
+            /* duplicates(s) of a duplicate set*/
+            if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path)) {
+                if(set->paranoid) {
+                    /* If byte by byte was succesful print a blue "x" */
+                    warning(BLU"   %-1s "NCO,"rm");
+                } else {
+                    warning(YEL"   %-1s "NCO,"rm");
+                }
+                if(set->verbosity > 1) {
+                    error("%s\n",i->path);
+                } else {
+                    error("   rm %s\n",i->path);
+                }
+            }
+            write_to_log(i, false, original);
+            set_dupcounter(get_dupcounter()+1);
+            add_total_lint(i->fsize);
+            if(handle_item(i,original)) {
+                pthread_mutex_unlock(&mutex_printage);
+                return true;
+            }
+        }
+        i = i->next;
+    }
+    pthread_mutex_unlock(&mutex_printage);
     return false;
 }
 

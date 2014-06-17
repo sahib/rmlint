@@ -25,15 +25,13 @@
 #include "list.h"
 
 
-typedef struct
-{
-	char is_ppath;
+typedef struct {
+    char is_ppath;
     char *path;
 } rmlint_path;
 
 /* all available settings see rmlint -h */
-typedef struct
-{
+typedef struct {
     char mode;
     char color;
     char collide;
@@ -64,7 +62,7 @@ typedef struct
     char keep_all_originals;   /*NEW - if set, will ONLY delete dupes that are not in ppath */
     char must_match_original;  /*NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
     char invert_original;      /*NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
-    char find_hardlinked_dupes; /*NEW - if set, will also search for hardlinked duplicates*/ 
+    char find_hardlinked_dupes; /*NEW - if set, will also search for hardlinked duplicates*/
     nuint_t threads;
     nuint_t depth;
     nuint_t oldtmpdata;

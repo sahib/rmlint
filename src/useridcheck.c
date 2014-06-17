@@ -30,28 +30,24 @@
 
 /* /////////////////////////// */
 
-UserGroupList ** userlist_new(void)
-{
+UserGroupList ** userlist_new(void) {
     UserGroupList ** list = NULL;
     const size_t block_size = 256;
     size_t mem_count = 0, block_count = 0;
     struct passwd * node = NULL;
     setpwent();
-    while((node = getpwent()) != NULL)
-    {
+    while((node = getpwent()) != NULL) {
         UserGroupList * item = malloc(sizeof(UserGroupList));
         item->gid = node->pw_gid;
         item->uid = node->pw_uid;
-        if(block_count * block_size <= mem_count)
-        {
+        if(block_count * block_size <= mem_count) {
             block_count++;
             list = realloc(list,(block_count + 1) * block_size * sizeof(UserGroupList*));
         }
         list[mem_count] = item;
         mem_count++;
     }
-    if(list != NULL)
-    {
+    if(list != NULL) {
         list[mem_count] = NULL;
     }
     endpwent();
@@ -60,16 +56,13 @@ UserGroupList ** userlist_new(void)
 
 /* /////////////////////////// */
 
-bool userlist_contains(UserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid)
-{
+bool userlist_contains(UserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid) {
     bool rc = false;
     bool gid_found = false;
     bool uid_found = false;
-    if(list != NULL)
-    {
+    if(list != NULL) {
         int i = 0;
-        for(i = 0; list[i] && rc == false; ++i)
-        {
+        for(i = 0; list[i] && rc == false; ++i) {
             if(list[i]->uid == uid)
                 uid_found = true;
             if(list[i]->gid == gid)
@@ -86,13 +79,10 @@ bool userlist_contains(UserGroupList ** list, unsigned long uid, unsigned gid, b
 
 /* /////////////////////////// */
 
-void userlist_destroy(UserGroupList ** list)
-{
-    if(list != NULL)
-    {
+void userlist_destroy(UserGroupList ** list) {
+    if(list != NULL) {
         int i = 0;
-        for(i = 0; list[i]; ++i)
-        {
+        for(i = 0; list[i]; ++i) {
             free(list[i]);
         }
         free(list);
@@ -105,18 +95,15 @@ void userlist_destroy(UserGroupList ** list)
 
 #define bool2str(v) (v) ? "True" : "False"
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char * argv[]) {
     struct stat stat_buf;
     bool has_gid, has_uid;
     UserGroupList ** list = userlist_new();
-    if(argc < 2)
-    {
+    if(argc < 2) {
         puts("Usage: prog <path>");
         return EXIT_FAILURE;
     }
-    if(stat(argv[1],&stat_buf) != 0)
-    {
+    if(stat(argv[1],&stat_buf) != 0) {
         return EXIT_FAILURE;
     }
     printf("File has UID %lu and GID %lu\n",

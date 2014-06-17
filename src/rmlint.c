@@ -68,8 +68,7 @@ jmp_buf place;
 
 /* ------------------------------------------------------------- */
 
-void rmlint_init(void)
-{
+void rmlint_init(void) {
     do_exit = false;
     use_cwd = false;
     jmp_set = false;
@@ -80,21 +79,18 @@ void rmlint_init(void)
 
 /* ------------------------------------------------------------- */
 
-nuint_t get_totalfiles(void)
-{
+nuint_t get_totalfiles(void) {
     return total_files;
 }
 
 /* ------------------------------------------------------------- */
 
 /* Don't forget to free retvalue */
-char *strdup_printf(const char *format, ...)
-{
+char *strdup_printf(const char *format, ...) {
     va_list arg;
     char *tmp;
     va_start(arg, format);
-    if(vasprintf(&tmp, format, arg) == -1)
-    {
+    if(vasprintf(&tmp, format, arg) == -1) {
         return NULL;
     }
     va_end(arg);
@@ -104,11 +100,9 @@ char *strdup_printf(const char *format, ...)
 /* ------------------------------------------------------------- */
 
 /* Make chained calls possible */
-char * rm_col(char * string, const char * COL)
-{
+char * rm_col(char * string, const char * COL) {
     char * new = strsubs(string,COL,NULL);
-    if(string)
-    {
+    if(string) {
         free(string);
         string = NULL;
     }
@@ -117,17 +111,13 @@ char * rm_col(char * string, const char * COL)
 
 /* ------------------------------------------------------------- */
 
-void msg_macro_print(FILE * stream, const char * string)
-{
-    if(stream && string)
-    {
+void msg_macro_print(FILE * stream, const char * string) {
+    if(stream && string) {
         char * tmp = strdup(string);
-        if(!set->color)
-        {
+        if(!set->color) {
             tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
         }
-        if(stream != NULL && tmp != NULL)
-        {
+        if(stream != NULL && tmp != NULL) {
             fprintf(stream,"%s",tmp);
             fflush(stream);
             free(tmp);
@@ -139,22 +129,18 @@ void msg_macro_print(FILE * stream, const char * string)
 /* ------------------------------------------------------------- */
 
 /** Messaging **/
-void error(const char* format, ...)
-{
-    if(set->verbosity > 0 && set->verbosity < 4)
-    {
+void error(const char* format, ...) {
+    if(set->verbosity > 0 && set->verbosity < 4) {
         char * tmp;
         va_list args;
         va_start(args, format);
-        if(vasprintf(&tmp, format, args) == -1)
-        {
+        if(vasprintf(&tmp, format, args) == -1) {
             return;
         }
         /* print, respect -B */
         msg_macro_print(stdout,tmp);
         va_end(args);
-        if(tmp)
-        {
+        if(tmp) {
             free(tmp);
         }
     }
@@ -162,21 +148,17 @@ void error(const char* format, ...)
 
 /* ------------------------------------------------------------- */
 
-void warning(const char* format, ...)
-{
-    if(set->verbosity > 1 && set->verbosity < 4)
-    {
+void warning(const char* format, ...) {
+    if(set->verbosity > 1 && set->verbosity < 4) {
         char * tmp;
         va_list args;
         va_start(args, format);
-        if(vasprintf(&tmp, format, args) == -1)
-        {
+        if(vasprintf(&tmp, format, args) == -1) {
             return;
         }
         msg_macro_print(stderr,tmp);
         va_end(args);
-        if(tmp)
-        {
+        if(tmp) {
             free(tmp);
         }
     }
@@ -184,21 +166,17 @@ void warning(const char* format, ...)
 
 /* ------------------------------------------------------------- */
 
-void info(const char* format, ...)
-{
-    if((set->verbosity > 2 && set->verbosity < 4) || set->verbosity == 6)
-    {
+void info(const char* format, ...) {
+    if((set->verbosity > 2 && set->verbosity < 4) || set->verbosity == 6) {
         char * tmp;
         va_list args;
         va_start(args, format);
-        if(vasprintf(&tmp, format, args) == -1)
-        {
+        if(vasprintf(&tmp, format, args) == -1) {
             return;
         }
         msg_macro_print(stdout,tmp);
         va_end(args);
-        if(tmp)
-        {
+        if(tmp) {
             free(tmp);
         }
     }
@@ -210,8 +188,7 @@ void info(const char* format, ...)
  * this is used twice; 1x with a variable format..
  * Please gimme a note if I forgot to check sth. there. ;)
  */
-int systemf(const char* format, ...)
-{
+int systemf(const char* format, ...) {
     va_list arg;
     char *cmd;
     int ret = 0;
@@ -220,8 +197,7 @@ int systemf(const char* format, ...)
         return -1;
     va_end(arg);
     /* Now execute a shell command */
-    if((ret = system(cmd)) == -1)
-    {
+    if((ret = system(cmd)) == -1) {
         perror("systemf(const char* format, ...)");
     }
     if(cmd) free(cmd);
@@ -231,13 +207,11 @@ int systemf(const char* format, ...)
 /* ------------------------------------------------------------- */
 
 /* Version string */
-static void print_version(bool exit)
-{
+static void print_version(bool exit) {
     fprintf(stderr, "Version 1.0.6b compiled: [%s]-[%s]\n",__DATE__,__TIME__);
     fprintf(stderr, "Author Christopher Pahl; Report bugs to <sahib@online.de>\n");
     fprintf(stderr, "or use the Issuetracker at https://github.com/sahib/rmlint/issues\n");
-    if(exit)
-    {
+    if(exit) {
         die(0);
     }
 }
@@ -246,8 +220,7 @@ static void print_version(bool exit)
 
 
 /* Help text */
-static void print_help(void)
-{
+static void print_help(void) {
     fprintf(stderr, "Syntax: rmlint [[//]TargetDir[s]] [File[s]] [Options]\n");
     fprintf(stderr, "\nGeneral options:\n\n"
             "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
@@ -278,10 +251,10 @@ static void print_help(void)
             "\t-f --followlinks\tWhether symlinks are followed (Default: no). Note that rmlint will try to detect if symlinks\n"
             "\t\t\t\tresult in the same physical file being encountered twice and will ignore the second one.\n"
             "\t-H --findhardlinked\tFind hardlinked duplicates.  Default is to ignore duplicates which are hardlinked to each other.\n"
-            );
+           );
     fprintf(stderr,"\t\t\t\tNote: currently, hardlinked files with the same basename are _always_ ignored, due to possible error with bind\n"
-			"\t\t\t\tmounts pointing to the same physical file\n"
-			"\t\t\t\tNote also: hardlinked duplicates _will_ be reported as part of GB count that can be freed up.\n"
+            "\t\t\t\tmounts pointing to the same physical file\n"
+            "\t\t\t\tNote also: hardlinked duplicates _will_ be reported as part of GB count that can be freed up.\n"
             "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: off, ie do cross mountpoints)\n"
             "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
            );
@@ -293,9 +266,9 @@ static void print_help(void)
             "\t\t\t\tnoask - Full removal without asking.\n"
             "\t\t\t\tcmd   - Takes the command given by -c/-C and executes it on the duplicate/original.\n"
             "\t\t\t\tDefault: list\n\n"
-            );
+           );
     fprintf(stderr,"\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n"
-			"\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
+            "\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
             "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
             "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n");
     fprintf(stderr,"\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
@@ -311,9 +284,9 @@ static void print_help(void)
             "\t-h --help\t\tPrints this text and exits\n"
             "\t-o --output <o>\tOutputs logfile to <o>.log and script to <o>.sh   (use -o \"\" or \'\' to disable output files)\n"
             "\t\t\t\tExamples:\n"
-   			"\t\t\t\t\t-o \"\" => No Logfile\n"
-			"\t\t\t\t\t-o \"la la.txt\" => Logfile to \"la la.txt.log\"\n"
-            );
+            "\t\t\t\t\t-o \"\" => No Logfile\n"
+            "\t\t\t\t\t-o \"la la.txt\" => Logfile to \"la la.txt.log\"\n"
+           );
     fprintf(stderr,"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
             "\t\t\t\tWhere:\n"
             "\t\t\t\t0 prints nothing\n"
@@ -339,8 +312,7 @@ static void print_help(void)
 /* ------------------------------------------------------------- */
 
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
-void rmlint_set_default_settings(rmlint_settings *pset)
-{
+void rmlint_set_default_settings(rmlint_settings *pset) {
     set = pset;
     pset->mode      =  1;       /* list only    */
     pset->casematch     =  0;       /* Insensitive  */
@@ -375,7 +347,7 @@ void rmlint_set_default_settings(rmlint_settings *pset)
     pset->invert_original = 0;   /* search for any dupes, not just ones which include ppath members*/
     pset->find_hardlinked_dupes = 0;   /* ignore hardlinked dupes*/
     pset->sort_criteria = "m";  /* default ranking order for choosing originals - keep oldest mtime*/
-    
+
 
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
@@ -386,14 +358,11 @@ void rmlint_set_default_settings(rmlint_settings *pset)
 
 /* ------------------------------------------------------------- */
 
-void parse_limit_sizes(char * limit_string)
-{
+void parse_limit_sizes(char * limit_string) {
     char * ptr = limit_string;
-    if(ptr != NULL)
-    {
+    if(ptr != NULL) {
         char * semicol = strchr(ptr,';');
-        if(semicol != NULL)
-        {
+        if(semicol != NULL) {
             semicol[0] = '\0';
             semicol++;
             set->maxsize = strtol(semicol,NULL,10);
@@ -406,10 +375,8 @@ void parse_limit_sizes(char * limit_string)
 /* ------------------------------------------------------------- */
 
 /* Check if this is the 'preferred' dir */
-int check_if_preferred(const char * dir)
-{
-    if(dir != NULL)
-    {
+int check_if_preferred(const char * dir) {
+    if(dir != NULL) {
         size_t length = strlen(dir);
         if(length >= 2 && dir[0] == '/' && dir[1] == '/')
             return 1;
@@ -418,14 +385,11 @@ int check_if_preferred(const char * dir)
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
-{
+char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) {
     int c,lp=0;
     rmlint_init();
-    while(1)
-    {
-        static struct option long_options[] =
-        {
+    while(1) {
+        static struct option long_options[] = {
             {"threads",        required_argument, 0, 't'},
             {"dregex",         required_argument, 0, 'R'},
             {"fregex",         required_argument, 0, 'r'},
@@ -478,18 +442,15 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         int option_index = 0;
         c = getopt_long(argc, argv, "aAbBcC:d:D:eEfFgGhHiIj:kKlLm:MnNo:OpPQr:R:sSt:uUv:Vx:XyYz:Z",long_options, &option_index);
         /* Detect the end of the options. */
-        if(c == -1)
-        {
+        if(c == -1) {
             break;
         }
-        switch(c)
-        {
+        switch(c) {
         case '?':
             return 0;
         case 't':
             sets->threads = atoi(optarg);
-            if(!sets->threads)
-            {
+            if(!sets->threads) {
                 sets->threads = 8;
             }
             break;
@@ -530,8 +491,8 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             print_help();
             break;
         case 'H':
-			sets->find_hardlinked_dupes = 1;
-			break;
+            sets->find_hardlinked_dupes = 1;
+            break;
         case 'j':
             sets->junk_chars = optarg;
             break;
@@ -555,9 +516,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             break;
         case 'o':
             if (strlen(optarg) != 0)
-				sets->output = optarg;
-			else
-				sets->output = NULL;
+                sets->output = optarg;
+            else
+                sets->output = NULL;
             break;
         case 'c':
             sets->cmd_path = optarg;
@@ -630,28 +591,22 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
             break;
         case 'm':
             sets->mode = 0;
-            if(!strcasecmp(optarg, "list"))
-            {
+            if(!strcasecmp(optarg, "list")) {
                 sets->mode = 1;
             }
-            if(!strcasecmp(optarg, "ask"))
-            {
+            if(!strcasecmp(optarg, "ask")) {
                 sets->mode = 2;
             }
-            if(!strcasecmp(optarg, "noask"))
-            {
+            if(!strcasecmp(optarg, "noask")) {
                 sets->mode = 3;
             }
-            if(!strcasecmp(optarg, "link"))
-            {
+            if(!strcasecmp(optarg, "link")) {
                 sets->mode = 4;
             }
-            if(!strcasecmp(optarg, "cmd"))
-            {
+            if(!strcasecmp(optarg, "cmd")) {
                 sets->mode = 5;
             }
-            if(!sets->mode)
-            {
+            if(!sets->mode) {
                 error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
                 error("       Available modes are: ask | list | link | noask | cmd\n");
                 die(0);
@@ -663,22 +618,17 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         }
     }
     /* Check the directory to be valid */
-    while(optind < argc)
-    {
+    while(optind < argc) {
         char * theDir = argv[optind];
         int p,isPref = check_if_preferred(theDir);
-        if(isPref)
-        {
+        if(isPref) {
             theDir += 2;
         }
         p = open(theDir,O_RDONLY);
-        if(p == -1)
-        {
+        if(p == -1) {
             error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", theDir, strerror(errno));
             return 0;
-        }
-        else
-        {
+        } else {
             close(p);
             sets->paths   = realloc(sets->paths,sizeof(rmlint_path)*(lp+2));
             if (sets->invert_original==0) sets->paths[lp].is_ppath = isPref;
@@ -688,8 +638,7 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         }
         optind++;
     }
-    if(lp == 0)
-    {
+    if(lp == 0) {
         /* Still no path set? - use `pwd` */
         sets->paths = malloc(sizeof(rmlint_path)*2);
         sets->paths[0].path = getcwd(NULL,0);
@@ -697,12 +646,10 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
         sets->paths[1].path = NULL;
         /*sets->ppath_flags = malloc(sizeof(char)*2);
         sets->ppath_flags[0] = 0;*/
-        if(!sets->paths[0].path)
-        {
+        if(!sets->paths[0].path) {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
-            if(sets->paths)
-            {
+            if(sets->paths) {
                 free(sets->paths);
             }
             return 0;
@@ -715,23 +662,18 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets)
 /* ------------------------------------------------------------- */
 
 /* User  may specify in -cC a command that get's excuted on every hit - check for being a safe one */
-static void check_cmd(const char *cmd)
-{
+static void check_cmd(const char *cmd) {
     int i = 0, ps = 0;
     int len = strlen(cmd);
-    for(; i < len; i++)
-    {
-        if(cmd[i] == '%' && i+1 != len)
-        {
-            if(cmd[i+1] != '%')
-            {
+    for(; i < len; i++) {
+        if(cmd[i] == '%' && i+1 != len) {
+            if(cmd[i+1] != '%') {
                 ps++;
                 continue;
             }
         }
     }
-    if(ps > 0)
-    {
+    if(ps > 0) {
         puts(YEL"FATAL: "NCO"--command [-cC]: printfstyle markups (e.g. %s) are not allowed!");
         puts(YEL"       "NCO"                 Escape '%' with '%%' to get around.");
         die(0);
@@ -741,40 +683,32 @@ static void check_cmd(const char *cmd)
 /* ------------------------------------------------------------- */
 
 /* This is only used to pass the current dir to eval_file */
-int  get_cpindex(void)
-{
+int  get_cpindex(void) {
     return cpindex;
 }
 
 /* ------------------------------------------------------------- */
 
 /* exit and return to calling method */
-void die(int status)
-{
+void die(int status) {
     /* Free mem */
-    if(use_cwd)
-    {
-        if(set->paths[0].path)
-        {
+    if(use_cwd) {
+        if(set->paths[0].path) {
             free(set->paths[0].path);
         }
     }
-    if(set->paths)
-    {
+    if(set->paths) {
         free(set->paths);
     }
-    if(status)
-    {
+    if(status) {
         info("Abnormal exit\n");
     }
     /* Close logfile */
-    if(get_logstream())
-    {
+    if(get_logstream()) {
         fclose(get_logstream());
     }
     /* Close scriptfile */
-    if(get_scriptstream())
-    {
+    if(get_scriptstream()) {
         fprintf(get_scriptstream(),
                 "                      \n"
                 "if [ -z $DO_REMOVE ]  \n"
@@ -788,12 +722,10 @@ void die(int status)
     /* Prepare to jump to return */
     do_exit = true;
     ex_stat = status;
-    if(jmp_set)
-    {
+    if(jmp_set) {
         longjmp(place,status);
     }
-    if(abort_n)
-    {
+    if(abort_n) {
         exit(status);
     }
 }
@@ -801,24 +733,20 @@ void die(int status)
 /* ------------------------------------------------------------- */
 
 /* Sort criteria for sizesort */
-static long cmp_sz(lint_t *a, lint_t *b)
-{
+static long cmp_sz(lint_t *a, lint_t *b) {
     return a->fsize - b->fsize;
 }
 
 /* ------------------------------------------------------------- */
 
 /* Actual entry point */
-int rmlint_main(void)
-{
+int rmlint_main(void) {
     /* Used only for infomessage */
     total_files = 0;
     abort_n = false;
-    if(do_exit != true)
-    {
+    if(do_exit != true) {
         /* Init all modules that use global variables.. */
-        if(!use_cwd)
-        {
+        if(!use_cwd) {
             rmlint_init();
         }
         md5c_c_init();
@@ -829,45 +757,35 @@ int rmlint_main(void)
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
     jmp_set = true;
-    if(do_exit != true)
-    {
-        if(set->mode == 5)
-        {
-            if(set->cmd_orig)
-            {
+    if(do_exit != true) {
+        if(set->mode == 5) {
+            if(set->cmd_orig) {
                 check_cmd(set->cmd_orig);
             }
-            if(set->cmd_path)
-            {
+            if(set->cmd_path) {
                 check_cmd(set->cmd_path);
             }
         }
-        
+
         /* Open logfile */
         init_filehandler();
         /* Warn if started with sudo */
-        if(!access("/bin/ls",R_OK|W_OK))
-        {
+        if(!access("/bin/ls",R_OK|W_OK)) {
             warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
             warning("      Take care of what you're doing!\n\n");
         }
         /* Count files and do some init  */
-        while(set->paths[cpindex].path != NULL)
-        {
+        while(set->paths[cpindex].path != NULL) {
             DIR *p = opendir(set->paths[cpindex].path);
-            if(p == NULL && errno == ENOTDIR)
-            {
+            if(p == NULL && errno == ENOTDIR) {
                 /* The path is a file */
                 struct stat buf;
-                if(stat(set->paths[cpindex].path,&buf) == -1)
-                {
+                if(stat(set->paths[cpindex].path,&buf) == -1) {
                     continue;
                 }
                 list_append(set->paths[cpindex].path,(nuint_t)buf.st_size,buf.st_mtime,buf.st_dev,buf.st_ino, true, 0, cpindex );
                 total_files++;
-            }
-            else
-            {
+            } else {
                 /* The path points to a dir - recurse it! */
                 info("Now scanning "YEL"\"%s\""NCO"..",set->paths[cpindex].path);
                 if (set->paths[cpindex].is_ppath ) info("(preferred path)");
@@ -877,14 +795,12 @@ int rmlint_main(void)
             }
             cpindex++;
         }
-		if(total_files < 2)
-        {
+        if(total_files < 2) {
             warning("No files in cache to search through => No duplicates.\n");
             die(0);
         }
         info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", total_files);
-        if(set->threads > total_files)
-        {
+        if(set->threads > total_files) {
             set->threads = total_files;
         }
         /* Till this point the list is unsorted

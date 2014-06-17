@@ -21,8 +21,7 @@
 
 #include <stdbool.h>
 
-typedef struct
-{
+typedef struct {
     unsigned long gid;
     unsigned long uid;
 } UserGroupList;
