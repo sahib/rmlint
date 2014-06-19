@@ -31,6 +31,12 @@ int main(int argc, char **argv) {
     if(rmlint_parse_arguments(argc,argv,&mySettings) == 0) {
         return -1;
     }
+    /*check settings*/
+    if (rmlint_echo_settings(&mySettings))
     /* do all the real work */
-    return rmlint_main();
+		return rmlint_main();
+	else{
+		error(RED"Aborting\n"NCO);
+		return -1;
+	}
 }

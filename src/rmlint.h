@@ -62,7 +62,8 @@ typedef struct {
     char keep_all_originals;   /*NEW - if set, will ONLY delete dupes that are not in ppath */
     char must_match_original;  /*NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
     char invert_original;      /*NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
-    char find_hardlinked_dupes; /*NEW - if set, will also search for hardlinked duplicates*/
+    char find_hardlinked_dupes;/*NEW - if set, will also search for hardlinked duplicates*/
+    char skip_confirm;         /*NEW - if set, bypasses user confirmation of input settings*/
     nuint_t threads;
     nuint_t depth;
     nuint_t oldtmpdata;
@@ -78,6 +79,7 @@ bool is_ppath;
 
 /* These method are also useable from 'outside' */
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets);
+char rmlint_echo_settings(rmlint_settings *settings);
 void rmlint_set_default_settings(rmlint_settings *set);
 int  rmlint_main(void);
 

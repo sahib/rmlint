@@ -149,7 +149,7 @@ void error(const char* format, ...) {
 /* ------------------------------------------------------------- */
 
 void warning(const char* format, ...) {
-    if(set->verbosity > 1 && set->verbosity < 4) {
+    if((set->verbosity > 1) && (set->verbosity < 4)) {
         char * tmp;
         va_list args;
         va_start(args, format);
@@ -167,7 +167,7 @@ void warning(const char* format, ...) {
 /* ------------------------------------------------------------- */
 
 void info(const char* format, ...) {
-    if((set->verbosity > 2 && set->verbosity < 4) || set->verbosity == 6) {
+    if(((set->verbosity > 2) && (set->verbosity < 4)) || set->verbosity == 6) {
         char * tmp;
         va_list args;
         va_start(args, format);
@@ -255,17 +255,18 @@ static void print_help(void) {
     fprintf(stderr,"\t\t\t\tNote: currently, hardlinked files with the same basename are _always_ ignored, due to possible error with bind\n"
             "\t\t\t\tmounts pointing to the same physical file\n"
             "\t\t\t\tNote also: hardlinked duplicates _will_ be reported as part of GB count that can be freed up.\n"
-            "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: off, ie do cross mountpoints)\n"
+            "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: off, ie DO cross mountpoints)\n"
             "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
            );
-    fprintf(stderr,             "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
+    fprintf(stderr,"\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
             "\n\t\t\t\tWhere modes are:\n\n"
-            "\t\t\t\tlist  - Only list found files and exit.\n"
-            "\t\t\t\tlink  - Replace file with a symlink to original.\n"
-            "\t\t\t\task   - Ask for each file what to do.\n"
-            "\t\t\t\tnoask - Full removal without asking.\n"
-            "\t\t\t\tcmd   - Takes the command given by -c/-C and executes it on the duplicate/original.\n"
-            "\t\t\t\tDefault: list\n\n"
+            "\t\t\t\tlist\t- (RECOMMENDED) Lists found files & creates executable script to carry out\n"
+            "\t\t\t\t\t actual removal (or other command given by -c/-C).\n"
+            "\t\t\t\tlink\t- Replace file with a symlink to original.\n"
+            "\t\t\t\task\t- Ask for each file what to do.\n"
+            "\t\t\t\tnoask\t- Full removal without asking.\n"
+            "\t\t\t\tcmd\t- Takes the command given by -c/-C and executes it on the duplicate/original (careful!).\n"
+            "\t\t\t\tDefault:\tlist\n\n"
            );
     fprintf(stderr,"\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n"
             "\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
@@ -299,7 +300,8 @@ static void print_help(void) {
             "\t\t\t\tDefault is 2.\n"
             "\t\t\t\tUse 6 to get an idea what's happening internally, 1 to get raw output without colors, 4 for liveparsing purpose.\n"
            );
-    fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n\n");
+    fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n"
+            "\t-q --skip_confirm\tSkips user confirmation of settings before running\n\n");
     fprintf(stderr,"Additionally, the options b,p,f,s,e,g,i,c,n,a,y,x,u have a uppercase option (B,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
             "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n\n"
            );
@@ -347,6 +349,7 @@ void rmlint_set_default_settings(rmlint_settings *pset) {
     pset->invert_original = 0;   /* search for any dupes, not just ones which include ppath members*/
     pset->find_hardlinked_dupes = 0;   /* ignore hardlinked dupes*/
     pset->sort_criteria = "m";  /* default ranking order for choosing originals - keep oldest mtime*/
+    pset->skip_confirm = 0; /* default setting is to ask user to confirm input settings at start */
 
 
     /* There is no cmdline option for this one    *
@@ -433,14 +436,15 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) {
             {"keepallorig",    no_argument,       0, 'O'},
             {"mustmatchorig",  no_argument,       0, 'M'},
             {"invertorig",     no_argument,       0, 'Q'},
-            {"findhardlinked", no_argument,      0, 'H'},
+            {"findhardlinked", no_argument,       0, 'H'},
+            {"skip_confirm",   no_argument,       0, 'q'},
             {"help",           no_argument,       0, 'h'},
             {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        c = getopt_long(argc, argv, "aAbBcC:d:D:eEfFgGhHiIj:kKlLm:MnNo:OpPQr:R:sSt:uUv:Vx:XyYz:Z",long_options, &option_index);
+        c = getopt_long(argc, argv, "aAbBcC:d:D:eEfFgGhHiIj:kKlLm:MnNo:OpPqQr:R:sSt:uUv:Vx:XyYz:Z",long_options, &option_index);
         /* Detect the end of the options. */
         if(c == -1) {
             break;
@@ -576,6 +580,9 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) {
             break;
         case 'Q':
             sets->invert_original = 1;
+            break;
+        case 'q':
+            sets->skip_confirm = 1;
             break;
         case 'z':
             parse_limit_sizes(optarg);
@@ -738,6 +745,200 @@ static long cmp_sz(lint_t *a, lint_t *b) {
 }
 
 /* ------------------------------------------------------------- */
+
+char rmlint_echo_settings(rmlint_settings *settings) {
+    char confirm;
+    int i=0;
+    int save_verbosity=settings->verbosity;
+
+    bool has_ppath=false;
+    if ((!settings->skip_confirm) && (settings->verbosity<2))
+        settings->verbosity=2;  /* need verbosity at least 2 if user is going to confirm settings*/
+
+    warning (BLU"Running rmlint with the following settings:\n"NCO);
+    warning ("(Note "BLU"[*]"NCO" hints below to change options)\n"NCO);
+
+    /*---------------- lint types ---------------*/
+    warning ("Looking for lint types:\n");
+    if (settings->searchdup)		warning ("\t+ duplicates "RED"(%s)"NCO" [-U]\n", settings->cmd_path?"cmd":"rm");
+    if (settings->findemptydirs)	warning ("\t+ empty directories "RED"(rm)"NCO" [-Y]\n");
+    if (settings->listemptyfiles)	warning ("\t+ zero size files "RED"(rm)"NCO" [-K]\n");
+    if (settings->findbadids)		warning ("\t+ files with bad UID/GID "BLU"(chown)"NCO" [-L]\n");
+    if (settings->namecluster)		warning ("\t+ files with same name "GRE"(info only)"NCO" [-N]\n");
+    if (settings->nonstripped)		warning ("\t+ non-stripped binaries"BLU"(strip)"RED"(slow)"NCO" [-A]\n");
+    if (settings->doldtmp)			warning ("\t+ tmp files more than %i second older than original "RED"(rm)"NCO"[-x t]/[-X]\n", settings->oldtmpdata);
+    if (settings->junk_chars)		warning ("\t+ junk characters "RED"%s"NCO" in file or dir name\n", settings->junk_chars);
+    if (!settings->searchdup ||
+            !settings->findemptydirs ||
+            !settings->listemptyfiles ||
+            !settings->findbadids ||
+            !settings->namecluster ||
+            !settings->nonstripped ||
+            !settings->doldtmp ||
+            !settings->junk_chars) {
+        warning (NCO"\tNot looking for:\n");
+        if (!settings->searchdup)		warning ("\t\tduplicates[-u];\n");
+        if (!settings->findemptydirs)	warning ("\t\tempty directories[-y];\n");
+        if (!settings->listemptyfiles)	warning ("\t\tzero size files[-k];\n");
+        if (!settings->findbadids)		warning ("\t\tfiles with bad UID/GID[-l];\n");
+        if (!settings->namecluster)		warning ("\t\tfiles with same name[-n];\n");
+        if (!settings->nonstripped)		warning ("\t\tnon-stripped binaries[-a];\n");
+        if (!settings->doldtmp)			warning ("\t\told tmp files[-x <time>];\n");
+        if (!settings->junk_chars)		warning ("\t\tjunk characters in filenames[-j \"chars\"];\n");
+    }
+
+    /*---------------- search paths ---------------*/
+    warning(NCO"Search paths:\n");
+    i=0;
+    while(settings->paths[i].path != NULL) {
+        warning ("\t%s+ %s\n", settings->paths[i].is_ppath ? GRE"(orig)\t"NCO : "\t", settings->paths[i].path );
+        if (settings->paths[i].is_ppath) has_ppath=true;
+        i++;
+    }
+    if ((settings->paths[1].path) && !has_ppath) warning("\t[prefix one or more paths with // to flag location of originals]\n");
+
+
+    /*---------------- search tree options---------*/
+    warning ("Tree search parameters:\n");
+    warning ("\t%s hidden files and folders [-%s]\n"NCO,
+             settings->ignore_hidden ? "Excluding" : "Including",
+             settings->ignore_hidden ? "G" :  "g" );
+    warning ("\t%s symlinked files and folders [-%s]\n"NCO,
+             settings->followlinks ?"Following" : "Excluding",
+             settings->followlinks ?"F" : "f" );
+    warning ("\t%srossing filesystem / mount point boundaries [-%s]\n"NCO,
+             settings->samepart ? "Not c" : "C",
+             settings->samepart ? "S" : "s");
+    if (settings->dpattern) {
+        warning("\tDirectory name must%s match regex '%s' (case %ssensitive)\n",
+                settings->invmatch ? " not" : "",
+                settings->dpattern,
+                settings->casematch ? "" : "in" );
+    } else warning ("\tNo regex filter for directory name [-R regex]\n");
+
+    if (settings->depth) warning("\t Only search %i levels deep into search paths\n",settings->depth);
+
+    /*---------------- file filters ---------------*/
+
+    warning("Filtering search based on:\n");
+    if (settings->fpattern) {
+        warning("\tFile name must%s match regex '%s'	 (case %ssensitive)\n",
+                settings->invmatch ? " not" : "",
+                settings->fpattern,
+                settings->casematch ? "" : "in" );
+    } else warning ("\tNo regex filter for directory name [-r regex]\n");
+
+    if ( (settings->minsize !=-1) && (settings->maxsize !=-1) )
+        warning("\tFile size between %i and %i bytes\n", settings->minsize, settings->maxsize);
+    else if (settings->minsize !=-1)
+        warning("\tFile size at least %i bytes\n", settings->minsize);
+    else if (settings->maxsize !=-1)
+        warning("\tFile size no bigger than %i bytes\n", settings->maxsize);
+    else
+        warning("\tNo file size limits [-z \"min;max\"]");
+    if (settings->must_match_original) {
+        warning("\tDuplicates must have at least one member in the "GRE"(orig)"NCO" paths indicated above\n");
+        if (!has_ppath)
+            error(RED"\tWarning: no "GRE"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"NCO);
+    }
+
+    if (settings->find_hardlinked_dupes) {
+        warning("\tHardlinked file sets will be treated as duplicates (%s)\n",settings->cmd_path ? settings->cmd_path : "rm");
+        warning(RED"\t\tBUG"NCO": rmlint currently does not deduplicate hardlinked files with same basename\n");
+    } else warning("\tHardlinked file sets will not be deduplicated [-H]\n");
+
+    /*---------------- originals selection ranking ---------*/
+
+    warning(NCO"Originals selected based on (decreasing priority):    [-D <criteria>]\n");
+    if (has_ppath) warning("\tpaths indicated "GRE"(orig)"NCO" above\n");
+
+    i=0;
+    while (settings->sort_criteria[i]) {
+        switch(settings->sort_criteria[i]) {
+        case 'm':
+            warning("\tKeep oldest modified time\n");
+            break;
+        case 'M':
+            warning("\tKeep newest modified time\n");
+            break;
+        case 'p':
+            warning("\tKeep first-listed path (above)\n");
+            break;
+        case 'P':
+            warning("\tKeep last-listed path (above)\n");
+            break;
+        case 'a':
+            warning("\tKeep first alphabetically\n");
+            break;
+        case 'A':
+            warning("\tKeep last alphabetically\n");
+            break;
+        default:
+            error(RED"\tWarning: invalid originals ranking option '-D %c'\n"NCO, settings->sort_criteria[i]);
+            break;
+        }
+        i++;
+    }
+    if (settings->keep_all_originals)
+        warning("\tNote: all originals in "GRE"(orig)"NCO" paths will be kept\n");
+
+    /*---------------- action mode ---------------*/
+    if (settings->mode==1) {
+        /*same mode for duplicates and everything else*/
+        warning ("Action for all Lint types:\n");
+    } else {
+        /*different mode for duplicated vs everything else*/
+        warning ("Action for Duplicates:\n\t");
+        switch (settings->mode) {
+        case 2:
+            warning("Ask user what to do with each file\n");
+            break;
+        case 3:
+            warning(RED"Delete files without asking\n"NCO);
+            break;
+        case 4:
+            warning(YEL"Replace duplicates with symlink to original\n"NCO);
+            break;
+        case 5:
+            warning(YEL"Execute command:\n\t\tdupe:'%s'\n\t\torig:'%s'\n"NCO, settings->cmd_path, settings->cmd_orig);
+            break;
+        default:
+            break;
+        }
+        warning ("Action for all other Lint types:\n");
+    }
+
+    if (settings->output)
+        warning("\tGenerate script %s.sh to run later\n", settings->output);
+    else warning("\tDo nothing\n");
+
+    /*--------------- paranoia ---------*/
+
+    if (settings->paranoid)
+        warning("Note: paranoid (bit-by-bit) comparison will be used to verify duplicates "RED"(slow)\n"NCO);
+    else
+        warning("Note: fingerprint and md5 comparison will be used to identify duplicates "RED"(very slight risk of false positives)"NCO" [-p]");
+
+    /*--------------- confirmation ---------*/
+
+    if (!settings->skip_confirm) {
+        warning(YEL"\n\nPress y or enter to continue, any other key to abort\n");
+        warning(YEL"\tNOTE: passing option -q bypasses this confirmation\n");
+
+        scanf("%c", &confirm);
+        settings->verbosity=save_verbosity;
+        return (confirm=='y' || confirm=='Y' || confirm=='\n');
+    }
+
+    settings->verbosity=save_verbosity;
+    return 1;
+
+    /**/
+}
+
+/* ------------------------------------------------------------- */
+
+
 
 /* Actual entry point */
 int rmlint_main(void) {
