@@ -35,6 +35,8 @@
 
 #include "md5.h"
 #include "rmlint.h"
+#include "list.h"
+
 
 #include <stdio.h>
 #include <string.h>

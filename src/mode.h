@@ -24,8 +24,7 @@
 #ifndef LIST_H
 #define LIST_H
 
-#include "list.h"
-#include "filter.h"
+#include "defs.h"
 
 /* Mostly used by filter.c  */
 bool process_doop_groop(file_group *grp);

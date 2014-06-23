@@ -41,6 +41,9 @@
 #include "rmlint.h"
 #include "mode.h"
 #include "md5.h"
+#include "list.h"
+#include "filter.h"
+
 
 #include <sys/mman.h>
 #include <sys/types.h>
