@@ -22,62 +22,16 @@
 #ifndef rmlint_H
 #define rmlint_H
 
-#include "list.h"
+#include "defs.h"
 
-
-typedef struct {
-    char is_ppath;
-    char *path;
-} rmlint_path;
-
-/* all available settings see rmlint -h */
-typedef struct {
-    char mode;
-    char color;
-    char collide;
-    char samepart;
-    char ignore_hidden;
-    char followlinks;
-    char casematch;
-    char paranoid;
-    char invmatch;
-    char namecluster;
-    char doldtmp;
-    char findbadids;
-    char searchdup;
-    char findemptydirs;
-    char nonstripped;
-    char verbosity;
-    char listemptyfiles;
-    rmlint_path *paths;
-    char *dpattern;
-    char *fpattern;
-    char *cmd_path;
-    char *cmd_orig;
-    char *junk_chars;
-    char *output;
-    char *sort_criteria;       /*NEW - sets criteria for ranking and selecting "original"*/
-    int minsize;
-    int maxsize;
-    char keep_all_originals;   /*NEW - if set, will ONLY delete dupes that are not in ppath */
-    char must_match_original;  /*NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
-    char invert_original;      /*NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
-    char find_hardlinked_dupes;/*NEW - if set, will also search for hardlinked duplicates*/
-    char skip_confirm;         /*NEW - if set, bypasses user confirmation of input settings*/
-    nuint_t threads;
-    nuint_t depth;
-    nuint_t oldtmpdata;
-
-} rmlint_settings;
 
 /* pointer to settings */
 rmlint_settings * set;
-/* global var for flagging whether current path being walked is */
-/* a "preferred" path                                           */
-bool is_ppath;
+
 
 
 /* These method are also useable from 'outside' */
+char is_ppath(const char* apath);
 char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets);
 char rmlint_echo_settings(rmlint_settings *settings);
 void rmlint_set_default_settings(rmlint_settings *set);

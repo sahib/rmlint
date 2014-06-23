@@ -43,6 +43,11 @@
 #include "rmlint.h"
 #include "mode.h"
 #include "md5.h"
+#include "list.h"
+#include "traverse.h"
+#include "filter.h"
+#include "linttests.h"
+
 
 /* If more that one path given increment */
 int  cpindex = 0;
@@ -237,7 +242,8 @@ static void print_help(void) {
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
             "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
             "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
-            "\t-O --keepallorig\tDon't delete any files that are in 'originals' paths. (Default - just keep one)\n"
+            "\t-O --keepallorig\tDon't delete any duplicates that are in 'originals' paths. (Default - just keep one)\n"
+            "\t\tNote: for lint types other than duplicates, keepallorig option is ignored\n" /*TODO: does this need unifying??*/
             "\t-Q --invertorig\tPaths prefixed with // are non-originals and all other paths are originals\n"
            );
     fprintf(stderr, "\t-D --sortcriteria <criteria>\twhen selecting original, sort in order of <criteria>:\n"
@@ -326,6 +332,7 @@ void rmlint_set_default_settings(rmlint_settings *pset) {
     pset->verbosity     =  2;       /* Most relev.  */
     pset->samepart      =  0;       /* Stay parted  */
     pset->paths         =  NULL;        /* Startnode    */
+    pset->is_ppath      =  NULL;        /* Startnode    */
     pset->dpattern      =  NULL;        /* DRegpattern  */
     pset->fpattern  =  NULL;        /* FRegPattern  */
     pset->cmd_path      =  NULL;        /* Cmd,if used  */
@@ -627,9 +634,10 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) {
     /* Check the directory to be valid */
     while(optind < argc) {
         char * theDir = argv[optind];
-        int p,isPref = check_if_preferred(theDir);
+        int p;
+        int isPref = check_if_preferred(theDir);
         if(isPref) {
-            theDir += 2;
+            theDir += 2;  /* skip first two characters ie "//" */
         }
         p = open(theDir,O_RDONLY);
         if(p == -1) {
@@ -637,23 +645,22 @@ char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) {
             return 0;
         } else {
             close(p);
-            sets->paths   = realloc(sets->paths,sizeof(rmlint_path)*(lp+2));
-            if (sets->invert_original==0) sets->paths[lp].is_ppath = isPref;
-            else sets->paths[lp].is_ppath = !isPref;
-            sets->paths[lp++].path = theDir;
-            sets->paths[lp].path = NULL;
+            sets->paths   = realloc(sets->paths,sizeof(char*)*(lp+2));
+            sets->is_ppath = realloc(sets->is_ppath,sizeof(char)*(lp+1));
+            sets->is_ppath[lp+1] = isPref;
+            sets->paths[lp++] = theDir;
+            sets->paths[lp] = NULL;
         }
         optind++;
     }
     if(lp == 0) {
         /* Still no path set? - use `pwd` */
-        sets->paths = malloc(sizeof(rmlint_path)*2);
-        sets->paths[0].path = getcwd(NULL,0);
-        sets->paths[0].is_ppath = 0;
-        sets->paths[1].path = NULL;
-        /*sets->ppath_flags = malloc(sizeof(char)*2);
-        sets->ppath_flags[0] = 0;*/
-        if(!sets->paths[0].path) {
+        sets->paths = malloc(sizeof(char*)*2);
+        sets->paths[0] = getcwd(NULL,0);
+        sets->paths[1] = NULL;
+        sets->is_ppath = malloc(sizeof(char)*(1));
+        sets->is_ppath[0] = 0;
+        if(!sets->paths[0]) {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
             if(sets->paths) {
@@ -700,8 +707,8 @@ int  get_cpindex(void) {
 void die(int status) {
     /* Free mem */
     if(use_cwd) {
-        if(set->paths[0].path) {
-            free(set->paths[0].path);
+        if(set->paths[0]) {
+            free(set->paths[0]);
         }
     }
     if(set->paths) {
@@ -790,12 +797,14 @@ char rmlint_echo_settings(rmlint_settings *settings) {
     /*---------------- search paths ---------------*/
     warning(NCO"Search paths:\n");
     i=0;
-    while(settings->paths[i].path != NULL) {
-        warning ("\t%s+ %s\n", settings->paths[i].is_ppath ? GRE"(orig)\t"NCO : "\t", settings->paths[i].path );
-        if (settings->paths[i].is_ppath) has_ppath=true;
+    while(settings->paths[i] != NULL) {
+        if (settings->is_ppath[i]) {
+            has_ppath=true;
+            warning (GRE"\t(orig)\t+ %s\n"NCO, settings->paths[i] );
+        } else warning ("\t\t+ %s\n", settings->paths[i] );
         i++;
     }
-    if ((settings->paths[1].path) && !has_ppath) warning("\t[prefix one or more paths with // to flag location of originals]\n");
+    if ((settings->paths[1]) && !has_ppath) warning("\t[prefix one or more paths with // to flag location of originals]\n");
 
 
     /*---------------- search tree options---------*/
@@ -881,6 +890,7 @@ char rmlint_echo_settings(rmlint_settings *settings) {
     }
     if (settings->keep_all_originals)
         warning("\tNote: all originals in "GRE"(orig)"NCO" paths will be kept\n");
+    warning("\t      "RED"but"NCO" other lint in "GRE"(orig)"NCO" paths may still be deleted\n");
 
     /*---------------- action mode ---------------*/
     if (settings->mode==1) {
@@ -954,6 +964,7 @@ int rmlint_main(void) {
         list_c_init();
         filt_c_init();
         mode_c_init();
+        linttests_c_init();
     }
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
@@ -975,31 +986,13 @@ int rmlint_main(void) {
             warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
             warning("      Take care of what you're doing!\n\n");
         }
-        /* Count files and do some init  */
-        while(set->paths[cpindex].path != NULL) {
-            DIR *p = opendir(set->paths[cpindex].path);
-            if(p == NULL && errno == ENOTDIR) {
-                /* The path is a file */
-                struct stat buf;
-                if(stat(set->paths[cpindex].path,&buf) == -1) {
-                    continue;
-                }
-                list_append(set->paths[cpindex].path,(nuint_t)buf.st_size,buf.st_mtime,buf.st_dev,buf.st_ino, true, 0, cpindex );
-                total_files++;
-            } else {
-                /* The path points to a dir - recurse it! */
-                info("Now scanning "YEL"\"%s\""NCO"..",set->paths[cpindex].path);
-                if (set->paths[cpindex].is_ppath ) info("(preferred path)");
-                total_files += recurse_dir(set->paths[cpindex].path);
-                info(" done.\n");
-                closedir(p);
-            }
-            cpindex++;
-        }
+        total_files = rmlint_search_tree(set);
         if(total_files < 2) {
             warning("No files in cache to search through => No duplicates.\n");
             die(0);
-        }
+        } else
+            info("Returned %d files\n", total_files);
+
         info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", total_files);
         if(set->threads > total_files) {
             set->threads = total_files;
