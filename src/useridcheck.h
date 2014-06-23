@@ -20,12 +20,12 @@
  **/
 
 #include <stdbool.h>
+#include "defs.h"
 
-typedef struct {
-    unsigned long gid;
-    unsigned long uid;
-} UserGroupList;
+
+
 
 UserGroupList ** userlist_new(void);
 bool userlist_contains(UserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid);
 void userlist_destroy(UserGroupList ** list);
+

@@ -27,8 +27,10 @@
 #include <pwd.h>
 
 #include "useridcheck.h"
+#include "rmlint.h"
 
 /* /////////////////////////// */
+
 
 UserGroupList ** userlist_new(void) {
     UserGroupList ** list = NULL;
@@ -116,3 +118,4 @@ int main(int argc, char * argv[]) {
     return EXIT_SUCCESS;
 }
 #endif
+
