@@ -28,6 +28,9 @@ else
 	CC?=gcc
 endif
 
+#Link flags
+GLIB_FLAGS := $(shell sh -c 'pkg-config --libs --cflags glib-2.0')
+LDFLAGS+=-lpthread -lm $(GLIB_FLAGS)
 
 MKDIR=mkdir -p
 GZIP=gzip -c -f
@@ -48,6 +51,7 @@ else
 	LDFLAGS+=-s
 endif
 
+CFLAGS+=$(GLIB_FLAGS) -std=c11 -D_GNU_SOURCE
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \

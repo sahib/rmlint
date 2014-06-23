@@ -22,6 +22,8 @@
 #ifndef LINTTESTS_H_INCLUDED
 #define LINTTESTS_H_INCLUDED
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fts.h>
 #include "useridcheck.h"
 

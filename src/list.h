@@ -19,34 +19,113 @@
 *
 **/
 
-#pragma once
-#ifndef SLIST_H
-#define SLIST_H
+#ifndef RM_LIST_H
+#define RM_LIST_H
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <glib.h>
 #include "defs.h"
 
+typedef enum RmFileType {
+    RM_FILE_TYPE_UNKNOWN = 0,
+    RM_FILE_TYPE_DUPLICATE = 1
+} RmFileType;
+
+typedef struct RmFile {
+    unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
+    unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
+    unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
+
+    char *path;                          /* absolute path from working dir */
+    bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
+    unsigned int pnum;                   /* numerical index of user-input paths */
+    guint64 fsize;                       /* Size of the file (bytes) */
+    time_t mtime;                        /* File modification date/time */
+    bool filter;                         /* this is used in calculations  */
+    RmFileType dupflag;                  /* Is the file marked as duplicate? */
+
+    /* This is used to find pointers to the physically same file */
+    ino_t node;
+    dev_t dev;
+
+    GList *list_node;
+    GQueue *file_group;
+} RmFile;
 
 
-/* Sort method; begins with '*begin' ends with NULL, cmp as sort criteria */
-lint_t *list_sort(lint_t *begin, long(*cmp)(lint_t*,lint_t*));
+RmFile * rm_file_new(const char * path, struct stat *buf, RmFileType type, bool is_ppath, unsigned pnum);
 
-/* Returns start pointer (only used before splitting list in groups) */
-lint_t *list_begin(void);
+/**
+ * @brief Free the memory allocated by rm_file_new()
+ */
+void rm_file_destroy(RmFile *file);
 
-/* Removes the element 'ptr' */
-lint_t *list_remove(lint_t *ptr);
 
-/* Clears list from begin till NULL */
-void list_clear(lint_t *begin);
+////////////////
 
-/* Appends lint_t with those datafields at end of list */
-void list_append(const char *n, nuint_t s, struct timespec t, dev_t dev,
-                 ino_t node,  char lint_type, bool is_ppath, unsigned int pnum);
+typedef struct RmFileList {
+    GSequence * size_groups;
+    GHashTable * size_table;
+} RmFileList;
 
-/* Returns len of list */
-nuint_t list_len(void);
+// TODO: Remove once we have RmSession.
+RmFileList * list_begin(void);
 
-/* Set vars.. (bad design to be honest)*/
-void list_c_init(void);
+typedef int (* RmFileListSortFunc)(RmFile *a, RmFile *b, gpointer);
 
-#endif
+/**
+ * @brief Create a new RmFileList object.
+ *
+ * @return A newly allocated RmFileList.
+ */
+RmFileList *rm_file_list_new(void);
+
+/**
+ * @brief Free a previous RmFileList
+ */
+void rm_file_list_destroy(RmFileList *list);
+
+/**
+ * @brief Get a subgroup (or isle) of the list.
+ *
+ * If rm_file_list_group() was not called yet, there is only one group at 0.
+ *
+ * @param child 
+ *
+ * @return a GQueue, containting all children in the group.
+ */
+GSequenceIter *rm_file_list_get_iter(RmFileList *list);
+
+/**
+ * @brief Append a file to the List.
+ *
+ * Chooses the appropiate group automatically.
+ *
+ * @param file The file to append; ownership is taken.
+ */
+void rm_file_list_append(RmFileList * list, RmFile * file);
+
+/**
+ * @brief Clear a sub 
+ *
+ * You can iterate over the subgroups like this:
+ *
+ * for(int i = 0; i < list->n_children; ++i) {
+ *     rm_file_list_clear(list, i);
+ * }
+ *
+ * @param child  The index of the group to remove.
+ */
+void rm_file_list_clear(RmFileList *list, GSequenceIter * iter);
+
+/**
+ * @brief Remove a single file, possibly adjusting groups.
+ *
+ * @param file The file to remove, will be freed.
+ */
+void rm_file_list_remove(RmFileList *list, RmFile *file);
+
+void rm_file_list_sort_groups(RmFileList *list);
+
+#endif /* RM_LIST_H */

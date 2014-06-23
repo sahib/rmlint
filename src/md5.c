@@ -31,8 +31,6 @@
  **********************************************************************
  */
 
-#define _GNU_SOURCE
-
 #include "md5.h"
 #include "rmlint.h"
 #include "list.h"

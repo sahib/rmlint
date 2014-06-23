@@ -23,220 +23,211 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
+
 #include "list.h"
-#include "rmlint.h"
+#include "linttests.h"
 
-/* list.c:
-   1) Append, sort, primitive implementation of simple doubly linked list
-*/
+// TODO: Remove this when adding RmSession.
 
-/*
-Please note:
-This implementation is quite simple, mostly because it's my first time that I use Linked Lists in C,
-Therefore the list is global (simply because only one is needed), and may accesed to the list_begin()
-Later in the program the list is handled by file_groups, which are actually some sort of sublists
-*/
-
-lint_t *start; /* A pointer to the first element in the list */
-lint_t *back ; /* A pointer to the last  element in the list */
-
-/* ------------------------------------------------------------- */
-
-void list_c_init(void) {
-    start = NULL;
-    back  = NULL;
-}
-
-/* ------------------------------------------------------------- */
-
-/** list_begin() - returns pointer to start of list **/
-lint_t *list_begin(void) {
-    return start;
-}
-
-/* ------------------------------------------------------------- */
-
-/**
- * Free all contents from the list
- * and give back memory.
- **/
-
-void list_clear(lint_t *begin) {
-    lint_t *ptr = begin;
-    lint_t *tmp;
-    while(ptr) {
-        /* Save ptr to tmp */
-        tmp = ptr;
-        /* Next */
-        ptr = ptr->next;
-        if(ptr) {
-            ptr->last = NULL;
-        }
-        /* free ressources */
-        if(tmp->path) {
-            free(tmp->path);
-            tmp->path = NULL;
-        }
-        free(tmp);
-        tmp = NULL;
+RmFileList * list_begin(void) {
+    static RmFileList * list = NULL;
+    if(list == NULL) {
+        list = rm_file_list_new();
     }
+
+    return list;
 }
 
-/* ------------------------------------------------------------- */
 
-lint_t *list_remove(lint_t *ptr) {
-    lint_t *p,*n;
-    if(ptr==NULL) {
-        return NULL;
-    }
-    p=ptr->last;
-    n=ptr->next;
-    if(p&&n) {
-        p->next = n;
-        n->last = p;
-    } else if(p&&!n) {
-        p->next=NULL;
-    } else if(!p&&n) {
-        n->last=NULL;
-    }
-    free(ptr->path);
-    ptr->path = NULL;
-    free(ptr);
-    ptr = NULL;
-    return n;
-}
+RmFile * rm_file_new(const char * path, struct stat *buf, RmFileType type, bool is_ppath, unsigned pnum) {
+    RmFile *self = g_new0(RmFile, 1);
 
-/* ------------------------------------------------------------- */
+    self->path = g_strdup(path);
+    self->node = buf->st_ino;
+    self->dev = buf->st_dev;
+    self->fsize = buf->st_size;
+    self->mtime = buf->st_mtime;
+    self->dupflag = type;
+    self->filter = TRUE;
+    
+    // TODO:
+    self->in_ppath = is_ppath;
+    self->pnum = pnum;
 
-/* Init of the element */
-static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, struct timespec mt, dev_t dev, ino_t node,
-                          char flag, bool is_ppath, unsigned int pnum) {
-    /* Fill data */
-    short   plen = strlen(n) + 2;
-    pointer->path = malloc(plen);
-    strncpy(pointer->path, n, plen);
-    pointer->node    = node;
-    pointer->dev     = dev;
-    pointer->fsize   = fs;
-    pointer->mtime   = mt.tv_sec;
-    pointer->dupflag = flag;
-    pointer->filter  = true;
-    pointer->in_ppath = is_ppath;
-    pointer->pnum = pnum;
     /* Make sure the fp arrays are filled with 0
      This is important if a file has a smaller size
      than the size read in for the fingerprint -
      The backsum might not be calculated then, what might
      cause inaccurate results.
     */
-    memset(pointer->fp[0],0,MD5_LEN);
-    memset(pointer->fp[1],0,MD5_LEN);
-    memset(pointer->bim,0,BYTE_MIDDLE_SIZE);
+    memset(self->fp[0],0,MD5_LEN);
+    memset(self->fp[1],0,MD5_LEN);
+    memset(self->bim,0,BYTE_MIDDLE_SIZE);
+
     /* Clear the md5 digest array too */
-    memset(pointer->md5_digest,0,MD5_LEN);
+    memset(self->md5_digest,0,MD5_LEN);
+    return self;
 }
 
-/* ------------------------------------------------------------- */
-
-/* Sorts the list after the criteria specified by the (*cmp) callback  */
-lint_t *list_sort(lint_t *begin, long(*cmp)(lint_t*,lint_t*)) {
-    lint_t *p, *q, *e, *tail;
-    lint_t *list = begin;
-    int insize, nmerges, psize, qsize, i;
-    /*
-     * Silly special case: if `list' was passed in as NULL, return
-     * NULL immediately.
-     */
-    if(!list) {
-        return NULL;
+void rm_file_destroy(RmFile *file) {
+    if(file->path) {
+        g_free(file->path);
+        file->path = NULL;
     }
-    insize = 1;
-    while(1) {
-        p = list;
-        list = NULL;
-        tail = NULL;
-        nmerges = 0;  /* count number of merges we do in this pass */
-        while(p) {
-            nmerges++;  /* there exists a merge to be done */
-            /* step `insize' places along from p */
-            q = p;
-            psize = 0;
-            for(i = 0; i < insize; i++) {
-                psize++;
-                q = q->next;
-                if(!q) {
-                    break;
-                }
-            }
-            /* if q hasn't fallen off end, we have two lists to merge */
-            qsize = insize;
-            /* now we have two lists; merge them */
-            while(psize > 0 || (qsize > 0 && q)) {
-                /* decide whether next lint_t of merge comes from p or q */
-                if(psize == 0) {
-                    /* p is empty; e must come from q. */
-                    e = q;
-                    q = q->next;
-                    qsize--;
-                } else if(qsize == 0 || !q) {
-                    /* q is empty; e must come from p. */
-                    e = p;
-                    p = p->next;
-                    psize--;
-                } else if(cmp(p,q) <= 0) {
-                    /* First lint_t of p is lower (or same);
-                     * e must come from p. */
-                    e = p;
-                    p = p->next;
-                    psize--;
-                } else {
-                    /* First lint_t of q is lower; e must come from q. */
-                    e = q;
-                    q = q->next;
-                    qsize--;
-                }
-                /* add the next lint_t to the merged list */
-                if(tail) {
-                    tail->next = e;
-                } else {
-                    list = e;
-                }
-                e->last = tail;
-                tail = e;
-            }
-            /* now p has stepped `insize' places along, and q has too */
-            p = q;
-        }
-        tail->next = NULL;
-        /* If we have done only one merge, we're finished. */
-        if(nmerges <= 1) {
-            /* allow for nmerges==0, the empty list case */
-            start=list;
-            return list;
-        }
-        /* Otherwise repeat, merging lists twice the size */
-        insize *= 2;
-    }
+    g_free(file);
 }
 
-/* ------------------------------------------------------------- */
+static void rm_file_list_destroy_queue(GQueue *queue) {
+    g_queue_free_full(queue, (GDestroyNotify)rm_file_destroy);
+}
 
-void list_append(const char *n, nuint_t s, struct timespec t, dev_t dev,
-                 ino_t node, char lint_type, bool is_ppath, unsigned int pnum) {
-    lint_t *tmp = malloc(sizeof(lint_t));
-    list_filldata(tmp,n,s,t,dev,node, lint_type, is_ppath, pnum);
-    if(start == NULL) { /* INIT */
-        tmp->next=NULL;
-        tmp->last=NULL;
-        start=tmp;
-        back=tmp;
+RmFileList *rm_file_list_new(void) {
+    RmFileList * list = g_new0(RmFileList, 1);
+    list->size_groups = g_sequence_new((GDestroyNotify)rm_file_list_destroy_queue);
+    list->size_table = g_hash_table_new(g_direct_hash, g_direct_equal);
+    return list;
+}
+
+void rm_file_list_destroy(RmFileList *list) {
+    g_sequence_free(list->size_groups);
+    g_hash_table_unref(list->size_table);
+    g_free(list);
+}
+
+GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
+    return g_sequence_get_begin_iter(list->size_groups);
+}
+
+static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, gpointer data) {
+    const GQueue *qa = a, *qb = b;
+    if(qa->head && qb->head) {
+        RmFile *fa = qa->head->data, *fb = qb->head->data;
+        return fa->fsize - fb->fsize;
     } else {
-        lint_t *prev = back;
-        back=tmp;
-        prev->next=tmp;
-        tmp->last=prev;
-        tmp->next=NULL;
+        return qa->head == qb->head;
     }
 }
 
-/* ------------------------------------------------------------- */
+void rm_file_list_append(RmFileList * list, RmFile * file) {
+    GQueue *old_group = g_hash_table_lookup(
+        list->size_table, GINT_TO_POINTER(file->fsize)
+    );
+
+    if(old_group == NULL) {
+        /* Insert a new group */
+
+        GQueue *new_group = g_queue_new();
+        g_queue_push_head(new_group, file);
+        g_sequence_insert_sorted(
+            list->size_groups, new_group, rm_file_list_cmp_file_size, NULL
+        );
+
+        g_hash_table_insert(
+            list->size_table, GINT_TO_POINTER(file->fsize), new_group
+        );
+
+        file->file_group = new_group;
+        file->list_node = new_group->head;
+    } else {
+        /* Group already exists */
+        g_queue_push_head(old_group, file);
+        file->file_group = old_group;
+        file->list_node = old_group->head;
+    }
+}
+
+void rm_file_list_clear(RmFileList *list, GSequenceIter * iter) {
+    g_sequence_remove(iter);
+}
+
+void rm_file_list_remove(RmFileList *list, RmFile *file) {
+    g_queue_delete_link(file->file_group, file->list_node);
+    rm_file_destroy(file);
+}
+
+static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, gpointer data) {
+    const RmFile *fa = a, *fb = b;
+    if (fa->node != fb->node)
+        return fa->node - fb->node;
+    else if (fa->dev != fb->dev)
+        return fa->dev - fb->dev;
+    else
+        return strcmp(rmlint_basename(fa->path), rmlint_basename(fb->path));
+}
+
+void rm_file_list_remove_double_paths(RmFileList *list) {
+    
+}
+
+void rm_file_list_sort_groups(RmFileList *list) {
+    GSequenceIter * iter = rm_file_list_get_iter(list);
+    while(!g_sequence_iter_is_end(iter)) {
+        GQueue *queue = g_sequence_get(iter);
+
+        if(queue->length < 2) {
+            /* Not important for duplicate finding
+             * We remove it therefore.  */
+            GSequenceIter * old_iter = iter;
+            iter = g_sequence_iter_next(iter);
+            g_sequence_remove(old_iter);
+        } else {
+            g_queue_sort(queue, rm_file_list_cmp_file, NULL);
+            iter = g_sequence_iter_next(iter);
+        }
+    }
+}
+
+#if 0 /* Testcase */
+
+static void rm_file_list_print_cb(gpointer data, gpointer user_data) {
+    GQueue *queue = data;
+    for(GList *iter = queue->head; iter; iter = iter->next) {
+        RmFile * file = iter->data;
+        g_printerr("%d:%ld:%ld:%s\n", file->fsize, file->dev, file->node, file->path);
+    }
+    g_printerr("----\n");
+}
+
+static void rm_file_list_print(RmFileList *list) {
+    g_printerr("### PRINT ###\n");
+    g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
+}
+
+int main(int argc, const char **argv)
+{
+    RmFileList * list = rm_file_list_new();
+
+    for(int i = 1; i < argc; ++i) {
+        struct stat buf;
+        stat(argv[i], &buf);
+
+        RmFile *file = rm_file_new(argv[i], &buf, RM_FILE_TYPE_DUPLICATE);
+        rm_file_list_append(list, file);
+    }
+    rm_file_list_print(list);
+    rm_file_list_sort_groups(list);
+    rm_file_list_print(list);
+
+    GSequenceIter * iter = rm_file_list_get_iter(list);
+    while(!g_sequence_iter_is_end(iter)) {
+        /* Remove the last element of the group - for no particular reason */
+        GQueue *group = g_sequence_get(iter);
+        rm_file_list_remove(list, group->tail->data);
+        iter = g_sequence_iter_next(iter);
+    }
+    rm_file_list_print(list);
+
+    /* Clear the first group */
+    rm_file_list_clear(list, rm_file_list_get_iter(list));
+
+    rm_file_list_print(list);
+
+
+    rm_file_list_destroy(list);
+    return 0;
+}
+
+#endif

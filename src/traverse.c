@@ -22,15 +22,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <fts.h>
 #include <sys/stat.h>
 #include "list.h"
 #include "rmlint.h"
 #include "filter.h"
 #include "linttests.h"
+#include "treesearch.h"
 
 
-static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
+static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
     /*TODO: regex check if filename exclude*/
     if (!lint_type) {
         /*see if we can find a lint type*/
@@ -58,22 +58,25 @@ static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
     case FTS_W:         /* whiteout object */
     case FTS_NS:        /* stat(2) failed */
     case FTS_NSOK:      /* no stat(2) requested */
-        list_append(ent->fts_path,
+        /* list_append(ent->fts_path,
                     0,
                     ent->fts_statp->st_mtim,
                     ent->fts_statp->st_dev,
                     ent->fts_statp->st_ino,
                     lint_type, is_ppath, pnum );
+        */
+        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, lint_type, is_ppath, pnum));
         break;
     case FTS_F:         /* regular file */
     case FTS_SL:        /* symbolic link */
     case FTS_DEFAULT:   /* none of the above */
-        list_append(ent->fts_path,
-                    ent->fts_statp->st_size,
-                    ent->fts_statp->st_mtim,
-                    ent->fts_statp->st_dev,
-                    ent->fts_statp->st_ino,
-                    lint_type, is_ppath, pnum );
+        // list_append(ent->fts_path,
+        //             ent->fts_statp->st_size,
+        //             ent->fts_statp->st_mtim,
+        //             ent->fts_statp->st_dev,
+        //             ent->fts_statp->st_ino,
+        //             lint_type, is_ppath, pnum );
+        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, lint_type, is_ppath, pnum));
         break;
     default:
         break;
@@ -86,7 +89,7 @@ static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
  * is NULL.  FTS_FLAGS controls how fts works.
  * Return true if successful.  */
 
-int traverse_path (rmlint_settings  *settings, int  pathnum, int fts_flags) {
+int traverse_path (RmFileList * list, rmlint_settings  *settings, int  pathnum, int fts_flags) {
     int numfiles = 0;
     int dir_file_counter = 0;
     char is_ppath = settings->is_ppath[pathnum];
@@ -120,7 +123,7 @@ int traverse_path (rmlint_settings  *settings, int  pathnum, int fts_flags) {
         case FTS_D:         /* preorder directory */
             if(junkinbasename(p->fts_path, settings)) {
                 info("Junk dir %s\n", p->fts_path);
-                process_file(p, is_ppath, pathnum, TYPE_JNK_DIRNAME);
+                process_file(list, p, is_ppath, pathnum, TYPE_JNK_DIRNAME);
                 junkdirskip = (settings->collide);
             }
             if (
@@ -147,7 +150,7 @@ int traverse_path (rmlint_settings  *settings, int  pathnum, int fts_flags) {
             break;
         case FTS_DP:        /* postorder directory */
             if (dir_file_counter==0) {
-                numfiles += process_file(p, is_ppath, pathnum, TYPE_EDIR);
+                numfiles += process_file(list, p, is_ppath, pathnum, TYPE_EDIR);
             }
             break;
         case FTS_ERR:       /* error; errno is set */
@@ -157,7 +160,7 @@ int traverse_path (rmlint_settings  *settings, int  pathnum, int fts_flags) {
             break;
         case FTS_SLNONE:    /* symbolic link without target */
             warning(RED"Warning: symlink without target: %s\n"NCO, errno, p->fts_path);
-            numfiles += process_file(p, is_ppath, pathnum, TYPE_BLNK);
+            numfiles += process_file(list, p, is_ppath, pathnum, TYPE_BLNK);
             break;
         case FTS_W:         /* whiteout object */
             break;
@@ -167,7 +170,7 @@ int traverse_path (rmlint_settings  *settings, int  pathnum, int fts_flags) {
         case FTS_SL:        /* symbolic link */
         case FTS_F:         /* regular file */
         case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
-            numfiles += process_file(p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
+            numfiles += process_file(list, p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
         default:
             break;
         } /* end switch(p->fts_info)*/
@@ -200,12 +203,13 @@ int rmlint_search_tree( rmlint_settings *settings) { /*, rmlint_filelist *list)*
     if (settings->samepart)
         bit_flags|=FTS_XDEV;
 
+    RmFileList * list = list_begin();
 
     while(settings->paths[cpindex] != NULL) {
         /* The path points to a dir - recurse it! */
         info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...",settings->paths[cpindex],
              settings->is_ppath[cpindex] ? "" : "non-");
-        numfiles += traverse_path (settings, cpindex, bit_flags);
+        numfiles += traverse_path (list, settings, cpindex, bit_flags);
         info(" done: %d files added.\n", numfiles);
 
         cpindex++;

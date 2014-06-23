@@ -21,8 +21,6 @@
 
 /* Needed for nftw() */
 #define _XOPEN_SOURCE 500
-#define _GNU_SOURCE
-#define __USE_GNU
 
 
 #include <sys/mman.h>
@@ -50,7 +48,6 @@
 #include "linttests.h"
 
 //#include "useridcheck.h"
-
 
 /* global vars, but initialized by filt_c_init() */
 nuint_t dircount, dbase_ctr;
@@ -211,6 +208,8 @@ static nuint_t rm_double_paths(file_group *fp) {
      * the same file (which are dangerous to include).
      * The coreutil df.c has code for this so may be a
      * good start point */
+
+    RmFileList *list = list_begin();
 
     if(b) {
         while(b->next) {

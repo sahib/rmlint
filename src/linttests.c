@@ -25,10 +25,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-
-#include <fts.h>
-#include <string.h>
-#include <sys/stat.h>
+#include "linttests.h"
 
 /* Include for ELF processing */
 #include <libelf.h>

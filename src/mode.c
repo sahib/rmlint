@@ -27,8 +27,6 @@
   3) implementation of different modes
 */
 
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>

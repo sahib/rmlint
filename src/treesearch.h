@@ -23,7 +23,6 @@
 #ifndef TREESEARCH_H
 #define TREESEARCH_H
 
-#include <fts.h>
 #include <assert.h>
 #include <stddef.h>
 #include <regex.h>
