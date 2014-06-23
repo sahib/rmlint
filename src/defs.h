@@ -25,6 +25,11 @@
 #define DEF_H
 
 #include <stdint.h>
+#include <time.h>
+#include <sys/types.h>
+#include <stdbool.h>
+
+
 
 /* Use colored output? Note: there's also a -Bb option */
 #define USE_COLOR 1
@@ -103,9 +108,9 @@ From man 2 open:
 typedef uint64_t nuint_t;
 
 /* I can haz bool? */
-typedef char bool;
+/*#typedef char bool;
 #define false ( 0)
-#define true  (!0)
+#define true  (!0)*/
 
 /* ------------------------------------------------------------- */
 
@@ -131,6 +136,7 @@ typedef char bool;
 
 /* types of lint */
 enum {
+    TYPE_DUPE_CANDIDATE = 1,
     TYPE_BLNK = 3,
     TYPE_OTMP,
     TYPE_EDIR,
@@ -139,7 +145,92 @@ enum {
     TYPE_NBIN,
     TYPE_BASE,
     TYPE_BADUID,
-    TYPE_BADGID
+    TYPE_BADGID,
+    TYPE_BADUGID
 } LintType;
+
+/* all available settings see rmlint -h */
+typedef struct {
+    char mode;
+    char color;
+    char collide;
+    char samepart;
+    char ignore_hidden;
+    char followlinks;
+    char casematch;
+    char paranoid;
+    char invmatch;
+    char namecluster;
+    char doldtmp;
+    char findbadids;
+    char searchdup;
+    char findemptydirs;
+    char nonstripped;
+    char verbosity;
+    char listemptyfiles;
+    char **paths;
+    char *is_ppath;           /*NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
+    char *dpattern;
+    char *fpattern;
+    char *cmd_path;
+    char *cmd_orig;
+    char *junk_chars;
+    char *output;
+    char *sort_criteria;       /*NEW - sets criteria for ranking and selecting "original"*/
+    int minsize;
+    int maxsize;
+    char keep_all_originals;   /*NEW - if set, will ONLY delete dupes that are not in ppath */
+    char must_match_original;  /*NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
+    char invert_original;      /*NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
+    char find_hardlinked_dupes;/*NEW - if set, will also search for hardlinked duplicates*/
+    char skip_confirm;         /*NEW - if set, bypasses user confirmation of input settings*/
+    nuint_t threads;
+    short depth;
+    nuint_t oldtmpdata;
+
+} rmlint_settings;
+
+
+/* The structure used from now on to handle nearly everything */
+typedef struct lint_t {
+    unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
+    unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
+    unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
+
+    char *path;                  /* absolute path from working dir */
+    bool in_ppath;               /* set if this file is in one of the preferred (originals) paths */
+    unsigned int pnum;           /* numerical index of user-input paths */
+    nuint_t fsize;               /* Size of the file (bytes) */
+    time_t mtime;				 /* File modification date/time */
+    bool filter;             /* this is used in calculations  */
+    long dupflag;            /* Is the file marked as duplicate? */
+
+    /* This is used to find pointers to the physically same file */
+    ino_t node;
+    dev_t dev;
+
+    /* Pointer to next element */
+    struct lint_t *next;
+    struct lint_t *last;
+
+} lint_t;
+
+
+/* file_group; models a 'sublist' */
+typedef struct {
+    /* Start and end pointer of a 'group' */
+    lint_t *grp_stp, *grp_enp;
+
+    /* elems in this list and total size in bytes */
+    nuint_t len, size;
+
+} file_group;
+
+
+typedef struct {
+    unsigned long gid;
+    unsigned long uid;
+} UserGroupList;
+
 
 #endif
