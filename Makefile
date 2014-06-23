@@ -39,7 +39,7 @@ CC?=gcc
 WARN=-Wall -pedantic
 
 #Link flags 
-LDFLAGS+=-lpthread -lm
+LDFLAGS+=-lpthread -lm -lelf
 
 ifdef DEBUG
 	CFLAGS?=-pipe -ggdb3 $(WARN)
@@ -56,7 +56,10 @@ SOURCES= \
 	$(SOURCEDIR)/mode.c \
 	$(SOURCEDIR)/list.c \
 	$(SOURCEDIR)/rmlint.c \
+	$(SOURCEDIR)/linttests.c \
+	$(SOURCEDIR)/traverse.c \
 	$(SOURCEDIR)/main.c
+
 
 
 OBJECTS=$(SOURCES:.c=.o)
@@ -77,7 +80,8 @@ endif
 
 .c.o: 	
 	@$(ECHO) "-> Compiling $<"
-	@$(CC) $(INCLUDE) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -c $< -o $@
+#	@$(CC) $(INCLUDE) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -c $< -o $@
+	@$(CC) $(INCLUDE) $(CFLAGS) -c $< -o $@
 
 .PHONY : clean
 clean:
