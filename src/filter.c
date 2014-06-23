@@ -45,27 +45,17 @@
 #include "filter.h"
 #include "mode.h"
 #include "md5.h"
-#include "useridcheck.h"
+#include "list.h"
+#include "defs.h"
+#include "linttests.h"
 
-char * rmlint_basename(const char *filename) {
-    char * base = strrchr(filename, '/');
-    if(base != NULL) {
-        /* Return a pointer to the part behind it
-         * (which may be the empty string */
-        return base + 1;
-    }
-
-    /* It's the full path anyway */
-    return (char *)filename;
-}
+//#include "useridcheck.h"
 
 
 /* global vars, but initialized by filt_c_init() */
 nuint_t dircount, dbase_ctr;
 bool dir_done, db_done;
-int iAbort;
 
-UserGroupList ** global_ug_list = NULL;
 
 nuint_t total_lint = 0;
 
@@ -73,11 +63,6 @@ void add_total_lint(nuint_t lint_to_add) {
     total_lint += lint_to_add;
 }
 
-/* ------------------------------------------------------------- */
-
-void delete_userlist(void) {
-    userlist_destroy(global_ug_list);
-}
 
 /* ------------------------------------------------------------- */
 
@@ -87,9 +72,6 @@ void filt_c_init(void) {
     iAbort   = false;
     dir_done = false;
     db_done  = false;
-
-    global_ug_list = userlist_new();
-    atexit(delete_userlist);
 }
 
 /* ------------------------------------------------------------- */
@@ -125,67 +107,10 @@ static void interrupt(int p) {
 
 /* ------------------------------------------------------------- */
 
-/* Cheap function to check if c is a char in str */
-static int junkinstr(const char *str) {
-    int i = 0, j = 0;
-    if(set->junk_chars == NULL) {
-        return 0;
-    }
-    for(; set->junk_chars[i]; i++) {
-        for(j=0; str[j]; j++) {
-            if(str[j] == set->junk_chars[i]) {
-                return true;
-            }
-        }
-    }
-    return 0;
-}
-
-/* ------------------------------------------------------------- */
-
-/* A simply method to test if a file is non stripped binary. Uses popen() */
-/* It's a bit slow, because it has to call fork() internally */
-static int check_binary_to_be_stripped(const char *path) {
-    FILE *pipe = NULL;
-    int bytes = 0;
-    char dummy_buf = 0,
-         * cmd = NULL,
-           * escaped = NULL;
-    if(path == NULL) {
-        return 0;
-    }
-    /* Escape ' so the shell does not get confused */
-    escaped = strsubs(path,"'","'\"'\"'");
-    /* The command we're using */
-    cmd = strdup_printf("file '%s' | grep 'not stripped'", escaped);
-    if(escaped) {
-        free(escaped);
-    }
-    /* Pipe  */
-    pipe = popen(cmd,"re");
-    if(pipe == NULL) {
-        return 0;
-    }
-    /* If one byte can be read, the file is a nonstripped binary */
-    bytes = fread(&dummy_buf, sizeof(char), 1, pipe);
-    /* close pipe */
-    pclose(pipe);
-    /* clean up */
-    if(cmd) {
-        free(cmd);
-    }
-    if(bytes) {
-        return 1;
-    }
-    /* not a nsb  */
-    return 0;
-}
-
-/* ------------------------------------------------------------- */
 
 /*
- * grep the string "string" to see if it contains the pattern.
- * Will return 0 if yes, 1 otherwise.
+ * grep the string "string" (basename of input) to see if it
+ * contains the pattern.  Will return 0 if yes, 1 otherwise.
  */
 int regfilter(const char* input, const char *pattern) {
     int status;
@@ -261,187 +186,9 @@ int regfilter(const char* input, const char *pattern) {
  *           I personally don't have a win comp and won't port it, as I don't found many users knowing what that black window with white
  *           white letters can do ;-)
  */
-static int eval_file(const char *path, const struct stat *ptr, int flag, struct FTW *ftwbuf) {
-    unsigned int pnum = get_cpindex();
-    bool is_ppath = set->paths[pnum].is_ppath;
-
-    if(set->depth && ftwbuf->level > set->depth) {
-        /* Do not recurse in this subdir */
-        return FTW_SKIP_SIBLINGS;
-    }
-    if(iAbort) {
-        return FTW_STOP;
-    }
-    if(flag == FTW_SLN) { /*fpath is a symbolic link pointing to a nonexistent file*/
-        list_append(path, 0, 0, ptr->st_dev,ptr->st_ino,TYPE_BLNK, is_ppath, pnum);
-        return FTW_CONTINUE;
-    }
-    if(path) {
-        if(!dir_done) {
-            char *orig_path = set->paths[get_cpindex()].path;
-            size_t orig_path_len = strlen(set->paths[pnum].path);
-            if(orig_path[orig_path_len - 1] == '/') {
-                orig_path_len -= 1;
-            }
-            if(!strncmp(set->paths[pnum].path, path, orig_path_len)) {
-                dir_done = true;
-                return FTW_CONTINUE;
-            }
-        }
-        if(flag == FTW_F &&     /*fpath is a regular file*/
-                (set->minsize <= ptr->st_size || set->minsize < 0) &&
-                (set->maxsize >= ptr->st_size || set->maxsize < 0)) {
-            if(regfilter(path, set->fpattern)) {
-                return FTW_CONTINUE;
-            }
-            if(junkinstr(rmlint_basename(path))) {
-                list_append(path, 0, 0, ptr->st_dev,ptr->st_ino,TYPE_JNK_FILENAME, is_ppath, pnum);
-                if(set->collide) {
-                    return FTW_CONTINUE;
-                }
-            }
-            if(set->findbadids) {
-                bool has_gid, has_uid;
-                if(userlist_contains(global_ug_list,ptr->st_uid,ptr->st_gid,&has_uid,&has_gid) == false) {
-                    if(has_gid == false)
-                        list_append(path,0,0,ptr->st_dev,ptr->st_ino,TYPE_BADGID, is_ppath, pnum);
-                    if(has_uid == false)
-                        list_append(path,0,0,ptr->st_dev,ptr->st_ino,TYPE_BADUID, is_ppath, pnum);
-
-                    if(set->collide) {
-                        return FTW_CONTINUE;
-                    }
-                }
-            }
-            if(set->nonstripped) {
-                if(check_binary_to_be_stripped(path)) {
-                    list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_NBIN, is_ppath, pnum);
-                    if(set->collide) {
-                        return FTW_CONTINUE;
-                    }
-                }
-            }
-            if(set->doldtmp) {
-                /* This checks only for *~ and .*.swp */
-                size_t len = strlen(path);
-                if(path[len-1] == '~' || (len>3&&path[len-1] == 'p'&&path[len-2] == 'w'&&path[len-3] == 's'&&path[len-4] == '.')) {
-                    char *cpy = NULL;
-                    struct stat stat_buf;
-                    if(path[len - 1] == '~') {
-                        cpy = strndup(path,len-1);
-                    } else {
-                        char * p = strrchr(path,'/');
-                        size_t p_len = p-path;
-                        char * front = alloca(p_len+1);
-                        memset(front, '\0', p_len+1);
-                        strncpy(front, path, p_len);
-                        cpy = strdup_printf("%s/%s",front,p+2);
-                        cpy[strlen(cpy)-4] = 0;
-                    }
-                    if(!stat(cpy, &stat_buf)) {
-                        if(ptr->st_mtime - stat_buf.st_mtime >= set->oldtmpdata) {
-                            list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_OTMP, is_ppath, pnum);
-                        }
-                    }
-                    if(cpy) {
-                        free(cpy);
-                    }
-                    if(set->collide) {
-                        return FTW_CONTINUE;
-                    }
-                }
-            }
-            /* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
-            if(flag == FTW_F && ptr->st_rdev == 0 && (set->listemptyfiles || ptr->st_size != 0)) {
-                if(!access(path,R_OK)) {
-                    if(set->ignore_hidden) {
-                        char *base = rmlint_basename(path);
-                        if(*base != '.') {
-                            dircount++;
-                            list_append(path, ptr->st_size,ptr->st_mtime,ptr->st_dev,ptr->st_ino,1, is_ppath, pnum);
-                        }
-                    } else {
-                        dircount++;
-                        list_append(path, ptr->st_size,ptr->st_mtime,ptr->st_dev,ptr->st_ino,1, is_ppath, pnum);
-                    }
-                }
-                return FTW_CONTINUE;
-            }
-        }
-        if(flag == FTW_D) { /*fpath is a directory*/
-            if(regfilter(path, set->dpattern) && dir_done) {
-                return FTW_SKIP_SUBTREE;
-            }
-            if(junkinstr(rmlint_basename(path))) {
-                list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_JNK_DIRNAME, is_ppath, pnum);
-                if(set->collide) {
-                    return FTW_SKIP_SUBTREE;
-                }
-            }
-            if(set->findemptydirs) {
-                int dir_counter = 0;
-                DIR *dir_e = opendir(path);
-                struct dirent *dir_p = NULL;
-                if(dir_e) {
-                    while((dir_p=readdir(dir_e)) && dir_counter < 2) {
-                        dir_counter++;
-                    }
-                    closedir(dir_e);
-                    if(dir_counter == 2 && dir_p == NULL) {
-                        list_append(path, 0,0,ptr->st_dev,ptr->st_ino,TYPE_EDIR, is_ppath, pnum);
-                        return FTW_SKIP_SUBTREE;
-                    }
-                }
-            }
-            if(set->ignore_hidden && path) {
-                char *base = rmlint_basename(path);
-                if(*base == '.' && dir_done) {
-                    return FTW_SKIP_SUBTREE;
-                }
-            }
-        }
-    }
-    return FTW_CONTINUE;
-}
 
 /* ------------------------------------------------------------- */
 
-/* This calls basically nftw() and sets some options */
-int  recurse_dir(const char *path) {
-    /* Set options */
-    int ret = 0;
-    int flags = FTW_ACTIONRETVAL;
-    if(!set->followlinks) {
-        flags |= FTW_PHYS;
-    }
-    if(USE_DEPTH_FIRST) {
-        flags |= FTW_DEPTH;
-    }
-    if(set->samepart) {
-        flags |= FTW_MOUNT;
-    }
-    /* Handle SIGs */
-    signal(SIGINT,  interrupt);
-    signal(SIGSEGV, interrupt);
-    signal(SIGFPE,  interrupt);
-    signal(SIGABRT, interrupt);
-    /* (Re)-Init */
-    dir_done = false;
-    /* Start recurse */
-    if((ret = nftw(path, eval_file, _XOPEN_SOURCE, flags))) {
-        printf("Nftw: %d\n", ret);
-        if(ret != FTW_STOP) {
-            /* Some error occured */
-            perror(YEL"FATAL: "NCO"nftw():");
-            return EXIT_FAILURE;
-        } else {
-            /* The user pressed SIGINT -> Quit from ntfw() to shutdown in peace. */
-            error(YEL"quitting.\n"NCO);
-            die(0);
-        }
-    }
-    return dircount;
-}
 
 /* ------------------------------------------------------------- */
 

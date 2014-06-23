@@ -23,20 +23,15 @@
 #ifndef PROGRESS_H
 #define PROGRESS_H
 
-#include "list.h"
 
-/* file_group; models a 'sublist' */
-typedef struct {
-    /* Start and end pointer of a 'group' */
-    lint_t *grp_stp, *grp_enp;
 
-    /* elems in this list and total size in bytes */
-    nuint_t len, size;
-
-} file_group;
 
 /* ------------------------------------------------------------- */
 
+/*globals*/
+int iAbort;
+
+int check_binary_to_be_stripped(const char *path);
 
 /* Used in rmlint.c only  */
 int  regfilter(const char* input, const char *pattern);
