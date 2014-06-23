@@ -25,7 +25,7 @@
 /* Original plan was to provide an API, but this would need some work */
 int main(int argc, char **argv) {
     /* Init */
-    rmlint_settings mySettings;
+    RmSettings mySettings;
     rmlint_set_default_settings(&mySettings);
     /* Parse commandline */
     if(rmlint_parse_arguments(argc,argv,&mySettings) == 0) {
@@ -33,10 +33,10 @@ int main(int argc, char **argv) {
     }
     /*check settings*/
     if (rmlint_echo_settings(&mySettings))
-    /* do all the real work */
-		return rmlint_main();
-	else{
-		error(RED"Aborting\n"NCO);
-		return -1;
-	}
+        /* do all the real work */
+        return rmlint_main();
+    else {
+        error(RED"Aborting\n"NCO);
+        return -1;
+    }
 }

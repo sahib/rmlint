@@ -89,7 +89,7 @@ static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum,
  * is NULL.  FTS_FLAGS controls how fts works.
  * Return true if successful.  */
 
-int traverse_path (RmFileList * list, rmlint_settings  *settings, int  pathnum, int fts_flags) {
+int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int fts_flags) {
     int numfiles = 0;
     int dir_file_counter = 0;
     char is_ppath = settings->is_ppath[pathnum];
@@ -192,7 +192,7 @@ int traverse_path (RmFileList * list, rmlint_settings  *settings, int  pathnum, 
  * add the files found into LIST
  * Return file count if successful.  */
 
-int rmlint_search_tree( rmlint_settings *settings) { /*, rmlint_filelist *list)*/
+int rmlint_search_tree( RmSettings *settings) { /*, rmlint_filelist *list)*/
     int numfiles=0;
     int cpindex=0;
     /* Set Bit flags for fts options.  */

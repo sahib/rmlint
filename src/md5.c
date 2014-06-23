@@ -316,7 +316,7 @@ void md5c_c_init(void) {
     pthread_mutex_init(&mutex_fp_IO,NULL);
 }
 
-void md5_file_mmap(lint_t *file) {
+void md5_file_mmap(RmFile *file) {
     int inFile=0;
     MD5_CTX mdContext;
     unsigned char *f_map=NULL;
@@ -355,7 +355,7 @@ void md5_file_mmap(lint_t *file) {
 /* ------------------------------------------------------------- */
 
 /* used to calc the complete checksum of file & save it in File */
-void md5_file_fread(lint_t *file) {
+void md5_file_fread(RmFile *file) {
     /* Number of bytes read in */
     ssize_t bytes=0;
     ssize_t offset=0;
@@ -423,7 +423,7 @@ void md5_file_fread(lint_t *file) {
    the 8 byte are stored in raw form
 */
 
-void md5_fingerprint_mmap(lint_t *file, const nuint_t readsize) {
+void md5_fingerprint_mmap(RmFile *file, const nuint_t readsize) {
     int bytes = 0;
     int pF = open(file->path, MD5_FILE_FLAGS);
     unsigned char *f_map = NULL;
@@ -466,7 +466,7 @@ void md5_fingerprint_mmap(lint_t *file, const nuint_t readsize) {
 
 /* ------------------------------ */
 
-void md5_fingerprint_fread(lint_t *file, const nuint_t readsize) {
+void md5_fingerprint_fread(RmFile *file, const nuint_t readsize) {
     int bytes = 0;
     bool unlock = true;
     FILE *pF = fopen(file->path, "re");
@@ -529,7 +529,7 @@ void md5_fingerprint_fread(lint_t *file, const nuint_t readsize) {
 
 /* ------------------------------ */
 
-void md5_fingerprint(lint_t *file, const nuint_t readsize) {
+void md5_fingerprint(RmFile *file, const nuint_t readsize) {
 #if MD5_USE_MMAP == -1
     if((file->fsize > MMAP_LIMIT) || file->fsize < MD5_IO_BLOCKSIZE>>1) {
         md5_fingerprint_fread(file,readsize);
@@ -545,7 +545,7 @@ void md5_fingerprint(lint_t *file, const nuint_t readsize) {
 
 /* ------------------------------ */
 
-void md5_file(lint_t *file) {
+void md5_file(RmFile *file) {
 #if MD5_USE_MMAP == -1
     if((!large_range_pointers && file->fsize > MMAP_LIMIT) || file->fsize < MD5_IO_BLOCKSIZE>>1 || file->fsize > MMAP_LIMIT<<4) {
         md5_file_fread(file);

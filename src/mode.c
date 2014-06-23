@@ -198,7 +198,7 @@ void script_print(char * string) {
 
 /* ------------------------------------------------------------- */
 
-void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig) {
+void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig) {
     bool free_fullpath = true;
     if(get_logstream() && get_scriptstream() && set->output) {
         int i = 0;
@@ -300,7 +300,7 @@ void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig) {
 
 /* ------------------------------------------------------------- */
 
-static bool handle_item(lint_t *file_path, lint_t *file_orig) {
+static bool handle_item(RmFile *file_path, RmFile *file_orig) {
     char *path = (file_path) ? file_path->path : NULL;
     char *orig = (file_orig) ? file_orig->path : NULL;
     /* What set->mode are we in? */
@@ -547,9 +547,9 @@ bool process_doop_groop(file_group *grp) {
     /* --> First one is the original otherwise */
 
 
-    lint_t *i = grp->grp_stp;
+    RmFile *i = grp->grp_stp;
     bool tagged_original = false;
-    lint_t *original;
+    RmFile *original;
 
     while(i) {
         if ( ( (i->in_ppath) && (set->keep_all_originals) ) ||

@@ -29,10 +29,10 @@
 
 
 void linttests_c_init(void);
-int uid_gid_check(FTSENT *fts_ent, rmlint_settings *settings);
-bool is_old_tmp(FTSENT *fts_ent, rmlint_settings *settings);
-bool is_nonstripped(FTSENT *afile, rmlint_settings *settings);
-bool junkinbasename(char *str, rmlint_settings * settings);
+int uid_gid_check(FTSENT *fts_ent, RmSettings *settings);
+bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings);
+bool is_nonstripped(FTSENT *afile, RmSettings *settings);
+bool junkinbasename(char *str, RmSettings * settings);
 char * rmlint_basename(char *filename);
 
 

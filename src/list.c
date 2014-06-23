@@ -41,19 +41,20 @@ RmFileList * list_begin(void) {
     return list;
 }
 
-
 RmFile * rm_file_new(const char * path, struct stat *buf, RmFileType type, bool is_ppath, unsigned pnum) {
     RmFile *self = g_new0(RmFile, 1);
 
     self->path = g_strdup(path);
     self->node = buf->st_ino;
     self->dev = buf->st_dev;
-    self->fsize = buf->st_size;
     self->mtime = buf->st_mtime;
+    if(type == TYPE_DUPE_CANDIDATE) {
+        self->fsize = buf->st_size;
+    }
     self->dupflag = type;
     self->filter = TRUE;
-    
-    // TODO:
+
+    // TODO: This sucks.
     self->in_ppath = is_ppath;
     self->pnum = pnum;
 
@@ -113,8 +114,8 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, gpointe
 
 void rm_file_list_append(RmFileList * list, RmFile * file) {
     GQueue *old_group = g_hash_table_lookup(
-        list->size_table, GINT_TO_POINTER(file->fsize)
-    );
+                            list->size_table, GINT_TO_POINTER(file->fsize)
+                        );
 
     if(old_group == NULL) {
         /* Insert a new group */
@@ -158,11 +159,40 @@ static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, gpointer dat
         return strcmp(rmlint_basename(fa->path), rmlint_basename(fb->path));
 }
 
-void rm_file_list_remove_double_paths(RmFileList *list) {
-    
+static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, bool find_hardlinked_dupes) {
+    guint removed_cnt = 0;
+
+    GList * iter = group->head;
+    while(iter && iter->next) {
+        RmFile * file = iter->data, *next_file = iter->next->data;
+        
+        if(file->node != next_file->node || file->dev != next_file->dev) {
+            iter = iter->next;
+            continue;
+        }
+
+        if(find_hardlinked_dupes && strcmp(
+                rmlint_basename(file->path), rmlint_basename(next_file->path)
+            ) != 0) {
+            iter = iter->next;
+            continue;
+        }
+
+        if(next_file->in_ppath || !file->in_ppath) {
+            iter = iter->next;
+            rm_file_list_remove(list, file);
+        } else {
+            iter = iter->next->next;
+            rm_file_list_remove(list, next_file);
+        }
+
+        removed_cnt++;
+    }
+
+    return removed_cnt;
 }
 
-void rm_file_list_sort_groups(RmFileList *list) {
+void rm_file_list_sort_groups(RmFileList *list, bool find_hardlinked_dupes) {
     GSequenceIter * iter = rm_file_list_get_iter(list);
     while(!g_sequence_iter_is_end(iter)) {
         GQueue *queue = g_sequence_get(iter);
@@ -175,6 +205,7 @@ void rm_file_list_sort_groups(RmFileList *list) {
             g_sequence_remove(old_iter);
         } else {
             g_queue_sort(queue, rm_file_list_cmp_file, NULL);
+            rm_file_list_remove_double_paths(list, queue, find_hardlinked_dupes);
             iter = g_sequence_iter_next(iter);
         }
     }
@@ -196,19 +227,18 @@ static void rm_file_list_print(RmFileList *list) {
     g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
 }
 
-int main(int argc, const char **argv)
-{
+int main(int argc, const char **argv) {
     RmFileList * list = rm_file_list_new();
 
     for(int i = 1; i < argc; ++i) {
         struct stat buf;
         stat(argv[i], &buf);
 
-        RmFile *file = rm_file_new(argv[i], &buf, RM_FILE_TYPE_DUPLICATE);
+        RmFile *file = rm_file_new(argv[i], &buf, RM_FILE_TYPE_DUPLICATE, 1, 1);
         rm_file_list_append(list, file);
     }
     rm_file_list_print(list);
-    rm_file_list_sort_groups(list);
+    rm_file_list_sort_groups(list, FALSE);
     rm_file_list_print(list);
 
     GSequenceIter * iter = rm_file_list_get_iter(list);
@@ -224,7 +254,6 @@ int main(int argc, const char **argv)
     rm_file_list_clear(list, rm_file_list_get_iter(list));
 
     rm_file_list_print(list);
-
 
     rm_file_list_destroy(list);
     return 0;

@@ -27,32 +27,6 @@
 #include <glib.h>
 #include "defs.h"
 
-typedef enum RmFileType {
-    RM_FILE_TYPE_UNKNOWN = 0,
-    RM_FILE_TYPE_DUPLICATE = 1
-} RmFileType;
-
-typedef struct RmFile {
-    unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
-    unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-    unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
-
-    char *path;                          /* absolute path from working dir */
-    bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
-    unsigned int pnum;                   /* numerical index of user-input paths */
-    guint64 fsize;                       /* Size of the file (bytes) */
-    time_t mtime;                        /* File modification date/time */
-    bool filter;                         /* this is used in calculations  */
-    RmFileType dupflag;                  /* Is the file marked as duplicate? */
-
-    /* This is used to find pointers to the physically same file */
-    ino_t node;
-    dev_t dev;
-
-    GList *list_node;
-    GQueue *file_group;
-} RmFile;
-
 
 RmFile * rm_file_new(const char * path, struct stat *buf, RmFileType type, bool is_ppath, unsigned pnum);
 
@@ -91,7 +65,7 @@ void rm_file_list_destroy(RmFileList *list);
  *
  * If rm_file_list_group() was not called yet, there is only one group at 0.
  *
- * @param child 
+ * @param child
  *
  * @return a GQueue, containting all children in the group.
  */
@@ -107,7 +81,7 @@ GSequenceIter *rm_file_list_get_iter(RmFileList *list);
 void rm_file_list_append(RmFileList * list, RmFile * file);
 
 /**
- * @brief Clear a sub 
+ * @brief Clear a sub
  *
  * You can iterate over the subgroups like this:
  *
@@ -126,6 +100,6 @@ void rm_file_list_clear(RmFileList *list, GSequenceIter * iter);
  */
 void rm_file_list_remove(RmFileList *list, RmFile *file);
 
-void rm_file_list_sort_groups(RmFileList *list);
+void rm_file_list_sort_groups(RmFileList *list, bool find_hardlinked_dupes);
 
 #endif /* RM_LIST_H */

@@ -70,7 +70,7 @@ char * rmlint_basename(char *filename) {
 /* ------------------------------------------------------------- */
 /* checks uid and gid; returns 0 if both ok, else TYPE_ corresponding *
  * to lint_t->filter types                                            */
-int uid_gid_check(FTSENT *fts_ent, rmlint_settings *settings) {
+int uid_gid_check(FTSENT *fts_ent, RmSettings *settings) {
     if (settings->findbadids) {
         bool has_gid, has_uid;
         if (userlist_contains(global_ug_list, fts_ent->fts_statp->st_uid,
@@ -90,7 +90,7 @@ int uid_gid_check(FTSENT *fts_ent, rmlint_settings *settings) {
 
 /* ------------------------------------------------------------- */
 
-bool is_old_tmp(FTSENT *fts_ent, rmlint_settings *settings) {
+bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings) {
     bool is_otmp=false;
     if (settings->doldtmp) {
         /* This checks only for *~ and .*.swp */
@@ -129,7 +129,7 @@ bool is_old_tmp(FTSENT *fts_ent, rmlint_settings *settings) {
 /* ------------------------------------------------------------- */
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
-bool is_nonstripped(FTSENT *fts_ent, rmlint_settings *settings) {
+bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
     bool is_ns=false;
     if ((settings->nonstripped) && fts_ent->fts_path) {
         /* inspired by "jschmier"'s answer at http://stackoverflow.com/a/5159890 */
@@ -182,7 +182,7 @@ bool is_nonstripped(FTSENT *fts_ent, rmlint_settings *settings) {
 /* ------------------------------------------------------------- */
 
 /* Cheap function to check if c is a char in str */
-bool junkinbasename(char *path, rmlint_settings * settings) {
+bool junkinbasename(char *path, RmSettings * settings) {
     if(settings->junk_chars != NULL ) {
         int i = 0, j = 0;
         char * base_name = rmlint_basename(path);

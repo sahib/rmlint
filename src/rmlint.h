@@ -26,20 +26,20 @@
 
 
 /* pointer to settings */
-rmlint_settings * set;
+RmSettings * set;
 
 
 
 /* These method are also useable from 'outside' */
 char is_ppath(const char* apath);
-char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets);
-char rmlint_echo_settings(rmlint_settings *settings);
-void rmlint_set_default_settings(rmlint_settings *set);
+char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets);
+char rmlint_echo_settings(RmSettings *settings);
+void rmlint_set_default_settings(RmSettings *set);
 int  rmlint_main(void);
 
 /* Misc */
 void die(int status);
-void print(lint_t *begin);
+void print(RmFile *begin);
 void info(const char* format, ...);
 void error(const char* format, ...);
 void warning(const char* format, ...);

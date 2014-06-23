@@ -28,7 +28,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <stdbool.h>
-
+#include <glib.h>
 
 
 /* Use colored output? Note: there's also a -Bb option */
@@ -187,39 +187,39 @@ typedef struct {
     nuint_t threads;
     short depth;
     nuint_t oldtmpdata;
+} RmSettings;
 
-} rmlint_settings;
+typedef enum RmFileType {
+    RM_FILE_TYPE_UNKNOWN = 0,
+    RM_FILE_TYPE_DUPLICATE = 1
+} RmFileType;
 
-
-/* The structure used from now on to handle nearly everything */
-typedef struct lint_t {
+typedef struct RmFile {
     unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
     unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
 
-    char *path;                  /* absolute path from working dir */
-    bool in_ppath;               /* set if this file is in one of the preferred (originals) paths */
-    unsigned int pnum;           /* numerical index of user-input paths */
-    nuint_t fsize;               /* Size of the file (bytes) */
-    time_t mtime;				 /* File modification date/time */
-    bool filter;             /* this is used in calculations  */
-    long dupflag;            /* Is the file marked as duplicate? */
+    char *path;                          /* absolute path from working dir */
+    bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
+    unsigned int pnum;                   /* numerical index of user-input paths */
+    guint64 fsize;                       /* Size of the file (bytes) */
+    time_t mtime;                        /* File modification date/time */
+    bool filter;                         /* this is used in calculations  */
+    RmFileType dupflag;                  /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
     ino_t node;
     dev_t dev;
 
-    /* Pointer to next element */
-    struct lint_t *next;
-    struct lint_t *last;
-
-} lint_t;
+    GList *list_node;
+    GQueue *file_group;
+} RmFile;
 
 
 /* file_group; models a 'sublist' */
 typedef struct {
     /* Start and end pointer of a 'group' */
-    lint_t *grp_stp, *grp_enp;
+    RmFile *grp_stp, *grp_enp;
 
     /* elems in this list and total size in bytes */
     nuint_t len, size;

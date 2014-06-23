@@ -29,7 +29,7 @@
 /* Mostly used by filter.c  */
 bool process_doop_groop(file_group *grp);
 void init_filehandler(void);
-void write_to_log(const lint_t *file, bool orig, const lint_t * p_to_orig);
+void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig);
 nuint_t get_dupcounter();
 
 

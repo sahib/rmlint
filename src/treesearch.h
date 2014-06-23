@@ -30,7 +30,7 @@
 #include "list.h"
 #include "rmlint.h"
 
-int rmlint_search_tree(rmlint_settings *settings);
+int rmlint_search_tree(RmSettings *settings);
 void search_init(void);
 
 #endif

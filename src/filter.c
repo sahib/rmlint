@@ -196,7 +196,7 @@ int regfilter(const char* input, const char *pattern) {
  * was physically the same as the original so now there*
  * is no original. - Kick'em   */
 static nuint_t rm_double_paths(file_group *fp) {
-    lint_t *b = (fp) ? fp->grp_stp : NULL;
+    RmFile *b = (fp) ? fp->grp_stp : NULL;
     nuint_t c = 0;
     /* This compares inode and devID
      * This a little bruteforce, but works just fine :-)
@@ -218,7 +218,7 @@ static nuint_t rm_double_paths(file_group *fp) {
                     ((set->find_hardlinked_dupes==0) ||
                      (strcmp(rmlint_basename(b->path),rmlint_basename(b->next->path))==0)) ) {
                 /* adjust grp */
-                lint_t *tmp = b;
+                RmFile *tmp = b;
                 fp->size -= b->fsize;
                 fp->len--;
                 if(b->next->in_ppath || !b->in_ppath) {
@@ -251,7 +251,7 @@ static nuint_t rm_double_paths(file_group *fp) {
 /* Sort criteria for sorting by dev and inode */
 /* This sorts by device second then basename (important later for
  * find_double_bases) */
-static long cmp_nd(lint_t *a, lint_t *b) {
+static long cmp_nd(RmFile *a, RmFile *b) {
     if (a->node != b->node)
         return ((long)(a->node) - (long)(b->node));
     else if (a->dev != b->dev)
@@ -263,13 +263,14 @@ static long cmp_nd(lint_t *a, lint_t *b) {
 /* ------------------------------------------------------------- */
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static long cmp_orig_criteria(lint_t *a, lint_t *b) {
+static long cmp_orig_criteria(RmFile *a, RmFile *b) {
 
     if (a->in_ppath != b->in_ppath)
         return a->in_ppath - b->in_ppath;
     else {
         int i=0;
-        while (i < strlen(set->sort_criteria)) {
+        gsize sort_criteria_len = strlen(set->sort_criteria);
+        while (i < sort_criteria_len) {
             long cmp=0;
             switch (set->sort_criteria[i]) {
             case 'm':
@@ -300,8 +301,8 @@ static long cmp_orig_criteria(lint_t *a, lint_t *b) {
 
 /* ------------------------------------------------------------- */
 
-/* Compares the "fp" array of the lint_t a and b */
-static int cmp_fingerprints(lint_t *a,lint_t *b) {
+/* Compares the "fp" array of the RmFile a and b */
+static int cmp_fingerprints(RmFile *a,RmFile *b) {
     int i,j;
     /* compare both fp-arrays */
     for(i=0; i<2; i++) {
@@ -324,7 +325,7 @@ static int cmp_fingerprints(lint_t *a,lint_t *b) {
 /* ------------------------------------------------------------- */
 
 /* Compare criteria of checksums */
-static int cmp_f(lint_t *a, lint_t *b) {
+static int cmp_f(RmFile *a, RmFile *b) {
     int i, fp_i, x;
     int is_empty[2][3] = { {1,1,1}, {1,1,1} };
     for(i = 0; i < MD5_LEN; i++) {
@@ -362,7 +363,7 @@ static int cmp_f(lint_t *a, lint_t *b) {
 }
 
 /* ------------------------------------------------------------- */
-static int paranoid(const lint_t *p1, const lint_t *p2) {
+static int paranoid(const RmFile *p1, const RmFile *p2) {
     int result = 0,file_a,file_b;
     char * file_map_a, * file_map_b;
     if(!p1 || !p2)
@@ -434,7 +435,7 @@ static int paranoid(const lint_t *p1, const lint_t *p2) {
 /* Callback from build_checksums */
 static void *cksum_cb(void * vp) {
     file_group *gp = vp;
-    lint_t *file = gp->grp_stp;
+    RmFile *file = gp->grp_stp;
     /* Iterate over all files in group */
     while(file && file != gp->grp_enp) {
         /* See md5.c */
@@ -452,7 +453,7 @@ static void *cksum_cb(void * vp) {
 /* ------------------------------------------------------------- */
 
 static void build_fingerprints (file_group *grp) {
-    lint_t *p = grp->grp_stp;
+    RmFile *p = grp->grp_stp;
 
     nuint_t grp_sz;
     /* Prevent crashes (should not happen too often) */
@@ -492,8 +493,8 @@ static void build_checksums(file_group *grp) {
         cksum_cb((void*)whole_grp);
     } else { /* split group in subgroups and start a seperate thread for each */
         nuint_t  sz = 0;
-        lint_t * ptr = grp->grp_stp;
-        lint_t * lst = grp->grp_stp;
+        RmFile * ptr = grp->grp_stp;
+        RmFile * lst = grp->grp_stp;
         /* The refereces to all threads */
         pthread_t * thread_queue = malloc((grp->size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t));
         int thread_counter = 0, ii = 0;
@@ -541,7 +542,7 @@ static void build_checksums(file_group *grp) {
 /* ------------------------------------------------------------- */
 
 bool findmatches(file_group *grp, int testlevel) {
-    lint_t *i = grp->grp_stp, *j;
+    RmFile *i = grp->grp_stp, *j;
     file_group * island = malloc(sizeof(file_group));
     file_group * mainland = malloc(sizeof(file_group));
     int returnval = 0;  /* not sure what we are using this for */
@@ -616,7 +617,7 @@ bool findmatches(file_group *grp, int testlevel) {
             if (match) {
                 /* move j from grp onto island*/
                 /* first get pointer to j before we start messing with j*/
-                lint_t *tmp = j;
+                RmFile *tmp = j;
                 /* now remove j from grp */
                 if(j->last&&j->next) {
                     j->last->next = j->next;
@@ -795,9 +796,9 @@ static void size_to_human_readable(nuint_t num, char *in, int sz) {
 
 /* ------------------------------------------------------------- */
 
-static void find_double_bases(lint_t *starting) {
-    lint_t *i = starting;
-    lint_t *j = NULL;
+static void find_double_bases(RmFile *starting) {
+    RmFile *i = starting;
+    RmFile *j = NULL;
     bool phead = true;
     while(i) {
         if(i->dupflag != TYPE_BASE) {
@@ -806,7 +807,7 @@ static void find_double_bases(lint_t *starting) {
             while(j) {
                 /* compare basenames */
                 if(!strcmp(rmlint_basename(i->path), rmlint_basename(j->path)) && i->node != j->node && j->dupflag != TYPE_BASE) {
-                    lint_t *x = j;
+                    RmFile *x = j;
                     char *tmp2 = realpath(j->path, NULL);
                     if(phead) {
                         error("\n%s#"NCO" Double basename(s):\n", (set->verbosity > 1) ? GRE : NCO);
@@ -857,7 +858,7 @@ static long cmp_sort_dupID(lint_t* a, lint_t* b) {
 /* ------------------------------------------------------------- */
 
 /* This the actual main() of rmlint */
-void start_processing(lint_t *b) {
+void start_processing(RmFile *b) {
     file_group *fglist = NULL,
                 emptylist;
     char lintbuf[128];
@@ -874,7 +875,7 @@ void start_processing(lint_t *b) {
     emptylist.size = 0;
     /* Split into groups, based by size */
     while(b) {
-        lint_t *q = b, *prev = NULL;
+        RmFile *q = b, *prev = NULL;
         nuint_t glen = 0, gsize = 0;
         nuint_t num_pref = 0;
         nuint_t num_nonpref = 0;
@@ -898,6 +899,7 @@ void start_processing(lint_t *b) {
                 b = q;
             }
             rem_counter++;
+        // TODO: Port this.
         } else if (((set->must_match_original) && (num_pref == 0) ) ||
                    /* isle doesn't contain any ppath original entries, but options
                     * require ppath entry; or...*/
@@ -927,6 +929,7 @@ void start_processing(lint_t *b) {
                 fglist[spelen].grp_enp = prev;
                 fglist[spelen].len     = glen;
                 fglist[spelen].size    = gsize;
+
                 /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
                 if((set->followlinks && get_cpindex() == 1) || ( get_cpindex() > 1 ) || 1 )
                     /* actually need this even for a single path because of possible bind mounts */
@@ -934,7 +937,7 @@ void start_processing(lint_t *b) {
                 /* number_of_groups++ */
                 spelen++;
             } else { /* this is some other sort of lint (indicated by a size of 0) */
-                lint_t *ptr;
+                RmFile *ptr;
                 char flag = 42;
                 bool e_file_printed = false;
                 const char * chown_cmd = "   chown $(whoami):$(id -gn)";

@@ -319,7 +319,7 @@ static void print_help(void) {
 /* ------------------------------------------------------------- */
 
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
-void rmlint_set_default_settings(rmlint_settings *pset) {
+void rmlint_set_default_settings(RmSettings *pset) {
     set = pset;
     pset->mode      =  1;       /* list only    */
     pset->casematch     =  0;       /* Insensitive  */
@@ -394,7 +394,7 @@ int check_if_preferred(const char * dir) {
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-char rmlint_parse_arguments(int argc, char **argv, rmlint_settings *sets) {
+char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
     int c,lp=0;
     rmlint_init();
     while(1) {
@@ -746,13 +746,13 @@ void die(int status) {
 /* ------------------------------------------------------------- */
 
 /* Sort criteria for sizesort */
-static long cmp_sz(lint_t *a, lint_t *b) {
+static long cmp_sz(RmFile *a, RmFile *b) {
     return a->fsize - b->fsize;
 }
 
 /* ------------------------------------------------------------- */
 
-char rmlint_echo_settings(rmlint_settings *settings) {
+char rmlint_echo_settings(RmSettings *settings) {
     char confirm;
     int i=0;
     int save_verbosity=settings->verbosity;
