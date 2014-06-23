@@ -23,32 +23,8 @@
 #ifndef SLIST_H
 #define SLIST_H
 
-#include <sys/types.h>
 #include "defs.h"
 
-/* The structure used from now on to handle nearly everything */
-typedef struct lint_t {
-    unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
-    unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
-    unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
-
-    char *path;                  /* absolute path from working dir */
-    bool in_ppath;               /* set if this file is in one of the preferred (originals) paths */
-    unsigned int pnum;           /* numerical index of user-input paths */
-    nuint_t fsize;               /* Size of the file (bytes) */
-    time_t mtime;				 /* File modification date/time */
-    bool filter;             /* this is used in calculations  */
-    long dupflag;            /* Is the file marked as duplicate? */
-
-    /* This is used to find pointers to the physically same file */
-    ino_t node;
-    dev_t dev;
-
-    /* Pointer to next element */
-    struct lint_t *next;
-    struct lint_t *last;
-
-} lint_t;
 
 
 /* Sort method; begins with '*begin' ends with NULL, cmp as sort criteria */
@@ -64,8 +40,8 @@ lint_t *list_remove(lint_t *ptr);
 void list_clear(lint_t *begin);
 
 /* Appends lint_t with those datafields at end of list */
-void list_append(const char *n, nuint_t s, time_t t, dev_t dev,
-                 ino_t node,  bool q, bool is_ppath, unsigned int pnum);
+void list_append(const char *n, nuint_t s, struct timespec t, dev_t dev,
+                 ino_t node,  char lint_type, bool is_ppath, unsigned int pnum);
 
 /* Returns len of list */
 nuint_t list_len(void);

@@ -109,8 +109,8 @@ lint_t *list_remove(lint_t *ptr) {
 /* ------------------------------------------------------------- */
 
 /* Init of the element */
-static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, time_t mt, dev_t dev, ino_t node,
-                          bool flag, bool is_ppath, unsigned int pnum) {
+static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, struct timespec mt, dev_t dev, ino_t node,
+                          char flag, bool is_ppath, unsigned int pnum) {
     /* Fill data */
     short   plen = strlen(n) + 2;
     pointer->path = malloc(plen);
@@ -118,7 +118,7 @@ static void list_filldata(lint_t *pointer, const char *n,nuint_t fs, time_t mt, 
     pointer->node    = node;
     pointer->dev     = dev;
     pointer->fsize   = fs;
-    pointer->mtime   = mt;
+    pointer->mtime   = mt.tv_sec;
     pointer->dupflag = flag;
     pointer->filter  = true;
     pointer->in_ppath = is_ppath;
@@ -221,10 +221,10 @@ lint_t *list_sort(lint_t *begin, long(*cmp)(lint_t*,lint_t*)) {
 
 /* ------------------------------------------------------------- */
 
-void list_append(const char *n, nuint_t s, time_t t, dev_t dev,
-                 ino_t node, bool dupflag, bool is_ppath, unsigned int pnum) {
+void list_append(const char *n, nuint_t s, struct timespec t, dev_t dev,
+                 ino_t node, char lint_type, bool is_ppath, unsigned int pnum) {
     lint_t *tmp = malloc(sizeof(lint_t));
-    list_filldata(tmp,n,s,t,dev,node, dupflag, is_ppath, pnum);
+    list_filldata(tmp,n,s,t,dev,node, lint_type, is_ppath, pnum);
     if(start == NULL) { /* INIT */
         tmp->next=NULL;
         tmp->last=NULL;
