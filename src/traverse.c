@@ -30,21 +30,21 @@
 #include "treesearch.h"
 
 
-static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
+static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum, int RmFileype) {
     /*TODO: regex check if filename exclude*/
-    if (!lint_type) {
+    if (!RmFileype) {
         /*see if we can find a lint type*/
         if (junkinbasename(ent->fts_path, set))
-            lint_type=TYPE_JNK_FILENAME;
-        else if ((lint_type = uid_gid_check(ent, set))) {}
+            RmFileype=TYPE_JNK_FILENAME;
+        else if ((RmFileype = uid_gid_check(ent, set))) {}
         else if (is_old_tmp(ent, set)) {
-            lint_type = TYPE_OTMP;
+            RmFileype = TYPE_OTMP;
         } else if(is_nonstripped(ent, set)) {
-            lint_type = TYPE_NBIN;
+            RmFileype = TYPE_NBIN;
         }
     }
 
-    if (!lint_type) lint_type=TYPE_DUPE_CANDIDATE;
+    if (!RmFileype) RmFileype=TYPE_DUPE_CANDIDATE;
 
     switch (ent->fts_info) {
     case FTS_D:         /* preorder directory */
@@ -63,9 +63,9 @@ static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum,
                     ent->fts_statp->st_mtim,
                     ent->fts_statp->st_dev,
                     ent->fts_statp->st_ino,
-                    lint_type, is_ppath, pnum );
+                    RmFileype, is_ppath, pnum );
         */
-        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, lint_type, is_ppath, pnum));
+        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, RmFileype, is_ppath, pnum));
         break;
     case FTS_F:         /* regular file */
     case FTS_SL:        /* symbolic link */
@@ -75,8 +75,8 @@ static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum,
         //             ent->fts_statp->st_mtim,
         //             ent->fts_statp->st_dev,
         //             ent->fts_statp->st_ino,
-        //             lint_type, is_ppath, pnum );
-        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, lint_type, is_ppath, pnum));
+        //             RmFileype, is_ppath, pnum );
+        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, RmFileype, is_ppath, pnum));
         break;
     default:
         break;

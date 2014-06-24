@@ -24,26 +24,26 @@
 #include "filter.h"
 #include <sys/stat.h>
 
-static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
+static int process_file (FTSENT *ent, bool is_ppath, int pnum, int RmFileype) {
     struct timespec mtime=ent->fts_statp->st_mtim;
 
     //size_t level;
 
     /*TODO: regex check if filename exclude*/
-    if (!lint_type) {
+    if (!RmFileype) {
         /*see if we can find a lint type*/
         if (junkinstr(rmlint_basename(ent->fts_path)))
-            lint_type=TYPE_JNK_FILENAME;
+            RmFileype=TYPE_JNK_FILENAME;
         else if (set->findbadids) {
             bool has_gid, has_uid;
             if(userlist_contains(global_ug_list,ent->fts_statp->st_uid,ent->fts_statp->st_gid,&has_uid,&has_gid) == false) {
                 if(has_gid == false)
                     if(has_uid == false)
-                        lint_type=TYPE_BADUGID;
+                        RmFileype=TYPE_BADUGID;
                     else
-                        lint_type=TYPE_BADGID;
+                        RmFileype=TYPE_BADGID;
                 else if (has_uid=false)
-                    lint_type=TYPE_BADUID;
+                    RmFileype=TYPE_BADUID;
             }
         } else if(set->doldtmp) {
             /* This checks only for *~ and .*.swp */
@@ -67,7 +67,7 @@ static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
                 }
                 if(!stat(cpy, &stat_buf)) {
                     if(mtime.tv_sec - stat_buf.st_mtime >= set->oldtmpdata) {
-                        lint_type=TYPE_OTMP;
+                        RmFileype=TYPE_OTMP;
                     }
                 }
                 if(cpy) {
@@ -76,22 +76,22 @@ static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
             }
         } else if(set->nonstripped) {
             if(check_binary_to_be_stripped(ent->fts_path)) {
-                lint_type = TYPE_NBIN;
+                RmFileype = TYPE_NBIN;
             }
         }
 
     }
 
-    if (lint_type) {
-        info("Adding lint type %d %s\n",lint_type, ent->fts_path);
+    if (RmFileype) {
+        info("Adding lint type %d %s\n",RmFileype, ent->fts_path);
         list_append(ent->fts_path, ent->fts_statp->st_size ,
                     mtime, ent->fts_statp->st_dev,
-                    ent->fts_statp->st_ino, lint_type, is_ppath, pnum );
+                    ent->fts_statp->st_ino, RmFileype, is_ppath, pnum );
     } else {
 
     }
 
-    if (lint_type==TYPE_DUPE_CANDIDATE) {
+    if (RmFileype==TYPE_DUPE_CANDIDATE) {
         switch (ent->fts_info) {
         case FTS_F:         /* regular file */
         case FTS_NSOK:      /* no stat(2) requested */

@@ -41,7 +41,7 @@ RmFileList * list_begin(void) {
     return list;
 }
 
-RmFile * rm_file_new(const char * path, struct stat *buf, RmFileType type, bool is_ppath, unsigned pnum) {
+RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum) {
     RmFile *self = g_new0(RmFile, 1);
 
     self->path = g_strdup(path);
@@ -192,23 +192,57 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
     return removed_cnt;
 }
 
-void rm_file_list_sort_groups(RmFileList *list, bool find_hardlinked_dupes) {
+
+static void rm_file_list_count_pref_paths(GQueue *group, int *num_pref, int *num_nonpref) {
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile * file = iter->data;
+        if(file->in_ppath) {
+            *num_pref = *num_pref + 1;
+        } else {
+            *num_nonpref = *num_nonpref + 1;
+        }
+    }
+}
+
+gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings) {
+    gsize removed_cnt = 0;
     GSequenceIter * iter = rm_file_list_get_iter(list);
     while(!g_sequence_iter_is_end(iter)) {
         GQueue *queue = g_sequence_get(iter);
 
-        if(queue->length < 2) {
-            /* Not important for duplicate finding
-             * We remove it therefore.  */
+        int num_pref = 0, num_nonpref = 0;
+        rm_file_list_count_pref_paths(queue, &num_pref, &num_nonpref);
+
+        /* Not important for duplicate finding, remove the isle */
+        if (
+            (queue->length < 2) || 
+            ((settings->must_match_original) && (num_pref == 0)) ||
+            ((settings->keep_all_originals) && (num_nonpref == 0) )
+        ) {
             GSequenceIter * old_iter = iter;
             iter = g_sequence_iter_next(iter);
             g_sequence_remove(old_iter);
         } else {
             g_queue_sort(queue, rm_file_list_cmp_file, NULL);
-            rm_file_list_remove_double_paths(list, queue, find_hardlinked_dupes);
+            removed_cnt += rm_file_list_remove_double_paths(
+                list, queue, settings->find_hardlinked_dupes
+            );
             iter = g_sequence_iter_next(iter);
         }
     }
+
+    return removed_cnt;
+}
+
+gsize rm_file_list_len(RmFileList *list) {
+    return g_sequence_get_length(list->size_groups);
+}
+
+gulong rm_file_list_byte_size(GQueue *group) {
+    if(group && group->head) {
+        return ((RmFile *)group->head)->fsize * group->length;
+    }
+    return 0;
 }
 
 #if 0 /* Testcase */

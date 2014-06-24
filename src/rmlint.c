@@ -743,15 +743,6 @@ void die(int status) {
     }
 }
 
-/* ------------------------------------------------------------- */
-
-/* Sort criteria for sizesort */
-static long cmp_sz(RmFile *a, RmFile *b) {
-    return a->fsize - b->fsize;
-}
-
-/* ------------------------------------------------------------- */
-
 char rmlint_echo_settings(RmSettings *settings) {
     char confirm;
     int i=0;
@@ -960,7 +951,6 @@ int rmlint_main(void) {
             rmlint_init();
         }
         md5c_c_init();
-        list_c_init();
         filt_c_init();
         mode_c_init();
         linttests_c_init();
@@ -1000,9 +990,6 @@ int rmlint_main(void) {
          * The filter alorithms requires the list to be size-sorted,
          * so it can easily filter unique sizes, and build "groups"
          * */
-        info("Now mergesorting list based on filesize... ");
-        list_sort(list_begin(),cmp_sz);
-        info("done.\n");
         info("Now finding easy lint..%c",set->verbosity > 4 ? '.' : '\n');
         /* Apply the prefilter and outsort inique sizes */
         start_processing(list_begin());

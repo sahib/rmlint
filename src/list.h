@@ -28,7 +28,7 @@
 #include "defs.h"
 
 
-RmFile * rm_file_new(const char * path, struct stat *buf, RmFileType type, bool is_ppath, unsigned pnum);
+RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum);
 
 /**
  * @brief Free the memory allocated by rm_file_new()
@@ -100,6 +100,8 @@ void rm_file_list_clear(RmFileList *list, GSequenceIter * iter);
  */
 void rm_file_list_remove(RmFileList *list, RmFile *file);
 
-void rm_file_list_sort_groups(RmFileList *list, bool find_hardlinked_dupes);
+gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings);
+gsize rm_file_list_len(RmFileList *list);
+gulong rm_file_list_byte_size(GQueue *group);
 
 #endif /* RM_LIST_H */

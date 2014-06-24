@@ -20,14 +20,13 @@
 **/
 
 
-#pragma once
-#ifndef LIST_H
-#define LIST_H
+#ifndef MODE_H
+#define MODE_H
 
 #include "defs.h"
 
 /* Mostly used by filter.c  */
-bool process_doop_groop(file_group *grp);
+bool process_doop_groop(GQueue *group);
 void init_filehandler(void);
 void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig);
 nuint_t get_dupcounter();

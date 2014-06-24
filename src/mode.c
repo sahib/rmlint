@@ -536,7 +536,7 @@ void init_filehandler(void) {
 bool print_newline = true;
 
 
-bool process_doop_groop(file_group *grp) {
+bool process_doop_groop(GQueue *group) {
     /* This does the final processing on a dupe group. All required   */
     /* comparisons have been done (including paranoid if required) so */
     /* now it's just a matter of deciding which originals to keep and */
@@ -546,41 +546,41 @@ bool process_doop_groop(file_group *grp) {
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
 
-
-    RmFile *i = grp->grp_stp;
+    GList *i = group->head;
     bool tagged_original = false;
     RmFile *original;
 
     while(i) {
-        if ( ( (i->in_ppath) && (set->keep_all_originals) ) ||
-                /* tag all originals*/
-                ( (i->in_ppath) && (!tagged_original) ) )
-            /*tag first original only*/
-        {
-            i->filter = false;
+        RmFile *fi = i->data;
+        if (
+            ((fi->in_ppath) && (set->keep_all_originals)) ||
+            ((fi->in_ppath) && (!tagged_original))
+        ) {
+            fi->filter = false;
             if (!tagged_original) {
                 tagged_original = true;
-                original = i;
+                original = fi;
             }
         } else {
             /*tag as duplicate*/
-            i->filter = true;
+            fi->filter = true;
         }
         i = i->next;
     }
     if (!tagged_original) {
         /* tag first file as the original*/
-        grp->grp_stp->filter = false;
-        original = grp->grp_stp;
+        original = group->head->data;
+        original->filter = false;
     }
 
     /* Make sure no group is printed / logged at the same time (== chaos) */
     pthread_mutex_lock(&mutex_printage);
 
     /* Now do the actual printout.. */
-    i = grp->grp_stp;
+    i = group->head;
     while(i) {
-        if(!i->filter) {
+        RmFile *fi = i->data;
+        if(!fi->filter) {
             /* original(s) of a duplicate set*/
             if((set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1) {
                 if(print_newline) {
@@ -588,19 +588,20 @@ bool process_doop_groop(file_group *grp) {
                     print_newline = false;
                 }
                 if(set->mode != 4) {
-                    error(GRE"   ls "NCO"%s\n",i->path);
+                    error(GRE"   ls "NCO"%s\n",fi->path);
                 }
             }
-            write_to_log(i, true, NULL);
-            handle_item(NULL, i);
+            write_to_log(fi, true, NULL);
+            handle_item(NULL, fi);
             /* Subtract size of the original , so we can gather it later */
-            grp->size -= i->fsize;
         }
         i = i->next;
     }
-    i = grp->grp_stp;
+
+    i = group->head;
     while(i) {
-        if(i->filter) {
+        RmFile *fi = i->data;
+        if(fi->filter) {
             /* duplicates(s) of a duplicate set*/
             if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path)) {
                 if(set->paranoid) {
@@ -610,15 +611,15 @@ bool process_doop_groop(file_group *grp) {
                     warning(YEL"   %-1s "NCO,"rm");
                 }
                 if(set->verbosity > 1) {
-                    error("%s\n",i->path);
+                    error("%s\n",fi->path);
                 } else {
-                    error("   rm %s\n",i->path);
+                    error("   rm %s\n",fi->path);
                 }
             }
-            write_to_log(i, false, original);
+            write_to_log(fi, false, original);
             set_dupcounter(get_dupcounter()+1);
-            add_total_lint(i->fsize);
-            if(handle_item(i,original)) {
+            add_total_lint(fi->fsize);
+            if(handle_item(fi,original)) {
                 pthread_mutex_unlock(&mutex_printage);
                 return true;
             }
@@ -628,5 +629,3 @@ bool process_doop_groop(file_group *grp) {
     pthread_mutex_unlock(&mutex_printage);
     return false;
 }
-
-/* ------------------------------------------------------------- */

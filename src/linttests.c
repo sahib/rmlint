@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -69,7 +70,7 @@ char * rmlint_basename(char *filename) {
 
 /* ------------------------------------------------------------- */
 /* checks uid and gid; returns 0 if both ok, else TYPE_ corresponding *
- * to lint_t->filter types                                            */
+ * to RmFile->filter types                                            */
 int uid_gid_check(FTSENT *fts_ent, RmSettings *settings) {
     if (settings->findbadids) {
         bool has_gid, has_uid;

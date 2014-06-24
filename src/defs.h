@@ -88,11 +88,7 @@ From man 2 open:
   - Linus Torvalds
 
 */
-#ifdef O_CLOEXEC
-#define MD5_FILE_FLAGS  (O_RDONLY | O_CLOEXEC)
-#else
 #define MD5_FILE_FLAGS  (O_RDONLY)
-#endif
 
 /* ------------------------------------------------------------- */
 
@@ -107,10 +103,6 @@ From man 2 open:
 /** nuint_t = normal unsigned integer type :-) **/
 typedef uint64_t nuint_t;
 
-/* I can haz bool? */
-/*#typedef char bool;
-#define false ( 0)
-#define true  (!0)*/
 
 /* ------------------------------------------------------------- */
 
@@ -135,7 +127,7 @@ typedef uint64_t nuint_t;
 /* ------------------------------------------------------------- */
 
 /* types of lint */
-enum {
+typedef enum RmLintType {
     TYPE_DUPE_CANDIDATE = 1,
     TYPE_BLNK = 3,
     TYPE_OTMP,
@@ -147,7 +139,7 @@ enum {
     TYPE_BADUID,
     TYPE_BADGID,
     TYPE_BADUGID
-} LintType;
+} RmLintType;
 
 /* all available settings see rmlint -h */
 typedef struct {
@@ -189,11 +181,6 @@ typedef struct {
     nuint_t oldtmpdata;
 } RmSettings;
 
-typedef enum RmFileType {
-    RM_FILE_TYPE_UNKNOWN = 0,
-    RM_FILE_TYPE_DUPLICATE = 1
-} RmFileType;
-
 typedef struct RmFile {
     unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
     unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
@@ -205,7 +192,7 @@ typedef struct RmFile {
     guint64 fsize;                       /* Size of the file (bytes) */
     time_t mtime;                        /* File modification date/time */
     bool filter;                         /* this is used in calculations  */
-    RmFileType dupflag;                  /* Is the file marked as duplicate? */
+    RmLintType dupflag;                  /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
     ino_t node;
@@ -214,18 +201,6 @@ typedef struct RmFile {
     GList *list_node;
     GQueue *file_group;
 } RmFile;
-
-
-/* file_group; models a 'sublist' */
-typedef struct {
-    /* Start and end pointer of a 'group' */
-    RmFile *grp_stp, *grp_enp;
-
-    /* elems in this list and total size in bytes */
-    nuint_t len, size;
-
-} file_group;
-
 
 typedef struct {
     unsigned long gid;

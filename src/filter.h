@@ -23,7 +23,7 @@
 #ifndef PROGRESS_H
 #define PROGRESS_H
 
-
+#include "list.h"
 
 
 /* ------------------------------------------------------------- */
@@ -37,8 +37,8 @@ int check_binary_to_be_stripped(const char *path);
 int  regfilter(const char* input, const char *pattern);
 int  recurse_dir(const char *path);
 
-void start_processing(RmFile *b);
+void start_processing(RmFileList *list);
 void filt_c_init(void);
-void add_total_lint(nuint_t lint_to_add);
+void add_total_lint(nuint_t RmFileo_add);
 
 #endif
