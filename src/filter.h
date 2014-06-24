@@ -38,6 +38,6 @@ int  recurse_dir(const char *path);
 
 void start_processing(RmFileList *list);
 void filt_c_init(void);
-void add_total_lint(nuint_t RmFileo_add);
+void add_total_lint(guint64 RmFileo_add);
 
 #endif

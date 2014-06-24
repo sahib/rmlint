@@ -56,7 +56,7 @@ bool do_exit = false,
      ex_stat = false,
      abort_n = true;
 
-nuint_t total_files = 0;
+guint64 total_files = 0;
 
 /* Default commands */
 const char *script_name = "rmlint";
@@ -81,7 +81,7 @@ void rmlint_init(void) {
 
 /* ------------------------------------------------------------- */
 
-nuint_t get_totalfiles(void) {
+guint64 get_totalfiles(void) {
     return total_files;
 }
 

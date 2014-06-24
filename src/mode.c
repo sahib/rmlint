@@ -45,14 +45,14 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
-nuint_t dup_counter=0;
-nuint_t get_dupcounter() {
+guint64 dup_counter=0;
+guint64 get_dupcounter() {
     return dup_counter;
 }
 
 /* ------------------------------------------------------------- */
 
-void set_dupcounter(nuint_t new) {
+void set_dupcounter(guint64 new) {
     dup_counter = new;
 }
 
@@ -542,7 +542,7 @@ bool process_doop_groop(GQueue *group) {
 
     GList *i = group->head;
     bool tagged_original = false;
-    RmFile *original;
+    RmFile *original = NULL;
 
     while(i) {
         RmFile *fi = i->data;

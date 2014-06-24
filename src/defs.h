@@ -28,27 +28,13 @@
 #include <stdbool.h>
 #include <glib.h>
 
-/* Use colored output? Note: there's also a -Bb option */
-#define USE_COLOR 1
-
-#if USE_COLOR
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
 #define NCO "\x1b[0m"
 #define GRE "\x1b[32;01m"
 #define BLU "\x1b[34;01m"
-#endif
-
-#if !USE_COLOR
-#define RED ""
-#define YEL ""
-#define NCO ""
-#define GRE ""
-#define BLU ""
-#endif
 
 /* not supposed to be changed */
-#define ABS(a)  (((a) < 0) ? -(a) : (a))
 #define MD5_LEN 16
 
 /* Which scheduler to take
@@ -73,39 +59,25 @@
 /*
 0 = fread only
 1 = mmap only
-      -1 = autochoice (which is best mostly)
-     */
+-1 = autochoice (which is best mostly)
 
-/* Do not use O_DIRECT! read() will do weird things */
-/*
+Do not use O_DIRECT! read() will do weird things 
 From man 2 open:
 
  "The thing that has always disturbed me about O_DIRECT is that the whole interface is just stupid,
   and was probably designed by a deranged monkey on some serious mind-controlling substances."
-  - Linus Torvalds
-
+  -- Linus Torvalds
 */
+
 #define MD5_FILE_FLAGS  (O_RDONLY)
 
 /* ------------------------------------------------------------- */
 
-#define MMAP_LIMIT      (MD5_MTHREAD_SIZE << 4)
+#define MMAP_LIMIT (MD5_MTHREAD_SIZE << 4)
 
 /* ------------------------------------------------------------- */
 
 #define MD5_FPSIZE_FORM(X) sqrt(X / MD5_FP_PERCENT) + 1
-
-/* ------------------------------------------------------------- */
-
-/** nuint_t = normal unsigned integer type :-) **/
-typedef uint64_t nuint_t;
-
-/* ------------------------------------------------------------- */
-
-/* Investigate directories by a depth first algorithm instead of (mostly) random access */
-/* found no advantage in depth first + it's just a paramter of ntwf() */
-/* Just have it here for convienience */
-#define USE_DEPTH_FIRST 0
 
 /* Reads a short sequence of bytes in the middle of a file, while doing fingerprints */
 /* This almost cost nothing, but helps a lot with lots of similiar datasets */
@@ -172,9 +144,9 @@ typedef struct RmSettings {
     char invert_original;      /*NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
     char find_hardlinked_dupes;/*NEW - if set, will also search for hardlinked duplicates*/
     char skip_confirm;         /*NEW - if set, bypasses user confirmation of input settings*/
-    nuint_t threads;
+    guint64 threads;
     short depth;
-    nuint_t oldtmpdata;
+    guint64 oldtmpdata;
 } RmSettings;
 
 typedef struct RmFile {
@@ -199,8 +171,7 @@ typedef struct RmFile {
 } RmFile;
 
 typedef struct {
-    unsigned long gid;
-    unsigned long uid;
+    gulong gid, uid;
 } UserGroupList;
 
 #endif

@@ -49,12 +49,12 @@
 //#include "useridcheck.h"
 
 /* global vars, but initialized by filt_c_init() */
-nuint_t dircount, dbase_ctr;
+guint64 dircount, dbase_ctr;
 bool dir_done, db_done;
 
-nuint_t total_lint = 0;
+guint64 total_lint = 0;
 
-void add_total_lint(nuint_t RmFileo_add) {
+void add_total_lint(guint64 RmFileo_add) {
     total_lint += RmFileo_add;
 }
 
@@ -275,7 +275,7 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
             result = 0;
         }
     } else { /* use fread() */
-        nuint_t blocksize = MD5_IO_BLOCKSIZE/2;
+        guint64 blocksize = MD5_IO_BLOCKSIZE/2;
         char * read_buf_a = alloca(blocksize);
         char * read_buf_b = alloca(blocksize);
         int read_a=-1,read_b=-1;
@@ -328,7 +328,7 @@ static void build_fingerprints (GQueue *group) {
     }
 
     RmFile *file = group->head->data;
-    nuint_t grp_sz;
+    guint64 grp_sz;
 
     /* The size read in to build a fingerprint */
     grp_sz = MD5_FPSIZE_FORM(file->fsize);
@@ -359,7 +359,7 @@ static void build_checksums(GQueue *group) {
         memcpy(group_copy, group, sizeof(GQueue));
         cksum_cb((void *) group_copy);
     } else { /* split group in subgroups and start a seperate thread for each */
-        nuint_t  sz = 0;
+        guint64  sz = 0;
         GList * ptr, *lst;
         ptr = lst = group->head;
 
@@ -543,8 +543,8 @@ static void* scheduler_cb(void *gfp) {
 /* ------------------------------------------------------------- */
 
 /* Joins the threads launched by scheduler */
-static void scheduler_jointhreads(pthread_t *tt, nuint_t n) {
-    nuint_t ii = 0;
+static void scheduler_jointhreads(pthread_t *tt, guint64 n) {
+    guint64 ii = 0;
     for(ii=0; ii < n; ii++) {
         if(pthread_join(tt[ii],NULL)) {
             perror(RED"ERROR: "NCO"pthread_join in scheduler()");
@@ -593,7 +593,7 @@ static void start_scheduler(RmFileList *list) {
 }
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
-static void size_to_human_readable(nuint_t num, char *in) {
+static void size_to_human_readable(guint64 num, char *in) {
     if(num < 1024 / 2) {
         sprintf(in,"%ld B",(unsigned long)num);
     } else if(num < 1048576) {
@@ -748,7 +748,7 @@ void start_processing(RmFileList *list) {
     //            emptylist;
     char lintbuf[128];
     // char suspbuf[128];
-    //nuint_t spelen       = 0,
+    //guint64 spelen       = 0,
     //        rem_counter  = 0,
     //        suspicious   = 0,
     //        path_doubles = 0;
@@ -770,7 +770,7 @@ void start_processing(RmFileList *list) {
     }
 
     GSequenceIter * first = rm_file_list_get_iter(list);
-    rm_file_list_sort_group(list, first, (GCompareDataFunc)cmp_sort_dupID, NULL);
+    rm_file_list_sort_group(first, (GCompareDataFunc)cmp_sort_dupID, NULL);
     GQueue *first_group = g_sequence_get(first);
     
     if(rm_file_list_byte_size(first_group) == 0) {
@@ -782,20 +782,12 @@ void start_processing(RmFileList *list) {
     info("done.\n");
 
     error("\n");
-    // TODO
-    // if(set->searchdup == 0) {
-    //     nuint_t i = 0;
-    //     /* rmlint was originally supposed to find duplicates only
-    //        So we have to free list that whould have been used for
-    //        dup search before dieing */
-    //     for(; i < spelen; i++) {
-    //         list_clear(fglist[i].grp_stp);
-    //     }
-    //     if(fglist) {
-    //         free(fglist);
-    //     }
-    //     die(0);
-    // }
+    if(set->searchdup == 0) {
+        /* rmlint was originally supposed to find duplicates only
+           So we have to free list that whould have been used for
+           dup search before dieing */
+        die(0);
+    }
 
     info("\nNow attempting to find duplicates. This may take a while...\n");
     info("Now removing files with unique sizes from list...");  /*actually this was done already above while building the list*/

@@ -43,7 +43,7 @@ void warning(const char* format, ...);
 char *strdup_printf(const char *format, ...);
 int  systemf(const char* format, ...);
 int  get_cpindex(void);
-nuint_t get_totalfiles(void);
+guint64 get_totalfiles(void);
 bool get_doldtmp(void);
 
 #endif

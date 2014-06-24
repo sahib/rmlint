@@ -91,37 +91,6 @@ int uid_gid_check(FTSENT *fts_ent, RmSettings *settings) {
 
 bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings) {
     bool is_otmp=false;
-    if (settings->doldtmp) {
-        /* This checks only for *~ and .*.swp */
-        size_t len = strlen(fts_ent->fts_path);
-        if(fts_ent->fts_path[len-1] == '~' ||
-                (len>3 && fts_ent->fts_path[len-1] == 'p'
-                 &&fts_ent->fts_path[len-2] == 'w' &&fts_ent->fts_path[len-3] == 's'
-                 &&fts_ent->fts_path[len-4] == '.')) {
-            char *cpy = NULL;
-            struct stat stat_buf;
-            if(fts_ent->fts_path[len - 1] == '~') {
-                cpy = strndup(fts_ent->fts_path,len-1);
-            } else {
-                char * p = strrchr(fts_ent->fts_path,'/');
-                size_t p_len = p-fts_ent->fts_path;
-                char * front = alloca(p_len+1);
-                memset(front, '\0', p_len+1);
-                strncpy(front, fts_ent->fts_path, p_len);
-                cpy = strdup_printf("%s/%s",front,p+2);
-                cpy[strlen(cpy)-4] = 0;
-            }
-            if(!stat(cpy, &stat_buf)) {
-                if((fts_ent->fts_statp->st_mtim.tv_sec - stat_buf.st_mtime) >= (unsigned)settings->oldtmpdata) {
-                    is_otmp = true;
-                }
-            }
-            if(cpy) {
-                free(cpy);
-            }
-        }
-
-    }
     return is_otmp;
 }
 
@@ -181,19 +150,5 @@ bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
 
 /* Cheap function to check if c is a char in str */
 bool junkinbasename(char *path, RmSettings * settings) {
-    if(settings->junk_chars != NULL ) {
-        int i = 0, j = 0;
-        char * base_name = rmlint_basename(path);
-        for(; settings->junk_chars[i]; i++) {
-            for(j=0; base_name[j]; j++) {
-                if(base_name[j] == settings->junk_chars[i]) {
-                    return true;
-                }
-            }
-        }
-    }
     return false;
 }
-
-/* ------------------------------------------------------------- */
-

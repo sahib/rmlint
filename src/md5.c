@@ -83,22 +83,22 @@ static unsigned char PADDING[64] = {
 /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4 */
 /* Rotation is separate from addition to prevent recomputation */
 #define FF(a, b, c, d, x, s, ac) \
-    {(a) += F ((b), (c), (d)) + (x) + (nuint_t)(ac); \
+    {(a) += F ((b), (c), (d)) + (x) + (guint64)(ac); \
         (a) = ROTATE_LEFT ((a), (s)); \
         (a) += (b); \
     }
 #define GG(a, b, c, d, x, s, ac) \
-    {(a) += G ((b), (c), (d)) + (x) + (nuint_t)(ac); \
+    {(a) += G ((b), (c), (d)) + (x) + (guint64)(ac); \
         (a) = ROTATE_LEFT ((a), (s)); \
         (a) += (b); \
     }
 #define HH(a, b, c, d, x, s, ac) \
-    {(a) += H ((b), (c), (d)) + (x) + (nuint_t)(ac); \
+    {(a) += H ((b), (c), (d)) + (x) + (guint64)(ac); \
         (a) = ROTATE_LEFT ((a), (s)); \
         (a) += (b); \
     }
 #define II(a, b, c, d, x, s, ac) \
-    {(a) += I ((b), (c), (d)) + (x) + (nuint_t)(ac); \
+    {(a) += I ((b), (c), (d)) + (x) + (guint64)(ac); \
         (a) = ROTATE_LEFT ((a), (s)); \
         (a) += (b); \
     }
@@ -106,13 +106,13 @@ static unsigned char PADDING[64] = {
 static void MD5Init(mdContext)
 MD5_CTX *mdContext;
 {
-    mdContext->i[0] = mdContext->i[1] = (nuint_t)0;
+    mdContext->i[0] = mdContext->i[1] = (guint64)0;
     /* Load magic initialization constants.
      */
-    mdContext->buf[0] = (nuint_t)0x67452301;
-    mdContext->buf[1] = (nuint_t)0xefcdab89;
-    mdContext->buf[2] = (nuint_t)0x98badcfe;
-    mdContext->buf[3] = (nuint_t)0x10325476;
+    mdContext->buf[0] = (guint64)0x67452301;
+    mdContext->buf[1] = (guint64)0xefcdab89;
+    mdContext->buf[2] = (guint64)0x98badcfe;
+    mdContext->buf[3] = (guint64)0x10325476;
 }
 
 static void MD5Update(mdContext, inBuf, inLen)
@@ -120,27 +120,27 @@ MD5_CTX *mdContext;
 unsigned char *inBuf;
 unsigned int inLen;
 {
-    nuint_t in[16];
+    guint64 in[16];
     int mdi;
     unsigned int i, ii;
     /* compute number of bytes mod 64 */
     mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
     /* update number of bits */
-    if((mdContext->i[0] + ((nuint_t)inLen << 3)) < mdContext->i[0]) {
+    if((mdContext->i[0] + ((guint64)inLen << 3)) < mdContext->i[0]) {
         mdContext->i[1]++;
     }
-    mdContext->i[0] += ((nuint_t)inLen << 3);
-    mdContext->i[1] += ((nuint_t)inLen >> 29);
+    mdContext->i[0] += ((guint64)inLen << 3);
+    mdContext->i[1] += ((guint64)inLen >> 29);
     while(inLen--) {
         /* add new character to buffer, increment mdi */
         mdContext->in[mdi++] = *inBuf++;
         /* transform if necessary */
         if(mdi == 0x40) {
             for(i = 0, ii = 0; i < 16; i++, ii += 4)
-                in[i] = (((nuint_t)mdContext->in[ii+3]) << 24) |
-                        (((nuint_t)mdContext->in[ii+2]) << 16) |
-                        (((nuint_t)mdContext->in[ii+1]) << 8) |
-                        ((nuint_t)mdContext->in[ii]);
+                in[i] = (((guint64)mdContext->in[ii+3]) << 24) |
+                        (((guint64)mdContext->in[ii+2]) << 16) |
+                        (((guint64)mdContext->in[ii+1]) << 8) |
+                        ((guint64)mdContext->in[ii]);
             Transform(mdContext->buf, in);
             mdi = 0;
         }
@@ -150,7 +150,7 @@ unsigned int inLen;
 static void MD5Final(mdContext)
 MD5_CTX *mdContext;
 {
-    nuint_t in[16];
+    guint64 in[16];
     int mdi;
     unsigned int i, ii;
     unsigned int padLen;
@@ -164,10 +164,10 @@ MD5_CTX *mdContext;
     MD5Update(mdContext, PADDING, padLen);
     /* append length in bits and transform */
     for(i = 0, ii = 0; i < 14; i++, ii += 4)
-        in[i] = (((nuint_t)mdContext->in[ii+3]) << 24) |
-                (((nuint_t)mdContext->in[ii+2]) << 16) |
-                (((nuint_t)mdContext->in[ii+1]) << 8) |
-                ((nuint_t)mdContext->in[ii]);
+        in[i] = (((guint64)mdContext->in[ii+3]) << 24) |
+                (((guint64)mdContext->in[ii+2]) << 16) |
+                (((guint64)mdContext->in[ii+1]) << 8) |
+                ((guint64)mdContext->in[ii]);
     Transform(mdContext->buf, in);
     /* store buffer in digest */
     for(i = 0, ii = 0; i < 4; i++, ii += 4) {
@@ -184,10 +184,10 @@ MD5_CTX *mdContext;
 /* Basic MD5 step. Transform buf based on in.
  */
 static void Transform(buf, in)
-nuint_t *buf;
-nuint_t *in;
+guint64 *buf;
+guint64 *in;
 {
-    nuint_t a = buf[0], b = buf[1], c = buf[2], d = buf[3];
+    guint64 a = buf[0], b = buf[1], c = buf[2], d = buf[3];
     /* Round 1 */
 #define S11 7
 #define S12 12
@@ -280,10 +280,6 @@ nuint_t *in;
 
 /* ------------------------------------------------------------- */
 
-/*********************************************/
-/** Original md5.c modified from now on ~CP **/
-/*********************************************/
-
 /* Prints a md5digest in human readable representation */
 void MDPrintArr(unsigned char *digest) {
     int i;
@@ -302,24 +298,18 @@ void MDPrintArr(unsigned char *digest) {
 /* ------------------------------------------------------------- */
 
 /* Mutexes to (pseudo-)"serialize" IO (avoid unnecessary jumping) */
-pthread_mutex_t mutex_fp_IO = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex_fp_IO = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
 
 /* Some sort of 32/64 bit comparasion */
 bool large_range_pointers = sizeof(int *) > 4;
-
-/* Some init call */
-void md5c_c_init(void) {
-    pthread_mutex_init(&mutex_ck_IO,NULL);
-    pthread_mutex_init(&mutex_fp_IO,NULL);
-}
 
 void md5_file_mmap(RmFile *file) {
     int inFile=0;
     MD5_CTX mdContext;
     unsigned char *f_map=NULL;
     /* Don't read the $already_read amount of bytes read by md5_fingerprint */
-    nuint_t already_read = MD5_FPSIZE_FORM(file->fsize);
+    guint64 already_read = MD5_FPSIZE_FORM(file->fsize);
     already_read = already_read ?  already_read - 1 : 0;
     /* This is some rather seldom case, but skip checksum building here */
     if(file->fsize <= (already_read*2))
@@ -332,7 +322,7 @@ void md5_file_mmap(RmFile *file) {
     MD5Init(&mdContext);
     f_map = mmap(NULL, (size_t)file->fsize, PROT_READ, MAP_PRIVATE, inFile, 0);
     if(f_map != MAP_FAILED) {
-        nuint_t f_offset = already_read;
+        guint64 f_offset = already_read;
         if(madvise(f_map,file->fsize - already_read, MADV_WILLNEED) == -1) {
             perror("madvise");
         }
@@ -364,8 +354,8 @@ void md5_file_fread(RmFile *file) {
     /* tmp buffer */
     unsigned char *data=NULL;
     /* Don't read the $already_read amount of bytes read by md5_fingerprint */
-    nuint_t already_read = 0;
-    nuint_t actual_size  = 0;
+    guint64 already_read = 0;
+    guint64 actual_size  = 0;
     already_read = MD5_FPSIZE_FORM(file->fsize);
     already_read = already_read ?  already_read - 1 : 0;
 
@@ -421,7 +411,7 @@ void md5_file_fread(RmFile *file) {
    the 8 byte are stored in raw form
 */
 
-void md5_fingerprint_mmap(RmFile *file, const nuint_t readsize) {
+void md5_fingerprint_mmap(RmFile *file, const guint64 readsize) {
     int bytes = 0;
     int pF = open(file->path, MD5_FILE_FLAGS);
     unsigned char *f_map = NULL;
@@ -457,14 +447,13 @@ void md5_fingerprint_mmap(RmFile *file, const nuint_t readsize) {
             memcpy(file->fp[1],con.digest,MD5_LEN);
         }
     }
-    /* kthxbai */
     close(pF);
     munmap(f_map,file->fsize);
 }
 
 /* ------------------------------ */
 
-void md5_fingerprint_fread(RmFile *file, const nuint_t readsize) {
+void md5_fingerprint_fread(RmFile *file, const guint64 readsize) {
     int bytes = 0;
     bool unlock = true;
     FILE *pF = fopen(file->path, "re");
@@ -521,13 +510,12 @@ void md5_fingerprint_fread(RmFile *file, const nuint_t readsize) {
         pthread_mutex_unlock(&mutex_fp_IO);
     }
 #endif
-    /* kthxbai */
     fclose(pF);
 }
 
 /* ------------------------------ */
 
-void md5_fingerprint(RmFile *file, const nuint_t readsize) {
+void md5_fingerprint(RmFile *file, const guint64 readsize) {
 #if MD5_USE_MMAP == -1
     if((file->fsize > MMAP_LIMIT) || file->fsize < MD5_IO_BLOCKSIZE>>1) {
         md5_fingerprint_fread(file,readsize);

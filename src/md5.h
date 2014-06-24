@@ -46,8 +46,8 @@
 
 /* Data structure for MD5 (Message Digest) computation */
 typedef struct {
-    nuint_t i[2];                   /* number of _bits_ handled mod 2^64 */
-    nuint_t buf[4];                                    /* scratch buffer */
+    guint64 i[2];                   /* number of _bits_ handled mod 2^64 */
+    guint64 buf[4];                                    /* scratch buffer */
     unsigned char in[64];                              /* input buffer */
     unsigned char digest[16];     /* actual digest after MD5Final call */
 } MD5_CTX;
@@ -56,7 +56,7 @@ typedef struct {
 
 /* Additional functions not in original md5.c */
 void MDPrintArr(unsigned char *digest);
-void md5_fingerprint(RmFile *file, const nuint_t readsize);
+void md5_fingerprint(RmFile *file, const guint64 readsize);
 
 void md5_file(RmFile* file);
 void md5c_c_init(void);

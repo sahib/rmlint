@@ -79,19 +79,16 @@ GSequenceIter *rm_file_list_get_iter(RmFileList *list);
 void rm_file_list_append(RmFileList * list, RmFile * file);
 
 /**
- * @brief Clear a sub
- *
- * You can iterate over the subgroups like this:
- *
- * for(int i = 0; i < list->n_children; ++i) {
- *     rm_file_list_clear(list, i);
- * }
+ * @brief Clear a subgroup.
  *
  * @param child  The index of the group to remove.
  */
 void rm_file_list_clear(GSequenceIter * iter);
 
-void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDataFunc func, gpointer user_data);
+/**
+ * @brief Sort a single group after a user-defined criteria.
+ */
+void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpointer user_data);
 
 /**
  * @brief Remove a single file, possibly adjusting groups.
@@ -100,8 +97,30 @@ void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDat
  */
 void rm_file_list_remove(RmFileList *list, RmFile *file);
 
+/** 
+ * @brief Sort and clean all groups. 
+ *
+ * The following actions are done:
+ * - Subgroups with only one element are deleted.
+ * - If the files in the group lie in a original path and
+ *   --must-match-original is set, the group is removed.
+ * - If the files in the group lie in a non-original path and
+ *   --keep-all-originals is set, the group is removed.
+ *
+ * All surviving groups are sorted by inode and device id.
+ *
+ * @returns: The number of filtered files.
+ */ 
 gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings);
+
+/**
+ * @brief: Return the number of groups in the list.
+ */
 gsize rm_file_list_len(RmFileList *list);
+
+/**
+ * @brief: Return the number of bytes the files in this group have together.
+ */
 gulong rm_file_list_byte_size(GQueue *group);
 
 #endif /* RM_LIST_H */

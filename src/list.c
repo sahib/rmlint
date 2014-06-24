@@ -245,7 +245,7 @@ gulong rm_file_list_byte_size(GQueue *group) {
     return 0;
 }
 
-void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDataFunc func, gpointer user_data) {
+void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpointer user_data) {
     GQueue * queue = g_sequence_get(group);
     g_queue_sort(queue, func, user_data);
 }
