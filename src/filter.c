@@ -22,7 +22,6 @@
 /* Needed for nftw() */
 #define _XOPEN_SOURCE 500
 
-
 #include <sys/mman.h>
 #include <fcntl.h>
 
@@ -53,13 +52,11 @@
 nuint_t dircount, dbase_ctr;
 bool dir_done, db_done;
 
-
 nuint_t total_lint = 0;
 
 void add_total_lint(nuint_t RmFileo_add) {
     total_lint += RmFileo_add;
 }
-
 
 /* ------------------------------------------------------------- */
 
@@ -103,7 +100,6 @@ static void interrupt(int p) {
 }
 
 /* ------------------------------------------------------------- */
-
 
 /*
  * grep the string "string" (basename of input) to see if it
@@ -150,7 +146,7 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
         return a->in_ppath - b->in_ppath;
     else {
         int i=0;
-        gsize sort_criteria_len = strlen(set->sort_criteria);
+        int sort_criteria_len = strlen(set->sort_criteria);
         while (i < sort_criteria_len) {
             long cmp=0;
             switch (set->sort_criteria[i]) {
@@ -311,7 +307,6 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
 
 /* ------------------------------------------------------------- */
 
-
 /* Callback from build_checksums */
 static void *cksum_cb(void * vp) {
     GQueue *group = vp;
@@ -357,6 +352,7 @@ static void build_checksums(GQueue *group) {
     }
 
     gulong byte_size = rm_file_list_byte_size(group);
+
     if(set->threads == 1 ||  byte_size < (2 * MD5_MTHREAD_SIZE)) {
         /* Just loop through this group and built the checksum */
         GQueue * group_copy = g_new0(GQueue, 1);
@@ -364,7 +360,7 @@ static void build_checksums(GQueue *group) {
         cksum_cb((void *) group_copy);
     } else { /* split group in subgroups and start a seperate thread for each */
         nuint_t  sz = 0;
-        GList * ptr, *lst; 
+        GList * ptr, *lst;
         ptr = lst = group->head;
 
         /* The refereces to all threads */
@@ -448,7 +444,7 @@ bool findmatches(GQueue *group, int testlevel) {
         /*start new island of matched files  */
         /* first remove i from mainland */
         i = g_queue_pop_head_link(&mainland);
-        g_queue_push_head(&island, i);
+        g_queue_push_head_link(&island, i);
         j = mainland.head;
 
         while(j) {
@@ -474,8 +470,8 @@ bool findmatches(GQueue *group, int testlevel) {
                 /* move j from grp onto island*/
                 /* first get pointer to j before we start messing with j*/
                 GList *tmp = j->next;
-                g_queue_delete_link(&mainland, j);
-                g_queue_push_tail(&island, j);
+                g_queue_unlink(&mainland, j);
+                g_queue_push_tail_link(&island, j);
 
                 RmFile * current = j->data;
                 num_orig += current->in_ppath;
@@ -491,11 +487,17 @@ bool findmatches(GQueue *group, int testlevel) {
         /* criteria related to setting must_match_original or 		  */
         /* keep_all_originals										  */
         if (0
-            || (g_queue_get_length(&island) == 1)
-            || ((set->keep_all_originals==1) && (num_non_orig == 0))
-            || ((set->must_match_original==1) && (num_orig == 0)) 
-        ) {
-            g_queue_clear(&island);
+                || (g_queue_get_length(&island) <= 1)
+                || ((set->keep_all_originals==1) && (num_non_orig == 0))
+                || ((set->must_match_original==1) && (num_orig == 0))
+           ) {
+            // TODO: Remove the group.
+            //g_queue_clear(&island);
+            // for(GList * iter = island.head; iter; iter = iter->next) {
+            //     RmFile *file = iter->data;
+            //     //rm_file_destroy(file);
+            //     rm_file_list_remove(list_begin(), file);
+            // }
         } else {
             if ((testlevel == 3) || (!set->paranoid && (testlevel == 2))) {
                 /* done testing; process the island */
@@ -511,7 +513,6 @@ bool findmatches(GQueue *group, int testlevel) {
     }
     return returnval;
 }
-
 
 /* ------------------------------------------------------------- */
 
@@ -566,7 +567,7 @@ static void start_scheduler(RmFileList *list) {
         }
     } else { /* if size of certain group exceeds limit start an own thread, else run in 'foreground' */
         /* Run max set->threads at the same time. */
-        int nrun = 0;
+        unsigned nrun = 0;
         while(!g_sequence_iter_is_end(iter)) {
             GQueue *group = g_sequence_get(iter);
             gulong byte_size = rm_file_list_byte_size(group);
@@ -592,7 +593,7 @@ static void start_scheduler(RmFileList *list) {
 }
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
-static void size_to_human_readable(nuint_t num, char *in, int sz) {
+static void size_to_human_readable(nuint_t num, char *in) {
     if(num < 1024 / 2) {
         sprintf(in,"%ld B",(unsigned long)num);
     } else if(num < 1048576) {
@@ -665,11 +666,81 @@ static void find_double_bases(GQueue *group) {
 
 /* You don't have to understand this really - don't worry. */
 /* Only used in conjuction with qsort to make output a lil nicer */
-static long cmp_sort_dupID(RmFile* a, RmFile* b) {
+static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
+    (void) user_data;
     return ((long)a->dupflag-(long)b->dupflag);
 }
 
-/* ------------------------------------------------------------- */
+static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
+    // TODO: Clean this bullshit up.
+    bool flag = 42, e_file_printed = false;
+    const char * chown_cmd = "   chown $(whoami):$(id -gn)";
+
+    for(GList *iter = first_group->head; iter; iter = iter->next) {
+        RmFile *ptr = iter->data;
+        if(flag != ptr->dupflag) {
+            if(set->verbosity > 1) {
+                error(YEL"\n#"NCO);
+            } else {
+                error("\n#");
+            }
+            /* -- */
+            if(ptr->dupflag == TYPE_BLNK) {
+                error(" Bad link(s): \n");
+            } else if(ptr->dupflag == TYPE_OTMP) {
+                error(" Old Tempfile(s): \n");
+            } else if(ptr->dupflag == TYPE_EDIR) {
+                error(" Empty dir(s): \n");
+            } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
+                error(" Junk dirname(s): \n");
+            } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
+                error(" Junk filename(s): \n");
+            } else if(ptr->dupflag == TYPE_NBIN) {
+                error(" Non stripped binarie(s): \n");
+            } else if(ptr->dupflag == TYPE_BADUID) {
+                error(" Bad UID: \n");
+            } else if(ptr->dupflag == TYPE_BADGID) {
+                error(" Bad GID: \n");
+            } else if(ptr->fsize == 0 && e_file_printed == false) {
+                error(" Empty file(s): \n");
+                e_file_printed = true;
+            }
+            flag = ptr->dupflag;
+        }
+        if(set->verbosity > 1) {
+            error(GRE);
+        }
+        if(ptr->dupflag == TYPE_BLNK) {
+            error("   rm");
+        } else if(ptr->dupflag == TYPE_OTMP) {
+            error("   rm");
+        } else if(ptr->dupflag == TYPE_EDIR) {
+            error("   rmdir");
+        } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
+            error("   ls");
+        } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
+            error("   ls");
+        } else if(ptr->dupflag == TYPE_NBIN) {
+            error("   strip --strip-debug");
+        } else if(ptr->dupflag == TYPE_BADUID) {
+            error(chown_cmd);
+        } else if(ptr->dupflag == TYPE_BADGID) {
+            error(chown_cmd);
+        } else if(ptr->fsize   == 0) {
+            error("   rm");
+        }
+        if(set->verbosity > 1) {
+            error(NCO);
+        }
+        error(" %s\n",ptr->path);
+        if(set->output) {
+            write_to_log(ptr, false,NULL);
+        }
+    }
+    rm_file_list_clear(first);
+
+}
+
 
 /* This the actual main() of rmlint */
 void start_processing(RmFileList *list) {
@@ -698,162 +769,15 @@ void start_processing(RmFileList *list) {
         error("\n");
     }
 
-
-    //emptylist.len  = 1;
-    //emptylist.size = 0;
-    ///* Split into groups, based by size */
-    //while(b) {
-    //    RmFile *q = b, *prev = NULL;
-    //    nuint_t glen = 0, gsize = 0;
-    //    nuint_t num_pref = 0;
-    //    nuint_t num_nonpref = 0;
-    //    while(b && q->fsize == b->fsize) {
-    //        prev = b;
-    //        if(b->dupflag == false) {
-    //            b->dupflag = true;
-    //        }
-    //        if(b->in_ppath) num_pref++;
-    //        else num_nonpref++;
-
-    //        gsize += b->fsize;
-    //        glen++;
-    //        b = b->next;
-    //    }
-    //    if(glen == 1) {
-    //        /* This is only a single element        */
-    //        /* We can remove it without feeling bad */
-    //        q = list_remove(q);
-    //        if(b != NULL) {
-    //            b = q;
-    //        }
-    //        rem_counter++;
-    //    // TODO: Port this.
-    //    } else if (((set->must_match_original) && (num_pref == 0) ) ||
-    //               /* isle doesn't contain any ppath original entries, but options
-    //                * require ppath entry; or...*/
-    //               ((set->keep_all_originals) && (num_nonpref == 0) ))
-    //        /* isle contains only ppath original entries, but options
-    //         * don't allow deleting any ppath files so no point searching*/
-    //    {
-    //        /* delete this isle */
-
-    //        while (q != b) {
-    //            q = list_remove(q);
-    //            rem_counter++;
-    //        }
-
-    //    } else {
-    //        /* Mark this isle as 'sublist' by setting next/last pointers */
-    //        if(b != NULL) {
-    //            prev->next = NULL;
-    //            b->last = NULL;
-    //        }
-    //        if(q->fsize != 0) {
-    //            /* Sort by inode (speeds up IO on normal HDs [not SSDs]) */
-    //            q = list_sort(q,cmp_nd);
-    //            /* Add this group to the list array */
-    //            fglist = realloc(fglist, (spelen+1) * sizeof(file_group));
-    //            fglist[spelen].grp_stp = q;
-    //            fglist[spelen].grp_enp = prev;
-    //            fglist[spelen].len     = glen;
-    //            fglist[spelen].size    = gsize;
-
-    //            /* Remove 'path-doubles' (files pointing to the physically SAME file) - this requires a node sorted list */
-    //            if((set->followlinks && get_cpindex() == 1) || ( get_cpindex() > 1 ) || 1 )
-    //                /* actually need this even for a single path because of possible bind mounts */
-    //                path_doubles += rm_double_paths(&fglist[spelen]);
-    //            /* number_of_groups++ */
-    //            spelen++;
-    //        } else { /* this is some other sort of lint (indicated by a size of 0) */
-    //            RmFile *ptr;
-    //            char flag = 42;
-    //            bool e_file_printed = false;
-    //            const char * chown_cmd = "   chown $(whoami):$(id -gn)";
-    //            q = list_sort(q,cmp_nd);
-    //            emptylist.grp_stp = q;
-    //            if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1 || 1)
-    //                rm_double_paths(&emptylist);
-
-    //            /* sort by lint_ID (== dupID) */
-    //            ptr = emptylist.grp_stp;
-    //            ptr = list_sort(ptr,cmp_sort_dupID);
-    //            emptylist.grp_stp = ptr;
-    //            emptylist.len = 0;
-
-
-    //            while(ptr) {
-    //                if(flag != ptr->dupflag) {
-    //                    if(set->verbosity > 1) {
-    //                        error(YEL"\n#"NCO);
-    //                    } else {
-    //                        error("\n#");
-    //                    }
-    //                    /* -- */
-    //                    if(ptr->dupflag == TYPE_BLNK) {
-    //                        error(" Bad link(s): \n");
-    //                    } else if(ptr->dupflag == TYPE_OTMP) {
-    //                        error(" Old Tempfile(s): \n");
-    //                    } else if(ptr->dupflag == TYPE_EDIR) {
-    //                        error(" Empty dir(s): \n");
-    //                    } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
-    //                        error(" Junk dirname(s): \n");
-    //                    } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
-    //                        error(" Junk filename(s): \n");
-    //                    } else if(ptr->dupflag == TYPE_NBIN) {
-    //                        error(" Non stripped binarie(s): \n");
-    //                    } else if(ptr->dupflag == TYPE_BADUID) {
-    //                        error(" Bad UID: \n");
-    //                    } else if(ptr->dupflag == TYPE_BADGID) {
-    //                        error(" Bad GID: \n");
-    //                    } else if(ptr->fsize == 0 && e_file_printed == false) {
-    //                        error(" Empty file(s): \n");
-    //                        e_file_printed = true;
-    //                    }
-    //                    flag = ptr->dupflag;
-    //                }
-    //                if(set->verbosity > 1) {
-    //                    error(GRE);
-    //                }
-    //                if(ptr->dupflag == TYPE_BLNK) {
-    //                    error("   rm");
-    //                } else if(ptr->dupflag == TYPE_OTMP) {
-    //                    error("   rm");
-    //                } else if(ptr->dupflag == TYPE_EDIR) {
-    //                    error("   rmdir");
-    //                } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
-    //                    error("   ls");
-    //                } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
-    //                    error("   ls");
-    //                } else if(ptr->dupflag == TYPE_NBIN) {
-    //                    error("   strip --strip-debug");
-    //                } else if(ptr->dupflag == TYPE_BADUID) {
-    //                    error(chown_cmd);
-    //                } else if(ptr->dupflag == TYPE_BADGID) {
-    //                    error(chown_cmd);
-    //                } else if(ptr->fsize   == 0) {
-    //                    error("   rm");
-    //                }
-    //                if(set->verbosity > 1) {
-    //                    error(NCO);
-    //                }
-    //                error(" %s\n",ptr->path);
-    //                if(set->output) {
-    //                    write_to_log(ptr, false,NULL);
-    //                }
-    //                emptylist.size += ptr->fsize;
-    //                ptr = list_remove(ptr);
-    //                emptylist.len++;
-    //            }
-    //        }
-    //    }
-    //}
-
-
+    GSequenceIter * first = rm_file_list_get_iter(list);
+    rm_file_list_sort_group(list, first, (GCompareDataFunc)cmp_sort_dupID, NULL);
+    GQueue *first_group = g_sequence_get(first);
     
+    if(rm_file_list_byte_size(first_group) == 0) {
+        handle_other_lint(first, first_group);
+    }
 
-    // TODO: Port the else block from above.
-    //
-    info("Now mergesorting list based on filesize... ");
+    info("Now sorting list based on filesize... ");
     gsize rem_counter = rm_file_list_sort_groups(list, set);
     info("done.\n");
 
@@ -897,8 +821,8 @@ void start_processing(RmFileList *list) {
         error("\n");
     }
     /* now process the ouptput we gonna print */
-    size_to_human_readable(total_lint, lintbuf, sizeof(lintbuf));
-    // size_to_human_readable(emptylist.size, suspbuf, sizeof(suspbuf));
+    size_to_human_readable(total_lint, lintbuf);
+    // size_to_human_readable(emptylist.size, suspbuf);
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
 
@@ -933,4 +857,6 @@ void start_processing(RmFileList *list) {
         warning("A log has been written to "BLU"%s.log"NCO".\n", set->output);
         warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set->output);
     }
+
+    rm_file_list_destroy(list);
 }

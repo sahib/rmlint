@@ -19,8 +19,6 @@
 *
 **/
 
-
-#pragma once
 #ifndef DEF_H
 #define DEF_H
 
@@ -29,7 +27,6 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <glib.h>
-
 
 /* Use colored output? Note: there's also a -Bb option */
 #define USE_COLOR 1
@@ -103,7 +100,6 @@ From man 2 open:
 /** nuint_t = normal unsigned integer type :-) **/
 typedef uint64_t nuint_t;
 
-
 /* ------------------------------------------------------------- */
 
 /* Investigate directories by a depth first algorithm instead of (mostly) random access */
@@ -142,7 +138,7 @@ typedef enum RmLintType {
 } RmLintType;
 
 /* all available settings see rmlint -h */
-typedef struct {
+typedef struct RmSettings {
     char mode;
     char color;
     char collide;
@@ -206,6 +202,5 @@ typedef struct {
     unsigned long gid;
     unsigned long uid;
 } UserGroupList;
-
 
 #endif

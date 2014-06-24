@@ -19,7 +19,6 @@
 *
 **/
 
-
 #ifndef MODE_H
 #define MODE_H
 
@@ -30,7 +29,6 @@ bool process_doop_groop(GQueue *group);
 void init_filehandler(void);
 void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig);
 nuint_t get_dupcounter();
-
 
 /* ------------------------------------------------------------- */
 

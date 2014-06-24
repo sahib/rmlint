@@ -31,7 +31,6 @@
 
 /* /////////////////////////// */
 
-
 UserGroupList ** userlist_new(void) {
     UserGroupList ** list = NULL;
     const size_t block_size = 256;

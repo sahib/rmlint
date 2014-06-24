@@ -19,7 +19,6 @@
 *
 **/
 
-
 /*
   mode.c:
   1) log routines
@@ -42,11 +41,9 @@
 #include "list.h"
 #include "filter.h"
 
-
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <fcntl.h>
-
 
 nuint_t dup_counter=0;
 nuint_t get_dupcounter() {
@@ -139,7 +136,6 @@ static void remfile(const char *r_path) {
 }
 
 /* ------------------------------------------------------------- */
-
 
 static void print_askhelp(void) {
     error(GRE"\nk"NCO" - keep file \n"
@@ -531,10 +527,8 @@ void init_filehandler(void) {
 
 /* ------------------------------------------------------------- */
 
-
 #define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false)
 bool print_newline = true;
-
 
 bool process_doop_groop(GQueue *group) {
     /* This does the final processing on a dupe group. All required   */

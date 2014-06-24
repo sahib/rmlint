@@ -19,7 +19,6 @@
  *
  **/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,7 +53,6 @@ void linttests_c_init(void) {
 }
 
 /* ------------------------------------------------------------- */
-
 
 char * rmlint_basename(char *filename) {
     char * base = strrchr(filename, '/');
@@ -114,7 +112,7 @@ bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings) {
                 cpy[strlen(cpy)-4] = 0;
             }
             if(!stat(cpy, &stat_buf)) {
-                if((fts_ent->fts_statp->st_mtim.tv_sec - stat_buf.st_mtime) >= settings->oldtmpdata) {
+                if((fts_ent->fts_statp->st_mtim.tv_sec - stat_buf.st_mtime) >= (unsigned)settings->oldtmpdata) {
                     is_otmp = true;
                 }
             }
@@ -136,7 +134,6 @@ bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
         /* inspired by "jschmier"'s answer at http://stackoverflow.com/a/5159890 */
         int fd;
         /*char *escapedpath = strsubs(fts_ent->fts_path,"'","'\"'\"'");*/
-
 
         Elf *elf;       /* ELF pointer for libelf */
         Elf_Scn *scn;   /* section descriptor pointer */
@@ -197,7 +194,6 @@ bool junkinbasename(char *path, RmSettings * settings) {
     }
     return false;
 }
-
 
 /* ------------------------------------------------------------- */
 

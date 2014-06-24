@@ -19,7 +19,6 @@
  *
  **/
 
-
 /*
    rmlint.c:
    1) Methods to parse arguments and set vars accordingly
@@ -46,7 +45,6 @@
 #include "traverse.h"
 #include "filter.h"
 #include "linttests.h"
-
 
 /* If more that one path given increment */
 int  cpindex = 0;
@@ -222,7 +220,6 @@ static void print_version(bool exit) {
 
 /* ------------------------------------------------------------- */
 
-
 /* Help text */
 static void print_help(void) {
     fprintf(stderr, "Syntax: rmlint [[//]TargetDir[s]] [File[s]] [Options]\n");
@@ -357,7 +354,6 @@ void rmlint_set_default_settings(RmSettings *pset) {
     pset->sort_criteria = "m";  /* default ranking order for choosing originals - keep oldest mtime*/
     pset->skip_confirm = 0; /* default setting is to ask user to confirm input settings at start */
 
-
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
      * investigated to be replicas of other files */
@@ -379,7 +375,6 @@ void parse_limit_sizes(char * limit_string) {
         set->minsize = strtol(ptr,NULL,10);
     }
 }
-
 
 /* ------------------------------------------------------------- */
 
@@ -644,9 +639,9 @@ char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
             return 0;
         } else {
             close(p);
-            sets->paths   = realloc(sets->paths,sizeof(char*)*(lp+2));
-            sets->is_ppath = realloc(sets->is_ppath,sizeof(char)*(lp+1));
-            sets->is_ppath[lp+1] = isPref;
+            sets->paths = g_realloc(sets->paths,sizeof(char*)*(lp+2));
+            sets->is_ppath = g_realloc(sets->is_ppath,sizeof(char)*(lp+1));
+            sets->is_ppath[lp] = isPref;
             sets->paths[lp++] = theDir;
             sets->paths[lp] = NULL;
         }
@@ -657,7 +652,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
         sets->paths = malloc(sizeof(char*)*2);
         sets->paths[0] = getcwd(NULL,0);
         sets->paths[1] = NULL;
-        sets->is_ppath = malloc(sizeof(char)*(1));
+        sets->is_ppath = g_malloc0(sizeof(char) * 1);
         sets->is_ppath[0] = 0;
         if(!sets->paths[0]) {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
@@ -712,6 +707,9 @@ void die(int status) {
     }
     if(set->paths) {
         free(set->paths);
+    }
+    if(set->is_ppath) {
+        free(set->is_ppath);
     }
     if(status) {
         info("Abnormal exit\n");
@@ -795,7 +793,6 @@ char rmlint_echo_settings(RmSettings *settings) {
         i++;
     }
     if ((settings->paths[1]) && !has_ppath) warning("\t[prefix one or more paths with // to flag location of originals]\n");
-
 
     /*---------------- search tree options---------*/
     warning ("Tree search parameters:\n");
@@ -937,8 +934,6 @@ char rmlint_echo_settings(RmSettings *settings) {
 }
 
 /* ------------------------------------------------------------- */
-
-
 
 /* Actual entry point */
 int rmlint_main(void) {

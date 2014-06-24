@@ -27,14 +27,12 @@
 #include <glib.h>
 #include "defs.h"
 
-
 RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum);
 
 /**
  * @brief Free the memory allocated by rm_file_new()
  */
 void rm_file_destroy(RmFile *file);
-
 
 ////////////////
 
@@ -91,7 +89,9 @@ void rm_file_list_append(RmFileList * list, RmFile * file);
  *
  * @param child  The index of the group to remove.
  */
-void rm_file_list_clear(RmFileList *list, GSequenceIter * iter);
+void rm_file_list_clear(GSequenceIter * iter);
+
+void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDataFunc func, gpointer user_data);
 
 /**
  * @brief Remove a single file, possibly adjusting groups.

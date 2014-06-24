@@ -51,7 +51,7 @@ else
 	LDFLAGS+=-s
 endif
 
-CFLAGS+=$(GLIB_FLAGS) -std=c11 -D_GNU_SOURCE
+CFLAGS+=$(GLIB_FLAGS) -std=c11 -D_GNU_SOURCE -Wall -Wextra
 
 SOURCES= \
 	$(SOURCEDIR)/md5.c \
@@ -63,7 +63,6 @@ SOURCES= \
 	$(SOURCEDIR)/linttests.c \
 	$(SOURCEDIR)/traverse.c \
 	$(SOURCEDIR)/main.c
-
 
 
 OBJECTS=$(SOURCES:.c=.o)

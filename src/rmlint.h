@@ -24,11 +24,8 @@
 
 #include "defs.h"
 
-
 /* pointer to settings */
 RmSettings * set;
-
-
 
 /* These method are also useable from 'outside' */
 char is_ppath(const char* apath);

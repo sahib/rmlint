@@ -29,7 +29,6 @@
 #include "linttests.h"
 #include "treesearch.h"
 
-
 static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum, int RmFileype) {
     /*TODO: regex check if filename exclude*/
     if (!RmFileype) {
@@ -93,29 +92,34 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
     int numfiles = 0;
     int dir_file_counter = 0;
     char is_ppath = settings->is_ppath[pathnum];
-    char** paths=malloc(sizeof(char*)*2);
+    char ** paths=malloc(sizeof(char*)*2);
+
     FTS *ftsp;
     FTSENT *p, *chp;
     if (settings->paths[pathnum]) {
         /* convert into char** structure for passing to fts */
-        paths[0]=settings->paths[pathnum];
-        paths[1]=NULL;
+        paths[0] = settings->paths[pathnum];
+        paths[1] = NULL;
     } else {
         error("Error: no paths defined for traverse_files");
-        return -1;
+        numfiles = -1;
+        goto cleanup;
     }
 
     if ((ftsp = fts_open(paths, fts_flags, NULL)) == NULL) {
         error("fts_open failed");
-        return -1;
+        numfiles = -1;
+        goto cleanup;
     }
 
     /* Initialize ftsp */
     chp = fts_children(ftsp, 0);
     if (chp == NULL) {
         warning("fts_children: can't initialise");
-        return 0;               /* no files to traverse */
+        numfiles = -1;
+        goto cleanup;
     }
+
     while (!iAbort && (p = fts_read(ftsp)) != NULL) {
         bool junkdirskip=false;
         dir_file_counter++;
@@ -182,8 +186,9 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
     }
 
     fts_close(ftsp);
-    return numfiles;
 
+cleanup:
+    g_free(paths);
     return numfiles;
 }
 
@@ -207,14 +212,15 @@ int rmlint_search_tree( RmSettings *settings) { /*, rmlint_filelist *list)*/
 
     while(settings->paths[cpindex] != NULL) {
         /* The path points to a dir - recurse it! */
-        info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...",settings->paths[cpindex],
-             settings->is_ppath[cpindex] ? "" : "non-");
+        info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...",
+             settings->paths[cpindex],
+             settings->is_ppath[cpindex] ? "" : "non-"
+            );
         numfiles += traverse_path (list, settings, cpindex, bit_flags);
         info(" done: %d files added.\n", numfiles);
 
         cpindex++;
     }
-
 
     /* TODO: do we need to free up any memory? */
     return (numfiles);

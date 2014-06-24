@@ -35,7 +35,6 @@
 #include "rmlint.h"
 #include "list.h"
 
-
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -281,7 +280,6 @@ nuint_t *in;
 
 /* ------------------------------------------------------------- */
 
-
 /*********************************************/
 /** Original md5.c modified from now on ~CP **/
 /*********************************************/
@@ -358,7 +356,7 @@ void md5_file_mmap(RmFile *file) {
 void md5_file_fread(RmFile *file) {
     /* Number of bytes read in */
     ssize_t bytes=0;
-    ssize_t offset=0;
+    size_t offset=0;
     /* Input stream */
     int inFile=0;
     /* the md5buf */

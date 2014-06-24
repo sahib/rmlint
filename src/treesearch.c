@@ -226,7 +226,6 @@ int rmlint_search_tree( RmSettings *settings) { /*, rmlint_filelist *list)*/
     if (settings->samepart)
         bit_flags|=FTS_XDEV;
 
-
     while(settings->paths[cpindex] != NULL) {
         /* The path points to a dir - recurse it! */
         info("Now scanning "YEL"\"%s\""NCO"..",settings->paths[cpindex]);
@@ -239,7 +238,6 @@ int rmlint_search_tree( RmSettings *settings) { /*, rmlint_filelist *list)*/
 
         cpindex++;
     }
-
 
     /* TODO: free up memory */
     info ("Exiting rmlint_search_tree with %d files added", numfiles);
