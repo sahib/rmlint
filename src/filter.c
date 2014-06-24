@@ -49,8 +49,6 @@
 #include "defs.h"
 #include "linttests.h"
 
-//#include "useridcheck.h"
-
 
 /* global vars, but initialized by filt_c_init() */
 nuint_t dircount, dbase_ctr;
