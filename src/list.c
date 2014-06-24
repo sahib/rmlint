@@ -49,7 +49,10 @@ RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool 
     self->mtime = buf->st_mtime;
     if(type == TYPE_DUPE_CANDIDATE) {
         self->fsize = buf->st_size;
+    } else {
+        self->fsize = 0;
     }
+
     self->dupflag = type;
     self->filter = TRUE;
 

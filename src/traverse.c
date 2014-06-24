@@ -57,24 +57,11 @@ static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum,
     case FTS_W:         /* whiteout object */
     case FTS_NS:        /* stat(2) failed */
     case FTS_NSOK:      /* no stat(2) requested */
-        /* list_append(ent->fts_path,
-                    0,
-                    ent->fts_statp->st_mtim,
-                    ent->fts_statp->st_dev,
-                    ent->fts_statp->st_ino,
-                    RmFileype, is_ppath, pnum );
-        */
         rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, RmFileype, is_ppath, pnum));
         break;
     case FTS_F:         /* regular file */
     case FTS_SL:        /* symbolic link */
     case FTS_DEFAULT:   /* none of the above */
-        // list_append(ent->fts_path,
-        //             ent->fts_statp->st_size,
-        //             ent->fts_statp->st_mtim,
-        //             ent->fts_statp->st_dev,
-        //             ent->fts_statp->st_ino,
-        //             RmFileype, is_ppath, pnum );
         rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, RmFileype, is_ppath, pnum));
         break;
     default:
