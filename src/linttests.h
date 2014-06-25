@@ -33,5 +33,6 @@ bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings);
 bool is_nonstripped(FTSENT *afile, RmSettings *settings);
 bool junkinbasename(char *str, RmSettings * settings);
 char * rmlint_basename(char *filename);
+ino_t parent_node(char *apath);
 
 #endif /* LINTTESTS_H_INCLUDED*/
