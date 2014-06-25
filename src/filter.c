@@ -185,12 +185,12 @@ int regfilter(const char* input, const char *pattern) {
  *           white letters can do ;-)
  */
 
+
+
+
 /* ------------------------------------------------------------- */
 
-
-/* ------------------------------------------------------------- */
-
-/* If we have more than one path, several lint_ts   *
+/* If we have more than one path, or a fs loop, several lint_ts   *
  *  may point to the same (physically same!) file.  *
  *  This would result in potentially dangerous false *
  * positives where the "duplicate" gets deleted but it*
@@ -199,27 +199,41 @@ int regfilter(const char* input, const char *pattern) {
 static nuint_t rm_double_paths(file_group *fp) {
     lint_t *b = (fp) ? fp->grp_stp : NULL;
     nuint_t c = 0;
-    /* This compares inode and devID
-     * This a little bruteforce, but works just fine :-)
-     * Note it *will* also kick hardlinked duplicates out (but since
-     * they occupy no space anyway it is not such a big deal).
-     * TODO: A workaround to keep hardlinked dupes in the search
-     * would have to distinguish between hard links (which are
-     * safe to include) and bind mounts pointing to
-     * the same file (which are dangerous to include).
-     * The coreutil df.c has code for this so may be a
-     * good start point */
+    /* Searches for and removes items in FP which are pointing to the same file.
+     * Depending on settings, also removes hardlinked duplicates sets, keeping
+     * just one of each set.
+     * Requires dev/inode matches to be adjacent in the list (eg by earlier sort
+     * of FP by dev/node or node/dev.
+     * Returns number of files removed from FP. */
 
     if(b) {
         while(b->next) {
-            if((b->node == b->next->node) &&
-                    (b->dev  == b->next->dev) &&
-                    ((set->find_hardlinked_dupes==0) ||
-                     (strcmp(rmlint_basename(b->path),rmlint_basename(b->next->path))==0)) ) {
-                /* adjust grp */
+            if (
+                    ((b->node == b->next->node) && (b->dev  == b->next->dev))
+                    /* same physical file - might be hardlink (safe to delete) or two
+                    * ways to get to the same original (not safe to delete)? */
+                    &&
+                    (
+                        (!set->find_hardlinked_dupes)
+                        /* not looking for hardlinked dupes so kick out all dev/inode collisions*/
+                        ||
+                        /* _are_ looking for hardlinked dupes; kick out double paths or filesystem loops*/
+                        (
+                            (strcmp(rmlint_basename(b->path),rmlint_basename(b->next->path))==0)
+                            /* double paths and loops will always have same basename */
+                            &&
+                            (parent_node(b->path) == parent_node(b->next->path))
+                            /* double paths and loops will always have same dir inode number*/
+                            /* note: basename check is redundant but we do it first because it
+                             * doesn't require disk read and will detect most hardlinks*/
+                        )
+                    )
+                ) {
+                /* kick! */
                 lint_t *tmp = b;
                 fp->size -= b->fsize;
                 fp->len--;
+                /* check if we want to kick b or b->next */
                 if(b->next->in_ppath || !b->in_ppath) {
                     /* Remove this one  */
                     b = list_remove(b);
@@ -228,6 +242,7 @@ static nuint_t rm_double_paths(file_group *fp) {
                     b = b->next;
                     tmp = b;
                     b = list_remove(b);
+                    b = b->last;
                 }
                 /* Update group info */
                 if(tmp == fp->grp_stp) {
@@ -850,7 +865,10 @@ static void find_double_bases(lint_t *starting) {
 /* You don't have to understand this really - don't worry. */
 /* Only used in conjuction with qsort to make output a lil nicer */
 static long cmp_sort_dupID(lint_t* a, lint_t* b) {
-    return ((long)a->dupflag-(long)b->dupflag);
+    if ( a->dupflag == b->dupflag && a->dupflag == TYPE_EDIR )
+        return strcmp(b->path, a->path); /* reverse alphabetical for recursive empty dirs*/
+    else
+        return ((long)a->dupflag-(long)b->dupflag);
 }
 
 /* ------------------------------------------------------------- */
@@ -940,7 +958,7 @@ void start_processing(lint_t *b) {
                 q = list_sort(q,cmp_nd);
                 emptylist.grp_stp = q;
                 if((set->followlinks && get_cpindex() == 1) || get_cpindex() > 1 || 1)
-                    rm_double_paths(&emptylist);
+                    path_doubles += rm_double_paths(&emptylist);
 
                 /* sort by lint_ID (== dupID) */
                 ptr = emptylist.grp_stp;
@@ -973,6 +991,8 @@ void start_processing(lint_t *b) {
                             error(" Bad UID: \n");
                         } else if(ptr->dupflag == TYPE_BADGID) {
                             error(" Bad GID: \n");
+                        } else if(ptr->dupflag == TYPE_BADUGID) {
+                            error(" Bad UID&GID: \n");
                         } else if(ptr->fsize == 0 && e_file_printed == false) {
                             error(" Empty file(s): \n");
                             e_file_printed = true;

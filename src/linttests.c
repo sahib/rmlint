@@ -29,6 +29,8 @@
 #include <fts.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <libgen.h>
+
 
 /* Include for ELF processing */
 #include <libelf.h>
@@ -70,6 +72,18 @@ char * rmlint_basename(char *filename) {
     return (char *)filename;
 }
 
+/* ------------------------------------------------------------- */
+
+ino_t parent_node(const char *apath)
+{
+    char *dummy  = strdup( apath );
+    char* parent_path = dirname(dummy);
+    struct stat stat_buf;
+    if(!stat(parent_path, &stat_buf)) {
+        return stat_buf.st_ino;
+    }
+    else return -1;
+}
 /* ------------------------------------------------------------- */
 /* checks uid and gid; returns 0 if both ok, else TYPE_ corresponding *
  * to lint_t->filter types                                            */

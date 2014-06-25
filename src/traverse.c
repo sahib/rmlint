@@ -29,10 +29,12 @@
 #include "filter.h"
 #include "linttests.h"
 
+static int const MAX_EMPTYDIR_DEPTH = 10;
+
 
 static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
     /*TODO: regex check if filename exclude*/
-    if (!lint_type) {
+    if (lint_type==0) {
         /*see if we can find a lint type*/
         if (junkinbasename(ent->fts_path, set))
             lint_type=TYPE_JNK_FILENAME;
@@ -44,7 +46,7 @@ static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
         }
     }
 
-    if (!lint_type) lint_type=TYPE_DUPE_CANDIDATE;
+    if (lint_type==0) lint_type=TYPE_DUPE_CANDIDATE;
 
     switch (ent->fts_info) {
     case FTS_D:         /* preorder directory */
@@ -88,7 +90,6 @@ static int process_file (FTSENT *ent, bool is_ppath, int pnum, int lint_type) {
 
 int traverse_path (rmlint_settings  *settings, int  pathnum, int fts_flags) {
     int numfiles = 0;
-    int dir_file_counter = 0;
     char is_ppath = settings->is_ppath[pathnum];
     char** paths=malloc(sizeof(char*)*2);
     FTS *ftsp;
@@ -113,66 +114,97 @@ int traverse_path (rmlint_settings  *settings, int  pathnum, int fts_flags) {
         warning("fts_children: can't initialise");
         return 0;               /* no files to traverse */
     }
-    while (!iAbort && (p = fts_read(ftsp)) != NULL) {
-        bool junkdirskip=false;
-        dir_file_counter++;
-        switch (p->fts_info) {
-        case FTS_D:         /* preorder directory */
-            if(junkinbasename(p->fts_path, settings)) {
-                info("Junk dir %s\n", p->fts_path);
-                process_file(p, is_ppath, pathnum, TYPE_JNK_DIRNAME);
-                junkdirskip = (settings->collide);
-            }
-            if (
-                (settings->depth!=0 && p->fts_level>=settings->depth) ||
-                /* continuing into folder would exceed maxdepth*/
-                (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') ||
-                /* ignoring hidden folders */
-                (regfilter(paths[0], settings->dpattern)) ||
-                /* does not match regex */
-                (junkdirskip)) {
-                fts_set(ftsp,p,FTS_SKIP);
-            } else {
-                dir_file_counter=0;
-            }
-            break;
-        case FTS_DC:        /* directory that causes cycles */
-            warning(RED"Warning: filesystem loop detected between:\nskipping:\t%s\n(same as):\t%s\n"NCO,
-                    p->fts_path, p->fts_cycle->fts_path );
-            break;
-        case FTS_DNR:       /* unreadable directory */
-            warning(RED"Warning: cannot read directory %s (skipping)\n"NCO, p->fts_path);
-            break;
-        case FTS_DOT:       /* dot or dot-dot */
-            break;
-        case FTS_DP:        /* postorder directory */
-            if (dir_file_counter==0) {
-                numfiles += process_file(p, is_ppath, pathnum, TYPE_EDIR);
-            }
-            break;
-        case FTS_ERR:       /* error; errno is set */
-            warning(RED"Warning: error %d in fts_read for %s (skipping)\n"NCO, errno, p->fts_path);
-            break;
-        case FTS_INIT:      /* initialized only */
-            break;
-        case FTS_SLNONE:    /* symbolic link without target */
-            warning(RED"Warning: symlink without target: %s\n"NCO, errno, p->fts_path);
-            numfiles += process_file(p, is_ppath, pathnum, TYPE_BLNK);
-            break;
-        case FTS_W:         /* whiteout object */
-            break;
-        case FTS_NS:        /* stat(2) failed */
-            warning(RED"Warning: cannot stat file %s (skipping)\n", p->fts_path);
-        case FTS_NSOK:      /* no stat(2) requested */
-        case FTS_SL:        /* symbolic link */
-        case FTS_F:         /* regular file */
-        case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
-            numfiles += process_file(p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
-        default:
-            break;
-        } /* end switch(p->fts_info)*/
-    } /*end while ((p = fts_read(ftsp)) != NULL)*/
+    else {
+        char is_emptydir[MAX_EMPTYDIR_DEPTH];
+        bool have_open_emptydirs = false;
+        bool clear_emptydir_flags = false;
+        memset(&is_emptydir[0], 'N', sizeof(is_emptydir)-1);
+        is_emptydir[sizeof(is_emptydir)-1]='\0';
 
+        int emptydir_stack_overflow=0;
+        while (!iAbort && (p = fts_read(ftsp)) != NULL) {
+            bool junkdirskip=false;
+            switch (p->fts_info) {
+            case FTS_D:         /* preorder directory */
+                if(junkinbasename(p->fts_path, settings)) {
+                    info("Junk dir %s\n", p->fts_path);
+                    process_file(p, is_ppath, pathnum, TYPE_JNK_DIRNAME);
+                    junkdirskip = (settings->collide);
+                }
+                if (
+                    (settings->depth!=0 && p->fts_level>=settings->depth) ||
+                    /* continuing into folder would exceed maxdepth*/
+                    (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') ||
+                    /* ignoring hidden folders */
+                    (regfilter(paths[0], settings->dpattern)) ||
+                    /* does not match regex */
+                    (junkdirskip)) {
+                    fts_set(ftsp,p,FTS_SKIP); /* do not recurse */
+                    clear_emptydir_flags=true; /*current dir not empty*/
+                } else {
+                    is_emptydir[ (p->fts_level + 1) % ( MAX_EMPTYDIR_DEPTH + 1 )]='E';
+                    have_open_emptydirs = true;
+                    /* assume dir is empty until proven otherwise */
+                }
+                break;
+            case FTS_DC:        /* directory that causes cycles */
+                warning(RED"Warning: filesystem loop detected at %s (skipping)\n"NCO,
+                        p->fts_path);
+                clear_emptydir_flags=true; /*current dir not empty*/
+                break;
+            case FTS_DNR:       /* unreadable directory */
+                warning(RED"Warning: cannot read directory %s (skipping)\n"NCO, p->fts_path);
+                clear_emptydir_flags=true; /*current dir not empty*/
+                break;
+            case FTS_DOT:       /* dot or dot-dot */
+                break;
+            case FTS_DP:        /* postorder directory */
+                if ((p->fts_level >= emptydir_stack_overflow) &&
+                        (is_emptydir[ (p->fts_level + 1) % ( MAX_EMPTYDIR_DEPTH + 1 )] == 'E')) {
+                    numfiles += process_file(p, is_ppath, pathnum, TYPE_EDIR);
+                }
+                break;
+            case FTS_ERR:       /* error; errno is set */
+                warning(RED"Warning: error %d in fts_read for %s (skipping)\n"NCO, errno, p->fts_path);
+                clear_emptydir_flags=true; /*current dir not empty*/
+                break;
+            case FTS_INIT:      /* initialized only */
+                break;
+            case FTS_SLNONE:    /* symbolic link without target */
+                warning(RED"Warning: symlink without target: %s\n"NCO, errno, p->fts_path);
+                numfiles += process_file(p, is_ppath, pathnum, TYPE_BLNK);
+                clear_emptydir_flags=true; /*current dir not empty*/
+                break;
+            case FTS_W:         /* whiteout object */
+                clear_emptydir_flags=true; /*current dir not empty*/
+                break;
+            case FTS_NS:        /* stat(2) failed */
+                clear_emptydir_flags=true; /*current dir not empty*/
+                warning(RED"Warning: cannot stat file %s (skipping)\n", p->fts_path);
+                break;
+            case FTS_NSOK:      /* no stat(2) requested */
+            case FTS_SL:        /* symbolic link */
+            case FTS_F:         /* regular file */
+            case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
+                clear_emptydir_flags=true; /*current dir not empty*/
+                numfiles += process_file(p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
+            default:
+                clear_emptydir_flags=true; /*current dir not empty*/
+                break;
+            } /* end switch(p->fts_info)*/
+            if (clear_emptydir_flags) {
+                /* non-empty dir found above; need to clear emptydir flags for all open levels*/
+                if (have_open_emptydirs) {
+                    memset(&is_emptydir[0], 'N', sizeof(is_emptydir)-1);
+                    have_open_emptydirs=false;
+                }
+                clear_emptydir_flags=false;
+            }
+
+               /*current dir may not be empty; by association, all open dirs are non-empty*/
+
+        } /*end while ((p = fts_read(ftsp)) != NULL)*/
+    }
     if (errno != 0) {
         error ("Error %d: fts_read failed: %s", 0, errno, ftsp->fts_path);
         numfiles = -1;
