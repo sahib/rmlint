@@ -90,8 +90,7 @@ int uid_gid_check(FTSENT *fts_ent, RmSettings *settings) {
 /* ------------------------------------------------------------- */
 
 bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings) {
-    bool is_otmp=false;
-    return is_otmp;
+    return false;
 }
 
 /* ------------------------------------------------------------- */

@@ -945,7 +945,6 @@ int rmlint_main(void) {
         if(!use_cwd) {
             rmlint_init();
         }
-        md5c_c_init();
         filt_c_init();
         mode_c_init();
         linttests_c_init();
