@@ -158,6 +158,17 @@ static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSE
         return strcmp(rmlint_basename(fa->path), rmlint_basename(fb->path));
 }
 
+/* ------------------------------------------------------------- */
+/* If we have more than one path, or a fs loop, several RMFILEs  *
+ * may point to the same (physically same!) file.  *
+ * This would result in potentially dangerous false positives where *
+ * the "duplicate" that gets deleted is actually the original*
+ * RM_FILE_LIST_REMOVE_DOUBLE_PATHS searches for and removes items in
+ * LIST  which are pointing to the same file.
+ * Depending on settings, also removes hardlinked duplicates sets, keeping
+ * just one of each set.
+ * Note: LIST must be sorted by dev/node or node/dev before callind.
+ * Returns number of files removed from FP. */
 static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, bool find_hardlinked_dupes) {
     guint removed_cnt = 0;
 
@@ -165,27 +176,37 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
     while(iter && iter->next) {
         RmFile * file = iter->data, *next_file = iter->next->data;
 
-        if(file->node != next_file->node || file->dev != next_file->dev) {
+        if( (file->node == next_file->node && file->dev == next_file->dev) &&
+				/* files have same dev and inode:  might be hardlink (safe to delete), or
+				 * two paths to the same original (not safe to delete) */
+			( (!find_hardlinked_dupes) 	/* not looking for hardlinked dupes so
+									 *kick out all dev/inode collisions*/
+				|| 	/* if we are looking for hardlinked dupes, still need to kick out
+					 * double paths or filesystem loops*/
+				(	(strcmp(rmlint_basename(file->path),rmlint_basename(next_file->path))==0)
+					&&
+					(parent_node(file->path) == parent_node(next_file->path))
+					/* double paths and loops will always have same basename */
+					/* double paths and loops will always have same dir inode number*/
+				)
+			) ) {
+			/* kick FILE or NEXT_FILE out */
+			if(next_file->in_ppath || !file->in_ppath) {
+				/*FILE does not outrank NEXT_FILE in terms of ppath*/
+				/*TODO: include extra criteria (alphabetical, mtime etc) as per -D input option*/
+				iter = iter->next;
+				rm_file_list_remove(list, file);
+			} else {
+				/*iter = iter->next->next;  no, actually we want to leave FILE where it is */
+				rm_file_list_remove(list, next_file);
+			}
+
+			removed_cnt++;
+		}
+		else {
             iter = iter->next;
-            continue;
         }
 
-        if(find_hardlinked_dupes && strcmp(
-                    rmlint_basename(file->path), rmlint_basename(next_file->path)
-                ) != 0) {
-            iter = iter->next;
-            continue;
-        }
-
-        if(next_file->in_ppath || !file->in_ppath) {
-            iter = iter->next;
-            rm_file_list_remove(list, file);
-        } else {
-            iter = iter->next->next;
-            rm_file_list_remove(list, next_file);
-        }
-
-        removed_cnt++;
     }
 
     return removed_cnt;

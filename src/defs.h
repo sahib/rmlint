@@ -124,7 +124,6 @@ typedef uint64_t nuint_t;
 
 /* types of lint */
 typedef enum RmLintType {
-    TYPE_DUPE_CANDIDATE = 1,
     TYPE_BLNK = 3,
     TYPE_OTMP,
     TYPE_EDIR,
@@ -134,7 +133,9 @@ typedef enum RmLintType {
     TYPE_BASE,
     TYPE_BADUID,
     TYPE_BADGID,
-    TYPE_BADUGID
+    TYPE_BADUGID,
+    TYPE_DUPE_CANDIDATE /* note: this needs to be last item in list so*
+						 * that "other" lint gets handled first       */
 } RmLintType;
 
 /* all available settings see rmlint -h */

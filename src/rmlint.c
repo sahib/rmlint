@@ -237,7 +237,8 @@ static void print_help(void) {
     fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
             "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
-            "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
+           );
+    fprintf(stderr,"\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
             "\t-O --keepallorig\tDon't delete any duplicates that are in 'originals' paths. (Default - just keep one)\n"
             "\t\tNote: for lint types other than duplicates, keepallorig option is ignored\n" /*TODO: does this need unifying??*/
             "\t-Q --invertorig\tPaths prefixed with // are non-originals and all other paths are originals\n"

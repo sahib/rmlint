@@ -46,7 +46,6 @@
 #include "defs.h"
 #include "linttests.h"
 
-//#include "useridcheck.h"
 
 /* global vars, but initialized by filt_c_init() */
 nuint_t dircount, dbase_ctr;
@@ -137,6 +136,7 @@ int regfilter(const char* input, const char *pattern) {
         return (set->invmatch) ? !(status) : (status);
     }
 }
+
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
@@ -232,7 +232,8 @@ static int cmp_f(RmFile *a, RmFile *b) {
     /* check for empty checkusm AND fingerprints - refuse and warn */
     for(x=0; x<2; x++) {
         if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2]) {
-            warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n");
+            warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n%s %d\n%s %d\n",
+            a->path, a->dupflag, b->path, b->dupflag );
             return 1;
         }
     }
@@ -668,16 +669,20 @@ static void find_double_bases(GQueue *group) {
 /* Only used in conjuction with qsort to make output a lil nicer */
 static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
     (void) user_data;
-    return ((long)a->dupflag-(long)b->dupflag);
+    if (a->dupflag == TYPE_EDIR && a->dupflag == TYPE_EDIR)
+		return (long)strcmp(b->path, a->path);
+	else
+		return ((long)a->dupflag-(long)b->dupflag);
 }
 
 static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
     // TODO: Clean this bullshit up.
     bool flag = 42, e_file_printed = false;
     const char * chown_cmd = "   chown $(whoami):$(id -gn)";
-
+    info ("Handling other lint\n");
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *ptr = iter->data;
+        info("Lint type %d\n", ptr->dupflag);
         if(flag != ptr->dupflag) {
             if(set->verbosity > 1) {
                 error(YEL"\n#"NCO);
@@ -701,6 +706,8 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
                 error(" Bad UID: \n");
             } else if(ptr->dupflag == TYPE_BADGID) {
                 error(" Bad GID: \n");
+            } else if(ptr->dupflag == TYPE_BADUGID) {
+                error(" Bad UID&GID: \n");
             } else if(ptr->fsize == 0 && e_file_printed == false) {
                 error(" Empty file(s): \n");
                 e_file_printed = true;
@@ -725,6 +732,8 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
         } else if(ptr->dupflag == TYPE_BADUID) {
             error(chown_cmd);
         } else if(ptr->dupflag == TYPE_BADGID) {
+            error(chown_cmd);
+        } else if(ptr->dupflag == TYPE_BADUGID) {
             error(chown_cmd);
         } else if(ptr->fsize   == 0) {
             error("   rm");
@@ -772,7 +781,9 @@ void start_processing(RmFileList *list) {
     GSequenceIter * first = rm_file_list_get_iter(list);
     rm_file_list_sort_group(list, first, (GCompareDataFunc)cmp_sort_dupID, NULL);
     GQueue *first_group = g_sequence_get(first);
-    
+    RmFile *tempfile = first_group->head->data;
+
+    info("checking rm_file_list_byte_size: %d : %d\n", rm_file_list_byte_size(first_group), tempfile->dupflag);
     if(rm_file_list_byte_size(first_group) == 0) {
         handle_other_lint(first, first_group);
     }
