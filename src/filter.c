@@ -679,10 +679,8 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
     // TODO: Clean this bullshit up.
     bool flag = 42, e_file_printed = false;
     const char * chown_cmd = "   chown $(whoami):$(id -gn)";
-    info ("Handling other lint\n");
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *ptr = iter->data;
-        info("Lint type %d\n", ptr->dupflag);
         if(flag != ptr->dupflag) {
             if(set->verbosity > 1) {
                 error(YEL"\n#"NCO);
@@ -781,9 +779,6 @@ void start_processing(RmFileList *list) {
     GSequenceIter * first = rm_file_list_get_iter(list);
     rm_file_list_sort_group(list, first, (GCompareDataFunc)cmp_sort_dupID, NULL);
     GQueue *first_group = g_sequence_get(first);
-    RmFile *tempfile = first_group->head->data;
-
-    info("checking rm_file_list_byte_size: %d : %d\n", rm_file_list_byte_size(first_group), tempfile->dupflag);
     if(rm_file_list_byte_size(first_group) == 0) {
         handle_other_lint(first, first_group);
     }
