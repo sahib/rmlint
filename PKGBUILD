@@ -1,11 +1,11 @@
 # Maintainer: SahibBommelig <sahib@online.de>
 # rmlint PKBUILD for ArchLinux 
 pkgname=rmlint-git
-pkgver=20120217
+pkgver=20140626
 pkgrel=1
 pkgdesc="Tool to remove duplicates and other lint, being much faster than fdupes"
 arch=('i686' 'x86_64')
-depends=(glibc)
+depends=(glibc clang)
 provides=('rmlint')
 conflicts=('rmlint')
 makedepends=('git')
@@ -22,7 +22,7 @@ build()
     msg "Connecting to the GIT server...."
     if [[ -d ${srcdir}/${_gitname} ]] ; then
         cd ${_gitname}
-        git pull origin
+        git pull origin --depth 1
     msg "Updating existing repo..."
     else
         git clone --depth=1 ${_gitroot}
@@ -31,7 +31,7 @@ build()
     msg "GIT checkout done."
     cd ${srcdir}/${_gitname}
     
-    make || return 1
+    CC=clang make || return 1
 }
 
 package() {
