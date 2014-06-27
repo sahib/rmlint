@@ -61,7 +61,7 @@
 1 = mmap only
 -1 = autochoice (which is best mostly)
 
-Do not use O_DIRECT! read() will do weird things 
+Do not use O_DIRECT! read() will do weird things
 From man 2 open:
 
  "The thing that has always disturbed me about O_DIRECT is that the whole interface is just stupid,
@@ -144,7 +144,7 @@ typedef struct RmSettings {
     char must_match_original;  /*NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
     char invert_original;      /*NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
     char find_hardlinked_dupes;/*NEW - if set, will also search for hardlinked duplicates*/
-    char skip_confirm;         /*NEW - if set, bypasses user confirmation of input settings*/
+    char confirm_settings;    /*NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
     guint64 oldtmpdata;
