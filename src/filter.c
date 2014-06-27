@@ -678,7 +678,9 @@ static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
 static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
     // TODO: Clean this bullshit up.
     bool flag = 42, e_file_printed = false;
-    const char * chown_cmd = "   chown $(whoami):$(id -gn)";
+    const char *user=get_username();
+    const char *group=get_groupname();
+
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *ptr = iter->data;
         if(flag != ptr->dupflag) {
@@ -715,6 +717,7 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
         if(set->verbosity > 1) {
             error(GRE);
         }
+
         if(ptr->dupflag == TYPE_BLNK) {
             error("   rm");
         } else if(ptr->dupflag == TYPE_OTMP) {
@@ -728,11 +731,11 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
         } else if(ptr->dupflag == TYPE_NBIN) {
             error("   strip --strip-debug");
         } else if(ptr->dupflag == TYPE_BADUID) {
-            error(chown_cmd);
+            error("   chown %s ", user);
         } else if(ptr->dupflag == TYPE_BADGID) {
-            error(chown_cmd);
+            error("   chgrp %s ", user);
         } else if(ptr->dupflag == TYPE_BADUGID) {
-            error(chown_cmd);
+            error("   chown %s:%s ", user, group);
         } else if(ptr->fsize   == 0) {
             error("   rm");
         }

@@ -25,11 +25,29 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pwd.h>
+#include <unistd.h>
+#include <grp.h>
 
 #include "useridcheck.h"
 #include "rmlint.h"
 
 /* /////////////////////////// */
+
+char *get_username(void) {
+    uid_t uid = geteuid ();
+    struct passwd *user=getpwuid(uid);
+    if (user) return user->pw_name;
+    else return "username_not_found";
+}
+
+char *get_groupname(void) {
+    uid_t uid = geteuid ();
+    struct passwd *user=getpwuid(uid);
+    struct group *grp=getgrgid(user->pw_gid);
+    if (grp) return grp->gr_name;
+    else return NULL;
+}
+
 
 UserGroupList ** userlist_new(void) {
     UserGroupList ** list = NULL;

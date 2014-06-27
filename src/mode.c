@@ -40,6 +40,7 @@
 #include "md5.h"
 #include "list.h"
 #include "filter.h"
+#include "useridcheck.h"
 
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -199,7 +200,9 @@ void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig) {
     if(get_logstream() && get_scriptstream() && set->output) {
         int i = 0;
         char *fpath = realpath(file->path, NULL);
-        const char * chown_cmd = "chown $(whoami):$(id -gn)";
+        const char * chown_cmd_baduid = "chown \"$user\"";
+        const char * chown_cmd_badgid = "chgrp \"$group\"";
+        const char * chown_cmd_badugid = "chown \"$user\":\"$group\"";
         if(!fpath) {
             if(file->dupflag != TYPE_BLNK) {
                 error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
@@ -236,11 +239,14 @@ void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig) {
             script_print(_sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
             log_print(get_logstream(),"NBIN");
         } else if(file->dupflag == TYPE_BADUID) {
-            script_print(_sd_("%s '%s' # bad uid\n",chown_cmd, fpath));
+            script_print(_sd_("%s '%s' # bad uid\n",chown_cmd_baduid, fpath));
             log_print(get_logstream(),"BUID");
         } else if(file->dupflag == TYPE_BADGID) {
-            script_print(_sd_("%s '%s' # bad gid\n",chown_cmd, fpath));
+            script_print(_sd_("%s '%s' # bad gid\n",chown_cmd_badgid, fpath));
             log_print(get_logstream(),"BGID");
+        } else if(file->dupflag == TYPE_BADGID) {
+            script_print(_sd_("%s '%s' # bad u&gid\n",chown_cmd_badugid, fpath));
+            log_print(get_logstream(),"BU&G");
         } else if(file->fsize == 0) {
             script_print(_sd_("rm -f '%s' # empty file.\n", fpath));
             log_print(get_logstream(),"ZERO");
@@ -485,6 +491,8 @@ void init_filehandler(void) {
                     "  usage\n"
                     "  ask \n"
                     "fi\n");
+            fprintf(get_scriptstream(), "user='%s'\ngroup='%s'\n",get_username(),get_groupname());
+
             fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
             fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
             fprintf(get_logstream(), "#\n# Entries are listed like this: \n");
@@ -512,6 +520,8 @@ void init_filehandler(void) {
             fprintf(get_logstream(), "# devID   : The ID of the device where the file is located\n");
             fprintf(get_logstream(), "# inode   : The Inode of the file (see man 2 stat)\n");
             fprintf(get_logstream(), "# The '//' inbetween each word is the seperator.\n");
+
+
             if(cwd) {
                 free(cwd);
             }
