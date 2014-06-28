@@ -233,7 +233,7 @@ static int cmp_f(RmFile *a, RmFile *b) {
     for(x=0; x<2; x++) {
         if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2]) {
             warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n%s %d\n%s %d\n",
-            a->path, a->dupflag, b->path, b->dupflag );
+                    a->path, a->dupflag, b->path, b->dupflag );
             return 1;
         }
     }
@@ -670,9 +670,9 @@ static void find_double_bases(GQueue *group) {
 static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
     (void) user_data;
     if (a->dupflag == TYPE_EDIR && a->dupflag == TYPE_EDIR)
-		return (long)strcmp(b->path, a->path);
-	else
-		return ((long)a->dupflag-(long)b->dupflag);
+        return (long)strcmp(b->path, a->path);
+    else
+        return ((long)a->dupflag-(long)b->dupflag);
 }
 
 static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {

@@ -106,8 +106,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
         warning("fts_children: can't initialise");
         numfiles = -1;
         goto cleanup;
-    }
-    else {
+    } else {
         char is_emptydir[MAX_EMPTYDIR_DEPTH];
         bool have_open_emptydirs = false;
         bool clear_emptydir_flags = false;
@@ -194,7 +193,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
                 clear_emptydir_flags=false;
             }
 
-               /*current dir may not be empty; by association, all open dirs are non-empty*/
+            /*current dir may not be empty; by association, all open dirs are non-empty*/
 
         } /*end while ((p = fts_read(ftsp)) != NULL)*/
     }

@@ -799,19 +799,19 @@ char rmlint_echo_settings(RmSettings *settings) {
     /*---------------- search tree options---------*/
     info ("Tree search parameters:\n");
     info ("\t%s hidden files and folders [-%s]\n"NCO,
-             settings->ignore_hidden ? "Excluding" : "Including",
-             settings->ignore_hidden ? "G" :  "g" );
+          settings->ignore_hidden ? "Excluding" : "Including",
+          settings->ignore_hidden ? "G" :  "g" );
     info ("\t%s symlinked files and folders [-%s]\n"NCO,
-             settings->followlinks ?"Following" : "Excluding",
-             settings->followlinks ?"F" : "f" );
+          settings->followlinks ?"Following" : "Excluding",
+          settings->followlinks ?"F" : "f" );
     info ("\t%srossing filesystem / mount point boundaries [-%s]\n"NCO,
-             settings->samepart ? "Not c" : "C",
-             settings->samepart ? "S" : "s");
+          settings->samepart ? "Not c" : "C",
+          settings->samepart ? "S" : "s");
     if (settings->dpattern) {
         info("\tDirectory name must%s match regex '%s' (case %ssensitive)\n",
-                settings->invmatch ? " not" : "",
-                settings->dpattern,
-                settings->casematch ? "" : "in" );
+             settings->invmatch ? " not" : "",
+             settings->dpattern,
+             settings->casematch ? "" : "in" );
     } else info ("\tNo regex filter for directory name [-R regex]\n");
 
     if (settings->depth) info("\t Only search %i levels deep into search paths\n",settings->depth);
@@ -821,9 +821,9 @@ char rmlint_echo_settings(RmSettings *settings) {
     info("Filtering search based on:\n");
     if (settings->fpattern) {
         info("\tFile name must%s match regex '%s'	 (case %ssensitive)\n",
-                settings->invmatch ? " not" : "",
-                settings->fpattern,
-                settings->casematch ? "" : "in" );
+             settings->invmatch ? " not" : "",
+             settings->fpattern,
+             settings->casematch ? "" : "in" );
     } else info ("\tNo regex filter for directory name [-r regex]\n");
 
     if ( (settings->minsize !=-1) && (settings->maxsize !=-1) )
