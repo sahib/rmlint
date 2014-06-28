@@ -48,50 +48,50 @@
 #include "filter.h"
 #include "linttests.h"
 
-    /* If more that one path given increment */
-    int  cpindex = 0;
+/* If more that one path given increment */
+int  cpindex = 0;
 
-    /* Control flags */
-    bool do_exit = false,
-         use_cwd = false,
-         jmp_set = false,
-         ex_stat = false,
-         abort_n = true;
+/* Control flags */
+bool do_exit = false,
+     use_cwd = false,
+     jmp_set = false,
+     ex_stat = false,
+     abort_n = true;
 
-    guint64 total_files = 0;
+guint64 total_files = 0;
 
-    /* Default commands */
-    const char *script_name = "rmlint";
+/* Default commands */
+const char *script_name = "rmlint";
 
-    /* If die() is called rmlint will jump back to the end of main
-     * rmlint does NOT call exit() or abort() on it's own - so you
-     * may use it's methods also in your own programs - see main()
-     * It still has various problems with calling rmlint_main() twice... :-( //ToDo
-     * */
-    jmp_buf place;
+/* If die() is called rmlint will jump back to the end of main
+ * rmlint does NOT call exit() or abort() on it's own - so you
+ * may use it's methods also in your own programs - see main()
+ * It still has various problems with calling rmlint_main() twice... :-( //ToDo
+ * */
+jmp_buf place;
 
-    void rmlint_init(void) {
-        do_exit = false;
-        use_cwd = false;
-        jmp_set = false;
-        ex_stat = false;
-        abort_n = true;
-        total_files = 0;
+void rmlint_init(void) {
+    do_exit = false;
+    use_cwd = false;
+    jmp_set = false;
+    ex_stat = false;
+    abort_n = true;
+    total_files = 0;
+}
+
+guint64 get_totalfiles(void) {
+    return total_files;
+}
+
+/* Make chained calls possible */
+char * rm_col(char * string, const char * COL) {
+    char * new = strsubs(string,COL,NULL);
+    if(string) {
+        free(string);
+        string = NULL;
     }
-
-    guint64 get_totalfiles(void) {
-        return total_files;
-    }
-
-    /* Make chained calls possible */
-    char * rm_col(char * string, const char * COL) {
-        char * new = strsubs(string,COL,NULL);
-        if(string) {
-            free(string);
-            string = NULL;
-        }
-        return new;
-    }
+    return new;
+}
 
 void msg_macro_print(FILE * stream, const char * string) {
     if(stream && string) {
@@ -934,7 +934,7 @@ int rmlint_main(RmSession *session) {
             }
             if(session->settings->cmd_path) {
                 check_cmd(session->settings->cmd_path);
-                    die(session, EXIT_FAILURE);
+                die(session, EXIT_FAILURE);
             }
         }
 

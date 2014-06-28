@@ -95,7 +95,7 @@ static void interrupt(int p) {
     case SIGABRT :
         error(RED"FATAL: "NCO"Aborting due to internal error!\n");
         error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-        // die(-1);
+    // die(-1);
     case SIGSEGV :
         error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
         error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
@@ -199,7 +199,7 @@ static int cmp_f(RmFile *a, RmFile *b) {
     for(x=0; x<2; x++) {
         if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2]) {
             warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n%s %d\n%s %d\n",
-            a->path, a->dupflag, b->path, b->dupflag );
+                    a->path, a->dupflag, b->path, b->dupflag );
             return 1;
         }
     }
@@ -471,7 +471,7 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
                 || ((sets->keep_all_originals == 1) && (num_non_orig == 0))
                 || ((sets->must_match_original == 1) && (num_orig == 0))
            ) {
-            // TODO: Remove the group. There is a memory leak involved here. 
+            // TODO: Remove the group. There is a memory leak involved here.
             //       But fixing ain't that easy after some beer.
             //g_queue_clear(&island);
             // for(GList * iter = island.head; iter; iter = iter->next) {
@@ -504,7 +504,7 @@ static void* scheduler_cb(void *tag_pointer) {
     if(group == NULL || group->head == NULL) {
         return NULL;
     }
-    /* start matching (start at level 1 (fingerprint filter)) then 
+    /* start matching (start at level 1 (fingerprint filter)) then
      * recursively escalates to higher levels */
     findmatches(tag->session, group, 1);
     return NULL;
@@ -639,9 +639,9 @@ static void find_double_bases(RmSession * session, GQueue *group) {
 static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
     (void) user_data;
     if (a->dupflag == TYPE_EDIR && a->dupflag == TYPE_EDIR)
-		return (long)strcmp(b->path, a->path);
-	else
-		return ((long)a->dupflag-(long)b->dupflag);
+        return (long)strcmp(b->path, a->path);
+    else
+        return ((long)a->dupflag-(long)b->dupflag);
 }
 
 static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *first_group) {
@@ -761,7 +761,7 @@ void start_processing(RmSession * session) {
 
     info("\nNow attempting to find duplicates. This may take a while...\n");
     /* actually this was done already above while building the list */
-    info("Now removing files with unique sizes from list...");  
+    info("Now removing files with unique sizes from list...");
     info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
     // info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
 
@@ -787,7 +787,7 @@ void start_processing(RmSession * session) {
     /* now process the ouptput we gonna print */
     size_to_human_readable(total_lint, lintbuf);
     // size_to_human_readable(emptylist.size, suspbuf);
-    
+
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
 

@@ -88,8 +88,8 @@ void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpoint
  */
 void rm_file_list_remove(RmFileList *list, RmFile *file);
 
-/** 
- * @brief Sort and clean all groups. 
+/**
+ * @brief Sort and clean all groups.
  *
  * The following actions are done:
  * - Subgroups with only one element are deleted.
@@ -101,7 +101,7 @@ void rm_file_list_remove(RmFileList *list, RmFile *file);
  * All surviving groups are sorted by inode and device id.
  *
  * @returns: The number of filtered files.
- */ 
+ */
 gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings);
 
 /**

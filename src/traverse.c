@@ -106,8 +106,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
         warning("fts_children: can't initialise");
         numfiles = -1;
         goto cleanup;
-    }
-    else {
+    } else {
         char is_emptydir[MAX_EMPTYDIR_DEPTH];
         bool have_open_emptydirs = false;
         bool clear_emptydir_flags = false;
@@ -129,8 +128,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
                     /* continuing into folder would exceed maxdepth*/
                     (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') ||
                     /* does not match regex */
-                    (junkdirskip)) 
-                {
+                    (junkdirskip)) {
                     fts_set(ftsp,p,FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags=true; /*current dir not empty*/
                 } else {
@@ -193,7 +191,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
                 clear_emptydir_flags=false;
             }
 
-               /*current dir may not be empty; by association, all open dirs are non-empty*/
+            /*current dir may not be empty; by association, all open dirs are non-empty*/
 
         } /*end while ((p = fts_read(ftsp)) != NULL)*/
     }
@@ -214,7 +212,7 @@ cleanup:
  * add the files found into LIST
  * Return file count if successful.  */
 
-int rmlint_search_tree(RmSession *session) { 
+int rmlint_search_tree(RmSession *session) {
     RmSettings *settings = session->settings;
     int numfiles=0;
     int cpindex=0;

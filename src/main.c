@@ -24,7 +24,7 @@
 #include "list.h"
 
 int main(int argc, char **argv) {
-    int exit_state = EXIT_FAILURE; 
+    int exit_state = EXIT_FAILURE;
 
     RmSettings settings;
     rmlint_set_default_settings(&settings);

@@ -61,7 +61,7 @@
 1 = mmap only
 -1 = autochoice (which is best mostly)
 
-Do not use O_DIRECT! read() will do weird things 
+Do not use O_DIRECT! read() will do weird things
 From man 2 open:
 
  "The thing that has always disturbed me about O_DIRECT is that the whole interface is just stupid,
