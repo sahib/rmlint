@@ -62,7 +62,7 @@ static int process_file (FTSENT *ent, bool is_ppath, int pnum, int RmFileype) {
                     char * front = alloca(p_len+1);
                     memset(front, '\0', p_len+1);
                     strncpy(front, ent->fts_path, p_len);
-                    cpy = strdup_printf("%s/%s",front,p+2);
+                    cpy = g_strdup_printf("%s/%s",front,p+2);
                     cpy[strlen(cpy)-4] = 0;
                 }
                 if(!stat(cpy, &stat_buf)) {
@@ -140,7 +140,7 @@ int traverse_path (RmSettings  *settings, int  pathnum, int fts_flags) {
     /* Initialize ftsp */
     chp = fts_children(ftsp, 0);
     if (chp == NULL) {
-        return 0;               /* no files to traverse */
+        return 0;  /* no files to traverse */
     }
     while (!iAbort && (p = fts_read(ftsp)) != NULL) {
         dir_file_counter++;
@@ -152,10 +152,8 @@ int traverse_path (RmSettings  *settings, int  pathnum, int fts_flags) {
             if (
                 (settings->depth!=0 && p->fts_level>=settings->depth) ||
                 /* continuing into folder would exceed maxdepth*/
-                (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') ||
+                (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.')
                 /* ignoring hidden folders */
-                (regfilter(paths[0], settings->dpattern))
-                /* does not match regex */
             ) {
                 fts_set(ftsp,p,FTS_SKIP);
             } else {

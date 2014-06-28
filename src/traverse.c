@@ -31,21 +31,21 @@
 
 static int const MAX_EMPTYDIR_DEPTH = 100;
 
-static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum, int RmFileype) {
-    /*TODO: regex check if filename exclude*/
-    if (RmFileype==0) {
+static int process_file (RmSettings *settings, RmFileList *list, FTSENT *ent, bool is_ppath, int pnum, RmLintType file_type) {
+    /* TODO: regex check if filename exclude */
+    if (file_type==0) {
         /*see if we can find a lint type*/
-        if (junkinbasename(ent->fts_path, set))
-            RmFileype=TYPE_JNK_FILENAME;
-        else if ((RmFileype = uid_gid_check(ent, set))) {}
-        else if (is_old_tmp(ent, set)) {
-            RmFileype = TYPE_OTMP;
-        } else if(is_nonstripped(ent, set)) {
-            RmFileype = TYPE_NBIN;
+        if (junkinbasename(ent->fts_path, settings)) {
+            file_type=TYPE_JNK_FILENAME;
+        } else if ((file_type = uid_gid_check(ent, settings))) {
+        } else if (is_old_tmp(ent, settings)) {
+            file_type = TYPE_OTMP;
+        } else if(is_nonstripped(ent, settings)) {
+            file_type = TYPE_NBIN;
+        } else {
+            file_type=TYPE_DUPE_CANDIDATE;
         }
     }
-
-    if (RmFileype==0) RmFileype=TYPE_DUPE_CANDIDATE;
 
     switch (ent->fts_info) {
     case FTS_D:         /* preorder directory */
@@ -59,12 +59,12 @@ static int process_file (RmFileList *list, FTSENT *ent, bool is_ppath, int pnum,
     case FTS_W:         /* whiteout object */
     case FTS_NS:        /* stat(2) failed */
     case FTS_NSOK:      /* no stat(2) requested */
-        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, RmFileype, is_ppath, pnum));
+        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
         break;
     case FTS_F:         /* regular file */
     case FTS_SL:        /* symbolic link */
     case FTS_DEFAULT:   /* none of the above */
-        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, RmFileype, is_ppath, pnum));
+        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
         break;
     default:
         break;
@@ -121,17 +121,16 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
             case FTS_D:         /* preorder directory */
                 if(junkinbasename(p->fts_path, settings)) {
                     info("Junk dir %s\n", p->fts_path);
-                    process_file(list, p, is_ppath, pathnum, TYPE_JNK_DIRNAME);
+                    process_file(settings, list, p, is_ppath, pathnum, TYPE_JNK_DIRNAME);
                     junkdirskip = (settings->collide);
                 }
                 if (
                     (settings->depth!=0 && p->fts_level>=settings->depth) ||
                     /* continuing into folder would exceed maxdepth*/
                     (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') ||
-                    /* ignoring hidden folders */
-                    (regfilter(paths[0], settings->dpattern)) ||
                     /* does not match regex */
-                    (junkdirskip)) {
+                    (junkdirskip)) 
+                {
                     fts_set(ftsp,p,FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags=true; /*current dir not empty*/
                 } else {
@@ -154,7 +153,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
             case FTS_DP:        /* postorder directory */
                 if ((p->fts_level >= emptydir_stack_overflow) &&
                         (is_emptydir[ (p->fts_level + 1) % ( MAX_EMPTYDIR_DEPTH + 1 )] == 'E')) {
-                    numfiles += process_file(list, p, is_ppath, pathnum, TYPE_EDIR);
+                    numfiles += process_file(settings, list, p, is_ppath, pathnum, TYPE_EDIR);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -165,7 +164,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 warning(RED"Warning: symlink without target: %s\n"NCO, errno, p->fts_path);
-                numfiles += process_file(list, p, is_ppath, pathnum, TYPE_BLNK);
+                numfiles += process_file(settings, list, p, is_ppath, pathnum, TYPE_BLNK);
                 clear_emptydir_flags=true; /*current dir not empty*/
                 break;
             case FTS_W:         /* whiteout object */
@@ -180,7 +179,7 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags=true; /*current dir not empty*/
-                numfiles += process_file(list, p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
+                numfiles += process_file(settings, list, p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
             default:
                 clear_emptydir_flags=true; /*current dir not empty*/
                 break;
@@ -215,9 +214,11 @@ cleanup:
  * add the files found into LIST
  * Return file count if successful.  */
 
-int rmlint_search_tree( RmSettings *settings) { /*, rmlint_filelist *list)*/
+int rmlint_search_tree(RmSession *session) { 
+    RmSettings *settings = session->settings;
     int numfiles=0;
     int cpindex=0;
+
     /* Set Bit flags for fts options.  */
     int bit_flags = 0;
     if (!settings->followlinks)
@@ -226,15 +227,13 @@ int rmlint_search_tree( RmSettings *settings) { /*, rmlint_filelist *list)*/
     if (settings->samepart)
         bit_flags|=FTS_XDEV;
 
-    RmFileList * list = list_begin();
-
     while(settings->paths[cpindex] != NULL) {
         /* The path points to a dir - recurse it! */
         info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...",
              settings->paths[cpindex],
              settings->is_ppath[cpindex] ? "" : "non-"
             );
-        numfiles += traverse_path (list, settings, cpindex, bit_flags);
+        numfiles += traverse_path (session->list, settings, cpindex, bit_flags);
         info(" done: %d files added.\n", numfiles);
 
         cpindex++;

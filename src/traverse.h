@@ -29,7 +29,7 @@
 #include <regex.h>
 #include "defs.h"
 
-int rmlint_search_tree(RmSettings *settings);
+int rmlint_search_tree(RmSession *session);
 void search_init(void);
 
 #endif

@@ -37,6 +37,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <setjmp.h>
+#include <glib.h>
+#include <glib/gprintf.h>
 
 #include "rmlint.h"
 #include "mode.h"
@@ -46,79 +48,59 @@
 #include "filter.h"
 #include "linttests.h"
 
-/* If more that one path given increment */
-int  cpindex = 0;
+    /* If more that one path given increment */
+    int  cpindex = 0;
 
-/* Control flags */
-bool do_exit = false,
-     use_cwd = false,
-     jmp_set = false,
-     ex_stat = false,
-     abort_n = true;
+    /* Control flags */
+    bool do_exit = false,
+         use_cwd = false,
+         jmp_set = false,
+         ex_stat = false,
+         abort_n = true;
 
-guint64 total_files = 0;
+    guint64 total_files = 0;
 
-/* Default commands */
-const char *script_name = "rmlint";
+    /* Default commands */
+    const char *script_name = "rmlint";
 
-/* If die() is called rmlint will jump back to the end of main
- * rmlint does NOT call exit() or abort() on it's own - so you
- * may use it's methods also in your own programs - see main()
- * It still has various problems with calling rmlint_main() twice... :-( //ToDo
- * */
-jmp_buf place;
+    /* If die() is called rmlint will jump back to the end of main
+     * rmlint does NOT call exit() or abort() on it's own - so you
+     * may use it's methods also in your own programs - see main()
+     * It still has various problems with calling rmlint_main() twice... :-( //ToDo
+     * */
+    jmp_buf place;
 
-/* ------------------------------------------------------------- */
-
-void rmlint_init(void) {
-    do_exit = false;
-    use_cwd = false;
-    jmp_set = false;
-    ex_stat = false;
-    abort_n = true;
-    total_files = 0;
-}
-
-/* ------------------------------------------------------------- */
-
-guint64 get_totalfiles(void) {
-    return total_files;
-}
-
-/* ------------------------------------------------------------- */
-
-/* Don't forget to free retvalue */
-char *strdup_printf(const char *format, ...) {
-    va_list arg;
-    char *tmp;
-    va_start(arg, format);
-    if(vasprintf(&tmp, format, arg) == -1) {
-        return NULL;
+    void rmlint_init(void) {
+        do_exit = false;
+        use_cwd = false;
+        jmp_set = false;
+        ex_stat = false;
+        abort_n = true;
+        total_files = 0;
     }
-    va_end(arg);
-    return tmp;
-}
 
-/* ------------------------------------------------------------- */
-
-/* Make chained calls possible */
-char * rm_col(char * string, const char * COL) {
-    char * new = strsubs(string,COL,NULL);
-    if(string) {
-        free(string);
-        string = NULL;
+    guint64 get_totalfiles(void) {
+        return total_files;
     }
-    return new;
-}
 
-/* ------------------------------------------------------------- */
+    /* Make chained calls possible */
+    char * rm_col(char * string, const char * COL) {
+        char * new = strsubs(string,COL,NULL);
+        if(string) {
+            free(string);
+            string = NULL;
+        }
+        return new;
+    }
 
 void msg_macro_print(FILE * stream, const char * string) {
     if(stream && string) {
         char * tmp = strdup(string);
-        if(!set->color) {
-            tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
-        }
+        // TODO: Use g_log. This is braindead.
+        // if(!set->color) {
+        //     // TODO: Wow. Stupidy wins again.
+        //     tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
+        // }
         if(stream != NULL && tmp != NULL) {
             fprintf(stream,"%s",tmp);
             fflush(stream);
@@ -128,15 +110,13 @@ void msg_macro_print(FILE * stream, const char * string) {
     }
 }
 
-/* ------------------------------------------------------------- */
-
 /** Messaging **/
 void error(const char* format, ...) {
-    if(set->verbosity > 0 && set->verbosity < 4) {
+    if(1) {
         char * tmp;
         va_list args;
         va_start(args, format);
-        if(vasprintf(&tmp, format, args) == -1) {
+        if(g_vasprintf(&tmp, format, args) == -1) {
             return;
         }
         /* print, respect -B */
@@ -148,14 +128,13 @@ void error(const char* format, ...) {
     }
 }
 
-/* ------------------------------------------------------------- */
-
 void warning(const char* format, ...) {
-    if((set->verbosity > 1) && (set->verbosity < 4)) {
+    //if((set->verbosity > 1) && (set->verbosity < 4)) {
+    if(1) {
         char * tmp;
         va_list args;
         va_start(args, format);
-        if(vasprintf(&tmp, format, args) == -1) {
+        if(g_vasprintf(&tmp, format, args) == -1) {
             return;
         }
         msg_macro_print(stderr,tmp);
@@ -166,14 +145,13 @@ void warning(const char* format, ...) {
     }
 }
 
-/* ------------------------------------------------------------- */
-
 void info(const char* format, ...) {
-    if(((set->verbosity > 2) && (set->verbosity < 4)) || set->verbosity == 6) {
+    // if(((set->verbosity > 2) && (set->verbosity < 4)) || set->verbosity == 6) {
+    if(1) {
         char * tmp;
         va_list args;
         va_start(args, format);
-        if(vasprintf(&tmp, format, args) == -1) {
+        if(g_vasprintf(&tmp, format, args) == -1) {
             return;
         }
         msg_macro_print(stdout,tmp);
@@ -195,27 +173,27 @@ int systemf(const char* format, ...) {
     char *cmd;
     int ret = 0;
     va_start(arg, format);
-    if(vasprintf(&cmd, format, arg) == -1)
+    if(g_vasprintf(&cmd, format, arg) == -1) {
         return -1;
+    }
+
     va_end(arg);
+
     /* Now execute a shell command */
     if((ret = system(cmd)) == -1) {
         perror("systemf(const char* format, ...)");
     }
-    if(cmd) free(cmd);
+    g_free(cmd);
     return ret;
 }
 
 /* ------------------------------------------------------------- */
 
 /* Version string */
-static void print_version(bool exit) {
+static void print_version(void) {
     fprintf(stderr, "Version 1.0.6b compiled: [%s]-[%s]\n",__DATE__,__TIME__);
     fprintf(stderr, "Author Christopher Pahl; Report bugs to <sahib@online.de>\n");
     fprintf(stderr, "or use the Issuetracker at https://github.com/sahib/rmlint/issues\n");
-    if(exit) {
-        die(0);
-    }
 }
 
 /* ------------------------------------------------------------- */
@@ -308,52 +286,49 @@ static void print_help(void) {
     fprintf(stderr,"Additionally, the options b,p,f,s,e,g,i,c,n,a,y,x,u have a uppercase option (B,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
             "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n\n"
            );
-    print_version(false);
     fprintf(stderr, "\nLicensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
     fprintf(stderr, "See the manpage, README or <http://sahib.github.com/rmlint/> for more information.\n");
-    die(0);
 }
 
 /* ------------------------------------------------------------- */
 
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
 void rmlint_set_default_settings(RmSettings *pset) {
-    set = pset;
-    pset->mode      =  1;       /* list only    */
-    pset->casematch     =  0;       /* Insensitive  */
-    pset->invmatch  =  0;       /* Normal mode  */
-    pset->paranoid      =  0;       /* dont be bush */
-    pset->depth         =  0;       /* inf depth    */
-    pset->followlinks   =  0;       /* fol. link    */
-    pset->threads       = 16;           /* Quad*quad.   */
-    pset->verbosity     =  2;       /* Most relev.  */
-    pset->samepart      =  0;       /* Stay parted  */
-    pset->paths         =  NULL;        /* Startnode    */
-    pset->is_ppath      =  NULL;        /* Startnode    */
-    pset->dpattern      =  NULL;        /* DRegpattern  */
-    pset->fpattern  =  NULL;        /* FRegPattern  */
-    pset->cmd_path      =  NULL;        /* Cmd,if used  */
-    pset->cmd_orig      =  NULL;        /* Origcmd, -"- */
-    pset->junk_chars    =  NULL;        /* You have to set this   */
-    pset->oldtmpdata    = 60;           /* Remove 1min old buffers */
-    pset->doldtmp       = true;         /* Remove 1min old buffers */
-    pset->ignore_hidden = 1;
-    pset->findemptydirs = 1;
-    pset->namecluster   = 0;
-    pset->nonstripped   = 0;
-    pset->searchdup     = 1;
-    pset->color         = 1;
-    pset->findbadids    = 1;
-    pset->output        = (char*)script_name;
-    pset->minsize       = -1;
-    pset->maxsize       = -1;
-    pset->listemptyfiles = 1;
-    pset->keep_all_originals = 0;    /* Keep just one file from ppath "originals" indicated by "//" */
-    pset->must_match_original = 0;   /* search for any dupes, not just ones which include ppath members*/
-    pset->invert_original = 0;   /* search for any dupes, not just ones which include ppath members*/
-    pset->find_hardlinked_dupes = 0;   /* ignore hardlinked dupes*/
-    pset->sort_criteria = "m";  /* default ranking order for choosing originals - keep oldest mtime*/
-    pset->skip_confirm = 0; /* default setting is to ask user to confirm input settings at start */
+    pset->mode                  = 1;                  /* list only    */
+    pset->casematch             = 0;                  /* Insensitive  */
+    pset->invmatch              = 0;                  /* Normal mode  */
+    pset->paranoid              = 0;                  /* dont be bush */
+    pset->depth                 = 0;                  /* inf depth    */
+    pset->followlinks           = 0;                  /* fol. link    */
+    pset->threads               = 16;                 /* Quad*quad.   */
+    pset->verbosity             = 2;                  /* Most relev.  */
+    pset->samepart              = 0;                  /* Stay parted  */
+    pset->paths                 = NULL;               /* Startnode    */
+    pset->is_ppath              = NULL;               /* Startnode    */
+    pset->dpattern              = NULL;               /* DRegpattern  */
+    pset->fpattern              = NULL;               /* FRegPattern  */
+    pset->cmd_path              = NULL;               /* Cmd,if used  */
+    pset->cmd_orig              = NULL;               /* Origcmd, -"- */
+    pset->junk_chars            = NULL;               /* You have to set this   */
+    pset->oldtmpdata            = 60;                 /* Remove 1min old buffers */
+    pset->doldtmp               = true;               /* Remove 1min old buffers */
+    pset->ignore_hidden         = 1;
+    pset->findemptydirs         = 1;
+    pset->namecluster           = 0;
+    pset->nonstripped           = 0;
+    pset->searchdup             = 1;
+    pset->color                 = 1;
+    pset->findbadids            = 1;
+    pset->output                = (char*)script_name;
+    pset->minsize               = -1;
+    pset->maxsize               = -1;
+    pset->listemptyfiles        = 1;
+    pset->keep_all_originals    = 0;                  /* Keep just one file from ppath "originals" indicated by "//" */
+    pset->must_match_original   = 0;                  /* search for any dupes, not just ones which include ppath members*/
+    pset->invert_original       = 0;                  /* search for any dupes, not just ones which include ppath members*/
+    pset->find_hardlinked_dupes = 0;                  /* ignore hardlinked dupes*/
+    pset->sort_criteria         = "m";                /* default ranking order for choosing originals - keep oldest mtime*/
+    pset->skip_confirm          = 0;                  /* default setting is to ask user to confirm input settings at start */
 
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
@@ -362,22 +337,19 @@ void rmlint_set_default_settings(RmSettings *pset) {
 
 }
 
-/* ------------------------------------------------------------- */
-
-void parse_limit_sizes(char * limit_string) {
+void parse_limit_sizes(RmSession * session, char * limit_string) {
+    // TODO: Make this support multipliers, i.e. 4M for 4 * (1024 * 1024)
     char * ptr = limit_string;
     if(ptr != NULL) {
         char * semicol = strchr(ptr,';');
         if(semicol != NULL) {
             semicol[0] = '\0';
             semicol++;
-            set->maxsize = strtol(semicol,NULL,10);
+            session->settings->maxsize = strtol(semicol,NULL,10);
         }
-        set->minsize = strtol(ptr,NULL,10);
+        session->settings->minsize = strtol(ptr,NULL,10);
     }
 }
-
-/* ------------------------------------------------------------- */
 
 /* Check if this is the 'preferred' dir */
 int check_if_preferred(const char * dir) {
@@ -390,9 +362,12 @@ int check_if_preferred(const char * dir) {
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
+char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
+    RmSettings * sets = session->settings;
+
     int c,lp=0;
     rmlint_init();
+
     while(1) {
         static struct option long_options[] = {
             {"threads",        required_argument, 0, 't'},
@@ -491,10 +466,12 @@ char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
             sets->color = 0;
             break;
         case 'V':
-            print_version(true);
+            print_version();
             break;
         case 'h':
             print_help();
+            print_version();
+            die(session, EXIT_SUCCESS);
             break;
         case 'H':
             sets->find_hardlinked_dupes = 1;
@@ -587,7 +564,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
             sets->skip_confirm = 1;
             break;
         case 'z':
-            parse_limit_sizes(optarg);
+            parse_limit_sizes(session, optarg);
             break;
         case 'l':
             sets->findbadids = true;
@@ -618,7 +595,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
             if(!sets->mode) {
                 error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
                 error("       Available modes are: ask | list | link | noask | cmd\n");
-                die(0);
+                die(session, EXIT_FAILURE);
                 return 0;
             }
             break;
@@ -658,9 +635,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
         if(!sets->paths[0]) {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
-            if(sets->paths) {
-                free(sets->paths);
-            }
+            g_free(sets->paths);
             return 0;
         }
         use_cwd = true;
@@ -671,22 +646,22 @@ char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets) {
 /* ------------------------------------------------------------- */
 
 /* User  may specify in -cC a command that get's excuted on every hit - check for being a safe one */
-static void check_cmd(const char *cmd) {
-    int i = 0, ps = 0;
+static int check_cmd(const char *cmd) {
+    gboolean invalid = FALSE;
     int len = strlen(cmd);
-    for(; i < len; i++) {
-        if(cmd[i] == '%' && i+1 != len) {
-            if(cmd[i+1] != '%') {
-                ps++;
-                continue;
-            }
+    for(int i = 0; i < (len - 1); i++) {
+        if(cmd[i] == '%' && cmd[i + 1] != '%') {
+            invalid = TRUE;
+            continue;
         }
     }
-    if(ps > 0) {
+    if(invalid) {
         puts(YEL"FATAL: "NCO"--command [-cC]: printfstyle markups (e.g. %s) are not allowed!");
         puts(YEL"       "NCO"                 Escape '%' with '%%' to get around.");
-        die(0);
+        return 0;
     }
+
+    return 1;
 }
 
 /* ------------------------------------------------------------- */
@@ -699,19 +674,17 @@ int  get_cpindex(void) {
 /* ------------------------------------------------------------- */
 
 /* exit and return to calling method */
-void die(int status) {
+void die(RmSession *session, int status) {
+    RmSettings * sets = session->settings;
+
     /* Free mem */
     if(use_cwd) {
-        if(set->paths[0]) {
-            free(set->paths[0]);
-        }
+        g_free(sets->paths[0]);
     }
-    if(set->paths) {
-        free(set->paths);
-    }
-    if(set->is_ppath) {
-        free(set->is_ppath);
-    }
+
+    g_free(sets->paths);
+    g_free(sets->is_ppath);
+
     if(status) {
         info("Abnormal exit\n");
     }
@@ -731,6 +704,7 @@ void die(int status) {
                );
         fclose(get_scriptstream());
     }
+
     /* Prepare to jump to return */
     do_exit = true;
     ex_stat = status;
@@ -744,7 +718,6 @@ void die(int status) {
 
 char rmlint_echo_settings(RmSettings *settings) {
     char confirm;
-    int i=0;
     int save_verbosity=settings->verbosity;
 
     bool has_ppath=false;
@@ -785,13 +758,11 @@ char rmlint_echo_settings(RmSettings *settings) {
 
     /*---------------- search paths ---------------*/
     warning(NCO"Search paths:\n");
-    i=0;
-    while(settings->paths[i] != NULL) {
+    for(int i = 0; settings->paths[i] != NULL; ++i) {
         if (settings->is_ppath[i]) {
             has_ppath=true;
             warning (GRE"\t(orig)\t+ %s\n"NCO, settings->paths[i] );
         } else warning ("\t\t+ %s\n", settings->paths[i] );
-        i++;
     }
     if ((settings->paths[1]) && !has_ppath) warning("\t[prefix one or more paths with // to flag location of originals]\n");
 
@@ -849,8 +820,7 @@ char rmlint_echo_settings(RmSettings *settings) {
     warning(NCO"Originals selected based on (decreasing priority):    [-D <criteria>]\n");
     if (has_ppath) warning("\tpaths indicated "GRE"(orig)"NCO" above\n");
 
-    i=0;
-    while (settings->sort_criteria[i]) {
+    for (int i = 0; settings->sort_criteria[i]; ++i) {
         switch(settings->sort_criteria[i]) {
         case 'm':
             warning("\tKeep oldest modified time\n");
@@ -874,10 +844,11 @@ char rmlint_echo_settings(RmSettings *settings) {
             error(RED"\tWarning: invalid originals ranking option '-D %c'\n"NCO, settings->sort_criteria[i]);
             break;
         }
-        i++;
     }
-    if (settings->keep_all_originals)
+
+    if (settings->keep_all_originals) {
         warning("\tNote: all originals in "GRE"(orig)"NCO" paths will be kept\n");
+    }
     warning("\t      "RED"but"NCO" other lint in "GRE"(orig)"NCO" paths may still be deleted\n");
 
     /*---------------- action mode ---------------*/
@@ -887,6 +858,7 @@ char rmlint_echo_settings(RmSettings *settings) {
     } else {
         /*different mode for duplicated vs everything else*/
         warning ("Action for Duplicates:\n\t");
+        // TODO: Enumerate this.
         switch (settings->mode) {
         case 2:
             warning("Ask user what to do with each file\n");
@@ -912,10 +884,11 @@ char rmlint_echo_settings(RmSettings *settings) {
 
     /*--------------- paranoia ---------*/
 
-    if (settings->paranoid)
+    if (settings->paranoid) {
         warning("Note: paranoid (bit-by-bit) comparison will be used to verify duplicates "RED"(slow)\n"NCO);
-    else
+    } else {
         warning("Note: fingerprint and md5 comparison will be used to identify duplicates "RED"(very slight risk of false positives)"NCO" [-p]");
+    }
 
     /*--------------- confirmation ---------*/
 
@@ -930,14 +903,11 @@ char rmlint_echo_settings(RmSettings *settings) {
 
     settings->verbosity=save_verbosity;
     return 1;
-
-    /**/
 }
 
 /* ------------------------------------------------------------- */
 
-/* Actual entry point */
-int rmlint_main(void) {
+int rmlint_main(RmSession *session) {
     /* Used only for infomessage */
     total_files = 0;
     abort_n = false;
@@ -950,46 +920,55 @@ int rmlint_main(void) {
         mode_c_init();
         linttests_c_init();
     }
+
     /* Jump to this location on exit (with do_exit=true) */
     setjmp(place);
+
     jmp_set = true;
     if(do_exit != true) {
-        if(set->mode == 5) {
-            if(set->cmd_orig) {
-                check_cmd(set->cmd_orig);
+        if(session->settings->mode == 5) {
+            if(session->settings->cmd_orig) {
+                if(check_cmd(session->settings->cmd_orig) == 0) {
+                    die(session, EXIT_FAILURE);
+                }
             }
-            if(set->cmd_path) {
-                check_cmd(set->cmd_path);
+            if(session->settings->cmd_path) {
+                check_cmd(session->settings->cmd_path);
+                    die(session, EXIT_FAILURE);
             }
         }
 
         /* Open logfile */
-        init_filehandler();
-        /* Warn if started with sudo */
-        if(!access("/bin/ls",R_OK|W_OK)) {
+        init_filehandler(session->settings);
+
+        /* Warn if started with sudo. Hack: Just try to get read access to /bin/ls */
+        if(!access("/bin/ls", R_OK | W_OK)) {
             warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
             warning("      Take care of what you're doing!\n\n");
         }
-        total_files = rmlint_search_tree(set);
+        total_files = rmlint_search_tree(session);
+
         if(total_files < 2) {
             warning("No files in cache to search through => No duplicates.\n");
-            die(0);
-        } else
+            die(session, 0);
+        } else {
             info("Returned %d files\n", total_files);
+        }
 
         info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", total_files);
-        if(set->threads > total_files) {
-            set->threads = total_files;
+        if(session->settings->threads > total_files) {
+            session->settings->threads = total_files + 1;
         }
         /* Till this point the list is unsorted
          * The filter alorithms requires the list to be size-sorted,
          * so it can easily filter unique sizes, and build "groups"
          * */
-        info("Now finding easy lint..%c",set->verbosity > 4 ? '.' : '\n');
+        info("Now finding easy lint..%c", session->settings->verbosity > 4 ? '.' : '\n');
+
         /* Apply the prefilter and outsort inique sizes */
-        start_processing(list_begin());
-        /* Exit! */
-        die(EXIT_SUCCESS);
+        start_processing(session);
+        die(session, EXIT_SUCCESS);
     }
+
     return ex_stat;
 }

@@ -19,24 +19,31 @@
 *
 **/
 
+#include <stdlib.h>
 #include "rmlint.h"
+#include "list.h"
 
-/* Only call the methods */
-/* Original plan was to provide an API, but this would need some work */
 int main(int argc, char **argv) {
-    /* Init */
-    RmSettings mySettings;
-    rmlint_set_default_settings(&mySettings);
+    int exit_state = EXIT_FAILURE; 
+
+    RmSettings settings;
+    rmlint_set_default_settings(&settings);
+
+    RmSession session;
+    session.list = rm_file_list_new();
+    session.settings = &settings;
+
     /* Parse commandline */
-    if(rmlint_parse_arguments(argc,argv,&mySettings) == 0) {
-        return -1;
+    if(rmlint_parse_arguments(argc, argv, &session) != 0) {
+        /* Check settings */
+        if (rmlint_echo_settings(session.settings)) {
+            /* Do all the real work */
+            exit_state = rmlint_main(&session);
+        } else {
+            error(RED"Aborting\n"NCO);
+        }
     }
-    /*check settings*/
-    if (rmlint_echo_settings(&mySettings))
-        /* do all the real work */
-        return rmlint_main();
-    else {
-        error(RED"Aborting\n"NCO);
-        return -1;
-    }
+
+    rm_file_list_destroy(session.list);
+    return exit_state;
 }

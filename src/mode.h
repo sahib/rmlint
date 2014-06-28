@@ -25,9 +25,9 @@
 #include "defs.h"
 
 /* Mostly used by filter.c  */
-bool process_doop_groop(GQueue *group);
-void init_filehandler(void);
-void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig);
+bool process_doop_groop(RmSession *session, GQueue *group);
+void init_filehandler(RmSettings * sets);
+void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFile * p_to_orig);
 guint64 get_dupcounter();
 
 /* ------------------------------------------------------------- */

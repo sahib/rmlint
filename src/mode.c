@@ -86,42 +86,19 @@ FILE *get_scriptstream(void) {
 
 /* ------------------------------------------------------------- */
 
-static char * __strsubs(char * string, const char * subs, size_t subs_len, const char * with, size_t with_len, long offset) {
-    char * new, * occ = strstr(string+offset,subs);
-    size_t strn_len = 0;
-    /* Terminate when no occurences left */
-    if(occ == NULL) {
-        return string;
+gchar * strsubs(const char * string, const char * subs, const char * with)
+{
+    gchar * result = NULL;
+    if (string != NULL && string[0] != '\0')
+    {
+        gchar ** split = g_strsplit (string,subs,0);
+        if (split != NULL)
+        {
+            result = g_strjoinv (with,split);
+        }
+        g_strfreev (split);
     }
-    /* string has a variable length */
-    strn_len = strlen(string);
-    new = calloc(strn_len + with_len - subs_len + 1,sizeof(char));
-    /* Split & copy */
-    strncat(new, string, occ-string);
-    strncat(new, with, with_len);
-    strncat(new, occ+subs_len, strn_len - subs_len - (occ-string));
-    /* free previous pointer */
-    free(string);
-    return __strsubs(new,subs,subs_len,with,with_len,(occ-string)+with_len);
-}
-
-/* ------------------------------------------------------------- */
-
-/* Return always a newly allocated string - wraps around __strsubs() */
-char * strsubs(const char * string, const char * subs, const char * with) {
-    size_t subs_len, with_len;
-    /* Handle special cases (where __strsubs would return weird things) */
-    if(string == NULL || *string == 0) {
-        return NULL;
-    }
-    if(subs == NULL || (subs == NULL && with == NULL) || *subs == 0) {
-        return strdup(string);
-    }
-    /* Call strlen() only once */
-    subs_len = strlen(subs);
-    with_len = (with) ? strlen(with) : 0;
-    /* Replace all occurenced recursevely */
-    return __strsubs(strdup(string), subs, subs_len, with, with_len,0);
+    return result;
 }
 
 /* ------------------------------------------------------------- */
@@ -137,21 +114,9 @@ static void remfile(const char *r_path) {
 
 /* ------------------------------------------------------------- */
 
-static void print_askhelp(void) {
-    error(GRE"\nk"NCO" - keep file \n"
-          GRE"d"NCO" - delete file \n"
-          GRE"i"NCO" - show fileinfo\n"
-          GRE"l"NCO" - replace with link \n"
-          GRE"q"NCO" - quit all\n"
-          GRE"h"NCO" - show help.\n\n"
-          NCO);
-}
-
-/* ------------------------------------------------------------- */
-
-void log_print(FILE * stream, const char * string) {
+void log_print(RmSettings *sets, FILE * stream, const char * string) {
     if(stream && string) {
-        if(set->verbosity == 4) {
+        if(sets->verbosity == 4) {
             fprintf(stdout,"%s",string);
         }
         fprintf(stream,"%s",string);
@@ -160,12 +125,15 @@ void log_print(FILE * stream, const char * string) {
 
 /* ------------------------------------------------------------- */
 
-static char * make_cmd_ready(bool is_orig, const char * orig, const char * dupl) {
+static char * make_cmd_ready(RmSettings * sets, bool is_orig, const char * orig, const char * dupl) {
     char * repl_orig = NULL;
-    if(!is_orig)
-        repl_orig = strsubs(set->cmd_path,CMD_ORIG,orig);
-    else
-        repl_orig = strsubs(set->cmd_orig,CMD_ORIG,orig);
+    if(!is_orig) {
+        repl_orig = strsubs(sets->cmd_path,CMD_ORIG,orig);
+    }
+    else {
+        repl_orig = strsubs(sets->cmd_orig,CMD_ORIG,orig);
+    }
+
     if(repl_orig != NULL && !is_orig) {
         char * repl_dups = strsubs(repl_orig,CMD_DUPL,dupl);
         if(repl_dups != NULL) {
@@ -178,9 +146,9 @@ static char * make_cmd_ready(bool is_orig, const char * orig, const char * dupl)
 
 /* ------------------------------------------------------------- */
 
-void script_print(char * string) {
+void script_print(RmSettings * sets, char * string) {
     if(string != NULL) {
-        if(set->verbosity == 5) {
+        if(sets->verbosity == 5) {
             fprintf(stdout,"%s",string);
         }
         fprintf(get_scriptstream(),"%s",string);
@@ -190,13 +158,15 @@ void script_print(char * string) {
 
 /* ------------------------------------------------------------- */
 
-#define _sd_ strdup_printf
+#define _sd_ g_strdup_printf
 
 /* ------------------------------------------------------------- */
 
-void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig) {
+void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFile * p_to_orig) {
     bool free_fullpath = true;
-    if(get_logstream() && get_scriptstream() && set->output) {
+    RmSettings *sets = session->settings;
+
+    if(get_logstream() && get_scriptstream() && sets->output) {
         int i = 0;
         char *fpath = realpath(file->path, NULL);
         const char * chown_cmd = "chown $(whoami):$(id -gn)";
@@ -215,146 +185,93 @@ void write_to_log(const RmFile *file, bool orig, const RmFile * p_to_orig) {
             free(tmp_copy);
         }
         if(file->dupflag == TYPE_BLNK) {
-            script_print(_sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
-            log_print(get_logstream(),"BLNK");
+            script_print(sets, _sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
+            log_print(sets, get_logstream(),"BLNK");
         } else if(file->dupflag == TYPE_BASE) {
-            log_print(get_logstream(),"BASE");
-            script_print(_sd_("echo  '%s' # double basename.\n", fpath));
+            log_print(sets, get_logstream(),"BASE");
+            script_print(sets, _sd_("echo  '%s' # double basename.\n", fpath));
         } else if(file->dupflag == TYPE_OTMP) {
-            script_print(_sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, set->oldtmpdata));
-            log_print(get_logstream(),"OTMP");
+            script_print(sets, _sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, sets->oldtmpdata));
+            log_print(sets, get_logstream(),"OTMP");
         } else if(file->dupflag == TYPE_EDIR) {
-            script_print(_sd_("rmdir '%s' # empty folder.\n", fpath));
-            log_print(get_logstream(),"EDIR");
+            script_print(sets, _sd_("rmdir '%s' # empty folder.\n", fpath));
+            log_print(sets, get_logstream(),"EDIR");
         } else if(file->dupflag == TYPE_JNK_DIRNAME) {
-            script_print(_sd_("echo  '%s' # dirname containing one char of the string \"%s\"\n", fpath, set->junk_chars));
-            log_print(get_logstream(),"JNKD");
+            script_print(sets, _sd_("echo  '%s' # dirname containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
+            log_print(sets, get_logstream(),"JNKD");
         } else if(file->dupflag == TYPE_JNK_FILENAME) {
-            script_print(_sd_("echo  '%s' # filename containing one char of the string \"%s\"\n", fpath, set->junk_chars));
-            log_print(get_logstream(),"JNKN");
+            script_print(sets, _sd_("echo  '%s' # filename containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
+            log_print(sets, get_logstream(),"JNKN");
         } else if(file->dupflag == TYPE_NBIN) {
-            script_print(_sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
-            log_print(get_logstream(),"NBIN");
+            script_print(sets, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
+            log_print(sets, get_logstream(),"NBIN");
         } else if(file->dupflag == TYPE_BADUID) {
-            script_print(_sd_("%s '%s' # bad uid\n",chown_cmd, fpath));
-            log_print(get_logstream(),"BUID");
+            script_print(sets, _sd_("%s '%s' # bad uid\n",chown_cmd, fpath));
+            log_print(sets, get_logstream(),"BUID");
         } else if(file->dupflag == TYPE_BADGID) {
-            script_print(_sd_("%s '%s' # bad gid\n",chown_cmd, fpath));
-            log_print(get_logstream(),"BGID");
+            script_print(sets, _sd_("%s '%s' # bad gid\n",chown_cmd, fpath));
+            log_print(sets, get_logstream(),"BGID");
         } else if(file->fsize == 0) {
-            script_print(_sd_("rm -f '%s' # empty file.\n", fpath));
-            log_print(get_logstream(),"ZERO");
+            script_print(sets, _sd_("rm -f '%s' # empty file.\n", fpath));
+            log_print(sets, get_logstream(),"ZERO");
         } else if(orig==false) {
-            log_print(get_logstream(),"DUPL");
-            if(set->cmd_path) {
+            log_print(sets, get_logstream(),"DUPL");
+            if(sets->cmd_path) {
                 char *opath = realpath(p_to_orig->path, NULL);
                 if(opath != NULL) {
-                    /*script_print(_sd_(set->cmd_path,fpath,opath));*/
+                    /*script_print(sets, _sd_(set->cmd_path,fpath,opath));*/
                     char * tmp_opath = strsubs(opath,"'","'\"'\"'");
                     if(tmp_opath != NULL) {
-                        script_print(make_cmd_ready(false,tmp_opath,fpath));
-                        script_print(_sd_("\n"));
-                        free(tmp_opath);
+                        script_print(sets, make_cmd_ready(sets, false,tmp_opath,fpath));
+                        script_print(sets, _sd_("\n"));
+                        g_free(tmp_opath);
                     }
-                    free(opath);
+                    g_free(opath);
                 }
             } else {
-                script_print(_sd_("rm -f '%s' # duplicate\n",fpath));
+                script_print(sets, _sd_("rm -f '%s' # duplicate\n",fpath));
             }
         } else {
-            log_print(get_logstream(),"ORIG");
-            if(set->cmd_orig) {
-                /*//script_print(_sd_(set->cmd_orig,fpath));*/
-                script_print(make_cmd_ready(true,fpath,NULL));
-                script_print(_sd_(" \n"));
+            log_print(sets, get_logstream(),"ORIG");
+            if(sets->cmd_orig) {
+                /*//script_print(sets, _sd_(set->cmd_orig,fpath));*/
+                script_print(sets, make_cmd_ready(sets, true,fpath,NULL));
+                script_print(sets, _sd_(" \n"));
             } else {
-                script_print(_sd_("echo  '%s' # original\n",fpath));
+                script_print(sets, _sd_("echo  '%s' # original\n",fpath));
             }
         }
-        log_print(get_logstream(),LOGSEP);
+        log_print(sets, get_logstream(),LOGSEP);
         for(i = 0; i < 16; i++) {
-            if(set->verbosity == 4) {
+            if(sets->verbosity == 4) {
                 fprintf(stdout,"%02x", file->md5_digest[i]);
             }
             fprintf(get_logstream(),"%02x", file->md5_digest[i]);
         }
 #define INT_CAST long unsigned
-        if(set->verbosity == 4) {
+        if(sets->verbosity == 4) {
             fprintf(stdout,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
         }
         fprintf(get_logstream(),"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
 #undef INT_CAST
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK) {
-            free(fpath);
+            g_free(fpath);
         }
     }
 }
 
-/* ------------------------------------------------------------- */
-
 #undef _sd_
 
-/* ------------------------------------------------------------- */
-
-static bool handle_item(RmFile *file_path, RmFile *file_orig) {
+static bool handle_item(RmSession * session, RmFile *file_path, RmFile *file_orig) {
     char *path = (file_path) ? file_path->path : NULL;
     char *orig = (file_orig) ? file_orig->path : NULL;
+    RmSettings *sets = session->settings;
+
     /* What set->mode are we in? */
-    switch(set->mode) {
+    switch(sets->mode) {
     case 1:
+    case 2:
         break;
-    case 2: {
-        /* Ask the user what to do */
-        char sel, block = 0;
-        if(path == NULL) {
-            break;
-        }
-        do {
-            error(YEL":: "NCO"'%s' same as '%s' [h for help]\n"YEL":: "NCO,path,orig);
-            do {
-                if(!scanf("%c",&sel)) {
-                    perror("scanf()");
-                }
-            } while(getchar() != '\n');
-            switch(sel) {
-            case 'k':
-                block = 0;
-                break;
-            case 'd':
-                remfile(path);
-                block = 0;
-                break;
-            case 'l':
-                remfile(path);
-                error(YEL"EXEC: "NCO"ln -s "NCO"\"%s\" \"%s\"\n", orig, path);
-                block = 0;
-                break;
-            case 'i':
-                MDPrintArr(file_path->md5_digest);
-                printf(" on DevID %d -> ",(unsigned short)file_path->dev);
-                fflush(stdout);
-                systemf("ls -lahi --author --color=auto '%s'",path);
-                MDPrintArr(file_path->md5_digest);
-                printf(" on DevID %d -> ",(unsigned short)file_orig->dev);
-                fflush(stdout);
-                systemf("ls -lahi --author --color=auto '%s'",path);
-                puts(" ");
-                block = 1;
-                break;
-            case 'q':
-                return true;
-                break;
-            case 'h':
-                print_askhelp();
-                block = 1;
-                break;
-            default :
-                block = 1;
-                break;
-            }
-        } while(block);
-    }
-    break;
     case 3: {
         /* Just remove it */
         if(path == NULL) {
@@ -393,9 +310,9 @@ static bool handle_item(RmFile *file_path, RmFile *file_orig) {
         if(tmp_opath && tmp_fpath) {
             const char * cmd = NULL;
             if(path) {
-                cmd = make_cmd_ready(false,tmp_opath,tmp_fpath);
+                cmd = make_cmd_ready(sets, false,tmp_opath,tmp_fpath);
             } else {
-                cmd = make_cmd_ready(true,tmp_opath,NULL);
+                cmd = make_cmd_ready(sets, true,tmp_opath,NULL);
             }
             if(cmd != NULL) {
                 ret = system(cmd);
@@ -419,10 +336,10 @@ static bool handle_item(RmFile *file_path, RmFile *file_orig) {
 
 /* ------------------------------------------------------------- */
 
-void init_filehandler(void) {
-    if(set->output) {
-        char *sc_name = strdup_printf("%s.sh", set->output);
-        char *lg_name = strdup_printf("%s.log",set->output);
+void init_filehandler(RmSettings * sets) {
+    if(sets->output) {
+        char *sc_name = g_strdup_printf("%s.sh", sets->output);
+        char *lg_name = g_strdup_printf("%s.log",sets->output);
         script_out = fopen(sc_name, "w");
         log_out    = fopen(lg_name, "w");
         if(script_out && log_out) {
@@ -520,8 +437,8 @@ void init_filehandler(void) {
         }
         fflush(script_out);
         fflush(log_out);
-        if(sc_name) free(sc_name);
-        if(lg_name) free(lg_name);
+        g_free(sc_name);
+        g_free(lg_name);
     }
 }
 
@@ -530,7 +447,7 @@ void init_filehandler(void) {
 #define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false)
 bool print_newline = true;
 
-bool process_doop_groop(GQueue *group) {
+bool process_doop_groop(RmSession *session, GQueue *group) {
     /* This does the final processing on a dupe group. All required   */
     /* comparisons have been done (including paranoid if required) so */
     /* now it's just a matter of deciding which originals to keep and */
@@ -540,6 +457,7 @@ bool process_doop_groop(GQueue *group) {
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
 
+    RmSettings * sets = session->settings;
     GList *i = group->head;
     bool tagged_original = false;
     RmFile *original = NULL;
@@ -547,7 +465,7 @@ bool process_doop_groop(GQueue *group) {
     while(i) {
         RmFile *fi = i->data;
         if (
-            ((fi->in_ppath) && (set->keep_all_originals)) ||
+            ((fi->in_ppath) && (sets->keep_all_originals)) ||
             ((fi->in_ppath) && (!tagged_original))
         ) {
             fi->filter = false;
@@ -576,18 +494,17 @@ bool process_doop_groop(GQueue *group) {
         RmFile *fi = i->data;
         if(!fi->filter) {
             /* original(s) of a duplicate set*/
-            if((set->mode == 1 || set->mode == 4 || (set->mode == 5 && set->cmd_orig == NULL && set->cmd_path == NULL)) && set->verbosity > 1) {
+            if((sets->mode == 1 || sets->mode == 4 || (sets->mode == 5 && sets->cmd_orig == NULL && sets->cmd_path == NULL)) && sets->verbosity > 1) {
                 if(print_newline) {
                     warning("\n");
                     print_newline = false;
                 }
-                if(set->mode != 4) {
+                if(sets->mode != 4) {
                     error(GRE"   ls "NCO"%s\n",fi->path);
                 }
             }
-            write_to_log(fi, true, NULL);
-            handle_item(NULL, fi);
-            /* Subtract size of the original , so we can gather it later */
+            write_to_log(session, fi, true, NULL);
+            handle_item(session, NULL, fi);
         }
         i = i->next;
     }
@@ -596,24 +513,24 @@ bool process_doop_groop(GQueue *group) {
     while(i) {
         RmFile *fi = i->data;
         if(fi->filter) {
-            /* duplicates(s) of a duplicate set*/
-            if(set->mode == 1 || (set->mode == 5 && !set->cmd_orig && !set->cmd_path)) {
-                if(set->paranoid) {
+            /* duplicates(s) of a duplicate sets*/
+            if(sets->mode == 1 || (sets->mode == 5 && !sets->cmd_orig && !sets->cmd_path)) {
+                if(sets->paranoid) {
                     /* If byte by byte was succesful print a blue "x" */
                     warning(BLU"   %-1s "NCO,"rm");
                 } else {
                     warning(YEL"   %-1s "NCO,"rm");
                 }
-                if(set->verbosity > 1) {
+                if(sets->verbosity > 1) {
                     error("%s\n",fi->path);
                 } else {
                     error("   rm %s\n",fi->path);
                 }
             }
-            write_to_log(fi, false, original);
+            write_to_log(session, fi, false, original);
             set_dupcounter(get_dupcounter()+1);
             add_total_lint(fi->fsize);
-            if(handle_item(fi,original)) {
+            if(handle_item(session, fi, original)) {
                 pthread_mutex_unlock(&mutex_printage);
                 return true;
             }

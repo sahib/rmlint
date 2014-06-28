@@ -46,15 +46,14 @@
 #include "defs.h"
 #include "linttests.h"
 
-
 /* global vars, but initialized by filt_c_init() */
 guint64 dircount, dbase_ctr;
 bool dir_done, db_done;
 
 guint64 total_lint = 0;
 
-void add_total_lint(guint64 RmFileo_add) {
-    total_lint += RmFileo_add;
+void add_total_lint(guint64 additions) {
+    total_lint += additions;
 }
 
 /* ------------------------------------------------------------- */
@@ -69,15 +68,21 @@ void filt_c_init(void) {
 
 /* ------------------------------------------------------------- */
 
+typedef struct SchedulerTag {
+    RmSession *session;
+    GQueue *group;
+} SchedulerTag;
+
 /*
  * Callbock from signal()
  * Counts number of CTRL-Cs and reacts
  */
 static void interrupt(int p) {
+    // TODO.
     switch(p) {
     case SIGINT:
         if(iAbort == 2) {
-            die(-1);
+            // die(-1);
         } else if(db_done) {
             iAbort = 2;
             warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
@@ -90,66 +95,26 @@ static void interrupt(int p) {
     case SIGABRT :
         error(RED"FATAL: "NCO"Aborting due to internal error!\n");
         error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-        die(-1);
+        // die(-1);
     case SIGSEGV :
         error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
         error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-        die(-1);
+        // die(-1);
     }
 }
-
-/* ------------------------------------------------------------- */
-
-/*
- * grep the string "string" (basename of input) to see if it
- * contains the pattern.  Will return 0 if yes, 1 otherwise.
- */
-int regfilter(const char* input, const char *pattern) {
-    int status;
-    int flags = REG_EXTENDED|REG_NOSUB;
-    const char *string;
-    if(!pattern) {
-        return 0;
-    } else {
-        regex_t re;
-        /* Only grep basename */
-        string = rmlint_basename((char *)input);
-        /* forget about case by default */
-        if(!set->casematch) {
-            flags |= REG_ICASE;
-        }
-        /* compile pattern */
-        if(regcomp(&re, pattern, flags)) {
-            return 0;
-        }
-        /* do the actual work */
-        if((status = regexec(&re, string, (size_t)0, NULL, 0)) != 0) {
-            /* catch errors */
-            if(status != REG_NOMATCH) {
-                char err_buff[100];
-                regerror(status, &re, err_buff, 100);
-                warning(YEL"WARN: "NCO" Invalid regex pattern: '%s'\n", err_buff);
-            }
-        }
-        /* finalize */
-        regfree(&re);
-        return (set->invmatch) ? !(status) : (status);
-    }
-}
-
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
-    (void) user_data; // TODO.
+    RmSession *session = user_data;
+    RmSettings *sets = session->settings;
 
-    if (a->in_ppath != b->in_ppath)
+    if (a->in_ppath != b->in_ppath) {
         return a->in_ppath - b->in_ppath;
-    else {
-        int i=0;
-        int sort_criteria_len = strlen(set->sort_criteria);
-        while (i < sort_criteria_len) {
-            long cmp=0;
-            switch (set->sort_criteria[i]) {
+    } else {
+        int sort_criteria_len = strlen(sets->sort_criteria);
+        for (int i = 0; i < sort_criteria_len; i++) {
+            long cmp = 0;
+            switch (sets->sort_criteria[i]) {
             case 'm':
                 cmp = (long)(a->mtime) - (long)(b->mtime);
                 break;
@@ -169,8 +134,9 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
                 cmp = (long)b->pnum - (long)a->pnum;
                 break;
             }
-            if (cmp !=0) return cmp;
-            i++;
+            if (cmp) {
+                return cmp;
+            }
         }
     }
     return 0;
@@ -258,8 +224,9 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
     if(p1->fsize < MMAP_LIMIT && p1->fsize > MD5_IO_BLOCKSIZE>>1) {
         file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
         if(file_map_a != MAP_FAILED) {
-            if(madvise(file_map_a,p1->fsize, MADV_SEQUENTIAL) == -1)
+            if(madvise(file_map_a,p1->fsize, MADV_SEQUENTIAL) == -1) {
                 perror("madvise");
+            }
             file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
             if(file_map_b != MAP_FAILED) {
                 if(madvise(file_map_b,p2->fsize, MADV_SEQUENTIAL) == -1)
@@ -276,9 +243,9 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
             result = 0;
         }
     } else { /* use fread() */
-        guint64 blocksize = MD5_IO_BLOCKSIZE/2;
-        char * read_buf_a = alloca(blocksize);
-        char * read_buf_b = alloca(blocksize);
+        guint64 blocksize = MD5_IO_BLOCKSIZE / 2;
+        char * read_buf_a = g_alloca(blocksize);
+        char * read_buf_b = g_alloca(blocksize);
         int read_a=-1,read_b=-1;
         while(read_a && read_b) {
             if((read_a=read(file_a,read_buf_a,blocksize) == -1)) {
@@ -310,19 +277,19 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
 
 /* Callback from build_checksums */
 static void *cksum_cb(void * vp) {
-    GQueue *group = vp;
+    SchedulerTag *tag = vp;
 
     /* Iterate over all files in group */
-    for(GList *iter = group->head; iter; iter = iter->next) {
-        md5_file(iter->data);
+    for(GList *iter = tag->group->head; iter; iter = iter->next) {
+        md5_file(tag->session, iter->data);
     }
 
     /* Do not use g_queue_free(), that would delete all GLists in it */
-    g_free(group);
+    g_free(tag->group);
     return NULL;
 }
 
-static void build_fingerprints (GQueue *group) {
+static void build_fingerprints (RmSession *session, GQueue *group) {
     /* Prevent crashes (should not happen too often) */
     if(group == NULL || group->head == NULL) {
         return;
@@ -340,11 +307,11 @@ static void build_fingerprints (GQueue *group) {
     /* Calc fingerprints  */
     for(GList *iter = group->head; iter; iter = iter->next) {
         /* see md5.c for explanations */
-        md5_fingerprint(iter->data, grp_sz);
+        md5_fingerprint(session, iter->data, grp_sz);
     }
 }
 
-static void build_checksums(GQueue *group) {
+static void build_checksums(RmSession *session, GQueue *group) {
     if(group == NULL || group->head == NULL) {
         if(group) {
             g_printerr("Warning: Empty group received. That's a bug.\n");
@@ -352,13 +319,17 @@ static void build_checksums(GQueue *group) {
         return;
     }
 
+    RmSettings *set = session->settings;
     gulong byte_size = rm_file_list_byte_size(group);
 
     if(set->threads == 1 ||  byte_size < (2 * MD5_MTHREAD_SIZE)) {
         /* Just loop through this group and built the checksum */
-        GQueue * group_copy = g_new0(GQueue, 1);
-        memcpy(group_copy, group, sizeof(GQueue));
-        cksum_cb((void *) group_copy);
+        SchedulerTag tag;
+        tag.session = session;
+        tag.group = g_new0(GQueue, 1);
+        memcpy(tag.group, group, sizeof(GQueue));
+
+        cksum_cb((void *) &tag);
     } else { /* split group in subgroups and start a seperate thread for each */
         guint64  sz = 0;
         GList * ptr, *lst;
@@ -366,9 +337,12 @@ static void build_checksums(GQueue *group) {
 
         /* The refereces to all threads */
         gulong byte_size = rm_file_list_byte_size(group);
-        pthread_t * thread_queue = malloc((byte_size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t));
-        int thread_counter = 0, ii = 0;
 
+        size_t list_size = (byte_size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t);
+        pthread_t * thread_queue = malloc(list_size);
+        SchedulerTag *tags = malloc(list_size);
+
+        int thread_counter = 0;
         gint subgroup_len = 0;
 
         while(ptr) {
@@ -384,18 +358,22 @@ static void build_checksums(GQueue *group) {
                 ptr = ptr->next;
                 lst = ptr;
 
+                tags[thread_counter].session = session;
+                tags[thread_counter].group = subgroup;
+
                 /* Now create the thread */
-                if(pthread_create(&thread_queue[thread_counter++], NULL, cksum_cb, subgroup)) {
+                if(pthread_create(&thread_queue[thread_counter], NULL, cksum_cb, &tags[thread_counter])) {
                     perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
                 }
+                thread_counter++;
             } else {
                 subgroup_len++;
                 ptr = ptr->next;
             }
         }
         /* Make sure all threads are joined */
-        for(ii = 0; ii < thread_counter; ii++) {
-            if(pthread_join(thread_queue[ii],NULL)) {
+        for(int i = 0; i < thread_counter; i++) {
+            if(pthread_join(thread_queue[i], NULL)) {
                 perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
             }
         }
@@ -405,7 +383,8 @@ static void build_checksums(GQueue *group) {
 
 /* ------------------------------------------------------------- */
 
-bool findmatches(GQueue *group, int testlevel) {
+bool findmatches(RmSession *session, GQueue *group, int testlevel) {
+    RmSettings *sets = session->settings;
     GList *i = group->head, *j = NULL;
 
     /* but for now it will be 1 if any dupes found*/
@@ -425,11 +404,11 @@ bool findmatches(GQueue *group, int testlevel) {
     switch (testlevel) {
     case 1:
         /*fingerprint compare - calculate fingerprints*/
-        build_fingerprints(&mainland);
+        build_fingerprints(session, &mainland);
         break;
     case 2:
         /*md5 compare - calculate checksums*/
-        build_checksums(&mainland);
+        build_checksums(session, &mainland);
         break;
     case 3:
         break;
@@ -461,7 +440,7 @@ bool findmatches(GQueue *group, int testlevel) {
                 break;
             case 3:
                 /* If we're bothering with paranoid users - Take the gatling! */
-                match = ((set->paranoid) ? paranoid(i->data, j->data) : 1);
+                match = ((sets->paranoid) ? paranoid(i->data, j->data) : 1);
                 break;
             default:
                 match = 0;
@@ -489,10 +468,11 @@ bool findmatches(GQueue *group, int testlevel) {
         /* keep_all_originals										  */
         if (0
                 || (g_queue_get_length(&island) <= 1)
-                || ((set->keep_all_originals==1) && (num_non_orig == 0))
-                || ((set->must_match_original==1) && (num_orig == 0))
+                || ((sets->keep_all_originals == 1) && (num_non_orig == 0))
+                || ((sets->must_match_original == 1) && (num_orig == 0))
            ) {
-            // TODO: Remove the group.
+            // TODO: Remove the group. There is a memory leak involved here. 
+            //       But fixing ain't that easy after some beer.
             //g_queue_clear(&island);
             // for(GList * iter = island.head; iter; iter = iter->next) {
             //     RmFile *file = iter->data;
@@ -500,13 +480,13 @@ bool findmatches(GQueue *group, int testlevel) {
             //     rm_file_list_remove(list_begin(), file);
             // }
         } else {
-            if ((testlevel == 3) || (!set->paranoid && (testlevel == 2))) {
+            if ((testlevel == 3) || (!sets->paranoid && (testlevel == 2))) {
                 /* done testing; process the island */
-                g_queue_sort(&island, (GCompareDataFunc) cmp_orig_criteria, NULL);
-                returnval = (returnval || process_doop_groop(&island));
+                g_queue_sort(&island, (GCompareDataFunc) cmp_orig_criteria, session);
+                returnval = (returnval || process_doop_groop(session, &island));
             } else {
                 /* go to next level */
-                returnval = (returnval || findmatches(&island, testlevel + 1));
+                returnval = (returnval || findmatches(session, &island, testlevel + 1));
             }
         }
 
@@ -515,82 +495,71 @@ bool findmatches(GQueue *group, int testlevel) {
     return returnval;
 }
 
-/* ------------------------------------------------------------- */
-
 /* Callback from scheduler that actually does the work for ONE group */
-static void* scheduler_cb(void *gfp) {
+static void* scheduler_cb(void *tag_pointer) {
     /* cast from *void */
-    GQueue *group = gfp;
+    SchedulerTag *tag = tag_pointer;
+    GQueue *group = tag->group;
 
     if(group == NULL || group->head == NULL) {
         return NULL;
     }
-    /* start matching (start at level 1 (fingerprint filter)) then */
-    /* recursively escalates to higher levels                      */
-    if(findmatches(group, 1)) {
-        /* this happens when 'q' was selected in askmode */
-        /* note: group should be empty by now so following not needed?*/
-        /*list_clear(group->grp_stp);
-        group->grp_stp = NULL;
-        group->grp_enp = NULL;
-        die(0);*/
-    }
-    /* note: group should be empty by now so following not needed?*/
-    /*list_clear(group->grp_stp);*/
-
+    /* start matching (start at level 1 (fingerprint filter)) then 
+     * recursively escalates to higher levels */
+    findmatches(tag->session, group, 1);
     return NULL;
 }
 
-/* ------------------------------------------------------------- */
-
 /* Joins the threads launched by scheduler */
-static void scheduler_jointhreads(pthread_t *tt, guint64 n) {
+static void scheduler_jointhreads(pthread_t *threads, guint64 n) {
     guint64 ii = 0;
     for(ii=0; ii < n; ii++) {
-        if(pthread_join(tt[ii],NULL)) {
+        if(pthread_join(threads[ii],NULL)) {
             perror(RED"ERROR: "NCO"pthread_join in scheduler()");
         }
     }
 }
 
-/* ------------------------------------------------------------- */
-
 /* Distributes the groups on the ressources */
-static void start_scheduler(RmFileList *list) {
-    gsize list_len = rm_file_list_len(list);
+static void start_scheduler(RmSession *session) {
+    RmFileList *list = session->list;
+    RmSettings *sets = session->settings;
+
+    /* There might be at max. sets->threads tags at the same time. */
+    pthread_t threads[sets->threads + 1];
+    SchedulerTag tags[sets->threads + 1];
+
+    /* If size of certain group exceeds limit start an own thread, else run in 'foreground'
+     * Run max set->threads at the same time. */
+    unsigned nrun = 0;
     GSequenceIter * iter = rm_file_list_get_iter(list);
 
-    pthread_t *tt = malloc(sizeof(pthread_t) * (list_len + 1));
-    if(set->threads == 1) {
-        while(!g_sequence_iter_is_end(iter)) {
-            scheduler_cb(g_sequence_get(iter));
-            iter = g_sequence_iter_next(iter);
-        }
-    } else { /* if size of certain group exceeds limit start an own thread, else run in 'foreground' */
-        /* Run max set->threads at the same time. */
-        unsigned nrun = 0;
-        while(!g_sequence_iter_is_end(iter)) {
-            GQueue *group = g_sequence_get(iter);
-            gulong byte_size = rm_file_list_byte_size(group);
+    while(!g_sequence_iter_is_end(iter)) {
+        GQueue *group = g_sequence_get(iter);
+        gulong byte_size = rm_file_list_byte_size(group);
 
-            if(byte_size > THREAD_SHEDULER_MTLIMIT) { /* Group exceeds limit */
-                if(pthread_create(&tt[nrun],NULL, scheduler_cb, group)) {
-                    perror(RED"ERROR: "NCO"pthread_create in scheduler()");
-                }
-                if(nrun >= set->threads - 1) {
-                    scheduler_jointhreads(tt, nrun + 1);
-                    nrun = 0;
-                    continue;
-                }
-                nrun++;
-            } else { /* run in foreground */
-                scheduler_cb(group);
+        if(byte_size > THREAD_SHEDULER_MTLIMIT && sets->threads > 1) { /* Group exceeds limit */
+            tags[nrun].group = group;
+            tags[nrun].session = session;
+
+            if(pthread_create(&threads[nrun],NULL, scheduler_cb, &tags[nrun])) {
+                perror(RED"ERROR: "NCO"pthread_create in scheduler()");
             }
-            iter = g_sequence_iter_next(iter);
+            if(nrun >= sets->threads - 1) {
+                scheduler_jointhreads(threads, nrun + 1);
+                nrun = 0;
+                continue;
+            }
+            nrun++;
+        } else { /* run in foreground */
+            SchedulerTag tag;
+            tag.group = group;
+            tag.session = session;
+            scheduler_cb(&tag);
         }
-        scheduler_jointhreads(tt, nrun);
+        iter = g_sequence_iter_next(iter);
     }
-    g_free(tt);
+    scheduler_jointhreads(threads, nrun);
 }
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
@@ -600,19 +569,19 @@ static void size_to_human_readable(guint64 num, char *in) {
     } else if(num < 1048576) {
         sprintf(in,"%.2f KB",(float)(num/1024.0));
     } else if(num < 1073741824 / 2) {
-        sprintf(in,"%.2f MB",(float)(num/1048576.0));
+        sprintf(in,"%.2f MB",(float)(num/(1024.0 * 1024.0)));
     } else {
-        sprintf(in,"%.2f GB",(float)(num/1073741824.0));
+        sprintf(in,"%.2f GB",(float)(num/(1024.0 * 1024.0 * 1024.0)));
     }
 }
 
 /* ------------------------------------------------------------- */
 
-static void find_double_bases(GQueue *group) {
+static void find_double_bases(RmSession * session, GQueue *group) {
     GList *i = group->head;
     GList *j = NULL;
-
     bool phead = true;
+    RmSettings *sets = session->settings;
 
     while(i) {
         RmFile *fi = i->data;
@@ -626,14 +595,14 @@ static void find_double_bases(GQueue *group) {
                     GList *x = j;
                     char *tmp2 = realpath(fj->path, NULL);
                     if(phead) {
-                        error("\n%s#"NCO" Double basename(s):\n", (set->verbosity > 1) ? GRE : NCO);
+                        error("\n%s#"NCO" Double basename(s):\n", (sets->verbosity > 1) ? GRE : NCO);
                         phead = false;
                     }
                     if(!pr) {
                         char * tmp = realpath(fi->path, NULL);
                         fi->dupflag = TYPE_BASE;
-                        error("   %sls"NCO" %s\n", (set->verbosity!=1) ? GRE : "", tmp,fi->fsize);
-                        write_to_log(fi,false,NULL);
+                        error("   %sls"NCO" %s\n", (sets->verbosity!=1) ? GRE : "", tmp,fi->fsize);
+                        write_to_log(session, fi,false,NULL);
                         pr = true;
                         g_free(tmp);
 
@@ -651,9 +620,9 @@ static void find_double_bases(GQueue *group) {
                     }
 
                     fj->dupflag = TYPE_BASE;
-                    error("   %sls"NCO" %s\n",(set->verbosity!=1) ? GRE : "",tmp2);
+                    error("   %sls"NCO" %s\n",(sets->verbosity!=1) ? GRE : "",tmp2);
                     dbase_ctr++;
-                    write_to_log(fj,false,NULL);
+                    write_to_log(session, fj,false,NULL);
                     g_free(tmp2);
                 }
                 j=j->next;
@@ -675,14 +644,16 @@ static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
 		return ((long)a->dupflag-(long)b->dupflag);
 }
 
-static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
+static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *first_group) {
     // TODO: Clean this bullshit up.
     bool flag = 42, e_file_printed = false;
     const char * chown_cmd = "   chown $(whoami):$(id -gn)";
+    RmSettings *sets = session->settings;
+
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *ptr = iter->data;
         if(flag != ptr->dupflag) {
-            if(set->verbosity > 1) {
+            if(sets->verbosity > 1) {
                 error(YEL"\n#"NCO);
             } else {
                 error("\n#");
@@ -712,7 +683,7 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
             }
             flag = ptr->dupflag;
         }
-        if(set->verbosity > 1) {
+        if(sets->verbosity > 1) {
             error(GRE);
         }
         if(ptr->dupflag == TYPE_BLNK) {
@@ -736,12 +707,12 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
         } else if(ptr->fsize   == 0) {
             error("   rm");
         }
-        if(set->verbosity > 1) {
+        if(sets->verbosity > 1) {
             error(NCO);
         }
         error(" %s\n",ptr->path);
-        if(set->output) {
-            write_to_log(ptr, false,NULL);
+        if(sets->output) {
+            write_to_log(session, ptr, false,NULL);
         }
     }
     rm_file_list_clear(first);
@@ -750,27 +721,20 @@ static void handle_other_lint(GSequenceIter *first, GQueue *first_group) {
 
 
 /* This the actual main() of rmlint */
-void start_processing(RmFileList *list) {
-    //file_group *fglist = NULL,
-    //            emptylist;
-    char lintbuf[128];
-    // char suspbuf[128];
-    //guint64 spelen       = 0,
-    //        rem_counter  = 0,
-    //        suspicious   = 0,
-    //        path_doubles = 0;
-    //
-    //
+void start_processing(RmSession * session) {
+    char lintbuf[128] = {0};
+    RmSettings *settings = session->settings;
+    RmFileList *list = session->list;
 
-    signal(SIGINT, interrupt);
+    signal(SIGINT,  interrupt);
     signal(SIGSEGV, interrupt);
-    signal(SIGFPE, interrupt);
+    signal(SIGFPE,  interrupt);
     signal(SIGABRT, interrupt);
 
-    if(set->namecluster) {
+    if(settings->namecluster) {
         GSequenceIter * iter = rm_file_list_get_iter(list);
         while(!g_sequence_iter_is_end(iter)) {
-            find_double_bases(g_sequence_get(iter));
+            find_double_bases(session, g_sequence_get(iter));
             iter = g_sequence_iter_next(iter);
         }
         error("\n");
@@ -780,23 +744,24 @@ void start_processing(RmFileList *list) {
     rm_file_list_sort_group(first, (GCompareDataFunc)cmp_sort_dupID, NULL);
     GQueue *first_group = g_sequence_get(first);
     if(rm_file_list_byte_size(first_group) == 0) {
-        handle_other_lint(first, first_group);
+        handle_other_lint(session, first, first_group);
     }
 
     info("Now sorting list based on filesize... ");
-    gsize rem_counter = rm_file_list_sort_groups(list, set);
+    gsize rem_counter = rm_file_list_sort_groups(list, settings);
     info("done.\n");
 
     error("\n");
-    if(set->searchdup == 0) {
+    if(settings->searchdup == 0) {
         /* rmlint was originally supposed to find duplicates only
            So we have to free list that whould have been used for
            dup search before dieing */
-        die(0);
+        die(session, EXIT_SUCCESS);
     }
 
     info("\nNow attempting to find duplicates. This may take a while...\n");
-    info("Now removing files with unique sizes from list...");  /*actually this was done already above while building the list*/
+    /* actually this was done already above while building the list */
+    info("Now removing files with unique sizes from list...");  
     info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
     // info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
 
@@ -804,23 +769,25 @@ void start_processing(RmFileList *list) {
     // info("Now sorting groups based on their location on the drive...");
 
     /* Now make sure groups are sorted by their location on the disk - TODO? can remove this because was already sorted above?*/
-    info(" done. \nNow doing fingerprints and full checksums.%c\n",set->verbosity > 4 ? '.' : '\n');
+    info(" done. \nNow doing fingerprints and full checksums.%c\n",settings->verbosity > 4 ? '.' : '\n');
     db_done = true;
 
-    error("%s Duplicate(s):",(set->verbosity > 1) ? YEL"#"NCO : "#");
+    error("%s Duplicate(s):",(settings->verbosity > 1) ? YEL"#"NCO : "#");
 
     /* Groups are splitted, now give it to the scheduler
      * The scheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
-    start_scheduler(list);
+    start_scheduler(session);
     if(get_dupcounter() == 0) {
         error("\r                    ");
     } else {
         error("\n");
     }
+
     /* now process the ouptput we gonna print */
     size_to_human_readable(total_lint, lintbuf);
     // size_to_human_readable(emptylist.size, suspbuf);
+    
     /* Now announce */
     warning("\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
 
@@ -833,11 +800,11 @@ void start_processing(RmFileList *list) {
     if(!iAbort) {
         warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, total_lint);
     }
-    if((set->mode == 1 || set->mode == 2) && get_dupcounter()) {
+    if((settings->mode == 1 || settings->mode == 2) && get_dupcounter()) {
         warning(RED"=> "NCO"Nothing removed yet!\n");
     }
     warning("\n");
-    if(set->verbosity == 6) {
+    if(settings->verbosity == 6) {
         info("Now calculation finished.. now writing end of log...\n");
         info(RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",get_totalfiles(), get_dupcounter());
         if(!iAbort) {
@@ -845,16 +812,14 @@ void start_processing(RmFileList *list) {
         }
     }
 
-    if(get_logstream() == NULL && set->output) {
+    if(get_logstream() == NULL && settings->output) {
         error(RED"\nERROR: "NCO);
         fflush(stdout);
         perror("Unable to write log - target file:");
-        perror(set->output);
+        perror(settings->output);
         putchar('\n');
-    } else if(set->output) {
-        warning("A log has been written to "BLU"%s.log"NCO".\n", set->output);
-        warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", set->output);
+    } else if(settings->output) {
+        warning("A log has been written to "BLU"%s.log"NCO".\n", settings->output);
+        warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", settings->output);
     }
-
-    rm_file_list_destroy(list);
 }

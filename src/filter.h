@@ -33,11 +33,10 @@ int iAbort;
 int check_binary_to_be_stripped(const char *path);
 
 /* Used in rmlint.c only  */
-int  regfilter(const char* input, const char *pattern);
 int  recurse_dir(const char *path);
 
-void start_processing(RmFileList *list);
+void start_processing(RmSession * session);
 void filt_c_init(void);
-void add_total_lint(guint64 RmFileo_add);
+void add_total_lint(guint64 additions);
 
 #endif

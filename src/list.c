@@ -29,17 +29,6 @@
 #include "list.h"
 #include "linttests.h"
 
-// TODO: Remove this when adding RmSession.
-
-RmFileList * list_begin(void) {
-    static RmFileList * list = NULL;
-    if(list == NULL) {
-        list = rm_file_list_new();
-    }
-
-    return list;
-}
-
 RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum) {
     RmFile *self = g_new0(RmFile, 1);
 

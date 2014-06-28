@@ -24,23 +24,18 @@
 
 #include "defs.h"
 
-/* pointer to settings */
-RmSettings * set;
-
 /* These method are also useable from 'outside' */
 char is_ppath(const char* apath);
-char rmlint_parse_arguments(int argc, char **argv, RmSettings *sets);
+char rmlint_parse_arguments(int argc, char **argv, RmSession *session);
 char rmlint_echo_settings(RmSettings *settings);
 void rmlint_set_default_settings(RmSettings *set);
-int  rmlint_main(void);
+int  rmlint_main(RmSession *session);
 
 /* Misc */
-void die(int status);
-void print(RmFile *begin);
+void die(RmSession * session, int status);
 void info(const char* format, ...);
 void error(const char* format, ...);
 void warning(const char* format, ...);
-char *strdup_printf(const char *format, ...);
 int  systemf(const char* format, ...);
 int  get_cpindex(void);
 guint64 get_totalfiles(void);

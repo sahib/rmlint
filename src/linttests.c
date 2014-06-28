@@ -104,7 +104,8 @@ int uid_gid_check(FTSENT *fts_ent, RmSettings *settings) {
 
 /* ------------------------------------------------------------- */
 
-bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings) {
+bool is_old_tmp(G_GNUC_UNUSED FTSENT *fts_ent, G_GNUC_UNUSED RmSettings *settings) {
+    // TODO: to be removed.
     return false;
 }
 
@@ -163,6 +164,6 @@ bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
 /* ------------------------------------------------------------- */
 
 /* Cheap function to check if c is a char in str */
-bool junkinbasename(char *path, RmSettings * settings) {
+bool junkinbasename(G_GNUC_UNUSED char *path, G_GNUC_UNUSED RmSettings * settings) {
     return false;
 }

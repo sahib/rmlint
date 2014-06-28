@@ -304,7 +304,7 @@ static pthread_mutex_t mutex_ck_IO = PTHREAD_MUTEX_INITIALIZER;
 /* Some sort of 32/64 bit comparasion */
 bool large_range_pointers = sizeof(int *) > 4;
 
-void md5_file_mmap(RmFile *file) {
+static void md5_file_mmap(G_GNUC_UNUSED RmSession *session, RmFile *file) {
     int inFile=0;
     MD5_CTX mdContext;
     unsigned char *f_map=NULL;
@@ -343,7 +343,7 @@ void md5_file_mmap(RmFile *file) {
 /* ------------------------------------------------------------- */
 
 /* used to calc the complete checksum of file & save it in File */
-void md5_file_fread(RmFile *file) {
+static void md5_file_fread(G_GNUC_UNUSED RmSession *session, RmFile *file) {
     /* Number of bytes read in */
     ssize_t bytes=0;
     size_t offset=0;
@@ -411,14 +411,14 @@ void md5_file_fread(RmFile *file) {
    the 8 byte are stored in raw form
 */
 
-void md5_fingerprint_mmap(RmFile *file, const guint64 readsize) {
+static void md5_fingerprint_mmap(RmSession *session, RmFile *file, const guint64 readsize) {
     int bytes = 0;
     int pF = open(file->path, MD5_FILE_FLAGS);
     unsigned char *f_map = NULL;
     MD5_CTX con;
     /* empty? */
     if(pF == -1) {
-        if(set->verbosity > 3) {
+        if(session->settings->verbosity > 3) {
             warning(YEL"WARN: "NCO"Cannot open %s",file->path);
         }
         return;
@@ -453,7 +453,7 @@ void md5_fingerprint_mmap(RmFile *file, const guint64 readsize) {
 
 /* ------------------------------ */
 
-void md5_fingerprint_fread(RmFile *file, const guint64 readsize) {
+static void md5_fingerprint_fread(RmSession *session, RmFile *file, const guint64 readsize) {
     int bytes = 0;
     bool unlock = true;
     FILE *pF = fopen(file->path, "re");
@@ -461,7 +461,7 @@ void md5_fingerprint_fread(RmFile *file, const guint64 readsize) {
     MD5_CTX con;
     /* empty? */
     if(!pF) {
-        if(set->verbosity > 3) {
+        if(session->settings->verbosity > 3) {
             warning(YEL"WARN: "NCO"Cannot open %s",file->path);
         }
         return;
@@ -515,38 +515,38 @@ void md5_fingerprint_fread(RmFile *file, const guint64 readsize) {
 
 /* ------------------------------ */
 
-void md5_fingerprint(RmFile *file, const guint64 readsize) {
+void md5_fingerprint(RmSession *session, RmFile *file, const guint64 readsize) {
 #if MD5_USE_MMAP == -1
     if((file->fsize > MMAP_LIMIT) || file->fsize < MD5_IO_BLOCKSIZE>>1) {
-        md5_fingerprint_fread(file,readsize);
+        md5_fingerprint_fread(session, file,readsize);
     } else {
-        md5_fingerprint_mmap(file,readsize);
+        md5_fingerprint_mmap(session, file,readsize);
     }
 #elif MD5_USE_MMAP == 1
-    md5_fingerprint_mmap(file,readsize);
+    md5_fingerprint_mmap(session, file,readsize);
 #else
-    md5_fingerprint_fread(file,readsize);
+    md5_fingerprint_fread(session, file,readsize);
 #endif
 }
 
 /* ------------------------------ */
 
-void md5_file(RmFile *file) {
+void md5_file(RmSession *session, RmFile *file) {
 #if MD5_USE_MMAP == -1
     if((!large_range_pointers && file->fsize > MMAP_LIMIT) || file->fsize < MD5_IO_BLOCKSIZE>>1 || file->fsize > MMAP_LIMIT<<4) {
-        md5_file_fread(file);
+        md5_file_fread(session, file);
 #ifdef PRINT_CHOICE
         printf("f->%ld\n",file->fsize);
 #endif
     } else {
-        md5_file_mmap(file);
+        md5_file_mmap(session, file);
 #ifdef PRINT_CHOICE
         printf("m->%ld\n",file->fsize);
 #endif
     }
 #elif MD5_USE_MMAP == 1
-    md5_file_mmap(file);
+    md5_file_mmap(session, file);
 #else
-    md5_file_fread(file);
+    md5_file_fread(session, file);
 #endif
 }

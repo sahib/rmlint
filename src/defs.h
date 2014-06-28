@@ -42,7 +42,7 @@
  * + 2) Run max. n (where n may be max. set->threads) at the same time.
  * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded
  * */
-#define THREAD_SHEDULER_MTLIMIT 8388608
+#define THREAD_SHEDULER_MTLIMIT (1024 * 1024 * 8)
 
 /* ------------------------------------------------------------- */
 
@@ -50,12 +50,12 @@
 /* Those values are by no means constants, you can/should adjust them to fit your system */
 /* nevertheless: They should fit quite well for an average 2010's desk, so be careful when changing */
 
-#define MD5_MTHREAD_SIZE   2097152   /* If size of grp > chekcksum are built in parallel.   2MB */
-#define MD5_IO_BLOCKSIZE   1048576   /* Block size in what IO buffers are read. Default:    1MB */
-#define MD5_FP_MAX_RSZ     8192      /* The maximal size read in for fingerprints. Default   8K */
-#define MD5_FP_PERCENT     10        /* Percent of a file read in for fingerprint. Default  10% */
-#define MD5_SERIAL_IO      1         /* Align threads before doing md5 related IO. Default:   1 */
-#define MD5_USE_MMAP       -1        /* Use mmap() instead of fread() EXPERIMENTAL! Use = risk! */
+#define MD5_MTHREAD_SIZE   (1024 * 1024 * 2) /* If size of grp > chekcksum are built in parallel.   2MB */
+#define MD5_IO_BLOCKSIZE   (1024 * 1024 * 1) /* Block size in what IO buffers are read. Default:    1MB */
+#define MD5_FP_MAX_RSZ     (8 * 1024)        /* The maximal size read in for fingerprints. Default   8K */
+#define MD5_FP_PERCENT     10                /* Percent of a file read in for fingerprint. Default  10% */
+#define MD5_SERIAL_IO      1                 /* Align threads before doing md5 related IO. Default:   1 */
+#define MD5_USE_MMAP       -1                /* Use mmap() instead of fread() EXPERIMENTAL! Use = risk! */
 /*
 0 = fread only
 1 = mmap only
@@ -130,21 +130,21 @@ typedef struct RmSettings {
     char verbosity;
     char listemptyfiles;
     char **paths;
-    char *is_ppath;           /*NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
+    char *is_ppath;            /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
     char *dpattern;
     char *fpattern;
     char *cmd_path;
     char *cmd_orig;
     char *junk_chars;
     char *output;
-    char *sort_criteria;       /*NEW - sets criteria for ranking and selecting "original"*/
+    char *sort_criteria;       /* NEW - sets criteria for ranking and selecting "original"*/
     int minsize;
     int maxsize;
-    char keep_all_originals;   /*NEW - if set, will ONLY delete dupes that are not in ppath */
-    char must_match_original;  /*NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
-    char invert_original;      /*NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
-    char find_hardlinked_dupes;/*NEW - if set, will also search for hardlinked duplicates*/
-    char skip_confirm;         /*NEW - if set, bypasses user confirmation of input settings*/
+    char keep_all_originals;   /* NEW - if set, will ONLY delete dupes that are not in ppath */
+    char must_match_original;  /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
+    char invert_original;      /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
+    char find_hardlinked_dupes;/* NEW - if set, will also search for hardlinked duplicates*/
+    char skip_confirm;         /* NEW - if set, bypasses user confirmation of input settings*/
     guint64 threads;
     short depth;
     guint64 oldtmpdata;
@@ -171,7 +171,19 @@ typedef struct RmFile {
     GQueue *file_group;
 } RmFile;
 
-typedef struct {
+typedef struct RmFileList {
+    GSequence * size_groups;
+    GHashTable * size_table;
+} RmFileList;
+
+typedef struct RmSession {
+    RmFileList * list;
+    RmSettings * settings;
+
+    guint64 total_files;
+} RmSession;
+
+typedef struct UserGroupList {
     gulong gid, uid;
 } UserGroupList;
 

@@ -34,15 +34,6 @@ RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool 
  */
 void rm_file_destroy(RmFile *file);
 
-////////////////
-
-typedef struct RmFileList {
-    GSequence * size_groups;
-    GHashTable * size_table;
-} RmFileList;
-
-// TODO: Remove once we have RmSession.
-RmFileList * list_begin(void);
 
 typedef int (* RmFileListSortFunc)(RmFile *a, RmFile *b, gpointer);
 
