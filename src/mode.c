@@ -40,6 +40,7 @@
 #include "md5.h"
 #include "list.h"
 #include "filter.h"
+#include "useridcheck.h"
 
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -86,11 +87,14 @@ FILE *get_scriptstream(void) {
 
 /* ------------------------------------------------------------- */
 
-gchar * strsubs(const char * string, const char * subs, const char * with) {
+gchar * strsubs(const char * string, const char * subs, const char * with)
+{
     gchar * result = NULL;
-    if (string != NULL && string[0] != '\0') {
+    if (string != NULL && string[0] != '\0')
+    {
         gchar ** split = g_strsplit (string,subs,0);
-        if (split != NULL) {
+        if (split != NULL)
+        {
             result = g_strjoinv (with,split);
         }
         g_strfreev (split);
@@ -126,7 +130,8 @@ static char * make_cmd_ready(RmSettings * sets, bool is_orig, const char * orig,
     char * repl_orig = NULL;
     if(!is_orig) {
         repl_orig = strsubs(sets->cmd_path,CMD_ORIG,orig);
-    } else {
+    }
+    else {
         repl_orig = strsubs(sets->cmd_orig,CMD_ORIG,orig);
     }
 
@@ -162,10 +167,13 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
     bool free_fullpath = true;
     RmSettings *sets = session->settings;
 
+    const char * chown_cmd_baduid = "chown \"$user\"";
+    const char * chown_cmd_badgid = "chgrp \"$group\"";
+    const char * chown_cmd_badugid = "chown \"$user\":\"$group\"";
+
     if(get_logstream() && get_scriptstream() && sets->output) {
         int i = 0;
         char *fpath = realpath(file->path, NULL);
-        const char * chown_cmd = "chown $(whoami):$(id -gn)";
         if(!fpath) {
             if(file->dupflag != TYPE_BLNK) {
                 error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
@@ -202,10 +210,13 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
             script_print(sets, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
             log_print(sets, get_logstream(),"NBIN");
         } else if(file->dupflag == TYPE_BADUID) {
-            script_print(sets, _sd_("%s '%s' # bad uid\n",chown_cmd, fpath));
+            script_print(sets, _sd_("%s '%s' # bad uid\n",chown_cmd_baduid, fpath));
             log_print(sets, get_logstream(),"BUID");
         } else if(file->dupflag == TYPE_BADGID) {
-            script_print(sets, _sd_("%s '%s' # bad gid\n",chown_cmd, fpath));
+            script_print(sets, _sd_("%s '%s' # bad gid\n",chown_cmd_badgid, fpath));
+            log_print(sets, get_logstream(),"BGID");
+        } else if(file->dupflag == TYPE_BADUGID) {
+            script_print(sets, _sd_("%s '%s' # bad gid and uid\n",chown_cmd_badugid, fpath));
             log_print(sets, get_logstream(),"BGID");
         } else if(file->fsize == 0) {
             script_print(sets, _sd_("rm -f '%s' # empty file.\n", fpath));
@@ -398,6 +409,7 @@ void init_filehandler(RmSettings * sets) {
                     "  usage\n"
                     "  ask \n"
                     "fi\n");
+            fprintf(get_scriptstream(), "user='%s'\ngroup='%s'\n",get_username(),get_groupname());
             fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
             fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
             fprintf(get_logstream(), "#\n# Entries are listed like this: \n");

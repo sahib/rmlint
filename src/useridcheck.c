@@ -25,17 +25,37 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pwd.h>
+#include <unistd.h>
+#include <grp.h>
 
 #include "useridcheck.h"
 #include "rmlint.h"
 
 /* /////////////////////////// */
 
+char *get_username(void) {
+    uid_t uid = geteuid ();
+    struct passwd *user=getpwuid(uid);
+    if (user) return user->pw_name;
+    else return "username_not_found";
+}
+
+char *get_groupname(void) {
+    uid_t uid = geteuid ();
+    struct passwd *user=getpwuid(uid);
+    struct group *grp=getgrgid(user->pw_gid);
+    if (grp) return grp->gr_name;
+    else return NULL;
+}
+
+
 UserGroupList ** userlist_new(void) {
     UserGroupList ** list = NULL;
     const size_t block_size = 256;
     size_t mem_count = 0, block_count = 0;
     struct passwd * node = NULL;
+    struct group * grp = NULL;
+
     setpwent();
     while((node = getpwent()) != NULL) {
         UserGroupList * item = malloc(sizeof(UserGroupList));
@@ -48,12 +68,31 @@ UserGroupList ** userlist_new(void) {
         list[mem_count] = item;
         mem_count++;
     }
+
+    /* add all groups, not just those that are user primary gid's*/
+    while((grp = getgrent()) != NULL) {
+        UserGroupList * item = malloc(sizeof(UserGroupList));
+        item->gid = grp->gr_gid;
+        item->uid = 0;
+        if(block_count * block_size <= mem_count) {
+            block_count++;
+            list = realloc(list,(block_count + 1) * block_size * sizeof(UserGroupList*));
+        }
+        list[mem_count] = item;
+        mem_count++;
+    }
+
+
     if(list != NULL) {
         list[mem_count] = NULL;
     }
     endpwent();
+    endgrent();
     return list;
 }
+
+
+
 
 /* /////////////////////////// */
 

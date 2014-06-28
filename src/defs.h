@@ -145,6 +145,7 @@ typedef struct RmSettings {
     char invert_original;      /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
     char find_hardlinked_dupes;/* NEW - if set, will also search for hardlinked duplicates*/
     char skip_confirm;         /* NEW - if set, bypasses user confirmation of input settings*/
+    char confirm_settings;     /* NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
     guint64 oldtmpdata;
