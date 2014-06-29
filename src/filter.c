@@ -381,7 +381,12 @@ static void build_checksums(RmSession *session, GQueue *group) {
     }
 }
 
-/* ------------------------------------------------------------- */
+static void free_island(GQueue *island) {
+    for(GList * iter = island->head; iter; iter = iter->next) {
+        rm_file_destroy((RmFile *)iter->data);
+    }
+    g_queue_clear(island);
+}
 
 bool findmatches(RmSession *session, GQueue *group, int testlevel) {
     RmSettings *sets = session->settings;
@@ -391,11 +396,6 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
     int returnval = 0;  /* not sure what we are using this for */
 
     GQueue island = G_QUEUE_INIT;
-    GQueue mainland = G_QUEUE_INIT;
-
-    mainland.head = group->head;
-    mainland.tail = group->tail;
-    mainland.length = group->length;
 
     if(i == NULL) {
         return false;
@@ -404,11 +404,11 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
     switch (testlevel) {
     case 1:
         /*fingerprint compare - calculate fingerprints*/
-        build_fingerprints(session, &mainland);
+        build_fingerprints(session, group);
         break;
     case 2:
         /*md5 compare - calculate checksums*/
-        build_checksums(session, &mainland);
+        build_checksums(session, group);
         break;
     case 3:
         break;
@@ -423,9 +423,9 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
 
         /*start new island of matched files  */
         /* first remove i from mainland */
-        i = g_queue_pop_head_link(&mainland);
+        i = g_queue_pop_head_link(group);
         g_queue_push_head_link(&island, i);
-        j = mainland.head;
+        j = group->head;
 
         while(j) {
             int match = 0;
@@ -450,7 +450,7 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
                 /* move j from grp onto island*/
                 /* first get pointer to j before we start messing with j*/
                 GList *tmp = j->next;
-                g_queue_unlink(&mainland, j);
+                g_queue_unlink(group, j);
                 g_queue_push_tail_link(&island, j);
 
                 RmFile * current = j->data;
@@ -462,23 +462,17 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
             }
         }
 
-        /* So we have created an island of everything that matched i. */
-        /* Now check if it is singleton or if it fails the other      */
-        /* criteria related to setting must_match_original or 		  */
-        /* keep_all_originals										  */
+        /* So we have created an island of everything that matched i.
+           Now check if it is singleton or if it fails the other
+           criteria related to setting must_match_original or
+           keep_all_originals
+        */
         if (0
                 || (g_queue_get_length(&island) <= 1)
                 || ((sets->keep_all_originals == 1) && (num_non_orig == 0))
                 || ((sets->must_match_original == 1) && (num_orig == 0))
            ) {
-            // TODO: Remove the group. There is a memory leak involved here.
-            //       But fixing ain't that easy after some beer.
-            //g_queue_clear(&island);
-            // for(GList * iter = island.head; iter; iter = iter->next) {
-            //     RmFile *file = iter->data;
-            //     //rm_file_destroy(file);
-            //     rm_file_list_remove(list_begin(), file);
-            // }
+            free_island(&island);
         } else {
             if ((testlevel == 3) || (!sets->paranoid && (testlevel == 2))) {
                 /* done testing; process the island */
@@ -490,8 +484,10 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
             }
         }
 
-        i = mainland.head;
+        i = group->head;
     }
+
+    free_island(&island);
     return returnval;
 }
 

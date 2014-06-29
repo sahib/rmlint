@@ -87,14 +87,11 @@ FILE *get_scriptstream(void) {
 
 /* ------------------------------------------------------------- */
 
-gchar * strsubs(const char * string, const char * subs, const char * with)
-{
+gchar * strsubs(const char * string, const char * subs, const char * with) {
     gchar * result = NULL;
-    if (string != NULL && string[0] != '\0')
-    {
+    if (string != NULL && string[0] != '\0') {
         gchar ** split = g_strsplit (string,subs,0);
-        if (split != NULL)
-        {
+        if (split != NULL) {
             result = g_strjoinv (with,split);
         }
         g_strfreev (split);
@@ -130,8 +127,7 @@ static char * make_cmd_ready(RmSettings * sets, bool is_orig, const char * orig,
     char * repl_orig = NULL;
     if(!is_orig) {
         repl_orig = strsubs(sets->cmd_path,CMD_ORIG,orig);
-    }
-    else {
+    } else {
         repl_orig = strsubs(sets->cmd_orig,CMD_ORIG,orig);
     }
 

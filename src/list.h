@@ -114,4 +114,9 @@ gsize rm_file_list_len(RmFileList *list);
  */
 gulong rm_file_list_byte_size(GQueue *group);
 
+/**
+ * @brief Print the list on stdout for debugging purpose.
+ */
+void rm_file_list_print(RmFileList *list);
+
 #endif /* RM_LIST_H */

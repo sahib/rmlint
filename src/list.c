@@ -259,21 +259,22 @@ void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpoint
     g_queue_sort(queue, func, user_data);
 }
 
-#if 0 /* Testcase */
 
-static void rm_file_list_print_cb(gpointer data, gpointer user_data) {
+static void rm_file_list_print_cb(gpointer data, gpointer G_GNUC_UNUSED user_data) {
     GQueue *queue = data;
     for(GList *iter = queue->head; iter; iter = iter->next) {
         RmFile * file = iter->data;
-        g_printerr("%lu:%ld:%ld:%s\n", file->fsize, file->dev, file->node, file->path);
+        g_printerr("  %lu:%ld:%ld:%s\n", file->fsize, file->dev, file->node, file->path);
     }
     g_printerr("----\n");
 }
 
-static void rm_file_list_print(RmFileList *list) {
+void rm_file_list_print(RmFileList *list) {
     g_printerr("### PRINT ###\n");
     g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
 }
+
+#if 0 /* Testcase */
 
 int main(int argc, const char **argv) {
     RmFileList * list = rm_file_list_new();
