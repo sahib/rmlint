@@ -19,23 +19,11 @@
 *
 **/
 
-#pragma once
-#ifndef PROGRESS_H
-#define PROGRESS_H
+#ifndef FILTER_H 
+#define FILTER_H 
 
-#include "list.h"
-
-/* ------------------------------------------------------------- */
-
-/*globals*/
-int iAbort;
-
-int check_binary_to_be_stripped(const char *path);
-
-/* Used in rmlint.c only  */
-int  recurse_dir(const char *path);
+#include "defs.h"
 
 void start_processing(RmSession * session);
-void filt_c_init(void);
 
 #endif

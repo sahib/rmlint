@@ -29,6 +29,7 @@ char is_ppath(const char* apath);
 char rmlint_parse_arguments(int argc, char **argv, RmSession *session);
 char rmlint_echo_settings(RmSettings *settings);
 void rmlint_set_default_settings(RmSettings *set);
+void rm_session_init(RmSession *session, RmSettings *settings);
 int  rmlint_main(RmSession *session);
 
 /* Misc */
@@ -36,6 +37,5 @@ void die(RmSession * session, int status);
 void info(const char* format, ...);
 void error(const char* format, ...);
 void warning(const char* format, ...);
-int  systemf(const char* format, ...);
 
 #endif

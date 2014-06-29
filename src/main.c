@@ -33,14 +33,7 @@ int main(int argc, char **argv) {
     rmlint_set_default_settings(&settings);
 
     RmSession session;
-    // TODO: write some init.
-    session.dup_counter = 0;
-    session.total_lint_size = 0;
-    session.total_files = 0;
-    session.userlist = userlist_new();
-
-    session.list = rm_file_list_new();
-    session.settings = &settings;
+    rm_session_init(&session, &settings);
 
     /* Parse commandline */
     if(rmlint_parse_arguments(argc, argv, &session) != 0) {

@@ -16,7 +16,6 @@
  *
  ** Author: Christopher Pahl <sahib@online.de>:
  ** Hosted on http://github.com/sahib/rmlint
- *
  **/
 
 #include <sys/mman.h>
@@ -25,7 +24,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <alloca.h>
 
 #include <ftw.h>
 #include <signal.h>
@@ -43,42 +41,27 @@
 #include "defs.h"
 #include "linttests.h"
 
-/* global vars, but initialized by filt_c_init() */
-guint64 dbase_ctr;
-bool db_done;
+// TODO: Check this at strategic points.
+static int global_abort_flag = FALSE;
 
-void filt_c_init(void) {
-    dbase_ctr = 0;
-    iAbort   = false;
-    db_done  = false;
-}
-
-typedef struct SchedulerTag {
+typedef struct RmSchedulerTag {
     RmSession *session;
     GQueue *group;
-} SchedulerTag;
+} RmSchedulerTag;
 
-/*
- * Callbock from signal()
- * Counts number of CTRL-Cs and reacts
- */
-static void interrupt(int p) {
+static void signal_handler(int signum) {
     // TODO: Cannot call die() on signal handler. Delay somehow.
-    switch(p) {
+    switch(signum) {
     case SIGINT:
-        if(iAbort == 2) {
-            // die(-1);
-        } else if(db_done) {
-            iAbort = 2;
+        if(global_abort_flag) {
             warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
         } else {
-            iAbort = 1;
-            db_done = true;
+            global_abort_flag = 1;
         }
         break;
     case SIGFPE  :
     case SIGABRT :
-        error(RED"FATAL: "NCO"Aborting due to internal error!\n");
+        error(RED"FATAL: "NCO"Aborting due to internal error! (signal received: %s)\n", g_strsignal(signum));
         // die(-1);
     case SIGSEGV :
         error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
@@ -87,8 +70,6 @@ static void interrupt(int p) {
         // die(-1);
         break;
     }
-
-    // TODO: use g_strsignal
 }
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
@@ -130,8 +111,6 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
     return 0;
 }
 
-/* ------------------------------------------------------------- */
-
 /* Compares the "fp" array of the RmFile a and b */
 static int cmp_fingerprints(RmFile *a,RmFile *b) {
     int i,j;
@@ -152,8 +131,6 @@ static int cmp_fingerprints(RmFile *a,RmFile *b) {
     /* Let it pass! */
     return 1;
 }
-
-/* ------------------------------------------------------------- */
 
 /* Compare criteria of checksums */
 static int cmp_f(RmFile *a, RmFile *b) {
@@ -265,7 +242,7 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
 
 /* Callback from build_checksums */
 static void *cksum_cb(void * vp) {
-    SchedulerTag *tag = vp;
+    RmSchedulerTag *tag = vp;
 
     /* Iterate over all files in group */
     for(GList *iter = tag->group->head; iter; iter = iter->next) {
@@ -312,7 +289,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
 
     if(set->threads == 1 ||  byte_size < (2 * MD5_MTHREAD_SIZE)) {
         /* Just loop through this group and built the checksum */
-        SchedulerTag tag;
+        RmSchedulerTag tag;
         tag.session = session;
         tag.group = g_new0(GQueue, 1);
         memcpy(tag.group, group, sizeof(GQueue));
@@ -328,7 +305,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
 
         size_t list_size = (byte_size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t);
         pthread_t * thread_queue = malloc(list_size);
-        SchedulerTag *tags = malloc(list_size);
+        RmSchedulerTag *tags = malloc(list_size);
 
         int thread_counter = 0;
         gint subgroup_len = 0;
@@ -376,7 +353,7 @@ static void free_island(GQueue *island) {
     g_queue_clear(island);
 }
 
-bool findmatches(RmSession *session, GQueue *group, int testlevel) {
+static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
     RmSettings *sets = session->settings;
     GList *i = group->head, *j = NULL;
 
@@ -482,7 +459,7 @@ bool findmatches(RmSession *session, GQueue *group, int testlevel) {
 /* Callback from scheduler that actually does the work for ONE group */
 static void* scheduler_cb(void *tag_pointer) {
     /* cast from *void */
-    SchedulerTag *tag = tag_pointer;
+    RmSchedulerTag *tag = tag_pointer;
     GQueue *group = tag->group;
 
     if(group == NULL || group->head == NULL) {
@@ -511,7 +488,7 @@ static void start_scheduler(RmSession *session) {
 
     /* There might be at max. sets->threads tags at the same time. */
     pthread_t threads[sets->threads + 1];
-    SchedulerTag tags[sets->threads + 1];
+    RmSchedulerTag tags[sets->threads + 1];
 
     /* If size of certain group exceeds limit start an own thread, else run in 'foreground'
      * Run max set->threads at the same time. */
@@ -536,7 +513,7 @@ static void start_scheduler(RmSession *session) {
             }
             nrun++;
         } else { /* run in foreground */
-            SchedulerTag tag;
+            RmSchedulerTag tag;
             tag.group = group;
             tag.session = session;
             scheduler_cb(&tag);
@@ -548,7 +525,7 @@ static void start_scheduler(RmSession *session) {
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
 static void size_to_human_readable(guint64 num, char *in) {
-    if(num < 1024 / 2) {
+    if(num < 512) {
         sprintf(in,"%ld B",(unsigned long)num);
     } else if(num < 1048576) {
         sprintf(in,"%.2f KB",(float)(num/1024.0));
@@ -559,12 +536,11 @@ static void size_to_human_readable(guint64 num, char *in) {
     }
 }
 
-/* ------------------------------------------------------------- */
-
-static void find_double_bases(RmSession * session, GQueue *group) {
+static int find_double_bases(RmSession * session, GQueue *group) {
     GList *i = group->head;
     GList *j = NULL;
     bool phead = true;
+    int num_found = 0;
     RmSettings *sets = session->settings;
 
     while(i) {
@@ -587,6 +563,7 @@ static void find_double_bases(RmSession * session, GQueue *group) {
                         fi->dupflag = TYPE_BASE;
                         error("   %sls"NCO" %s\n", (sets->verbosity!=1) ? GRE : "", tmp,fi->fsize);
                         write_to_log(session, fi,false,NULL);
+                        num_found++;
                         pr = true;
                         g_free(tmp);
 
@@ -605,8 +582,8 @@ static void find_double_bases(RmSession * session, GQueue *group) {
 
                     fj->dupflag = TYPE_BASE;
                     error("   %sls"NCO" %s\n",(sets->verbosity!=1) ? GRE : "",tmp2);
-                    dbase_ctr++;
                     write_to_log(session, fj,false,NULL);
+                    num_found++;
                     g_free(tmp2);
                 }
                 j=j->next;
@@ -614,12 +591,10 @@ static void find_double_bases(RmSession * session, GQueue *group) {
         }
         i=i->next;
     }
+
+    return num_found;
 }
 
-/* ------------------------------------------------------------- */
-
-/* You don't have to understand this really - don't worry. */
-/* Only used in conjuction with qsort to make output a lil nicer */
 static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
     (void) user_data;
     if (a->dupflag == TYPE_EDIR && a->dupflag == TYPE_EDIR)
@@ -627,7 +602,6 @@ static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
     else
         return ((long)a->dupflag-(long)b->dupflag);
 }
-
 
 static const char *TYPE_TO_DESCRIPTION[] = {
     [TYPE_UNKNOWN]      = "",
@@ -719,13 +693,14 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
 /* This the actual main() of rmlint */
 void start_processing(RmSession * session) {
     char lintbuf[128] = {0};
+    int other_lint = 0;
+
     RmSettings *settings = session->settings;
     RmFileList *list = session->list;
 
-    // TODO: use sigaction.
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);
-    sa.sa_handler = interrupt;
+    sa.sa_handler = signal_handler;
 
     sigaction(SIGINT,  &sa, NULL);
     sigaction(SIGSEGV, &sa, NULL);
@@ -737,7 +712,7 @@ void start_processing(RmSession * session) {
     if(settings->namecluster) {
         GSequenceIter * iter = rm_file_list_get_iter(list);
         while(!g_sequence_iter_is_end(iter)) {
-            find_double_bases(session, g_sequence_get(iter));
+            other_lint += find_double_bases(session, g_sequence_get(iter));
             iter = g_sequence_iter_next(iter);
         }
         error("\n");
@@ -748,6 +723,7 @@ void start_processing(RmSession * session) {
     GQueue *first_group = g_sequence_get(first);
 
     if(rm_file_list_byte_size(first_group) == 0) {
+        other_lint += g_queue_get_length(first_group);
         handle_other_lint(session, first, first_group);
     }
 
@@ -770,7 +746,6 @@ void start_processing(RmSession * session) {
 
     /* Now make sure groups are sorted by their location on the disk - TODO? can remove this because was already sorted above?*/
     info(" done. \nNow doing fingerprints and full checksums.%c\n",settings->verbosity > 4 ? '.' : '\n');
-    db_done = true;
 
     error("%s Duplicate(s):",(settings->verbosity > 1) ? YEL"#"NCO : "#");
 
@@ -784,24 +759,19 @@ void start_processing(RmSession * session) {
         error("\n");
     }
 
-    /* now process the ouptput we gonna print */
     size_to_human_readable(session->total_lint_size, lintbuf);
-    // size_to_human_readable(emptylist.size, suspbuf);
-
-    /* Now announce */
     warning(
         "\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",
         session->total_files, session->dup_counter
     );
 
-    // TODO
-    // suspicious = emptylist.len + dbase_ctr;
-    // if(suspicious > 1) {
-    //     warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
-    // }
+    if(other_lint > 0) {
+        size_to_human_readable(other_lint, lintbuf);
+        warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
+    }
     
     warning("\n");
-    if(!iAbort) {
+    if(!global_abort_flag) {
         warning(
             RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n",
             lintbuf, session->total_lint_size
@@ -817,7 +787,7 @@ void start_processing(RmSession * session) {
             RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",
             session->total_files, session->dup_counter
         );
-        if(!iAbort) {
+        if(!global_abort_flag) {
             info(
                 RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n",
                 lintbuf, session->total_lint_size

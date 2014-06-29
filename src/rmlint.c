@@ -42,33 +42,10 @@
 #include "filter.h"
 #include "linttests.h"
 
-/* Control flags */
-bool do_exit = false,
-     jmp_set = false,
-     ex_stat = false,
-     abort_n = true;
-
-/* If die() is called rmlint will jump back to the end of main
- * rmlint does NOT call exit() or abort() on it's own - so you
- * may use it's methods also in your own programs - see main()
- * It still has various problems with calling rmlint_main() twice... :-( //ToDo
- * */
-jmp_buf place;
-
-void rmlint_init(void) {
-    do_exit = false;
-    jmp_set = false;
-    ex_stat = false;
-    abort_n = true;
-}
-
 /* Make chained calls possible */
 char * rm_col(char * string, const char * COL) {
     char * new = strsubs(string,COL,NULL);
-    if(string) {
-        free(string);
-        string = NULL;
-    }
+    g_free(string);
     return new;
 }
 
@@ -140,33 +117,6 @@ void info(const char* format, ...) {
         }
     }
 }
-
-/* ------------------------------------------------------------- */
-
-/* The nightmare of every secure program :))
- * this is used twice; 1x with a variable format..
- * Please gimme a note if I forgot to check sth. there. ;)
- */
-int systemf(const char* format, ...) {
-    va_list arg;
-    char *cmd;
-    int ret = 0;
-    va_start(arg, format);
-    if(g_vasprintf(&cmd, format, arg) == -1) {
-        return -1;
-    }
-
-    va_end(arg);
-
-    /* Now execute a shell command */
-    if((ret = system(cmd)) == -1) {
-        perror("systemf(const char* format, ...)");
-    }
-    g_free(cmd);
-    return ret;
-}
-
-/* ------------------------------------------------------------- */
 
 /* Version string */
 static void print_version(void) {
@@ -345,8 +295,7 @@ int check_if_preferred(const char * dir) {
 char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
     RmSettings * sets = session->settings;
 
-    int c,lp=0;
-    rmlint_init();
+    int c, lp = 0;
 
     while(1) {
         static struct option long_options[] = {
@@ -675,20 +624,11 @@ void die(RmSession *session, int status) {
         fclose(session->script_out);
     }
 
-    /* Prepare to jump to return */
-    do_exit = true;
-    ex_stat = status;
-
     if(session->userlist) {
         userlist_destroy(session->userlist);
     }
 
-    if(jmp_set) {
-        longjmp(place,status);
-    }
-    if(abort_n) {
-        exit(status);
-    }
+    exit(status);
 }
 
 char rmlint_echo_settings(RmSettings *settings) {
@@ -887,68 +827,62 @@ char rmlint_echo_settings(RmSettings *settings) {
         return (confirm=='y' || confirm=='Y' || confirm=='\n');
     }
 
-    settings->verbosity=save_verbosity;
+    settings->verbosity = save_verbosity;
     return 1;
+}
+
+void rm_session_init(RmSession *session, RmSettings *settings) {
+    session->dup_counter = 0;
+    session->total_lint_size = 0;
+    session->total_files = 0;
+    session->userlist = userlist_new();
+    session->list = rm_file_list_new();
+    session->settings = settings;
+
+    init_filehandler(session);
 }
 
 int rmlint_main(RmSession *session) {
     /* Used only for infomessage */
     session->total_files = 0;
-    abort_n = false;
 
-    if(do_exit != true) {
-        /* Init all modules that use global variables.. */
-        rmlint_init();
-        filt_c_init();
-    }
-
-    /* Jump to this location on exit (with do_exit=true) */
-    setjmp(place);
-
-    jmp_set = true;
-    if(do_exit != true) {
-
-        if(session->settings->mode == 5) {
-            if(session->settings->cmd_orig) {
-                if(check_cmd(session->settings->cmd_orig) == 0) {
-                    die(session, EXIT_FAILURE);
-                }
-            }
-            if(session->settings->cmd_path) {
-                check_cmd(session->settings->cmd_path);
+    if(session->settings->mode == 5) {
+        if(session->settings->cmd_orig) {
+            if(check_cmd(session->settings->cmd_orig) == 0) {
                 die(session, EXIT_FAILURE);
             }
         }
-
-        /* Open logfile */
-        init_filehandler(session);
-
-        /* Warn if started with sudo. Hack: Just try to get read access to /bin/ls */
-        if(!access("/bin/ls", R_OK | W_OK)) {
-            warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
-            warning("      Take care of what you're doing!\n\n");
+        if(session->settings->cmd_path) {
+            check_cmd(session->settings->cmd_path);
+            die(session, EXIT_FAILURE);
         }
-        session->total_files = rmlint_search_tree(session);
-
-        if(session->total_files < 2) {
-            warning("No files in cache to search through => No duplicates.\n");
-            die(session, 0);
-        } 
-
-        info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
-        if(session->settings->threads > session->total_files) {
-            session->settings->threads = session->total_files + 1;
-        }
-        /* Till this point the list is unsorted
-         * The filter alorithms requires the list to be size-sorted,
-         * so it can easily filter unique sizes, and build "groups"
-         * */
-        info("Now finding easy lint..%c", session->settings->verbosity > 4 ? '.' : '\n');
-
-        /* Apply the prefilter and outsort inique sizes */
-        start_processing(session);
-        die(session, EXIT_SUCCESS);
     }
 
-    return ex_stat;
+    /* Warn if started with sudo. Hack: Just try to get read access to /bin/ls */
+    if(!access("/bin/ls", R_OK | W_OK)) {
+        warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
+        warning("      Take care of what you're doing!\n\n");
+    }
+    session->total_files = rmlint_search_tree(session);
+
+    if(session->total_files < 2) {
+        warning("No files in cache to search through => No duplicates.\n");
+        die(session, 0);
+    } 
+
+    info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
+    if(session->settings->threads > session->total_files) {
+        session->settings->threads = session->total_files + 1;
+    }
+    /* Till this point the list is unsorted
+     * The filter alorithms requires the list to be size-sorted,
+     * so it can easily filter unique sizes, and build "groups"
+     * */
+    info("Now finding easy lint..%c", session->settings->verbosity > 4 ? '.' : '\n');
+
+    /* Apply the prefilter and outsort inique sizes */
+    start_processing(session);
+ 
+    die(session, EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
