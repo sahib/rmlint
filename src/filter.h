@@ -37,6 +37,5 @@ int  recurse_dir(const char *path);
 
 void start_processing(RmSession * session);
 void filt_c_init(void);
-void add_total_lint(guint64 additions);
 
 #endif

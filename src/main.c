@@ -20,7 +20,10 @@
 **/
 
 #include <stdlib.h>
+#include <string.h>
+
 #include "rmlint.h"
+#include "useridcheck.h"
 #include "list.h"
 
 int main(int argc, char **argv) {
@@ -30,6 +33,12 @@ int main(int argc, char **argv) {
     rmlint_set_default_settings(&settings);
 
     RmSession session;
+    // TODO: write some init.
+    session.dup_counter = 0;
+    session.total_lint_size = 0;
+    session.total_files = 0;
+    session.userlist = userlist_new();
+
     session.list = rm_file_list_new();
     session.settings = &settings;
 

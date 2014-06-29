@@ -46,46 +46,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
-guint64 dup_counter=0;
-guint64 get_dupcounter() {
-    return dup_counter;
-}
-
-/* ------------------------------------------------------------- */
-
-void set_dupcounter(guint64 new) {
-    dup_counter = new;
-}
-
-/* ------------------------------------------------------------- */
-
-/* Make the stream "public" */
-FILE *script_out;
-FILE *log_out;
-
 pthread_mutex_t mutex_printage =  PTHREAD_MUTEX_INITIALIZER;
-
-/* ------------------------------------------------------------- */
-
-void mode_c_init(void) {
-    script_out = NULL;
-    log_out    = NULL;
-    dup_counter = 0;
-    pthread_mutex_init(&mutex_printage, NULL);
-}
-
-/* ------------------------------------------------------------- */
-
-FILE *get_logstream(void) {
-    return log_out;
-}
-/* ------------------------------------------------------------- */
-
-FILE *get_scriptstream(void) {
-    return script_out;
-}
-
-/* ------------------------------------------------------------- */
 
 gchar * strsubs(const char * string, const char * subs, const char * with) {
     gchar * result = NULL;
@@ -112,9 +73,9 @@ static void remfile(const char *r_path) {
 
 /* ------------------------------------------------------------- */
 
-void log_print(RmSettings *sets, FILE * stream, const char * string) {
+void log_print(RmSession *session, FILE * stream, const char * string) {
     if(stream && string) {
-        if(sets->verbosity == 4) {
+        if(session->settings->verbosity == 4) {
             fprintf(stdout,"%s",string);
         }
         fprintf(stream,"%s",string);
@@ -143,12 +104,12 @@ static char * make_cmd_ready(RmSettings * sets, bool is_orig, const char * orig,
 
 /* ------------------------------------------------------------- */
 
-void script_print(RmSettings * sets, char * string) {
+void script_print(RmSession * session, char * string) {
     if(string != NULL) {
-        if(sets->verbosity == 5) {
+        if(session->settings->verbosity == 5) {
             fprintf(stdout,"%s",string);
         }
-        fprintf(get_scriptstream(),"%s",string);
+        fprintf(session->script_out, "%s",string);
         free(string);
     }
 }
@@ -167,7 +128,7 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
     const char * chown_cmd_badgid = "chgrp \"$group\"";
     const char * chown_cmd_badugid = "chown \"$user\":\"$group\"";
 
-    if(get_logstream() && get_scriptstream() && sets->output) {
+    if(session->log_out && session->script_out && sets->output) {
         int i = 0;
         char *fpath = realpath(file->path, NULL);
         if(!fpath) {
@@ -185,77 +146,77 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
             free(tmp_copy);
         }
         if(file->dupflag == TYPE_BLNK) {
-            script_print(sets, _sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
-            log_print(sets, get_logstream(),"BLNK");
+            script_print(session, _sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
+            log_print(session, session->log_out,"BLNK");
         } else if(file->dupflag == TYPE_BASE) {
-            log_print(sets, get_logstream(),"BASE");
-            script_print(sets, _sd_("echo  '%s' # double basename.\n", fpath));
+            log_print(session, session->log_out,"BASE");
+            script_print(session, _sd_("echo  '%s' # double basename.\n", fpath));
         } else if(file->dupflag == TYPE_OTMP) {
-            script_print(sets, _sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, sets->oldtmpdata));
-            log_print(sets, get_logstream(),"OTMP");
+            script_print(session, _sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, sets->oldtmpdata));
+            log_print(session, session->log_out,"OTMP");
         } else if(file->dupflag == TYPE_EDIR) {
-            script_print(sets, _sd_("rmdir '%s' # empty folder.\n", fpath));
-            log_print(sets, get_logstream(),"EDIR");
+            script_print(session, _sd_("rmdir '%s' # empty folder.\n", fpath));
+            log_print(session, session->log_out,"EDIR");
         } else if(file->dupflag == TYPE_JNK_DIRNAME) {
-            script_print(sets, _sd_("echo  '%s' # dirname containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
-            log_print(sets, get_logstream(),"JNKD");
+            script_print(session, _sd_("echo  '%s' # dirname containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
+            log_print(session, session->log_out,"JNKD");
         } else if(file->dupflag == TYPE_JNK_FILENAME) {
-            script_print(sets, _sd_("echo  '%s' # filename containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
-            log_print(sets, get_logstream(),"JNKN");
+            script_print(session, _sd_("echo  '%s' # filename containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
+            log_print(session, session->log_out,"JNKN");
         } else if(file->dupflag == TYPE_NBIN) {
-            script_print(sets, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
-            log_print(sets, get_logstream(),"NBIN");
+            script_print(session, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
+            log_print(session, session->log_out,"NBIN");
         } else if(file->dupflag == TYPE_BADUID) {
-            script_print(sets, _sd_("%s '%s' # bad uid\n",chown_cmd_baduid, fpath));
-            log_print(sets, get_logstream(),"BUID");
+            script_print(session, _sd_("%s '%s' # bad uid\n",chown_cmd_baduid, fpath));
+            log_print(session, session->log_out,"BUID");
         } else if(file->dupflag == TYPE_BADGID) {
-            script_print(sets, _sd_("%s '%s' # bad gid\n",chown_cmd_badgid, fpath));
-            log_print(sets, get_logstream(),"BGID");
+            script_print(session, _sd_("%s '%s' # bad gid\n",chown_cmd_badgid, fpath));
+            log_print(session, session->log_out,"BGID");
         } else if(file->dupflag == TYPE_BADUGID) {
-            script_print(sets, _sd_("%s '%s' # bad gid and uid\n",chown_cmd_badugid, fpath));
-            log_print(sets, get_logstream(),"BGID");
+            script_print(session, _sd_("%s '%s' # bad gid and uid\n",chown_cmd_badugid, fpath));
+            log_print(session, session->log_out,"BGID");
         } else if(file->fsize == 0) {
-            script_print(sets, _sd_("rm -f '%s' # empty file.\n", fpath));
-            log_print(sets, get_logstream(),"ZERO");
+            script_print(session, _sd_("rm -f '%s' # empty file.\n", fpath));
+            log_print(session, session->log_out,"ZERO");
         } else if(orig==false) {
-            log_print(sets, get_logstream(),"DUPL");
+            log_print(session, session->log_out,"DUPL");
             if(sets->cmd_path) {
                 char *opath = realpath(p_to_orig->path, NULL);
                 if(opath != NULL) {
                     /*script_print(sets, _sd_(set->cmd_path,fpath,opath));*/
                     char * tmp_opath = strsubs(opath,"'","'\"'\"'");
                     if(tmp_opath != NULL) {
-                        script_print(sets, make_cmd_ready(sets, false,tmp_opath,fpath));
-                        script_print(sets, _sd_("\n"));
+                        script_print(session, make_cmd_ready(sets, false,tmp_opath,fpath));
+                        script_print(session, _sd_("\n"));
                         g_free(tmp_opath);
                     }
                     g_free(opath);
                 }
             } else {
-                script_print(sets, _sd_("rm -f '%s' # duplicate\n",fpath));
+                script_print(session, _sd_("rm -f '%s' # duplicate\n",fpath));
             }
         } else {
-            log_print(sets, get_logstream(),"ORIG");
+            log_print(session, session->log_out,"ORIG");
             if(sets->cmd_orig) {
                 /*//script_print(sets, _sd_(set->cmd_orig,fpath));*/
-                script_print(sets, make_cmd_ready(sets, true,fpath,NULL));
-                script_print(sets, _sd_(" \n"));
+                script_print(session, make_cmd_ready(sets, true,fpath,NULL));
+                script_print(session, _sd_(" \n"));
             } else {
-                script_print(sets, _sd_("echo  '%s' # original\n",fpath));
+                script_print(session, _sd_("echo  '%s' # original\n",fpath));
             }
         }
-        log_print(sets, get_logstream(),LOGSEP);
+        log_print(session, session->log_out,LOGSEP);
         for(i = 0; i < 16; i++) {
             if(sets->verbosity == 4) {
                 fprintf(stdout,"%02x", file->md5_digest[i]);
             }
-            fprintf(get_logstream(),"%02x", file->md5_digest[i]);
+            fprintf(session->log_out,"%02x", file->md5_digest[i]);
         }
 #define INT_CAST long unsigned
         if(sets->verbosity == 4) {
             fprintf(stdout,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
         }
-        fprintf(get_logstream(),"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
+        fprintf(session->log_out,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
 #undef INT_CAST
         if(free_fullpath && fpath && file->dupflag != TYPE_BLNK) {
             g_free(fpath);
@@ -339,20 +300,20 @@ static bool handle_item(RmSession * session, RmFile *file_path, RmFile *file_ori
 
 /* ------------------------------------------------------------- */
 
-void init_filehandler(RmSettings * sets) {
-    if(sets->output) {
-        char *sc_name = g_strdup_printf("%s.sh", sets->output);
-        char *lg_name = g_strdup_printf("%s.log",sets->output);
-        script_out = fopen(sc_name, "w");
-        log_out    = fopen(lg_name, "w");
-        if(script_out && log_out) {
+void init_filehandler(RmSession * session) {
+    if(session->settings->output) {
+        char *sc_name = g_strdup_printf("%s.sh", session->settings->output);
+        char *lg_name = g_strdup_printf("%s.log",session->settings->output);
+        session->script_out = fopen(sc_name, "w");
+        session->log_out    = fopen(lg_name, "w");
+        if(session->script_out && session->log_out) {
             char *cwd = getcwd(NULL,0);
             /* Make the file executable */
-            if(fchmod(fileno(script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1) {
+            if(fchmod(fileno(session->script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1) {
                 perror(YEL"WARN: "NCO"chmod");
             }
             /* Write a basic header */
-            fprintf(get_scriptstream(),
+            fprintf(session->script_out,
                     "#!/bin/sh\n"
                     "#This file was autowritten by 'rmlint'\n"
                     "#rmlint was executed from: %s\n"
@@ -374,7 +335,7 @@ void init_filehandler(RmSettings * sets) {
                     "usage: $0 options\n"
                     "\n"
                     "OPTIONS:\n",cwd);
-            fprintf(get_scriptstream(),
+            fprintf(session->script_out,
                     "-h      Show this message\n"
                     "-d      Do not ask before running\n"
                     "-x      Keep rmlint.sh and rmlint.log\n"
@@ -405,18 +366,18 @@ void init_filehandler(RmSettings * sets) {
                     "  usage\n"
                     "  ask \n"
                     "fi\n");
-            fprintf(get_scriptstream(), "user='%s'\ngroup='%s'\n",get_username(),get_groupname());
-            fprintf(get_logstream(),"#This file was autowritten by 'rmlint'\n");
-            fprintf(get_logstream(),"#rmlint was executed from: %s\n",cwd);
-            fprintf(get_logstream(), "#\n# Entries are listed like this: \n");
-            fprintf(get_logstream(), "# dupflag | md5sum | path | size | devID | inode\n");
-            fprintf(get_logstream(), "# -------------------------------------------\n");
-            fprintf(get_logstream(), "# dupflag : What type of lint found:\n");
-            fprintf(get_logstream(), "#           BLNK: Bad link pointing nowhere\n"
+            fprintf(session->script_out, "user='%s'\ngroup='%s'\n",get_username(),get_groupname());
+            fprintf(session->log_out,"#This file was autowritten by 'rmlint'\n");
+            fprintf(session->log_out,"#rmlint was executed from: %s\n",cwd);
+            fprintf(session->log_out, "#\n# Entries are listed like this: \n");
+            fprintf(session->log_out, "# dupflag | md5sum | path | size | devID | inode\n");
+            fprintf(session->log_out, "# -------------------------------------------\n");
+            fprintf(session->log_out, "# dupflag : What type of lint found:\n");
+            fprintf(session->log_out, "#           BLNK: Bad link pointing nowhere\n"
                     "#           OTMP: Old tmp data (e.g: test.txt~)\n"
                     "#           BASE: Double basename\n"
                     "#           EDIR: Empty directory\n");
-            fprintf(get_logstream(),
+            fprintf(session->log_out,
                     "#           BLNK: Bad link pointing nowhere\n"
                     "#           JNKD: Dirname containg one char of a user defined string\n"
                     "#           JNKF: Filename containg one char of a user defined string\n"
@@ -427,20 +388,20 @@ void init_filehandler(RmSettings * sets) {
                     "#           ORIG: File that has a duplicate, but supposed to be a original\n"
                     "#           DUPL: File that is supposed to be a duplicate\n"
                     "#\n");
-            fprintf(get_logstream(), "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`, because only parts are read!)\n");
-            fprintf(get_logstream(), "# path    : The full path to the found file\n");
-            fprintf(get_logstream(), "# size    : total size in byte as a decimal integer\n");
-            fprintf(get_logstream(), "# devID   : The ID of the device where the file is located\n");
-            fprintf(get_logstream(), "# inode   : The Inode of the file (see man 2 stat)\n");
-            fprintf(get_logstream(), "# The '//' inbetween each word is the seperator.\n");
+            fprintf(session->log_out, "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`, because only parts are read!)\n");
+            fprintf(session->log_out, "# path    : The full path to the found file\n");
+            fprintf(session->log_out, "# size    : total size in byte as a decimal integer\n");
+            fprintf(session->log_out, "# devID   : The ID of the device where the file is located\n");
+            fprintf(session->log_out, "# inode   : The Inode of the file (see man 2 stat)\n");
+            fprintf(session->log_out, "# The '//' inbetween each word is the seperator.\n");
             if(cwd) {
                 free(cwd);
             }
         } else {
             perror(NULL);
         }
-        fflush(script_out);
-        fflush(log_out);
+        fflush(session->script_out);
+        fflush(session->log_out);
         g_free(sc_name);
         g_free(lg_name);
     }
@@ -532,8 +493,8 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
                 }
             }
             write_to_log(session, fi, false, original);
-            set_dupcounter(get_dupcounter()+1);
-            add_total_lint(fi->fsize);
+            session->dup_counter++;
+            session->total_lint_size += fi->fsize;
             if(handle_item(session, fi, original)) {
                 pthread_mutex_unlock(&mutex_printage);
                 return true;

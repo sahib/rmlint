@@ -27,8 +27,7 @@
 #include <fts.h>
 #include "useridcheck.h"
 
-void linttests_c_init(void);
-int uid_gid_check(FTSENT *fts_ent, RmSettings *settings);
+int uid_gid_check(FTSENT *fts_ent, RmSession *session);
 bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings);
 bool is_nonstripped(FTSENT *afile, RmSettings *settings);
 bool junkinbasename(char *str, RmSettings * settings);

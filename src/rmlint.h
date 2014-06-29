@@ -37,8 +37,5 @@ void info(const char* format, ...);
 void error(const char* format, ...);
 void warning(const char* format, ...);
 int  systemf(const char* format, ...);
-int  get_cpindex(void);
-guint64 get_totalfiles(void);
-bool get_doldtmp(void);
 
 #endif

@@ -38,25 +38,6 @@
 
 #include "defs.h"
 
-/* ------------------------------------------------------------- */
-/* Globals                                                       */
-UserGroupList **global_ug_list;
-
-/* ------------------------------------------------------------- */
-
-void delete_userlist(void) {
-    userlist_destroy(global_ug_list);
-}
-
-/* ------------------------------------------------------------- */
-
-void linttests_c_init(void) {
-    global_ug_list = userlist_new();
-    atexit(delete_userlist);
-}
-
-/* ------------------------------------------------------------- */
-
 char * rmlint_basename(char *filename) {
     char * base = strrchr(filename, '/');
     if(base != NULL) {
@@ -82,11 +63,13 @@ ino_t parent_node(const char *apath) {
 /* ------------------------------------------------------------- */
 /* checks uid and gid; returns 0 if both ok, else TYPE_ corresponding *
  * to RmFile->filter types                                            */
-int uid_gid_check(FTSENT *fts_ent, RmSettings *settings) {
-    if (settings->findbadids) {
+int uid_gid_check(FTSENT *fts_ent, RmSession *session) {
+    if (session->settings->findbadids) {
         bool has_gid, has_uid;
-        if (userlist_contains(global_ug_list, fts_ent->fts_statp->st_uid,
-                              fts_ent->fts_statp->st_gid, &has_uid, &has_gid)) {
+        if (userlist_contains(
+                session->userlist, fts_ent->fts_statp->st_uid,
+                fts_ent->fts_statp->st_gid, &has_uid, &has_gid)
+            ) {
             if(has_gid == false)
                 if(has_uid == false)
                     return TYPE_BADUGID;

@@ -19,12 +19,6 @@
  *
  **/
 
-/*
-   rmlint.c:
-   1) Methods to parse arguments and set vars accordingly
-   */
-#define _XOPEN_SOURCE 500
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -48,20 +42,11 @@
 #include "filter.h"
 #include "linttests.h"
 
-/* If more that one path given increment */
-int  cpindex = 0;
-
 /* Control flags */
 bool do_exit = false,
-     use_cwd = false,
      jmp_set = false,
      ex_stat = false,
      abort_n = true;
-
-guint64 total_files = 0;
-
-/* Default commands */
-const char *script_name = "rmlint";
 
 /* If die() is called rmlint will jump back to the end of main
  * rmlint does NOT call exit() or abort() on it's own - so you
@@ -72,15 +57,9 @@ jmp_buf place;
 
 void rmlint_init(void) {
     do_exit = false;
-    use_cwd = false;
     jmp_set = false;
     ex_stat = false;
     abort_n = true;
-    total_files = 0;
-}
-
-guint64 get_totalfiles(void) {
-    return total_files;
 }
 
 /* Make chained calls possible */
@@ -320,7 +299,7 @@ void rmlint_set_default_settings(RmSettings *pset) {
     pset->searchdup             = 1;
     pset->color                 = 1;
     pset->findbadids            = 1;
-    pset->output                = (char*)script_name;
+    pset->output                = "rmlint";
     pset->minsize               = -1;
     pset->maxsize               = -1;
     pset->listemptyfiles        = 1;
@@ -621,7 +600,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             sets->paths = g_realloc(sets->paths,sizeof(char*)*(lp+2));
             sets->is_ppath = g_realloc(sets->is_ppath,sizeof(char)*(lp+1));
             sets->is_ppath[lp] = isPref;
-            sets->paths[lp++] = theDir;
+            sets->paths[lp++] = g_strdup(theDir);
             sets->paths[lp] = NULL;
         }
         optind++;
@@ -639,7 +618,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             g_free(sets->paths);
             return 0;
         }
-        use_cwd = true;
     }
     return 1;
 }
@@ -665,22 +643,13 @@ static int check_cmd(const char *cmd) {
     return 1;
 }
 
-/* ------------------------------------------------------------- */
-
-/* This is only used to pass the current dir to eval_file */
-int  get_cpindex(void) {
-    return cpindex;
-}
-
-/* ------------------------------------------------------------- */
-
 /* exit and return to calling method */
 void die(RmSession *session, int status) {
     RmSettings * sets = session->settings;
 
     /* Free mem */
-    if(use_cwd) {
-        g_free(sets->paths[0]);
+    for(int i = 0; sets->paths[i]; ++i) {
+        g_free(sets->paths[i]);
     }
 
     g_free(sets->paths);
@@ -690,12 +659,12 @@ void die(RmSession *session, int status) {
         info("Abnormal exit\n");
     }
     /* Close logfile */
-    if(get_logstream()) {
-        fclose(get_logstream());
+    if(session->log_out) {
+        fclose(session->log_out);
     }
     /* Close scriptfile */
-    if(get_scriptstream()) {
-        fprintf(get_scriptstream(),
+    if(session->script_out) {
+        fprintf(session->script_out,
                 "                      \n"
                 "if [ -z $DO_REMOVE ]  \n"
                 "then                  \n"
@@ -703,12 +672,17 @@ void die(RmSession *session, int status) {
                 "  rm -f rmlint.sh     \n"
                 "fi                    \n"
                );
-        fclose(get_scriptstream());
+        fclose(session->script_out);
     }
 
     /* Prepare to jump to return */
     do_exit = true;
     ex_stat = status;
+
+    if(session->userlist) {
+        userlist_destroy(session->userlist);
+    }
+
     if(jmp_set) {
         longjmp(place,status);
     }
@@ -917,20 +891,15 @@ char rmlint_echo_settings(RmSettings *settings) {
     return 1;
 }
 
-/* ------------------------------------------------------------- */
-
 int rmlint_main(RmSession *session) {
     /* Used only for infomessage */
-    total_files = 0;
+    session->total_files = 0;
     abort_n = false;
+
     if(do_exit != true) {
         /* Init all modules that use global variables.. */
-        if(!use_cwd) {
-            rmlint_init();
-        }
+        rmlint_init();
         filt_c_init();
-        mode_c_init();
-        linttests_c_init();
     }
 
     /* Jump to this location on exit (with do_exit=true) */
@@ -938,6 +907,7 @@ int rmlint_main(RmSession *session) {
 
     jmp_set = true;
     if(do_exit != true) {
+
         if(session->settings->mode == 5) {
             if(session->settings->cmd_orig) {
                 if(check_cmd(session->settings->cmd_orig) == 0) {
@@ -951,23 +921,23 @@ int rmlint_main(RmSession *session) {
         }
 
         /* Open logfile */
-        init_filehandler(session->settings);
+        init_filehandler(session);
 
         /* Warn if started with sudo. Hack: Just try to get read access to /bin/ls */
         if(!access("/bin/ls", R_OK | W_OK)) {
             warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
             warning("      Take care of what you're doing!\n\n");
         }
-        total_files = rmlint_search_tree(session);
+        session->total_files = rmlint_search_tree(session);
 
-        if(total_files < 2) {
+        if(session->total_files < 2) {
             warning("No files in cache to search through => No duplicates.\n");
             die(session, 0);
         } 
 
-        info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", total_files);
-        if(session->settings->threads > total_files) {
-            session->settings->threads = total_files + 1;
+        info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
+        if(session->settings->threads > session->total_files) {
+            session->settings->threads = session->total_files + 1;
         }
         /* Till this point the list is unsorted
          * The filter alorithms requires the list to be size-sorted,

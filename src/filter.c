@@ -19,9 +19,6 @@
  *
  **/
 
-/* Needed for nftw() */
-#define _XOPEN_SOURCE 500
-
 #include <sys/mman.h>
 #include <fcntl.h>
 
@@ -47,26 +44,14 @@
 #include "linttests.h"
 
 /* global vars, but initialized by filt_c_init() */
-guint64 dircount, dbase_ctr;
-bool dir_done, db_done;
-
-guint64 total_lint = 0;
-
-void add_total_lint(guint64 additions) {
-    total_lint += additions;
-}
-
-/* ------------------------------------------------------------- */
+guint64 dbase_ctr;
+bool db_done;
 
 void filt_c_init(void) {
-    dircount  = 0;
     dbase_ctr = 0;
     iAbort   = false;
-    dir_done = false;
     db_done  = false;
 }
-
-/* ------------------------------------------------------------- */
 
 typedef struct SchedulerTag {
     RmSession *session;
@@ -78,7 +63,7 @@ typedef struct SchedulerTag {
  * Counts number of CTRL-Cs and reacts
  */
 static void interrupt(int p) {
-    // TODO.
+    // TODO: Cannot call die() on signal handler. Delay somehow.
     switch(p) {
     case SIGINT:
         if(iAbort == 2) {
@@ -94,13 +79,16 @@ static void interrupt(int p) {
     case SIGFPE  :
     case SIGABRT :
         error(RED"FATAL: "NCO"Aborting due to internal error!\n");
-        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-    // die(-1);
+        // die(-1);
     case SIGSEGV :
         error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
+    default:
         error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
         // die(-1);
+        break;
     }
+
+    // TODO: use g_strsignal
 }
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
@@ -643,17 +631,17 @@ static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
 
 static const char *TYPE_TO_DESCRIPTION[] = {
     [TYPE_UNKNOWN]      = "",
-    [TYPE_BLNK]         = "Bad link(s):",
-    [TYPE_OTMP]         = "Old Tempfile(s):",
-    [TYPE_EDIR]         = "Empty dir(s):",
-    [TYPE_JNK_DIRNAME]  = "Junk dirname(s):",
-    [TYPE_JNK_FILENAME] = "Junk filename(s):",
-    [TYPE_NBIN]         = "Non stripped binarie(s):",
-    [TYPE_BADUID]       = "Bad UID:",
-    [TYPE_BADGID]       = "Bad GID:",
-    [TYPE_BADUGID]      = "Bad UID and GID:",
-    [TYPE_EFILE]        = "Empty file(s):",
-    [TYPE_DUPE_CANDIDATE] = "Duplicate(s):"
+    [TYPE_BLNK]         = "Bad link(s)",
+    [TYPE_OTMP]         = "Old Tempfile(s)",
+    [TYPE_EDIR]         = "Empty dir(s)",
+    [TYPE_JNK_DIRNAME]  = "Junk dirname(s)",
+    [TYPE_JNK_FILENAME] = "Junk filename(s)",
+    [TYPE_NBIN]         = "Non stripped binarie(s)",
+    [TYPE_BADUID]       = "Bad UID(s)",
+    [TYPE_BADGID]       = "Bad GID(s)",
+    [TYPE_BADUGID]      = "Bad UID and GID(s)",
+    [TYPE_EFILE]        = "Empty file(s)",
+    [TYPE_DUPE_CANDIDATE] = "Duplicate(s)"
 };
 
 static const char *TYPE_TO_COMMAND[] = {
@@ -735,10 +723,14 @@ void start_processing(RmSession * session) {
     RmFileList *list = session->list;
 
     // TODO: use sigaction.
-    signal(SIGINT,  interrupt);
-    signal(SIGSEGV, interrupt);
-    signal(SIGFPE,  interrupt);
-    signal(SIGABRT, interrupt);
+    struct sigaction sa;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = interrupt;
+
+    sigaction(SIGINT,  &sa, NULL);
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGFPE,  &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
 
     /* TODO: this is broken... or not, if we only want to find double names with
      * same size :) */
@@ -786,41 +778,54 @@ void start_processing(RmSession * session) {
      * The scheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
     start_scheduler(session);
-    if(get_dupcounter() == 0) {
+    if(session->dup_counter == 0) {
         error("\r                    ");
     } else {
         error("\n");
     }
 
     /* now process the ouptput we gonna print */
-    size_to_human_readable(total_lint, lintbuf);
+    size_to_human_readable(session->total_lint_size, lintbuf);
     // size_to_human_readable(emptylist.size, suspbuf);
 
     /* Now announce */
-    warning("\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",get_totalfiles(), get_dupcounter());
+    warning(
+        "\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",
+        session->total_files, session->dup_counter
+    );
 
     // TODO
     // suspicious = emptylist.len + dbase_ctr;
     // if(suspicious > 1) {
     //     warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]",emptylist.len + dbase_ctr,suspbuf);
     // }
+    
     warning("\n");
     if(!iAbort) {
-        warning(RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n", lintbuf, total_lint);
+        warning(
+            RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n",
+            lintbuf, session->total_lint_size
+        );
     }
-    if((settings->mode == 1 || settings->mode == 2) && get_dupcounter()) {
+    if((settings->mode == 1 || settings->mode == 2) && session->dup_counter) {
         warning(RED"=> "NCO"Nothing removed yet!\n");
     }
     warning("\n");
     if(settings->verbosity == 6) {
         info("Now calculation finished.. now writing end of log...\n");
-        info(RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",get_totalfiles(), get_dupcounter());
+        info(
+            RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",
+            session->total_files, session->dup_counter
+        );
         if(!iAbort) {
-            info(RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n", lintbuf, total_lint);
+            info(
+                RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n",
+                lintbuf, session->total_lint_size
+            );
         }
     }
 
-    if(get_logstream() == NULL && settings->output) {
+    if(session->log_out == NULL && settings->output) {
         error(RED"\nERROR: "NCO);
         fflush(stdout);
         perror("Unable to write log - target file:");

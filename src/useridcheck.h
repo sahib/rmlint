@@ -22,9 +22,9 @@
 #include <stdbool.h>
 #include "defs.h"
 
-UserGroupList ** userlist_new(void);
-bool userlist_contains(UserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid);
-void userlist_destroy(UserGroupList ** list);
+RmUserGroupList ** userlist_new(void);
+bool userlist_contains(RmUserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid);
+void userlist_destroy(RmUserGroupList ** list);
 char *get_username(void);
 char *get_groupname(void);
 

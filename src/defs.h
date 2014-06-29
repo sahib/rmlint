@@ -22,6 +22,8 @@
 #ifndef DEF_H
 #define DEF_H
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <time.h>
 #include <sys/types.h>
@@ -181,15 +183,22 @@ typedef struct RmFileList {
     GHashTable * size_table;
 } RmFileList;
 
+typedef struct RmUserGroupList {
+    gulong gid, uid;
+} RmUserGroupList;
+
 typedef struct RmSession {
     RmFileList * list;
     RmSettings * settings;
 
     guint64 total_files;
-} RmSession;
+    guint64 total_lint_size;
+    guint64 dup_counter;
 
-typedef struct UserGroupList {
-    gulong gid, uid;
-} UserGroupList;
+    FILE *script_out;
+    FILE *log_out;
+
+    RmUserGroupList **userlist;
+} RmSession;
 
 #endif

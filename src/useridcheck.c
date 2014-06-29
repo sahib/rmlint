@@ -49,8 +49,8 @@ char *get_groupname(void) {
 }
 
 
-UserGroupList ** userlist_new(void) {
-    UserGroupList ** list = NULL;
+RmUserGroupList ** userlist_new(void) {
+    RmUserGroupList ** list = NULL;
     const size_t block_size = 256;
     size_t mem_count = 0, block_count = 0;
     struct passwd * node = NULL;
@@ -58,12 +58,12 @@ UserGroupList ** userlist_new(void) {
 
     setpwent();
     while((node = getpwent()) != NULL) {
-        UserGroupList * item = malloc(sizeof(UserGroupList));
+        RmUserGroupList * item = malloc(sizeof(RmUserGroupList));
         item->gid = node->pw_gid;
         item->uid = node->pw_uid;
         if(block_count * block_size <= mem_count) {
             block_count++;
-            list = realloc(list,(block_count + 1) * block_size * sizeof(UserGroupList*));
+            list = realloc(list,(block_count + 1) * block_size * sizeof(RmUserGroupList*));
         }
         list[mem_count] = item;
         mem_count++;
@@ -71,12 +71,12 @@ UserGroupList ** userlist_new(void) {
 
     /* add all groups, not just those that are user primary gid's*/
     while((grp = getgrent()) != NULL) {
-        UserGroupList * item = malloc(sizeof(UserGroupList));
+        RmUserGroupList * item = malloc(sizeof(RmUserGroupList));
         item->gid = grp->gr_gid;
         item->uid = 0;
         if(block_count * block_size <= mem_count) {
             block_count++;
-            list = realloc(list,(block_count + 1) * block_size * sizeof(UserGroupList*));
+            list = realloc(list,(block_count + 1) * block_size * sizeof(RmUserGroupList*));
         }
         list[mem_count] = item;
         mem_count++;
@@ -96,7 +96,7 @@ UserGroupList ** userlist_new(void) {
 
 /* /////////////////////////// */
 
-bool userlist_contains(UserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid) {
+bool userlist_contains(RmUserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid) {
     bool rc = false;
     bool gid_found = false;
     bool uid_found = false;
@@ -119,7 +119,7 @@ bool userlist_contains(UserGroupList ** list, unsigned long uid, unsigned gid, b
 
 /* /////////////////////////// */
 
-void userlist_destroy(UserGroupList ** list) {
+void userlist_destroy(RmUserGroupList ** list) {
     if(list != NULL) {
         int i = 0;
         for(i = 0; list[i]; ++i) {
@@ -138,7 +138,7 @@ void userlist_destroy(UserGroupList ** list) {
 int main(int argc, char * argv[]) {
     struct stat stat_buf;
     bool has_gid, has_uid;
-    UserGroupList ** list = userlist_new();
+    RmUserGroupList ** list = userlist_new();
     if(argc < 2) {
         puts("Usage: prog <path>");
         return EXIT_FAILURE;
