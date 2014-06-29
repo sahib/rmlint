@@ -109,6 +109,7 @@ bool is_old_tmp(G_GNUC_UNUSED FTSENT *fts_ent, G_GNUC_UNUSED RmSettings *setting
 
 /* ------------------------------------------------------------- */
 
+
 /* Method to test if a file is non stripped binary. Uses libelf*/
 bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
     bool is_ns=false;
@@ -120,10 +121,15 @@ bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
         Elf *elf;       /* ELF pointer for libelf */
         Elf_Scn *scn;   /* section descriptor pointer */
         GElf_Shdr shdr; /* section header */
+        static char CWD_BUF[PATH_MAX];
+
+        char *abs_path = g_build_filename(getcwd(CWD_BUF, PATH_MAX), rmlint_basename(fts_ent->fts_path), NULL);
 
         /* Open ELF file to obtain file descriptor */
-        if((fd = open(fts_ent->fts_path, O_RDONLY)) < 0) {
-            warning("Error opening file %s for nostripped test\n", fts_ent->fts_path);
+        if((fd = open(abs_path, O_RDONLY)) < 0) {
+            warning("Error opening file '%s' for nostripped test: ", fts_ent->fts_path);
+            perror("");
+            g_free(abs_path);
             return 0;
         }
 
@@ -155,6 +161,7 @@ bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
 
         elf_end(elf);
         close(fd);
+        g_free(abs_path);
     }
     return is_ns;
 }

@@ -110,17 +110,22 @@ void rm_file_list_append(RmFileList * list, RmFile * file) {
     if(old_group == NULL) {
         /* Insert a new group */
         old_group = g_queue_new();
+
+        g_queue_push_head(old_group, file);
+        file->file_group = old_group;
+        file->list_node = old_group->head;
+
         g_sequence_insert_sorted(
             list->size_groups, old_group, rm_file_list_cmp_file_size, NULL
         );
         g_hash_table_insert(
             list->size_table, GINT_TO_POINTER(file->fsize), old_group
         );
+    } else {
+        g_queue_push_head(old_group, file);
+        file->file_group = old_group;
+        file->list_node = old_group->head;
     }
-
-    g_queue_push_head(old_group, file);
-    file->file_group = old_group;
-    file->list_node = old_group->head;
 }
 
 void rm_file_list_clear(GSequenceIter * iter) {
@@ -213,6 +218,9 @@ static void rm_file_list_count_pref_paths(GQueue *group, int *num_pref, int *num
 
 gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings) {
     gsize removed_cnt = 0;
+
+    g_sequence_sort(list->size_groups, rm_file_list_cmp_file_size, NULL);
+
     GSequenceIter * iter = rm_file_list_get_iter(list);
     while(!g_sequence_iter_is_end(iter)) {
         GQueue *queue = g_sequence_get(iter);

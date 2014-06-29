@@ -96,9 +96,11 @@ From man 2 open:
 
 /* types of lint */
 typedef enum RmLintType {
-    TYPE_BLNK = 3,
+    TYPE_UNKNOWN = 0,
+    TYPE_BLNK,
     TYPE_OTMP,
     TYPE_EDIR,
+    TYPE_EFILE,
     TYPE_JNK_DIRNAME,
     TYPE_JNK_FILENAME,
     TYPE_NBIN,
@@ -106,6 +108,8 @@ typedef enum RmLintType {
     TYPE_BADUID,
     TYPE_BADGID,
     TYPE_BADUGID,
+    /* Border */
+    TYPE_OTHER_LINT,
     TYPE_DUPE_CANDIDATE /* note: this needs to be last item in list so*
 						 * that "other" lint gets handled first       */
 } RmLintType;

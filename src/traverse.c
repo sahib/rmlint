@@ -34,14 +34,19 @@ static int const MAX_EMPTYDIR_DEPTH = 100;
 static int process_file (RmSettings *settings, RmFileList *list, FTSENT *ent, bool is_ppath, int pnum, RmLintType file_type) {
     /* TODO: regex check if filename exclude */
     if (file_type==0) {
+        RmLintType gid_check;
+
         /*see if we can find a lint type*/
         if (junkinbasename(ent->fts_path, settings)) {
             file_type=TYPE_JNK_FILENAME;
-        } else if ((file_type = uid_gid_check(ent, settings))) {
+        } else if ((gid_check = uid_gid_check(ent, settings))) {
+            file_type = gid_check;
         } else if (is_old_tmp(ent, settings)) {
             file_type = TYPE_OTMP;
         } else if(is_nonstripped(ent, settings)) {
             file_type = TYPE_NBIN;
+        } else if(ent->fts_statp->st_size == 0) {
+            file_type = TYPE_EFILE;
         } else {
             file_type=TYPE_DUPE_CANDIDATE;
         }
@@ -76,11 +81,10 @@ static int process_file (RmSettings *settings, RmFileList *list, FTSENT *ent, bo
 /* Traverse the file hierarchies named in PATHS, the last entry of which
  * is NULL.  FTS_FLAGS controls how fts works.
  * Return true if successful.  */
-
 int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int fts_flags) {
     int numfiles = 0;
     char is_ppath = settings->is_ppath[pathnum];
-    char ** paths=malloc(sizeof(char*)*2);
+    char * paths[2];
 
     FTS *ftsp;
     FTSENT *p, *chp;
@@ -203,7 +207,6 @@ int traverse_path (RmFileList * list, RmSettings  *settings, int  pathnum, int f
     fts_close(ftsp);
 
 cleanup:
-    g_free(paths);
     return numfiles;
 }
 

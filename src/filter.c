@@ -640,81 +640,91 @@ static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
         return ((long)a->dupflag-(long)b->dupflag);
 }
 
+
+static const char *TYPE_TO_DESCRIPTION[] = {
+    [TYPE_UNKNOWN]      = "",
+    [TYPE_BLNK]         = "Bad link(s):",
+    [TYPE_OTMP]         = "Old Tempfile(s):",
+    [TYPE_EDIR]         = "Empty dir(s):",
+    [TYPE_JNK_DIRNAME]  = "Junk dirname(s):",
+    [TYPE_JNK_FILENAME] = "Junk filename(s):",
+    [TYPE_NBIN]         = "Non stripped binarie(s):",
+    [TYPE_BADUID]       = "Bad UID:",
+    [TYPE_BADGID]       = "Bad GID:",
+    [TYPE_BADUGID]      = "Bad UID and GID:",
+    [TYPE_EFILE]        = "Empty file(s):",
+    [TYPE_DUPE_CANDIDATE] = "Duplicate(s):"
+};
+
+static const char *TYPE_TO_COMMAND[] = {
+    [TYPE_UNKNOWN]      = "",
+    [TYPE_BLNK]         = "rm",
+    [TYPE_OTMP]         = "rm",
+    [TYPE_EDIR]         = "rmdir",
+    [TYPE_JNK_DIRNAME]  = "ls",
+    [TYPE_JNK_FILENAME] = "ls",
+    [TYPE_NBIN]         = "strip --strip-debug",
+    [TYPE_BADUID]       = "chown %s",
+    [TYPE_BADGID]       = "chgrp %s",
+    [TYPE_BADUGID]      = "chown %s:%s",
+    [TYPE_EFILE]        = "rm",
+    [TYPE_DUPE_CANDIDATE] = "ls"
+};
+
 static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *first_group) {
-    // TODO: Clean this bullshit up.
-    bool flag = 42, e_file_printed = false;
+    RmLintType flag = TYPE_UNKNOWN;
     RmSettings *sets = session->settings;
     const char *user = get_username();
     const char *group = get_groupname();
 
     for(GList *iter = first_group->head; iter; iter = iter->next) {
-        RmFile *ptr = iter->data;
-        if(flag != ptr->dupflag) {
-            if(sets->verbosity > 1) {
-                error(YEL"\n#"NCO);
-            } else {
-                error("\n#");
-            }
-            /* -- */
-            if(ptr->dupflag == TYPE_BLNK) {
-                error(" Bad link(s): \n");
-            } else if(ptr->dupflag == TYPE_OTMP) {
-                error(" Old Tempfile(s): \n");
-            } else if(ptr->dupflag == TYPE_EDIR) {
-                error(" Empty dir(s): \n");
-            } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
-                error(" Junk dirname(s): \n");
-            } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
-                error(" Junk filename(s): \n");
-            } else if(ptr->dupflag == TYPE_NBIN) {
-                error(" Non stripped binarie(s): \n");
-            } else if(ptr->dupflag == TYPE_BADUID) {
-                error(" Bad UID: \n");
-            } else if(ptr->dupflag == TYPE_BADGID) {
-                error(" Bad GID: \n");
-            } else if(ptr->dupflag == TYPE_BADUGID) {
-                error(" Bad UID&GID: \n");
-            } else if(ptr->fsize == 0 && e_file_printed == false) {
-                error(" Empty file(s): \n");
-                e_file_printed = true;
-            }
-            flag = ptr->dupflag;
+        RmFile *file = iter->data;
+        if(file->dupflag < 0 || file->dupflag >= TYPE_OTHER_LINT) {
+            error("Unknown filetype: %d (thats a bug)\n", file->dupflag);
+            continue;
         }
+
+        if(flag != file->dupflag) {
+            if(sets->verbosity > 1) {
+                error(YEL"\n# "NCO);
+            } else {
+                error("\n# ");
+            }
+            
+            error(TYPE_TO_DESCRIPTION[file->dupflag]);
+            error(": \n"NCO);
+            flag = file->dupflag;
+        }
+
         if(sets->verbosity > 1) {
             error(GRE);
         }
 
-        if(ptr->dupflag == TYPE_BLNK) {
-            error("   rm");
-        } else if(ptr->dupflag == TYPE_OTMP) {
-            error("   rm");
-        } else if(ptr->dupflag == TYPE_EDIR) {
-            error("   rmdir");
-        } else if(ptr->dupflag == TYPE_JNK_DIRNAME) {
-            error("   ls");
-        } else if(ptr->dupflag == TYPE_JNK_FILENAME) {
-            error("   ls");
-        } else if(ptr->dupflag == TYPE_NBIN) {
-            error("   strip --strip-debug");
-        } else if(ptr->dupflag == TYPE_BADUID) {
-            error("   chown %s ", user);
-        } else if(ptr->dupflag == TYPE_BADGID) {
-            error("   chgrp %s ", user);
-        } else if(ptr->dupflag == TYPE_BADUGID) {
-            error("   chown %s:%s ", user, group);
-        } else if(ptr->fsize   == 0) {
-            error("   rm");
+        error("   ");
+        const char *format = TYPE_TO_COMMAND[file->dupflag];
+        switch(file->dupflag) {
+            case TYPE_BADUID:
+                error(format, user);
+                break;
+            case TYPE_BADGID:
+                error(format, group);
+                break;
+            case TYPE_BADUGID:
+                error(format, user, group);
+                break;
+            default:
+                error(format);
         }
+
         if(sets->verbosity > 1) {
             error(NCO);
         }
-        error(" %s\n",ptr->path);
+        error(" %s\n",file->path);
         if(sets->output) {
-            write_to_log(session, ptr, false,NULL);
+            write_to_log(session, file, false,NULL);
         }
     }
     rm_file_list_clear(first);
-
 }
 
 
@@ -724,11 +734,14 @@ void start_processing(RmSession * session) {
     RmSettings *settings = session->settings;
     RmFileList *list = session->list;
 
+    // TODO: use sigaction.
     signal(SIGINT,  interrupt);
     signal(SIGSEGV, interrupt);
     signal(SIGFPE,  interrupt);
     signal(SIGABRT, interrupt);
 
+    /* TODO: this is broken... or not, if we only want to find double names with
+     * same size :) */
     if(settings->namecluster) {
         GSequenceIter * iter = rm_file_list_get_iter(list);
         while(!g_sequence_iter_is_end(iter)) {
@@ -741,15 +754,15 @@ void start_processing(RmSession * session) {
     GSequenceIter * first = rm_file_list_get_iter(list);
     rm_file_list_sort_group(first, (GCompareDataFunc)cmp_sort_dupID, NULL);
     GQueue *first_group = g_sequence_get(first);
+
     if(rm_file_list_byte_size(first_group) == 0) {
         handle_other_lint(session, first, first_group);
     }
 
-    info("Now sorting list based on filesize... ");
+    info("\nNow sorting list based on filesize... ");
     gsize rem_counter = rm_file_list_sort_groups(list, settings);
     info("done.\n");
 
-    error("\n");
     if(settings->searchdup == 0) {
         /* rmlint was originally supposed to find duplicates only
            So we have to free list that whould have been used for
@@ -757,14 +770,11 @@ void start_processing(RmSession * session) {
         die(session, EXIT_SUCCESS);
     }
 
-    info("\nNow attempting to find duplicates. This may take a while...\n");
+    info("Now attempting to find duplicates. This may take a while...\n");
     /* actually this was done already above while building the list */
     info("Now removing files with unique sizes from list...");
     info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
     // info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
-
-    /*actually this was done already above while building the list*/
-    // info("Now sorting groups based on their location on the drive...");
 
     /* Now make sure groups are sorted by their location on the disk - TODO? can remove this because was already sorted above?*/
     info(" done. \nNow doing fingerprints and full checksums.%c\n",settings->verbosity > 4 ? '.' : '\n');

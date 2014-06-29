@@ -720,8 +720,14 @@ void die(RmSession *session, int status) {
 char rmlint_echo_settings(RmSettings *settings) {
     char confirm;
     int save_verbosity=settings->verbosity;
-
     bool has_ppath=false;
+
+    /* I've disabled this for now. Shouldn't we only print a summary
+     * if the user has time to read it? */
+    if(!settings->confirm_settings) {
+        return 1;
+    }
+
     if ((settings->confirm_settings) && (settings->verbosity<3))
         settings->verbosity=3;  /* need verbosity at least 3 if user is going to confirm settings*/
 
@@ -957,9 +963,7 @@ int rmlint_main(RmSession *session) {
         if(total_files < 2) {
             warning("No files in cache to search through => No duplicates.\n");
             die(session, 0);
-        } else {
-            info("Returned %d files\n", total_files);
-        }
+        } 
 
         info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", total_files);
         if(session->settings->threads > total_files) {
