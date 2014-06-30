@@ -50,17 +50,17 @@ char * rmlint_basename(char *filename) {
     return (char *)filename;
 }
 
-/* ------------------------------------------------------------- */
-
 ino_t parent_node(const char *apath) {
     char *dummy  = strdup( apath );
     char* parent_path = dirname(dummy);
     struct stat stat_buf;
     if(!stat(parent_path, &stat_buf)) {
         return stat_buf.st_ino;
-    } else return -1;
+    } else {
+        return -1;
+    }
 }
-/* ------------------------------------------------------------- */
+
 /* checks uid and gid; returns 0 if both ok, else TYPE_ corresponding *
  * to RmFile->filter types                                            */
 int uid_gid_check(FTSENT *fts_ent, RmSession *session) {
@@ -82,16 +82,6 @@ int uid_gid_check(FTSENT *fts_ent, RmSession *session) {
     /* no bad gid or uid */
     return 0;
 }
-
-/* ------------------------------------------------------------- */
-
-bool is_old_tmp(G_GNUC_UNUSED FTSENT *fts_ent, G_GNUC_UNUSED RmSettings *settings) {
-    // TODO: to be removed.
-    return false;
-}
-
-/* ------------------------------------------------------------- */
-
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
 bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
@@ -147,11 +137,4 @@ bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
         g_free(abs_path);
     }
     return is_ns;
-}
-
-/* ------------------------------------------------------------- */
-
-/* Cheap function to check if c is a char in str */
-bool junkinbasename(G_GNUC_UNUSED char *path, G_GNUC_UNUSED RmSettings * settings) {
-    return false;
 }

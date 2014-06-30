@@ -19,13 +19,11 @@
 *
 **/
 
-#ifndef rmlint_H
-#define rmlint_H
+#ifndef RMLINT_H
+#define RMLINT_H
 
 #include "defs.h"
 
-/* These method are also useable from 'outside' */
-char is_ppath(const char* apath);
 char rmlint_parse_arguments(int argc, char **argv, RmSession *session);
 char rmlint_echo_settings(RmSettings *settings);
 void rmlint_set_default_settings(RmSettings *set);
@@ -34,8 +32,17 @@ int  rmlint_main(RmSession *session);
 
 /* Misc */
 void die(RmSession * session, int status);
-void info(const char* format, ...);
-void error(const char* format, ...);
-void warning(const char* format, ...);
+
+#define debug(...) \
+    g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define info(...) \
+    g_log("rmlint", G_LOG_LEVEL_MESSAGE, __VA_ARGS__)
+#define fyi(...) \
+    g_log("rmlint", G_LOG_LEVEL_MESSAGE, __VA_ARGS__)
+#define warning(...) \
+    g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
+#define error(...) \
+    g_log("rmling", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+
 
 #endif

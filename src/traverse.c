@@ -27,7 +27,6 @@
 #include "rmlint.h"
 #include "filter.h"
 #include "linttests.h"
-#include "treesearch.h"
 
 static int const MAX_EMPTYDIR_DEPTH = 100;
 
@@ -39,12 +38,8 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
         RmLintType gid_check;
 
         /*see if we can find a lint type*/
-        if (junkinbasename(ent->fts_path, settings)) {
-            file_type=TYPE_JNK_FILENAME;
-        } else if ((gid_check = uid_gid_check(ent, session))) {
+        if ((gid_check = uid_gid_check(ent, session))) {
             file_type = gid_check;
-        } else if (is_old_tmp(ent, settings)) {
-            file_type = TYPE_OTMP;
         } else if(is_nonstripped(ent, settings)) {
             file_type = TYPE_NBIN;
         } else if(ent->fts_statp->st_size == 0) {
@@ -122,21 +117,14 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
         is_emptydir[sizeof(is_emptydir)-1]='\0';
 
         int emptydir_stack_overflow=0;
-        while (!iAbort && (p = fts_read(ftsp)) != NULL) {
-            bool junkdirskip=false;
+        while (!session->aborted && (p = fts_read(ftsp)) != NULL) {
             switch (p->fts_info) {
             case FTS_D:         /* preorder directory */
-                if(junkinbasename(p->fts_path, settings)) {
-                    info("Junk dir %s\n", p->fts_path);
-                    process_file(session, p, is_ppath, pathnum, TYPE_JNK_DIRNAME);
-                    junkdirskip = (settings->collide);
-                }
                 if (
                     (settings->depth!=0 && p->fts_level>=settings->depth) ||
                     /* continuing into folder would exceed maxdepth*/
-                    (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') ||
-                    /* does not match regex */
-                    (junkdirskip)) {
+                    (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.')
+                ) {
                     fts_set(ftsp,p,FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags=true; /*current dir not empty*/
                 } else {
@@ -169,7 +157,7 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
             case FTS_INIT:      /* initialized only */
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
-                warning(RED"Warning: symlink without target: %s\n"NCO, errno, p->fts_path);
+                warning(RED"Warning: symlink without target: %s\n"NCO, p->fts_path);
                 numfiles += process_file(session, p, is_ppath, pathnum, TYPE_BLNK);
                 clear_emptydir_flags=true; /*current dir not empty*/
                 break;
@@ -204,7 +192,7 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
         } /*end while ((p = fts_read(ftsp)) != NULL)*/
     }
     if (errno != 0) {
-        error ("Error %d: fts_read failed: %s", 0, errno, ftsp->fts_path);
+        error ("Error '%s': fts_read failed on %s", g_strerror(errno), ftsp->fts_path);
         numfiles = -1;
     }
 

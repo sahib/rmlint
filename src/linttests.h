@@ -28,9 +28,7 @@
 #include "useridcheck.h"
 
 int uid_gid_check(FTSENT *fts_ent, RmSession *session);
-bool is_old_tmp(FTSENT *fts_ent, RmSettings *settings);
 bool is_nonstripped(FTSENT *afile, RmSettings *settings);
-bool junkinbasename(char *str, RmSettings * settings);
 char * rmlint_basename(char *filename);
 ino_t parent_node(char *apath);
 

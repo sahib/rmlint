@@ -41,36 +41,10 @@
 #include "defs.h"
 #include "linttests.h"
 
-// TODO: Check this at strategic points.
-static int global_abort_flag = FALSE;
-
 typedef struct RmSchedulerTag {
     RmSession *session;
     GQueue *group;
 } RmSchedulerTag;
-
-static void signal_handler(int signum) {
-    // TODO: Cannot call die() on signal handler. Delay somehow.
-    switch(signum) {
-    case SIGINT:
-        if(global_abort_flag) {
-            warning(GRE"\nINFO: "NCO"Received Interrupt.\n");
-        } else {
-            global_abort_flag = 1;
-        }
-        break;
-    case SIGFPE  :
-    case SIGABRT :
-        error(RED"FATAL: "NCO"Aborting due to internal error! (signal received: %s)\n", g_strsignal(signum));
-        // die(-1);
-    case SIGSEGV :
-        error(RED"FATAL: "NCO"Rmlint crashed due to a Segmentation fault! :(\n");
-    default:
-        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
-        // die(-1);
-        break;
-    }
-}
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
@@ -356,11 +330,8 @@ static void free_island(GQueue *island) {
 static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
     RmSettings *sets = session->settings;
     GList *i = group->head, *j = NULL;
-
-    /* but for now it will be 1 if any dupes found*/
-    int returnval = 0;  /* not sure what we are using this for */
-
     GQueue island = G_QUEUE_INIT;
+    int returnval = 0;  /* not sure what we are using this for */
 
     if(i == NULL) {
         return false;
@@ -473,9 +444,8 @@ static void* scheduler_cb(void *tag_pointer) {
 
 /* Joins the threads launched by scheduler */
 static void scheduler_jointhreads(pthread_t *threads, guint64 n) {
-    guint64 ii = 0;
-    for(ii=0; ii < n; ii++) {
-        if(pthread_join(threads[ii],NULL)) {
+    for(guint64 i = 0; i < n; i++) {
+        if(pthread_join(threads[i],NULL)) {
             perror(RED"ERROR: "NCO"pthread_join in scheduler()");
         }
     }
@@ -561,7 +531,7 @@ static int find_double_bases(RmSession * session, GQueue *group) {
                     if(!pr) {
                         char * tmp = realpath(fi->path, NULL);
                         fi->dupflag = TYPE_BASE;
-                        error("   %sls"NCO" %s\n", (sets->verbosity!=1) ? GRE : "", tmp,fi->fsize);
+                        error("   %sls%s %s\n", (sets->verbosity!=1) ? GRE : "", NCO, tmp);
                         write_to_log(session, fi,false,NULL);
                         num_found++;
                         pr = true;
@@ -591,11 +561,10 @@ static int find_double_bases(RmSession * session, GQueue *group) {
         }
         i=i->next;
     }
-
     return num_found;
 }
 
-static long cmp_sort_dupID(RmFile* a, RmFile* b, gpointer user_data) {
+static long cmp_sort_lint_type(RmFile* a, RmFile* b, gpointer user_data) {
     (void) user_data;
     if (a->dupflag == TYPE_EDIR && a->dupflag == TYPE_EDIR)
         return (long)strcmp(b->path, a->path);
@@ -641,7 +610,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
 
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if(file->dupflag < 0 || file->dupflag >= TYPE_OTHER_LINT) {
+        if(file->dupflag >= TYPE_OTHER_LINT) {
             error("Unknown filetype: %d (thats a bug)\n", file->dupflag);
             continue;
         }
@@ -653,7 +622,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
                 error("\n# ");
             }
             
-            error(TYPE_TO_DESCRIPTION[file->dupflag]);
+            error("%s", TYPE_TO_DESCRIPTION[file->dupflag]);
             error(": \n"NCO);
             flag = file->dupflag;
         }
@@ -675,7 +644,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
                 error(format, user, group);
                 break;
             default:
-                error(format);
+                error("%s", format);
         }
 
         if(sets->verbosity > 1) {
@@ -693,19 +662,10 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
 /* This the actual main() of rmlint */
 void start_processing(RmSession * session) {
     char lintbuf[128] = {0};
-    int other_lint = 0;
+    guint64 other_lint = 0;
 
     RmSettings *settings = session->settings;
     RmFileList *list = session->list;
-
-    struct sigaction sa;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_handler = signal_handler;
-
-    sigaction(SIGINT,  &sa, NULL);
-    sigaction(SIGSEGV, &sa, NULL);
-    sigaction(SIGFPE,  &sa, NULL);
-    sigaction(SIGABRT, &sa, NULL);
 
     /* TODO: this is broken... or not, if we only want to find double names with
      * same size :) */
@@ -719,7 +679,7 @@ void start_processing(RmSession * session) {
     }
 
     GSequenceIter * first = rm_file_list_get_iter(list);
-    rm_file_list_sort_group(first, (GCompareDataFunc)cmp_sort_dupID, NULL);
+    rm_file_list_sort_group(first, (GCompareDataFunc)cmp_sort_lint_type, NULL);
     GQueue *first_group = g_sequence_get(first);
 
     if(rm_file_list_byte_size(first_group) == 0) {
@@ -761,19 +721,19 @@ void start_processing(RmSession * session) {
 
     size_to_human_readable(session->total_lint_size, lintbuf);
     warning(
-        "\n"RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)",
+        "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s)",
         session->total_files, session->dup_counter
     );
 
     if(other_lint > 0) {
         size_to_human_readable(other_lint, lintbuf);
-        warning(RED"\n=> %llu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
+        warning(RED"\n=> %lu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
     }
     
     warning("\n");
-    if(!global_abort_flag) {
+    if(!session->aborted) {
         warning(
-            RED"=> "NCO"Totally "GRE" %s "NCO" [%llu Bytes] can be removed.\n",
+            RED"=> "NCO"Totally "GRE" %s "NCO" [%lu Bytes] can be removed.\n",
             lintbuf, session->total_lint_size
         );
     }
@@ -784,12 +744,12 @@ void start_processing(RmSession * session) {
     if(settings->verbosity == 6) {
         info("Now calculation finished.. now writing end of log...\n");
         info(
-            RED"=> "NCO"In total "RED"%llu"NCO" files, whereof "RED"%llu"NCO" are duplicate(s)\n",
+            RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s)\n",
             session->total_files, session->dup_counter
         );
-        if(!global_abort_flag) {
+        if(!session->aborted) {
             info(
-                RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%llu"NCO" Bytes] can be removed without dataloss.\n",
+                RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%lu"NCO" Bytes] can be removed without dataloss.\n",
                 lintbuf, session->total_lint_size
             );
         }

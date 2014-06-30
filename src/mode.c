@@ -151,18 +151,9 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
         } else if(file->dupflag == TYPE_BASE) {
             log_print(session, session->log_out,"BASE");
             script_print(session, _sd_("echo  '%s' # double basename.\n", fpath));
-        } else if(file->dupflag == TYPE_OTMP) {
-            script_print(session, _sd_("rm -f '%s' # temp buffer being <%ld> sec. older than actual file.\n", fpath, sets->oldtmpdata));
-            log_print(session, session->log_out,"OTMP");
         } else if(file->dupflag == TYPE_EDIR) {
             script_print(session, _sd_("rmdir '%s' # empty folder.\n", fpath));
             log_print(session, session->log_out,"EDIR");
-        } else if(file->dupflag == TYPE_JNK_DIRNAME) {
-            script_print(session, _sd_("echo  '%s' # dirname containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
-            log_print(session, session->log_out,"JNKD");
-        } else if(file->dupflag == TYPE_JNK_FILENAME) {
-            script_print(session, _sd_("echo  '%s' # filename containing one char of the string \"%s\"\n", fpath, sets->junk_chars));
-            log_print(session, session->log_out,"JNKN");
         } else if(file->dupflag == TYPE_NBIN) {
             script_print(session, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
             log_print(session, session->log_out,"NBIN");

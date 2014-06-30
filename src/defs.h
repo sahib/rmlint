@@ -124,11 +124,8 @@ typedef struct RmSettings {
     char samepart;
     char ignore_hidden;
     char followlinks;
-    char casematch;
     char paranoid;
-    char invmatch;
     char namecluster;
-    char doldtmp;
     char findbadids;
     char searchdup;
     char findemptydirs;
@@ -137,11 +134,8 @@ typedef struct RmSettings {
     char listemptyfiles;
     char **paths;
     char *is_ppath;            /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
-    char *dpattern;
-    char *fpattern;
     char *cmd_path;
     char *cmd_orig;
-    char *junk_chars;
     char *output;
     char *sort_criteria;       /* NEW - sets criteria for ranking and selecting "original"*/
     int minsize;
@@ -154,7 +148,6 @@ typedef struct RmSettings {
     char confirm_settings;     /* NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
-    guint64 oldtmpdata;
 } RmSettings;
 
 typedef struct RmFile {
@@ -199,6 +192,8 @@ typedef struct RmSession {
     FILE *log_out;
 
     RmUserGroupList **userlist;
+
+    volatile bool aborted;
 } RmSession;
 
 #endif

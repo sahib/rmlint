@@ -42,93 +42,18 @@
 #include "filter.h"
 #include "linttests.h"
 
-/* Make chained calls possible */
-char * rm_col(char * string, const char * COL) {
-    char * new = strsubs(string,COL,NULL);
-    g_free(string);
-    return new;
-}
-
-void msg_macro_print(FILE * stream, const char * string) {
-    if(stream && string) {
-        char * tmp = strdup(string);
-        // TODO: Use g_log. This is braindead.
-        // if(!set->color) {
-        //     // TODO: Wow. Stupidy wins again.
-        //     tmp = rm_col(rm_col(rm_col(rm_col(rm_col(tmp,RED),YEL),GRE),BLU),NCO);
-        // }
-        if(stream != NULL && tmp != NULL) {
-            fprintf(stream,"%s",tmp);
-            fflush(stream);
-            free(tmp);
-            tmp = NULL;
-        }
-    }
-}
-
-/** Messaging **/
-void error(const char* format, ...) {
-    if(1) {
-        char * tmp;
-        va_list args;
-        va_start(args, format);
-        if(g_vasprintf(&tmp, format, args) == -1) {
-            return;
-        }
-        /* print, respect -B */
-        msg_macro_print(stdout,tmp);
-        va_end(args);
-        if(tmp) {
-            free(tmp);
-        }
-    }
-}
-
-void warning(const char* format, ...) {
-    //if((set->verbosity > 1) && (set->verbosity < 4)) {
-    if(1) {
-        char * tmp;
-        va_list args;
-        va_start(args, format);
-        if(g_vasprintf(&tmp, format, args) == -1) {
-            return;
-        }
-        msg_macro_print(stderr,tmp);
-        va_end(args);
-        if(tmp) {
-            free(tmp);
-        }
-    }
-}
-
-void info(const char* format, ...) {
-    // if(((set->verbosity > 2) && (set->verbosity < 4)) || set->verbosity == 6) {
-    if(1) {
-        char * tmp;
-        va_list args;
-        va_start(args, format);
-        if(g_vasprintf(&tmp, format, args) == -1) {
-            return;
-        }
-        msg_macro_print(stdout,tmp);
-        va_end(args);
-        if(tmp) {
-            free(tmp);
-        }
-    }
-}
-
 /* Version string */
 static void print_version(void) {
     fprintf(stderr, "Version 1.0.6b compiled: [%s]-[%s]\n",__DATE__,__TIME__);
-    fprintf(stderr, "Author Christopher Pahl; Report bugs to <sahib@online.de>\n");
-    fprintf(stderr, "or use the Issuetracker at https://github.com/sahib/rmlint/issues\n");
+    fprintf(stderr, "Author Christopher Pahl;\n");
+    fprintf(stderr, "Report bugs to https://github.com/sahib/rmlint/issues\n");
 }
 
 /* ------------------------------------------------------------- */
 
 /* Help text */
 static void print_help(void) {
+    // TODO: Clean up helptext; rewrite man page.
     fprintf(stderr, "Syntax: rmlint [[//]TargetDir[s]] [File[s]] [Options]\n");
     fprintf(stderr, "\nGeneral options:\n\n"
             "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
@@ -225,8 +150,6 @@ static void print_help(void) {
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
 void rmlint_set_default_settings(RmSettings *pset) {
     pset->mode                  = 1;                  /* list only    */
-    pset->casematch             = 0;                  /* Insensitive  */
-    pset->invmatch              = 0;                  /* Normal mode  */
     pset->paranoid              = 0;                  /* dont be bush */
     pset->depth                 = 0;                  /* inf depth    */
     pset->followlinks           = 0;                  /* fol. link    */
@@ -235,13 +158,8 @@ void rmlint_set_default_settings(RmSettings *pset) {
     pset->samepart              = 0;                  /* Stay parted  */
     pset->paths                 = NULL;               /* Startnode    */
     pset->is_ppath              = NULL;               /* Startnode    */
-    pset->dpattern              = NULL;               /* DRegpattern  */
-    pset->fpattern              = NULL;               /* FRegPattern  */
     pset->cmd_path              = NULL;               /* Cmd,if used  */
     pset->cmd_orig              = NULL;               /* Origcmd, -"- */
-    pset->junk_chars            = NULL;               /* You have to set this   */
-    pset->oldtmpdata            = 60;                 /* Remove 1min old buffers */
-    pset->doldtmp               = true;               /* Remove 1min old buffers */
     pset->ignore_hidden         = 1;
     pset->findemptydirs         = 1;
     pset->namecluster           = 0;
@@ -291,27 +209,32 @@ int check_if_preferred(const char * dir) {
     return 0;
 }
 
+static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
+    [0] = G_LOG_LEVEL_CRITICAL,
+    [1] = G_LOG_LEVEL_ERROR,
+    [2] = G_LOG_LEVEL_WARNING,
+    [3] = G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_INFO,
+    [4] = G_LOG_LEVEL_DEBUG
+};
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
     RmSettings * sets = session->settings;
 
-    int c, lp = 0;
+    int choice, lp = 0;
+    int verbosity_counter = 2;
 
     while(1) {
         static struct option long_options[] = {
             {"threads",        required_argument, 0, 't'},
-            {"dregex",         required_argument, 0, 'R'},
-            {"fregex",         required_argument, 0, 'r'},
             {"mode",           required_argument, 0, 'm'},
             {"maxdepth",       required_argument, 0, 'd'},
             {"cmd_dup",        required_argument, 0, 'c'},
             {"cmd_orig",       required_argument, 0, 'C'},
-            {"junk",           required_argument, 0, 'j'},
-            {"verbosity",      required_argument, 0, 'v'},
-            {"oldtmp",         required_argument, 0, 'x'},
             {"limit",          required_argument, 0, 'z'},
             {"output",         required_argument, 0, 'o'},
             {"sortcriteria",   required_argument, 0, 'D'},
+            {"verbosity",      no_argument,       0, 'v'},
             {"emptyfiles",     no_argument,       0, 'k'},
             {"no-emptyfiles",  no_argument,       0, 'K'},
             {"emptydirs",      no_argument,       0, 'y'},
@@ -322,7 +245,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {"no-namecluster", no_argument,       0, 'N'},
             {"nonstripped",    no_argument,       0, 'a'},
             {"no-nonstripped", no_argument,       0, 'A'},
-            {"no-oldtmp",      no_argument,       0, 'X'},
             {"no-hidden",      no_argument,       0, 'g'},
             {"hidden",         no_argument,       0, 'G'},
             {"badids",         no_argument,       0, 'l'},
@@ -333,8 +255,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {"ignorecase",     no_argument,       0, 'E'},
             {"followlinks",    no_argument,       0, 'f'},
             {"ignorelinks",    no_argument,       0, 'F'},
-            {"invertmatch",    no_argument,       0, 'i'},
-            {"normalmatch",    no_argument,       0, 'I'},
             {"samepart",       no_argument,       0, 's'},
             {"allpart",        no_argument,       0, 'S'},
             {"paranoid",       no_argument,       0, 'p'},
@@ -345,17 +265,16 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {"findhardlinked", no_argument,       0, 'H'},
             {"confirm-settings",no_argument,      0, 'q'},
             {"help",           no_argument,       0, 'h'},
-            {"version",        no_argument,       0, 'V'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
-        c = getopt_long(argc, argv, "aAbBcC:d:D:eEfFgGhHiIj:kKlLm:MnNo:OpPqQr:R:sSt:uUv:Vx:XyYz:Z",long_options, &option_index);
+        choice = getopt_long(argc, argv, "aAbBcC:d:D:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z",long_options, &option_index);
         /* Detect the end of the options. */
-        if(c == -1) {
+        if(choice == -1) {
             break;
         }
-        switch(c) {
+        switch(choice) {
         case '?':
             return 0;
         case 't':
@@ -394,9 +313,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'B':
             sets->color = 0;
             break;
-        case 'V':
-            print_version();
-            break;
         case 'h':
             print_help();
             print_version();
@@ -404,9 +320,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             break;
         case 'H':
             sets->find_hardlinked_dupes = 1;
-            break;
-        case 'j':
-            sets->junk_chars = optarg;
             break;
         case 'y':
             sets->findemptydirs = 1;
@@ -420,17 +333,12 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'A':
             sets->nonstripped = 0;
             break;
-        case 'x':
-            sets->oldtmpdata = atoi(optarg);
-            break;
-        case 'X':
-            sets->doldtmp = false;
-            break;
         case 'o':
-            if (strlen(optarg) != 0)
+            if (*optarg) {
                 sets->output = optarg;
-            else
+            } else {
                 sets->output = NULL;
+            }
             break;
         case 'c':
             sets->cmd_path = optarg;
@@ -444,14 +352,11 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'G':
             sets->ignore_hidden = 0;
             break;
+        case 'V':
+            verbosity_counter--;
+            break;
         case 'v':
-            sets->verbosity = atoi(optarg);
-            break;
-        case 'i':
-            sets->invmatch = 1;
-            break;
-        case 'I':
-            sets->invmatch = 0;
+            verbosity_counter++;
             break;
         case 's':
             sets->samepart = 1;
@@ -459,23 +364,11 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'S':
             sets->samepart = 0;
             break;
-        case 'e':
-            sets->casematch = 1;
-            break;
-        case 'E':
-            sets->casematch = 0;
-            break;
         case 'd':
             sets->depth = ABS(atoi(optarg));
             break;
         case 'D':
             sets->sort_criteria = optarg;
-            break;
-        case 'r':
-            sets->fpattern = optarg;
-            break;
-        case 'R':
-            sets->dpattern = optarg;
             break;
         case 'p':
             sets->paranoid = 1;
@@ -532,8 +425,16 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             return 0;
         }
     }
+
+    sets->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
+        verbosity_counter, 0, G_LOG_LEVEL_DEBUG
+    )];
+
+    // TODO: Implement  - as input path (read from stdin)
+
     /* Check the directory to be valid */
     while(optind < argc) {
+        // TODO: Clean this up a bit.
         char * theDir = argv[optind];
         int p;
         int isPref = check_if_preferred(theDir);
@@ -556,10 +457,10 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
     }
     if(lp == 0) {
         /* Still no path set? - use `pwd` */
-        sets->paths = malloc(sizeof(char*)*2);
-        sets->paths[0] = getcwd(NULL,0);
+        sets->paths = malloc(sizeof(char *) * 2);
+        sets->paths[0] = getcwd(NULL, 0);
         sets->paths[1] = NULL;
-        sets->is_ppath = g_malloc0(sizeof(char) * 1);
+        sets->is_ppath = g_malloc0(sizeof(char));
         sets->is_ppath[0] = 0;
         if(!sets->paths[0]) {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
@@ -570,8 +471,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
     }
     return 1;
 }
-
-/* ------------------------------------------------------------- */
 
 /* User  may specify in -cC a command that get's excuted on every hit - check for being a safe one */
 static int check_cmd(const char *cmd) {
@@ -633,8 +532,8 @@ void die(RmSession *session, int status) {
 
 char rmlint_echo_settings(RmSettings *settings) {
     char confirm;
-    int save_verbosity=settings->verbosity;
-    bool has_ppath=false;
+    int save_verbosity = settings->verbosity;
+    bool has_ppath = false;
 
     /* I've disabled this for now. Shouldn't we only print a summary
      * if the user has time to read it? */
@@ -656,16 +555,13 @@ char rmlint_echo_settings(RmSettings *settings) {
     if (settings->findbadids)		info ("\t+ files with bad UID/GID "BLU"(chown)"NCO" [-L]\n");
     if (settings->namecluster)		info ("\t+ files with same name "GRE"(info only)"NCO" [-N]\n");
     if (settings->nonstripped)		info ("\t+ non-stripped binaries"BLU"(strip)"RED"(slow)"NCO" [-A]\n");
-    if (settings->doldtmp)			info ("\t+ tmp files more than %i second older than original "RED"(rm)"NCO"[-x t]/[-X]\n", settings->oldtmpdata);
-    if (settings->junk_chars)		info ("\t+ junk characters "RED"%s"NCO" in file or dir name\n", settings->junk_chars);
     if (!settings->searchdup ||
             !settings->findemptydirs ||
             !settings->listemptyfiles ||
             !settings->findbadids ||
             !settings->namecluster ||
-            !settings->nonstripped ||
-            !settings->doldtmp ||
-            !settings->junk_chars) {
+            !settings->nonstripped 
+    ) {
         info (NCO"\tNot looking for:\n");
         if (!settings->searchdup)		info ("\t\tduplicates[-u];\n");
         if (!settings->findemptydirs)	info ("\t\tempty directories[-y];\n");
@@ -673,8 +569,6 @@ char rmlint_echo_settings(RmSettings *settings) {
         if (!settings->findbadids)		info ("\t\tfiles with bad UID/GID[-l];\n");
         if (!settings->namecluster)		info ("\t\tfiles with same name[-n];\n");
         if (!settings->nonstripped)		info ("\t\tnon-stripped binaries[-a];\n");
-        if (!settings->doldtmp)			info ("\t\told tmp files[-x <time>];\n");
-        if (!settings->junk_chars)		info ("\t\tjunk characters in filenames[-j \"chars\"];\n");
     }
 
     /*---------------- search paths ---------------*/
@@ -702,24 +596,12 @@ char rmlint_echo_settings(RmSettings *settings) {
     info ("\t%srossing filesystem / mount point boundaries [-%s]\n"NCO,
           settings->samepart ? "Not c" : "C",
           settings->samepart ? "S" : "s");
-    if (settings->dpattern) {
-        info("\tDirectory name must%s match regex '%s' (case %ssensitive)\n",
-             settings->invmatch ? " not" : "",
-             settings->dpattern,
-             settings->casematch ? "" : "in" );
-    } else info ("\tNo regex filter for directory name [-R regex]\n");
 
     if (settings->depth) info("\t Only search %i levels deep into search paths\n",settings->depth);
 
     /*---------------- file filters ---------------*/
 
     info("Filtering search based on:\n");
-    if (settings->fpattern) {
-        info("\tFile name must%s match regex '%s'	 (case %ssensitive)\n",
-             settings->invmatch ? " not" : "",
-             settings->fpattern,
-             settings->casematch ? "" : "in" );
-    } else info ("\tNo regex filter for directory name [-r regex]\n");
 
     if ( (settings->minsize !=-1) && (settings->maxsize !=-1) )
         info("\tFile size between %i and %i bytes\n", settings->minsize, settings->maxsize);
@@ -838,6 +720,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->userlist = userlist_new();
     session->list = rm_file_list_new();
     session->settings = settings;
+    session->aborted = FALSE;
 
     init_filehandler(session);
 }
