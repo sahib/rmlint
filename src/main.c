@@ -53,10 +53,10 @@ static void signal_handler(int signum) {
             die((RmSession *)SESSION_POINTER, EXIT_FAILURE);
         } 
         break;
-    case SIGFPE  :
-    case SIGABRT :
-    case SIGSEGV :
-        error(RED"FATAL: "NCO"Aborting due to internal error! (signal received: %s)\n", g_strsignal(signum));
+    case SIGFPE:
+    case SIGABRT:
+    case SIGSEGV:
+        error(RED"FATAL: "NCO"Aborting due to a fatal error. (signal received: %s)\n", g_strsignal(signum));
     default:
         error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
         break;

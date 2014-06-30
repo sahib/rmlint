@@ -33,6 +33,7 @@
 #include <setjmp.h>
 #include <glib.h>
 #include <glib/gprintf.h>
+#include <glib/gstdio.h>
 
 #include "rmlint.h"
 #include "mode.h"
@@ -200,13 +201,13 @@ void parse_limit_sizes(RmSession * session, char * limit_string) {
 }
 
 /* Check if this is the 'preferred' dir */
-int check_if_preferred(const char * dir) {
+bool check_if_preferred(const char * dir) {
     if(dir != NULL) {
         size_t length = strlen(dir);
         if(length >= 2 && dir[0] == '/' && dir[1] == '/')
-            return 1;
+            return TRUE;
     }
-    return 0;
+    return FALSE;
 }
 
 static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
@@ -217,12 +218,46 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
     [4] = G_LOG_LEVEL_DEBUG
 };
 
+static bool add_path(RmSession *session, int index, const char *path) {
+    RmSettings *settings = session->settings;
+    bool is_pref = check_if_preferred(path);
+
+    if(is_pref) {
+        path += 2;  /* skip first two characters ie "//" */
+    }
+
+    if(g_access(path, R_OK) != 0) {
+        error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", path, strerror(errno));
+        return FALSE;
+    } else {
+        settings->is_ppath = g_realloc(settings->is_ppath,sizeof(char) * (index + 1));
+        settings->is_ppath[index] = is_pref;
+        settings->paths = g_realloc(settings->paths,sizeof(char*) * (index + 2));
+        settings->paths[index] = g_strdup(path);
+        settings->paths[index + 1] = NULL;
+        return TRUE;
+    }
+}
+
+static int read_paths_from_stdin(RmSession *session, int index) {
+    int paths_added = 0;
+    char path_buf[PATH_MAX];
+
+    while(fgets(path_buf, PATH_MAX, stdin)) {
+        paths_added += add_path(session, index + paths_added, strtok(path_buf, "\n"));
+    }
+
+    return paths_added;
+}
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
     RmSettings * sets = session->settings;
 
-    int choice, lp = 0;
+    int choice = -1;
     int verbosity_counter = 2;
+    int option_index = 0;
+    int path_index = 0;
 
     while(1) {
         static struct option long_options[] = {
@@ -268,7 +303,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
-        int option_index = 0;
         choice = getopt_long(argc, argv, "aAbBcC:d:D:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z",long_options, &option_index);
         /* Detect the end of the options. */
         if(choice == -1) {
@@ -434,30 +468,17 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
 
     /* Check the directory to be valid */
     while(optind < argc) {
-        // TODO: Clean this up a bit.
-        char * theDir = argv[optind];
-        int p;
-        int isPref = check_if_preferred(theDir);
-        if(isPref) {
-            theDir += 2;  /* skip first two characters ie "//" */
-        }
-        p = open(theDir,O_RDONLY);
-        if(p == -1) {
-            error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", theDir, strerror(errno));
-            return 0;
+        const char *dir_path = argv[optind];
+        if(strlen(dir_path) == 1 && *dir_path == '-') {
+            path_index += read_paths_from_stdin(session, path_index);
         } else {
-            close(p);
-            sets->paths = g_realloc(sets->paths,sizeof(char*)*(lp+2));
-            sets->is_ppath = g_realloc(sets->is_ppath,sizeof(char)*(lp+1));
-            sets->is_ppath[lp] = isPref;
-            sets->paths[lp++] = g_strdup(theDir);
-            sets->paths[lp] = NULL;
+            path_index += add_path(session, path_index, argv[optind]);
         }
         optind++;
     }
-    if(lp == 0) {
+    if(path_index == 0) {
         /* Still no path set? - use `pwd` */
-        sets->paths = malloc(sizeof(char *) * 2);
+        sets->paths = g_malloc0(sizeof(char *) * 2);
         sets->paths[0] = getcwd(NULL, 0);
         sets->paths[1] = NULL;
         sets->is_ppath = g_malloc0(sizeof(char));

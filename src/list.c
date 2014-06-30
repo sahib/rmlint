@@ -45,7 +45,6 @@ RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool 
     self->dupflag = type;
     self->filter = TRUE;
 
-    // TODO: This sucks.
     self->in_ppath = is_ppath;
     self->pnum = pnum;
 
