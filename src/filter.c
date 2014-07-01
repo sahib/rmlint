@@ -506,60 +506,68 @@ static void size_to_human_readable(guint64 num, char *in) {
     }
 }
 
-static int find_double_bases(RmSession * session, GQueue *group) {
-    GList *i = group->head;
-    GList *j = NULL;
-    bool phead = true;
+static int find_double_bases(RmSession * session) {
+    bool header_printed = true;
     int num_found = 0;
     RmSettings *sets = session->settings;
 
-    while(i) {
-        RmFile *fi = i->data;
-        if(fi->dupflag != TYPE_BASE) {
-            bool pr = false;
-            j = i->next;
-            while(j) {
-                RmFile * fj = j->data;
-                /* compare basenames */
-                if(!strcmp(rmlint_basename(fi->path), rmlint_basename(fj->path)) && fi->node != fj->node && fj->dupflag != TYPE_BASE) {
-                    GList *x = j;
-                    char *tmp2 = realpath(fj->path, NULL);
-                    if(phead) {
-                        error("\n%s#"NCO" Double basename(s):\n", (sets->verbosity > 1) ? GRE : NCO);
-                        phead = false;
-                    }
-                    if(!pr) {
-                        char * tmp = realpath(fi->path, NULL);
-                        fi->dupflag = TYPE_BASE;
-                        error("   %sls%s %s\n", (sets->verbosity!=1) ? GRE : "", NCO, tmp);
-                        write_to_log(session, fi,false,NULL);
-                        num_found++;
-                        pr = true;
-                        g_free(tmp);
+    RmFile * iter = NULL;
+    while((iter = rm_file_list_iter_all(session->list, iter))) {
+        g_printerr("### %s\n", iter->path);
+    }
 
-                        /* At this point files with same inode and device are NOT handled yet.
-                           Therefore this foolish, but well working approach is made.
-                           (So it works also with more than one dir in the cmd)  */
+    // for(GList * i = group->head; i; i = i->next) {
+    RmFile *fi = NULL;
+    while((fi = rm_file_list_iter_all(session->list, fi))) {
+        if(fi->dupflag == TYPE_BASE) {
+            continue;
+        }
 
-                        while(x) {
-                            RmFile *fx = x->data;
-                            if(fx->node == fj->node) {
-                                fx->dupflag = TYPE_BASE;
-                            }
-                            x = x->next;
+        bool node_handled = false;
+
+        RmFile *fj = rm_file_list_iter_all(session->list, fi);
+        while((fj = rm_file_list_iter_all(session->list, fj))) {
+            /* compare basenames */
+            if(1 
+                && !strcmp(rmlint_basename(fi->path), rmlint_basename(fj->path)) 
+                && fi->node != fj->node 
+                && fj->dupflag != TYPE_BASE
+            ) {
+                char *tmp2 = realpath(fj->path, NULL);
+                if(header_printed) {
+                    error("\n%s#"NCO" Double basename(s):\n", (sets->verbosity > 1) ? GRE : NCO);
+                    header_printed = false;
+                }
+
+                if(!node_handled) {
+                    char * tmp = realpath(fi->path, NULL);
+                    fi->dupflag = TYPE_BASE;
+                    error("   %sls%s %s\n", (sets->verbosity!=1) ? GRE : "", NCO, tmp);
+                    write_to_log(session, fi,false,NULL);
+                    num_found++;
+                    node_handled = true;
+                    g_free(tmp);
+
+                    /* At this point files with same inode and device are NOT handled yet.
+                       Therefore this foolish, but well working approach is made.
+                       (So it works also with more than one dir in the cmd)  */
+
+                    //for(GList *iter = j; iter; iter = iter->next) {
+                    RmFile *fx = fj;
+                    while((fx = rm_file_list_iter_all(session->list, fx))) {
+                        if(fx->node == fj->node) {
+                            fx->dupflag = TYPE_BASE;
                         }
                     }
-
-                    fj->dupflag = TYPE_BASE;
-                    error("   %sls"NCO" %s\n",(sets->verbosity!=1) ? GRE : "",tmp2);
-                    write_to_log(session, fj,false,NULL);
-                    num_found++;
-                    g_free(tmp2);
                 }
-                j=j->next;
+
+                fj->dupflag = TYPE_BASE;
+                error("   %sls"NCO" %s\n",(sets->verbosity!=1) ? GRE : "",tmp2);
+                write_to_log(session, fj,false,NULL);
+                num_found++;
+                g_free(tmp2);
             }
         }
-        i=i->next;
     }
     return num_found;
 }
@@ -658,7 +666,6 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
     rm_file_list_clear(first);
 }
 
-
 /* This the actual main() of rmlint */
 void start_processing(RmSession * session) {
     char lintbuf[128] = {0};
@@ -670,11 +677,7 @@ void start_processing(RmSession * session) {
     /* TODO: this is broken... or not, if we only want to find double names with
      * same size :) */
     if(settings->namecluster) {
-        GSequenceIter * iter = rm_file_list_get_iter(list);
-        while(!g_sequence_iter_is_end(iter)) {
-            other_lint += find_double_bases(session, g_sequence_get(iter));
-            iter = g_sequence_iter_next(iter);
-        }
+        other_lint += find_double_bases(session);
         error("\n");
     }
 

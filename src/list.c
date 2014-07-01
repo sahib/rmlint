@@ -36,6 +36,7 @@ RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool 
     self->node = buf->st_ino;
     self->dev = buf->st_dev;
     self->mtime = buf->st_mtime;
+
     if(type == TYPE_DUPE_CANDIDATE) {
         self->fsize = buf->st_size;
     } else {
@@ -100,29 +101,28 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
 }
 
 void rm_file_list_append(RmFileList * list, RmFile * file) {
-    GQueue *old_group = g_hash_table_lookup(
+    GSequenceIter *old_iter = g_hash_table_lookup(
                             list->size_table, GINT_TO_POINTER(file->fsize)
                         );
 
     g_assert(file);
 
-    if(old_group == NULL) {
+    if(old_iter == NULL) {
         /* Insert a new group */
-        old_group = g_queue_new();
+        GQueue *old_group = g_queue_new();
 
         g_queue_push_head(old_group, file);
-        file->file_group = old_group;
         file->list_node = old_group->head;
-
-        g_sequence_insert_sorted(
+        file->file_group = g_sequence_insert_sorted(
             list->size_groups, old_group, rm_file_list_cmp_file_size, NULL
         );
         g_hash_table_insert(
-            list->size_table, GINT_TO_POINTER(file->fsize), old_group
+            list->size_table, GINT_TO_POINTER(file->fsize), file->file_group
         );
     } else {
+        GQueue *old_group = g_sequence_get(old_iter);
         g_queue_push_head(old_group, file);
-        file->file_group = old_group;
+        file->file_group = old_iter;
         file->list_node = old_group->head;
     }
 }
@@ -132,12 +132,15 @@ void rm_file_list_clear(GSequenceIter * iter) {
 }
 
 void rm_file_list_remove(G_GNUC_UNUSED RmFileList *list, RmFile *file) {
-    g_queue_delete_link(file->file_group, file->list_node);
+    GQueue *group = g_sequence_get(file->file_group);
+    guint64 file_size = file->fsize;
+
+    g_queue_delete_link(group, file->list_node);
     rm_file_destroy(file);
 
-    GQueue *queue = file->file_group;
-    if(g_queue_get_length(queue) == 0) {
-        g_queue_free(queue);
+    if(g_queue_get_length(group) == 0) {
+        g_queue_free(group);
+        g_hash_table_remove(list->size_table, GINT_TO_POINTER(file_size));
     }
 }
 
@@ -212,6 +215,32 @@ static void rm_file_list_count_pref_paths(GQueue *group, int *num_pref, int *num
         } else {
             *num_nonpref = *num_nonpref + 1;
         }
+    }
+}
+
+RmFile * rm_file_list_iter_all(RmFileList *list, RmFile *previous) {
+    if(previous == NULL) {
+        if(rm_file_list_get_iter(list)) {
+            GQueue *group = g_sequence_get(rm_file_list_get_iter(list));
+            return group->head->data;
+        } else {
+            return NULL;
+        }
+    } else if(previous->list_node && previous->list_node->next) {
+        return previous->list_node->next->data;
+    } else {
+        GSequenceIter *next_pos = previous->file_group;
+        next_pos = g_sequence_iter_next(next_pos);
+
+        /* Advance one group */
+        if(g_sequence_iter_is_end(next_pos)) {
+            /* That is the only occassion where NULL is returned
+             * with a non-empty list */
+            return NULL;
+        }
+
+        GQueue *group = g_sequence_get(next_pos);
+        return group->head->data;
     }
 }
 

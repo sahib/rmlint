@@ -119,4 +119,22 @@ gulong rm_file_list_byte_size(GQueue *group);
  */
 void rm_file_list_print(RmFileList *list);
 
+/**
+ * @brief Iterate over all files in all groups easily.
+ *
+ * @param list The list to iterate.
+ * @param previous The previously returned file or NULL on start.
+ *
+ *
+ * Iteration example:
+ *
+ * RmFile *iter = NULL;
+ * while((iter = rm_file_list_iter_all(list, iter))) {
+ *     ...
+ * }
+ *
+ * @return The next file or NULL if none left.
+ */
+RmFile * rm_file_list_iter_all(RmFileList *list, RmFile *previous);
+
 #endif /* RM_LIST_H */

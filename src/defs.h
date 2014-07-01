@@ -168,7 +168,7 @@ typedef struct RmFile {
     dev_t dev;
 
     GList *list_node;
-    GQueue *file_group;
+    GSequenceIter *file_group;
 } RmFile;
 
 typedef struct RmFileList {
