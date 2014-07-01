@@ -511,12 +511,7 @@ static int find_double_bases(RmSession * session) {
     int num_found = 0;
     RmSettings *sets = session->settings;
 
-    RmFile * iter = NULL;
-    while((iter = rm_file_list_iter_all(session->list, iter))) {
-        g_printerr("### %s\n", iter->path);
-    }
 
-    // for(GList * i = group->head; i; i = i->next) {
     RmFile *fi = NULL;
     while((fi = rm_file_list_iter_all(session->list, fi))) {
         if(fi->dupflag == TYPE_BASE) {
@@ -674,8 +669,6 @@ void start_processing(RmSession * session) {
     RmSettings *settings = session->settings;
     RmFileList *list = session->list;
 
-    /* TODO: this is broken... or not, if we only want to find double names with
-     * same size :) */
     if(settings->namecluster) {
         other_lint += find_double_bases(session);
         error("\n");
