@@ -232,6 +232,5 @@ int rmlint_search_tree(RmSession *session) {
         cpindex++;
     }
 
-    /* TODO: do we need to free up any memory? */
-    return (numfiles);
+    return numfiles;
 }

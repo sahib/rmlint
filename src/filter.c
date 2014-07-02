@@ -714,7 +714,6 @@ void start_processing(RmSession *session) {
     info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
     // info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
 
-    /* Now make sure groups are sorted by their location on the disk - TODO? can remove this because was already sorted above?*/
     info(" done. \nNow doing fingerprints and full checksums.%c\n", settings->verbosity > 4 ? '.' : '\n');
 
     error("%s Duplicate(s):", (settings->verbosity > 1) ? YEL"#"NCO : "#");
