@@ -330,7 +330,6 @@ static void free_island(GQueue *island) {
 static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
     RmSettings *sets = session->settings;
     GList *i = group->head, *j = NULL;
-    GQueue island = G_QUEUE_INIT;
     int returnval = 0;  /* not sure what we are using this for */
 
     if(i == NULL) {
@@ -354,6 +353,7 @@ static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
 
     warning(NCO);
     while(i) {
+        GQueue island = G_QUEUE_INIT;
         int num_orig = 0;
         int num_non_orig = 0;
 
@@ -420,10 +420,10 @@ static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
             }
         }
 
+        free_island(&island);
         i = group->head;
     }
 
-    free_island(&island);
     return returnval;
 }
 
@@ -523,9 +523,9 @@ static int find_double_bases(RmSession * session) {
         RmFile *fj = rm_file_list_iter_all(session->list, fi);
         while((fj = rm_file_list_iter_all(session->list, fj))) {
             /* compare basenames */
-            if(1 
-                && !strcmp(rmlint_basename(fi->path), rmlint_basename(fj->path)) 
-                && fi->node != fj->node 
+            if(1
+                && !strcmp(rmlint_basename(fi->path), rmlint_basename(fj->path))
+                && fi->node != fj->node
                 && fj->dupflag != TYPE_BASE
             ) {
                 char *tmp2 = realpath(fj->path, NULL);
@@ -624,7 +624,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
             } else {
                 error("\n# ");
             }
-            
+
             error("%s", TYPE_TO_DESCRIPTION[file->dupflag]);
             error(": \n"NCO);
             flag = file->dupflag;
@@ -725,7 +725,7 @@ void start_processing(RmSession * session) {
         size_to_human_readable(other_lint, lintbuf);
         warning(RED"\n=> %lu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
     }
-    
+
     warning("\n");
     if(!session->aborted) {
         warning(
