@@ -506,6 +506,14 @@ static void size_to_human_readable(guint64 num, char *in) {
     }
 }
 
+static void handle_double_base_file(RmSession *session, RmFile *file) {
+    char * abs_path = realpath(file->path, NULL);
+    file->dupflag = TYPE_BASE;
+    error("   %sls%s %s\n", (session->settings->verbosity!=1) ? GRE : "", NCO, abs_path);
+    write_to_log(session, file, false, NULL);
+    g_free(abs_path);
+}
+
 static int find_double_bases(RmSession * session) {
     bool header_printed = true;
     int num_found = 0;
@@ -528,26 +536,19 @@ static int find_double_bases(RmSession * session) {
                 && fi->node != fj->node 
                 && fj->dupflag != TYPE_BASE
             ) {
-                char *tmp2 = realpath(fj->path, NULL);
                 if(header_printed) {
                     error("\n%s#"NCO" Double basename(s):\n", (sets->verbosity > 1) ? GRE : NCO);
                     header_printed = false;
                 }
 
                 if(!node_handled) {
-                    char * tmp = realpath(fi->path, NULL);
-                    fi->dupflag = TYPE_BASE;
-                    error("   %sls%s %s\n", (sets->verbosity!=1) ? GRE : "", NCO, tmp);
-                    write_to_log(session, fi,false,NULL);
-                    num_found++;
                     node_handled = true;
-                    g_free(tmp);
+                    handle_double_base_file(session, fi);
 
                     /* At this point files with same inode and device are NOT handled yet.
                        Therefore this foolish, but well working approach is made.
                        (So it works also with more than one dir in the cmd)  */
 
-                    //for(GList *iter = j; iter; iter = iter->next) {
                     RmFile *fx = fj;
                     while((fx = rm_file_list_iter_all(session->list, fx))) {
                         if(fx->node == fj->node) {
@@ -556,11 +557,8 @@ static int find_double_bases(RmSession * session) {
                     }
                 }
 
-                fj->dupflag = TYPE_BASE;
-                error("   %sls"NCO" %s\n",(sets->verbosity!=1) ? GRE : "",tmp2);
-                write_to_log(session, fj,false,NULL);
+                handle_double_base_file(session, fj);
                 num_found++;
-                g_free(tmp2);
             }
         }
     }
