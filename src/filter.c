@@ -520,6 +520,7 @@ static int find_double_bases(RmSession * session) {
     int num_found = 0;
     RmSettings *sets = session->settings;
 
+    GHashTable * found_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     RmFile *fi = NULL;
     while((fi = rm_file_list_iter_all(session->list, fi))) {
@@ -560,9 +561,23 @@ static int find_double_bases(RmSession * session) {
 
                 handle_double_base_file(session, fj);
                 num_found++;
+
+                g_hash_table_insert(found_table, fj, NULL /* value is not important */);
             }
         }
     }
+
+    if(sets->collide) {
+        GHashTableIter iter;
+        gpointer key, value;
+
+        g_hash_table_iter_init(&iter, found_table);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            RmFile * file = key;
+            rm_file_list_remove(session->list, file);
+        }
+    }
+    g_hash_table_destroy(found_table);
     return num_found;
 }
 
