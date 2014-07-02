@@ -317,6 +317,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
             }
         }
         g_free(thread_queue);
+        g_free(tags);
     }
 }
 
