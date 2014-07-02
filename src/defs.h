@@ -30,6 +30,8 @@
 #include <stdbool.h>
 #include <glib.h>
 
+#include "config.h"
+
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
 #define NCO "\x1b[0m"

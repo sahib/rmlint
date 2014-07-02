@@ -1,7 +1,7 @@
 Stable Version
 --------------
 
-- Replace Makefile with sane build system. (SCons/CMake?)
+- Add Daniel to AUTHORS and file headers.
 - Add a test target to the build system.
 - Put rmlint on TravisCI.
 - Write a manpage; --help should just load the manpage. (Screw separate help texts)

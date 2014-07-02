@@ -45,8 +45,8 @@
 
 /* Version string */
 static void print_version(void) {
-    fprintf(stderr, "Version 1.0.6b compiled: [%s]-[%s]\n",__DATE__,__TIME__);
-    fprintf(stderr, "Author Christopher Pahl;\n");
+    fprintf(stderr, "Version %s compiled: [%s]-[%s] (rev %s)\n", RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION);
+    fprintf(stderr, "Author Christopher Pahl\n");
     fprintf(stderr, "Report bugs to https://github.com/sahib/rmlint/issues\n");
 }
 
