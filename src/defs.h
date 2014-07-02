@@ -174,8 +174,8 @@ typedef struct RmFile {
 } RmFile;
 
 typedef struct RmFileList {
-    GSequence * size_groups;
-    GHashTable * size_table;
+    GSequence *size_groups;
+    GHashTable *size_table;
 } RmFileList;
 
 typedef struct RmUserGroupList {
@@ -183,8 +183,8 @@ typedef struct RmUserGroupList {
 } RmUserGroupList;
 
 typedef struct RmSession {
-    RmFileList * list;
-    RmSettings * settings;
+    RmFileList *list;
+    RmSettings *settings;
 
     guint64 total_files;
     guint64 total_lint_size;

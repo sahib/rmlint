@@ -31,7 +31,7 @@ void rm_session_init(RmSession *session, RmSettings *settings);
 int  rmlint_main(RmSession *session);
 
 /* Misc */
-void die(RmSession * session, int status);
+void die(RmSession *session, int status);
 
 #define debug(...) \
     g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)

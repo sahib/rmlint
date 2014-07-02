@@ -26,11 +26,11 @@
 
 /* Mostly used by filter.c  */
 bool process_doop_groop(RmSession *session, GQueue *group);
-void init_filehandler(RmSession * session);
-void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFile * p_to_orig);
+void init_filehandler(RmSession *session);
+void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFile *p_to_orig);
 
 /* Method to substitute $subs in $string with $with */
 /* Something should really get a std method */
-char * strsubs(const char * string, const char * subs, const char * with);
+char *strsubs(const char *string, const char *subs, const char *with);
 
 #endif

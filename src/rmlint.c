@@ -61,17 +61,17 @@ static void print_help(void) {
             "\t-p --paranoid\t\tDo a byte-by-byte comparison additionally for duplicates. (Slow!) (Default: No.)\n"
             "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!'')\n"
            );
-    fprintf(stderr,"\t-z --limit\t\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")\n");
+    fprintf(stderr, "\t-z --limit\t\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")\n");
     fprintf(stderr, "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
             "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
             "\t-k --emptyfiles\t\tSearch for empty files (Default: Yes, use -K to disable)\n"
             "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes, use -Y to disable)\n"
             "\t-x --oldtmp <sec>\tSearch for files with a '~'/'.swp' suffix being min. <sec> seconds older than the corresponding file without the '~'/'.swp'; (Default: 60)\n");
-    fprintf(stderr,"\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
+    fprintf(stderr, "\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
             "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
             "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
            );
-    fprintf(stderr,"\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
+    fprintf(stderr, "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
             "\t-O --keepallorig\tDon't delete any duplicates that are in 'originals' paths. (Default - just keep one)\n"
             "\t\tNote: for lint types other than duplicates, keepallorig option is ignored\n" /*TODO: does this need unifying??*/
             "\t-Q --invertorig\tPaths prefixed with // are non-originals and all other paths are originals\n"
@@ -88,13 +88,13 @@ static void print_help(void) {
             "\t\t\t\tresult in the same physical file being encountered twice and will ignore the second one.\n"
             "\t-H --findhardlinked\tFind hardlinked duplicates.  Default is to ignore duplicates which are hardlinked to each other.\n"
            );
-    fprintf(stderr,"\t\t\t\tNote: currently, hardlinked files with the same basename are _always_ ignored, due to possible error with bind\n"
+    fprintf(stderr, "\t\t\t\tNote: currently, hardlinked files with the same basename are _always_ ignored, due to possible error with bind\n"
             "\t\t\t\tmounts pointing to the same physical file\n"
             "\t\t\t\tNote also: hardlinked duplicates _will_ be reported as part of GB count that can be freed up.\n"
             "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: off, ie DO cross mountpoints)\n"
             "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
            );
-    fprintf(stderr,"\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
+    fprintf(stderr, "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
             "\n\t\t\t\tWhere modes are:\n\n"
             "\t\t\t\tlist\t- (RECOMMENDED) Lists found files & creates executable script to carry out\n"
             "\t\t\t\t\t actual removal (or other command given by -c/-C).\n"
@@ -104,11 +104,11 @@ static void print_help(void) {
             "\t\t\t\tcmd\t- Takes the command given by -c/-C and executes it on the duplicate/original (careful!).\n"
             "\t\t\t\tDefault:\tlist\n\n"
            );
-    fprintf(stderr,"\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n"
+    fprintf(stderr, "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n"
             "\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
             "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
             "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n");
-    fprintf(stderr,"\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
+    fprintf(stderr, "\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
             "\t\t\t\tNote: If '-m cmd' is not given, rmlint's default commands are replaced with the ones from -cC\n"
             "\t\t\t\t      This is especially useful with -v5, so you can pipe your commands to sh in realtime.\n"
            );
@@ -124,7 +124,7 @@ static void print_help(void) {
             "\t\t\t\t\t-o \"\" => No Logfile\n"
             "\t\t\t\t\t-o \"la la.txt\" => Logfile to \"la la.txt.log\"\n"
            );
-    fprintf(stderr,"\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
+    fprintf(stderr, "\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
             "\t\t\t\tWhere:\n"
             "\t\t\t\t0 prints nothing\n"
             "\t\t\t\t1 prints only errors and results\n"
@@ -136,9 +136,9 @@ static void print_help(void) {
             "\t\t\t\tDefault is 2.\n"
             "\t\t\t\tUse 6 to get an idea what's happening internally, 1 to get raw output without colors, 4 for liveparsing purpose.\n"
            );
-    fprintf(stderr,"\t-B --no-color\t\tDon't use colored output.\n"
+    fprintf(stderr, "\t-B --no-color\t\tDon't use colored output.\n"
             "\t-q --confirm-settings\tDisplays summary of settings and queries user for confirmation before running\n\n");
-    fprintf(stderr,"Additionally, the options b,p,f,s,e,g,i,c,n,a,y,x,u have a uppercase option (B,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
+    fprintf(stderr, "Additionally, the options b,p,f,s,e,g,i,c,n,a,y,x,u have a uppercase option (B,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
             "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n\n"
            );
     fprintf(stderr, "\nLicensed under the terms of the GPLv3 - See COPYRIGHT for more information\n");
@@ -186,22 +186,22 @@ void rmlint_set_default_settings(RmSettings *pset) {
 
 }
 
-void parse_limit_sizes(RmSession * session, char * limit_string) {
+void parse_limit_sizes(RmSession *session, char *limit_string) {
     // TODO: Make this support multipliers, i.e. 4M for 4 * (1024 * 1024)
-    char * ptr = limit_string;
+    char *ptr = limit_string;
     if(ptr != NULL) {
-        char * semicol = strchr(ptr,';');
+        char *semicol = strchr(ptr, ';');
         if(semicol != NULL) {
             semicol[0] = '\0';
             semicol++;
-            session->settings->maxsize = strtol(semicol,NULL,10);
+            session->settings->maxsize = strtol(semicol, NULL, 10);
         }
-        session->settings->minsize = strtol(ptr,NULL,10);
+        session->settings->minsize = strtol(ptr, NULL, 10);
     }
 }
 
 /* Check if this is the 'preferred' dir */
-bool check_if_preferred(const char * dir) {
+bool check_if_preferred(const char *dir) {
     if(dir != NULL) {
         size_t length = strlen(dir);
         if(length >= 2 && dir[0] == '/' && dir[1] == '/')
@@ -230,9 +230,9 @@ static bool add_path(RmSession *session, int index, const char *path) {
         error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
-        settings->is_ppath = g_realloc(settings->is_ppath,sizeof(char) * (index + 1));
+        settings->is_ppath = g_realloc(settings->is_ppath, sizeof(char) * (index + 1));
         settings->is_ppath[index] = is_pref;
-        settings->paths = g_realloc(settings->paths,sizeof(char*) * (index + 2));
+        settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
         settings->paths[index] = g_strdup(path);
         settings->paths[index + 1] = NULL;
         return TRUE;
@@ -252,7 +252,7 @@ static int read_paths_from_stdin(RmSession *session, int index) {
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
-    RmSettings * sets = session->settings;
+    RmSettings *sets = session->settings;
 
     int choice = -1;
     int verbosity_counter = 2;
@@ -298,12 +298,12 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {"mustmatchorig",  no_argument,       0, 'M'},
             {"invertorig",     no_argument,       0, 'Q'},
             {"findhardlinked", no_argument,       0, 'H'},
-            {"confirm-settings",no_argument,      0, 'q'},
+            {"confirm-settings", no_argument,      0, 'q'},
             {"help",           no_argument,       0, 'h'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
-        choice = getopt_long(argc, argv, "aAbBcC:d:D:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z",long_options, &option_index);
+        choice = getopt_long(argc, argv, "aAbBcC:d:D:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z", long_options, &option_index);
         /* Detect the end of the options. */
         if(choice == -1) {
             break;
@@ -461,8 +461,8 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
     }
 
     sets->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
-        verbosity_counter, 0, G_LOG_LEVEL_DEBUG
-    )];
+                          verbosity_counter, 0, G_LOG_LEVEL_DEBUG
+                      )];
 
     // TODO: Implement  - as input path (read from stdin)
 
@@ -514,7 +514,7 @@ static int check_cmd(const char *cmd) {
 
 /* exit and return to calling method */
 void die(RmSession *session, int status) {
-    RmSettings * sets = session->settings;
+    RmSettings *sets = session->settings;
 
     /* Free mem */
     for(int i = 0; sets->paths[i]; ++i) {
@@ -562,15 +562,15 @@ char rmlint_echo_settings(RmSettings *settings) {
         return 1;
     }
 
-    if ((settings->confirm_settings) && (settings->verbosity<3))
-        settings->verbosity=3;  /* need verbosity at least 3 if user is going to confirm settings*/
+    if ((settings->confirm_settings) && (settings->verbosity < 3))
+        settings->verbosity = 3; /* need verbosity at least 3 if user is going to confirm settings*/
 
     info (BLU"Running rmlint with the following settings:\n"NCO);
     info ("(Note "BLU"[*]"NCO" hints below to change options)\n"NCO);
 
     /*---------------- lint types ---------------*/
     info ("Looking for lint types:\n");
-    if (settings->searchdup)		info ("\t+ duplicates "RED"(%s)"NCO" [-U]\n", settings->cmd_path?"cmd":"rm");
+    if (settings->searchdup)		info ("\t+ duplicates "RED"(%s)"NCO" [-U]\n", settings->cmd_path ? "cmd" : "rm");
     if (settings->findemptydirs)	info ("\t+ empty directories "RED"(rm)"NCO" [-Y]\n");
     if (settings->listemptyfiles)	info ("\t+ zero size files "RED"(rm)"NCO" [-K]\n");
     if (settings->findbadids)		info ("\t+ files with bad UID/GID "BLU"(chown)"NCO" [-L]\n");
@@ -581,8 +581,8 @@ char rmlint_echo_settings(RmSettings *settings) {
             !settings->listemptyfiles ||
             !settings->findbadids ||
             !settings->namecluster ||
-            !settings->nonstripped 
-    ) {
+            !settings->nonstripped
+       ) {
         info (NCO"\tNot looking for:\n");
         if (!settings->searchdup)		info ("\t\tduplicates[-u];\n");
         if (!settings->findemptydirs)	info ("\t\tempty directories[-y];\n");
@@ -596,7 +596,7 @@ char rmlint_echo_settings(RmSettings *settings) {
     info(NCO"Search paths:\n");
     for(int i = 0; settings->paths[i] != NULL; ++i) {
         if (settings->is_ppath[i]) {
-            has_ppath=true;
+            has_ppath = true;
             warning (GRE"\t(orig)\t+ %s\n"NCO, settings->paths[i] );
         } else {
             info("\t\t+ %s\n", settings->paths[i]);
@@ -612,23 +612,23 @@ char rmlint_echo_settings(RmSettings *settings) {
           settings->ignore_hidden ? "Excluding" : "Including",
           settings->ignore_hidden ? "G" :  "g" );
     info ("\t%s symlinked files and folders [-%s]\n"NCO,
-          settings->followlinks ?"Following" : "Excluding",
-          settings->followlinks ?"F" : "f" );
+          settings->followlinks ? "Following" : "Excluding",
+          settings->followlinks ? "F" : "f" );
     info ("\t%srossing filesystem / mount point boundaries [-%s]\n"NCO,
           settings->samepart ? "Not c" : "C",
           settings->samepart ? "S" : "s");
 
-    if (settings->depth) info("\t Only search %i levels deep into search paths\n",settings->depth);
+    if (settings->depth) info("\t Only search %i levels deep into search paths\n", settings->depth);
 
     /*---------------- file filters ---------------*/
 
     info("Filtering search based on:\n");
 
-    if ( (settings->minsize !=-1) && (settings->maxsize !=-1) )
+    if ( (settings->minsize != -1) && (settings->maxsize != -1) )
         info("\tFile size between %i and %i bytes\n", settings->minsize, settings->maxsize);
-    else if (settings->minsize !=-1)
+    else if (settings->minsize != -1)
         info("\tFile size at least %i bytes\n", settings->minsize);
-    else if (settings->maxsize !=-1)
+    else if (settings->maxsize != -1)
         info("\tFile size no bigger than %i bytes\n", settings->maxsize);
     else
         info("\tNo file size limits [-z \"min;max\"]");
@@ -639,7 +639,7 @@ char rmlint_echo_settings(RmSettings *settings) {
     }
 
     if (settings->find_hardlinked_dupes) {
-        info("\tHardlinked file sets will be treated as duplicates (%s)\n",settings->cmd_path ? settings->cmd_path : "rm");
+        info("\tHardlinked file sets will be treated as duplicates (%s)\n", settings->cmd_path ? settings->cmd_path : "rm");
         info(RED"\t\tBUG"NCO": rmlint currently does not deduplicate hardlinked files with same basename\n");
     } else info("\tHardlinked file sets will not be deduplicated [-H]\n");
 
@@ -680,7 +680,7 @@ char rmlint_echo_settings(RmSettings *settings) {
     info("\t      "RED"but"NCO" other lint in "GRE"(orig)"NCO" paths may still be deleted\n");
 
     /*---------------- action mode ---------------*/
-    if (settings->mode==1) {
+    if (settings->mode == 1) {
         /*same mode for duplicates and everything else*/
         info ("Action for all Lint types:\n");
     } else {
@@ -726,8 +726,8 @@ char rmlint_echo_settings(RmSettings *settings) {
         info(YEL"\n\nPress y or enter to continue, any other key to abort\n");
 
         scanf("%c", &confirm);
-        settings->verbosity=save_verbosity;
-        return (confirm=='y' || confirm=='Y' || confirm=='\n');
+        settings->verbosity = save_verbosity;
+        return (confirm == 'y' || confirm == 'Y' || confirm == '\n');
     }
 
     settings->verbosity = save_verbosity;
@@ -772,7 +772,7 @@ int rmlint_main(RmSession *session) {
     if(session->total_files < 2) {
         warning("No files in cache to search through => No duplicates.\n");
         die(session, 0);
-    } 
+    }
 
     info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
     if(session->settings->threads > session->total_files) {
@@ -786,7 +786,7 @@ int rmlint_main(RmSession *session) {
 
     /* Apply the prefilter and outsort inique sizes */
     start_processing(session);
- 
+
     die(session, EXIT_SUCCESS);
     return EXIT_SUCCESS;
 }

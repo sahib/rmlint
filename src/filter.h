@@ -19,11 +19,11 @@
 *
 **/
 
-#ifndef FILTER_H 
-#define FILTER_H 
+#ifndef FILTER_H
+#define FILTER_H
 
 #include "defs.h"
 
-void start_processing(RmSession * session);
+void start_processing(RmSession *session);
 
 #endif

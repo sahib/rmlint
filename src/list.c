@@ -29,7 +29,7 @@
 #include "list.h"
 #include "linttests.h"
 
-RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum) {
+RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum) {
     RmFile *self = g_new0(RmFile, 1);
 
     self->path = g_strdup(path);
@@ -55,12 +55,12 @@ RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool 
      The backsum might not be calculated then, what might
      cause inaccurate results.
     */
-    memset(self->fp[0],0,MD5_LEN);
-    memset(self->fp[1],0,MD5_LEN);
-    memset(self->bim,0,BYTE_MIDDLE_SIZE);
+    memset(self->fp[0], 0, MD5_LEN);
+    memset(self->fp[1], 0, MD5_LEN);
+    memset(self->bim, 0, BYTE_MIDDLE_SIZE);
 
     /* Clear the md5 digest array too */
-    memset(self->md5_digest,0,MD5_LEN);
+    memset(self->md5_digest, 0, MD5_LEN);
     return self;
 }
 
@@ -74,7 +74,7 @@ static void rm_file_list_destroy_queue(GQueue *queue) {
 }
 
 RmFileList *rm_file_list_new(void) {
-    RmFileList * list = g_new0(RmFileList, 1);
+    RmFileList *list = g_new0(RmFileList, 1);
     list->size_groups = g_sequence_new((GDestroyNotify)rm_file_list_destroy_queue);
     list->size_table = g_hash_table_new(g_direct_hash, g_direct_equal);
     return list;
@@ -100,10 +100,10 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
     }
 }
 
-void rm_file_list_append(RmFileList * list, RmFile * file) {
+void rm_file_list_append(RmFileList *list, RmFile *file) {
     GSequenceIter *old_iter = g_hash_table_lookup(
-                            list->size_table, GINT_TO_POINTER(file->fsize)
-                        );
+                                  list->size_table, GINT_TO_POINTER(file->fsize)
+                              );
 
     g_assert(file);
 
@@ -114,8 +114,8 @@ void rm_file_list_append(RmFileList * list, RmFile * file) {
         g_queue_push_head(old_group, file);
         file->list_node = old_group->head;
         file->file_group = g_sequence_insert_sorted(
-            list->size_groups, old_group, rm_file_list_cmp_file_size, NULL
-        );
+                               list->size_groups, old_group, rm_file_list_cmp_file_size, NULL
+                           );
         g_hash_table_insert(
             list->size_table, GINT_TO_POINTER(file->fsize), file->file_group
         );
@@ -127,7 +127,7 @@ void rm_file_list_append(RmFileList * list, RmFile * file) {
     }
 }
 
-void rm_file_list_clear(GSequenceIter * iter) {
+void rm_file_list_clear(GSequenceIter *iter) {
     g_sequence_remove(iter);
 }
 
@@ -168,9 +168,9 @@ static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSE
 static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, bool find_hardlinked_dupes) {
     guint removed_cnt = 0;
 
-    GList * iter = group->head;
+    GList *iter = group->head;
     while(iter && iter->next) {
-        RmFile * file = iter->data, *next_file = iter->next->data;
+        RmFile *file = iter->data, *next_file = iter->next->data;
 
         if( (file->node == next_file->node && file->dev == next_file->dev) &&
                 /* files have same dev and inode:  might be hardlink (safe to delete), or
@@ -179,7 +179,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
 									 *kick out all dev/inode collisions*/
                   || 	/* if we are looking for hardlinked dupes, still need to kick out
 					 * double paths or filesystem loops*/
-                  (	(strcmp(rmlint_basename(file->path),rmlint_basename(next_file->path))==0)
+                  (	(strcmp(rmlint_basename(file->path), rmlint_basename(next_file->path)) == 0)
                       &&
                       (parent_node(file->path) == parent_node(next_file->path))
                       /* double paths and loops will always have same basename */
@@ -209,7 +209,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
 
 static void rm_file_list_count_pref_paths(GQueue *group, int *num_pref, int *num_nonpref) {
     for(GList *iter = group->head; iter; iter = iter->next) {
-        RmFile * file = iter->data;
+        RmFile *file = iter->data;
         if(file->in_ppath) {
             *num_pref = *num_pref + 1;
         } else {
@@ -218,7 +218,7 @@ static void rm_file_list_count_pref_paths(GQueue *group, int *num_pref, int *num
     }
 }
 
-RmFile * rm_file_list_iter_all(RmFileList *list, RmFile *previous) {
+RmFile *rm_file_list_iter_all(RmFileList *list, RmFile *previous) {
     if(previous == NULL) {
         if(rm_file_list_get_iter(list)) {
             GQueue *group = g_sequence_get(rm_file_list_get_iter(list));
@@ -244,12 +244,12 @@ RmFile * rm_file_list_iter_all(RmFileList *list, RmFile *previous) {
     }
 }
 
-gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings) {
+gsize rm_file_list_sort_groups(RmFileList *list, RmSettings *settings) {
     gsize removed_cnt = 0;
 
     g_sequence_sort(list->size_groups, rm_file_list_cmp_file_size, NULL);
 
-    GSequenceIter * iter = rm_file_list_get_iter(list);
+    GSequenceIter *iter = rm_file_list_get_iter(list);
     while(!g_sequence_iter_is_end(iter)) {
         GQueue *queue = g_sequence_get(iter);
         int num_pref = 0, num_nonpref = 0;
@@ -267,7 +267,7 @@ gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings) {
             ((settings->must_match_original) && (num_pref == 0)) ||
             ((settings->keep_all_originals) && (num_nonpref == 0) )
         ) {
-            GSequenceIter * old_iter = iter;
+            GSequenceIter *old_iter = iter;
             iter = g_sequence_iter_next(iter);
             g_sequence_remove(old_iter);
         } else {
@@ -291,7 +291,7 @@ gulong rm_file_list_byte_size(GQueue *group) {
 }
 
 void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpointer user_data) {
-    GQueue * queue = g_sequence_get(group);
+    GQueue *queue = g_sequence_get(group);
     g_queue_sort(queue, func, user_data);
 }
 
@@ -299,7 +299,7 @@ void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpoint
 static void rm_file_list_print_cb(gpointer data, gpointer G_GNUC_UNUSED user_data) {
     GQueue *queue = data;
     for(GList *iter = queue->head; iter; iter = iter->next) {
-        RmFile * file = iter->data;
+        RmFile *file = iter->data;
         g_printerr("  %lu:%ld:%ld:%s\n", file->fsize, file->dev, file->node, file->path);
     }
     g_printerr("----\n");
@@ -313,7 +313,7 @@ void rm_file_list_print(RmFileList *list) {
 #if 0 /* Testcase */
 
 int main(int argc, const char **argv) {
-    RmFileList * list = rm_file_list_new();
+    RmFileList *list = rm_file_list_new();
 
     for(int i = 1; i < argc; ++i) {
         struct stat buf;
@@ -333,7 +333,7 @@ int main(int argc, const char **argv) {
     rm_file_list_print(list);
 
     g_printerr("### REMOVE LAST ELEMENT OF EACH\n");
-    GSequenceIter * iter = rm_file_list_get_iter(list);
+    GSequenceIter *iter = rm_file_list_get_iter(list);
     while(!g_sequence_iter_is_end(iter)) {
         /* Remove the last element of the group - for no particular reason */
         GQueue *group = g_sequence_get(iter);

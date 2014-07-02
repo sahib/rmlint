@@ -38,8 +38,8 @@
 
 #include "defs.h"
 
-char * rmlint_basename(char *filename) {
-    char * base = strrchr(filename, '/');
+char *rmlint_basename(char *filename) {
+    char *base = strrchr(filename, '/');
     if(base != NULL) {
         /* Return a pointer to the part behind it
          * (which may be the empty string */
@@ -52,7 +52,7 @@ char * rmlint_basename(char *filename) {
 
 ino_t parent_node(const char *apath) {
     char *dummy  = strdup( apath );
-    char* parent_path = dirname(dummy);
+    char *parent_path = dirname(dummy);
     struct stat stat_buf;
     if(!stat(parent_path, &stat_buf)) {
         return stat_buf.st_ino;
@@ -67,15 +67,15 @@ int uid_gid_check(FTSENT *fts_ent, RmSession *session) {
     if (session->settings->findbadids) {
         bool has_gid, has_uid;
         if (userlist_contains(
-                session->userlist, fts_ent->fts_statp->st_uid,
-                fts_ent->fts_statp->st_gid, &has_uid, &has_gid)
-            ) {
+                    session->userlist, fts_ent->fts_statp->st_uid,
+                    fts_ent->fts_statp->st_gid, &has_uid, &has_gid)
+           ) {
             if(has_gid == false)
                 if(has_uid == false)
                     return TYPE_BADUGID;
                 else
                     return TYPE_BADGID;
-            else if (has_uid==false)
+            else if (has_uid == false)
                 return TYPE_BADUID;
         }
     }
@@ -85,7 +85,7 @@ int uid_gid_check(FTSENT *fts_ent, RmSession *session) {
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
 bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
-    bool is_ns=false;
+    bool is_ns = false;
     if ((settings->nonstripped) && fts_ent->fts_path) {
         /* inspired by "jschmier"'s answer at http://stackoverflow.com/a/5159890 */
         int fd;

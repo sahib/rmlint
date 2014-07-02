@@ -35,35 +35,35 @@
 
 char *get_username(void) {
     uid_t uid = geteuid ();
-    struct passwd *user=getpwuid(uid);
+    struct passwd *user = getpwuid(uid);
     if (user) return user->pw_name;
     else return "username_not_found";
 }
 
 char *get_groupname(void) {
     uid_t uid = geteuid ();
-    struct passwd *user=getpwuid(uid);
-    struct group *grp=getgrgid(user->pw_gid);
+    struct passwd *user = getpwuid(uid);
+    struct group *grp = getgrgid(user->pw_gid);
     if (grp) return grp->gr_name;
     else return NULL;
 }
 
 
-RmUserGroupList ** userlist_new(void) {
-    RmUserGroupList ** list = NULL;
+RmUserGroupList **userlist_new(void) {
+    RmUserGroupList **list = NULL;
     const size_t block_size = 256;
     size_t mem_count = 0, block_count = 0;
-    struct passwd * node = NULL;
-    struct group * grp = NULL;
+    struct passwd *node = NULL;
+    struct group *grp = NULL;
 
     setpwent();
     while((node = getpwent()) != NULL) {
-        RmUserGroupList * item = malloc(sizeof(RmUserGroupList));
+        RmUserGroupList *item = malloc(sizeof(RmUserGroupList));
         item->gid = node->pw_gid;
         item->uid = node->pw_uid;
         if(block_count * block_size <= mem_count) {
             block_count++;
-            list = realloc(list,(block_count + 1) * block_size * sizeof(RmUserGroupList*));
+            list = realloc(list, (block_count + 1) * block_size * sizeof(RmUserGroupList *));
         }
         list[mem_count] = item;
         mem_count++;
@@ -71,12 +71,12 @@ RmUserGroupList ** userlist_new(void) {
 
     /* add all groups, not just those that are user primary gid's*/
     while((grp = getgrent()) != NULL) {
-        RmUserGroupList * item = malloc(sizeof(RmUserGroupList));
+        RmUserGroupList *item = malloc(sizeof(RmUserGroupList));
         item->gid = grp->gr_gid;
         item->uid = 0;
         if(block_count * block_size <= mem_count) {
             block_count++;
-            list = realloc(list,(block_count + 1) * block_size * sizeof(RmUserGroupList*));
+            list = realloc(list, (block_count + 1) * block_size * sizeof(RmUserGroupList *));
         }
         list[mem_count] = item;
         mem_count++;
@@ -96,7 +96,7 @@ RmUserGroupList ** userlist_new(void) {
 
 /* /////////////////////////// */
 
-bool userlist_contains(RmUserGroupList ** list, unsigned long uid, unsigned gid, bool * valid_uid, bool * valid_gid) {
+bool userlist_contains(RmUserGroupList **list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
     bool rc = false;
     bool gid_found = false;
     bool uid_found = false;
@@ -119,7 +119,7 @@ bool userlist_contains(RmUserGroupList ** list, unsigned long uid, unsigned gid,
 
 /* /////////////////////////// */
 
-void userlist_destroy(RmUserGroupList ** list) {
+void userlist_destroy(RmUserGroupList **list) {
     if(list != NULL) {
         int i = 0;
         for(i = 0; list[i]; ++i) {
@@ -135,23 +135,23 @@ void userlist_destroy(RmUserGroupList ** list) {
 
 #define bool2str(v) (v) ? "True" : "False"
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     struct stat stat_buf;
     bool has_gid, has_uid;
-    RmUserGroupList ** list = userlist_new();
+    RmUserGroupList **list = userlist_new();
     if(argc < 2) {
         puts("Usage: prog <path>");
         return EXIT_FAILURE;
     }
-    if(stat(argv[1],&stat_buf) != 0) {
+    if(stat(argv[1], &stat_buf) != 0) {
         return EXIT_FAILURE;
     }
     printf("File has UID %lu and GID %lu\n",
            (unsigned long)stat_buf.st_uid,
            (unsigned long)stat_buf.st_gid);
-    userlist_contains(list,stat_buf.st_uid,stat_buf.st_gid,&has_uid,&has_gid);
-    printf("=> Valid UID = %s\n",bool2str(has_uid));
-    printf("=> Valid GID = %s\n",bool2str(has_gid));
+    userlist_contains(list, stat_buf.st_uid, stat_buf.st_gid, &has_uid, &has_gid);
+    printf("=> Valid UID = %s\n", bool2str(has_uid));
+    printf("=> Valid GID = %s\n", bool2str(has_gid));
     userlist_destroy(list);
     return EXIT_SUCCESS;
 }

@@ -48,12 +48,12 @@
 
 pthread_mutex_t mutex_printage =  PTHREAD_MUTEX_INITIALIZER;
 
-gchar * strsubs(const char * string, const char * subs, const char * with) {
-    gchar * result = NULL;
+gchar *strsubs(const char *string, const char *subs, const char *with) {
+    gchar *result = NULL;
     if (string != NULL && string[0] != '\0') {
-        gchar ** split = g_strsplit (string,subs,0);
+        gchar **split = g_strsplit (string, subs, 0);
         if (split != NULL) {
-            result = g_strjoinv (with,split);
+            result = g_strjoinv (with, split);
         }
         g_strfreev (split);
     }
@@ -73,27 +73,27 @@ static void remfile(const char *r_path) {
 
 /* ------------------------------------------------------------- */
 
-void log_print(RmSession *session, FILE * stream, const char * string) {
+void log_print(RmSession *session, FILE *stream, const char *string) {
     if(stream && string) {
         if(session->settings->verbosity == 4) {
-            fprintf(stdout,"%s",string);
+            fprintf(stdout, "%s", string);
         }
-        fprintf(stream,"%s",string);
+        fprintf(stream, "%s", string);
     }
 }
 
 /* ------------------------------------------------------------- */
 
-static char * make_cmd_ready(RmSettings * sets, bool is_orig, const char * orig, const char * dupl) {
-    char * repl_orig = NULL;
+static char *make_cmd_ready(RmSettings *sets, bool is_orig, const char *orig, const char *dupl) {
+    char *repl_orig = NULL;
     if(!is_orig) {
-        repl_orig = strsubs(sets->cmd_path,CMD_ORIG,orig);
+        repl_orig = strsubs(sets->cmd_path, CMD_ORIG, orig);
     } else {
-        repl_orig = strsubs(sets->cmd_orig,CMD_ORIG,orig);
+        repl_orig = strsubs(sets->cmd_orig, CMD_ORIG, orig);
     }
 
     if(repl_orig != NULL && !is_orig) {
-        char * repl_dups = strsubs(repl_orig,CMD_DUPL,dupl);
+        char *repl_dups = strsubs(repl_orig, CMD_DUPL, dupl);
         if(repl_dups != NULL) {
             free(repl_orig);
             repl_orig = repl_dups;
@@ -104,12 +104,12 @@ static char * make_cmd_ready(RmSettings * sets, bool is_orig, const char * orig,
 
 /* ------------------------------------------------------------- */
 
-void script_print(RmSession * session, char * string) {
+void script_print(RmSession *session, char *string) {
     if(string != NULL) {
         if(session->settings->verbosity == 5) {
-            fprintf(stdout,"%s",string);
+            fprintf(stdout, "%s", string);
         }
-        fprintf(session->script_out, "%s",string);
+        fprintf(session->script_out, "%s", string);
         free(string);
     }
 }
@@ -120,13 +120,13 @@ void script_print(RmSession * session, char * string) {
 
 /* ------------------------------------------------------------- */
 
-void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFile * p_to_orig) {
+void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFile *p_to_orig) {
     bool free_fullpath = true;
     RmSettings *sets = session->settings;
 
-    const char * chown_cmd_baduid = "chown \"$user\"";
-    const char * chown_cmd_badgid = "chgrp \"$group\"";
-    const char * chown_cmd_badugid = "chown \"$user\":\"$group\"";
+    const char *chown_cmd_baduid = "chown \"$user\"";
+    const char *chown_cmd_badgid = "chgrp \"$group\"";
+    const char *chown_cmd_badugid = "chown \"$user\":\"$group\"";
 
     if(session->log_out && session->script_out && sets->output) {
         int i = 0;
@@ -137,77 +137,77 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
                 perror("(write_to_log():mode.c)");
             }
             free_fullpath = false;
-            fpath = (char*)file->path;
+            fpath = (char *)file->path;
         } else {
             /* This is so scary. */
             /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings for more info on this */
             char *tmp_copy = fpath;
-            fpath = strsubs(fpath,"'","'\"'\"'");
+            fpath = strsubs(fpath, "'", "'\"'\"'");
             free(tmp_copy);
         }
         if(file->lint_type == TYPE_BLNK) {
             script_print(session, _sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
-            log_print(session, session->log_out,"BLNK");
+            log_print(session, session->log_out, "BLNK");
         } else if(file->lint_type == TYPE_BASE) {
-            log_print(session, session->log_out,"BASE");
+            log_print(session, session->log_out, "BASE");
             script_print(session, _sd_("echo  '%s' # double basename.\n", fpath));
         } else if(file->lint_type == TYPE_EDIR) {
             script_print(session, _sd_("rmdir '%s' # empty folder.\n", fpath));
-            log_print(session, session->log_out,"EDIR");
+            log_print(session, session->log_out, "EDIR");
         } else if(file->lint_type == TYPE_NBIN) {
             script_print(session, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
-            log_print(session, session->log_out,"NBIN");
+            log_print(session, session->log_out, "NBIN");
         } else if(file->lint_type == TYPE_BADUID) {
-            script_print(session, _sd_("%s '%s' # bad uid\n",chown_cmd_baduid, fpath));
-            log_print(session, session->log_out,"BUID");
+            script_print(session, _sd_("%s '%s' # bad uid\n", chown_cmd_baduid, fpath));
+            log_print(session, session->log_out, "BUID");
         } else if(file->lint_type == TYPE_BADGID) {
-            script_print(session, _sd_("%s '%s' # bad gid\n",chown_cmd_badgid, fpath));
-            log_print(session, session->log_out,"BGID");
+            script_print(session, _sd_("%s '%s' # bad gid\n", chown_cmd_badgid, fpath));
+            log_print(session, session->log_out, "BGID");
         } else if(file->lint_type == TYPE_BADUGID) {
-            script_print(session, _sd_("%s '%s' # bad gid and uid\n",chown_cmd_badugid, fpath));
-            log_print(session, session->log_out,"BGID");
+            script_print(session, _sd_("%s '%s' # bad gid and uid\n", chown_cmd_badugid, fpath));
+            log_print(session, session->log_out, "BGID");
         } else if(file->fsize == 0) {
             script_print(session, _sd_("rm -f '%s' # empty file.\n", fpath));
-            log_print(session, session->log_out,"ZERO");
-        } else if(orig==false) {
-            log_print(session, session->log_out,"DUPL");
+            log_print(session, session->log_out, "ZERO");
+        } else if(orig == false) {
+            log_print(session, session->log_out, "DUPL");
             if(sets->cmd_path) {
                 char *opath = realpath(p_to_orig->path, NULL);
                 if(opath != NULL) {
                     /*script_print(sets, _sd_(set->cmd_path,fpath,opath));*/
-                    char * tmp_opath = strsubs(opath,"'","'\"'\"'");
+                    char *tmp_opath = strsubs(opath, "'", "'\"'\"'");
                     if(tmp_opath != NULL) {
-                        script_print(session, make_cmd_ready(sets, false,tmp_opath,fpath));
+                        script_print(session, make_cmd_ready(sets, false, tmp_opath, fpath));
                         script_print(session, _sd_("\n"));
                         g_free(tmp_opath);
                     }
                     g_free(opath);
                 }
             } else {
-                script_print(session, _sd_("rm -f '%s' # duplicate\n",fpath));
+                script_print(session, _sd_("rm -f '%s' # duplicate\n", fpath));
             }
         } else {
-            log_print(session, session->log_out,"ORIG");
+            log_print(session, session->log_out, "ORIG");
             if(sets->cmd_orig) {
                 /*//script_print(sets, _sd_(set->cmd_orig,fpath));*/
-                script_print(session, make_cmd_ready(sets, true,fpath,NULL));
+                script_print(session, make_cmd_ready(sets, true, fpath, NULL));
                 script_print(session, _sd_(" \n"));
             } else {
-                script_print(session, _sd_("echo  '%s' # original\n",fpath));
+                script_print(session, _sd_("echo  '%s' # original\n", fpath));
             }
         }
-        log_print(session, session->log_out,LOGSEP);
+        log_print(session, session->log_out, LOGSEP);
         for(i = 0; i < 16; i++) {
             if(sets->verbosity == 4) {
-                fprintf(stdout,"%02x", file->md5_digest[i]);
+                fprintf(stdout, "%02x", file->md5_digest[i]);
             }
-            fprintf(session->log_out,"%02x", file->md5_digest[i]);
+            fprintf(session->log_out, "%02x", file->md5_digest[i]);
         }
 #define INT_CAST long unsigned
         if(sets->verbosity == 4) {
-            fprintf(stdout,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
+            fprintf(stdout, "%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node, LOGSEP);
         }
-        fprintf(session->log_out,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
+        fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node, LOGSEP);
 #undef INT_CAST
         if(free_fullpath && fpath && file->lint_type != TYPE_BLNK) {
             g_free(fpath);
@@ -217,7 +217,7 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
 
 #undef _sd_
 
-static bool handle_item(RmSession * session, RmFile *file_path, RmFile *file_orig) {
+static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig) {
     char *path = (file_path) ? file_path->path : NULL;
     char *orig = (file_orig) ? file_orig->path : NULL;
     RmSettings *sets = session->settings;
@@ -241,13 +241,13 @@ static bool handle_item(RmSession * session, RmFile *file_path, RmFile *file_ori
         if(path == NULL) {
             break;
         } else {
-            char * full_orig_path = realpath(orig, NULL);
+            char *full_orig_path = realpath(orig, NULL);
             if(full_orig_path) {
-                char * full_dupl_path = realpath(path, NULL);
+                char *full_dupl_path = realpath(path, NULL);
                 if(full_dupl_path) {
                     error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
                     remfile(full_dupl_path);
-                    if(symlink(full_orig_path ,full_dupl_path) == -1) {
+                    if(symlink(full_orig_path , full_dupl_path) == -1) {
                         perror(YEL"WARN: "NCO"symlink:");
                     }
                     free(full_dupl_path);
@@ -260,21 +260,21 @@ static bool handle_item(RmSession * session, RmFile *file_path, RmFile *file_ori
     case 5: {
         /* Exec a command on it */
         int ret = 0;
-        char * tmp_opath = strsubs(orig,"'","'\"'\"'");
-        char * tmp_fpath = strsubs(path,"'","'\"'\"'");
+        char *tmp_opath = strsubs(orig, "'", "'\"'\"'");
+        char *tmp_fpath = strsubs(path, "'", "'\"'\"'");
         if(tmp_opath && tmp_fpath) {
-            const char * cmd = NULL;
+            const char *cmd = NULL;
             if(path) {
-                cmd = make_cmd_ready(sets, false,tmp_opath,tmp_fpath);
+                cmd = make_cmd_ready(sets, false, tmp_opath, tmp_fpath);
             } else {
-                cmd = make_cmd_ready(sets, true,tmp_opath,NULL);
+                cmd = make_cmd_ready(sets, true, tmp_opath, NULL);
             }
             if(cmd != NULL) {
                 ret = system(cmd);
                 if(WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
                     return true;
                 }
-                free((char*)cmd);
+                free((char *)cmd);
                 cmd = NULL;
             }
             free(tmp_opath);
@@ -291,16 +291,16 @@ static bool handle_item(RmSession * session, RmFile *file_path, RmFile *file_ori
 
 /* ------------------------------------------------------------- */
 
-void init_filehandler(RmSession * session) {
+void init_filehandler(RmSession *session) {
     if(session->settings->output) {
         char *sc_name = g_strdup_printf("%s.sh", session->settings->output);
-        char *lg_name = g_strdup_printf("%s.log",session->settings->output);
+        char *lg_name = g_strdup_printf("%s.log", session->settings->output);
         session->script_out = fopen(sc_name, "w");
         session->log_out    = fopen(lg_name, "w");
         if(session->script_out && session->log_out) {
-            char *cwd = getcwd(NULL,0);
+            char *cwd = getcwd(NULL, 0);
             /* Make the file executable */
-            if(fchmod(fileno(session->script_out), S_IRUSR|S_IWUSR|S_IXUSR) == -1) {
+            if(fchmod(fileno(session->script_out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
                 perror(YEL"WARN: "NCO"chmod");
             }
             /* Write a basic header */
@@ -325,7 +325,7 @@ void init_filehandler(RmSession * session) {
                     "cat << EOF\n"
                     "usage: $0 options\n"
                     "\n"
-                    "OPTIONS:\n",cwd);
+                    "OPTIONS:\n", cwd);
             fprintf(session->script_out,
                     "-h      Show this message\n"
                     "-d      Do not ask before running\n"
@@ -357,9 +357,9 @@ void init_filehandler(RmSession * session) {
                     "  usage\n"
                     "  ask \n"
                     "fi\n");
-            fprintf(session->script_out, "user='%s'\ngroup='%s'\n",get_username(),get_groupname());
-            fprintf(session->log_out,"#This file was autowritten by 'rmlint'\n");
-            fprintf(session->log_out,"#rmlint was executed from: %s\n",cwd);
+            fprintf(session->script_out, "user='%s'\ngroup='%s'\n", get_username(), get_groupname());
+            fprintf(session->log_out, "#This file was autowritten by 'rmlint'\n");
+            fprintf(session->log_out, "#rmlint was executed from: %s\n", cwd);
             fprintf(session->log_out, "#\n# Entries are listed like this: \n");
             fprintf(session->log_out, "# lint_type | md5sum | path | size | devID | inode\n");
             fprintf(session->log_out, "# -------------------------------------------\n");
@@ -413,7 +413,7 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
 
-    RmSettings * sets = session->settings;
+    RmSettings *sets = session->settings;
     GList *i = group->head;
     bool tagged_original = false;
     RmFile *original = NULL;
@@ -456,7 +456,7 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
                     print_newline = false;
                 }
                 if(sets->mode != 4) {
-                    error(GRE"   ls "NCO"%s\n",fi->path);
+                    error(GRE"   ls "NCO"%s\n", fi->path);
                 }
             }
             write_to_log(session, fi, true, NULL);
@@ -473,14 +473,14 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
             if(sets->mode == 1 || (sets->mode == 5 && !sets->cmd_orig && !sets->cmd_path)) {
                 if(sets->paranoid) {
                     /* If byte by byte was succesful print a blue "x" */
-                    warning(BLU"   %-1s "NCO,"rm");
+                    warning(BLU"   %-1s "NCO, "rm");
                 } else {
-                    warning(YEL"   %-1s "NCO,"rm");
+                    warning(YEL"   %-1s "NCO, "rm");
                 }
                 if(sets->verbosity > 1) {
-                    error("%s\n",fi->path);
+                    error("%s\n", fi->path);
                 } else {
-                    error("   rm %s\n",fi->path);
+                    error("   rm %s\n", fi->path);
                 }
             }
             write_to_log(session, fi, false, original);

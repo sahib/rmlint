@@ -29,7 +29,7 @@
 
 int uid_gid_check(FTSENT *fts_ent, RmSession *session);
 bool is_nonstripped(FTSENT *afile, RmSettings *settings);
-char * rmlint_basename(char *filename);
+char *rmlint_basename(char *filename);
 ino_t parent_node(char *apath);
 
 #endif /* LINTTESTS_H_INCLUDED*/

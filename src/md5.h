@@ -57,7 +57,7 @@ typedef struct {
 /* Additional functions not in original md5.c */
 void MDPrintArr(unsigned char *digest);
 void md5_fingerprint(RmSession *session, RmFile *file, const guint64 readsize);
-void md5_file(RmSession *session, RmFile* file);
+void md5_file(RmSession *session, RmFile *file);
 void md5c_c_init(void);
 
 #endif

@@ -27,7 +27,7 @@
 #include <glib.h>
 #include "defs.h"
 
-RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum);
+RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum);
 
 /**
  * @brief Free the memory allocated by rm_file_new()
@@ -67,14 +67,14 @@ GSequenceIter *rm_file_list_get_iter(RmFileList *list);
  *
  * @param file The file to append; ownership is taken.
  */
-void rm_file_list_append(RmFileList * list, RmFile * file);
+void rm_file_list_append(RmFileList *list, RmFile *file);
 
 /**
  * @brief Clear a subgroup.
  *
  * @param child  The index of the group to remove.
  */
-void rm_file_list_clear(GSequenceIter * iter);
+void rm_file_list_clear(GSequenceIter *iter);
 
 /**
  * @brief Sort a single group after a user-defined criteria.
@@ -102,7 +102,7 @@ void rm_file_list_remove(RmFileList *list, RmFile *file);
  *
  * @returns: The number of filtered files.
  */
-gsize rm_file_list_sort_groups(RmFileList *list, RmSettings * settings);
+gsize rm_file_list_sort_groups(RmFileList *list, RmSettings *settings);
 
 /**
  * @brief: Return the number of groups in the list.
@@ -135,6 +135,6 @@ void rm_file_list_print(RmFileList *list);
  *
  * @return The next file or NULL if none left.
  */
-RmFile * rm_file_list_iter_all(RmFileList *list, RmFile *previous);
+RmFile *rm_file_list_iter_all(RmFileList *list, RmFile *previous);
 
 #endif /* RM_LIST_H */
