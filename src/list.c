@@ -43,7 +43,7 @@ RmFile * rm_file_new(const char * path, struct stat *buf, RmLintType type, bool 
         self->fsize = 0;
     }
 
-    self->dupflag = type;
+    self->lint_type = type;
     self->filter = TRUE;
 
     self->in_ppath = is_ppath;

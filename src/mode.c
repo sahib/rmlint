@@ -132,7 +132,7 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
         int i = 0;
         char *fpath = realpath(file->path, NULL);
         if(!fpath) {
-            if(file->dupflag != TYPE_BLNK) {
+            if(file->lint_type != TYPE_BLNK) {
                 error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
                 perror("(write_to_log():mode.c)");
             }
@@ -145,25 +145,25 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
             fpath = strsubs(fpath,"'","'\"'\"'");
             free(tmp_copy);
         }
-        if(file->dupflag == TYPE_BLNK) {
+        if(file->lint_type == TYPE_BLNK) {
             script_print(session, _sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
             log_print(session, session->log_out,"BLNK");
-        } else if(file->dupflag == TYPE_BASE) {
+        } else if(file->lint_type == TYPE_BASE) {
             log_print(session, session->log_out,"BASE");
             script_print(session, _sd_("echo  '%s' # double basename.\n", fpath));
-        } else if(file->dupflag == TYPE_EDIR) {
+        } else if(file->lint_type == TYPE_EDIR) {
             script_print(session, _sd_("rmdir '%s' # empty folder.\n", fpath));
             log_print(session, session->log_out,"EDIR");
-        } else if(file->dupflag == TYPE_NBIN) {
+        } else if(file->lint_type == TYPE_NBIN) {
             script_print(session, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
             log_print(session, session->log_out,"NBIN");
-        } else if(file->dupflag == TYPE_BADUID) {
+        } else if(file->lint_type == TYPE_BADUID) {
             script_print(session, _sd_("%s '%s' # bad uid\n",chown_cmd_baduid, fpath));
             log_print(session, session->log_out,"BUID");
-        } else if(file->dupflag == TYPE_BADGID) {
+        } else if(file->lint_type == TYPE_BADGID) {
             script_print(session, _sd_("%s '%s' # bad gid\n",chown_cmd_badgid, fpath));
             log_print(session, session->log_out,"BGID");
-        } else if(file->dupflag == TYPE_BADUGID) {
+        } else if(file->lint_type == TYPE_BADUGID) {
             script_print(session, _sd_("%s '%s' # bad gid and uid\n",chown_cmd_badugid, fpath));
             log_print(session, session->log_out,"BGID");
         } else if(file->fsize == 0) {
@@ -209,7 +209,7 @@ void write_to_log(RmSession * session, const RmFile *file, bool orig, const RmFi
         }
         fprintf(session->log_out,"%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP,fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node,LOGSEP);
 #undef INT_CAST
-        if(free_fullpath && fpath && file->dupflag != TYPE_BLNK) {
+        if(free_fullpath && fpath && file->lint_type != TYPE_BLNK) {
             g_free(fpath);
         }
     }
@@ -361,9 +361,9 @@ void init_filehandler(RmSession * session) {
             fprintf(session->log_out,"#This file was autowritten by 'rmlint'\n");
             fprintf(session->log_out,"#rmlint was executed from: %s\n",cwd);
             fprintf(session->log_out, "#\n# Entries are listed like this: \n");
-            fprintf(session->log_out, "# dupflag | md5sum | path | size | devID | inode\n");
+            fprintf(session->log_out, "# lint_type | md5sum | path | size | devID | inode\n");
             fprintf(session->log_out, "# -------------------------------------------\n");
-            fprintf(session->log_out, "# dupflag : What type of lint found:\n");
+            fprintf(session->log_out, "# lint_type : What type of lint found:\n");
             fprintf(session->log_out, "#           BLNK: Bad link pointing nowhere\n"
                     "#           OTMP: Old tmp data (e.g: test.txt~)\n"
                     "#           BASE: Double basename\n"
@@ -400,7 +400,7 @@ void init_filehandler(RmSession * session) {
 
 /* ------------------------------------------------------------- */
 
-#define NOT_DUP_FLAGGED(ptr) !(ptr->dupflag <= false)
+#define NOT_DUP_FLAGGED(ptr) !(ptr->lint_type <= false)
 bool print_newline = true;
 
 bool process_doop_groop(RmSession *session, GQueue *group) {

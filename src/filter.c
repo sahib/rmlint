@@ -138,7 +138,7 @@ static int cmp_f(RmFile *a, RmFile *b) {
     for(x=0; x<2; x++) {
         if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2]) {
             warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n%s %d\n%s %d\n",
-                    a->path, a->dupflag, b->path, b->dupflag );
+                    a->path, a->lint_type, b->path, b->lint_type );
             return 1;
         }
     }
@@ -509,7 +509,7 @@ static void size_to_human_readable(guint64 num, char *in) {
 
 static void handle_double_base_file(RmSession *session, RmFile *file) {
     char * abs_path = realpath(file->path, NULL);
-    file->dupflag = TYPE_BASE;
+    file->lint_type = TYPE_BASE;
     error("   %sls%s %s\n", (session->settings->verbosity!=1) ? GRE : "", NCO, abs_path);
     write_to_log(session, file, false, NULL);
     g_free(abs_path);
@@ -524,7 +524,7 @@ static int find_double_bases(RmSession * session) {
 
     RmFile *fi = NULL;
     while((fi = rm_file_list_iter_all(session->list, fi))) {
-        if(fi->dupflag == TYPE_BASE) {
+        if(fi->lint_type == TYPE_BASE) {
             continue;
         }
 
@@ -536,7 +536,7 @@ static int find_double_bases(RmSession * session) {
             if(1
                 && !strcmp(rmlint_basename(fi->path), rmlint_basename(fj->path))
                 && fi->node != fj->node
-                && fj->dupflag != TYPE_BASE
+                && fj->lint_type != TYPE_BASE
             ) {
                 if(header_printed) {
                     error("\n%s#"NCO" Double basename(s):\n", (sets->verbosity > 1) ? GRE : NCO);
@@ -554,7 +554,7 @@ static int find_double_bases(RmSession * session) {
                     RmFile *fx = fj;
                     while((fx = rm_file_list_iter_all(session->list, fx))) {
                         if(fx->node == fj->node) {
-                            fx->dupflag = TYPE_BASE;
+                            fx->lint_type = TYPE_BASE;
                         }
                     }
                 }
@@ -583,10 +583,10 @@ static int find_double_bases(RmSession * session) {
 
 static long cmp_sort_lint_type(RmFile* a, RmFile* b, gpointer user_data) {
     (void) user_data;
-    if (a->dupflag == TYPE_EDIR && a->dupflag == TYPE_EDIR)
+    if (a->lint_type == TYPE_EDIR && a->lint_type == TYPE_EDIR)
         return (long)strcmp(b->path, a->path);
     else
-        return ((long)a->dupflag-(long)b->dupflag);
+        return ((long)a->lint_type-(long)b->lint_type);
 }
 
 static const char *TYPE_TO_DESCRIPTION[] = {
@@ -627,21 +627,21 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
 
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if(file->dupflag >= TYPE_OTHER_LINT) {
-            error("Unknown filetype: %d (thats a bug)\n", file->dupflag);
+        if(file->lint_type >= TYPE_OTHER_LINT) {
+            error("Unknown filetype: %d (thats a bug)\n", file->lint_type);
             continue;
         }
 
-        if(flag != file->dupflag) {
+        if(flag != file->lint_type) {
             if(sets->verbosity > 1) {
                 error(YEL"\n# "NCO);
             } else {
                 error("\n# ");
             }
 
-            error("%s", TYPE_TO_DESCRIPTION[file->dupflag]);
+            error("%s", TYPE_TO_DESCRIPTION[file->lint_type]);
             error(": \n"NCO);
-            flag = file->dupflag;
+            flag = file->lint_type;
         }
 
         if(sets->verbosity > 1) {
@@ -649,8 +649,8 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
         }
 
         error("   ");
-        const char *format = TYPE_TO_COMMAND[file->dupflag];
-        switch(file->dupflag) {
+        const char *format = TYPE_TO_COMMAND[file->lint_type];
+        switch(file->lint_type) {
             case TYPE_BADUID:
                 error(format, user);
                 break;

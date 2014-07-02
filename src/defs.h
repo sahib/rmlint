@@ -161,7 +161,7 @@ typedef struct RmFile {
     guint64 fsize;                       /* Size of the file (bytes) */
     time_t mtime;                        /* File modification date/time */
     bool filter;                         /* this is used in calculations  */
-    RmLintType dupflag;                  /* Is the file marked as duplicate? */
+    RmLintType lint_type;                  /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
     ino_t node;
