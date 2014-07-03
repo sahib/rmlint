@@ -419,7 +419,7 @@ static void md5_fingerprint_mmap(RmSession *session, RmFile *file, const guint64
     /* empty? */
     if(pF == -1) {
         if(session->settings->verbosity > 3) {
-            warning(YEL"WARN: "NCO"Cannot open %s", file->path);
+            warning(YEL"\nWARN: "NCO"Cannot open %s for mmap fingerprint", file->path);
         }
         return;
     }
@@ -462,7 +462,7 @@ static void md5_fingerprint_fread(RmSession *session, RmFile *file, const guint6
     /* empty? */
     if(!pF) {
         if(session->settings->verbosity > 3) {
-            warning(YEL"WARN: "NCO"Cannot open %s", file->path);
+            warning(YEL"\nWARN: "NCO"Cannot open %s for fingerprint fread", file->path);
         }
         return;
     }
