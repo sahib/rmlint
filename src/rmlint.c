@@ -222,7 +222,7 @@ static const struct FormatSpec {
     {.id = "pb" , .base = 1024 , .exponent = 5},
     {.id = "t"  , .base = 1000 , .exponent = 4},
     {.id = "tb" , .base = 1024 , .exponent = 4},
-    {.id = "w"  , .base = 2    , .exponent = 1} 
+    {.id = "w"  , .base = 2    , .exponent = 1}
 };
 
 typedef struct FormatSpec FormatSpec;
@@ -236,7 +236,7 @@ static int size_format_error(const char **error, const char *msg) {
     return 0;
 }
 
-static int compare_spec_elem(const void * fmt_a, const void * fmt_b) {
+static int compare_spec_elem(const void *fmt_a, const void *fmt_b) {
     return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
 }
 
@@ -245,7 +245,7 @@ guint64 size_string_to_bytes(const char *size_spec, const char **error) {
         return size_format_error(error, "Input size is NULL");
     }
 
-    char * format = NULL;
+    char *format = NULL;
     long double decimal = strtold(size_spec, &format);
 
     if (decimal == 0 && format == size_spec) {
@@ -259,11 +259,11 @@ guint64 size_string_to_bytes(const char *size_spec, const char **error) {
     }
 
     FormatSpec key = {.id = format};
-    FormatSpec* found = bsearch(
-        &key, SIZE_FORMAT_TABLE,
-        SIZE_FORMAT_TABLE_N, sizeof(FormatSpec),
-        compare_spec_elem
-    );
+    FormatSpec *found = bsearch(
+                            &key, SIZE_FORMAT_TABLE,
+                            SIZE_FORMAT_TABLE_N, sizeof(FormatSpec),
+                            compare_spec_elem
+                        );
 
     if (found != NULL) {
         /* No overflow check */
@@ -281,7 +281,7 @@ static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min,
     *min = 0;
     *max = G_MAXULONG;
 
-    const char * tmp_error = NULL;
+    const char *tmp_error = NULL;
     gchar **split = g_strsplit(range_spec, "-", 2);
 
     if(split[0] != NULL) {
@@ -289,7 +289,7 @@ static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min,
     }
 
     if(split[1] != NULL && tmp_error == NULL) {
-        *max= size_string_to_bytes(split[1], &tmp_error);
+        *max = size_string_to_bytes(split[1], &tmp_error);
     }
 
     g_strfreev(split);
@@ -308,11 +308,11 @@ static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min,
 static void parse_limit_sizes(RmSession *session, char *range_spec) {
     const char *error = NULL;
     if(!size_range_string_to_bytes(
-            range_spec, 
-            &session->settings->minsize,
-            &session->settings->maxsize,
-            &error
-    )) {
+                range_spec,
+                &session->settings->minsize,
+                &session->settings->maxsize,
+                &error
+            )) {
         g_printerr(RED"Error while parsing --limit: %s\n", error);
         die(session, EXIT_FAILURE);
     }
@@ -527,7 +527,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'q':
             sets->confirm_settings = 1;
             break;
-        case 'z': 
+        case 'z':
             sets->limits_specified = 1;
             parse_limit_sizes(session, optarg);
             break;
@@ -572,8 +572,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
     sets->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
                           verbosity_counter, 0, G_LOG_LEVEL_DEBUG
                       )];
-
-    // TODO: Implement  - as input path (read from stdin)
 
     /* Check the directory to be valid */
     while(optind < argc) {
