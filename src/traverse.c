@@ -168,8 +168,10 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
                 clear_emptydir_flags = true; /*current dir not empty*/
                 warning(RED"Warning: cannot stat file %s (skipping)\n", p->fts_path);
                 break;
-            case FTS_NSOK:      /* no stat(2) requested */
             case FTS_SL:        /* symbolic link */
+                clear_emptydir_flags = true; /*current dir not empty*/
+                break;
+            case FTS_NSOK:      /* no stat(2) requested */
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /*current dir not empty*/
@@ -214,11 +216,18 @@ int rmlint_search_tree(RmSession *session) {
 
     /* Set Bit flags for fts options.  */
     int bit_flags = 0;
-    if (!settings->followlinks)
+    if (!settings->followlinks) {
+        g_printerr("no links\n");
         bit_flags |= FTS_COMFOLLOW | FTS_PHYSICAL;
-    /* don't follow symlinks except those passed in command line*/
-    if (settings->samepart)
+    } else {
+        g_printerr("Following links\n");
+        bit_flags |= FTS_LOGICAL;
+    }
+
+    /* don't follow symlinks except those passed in command line */
+    if (settings->samepart) {
         bit_flags |= FTS_XDEV;
+    }
 
     while(settings->paths[cpindex] != NULL) {
         /* The path points to a dir - recurse it! */
@@ -232,5 +241,6 @@ int rmlint_search_tree(RmSession *session) {
         cpindex++;
     }
 
+    rm_file_list_print(session->list);
     return numfiles;
 }
