@@ -230,9 +230,9 @@ static void *cksum_cb(void *vp) {
             /* do checksum unless this is a hardlink of a file which is
              * already going to be checksummed */
             md5_file(tag->session, iter->data);
-            /* FUTURE OPTIMISATION: as-is, we _always_ do checksum of _one_ file
-             * in each a group of hardlinks; but if the group contains _only_
-             * hardlinks then we in theory don't need to checksum _any_ of them  */
+        /* FUTURE OPTIMISATION: as-is, we _always_ do checksum of _one_ file
+         * in each a group of hardlinks; but if the group contains _only_
+         * hardlinks then we in theory don't need to checksum _any_ of them  */
     }
 
     /* Do not use g_queue_free(), that would delete all GLists in it */

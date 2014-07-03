@@ -179,16 +179,16 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
         if (file->node == next_file->node && file->dev == next_file->dev) {
             /* files have same dev and inode:  might be hardlink (safe to delete), or
              * two paths to the same original (not safe to delete) */
-           if   (0
-                || (!find_hardlinked_dupes)
+            if   (0
+                    || (!find_hardlinked_dupes)
                     /* not looking for hardlinked dupes so kick out all dev/inode collisions*/
-                ||  (1
-                    && (strcmp(rmlint_basename(file->path), rmlint_basename(next_file->path)) == 0)
-                      /* double paths and loops will always have same basename */
-                    && (parent_node(file->path) == parent_node(next_file->path))
-                      /* double paths and loops will always have same dir inode number*/
-                    )
-                ) {
+                    ||  (1
+                         && (strcmp(rmlint_basename(file->path), rmlint_basename(next_file->path)) == 0)
+                         /* double paths and loops will always have same basename */
+                         && (parent_node(file->path) == parent_node(next_file->path))
+                         /* double paths and loops will always have same dir inode number*/
+                        )
+                 ) {
                 /* kick FILE or NEXT_FILE out */
                 if(next_file->in_ppath || !file->in_ppath) {
                     /*FILE does not outrank NEXT_FILE in terms of ppath*/
@@ -201,8 +201,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
                 }
 
                 removed_cnt++;
-            }
-            else {
+            } else {
                 /*hardlinked - store the hardlink to save time later building checksums*/
                 if (file->hardlinked_original)
                     next_file->hardlinked_original = file->hardlinked_original;
@@ -210,8 +209,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
                     next_file->hardlinked_original = file;
                 iter = iter->next;
             }
-        }
-        else {
+        } else {
             iter = iter->next;
         }
     }
