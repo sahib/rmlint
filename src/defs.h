@@ -140,8 +140,9 @@ typedef struct RmSettings {
     char *cmd_orig;
     char *output;
     char *sort_criteria;       /* NEW - sets criteria for ranking and selecting "original"*/
-    int minsize;
-    int maxsize;
+    char limits_specified;
+    guint64 minsize;
+    guint64 maxsize;
     char keep_all_originals;   /* NEW - if set, will ONLY delete dupes that are not in ppath */
     char must_match_original;  /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
     char invert_original;      /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/

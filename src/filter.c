@@ -511,15 +511,15 @@ static void start_scheduler(RmSession *session) {
 }
 
 /* Takes num and converts into some human readable string. 1024 -> 1KB */
-static void size_to_human_readable(guint64 num, char *in) {
+void size_to_human_readable(guint64 num, char *in, size_t len) {
     if(num < 512) {
-        sprintf(in, "%ld B", (unsigned long)num);
+        snprintf(in, len, "%ld B", (unsigned long)num);
     } else if(num < 1048576) {
-        sprintf(in, "%.2f KB", (float)(num / 1024.0));
+        snprintf(in, len, "%.2f KB", (float)(num / 1024.0));
     } else if(num < 1073741824 / 2) {
-        sprintf(in, "%.2f MB", (float)(num / (1024.0 * 1024.0)));
+        snprintf(in, len, "%.2f MB", (float)(num / (1024.0 * 1024.0)));
     } else {
-        sprintf(in, "%.2f GB", (float)(num / (1024.0 * 1024.0 * 1024.0)));
+        snprintf(in, len, "%.2f GB", (float)(num / (1024.0 * 1024.0 * 1024.0)));
     }
 }
 
@@ -744,14 +744,14 @@ void start_processing(RmSession *session) {
         error("\n");
     }
 
-    size_to_human_readable(session->total_lint_size, lintbuf);
+    size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
     warning(
         "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s)",
         session->total_files, session->dup_counter
     );
 
     if(other_lint > 0) {
-        size_to_human_readable(other_lint, lintbuf);
+        size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
         warning(RED"\n=> %lu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
     }
 

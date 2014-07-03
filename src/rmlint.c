@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h>
 
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -169,6 +170,7 @@ void rmlint_set_default_settings(RmSettings *pset) {
     pset->color                 = 1;
     pset->findbadids            = 1;
     pset->output                = "rmlint";
+    pset->limits_specified      = 0;
     pset->minsize               = -1;
     pset->maxsize               = -1;
     pset->listemptyfiles        = 1;
@@ -186,20 +188,6 @@ void rmlint_set_default_settings(RmSettings *pset) {
 
 }
 
-void parse_limit_sizes(RmSession *session, char *limit_string) {
-    // TODO: Make this support multipliers, i.e. 4M for 4 * (1024 * 1024)
-    char *ptr = limit_string;
-    if(ptr != NULL) {
-        char *semicol = strchr(ptr, ';');
-        if(semicol != NULL) {
-            semicol[0] = '\0';
-            semicol++;
-            session->settings->maxsize = strtol(semicol, NULL, 10);
-        }
-        session->settings->minsize = strtol(ptr, NULL, 10);
-    }
-}
-
 /* Check if this is the 'preferred' dir */
 bool check_if_preferred(const char *dir) {
     if(dir != NULL) {
@@ -208,6 +196,122 @@ bool check_if_preferred(const char *dir) {
             return TRUE;
     }
     return FALSE;
+}
+
+static const struct FormatSpec {
+    const char *id;
+    unsigned base;
+    unsigned exponent;
+} SIZE_FORMAT_TABLE[] = {
+    /* This list is sorted, so bsearch() can be used */
+    {.id = "b"  , .base = 512  , .exponent = 1},
+    {.id = "c"  , .base = 1    , .exponent = 1},
+    {.id = "e"  , .base = 1000 , .exponent = 6},
+    {.id = "eb" , .base = 1024 , .exponent = 6},
+    {.id = "g"  , .base = 1000 , .exponent = 3},
+    {.id = "gb" , .base = 1024 , .exponent = 3},
+    {.id = "k"  , .base = 1000 , .exponent = 1},
+    {.id = "kb" , .base = 1024 , .exponent = 1},
+    {.id = "m"  , .base = 1000 , .exponent = 2},
+    {.id = "mb" , .base = 1024 , .exponent = 2},
+    {.id = "p"  , .base = 1000 , .exponent = 5},
+    {.id = "pb" , .base = 1024 , .exponent = 5},
+    {.id = "t"  , .base = 1000 , .exponent = 4},
+    {.id = "tb" , .base = 1024 , .exponent = 4},
+    {.id = "w"  , .base = 2    , .exponent = 1} 
+};
+
+typedef struct FormatSpec FormatSpec;
+
+static const int SIZE_FORMAT_TABLE_N = sizeof(SIZE_FORMAT_TABLE) / sizeof(FormatSpec);
+
+static int size_format_error(const char **error, const char *msg) {
+    if(error) {
+        *error = msg;
+    }
+    return 0;
+}
+
+static int compare_spec_elem(const void * fmt_a, const void * fmt_b) {
+    return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
+}
+
+guint64 size_string_to_bytes(const char *size_spec, const char **error) {
+    if (size_spec == NULL) {
+        return size_format_error(error, "Input size is NULL");
+    }
+
+    char * format = NULL;
+    long double decimal = strtold(size_spec, &format);
+
+    if (decimal == 0 && format == size_spec) {
+        return size_format_error(error, "This does not look like a number");
+    } else if (decimal < 0) {
+        return size_format_error(error, "Negativ sizes are no good idea");
+    } else if (*format) {
+        format = g_strstrip(format);
+    } else {
+        return round(decimal);
+    }
+
+    FormatSpec key = {.id = format};
+    FormatSpec* found = bsearch(
+        &key, SIZE_FORMAT_TABLE,
+        SIZE_FORMAT_TABLE_N, sizeof(FormatSpec),
+        compare_spec_elem
+    );
+
+    if (found != NULL) {
+        /* No overflow check */
+        return decimal * powl(found->base, found->exponent);
+    } else {
+        return size_format_error(error, "Given format specifier not found");
+    }
+}
+
+/* Size spec parsing implemented by qitta.
+ * (http://github.com/qitta)
+ * Thanks and go blame him if this breaks!
+ */
+static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min, guint64 *max, const char **error) {
+    *min = 0;
+    *max = G_MAXULONG;
+
+    const char * tmp_error = NULL;
+    gchar **split = g_strsplit(range_spec, "-", 2);
+
+    if(split[0] != NULL) {
+        *min = size_string_to_bytes(split[0], &tmp_error);
+    }
+
+    if(split[1] != NULL && tmp_error == NULL) {
+        *max= size_string_to_bytes(split[1], &tmp_error);
+    }
+
+    g_strfreev(split);
+
+    if(*max < *min) {
+        tmp_error = "Max is smaller than min";
+    }
+
+    if(error != NULL) {
+        *error = tmp_error;
+    }
+
+    return (tmp_error == NULL);
+}
+
+static void parse_limit_sizes(RmSession *session, char *range_spec) {
+    const char *error = NULL;
+    if(!size_range_string_to_bytes(
+            range_spec, 
+            &session->settings->minsize,
+            &session->settings->maxsize,
+            &error
+    )) {
+        g_printerr(RED"Error while parsing --limit: %s\n", error);
+        die(session, EXIT_FAILURE);
+    }
 }
 
 static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
@@ -261,45 +365,45 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
 
     while(1) {
         static struct option long_options[] = {
-            {"threads",        required_argument, 0, 't'},
-            {"mode",           required_argument, 0, 'm'},
-            {"maxdepth",       required_argument, 0, 'd'},
-            {"cmd_dup",        required_argument, 0, 'c'},
-            {"cmd_orig",       required_argument, 0, 'C'},
-            {"limit",          required_argument, 0, 'z'},
-            {"output",         required_argument, 0, 'o'},
-            {"sortcriteria",   required_argument, 0, 'D'},
-            {"verbosity",      no_argument,       0, 'v'},
-            {"emptyfiles",     no_argument,       0, 'k'},
-            {"no-emptyfiles",  no_argument,       0, 'K'},
-            {"emptydirs",      no_argument,       0, 'y'},
-            {"color",          no_argument,       0, 'b'},
-            {"no-color",       no_argument,       0, 'B'},
-            {"no-emptydirs",   no_argument,       0, 'Y'},
-            {"namecluster",    no_argument,       0, 'n'},
-            {"no-namecluster", no_argument,       0, 'N'},
-            {"nonstripped",    no_argument,       0, 'a'},
-            {"no-nonstripped", no_argument,       0, 'A'},
-            {"no-hidden",      no_argument,       0, 'g'},
-            {"hidden",         no_argument,       0, 'G'},
-            {"badids",         no_argument,       0, 'l'},
-            {"no-badids",      no_argument,       0, 'L'},
-            {"dups",           no_argument,       0, 'u'},
-            {"no-dups",        no_argument,       0, 'U'},
-            {"matchcase",      no_argument,       0, 'e'},
-            {"ignorecase",     no_argument,       0, 'E'},
-            {"followlinks",    no_argument,       0, 'f'},
-            {"ignorelinks",    no_argument,       0, 'F'},
-            {"samepart",       no_argument,       0, 's'},
-            {"allpart",        no_argument,       0, 'S'},
-            {"paranoid",       no_argument,       0, 'p'},
-            {"naive",          no_argument,       0, 'P'},
-            {"keepallorig",    no_argument,       0, 'O'},
-            {"mustmatchorig",  no_argument,       0, 'M'},
-            {"invertorig",     no_argument,       0, 'Q'},
-            {"findhardlinked", no_argument,       0, 'H'},
-            {"confirm-settings", no_argument,      0, 'q'},
-            {"help",           no_argument,       0, 'h'},
+            {"threads"          ,  required_argument ,  0 ,  't'},
+            {"mode"             ,  required_argument ,  0 ,  'm'},
+            {"maxdepth"         ,  required_argument ,  0 ,  'd'},
+            {"cmd_dup"          ,  required_argument ,  0 ,  'c'},
+            {"cmd_orig"         ,  required_argument ,  0 ,  'C'},
+            {"limit"            ,  required_argument ,  0 ,  'z'},
+            {"output"           ,  required_argument ,  0 ,  'o'},
+            {"sortcriteria"     ,  required_argument ,  0 ,  'D'},
+            {"verbosity"        ,  no_argument       ,  0 ,  'v'},
+            {"emptyfiles"       ,  no_argument       ,  0 ,  'k'},
+            {"no-emptyfiles"    ,  no_argument       ,  0 ,  'K'},
+            {"emptydirs"        ,  no_argument       ,  0 ,  'y'},
+            {"color"            ,  no_argument       ,  0 ,  'b'},
+            {"no-color"         ,  no_argument       ,  0 ,  'B'},
+            {"no-emptydirs"     ,  no_argument       ,  0 ,  'Y'},
+            {"namecluster"      ,  no_argument       ,  0 ,  'n'},
+            {"no-namecluster"   ,  no_argument       ,  0 ,  'N'},
+            {"nonstripped"      ,  no_argument       ,  0 ,  'a'},
+            {"no-nonstripped"   ,  no_argument       ,  0 ,  'A'},
+            {"no-hidden"        ,  no_argument       ,  0 ,  'g'},
+            {"hidden"           ,  no_argument       ,  0 ,  'G'},
+            {"badids"           ,  no_argument       ,  0 ,  'l'},
+            {"no-badids"        ,  no_argument       ,  0 ,  'L'},
+            {"dups"             ,  no_argument       ,  0 ,  'u'},
+            {"no-dups"          ,  no_argument       ,  0 ,  'U'},
+            {"matchcase"        ,  no_argument       ,  0 ,  'e'},
+            {"ignorecase"       ,  no_argument       ,  0 ,  'E'},
+            {"followlinks"      ,  no_argument       ,  0 ,  'f'},
+            {"ignorelinks"      ,  no_argument       ,  0 ,  'F'},
+            {"samepart"         ,  no_argument       ,  0 ,  's'},
+            {"allpart"          ,  no_argument       ,  0 ,  'S'},
+            {"paranoid"         ,  no_argument       ,  0 ,  'p'},
+            {"naive"            ,  no_argument       ,  0 ,  'P'},
+            {"keepallorig"      ,  no_argument       ,  0 ,  'O'},
+            {"mustmatchorig"    ,  no_argument       ,  0 ,  'M'},
+            {"invertorig"       ,  no_argument       ,  0 ,  'Q'},
+            {"findhardlinked"   ,  no_argument       ,  0 ,  'H'},
+            {"confirm-settings" ,  no_argument       ,  0 ,  'q'},
+            {"help"             ,  no_argument       ,  0 ,  'h'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
@@ -419,7 +523,8 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'q':
             sets->confirm_settings = 1;
             break;
-        case 'z':
+        case 'z': 
+            sets->limits_specified = 1;
             parse_limit_sizes(session, optarg);
             break;
         case 'l':
@@ -517,11 +622,13 @@ void die(RmSession *session, int status) {
     RmSettings *sets = session->settings;
 
     /* Free mem */
-    for(int i = 0; sets->paths[i]; ++i) {
-        g_free(sets->paths[i]);
+    if(sets->paths) {
+        for(int i = 0; sets->paths[i]; ++i) {
+            g_free(sets->paths[i]);
+        }
+        g_free(sets->paths);
     }
 
-    g_free(sets->paths);
     g_free(sets->is_ppath);
 
     if(status) {
@@ -563,7 +670,7 @@ char rmlint_echo_settings(RmSettings *settings) {
     }
 
     if ((settings->confirm_settings) && (settings->verbosity < 3))
-        settings->verbosity = 3; /* need verbosity at least 3 if user is going to confirm settings*/
+        settings->verbosity = G_LOG_LEVEL_INFO; /* need verbosity at least 3 if user is going to confirm settings*/
 
     info (BLU"Running rmlint with the following settings:\n"NCO);
     info ("(Note "BLU"[*]"NCO" hints below to change options)\n"NCO);
@@ -624,14 +731,15 @@ char rmlint_echo_settings(RmSettings *settings) {
 
     info("Filtering search based on:\n");
 
-    if ( (settings->minsize != -1) && (settings->maxsize != -1) )
-        info("\tFile size between %i and %i bytes\n", settings->minsize, settings->maxsize);
-    else if (settings->minsize != -1)
-        info("\tFile size at least %i bytes\n", settings->minsize);
-    else if (settings->maxsize != -1)
-        info("\tFile size no bigger than %i bytes\n", settings->maxsize);
-    else
-        info("\tNo file size limits [-z \"min;max\"]\n");
+    if (settings->limits_specified) {
+        char size_buf_min[128], size_buf_max[128];
+        size_to_human_readable(settings->minsize, size_buf_min, sizeof(size_buf_min));
+        size_to_human_readable(settings->maxsize, size_buf_max, sizeof(size_buf_max));
+        info("\tFile size between %s and %s bytes\n", size_buf_min, size_buf_max);
+
+    } else {
+        info("\tNo file size limits [-z \"min-max\"]\n");
+    }
     if (settings->must_match_original) {
         info("\tDuplicates must have at least one member in the "GRE"(orig)"NCO" paths indicated above\n");
         if (!has_ppath)

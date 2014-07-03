@@ -45,7 +45,12 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
         } else if(ent->fts_statp->st_size == 0) {
             file_type = TYPE_EFILE;
         } else {
-            file_type = TYPE_DUPE_CANDIDATE;
+            guint64 file_size = ent->fts_statp->st_size;
+            if(!settings->limits_specified || (settings->minsize <= file_size && file_size <= settings->maxsize)) {
+                file_type = TYPE_DUPE_CANDIDATE;
+            } else {
+                return 0;
+            }
         }
     }
 
@@ -217,10 +222,8 @@ int rmlint_search_tree(RmSession *session) {
     /* Set Bit flags for fts options.  */
     int bit_flags = 0;
     if (!settings->followlinks) {
-        g_printerr("no links\n");
         bit_flags |= FTS_COMFOLLOW | FTS_PHYSICAL;
     } else {
-        g_printerr("Following links\n");
         bit_flags |= FTS_LOGICAL;
     }
 

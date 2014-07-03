@@ -25,5 +25,6 @@
 #include "defs.h"
 
 void start_processing(RmSession *session);
+void size_to_human_readable(guint64 num, char *in, size_t len);
 
 #endif
