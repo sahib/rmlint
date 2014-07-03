@@ -631,7 +631,7 @@ char rmlint_echo_settings(RmSettings *settings) {
     else if (settings->maxsize != -1)
         info("\tFile size no bigger than %i bytes\n", settings->maxsize);
     else
-        info("\tNo file size limits [-z \"min;max\"]");
+        info("\tNo file size limits [-z \"min;max\"]\n");
     if (settings->must_match_original) {
         info("\tDuplicates must have at least one member in the "GRE"(orig)"NCO" paths indicated above\n");
         if (!has_ppath)

@@ -152,7 +152,9 @@ typedef struct RmSettings {
     short depth;
 } RmSettings;
 
-typedef struct RmFile {
+typedef struct _RmFile RmFile;
+
+struct _RmFile {
     unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
     unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
@@ -171,7 +173,8 @@ typedef struct RmFile {
 
     GList *list_node;
     GSequenceIter *file_group;
-} RmFile;
+    RmFile *hardlinked_original;
+};
 
 typedef struct RmFileList {
     GSequence *size_groups;

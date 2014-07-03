@@ -86,8 +86,11 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
 }
 
 /* Compares the "fp" array of the RmFile a and b */
-static int cmp_fingerprints(RmFile *a, RmFile *b) {
+static int cmp_fingerprints(RmFile *_a, RmFile *_b) {
     int i, j;
+    RmFile *a = ( _a->hardlinked_original ? _a->hardlinked_original : _a );
+    RmFile *b = ( _b->hardlinked_original ? _b->hardlinked_original : _b );
+
     /* compare both fp-arrays */
     for(i = 0; i < 2; i++) {
         for(j = 0; j < MD5_LEN; j++) {
@@ -107,7 +110,9 @@ static int cmp_fingerprints(RmFile *a, RmFile *b) {
 }
 
 /* Compare criteria of checksums */
-static int cmp_f(RmFile *a, RmFile *b) {
+static int cmp_f(RmFile *_a, RmFile *_b) {
+    RmFile *a = ( _a->hardlinked_original ? _a->hardlinked_original : _a );
+    RmFile *b = ( _b->hardlinked_original ? _b->hardlinked_original : _b );
     int i, fp_i, x;
     int is_empty[2][3] = { {1, 1, 1}, {1, 1, 1} };
     for(i = 0; i < MD5_LEN; i++) {
@@ -137,8 +142,8 @@ static int cmp_f(RmFile *a, RmFile *b) {
     /* check for empty checkusm AND fingerprints - refuse and warn */
     for(x = 0; x < 2; x++) {
         if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2]) {
-            warning(YEL"WARN: "NCO"Refusing file with empty checksum and empty fingerprint.\n%s %d\n%s %d\n",
-                    a->path, a->lint_type, b->path, b->lint_type );
+            warning(YEL"\nWARN: "NCO"Refusing file with empty checksum and empty fingerprint.  Trying to compare:\n%s (lint type %d)\n%s (lint type %d)\n",
+                    _a->path, _a->lint_type, _b->path, _b->lint_type );
             return 1;
         }
     }
@@ -220,7 +225,14 @@ static void *cksum_cb(void *vp) {
 
     /* Iterate over all files in group */
     for(GList *iter = tag->group->head; iter; iter = iter->next) {
-        md5_file(tag->session, iter->data);
+        RmFile *iter_file = iter->data;
+        if (!iter_file->hardlinked_original)
+            /* do checksum unless this is a hardlink of a file which is
+             * already going to be checksummed */
+            md5_file(tag->session, iter->data);
+        /* FUTURE OPTIMISATION: as-is, we _always_ do checksum of _one_ file
+         * in each a group of hardlinks; but if the group contains _only_
+         * hardlinks then we in theory don't need to checksum _any_ of them  */
     }
 
     /* Do not use g_queue_free(), that would delete all GLists in it */
@@ -246,7 +258,11 @@ static void build_fingerprints (RmSession *session, GQueue *group) {
     /* Calc fingerprints  */
     for(GList *iter = group->head; iter; iter = iter->next) {
         /* see md5.c for explanations */
-        md5_fingerprint(session, iter->data, grp_sz);
+        RmFile *iter_file = iter->data;
+        if (!iter_file->hardlinked_original)
+            /* do fingerprint unless this is a hardlink of a file which is
+             * already going to be fingerprinted */
+            md5_fingerprint(session, iter_file, grp_sz);
     }
 }
 
