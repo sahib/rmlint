@@ -241,6 +241,5 @@ int rmlint_search_tree(RmSession *session) {
         cpindex++;
     }
 
-    rm_file_list_print(session->list);
     return numfiles;
 }
