@@ -892,7 +892,7 @@ int rmlint_main(RmSession *session) {
      * The filter alorithms requires the list to be size-sorted,
      * so it can easily filter unique sizes, and build "groups"
      * */
-    info("Now finding easy lint..%c", session->settings->verbosity > 4 ? '.' : '\n');
+    info("Now finding easy lint...\n");
 
     /* Apply the prefilter and outsort inique sizes */
     start_processing(session);

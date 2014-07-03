@@ -454,7 +454,7 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
         RmFile *fi = i->data;
         if(!fi->filter) {
             /* original(s) of a duplicate set*/
-            if((sets->mode == 1 || sets->mode == 4 || (sets->mode == 5 && sets->cmd_orig == NULL && sets->cmd_path == NULL)) && sets->verbosity > 1) {
+            if(sets->mode == 1 || sets->mode == 4 || (sets->mode == 5 && sets->cmd_orig == NULL && sets->cmd_path == NULL)) {
                 if(print_newline) {
                     warning("\n");
                     print_newline = false;
@@ -481,11 +481,7 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
                 } else {
                     warning(YEL"   %-1s "NCO, "rm");
                 }
-                if(sets->verbosity > 1) {
-                    error("%s\n", fi->path);
-                } else {
-                    error("   rm %s\n", fi->path);
-                }
+                error("%s\n", fi->path);
             }
             write_to_log(session, fi, false, original);
             session->dup_counter++;

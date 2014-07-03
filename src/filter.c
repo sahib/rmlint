@@ -559,7 +559,7 @@ static int find_double_bases(RmSession *session) {
                     && fj->lint_type != TYPE_BASE
               ) {
                 if(header_printed) {
-                    error("\n%s#"NCO" Double basename(s):\n", (sets->verbosity > 1) ? GRE : NCO);
+                    error("\n%s#"NCO" Double basename(s):\n", GRE);
                     header_printed = false;
                 }
 
@@ -653,22 +653,15 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
         }
 
         if(flag != file->lint_type) {
-            if(sets->verbosity > 1) {
-                error(YEL"\n# "NCO);
-            } else {
-                error("\n# ");
-            }
-
+            error(YEL"\n# "NCO);
             error("%s", TYPE_TO_DESCRIPTION[file->lint_type]);
             error(": \n"NCO);
             flag = file->lint_type;
         }
 
-        if(sets->verbosity > 1) {
-            error(GRE);
-        }
-
+        error(GRE);
         error("   ");
+
         const char *format = TYPE_TO_COMMAND[file->lint_type];
         switch(file->lint_type) {
         case TYPE_BADUID:
@@ -684,9 +677,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
             error("%s", format);
         }
 
-        if(sets->verbosity > 1) {
-            error(NCO);
-        }
+        error(NCO);
         error(" %s\n", file->path);
         if(sets->output) {
             write_to_log(session, file, false, NULL);
@@ -729,14 +720,10 @@ void start_processing(RmSession *session) {
     }
 
     info("Now attempting to find duplicates. This may take a while...\n");
-    /* actually this was done already above while building the list */
     info("Now removing files with unique sizes from list...");
     info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
-    // info(NCO"\nNow removing "GRE"%ld"NCO" empty files / bad links / junk names from list...\n"NCO, emptylist.len);
-
-    info(" done. \nNow doing fingerprints and full checksums.%c\n", settings->verbosity > 4 ? '.' : '\n');
-
-    error("%s Duplicate(s):", (settings->verbosity > 1) ? YEL"#"NCO : "#");
+    info(" done. \nNow doing fingerprints and full checksums.\n");
+    error("%s Duplicate(s):", YEL"#"NCO);
 
     /* Groups are splitted, now give it to the scheduler
      * The scheduler will do another filterstep, build checkusm
