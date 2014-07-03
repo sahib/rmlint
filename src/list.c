@@ -14,7 +14,11 @@
 *  You should have received a copy of the GNU General Public License
 *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
-** Author: Christopher Pahl <sahib@online.de>:
+** Authors:
+ *
+ *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+ *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+ *
 ** Hosted on http://github.com/sahib/rmlint
 *
 **/
