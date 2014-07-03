@@ -104,7 +104,6 @@ static void print_help(void) {
             "\t\t\t\tlist\t- (RECOMMENDED) Lists found files & creates executable script to carry out\n"
             "\t\t\t\t\t actual removal (or other command given by -c/-C).\n"
             "\t\t\t\tlink\t- Replace file with a symlink to original.\n"
-            "\t\t\t\task\t- Ask for each file what to do.\n"
             "\t\t\t\tnoask\t- Full removal without asking.\n"
             "\t\t\t\tcmd\t- Takes the command given by -c/-C and executes it on the duplicate/original (careful!).\n"
             "\t\t\t\tDefault:\tlist\n\n"
@@ -155,7 +154,7 @@ static void print_help(void) {
 
 /* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
 void rmlint_set_default_settings(RmSettings *pset) {
-    pset->mode                  = 1;                  /* list only    */
+    pset->mode                  = RM_MODE_LIST;       /* list only    */
     pset->paranoid              = 0;                  /* dont be bush */
     pset->depth                 = 0;                  /* inf depth    */
     pset->followlinks           = 0;                  /* fol. link    */
@@ -543,23 +542,21 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'm':
             sets->mode = 0;
             if(!strcasecmp(optarg, "list")) {
-                sets->mode = 1;
-            }
-            if(!strcasecmp(optarg, "ask")) {
-                sets->mode = 2;
+                sets->mode = RM_MODE_LIST;
             }
             if(!strcasecmp(optarg, "noask")) {
-                sets->mode = 3;
+                sets->mode = RM_MODE_NOASK;
             }
             if(!strcasecmp(optarg, "link")) {
-                sets->mode = 4;
+                sets->mode = RM_MODE_LINK;
             }
             if(!strcasecmp(optarg, "cmd")) {
-                sets->mode = 5;
+                sets->mode = RM_MODE_CMD;
             }
+
             if(!sets->mode) {
                 error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
-                error("       Available modes are: ask | list | link | noask | cmd\n");
+                error("       Available modes are: list | link | noask | cmd\n");
                 die(session, EXIT_FAILURE);
                 return 0;
             }
@@ -790,24 +787,20 @@ char rmlint_echo_settings(RmSettings *settings) {
     info("\t      "RED"but"NCO" other lint in "GRE"(orig)"NCO" paths may still be deleted\n");
 
     /*---------------- action mode ---------------*/
-    if (settings->mode == 1) {
-        /*same mode for duplicates and everything else*/
+    if (settings->mode == RM_MODE_LIST) {
+        /* same mode for duplicates and everything else */
         info ("Action for all Lint types:\n");
     } else {
-        /*different mode for duplicated vs everything else*/
+        /* different mode for duplicated vs everything else */
         info("Action for Duplicates:\n\t");
-        // TODO: Enumerate this.
         switch (settings->mode) {
-        case 2:
-            info("Ask user what to do with each file\n");
-            break;
-        case 3:
+        case RM_MODE_NOASK:
             info(RED"Delete files without asking\n"NCO);
             break;
-        case 4:
+        case RM_MODE_LINK:
             info(YEL"Replace duplicates with symlink to original\n"NCO);
             break;
-        case 5:
+        case RM_MODE_CMD:
             info(YEL"Execute command:\n\t\tdupe:'%s'\n\t\torig:'%s'\n"NCO, settings->cmd_path, settings->cmd_orig);
             break;
         default:
@@ -860,7 +853,7 @@ int rmlint_main(RmSession *session) {
     /* Used only for infomessage */
     session->total_files = 0;
 
-    if(session->settings->mode == 5) {
+    if(session->settings->mode == RM_MODE_CMD) {
         if(session->settings->cmd_orig) {
             if(check_cmd(session->settings->cmd_orig) == 0) {
                 die(session, EXIT_FAILURE);

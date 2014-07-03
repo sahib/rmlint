@@ -228,10 +228,8 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
 
     /* What set->mode are we in? */
     switch(sets->mode) {
-    case 1:
-    case 2:
-        break;
-    case 3: {
+    case RM_MODE_LIST:
+    case RM_MODE_NOASK: {
         /* Just remove it */
         if(path == NULL) {
             break;
@@ -240,7 +238,7 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
         remfile(path);
     }
     break;
-    case 4: {
+    case RM_MODE_LINK: {
         /* Replace the file with a neat symlink */
         if(path == NULL) {
             break;
@@ -261,7 +259,7 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
         }
     }
     break;
-    case 5: {
+    case RM_MODE_CMD: {
         /* Exec a command on it */
         int ret = 0;
         char *tmp_opath = strsubs(orig, "'", "'\"'\"'");
@@ -454,12 +452,16 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
         RmFile *fi = i->data;
         if(!fi->filter) {
             /* original(s) of a duplicate set*/
-            if(sets->mode == 1 || sets->mode == 4 || (sets->mode == 5 && sets->cmd_orig == NULL && sets->cmd_path == NULL)) {
+            if(0
+                || sets->mode == RM_MODE_LIST 
+                || sets->mode == RM_MODE_LINK 
+                || (sets->mode == RM_MODE_CMD && sets->cmd_orig == NULL && sets->cmd_path == NULL)
+            ) {
                 if(print_newline) {
                     warning("\n");
                     print_newline = false;
                 }
-                if(sets->mode != 4) {
+                if(sets->mode != RM_MODE_LINK) {
                     error(GRE"   ls "NCO"%s\n", fi->path);
                 }
             }
@@ -474,7 +476,10 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
         RmFile *fi = i->data;
         if(fi->filter) {
             /* duplicates(s) of a duplicate sets*/
-            if(sets->mode == 1 || (sets->mode == 5 && !sets->cmd_orig && !sets->cmd_path)) {
+            if(0 
+                || sets->mode == RM_MODE_LIST
+                || (sets->mode == RM_MODE_CMD && !sets->cmd_orig && !sets->cmd_path)
+            ) {
                 if(sets->paranoid) {
                     /* If byte by byte was succesful print a blue "x" */
                     warning(BLU"   %-1s "NCO, "rm");

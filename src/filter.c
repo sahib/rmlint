@@ -753,7 +753,7 @@ void start_processing(RmSession *session) {
             lintbuf, session->total_lint_size
         );
     }
-    if((settings->mode == 1 || settings->mode == 2) && session->dup_counter) {
+    if(settings->mode == RM_MODE_LIST && session->dup_counter) {
         warning(RED"=> "NCO"Nothing removed yet!\n");
     }
     warning("\n");

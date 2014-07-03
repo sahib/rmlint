@@ -122,9 +122,16 @@ typedef enum RmLintType {
 						 * that "other" lint gets handled first       */
 } RmLintType;
 
+typedef enum RmHandleMode {
+    RM_MODE_LIST = 1,
+    RM_MODE_NOASK = 3,
+    RM_MODE_LINK = 4,
+    RM_MODE_CMD = 5
+} RmHandleMode;
+
 /* all available settings see rmlint -h */
 typedef struct RmSettings {
-    char mode;
+    RmHandleMode mode;
     char color;
     char collide;
     char samepart;

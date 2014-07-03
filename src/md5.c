@@ -58,7 +58,7 @@
    I don't understand the code myself...
 */
 /* forward declaration */
-static void Transform();
+static void Transform(guint64 *buf, guint64 *in);
 
 static unsigned char PADDING[64] = {
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -103,8 +103,7 @@ static unsigned char PADDING[64] = {
         (a) += (b); \
     }
 
-static void MD5Init(mdContext)
-MD5_CTX *mdContext;
+static void MD5Init(MD5_CTX *mdContext)
 {
     mdContext->i[0] = mdContext->i[1] = (guint64)0;
     /* Load magic initialization constants.
@@ -115,10 +114,7 @@ MD5_CTX *mdContext;
     mdContext->buf[3] = (guint64)0x10325476;
 }
 
-static void MD5Update(mdContext, inBuf, inLen)
-MD5_CTX *mdContext;
-unsigned char *inBuf;
-unsigned int inLen;
+static void MD5Update(MD5_CTX *mdContext, unsigned char *inBuf, unsigned int inLen)
 {
     guint64 in[16];
     int mdi;
@@ -147,8 +143,7 @@ unsigned int inLen;
     }
 }
 
-static void MD5Final(mdContext)
-MD5_CTX *mdContext;
+static void MD5Final(MD5_CTX *mdContext)
 {
     guint64 in[16];
     int mdi;
@@ -183,9 +178,7 @@ MD5_CTX *mdContext;
 
 /* Basic MD5 step. Transform buf based on in.
  */
-static void Transform(buf, in)
-guint64 *buf;
-guint64 *in;
+static void Transform(guint64 *buf, guint64 *in)
 {
     guint64 a = buf[0], b = buf[1], c = buf[2], d = buf[3];
     /* Round 1 */
@@ -411,7 +404,7 @@ static void md5_file_fread(G_GNUC_UNUSED RmSession *session, RmFile *file) {
    the 8 byte are stored in raw form
 */
 
-static void md5_fingerprint_mmap(RmSession *session, RmFile *file, const guint64 readsize) {
+static void md5_fingerprint_mmap(G_GNUC_UNUSED RmSession *session, RmFile *file, const guint64 readsize) {
     int bytes = 0;
     int pF = open(file->path, MD5_FILE_FLAGS);
     unsigned char *f_map = NULL;
@@ -451,7 +444,7 @@ static void md5_fingerprint_mmap(RmSession *session, RmFile *file, const guint64
 
 /* ------------------------------ */
 
-static void md5_fingerprint_fread(RmSession *session, RmFile *file, const guint64 readsize) {
+static void md5_fingerprint_fread(G_GNUC_UNUSED RmSession *session, RmFile *file, const guint64 readsize) {
     int bytes = 0;
     bool unlock = true;
     FILE *pF = fopen(file->path, "re");
