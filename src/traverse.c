@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <pthread.h>
+
 #include <sys/stat.h>
 #include "list.h"
 #include "rmlint.h"
@@ -33,6 +35,7 @@
 #include "linttests.h"
 
 static int const MAX_EMPTYDIR_DEPTH = 100;
+
 
 static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnum, RmLintType file_type) {
     RmSettings *settings = session->settings;
@@ -87,10 +90,31 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
 /* Traverse the file hierarchies named in PATHS, the last entry of which
  * is NULL.  FTS_FLAGS controls how fts works.
  * Return true if successful.  */
-int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
+
+
+struct rm_traverse_path_buffer {
+    int  pathnum;
+    int fts_flags;
+    int numfiles;
+    RmSession *session;
+} rm_traverse_path_buffer;
+
+
+
+static void *traverse_path(void *threadarg) {
+
+    struct rm_traverse_path_buffer *traverse_path_args = threadarg;
+
+    RmSession *session = traverse_path_args->session;
+    pthread_mutex_lock(&session->threadlock);
+    pthread_mutex_unlock(&session->threadlock);
+
+    int  pathnum = traverse_path_args->pathnum;
+    int fts_flags = traverse_path_args->fts_flags;
+    traverse_path_args->numfiles = 0;
+
     RmSettings *settings = session->settings;
 
-    int numfiles = 0;
     char is_ppath = settings->is_ppath[pathnum];
     char *paths[2];
 
@@ -102,13 +126,13 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
         paths[1] = NULL;
     } else {
         error("Error: no paths defined for traverse_files");
-        numfiles = -1;
+        traverse_path_args->numfiles = -1;
         goto cleanup;
     }
 
     if ((ftsp = fts_open(paths, fts_flags, NULL)) == NULL) {
         error("fts_open failed");
-        numfiles = -1;
+        traverse_path_args->numfiles = -1;
         goto cleanup;
     }
 
@@ -116,7 +140,7 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
     chp = fts_children(ftsp, 0);
     if (chp == NULL) {
         warning("fts_children: can't initialise");
-        numfiles = -1;
+        traverse_path_args->numfiles = -1;
         goto cleanup;
     } else {
         char is_emptydir[MAX_EMPTYDIR_DEPTH];
@@ -156,7 +180,7 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
             case FTS_DP:        /* postorder directory */
                 if ((p->fts_level >= emptydir_stack_overflow) &&
                         (is_emptydir[ (p->fts_level + 1) % ( MAX_EMPTYDIR_DEPTH + 1 )] == 'E')) {
-                    numfiles += process_file(session, p, is_ppath, pathnum, TYPE_EDIR);
+                    traverse_path_args->numfiles += process_file(session, p, is_ppath, pathnum, TYPE_EDIR);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -167,7 +191,7 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 warning(RED"Warning: symlink without target: %s\n"NCO, p->fts_path);
-                numfiles += process_file(session, p, is_ppath, pathnum, TYPE_BLNK);
+                traverse_path_args->numfiles += process_file(session, p, is_ppath, pathnum, TYPE_BLNK);
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
             case FTS_W:         /* whiteout object */
@@ -184,7 +208,7 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /*current dir not empty*/
-                numfiles += process_file(session, p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
+                traverse_path_args->numfiles += process_file(session, p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
             default:
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
@@ -204,14 +228,19 @@ int traverse_path (RmSession *session, int  pathnum, int fts_flags) {
     }
     if (errno != 0) {
         error ("Error '%s': fts_read failed on %s", g_strerror(errno), ftsp->fts_path);
-        numfiles = -1;
+        traverse_path_args->numfiles = -1;
     }
 
     fts_close(ftsp);
 
 cleanup:
-    return numfiles;
+    pthread_mutex_lock(&session->threadlock);
+    session->activethreads--;
+    pthread_mutex_unlock(&session->threadlock);
+    pthread_exit(NULL);
 }
+
+
 
 /*--------------------------------------------------------------------*/
 /* Traverse file hierarchies based on settings contained in SETTINGS;
@@ -222,31 +251,53 @@ int rmlint_search_tree(RmSession *session) {
     RmSettings *settings = session->settings;
     int numfiles = 0;
     int cpindex = 0;
+    pthread_t *thread_ids = malloc(settings->num_paths * sizeof(pthread_t));
+    struct rm_traverse_path_buffer *thread_data = malloc(settings->num_paths * sizeof(rm_traverse_path_buffer));
 
     /* Set Bit flags for fts options.  */
-    int bit_flags = 0;
+    int bit_flags = FTS_NOCHDIR; /* TODO: only need this if multi-threading*/
     if (!settings->followlinks) {
         bit_flags |= FTS_COMFOLLOW | FTS_PHYSICAL;
     } else {
         bit_flags |= FTS_LOGICAL;
     }
 
+
     /* don't follow symlinks except those passed in command line */
     if (settings->samepart) {
         bit_flags |= FTS_XDEV;
     }
 
+
     while(settings->paths[cpindex] != NULL) {
         /* The path points to a dir - recurse it! */
-        info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...",
-             settings->paths[cpindex],
-             settings->is_ppath[cpindex] ? "" : "non-"
-            );
-        numfiles += traverse_path (session, cpindex, bit_flags);
-        info(" done: %d files added.\n", numfiles);
+        /*TODO: test if under threadcount limit*/
+        pthread_mutex_lock(&session->threadlock);
+        if ( session->activethreads < settings->threads ) {
+            thread_data[cpindex].session = session;
+            thread_data[cpindex].pathnum= cpindex;
+            thread_data[cpindex].fts_flags= bit_flags;
 
+            info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...\n",
+                 settings->paths[cpindex],
+                 settings->is_ppath[cpindex] ? "" : "non-"
+                );
+            //thread_ids = realloc(&thread_ids, sizeof(pthread_t)*(cpindex+1));
+            if (pthread_create(&thread_ids[cpindex], NULL, traverse_path, &thread_data[cpindex]))
+                error ("Error launching traverse_path thread");
+            else
+                session->activethreads++;
+            cpindex++;
+        }
+        pthread_mutex_unlock(&session->threadlock);
+    }
+    cpindex = 0;
+    while(settings->paths[cpindex] != NULL) {
+        //int num_files_from_thread;
+        pthread_join(thread_ids[cpindex], NULL); // (void**)&num_files_from_thread);
+        numfiles += thread_data[cpindex].numfiles;
         cpindex++;
     }
-
+    free(thread_data);
     return numfiles;
 }
