@@ -40,6 +40,8 @@
 #include <glib/gprintf.h>
 #include <glib/gstdio.h>
 
+#include <sys/time.h>
+
 #include "rmlint.h"
 #include "mode.h"
 #include "md5.h"
@@ -61,7 +63,7 @@ static void print_version(void) {
 static void print_help(void) {
     // TODO: Clean up helptext; rewrite man page.
     //       Or just write manpage do system("man rmlint") here.
-    fprintf(stderr, 
+    fprintf(stderr,
             "Syntax: rmlint [[//]TargetDir[s]] [File[s]] [Options]\n"
             "\nGeneral options:\n\n"
             "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
@@ -180,7 +182,7 @@ void rmlint_set_default_settings(RmSettings *pset) {
      * It controls wether 'other lint' is also    *
      * investigated to be replicas of other files */
     pset->collide                                    = 0;
-
+    pset->num_paths             = 0;
 }
 
 /* Check if this is the 'preferred' dir */
@@ -334,6 +336,7 @@ static bool add_path(RmSession *session, int index, const char *path) {
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
         settings->paths[index] = g_strdup(path);
         settings->paths[index + 1] = NULL;
+        settings->num_paths++;
         return TRUE;
     }
 }
@@ -579,6 +582,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         sets->paths[1] = NULL;
         sets->is_ppath = g_malloc0(sizeof(char));
         sets->is_ppath[0] = 0;
+        sets->num_paths++;
         if(!sets->paths[0]) {
             error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
             error("       Are you maybe in a dir that just had been removed?\n");
@@ -837,12 +841,17 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->list = rm_file_list_new();
     session->settings = settings;
     session->aborted = FALSE;
+    session->activethreads = 0; /*foreground thread not counted as 1*/
+    pthread_mutex_init(&session->threadlock , NULL);/*lock for manipulating activethreads var*/
 
     init_filehandler(session);
 }
 
 int rmlint_main(RmSession *session) {
     /* Used only for infomessage */
+    struct timeval start, end;
+    float secs_used;
+
     session->total_files = 0;
 
     if(session->settings->mode == RM_MODE_CMD) {
@@ -862,7 +871,15 @@ int rmlint_main(RmSession *session) {
         warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
         warning("      Take care of what you're doing!\n\n");
     }
+
+
+    gettimeofday(&start, NULL);
     session->total_files = rmlint_search_tree(session);
+    gettimeofday(&end, NULL);
+    secs_used=(float)(end.tv_sec - start.tv_sec) + (float)(end.tv_usec - start.tv_usec) / 1000000.0;
+
+    info ("List build time %.6f with %d files\n", secs_used, (int)session->total_files);
+
 
     if(session->total_files < 2) {
         warning("No files in cache to search through => No duplicates.\n");
