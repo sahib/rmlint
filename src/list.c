@@ -85,20 +85,27 @@ RmFileList *rm_file_list_new(void) {
     RmFileList *list = g_new0(RmFileList, 1);
     list->size_groups = g_sequence_new((GDestroyNotify)rm_file_list_destroy_queue);
     list->size_table = g_hash_table_new(g_direct_hash, g_direct_equal);
+    pthread_mutex_init(&list->lock, NULL);
     return list;
 }
 
 void rm_file_list_destroy(RmFileList *list) {
+    pthread_mutex_lock(&list->lock);
     g_sequence_free(list->size_groups);
     g_hash_table_unref(list->size_table);
+    pthread_mutex_unlock(&list->lock);
     g_free(list);
 }
 
 GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
-    return g_sequence_get_begin_iter(list->size_groups);
+    pthread_mutex_lock(&list->lock);
+    GSequenceIter *me = g_sequence_get_begin_iter(list->size_groups);
+    pthread_mutex_unlock(&list->lock);
+    return me;
 }
 
 static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
+    /*TODO: make of calling this thread safe by locking mutex*/
     const GQueue *qa = a, *qb = b;
     if(qa->head && qb->head) {
         RmFile *fa = qa->head->data, *fb = qb->head->data;
@@ -109,6 +116,9 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
 }
 
 void rm_file_list_append(RmFileList *list, RmFile *file) {
+
+    pthread_mutex_lock(&list->lock);
+
     GSequenceIter *old_iter = g_hash_table_lookup(
                                   list->size_table, GINT_TO_POINTER(file->fsize)
                               );
@@ -133,6 +143,9 @@ void rm_file_list_append(RmFileList *list, RmFile *file) {
         file->file_group = old_iter;
         file->list_node = old_group->head;
     }
+
+    pthread_mutex_unlock(&list->lock);
+
 }
 
 void rm_file_list_clear(GSequenceIter *iter) {
@@ -140,6 +153,7 @@ void rm_file_list_clear(GSequenceIter *iter) {
 }
 
 void rm_file_list_remove(G_GNUC_UNUSED RmFileList *list, RmFile *file) {
+    pthread_mutex_lock(&list->lock);
     GQueue *group = g_sequence_get(file->file_group);
     guint64 file_size = file->fsize;
 
@@ -150,9 +164,12 @@ void rm_file_list_remove(G_GNUC_UNUSED RmFileList *list, RmFile *file) {
         g_queue_free(group);
         g_hash_table_remove(list->size_table, GINT_TO_POINTER(file_size));
     }
+    pthread_mutex_unlock(&list->lock);
+
 }
 
 static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
+    /*TODO: make of calling this thread safe by locking mutex*/
     const RmFile *fa = a, *fb = b;
     if (fa->node != fb->node)
         return fa->node - fb->node;
