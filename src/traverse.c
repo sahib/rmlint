@@ -22,6 +22,7 @@
  * Hosted on http://github.com/sahib/rmlint
  *
  */
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -242,7 +243,8 @@ cleanup:
 static gpointer traverse_path_list(gpointer data) {
     guint64 numfiles = 0;
     for(GList * iter = data; iter; iter = iter->next) {
-        numfiles += traverse_path(iter->data);
+        RmTraversePathBuffer *buffer = iter->data;
+        numfiles += traverse_path(buffer);
     }
     g_list_free_full(data, g_free);
     pthread_exit(GINT_TO_POINTER(numfiles));
@@ -262,7 +264,7 @@ int rmlint_search_tree(RmSession *session) {
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     /* Set Bit flags for fts options.  */
-    int bit_flags = FTS_NOCHDIR; /* TODO: only need this if multi-threading*/
+    int bit_flags = 0 ; 
     if (!settings->followlinks) {
         bit_flags |= FTS_COMFOLLOW | FTS_PHYSICAL;
     } else {
@@ -288,6 +290,7 @@ int rmlint_search_tree(RmSession *session) {
         if(directories == NULL) {
             directories = g_list_prepend(directories, thread_data);
             g_hash_table_insert(thread_table, GINT_TO_POINTER(stat_buf.st_dev), directories);
+            g_atomic_int_inc(&session->activethreads);
         } else {
             directories = g_list_prepend(directories, thread_data);
         }
@@ -299,11 +302,17 @@ int rmlint_search_tree(RmSession *session) {
 
     g_hash_table_iter_init(&iter, thread_table);
     for(int idx = 0; g_hash_table_iter_next(&iter, &key, (gpointer) &value); idx++) {
+        /* If more threads are active, forbid calling chdir behind our back */
+        if(g_atomic_int_get(&session->activethreads) > 1) {
+            for(GList *iter = value; iter; iter = iter->next) {
+                RmTraversePathBuffer * buffer = iter->data;
+                buffer->fts_flags |= FTS_NOCHDIR;
+            }
+
+        }
         if (pthread_create(&thread_ids[idx], NULL, traverse_path_list, value)) {
             error ("Error launching traverse_path thread");
-        } else {
-            g_atomic_int_inc(&session->activethreads);
-        }
+        } 
     }
     
     for(int idx = 0; thread_ids[idx]; idx++) {
