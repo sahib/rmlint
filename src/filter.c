@@ -279,7 +279,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
     }
 
     RmSettings *set = session->settings;
-    gulong byte_size = rm_file_list_byte_size(group);
+    gulong byte_size = rm_file_list_byte_size(session->list, group);
 
     if(set->threads == 1 ||  byte_size < (2 * HASH_MTHREAD_SIZE)) {
         /* Just loop through this group and built the checksum */
@@ -295,7 +295,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
         ptr = lst = group->head;
 
         /* The refereces to all threads */
-        gulong byte_size = rm_file_list_byte_size(group);
+        gulong byte_size = rm_file_list_byte_size(session->list, group);
 
         size_t list_size = (byte_size / HASH_MTHREAD_SIZE + 2) * sizeof(pthread_t);
         pthread_t *thread_queue = malloc(list_size);
@@ -488,7 +488,7 @@ static void start_scheduler(RmSession *session) {
 
     while(!g_sequence_iter_is_end(iter)) {
         GQueue *group = g_sequence_get(iter);
-        gulong byte_size = rm_file_list_byte_size(group);
+        gulong byte_size = rm_file_list_byte_size(session->list, group);
 
         if(byte_size > THREAD_SHEDULER_MTLIMIT && sets->threads > 1) { /* Group exceeds limit */
             tags[nrun].group = group;
@@ -683,7 +683,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
             write_to_log(session, file, false, NULL);
         }
     }
-    rm_file_list_clear(first);
+    rm_file_list_clear(session->list, first);
 }
 
 /* This the actual main() of rmlint */
@@ -700,10 +700,10 @@ void start_processing(RmSession *session) {
     }
 
     GSequenceIter *first = rm_file_list_get_iter(list);
-    rm_file_list_sort_group(first, (GCompareDataFunc)cmp_sort_lint_type, NULL);
+    rm_file_list_sort_group(list, first, (GCompareDataFunc)cmp_sort_lint_type, NULL);
     GQueue *first_group = g_sequence_get(first);
 
-    if(rm_file_list_byte_size(first_group) == 0) {
+    if(rm_file_list_byte_size(session->list, first_group) == 0) {
         other_lint += g_queue_get_length(first_group);
         handle_other_lint(session, first, first_group);
     }

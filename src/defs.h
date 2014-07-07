@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <glib.h>
+#include <pthread.h>
 
 #include "config.h"
 #include "checksum.h"
@@ -150,6 +151,7 @@ typedef struct RmSettings {
     char listemptyfiles;
     char **paths;
     char *is_ppath;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
+    int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
     char *cmd_path;
     char *cmd_orig;
     char *output;
@@ -195,6 +197,7 @@ struct _RmFile {
 typedef struct RmFileList {
     GSequence *size_groups;
     GHashTable *size_table;
+    GRecMutex lock;
 } RmFileList;
 
 typedef struct RmUserGroupList {
@@ -213,6 +216,9 @@ typedef struct RmSession {
     FILE *log_out;
 
     RmUserGroupList **userlist;
+
+    guint64 activethreads;
+    pthread_mutex_t threadlock;
 
     volatile bool aborted;
 } RmSession;

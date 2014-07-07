@@ -34,7 +34,7 @@
 #include "linttests.h"
 
 RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum) {
-    RmFile *self = g_new0(RmFile, 1);
+    RmFile *self = g_slice_new0(RmFile);
 
     self->path = g_strdup(path);
     self->node = buf->st_ino;
@@ -74,7 +74,28 @@ RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is
 
 void rm_file_destroy(RmFile *file) {
     g_free(file->path);
-    g_free(file);
+    g_slice_free(RmFile, file);
+}
+
+void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest) {
+    g_rec_mutex_lock(&list->lock); {
+        rm_digest_finalize_binary(digest, file->checksum, _RM_HASH_LEN);
+    }
+    g_rec_mutex_unlock(&list->lock);
+}
+
+void rm_file_set_fingerprint(RmFileList *list, RmFile *file, guint index, RmDigest *digest) {
+    g_rec_mutex_lock(&list->lock); {
+        rm_digest_finalize_binary(digest, file->fp[index], _RM_HASH_LEN);
+    }
+    g_rec_mutex_unlock(&list->lock);
+}
+
+void rm_file_set_middle_bytes(RmFileList *list, RmFile *file, const char *bytes, gsize len) {
+    g_rec_mutex_lock(&list->lock); {
+        memcpy(file->bim, bytes, len);
+    }
+    g_rec_mutex_unlock(&list->lock);
 }
 
 static void rm_file_list_destroy_queue(GQueue *queue) {
@@ -82,20 +103,30 @@ static void rm_file_list_destroy_queue(GQueue *queue) {
 }
 
 RmFileList *rm_file_list_new(void) {
-    RmFileList *list = g_new0(RmFileList, 1);
+    RmFileList *list = g_slice_new0(RmFileList);
     list->size_groups = g_sequence_new((GDestroyNotify)rm_file_list_destroy_queue);
     list->size_table = g_hash_table_new(g_direct_hash, g_direct_equal);
+    g_rec_mutex_init(&list->lock);
     return list;
 }
 
 void rm_file_list_destroy(RmFileList *list) {
-    g_sequence_free(list->size_groups);
-    g_hash_table_unref(list->size_table);
-    g_free(list);
+    g_rec_mutex_lock(&list->lock); {
+        g_sequence_free(list->size_groups);
+        g_hash_table_unref(list->size_table);
+    }
+    g_rec_mutex_unlock(&list->lock);
+    g_rec_mutex_clear(&list->lock);
+    g_slice_free(RmFileList, list);
 }
 
 GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
-    return g_sequence_get_begin_iter(list->size_groups);
+    GSequenceIter *first = NULL;
+    g_rec_mutex_lock(&list->lock); {
+         first = g_sequence_get_begin_iter(list->size_groups);
+    }
+    g_rec_mutex_unlock(&list->lock);
+    return first;
 }
 
 static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
@@ -109,47 +140,56 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
 }
 
 void rm_file_list_append(RmFileList *list, RmFile *file) {
-    GSequenceIter *old_iter = g_hash_table_lookup(
-                                  list->size_table, GINT_TO_POINTER(file->fsize)
-                              );
+    g_rec_mutex_lock(&list->lock); {
+        GSequenceIter *old_iter = g_hash_table_lookup(
+                                      list->size_table, GINT_TO_POINTER(file->fsize)
+                                  );
 
-    g_assert(file);
+        g_assert(file);
 
-    if(old_iter == NULL) {
-        /* Insert a new group */
-        GQueue *old_group = g_queue_new();
+        if(old_iter == NULL) {
+            /* Insert a new group */
+            GQueue *old_group = g_queue_new();
 
-        g_queue_push_head(old_group, file);
-        file->list_node = old_group->head;
-        file->file_group = g_sequence_insert_sorted(
-                               list->size_groups, old_group, rm_file_list_cmp_file_size, NULL
-                           );
-        g_hash_table_insert(
-            list->size_table, GINT_TO_POINTER(file->fsize), file->file_group
-        );
-    } else {
-        GQueue *old_group = g_sequence_get(old_iter);
-        g_queue_push_head(old_group, file);
-        file->file_group = old_iter;
-        file->list_node = old_group->head;
+            g_queue_push_head(old_group, file);
+            file->list_node = old_group->head;
+            file->file_group = g_sequence_insert_sorted(
+                                   list->size_groups, old_group, rm_file_list_cmp_file_size, NULL
+                               );
+            g_hash_table_insert(
+                list->size_table, GINT_TO_POINTER(file->fsize), file->file_group
+            );
+        } else {
+            GQueue *old_group = g_sequence_get(old_iter);
+            g_queue_push_head(old_group, file);
+            file->file_group = old_iter;
+            file->list_node = old_group->head;
+        }
     }
+    g_rec_mutex_unlock(&list->lock);
 }
 
-void rm_file_list_clear(GSequenceIter *iter) {
-    g_sequence_remove(iter);
+void rm_file_list_clear(RmFileList *list, GSequenceIter *iter) {
+    g_rec_mutex_lock(&list->lock); {
+        g_sequence_remove(iter);
+    }
+    g_rec_mutex_unlock(&list->lock);
 }
 
 void rm_file_list_remove(G_GNUC_UNUSED RmFileList *list, RmFile *file) {
-    GQueue *group = g_sequence_get(file->file_group);
-    guint64 file_size = file->fsize;
+    g_rec_mutex_lock(&list->lock); {
+        GQueue *group = g_sequence_get(file->file_group);
+        guint64 file_size = file->fsize;
 
-    g_queue_delete_link(group, file->list_node);
-    rm_file_destroy(file);
+        g_queue_delete_link(group, file->list_node);
+        rm_file_destroy(file);
 
-    if(g_queue_get_length(group) == 0) {
-        g_queue_free(group);
-        g_hash_table_remove(list->size_table, GINT_TO_POINTER(file_size));
+        if(g_queue_get_length(group) == 0) {
+            g_queue_free(group);
+            g_hash_table_remove(list->size_table, GINT_TO_POINTER(file_size));
+        }
     }
+    g_rec_mutex_unlock(&list->lock);
 }
 
 static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
@@ -233,80 +273,105 @@ static void rm_file_list_count_pref_paths(GQueue *group, int *num_pref, int *num
 }
 
 RmFile *rm_file_list_iter_all(RmFileList *list, RmFile *previous) {
-    if(previous == NULL) {
-        if(rm_file_list_get_iter(list)) {
-            GQueue *group = g_sequence_get(rm_file_list_get_iter(list));
-            return group->head->data;
+    RmFile *result = NULL;
+    g_rec_mutex_lock(&list->lock); {
+        if(previous == NULL) {
+            if(rm_file_list_get_iter(list)) {
+                GQueue *group = g_sequence_get(rm_file_list_get_iter(list));
+                result = group->head->data;
+            } else {
+                result = NULL;
+            }
+        } else if(previous->list_node && previous->list_node->next) {
+            return previous->list_node->next->data;
         } else {
-            return NULL;
-        }
-    } else if(previous->list_node && previous->list_node->next) {
-        return previous->list_node->next->data;
-    } else {
-        GSequenceIter *next_pos = previous->file_group;
-        next_pos = g_sequence_iter_next(next_pos);
+            GSequenceIter *next_pos = previous->file_group;
+            next_pos = g_sequence_iter_next(next_pos);
 
-        /* Advance one group */
-        if(g_sequence_iter_is_end(next_pos)) {
-            /* That is the only occassion where NULL is returned
-             * with a non-empty list */
-            return NULL;
+            /* Advance one group */
+            if(g_sequence_iter_is_end(next_pos)) {
+                /* That is the only occassion where NULL is returned
+                 * with a non-empty list */
+                result = NULL;
+            } else {
+                GQueue *group = g_sequence_get(next_pos);
+                result = group->head->data;
+            }
         }
-
-        GQueue *group = g_sequence_get(next_pos);
-        return group->head->data;
     }
+    g_rec_mutex_unlock(&list->lock);
+
+    return result;
 }
 
 gsize rm_file_list_sort_groups(RmFileList *list, RmSettings *settings) {
     gsize removed_cnt = 0;
 
-    g_sequence_sort(list->size_groups, rm_file_list_cmp_file_size, NULL);
+    g_rec_mutex_lock(&list->lock); {
+        g_sequence_sort(list->size_groups, rm_file_list_cmp_file_size, NULL);
 
-    GSequenceIter *iter = rm_file_list_get_iter(list);
-    while(!g_sequence_iter_is_end(iter)) {
-        GQueue *queue = g_sequence_get(iter);
-        int num_pref = 0, num_nonpref = 0;
-        if(queue->length >= 2) {
-            rm_file_list_count_pref_paths(queue, &num_pref, &num_nonpref);
-            g_queue_sort(queue, rm_file_list_cmp_file, NULL);
-            removed_cnt += rm_file_list_remove_double_paths(
-                               list, queue, settings->find_hardlinked_dupes
-                           );
-        }
+        GSequenceIter *iter = rm_file_list_get_iter(list);
+        while(!g_sequence_iter_is_end(iter)) {
+            GQueue *queue = g_sequence_get(iter);
+            int num_pref = 0, num_nonpref = 0;
+            if(queue->length >= 2) {
+                rm_file_list_count_pref_paths(queue, &num_pref, &num_nonpref);
+                g_queue_sort(queue, rm_file_list_cmp_file, NULL);
+                removed_cnt += rm_file_list_remove_double_paths(
+                                   list, queue, settings->find_hardlinked_dupes
+                               );
+            }
 
-        /* Not important for duplicate finding, remove the isle */
-        if (
-            (queue->length < 2) ||
-            ((settings->must_match_original) && (num_pref == 0)) ||
-            ((settings->keep_all_originals) && (num_nonpref == 0) )
-        ) {
-            GSequenceIter *old_iter = iter;
-            iter = g_sequence_iter_next(iter);
-            g_sequence_remove(old_iter);
-        } else {
-            iter = g_sequence_iter_next(iter);
+            /* Not important for duplicate finding, remove the isle */
+            if (
+                (queue->length < 2) ||
+                ((settings->must_match_original) && (num_pref == 0)) ||
+                ((settings->keep_all_originals) && (num_nonpref == 0) )
+            ) {
+                GSequenceIter *old_iter = iter;
+                iter = g_sequence_iter_next(iter);
+                g_sequence_remove(old_iter);
+            } else {
+                iter = g_sequence_iter_next(iter);
+            }
         }
     }
+    g_rec_mutex_unlock(&list->lock);
 
     return removed_cnt;
 }
 
 gsize rm_file_list_len(RmFileList *list) {
-    return g_sequence_get_length(list->size_groups);
-}
+    gsize len = 0;
 
-gulong rm_file_list_byte_size(GQueue *group) {
-    if(group && group->head && group->head->data) {
-        RmFile *file = group->head->data;
-        return file->fsize * group->length;
+    g_rec_mutex_lock(&list->lock); {
+        len = g_sequence_get_length(list->size_groups);
     }
-    return 0;
+    g_rec_mutex_unlock(&list->lock);
+
+    return len;
 }
 
-void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpointer user_data) {
-    GQueue *queue = g_sequence_get(group);
-    g_queue_sort(queue, func, user_data);
+gulong rm_file_list_byte_size(RmFileList *list, GQueue *group) {
+    gulong size = 0;
+    g_rec_mutex_lock(&list->lock); {
+        if(group && group->head && group->head->data) {
+            RmFile *file = group->head->data;
+            size = file->fsize * group->length;
+        } else {
+            size = 0;
+        }
+    }
+    g_rec_mutex_unlock(&list->lock);
+    return size;
+}
+
+void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDataFunc func, gpointer user_data) {
+    g_rec_mutex_lock(&list->lock); {
+        GQueue *queue = g_sequence_get(group);
+        g_queue_sort(queue, func, user_data);
+    }
+    g_rec_mutex_unlock(&list->lock);
 }
 
 
@@ -320,8 +385,11 @@ static void rm_file_list_print_cb(gpointer data, gpointer G_GNUC_UNUSED user_dat
 }
 
 void rm_file_list_print(RmFileList *list) {
-    g_printerr("### PRINT ###\n");
-    g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
+    g_rec_mutex_lock(&list->lock); {
+        g_printerr("### PRINT ###\n");
+        g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
+    }
+    g_rec_mutex_unlock(&list->lock);
 }
 
 #if 0 /* Testcase */
