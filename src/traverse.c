@@ -276,6 +276,8 @@ int rmlint_search_tree(RmSession *session) {
         bit_flags |= FTS_XDEV;
     }
 
+    GList *first_used_list = NULL;
+
     for(int idx = 0; settings->paths[idx] != NULL; ++idx) {
         struct stat stat_buf;
         stat(settings->paths[idx], &stat_buf);
@@ -286,14 +288,23 @@ int rmlint_search_tree(RmSession *session) {
         thread_data->fts_flags = bit_flags;
 
         GList *directories = g_hash_table_lookup(thread_table, GINT_TO_POINTER(stat_buf.st_dev));
+        bool one_more = g_atomic_int_get(&session->activethreads) < (gint)settings->threads;
 
-        if(directories == NULL) {
+        if(directories == NULL && one_more) {
             directories = g_list_prepend(directories, thread_data);
             g_hash_table_insert(thread_table, GINT_TO_POINTER(stat_buf.st_dev), directories);
             g_atomic_int_inc(&session->activethreads);
-        } else {
+            if(first_used_list == NULL) {
+                first_used_list = directories;
+            }
+        } else if(directories != NULL) {
             directories = g_list_prepend(directories, thread_data);
+        } else {
+            /* append, so we do not need to change the head of the list */
+            first_used_list = g_list_append(first_used_list, thread_data);
         }
+
+        first_used_list = directories;
     }
 
     GHashTableIter iter;
@@ -308,8 +319,8 @@ int rmlint_search_tree(RmSession *session) {
                 RmTraversePathBuffer * buffer = iter->data;
                 buffer->fts_flags |= FTS_NOCHDIR;
             }
-
         }
+
         if (pthread_create(&thread_ids[idx], NULL, traverse_path_list, value)) {
             error ("Error launching traverse_path thread");
         } 
