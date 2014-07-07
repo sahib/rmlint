@@ -276,6 +276,9 @@ int rmlint_search_tree(RmSession *session) {
         bit_flags |= FTS_XDEV;
     }
 
+    /* Code below depends on this */
+    settings->threads = MIN(1, settings->threads);
+
     GList *first_used_list = NULL;
 
     for(int idx = 0; settings->paths[idx] != NULL; ++idx) {
