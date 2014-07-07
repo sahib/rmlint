@@ -217,7 +217,7 @@ typedef struct RmSession {
 
     RmUserGroupList **userlist;
 
-    guint64 activethreads;
+    gint activethreads;
     pthread_mutex_t threadlock;
 
     volatile bool aborted;

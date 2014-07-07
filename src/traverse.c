@@ -95,22 +95,17 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
 typedef struct RmTraversePathBuffer {
     int  pathnum;
     int fts_flags;
-    int numfiles;
     RmSession *session;
+    pthread_t *thread;
 } RmTraversePathBuffer;
 
 
-
-static void *traverse_path(void *threadarg) {
-    RmTraversePathBuffer *traverse_path_args = threadarg;
-
+static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
     RmSession *session = traverse_path_args->session;
-    pthread_mutex_lock(&session->threadlock);
-    pthread_mutex_unlock(&session->threadlock);
 
     int  pathnum = traverse_path_args->pathnum;
     int fts_flags = traverse_path_args->fts_flags;
-    traverse_path_args->numfiles = 0;
+    guint64 numfiles = 0;
 
     RmSettings *settings = session->settings;
 
@@ -119,19 +114,26 @@ static void *traverse_path(void *threadarg) {
 
     FTS *ftsp;
     FTSENT *p, *chp;
+
+
+    info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...\n",
+         settings->paths[pathnum],
+         settings->is_ppath[pathnum] ? "" : "non-"
+    );
+
     if (settings->paths[pathnum]) {
         /* convert into char** structure for passing to fts */
         paths[0] = settings->paths[pathnum];
         paths[1] = NULL;
     } else {
         error("Error: no paths defined for traverse_files");
-        traverse_path_args->numfiles = -1;
+        numfiles = -1;
         goto cleanup;
     }
 
     if ((ftsp = fts_open(paths, fts_flags, NULL)) == NULL) {
         error("fts_open failed");
-        traverse_path_args->numfiles = -1;
+        numfiles = -1;
         goto cleanup;
     }
 
@@ -139,7 +141,7 @@ static void *traverse_path(void *threadarg) {
     chp = fts_children(ftsp, 0);
     if (chp == NULL) {
         warning("fts_children: can't initialise");
-        traverse_path_args->numfiles = -1;
+        numfiles = -1;
         goto cleanup;
     } else {
         char is_emptydir[MAX_EMPTYDIR_DEPTH];
@@ -179,7 +181,7 @@ static void *traverse_path(void *threadarg) {
             case FTS_DP:        /* postorder directory */
                 if ((p->fts_level >= emptydir_stack_overflow) &&
                         (is_emptydir[ (p->fts_level + 1) % ( MAX_EMPTYDIR_DEPTH + 1 )] == 'E')) {
-                    traverse_path_args->numfiles += process_file(session, p, is_ppath, pathnum, TYPE_EDIR);
+                    numfiles += process_file(session, p, is_ppath, pathnum, TYPE_EDIR);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -190,7 +192,7 @@ static void *traverse_path(void *threadarg) {
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 warning(RED"Warning: symlink without target: %s\n"NCO, p->fts_path);
-                traverse_path_args->numfiles += process_file(session, p, is_ppath, pathnum, TYPE_BLNK);
+                numfiles += process_file(session, p, is_ppath, pathnum, TYPE_BLNK);
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
             case FTS_W:         /* whiteout object */
@@ -207,7 +209,7 @@ static void *traverse_path(void *threadarg) {
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /*current dir not empty*/
-                traverse_path_args->numfiles += process_file(session, p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
+                numfiles += process_file(session, p, is_ppath, pathnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
             default:
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
@@ -227,18 +229,24 @@ static void *traverse_path(void *threadarg) {
     }
     if (errno != 0) {
         error ("Error '%s': fts_read failed on %s", g_strerror(errno), ftsp->fts_path);
-        traverse_path_args->numfiles = -1;
+        numfiles = -1;
     }
 
     fts_close(ftsp);
 
 cleanup:
-    pthread_mutex_lock(&session->threadlock);
-    session->activethreads--;
-    pthread_mutex_unlock(&session->threadlock);
-    pthread_exit(NULL);
+    g_atomic_int_dec_and_test(&session->activethreads);
+    return numfiles;
 }
 
+static gpointer traverse_path_list(gpointer data) {
+    guint64 numfiles = 0;
+    for(GList * iter = data; iter; iter = iter->next) {
+        numfiles += traverse_path(iter->data);
+    }
+    g_list_free_full(data, g_free);
+    pthread_exit(GINT_TO_POINTER(numfiles));
+}
 
 
 /*--------------------------------------------------------------------*/
@@ -248,10 +256,10 @@ cleanup:
 
 int rmlint_search_tree(RmSession *session) {
     RmSettings *settings = session->settings;
-    int numfiles = 0;
-    int cpindex = 0;
-    pthread_t *thread_ids = g_malloc0(settings->num_paths * sizeof(pthread_t));
-    RmTraversePathBuffer *thread_data = g_malloc0(settings->num_paths * sizeof(RmTraversePathBuffer));
+    guint64 numfiles = 0;
+
+    pthread_t *thread_ids = g_malloc0((settings->num_paths + 1) * sizeof(pthread_t));
+    GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     /* Set Bit flags for fts options.  */
     int bit_flags = FTS_NOCHDIR; /* TODO: only need this if multi-threading*/
@@ -266,37 +274,45 @@ int rmlint_search_tree(RmSession *session) {
         bit_flags |= FTS_XDEV;
     }
 
-    while(settings->paths[cpindex] != NULL) {
-        /* The path points to a dir - recurse it! */
-        /*TODO: test if under threadcount limit*/
-        pthread_mutex_lock(&session->threadlock);
-        if ( session->activethreads < settings->threads ) {
-            thread_data[cpindex].session = session;
-            thread_data[cpindex].pathnum= cpindex;
-            thread_data[cpindex].fts_flags= bit_flags;
+    for(int idx = 0; settings->paths[idx] != NULL; ++idx) {
+        struct stat stat_buf;
+        stat(settings->paths[idx], &stat_buf);
 
-            info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...\n",
-                 settings->paths[cpindex],
-                 settings->is_ppath[cpindex] ? "" : "non-"
-                );
-            //thread_ids = realloc(&thread_ids, sizeof(pthread_t)*(cpindex+1));
-            if (pthread_create(&thread_ids[cpindex], NULL, traverse_path, &thread_data[cpindex]))
-                error ("Error launching traverse_path thread");
-            else
-                session->activethreads++;
-            cpindex++;
+        RmTraversePathBuffer *thread_data = g_new0(RmTraversePathBuffer, 1);
+        thread_data->session = session;
+        thread_data->pathnum = idx;
+        thread_data->fts_flags = bit_flags;
+
+        GList *directories = g_hash_table_lookup(thread_table, GINT_TO_POINTER(stat_buf.st_dev));
+
+        if(directories == NULL) {
+            directories = g_list_prepend(directories, thread_data);
+            g_hash_table_insert(thread_table, GINT_TO_POINTER(stat_buf.st_dev), directories);
+        } else {
+            directories = g_list_prepend(directories, thread_data);
         }
-        pthread_mutex_unlock(&session->threadlock);
     }
-    cpindex = 0;
-    while(settings->paths[cpindex] != NULL) {
-        //int num_files_from_thread;
-        pthread_join(thread_ids[cpindex], NULL); // (void**)&num_files_from_thread);
-        numfiles += thread_data[cpindex].numfiles;
-        cpindex++;
+
+    GHashTableIter iter;
+    gpointer key = NULL;
+    GList *value = NULL;
+
+    g_hash_table_iter_init(&iter, thread_table);
+    for(int idx = 0; g_hash_table_iter_next(&iter, &key, (gpointer) &value); idx++) {
+        if (pthread_create(&thread_ids[idx], NULL, traverse_path_list, value)) {
+            error ("Error launching traverse_path thread");
+        } else {
+            g_atomic_int_inc(&session->activethreads);
+        }
+    }
+    
+    for(int idx = 0; thread_ids[idx]; idx++) {
+        gpointer return_data;
+        pthread_join(thread_ids[idx], &return_data); 
+        numfiles += GPOINTER_TO_INT(return_data);
     }
 
     g_free(thread_ids);
-    g_free(thread_data);
+    g_hash_table_unref(thread_table);
     return numfiles;
 }

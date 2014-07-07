@@ -294,14 +294,8 @@ static void build_checksums(RmSession *session, GQueue *group) {
         GList *ptr, *lst;
         ptr = lst = group->head;
 
-        /* The refereces to all threads */
-        gulong byte_size = rm_file_list_byte_size(session->list, group);
-
-        size_t list_size = (byte_size / HASH_MTHREAD_SIZE + 2) * sizeof(pthread_t);
-        pthread_t *thread_queue = malloc(list_size);
-        RmSchedulerTag *tags = malloc(list_size);
-
-        int thread_counter = 0;
+        GList * thread_list = NULL;
+        GList * tag_list = NULL;
         gint subgroup_len = 0;
 
         while(ptr) {
@@ -317,27 +311,33 @@ static void build_checksums(RmSession *session, GQueue *group) {
                 ptr = ptr->next;
                 lst = ptr;
 
-                tags[thread_counter].session = session;
-                tags[thread_counter].group = subgroup;
+                RmSchedulerTag *tag = g_new0(RmSchedulerTag, 1);
+                tag->session = session;
+                tag->group = subgroup;
+                tag_list = g_list_prepend(tag_list, tag);
+            
+                pthread_t *thread = g_new0(pthread_t, 1);
+                thread_list = g_list_prepend(thread_list, thread);
 
                 /* Now create the thread */
-                if(pthread_create(&thread_queue[thread_counter], NULL, cksum_cb, &tags[thread_counter])) {
+                if(pthread_create(thread, NULL, cksum_cb, tag)) {
                     perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
                 }
-                thread_counter++;
             } else {
                 subgroup_len++;
                 ptr = ptr->next;
             }
         }
         /* Make sure all threads are joined */
-        for(int i = 0; i < thread_counter; i++) {
-            if(pthread_join(thread_queue[i], NULL)) {
+        for(GList *iter = thread_list; iter; iter = iter->next) {
+            pthread_t *thread = iter->data;
+            if(pthread_join(*thread, NULL)) {
                 perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
             }
         }
-        g_free(thread_queue);
-        g_free(tags);
+
+        g_list_free_full(thread_list, g_free);
+        g_list_free_full(tag_list, g_free);
     }
 }
 
