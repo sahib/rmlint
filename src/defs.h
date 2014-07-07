@@ -35,6 +35,7 @@
 #include <glib.h>
 
 #include "config.h"
+#include "checksum.h"
 
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
@@ -43,12 +44,14 @@
 #define BLU "\x1b[34;01m"
 
 /* not supposed to be changed */
-#define MD5_LEN 16
+#ifndef _RM_HASH_LEN
+    #define _RM_HASH_LEN 16
+#endif
 
 /* Which scheduler to take
  * + 1) Always single threaded on each group
  * + 2) Run max. n (where n may be max. set->threads) at the same time.
- * + 3) If a group-size is larger than MD5_MTHREAD_SIZE a new thread is started, otherwise singlethreaded
+ * + 3) If a group-size is larger than HASH_MTHREAD_SIZE a new thread is started, otherwise singlethreaded
  * */
 #define THREAD_SHEDULER_MTLIMIT (1024 * 1024 * 8)
 
@@ -58,12 +61,12 @@
 /* Those values are by no means constants, you can/should adjust them to fit your system */
 /* nevertheless: They should fit quite well for an average 2010's desk, so be careful when changing */
 
-#define MD5_MTHREAD_SIZE   (1024 * 1024 * 2) /* If size of grp > chekcksum are built in parallel.   2MB */
-#define MD5_IO_BLOCKSIZE   (1024 * 1024 * 1) /* Block size in what IO buffers are read. Default:    1MB */
-#define MD5_FP_MAX_RSZ     (8 * 1024)        /* The maximal size read in for fingerprints. Default   8K */
-#define MD5_FP_PERCENT     10                /* Percent of a file read in for fingerprint. Default  10% */
-#define MD5_SERIAL_IO      1                 /* Align threads before doing md5 related IO. Default:   1 */
-#define MD5_USE_MMAP       -1                /* Use mmap() instead of fread() EXPERIMENTAL! Use = risk! */
+#define HASH_MTHREAD_SIZE   (1024 * 1024 * 2) /* If size of grp > chekcksum are built in parallel.   2MB */
+#define HASH_IO_BLOCKSIZE   (1024 * 1024 * 1) /* Block size in what IO buffers are read. Default:    1MB */
+#define HASH_FP_MAX_RSZ     (8 * 1024)        /* The maximal size read in for fingerprints. Default   8K */
+#define HASH_FP_PERCENT     10                /* Percent of a file read in for fingerprint. Default  10% */
+#define HASH_SERIAL_IO      1                 /* Align threads before doing md5 related IO. Default:   1 */
+#define HASH_USE_MMAP       -1                /* Use mmap() instead of fread() EXPERIMENTAL! Use = risk! */
 /*
 0 = fread only
 1 = mmap only
@@ -77,15 +80,15 @@ From man 2 open:
   -- Linus Torvalds
 */
 
-#define MD5_FILE_FLAGS  (O_RDONLY)
+#define HASH_FILE_FLAGS  (O_RDONLY)
 
 /* ------------------------------------------------------------- */
 
-#define MMAP_LIMIT (MD5_MTHREAD_SIZE << 4)
+#define MMAP_LIMIT (HASH_MTHREAD_SIZE << 4)
 
 /* ------------------------------------------------------------- */
 
-#define MD5_FPSIZE_FORM(X) sqrt(X / MD5_FP_PERCENT) + 1
+#define HASH_FPSIZE_FORM(X) sqrt(X / HASH_FP_PERCENT) + 1
 
 /* Reads a short sequence of bytes in the middle of a file, while doing fingerprints */
 /* This almost cost nothing, but helps a lot with lots of similiar datasets */
@@ -146,29 +149,30 @@ typedef struct RmSettings {
     char verbosity;
     char listemptyfiles;
     char **paths;
-    char *is_ppath;            /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
+    char *is_ppath;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
     char *cmd_path;
     char *cmd_orig;
     char *output;
-    char *sort_criteria;       /* NEW - sets criteria for ranking and selecting "original"*/
+    char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
     char limits_specified;
     guint64 minsize;
     guint64 maxsize;
-    char keep_all_originals;   /* NEW - if set, will ONLY delete dupes that are not in ppath */
-    char must_match_original;  /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
-    char invert_original;      /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
-    char find_hardlinked_dupes;/* NEW - if set, will also search for hardlinked duplicates*/
-    char skip_confirm;         /* NEW - if set, bypasses user confirmation of input settings*/
-    char confirm_settings;     /* NEW - if set, pauses for user confirmation of input settings*/
+    char keep_all_originals;     /* NEW - if set, will ONLY delete dupes that are not in ppath */
+    char must_match_original;    /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
+    char invert_original;        /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
+    char find_hardlinked_dupes;  /* NEW - if set, will also search for hardlinked duplicates*/
+    char skip_confirm;           /* NEW - if set, bypasses user confirmation of input settings*/
+    char confirm_settings;       /* NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
+    RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
 } RmSettings;
 
 typedef struct _RmFile RmFile;
 
 struct _RmFile {
-    unsigned char md5_digest[MD5_LEN];   /* md5sum of the file */
-    unsigned char fp[2][MD5_LEN];        /* A short fingerprint of a file - start and back */
+    unsigned char checksum[_RM_HASH_LEN];   /* md5sum of the file */
+    unsigned char fp[2][_RM_HASH_LEN];        /* A short fingerprint of a file - start and back */
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
 
     char *path;                          /* absolute path from working dir */

@@ -40,7 +40,7 @@
 #include "rmlint.h"
 #include "filter.h"
 #include "mode.h"
-#include "md5.h"
+#include "read.h"
 #include "list.h"
 #include "defs.h"
 #include "linttests.h"
@@ -97,7 +97,7 @@ static int cmp_fingerprints(RmFile *_a, RmFile *_b) {
 
     /* compare both fp-arrays */
     for(i = 0; i < 2; i++) {
-        for(j = 0; j < MD5_LEN; j++) {
+        for(j = 0; j < _RM_HASH_LEN; j++) {
             if(a->fp[i][j] != b->fp[i][j]) {
                 return  0;
             }
@@ -119,19 +119,19 @@ static int cmp_f(RmFile *_a, RmFile *_b) {
     RmFile *b = ( _b->hardlinked_original ? _b->hardlinked_original : _b );
     int i, fp_i, x;
     int is_empty[2][3] = { {1, 1, 1}, {1, 1, 1} };
-    for(i = 0; i < MD5_LEN; i++) {
-        if(a->md5_digest[i] != b->md5_digest[i]) {
+    for(i = 0; i < _RM_HASH_LEN; i++) {
+        if(a->checksum[i] != b->checksum[i]) {
             return 1;
         }
-        if(a->md5_digest[i] != 0) {
+        if(a->checksum[i] != 0) {
             is_empty[0][0] = 0;
         }
-        if(b->md5_digest[i] != 0) {
+        if(b->checksum[i] != 0) {
             is_empty[1][0] = 0;
         }
     }
     for(fp_i = 0; fp_i < 2; fp_i++) {
-        for(i = 0; i < MD5_LEN; i++) {
+        for(i = 0; i < _RM_HASH_LEN; i++) {
             if(a->fp[fp_i][i] != b->fp[fp_i][i]) {
                 return 1;
             }
@@ -161,15 +161,15 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
         return 0;
     if(p1->fsize != p2->fsize)
         return 0;
-    if((file_a = open(p1->path, MD5_FILE_FLAGS)) == -1) {
+    if((file_a = open(p1->path, HASH_FILE_FLAGS)) == -1) {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
-    if((file_b = open(p2->path, MD5_FILE_FLAGS)) == -1) {
+    if((file_b = open(p2->path, HASH_FILE_FLAGS)) == -1) {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
-    if(p1->fsize < MMAP_LIMIT && p1->fsize > MD5_IO_BLOCKSIZE >> 1) {
+    if(p1->fsize < MMAP_LIMIT && p1->fsize > HASH_IO_BLOCKSIZE >> 1) {
         file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
         if(file_map_a != MAP_FAILED) {
             if(madvise(file_map_a, p1->fsize, MADV_SEQUENTIAL) == -1) {
@@ -191,7 +191,7 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
             result = 0;
         }
     } else { /* use fread() */
-        guint64 blocksize = MD5_IO_BLOCKSIZE / 2;
+        guint64 blocksize = HASH_IO_BLOCKSIZE / 2;
         char *read_buf_a = g_alloca(blocksize);
         char *read_buf_b = g_alloca(blocksize);
         int read_a = -1, read_b = -1;
@@ -233,7 +233,7 @@ static void *cksum_cb(void *vp) {
         if (!iter_file->hardlinked_original)
             /* do checksum unless this is a hardlink of a file which is
              * already going to be checksummed */
-            md5_file(tag->session, iter->data);
+            hash_file(tag->session, iter->data);
         /* FUTURE OPTIMISATION: as-is, we _always_ do checksum of _one_ file
          * in each a group of hardlinks; but if the group contains _only_
          * hardlinks then we in theory don't need to checksum _any_ of them  */
@@ -254,10 +254,10 @@ static void build_fingerprints (RmSession *session, GQueue *group) {
     guint64 grp_sz;
 
     /* The size read in to build a fingerprint */
-    grp_sz = MD5_FPSIZE_FORM(file->fsize);
+    grp_sz = HASH_FPSIZE_FORM(file->fsize);
 
     /* Clamp it to some maximum (4KB) */
-    grp_sz = (grp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : grp_sz;
+    grp_sz = (grp_sz > HASH_FP_MAX_RSZ) ? HASH_FP_MAX_RSZ : grp_sz;
 
     /* Calc fingerprints  */
     for(GList *iter = group->head; iter; iter = iter->next) {
@@ -266,7 +266,7 @@ static void build_fingerprints (RmSession *session, GQueue *group) {
         if (!iter_file->hardlinked_original)
             /* do fingerprint unless this is a hardlink of a file which is
              * already going to be fingerprinted */
-            md5_fingerprint(session, iter_file, grp_sz);
+            hash_fingerprint(session, iter_file, grp_sz);
     }
 }
 
@@ -281,7 +281,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
     RmSettings *set = session->settings;
     gulong byte_size = rm_file_list_byte_size(group);
 
-    if(set->threads == 1 ||  byte_size < (2 * MD5_MTHREAD_SIZE)) {
+    if(set->threads == 1 ||  byte_size < (2 * HASH_MTHREAD_SIZE)) {
         /* Just loop through this group and built the checksum */
         RmSchedulerTag tag;
         tag.session = session;
@@ -297,7 +297,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
         /* The refereces to all threads */
         gulong byte_size = rm_file_list_byte_size(group);
 
-        size_t list_size = (byte_size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t);
+        size_t list_size = (byte_size / HASH_MTHREAD_SIZE + 2) * sizeof(pthread_t);
         pthread_t *thread_queue = malloc(list_size);
         RmSchedulerTag *tags = malloc(list_size);
 
@@ -306,7 +306,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
 
         while(ptr) {
             sz += ((RmFile *)ptr->data)->fsize;
-            if(sz >= MD5_MTHREAD_SIZE || ptr->next == NULL) {
+            if(sz >= HASH_MTHREAD_SIZE || ptr->next == NULL) {
                 GQueue *subgroup = g_new0(GQueue, 1);
                 subgroup->head = lst;
                 subgroup->tail = ptr->next;

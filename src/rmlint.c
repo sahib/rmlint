@@ -42,7 +42,6 @@
 
 #include "rmlint.h"
 #include "mode.h"
-#include "md5.h"
 #include "list.h"
 #include "traverse.h"
 #include "filter.h"
@@ -166,6 +165,7 @@ void rmlint_set_default_settings(RmSettings *pset) {
     pset->findbadids            = 1;
     pset->output                = "rmlint";
     pset->limits_specified      = 0;
+    pset->checksum_type         = RM_DIGEST_CITY;
     pset->minsize               = -1;
     pset->maxsize               = -1;
     pset->listemptyfiles        = 1;
@@ -368,6 +368,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {"limit"            ,  required_argument ,  0 ,  'z'},
             {"output"           ,  required_argument ,  0 ,  'o'},
             {"sortcriteria"     ,  required_argument ,  0 ,  'D'},
+            {"algorithm"        ,  required_argument ,  0 ,  'e'},
             {"verbosity"        ,  no_argument       ,  0 ,  'v'},
             {"emptyfiles"       ,  no_argument       ,  0 ,  'k'},
             {"no-emptyfiles"    ,  no_argument       ,  0 ,  'K'},
@@ -385,8 +386,6 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {"no-badids"        ,  no_argument       ,  0 ,  'L'},
             {"dups"             ,  no_argument       ,  0 ,  'u'},
             {"no-dups"          ,  no_argument       ,  0 ,  'U'},
-            {"matchcase"        ,  no_argument       ,  0 ,  'e'},
-            {"ignorecase"       ,  no_argument       ,  0 ,  'E'},
             {"followlinks"      ,  no_argument       ,  0 ,  'f'},
             {"ignorelinks"      ,  no_argument       ,  0 ,  'F'},
             {"samepart"         ,  no_argument       ,  0 ,  's'},
@@ -402,7 +401,7 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
-        choice = getopt_long(argc, argv, "aAbBcC:d:D:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z", long_options, &option_index);
+        choice = getopt_long(argc, argv, "aAbBcC:d:D:e:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z", long_options, &option_index);
         /* Detect the end of the options. */
         if(choice == -1) {
             break;
@@ -414,6 +413,13 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             sets->threads = atoi(optarg);
             if(!sets->threads) {
                 sets->threads = 8;
+            }
+            break;
+        case 'e':
+            sets->checksum_type = rm_string_to_digest_type(optarg);
+            if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
+                error(RED"Unknown hash algorithm: '%s'\n", optarg);
+                die(session, EXIT_FAILURE);
             }
             break;
         case 'k':

@@ -59,12 +59,12 @@ RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is
      The backsum might not be calculated then, what might
      cause inaccurate results.
     */
-    memset(self->fp[0], 0, MD5_LEN);
-    memset(self->fp[1], 0, MD5_LEN);
+    memset(self->fp[0], 0, _RM_HASH_LEN);
+    memset(self->fp[1], 0, _RM_HASH_LEN);
     memset(self->bim, 0, BYTE_MIDDLE_SIZE);
 
     /* Clear the md5 digest array too */
-    memset(self->md5_digest, 0, MD5_LEN);
+    memset(self->checksum, 0, _RM_HASH_LEN);
 
     /* initialised with no hardlink*/
     self->hardlinked_original = NULL;
