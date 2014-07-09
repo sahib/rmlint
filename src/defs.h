@@ -167,7 +167,6 @@ typedef struct RmSettings {
     char confirm_settings;       /* NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
-    bool db_test;
     RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
 } RmSettings;
 
