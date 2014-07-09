@@ -229,6 +229,7 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
     /* What set->mode are we in? */
     switch(sets->mode) {
     case RM_MODE_LIST:
+        break;
     case RM_MODE_NOASK: {
         /* Just remove it */
         if(path == NULL) {
@@ -453,8 +454,8 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
         if(!fi->filter) {
             /* original(s) of a duplicate set*/
             if(0
-                || sets->mode == RM_MODE_LIST 
-                || sets->mode == RM_MODE_LINK 
+                || sets->mode == RM_MODE_LIST
+                || sets->mode == RM_MODE_LINK
                 || (sets->mode == RM_MODE_CMD && sets->cmd_orig == NULL && sets->cmd_path == NULL)
             ) {
                 if(print_newline) {
@@ -476,7 +477,7 @@ bool process_doop_groop(RmSession *session, GQueue *group) {
         RmFile *fi = i->data;
         if(fi->filter) {
             /* duplicates(s) of a duplicate sets*/
-            if(0 
+            if(0
                 || sets->mode == RM_MODE_LIST
                 || (sets->mode == RM_MODE_CMD && !sets->cmd_orig && !sets->cmd_path)
             ) {
