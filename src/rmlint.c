@@ -183,6 +183,7 @@ void rmlint_set_default_settings(RmSettings *pset) {
      * investigated to be replicas of other files */
     pset->collide                                    = 0;
     pset->num_paths             = 0;
+    pset->db_test=false;
 }
 
 /* Check if this is the 'preferred' dir */
@@ -402,10 +403,11 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
             {"findhardlinked"   ,  no_argument       ,  0 ,  'H'},
             {"confirm-settings" ,  no_argument       ,  0 ,  'q'},
             {"help"             ,  no_argument       ,  0 ,  'h'},
+            {"dbtest"           ,  no_argument       ,  0 ,  'E'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
-        choice = getopt_long(argc, argv, "aAbBcC:d:D:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z", long_options, &option_index);
+        choice = getopt_long(argc, argv, "aAbBcC:d:D:EfFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z", long_options, &option_index);
         /* Detect the end of the options. */
         if(choice == -1) {
             break;
@@ -413,6 +415,9 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         switch(choice) {
         case '?':
             return 0;
+        case 'E':
+            sets->db_test=true;
+            break;
         case 't':
             sets->threads = atoi(optarg);
             if(!sets->threads) {

@@ -164,6 +164,7 @@ typedef struct RmSettings {
     char confirm_settings;     /* NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
+    bool db_test;
 } RmSettings;
 
 typedef struct _RmFile RmFile;

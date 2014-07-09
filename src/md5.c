@@ -335,17 +335,30 @@ static void md5_file_mmap(G_GNUC_UNUSED RmSession *session, RmFile *file) {
 
 /* ------------------------------------------------------------- */
 
+struct rmBgMd5Buffer {
+    MD5_CTX *mdContextPtr;
+    unsigned char *data;
+    ssize_t bytes;
+} rmBgMd5Buffer;
+
+static void *bg_md5 (void *ptr) {
+    struct rmBgMd5Buffer *args = ptr;
+    MD5Update(args->mdContextPtr, args->data, args->bytes);
+    return NULL;
+}
+
 /* used to calc the complete checksum of file & save it in File */
 static void md5_file_fread(G_GNUC_UNUSED RmSession *session, RmFile *file) {
     /* Number of bytes read in */
-    ssize_t bytes = 0;
+    MD5_CTX mdContext;
+    struct rmBgMd5Buffer md5Buffers[2];
+    pthread_t md5thread;
+    int i;  /*buffer index*/
+    bool first_pass = true;
+
     size_t offset = 0;
     /* Input stream */
-    int inFile = 0;
-    /* the md5buf */
-    MD5_CTX mdContext;
-    /* tmp buffer */
-    unsigned char *data = NULL;
+
     /* Don't read the $already_read amount of bytes read by md5_fingerprint */
     guint64 already_read = 0;
     guint64 actual_size  = 0;
@@ -358,41 +371,65 @@ static void md5_file_fread(G_GNUC_UNUSED RmSession *session, RmFile *file) {
     }
     actual_size  = (MD5_IO_BLOCKSIZE > file->fsize) ? (file->fsize + 1) : MD5_IO_BLOCKSIZE;
     /* Allocate buffer on the thread's stack */
-    data = alloca(actual_size + 1);
-    inFile = open(file->path, MD5_FILE_FLAGS);
+
+    MD5Init(&mdContext);
+    for (i=0; i<=1; i++) {
+        md5Buffers[i].bytes = 0;
+        md5Buffers[i].data = alloca(actual_size + 1);
+        md5Buffers[i].mdContextPtr = &mdContext;
+    }
+
+    FILE *inFile = fopen(file->path, "re");
     /* Can't open file? */
-    if(inFile == -1) {
+    if(inFile == NULL) {
         return;
     }
     /* Init md5sum & jump to start */
-    MD5Init(&mdContext);
-    lseek(inFile, already_read, SEEK_SET);
+    fseek(inFile, already_read, SEEK_SET);
+
+
     do {
         /* If (pseudo-)serialized IO is requested lock a mutex, so other threads have to wait here
          * This is to prevent that several threads call fread() at the same time, what would case the
          * HD to jump a lot around without doing anything intelligent..
          * */
+
+        i = !i;
+
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_lock(&mutex_ck_IO);
 #endif
         /* The call to fread */
-        if((bytes = read(inFile, data, actual_size)) == -1) {
+        if((md5Buffers[i].bytes = fread(md5Buffers[i].data, sizeof(char), actual_size, inFile)) == -1) {
             perror(RED"ERROR:"NCO"read()");
         }
         /* Unlock */
 #if (MD5_SERIAL_IO == 1)
         pthread_mutex_unlock(&mutex_ck_IO);
 #endif
-        if(bytes != -1) {
-            offset += bytes;
-            /* Update the checksum with the current contents of &data */
-            MD5Update(&mdContext, data, bytes);
+        if(md5Buffers[i].bytes != -1) {
+            offset += md5Buffers[i].bytes;
+            /* Update the checksum in background with the current contents of &data */
+            if (!first_pass && session->settings->db_test) {
+                /* don't get ahead of md5 calculations*/
+                first_pass = false;
+                pthread_join(md5thread, NULL);
+            }
+            if (session->settings->db_test)
+                pthread_create(&md5thread, NULL, bg_md5, &md5Buffers[i]);
+            else
+                bg_md5(&md5Buffers[i]);
         }
-    } while(bytes != -1 && bytes && (offset < (file->fsize - already_read)));
+    } while(md5Buffers[i].bytes != -1 && md5Buffers[i].bytes && (offset < (file->fsize - already_read)));
+
+    /*wait for md5 to catch up */
+    if (session->settings->db_test)
+        pthread_join(md5thread, NULL);
+
     /* Finalize, copy and close */
     MD5Final(&mdContext);
     memcpy(file->md5_digest, mdContext.digest, MD5_LEN);
-    if(close(inFile) == -1) {
+    if(fclose(inFile) != 0 ) {
         perror(RED"ERROR:"NCO"close()");
     }
 }
@@ -448,8 +485,12 @@ static void md5_fingerprint_fread(G_GNUC_UNUSED RmSession *session, RmFile *file
     int bytes = 0;
     bool unlock = true;
     FILE *pF = fopen(file->path, "re");
-    unsigned char *data = alloca(readsize);
-    MD5_CTX con;
+    MD5_CTX con0, con1;
+
+    struct rmBgMd5Buffer md5Buffer;
+    pthread_t md5thread;
+    bool md5_called = false;
+
     /* empty? */
     if(!pF) {
         warning(YEL"\nWARN: "NCO"Cannot open %s for fingerprint fread", file->path);
@@ -459,16 +500,24 @@ static void md5_fingerprint_fread(G_GNUC_UNUSED RmSession *session, RmFile *file
     pthread_mutex_lock(&mutex_fp_IO);
 #endif
     /* Read the first block */
-    bytes = fread(data, sizeof(char), readsize, pF);
+    md5Buffer.data = alloca(readsize + 1); /* do we need the +1?*/
+    md5Buffer.bytes = fread(md5Buffer.data, sizeof(char), readsize, pF);
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif
-    /* Compute md5sum of this block */
-    if(bytes) {
-        MD5Init(&con);
-        MD5Update(&con, data, bytes);
-        MD5Final(&con);
-        memcpy(file->fp[0], con.digest, MD5_LEN);
+    if(md5Buffer.bytes) {
+        MD5Init(&con0);
+        md5Buffer.mdContextPtr = &con0;
+        if (session->settings->db_test) {
+            /* Compute md5sum of this block in background while last block being read*/
+            pthread_create(&md5thread, NULL, bg_md5, &md5Buffer);
+            md5_called = true;
+        }
+        else {
+            /* Compute md5sum of this block in foreground */
+            bg_md5(&md5Buffer);
+        }
+
     }
 #if (MD5_SERIAL_IO == 1)
     pthread_mutex_lock(&mutex_fp_IO);
@@ -477,8 +526,11 @@ static void md5_fingerprint_fread(G_GNUC_UNUSED RmSession *session, RmFile *file
         /* Jump to middle of file and read a couple of bytes there s*/
         fseek(pF, file->fsize / 2 , SEEK_SET);
         bytes = fread(file->bim, sizeof(unsigned char), BYTE_MIDDLE_SIZE, pF);
+
+
         if(readsize + BYTE_MIDDLE_SIZE <= file->fsize) {
             /* Jump to end and read final block */
+            unsigned char *data = alloca(readsize + 1);
             fseek(pF, -readsize, SEEK_END);
             bytes = fread(data, sizeof(char), readsize, pF);
 #if (MD5_SERIAL_IO == 1)
@@ -487,13 +539,21 @@ static void md5_fingerprint_fread(G_GNUC_UNUSED RmSession *session, RmFile *file
 #endif
             /* Compute checksum of this last block */
             if(bytes) {
-                MD5Init(&con);
-                MD5Update(&con, data, bytes);
-                MD5Final(&con);
-                memcpy(file->fp[1], con.digest, MD5_LEN);
+                MD5Init(&con1);
+                MD5Update(&con1, data, bytes);
+                MD5Final(&con1);
+                memcpy(file->fp[1], con1.digest, MD5_LEN);
             }
         }
     }
+
+    if (md5_called) {
+        /* join and finish the first md5 */
+        pthread_join(md5thread, NULL);
+        }
+    MD5Final(&con0);
+    memcpy(file->fp[0], con0.digest, MD5_LEN);
+
 #if (MD5_SERIAL_IO == 1)
     if(unlock) {
         pthread_mutex_unlock(&mutex_fp_IO);
