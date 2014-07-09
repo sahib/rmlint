@@ -218,7 +218,7 @@ def TarFile(target, source, env):
     tar.close()
 
 
-program = env.Program('rmlint', Glob('src/*.c'))
+program = env.Program('rmlint', Glob('src/*.c') + Glob('src/checksums/*.c'))
 
 if 'install' in COMMAND_LINE_TARGETS:
     env.Install('/usr/bin', [program])

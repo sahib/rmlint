@@ -1,13 +1,11 @@
 Stable Version
 --------------
 
-- Add Daniel to AUTHORS and file headers.
 - Add a test target to the build system.
 - Put rmlint on TravisCI.
 - Write a manpage; --help should just load the manpage. (Screw separate help texts)
 - Remove the --mode option?
 - Write a tutorial.
-- Implement several hashing algorithms (CityHash, GChecksum(md5, sha1-256), Murmur3)
 - add additional steps in findmatches? (SeeSpotRun)
 - Tickle packagers.
 - Integrate 'ack TODO | wc -l' to 0.
@@ -18,3 +16,10 @@ Further Developement
 
 - Multithreaded directory tree traversal? (SeeSpotRun)
 - Some of https://github.com/sahib/rmlint/issues
+
+
+Done items
+----------
+
+- Add Daniel to AUTHORS and file headers.
+- Implement several hashing algorithms (CityHash, GChecksum(md5, sha1-256), Murmur3)

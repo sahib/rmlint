@@ -48,6 +48,10 @@ typedef int (* RmFileListSortFunc)(RmFile *a, RmFile *b, gpointer);
  */
 RmFileList *rm_file_list_new(void);
 
+void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest);
+void rm_file_set_fingerprint(RmFileList *list, RmFile *file, guint index, RmDigest *digest);
+void rm_file_set_middle_bytes(RmFileList *list, RmFile *file, const char *bytes, gsize len);
+
 /**
  * @brief Free a previous RmFileList
  */
@@ -78,12 +82,19 @@ void rm_file_list_append(RmFileList *list, RmFile *file);
  *
  * @param child  The index of the group to remove.
  */
-void rm_file_list_clear(GSequenceIter *iter);
+void rm_file_list_clear(RmFileList *list, GSequenceIter *iter);
+
+
+/**
+ * @brief compare two files after a user-defined criteria.
+ */
+long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data);
+
 
 /**
  * @brief Sort a single group after a user-defined criteria.
  */
-void rm_file_list_sort_group(GSequenceIter *group, GCompareDataFunc func, gpointer user_data);
+void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDataFunc func, gpointer user_data);
 
 /**
  * @brief Remove a single file, possibly adjusting groups.
@@ -106,7 +117,7 @@ void rm_file_list_remove(RmFileList *list, RmFile *file);
  *
  * @returns: The number of filtered files.
  */
-gsize rm_file_list_sort_groups(RmFileList *list, RmSettings *settings);
+gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session);
 
 /**
  * @brief: Return the number of groups in the list.
@@ -116,7 +127,7 @@ gsize rm_file_list_len(RmFileList *list);
 /**
  * @brief: Return the number of bytes the files in this group have together.
  */
-gulong rm_file_list_byte_size(GQueue *group);
+gulong rm_file_list_byte_size(RmFileList *list, GQueue *group);
 
 /**
  * @brief Print the list on stdout for debugging purpose.

@@ -41,7 +41,6 @@
 
 #include "rmlint.h"
 #include "mode.h"
-#include "md5.h"
 #include "list.h"
 #include "filter.h"
 #include "useridcheck.h"
@@ -133,7 +132,6 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
     const char *chown_cmd_badugid = "chown \"$user\":\"$group\"";
 
     if(session->log_out && session->script_out && sets->output) {
-        int i = 0;
         char *fpath = realpath(file->path, NULL);
         if(!fpath) {
             if(file->lint_type != TYPE_BLNK) {
@@ -199,13 +197,6 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
             } else {
                 script_print(session, _sd_("echo  '%s' # original\n", fpath));
             }
-        }
-        log_print(session, session->log_out, LOGSEP);
-        for(i = 0; i < 16; i++) {
-            if(sets->verbosity == 4) {
-                fprintf(stdout, "%02x", file->md5_digest[i]);
-            }
-            fprintf(session->log_out, "%02x", file->md5_digest[i]);
         }
 #define INT_CAST long unsigned
         if(sets->verbosity == 4) {

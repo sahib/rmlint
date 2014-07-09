@@ -40,7 +40,7 @@
 #include "rmlint.h"
 #include "filter.h"
 #include "mode.h"
-#include "md5.h"
+#include "read.h"
 #include "list.h"
 #include "defs.h"
 #include "linttests.h"
@@ -50,44 +50,6 @@ typedef struct RmSchedulerTag {
     GQueue *group;
 } RmSchedulerTag;
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
-    RmSession *session = user_data;
-    RmSettings *sets = session->settings;
-
-    if (a->in_ppath != b->in_ppath) {
-        return a->in_ppath - b->in_ppath;
-    } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
-        for (int i = 0; i < sort_criteria_len; i++) {
-            long cmp = 0;
-            switch (sets->sort_criteria[i]) {
-            case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'M':
-                cmp = (long)(b->mtime) - (long)(a->mtime);
-                break;
-            case 'a':
-                cmp = strcmp (rmlint_basename(a->path), rmlint_basename (b->path));
-                break;
-            case 'A':
-                cmp = strcmp (rmlint_basename(b->path), rmlint_basename (a->path));
-                break;
-            case 'p':
-                cmp = (long)a->pnum - (long)b->pnum;
-                break;
-            case 'P':
-                cmp = (long)b->pnum - (long)a->pnum;
-                break;
-            }
-            if (cmp) {
-                return cmp;
-            }
-        }
-    }
-    return 0;
-}
 
 /* Compares the "fp" array of the RmFile a and b */
 static int cmp_fingerprints(RmFile *_a, RmFile *_b) {
@@ -97,7 +59,7 @@ static int cmp_fingerprints(RmFile *_a, RmFile *_b) {
 
     /* compare both fp-arrays */
     for(i = 0; i < 2; i++) {
-        for(j = 0; j < MD5_LEN; j++) {
+        for(j = 0; j < _RM_HASH_LEN; j++) {
             if(a->fp[i][j] != b->fp[i][j]) {
                 return  0;
             }
@@ -119,19 +81,19 @@ static int cmp_f(RmFile *_a, RmFile *_b) {
     RmFile *b = ( _b->hardlinked_original ? _b->hardlinked_original : _b );
     int i, fp_i, x;
     int is_empty[2][3] = { {1, 1, 1}, {1, 1, 1} };
-    for(i = 0; i < MD5_LEN; i++) {
-        if(a->md5_digest[i] != b->md5_digest[i]) {
+    for(i = 0; i < _RM_HASH_LEN; i++) {
+        if(a->checksum[i] != b->checksum[i]) {
             return 1;
         }
-        if(a->md5_digest[i] != 0) {
+        if(a->checksum[i] != 0) {
             is_empty[0][0] = 0;
         }
-        if(b->md5_digest[i] != 0) {
+        if(b->checksum[i] != 0) {
             is_empty[1][0] = 0;
         }
     }
     for(fp_i = 0; fp_i < 2; fp_i++) {
-        for(i = 0; i < MD5_LEN; i++) {
+        for(i = 0; i < _RM_HASH_LEN; i++) {
             if(a->fp[fp_i][i] != b->fp[fp_i][i]) {
                 return 1;
             }
@@ -161,15 +123,15 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
         return 0;
     if(p1->fsize != p2->fsize)
         return 0;
-    if((file_a = open(p1->path, MD5_FILE_FLAGS)) == -1) {
+    if((file_a = open(p1->path, HASH_FILE_FLAGS)) == -1) {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
-    if((file_b = open(p2->path, MD5_FILE_FLAGS)) == -1) {
+    if((file_b = open(p2->path, HASH_FILE_FLAGS)) == -1) {
         perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
-    if(p1->fsize < MMAP_LIMIT && p1->fsize > MD5_IO_BLOCKSIZE >> 1) {
+    if(p1->fsize < MMAP_LIMIT && p1->fsize > HASH_IO_BLOCKSIZE >> 1) {
         file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
         if(file_map_a != MAP_FAILED) {
             if(madvise(file_map_a, p1->fsize, MADV_SEQUENTIAL) == -1) {
@@ -191,7 +153,7 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
             result = 0;
         }
     } else { /* use fread() */
-        guint64 blocksize = MD5_IO_BLOCKSIZE / 2;
+        guint64 blocksize = HASH_IO_BLOCKSIZE / 2;
         char *read_buf_a = g_alloca(blocksize);
         char *read_buf_b = g_alloca(blocksize);
         int read_a = -1, read_b = -1;
@@ -233,7 +195,7 @@ static void *cksum_cb(void *vp) {
         if (!iter_file->hardlinked_original)
             /* do checksum unless this is a hardlink of a file which is
              * already going to be checksummed */
-            md5_file(tag->session, iter->data);
+            hash_file(tag->session, iter->data);
         /* FUTURE OPTIMISATION: as-is, we _always_ do checksum of _one_ file
          * in each a group of hardlinks; but if the group contains _only_
          * hardlinks then we in theory don't need to checksum _any_ of them  */
@@ -254,10 +216,10 @@ static void build_fingerprints (RmSession *session, GQueue *group) {
     guint64 grp_sz;
 
     /* The size read in to build a fingerprint */
-    grp_sz = MD5_FPSIZE_FORM(file->fsize);
+    grp_sz = HASH_FPSIZE_FORM(file->fsize);
 
     /* Clamp it to some maximum (4KB) */
-    grp_sz = (grp_sz > MD5_FP_MAX_RSZ) ? MD5_FP_MAX_RSZ : grp_sz;
+    grp_sz = (grp_sz > HASH_FP_MAX_RSZ) ? HASH_FP_MAX_RSZ : grp_sz;
 
     /* Calc fingerprints  */
     for(GList *iter = group->head; iter; iter = iter->next) {
@@ -266,7 +228,7 @@ static void build_fingerprints (RmSession *session, GQueue *group) {
         if (!iter_file->hardlinked_original)
             /* do fingerprint unless this is a hardlink of a file which is
              * already going to be fingerprinted */
-            md5_fingerprint(session, iter_file, grp_sz);
+            hash_fingerprint(session, iter_file, grp_sz);
     }
 }
 
@@ -279,9 +241,9 @@ static void build_checksums(RmSession *session, GQueue *group) {
     }
 
     RmSettings *set = session->settings;
-    gulong byte_size = rm_file_list_byte_size(group);
+    gulong byte_size = rm_file_list_byte_size(session->list, group);
 
-    if(set->threads == 1 ||  byte_size < (2 * MD5_MTHREAD_SIZE)) {
+    if(set->threads == 1 ||  byte_size < (2 * HASH_MTHREAD_SIZE)) {
         /* Just loop through this group and built the checksum */
         RmSchedulerTag tag;
         tag.session = session;
@@ -294,19 +256,13 @@ static void build_checksums(RmSession *session, GQueue *group) {
         GList *ptr, *lst;
         ptr = lst = group->head;
 
-        /* The refereces to all threads */
-        gulong byte_size = rm_file_list_byte_size(group);
-
-        size_t list_size = (byte_size / MD5_MTHREAD_SIZE + 2) * sizeof(pthread_t);
-        pthread_t *thread_queue = malloc(list_size);
-        RmSchedulerTag *tags = malloc(list_size);
-
-        int thread_counter = 0;
+        GList * thread_list = NULL;
+        GList * tag_list = NULL;
         gint subgroup_len = 0;
 
         while(ptr) {
             sz += ((RmFile *)ptr->data)->fsize;
-            if(sz >= MD5_MTHREAD_SIZE || ptr->next == NULL) {
+            if(sz >= HASH_MTHREAD_SIZE || ptr->next == NULL) {
                 GQueue *subgroup = g_new0(GQueue, 1);
                 subgroup->head = lst;
                 subgroup->tail = ptr->next;
@@ -317,27 +273,33 @@ static void build_checksums(RmSession *session, GQueue *group) {
                 ptr = ptr->next;
                 lst = ptr;
 
-                tags[thread_counter].session = session;
-                tags[thread_counter].group = subgroup;
+                RmSchedulerTag *tag = g_new0(RmSchedulerTag, 1);
+                tag->session = session;
+                tag->group = subgroup;
+                tag_list = g_list_prepend(tag_list, tag);
+
+                pthread_t *thread = g_new0(pthread_t, 1);
+                thread_list = g_list_prepend(thread_list, thread);
 
                 /* Now create the thread */
-                if(pthread_create(&thread_queue[thread_counter], NULL, cksum_cb, &tags[thread_counter])) {
+                if(pthread_create(thread, NULL, cksum_cb, tag)) {
                     perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
                 }
-                thread_counter++;
             } else {
                 subgroup_len++;
                 ptr = ptr->next;
             }
         }
         /* Make sure all threads are joined */
-        for(int i = 0; i < thread_counter; i++) {
-            if(pthread_join(thread_queue[i], NULL)) {
+        for(GList *iter = thread_list; iter; iter = iter->next) {
+            pthread_t *thread = iter->data;
+            if(pthread_join(*thread, NULL)) {
                 perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
             }
         }
-        g_free(thread_queue);
-        g_free(tags);
+
+        g_list_free_full(thread_list, g_free);
+        g_list_free_full(tag_list, g_free);
     }
 }
 
@@ -488,7 +450,7 @@ static void start_scheduler(RmSession *session) {
 
     while(!g_sequence_iter_is_end(iter)) {
         GQueue *group = g_sequence_get(iter);
-        gulong byte_size = rm_file_list_byte_size(group);
+        gulong byte_size = rm_file_list_byte_size(session->list, group);
 
         if(byte_size > THREAD_SHEDULER_MTLIMIT && sets->threads > 1) { /* Group exceeds limit */
             tags[nrun].group = group;
@@ -683,7 +645,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
             write_to_log(session, file, false, NULL);
         }
     }
-    rm_file_list_clear(first);
+    rm_file_list_clear(session->list, first);
 }
 
 /* This the actual main() of rmlint */
@@ -700,16 +662,16 @@ void start_processing(RmSession *session) {
     }
 
     GSequenceIter *first = rm_file_list_get_iter(list);
-    rm_file_list_sort_group(first, (GCompareDataFunc)cmp_sort_lint_type, NULL);
+    rm_file_list_sort_group(list, first, (GCompareDataFunc)cmp_sort_lint_type, NULL);
     GQueue *first_group = g_sequence_get(first);
 
-    if(rm_file_list_byte_size(first_group) == 0) {
+    if(rm_file_list_byte_size(session->list, first_group) == 0) {
         other_lint += g_queue_get_length(first_group);
         handle_other_lint(session, first, first_group);
     }
 
     info("\nNow sorting list based on filesize... ");
-    gsize rem_counter = rm_file_list_sort_groups(list, settings);
+    gsize rem_counter = rm_file_list_sort_groups(list, session);
     info("done.\n");
 
     if(settings->searchdup == 0) {
