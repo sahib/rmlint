@@ -50,44 +50,6 @@ typedef struct RmSchedulerTag {
     GQueue *group;
 } RmSchedulerTag;
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
-    RmSession *session = user_data;
-    RmSettings *sets = session->settings;
-
-    if (a->in_ppath != b->in_ppath) {
-        return a->in_ppath - b->in_ppath;
-    } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
-        for (int i = 0; i < sort_criteria_len; i++) {
-            long cmp = 0;
-            switch (sets->sort_criteria[i]) {
-            case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'M':
-                cmp = (long)(b->mtime) - (long)(a->mtime);
-                break;
-            case 'a':
-                cmp = strcmp (rmlint_basename(a->path), rmlint_basename (b->path));
-                break;
-            case 'A':
-                cmp = strcmp (rmlint_basename(b->path), rmlint_basename (a->path));
-                break;
-            case 'p':
-                cmp = (long)a->pnum - (long)b->pnum;
-                break;
-            case 'P':
-                cmp = (long)b->pnum - (long)a->pnum;
-                break;
-            }
-            if (cmp) {
-                return cmp;
-            }
-        }
-    }
-    return 0;
-}
 
 /* Compares the "fp" array of the RmFile a and b */
 static int cmp_fingerprints(RmFile *_a, RmFile *_b) {
@@ -315,7 +277,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
                 tag->session = session;
                 tag->group = subgroup;
                 tag_list = g_list_prepend(tag_list, tag);
-            
+
                 pthread_t *thread = g_new0(pthread_t, 1);
                 thread_list = g_list_prepend(thread_list, thread);
 
@@ -709,7 +671,7 @@ void start_processing(RmSession *session) {
     }
 
     info("\nNow sorting list based on filesize... ");
-    gsize rem_counter = rm_file_list_sort_groups(list, settings);
+    gsize rem_counter = rm_file_list_sort_groups(list, session);
     info("done.\n");
 
     if(settings->searchdup == 0) {

@@ -84,6 +84,13 @@ void rm_file_list_append(RmFileList *list, RmFile *file);
  */
 void rm_file_list_clear(RmFileList *list, GSequenceIter *iter);
 
+
+/**
+ * @brief compare two files after a user-defined criteria.
+ */
+long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data);
+
+
 /**
  * @brief Sort a single group after a user-defined criteria.
  */
@@ -110,7 +117,7 @@ void rm_file_list_remove(RmFileList *list, RmFile *file);
  *
  * @returns: The number of filtered files.
  */
-gsize rm_file_list_sort_groups(RmFileList *list, RmSettings *settings);
+gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session);
 
 /**
  * @brief: Return the number of groups in the list.
