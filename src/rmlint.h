@@ -33,9 +33,7 @@ char rmlint_echo_settings(RmSettings *settings);
 void rmlint_set_default_settings(RmSettings *set);
 void rm_session_init(RmSession *session, RmSettings *settings);
 int  rmlint_main(RmSession *session);
-
-/* Misc */
-void die(RmSession *session, int status);
+int die(RmSession *session, int status);
 
 #define debug(...) \
     g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)

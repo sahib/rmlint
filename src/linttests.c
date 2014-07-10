@@ -67,20 +67,22 @@ ino_t parent_node(const char *apath) {
 
 /* checks uid and gid; returns 0 if both ok, else TYPE_ corresponding *
  * to RmFile->filter types                                            */
-int uid_gid_check(FTSENT *fts_ent, RmSession *session) {
+int uid_gid_check(G_GNUC_UNUSED const char *path, struct stat *statp, RmSession *session) {
     if (session->settings->findbadids) {
         bool has_gid, has_uid;
         if (userlist_contains(
-                    session->userlist, fts_ent->fts_statp->st_uid,
-                    fts_ent->fts_statp->st_gid, &has_uid, &has_gid)
+                    session->userlist, statp->st_uid,
+                    statp->st_gid, &has_uid, &has_gid)
            ) {
-            if(has_gid == false)
-                if(has_uid == false)
+            if(has_gid == false) {
+                if(has_uid == false) {
                     return TYPE_BADUGID;
-                else
+                } else {
                     return TYPE_BADGID;
-            else if (has_uid == false)
+                }
+            } else if (has_uid == false) {
                 return TYPE_BADUID;
+            }
         }
     }
     /* no bad gid or uid */
@@ -88,23 +90,22 @@ int uid_gid_check(FTSENT *fts_ent, RmSession *session) {
 }
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
-bool is_nonstripped(FTSENT *fts_ent, RmSettings *settings) {
+bool is_nonstripped(const char *path, G_GNUC_UNUSED struct stat *statp,  RmSettings *settings) {
     bool is_ns = false;
-    if ((settings->nonstripped) && fts_ent->fts_path) {
+    if ((settings->nonstripped) && path) {
         /* inspired by "jschmier"'s answer at http://stackoverflow.com/a/5159890 */
         int fd;
-        /*char *escapedpath = strsubs(fts_ent->fts_path,"'","'\"'\"'");*/
 
         Elf *elf;       /* ELF pointer for libelf */
         Elf_Scn *scn;   /* section descriptor pointer */
         GElf_Shdr shdr; /* section header */
         static char CWD_BUF[PATH_MAX];
 
-        char *abs_path = g_build_filename(getcwd(CWD_BUF, PATH_MAX), rmlint_basename(fts_ent->fts_path), NULL);
+        char *abs_path = g_build_filename(getcwd(CWD_BUF, PATH_MAX), rmlint_basename((char *)path), NULL);
 
         /* Open ELF file to obtain file descriptor */
         if((fd = open(abs_path, O_RDONLY)) < 0) {
-            warning("Error opening file '%s' for nostripped test: ", fts_ent->fts_path);
+            warning("Error opening file '%s' for nostripped test: ", path);
             perror("");
             g_free(abs_path);
             return 0;

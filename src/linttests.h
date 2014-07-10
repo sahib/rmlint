@@ -31,8 +31,8 @@
 #include <fts.h>
 #include "useridcheck.h"
 
-int uid_gid_check(FTSENT *fts_ent, RmSession *session);
-bool is_nonstripped(FTSENT *afile, RmSettings *settings);
+int uid_gid_check(const char *path, struct stat *statp, RmSession *session);
+bool is_nonstripped(const char *path, struct stat *statp,  RmSettings *settings);
 char *rmlint_basename(char *filename);
 ino_t parent_node(char *apath);
 

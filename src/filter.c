@@ -434,7 +434,7 @@ static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
             if ((testlevel == 3) || (!sets->paranoid && (testlevel == 2))) {
                 /* done testing; process the island */
                 g_queue_sort(&island, (GCompareDataFunc) cmp_orig_criteria, session);
-                returnval = (returnval || process_doop_groop(session, &island));
+                returnval = (returnval || process_island(session, &island));
             } else {
                 /* go to next level */
                 returnval = (returnval || findmatches(session, &island, testlevel + 1));
@@ -612,10 +612,7 @@ static long cmp_sort_lint_type(RmFile *a, RmFile *b, gpointer user_data) {
 static const char *TYPE_TO_DESCRIPTION[] = {
     [TYPE_UNKNOWN]      = "",
     [TYPE_BLNK]         = "Bad link(s)",
-    [TYPE_OTMP]         = "Old Tempfile(s)",
     [TYPE_EDIR]         = "Empty dir(s)",
-    [TYPE_JNK_DIRNAME]  = "Junk dirname(s)",
-    [TYPE_JNK_FILENAME] = "Junk filename(s)",
     [TYPE_NBIN]         = "Non stripped binarie(s)",
     [TYPE_BADUID]       = "Bad UID(s)",
     [TYPE_BADGID]       = "Bad GID(s)",
@@ -627,10 +624,7 @@ static const char *TYPE_TO_DESCRIPTION[] = {
 static const char *TYPE_TO_COMMAND[] = {
     [TYPE_UNKNOWN]      = "",
     [TYPE_BLNK]         = "rm",
-    [TYPE_OTMP]         = "rm",
     [TYPE_EDIR]         = "rmdir",
-    [TYPE_JNK_DIRNAME]  = "ls",
-    [TYPE_JNK_FILENAME] = "ls",
     [TYPE_NBIN]         = "strip --strip-debug",
     [TYPE_BADUID]       = "chown %s",
     [TYPE_BADGID]       = "chgrp %s",
@@ -679,7 +673,7 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
 
         error(NCO);
         error(" %s\n", file->path);
-        if(sets->output) {
+        if(sets->output_log) {
             write_to_log(session, file, false, NULL);
         }
     }
@@ -771,14 +765,14 @@ void start_processing(RmSession *session) {
         }
     }
 
-    if(session->log_out == NULL && settings->output) {
+    if(session->log_out == NULL && settings->output_log) {
         error(RED"\nERROR: "NCO);
         fflush(stdout);
         perror("Unable to write log - target file:");
-        perror(settings->output);
+        perror(settings->output_log);
         putchar('\n');
-    } else if(settings->output) {
-        warning("A log has been written to "BLU"%s.log"NCO".\n", settings->output);
-        warning("A ready to use shellscript to "BLU"%s.sh"NCO".\n", settings->output);
+    } else if(settings->output_log && settings->output_script) {
+        warning("A log has been written to "BLU"%s "NCO".\n", settings->output_script);
+        warning("A ready to use shellscript to "BLU"%s"NCO".\n", settings->output_log);
     }
 }

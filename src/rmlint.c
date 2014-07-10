@@ -51,96 +51,21 @@
 
 /* Version string */
 static void print_version(void) {
-    fprintf(stderr, "Version %s compiled: [%s]-[%s] (rev %s)\n", RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION);
-    fprintf(stderr, "Author Christopher Pahl\n");
-    fprintf(stderr, "Report bugs to https://github.com/sahib/rmlint/issues\n");
+    fprintf(stderr, "rmlint-version %s compiled: [%s]-[%s] (rev %s)\n", RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION);
 }
 
 /* ------------------------------------------------------------- */
 
 /* Help text */
 static void print_help(void) {
-    // TODO: Clean up helptext; rewrite man page.
-    //       Or just write manpage do system("man rmlint") here.
-    fprintf(stderr,
-            "Syntax: rmlint [[//]TargetDir[s]] [File[s]] [Options]\n"
-            "\nGeneral options:\n\n"
-            "\t-t --threads <t>\tSet the number of threads to <t> (Default: 4; May have only minor effect)\n"
-            "\t-p --paranoid\t\tDo a byte-by-byte comparison additionally for duplicates. (Slow!) (Default: No.)\n"
-            "\t-j --junk <junkchars>\tSearch for files having one letter of <junkchars> in their name. (Useful for finding names like 'Q@^3!'')\n"
-            "\t-z --limit\t\tMinimum and maximum size of files in Bytes; example: \"20000;-1\" (Default: \"-1;-1\")\n"
-            "\t-a --nonstripped\tSearch for nonstripped binaries (Binaries with debugsymbols) (Slow) (Default: No.)\n"
-            "\t-n --namecluster\tSearch for files with the same name (do nothing but printing them) (Default: No.)\n"
-            "\t-k --emptyfiles\t\tSearch for empty files (Default: Yes, use -K to disable)\n"
-            "\t-y --emptydirs\t\tSearch for empty dirs (Default: Yes, use -Y to disable)\n"
-            "\t-x --oldtmp <sec>\tSearch for files with a '~'/'.swp' suffix being min. <sec> seconds older than the corresponding file without the '~'/'.swp'; (Default: 60)\n"
-            "\t\t\t\tNegative values are possible, what will find data younger than <sec>\n"
-            "\t-u --dups\t\tSearch for duplicates (Default: Yes.)\n"
-            "\t-l --badids\t\tSearch for files with bad IDs and GIDs (Default: Yes.)\n"
-            "\t-M --mustmatchorig\tOnly look for duplicates of which one is in 'originals' paths. (Default: no)\n"
-            "\t-O --keepallorig\tDon't delete any duplicates that are in 'originals' paths. (Default - just keep one)\n"
-            "\t\tNote: for lint types other than duplicates, keepallorig option is ignored\n" /*TODO: does this need unifying??*/
-            "\t-Q --invertorig\tPaths prefixed with // are non-originals and all other paths are originals\n"
-            "\t-D --sortcriteria <criteria>\twhen selecting original, sort in order of <criteria>:\n"
-            "\t\t\t\tm=keep lowest mtime (oldest), M=keep highest mtime (newest)\n"
-            "\t\t\t\ta=keep first alphabetically,  A=keep last alphabetically\n"
-            "\t\t\t\tp=keep first named path,      P=keep last named path\n"
-            "\t\t\t\tNote: can have multiple criteria, eg \"-D am\" will choose first alphabetically; if tied then by mtime.\n"
-            "\t\t\t\tNote also: original path criteria (specified using //) will always take first priority over \"-D\" options.\n"
-            "\t-d --maxdepth <depth>\tOnly recurse up to this depth. (default: inf)\n"
-            "\t-f --followlinks\tWhether symlinks are followed (Default: no). Note that rmlint will try to detect if symlinks\n"
-            "\t\t\t\tresult in the same physical file being encountered twice and will ignore the second one.\n"
-            "\t-H --findhardlinked\tFind hardlinked duplicates.  Default is to ignore duplicates which are hardlinked to each other.\n"
-            "\t\t\t\tNote: currently, hardlinked files with the same basename are _always_ ignored, due to possible error with bind\n"
-            "\t\t\t\tmounts pointing to the same physical file\n"
-            "\t\t\t\tNote also: hardlinked duplicates _will_ be reported as part of GB count that can be freed up.\n"
-            "\t-s --samepart\t\tNever cross mountpoints, stay on the same partition. (Default: off, ie DO cross mountpoints)\n"
-            "\t-G --hidden\t\tAlso search through hidden files / directories (Default: No.)\n"
-            "\t-m --mode <mode>\tTell rmlint how to deal with the duplicates it finds (only on duplicates!).:\n"
-            "\n\t\t\t\tWhere modes are:\n\n"
-            "\t\t\t\tlist\t- (RECOMMENDED) Lists found files & creates executable script to carry out\n"
-            "\t\t\t\t\t actual removal (or other command given by -c/-C).\n"
-            "\t\t\t\tlink\t- Replace file with a symlink to original.\n"
-            "\t\t\t\tnoask\t- Full removal without asking.\n"
-            "\t\t\t\tcmd\t- Takes the command given by -c/-C and executes it on the duplicate/original (careful!).\n"
-            "\t\t\t\tDefault:\tlist\n\n"
-            "\t-c --cmd_dup  <cmd>\tExecute a shellcommand on found duplicates when used with '-m cmd'\n"
-            "\t-C --cmd_orig <cmd>\tExecute a shellcommand on original files when used with '-m cmd'\n\n"
-            "\t\t\t\tExample: rmlint testdir -m cmd -C \"ls '<orig>'\" -c \"ls -lasi '<dupl>' #== '<orig>'\" -v5\n"
-            "\t\t\t\tThis would print all found files (both duplicates and originals via the 'ls' utility\n"
-            "\t\t\t\tThe <dupl> expands to the found duplicate, <orig> to the original.\n\n"
-            "\t\t\t\tNote: If '-m cmd' is not given, rmlint's default commands are replaced with the ones from -cC\n"
-            "\t\t\t\t      This is especially useful with -v5, so you can pipe your commands to sh in realtime.\n"
-            "Regex options:\n\n"
-            "\t-r --fregex <pat>\tChecks filenames against the pattern <pat>\n"
-            "\t-R --dregex <pat>\tChecks dirnames against the pattern <pat>\n"
-            "\t-i --invmatch\t\tInvert match - Only investigate when not containing <pat> (Default: No.)\n"
-            "\t-e --matchcase\t\tMatches case of paths (Default: No.)\n"
-            "\nMisc options:\n\n"
-            "\t-h --help\t\tPrints this text and exits\n"
-            "\t-o --output <o>\tOutputs logfile to <o>.log and script to <o>.sh   (use -o \"\" or \'\' to disable output files)\n"
-            "\t\t\t\tExamples:\n"
-            "\t\t\t\t\t-o \"\" => No Logfile\n"
-            "\t\t\t\t\t-o \"la la.txt\" => Logfile to \"la la.txt.log\"\n"
-            "\t-v --verbosity <v>\tSets the verbosity level to <v>\n"
-            "\t\t\t\tWhere:\n"
-            "\t\t\t\t0 prints nothing\n"
-            "\t\t\t\t1 prints only errors and results\n"
-            "\t\t\t\t2 + prints warning\n"
-            "\t\t\t\t3 + info and statistics\n"
-            "\t\t\t\t4 + dumps log to stdout (still writes to HD)\n"
-            "\t\t\t\t5 + dumps script to stdout (still writes to HD)\n"
-            "\t\t\t\t6 + rdfind-like informative output\n\n"
-            "\t\t\t\tDefault is 2.\n"
-            "\t\t\t\tUse 6 to get an idea what's happening internally, 1 to get raw output without colors, 4 for liveparsing purpose.\n"
-            "\t-B --no-color\t\tDon't use colored output.\n"
-            "\t-q --confirm-settings\tDisplays summary of settings and queries user for confirmation before running\n\n"
-            "Additionally, the options b,p,f,s,e,g,i,c,n,a,y,x,u have a uppercase option (B,G,P,F,S,E,I,C,N,A,Y,X,U) that inverse it's effect.\n"
-            "The corresponding long options have a \"no-\" prefix. E.g.: --no-emptydirs\n\n"
-            "\nLicensed under the terms of the GPLv3 - See COPYRIGHT for more information\n"
-            "Quick clues for adjusting settings are available by using the -q option.\n"
-            "See the manpage, README or <http://sahib.github.com/rmlint/> for more information.\n"
-        );
+    if(system("man rmlint") == 0) {
+        return;
+    }
+    if(system("man doc/rmlint.1.gz") == 0) {
+        return;
+    }
+
+    g_printerr("You have no manpage for rmlint.\n");
 }
 
 /* ------------------------------------------------------------- */
@@ -152,7 +77,7 @@ void rmlint_set_default_settings(RmSettings *pset) {
     pset->depth                 = 0;                  /* inf depth    */
     pset->followlinks           = 0;                  /* fol. link    */
     pset->threads               = 16;                 /* Quad*quad.   */
-    pset->verbosity             = 2;                  /* Most relev.  */
+    pset->verbosity             = G_LOG_LEVEL_INFO;   /* Most relev.  */
     pset->samepart              = 0;                  /* Stay parted  */
     pset->paths                 = NULL;               /* Startnode    */
     pset->is_ppath              = NULL;               /* Startnode    */
@@ -165,11 +90,12 @@ void rmlint_set_default_settings(RmSettings *pset) {
     pset->searchdup             = 1;
     pset->color                 = 1;
     pset->findbadids            = 1;
-    pset->output                = "rmlint";
+    pset->output_log            = "rmlint.log";
+    pset->output_script         = "rmlint.sh";
     pset->limits_specified      = 0;
-    pset->checksum_type         = RM_DIGEST_CITY;
-    pset->minsize               = -1;
-    pset->maxsize               = -1;
+    pset->checksum_type         = RM_DIGEST_SPOOKY;
+    pset->minsize               = 0;
+    pset->maxsize               = G_MAXUINT64;
     pset->listemptyfiles        = 1;
     pset->keep_all_originals    = 0;                  /* Keep just one file from ppath "originals" indicated by "//" */
     pset->must_match_original   = 0;                  /* search for any dupes, not just ones which include ppath members*/
@@ -181,7 +107,7 @@ void rmlint_set_default_settings(RmSettings *pset) {
     /* There is no cmdline option for this one    *
      * It controls wether 'other lint' is also    *
      * investigated to be replicas of other files */
-    pset->collide                                    = 0;
+    pset->collide               = 0;
     pset->num_paths             = 0;
 }
 
@@ -328,13 +254,13 @@ static bool add_path(RmSession *session, int index, const char *path) {
     }
 
     if(g_access(path, R_OK) != 0) {
-        error(YEL"FATAL: "NCO"Can't open directory \"%s\": %s\n", path, strerror(errno));
+        error(YEL"FATAL: "NCO"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
         settings->is_ppath = g_realloc(settings->is_ppath, sizeof(char) * (index + 1));
         settings->is_ppath[index] = is_pref;
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
-        settings->paths[index] = g_strdup(path);
+        settings->paths[index + 0] = g_strdup(path);
         settings->paths[index + 1] = NULL;
         settings->num_paths++;
         return TRUE;
@@ -363,48 +289,62 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
 
     while(1) {
         static struct option long_options[] = {
-            {"threads"          ,  required_argument ,  0 ,  't'},
-            {"mode"             ,  required_argument ,  0 ,  'm'},
-            {"maxdepth"         ,  required_argument ,  0 ,  'd'},
-            {"cmd_dup"          ,  required_argument ,  0 ,  'c'},
-            {"cmd_orig"         ,  required_argument ,  0 ,  'C'},
-            {"limit"            ,  required_argument ,  0 ,  'z'},
-            {"output"           ,  required_argument ,  0 ,  'o'},
-            {"sortcriteria"     ,  required_argument ,  0 ,  'D'},
-            {"algorithm"        ,  required_argument ,  0 ,  'e'},
-            {"verbosity"        ,  no_argument       ,  0 ,  'v'},
-            {"emptyfiles"       ,  no_argument       ,  0 ,  'k'},
-            {"no-emptyfiles"    ,  no_argument       ,  0 ,  'K'},
-            {"emptydirs"        ,  no_argument       ,  0 ,  'y'},
-            {"color"            ,  no_argument       ,  0 ,  'b'},
-            {"no-color"         ,  no_argument       ,  0 ,  'B'},
-            {"no-emptydirs"     ,  no_argument       ,  0 ,  'Y'},
-            {"namecluster"      ,  no_argument       ,  0 ,  'n'},
-            {"no-namecluster"   ,  no_argument       ,  0 ,  'N'},
-            {"nonstripped"      ,  no_argument       ,  0 ,  'a'},
-            {"no-nonstripped"   ,  no_argument       ,  0 ,  'A'},
-            {"no-hidden"        ,  no_argument       ,  0 ,  'g'},
-            {"hidden"           ,  no_argument       ,  0 ,  'G'},
-            {"badids"           ,  no_argument       ,  0 ,  'l'},
-            {"no-badids"        ,  no_argument       ,  0 ,  'L'},
-            {"dups"             ,  no_argument       ,  0 ,  'u'},
-            {"no-dups"          ,  no_argument       ,  0 ,  'U'},
-            {"followlinks"      ,  no_argument       ,  0 ,  'f'},
-            {"ignorelinks"      ,  no_argument       ,  0 ,  'F'},
-            {"samepart"         ,  no_argument       ,  0 ,  's'},
-            {"allpart"          ,  no_argument       ,  0 ,  'S'},
-            {"paranoid"         ,  no_argument       ,  0 ,  'p'},
-            {"naive"            ,  no_argument       ,  0 ,  'P'},
-            {"keepallorig"      ,  no_argument       ,  0 ,  'O'},
-            {"mustmatchorig"    ,  no_argument       ,  0 ,  'M'},
-            {"invertorig"       ,  no_argument       ,  0 ,  'Q'},
-            {"findhardlinked"   ,  no_argument       ,  0 ,  'H'},
-            {"confirm-settings" ,  no_argument       ,  0 ,  'q'},
-            {"help"             ,  no_argument       ,  0 ,  'h'},
+            {"threads"                          ,  required_argument ,  0 ,  't'},
+            {"mode"                             ,  required_argument ,  0 ,  'm'},
+            {"maxdepth"                         ,  required_argument ,  0 ,  'd'},
+            {"cmd-dup"                          ,  required_argument ,  0 ,  'c'},
+            {"cmd-orig"                         ,  required_argument ,  0 ,  'C'},
+            {"size"                             ,  required_argument ,  0 ,  's'},
+            {"sortcriteria"                     ,  required_argument ,  0 ,  'S'},
+            {"algorithm"                        ,  required_argument ,  0 ,  'a'},
+            {"output-script"                    ,  optional_argument ,  0 ,  'o'},
+            {"output-log"                       ,  optional_argument ,  0 ,  'O'},
+            {"loud"                             ,  no_argument       ,  0 ,  'v'},
+            {"quiet"                            ,  no_argument       ,  0 ,  'V'},
+            {"emptyfiles"                       ,  no_argument       ,  0 ,  'e'},
+            {"no-emptyfiles"                    ,  no_argument       ,  0 ,  'E'},
+            {"color"                            ,  no_argument       ,  0 ,  'w'},
+            {"no-color"                         ,  no_argument       ,  0 ,  'W'},
+            {"emptydirs"                        ,  no_argument       ,  0 ,  'z'},
+            {"no-emptydirs"                     ,  no_argument       ,  0 ,  'Z'},
+            {"namecluster"                      ,  no_argument       ,  0 ,  'n'},
+            {"no-namecluster"                   ,  no_argument       ,  0 ,  'N'},
+            {"nonstripped"                      ,  no_argument       ,  0 ,  'b'},
+            {"no-nonstripped"                   ,  no_argument       ,  0 ,  'B'},
+            {"no-hidden"                        ,  no_argument       ,  0 ,  'r'},
+            {"hidden"                           ,  no_argument       ,  0 ,  'R'},
+            {"badids"                           ,  no_argument       ,  0 ,  'g'},
+            {"no-badids"                        ,  no_argument       ,  0 ,  'G'},
+            {"dups"                             ,  no_argument       ,  0 ,  'u'},
+            {"no-dups"                          ,  no_argument       ,  0 ,  'U'},
+            {"followlinks"                      ,  no_argument       ,  0 ,  'f'},
+            {"no-followlinks"                   ,  no_argument       ,  0 ,  'F'},
+            {"crossdev"                         ,  no_argument       ,  0 ,  'x'},
+            {"no-crossdev"                      ,  no_argument       ,  0 ,  'X'},
+            {"paranoid"                         ,  no_argument       ,  0 ,  'p'},
+            {"no-paranoid"                      ,  no_argument       ,  0 ,  'P'},
+            {"keepallorig"                      ,  no_argument       ,  0 ,  'k'},
+            {"no-keepallorig"                   ,  no_argument       ,  0 ,  'K'},
+            {"mustmatchorig"                    ,  no_argument       ,  0 ,  'm'},
+            {"no-mustmatchorig"                 ,  no_argument       ,  0 ,  'M'},
+            {"invertorig"                       ,  no_argument       ,  0 ,  'i'},
+            {"no-invertorig"                    ,  no_argument       ,  0 ,  'I'},
+            {"hardlinked"                       ,  no_argument       ,  0 ,  'l'},
+            {"no-hardlinked"                    ,  no_argument       ,  0 ,  'L'},
+            {"confirm-settings"                 ,  no_argument       ,  0 ,  'q'},
+            {"no-confirm-settings"              ,  no_argument       ,  0 ,  'Q'},
+            {"help"                             ,  no_argument       ,  0 ,  'h'},
+            {"version"                          ,  no_argument       ,  0 ,  'H'},
             {0, 0, 0, 0}
         };
+
         /* getopt_long stores the option index here. */
-        choice = getopt_long(argc, argv, "aAbBcC:d:D:e:fFgGhHkKlLm:MnNo:OpPqQsSt:uUvVyYz:Z", long_options, &option_index);
+        choice = getopt_long(
+            argc, argv,
+            "t:m:d:c:C:s:o::O::S:a:vVeEwWzZnNbBrRgGuUfFXxpPkKmMiIlLqQhH",
+            long_options, &option_index
+        );
+
         /* Detect the end of the options. */
         if(choice == -1) {
             break;
@@ -418,17 +358,17 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
                 sets->threads = 8;
             }
             break;
-        case 'e':
+        case 'a':
             sets->checksum_type = rm_string_to_digest_type(optarg);
             if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
                 error(RED"Unknown hash algorithm: '%s'\n", optarg);
                 die(session, EXIT_FAILURE);
             }
             break;
-        case 'k':
+        case 'e':
             sets->listemptyfiles = 1;
             break;
-        case 'K':
+        case 'E':
             sets->listemptyfiles = 0;
             break;
         case 'f':
@@ -449,38 +389,44 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'N':
             sets->namecluster = 0;
             break;
-        case 'b':
+        case 'w':
             sets->color = 1;
             break;
-        case 'B':
+        case 'W':
             sets->color = 0;
+            break;
+        case 'H':
+            print_version();
+            die(session, EXIT_SUCCESS);
             break;
         case 'h':
             print_help();
             print_version();
             die(session, EXIT_SUCCESS);
             break;
-        case 'H':
+        case 'l':
             sets->find_hardlinked_dupes = 1;
             break;
-        case 'y':
+        case 'L':
+            sets->find_hardlinked_dupes = 0;
+            break;
+        case 'z':
             sets->findemptydirs = 1;
             break;
-        case 'Y':
+        case 'Z':
             sets->findemptydirs = 0;
             break;
-        case 'a':
+        case 'b':
             sets->nonstripped = 1;
             break;
-        case 'A':
+        case 'B':
             sets->nonstripped = 0;
             break;
         case 'o':
-            if (*optarg) {
-                sets->output = optarg;
-            } else {
-                sets->output = NULL;
-            }
+            sets->output_script = (optarg && *optarg) ? optarg : NULL;
+            break;
+        case 'O':
+            sets->output_log = (optarg && *optarg) ? optarg : NULL;
             break;
         case 'c':
             sets->cmd_path = optarg;
@@ -488,10 +434,10 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'C':
             sets->cmd_orig = optarg;
             break;
-        case 'g':
+        case 'R':
             sets->ignore_hidden = 1;
             break;
-        case 'G':
+        case 'r':
             sets->ignore_hidden = 0;
             break;
         case 'V':
@@ -500,41 +446,50 @@ char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'v':
             verbosity_counter++;
             break;
-        case 's':
+        case 'x':
             sets->samepart = 1;
             break;
-        case 'S':
+        case 'X':
             sets->samepart = 0;
             break;
         case 'd':
             sets->depth = ABS(atoi(optarg));
             break;
-        case 'D':
+        case 'S':
             sets->sort_criteria = optarg;
             break;
         case 'p':
             sets->paranoid = 1;
             break;
-        case 'O':
+        case 'k':
+            sets->keep_all_originals = 1;
+            break;
+        case 'K':
             sets->keep_all_originals = 1;
             break;
         case 'M':
             sets->must_match_original = 1;
             break;
-        case 'Q':
+        case 'i':
             sets->invert_original = 1;
+            break;
+        case 'I':
+            sets->invert_original = 0;
+            break;
+        case 'Q':
+            sets->confirm_settings = 0;
             break;
         case 'q':
             sets->confirm_settings = 1;
             break;
-        case 'z':
+        case 's':
             sets->limits_specified = 1;
             parse_limit_sizes(session, optarg);
             break;
-        case 'l':
+        case 'g':
             sets->findbadids = true;
             break;
-        case 'L':
+        case 'G':
             sets->findbadids = false;
             break;
         case 'P':
@@ -619,7 +574,7 @@ static int check_cmd(const char *cmd) {
 }
 
 /* exit and return to calling method */
-void die(RmSession *session, int status) {
+int die(RmSession *session, int status) {
     RmSettings *sets = session->settings;
 
     /* Free mem */
@@ -657,6 +612,7 @@ void die(RmSession *session, int status) {
     }
 
     exit(status);
+    return status;
 }
 
 char rmlint_echo_settings(RmSettings *settings) {
@@ -811,10 +767,15 @@ char rmlint_echo_settings(RmSettings *settings) {
         info ("Action for all other Lint types:\n");
     }
 
-    if (settings->output) {
-        info("\tGenerate script %s.sh to run later\n", settings->output);
+    if (settings->output_script) {
+        info("\tGenerate script %s to run later\n", settings->output_script);
     } else {
-        info("\tDo nothing\n");
+        info("\tWrite no script.\n");
+    }
+    if (settings->output_log) {
+        info("\tGenerate log %s\n", settings->output_log);
+    } else {
+        info("\tWrite no log.\n");
     }
 
     /*--------------- paranoia ---------*/
@@ -847,7 +808,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->list = rm_file_list_new();
     session->settings = settings;
     session->aborted = FALSE;
-    session->activethreads = 0; /*foreground thread not counted as 1*/
+    session->activethreads = 0; /* foreground thread not counted as 1 */
     pthread_mutex_init(&session->threadlock , NULL);/*lock for manipulating activethreads var*/
 
     init_filehandler(session);
@@ -905,6 +866,5 @@ int rmlint_main(RmSession *session) {
     /* Apply the prefilter and outsort inique sizes */
     start_processing(session);
 
-    die(session, EXIT_SUCCESS);
-    return EXIT_SUCCESS;
+    return die(session, EXIT_SUCCESS);
 }

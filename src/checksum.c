@@ -51,9 +51,6 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 void rm_digest_init(RmDigest *digest, RmDigestType type, guint64 seed) {
     digest->type = type;
     switch(type) {
-        case RM_DIGEST_SPOOKY:
-            spooky_init(&digest->spooky_state, seed, ~seed);
-            break;
         case RM_DIGEST_MD5:
             digest->glib_checksum = g_checksum_new(G_CHECKSUM_MD5);
             break;
@@ -72,9 +69,12 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, guint64 seed) {
             digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA512);
             break;
 #endif
+        case RM_DIGEST_SPOOKY:
+            spooky_init(&digest->spooky_state, seed, ~seed);
+            /* Fallthrough */
         case RM_DIGEST_MURMUR:
         case RM_DIGEST_CITY:
-             digest->hash.first = 0;
+            digest->hash.first = 0;
             digest->hash.second = 0;
             break;
         default:

@@ -41,19 +41,30 @@ static int const MAX_EMPTYDIR_DEPTH = 100;
 static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnum, RmLintType file_type) {
     RmSettings *settings = session->settings;
     RmFileList *list = session->list;
+    const char *path = session->settings->paths[pnum];
+
+    struct stat stat_buf;
+    struct stat *statp = NULL;
+
+    if(ent != NULL) {
+        statp = ent->fts_statp;
+    } else {
+        stat(path, &stat_buf);
+        statp = &stat_buf;
+    }
 
     if (file_type == 0) {
         RmLintType gid_check;
 
         /*see if we can find a lint type*/
-        if ((gid_check = uid_gid_check(ent, session))) {
+        if ((gid_check = uid_gid_check(path, statp, session))) {
             file_type = gid_check;
-        } else if(is_nonstripped(ent, settings)) {
+        } else if(is_nonstripped(path, statp, settings)) {
             file_type = TYPE_NBIN;
-        } else if(ent->fts_statp->st_size == 0) {
+        } else if(statp->st_size == 0) {
             file_type = TYPE_EFILE;
         } else {
-            guint64 file_size = ent->fts_statp->st_size;
+            guint64 file_size = statp->st_size;
             if(!settings->limits_specified || (settings->minsize <= file_size && file_size <= settings->maxsize)) {
                 file_type = TYPE_DUPE_CANDIDATE;
             } else {
@@ -62,29 +73,32 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
         }
     }
 
-    switch (ent->fts_info) {
-    case FTS_D:         /* preorder directory */
-    case FTS_DC:        /* directory that causes cycles */
-    case FTS_DNR:       /* unreadable directory */
-    case FTS_DOT:       /* dot or dot-dot */
-    case FTS_DP:        /* postorder directory */
-    case FTS_ERR:       /* error; errno is set */
-    case FTS_INIT:      /* initialized only */
-    case FTS_SLNONE:    /* symbolic link without target */
-    case FTS_W:         /* whiteout object */
-    case FTS_NS:        /* stat(2) failed */
-    case FTS_NSOK:      /* no stat(2) requested */
-        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
-        break;
-    case FTS_F:         /* regular file */
-    case FTS_SL:        /* symbolic link */
-    case FTS_DEFAULT:   /* none of the above */
-        rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
-        break;
-    default:
-        break;
-    } /* end switch(p->fts_info)*/
-
+    if(ent == NULL) {
+        rm_file_list_append(list, rm_file_new(path, statp, file_type, is_ppath, pnum));
+    } else {
+        switch (ent->fts_info) {
+        case FTS_D:         /* preorder directory */
+        case FTS_DC:        /* directory that causes cycles */
+        case FTS_DNR:       /* unreadable directory */
+        case FTS_DOT:       /* dot or dot-dot */
+        case FTS_DP:        /* postorder directory */
+        case FTS_ERR:       /* error; errno is set */
+        case FTS_INIT:      /* initialized only */
+        case FTS_SLNONE:    /* symbolic link without target */
+        case FTS_W:         /* whiteout object */
+        case FTS_NS:        /* stat(2) failed */
+        case FTS_NSOK:      /* no stat(2) requested */
+            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
+            break;
+        case FTS_F:         /* regular file */
+        case FTS_SL:        /* symbolic link */
+        case FTS_DEFAULT:   /* none of the above */
+            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
+            break;
+        default:
+            break;
+        } /* end switch(p->fts_info)*/
+    }
     return 1;
 }
 
@@ -282,32 +296,38 @@ int rmlint_search_tree(RmSession *session) {
     GList *first_used_list = NULL;
 
     for(int idx = 0; settings->paths[idx] != NULL; ++idx) {
-        struct stat stat_buf;
-        stat(settings->paths[idx], &stat_buf);
-
-        RmTraversePathBuffer *thread_data = g_new0(RmTraversePathBuffer, 1);
-        thread_data->session = session;
-        thread_data->pathnum = idx;
-        thread_data->fts_flags = bit_flags;
-
-        GList *directories = g_hash_table_lookup(thread_table, GINT_TO_POINTER(stat_buf.st_dev));
-        bool one_more = g_atomic_int_get(&session->activethreads) < (gint)settings->threads;
-
-        if(directories == NULL && one_more) {
-            directories = g_list_prepend(directories, thread_data);
-            g_hash_table_insert(thread_table, GINT_TO_POINTER(stat_buf.st_dev), directories);
-            g_atomic_int_inc(&session->activethreads);
-            if(first_used_list == NULL) {
-                first_used_list = directories;
-            }
-        } else if(directories != NULL) {
-            directories = g_list_prepend(directories, thread_data);
+        if(g_file_test(settings->paths[idx], G_FILE_TEST_IS_REGULAR)) {
+            /* Normal file */
+            numfiles += process_file(session, NULL, settings->is_ppath[idx], idx, 0);
         } else {
-            /* append, so we do not need to change the head of the list */
-            first_used_list = g_list_append(first_used_list, thread_data);
-        }
+            /* Directory - Traversing needed */
+            struct stat stat_buf;
+            stat(settings->paths[idx], &stat_buf);
 
-        first_used_list = directories;
+            RmTraversePathBuffer *thread_data = g_new0(RmTraversePathBuffer, 1);
+            thread_data->session = session;
+            thread_data->pathnum = idx;
+            thread_data->fts_flags = bit_flags;
+
+            GList *directories = g_hash_table_lookup(thread_table, GINT_TO_POINTER(stat_buf.st_dev));
+            bool one_more = g_atomic_int_get(&session->activethreads) < (gint)settings->threads;
+
+            if(directories == NULL && one_more) {
+                directories = g_list_prepend(directories, thread_data);
+                g_hash_table_insert(thread_table, GINT_TO_POINTER(stat_buf.st_dev), directories);
+                g_atomic_int_inc(&session->activethreads);
+                if(first_used_list == NULL) {
+                    first_used_list = directories;
+                }
+            } else if(directories != NULL) {
+                directories = g_list_prepend(directories, thread_data);
+            } else {
+                /* append, so we do not need to change the head of the list */
+                first_used_list = g_list_append(first_used_list, thread_data);
+            }
+
+            first_used_list = directories;
+        }
     }
 
     GHashTableIter iter;

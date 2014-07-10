@@ -218,13 +218,28 @@ def TarFile(target, source, env):
     tar.close()
 
 
+def BuildMan(target, source, env):
+    os.system('rst2man "{s}" > "{t}"'.format(t=str(target[0]), s=str(source[0])))
+
+
+env.AlwaysBuild(
+    env.Alias('man',
+        env.Command(
+            'doc/rmlint.1', 'doc/rmlint.1.rst', BuildMan
+        )
+    )
+)
+
+manpage = env.Command(
+    'doc/rmlint.1.gz', 'doc/rmlint.1', TarFile
+)
+
+env.AlwaysBuild(manpage)
 program = env.Program('rmlint', Glob('src/*.c') + Glob('src/checksums/*.c'))
+
 
 if 'install' in COMMAND_LINE_TARGETS:
     env.Install('/usr/bin', [program])
-    manpage = env.Command(
-        'doc/rmlint.1.gz', 'doc/rmlint.1', TarFile
-    )
     env.Install('/usr/share/man/man1', [manpage])
     env.Alias('install', ['/usr/bin', '/usr/share/man/man1'])
 

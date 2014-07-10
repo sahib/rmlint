@@ -23,13 +23,6 @@
 *
 **/
 
-/*
-  mode.c:
-  1) log routines
-  2) finding double checksums
-  3) implementation of different modes
-*/
-
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
@@ -49,7 +42,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
-pthread_mutex_t mutex_printage =  PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_printage = PTHREAD_MUTEX_INITIALIZER;
 
 gchar *strsubs(const char *string, const char *subs, const char *with) {
     gchar *result = NULL;
@@ -131,7 +124,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
     const char *chown_cmd_badgid = "chgrp \"$group\"";
     const char *chown_cmd_badugid = "chown \"$user\":\"$group\"";
 
-    if(session->log_out && session->script_out && sets->output) {
+    if(session->log_out && session->script_out && sets->output_log) {
         char *fpath = realpath(file->path, NULL);
         if(!fpath) {
             if(file->lint_type != TYPE_BLNK) {
@@ -142,7 +135,8 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
             fpath = (char *)file->path;
         } else {
             /* This is so scary. */
-            /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings for more info on this */
+            /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
+             * for more info on this */
             char *tmp_copy = fpath;
             fpath = strsubs(fpath, "'", "'\"'\"'");
             free(tmp_copy);
@@ -264,6 +258,7 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
                 cmd = make_cmd_ready(sets, true, tmp_opath, NULL);
             }
             if(cmd != NULL) {
+                // TODO: fork/execve
                 ret = system(cmd);
                 if(WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
                     return true;
@@ -286,118 +281,114 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
 /* ------------------------------------------------------------- */
 
 void init_filehandler(RmSession *session) {
-    if(session->settings->output) {
-        char *sc_name = g_strdup_printf("%s.sh", session->settings->output);
-        char *lg_name = g_strdup_printf("%s.log", session->settings->output);
-        session->script_out = fopen(sc_name, "w");
-        session->log_out    = fopen(lg_name, "w");
-        if(session->script_out && session->log_out) {
-            char *cwd = getcwd(NULL, 0);
-            /* Make the file executable */
-            if(fchmod(fileno(session->script_out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
-                perror(YEL"WARN: "NCO"chmod");
-            }
-            /* Write a basic header */
-            fprintf(session->script_out,
-                    "#!/bin/sh\n"
-                    "#This file was autowritten by 'rmlint'\n"
-                    "#rmlint was executed from: %s\n"
-                    "\n"
-                    "ask() {\n"
-                    "cat << EOF\n"
-                    "This script will delete certain files rmlint found.\n"
-                    "It is highly advisable to view the script (or log) first!\n"
-                    "\n"
-                    "Execute this script with -d to disable this message\n"
-                    "Hit enter to continue; CTRL-C to abort immediately\n"
-                    "EOF\n"
-                    "read dummy_var\n"
-                    "}\n"
-                    "\n"
-                    "usage()\n"
-                    "{\n"
-                    "cat << EOF\n"
-                    "usage: $0 options\n"
-                    "\n"
-                    "OPTIONS:\n", cwd);
-            fprintf(session->script_out,
-                    "-h      Show this message\n"
-                    "-d      Do not ask before running\n"
-                    "-x      Keep rmlint.sh and rmlint.log\n"
-                    "EOF\n"
-                    "}\n"
-                    "\n"
-                    "DO_REMOVE=\n"
-                    "DO_ASK=\n"
-                    "\n"
-                    "while getopts “dhx” OPTION\n"
-                    "do\n"
-                    "  case $OPTION in\n"
-                    "     h)\n"
-                    "       usage\n"
-                    "       exit 1\n"
-                    "       ;;\n"
-                    "     d)\n"
-                    "       DO_ASK=false\n"
-                    "       ;;\n"
-                    "     x)\n"
-                    "       DO_REMOVE=false\n"
-                    "       ;;\n"
-                    "  esac\n"
-                    "done\n"
-                    "\n"
-                    "if [ -z $DO_ASK ]\n"
-                    "then\n"
-                    "  usage\n"
-                    "  ask \n"
-                    "fi\n");
-            fprintf(session->script_out, "user='%s'\ngroup='%s'\n", get_username(), get_groupname());
-            fprintf(session->log_out, "#This file was autowritten by 'rmlint'\n");
-            fprintf(session->log_out, "#rmlint was executed from: %s\n", cwd);
-            fprintf(session->log_out, "#\n# Entries are listed like this: \n");
-            fprintf(session->log_out, "# lint_type | md5sum | path | size | devID | inode\n");
-            fprintf(session->log_out, "# -------------------------------------------\n");
-            fprintf(session->log_out, "# lint_type : What type of lint found:\n");
-            fprintf(session->log_out, "#           BLNK: Bad link pointing nowhere\n"
-                    "#           OTMP: Old tmp data (e.g: test.txt~)\n"
-                    "#           BASE: Double basename\n"
-                    "#           EDIR: Empty directory\n");
-            fprintf(session->log_out,
-                    "#           BLNK: Bad link pointing nowhere\n"
-                    "#           JNKD: Dirname containg one char of a user defined string\n"
-                    "#           JNKF: Filename containg one char of a user defined string\n"
-                    "#           ZERO: Empty file\n"
-                    "#           NBIN: Nonstripped binary\n"
-                    "#           BGID: File with Bad GroupID\n"
-                    "#           BUID: File with Bad UserID\n"
-                    "#           ORIG: File that has a duplicate, but supposed to be a original\n"
-                    "#           DUPL: File that is supposed to be a duplicate\n"
-                    "#\n");
-            fprintf(session->log_out, "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`, because only parts are read!)\n");
-            fprintf(session->log_out, "# path    : The full path to the found file\n");
-            fprintf(session->log_out, "# size    : total size in byte as a decimal integer\n");
-            fprintf(session->log_out, "# devID   : The ID of the device where the file is located\n");
-            fprintf(session->log_out, "# inode   : The Inode of the file (see man 2 stat)\n");
-            fprintf(session->log_out, "# The '//' inbetween each word is the seperator.\n");
-            if(cwd) {
-                free(cwd);
-            }
-        } else {
-            perror(NULL);
+    if(session->settings->output_script) {
+        session->script_out = fopen(session->settings->output_script, "w");
+    }
+
+    if(session->settings->output_log) {
+        session->log_out = fopen(session->settings->output_log, "w");
+    }
+
+    char *cwd = getcwd(NULL, 0);
+
+    if(session->script_out) {
+        /* Make the file executable */
+        if(fchmod(fileno(session->script_out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
+            perror(YEL"WARN: "NCO"chmod");
         }
-        fflush(session->script_out);
-        fflush(session->log_out);
-        g_free(sc_name);
-        g_free(lg_name);
+        /* Write a basic header */
+        fprintf(session->script_out,
+                "#!/bin/sh\n"
+                "#This file was autowritten by 'rmlint'\n"
+                "#rmlint was executed from: %s\n"
+                "\n"
+                "ask() {\n"
+                "cat << EOF\n"
+                "This script will delete certain files rmlint found.\n"
+                "It is highly advisable to view the script (or log) first!\n"
+                "\n"
+                "Execute this script with -d to disable this message\n"
+                "Hit enter to continue; CTRL-C to abort immediately\n"
+                "EOF\n"
+                "read dummy_var\n"
+                "}\n"
+                "\n"
+                "usage()\n"
+                "{\n"
+                "cat << EOF\n"
+                "usage: $0 options\n"
+                "\n"
+                "OPTIONS:\n", cwd);
+        fprintf(session->script_out,
+                "-h      Show this message\n"
+                "-d      Do not ask before running\n"
+                "-x      Keep rmlint.sh and rmlint.log\n"
+                "EOF\n"
+                "}\n"
+                "\n"
+                "DO_REMOVE=\n"
+                "DO_ASK=\n"
+                "\n"
+                "while getopts “dhx” OPTION\n"
+                "do\n"
+                "  case $OPTION in\n"
+                "     h)\n"
+                "       usage\n"
+                "       exit 1\n"
+                "       ;;\n"
+                "     d)\n"
+                "       DO_ASK=false\n"
+                "       ;;\n"
+                "     x)\n"
+                "       DO_REMOVE=false\n"
+                "       ;;\n"
+                "  esac\n"
+                "done\n"
+                "\n"
+                "if [ -z $DO_ASK ]\n"
+                "then\n"
+                "  usage\n"
+                "  ask \n"
+                "fi\n");
+        fprintf(session->script_out, "user='%s'\ngroup='%s'\n", get_username(), get_groupname());
+    }
+
+    if(session->log_out) {
+        fprintf(session->log_out, "# This file was autowritten by 'rmlint'\n");
+        fprintf(session->log_out, "# rmlint was executed from: %s\n", cwd);
+        fprintf(session->log_out, "# \n# Entries are listed like this: \n");
+        fprintf(session->log_out, "#  lint_type | md5sum | path | size | devID | inode\n");
+        fprintf(session->log_out, "#  -------------------------------------------\n");
+        fprintf(session->log_out, "#  lint_type : What type of lint found:\n");
+        fprintf(session->log_out, "#            BLNK: Bad link pointing nowhere\n"
+                "#           BASE: Double basename\n"
+                "#           EDIR: Empty directory\n");
+        fprintf(session->log_out,
+                "#           BLNK: Bad link pointing nowhere\n"
+                "#           ZERO: Empty file\n"
+                "#           NBIN: Nonstripped binary\n"
+                "#           BGID: File with Bad GroupID\n"
+                "#           BUID: File with Bad UserID\n"
+                "#           ORIG: File that has a duplicate, but supposed to be a original\n"
+                "#           DUPL: File that is supposed to be a duplicate\n"
+                "#\n");
+        fprintf(session->log_out, "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`, because only parts are read!)\n");
+        fprintf(session->log_out, "# path    : The full path to the found file\n");
+        fprintf(session->log_out, "# size    : total size in byte as a decimal integer\n");
+        fprintf(session->log_out, "# devID   : The ID of the device where the file is located\n");
+        fprintf(session->log_out, "# inode   : The Inode of the file (see man 2 stat)\n");
+        fprintf(session->log_out, "# The '//' inbetween each word is the seperator.\n");
+
+        g_free(cwd);
+    } else {
+        perror(NULL);
     }
 }
 
-/* ------------------------------------------------------------- */
-
-#define NOT_DUP_FLAGGED(ptr) !(ptr->lint_type <= false)
+// TODO: What the fuck? I forgot that one.
 bool print_newline = true;
 
-bool process_doop_groop(RmSession *session, GQueue *group) {
+bool process_island(RmSession *session, GQueue *group) {
     /* This does the final processing on a dupe group. All required   */
     /* comparisons have been done (including paranoid if required) so */
     /* now it's just a matter of deciding which originals to keep and */

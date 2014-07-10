@@ -110,11 +110,8 @@ From man 2 open:
 typedef enum RmLintType {
     TYPE_UNKNOWN = 0,
     TYPE_BLNK,
-    TYPE_OTMP,
     TYPE_EDIR,
     TYPE_EFILE,
-    TYPE_JNK_DIRNAME,
-    TYPE_JNK_FILENAME,
     TYPE_NBIN,
     TYPE_BASE,
     TYPE_BADUID,
@@ -154,7 +151,8 @@ typedef struct RmSettings {
     int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
     char *cmd_path;
     char *cmd_orig;
-    char *output;
+    char *output_script;
+    char *output_log;
     char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
     char limits_specified;
     guint64 minsize;
