@@ -277,8 +277,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, R
                  ) {
                 /* kick FILE or NEXT_FILE out */
                 if ( cmp_orig_criteria(file, next_file, session) >= 0 ) {
-                    /*FILE does not outrank NEXT_FILE in terms of ppath*/
-                    /*TODO: include extra criteria (alphabetical, mtime etc) as per -D input option*/
+                    /* FILE does not outrank NEXT_FILE in terms of ppath */
                     iter = iter->next;
                     rm_file_list_remove(list, file);
                 } else {
