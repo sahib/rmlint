@@ -88,7 +88,7 @@ void rm_set_default_settings(RmSettings *pset) {
     pset->namecluster           = 0;
     pset->nonstripped           = 0;
     pset->searchdup             = 1;
-    pset->color                 = 1;
+    pset->color                 = isatty(fileno(stdout));
     pset->findbadids            = 1;
     pset->output_log            = "rmlint.log";
     pset->output_script         = "rmlint.sh";
@@ -192,8 +192,7 @@ guint64 size_string_to_bytes(const char *size_spec, const char **error) {
     }
 }
 
-/* Size spec parsing implemented by qitta.
- * (http://github.com/qitta)
+/* Size spec parsing implemented by qitta (http://github.com/qitta)
  * Thanks and go blame him if this breaks!
  */
 static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min, guint64 *max, const char **error) {
@@ -289,52 +288,52 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
 
     while(1) {
         static struct option long_options[] = {
-            {"threads"                          ,  required_argument ,  0 ,  't'},
-            {"mode"                             ,  required_argument ,  0 ,  'm'},
-            {"maxdepth"                         ,  required_argument ,  0 ,  'd'},
-            {"cmd-dup"                          ,  required_argument ,  0 ,  'c'},
-            {"cmd-orig"                         ,  required_argument ,  0 ,  'C'},
-            {"size"                             ,  required_argument ,  0 ,  's'},
-            {"sortcriteria"                     ,  required_argument ,  0 ,  'S'},
-            {"algorithm"                        ,  required_argument ,  0 ,  'a'},
-            {"output-script"                    ,  optional_argument ,  0 ,  'o'},
-            {"output-log"                       ,  optional_argument ,  0 ,  'O'},
-            {"loud"                             ,  no_argument       ,  0 ,  'v'},
-            {"quiet"                            ,  no_argument       ,  0 ,  'V'},
-            {"emptyfiles"                       ,  no_argument       ,  0 ,  'e'},
-            {"no-emptyfiles"                    ,  no_argument       ,  0 ,  'E'},
-            {"with-color"                       ,  no_argument       ,  0 ,  'w'},
-            {"no-with-color"                    ,  no_argument       ,  0 ,  'W'},
-            {"emptydirs"                        ,  no_argument       ,  0 ,  'z'},
-            {"no-emptydirs"                     ,  no_argument       ,  0 ,  'Z'},
-            {"namecluster"                      ,  no_argument       ,  0 ,  'n'},
-            {"no-namecluster"                   ,  no_argument       ,  0 ,  'N'},
-            {"nonstripped"                      ,  no_argument       ,  0 ,  'b'},
-            {"no-nonstripped"                   ,  no_argument       ,  0 ,  'B'},
-            {"no-hidden"                        ,  no_argument       ,  0 ,  'r'},
-            {"hidden"                           ,  no_argument       ,  0 ,  'R'},
-            {"badids"                           ,  no_argument       ,  0 ,  'g'},
-            {"no-badids"                        ,  no_argument       ,  0 ,  'G'},
-            {"dups"                             ,  no_argument       ,  0 ,  'u'},
-            {"no-dups"                          ,  no_argument       ,  0 ,  'U'},
-            {"followlinks"                      ,  no_argument       ,  0 ,  'f'},
-            {"no-followlinks"                   ,  no_argument       ,  0 ,  'F'},
-            {"crossdev"                         ,  no_argument       ,  0 ,  'x'},
-            {"no-crossdev"                      ,  no_argument       ,  0 ,  'X'},
-            {"paranoid"                         ,  no_argument       ,  0 ,  'p'},
-            {"no-paranoid"                      ,  no_argument       ,  0 ,  'P'},
-            {"keepallorig"                      ,  no_argument       ,  0 ,  'k'},
-            {"no-keepallorig"                   ,  no_argument       ,  0 ,  'K'},
-            {"mustmatchorig"                    ,  no_argument       ,  0 ,  'm'},
-            {"no-mustmatchorig"                 ,  no_argument       ,  0 ,  'M'},
-            {"invertorig"                       ,  no_argument       ,  0 ,  'i'},
-            {"no-invertorig"                    ,  no_argument       ,  0 ,  'I'},
-            {"hardlinked"                       ,  no_argument       ,  0 ,  'l'},
-            {"no-hardlinked"                    ,  no_argument       ,  0 ,  'L'},
-            {"confirm-settings"                 ,  no_argument       ,  0 ,  'q'},
-            {"no-confirm-settings"              ,  no_argument       ,  0 ,  'Q'},
-            {"help"                             ,  no_argument       ,  0 ,  'h'},
-            {"version"                          ,  no_argument       ,  0 ,  'H'},
+            {"threads"             ,  required_argument ,  0 ,  't'},
+            {"mode"                ,  required_argument ,  0 ,  'm'},
+            {"maxdepth"            ,  required_argument ,  0 ,  'd'},
+            {"cmd-dup"             ,  required_argument ,  0 ,  'c'},
+            {"cmd-orig"            ,  required_argument ,  0 ,  'C'},
+            {"size"                ,  required_argument ,  0 ,  's'},
+            {"sortcriteria"        ,  required_argument ,  0 ,  'S'},
+            {"algorithm"           ,  required_argument ,  0 ,  'a'},
+            {"output-script"       ,  optional_argument ,  0 ,  'o'},
+            {"output-log"          ,  optional_argument ,  0 ,  'O'},
+            {"loud"                ,  no_argument       ,  0 ,  'v'},
+            {"quiet"               ,  no_argument       ,  0 ,  'V'},
+            {"emptyfiles"          ,  no_argument       ,  0 ,  'e'},
+            {"no-emptyfiles"       ,  no_argument       ,  0 ,  'E'},
+            {"with-color"          ,  no_argument       ,  0 ,  'w'},
+            {"no-with-color"       ,  no_argument       ,  0 ,  'W'},
+            {"emptydirs"           ,  no_argument       ,  0 ,  'z'},
+            {"no-emptydirs"        ,  no_argument       ,  0 ,  'Z'},
+            {"namecluster"         ,  no_argument       ,  0 ,  'n'},
+            {"no-namecluster"      ,  no_argument       ,  0 ,  'N'},
+            {"nonstripped"         ,  no_argument       ,  0 ,  'b'},
+            {"no-nonstripped"      ,  no_argument       ,  0 ,  'B'},
+            {"no-hidden"           ,  no_argument       ,  0 ,  'r'},
+            {"hidden"              ,  no_argument       ,  0 ,  'R'},
+            {"badids"              ,  no_argument       ,  0 ,  'g'},
+            {"no-badids"           ,  no_argument       ,  0 ,  'G'},
+            {"dups"                ,  no_argument       ,  0 ,  'u'},
+            {"no-dups"             ,  no_argument       ,  0 ,  'U'},
+            {"followlinks"         ,  no_argument       ,  0 ,  'f'},
+            {"no-followlinks"      ,  no_argument       ,  0 ,  'F'},
+            {"crossdev"            ,  no_argument       ,  0 ,  'x'},
+            {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
+            {"paranoid"            ,  no_argument       ,  0 ,  'p'},
+            {"no-paranoid"         ,  no_argument       ,  0 ,  'P'},
+            {"keepallorig"         ,  no_argument       ,  0 ,  'k'},
+            {"no-keepallorig"      ,  no_argument       ,  0 ,  'K'},
+            {"mustmatchorig"       ,  no_argument       ,  0 ,  'm'},
+            {"no-mustmatchorig"    ,  no_argument       ,  0 ,  'M'},
+            {"invertorig"          ,  no_argument       ,  0 ,  'i'},
+            {"no-invertorig"       ,  no_argument       ,  0 ,  'I'},
+            {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
+            {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
+            {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
+            {"no-confirm-settings" ,  no_argument       ,  0 ,  'Q'},
+            {"help"                ,  no_argument       ,  0 ,  'h'},
+            {"version"             ,  no_argument       ,  0 ,  'H'},
             {0, 0, 0, 0}
         };
 
@@ -390,7 +389,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             sets->namecluster = 0;
             break;
         case 'w':
-            sets->color = 1;
+            sets->color = isatty(fileno(stdout));
             break;
         case 'W':
             sets->color = 0;

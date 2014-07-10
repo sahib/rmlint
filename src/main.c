@@ -32,6 +32,20 @@
 #include "list.h"
 
 
+static char * remove_color_escapes(char *message) {
+    char *dst = message;
+    for(char *src = message; src && *src; src++) {
+        if(*src == '\x1b') {
+            src = strchr(src, 'm');
+        } else {
+           *dst++ = *src; 
+        }
+    }
+    
+    if(dst) *dst = 0;
+    return message;
+}
+
 static void logging_callback(
     G_GNUC_UNUSED const gchar *log_domain,
     GLogLevelFlags log_level,
@@ -39,6 +53,9 @@ static void logging_callback(
     gpointer user_data) {
     RmSession *session = user_data;
     if(session->settings->verbosity >= log_level) {
+        if(!session->settings->color) {
+            message = remove_color_escapes((char *)message);
+        }
         g_printerr("%s", message);
     }
 }
@@ -55,6 +72,7 @@ static void signal_handler(int signum) {
         } else {
             warning(GRE"\nINFO: "NCO"Received second Interrupt, stopping hard.\n");
             die((RmSession *)SESSION_POINTER, EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         }
         break;
     case SIGFPE:
@@ -63,6 +81,7 @@ static void signal_handler(int signum) {
         error(RED"FATAL: "NCO"Aborting due to a fatal error. (signal received: %s)\n", g_strsignal(signum));
     default:
         error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
+        exit(EXIT_FAILURE);
         break;
     }
 }

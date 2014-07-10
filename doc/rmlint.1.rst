@@ -86,7 +86,7 @@ General Options
 **-w --with-color** (*default*) **/ -W --no-with-color**
 
     Use color escapes for pretty output or disable them. 
-    If you pipe `rmlints` output to a file -W is assumed. (TODO: Implement)
+    If you pipe `rmlints` output to a file -W is assumed.
 
 **-q --confirm-settings / -Q --no-confirm-settings** (*default*)
     
