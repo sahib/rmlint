@@ -202,6 +202,47 @@ static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSE
         return strcmp(rmlint_basename(fa->path), rmlint_basename(fb->path));
 }
 
+
+
+/* Sort criteria for sorting by preferred path (first) then user-input criteria */
+long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
+    RmSession *session = user_data;
+    RmSettings *sets = session->settings;
+
+    if (a->in_ppath != b->in_ppath) {
+        return a->in_ppath - b->in_ppath;
+    } else {
+        int sort_criteria_len = strlen(sets->sort_criteria);
+        for (int i = 0; i < sort_criteria_len; i++) {
+            long cmp = 0;
+            switch (sets->sort_criteria[i]) {
+            case 'm':
+                cmp = (long)(a->mtime) - (long)(b->mtime);
+                break;
+            case 'M':
+                cmp = (long)(b->mtime) - (long)(a->mtime);
+                break;
+            case 'a':
+                cmp = strcmp (rmlint_basename(a->path), rmlint_basename (b->path));
+                break;
+            case 'A':
+                cmp = strcmp (rmlint_basename(b->path), rmlint_basename (a->path));
+                break;
+            case 'p':
+                cmp = (long)a->pnum - (long)b->pnum;
+                break;
+            case 'P':
+                cmp = (long)b->pnum - (long)a->pnum;
+                break;
+            }
+            if (cmp) {
+                return cmp;
+            }
+        }
+    }
+    return 0;
+}
+
 /* ------------------------------------------------------------- */
 /* If we have more than one path, or a fs loop, several RMFILEs  *
  * may point to the same (physically same!) file.  *
@@ -213,7 +254,8 @@ static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSE
  * just one of each set.
  * Note: LIST must be sorted by dev/node or node/dev before callind.
  * Returns number of files removed from FP. */
-static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, bool find_hardlinked_dupes) {
+static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, RmSession *session) {
+    RmSettings *settings = session->settings;
     guint removed_cnt = 0;
 
     GList *iter = group->head;
@@ -224,7 +266,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
             /* files have same dev and inode:  might be hardlink (safe to delete), or
              * two paths to the same original (not safe to delete) */
             if   (0
-                    || (!find_hardlinked_dupes)
+                    || (!settings->find_hardlinked_dupes)
                     /* not looking for hardlinked dupes so kick out all dev/inode collisions*/
                     ||  (1
                          && (strcmp(rmlint_basename(file->path), rmlint_basename(next_file->path)) == 0)
@@ -234,7 +276,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, b
                         )
                  ) {
                 /* kick FILE or NEXT_FILE out */
-                if(next_file->in_ppath || !file->in_ppath) {
+                if ( cmp_orig_criteria(file, next_file, session) >= 0 ) {
                     /*FILE does not outrank NEXT_FILE in terms of ppath*/
                     /*TODO: include extra criteria (alphabetical, mtime etc) as per -D input option*/
                     iter = iter->next;
@@ -304,7 +346,8 @@ RmFile *rm_file_list_iter_all(RmFileList *list, RmFile *previous) {
     return result;
 }
 
-gsize rm_file_list_sort_groups(RmFileList *list, RmSettings *settings) {
+gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session) {
+    RmSettings *settings = session->settings;
     gsize removed_cnt = 0;
 
     g_rec_mutex_lock(&list->lock); {
@@ -318,7 +361,7 @@ gsize rm_file_list_sort_groups(RmFileList *list, RmSettings *settings) {
                 rm_file_list_count_pref_paths(queue, &num_pref, &num_nonpref);
                 g_queue_sort(queue, rm_file_list_cmp_file, NULL);
                 removed_cnt += rm_file_list_remove_double_paths(
-                                   list, queue, settings->find_hardlinked_dupes
+                                   list, queue, session
                                );
             }
 
@@ -411,7 +454,7 @@ int main(int argc, const char **argv) {
     settings.keep_all_originals = FALSE;
     settings.find_hardlinked_dupes = TRUE;
     g_printerr("### SORT AND CLEAN\n");
-    rm_file_list_sort_groups(list, &settings);
+    rm_file_list_sort_groups(list, &session);
     rm_file_list_print(list);
 
     g_printerr("### REMOVE LAST ELEMENT OF EACH\n");
