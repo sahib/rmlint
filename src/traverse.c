@@ -321,6 +321,7 @@ int rm_search_tree(RmSession *session) {
                 }
             } else if(directories != NULL) {
                 directories = g_list_prepend(directories, thread_data);
+                g_hash_table_insert(thread_table, GINT_TO_POINTER(stat_buf.st_dev), directories);
             } else {
                 /* append, so we do not need to change the head of the list */
                 first_used_list = g_list_append(first_used_list, thread_data);
