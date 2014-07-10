@@ -41,13 +41,13 @@ are what `rmlint` thinks to be the file that was first there. You can drive
 the original detection with the `-S` option. If you know which path contains the
 originals you can prefix the path with **//**, 
 
-Quick clues for adjusting settings are available by using the -q option.
+Quick clues for adjusting settings are available by using the `-q` option.
 
 **Note:** `rmlint` will not delete any files by itself unless you command it!
 
-
 OPTIONS
 =======
+
 .. all: ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 
 .. use:  BC EFGHI KLMN PQRS UVWX Z abcdefghi klmnopqrstuvwx z
 .. nop: A  D     J    O    T    Y           j              y
@@ -83,7 +83,7 @@ General Options
     Do a byte by byte comparison of each duplicate file. Use this when you do
     not trust hash functions. *Warning:* Slow.
 
-**-w --color** (*default*) **/ -W --no-color**
+**-w --with-color** (*default*) **/ -W --no-with-color**
 
     Use color escapes for pretty output or disable them. 
     If you pipe `rmlints` output to a file -W is assumed. (TODO: Implement)
@@ -109,8 +109,6 @@ General Options
 
     If `--mode cmd` is used you can specify the commands that are used
     on duplicate files and their respective originals. 
-
-
 
 **-h --help / -H --version**
 
