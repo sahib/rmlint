@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
     int exit_state = EXIT_FAILURE;
 
     RmSettings settings;
-    rmlint_set_default_settings(&settings);
+    rm_set_default_settings(&settings);
 
     RmSession session;
     rm_session_init(&session, &settings);
@@ -96,11 +96,11 @@ int main(int argc, char **argv) {
     sigaction(SIGABRT, &sa, NULL);
 
     /* Parse commandline */
-    if(rmlint_parse_arguments(argc, argv, &session) != 0) {
+    if(rm_parse_arguments(argc, argv, &session) != 0) {
         /* Check settings */
-        if (rmlint_echo_settings(session.settings)) {
+        if (rm_echo_settings(session.settings)) {
             /* Do all the real work */
-            exit_state = rmlint_main(&session);
+            exit_state = rm_main(&session);
         } else {
             error(RED"Aborting.\n"NCO);
         }

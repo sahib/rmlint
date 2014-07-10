@@ -516,7 +516,7 @@ static int find_double_bases(RmSession *session) {
         while((fj = rm_file_list_iter_all(session->list, fj))) {
             /* compare basenames */
             if(1
-                    && !strcmp(rmlint_basename(fi->path), rmlint_basename(fj->path))
+                    && !strcmp(rm_basename(fi->path), rm_basename(fj->path))
                     && fi->node != fj->node
                     && fj->lint_type != TYPE_BASE
               ) {

@@ -70,8 +70,8 @@ static void print_help(void) {
 
 /* ------------------------------------------------------------- */
 
-/* Options not specified by commandline get a default option - this called before rmlint_parse_arguments */
-void rmlint_set_default_settings(RmSettings *pset) {
+/* Options not specified by commandline get a default option - this called before rm_parse_arguments */
+void rm_set_default_settings(RmSettings *pset) {
     pset->mode                  = RM_MODE_LIST;       /* list only    */
     pset->paranoid              = 0;                  /* dont be bush */
     pset->depth                 = 0;                  /* inf depth    */
@@ -279,7 +279,7 @@ static int read_paths_from_stdin(RmSession *session, int index) {
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-char rmlint_parse_arguments(int argc, char **argv, RmSession *session) {
+char rm_parse_arguments(int argc, char **argv, RmSession *session) {
     RmSettings *sets = session->settings;
 
     int choice = -1;
@@ -615,7 +615,7 @@ int die(RmSession *session, int status) {
     return status;
 }
 
-char rmlint_echo_settings(RmSettings *settings) {
+char rm_echo_settings(RmSettings *settings) {
     char confirm;
     int save_verbosity = settings->verbosity;
     bool has_ppath = false;
@@ -814,7 +814,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     init_filehandler(session);
 }
 
-int rmlint_main(RmSession *session) {
+int rm_main(RmSession *session) {
     /* Used only for infomessage */
     struct timeval start, end;
     float secs_used;
@@ -841,7 +841,7 @@ int rmlint_main(RmSession *session) {
 
 
     gettimeofday(&start, NULL);
-    session->total_files = rmlint_search_tree(session);
+    session->total_files = rm_search_tree(session);
     gettimeofday(&end, NULL);
     secs_used=(float)(end.tv_sec - start.tv_sec) + (float)(end.tv_usec - start.tv_usec) / 1000000.0;
 

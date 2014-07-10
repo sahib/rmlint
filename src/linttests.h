@@ -33,7 +33,7 @@
 
 int uid_gid_check(const char *path, struct stat *statp, RmSession *session);
 bool is_nonstripped(const char *path, struct stat *statp,  RmSettings *settings);
-char *rmlint_basename(char *filename);
+char *rm_basename(char *filename);
 ino_t parent_node(char *apath);
 
 #endif /* LINTTESTS_H_INCLUDED*/

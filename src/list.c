@@ -199,7 +199,7 @@ static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSE
     else if (fa->dev != fb->dev)
         return fa->dev - fb->dev;
     else
-        return strcmp(rmlint_basename(fa->path), rmlint_basename(fb->path));
+        return strcmp(rm_basename(fa->path), rm_basename(fb->path));
 }
 
 
@@ -223,10 +223,10 @@ long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
                 cmp = (long)(b->mtime) - (long)(a->mtime);
                 break;
             case 'a':
-                cmp = strcmp (rmlint_basename(a->path), rmlint_basename (b->path));
+                cmp = strcmp (rm_basename(a->path), rm_basename (b->path));
                 break;
             case 'A':
-                cmp = strcmp (rmlint_basename(b->path), rmlint_basename (a->path));
+                cmp = strcmp (rm_basename(b->path), rm_basename (a->path));
                 break;
             case 'p':
                 cmp = (long)a->pnum - (long)b->pnum;
@@ -269,7 +269,7 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, R
                     || (!settings->find_hardlinked_dupes)
                     /* not looking for hardlinked dupes so kick out all dev/inode collisions*/
                     ||  (1
-                         && (strcmp(rmlint_basename(file->path), rmlint_basename(next_file->path)) == 0)
+                         && (strcmp(rm_basename(file->path), rm_basename(next_file->path)) == 0)
                          /* double paths and loops will always have same basename */
                          && (parent_node(file->path) == parent_node(next_file->path))
                          /* double paths and loops will always have same dir inode number*/

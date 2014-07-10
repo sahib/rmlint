@@ -28,11 +28,11 @@
 
 #include "defs.h"
 
-char rmlint_parse_arguments(int argc, char **argv, RmSession *session);
-char rmlint_echo_settings(RmSettings *settings);
-void rmlint_set_default_settings(RmSettings *set);
+char rm_parse_arguments(int argc, char **argv, RmSession *session);
+char rm_echo_settings(RmSettings *settings);
+void rm_set_default_settings(RmSettings *set);
 void rm_session_init(RmSession *session, RmSettings *settings);
-int  rmlint_main(RmSession *session);
+int  rm_main(RmSession *session);
 int die(RmSession *session, int status);
 
 #define debug(...) \

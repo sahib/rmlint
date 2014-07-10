@@ -270,7 +270,7 @@ static gpointer traverse_path_list(gpointer data) {
  * add the files found into LIST
  * Return file count if successful.  */
 
-int rmlint_search_tree(RmSession *session) {
+int rm_search_tree(RmSession *session) {
     RmSettings *settings = session->settings;
     guint64 numfiles = 0;
 

@@ -42,7 +42,7 @@
 
 #include "defs.h"
 
-char *rmlint_basename(char *filename) {
+char *rm_basename(char *filename) {
     char *base = strrchr(filename, '/');
     if(base != NULL) {
         /* Return a pointer to the part behind it
@@ -101,7 +101,7 @@ bool is_nonstripped(const char *path, G_GNUC_UNUSED struct stat *statp,  RmSetti
         GElf_Shdr shdr; /* section header */
         static char CWD_BUF[PATH_MAX];
 
-        char *abs_path = g_build_filename(getcwd(CWD_BUF, PATH_MAX), rmlint_basename((char *)path), NULL);
+        char *abs_path = g_build_filename(getcwd(CWD_BUF, PATH_MAX), rm_basename((char *)path), NULL);
 
         /* Open ELF file to obtain file descriptor */
         if((fd = open(abs_path, O_RDONLY)) < 0) {
