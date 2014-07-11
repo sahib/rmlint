@@ -7,3 +7,8 @@ rmlint.sh
 src/config.h
 doc/rmlint.1.gz
 doc/rmlint.1
+
+# Scons
+.scons*
+.sconf*
+.rope*
