@@ -589,20 +589,27 @@ int die(RmSession *session, int status) {
     if(status) {
         info("Abnormal exit\n");
     }
+
     /* Close logfile */
     if(session->log_out) {
         fclose(session->log_out);
     }
+
     /* Close scriptfile */
     if(session->script_out) {
-        fprintf(session->script_out,
-                "                      \n"
-                "if [ -z $DO_REMOVE ]  \n"
-                "then                  \n"
-                "  rm -f rmlint.log    \n"  /*TODO: fix this to match "-o" command line options*/
-                "  rm -f rmlint.sh     \n"
-                "fi                    \n"
-               );
+        fprintf(
+            session->script_out,
+            "                      \n"
+            "if [ -z $DO_REMOVE ]  \n"
+            "then                  \n"
+            "  %s %s;              \n" 
+            "  %s %s;              \n"
+            "fi                    \n",
+            (session->settings->output_script) ? "rm -rf" : "",
+            (session->settings->output_script) ? (session->settings->output_script) : "",
+            (session->settings->output_log) ? "rm -rf" : "",
+            (session->settings->output_log) ? (session->settings->output_log) : ""
+        );
         fclose(session->script_out);
     }
 
