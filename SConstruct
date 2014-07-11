@@ -172,12 +172,12 @@ if 'LDFLAGS' in os.environ:
     print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
 
 conf.env.Append(LINKFLAGS=[
-    '-lpthread', '-lm', '-lelf'
+    '-pthread', '-lm', '-lelf'
 ])
 
 # Needed/Adviceable flags:
 conf.env.Append(CCFLAGS=[
-    '-std=c99', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE'
+    '-std=c99', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE', '-pthread'
 ])
 
 if ARGUMENTS.get('DEBUG') == "1":
