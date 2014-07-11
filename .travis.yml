@@ -1,3 +1,4 @@
+language: c
 install: sudo apt-get install libelf-dev libglib2.0-dev python-docutils
 compiler:
   - clang
