@@ -61,7 +61,7 @@ static void hash_file_mmap(RmSession *session, RmFile *file) {
         perror(RED"ERROR:"NCO"sys:open()");
         return;
     }
-    
+
     RmDigest digest;
     rm_digest_init(&digest, session->settings->checksum_type, 0);
 
@@ -73,10 +73,10 @@ static void hash_file_mmap(RmSession *session, RmFile *file) {
         }
         /* Shut your eyes and go through, leave out start & end of fp */
         rm_digest_update(&digest, f_map + f_offset, file->fsize - already_read);
-            
+
         /* Unmap this file */
         munmap(f_map, file->fsize);
-        
+
         rm_file_set_checksum(session->list, file, &digest);
     } else {
         perror(RED"ERROR:"NCO"hash_file->mmap");

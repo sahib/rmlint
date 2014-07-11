@@ -33,62 +33,61 @@
 #define SC_BLOCKSIZE	(8 * SC_NUMVARS)
 #define SC_BUFSIZE		(2 * SC_BLOCKSIZE)
 
-struct spooky_state
-{
-	uint64_t m_data[2 * SC_NUMVARS];
-	uint64_t m_state[SC_NUMVARS];
-	size_t m_length;
-	unsigned char m_remainder;
+struct spooky_state {
+    uint64_t m_data[2 * SC_NUMVARS];
+    uint64_t m_state[SC_NUMVARS];
+    size_t m_length;
+    unsigned char m_remainder;
 };
 
 void spooky_shorthash
 (
-	const void *message,
-	size_t length,
-	uint64_t *hash1,
-	uint64_t *hash2
+    const void *message,
+    size_t length,
+    uint64_t *hash1,
+    uint64_t *hash2
 );
 
 void spooky_init
 (
-	struct spooky_state *state,
-	uint64_t hash1,
-	uint64_t hash2
+    struct spooky_state *state,
+    uint64_t hash1,
+    uint64_t hash2
 );
 
 void spooky_update
 (
-	struct spooky_state *state,
-	const void *msg,
-	size_t len
+    struct spooky_state *state,
+    const void *msg,
+    size_t len
 );
 
 void spooky_final
 (
-	struct spooky_state *state,
-	uint64_t *hash1,
-	uint64_t *hash2
+    struct spooky_state *state,
+    uint64_t *hash1,
+    uint64_t *hash2
 );
 
 //hash1/2 doubles as input parameter for seed1/2 and output for hash1/2
 void spooky_hash128
 (
-	const void *message,
-	size_t length,
-	uint64_t *hash1,
-	uint64_t *hash2
+    const void *message,
+    size_t length,
+    uint64_t *hash1,
+    uint64_t *hash2
 );
 
 uint64_t spooky_hash64
 (
-	const void *message,
-	size_t len,
-	uint64_t seed
+    const void *message,
+    size_t len,
+    uint64_t seed
 );
 
 uint32_t spooky_hash32
 (
-	const void *message,
-	size_t len,
-	uint32_t seed
+    const void *message,
+    size_t len,
+    uint32_t seed
 );

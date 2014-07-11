@@ -256,8 +256,8 @@ static void build_checksums(RmSession *session, GQueue *group) {
         GList *ptr, *lst;
         ptr = lst = group->head;
 
-        GList * thread_list = NULL;
-        GList * tag_list = NULL;
+        GList *thread_list = NULL;
+        GList *tag_list = NULL;
         gint subgroup_len = 0;
 
         while(ptr) {

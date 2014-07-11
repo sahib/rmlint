@@ -134,7 +134,7 @@ static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
     info("Now scanning "YEL"\"%s\""NCO" (%spreferred path)...\n",
          settings->paths[pathnum],
          settings->is_ppath[pathnum] ? "" : "non-"
-    );
+        );
 
     if (settings->paths[pathnum]) {
         /* convert into char** structure for passing to fts */
@@ -256,7 +256,7 @@ cleanup:
 
 static gpointer traverse_path_list(gpointer data) {
     guint64 numfiles = 0;
-    for(GList * iter = data; iter; iter = iter->next) {
+    for(GList *iter = data; iter; iter = iter->next) {
         RmTraversePathBuffer *buffer = iter->data;
         numfiles += traverse_path(buffer);
     }
@@ -278,7 +278,7 @@ int rm_search_tree(RmSession *session) {
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     /* Set Bit flags for fts options.  */
-    int bit_flags = 0 ; 
+    int bit_flags = 0 ;
     if (!settings->followlinks) {
         bit_flags |= FTS_COMFOLLOW | FTS_PHYSICAL;
     } else {
@@ -340,19 +340,19 @@ int rm_search_tree(RmSession *session) {
         /* If more threads are active, forbid calling chdir behind our back */
         if(g_atomic_int_get(&session->activethreads) > 1) {
             for(GList *iter = value; iter; iter = iter->next) {
-                RmTraversePathBuffer * buffer = iter->data;
+                RmTraversePathBuffer *buffer = iter->data;
                 buffer->fts_flags |= FTS_NOCHDIR;
             }
         }
 
         if (pthread_create(&thread_ids[idx], NULL, traverse_path_list, value)) {
             error ("Error launching traverse_path thread");
-        } 
+        }
     }
-    
+
     for(int idx = 0; thread_ids[idx]; idx++) {
         gpointer return_data;
-        pthread_join(thread_ids[idx], &return_data); 
+        pthread_join(thread_ids[idx], &return_data);
         numfiles += GPOINTER_TO_INT(return_data);
     }
 

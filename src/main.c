@@ -32,16 +32,16 @@
 #include "list.h"
 
 
-static char * remove_color_escapes(char *message) {
+static char *remove_color_escapes(char *message) {
     char *dst = message;
     for(char *src = message; src && *src; src++) {
         if(*src == '\x1b') {
             src = strchr(src, 'm');
         } else {
-           *dst++ = *src; 
+            *dst++ = *src;
         }
     }
-    
+
     if(dst) *dst = 0;
     return message;
 }

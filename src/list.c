@@ -78,21 +78,24 @@ void rm_file_destroy(RmFile *file) {
 }
 
 void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         rm_digest_finalize_binary(digest, file->checksum, _RM_HASH_LEN);
     }
     g_rec_mutex_unlock(&list->lock);
 }
 
 void rm_file_set_fingerprint(RmFileList *list, RmFile *file, guint index, RmDigest *digest) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         rm_digest_finalize_binary(digest, file->fp[index], _RM_HASH_LEN);
     }
     g_rec_mutex_unlock(&list->lock);
 }
 
 void rm_file_set_middle_bytes(RmFileList *list, RmFile *file, const char *bytes, gsize len) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         memcpy(file->bim, bytes, len);
     }
     g_rec_mutex_unlock(&list->lock);
@@ -111,7 +114,8 @@ RmFileList *rm_file_list_new(void) {
 }
 
 void rm_file_list_destroy(RmFileList *list) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         g_sequence_free(list->size_groups);
         g_hash_table_unref(list->size_table);
     }
@@ -122,8 +126,9 @@ void rm_file_list_destroy(RmFileList *list) {
 
 GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
     GSequenceIter *first = NULL;
-    g_rec_mutex_lock(&list->lock); {
-         first = g_sequence_get_begin_iter(list->size_groups);
+    g_rec_mutex_lock(&list->lock);
+    {
+        first = g_sequence_get_begin_iter(list->size_groups);
     }
     g_rec_mutex_unlock(&list->lock);
     return first;
@@ -140,7 +145,8 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
 }
 
 void rm_file_list_append(RmFileList *list, RmFile *file) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         GSequenceIter *old_iter = g_hash_table_lookup(
                                       list->size_table, GINT_TO_POINTER(file->fsize)
                                   );
@@ -170,14 +176,16 @@ void rm_file_list_append(RmFileList *list, RmFile *file) {
 }
 
 void rm_file_list_clear(RmFileList *list, GSequenceIter *iter) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         g_sequence_remove(iter);
     }
     g_rec_mutex_unlock(&list->lock);
 }
 
 void rm_file_list_remove(G_GNUC_UNUSED RmFileList *list, RmFile *file) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         GQueue *group = g_sequence_get(file->file_group);
         guint64 file_size = file->fsize;
 
@@ -315,7 +323,8 @@ static void rm_file_list_count_pref_paths(GQueue *group, int *num_pref, int *num
 
 RmFile *rm_file_list_iter_all(RmFileList *list, RmFile *previous) {
     RmFile *result = NULL;
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         if(previous == NULL) {
             if(rm_file_list_get_iter(list)) {
                 GQueue *group = g_sequence_get(rm_file_list_get_iter(list));
@@ -349,7 +358,8 @@ gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session) {
     RmSettings *settings = session->settings;
     gsize removed_cnt = 0;
 
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         g_sequence_sort(list->size_groups, rm_file_list_cmp_file_size, NULL);
 
         GSequenceIter *iter = rm_file_list_get_iter(list);
@@ -386,7 +396,8 @@ gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session) {
 gsize rm_file_list_len(RmFileList *list) {
     gsize len = 0;
 
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         len = g_sequence_get_length(list->size_groups);
     }
     g_rec_mutex_unlock(&list->lock);
@@ -396,7 +407,8 @@ gsize rm_file_list_len(RmFileList *list) {
 
 gulong rm_file_list_byte_size(RmFileList *list, GQueue *group) {
     gulong size = 0;
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         if(group && group->head && group->head->data) {
             RmFile *file = group->head->data;
             size = file->fsize * group->length;
@@ -409,7 +421,8 @@ gulong rm_file_list_byte_size(RmFileList *list, GQueue *group) {
 }
 
 void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDataFunc func, gpointer user_data) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         GQueue *queue = g_sequence_get(group);
         g_queue_sort(queue, func, user_data);
     }
@@ -427,7 +440,8 @@ static void rm_file_list_print_cb(gpointer data, gpointer G_GNUC_UNUSED user_dat
 }
 
 void rm_file_list_print(RmFileList *list) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         g_printerr("### PRINT ###\n");
         g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
     }

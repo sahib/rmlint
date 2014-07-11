@@ -57,8 +57,8 @@ typedef uint64_t uint64;
 
 typedef struct _uint128 uint128;
 struct _uint128 {
-  uint64 first;
-  uint64 second;
+    uint64 first;
+    uint64 second;
 };
 
 #define Uint128Low64(x) 	(x).first

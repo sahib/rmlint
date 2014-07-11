@@ -339,10 +339,10 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
 
         /* getopt_long stores the option index here. */
         choice = getopt_long(
-            argc, argv,
-            "t:m:d:c:C:s:o::O::S:a:vVeEwWzZnNbBrRgGuUfFXxpPkKmMiIlLqQhH",
-            long_options, &option_index
-        );
+                     argc, argv,
+                     "t:m:d:c:C:s:o::O::S:a:vVeEwWzZnNbBrRgGuUfFXxpPkKmMiIlLqQhH",
+                     long_options, &option_index
+                 );
 
         /* Detect the end of the options. */
         if(choice == -1) {
@@ -602,7 +602,7 @@ int die(RmSession *session, int status) {
             "                      \n"
             "if [ -z $DO_REMOVE ]  \n"
             "then                  \n"
-            "  %s %s;              \n" 
+            "  %s %s;              \n"
             "  %s %s;              \n"
             "fi                    \n",
             (session->settings->output_script) ? "rm -rf" : "",
@@ -849,7 +849,7 @@ int rm_main(RmSession *session) {
     gettimeofday(&start, NULL);
     session->total_files = rm_search_tree(session);
     gettimeofday(&end, NULL);
-    secs_used=(float)(end.tv_sec - start.tv_sec) + (float)(end.tv_usec - start.tv_usec) / 1000000.0;
+    secs_used = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_usec - start.tv_usec) / 1000000.0;
 
     info ("List build time %.6f with %d files\n", secs_used, (int)session->total_files);
 

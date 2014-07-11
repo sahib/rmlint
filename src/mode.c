@@ -436,10 +436,10 @@ bool process_island(RmSession *session, GQueue *group) {
         if(!fi->filter) {
             /* original(s) of a duplicate set*/
             if(0
-                || sets->mode == RM_MODE_LIST
-                || sets->mode == RM_MODE_LINK
-                || (sets->mode == RM_MODE_CMD && sets->cmd_orig == NULL && sets->cmd_path == NULL)
-            ) {
+                    || sets->mode == RM_MODE_LIST
+                    || sets->mode == RM_MODE_LINK
+                    || (sets->mode == RM_MODE_CMD && sets->cmd_orig == NULL && sets->cmd_path == NULL)
+              ) {
                 if(print_newline) {
                     warning("\n");
                     print_newline = false;
@@ -460,9 +460,9 @@ bool process_island(RmSession *session, GQueue *group) {
         if(fi->filter) {
             /* duplicates(s) of a duplicate sets*/
             if(0
-                || sets->mode == RM_MODE_LIST
-                || (sets->mode == RM_MODE_CMD && !sets->cmd_orig && !sets->cmd_path)
-            ) {
+                    || sets->mode == RM_MODE_LIST
+                    || (sets->mode == RM_MODE_CMD && !sets->cmd_orig && !sets->cmd_path)
+              ) {
                 if(sets->paranoid) {
                     /* If byte by byte was succesful print a blue "x" */
                     warning(BLU"   %-1s "NCO, "rm");

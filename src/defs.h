@@ -46,7 +46,7 @@
 
 /* not supposed to be changed */
 #ifndef _RM_HASH_LEN
-    #define _RM_HASH_LEN 16
+#define _RM_HASH_LEN 16
 #endif
 
 /* Which scheduler to take
