@@ -797,7 +797,10 @@ char rm_echo_settings(RmSettings *settings) {
     if (settings->confirm_settings) {
         info(YEL"\n\nPress y or enter to continue, any other key to abort\n");
 
-        scanf("%c", &confirm);
+        if(scanf("%c", &confirm) == EOF) {
+            info(RED"Reading your input failed."NCO);
+        }
+
         settings->verbosity = save_verbosity;
         return (confirm == 'y' || confirm == 'Y' || confirm == '\n');
     }

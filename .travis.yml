@@ -1,5 +1,5 @@
-install: sudo apt-get install libelf-dev libglib2.0-dev
+install: sudo apt-get install libelf-dev libglib2.0-dev python-docutils
 compiler:
   - clang
   - gcc
-script: scons
+script: scons VERBOSE=1
