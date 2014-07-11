@@ -6,10 +6,12 @@ rmlint
 find duplicate files and other space waste efficiently
 ------------------------------------------------------
 
+.. Stuff in curly braces gets replaced by SCons
+
 :Author: sahib@online.de
-:Date: 2014-07-08
+:Date: {DATE}
 :Copyright: public domain
-:Version: 0.1
+:Version: {VERSION}
 :Manual section: 1
 :Manual group: file system
 

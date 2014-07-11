@@ -3,8 +3,13 @@
 
 import os
 import sys
+import time
 import codecs
 import subprocess
+
+VERSION_MAJOR = 2
+VERSION_MINOR = 0
+VERSION_PATCH = 0
 
 
 def CheckPKGConfig(context, version):
@@ -46,9 +51,9 @@ def BuildConfigTemplate(target, source, env):
     with codecs.open(str(target[0]), 'w') as handle:
         handle.write(text.format(
             HAVE_GLIB=int(conf.env['glib']),
-            VERSION_MAJOR=2,
-            VERSION_MINOR=0,
-            VERSION_PATCH=0,
+            VERSION_MAJOR=VERSION_MAJOR,
+            VERSION_MINOR=VERSION_MINOR,
+            VERSION_PATCH=VERSION_PATCH,
             VERSION_GIT_REVISION=env['gitrev']
         ))
 
@@ -219,13 +224,29 @@ def TarFile(target, source, env):
 
 
 def BuildMan(target, source, env):
-    os.system('rst2man "{s}" > "{t}"'.format(t=str(target[0]), s=str(source[0])))
+    rst_in_path = str(source[0])
+    man_out_path = str(target[0])
+
+    with open(rst_in_path, 'r') as handle:
+        text = handle.read()
+        text = text.format(
+            VERSION='{}.{}.{} ({})'.format(
+                VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, env['gitrev']
+            ),
+            DATE=time.strftime("%d-%m-%Y")
+        )
+
+    rst_meta_path = rst_in_path[:-3]
+    with open(rst_meta_path, 'w') as handle:
+        handle.write(text)
+
+    os.system('rst2man "{s}" > "{t}"'.format(t=man_out_path, s=rst_meta_path))
 
 
 env.AlwaysBuild(
     env.Alias('man',
         env.Command(
-            'doc/rmlint.1', 'doc/rmlint.1.rst', BuildMan
+            'doc/rmlint.1', 'doc/rmlint.1.rst.in', BuildMan
         )
     )
 )
