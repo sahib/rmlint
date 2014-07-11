@@ -31,7 +31,7 @@
 #include <glib.h>
 #include "defs.h"
 
-RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum);
+RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum, char *iwd);
 
 /**
  * @brief Free the memory allocated by rm_file_new()
