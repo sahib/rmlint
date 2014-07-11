@@ -30,6 +30,7 @@
 #include <pthread.h>
 
 #include <sys/stat.h>
+#include <unistd.h>
 #include "list.h"
 #include "rmlint.h"
 #include "filter.h"
@@ -74,7 +75,7 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
     }
 
     if(ent == NULL) {
-        rm_file_list_append(list, rm_file_new(path, statp, file_type, is_ppath, pnum));
+        rm_file_list_append(list, rm_file_new(path, statp, file_type, is_ppath, pnum, settings->iwd));
     } else {
         switch (ent->fts_info) {
         case FTS_D:         /* preorder directory */
@@ -88,12 +89,12 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
         case FTS_W:         /* whiteout object */
         case FTS_NS:        /* stat(2) failed */
         case FTS_NSOK:      /* no stat(2) requested */
-            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
+            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum, settings->iwd));
             break;
         case FTS_F:         /* regular file */
         case FTS_SL:        /* symbolic link */
         case FTS_DEFAULT:   /* none of the above */
-            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum));
+            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum, settings->iwd));
             break;
         default:
             break;
@@ -276,6 +277,10 @@ int rm_search_tree(RmSession *session) {
 
     pthread_t *thread_ids = g_malloc0((settings->num_paths + 1) * sizeof(pthread_t));
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
+
+    char CWD[PATH_MAX];
+    session->settings->iwd = getcwd(CWD, PATH_MAX);
+    info("iwd: %s", session->settings->iwd);
 
     /* Set Bit flags for fts options.  */
     int bit_flags = 0 ;

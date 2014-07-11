@@ -29,17 +29,22 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <inttypes.h>
 
 #include "list.h"
 #include "linttests.h"
+#include "filemap.h"
+#include "rmlint.h"
 
-RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum) {
+RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum, char *iwd) {
     RmFile *self = g_slice_new0(RmFile);
 
     self->path = g_strdup(path);
     self->node = buf->st_ino;
     self->dev = buf->st_dev;
     self->mtime = buf->st_mtime;
+
+    self->offset = get_disk_offset(rm_fullname(path, iwd), 0);
 
     if(type == TYPE_DUPE_CANDIDATE) {
         self->fsize = buf->st_size;
@@ -173,6 +178,7 @@ void rm_file_list_append(RmFileList *list, RmFile *file) {
         }
     }
     g_rec_mutex_unlock(&list->lock);
+    info("Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
 }
 
 void rm_file_list_clear(RmFileList *list, GSequenceIter *iter) {

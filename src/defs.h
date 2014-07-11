@@ -166,6 +166,7 @@ typedef struct RmSettings {
     guint64 threads;
     short depth;
     RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
+    char * iwd;                  /* cwd when rmlint called */
 } RmSettings;
 
 typedef struct _RmFile RmFile;
@@ -186,6 +187,7 @@ struct _RmFile {
     /* This is used to find pointers to the physically same file */
     ino_t node;
     dev_t dev;
+    uint64_t offset;                    /*offset in bytes from start of device*/
 
     GList *list_node;
     GSequenceIter *file_group;

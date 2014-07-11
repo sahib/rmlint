@@ -54,6 +54,19 @@ char *rm_basename(char *filename) {
     return (char *)filename;
 }
 
+char *rm_fullname(const char *filename, char *iwd) {
+    if (filename[0] == '/')
+        /* It's the full path anyway */
+        return (char *)filename;
+    else {
+        char *result = malloc(strlen(filename)+strlen(iwd)+2);
+        strcpy(result, iwd);
+        strcat(result, "/");
+        strcat(result, filename);
+        return (char *)result;
+    }
+}
+
 ino_t parent_node(const char *apath) {
     char *dummy  = strdup( apath );
     char *parent_path = dirname(dummy);
@@ -102,6 +115,7 @@ bool is_nonstripped(const char *path, G_GNUC_UNUSED struct stat *statp,  RmSetti
         static char CWD_BUF[PATH_MAX];
 
         char *abs_path = g_build_filename(getcwd(CWD_BUF, PATH_MAX), rm_basename((char *)path), NULL);
+        /* TODO: will the above work for all cases, eg NOCHDIR case with multi threads*/
 
         /* Open ELF file to obtain file descriptor */
         if((fd = open(abs_path, O_RDONLY)) < 0) {
