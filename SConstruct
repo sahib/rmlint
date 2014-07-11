@@ -171,10 +171,6 @@ if 'LDFLAGS' in os.environ:
     conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
     print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
 
-conf.env.Append(LINKFLAGS=[
-    '-pthread', '-lm', '-lelf'
-])
-
 # Needed/Adviceable flags:
 conf.env.Append(CCFLAGS=[
     '-std=c99', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE', '-pthread'
@@ -203,6 +199,10 @@ conf.env.Append(CFLAGS=[
 ])
 
 env.ParseConfig('pkg-config --cflags --libs ' + ' '.join(packages))
+
+conf.env.Append(_LIBFLAGS=[
+    '-pthread', '-lm', '-lelf'
+])
 
 # Your extra checks here
 env = conf.Finish()
