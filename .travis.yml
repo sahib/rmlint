@@ -1,0 +1,5 @@
+install: sudo apt-get install libelf-dev libglib2.0-dev
+compiler:
+  - clang
+  - gcc
+script: scons
