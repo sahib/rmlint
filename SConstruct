@@ -177,7 +177,7 @@ conf.env.Append(LINKFLAGS=[
 
 # Needed/Adviceable flags:
 conf.env.Append(CCFLAGS=[
-    '-std=c11', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE'
+    '-std=c99', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE'
 ])
 
 if ARGUMENTS.get('DEBUG') == "1":
