@@ -679,7 +679,7 @@ void start_processing(RmSession *session) {
     info("Now removing files with unique sizes from list...");
     info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
     info(" done. \nNow doing fingerprints and full checksums.\n");
-    error("%s Duplicate(s):", YEL"#"NCO);
+    error("\n%s Duplicate(s):\n", YEL"#"NCO);
 
     /* Groups are splitted, now give it to the scheduler
      * The scheduler will do another filterstep, build checkusm

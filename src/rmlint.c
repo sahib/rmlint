@@ -834,8 +834,9 @@ int rm_main(RmSession *session) {
             }
         }
         if(session->settings->cmd_path) {
-            check_cmd(session->settings->cmd_path);
-            die(session, EXIT_FAILURE);
+            if(check_cmd(session->settings->cmd_path) == 0) {
+                die(session, EXIT_FAILURE);
+            }
         }
     }
 

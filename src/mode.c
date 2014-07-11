@@ -247,24 +247,21 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
     break;
     case RM_MODE_CMD: {
         /* Exec a command on it */
-        int ret = 0;
         char *tmp_opath = strsubs(orig, "'", "'\"'\"'");
         char *tmp_fpath = strsubs(path, "'", "'\"'\"'");
         if(tmp_opath && tmp_fpath) {
-            const char *cmd = NULL;
+            char *cmd = NULL;
             if(path) {
                 cmd = make_cmd_ready(sets, false, tmp_opath, tmp_fpath);
             } else {
                 cmd = make_cmd_ready(sets, true, tmp_opath, NULL);
             }
             if(cmd != NULL) {
-                // TODO: fork/execve
-                ret = system(cmd);
-                if(WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
+                int rc = system(cmd);
+                g_free(cmd);
+                if(WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT)) {
                     return true;
                 }
-                free((char *)cmd);
-                cmd = NULL;
             }
             free(tmp_opath);
             free(tmp_fpath);
@@ -385,9 +382,6 @@ void init_filehandler(RmSession *session) {
     }
 }
 
-// TODO: What the fuck? I forgot that one.
-bool print_newline = true;
-
 bool process_island(RmSession *session, GQueue *group) {
     /* This does the final processing on a dupe group. All required   */
     /* comparisons have been done (including paranoid if required) so */
@@ -440,10 +434,6 @@ bool process_island(RmSession *session, GQueue *group) {
                     || sets->mode == RM_MODE_LINK
                     || (sets->mode == RM_MODE_CMD && sets->cmd_orig == NULL && sets->cmd_path == NULL)
               ) {
-                if(print_newline) {
-                    warning("\n");
-                    print_newline = false;
-                }
                 if(sets->mode != RM_MODE_LINK) {
                     error(GRE"   ls "NCO"%s\n", fi->path);
                 }
