@@ -236,7 +236,7 @@ def BuildMan(target, source, env):
             DATE=time.strftime("%d-%m-%Y")
         )
 
-    rst_meta_path = rst_in_path[:-3]
+    rst_meta_path = rst_in_path[:-4]
     with open(rst_meta_path, 'w') as handle:
         handle.write(text)
 
@@ -246,13 +246,13 @@ def BuildMan(target, source, env):
 env.AlwaysBuild(
     env.Alias('man',
         env.Command(
-            'doc/rmlint.1', 'doc/rmlint.1.rst.in', BuildMan
+            'docs/rmlint.1', 'docs/rmlint.1.in.rst', BuildMan
         )
     )
 )
 
 manpage = env.Command(
-    'doc/rmlint.1.gz', 'doc/rmlint.1', TarFile
+    'docs/rmlint.1.gz', 'docs/rmlint.1', TarFile
 )
 
 env.AlwaysBuild(manpage)

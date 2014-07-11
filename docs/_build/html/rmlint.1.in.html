@@ -1,0 +1,444 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>rmlint &mdash; rmlint (0.07) apidoc</title>
+    
+    <link rel="stylesheet" href="_static/flasky.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.07',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="top" title="rmlint (0.07) apidoc" href="index.html" />
+    <link rel="next" title="ToDo List" href="todo.html" />
+    <link rel="prev" title="rmlint manual" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body>
+  
+  
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="todo.html" title="ToDo List"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="rmlint manual"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">rmlint (0.07) apidoc</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="rmlint">
+<h1>rmlint<a class="headerlink" href="#rmlint" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="find-duplicate-files-and-other-space-waste-efficiently">
+<h2>find duplicate files and other space waste efficiently<a class="headerlink" href="#find-duplicate-files-and-other-space-waste-efficiently" title="Permalink to this headline">¶</a></h2>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Author:</th><td class="field-body"><a class="reference external" href="mailto:sahib&#37;&#52;&#48;online&#46;de">sahib<span>&#64;</span>online<span>&#46;</span>de</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Date:</th><td class="field-body">{DATE}</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Copyright:</th><td class="field-body">public domain</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Version:</th><td class="field-body">{VERSION}</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Manual section:</th><td class="field-body">1</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Manual group:</th><td class="field-body">file system</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="synopsis">
+<h3>SYNOPSIS<a class="headerlink" href="#synopsis" title="Permalink to this headline">¶</a></h3>
+<p>rmlint [[//]TARGET_DIR ...] [FILE ...] [-] [OPTIONS]</p>
+</div>
+<div class="section" id="description">
+<h3>DESCRIPTION<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h3>
+<p><cite>rmlint</cite> finds space waste and other broken things on your filesystem and offers
+to remove it. This includes:</p>
+<ul class="simple">
+<li>Duplicate files.</li>
+<li>Nonstripped Binaries (Binaries with debug symbols).</li>
+<li>Broken links.</li>
+<li>Empty files and directories.</li>
+<li>Files with broken user or group id.</li>
+<li>Optionally: Double basenames.</li>
+</ul>
+<p>In order to find the lint, <cite>rmlint</cite> is given one or more directories to traverse.
+If no directory or file was given, the current working directory is assumed.
+<cite>rmlint</cite> will take care of things like filesystem loops and symlinks during
+traversing.</p>
+<p>Found duplicates are divided into the original and duplicates. Original
+are what <cite>rmlint</cite> thinks to be the file that was first there. You can drive
+the original detection with the <cite>-S</cite> option. If you know which path contains the
+originals you can prefix the path with <strong>//</strong>,</p>
+<p>Quick clues for adjusting settings are available by using the <cite>-q</cite> option.</p>
+<p><strong>Note:</strong> <cite>rmlint</cite> will not delete any files by itself unless you command it!</p>
+</div>
+<div class="section" id="options">
+<h3>OPTIONS<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="general-options">
+<h4>General Options<a class="headerlink" href="#general-options" title="Permalink to this headline">¶</a></h4>
+<p><strong>-o &#8211;output-script[=path]</strong> (<em>default:</em> ./rmlint.sh)</p>
+<p><strong>-O &#8211;output-log[=path]</strong> (<em>default:</em> ./rmlint.log)</p>
+<blockquote>
+<div>Specify where to output the script or log file. The path is optional, if
+none is specified, no script or logfile is written.</div></blockquote>
+<p><strong>-a &#8211;algorithm=name</strong> (<em>default:</em> spooky)</p>
+<blockquote>
+<div><p>Choose the hash algorithm to use for finding duplicate files.
+The following algorithms are available:
+<strong>spooky</strong>, <strong>city</strong>, <strong>murmur</strong>, <strong>md5</strong>.</p>
+<p>If <cite>rmlint</cite> was compiled with <cite>-D_RM_HASH_LEN=64</cite> (not by default), then
+additionally the following algorithms are available:
+<strong>sha1</strong>, <strong>sha256</strong>, <strong>sha512</strong>.</p>
+</div></blockquote>
+<p><strong>-v &#8211;loud / -V &#8211;quiet</strong></p>
+<blockquote>
+<div>Increase or decrease the verbosity. You can pass these options several
+times.</div></blockquote>
+<p><strong>-p &#8211;paranoid / -P &#8211;no-paranoid</strong> (<em>default</em>)</p>
+<blockquote>
+<div>Do a byte by byte comparison of each duplicate file. Use this when you do
+not trust hash functions. <em>Warning:</em> Slow.</div></blockquote>
+<p><strong>-w &#8211;with-color</strong> (<em>default</em>) <strong>/ -W &#8211;no-with-color</strong></p>
+<blockquote>
+<div>Use color escapes for pretty output or disable them.
+If you pipe <cite>rmlints</cite> output to a file -W is assumed.</div></blockquote>
+<p><strong>-q &#8211;confirm-settings / -Q &#8211;no-confirm-settings</strong> (<em>default</em>)</p>
+<blockquote>
+<div>Print a screen of the used settings and the options that you need to change
+them. Requires confirmation before proceeding.</div></blockquote>
+<p><strong>-m &#8211;mode=name</strong> (<em>default:</em> list)</p>
+<blockquote>
+<div><p>Tell <cite>rmlint</cite> what to do with found duplicates. The mode is ignored for other
+lint types than duplicates.</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">--mode</span> <span class="pre">list</span></tt>:  Only list files with the command that would be executed on <tt class="docutils literal"><span class="pre">--mode</span> <span class="pre">cmd</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">--mode</span> <span class="pre">noask</span></tt>: Remove files without asking.</li>
+<li><tt class="docutils literal"><span class="pre">--mode</span> <span class="pre">cmd</span></tt>:   Execute a command given with <cite>-c / -C</cite> on the duplicate / original.</li>
+<li><tt class="docutils literal"><span class="pre">--mode</span> <span class="pre">link</span></tt>:  Replace duplicates with symbolic links to their original.</li>
+</ul>
+</div></blockquote>
+<p><strong>-c &#8211;cmd-dup=cmd</strong> (<em>default:</em> rm)</p>
+<p><strong>-C &#8211;cmd-orig=cmd</strong> (<em>default:</em> ls)</p>
+<blockquote>
+<div>If <cite>&#8211;mode cmd</cite> is used you can specify the commands that are used
+on duplicate files and their respective originals.</div></blockquote>
+<p><strong>-h &#8211;help / -H &#8211;version</strong></p>
+<blockquote>
+<div>Show this manual or print the version string.</div></blockquote>
+</div>
+<div class="section" id="traversal-options">
+<h4>Traversal Options<a class="headerlink" href="#traversal-options" title="Permalink to this headline">¶</a></h4>
+<p><strong>-t &#8211;threads=N</strong> (<em>default:</em> 16)</p>
+<blockquote>
+<div>The number of threads to use during file tree traversal and hashing.
+<cite>rmlint</cite> probably knows better than you how to set the value.</div></blockquote>
+<p><strong>-s &#8211;size=range</strong> (<em>default:</em> all)</p>
+<blockquote>
+<div><p>Only consider files in a certain size range.
+The format of <cite>range</cite> is <cite>min-max</cite>, where both ends can be specified
+as a number with an optional multiplier. The available multipliers are:</p>
+<ul class="simple">
+<li><em>C</em> (1^1), <em>W</em> (2^1), B (512^1), <em>K</em> (1000^1), KB (1024^1), <em>M</em> (1000^2), <em>MB</em> (1024^2), <em>G</em> (1000^3), <em>GB</em> (1024^3),</li>
+<li><em>T</em> (1000^4), <em>TB</em> (1024^4), <em>P</em> (1000^5), <em>PB</em> (1024^5), <em>E</em> (1000^6), <em>EB</em> (1024^6)</li>
+</ul>
+<p>The size format is about the same as <cite>dd(1)</cite> uses. Example: <strong>&#8220;100KB-2M&#8221;</strong>.</p>
+<p>It&#8217;s also possible to specify only one size. In this case the size is
+interpreted as &#8220;up to this size&#8221;.</p>
+</div></blockquote>
+<p><strong>-d &#8211;maxdepth=depth</strong> (<em>default:</em> INF)</p>
+<blockquote>
+<div>Only recurse up to this depth. A depth of 1 would disable recursion and is
+equivalent to a directory listing.</div></blockquote>
+<p><strong>-l &#8211;hardlinked / -L &#8211;no-hardlinked</strong> (<em>default</em>)</p>
+<blockquote>
+<div>By default <cite>rmlint</cite> will not allow several files with the same <em>inode</em> and
+therefore keep only one of them in it&#8217;s internal list.
+If <cite>-l</cite> is specified the whole group is reported instead.</div></blockquote>
+<p><strong>-f &#8211;followlinks</strong> (<em>default</em>) <strong>/ -F &#8211;no-followlinks</strong></p>
+<blockquote>
+<div><p>Follow symbolic links? If file system loops occur <cite>rmlint</cite> will detect this.
+If <cite>-F</cite> is specified, symbolic links will be ignored completely.</p>
+<p><strong>Note:</strong> Hardlinks are always followed, but it depends on <tt class="docutils literal"><span class="pre">-L</span></tt> how those are
+handled.</p>
+</div></blockquote>
+<p><strong>-x &#8211;crossdev</strong> (<em>default</em>) <strong>/ -X &#8211;no-crossdev</strong></p>
+<blockquote>
+<div>Do cross over mount points (<tt class="docutils literal"><span class="pre">-x</span></tt>)? Or stay always on the same device
+(<tt class="docutils literal"><span class="pre">-X</span></tt>)?</div></blockquote>
+<p><strong>-r &#8211;no-hidden</strong> (<em>default</em>) <strong>/ -R &#8211;hidden</strong></p>
+<blockquote>
+<div>Also traverse hidden directories? This is often not a good idea, since
+directories like <cite>.git/</cite> would be investigated.</div></blockquote>
+</div>
+<div class="section" id="lint-options">
+<h4>Lint options<a class="headerlink" href="#lint-options" title="Permalink to this headline">¶</a></h4>
+<p><strong>-e &#8211;emptyfiles</strong> (<em>default</em>) <strong>/ -E &#8211;no-emptyfiles</strong></p>
+<blockquote>
+<div>Find and list empty files?</div></blockquote>
+<p><strong>-z &#8211;emptydirs</strong> (<em>default</em>) <strong>/ -Z &#8211;no-emptydirs</strong></p>
+<blockquote>
+<div>Find and list empty directories?</div></blockquote>
+<p><strong>-n &#8211;namecluster / -N &#8211;no-namecluster</strong> (<em>default</em>)</p>
+<blockquote>
+<div>Find files with the same basename? Files that have the same basename
+are still checked to be duplicates if <cite>-U</cite> was not passed.</div></blockquote>
+<p><strong>-b &#8211;nonstripped / -B &#8211;no-nonstripped</strong> (<em>default</em>)</p>
+<blockquote>
+<div>Find binaries with debug symbols. Debug symbols can be removed via the
+<cite>strip</cite> utility. <em>Warning:</em> Slow if applied to many binaries.</div></blockquote>
+<p><strong>-g &#8211;badids</strong> (<em>default</em>) <strong>/ -G &#8211;no-badids</strong></p>
+<blockquote>
+<div>Find files or directories with bad <em>UID</em>, <em>GID</em> or <em>both</em>.</div></blockquote>
+<p><strong>-u &#8211;dups</strong> (<em>default</em>) <strong>/ -U &#8211;no-dups</strong></p>
+<blockquote>
+<div>Find duplicate files?</div></blockquote>
+<p><strong>-k &#8211;keepallorig / -K &#8211;no-keepallorig</strong> (<em>default</em>)</p>
+<blockquote>
+<div><p>Don&#8217;t delete any duplicates that are in original paths.
+(Paths that were prefixed with <strong>//</strong>).</p>
+<p><strong>Note:</strong> for lint types other than duplicates, <cite>&#8211;keepallorig</cite> option is ignored.</p>
+</div></blockquote>
+<p><strong>-m &#8211;mustmatchorig / -M &#8211;no-mustmatchorig</strong> (<em>default</em>)</p>
+<blockquote>
+<div>Only look for duplicates of which one is in original paths.
+(Paths that were prefixed with <strong>//</strong>).</div></blockquote>
+<p><strong>-i &#8211;invertorig / -I &#8211;no-invertorig</strong> (<em>default</em>)</p>
+<blockquote>
+<div>Paths prefixed with <strong>//</strong> are non-originals and all other paths are originals.</div></blockquote>
+<p><strong>-S &#8211;sortcriteria=criteria</strong> (<em>default</em>: m)</p>
+<blockquote>
+<div><ul class="simple">
+<li><strong>m</strong>: keep lowest mtime (oldest)  <strong>M</strong>: keep highest mtime (newest)</li>
+<li><strong>a</strong>: keep first alphabetically   <strong>A</strong>: keep last alphabetically</li>
+<li><strong>p</strong>: keep first named path       <strong>P</strong>: keep last named path</li>
+</ul>
+<p>One can have multiple criteria, e.g.: <tt class="docutils literal"><span class="pre">-S</span> <span class="pre">am</span></tt> will choose first alphabetically; if tied then by mtime.
+<strong>Note:</strong> original path criteria (specified using <cite>//</cite>) will always take first priority over <cite>-S</cite> options.</p>
+</div></blockquote>
+</div>
+</div>
+<div class="section" id="examples">
+<h3>EXAMPLES<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first"><tt class="docutils literal"><span class="pre">rmlint</span></tt></p>
+<p>Check the current working directory for duplicates.</p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">find</span> <span class="pre">~/pics</span> <span class="pre">-iname</span> <span class="pre">'*.png'</span> <span class="pre">|</span> <span class="pre">./rmlint</span> <span class="pre">-</span></tt></p>
+<p>Read paths from <em>stdin</em> and check all png files for duplicates.</p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">rmlint</span> <span class="pre">//files</span> <span class="pre">files_backup</span> <span class="pre">--keepallorig</span> <span class="pre">--mustmatchorig</span></tt></p>
+<p>Check for duplicate files between the current files and the backup of it.
+Only files in <em>files_backup</em> would be reported as duplicate.
+Additionally, all reported duplicates must occur in both paths.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="problems">
+<h3>PROBLEMS<a class="headerlink" href="#problems" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><strong>False Positives:</strong> Depending on the options you use, there is a very slight risk
+of false positives (files that are erroneously detected as duplicate).
+Internally a hasfunctions is used to compute a <em>fingerprint</em> of a file. These
+hashfunctions may, in theory, map two different files to the same
+fingerprint. This happens about once in 2 ** 64 files. Since <cite>rmlint</cite> computes
+at least 3 hashes per file and requires them to be the same size, it&#8217;s very
+unlikely to happen. If you&#8217;re really wary, try the <em>&#8211;paranoid</em> option.</li>
+</ol>
+</div>
+<div class="section" id="see-also">
+<h3>SEE ALSO<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><cite>find(1)</cite></li>
+<li><cite>rm(1)</cite></li>
+</ul>
+<p>Extended documentation and an in-depth tutorial can be found at:</p>
+<p>TODO: Actually write this tutorial.</p>
+</div>
+<div class="section" id="bugs">
+<h3>BUGS<a class="headerlink" href="#bugs" title="Permalink to this headline">¶</a></h3>
+<p>If you found a bug, have a feature requests or want to say something nice, please
+visit <a class="reference external" href="https://github.com/sahib/rmlint/issues">https://github.com/sahib/rmlint/issues</a>.</p>
+<p>Please make sure to describe your problem in detail. Always include the version
+of <cite>rmlint</cite> (<tt class="docutils literal"><span class="pre">--version</span></tt>). If you experienced a crash, please include
+one of the following information with a debug build of <cite>rmlint</cite>:</p>
+<blockquote>
+<div><ul class="simple">
+<li><tt class="docutils literal"><span class="pre">gdb</span> <span class="pre">--ex</span> <span class="pre">run</span> <span class="pre">-ex</span> <span class="pre">bt</span> <span class="pre">--args</span> <span class="pre">rmlint</span> <span class="pre">-vvv</span> <span class="pre">[your_options]</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">valgrind</span> <span class="pre">--leak-check=no</span> <span class="pre">rmlint</span> <span class="pre">-vvv</span> <span class="pre">[your_options]</span></tt></li>
+</ul>
+</div></blockquote>
+<p>You can build a debug build of <tt class="docutils literal"><span class="pre">rmlint</span></tt> like this:</p>
+<blockquote>
+<div><ul class="simple">
+<li><tt class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:sahib/rmlint.git</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">cd</span> <span class="pre">rmlint</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">scons</span> <span class="pre">DEBUG=1</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">sudo</span> <span class="pre">scons</span> <span class="pre">install</span>&nbsp; <span class="pre">#</span> <span class="pre">Optional</span></tt></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="license">
+<h3>LICENSE<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h3>
+<p><cite>rmlint</cite> is licensed under the terms of the GPLv3.</p>
+<p>See the COPYRIGHT file that came with the source for more information.</p>
+</div>
+<div class="section" id="program-authors">
+<h3>PROGRAM AUTHORS<a class="headerlink" href="#program-authors" title="Permalink to this headline">¶</a></h3>
+<p><cite>rmlint</cite> was written by:</p>
+<ul class="simple">
+<li>Christopher &lt;sahib&gt; Pahl 2010-2014 (<a class="reference external" href="https://github.com/sahib">https://github.com/sahib</a>)</li>
+<li>Daniel &lt;SeeSpotRun&gt; T.   2014-2014 (<a class="reference external" href="https://github.com/SeeSpotRun">https://github.com/SeeSpotRun</a>)</li>
+</ul>
+<p>Also see the THANKS file for other people that helped us.</p>
+<p>If you consider a donation you can use <em>Flattr</em> or buy us a beer if we meet:</p>
+<p><a class="reference external" href="https://flattr.com/thing/302682/libglyr">https://flattr.com/thing/302682/libglyr</a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+    <a href="index.html">
+        <img src="_static/logo.png" width="200px"/>
+    </a>
+
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">rmlint</a><ul>
+<li><a class="reference internal" href="#find-duplicate-files-and-other-space-waste-efficiently">find duplicate files and other space waste efficiently</a><ul>
+<li><a class="reference internal" href="#synopsis">SYNOPSIS</a></li>
+<li><a class="reference internal" href="#description">DESCRIPTION</a></li>
+<li><a class="reference internal" href="#options">OPTIONS</a><ul>
+<li><a class="reference internal" href="#general-options">General Options</a></li>
+<li><a class="reference internal" href="#traversal-options">Traversal Options</a></li>
+<li><a class="reference internal" href="#lint-options">Lint options</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#examples">EXAMPLES</a></li>
+<li><a class="reference internal" href="#problems">PROBLEMS</a></li>
+<li><a class="reference internal" href="#see-also">SEE ALSO</a></li>
+<li><a class="reference internal" href="#bugs">BUGS</a></li>
+<li><a class="reference internal" href="#license">LICENSE</a></li>
+<li><a class="reference internal" href="#program-authors">PROGRAM AUTHORS</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">rmlint manual</a></li>
+      <li>Next: <a href="todo.html" title="next chapter">ToDo List</a></li>
+  </ul></li>
+</ul>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/rmlint.1.in.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+  <h3>Useful links:</h3>
+  <ul>
+    <li><a href="https://github.com/sahib/rmlint">Github Repo</a></li>
+    <li><a href="https://github.com/sahib/rmlint/issues">Issue Tracker</a></li>
+  </ul>
+  <p><b>Package:</b></p>
+  <ul>
+    <li>
+        <a href="https://travis-ci.org/sahib/libmunin/">
+            <img src="https://travis-ci.org/sahib/rmlint.png?branch=master"/>
+        </a>
+    </li>
+  </ul>
+  <p><b>Github:</b></p>
+  <ul>
+    <li>
+        <iframe 
+            src="http://ghbtns.com/github-btn.html?user=sahib&repo=rmlint&type=watch&count=true"
+            allowtransparency="true" frameborder="0" scrolling="0" width="120" height="20">
+        </iframe>
+    </li>
+    <li>
+        <iframe 
+            src="http://ghbtns.com/github-btn.html?user=sahib&repo=rmlint&type=fork&count=true"
+            allowtransparency="true" frameborder="0" scrolling="0" width="100" height="20">
+        </iframe>
+    </li>
+    <li>
+        <iframe 
+            src="http://ghbtns.com/github-btn.html?user=sahib&repo=rmlint&type=follow&count=true"
+            allowtransparency="true" frameborder="0" scrolling="0" width="150" height="20">
+        </iframe>
+    </li>
+    <li>
+        <iframe 
+            src="http://ghbtns.com/github-btn.html?user=SeeSpotRun&repo=rmlint&type=follow&count=true"
+            allowtransparency="true" frameborder="0" scrolling="0" width="180" height="20">
+        </iframe>
+    </li>
+  </ul>
+  
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  <div class="footer">
+    &copy; Copyright 2013, Christopher Pahl.
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  
+  </body>
+</html>
