@@ -278,8 +278,9 @@ int rm_search_tree(RmSession *session) {
     pthread_t *thread_ids = g_malloc0((settings->num_paths + 1) * sizeof(pthread_t));
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
-    session->settings->iwd = getcwd(NULL, 0);
-    strcat(session->settings->iwd, G_DIR_SEPARATOR_S);
+    char cwd_buf[PATH_MAX + 1];
+    getcwd(cwd_buf, PATH_MAX);
+    session->settings->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
 
     /* Set Bit flags for fts options.  */
     int bit_flags = 0 ;

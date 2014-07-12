@@ -34,9 +34,7 @@
 uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, const int64_t offset ) {
     uint64_t returnval = 0;
     uint64_t save_pos = 0;
-    struct fiemap *fm;
-
-    fm = (struct fiemap *)malloc(sizeof(struct fiemap) + sizeof(struct fiemap_extent) * 1);
+    struct fiemap *fm = g_malloc0(sizeof(struct fiemap) + sizeof(struct fiemap_extent));
     if (fm == NULL) {
         error("Out of memory allocating fiemap\n");
         return 0;
@@ -46,7 +44,7 @@ uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, c
 
     switch (offset_type) {
     case RM_OFFSET_RELATIVE:
-        fm->fm_start = lseek ( fd, 0, SEEK_END) + offset;
+        fm->fm_start = lseek(fd, 0, SEEK_END) + offset;
         break;
     case RM_OFFSET_ABSOLUTE:
         fm->fm_start = offset;

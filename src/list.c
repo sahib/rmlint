@@ -188,8 +188,8 @@ void rm_file_list_append(RmFileList *list, RmFile *file) {
             file->list_node = old_group->head;
         }
     }
-    g_rec_mutex_unlock(&list->lock);
     info("Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
+    g_rec_mutex_unlock(&list->lock);
 }
 
 void rm_file_list_clear(RmFileList *list, GSequenceIter *iter) {
