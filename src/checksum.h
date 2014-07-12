@@ -62,12 +62,13 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
  * rm_digest_update is not allowed to be called after finalizing.
  *
  * @param digest a pointer to a RmDigest
- * @param buffer The buffer to write the hexadecimal checksum to.
+ * @param input The input buffer to convert
  * @param buflen Size of the buffer.
+ * @param buffer The buffer to write the hexadecimal checksum to.
  *
  * @return how many bytes were written. (for md5sum: 32)
  */
-int rm_digest_finalize(RmDigest *digest, unsigned char *buffer, gsize buflen);
+int rm_digest_hexstring(unsigned char *input, gsize buflen, char *buffer);
 
 /**
  * @brief Convert the checksum to a byte blob.
