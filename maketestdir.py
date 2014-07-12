@@ -117,7 +117,7 @@ def create_dupes(N):
     for size in [1024, 2048, 4096, 8192]:
         for idx in range(N):
             create_random_file(
-                os.path.join('dupes', str(idx)) + '_' + str(size), size=size
+                os.path.join('dupes\' ', str(idx)) + '_' + str(size), size=size
             )
 
     os.makedirs('origs')
