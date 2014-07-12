@@ -61,25 +61,27 @@ uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, c
         fm->fm_start = 0;
         break;
     }
+
     fm->fm_length = 1;       /* one byte mapping*/
     fm->fm_extent_count = 1; /* buffer for one extent provided */
 
     if (ioctl(fd, FS_IOC_FIEMAP, fm) != -1 && fm->fm_mapped_extents == 1) {
         returnval = fm->fm_extents[0].fe_physical;
     } else {
-        if (errno == EBADR ) {
-            error ("FIEMAP failed with unsupported flags %x\n", fm->fm_flags);
+        if (errno == EBADR) {
+            error("FIEMAP failed with unsupported flags %x for file", fm->fm_flags);
         } else {
-            error ("FIEMAP failed on");
+            error("FIEMAP failed for file: ");
+            perror("FS_IOC_FIEMAP");
         }
         returnval = 0;
     }
-    free (fm);
+    g_free(fm);
     return returnval;
 }
 
 
-uint64_t get_disk_offset(char *path, uint64_t file_offset) {
+uint64_t get_disk_offset(const char *path, uint64_t file_offset) {
 
 #if !defined (__linux__) && 0  /*TODO - fix this*/
     return -1;  /*for now, no file map info for non-linux systems*/
@@ -87,7 +89,7 @@ uint64_t get_disk_offset(char *path, uint64_t file_offset) {
     uint64_t returnval = 0;
 
     /* ---open the file--- */
-#if defined(HAVE_OPEN64) && !defined(__OSX_AVAILABLE_BUT_DEPRECATED)
+#if 1 || defined(HAVE_OPEN64) && !defined(__OSX_AVAILABLE_BUT_DEPRECATED)
     int fd = open64(path, O_RDONLY);
 #else
     int fd = open(path, O_RDONLY);
@@ -103,12 +105,9 @@ uint64_t get_disk_offset(char *path, uint64_t file_offset) {
         }
     }
 
-    returnval = get_disk_offset_openfile (fd, RM_OFFSET_START, 0);
-    if(returnval == 0) {
-        error("Failed on %s\n", path);
-    } else {
-        error("Worked with %s: %lu\n", path, returnval);
-    }
+    returnval = get_disk_offset_openfile ( fd, RM_OFFSET_START, 0 );
+    if (returnval == 0)
+        error ("%s\n", path);
 
     close(fd);
 

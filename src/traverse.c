@@ -279,7 +279,7 @@ int rm_search_tree(RmSession *session) {
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     session->settings->iwd = getcwd(NULL, 0);
-    info("iwd: %s", session->settings->iwd);
+    strcat(session->settings->iwd, G_DIR_SEPARATOR_S);
 
     /* Set Bit flags for fts options.  */
     int bit_flags = 0 ;

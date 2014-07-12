@@ -54,18 +54,19 @@ char *rm_basename(char *filename) {
     return (char *)filename;
 }
 
-char *rm_fullname(const char *filename, char *iwd) {
-    if (filename[0] == '/')
+/* returns pointer to full path name - note this allocate space,
+ * so calling procedure needs to free this */
+char *rm_fullname(const char *iwd, const char *filename) {
+    char *result;
+    if (filename[0] == '/') {
         /* It's the full path anyway */
         return g_strdup(filename);
-    else {
-        size_t iwd_len = strlen(iwd);
-        char *result = malloc(iwd_len + strlen(filename) + 2);
-        strcpy(result + 0, iwd);
-        strcpy(result + iwd_len, G_DIR_SEPARATOR_S);
-        strcat(result + iwd_len + 1, filename);
-        return result;
+    } else {
+        result = malloc(strlen(filename) + strlen(iwd) + 1);
+        strcpy(result, iwd);
+        strcat(result, filename);
     }
+    return (char *)result;
 }
 
 ino_t parent_node(const char *apath) {

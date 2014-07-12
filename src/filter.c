@@ -225,7 +225,7 @@ static void build_fingerprints (RmSession *session, GQueue *group) {
     for(GList *iter = group->head; iter; iter = iter->next) {
         /* see md5.c for explanations */
         RmFile *iter_file = iter->data;
-        
+
         if (!iter_file->hardlinked_original)
             /* do fingerprint unless this is a hardlink of a file which is
              * already going to be fingerprinted */
