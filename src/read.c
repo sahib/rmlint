@@ -217,6 +217,7 @@ static void hash_fingerprint_fread(RmSession *session, RmFile *file, const guint
 #if (HASH_SERIAL_IO == 1)
     pthread_mutex_unlock(&mutex_fp_IO);
 #endif
+
     /* Compute md5sum of this block */
     RmDigest digest;
     if(bytes) {

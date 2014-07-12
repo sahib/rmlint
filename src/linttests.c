@@ -57,13 +57,14 @@ char *rm_basename(char *filename) {
 char *rm_fullname(const char *filename, char *iwd) {
     if (filename[0] == '/')
         /* It's the full path anyway */
-        return (char *)filename;
+        return g_strdup(filename);
     else {
-        char *result = malloc(strlen(filename)+strlen(iwd)+2);
-        strcpy(result, iwd);
-        strcat(result, "/");
-        strcat(result, filename);
-        return (char *)result;
+        size_t iwd_len = strlen(iwd);
+        char *result = malloc(iwd_len + strlen(filename) + 2);
+        strcpy(result + 0, iwd);
+        strcpy(result + iwd_len, G_DIR_SEPARATOR_S);
+        strcat(result + iwd_len + 1, filename);
+        return result;
     }
 }
 

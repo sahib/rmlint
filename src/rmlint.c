@@ -585,6 +585,7 @@ int die(RmSession *session, int status) {
     }
 
     g_free(sets->is_ppath);
+    g_free(sets->iwd);
 
     if(status) {
         info("Abnormal exit\n");

@@ -27,6 +27,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <fcntl.h>
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <inttypes.h>
@@ -39,12 +41,12 @@
 RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum, char *iwd) {
     RmFile *self = g_slice_new0(RmFile);
 
-    self->path = g_strdup(path);
+    self->path = rm_fullname(path, iwd);
     self->node = buf->st_ino;
     self->dev = buf->st_dev;
     self->mtime = buf->st_mtime;
 
-    self->offset = get_disk_offset(rm_fullname(path, iwd), 0);
+    self->offset = get_disk_offset(self->path, 0);
 
     if(type == TYPE_DUPE_CANDIDATE) {
         self->fsize = buf->st_size;
@@ -390,6 +392,12 @@ gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session) {
                 iter = g_sequence_iter_next(iter);
                 g_sequence_remove(old_iter);
             } else {
+                for(GList *iter = queue->head; iter; iter = iter->next) {
+                    RmFile *file = iter->data;
+                    int fd = open(file->path, O_RDONLY);
+                    readahead(fd, 0, file->fsize);
+                    close(fd);
+                }
                 iter = g_sequence_iter_next(iter);
             }
         }

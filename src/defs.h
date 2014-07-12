@@ -166,7 +166,7 @@ typedef struct RmSettings {
     guint64 threads;
     short depth;
     RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
-    char * iwd;                  /* cwd when rmlint called */
+    char *iwd;                   /* cwd when rmlint called */
 } RmSettings;
 
 typedef struct _RmFile RmFile;

@@ -56,8 +56,6 @@ gchar *strsubs(const char *string, const char *subs, const char *with) {
     return result;
 }
 
-/* ------------------------------------------------------------- */
-
 /* Simple wrapper around unlink() syscall */
 static void remfile(const char *r_path) {
     if(r_path) {
@@ -67,8 +65,6 @@ static void remfile(const char *r_path) {
     }
 }
 
-/* ------------------------------------------------------------- */
-
 void log_print(RmSession *session, FILE *stream, const char *string) {
     if(stream && string) {
         if(session->settings->verbosity == 4) {
@@ -77,8 +73,6 @@ void log_print(RmSession *session, FILE *stream, const char *string) {
         fprintf(stream, "%s", string);
     }
 }
-
-/* ------------------------------------------------------------- */
 
 static char *make_cmd_ready(RmSettings *sets, bool is_orig, const char *orig, const char *dupl) {
     char *repl_orig = NULL;
@@ -98,8 +92,6 @@ static char *make_cmd_ready(RmSettings *sets, bool is_orig, const char *orig, co
     return repl_orig;
 }
 
-/* ------------------------------------------------------------- */
-
 void script_print(RmSession *session, char *string) {
     if(string != NULL) {
         if(session->settings->verbosity == 5) {
@@ -110,11 +102,7 @@ void script_print(RmSession *session, char *string) {
     }
 }
 
-/* ------------------------------------------------------------- */
-
 #define _sd_ g_strdup_printf
-
-/* ------------------------------------------------------------- */
 
 void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFile *p_to_orig) {
     bool free_fullpath = true;
@@ -194,9 +182,9 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
         }
 #define INT_CAST long unsigned
         if(sets->verbosity == 4) {
-            fprintf(stdout, "%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node, LOGSEP);
+            fprintf(stdout, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
         }
-        fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu%s\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node, LOGSEP);
+        fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
 #undef INT_CAST
         if(free_fullpath && fpath && file->lint_type != TYPE_BLNK) {
             g_free(fpath);
@@ -369,7 +357,6 @@ void init_filehandler(RmSession *session) {
                 "#           ORIG: File that has a duplicate, but supposed to be a original\n"
                 "#           DUPL: File that is supposed to be a duplicate\n"
                 "#\n");
-        fprintf(session->log_out, "# md5sum  : The md5-checksum of the file (not equal with output of `md5sum`, because only parts are read!)\n");
         fprintf(session->log_out, "# path    : The full path to the found file\n");
         fprintf(session->log_out, "# size    : total size in byte as a decimal integer\n");
         fprintf(session->log_out, "# devID   : The ID of the device where the file is located\n");
@@ -420,7 +407,6 @@ bool process_island(RmSession *session, GQueue *group) {
         original->filter = false;
     }
 
-    /* Make sure no group is printed / logged at the same time (== chaos) */
     pthread_mutex_lock(&mutex_printage);
 
     /* Now do the actual printout.. */

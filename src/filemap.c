@@ -19,7 +19,7 @@
  *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
  *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
  *
- * Hosted on http:                              //github.com/sahib/rmlint
+ * Hosted on http://github.com/sahib/rmlint
  *
  */
 
@@ -32,50 +32,50 @@
 
 
 uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, const int64_t offset ) {
-   uint64_t returnval = 0;
-   uint64_t save_pos = 0;
-   struct fiemap *fm;
+    uint64_t returnval = 0;
+    uint64_t save_pos = 0;
+    struct fiemap *fm;
 
-   fm = (struct fiemap*)malloc(sizeof(struct fiemap) + sizeof(struct fiemap_extent) * 1);
-   if (fm == NULL) {
+    fm = (struct fiemap *)malloc(sizeof(struct fiemap) + sizeof(struct fiemap_extent) * 1);
+    if (fm == NULL) {
         error("Out of memory allocating fiemap\n");
         return 0;
-   }
-
-   memset (fm, 0, sizeof (*fm));
-
-   switch (offset_type) {
-        case RM_OFFSET_RELATIVE:
-             fm->fm_start = lseek ( fd, 0, SEEK_END) + offset;
-             break;
-        case RM_OFFSET_ABSOLUTE:
-             fm->fm_start = offset;
-             break;
-        case RM_OFFSET_END:
-             save_pos = lseek ( fd, 0, SEEK_CUR);
-             fm->fm_start = lseek ( fd, 0, SEEK_END);
-             save_pos = lseek ( fd, save_pos, SEEK_SET);
-             break;
-        case RM_OFFSET_START:
-        default:
-             fm->fm_start = 0;
-             break;
     }
-   fm->fm_length = 1;       /* one byte mapping*/
-   fm->fm_extent_count = 1; /* buffer for one extent provided */
 
-   if (ioctl(fd, FS_IOC_FIEMAP, fm) != -1 && fm->fm_mapped_extents == 1)
-      returnval = fm->fm_extents[0].fe_physical;
-   else {
-       if (errno == EBADR )
-           error ("FIEMAP failed with unsupported flags %x\n",
-                          fm->fm_flags);
-       else
-           error ("FIEMAP failed");
-   returnval = 0;
-   }
-   free (fm);
-   return returnval;
+    memset (fm, 0, sizeof (*fm));
+
+    switch (offset_type) {
+    case RM_OFFSET_RELATIVE:
+        fm->fm_start = lseek ( fd, 0, SEEK_END) + offset;
+        break;
+    case RM_OFFSET_ABSOLUTE:
+        fm->fm_start = offset;
+        break;
+    case RM_OFFSET_END:
+        save_pos = lseek ( fd, 0, SEEK_CUR);
+        fm->fm_start = lseek ( fd, 0, SEEK_END);
+        save_pos = lseek ( fd, save_pos, SEEK_SET);
+        break;
+    case RM_OFFSET_START:
+    default:
+        fm->fm_start = 0;
+        break;
+    }
+    fm->fm_length = 1;       /* one byte mapping*/
+    fm->fm_extent_count = 1; /* buffer for one extent provided */
+
+    if (ioctl(fd, FS_IOC_FIEMAP, fm) != -1 && fm->fm_mapped_extents == 1) {
+        returnval = fm->fm_extents[0].fe_physical;
+    } else {
+        if (errno == EBADR ) {
+            error ("FIEMAP failed with unsupported flags %x\n", fm->fm_flags);
+        } else {
+            error ("FIEMAP failed on");
+        }
+        returnval = 0;
+    }
+    free (fm);
+    return returnval;
 }
 
 
@@ -97,13 +97,18 @@ uint64_t get_disk_offset(char *path, uint64_t file_offset) {
         return 0;
     }
 
-    if ( file_offset != 0) {
-        if ( (lseek(fd, SEEK_SET, file_offset) != (__off_t)file_offset) ) {
+    if (file_offset != 0) {
+        if ((lseek(fd, SEEK_SET, file_offset) != (__off_t)file_offset)) {
             error ("error in lseek");
         }
     }
 
-    returnval = get_disk_offset_openfile ( fd, RM_OFFSET_START, 0 );
+    returnval = get_disk_offset_openfile (fd, RM_OFFSET_START, 0);
+    if(returnval == 0) {
+        error("Failed on %s\n", path);
+    } else {
+        error("Worked with %s: %lu\n", path, returnval);
+    }
 
     close(fd);
 

@@ -3,4 +3,4 @@ install: sudo apt-get install libelf-dev libglib2.0-dev python-docutils
 compiler:
   - clang
   - gcc
-script: scons VERBOSE=1
+script: scons VERBOSE=1 && sudo python maketestdir.py create && ./rmlint testdir
