@@ -177,6 +177,7 @@ struct _RmFile {
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
 
     char *path;                          /* absolute path from working dir */
+    const char *fullpath_prepend;        /* pointer to settings->iwd if path is relative; else null */
     bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
     unsigned int pnum;                   /* numerical index of user-input paths */
     guint64 fsize;                       /* Size of the file (bytes) */

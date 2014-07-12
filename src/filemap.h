@@ -26,7 +26,7 @@ typedef enum RmFileOffsetType {
 } RmFileOffsetType;
 
 
-uint64_t get_disk_offset(char *path, uint64_t file_offset);
+uint64_t get_disk_offset(const char *path, uint64_t file_offset);
 uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, int64_t offset );
 
 #endif // FILEMAP_H_INCLUDED
