@@ -11,7 +11,9 @@ typedef enum RmDigestType {
     RM_DIGEST_MD5,
     RM_DIGEST_SHA1,
     RM_DIGEST_SHA256,
-    RM_DIGEST_SHA512
+    RM_DIGEST_SHA512,
+    RM_DIGEST_MURMUR512,
+    RM_DIGEST_CITY512
 } RmDigestType;
 
 
@@ -24,9 +26,16 @@ typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
         struct spooky_state spooky_state;
+#if _RM_HASH_LEN >= 64
+        uint128 hash[4];
+#elif _RM_HASH_LEN >= 32
+        uint128 hash[2];
+#else
+        uint128 hash[1];
+#endif
     };
-    uint128 hash;
     RmDigestType type;
+    guint8 num_128bit_blocks;
 } RmDigest;
 
 /**

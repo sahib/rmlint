@@ -10,6 +10,10 @@
 #include "checksum.h"
 #include "defs.h"
 
+// TODO
+#undef _RM_HASH_LEN 
+#define _RM_HASH_LEN 64
+
 /* Less than 16 byte is not allowed */
 G_STATIC_ASSERT(_RM_HASH_LEN >= 16);
 
@@ -22,6 +26,10 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 #if _RM_HASH_LEN >= 64
     if(!strcasecmp(string, "sha512")) {
         return RM_DIGEST_SHA512;
+    } else if(!strcasecmp(string, "city512")) {
+        return RM_DIGEST_CITY512;
+    } else if(!strcasecmp(string, "murmur512")) {
+        return RM_DIGEST_MURMUR512;
     } else
 #elif _RM_HASH_LEN >= 32
     if(!strcasecmp(string, "sha256")) {
@@ -73,9 +81,27 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
     /* Fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-        digest->hash.first = seed1;
-        digest->hash.second = seed2;
+        digest->hash[0].first = seed1;
+        digest->hash[0].second = seed2;
         break;
+#if _RM_HASH_LEN >= 64
+    case RM_DIGEST_MURMUR512:
+    case RM_DIGEST_CITY512:
+        digest->num_128bit_blocks=4;
+        digest->hash[0].first = 0;
+        digest->hash[0].second = 0;
+        digest->hash[1].first = (0xf0f0f0f0f0f0f0f0); /*1111000011110000 etc*/
+        digest->hash[1].second = (0xf0f0f0f0f0f0f0f0);
+        digest->hash[2].first = (0x3333333333333333); /*001100110011 etc*/
+        digest->hash[2].second = (0x3333333333333333);
+        if (seed) {
+            digest->hash[3].first = seed;
+        } else {
+            digest->hash[3].first = (0xaaaaaaaaaaaaaaaa);
+        }
+        digest->hash[3].second = (0xaaaaaaaaaaaaaaaa); /*10101010 etc */
+        break;
+#endif
     default:
         g_assert_not_reached();
     }
@@ -91,36 +117,44 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
 #elif _RM_HASH_LEN >= 20
     case RM_DIGEST_SHA1:
 #endif
-        if(digest->glib_checksum == NULL) {
-            rm_digest_init(digest, digest->type, digest->hash.first, digest->hash.second);
-        }
         g_checksum_update(digest->glib_checksum, (const guchar *)data, size);
         break;
     case RM_DIGEST_SPOOKY:
         spooky_update(&digest->spooky_state, data, size);
         break;
+#if _RM_HASH_LEN >= 64
+    case RM_DIGEST_MURMUR512:
+#endif 
     case RM_DIGEST_MURMUR:
+       for (int i=0; i < digest->num_128bit_blocks; i++) {
+        /*TODO: multithread this if num_128bit_blocks > 1 */
 #if UINTPTR_MAX == 0xffffffff
         /* 32 bit */
-        MurmurHash3_x86_128(data, size, (uint32_t)digest->hash.first, &digest->hash);
+        MurmurHash3_x86_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
 #elif UINTPTR_MAX == 0xffffffffffffffff
         /* 64 bit */
-        MurmurHash3_x64_128(data, size, (uint32_t)digest->hash.first, &digest->hash);
+        MurmurHash3_x64_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
 #else
         /* 16 bit or unknown */
-        #error "Probably not a good idea to compile rmlint on 16bit."
+#error "Probably not a good idea to compile rmlint on 16bit."
 #endif
+        }
         break;
     case RM_DIGEST_CITY:
-        /* Opt out for the more optimized version.
-         * This needs the crc command of sse4.2
-         * (available on Intel Nehalem and up; my amd box doesn't have this though)
-         */
+#if _RM_HASH_LEN >= 64
+    case RM_DIGEST_CITY512:
+#endif 
+        for (int i=0; i < digest->num_128bit_blocks; i++) {
+            /* Opt out for the more optimized version.
+             * This needs the crc command of sse4.2
+             * (available on Intel Nehalem and up; my amd box doesn't have this though)
+             */
 #ifdef __sse4_2__
-        digest->hash = CityHashCrc128WithSeed(data, size, digest->hash);
+            digest->hash = CityHashCrc128WithSeed(data, size, digest->hash);
 #else
-        digest->hash = CityHash128WithSeed((const char *) data, size, digest->hash);
+            digest->hash[i] = CityHash128WithSeed((const char *) data, size, digest->hash[i]);
 #endif
+        }
         break;
     default:
         g_assert_not_reached();
@@ -147,8 +181,14 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     /* Fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-        self->hash.first = digest->hash.first;
-        self->hash.second = digest->hash.second;
+#if _RM_HASH_LEN >= 64
+    case RM_DIGEST_CITY512:
+    case RM_DIGEST_MURMUR512:
+#endif 
+        for (int i = 0; i < digest->num_128bit_blocks; i++) {
+            self->hash[i].first = digest->hash[i].first;
+            self->hash[i].second = digest->hash[i].second;
+        }
         break;
     default:
         g_assert_not_reached();
@@ -173,12 +213,16 @@ static int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
         bytes_written = buflen;
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_final(&copy->spooky_state, &copy->hash.first, &copy->hash.second);
+        spooky_final(&copy->spooky_state, &copy->hash[0].first, &copy->hash[0].second);
         /* Fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-        memcpy(buf, &copy->hash, sizeof(uint128));
-        bytes_written = 16;
+#if _RM_HASH_LEN >= 64
+    case RM_DIGEST_CITY512:
+    case RM_DIGEST_MURMUR512:
+#endif 
+        memcpy(buf, copy->hash, sizeof(uint128) * digest->num_128bit_blocks);
+        bytes_written = 16 * digest->num_128bit_blocks;
         break;
     default:
         g_assert_not_reached();
@@ -235,10 +279,14 @@ void rm_digest_finalize(RmDigest *digest) {
         g_checksum_free(digest->glib_checksum);
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_final(&digest->spooky_state, &digest->hash.first, &digest->hash.second);
+        spooky_final(&digest->spooky_state, &digest->hash[0].first, &digest->hash[0].second);
     /* fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
+#if _RM_HASH_LEN >= 64
+    case RM_DIGEST_CITY512:
+    case RM_DIGEST_MURMUR512:
+#endif 
         break;
     default:
         g_assert_not_reached();
