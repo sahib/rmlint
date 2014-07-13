@@ -10,10 +10,6 @@
 #include "checksum.h"
 #include "defs.h"
 
-// TODO
-#undef _RM_HASH_LEN 
-#define _RM_HASH_LEN 64
-
 /* Less than 16 byte is not allowed */
 G_STATIC_ASSERT(_RM_HASH_LEN >= 16);
 
@@ -210,7 +206,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     return self;
 }
 
-static int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
+int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
     RmDigest *copy = rm_digest_copy(digest);
     gsize bytes_written = 0;
 

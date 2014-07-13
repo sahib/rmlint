@@ -90,4 +90,6 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
  */
 void rm_digest_finalize(RmDigest *digest);
 
+int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen);
+
 #endif /* end of include guard */
