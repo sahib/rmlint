@@ -409,6 +409,15 @@ void spooky_init
     state->m_state[1] = seed2;
 }
 
+void spooky_copy
+(
+    struct spooky_state *dest,
+    struct spooky_state *src
+) {
+    memcpy(dest, src, sizeof (struct spooky_state));
+}
+
+
 void spooky_update
 (
     struct spooky_state *state,

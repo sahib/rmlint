@@ -79,6 +79,39 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, guint64 seed) {
     }
 }
 
+RmDigest *rm_digest_copy ( RmDigest *digest ) {
+    RmDigest *self = g_malloc0 (sizeof (RmDigest));
+
+    self->type = digest->type;
+
+    switch(digest->type) {
+    case RM_DIGEST_MD5:
+#if _RM_HASH_LEN >= 20
+    case RM_DIGEST_SHA1:
+#endif
+#if _RM_HASH_LEN >= 32
+    case RM_DIGEST_SHA256:
+#endif
+#if _RM_HASH_LEN >= 64
+    case RM_DIGEST_SHA512:
+#endif
+        self->glib_checksum = g_checksum_copy(digest->glib_checksum);
+        break;
+    case RM_DIGEST_SPOOKY:
+        spooky_copy(&self->spooky_state, &digest->spooky_state);
+    /* Fallthrough */
+    case RM_DIGEST_MURMUR:
+    case RM_DIGEST_CITY:
+        self->hash.first = digest->hash.first;
+        digest->hash.second = digest->hash.second;
+        break;
+    default:
+        g_assert_not_reached();
+    }
+    return self;
+}
+
+
 void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size) {
     switch(digest->type) {
     case RM_DIGEST_MD5:
@@ -169,6 +202,7 @@ int rm_digest_finalize(RmDigest *digest, unsigned char *buffer, gsize buflen) {
     }
 }
 
+
 int rm_digest_finalize_binary(RmDigest *digest, unsigned char *buffer, gsize buflen) {
     switch(digest->type) {
     case RM_DIGEST_MD5:
@@ -197,6 +231,32 @@ int rm_digest_finalize_binary(RmDigest *digest, unsigned char *buffer, gsize buf
     }
 }
 
+
+/* get digest, with or without finalising */
+int rm_digest_read_binary(RmDigest *digest, unsigned char *buffer, gsize buflen, bool finalise) {
+    if (0
+        || finalise
+        || digest->type==RM_DIGEST_MURMUR  /* MURMUR finalize doesn't change the RmDigest so don't need rm_digest_copy */
+        || digest->type==RM_DIGEST_CITY    /* CITY finalize doesn't change the RmDigest so don't need rm_digest_copy */
+        ) {
+        return rm_digest_finalize_binary(digest, buffer, buflen);
+    }
+    else {
+        /* make a copy and then finalise that */
+        RmDigest *theDigest = rm_digest_copy (digest);
+        return rm_digest_finalize_binary(theDigest, buffer, buflen);
+    }
+}
+
+void rm_digest_print(char *buffer, double buffer_len) {
+    printf("checksum:");
+    for (int i=0; i < buffer_len; i++)
+    {
+        printf("%02X", ((unsigned char *) buffer)[i]);
+    }
+    printf("\n");
+}
+
 #ifdef _RM_COMPILE_MAIN
 
 /* Use this to compile:
@@ -204,11 +264,12 @@ int rm_digest_finalize_binary(RmDigest *digest, unsigned char *buffer, gsize buf
  * $ ./a.out mmap <some_file[s]>
  */
 
-static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb, char *buffer, size_t buf_len) {
+static int rm_hash_file(const char *file, RmDigestType type, double buf_size_kb, char *buffer, size_t buf_len) {
     ssize_t bytes = 0;
-    const int N = buf_size_mb * 1024 * 1024;
+    const int N = buf_size_kb * 1024;
     char *data = g_alloca(N);
     FILE *fd = fopen(file, "rb");
+    int interim;
 
     /* Can't open file? */
     if(fd == NULL) {
@@ -223,15 +284,16 @@ static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb,
             printf("ERROR:read()");
         } else {
             rm_digest_update(&digest, data, bytes);
+            interim = rm_digest_read_binary(&digest, buffer, buf_len, false);
+            rm_digest_print(buffer, 16);
         }
     } while(bytes > 0);
 
     fclose(fd);
-
     return rm_digest_finalize(&digest, buffer, buf_len);
 }
 
-static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED double buf_size_mb, char *buffer, size_t buf_len) {
+static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED double buf_size_kb, char *buffer, size_t buf_len) {
     int fd = 0;
     char *f_map = NULL;
 

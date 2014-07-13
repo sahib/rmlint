@@ -40,6 +40,13 @@ struct spooky_state {
     unsigned char m_remainder;
 };
 
+void spooky_copy
+(
+    struct spooky_state *dest,
+    struct spooky_state *src
+);
+
+
 void spooky_shorthash
 (
     const void *message,
