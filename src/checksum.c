@@ -77,7 +77,7 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, guint64 seed) {
     /* Fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-        digest->hash[0].first = 0;
+        digest->hash[0].first = seed;
         digest->hash[0].second = 0;
         break;
 #if _RM_HASH_LEN >= 64
@@ -90,8 +90,12 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, guint64 seed) {
         digest->hash[1].second = (0xf0f0f0f0f0f0f0f0);
         digest->hash[2].first =  (0x3333333333333333);  /*001100110011 etc*/
         digest->hash[2].second = (0x3333333333333333);
-        digest->hash[3].first =  (0xaaaaaaaaaaaaaaaa);
-        digest->hash[3].second = (0xaaaaaaaaaaaaaaaa);   10101010 etc */
+        if (seed) {
+            digest->hash[3].first = seed;
+        } else {
+            digest->hash[3].first =  (0xaaaaaaaaaaaaaaaa);
+        }
+        digest->hash[3].second = (0xaaaaaaaaaaaaaaaa);   /*10101010 etc */
         break;
 #endif
     default:
