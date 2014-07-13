@@ -77,7 +77,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
  *
  * @return how many bytes were written. (for md5sum: 32)
  */
-int rm_digest_hexstring(RmDigest *digest, char *buffer, gsize buflen);
+int rm_digest_hexstring(RmDigest *digest, char *buffer);
 
 /**
  * @brief Convert the checksum to a byte blob.

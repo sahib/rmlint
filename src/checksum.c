@@ -31,11 +31,13 @@ RmDigestType rm_string_to_digest_type(const char *string) {
     } else if(!strcasecmp(string, "murmur512")) {
         return RM_DIGEST_MURMUR512;
     } else
-#elif _RM_HASH_LEN >= 32
+#endif
+#if _RM_HASH_LEN >= 32
     if(!strcasecmp(string, "sha256")) {
         return RM_DIGEST_SHA256;
     } else
-#elif _RM_HASH_LEN >= 20
+#endif
+#if _RM_HASH_LEN >= 20
     if(!strcasecmp(string, "sha1")) {
         return RM_DIGEST_SHA1;
     } else
@@ -51,10 +53,16 @@ RmDigestType rm_string_to_digest_type(const char *string) {
     }
 }
 
-#define add_seed(digest, seed) { if(seed) g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(uint64_t)); }
+#define add_seed(digest, seed) {                                                           \
+    if(seed) {                                                                             \
+        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(uint64_t)); \
+    }                                                                                      \
+}
 
 void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_t seed2) {
     digest->type = type;
+    digest->num_128bit_blocks = 1;
+
     switch(type) {
     case RM_DIGEST_MD5:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_MD5);
@@ -65,12 +73,14 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA512);
         add_seed(digest, seed1);
         break;
-#elif _RM_HASH_LEN >= 32
+#endif
+#if _RM_HASH_LEN >= 32
     case RM_DIGEST_SHA256:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA256);
         add_seed(digest, seed1);
         break;
-#elif _RM_HASH_LEN >= 20
+#endif
+#if _RM_HASH_LEN >= 20
     case RM_DIGEST_SHA1:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA1);
         add_seed(digest, seed1);
@@ -87,15 +97,15 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
-        digest->num_128bit_blocks=4;
+        digest->num_128bit_blocks = 4;
         digest->hash[0].first = 0;
         digest->hash[0].second = 0;
         digest->hash[1].first = (0xf0f0f0f0f0f0f0f0); /*1111000011110000 etc*/
         digest->hash[1].second = (0xf0f0f0f0f0f0f0f0);
         digest->hash[2].first = (0x3333333333333333); /*001100110011 etc*/
         digest->hash[2].second = (0x3333333333333333);
-        if (seed) {
-            digest->hash[3].first = seed;
+        if (seed1) {
+            digest->hash[3].first = seed1;
         } else {
             digest->hash[3].first = (0xaaaaaaaaaaaaaaaa);
         }
@@ -112,9 +122,11 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
     case RM_DIGEST_MD5:
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_SHA512:
-#elif _RM_HASH_LEN >= 32
+#endif
+#if _RM_HASH_LEN >= 32
     case RM_DIGEST_SHA256:
-#elif _RM_HASH_LEN >= 20
+#endif
+#if _RM_HASH_LEN >= 20
     case RM_DIGEST_SHA1:
 #endif
         g_checksum_update(digest->glib_checksum, (const guchar *)data, size);
@@ -126,7 +138,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
     case RM_DIGEST_MURMUR512:
 #endif 
     case RM_DIGEST_MURMUR:
-       for (int i=0; i < digest->num_128bit_blocks; i++) {
+       for (guint8 i = 0; i < digest->num_128bit_blocks; i++) {
         /*TODO: multithread this if num_128bit_blocks > 1 */
 #if UINTPTR_MAX == 0xffffffff
         /* 32 bit */
@@ -144,7 +156,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_CITY512:
 #endif 
-        for (int i=0; i < digest->num_128bit_blocks; i++) {
+        for (guint8 i = 0; i < digest->num_128bit_blocks; i++) {
             /* Opt out for the more optimized version.
              * This needs the crc command of sse4.2
              * (available on Intel Nehalem and up; my amd box doesn't have this though)
@@ -169,9 +181,11 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_MD5:
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_SHA512:
-#elif _RM_HASH_LEN >= 32
+#endif
+#if _RM_HASH_LEN >= 32
     case RM_DIGEST_SHA256:
-#elif _RM_HASH_LEN >= 20
+#endif
+#if _RM_HASH_LEN >= 20
     case RM_DIGEST_SHA1:
 #endif
         self->glib_checksum = g_checksum_copy(digest->glib_checksum);
@@ -204,9 +218,11 @@ static int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
     case RM_DIGEST_MD5:
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_SHA512:
-#elif _RM_HASH_LEN >= 32
+#endif
+#if _RM_HASH_LEN >= 32
     case RM_DIGEST_SHA256:
-#elif _RM_HASH_LEN >= 20
+#endif
+#if _RM_HASH_LEN >= 20
     case RM_DIGEST_SHA1:
 #endif
         g_checksum_get_digest(copy->glib_checksum, buf, &buflen);
@@ -233,7 +249,7 @@ static int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
     return bytes_written;
 }
 
-int rm_digest_hexstring(RmDigest *digest, char *buffer, gsize buflen) {
+int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     const char *hex = "0123456789abcdef";
 
     guint8 input[_RM_HASH_LEN];
@@ -245,7 +261,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer, gsize buflen) {
         buffer[1] = hex[input[i] % 16];
         buffer += 2;
     }
-    return buflen;
+    return digest_len * 2;
 }
 
 
@@ -271,9 +287,11 @@ void rm_digest_finalize(RmDigest *digest) {
     case RM_DIGEST_MD5:
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_SHA512:
-#elif _RM_HASH_LEN >= 32
+#endif
+#if _RM_HASH_LEN >= 32
     case RM_DIGEST_SHA256:
-#elif _RM_HASH_LEN >= 20
+#endif
+#if _RM_HASH_LEN >= 20
     case RM_DIGEST_SHA1:
 #endif
         g_checksum_free(digest->glib_checksum);
@@ -300,7 +318,7 @@ void rm_digest_finalize(RmDigest *digest) {
  * $ ./a.out mmap <some_file[s]>
  */
 
-static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb, char *buffer, gsize buflen) {
+static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb, char *buffer) {
     ssize_t bytes = 0;
     const int N = buf_size_mb * 1024 * 1024;
     unsigned char *data = g_alloca(N);
@@ -320,7 +338,7 @@ static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb,
         } else if(bytes > 0) {
             rm_digest_update(&digest, data, bytes);
 
-            gsize digest_len = rm_digest_hexstring(&digest, buffer, buflen);
+            gsize digest_len = rm_digest_hexstring(&digest, buffer);
             for(gsize i = 0; i < digest_len; i++) {
                 g_printerr("%c", buffer[i]);
             }
@@ -330,12 +348,12 @@ static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb,
 
     fclose(fd);
 
-    gsize digest_len = rm_digest_hexstring(&digest, buffer, buflen);
+    gsize digest_len = rm_digest_hexstring(&digest, buffer);
     rm_digest_finalize(&digest);
     return digest_len;
 }
 
-static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED double buf_size_mb, char *buffer, gsize buflen) {
+static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED double buf_size_mb, char *buffer) {
     int fd = 0;
     unsigned char *f_map = NULL;
 
@@ -372,7 +390,7 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
         perror("ERROR:close()");
     }
 
-    gsize digest_len = rm_digest_hexstring(&digest, buffer, buflen);
+    gsize digest_len = rm_digest_hexstring(&digest, buffer);
     rm_digest_finalize(&digest);
     return digest_len;
 }
@@ -385,7 +403,7 @@ int main(int argc, char **argv) {
     }
 
     for(int j = 2; j < argc; j++) {
-        const char *types[] = {"city", "spooky", "murmur", "md5", "sha1", "sha256", "sha512", NULL};
+        const char *types[] = {"city", "spooky", "murmur",  "murmur512", "city512", "md5", "sha1", "sha256", "sha512", NULL};
 
         // printf("# %d MB\n", 1 << (j - 2));
         for(int i = 0; types[i]; ++i) {
@@ -402,9 +420,9 @@ int main(int argc, char **argv) {
             memset(buffer, 0, sizeof(buffer));
 
             if(!strcasecmp(argv[1], "mmap")) {
-                digest_len = rm_hash_file_mmap(argv[j], type, 1, buffer, sizeof(buffer));
+                digest_len = rm_hash_file_mmap(argv[j], type, 1, buffer);
             } else {
-                digest_len = rm_hash_file(argv[j], type, strtod(argv[1], NULL), buffer, sizeof(buffer));
+                digest_len = rm_hash_file(argv[j], type, strtod(argv[1], NULL), buffer);
             }
 
             for(int i = 0; i < digest_len; i++) {
