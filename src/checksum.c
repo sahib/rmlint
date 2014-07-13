@@ -90,20 +90,8 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, guint64 seed) {
         digest->hash[1].second = (0xf0f0f0f0f0f0f0f0);
         digest->hash[2].first =  (0x3333333333333333);  /*001100110011 etc*/
         digest->hash[2].second = (0x3333333333333333);
-        /*boring:
         digest->hash[3].first =  (0xaaaaaaaaaaaaaaaa);
         digest->hash[3].second = (0xaaaaaaaaaaaaaaaa);   10101010 etc */
-
-        /*much more funner, and protects against malicious hash collisions: */
-        srand(time(NULL));
-        digest->hash[3].first =  (((( rand() % 256 ) ) * 256
-                                  + ( rand() % 256 ) ) * 256
-                                  + ( rand() % 256 ) ) * 256
-                                  + ( rand() % 256 ) ;
-        digest->hash[3].second = (((( rand() % 256 ) ) * 256
-                                  + ( rand() % 256 ) ) * 256
-                                  + ( rand() % 256 ) ) * 256
-                                  + ( rand() % 256 ) ;
         break;
 #endif
     default:
