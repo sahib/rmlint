@@ -11,6 +11,8 @@ Stable Version
 - Tickle packagers.
 - Integrate 'ack TODO | wc -l' to 0.
 - ...
+- for lint types, instead of -kK -lL etc, we could have --types [enz...]
+  (SeeSpotRun)
 
 Further Developement
 --------------------
@@ -30,3 +32,5 @@ Documentation Items
 .. todolist::
 
 .. todo:: Write the tutorial.
+
+

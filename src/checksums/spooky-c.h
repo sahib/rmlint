@@ -69,6 +69,12 @@ void spooky_final
     uint64_t *hash2
 );
 
+void spooky_copy
+(
+ struct spooky_state *dest,
+ struct spooky_state *src
+);
+
 //hash1/2 doubles as input parameter for seed1/2 and output for hash1/2
 void spooky_hash128
 (
