@@ -10,6 +10,7 @@ Stable Version
 - add additional steps in findmatches? (SeeSpotRun)
 - Tickle packagers.
 - Integrate 'ack TODO | wc -l' to 0.
+- Try "man 3 readv" instead of allocation more buffers.
 - ...
 - for lint types, instead of -kK -lL etc, we could have --types [enz...]
   (SeeSpotRun)
