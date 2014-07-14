@@ -351,7 +351,7 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
 
 
     if((fd = open(file, O_RDONLY)) == -1) {
-        perror("ERROR:sys:open()");
+        rm_perror("ERROR:sys:open()");
         return 0;
     }
 
@@ -365,7 +365,7 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
 
     if(f_map != MAP_FAILED) {
         if(madvise(f_map, stat_buf.st_size, MADV_WILLNEED) == -1) {
-            perror("madvise");
+            rm_perror("madvise");
         }
 
         /* Shut your eyes and go through, leave out start & end of fp */
@@ -375,11 +375,11 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
         munmap(f_map, stat_buf.st_size);
 
     } else {
-        perror("ERROR:hash_file->mmap");
+        rm_perror("ERROR:hash_file->mmap");
     }
 
     if(close(fd) == -1) {
-        perror("ERROR:close()");
+        rm_perror("ERROR:close()");
     }
 
     gsize digest_len = rm_digest_hexstring(&digest, buffer);

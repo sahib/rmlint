@@ -122,7 +122,7 @@ bool is_nonstripped(const char *path, G_GNUC_UNUSED struct stat *statp,  RmSetti
         /* Open ELF file to obtain file descriptor */
         if((fd = open(abs_path, O_RDONLY)) < 0) {
             warning("Error opening file '%s' for nostripped test: ", path);
-            perror("");
+            rm_perror("");
             g_free(abs_path);
             return 0;
         }

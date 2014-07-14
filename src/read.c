@@ -58,7 +58,7 @@ static void hash_file_mmap(RmSession *session, RmFile *file) {
     if(file->fsize <= (already_read * 2))
         return;
     if((inFile = open(file->path, HASH_FILE_FLAGS)) == -1) {
-        perror(RED"ERROR:"NCO"sys:open()");
+        rm_perror(RED"ERROR:"NCO"sys:open()");
         return;
     }
 
@@ -69,7 +69,7 @@ static void hash_file_mmap(RmSession *session, RmFile *file) {
     if(f_map != MAP_FAILED) {
         guint64 f_offset = already_read;
         if(madvise(f_map, file->fsize - already_read, MADV_WILLNEED) == -1) {
-            perror("madvise");
+            rm_perror("madvise");
         }
         /* Shut your eyes and go through, leave out start & end of fp */
         rm_digest_update(&digest, f_map + f_offset, file->fsize - already_read);
@@ -80,10 +80,10 @@ static void hash_file_mmap(RmSession *session, RmFile *file) {
         rm_file_set_checksum(session->list, file, &digest);
         rm_digest_finalize(&digest);
     } else {
-        perror(RED"ERROR:"NCO"hash_file->mmap");
+        rm_perror(RED"ERROR:"NCO"hash_file->mmap");
     }
     if(close(inFile) == -1)
-        perror(RED"ERROR:"NCO"close()");
+        rm_perror(RED"ERROR:"NCO"close()");
 }
 
 /* ------------------------------------------------------------- */
@@ -130,7 +130,7 @@ static void hash_file_fread(RmSession *session, RmFile *file) {
 #endif
         /* The call to fread */
         if((bytes = read(inFile, data, actual_size)) == -1) {
-            perror(RED"ERROR:"NCO"read()");
+            rm_perror(RED"ERROR:"NCO"read()");
         }
         /* Unlock */
 #if (HASH_SERIAL_IO == 1)
@@ -147,7 +147,7 @@ static void hash_file_fread(RmSession *session, RmFile *file) {
     rm_digest_finalize(&digest);
 
     if(close(inFile) == -1) {
-        perror(RED"ERROR:"NCO"close()");
+        rm_perror(RED"ERROR:"NCO"close()");
     }
 }
 
@@ -169,7 +169,7 @@ static void hash_fingerprint_mmap(RmSession *session, RmFile *file, const guint6
     }
     f_map = mmap(0, file->fsize, PROT_READ, MAP_PRIVATE, pF, 0);
     if(f_map == MAP_FAILED) {
-        perror(RED"ERROR:"NCO"mmap()");
+        rm_perror(RED"ERROR:"NCO"mmap()");
         close(pF);
         return;
     }
