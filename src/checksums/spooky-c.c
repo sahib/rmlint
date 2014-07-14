@@ -637,3 +637,11 @@ uint32_t spooky_hash32
     spooky_hash128(message, length, &hash1, &hash2);
     return (uint32_t)hash1;
 }
+
+void spooky_copy
+(
+ struct spooky_state *dest,
+ struct spooky_state *src
+) {
+    memcpy(dest, src, sizeof (struct spooky_state));
+}

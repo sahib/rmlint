@@ -124,32 +124,32 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
     if(p1->fsize != p2->fsize)
         return 0;
     if((file_a = open(p1->path, HASH_FILE_FLAGS)) == -1) {
-        perror(RED"ERROR:"NCO"sys:open()");
+        rm_perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
     if((file_b = open(p2->path, HASH_FILE_FLAGS)) == -1) {
-        perror(RED"ERROR:"NCO"sys:open()");
+        rm_perror(RED"ERROR:"NCO"sys:open()");
         return 0;
     }
     if(p1->fsize < MMAP_LIMIT && p1->fsize > HASH_IO_BLOCKSIZE >> 1) {
         file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
         if(file_map_a != MAP_FAILED) {
             if(madvise(file_map_a, p1->fsize, MADV_SEQUENTIAL) == -1) {
-                perror("madvise");
+                rm_perror("madvise");
             }
             file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
             if(file_map_b != MAP_FAILED) {
                 if(madvise(file_map_b, p2->fsize, MADV_SEQUENTIAL) == -1)
-                    perror("madvise");
+                    rm_perror("madvise");
                 result = !memcmp(file_map_a, file_map_b, p1->fsize);
                 munmap(file_map_b, p1->fsize);
             } else {
-                perror("paranoid->mmap");
+                rm_perror("paranoid->mmap");
                 result = 0;
             }
             munmap(file_map_a, p1->fsize);
         } else {
-            perror("paranoid->mmap");
+            rm_perror("paranoid->mmap");
             result = 0;
         }
     } else { /* use fread() */
@@ -177,9 +177,9 @@ static int paranoid(const RmFile *p1, const RmFile *p2) {
         }
     }
     if(close(file_a) == -1)
-        perror(RED"ERROR:"NCO"close()");
+        rm_perror(RED"ERROR:"NCO"close()");
     if(close(file_b) == -1)
-        perror(RED"ERROR:"NCO"close()");
+        rm_perror(RED"ERROR:"NCO"close()");
     return result;
 }
 
@@ -284,7 +284,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
 
                 /* Now create the thread */
                 if(pthread_create(thread, NULL, cksum_cb, tag)) {
-                    perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
+                    rm_perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
                 }
             } else {
                 subgroup_len++;
@@ -295,7 +295,7 @@ static void build_checksums(RmSession *session, GQueue *group) {
         for(GList *iter = thread_list; iter; iter = iter->next) {
             pthread_t *thread = iter->data;
             if(pthread_join(*thread, NULL)) {
-                perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
+                rm_perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
             }
         }
 
@@ -430,7 +430,7 @@ static void *scheduler_cb(void *tag_pointer) {
 static void scheduler_jointhreads(pthread_t *threads, guint64 n) {
     for(guint64 i = 0; i < n; i++) {
         if(pthread_join(threads[i], NULL)) {
-            perror(RED"ERROR: "NCO"pthread_join in scheduler()");
+            rm_perror(RED"ERROR: "NCO"pthread_join in scheduler()");
         }
     }
 }
@@ -458,7 +458,7 @@ static void start_scheduler(RmSession *session) {
             tags[nrun].session = session;
 
             if(pthread_create(&threads[nrun], NULL, scheduler_cb, &tags[nrun])) {
-                perror(RED"ERROR: "NCO"pthread_create in scheduler()");
+                rm_perror(RED"ERROR: "NCO"pthread_create in scheduler()");
             }
             if(nrun >= sets->threads - 1) {
                 scheduler_jointhreads(threads, nrun + 1);
@@ -731,8 +731,8 @@ void start_processing(RmSession *session) {
     if(session->log_out == NULL && settings->output_log) {
         error(RED"\nERROR: "NCO);
         fflush(stdout);
-        perror("Unable to write log - target file:");
-        perror(settings->output_log);
+        rm_perror("Unable to write log - target file:");
+        rm_perror(settings->output_log);
         putchar('\n');
     } else if(settings->output_log && settings->output_script) {
         warning("A log has been written to "BLU"%s "NCO".\n", settings->output_script);

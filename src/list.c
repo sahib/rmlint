@@ -96,7 +96,8 @@ void rm_file_destroy(RmFile *file) {
 void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest) {
     g_rec_mutex_lock(&list->lock);
     {
-        rm_digest_finalize_binary(digest, file->checksum, _RM_HASH_LEN);
+        rm_digest_steal_buffer(digest, file->checksum, _RM_HASH_LEN);
+        // rm_digest_finalize(digest, file->checksum, _RM_HASH_LEN);
     }
     g_rec_mutex_unlock(&list->lock);
 }
@@ -104,7 +105,8 @@ void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest) {
 void rm_file_set_fingerprint(RmFileList *list, RmFile *file, guint index, RmDigest *digest) {
     g_rec_mutex_lock(&list->lock);
     {
-        rm_digest_finalize_binary(digest, file->fp[index], _RM_HASH_LEN);
+        rm_digest_steal_buffer(digest, file->fp[index], _RM_HASH_LEN);
+        // rm_digest_finalize(digest, file->fp[index], _RM_HASH_LEN);
     }
     g_rec_mutex_unlock(&list->lock);
 }

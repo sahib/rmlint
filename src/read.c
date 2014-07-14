@@ -58,18 +58,18 @@ static void hash_file_mmap(RmSession *session, RmFile *file) {
     if(file->fsize <= (already_read * 2))
         return;
     if((inFile = open(file->path, HASH_FILE_FLAGS)) == -1) {
-        perror(RED"ERROR:"NCO"sys:open()");
+        rm_perror(RED"ERROR:"NCO"sys:open()");
         return;
     }
 
     RmDigest digest;
-    rm_digest_init(&digest, session->settings->checksum_type, 0);
+    rm_digest_init(&digest, session->settings->checksum_type, 0, 0);
 
     f_map = mmap(NULL, (size_t)file->fsize, PROT_READ, MAP_PRIVATE, inFile, 0);
     if(f_map != MAP_FAILED) {
         guint64 f_offset = already_read;
         if(madvise(f_map, file->fsize - already_read, MADV_WILLNEED) == -1) {
-            perror("madvise");
+            rm_perror("madvise");
         }
         /* Shut your eyes and go through, leave out start & end of fp */
         rm_digest_update(&digest, f_map + f_offset, file->fsize - already_read);
@@ -78,11 +78,12 @@ static void hash_file_mmap(RmSession *session, RmFile *file) {
         munmap(f_map, file->fsize);
 
         rm_file_set_checksum(session->list, file, &digest);
+        rm_digest_finalize(&digest);
     } else {
-        perror(RED"ERROR:"NCO"hash_file->mmap");
+        rm_perror(RED"ERROR:"NCO"hash_file->mmap");
     }
     if(close(inFile) == -1)
-        perror(RED"ERROR:"NCO"close()");
+        rm_perror(RED"ERROR:"NCO"close()");
 }
 
 /* ------------------------------------------------------------- */
@@ -103,7 +104,7 @@ static void hash_file_fread(RmSession *session, RmFile *file) {
     already_read = already_read ?  already_read - 1 : 0;
 
     RmDigest digest;
-    rm_digest_init(&digest, session->settings->checksum_type, 0);
+    rm_digest_init(&digest, session->settings->checksum_type, 0, 0);
 
     /* This is some rather seldom case, but skip checksum building here */
     if(file->fsize <= (already_read * 2)) {
@@ -129,7 +130,7 @@ static void hash_file_fread(RmSession *session, RmFile *file) {
 #endif
         /* The call to fread */
         if((bytes = read(inFile, data, actual_size)) == -1) {
-            perror(RED"ERROR:"NCO"read()");
+            rm_perror(RED"ERROR:"NCO"read()");
         }
         /* Unlock */
 #if (HASH_SERIAL_IO == 1)
@@ -143,9 +144,10 @@ static void hash_file_fread(RmSession *session, RmFile *file) {
     } while(bytes != -1 && bytes && (offset < (file->fsize - already_read)));
 
     rm_file_set_checksum(session->list, file, &digest);
+    rm_digest_finalize(&digest);
 
     if(close(inFile) == -1) {
-        perror(RED"ERROR:"NCO"close()");
+        rm_perror(RED"ERROR:"NCO"close()");
     }
 }
 
@@ -167,13 +169,13 @@ static void hash_fingerprint_mmap(RmSession *session, RmFile *file, const guint6
     }
     f_map = mmap(0, file->fsize, PROT_READ, MAP_PRIVATE, pF, 0);
     if(f_map == MAP_FAILED) {
-        perror(RED"ERROR:"NCO"mmap()");
+        rm_perror(RED"ERROR:"NCO"mmap()");
         close(pF);
         return;
     }
 
     RmDigest digest;
-    rm_digest_init(&digest, session->settings->checksum_type, 0);
+    rm_digest_init(&digest, session->settings->checksum_type, 0, 0);
     rm_digest_update(&digest, f_map, readsize);
     rm_file_set_fingerprint(session->list, file, 0, &digest);
 
@@ -187,9 +189,10 @@ static void hash_fingerprint_mmap(RmSession *session, RmFile *file, const guint6
             lseek(pF, -readsize, SEEK_END);
 
             /* Compute checksum of this last block */
-            rm_digest_init(&digest, RM_DIGEST_CITY, 0);
+            rm_digest_init(&digest, RM_DIGEST_CITY, 0, 0);
             rm_digest_update(&digest, f_map, readsize);
             rm_file_set_fingerprint(session->list, file, 1, &digest);
+            rm_digest_finalize(&digest);
         }
     }
     close(pF);
@@ -202,7 +205,7 @@ static void hash_fingerprint_fread(RmSession *session, RmFile *file, const guint
     int bytes = 0;
     bool unlock = true;
     FILE *pF = fopen(file->path, "re");
-    unsigned char *data = alloca(readsize);
+    unsigned char *data = g_alloca(readsize);
 
     /* empty? */
     if(!pF) {
@@ -221,9 +224,10 @@ static void hash_fingerprint_fread(RmSession *session, RmFile *file, const guint
     /* Compute md5sum of this block */
     RmDigest digest;
     if(bytes) {
-        rm_digest_init(&digest, session->settings->checksum_type, 0);
+        rm_digest_init(&digest, session->settings->checksum_type, 0, 0);
         rm_digest_update(&digest, data, bytes);
         rm_file_set_fingerprint(session->list, file, 0, &digest);
+        rm_digest_finalize(&digest);
     }
 #if (HASH_SERIAL_IO == 1)
     pthread_mutex_lock(&mutex_fp_IO);
@@ -242,9 +246,10 @@ static void hash_fingerprint_fread(RmSession *session, RmFile *file, const guint
 #endif
             /* Compute checksum of this last block */
             if(bytes) {
-                rm_digest_init(&digest, RM_DIGEST_CITY, 0);
+                rm_digest_init(&digest, RM_DIGEST_CITY, 0, 0);
                 rm_digest_update(&digest, data, bytes);
                 rm_file_set_fingerprint(session->list, file, 1, &digest);
+                rm_digest_finalize(&digest);
             }
         }
     }

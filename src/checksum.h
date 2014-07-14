@@ -35,7 +35,7 @@ typedef struct RmDigest {
 #endif
     };
     RmDigestType type;
-    int num_128bit_blocks;
+    guint8 num_128bit_blocks;
 } RmDigest;
 
 /**
@@ -54,7 +54,7 @@ RmDigestType rm_string_to_digest_type(const char *string);
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
  */
-void rm_digest_init(RmDigest *digest, RmDigestType type, guint64 seed);
+void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_t seed2);
 
 /**
  * @brief Hash a datablock and add it to the current checksum.
@@ -71,12 +71,13 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
  * rm_digest_update is not allowed to be called after finalizing.
  *
  * @param digest a pointer to a RmDigest
- * @param buffer The buffer to write the hexadecimal checksum to.
+ * @param input The input buffer to convert
  * @param buflen Size of the buffer.
+ * @param buffer The buffer to write the hexadecimal checksum to.
  *
  * @return how many bytes were written. (for md5sum: 32)
  */
-int rm_digest_finalize(RmDigest *digest, unsigned char *buffer, gsize buflen);
+int rm_digest_hexstring(RmDigest *digest, char *buffer);
 
 /**
  * @brief Convert the checksum to a byte blob.
@@ -87,6 +88,8 @@ int rm_digest_finalize(RmDigest *digest, unsigned char *buffer, gsize buflen);
  *
  * @return how many bytes were written. (for md5sum: 16)
  */
-int rm_digest_finalize_binary(RmDigest *digest, unsigned char *buffer, gsize buflen);
+void rm_digest_finalize(RmDigest *digest);
+
+int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen);
 
 #endif /* end of include guard */

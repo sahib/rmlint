@@ -70,7 +70,7 @@ uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, c
             error("FIEMAP failed with unsupported flags %x for file", fm->fm_flags);
         } else {
             error("FIEMAP failed for file: ");
-            perror("FS_IOC_FIEMAP");
+            rm_perror("FS_IOC_FIEMAP");
         }
         returnval = 0;
     }

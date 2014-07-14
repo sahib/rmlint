@@ -27,6 +27,7 @@
 #define RMLINT_H
 
 #include "defs.h"
+#include "errno.h"
 
 char rm_parse_arguments(int argc, char **argv, RmSession *session);
 char rm_echo_settings(RmSettings *settings);
@@ -45,6 +46,11 @@ int die(RmSession *session, int status);
     g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
 #define error(...) \
     g_log("rmling", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+
+#define rm_perror(message)                                                      \
+    if(errno) {                                                                 \
+        error("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
+    }                                                                           \
 
 
 #endif

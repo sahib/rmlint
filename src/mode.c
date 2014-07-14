@@ -60,7 +60,7 @@ gchar *strsubs(const char *string, const char *subs, const char *with) {
 static void remfile(const char *r_path) {
     if(r_path) {
         if(unlink(r_path) == -1) {
-            perror(YEL"WARN:"NCO" unlink():");
+            rm_perror(YEL"WARN:"NCO" unlink():");
         }
     }
 }
@@ -117,7 +117,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
         if(!fpath) {
             if(file->lint_type != TYPE_BLNK) {
                 error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
-                perror("(write_to_log():mode.c)");
+                rm_perror("(write_to_log():mode.c)");
             }
             free_fullpath = false;
             fpath = (char *)file->path;
@@ -224,7 +224,7 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
                     error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
                     remfile(full_dupl_path);
                     if(symlink(full_orig_path , full_dupl_path) == -1) {
-                        perror(YEL"WARN: "NCO"symlink:");
+                        rm_perror(YEL"WARN: "NCO"symlink:");
                     }
                     free(full_dupl_path);
                 }
@@ -279,7 +279,7 @@ void init_filehandler(RmSession *session) {
     if(session->script_out) {
         /* Make the file executable */
         if(fchmod(fileno(session->script_out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
-            perror(YEL"WARN: "NCO"chmod");
+            rm_perror(YEL"WARN: "NCO"chmod");
         }
         /* Write a basic header */
         fprintf(session->script_out,
@@ -365,7 +365,7 @@ void init_filehandler(RmSession *session) {
 
         g_free(cwd);
     } else {
-        perror(NULL);
+        rm_perror("error during log or script file");
     }
 }
 
