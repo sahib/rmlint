@@ -94,18 +94,14 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
         digest->num_128bit_blocks = 4;
-        digest->hash[0].first = 0;
-        digest->hash[0].second = 0;
-        digest->hash[1].first = (0xf0f0f0f0f0f0f0f0); /*1111000011110000 etc*/
-        digest->hash[1].second = (0xf0f0f0f0f0f0f0f0);
-        digest->hash[2].first = (0x3333333333333333); /*001100110011 etc*/
-        digest->hash[2].second = (0x3333333333333333);
-        if (seed1) {
-            digest->hash[3].first = seed1;
-        } else {
-            digest->hash[3].first = (0xaaaaaaaaaaaaaaaa);
-        }
-        digest->hash[3].second = (0xaaaaaaaaaaaaaaaa); /*10101010 etc */
+        digest->hash[0].first  = seed1;
+        digest->hash[0].second = seed2;
+        digest->hash[1].first  = 0xf0f0f0f0f0f0f0f0 ^ seed1;
+        digest->hash[1].second = 0xf0f0f0f0f0f0f0f0 ^ seed2;
+        digest->hash[2].first  = 0x3333333333333333 ^ seed1;
+        digest->hash[2].second = 0x3333333333333333 ^ seed2;
+        digest->hash[3].first  = 0xaaaaaaaaaaaaaaaa ^ seed1;
+        digest->hash[3].second = 0xaaaaaaaaaaaaaaaa ^ seed2;
         break;
 #endif
     default:
@@ -137,14 +133,14 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
        for (guint8 i = 0; i < digest->num_128bit_blocks; i++) {
         /*TODO: multithread this if num_128bit_blocks > 1 */
 #if UINTPTR_MAX == 0xffffffff
-        /* 32 bit */
-        MurmurHash3_x86_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
+            /* 32 bit */
+            MurmurHash3_x86_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
 #elif UINTPTR_MAX == 0xffffffffffffffff
-        /* 64 bit */
-        MurmurHash3_x64_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
+            /* 64 bit */
+            MurmurHash3_x64_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
 #else
         /* 16 bit or unknown */
-#error "Probably not a good idea to compile rmlint on 16bit."
+        #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
         }
         break;
@@ -158,7 +154,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
              * (available on Intel Nehalem and up; my amd box doesn't have this though)
              */
 #ifdef __sse4_2__
-            digest->hash = CityHashCrc128WithSeed(data, size, digest->hash);
+            digest->hash[i] = CityHashCrc128WithSeed((const char* )data, size, digest->hash[i]);
 #else
             digest->hash[i] = CityHash128WithSeed((const char *) data, size, digest->hash[i]);
 #endif
