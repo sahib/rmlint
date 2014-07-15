@@ -190,7 +190,7 @@ void rm_file_list_append(RmFileList *list, RmFile *file) {
             file->list_node = old_group->head;
         }
     }
-    info("Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
+    debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
     g_rec_mutex_unlock(&list->lock);
 }
 
@@ -285,47 +285,72 @@ static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, R
     RmSettings *settings = session->settings;
     guint removed_cnt = 0;
 
-    GList *iter = group->head;
-    while(iter && iter->next) {
-        RmFile *file = iter->data, *next_file = iter->next->data;
+    GList *iter1 = group->head;
 
-        if (file->node == next_file->node && file->dev == next_file->dev) {
-            /* files have same dev and inode:  might be hardlink (safe to delete), or
-             * two paths to the same original (not safe to delete) */
+    while(iter1 && iter1->next) {
+        RmFile *file1 = iter1->data;
+        RmFile *highest_ranked_hardlink = file1;
+        GList *iter2 = iter1->next;
+        RmFile *file2 = iter2->data;
+
+        /* walk iter2 forwards from iter1, looking for doubles and kicking them out, *
+         * until we hit different inode.                                             */
+        while ( iter2
+               && (file1->dev == file2->dev)
+               && (file1->node == file2->node)
+               ) {
+            /* nodes match; kick out if it's a path double or FS loop; *
+             * also kick out if we're not looking for hardlinks        */
             if   (0
                     || (!settings->find_hardlinked_dupes)
                     /* not looking for hardlinked dupes so kick out all dev/inode collisions*/
                     ||  (1
-                         && (strcmp(rm_basename(file->path), rm_basename(next_file->path)) == 0)
+                         && (strcmp(rm_basename(file1->path), rm_basename(file2->path)) == 0)
                          /* double paths and loops will always have same basename */
-                         && (parent_node(file->path) == parent_node(next_file->path))
+                         && (parent_node(file1->path) == parent_node(file2->path))
                          /* double paths and loops will always have same dir inode number*/
                         )
                  ) {
-                /* kick FILE or NEXT_FILE out */
-                if ( cmp_orig_criteria(file, next_file, session) >= 0 ) {
-                    /* FILE does not outrank NEXT_FILE in terms of ppath */
-                    iter = iter->next;
-                    rm_file_list_remove(list, file);
+                /* kick file1 or file2 out */
+                if ( cmp_orig_criteria(file1, file2, session) >= 0 ) {
+                    /* file2 outranks file1; kick file1 and start walk again from iter1->next*/
+                    iter1 = iter1->next;
+                    rm_file_list_remove(list, file1);
+                    file1 = iter1->data;
+                    iter2 = iter1->next;
+                    highest_ranked_hardlink = file1;
                 } else {
-                    /*iter = iter->next->next;  no, actually we want to leave FILE where it is */
-                    rm_file_list_remove(list, next_file);
+                    /* file2 doesn't outrank file1; kick file2 and continue walk */
+                    iter2 = iter2->next;
+                    rm_file_list_remove(list, file2);
                 }
-
                 removed_cnt++;
             } else {
-                /*hardlinked - store the hardlink to save time later building checksums*/
-                if (file->hardlinked_original)
-                    next_file->hardlinked_original = file->hardlinked_original;
-                else
-                    next_file->hardlinked_original = file;
-                iter = iter->next;
+                /* iter2 is hardlink of iter1 */
+                if ( cmp_orig_criteria(highest_ranked_hardlink, file2, session) >= 0 ) {
+                    /* file2 outranks highest_ranked_hardlink; replace it */
+                    highest_ranked_hardlink = file2;
+                }
+                iter2 = iter2->next;
             }
-        } else {
-            iter = iter->next;
+            if (iter2) {
+                file2 = iter2->data;
+            } else {
+                file2 = NULL;
+            }
+        } /* end while iter2 */
+
+        /* all path doubles now removed; anything between file1 and file2 must be hardlink */
+        /* iterate through these and point them to the highest-ranked hardlink. */
+
+        while (iter1 != iter2) {
+            file1 = iter1->data;
+            if (file1 != highest_ranked_hardlink) {
+                file1->hardlinked_original = highest_ranked_hardlink;
+            }
+            iter1 = iter1->next;
         }
     }
-
     return removed_cnt;
 }
 
