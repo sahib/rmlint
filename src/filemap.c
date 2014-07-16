@@ -44,7 +44,7 @@ uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, c
 
     switch (offset_type) {
     case RM_OFFSET_RELATIVE:
-        fm->fm_start = lseek(fd, 0, SEEK_END) + offset;
+        fm->fm_start = lseek(fd, 0, SEEK_CUR) + offset;
         break;
     case RM_OFFSET_ABSOLUTE:
         fm->fm_start = offset;
@@ -87,7 +87,7 @@ uint64_t get_disk_offset(const char *path, uint64_t file_offset) {
     uint64_t returnval = 0;
 
     /* ---open the file--- */
-#if 1 || defined(HAVE_OPEN64) && !defined(__OSX_AVAILABLE_BUT_DEPRECATED)
+#if defined(HAVE_OPEN64) && !defined(__OSX_AVAILABLE_BUT_DEPRECATED)
     int fd = open64(path, O_RDONLY);
 #else
     int fd = open(path, O_RDONLY);
@@ -104,11 +104,7 @@ uint64_t get_disk_offset(const char *path, uint64_t file_offset) {
     }
 
     returnval = get_disk_offset_openfile ( fd, RM_OFFSET_START, 0 );
-    if (returnval == 0)
-        error ("%s\n", path);
-
     close(fd);
-
     return returnval;
 }
 
