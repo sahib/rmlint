@@ -11,7 +11,9 @@ Stable Version
 - Tickle packagers.
 - Integrate 'ack TODO | wc -l' to 0.
 - Try "man 3 readv" instead of allocation more buffers.
-- ...
+- cat /sys/block/sda/queue/rotational # find out if dev is sdd 
+  Find device name from dev_t via statvfs()?
+- long psize = sysconf(_SC_PAGESIZE); // posix compatible page size
 - for lint types, instead of -kK -lL etc, we could have --types [enz...]
   (SeeSpotRun)
 

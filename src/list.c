@@ -55,6 +55,7 @@ RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is
     if(type == TYPE_DUPE_CANDIDATE) {
         const char *fullname = rm_fullname(iwd, path);
         self->offset = get_disk_offset(fullname, 0);
+        g_printerr("Physical block: %lu\n", self->offset);
         free((char *)fullname);
 
         self->fsize = buf->st_size;
