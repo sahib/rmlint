@@ -74,7 +74,7 @@ static void print_help(void) {
 void rm_set_default_settings(RmSettings *pset) {
     pset->mode                  = RM_MODE_LIST;       /* list only    */
     pset->paranoid              = 0;                  /* dont be bush */
-    pset->depth                 = 0;                  /* inf depth    */
+    pset->depth                 = PATH_MAX/2;         /* max tree depth*/
     pset->followlinks           = 0;                  /* fol. link    */
     pset->threads               = 16;                 /* Quad*quad.   */
     pset->verbosity             = G_LOG_LEVEL_INFO;   /* Most relev.  */
