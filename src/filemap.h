@@ -14,6 +14,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <inttypes.h>
+
 
 #define FILEFRAG_FIEMAP_FLAGS_COMPAT (FIEMAP_FLAG_SYNC | FIEMAP_FLAG_XATTR)
 
