@@ -40,7 +40,6 @@
 
 RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum, const char *iwd) {
     RmFile *self = g_slice_new0(RmFile);
-
     self->path = g_strdup(path);
     self->node = buf->st_ino;
     self->dev = buf->st_dev;
@@ -190,7 +189,7 @@ void rm_file_list_append(RmFileList *list, RmFile *file) {
             file->list_node = old_group->head;
         }
     }
-    info("Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
+    debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
     g_rec_mutex_unlock(&list->lock);
 }
 
