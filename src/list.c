@@ -52,10 +52,7 @@ RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is
                                         *note: not using this anywhere yet so not "unsafe" */
 
     if(type == TYPE_DUPE_CANDIDATE) {
-        const char *fullname = rm_fullname(iwd, path);
-        self->offset = get_disk_offset(fullname, 0);
-        free((char *)fullname);
-
+        self->offset = get_disk_offset(path, 0);
         self->fsize = buf->st_size;
     } else {
         self->fsize = 0;
