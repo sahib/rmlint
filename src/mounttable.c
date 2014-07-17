@@ -1,6 +1,7 @@
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 
 static GOnce ONCE_PROC_MOUNTS = G_ONCE_INIT;
