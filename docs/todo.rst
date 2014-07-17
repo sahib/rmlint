@@ -7,7 +7,6 @@ Stable Version
 - Add a test target to the build system.
 - Put rmlint on TravisCI.
 - Write a tutorial.
-- add additional steps in findmatches? (SeeSpotRun)
 - Tickle packagers.
 - Integrate 'ack TODO | wc -l' to 0.
 - Try "man 3 readv" instead of allocation more buffers.
@@ -28,6 +27,7 @@ Done items
 ----------
 
 - Add Daniel to AUTHORS and file headers.
+- add additional checks in find_path_doubles
 
 Documentation Items
 -------------------

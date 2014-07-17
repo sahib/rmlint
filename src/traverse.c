@@ -36,7 +36,7 @@
 #include "filter.h"
 #include "linttests.h"
 
-static int const MAX_EMPTYDIR_DEPTH = 100;
+static int const MAX_EMPTYDIR_DEPTH = PATH_MAX / 2; /* brute force option */
 
 
 static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnum, RmLintType file_type) {
@@ -116,6 +116,15 @@ typedef struct RmTraversePathBuffer {
 } RmTraversePathBuffer;
 
 
+bool matches_toplevel_path ( char *filepath, RmSettings *settings) {
+    for ( int i = 0; settings->paths[i] != NULL; i++) {
+        if (strcmp(filepath, settings->paths[i]) == 0)
+            return true;
+    }
+    return false;
+}
+
+
 static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
     RmSession *session = traverse_path_args->session;
 
@@ -166,19 +175,23 @@ static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
         memset(&is_emptydir[0], 'N', sizeof(is_emptydir) - 1);
         is_emptydir[sizeof(is_emptydir) - 1] = '\0';
 
-        int emptydir_stack_overflow = 0;
         while (!session->aborted && (p = fts_read(ftsp)) != NULL) {
             switch (p->fts_info) {
             case FTS_D:         /* preorder directory */
-                if (
-                    (settings->depth != 0 && p->fts_level >= settings->depth) ||
-                    /* continuing into folder would exceed maxdepth*/
-                    (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.')
-                ) {
+                /* TODO: Don't recurse if p->fts_name matches any settings->paths */
+                if ( 0
+                        ||  ( 1
+                              && p->fts_level > 0
+                              && matches_toplevel_path (p->fts_path, settings )
+                            )
+                        || (settings->depth != 0 && p->fts_level >= settings->depth)
+                        /* continuing into folder would exceed maxdepth*/
+                        || (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.')
+                   ) {
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
-                    clear_emptydir_flags = true; /*current dir not empty*/
+                    clear_emptydir_flags = true; /*flag current dir as not empty*/
                 } else {
-                    is_emptydir[ (p->fts_level + 1) % ( MAX_EMPTYDIR_DEPTH + 1 )] = 'E';
+                    is_emptydir[ (p->fts_level + 1) ] = 'E';
                     have_open_emptydirs = true;
                     /* assume dir is empty until proven otherwise */
                 }
@@ -195,8 +208,7 @@ static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
             case FTS_DOT:       /* dot or dot-dot */
                 break;
             case FTS_DP:        /* postorder directory */
-                if ((p->fts_level >= emptydir_stack_overflow) &&
-                        (is_emptydir[ (p->fts_level + 1) % ( MAX_EMPTYDIR_DEPTH + 1 )] == 'E')) {
+                if ( is_emptydir[ (p->fts_level + 1) ] == 'E') {
                     numfiles += process_file(session, p, is_ppath, pathnum, TYPE_EDIR);
                 }
                 break;
@@ -277,10 +289,6 @@ int rm_search_tree(RmSession *session) {
 
     pthread_t *thread_ids = g_malloc0((settings->num_paths + 1) * sizeof(pthread_t));
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
-
-    char cwd_buf[PATH_MAX + 1];
-    getcwd(cwd_buf, PATH_MAX);
-    session->settings->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
 
     /* Set Bit flags for fts options.  */
     int bit_flags = 0 ;

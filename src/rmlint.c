@@ -74,7 +74,7 @@ static void print_help(void) {
 void rm_set_default_settings(RmSettings *pset) {
     pset->mode                  = RM_MODE_LIST;       /* list only    */
     pset->paranoid              = 0;                  /* dont be bush */
-    pset->depth                 = 0;                  /* inf depth    */
+    pset->depth                 = PATH_MAX / 2;       /* max tree depth*/
     pset->followlinks           = 0;                  /* fol. link    */
     pset->threads               = 16;                 /* Quad*quad.   */
     pset->verbosity             = G_LOG_LEVEL_INFO;   /* Most relev.  */
@@ -259,7 +259,13 @@ static bool add_path(RmSession *session, int index, const char *path) {
         settings->is_ppath = g_realloc(settings->is_ppath, sizeof(char) * (index + 1));
         settings->is_ppath[index] = is_pref;
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
-        settings->paths[index + 0] = g_strdup(path);
+
+        if (path[0] == '/') {
+            /* It's the full path already*/
+            settings->paths[index + 0] = g_strdup(path);
+        } else {
+            settings->paths[index + 0] = g_strdup_printf("%s%s", settings->iwd, path);
+        }
         settings->paths[index + 1] = NULL;
         settings->num_paths++;
         return TRUE;
@@ -524,6 +530,11 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
     sets->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
                           verbosity_counter, 0, G_LOG_LEVEL_DEBUG
                       )];
+
+    /* Get current directory */
+    char cwd_buf[PATH_MAX + 1];
+    getcwd(cwd_buf, PATH_MAX);
+    sets->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
 
     /* Check the directory to be valid */
     while(optind < argc) {

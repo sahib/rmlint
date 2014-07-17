@@ -631,8 +631,8 @@ uint32_t spooky_hash32
 
 void spooky_copy
 (
- struct spooky_state *dest,
- struct spooky_state *src
+    struct spooky_state *dest,
+    struct spooky_state *src
 ) {
     memcpy(dest, src, sizeof (struct spooky_state));
 }

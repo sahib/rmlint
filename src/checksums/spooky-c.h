@@ -78,8 +78,8 @@ void spooky_final
 
 void spooky_copy
 (
- struct spooky_state *dest,
- struct spooky_state *src
+    struct spooky_state *dest,
+    struct spooky_state *src
 );
 
 //hash1/2 doubles as input parameter for seed1/2 and output for hash1/2
