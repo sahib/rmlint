@@ -1,113 +1,162 @@
 #include <glib.h>
 #include <stdio.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <limits.h>
 #include <string.h>
+#include <sys/stat.h>
 
-#include "config.h"
+static GOnce ONCE_PROC_MOUNTS = G_ONCE_INIT;
+static GOnce ONCE_RESULT_TABLE = G_ONCE_INIT;
 
-#if HAVE_LIBMOUNT
-    #include <libmount.h>
-#endif 
+static gchar rm_mount_is_rotational_blockdev(const char *dev) {
+    char sys_path[PATH_MAX];
+    gchar is_rotational = -1;
 
-#define PATH_MAX 4095 // todo
+    snprintf(sys_path, PATH_MAX, "/sys/block/%s/queue/rotational", dev);
 
-
-static gboolean rm_mounts_check_if_non_rotational(const char *device_path) {
-    // TODO: Follow link if lvm device or other pseudo device.
-    // TODO: Proper parsing, currently "...[0-9]" is assumed.
-    //       dm-0 would fail, sda1 would work.
-    //
-    //
-    char copy[PATH_MAX];
-    if(readlink(device_path, copy, PATH_MAX) == -1) {
-        strncpy(copy, device_path, PATH_MAX);
-    } 
-
-    char *base = strrchr(copy, G_DIR_SEPARATOR);
-    unsigned char is_rotational = 1;
-
-    if(base == NULL) {
-        base = copy;
-    } else {
-        base++;
-    }
-
-    if(strstr(device_path, "mapper") == NULL) {
-        for(int i = 0; i < 3 && *base++; ++i);
-
-        *base = '\0';
-        base -= 3;
-    }
-
-    char *sys_path = g_strdup_printf("/sys/block/%s/queue/rotational", base);
     FILE *sys_fdes = fopen(sys_path, "r");
-    if(sys_fdes != NULL) {
-        int bytes_read = fread(&is_rotational, 1, 1, sys_fdes);
-        if(bytes_read != 1) {
-            printf("Huh? Read %d bytes\n", bytes_read);
-        } else {
-            is_rotational -= '0';
-        }
-        fclose(sys_fdes);
+    if(sys_fdes == NULL) {
+        return -1;
     }
 
-    g_free(sys_path);
-    return !is_rotational;
+    if(fread(&is_rotational, 1, 1, sys_fdes) == 1) {
+        is_rotational -= '0';
+    }
+
+    fclose(sys_fdes);
+    return is_rotational;
 }
 
+static GHashTable *rm_mounts_parse_proc_mounts(G_GNUC_UNUSED gpointer unused) {
+    FILE *proc_fd = fopen("/proc/partitions", "r");
+    GHashTable *part_table = g_hash_table_new_full(
+                                 g_direct_hash, g_direct_equal,
+                                 g_free, NULL
+                             );
 
-static GHashTable * rm_mounts_create_table(void) {
+    if(proc_fd == NULL) {
+        return part_table;
+    }
+
+    unsigned major, minor, dummy;
+    major = minor = dummy = 0;
+    char dev_name[200];
+    char line[PATH_MAX];
+
+    while(fgets(line, PATH_MAX, proc_fd)) {
+        memset(dev_name, 0, sizeof(dev_name));
+        sscanf(
+            line, "%d%d%d%200s",
+            &major, &minor, &dummy, dev_name
+        );
+
+        if(*dev_name) {
+            g_hash_table_insert(
+                part_table,
+                g_strdup(dev_name),
+                GINT_TO_POINTER(makedev(major, minor))
+            );
+        }
+    }
+
+    fclose(proc_fd);
+    return part_table;
+}
+
+static void rm_mount_find_partitions(const char *blockdev_name, GHashTable *mount_table, gboolean non_rotational) {
+    GHashTableIter iter;
+    gpointer key, value;
+    gsize blockdev_name_len = strlen(blockdev_name);
+
+    g_once(&ONCE_PROC_MOUNTS, (GThreadFunc)rm_mounts_parse_proc_mounts, NULL);
+    GHashTable *partition_table = ONCE_PROC_MOUNTS.retval;
+
+    g_hash_table_iter_init(&iter, partition_table);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        if(strncmp(blockdev_name, (char *)key, blockdev_name_len) == 0) {
+            dev_t part_devid = GPOINTER_TO_INT(value);
+
+            printf(
+                "%02u:%02u: %5s is a %srotational device\n",
+                major(part_devid), minor(part_devid),
+                (char *)key, (non_rotational) ? "non-" : ""
+            );
+            g_hash_table_insert(
+                mount_table,
+                GINT_TO_POINTER(part_devid),
+                GINT_TO_POINTER(non_rotational)
+            );
+        }
+    }
+}
+
+static GHashTable *rm_mounts_create_table(void) {
+    GError *error = NULL;
+    GDir *dir_handle = g_dir_open("/sys/block", 0, &error);
     GHashTable *mount_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
-#if HAVE_LIBMOUNT
-    struct libmnt_table *table =  mnt_new_table_from_file("/etc/fstab");
-    struct libmnt_fs *fs = NULL;
-    struct libmnt_iter * iter = mnt_new_iter(MNT_ITER_FORWARD);
-
-    mnt_table_parse_mtab(table, "/etc/mtab");
-    mnt_table_parse_mtab(table, "/proc/mounts");
-    mnt_table_parse_mtab(table, "/proc/self/mountinfo");
-    mnt_table_parse_mtab(table, "/run/mount/utabs");
-
-    while(mnt_table_next_fs(table, iter, &fs) == 0) {
-        const char *dir = mnt_fs_get_target(fs);
-        const char *src = mnt_fs_get_source(fs);
-        
-        if(src && *src == '/') {
-            /* check if we can stat it */
-            struct stat stat_buf;
-            stat(src, &stat_buf);
-
-            if(S_ISBLK(stat_buf.st_mode)) {
-                gboolean non_rotational = rm_mounts_check_if_non_rotational(src);
-                printf(
-                    "%lu: %s (%s) is a %srotational device\n",
-                    stat_buf.st_rdev, dir, src, non_rotational ? "non-" : ""
-                );
-
-                g_hash_table_insert(
-                    mount_table,
-                    GINT_TO_POINTER(stat_buf.st_rdev),
-                    GINT_TO_POINTER(non_rotational)
-                );
-            }
-        }
-
+    if (dir_handle == NULL) {
+        printf("Cannot read /sys/block/: %s\n", error->message);
+        g_error_free(error);
+        return mount_table;
     }
-    mnt_free_iter(iter);
-    mnt_free_table(table);
-#endif
+
+    const char *dir_entry = NULL;
+    while ((dir_entry = g_dir_read_name(dir_handle)) != 0) {
+        gchar non_rotational = !rm_mount_is_rotational_blockdev(dir_entry);
+
+        if (non_rotational == -1) {
+            printf("Cannot determine if '%s' is rotational. Assuming not.\n", dir_entry);
+        } else {
+            rm_mount_find_partitions(dir_entry, mount_table, non_rotational);
+        }
+    }
+
+    g_dir_close(dir_handle);
     return mount_table;
+}
+
+/////////////////////////////////
+//         PUBLIC API          //
+/////////////////////////////////
+
+gboolean rm_mounts_file_is_on_sdd(dev_t device) {
+    g_once(&ONCE_RESULT_TABLE, (GThreadFunc)rm_mounts_create_table, NULL);
+
+    GHashTable *mount_table = ONCE_RESULT_TABLE.retval;
+    return GPOINTER_TO_INT(
+               g_hash_table_lookup(
+                   mount_table, GINT_TO_POINTER(device)
+               )
+           );
+}
+
+void rm_mounts_clear(void) {
+    GHashTable *table = NULL;
+
+    table = ONCE_RESULT_TABLE.retval;
+    if(table) {
+        g_hash_table_unref(table);
+    }
+
+    table = ONCE_PROC_MOUNTS.retval;
+    if(table) {
+        g_hash_table_unref(table);
+    }
 }
 
 #ifdef _RM_COMPILE_MAIN
 
-int main(void) {
-    GHashTable *mount_table = rm_mounts_create_table();
-    g_hash_table_unref(mount_table);
+int main(int argc, char **argv) {
+    for(int i = 1; i < argc; ++i) {
+        struct stat stat_buf;
+        stat(argv[i], &stat_buf);
 
+        g_printerr("%s is on %srotational device.\n",
+                   argv[i],
+                   rm_mounts_file_is_on_sdd(stat_buf.st_dev) ? "non-" : ""
+                  );
+    }
+
+    rm_mounts_clear();
     return 0;
 }
 
