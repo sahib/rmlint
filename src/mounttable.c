@@ -31,6 +31,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "rmlint.h"
+
 static GOnce ONCE_PROC_MOUNTS = G_ONCE_INIT;
 static GOnce ONCE_RESULT_TABLE = G_ONCE_INIT;
 
@@ -102,7 +104,7 @@ static void rm_mount_find_partitions(const char *blockdev_name, GHashTable *moun
         if(strncmp(blockdev_name, (char *)key, blockdev_name_len) == 0) {
             dev_t part_devid = GPOINTER_TO_INT(value);
 
-            printf(
+            debug(
                 "%02u:%02u: %5s is a %srotational device\n",
                 major(part_devid), minor(part_devid),
                 (char *)key, (non_rotational) ? "non-" : ""
@@ -122,7 +124,7 @@ static GHashTable *rm_mounts_create_table(void) {
     GHashTable *mount_table = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     if (dir_handle == NULL) {
-        printf("Cannot read /sys/block/: %s\n", error->message);
+        debug("Cannot read /sys/block/: %s\n", error->message);
         g_error_free(error);
         return mount_table;
     }
@@ -132,7 +134,7 @@ static GHashTable *rm_mounts_create_table(void) {
         gchar non_rotational = !rm_mount_is_rotational_blockdev(dir_entry);
 
         if (non_rotational == -1) {
-            printf("Cannot determine if '%s' is rotational. Assuming not.\n", dir_entry);
+            debug("Cannot determine if '%s' is rotational. Assuming not.\n", dir_entry);
         } else {
             rm_mount_find_partitions(dir_entry, mount_table, non_rotational);
         }
@@ -146,7 +148,7 @@ static GHashTable *rm_mounts_create_table(void) {
 //         PUBLIC API          //
 /////////////////////////////////
 
-gboolean rm_mounts_file_is_on_sdd(dev_t device) {
+bool rm_mounts_file_is_on_sdd(dev_t device) {
     g_once(&ONCE_RESULT_TABLE, (GThreadFunc)rm_mounts_create_table, NULL);
 
     GHashTable *mount_table = ONCE_RESULT_TABLE.retval;
