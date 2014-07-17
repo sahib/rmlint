@@ -1,3 +1,30 @@
+/**
+*  This file is part of rmlint.
+*
+*  rmlint is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, either version 3 of the License, or
+*  (at your option) any later version.
+*
+*  rmlint is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+*
+*  Authors:
+*
+*  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+*  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+*
+*
+* Hosted on http://github.com/sahib/rmlint
+*
+* This file was partly authored by qitta (https://github.com/qitta) - Thanks!
+**/
+
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,7 +53,7 @@ static gchar rm_mount_is_rotational_blockdev(const char *dev) {
     return is_rotational;
 }
 
-static GHashTable *rm_mounts_parse_proc_mounts(G_GNUC_UNUSED gpointer unused) {
+static GHashTable *rm_mounts_parse_proc_partitions(void) {
     FILE *proc_fd = fopen("/proc/partitions", "r");
     GHashTable *part_table = g_hash_table_new_full(
                                  g_direct_hash, g_direct_equal,
@@ -67,7 +94,7 @@ static void rm_mount_find_partitions(const char *blockdev_name, GHashTable *moun
     gpointer key, value;
     gsize blockdev_name_len = strlen(blockdev_name);
 
-    g_once(&ONCE_PROC_MOUNTS, (GThreadFunc)rm_mounts_parse_proc_mounts, NULL);
+    g_once(&ONCE_PROC_MOUNTS, (GThreadFunc)rm_mounts_parse_proc_partitions, NULL);
     GHashTable *partition_table = ONCE_PROC_MOUNTS.retval;
 
     g_hash_table_iter_init(&iter, partition_table);
