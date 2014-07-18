@@ -21,37 +21,37 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_MD5;
     } else
 #if _RM_HASH_LEN >= 64
-    if(!strcasecmp(string, "sha512")) {
-        return RM_DIGEST_SHA512;
-    } else if(!strcasecmp(string, "city512")) {
-        return RM_DIGEST_CITY512;
-    } else if(!strcasecmp(string, "murmur512")) {
-        return RM_DIGEST_MURMUR512;
-    } else
+        if(!strcasecmp(string, "sha512")) {
+            return RM_DIGEST_SHA512;
+        } else if(!strcasecmp(string, "city512")) {
+            return RM_DIGEST_CITY512;
+        } else if(!strcasecmp(string, "murmur512")) {
+            return RM_DIGEST_MURMUR512;
+        } else
 #endif
 #if _RM_HASH_LEN >= 32
-    if(!strcasecmp(string, "sha256")) {
-        return RM_DIGEST_SHA256;
-    } else if(!strcasecmp(string, "city256")) {
-        return RM_DIGEST_CITY256;
-    } else if(!strcasecmp(string, "murmur256")) {
-        return RM_DIGEST_MURMUR256;
-    } else
+            if(!strcasecmp(string, "sha256")) {
+                return RM_DIGEST_SHA256;
+            } else if(!strcasecmp(string, "city256")) {
+                return RM_DIGEST_CITY256;
+            } else if(!strcasecmp(string, "murmur256")) {
+                return RM_DIGEST_MURMUR256;
+            } else
 #endif
 #if _RM_HASH_LEN >= 20
-    if(!strcasecmp(string, "sha1")) {
-        return RM_DIGEST_SHA1;
-    } else
+                if(!strcasecmp(string, "sha1")) {
+                    return RM_DIGEST_SHA1;
+                } else
 #endif
-    if(!strcasecmp(string, "murmur")) {
-        return RM_DIGEST_MURMUR;
-    } else if(!strcasecmp(string, "spooky")) {
-        return RM_DIGEST_SPOOKY;
-    } else if(!strcasecmp(string, "city")) {
-        return RM_DIGEST_CITY;
-    } else {
-        return RM_DIGEST_UNKNOWN;
-    }
+                    if(!strcasecmp(string, "murmur")) {
+                        return RM_DIGEST_MURMUR;
+                    } else if(!strcasecmp(string, "spooky")) {
+                        return RM_DIGEST_SPOOKY;
+                    } else if(!strcasecmp(string, "city")) {
+                        return RM_DIGEST_CITY;
+                    } else {
+                        return RM_DIGEST_UNKNOWN;
+                    }
 }
 
 #define add_seed(digest, seed) {                                                           \
@@ -98,7 +98,7 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
     case RM_DIGEST_CITY1024:
         digest->num_128bit_blocks += 4; /*XXX: will = 8 after fallthrough */
         /* to do: initialise hash[4] through hash[7]*/
-    /*-- FallThrough --*/
+        /*-- FallThrough --*/
 #endif
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_MURMUR512:
@@ -108,7 +108,7 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
         digest->hash[3].second = 0xaaaaaaaaaaaaaaaa ^ seed2;
         digest->hash[2].first = 0x3333333333333333 ^ seed1;
         digest->hash[2].second = 0x3333333333333333 ^ seed2;
-    /* Fallthrough */
+        /* Fallthrough */
 #endif
 #if _RM_HASH_LEN >= 32
     case RM_DIGEST_MURMUR256:
@@ -116,7 +116,7 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
         digest->num_128bit_blocks += 1;
         digest->hash[1].first = 0xf0f0f0f0f0f0f0f0 ^ seed1;
         digest->hash[1].second = 0xf0f0f0f0f0f0f0f0 ^ seed2;
-    /* Fallthrough */
+        /* Fallthrough */
 #endif
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
@@ -152,8 +152,8 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
     case RM_DIGEST_MURMUR256:
 #endif
     case RM_DIGEST_MURMUR:
-       for (guint8 i = 0; i < digest->num_128bit_blocks; i++) {
-        /*TODO: multithread this if num_128bit_blocks > 1 */
+        for (guint8 i = 0; i < digest->num_128bit_blocks; i++) {
+            /*TODO: multithread this if num_128bit_blocks > 1 */
 #if UINTPTR_MAX == 0xffffffff
             /* 32 bit */
             MurmurHash3_x86_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
@@ -161,8 +161,8 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
             /* 64 bit */
             MurmurHash3_x64_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);
 #else
-        /* 16 bit or unknown */
-        #error "Probably not a good idea to compile rmlint on 16bit."
+            /* 16 bit or unknown */
+#error "Probably not a good idea to compile rmlint on 16bit."
 #endif
         }
         break;
@@ -175,11 +175,11 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
 #endif
         for (guint8 i = 0; i < digest->num_128bit_blocks; i++) {
             /* Opt out for the more optimized version.
-* This needs the crc command of sse4.2
-* (available on Intel Nehalem and up; my amd box doesn't have this though)
-*/
+            * This needs the crc command of sse4.2
+            * (available on Intel Nehalem and up; my amd box doesn't have this though)
+            */
 #ifdef __sse4_2__
-            digest->hash[i] = CityHashCrc128WithSeed((const char* )data, size, digest->hash[i]);
+            digest->hash[i] = CityHashCrc128WithSeed((const char *)data, size, digest->hash[i]);
 #else
             digest->hash[i] = CityHash128WithSeed((const char *) data, size, digest->hash[i]);
 #endif
@@ -251,7 +251,7 @@ int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
         break;
     case RM_DIGEST_SPOOKY:
         spooky_final(&copy->spooky_state, &copy->hash[0].first, &copy->hash[0].second);
-        /* Fallthrough */
+    /* Fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
 #if _RM_HASH_LEN >= 32

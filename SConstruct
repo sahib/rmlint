@@ -51,7 +51,6 @@ def BuildConfigTemplate(target, source, env):
     with codecs.open(str(target[0]), 'w') as handle:
         handle.write(text.format(
             HAVE_GLIB=int(conf.env['glib']),
-            HAVE_LIBMOUNT=int(conf.env['mount']),
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
@@ -146,8 +145,7 @@ conf.CheckPKGConfig('0.15.0')
 
 # Pkg-config to internal name
 DEPS = {
-    'glib-2.0 >= 2.32': 'glib',
-    'mount': 'mount'
+    'glib-2.0 >= 2.32': 'glib'
     # libelf has no .pc file :/
 }
 

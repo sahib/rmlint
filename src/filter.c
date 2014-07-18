@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include <ftw.h>
 #include <signal.h>
@@ -108,8 +109,9 @@ static int cmp_f(RmFile *_a, RmFile *_b) {
     /* check for empty checkusm AND fingerprints - refuse and warn */
     for(x = 0; x < 2; x++) {
         if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2]) {
-            warning(YEL"\nWARN: "NCO"Refusing file with empty checksum and empty fingerprint.  Trying to compare:\n%s (lint type %d)\n%s (lint type %d)\n",
-                    _a->path, _a->lint_type, _b->path, _b->lint_type );
+            warning(YEL"\nWARN: "NCO"Refusing file with empty checksum and empty fingerprint."
+                    "  Trying to compare:\n%s (lint type %d size %" PRId64 ")\n%s (lint type %d size %" PRId64 ")\n",
+                    _a->path, _a->lint_type, _a->fsize, _b->path, _b->lint_type, _b->fsize );
             return 1;
         }
     }
@@ -340,7 +342,6 @@ static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
         GQueue island = G_QUEUE_INIT;
         int num_orig = 0;
         int num_non_orig = 0;
-
         /*start new island of matched files  */
         /* first remove i from mainland */
         i = g_queue_pop_head_link(group);

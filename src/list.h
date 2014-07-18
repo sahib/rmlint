@@ -48,7 +48,16 @@ typedef int (* RmFileListSortFunc)(RmFile *a, RmFile *b, gpointer);
  */
 RmFileList *rm_file_list_new(void);
 
+/**
+ * @brief Set the checksum.
+ *
+ * @param list the list the file belongs to.
+ * @param file the file to update
+ * @param digest The rm digest to update.
+ */
 void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest);
+
+/* TODO: To-be-removed API */
 void rm_file_set_fingerprint(RmFileList *list, RmFile *file, guint index, RmDigest *digest);
 void rm_file_set_middle_bytes(RmFileList *list, RmFile *file, const char *bytes, gsize len);
 
