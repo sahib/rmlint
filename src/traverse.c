@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include <pthread.h>
+#include <glib.h>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -36,22 +37,57 @@
 #include "filter.h"
 #include "linttests.h"
 
-static int const MAX_EMPTYDIR_DEPTH = PATH_MAX / 2; /* brute force option */
+#define MAX_EMPTYDIR_DEPTH (PATH_MAX / 2) /* brute force option */
+
+#define RM_MAX_LIST_BUILD_POOL_THREADS 20 /* for testing */
+
+
+typedef struct RmListBuilderBuffer {
+    char *path;
+    guint64 fsize;
+    ino_t node;
+    dev_t dev;
+    time_t mtime;
+    RmLintType linttype;
+    bool is_ppath;
+    unsigned pnum;
+} RmListBuilderBuffer;
+
+
+/* Threadpool worker for creating RmFiles and adding them to list
+ * Why: to avoid slowing down the FTS traverses
+ * Receives: RmListBuilderBuffers from FTS threads
+ * Work: Creates new RmFile from the info in the RmListBuilderBuffer and appends it to list
+ * Signals to other threads: none */
+void rm_add_file_to_list (gpointer data, gpointer user_data) {
+    struct RmListBuilderBuffer *buf = (gpointer)data;
+    RmFileList *list = (gpointer)user_data;
+    RmFile *file = rm_file_new(buf->path, buf->fsize, buf->node, buf->dev, buf->mtime, buf->linttype, buf->is_ppath, buf->pnum);
+    rm_file_list_append(list, file);
+    g_free(buf->path);
+    g_free(buf);
+}
 
 
 static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnum, RmLintType file_type) {
     RmSettings *settings = session->settings;
-    RmFileList *list = session->list;
+    GThreadPool *pool = session->list_build_pool;
+    GError *g_err = NULL;
+
+    struct RmListBuilderBuffer *buf = NULL;
+
     const char *path = session->settings->paths[pnum];
 
     struct stat stat_buf;
     struct stat *statp = NULL;
 
-    if(ent != NULL) {
-        statp = ent->fts_statp;
-    } else {
+    if(ent == NULL) {
+        /* if this is direct file add from command-line argument, then we didn't get here via FTS, *
+         * so we don't have statp yet; get it!*/
         stat(path, &stat_buf);
         statp = &stat_buf;
+    } else {
+        statp = ent->fts_statp;
     }
 
     if (file_type == 0) {
@@ -74,8 +110,21 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
         }
     }
 
+
     if(ent == NULL) {
-        rm_file_list_append(list, rm_file_new(path, statp, file_type, is_ppath, pnum, settings->iwd));
+        buf = g_malloc0 ( sizeof (struct RmListBuilderBuffer));
+        buf->path = g_strdup(path);
+        buf->fsize = statp->st_size;
+        buf->node = statp->st_ino;
+        buf->dev = statp->st_dev;
+        buf->mtime = statp->st_mtim.tv_sec;
+        buf->linttype = file_type;
+        buf->is_ppath = is_ppath;
+        buf->pnum = pnum;
+        if (!g_thread_pool_push (pool, buf, &g_err)) {
+            error("Error %d %s pushing RmFile %s to list build pool", g_err->code, g_err->message, path);
+        }
+
     } else {
         switch (ent->fts_info) {
         case FTS_D:         /* preorder directory */
@@ -89,12 +138,24 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
         case FTS_W:         /* whiteout object */
         case FTS_NS:        /* stat(2) failed */
         case FTS_NSOK:      /* no stat(2) requested */
-            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum, settings->iwd));
+            /* don't add entry for above types */
             break;
         case FTS_F:         /* regular file */
         case FTS_SL:        /* symbolic link */
         case FTS_DEFAULT:   /* none of the above */
-            rm_file_list_append(list, rm_file_new(ent->fts_path, ent->fts_statp, file_type, is_ppath, pnum, settings->iwd));
+            /* TODO: clean this up (code here is almost identical to above) */
+            buf = g_malloc0 ( sizeof (struct RmListBuilderBuffer));
+            buf->path = g_strdup(ent->fts_path);
+            buf->fsize = statp->st_size;
+            buf->node = statp->st_ino;
+            buf->dev = statp->st_dev;
+            buf->mtime = statp->st_mtim.tv_sec;
+            buf->linttype = file_type;
+            buf->is_ppath = is_ppath;
+            buf->pnum = pnum;
+            if (!g_thread_pool_push (pool, buf, &g_err)) {
+                error("Error %d %s pushing RmFile %s to list build pool", g_err->code, g_err->message, ent->fts_path);
+            }
             break;
         default:
             break;
@@ -103,16 +164,11 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
     return 1;
 }
 
-/* Traverse the file hierarchies named in PATHS, the last entry of which
- * is NULL.  FTS_FLAGS controls how fts works.
- * Return true if successful.  */
-
 
 typedef struct RmTraversePathBuffer {
     int  pathnum;
     int fts_flags;
     RmSession *session;
-    pthread_t *thread;
 } RmTraversePathBuffer;
 
 
@@ -125,6 +181,8 @@ bool matches_toplevel_path ( char *filepath, RmSettings *settings) {
 }
 
 
+/* Traverse the file hierarchies named in session->paths[pathnum]. *
+ * Returns number of files added to list                           */
 static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
     RmSession *session = traverse_path_args->session;
 
@@ -279,13 +337,25 @@ static gpointer traverse_path_list(gpointer data) {
 
 
 /*--------------------------------------------------------------------*/
-/* Traverse file hierarchies based on settings contained in SETTINGS;
- * add the files found into LIST
+/* Traverse file hierarchies based on settings contained in session->settings;
+ * add the files found into session->list;
  * Return file count if successful.  */
 
 int rm_search_tree(RmSession *session) {
     RmSettings *settings = session->settings;
     guint64 numfiles = 0;
+    GError *g_err = NULL;
+
+    /* initialise and launch list builder pool */
+    session->list_build_pool = g_thread_pool_new (rm_add_file_to_list,
+                                                  session->list,
+                                                  settings->threads, /*TODO: rationalise this */
+                                                  true, /* share the thread pool */
+                                                  &g_err);
+    if (g_err != NULL) {
+        error("Error %d creating thread pool session->list_build_pool\n", g_err->code);
+        return -1;
+    }
 
     pthread_t *thread_ids = g_malloc0((settings->num_paths + 1) * sizeof(pthread_t));
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -304,7 +374,7 @@ int rm_search_tree(RmSession *session) {
     }
 
     /* Code below depends on this */
-    settings->threads = MIN(1, settings->threads);
+    settings->threads = MAX(1, settings->threads);
 
     GList *first_used_list = NULL;
 
@@ -358,6 +428,7 @@ int rm_search_tree(RmSession *session) {
             }
         }
 
+        /* TODO: GThreadPool this: */
         if (pthread_create(&thread_ids[idx], NULL, traverse_path_list, value)) {
             error ("Error launching traverse_path thread");
         }
@@ -371,5 +442,11 @@ int rm_search_tree(RmSession *session) {
 
     g_free(thread_ids);
     g_hash_table_unref(thread_table);
+
+    /* wait for list builder pool to finish */
+    g_thread_pool_free(session->list_build_pool, false, true);
+      /*TODO: do we need to wait or can rmlint continue and let the list build finish in the background?
+        (in which case change last arg to false above) */
+
     return numfiles;
 }
