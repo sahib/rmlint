@@ -867,8 +867,7 @@ int rm_main(RmSession *session) {
     gettimeofday(&end, NULL);
     secs_used = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_usec - start.tv_usec) / 1000000.0;
 
-    info ("List build time %.6f with %d files\n", secs_used, (int)session->total_files);
-
+    warning("List build time %.6f with %d files\n", secs_used, (int)session->total_files);
 
     if(session->total_files < 2) {
         warning("No files in cache to search through => No duplicates.\n");
