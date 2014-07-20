@@ -29,6 +29,7 @@
 
 #include <pthread.h>
 #include <glib.h>
+#include <error.h>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -122,7 +123,7 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
         buf->is_ppath = is_ppath;
         buf->pnum = pnum;
         if (!g_thread_pool_push (pool, buf, &g_err)) {
-            error("Error %d %s pushing RmFile %s to list build pool", g_err->code, g_err->message, path);
+            rm_error("Error %d %s pushing RmFile %s to list build pool", g_err->code, g_err->message, path);
         }
 
     } else {
@@ -154,7 +155,7 @@ static int process_file (RmSession *session, FTSENT *ent, bool is_ppath, int pnu
             buf->is_ppath = is_ppath;
             buf->pnum = pnum;
             if (!g_thread_pool_push (pool, buf, &g_err)) {
-                error("Error %d %s pushing RmFile %s to list build pool", g_err->code, g_err->message, ent->fts_path);
+                rm_error("Error %d %s pushing RmFile %s to list build pool", g_err->code, g_err->message, ent->fts_path);
             }
             break;
         default:
@@ -209,13 +210,13 @@ static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
         paths[0] = settings->paths[pathnum];
         paths[1] = NULL;
     } else {
-        error("Error: no paths defined for traverse_files");
+        rm_error("Error: no paths defined for traverse_files");
         numfiles = -1;
         goto cleanup;
     }
 
     if ((ftsp = fts_open(paths, fts_flags, NULL)) == NULL) {
-        error("fts_open failed");
+        rm_error("fts_open failed");
         numfiles = -1;
         goto cleanup;
     }
@@ -260,7 +261,7 @@ static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
             case FTS_DNR:       /* unreadable directory */
-                warning(RED"Warning: cannot read directory %s (skipping)\n"NCO, p->fts_path);
+                error( 0, p->fts_errno, "Warning: cannot read directory %s", p->fts_path);
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
             case FTS_DOT:       /* dot or dot-dot */
@@ -314,7 +315,7 @@ static guint64 traverse_path(RmTraversePathBuffer *traverse_path_args) {
         } /*end while ((p = fts_read(ftsp)) != NULL)*/
     }
     if (errno != 0) {
-        error ("Error '%s': fts_read failed on %s", g_strerror(errno), ftsp->fts_path);
+        rm_error("Error '%s': fts_read failed on %s", g_strerror(errno), ftsp->fts_path);
         numfiles = -1;
     }
 
@@ -353,7 +354,7 @@ int rm_search_tree(RmSession *session) {
                                                   true, /* share the thread pool */
                                                   &g_err);
     if (g_err != NULL) {
-        error("Error %d creating thread pool session->list_build_pool\n", g_err->code);
+        rm_error("Error %d creating thread pool session->list_build_pool\n", g_err->code);
         return -1;
     }
 
@@ -430,7 +431,7 @@ int rm_search_tree(RmSession *session) {
 
         /* TODO: GThreadPool this: */
         if (pthread_create(&thread_ids[idx], NULL, traverse_path_list, value)) {
-            error ("Error launching traverse_path thread");
+            rm_error("Error launching traverse_path thread");
         }
     }
 

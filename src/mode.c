@@ -116,7 +116,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
         char *fpath = realpath(file->path, NULL);
         if(!fpath) {
             if(file->lint_type != TYPE_BLNK) {
-                error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
+                rm_error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
                 rm_perror("(write_to_log():mode.c)");
             }
             free_fullpath = false;
@@ -221,7 +221,7 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
             if(full_orig_path) {
                 char *full_dupl_path = realpath(path, NULL);
                 if(full_dupl_path) {
-                    error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
+                    rm_error(NCO"   ln -s "NCO"\"%s\" "NCO"\"%s\"\n", full_orig_path, full_dupl_path);
                     remfile(full_dupl_path);
                     if(symlink(full_orig_path , full_dupl_path) == -1) {
                         rm_perror(YEL"WARN: "NCO"symlink:");
@@ -257,7 +257,7 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
     }
     break;
     default:
-        error(RED"ERROR: "NCO"Invalid set->mode. This is a program error :(");
+        rm_error(RED"ERROR: "NCO"Invalid set->mode. This is a program error :(");
         return true;
     }
     return false;
@@ -421,7 +421,7 @@ bool process_island(RmSession *session, GQueue *group) {
                     || (sets->mode == RM_MODE_CMD && sets->cmd_orig == NULL && sets->cmd_path == NULL)
               ) {
                 if(sets->mode != RM_MODE_LINK) {
-                    error(GRE"   ls "NCO"%s\n", fi->path);
+                    rm_error(GRE"   ls "NCO"%s\n", fi->path);
                 }
             }
             write_to_log(session, fi, true, NULL);
@@ -445,7 +445,7 @@ bool process_island(RmSession *session, GQueue *group) {
                 } else {
                     warning(YEL"   %-1s "NCO, "rm");
                 }
-                error("%s\n", fi->path);
+                rm_error("%s\n", fi->path);
             }
             write_to_log(session, fi, false, original);
             session->dup_counter++;

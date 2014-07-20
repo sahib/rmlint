@@ -494,7 +494,7 @@ void size_to_human_readable(guint64 num, char *in, size_t len) {
 static void handle_double_base_file(RmSession *session, RmFile *file) {
     char *abs_path = realpath(file->path, NULL);
     file->lint_type = TYPE_BASE;
-    error("   %sls%s %s\n", (session->settings->verbosity != 1) ? GRE : "", NCO, abs_path);
+    rm_error("   %sls%s %s\n", (session->settings->verbosity != 1) ? GRE : "", NCO, abs_path);
     write_to_log(session, file, false, NULL);
     g_free(abs_path);
 }
@@ -523,7 +523,7 @@ static int find_double_bases(RmSession *session) {
                     && fj->lint_type != TYPE_BASE
               ) {
                 if(header_printed) {
-                    error("\n%s#"NCO" Double basename(s):\n", GRE);
+                    rm_error("\n%s#"NCO" Double basename(s):\n", GRE);
                     header_printed = false;
                 }
 
@@ -606,37 +606,37 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if(file->lint_type >= TYPE_OTHER_LINT) {
-            error("Unknown filetype: %d (thats a bug)\n", file->lint_type);
+            rm_error("Unknown filetype: %d (thats a bug)\n", file->lint_type);
             continue;
         }
 
         if(flag != file->lint_type) {
-            error(YEL"\n# "NCO);
-            error("%s", TYPE_TO_DESCRIPTION[file->lint_type]);
-            error(": \n"NCO);
+            rm_error(YEL"\n# "NCO);
+            rm_error("%s", TYPE_TO_DESCRIPTION[file->lint_type]);
+            rm_error(": \n"NCO);
             flag = file->lint_type;
         }
 
-        error(GRE);
-        error("   ");
+        rm_error(GRE);
+        rm_error("   ");
 
         const char *format = TYPE_TO_COMMAND[file->lint_type];
         switch(file->lint_type) {
         case TYPE_BADUID:
-            error(format, user);
+            rm_error(format, user);
             break;
         case TYPE_BADGID:
-            error(format, group);
+            rm_error(format, group);
             break;
         case TYPE_BADUGID:
-            error(format, user, group);
+            rm_error(format, user, group);
             break;
         default:
-            error("%s", format);
+            rm_error("%s", format);
         }
 
-        error(NCO);
-        error(" %s\n", file->path);
+        rm_error(NCO);
+        rm_error(" %s\n", file->path);
         if(sets->output_log) {
             write_to_log(session, file, false, NULL);
         }
@@ -654,7 +654,7 @@ void start_processing(RmSession *session) {
 
     if(settings->namecluster) {
         other_lint += find_double_bases(session);
-        error("\n");
+        rm_error("\n");
     }
 
     GSequenceIter *first = rm_file_list_get_iter(list);
@@ -681,16 +681,16 @@ void start_processing(RmSession *session) {
     info("Now removing files with unique sizes from list...");
     info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
     info(" done. \nNow doing fingerprints and full checksums.\n");
-    error("\n%s Duplicate(s):\n", YEL"#"NCO);
+    rm_error("\n%s Duplicate(s):\n", YEL"#"NCO);
 
     /* Groups are splitted, now give it to the scheduler
      * The scheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
     start_scheduler(session);
     if(session->dup_counter == 0) {
-        error("\r                    ");
+        rm_error("\r                    ");
     } else {
-        error("\n");
+        rm_error("\n");
     }
 
     size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
@@ -730,7 +730,7 @@ void start_processing(RmSession *session) {
     }
 
     if(session->log_out == NULL && settings->output_log) {
-        error(RED"\nERROR: "NCO);
+        rm_error(RED"\nERROR: "NCO);
         fflush(stdout);
         rm_perror("Unable to write log - target file:");
         rm_perror(settings->output_log);

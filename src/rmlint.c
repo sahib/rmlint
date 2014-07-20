@@ -253,7 +253,7 @@ static bool add_path(RmSession *session, int index, const char *path) {
     }
 
     if(g_access(path, R_OK) != 0) {
-        error(YEL"FATAL: "NCO"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
+        rm_error(YEL"FATAL: "NCO"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
         settings->is_ppath = g_realloc(settings->is_ppath, sizeof(char) * (index + 1));
@@ -366,7 +366,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'a':
             sets->checksum_type = rm_string_to_digest_type(optarg);
             if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
-                error(RED"Unknown hash algorithm: '%s'\n", optarg);
+                rm_error(RED"Unknown hash algorithm: '%s'\n", optarg);
                 die(session, EXIT_FAILURE);
             }
             break;
@@ -516,8 +516,8 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             }
 
             if(!sets->mode) {
-                error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
-                error("       Available modes are: list | link | noask | cmd\n");
+                rm_error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
+                rm_error("       Available modes are: list | link | noask | cmd\n");
                 die(session, EXIT_FAILURE);
                 return 0;
             }
@@ -555,8 +555,8 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         sets->is_ppath[0] = 0;
         sets->num_paths++;
         if(!sets->paths[0]) {
-            error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
-            error("       Are you maybe in a dir that just had been removed?\n");
+            rm_error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
+            rm_error("       Are you maybe in a dir that just had been removed?\n");
             g_free(sets->paths);
             return 0;
         }
@@ -718,7 +718,7 @@ char rm_echo_settings(RmSettings *settings) {
     if (settings->must_match_original) {
         info("\tDuplicates must have at least one member in the "GRE"(orig)"NCO" paths indicated above\n");
         if (!has_ppath)
-            error(RED"\tWarning: no "GRE"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"NCO);
+            rm_error(RED"\tWarning: no "GRE"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"NCO);
     }
 
     if (settings->find_hardlinked_dupes) {
@@ -752,7 +752,7 @@ char rm_echo_settings(RmSettings *settings) {
             info("\tKeep last alphabetically\n");
             break;
         default:
-            error(RED"\tWarning: invalid originals ranking option '-D %c'\n"NCO, settings->sort_criteria[i]);
+            rm_error(RED"\tWarning: invalid originals ranking option '-D %c'\n"NCO, settings->sort_criteria[i]);
             break;
         }
     }

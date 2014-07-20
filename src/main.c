@@ -78,9 +78,9 @@ static void signal_handler(int signum) {
     case SIGFPE:
     case SIGABRT:
     case SIGSEGV:
-        error(RED"FATAL: "NCO"Aborting due to a fatal error. (signal received: %s)\n", g_strsignal(signum));
+        rm_error(RED"FATAL: "NCO"Aborting due to a fatal error. (signal received: %s)\n", g_strsignal(signum));
     default:
-        error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
+        rm_error(RED"FATAL: "NCO"Please file a bug report (See rmlint -h)\n");
         exit(EXIT_FAILURE);
         break;
     }
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
             /* Do all the real work */
             exit_state = rm_main(&session);
         } else {
-            error(RED"Aborting.\n"NCO);
+            rm_error(RED"Aborting.\n"NCO);
         }
     }
 

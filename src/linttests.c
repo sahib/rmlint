@@ -115,7 +115,7 @@ bool is_nonstripped(const char *path, G_GNUC_UNUSED struct stat *statp,  RmSetti
 
         /* Protect program from using an older library */
         if(elf_version(EV_CURRENT) == EV_NONE) {
-            error("ERROR - ELF Library is out of date!\n");
+            rm_error("ERROR - ELF Library is out of date!\n");
             exit(EXIT_FAILURE);
         }
 
