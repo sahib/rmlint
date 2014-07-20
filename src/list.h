@@ -26,12 +26,25 @@
 #ifndef RM_LIST_H
 #define RM_LIST_H
 
+#define __need_timespec
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <glib.h>
+
 #include "defs.h"
 
-RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum, const char *iwd);
+/**
+ * @brief Allocate and new RmFile and populate with args
+ */
+
+RmFile *rm_file_new(const char *path,
+                    guint64 fsize,
+                    ino_t node,
+                    dev_t dev,
+                    time_t mtime,
+                    RmLintType type,
+                    bool is_ppath,
+                    unsigned pnum);
 
 /**
  * @brief Free the memory allocated by rm_file_new()

@@ -38,24 +38,25 @@
 #include "filemap.h"
 #include "rmlint.h"
 
-RmFile *rm_file_new(const char *path, struct stat *buf, RmLintType type, bool is_ppath, unsigned pnum, const char *iwd) {
+RmFile *rm_file_new(const char *path,
+                    guint64 fsize,
+                    ino_t node,
+                    dev_t dev,
+                    time_t mtime,
+                    RmLintType type,
+                    bool is_ppath,
+                    unsigned pnum) {
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
-    self->node = buf->st_ino;
-    self->dev = buf->st_dev;
-    self->mtime = buf->st_mtime;
+    self->node = node;
+    self->dev = dev;
+    self->mtime = mtime;
 
 
-
-    if(path[0] == '/')
-        self->fullpath_prepend = NULL;
-    else
-        self->fullpath_prepend = iwd; /*TODO: check if this is safe, ie is settings->iwd always going to be there?
-                                        *note: not using this anywhere yet so not "unsafe" */
 
     if(type == TYPE_DUPE_CANDIDATE) {
         self->offset = get_disk_offset(path, 0);
-        self->fsize = buf->st_size;
+        self->fsize = fsize;
     } else {
         self->fsize = 0;
         self->offset = 0;
