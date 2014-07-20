@@ -45,12 +45,12 @@ int die(RmSession *session, int status);
 #define warning(...) \
     g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
 #define error(...) \
-    g_log("rmling", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+    g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
 
 #define rm_perror(message)                                                      \
     if(errno) {                                                                 \
         error("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
     }                                                                           \
- 
+
 
 #endif
