@@ -67,10 +67,10 @@ uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, c
         returnval = fm->fm_extents[0].fe_physical;
     } else {
         if (errno == EBADR) {
-            error("FIEMAP failed with unsupported flags %x for file", fm->fm_flags);
+            debug("FIEMAP failed with unsupported flags %x for file", fm->fm_flags);
         } else {
-            error("FIEMAP failed for file: ");
-            rm_perror("FS_IOC_FIEMAP");
+            debug("FIEMAP failed for file: ");
+            //rm_perror("FS_IOC_FIEMAP");
         }
         returnval = 0;
     }
