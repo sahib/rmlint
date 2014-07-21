@@ -21,37 +21,37 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_MD5;
     } else
 #if _RM_HASH_LEN >= 64
-        if(!strcasecmp(string, "sha512")) {
-            return RM_DIGEST_SHA512;
-        } else if(!strcasecmp(string, "city512")) {
-            return RM_DIGEST_CITY512;
-        } else if(!strcasecmp(string, "murmur512")) {
-            return RM_DIGEST_MURMUR512;
-        } else
+    if(!strcasecmp(string, "sha512")) {
+        return RM_DIGEST_SHA512;
+    } else if(!strcasecmp(string, "city512")) {
+        return RM_DIGEST_CITY512;
+    } else if(!strcasecmp(string, "murmur512")) {
+        return RM_DIGEST_MURMUR512;
+    } else
 #endif
 #if _RM_HASH_LEN >= 32
-            if(!strcasecmp(string, "sha256")) {
-                return RM_DIGEST_SHA256;
-            } else if(!strcasecmp(string, "city256")) {
-                return RM_DIGEST_CITY256;
-            } else if(!strcasecmp(string, "murmur256")) {
-                return RM_DIGEST_MURMUR256;
-            } else
+    if(!strcasecmp(string, "sha256")) {
+        return RM_DIGEST_SHA256;
+    } else if(!strcasecmp(string, "city256")) {
+        return RM_DIGEST_CITY256;
+    } else if(!strcasecmp(string, "murmur256")) {
+        return RM_DIGEST_MURMUR256;
+    } else
 #endif
 #if _RM_HASH_LEN >= 20
-                if(!strcasecmp(string, "sha1")) {
-                    return RM_DIGEST_SHA1;
-                } else
+    if(!strcasecmp(string, "sha1")) {
+        return RM_DIGEST_SHA1;
+    } else
 #endif
-                    if(!strcasecmp(string, "murmur")) {
-                        return RM_DIGEST_MURMUR;
-                    } else if(!strcasecmp(string, "spooky")) {
-                        return RM_DIGEST_SPOOKY;
-                    } else if(!strcasecmp(string, "city")) {
-                        return RM_DIGEST_CITY;
-                    } else {
-                        return RM_DIGEST_UNKNOWN;
-                    }
+    if(!strcasecmp(string, "murmur")) {
+        return RM_DIGEST_MURMUR;
+    } else if(!strcasecmp(string, "spooky")) {
+        return RM_DIGEST_SPOOKY;
+    } else if(!strcasecmp(string, "city")) {
+        return RM_DIGEST_CITY;
+    } else {
+        return RM_DIGEST_UNKNOWN;
+    }
 }
 
 #define add_seed(digest, seed) {                                                           \
@@ -93,20 +93,13 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
         digest->hash[0].first = seed1;
         digest->hash[0].second = seed2;
         break;
-#ifdef _VIEL_MEHR_PARANOIDER
-    case RM_DIGEST_MURMUR1024:
-    case RM_DIGEST_CITY1024:
-        digest->num_128bit_blocks += 4; /*XXX: will = 8 after fallthrough */
-        /* to do: initialise hash[4] through hash[7]*/
-        /*-- FallThrough --*/
-#endif
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
         digest->num_128bit_blocks += 2; /*XXX: will = 4 after fallthrough */
-        digest->hash[3].first = 0xaaaaaaaaaaaaaaaa ^ seed1;
+        digest->hash[3].first  = 0xaaaaaaaaaaaaaaaa ^ seed1;
         digest->hash[3].second = 0xaaaaaaaaaaaaaaaa ^ seed2;
-        digest->hash[2].first = 0x3333333333333333 ^ seed1;
+        digest->hash[2].first  = 0x3333333333333333 ^ seed1;
         digest->hash[2].second = 0x3333333333333333 ^ seed2;
         /* Fallthrough */
 #endif
@@ -114,13 +107,13 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
         digest->num_128bit_blocks += 1;
-        digest->hash[1].first = 0xf0f0f0f0f0f0f0f0 ^ seed1;
+        digest->hash[1].first  = 0xf0f0f0f0f0f0f0f0 ^ seed1;
         digest->hash[1].second = 0xf0f0f0f0f0f0f0f0 ^ seed2;
         /* Fallthrough */
 #endif
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-        digest->hash[0].first = seed1;
+        digest->hash[0].first  = seed1;
         digest->hash[0].second = seed2;
         break;
     default:
@@ -342,6 +335,10 @@ void rm_digest_finalize(RmDigest *digest) {
 
 #ifdef _RM_COMPILE_MAIN
 
+#include <alloca.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+
 /* Use this to compile:
 * $ gcc src/checksum.c src/checksums/ *.c -Wextra -Wall $(pkg-config --libs --cflags glib-2.0) -std=c11 -msse4a -O4 -D_GNU_SOURCE -D_RM_COMPILE_MAIN
 * $ ./a.out mmap <some_file[s]>
@@ -368,10 +365,10 @@ static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb,
             rm_digest_update(&digest, data, bytes);
 
             gsize digest_len = rm_digest_hexstring(&digest, buffer);
-            for(gsize i = 0; i < digest_len; i++) {
-                g_printerr("%c", buffer[i]);
-            }
-            g_printerr(" (%ld Bytes)\n", bytes);
+            // for(gsize i = 0; i < digest_len; i++) {
+            //     g_printerr("%c", buffer[i]);
+            // }
+            //g_printerr(" (%ld Bytes)\n", bytes);
         }
     } while(bytes > 0);
 
@@ -388,7 +385,7 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
 
 
     if((fd = open(file, O_RDONLY)) == -1) {
-        rm_perror("ERROR:sys:open()");
+        perror("ERROR:sys:open()");
         return 0;
     }
 
@@ -402,21 +399,18 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
 
     if(f_map != MAP_FAILED) {
         if(madvise(f_map, stat_buf.st_size, MADV_WILLNEED) == -1) {
-            rm_perror("madvise");
+            perror("madvise");
         }
 
-        /* Shut your eyes and go through, leave out start & end of fp */
         rm_digest_update(&digest, f_map, stat_buf.st_size);
-        /* Unmap this file */
-
         munmap(f_map, stat_buf.st_size);
 
     } else {
-        rm_perror("ERROR:hash_file->mmap");
+        perror("ERROR:hash_file->mmap");
     }
 
     if(close(fd) == -1) {
-        rm_perror("ERROR:close()");
+        perror("ERROR:close()");
     }
 
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
@@ -424,15 +418,48 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
     return digest_len;
 }
 
+static int rm_hash_file_readv(const char *file, RmDigestType type, G_GNUC_UNUSED double buf_size_mb, char *buffer) {
+    const int N = 4;
+    const int S = 4096 * 4;
+    struct iovec readvec[N];
+    for(int i = 0; i < N; ++i) {
+        readvec[i].iov_base = alloca(S);
+        readvec[i].iov_len = S;
+    }
 
-int main(int argc, char **argv) {
+    RmDigest digest;
+    rm_digest_init(&digest, type, 0, 0);
+
+    int bytes = 0;
+    int fd = open(file, O_RDONLY);
+    while((bytes = readv(fd, readvec, N)) > 0) {
+        int blocks = bytes / S + 1;
+        int remainder = bytes % S;
+        for(int i = 0; i < blocks; ++i) {
+            rm_digest_update(&digest, readvec[i].iov_base, (i == blocks -1) ? remainder : S);
+        }
+    }
+    
+    gsize digest_len = rm_digest_hexstring(&digest, buffer);
+    rm_digest_finalize(&digest);
+
+    close(fd);
+    return digest_len;
+}
+
+
+    int main(int argc, char **argv) {
     if(argc < 3) {
         printf("Specify a type and a file\n");
         return EXIT_FAILURE;
     }
 
     for(int j = 2; j < argc; j++) {
-        const char *types[] = {"city", "spooky", "murmur", "murmur256", "city256", "murmur512", "city512", "md5", "sha1", "sha256", "sha512", NULL};
+        const char *types[] = {
+            "city", "spooky", "murmur", "murmur256", "city256", "murmur512",
+            "city512", "md5", "sha1", "sha256", "sha512", 
+            NULL
+        };
 
         // printf("# %d MB\n", 1 << (j - 2));
         for(int i = 0; types[i]; ++i) {
@@ -445,11 +472,13 @@ int main(int argc, char **argv) {
             GTimer *timer = g_timer_new();
             int digest_len = 0;
 
-            char buffer[64];
+            char buffer[_RM_HASH_LEN * 2];
             memset(buffer, 0, sizeof(buffer));
 
             if(!strcasecmp(argv[1], "mmap")) {
                 digest_len = rm_hash_file_mmap(argv[j], type, 1, buffer);
+            } else if(!strcasecmp(argv[1], "readv")) {
+                digest_len = rm_hash_file_readv(argv[j], type, 1, buffer);
             } else {
                 digest_len = rm_hash_file(argv[j], type, strtod(argv[1], NULL), buffer);
             }
