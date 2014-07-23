@@ -90,7 +90,9 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         }
 
         dev_t whole_disk = 0;
-        char diskname[32];
+        char diskname[PATH_MAX];
+        memset(diskname, 0, sizeof(diskname));
+
         if(blkid_devno_to_wholedisk(stat_buf.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
             continue;
         }
