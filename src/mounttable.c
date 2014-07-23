@@ -71,7 +71,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                  g_direct_hash, g_direct_equal,
                                  NULL, NULL
                              );
-    info("rm_mounts_create_tables");
+
 #if HAVE_BLKID && HAVE_MOUNTLIST
     glibtop_mountlist mount_list;
     glibtop_mountentry *mount_entries = glibtop_get_mountlist(&mount_list, true);
@@ -89,17 +89,12 @@ static void rm_mounts_create_tables(RmMountTable *self) {
             rm_perror(mount_entries[index].devname);
             continue;
         }
+
         struct stat stat_buf_folder;
         if(stat(mount_entries[index].mountdir, &stat_buf_folder) == -1) {
             rm_perror(mount_entries[index].mountdir);
             continue;
         }
-
-		info("Got mountpoint %s, file device number %lu, device %s, DevID %02d:%02d", mount_entries[index].mountdir,
-                stat_buf_folder.st_dev,
-                mount_entries[index].devname,
-                major(stat_buf_dev.st_rdev), minor(stat_buf_dev.st_rdev));
-
 
         dev_t whole_disk = 0;
         char diskname[PATH_MAX];
@@ -109,16 +104,16 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 continue;
         }
 
-        info("%02d:%02d %10s -> %02d:%02d %s",
-             major(stat_buf_dev.st_rdev), minor(stat_buf_dev.st_rdev),
-             mount_entries[index].devname,
+        info("%lu %s -> %02d:%02d %s",
+             stat_buf_folder.st_dev,
+             mount_entries[index].mountdir,
              major(whole_disk), minor(whole_disk),
              diskname
             );
 
         g_hash_table_insert(
             self->part_table,
-            GINT_TO_POINTER(stat_buf_dev.st_rdev),
+            GINT_TO_POINTER(stat_buf_folder.st_dev),
             GINT_TO_POINTER(whole_disk)
         );
 
