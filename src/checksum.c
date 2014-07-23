@@ -21,37 +21,37 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_MD5;
     } else
 #if _RM_HASH_LEN >= 64
-    if(!strcasecmp(string, "sha512")) {
-        return RM_DIGEST_SHA512;
-    } else if(!strcasecmp(string, "city512")) {
-        return RM_DIGEST_CITY512;
-    } else if(!strcasecmp(string, "murmur512")) {
-        return RM_DIGEST_MURMUR512;
-    } else
+        if(!strcasecmp(string, "sha512")) {
+            return RM_DIGEST_SHA512;
+        } else if(!strcasecmp(string, "city512")) {
+            return RM_DIGEST_CITY512;
+        } else if(!strcasecmp(string, "murmur512")) {
+            return RM_DIGEST_MURMUR512;
+        } else
 #endif
 #if _RM_HASH_LEN >= 32
-    if(!strcasecmp(string, "sha256")) {
-        return RM_DIGEST_SHA256;
-    } else if(!strcasecmp(string, "city256")) {
-        return RM_DIGEST_CITY256;
-    } else if(!strcasecmp(string, "murmur256")) {
-        return RM_DIGEST_MURMUR256;
-    } else
+            if(!strcasecmp(string, "sha256")) {
+                return RM_DIGEST_SHA256;
+            } else if(!strcasecmp(string, "city256")) {
+                return RM_DIGEST_CITY256;
+            } else if(!strcasecmp(string, "murmur256")) {
+                return RM_DIGEST_MURMUR256;
+            } else
 #endif
 #if _RM_HASH_LEN >= 20
-    if(!strcasecmp(string, "sha1")) {
-        return RM_DIGEST_SHA1;
-    } else
+                if(!strcasecmp(string, "sha1")) {
+                    return RM_DIGEST_SHA1;
+                } else
 #endif
-    if(!strcasecmp(string, "murmur")) {
-        return RM_DIGEST_MURMUR;
-    } else if(!strcasecmp(string, "spooky")) {
-        return RM_DIGEST_SPOOKY;
-    } else if(!strcasecmp(string, "city")) {
-        return RM_DIGEST_CITY;
-    } else {
-        return RM_DIGEST_UNKNOWN;
-    }
+                    if(!strcasecmp(string, "murmur")) {
+                        return RM_DIGEST_MURMUR;
+                    } else if(!strcasecmp(string, "spooky")) {
+                        return RM_DIGEST_SPOOKY;
+                    } else if(!strcasecmp(string, "city")) {
+                        return RM_DIGEST_CITY;
+                    } else {
+                        return RM_DIGEST_UNKNOWN;
+                    }
 }
 
 #define add_seed(digest, seed) {                                                           \
@@ -436,10 +436,10 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, G_GNUC_UNUSED
         int blocks = bytes / S + 1;
         int remainder = bytes % S;
         for(int i = 0; i < blocks; ++i) {
-            rm_digest_update(&digest, readvec[i].iov_base, (i == blocks -1) ? remainder : S);
+            rm_digest_update(&digest, readvec[i].iov_base, (i == blocks - 1) ? remainder : S);
         }
     }
-    
+
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
     rm_digest_finalize(&digest);
 
@@ -448,7 +448,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, G_GNUC_UNUSED
 }
 
 
-    int main(int argc, char **argv) {
+int main(int argc, char **argv) {
     if(argc < 3) {
         printf("Specify a type and a file\n");
         return EXIT_FAILURE;
@@ -457,7 +457,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, G_GNUC_UNUSED
     for(int j = 2; j < argc; j++) {
         const char *types[] = {
             "city", "spooky", "murmur", "murmur256", "city256", "murmur512",
-            "city512", "md5", "sha1", "sha256", "sha512", 
+            "city512", "md5", "sha1", "sha256", "sha512",
             NULL
         };
 

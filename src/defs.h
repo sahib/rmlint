@@ -44,11 +44,6 @@
 #define GRE "\x1b[32;01m"
 #define BLU "\x1b[34;01m"
 
-/* not supposed to be changed */
-#ifndef _RM_HASH_LEN
-#define _RM_HASH_LEN 16
-#endif
-
 /* Which scheduler to take
  * + 1) Always single threaded on each group
  * + 2) Run max. n (where n may be max. set->threads) at the same time.

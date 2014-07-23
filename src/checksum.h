@@ -2,6 +2,7 @@
 #define RM_CHECKSUM_H
 
 #include <glib.h>
+#include "config.h"
 
 typedef enum RmDigestType {
     RM_DIGEST_UNKNOWN = 0,
@@ -28,13 +29,7 @@ typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
         struct spooky_state spooky_state;
-#if _RM_HASH_LEN >= 64
-        uint128 hash[4];
-#elif _RM_HASH_LEN >= 32
-        uint128 hash[2];
-#else
-        uint128 hash[1];
-#endif
+        uint128 hash[_RM_HASH_LEN / 16];
     };
     RmDigestType type;
     guint8 num_128bit_blocks;

@@ -153,12 +153,8 @@ GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
 
 static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
     const GQueue *qa = a, *qb = b;
-    if(qa->head && qb->head) {
-        RmFile *fa = qa->head->data, *fb = qb->head->data;
-        return fa->fsize - fb->fsize;
-    } else {
-        return qa->head == qb->head;
-    }
+    RmFile *fa = qa->head->data, *fb = qb->head->data;
+    return fa->fsize - fb->fsize;
 }
 
 void rm_file_list_append(RmFileList *list, RmFile *file) {

@@ -25,18 +25,21 @@
 * This file was partly authored by qitta (https://github.com/qitta) - Thanks!
 **/
 
-#include <glib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "mounttable.h"
+#include "config.h"
+
+#if HAVE_BLKID
+    #include <blkid.h>
+#endif
+
 #include "rmlint.h"
 
-static GOnce ONCE_PROC_MOUNTS = G_ONCE_INIT;
-static GOnce ONCE_RESULT_TABLE = G_ONCE_INIT;
-
-static gchar rm_mount_is_rotational_blockdev(const char *dev) {
+static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     char sys_path[PATH_MAX];
     gchar is_rotational = -1;
 
@@ -55,139 +58,152 @@ static gchar rm_mount_is_rotational_blockdev(const char *dev) {
     return is_rotational;
 }
 
-static GHashTable *rm_mounts_parse_proc_partitions(void) {
-    FILE *proc_fd = fopen("/proc/partitions", "r");
-    GHashTable *part_table = g_hash_table_new_full(
+static void rm_mounts_create_tables(RmMountTable *self) {
+    /* partition dev_t to disk dev_t */
+    self->part_table = g_hash_table_new_full(
+                           g_direct_hash, g_direct_equal,
+                           NULL, NULL
+                       );
+
+    /* disk dev_t to boolean indication if disk is rotational */
+    self->rotational_table = g_hash_table_new_full(
                                  g_direct_hash, g_direct_equal,
-                                 g_free, NULL
+                                 NULL, NULL
                              );
 
-    if(proc_fd == NULL) {
-        return part_table;
-    }
+#if HAVE_BLKID
+    blkid_cache cache;
+    blkid_get_cache(&cache, NULL);
+    blkid_probe_all(cache);
+    blkid_dev_iterate iter = blkid_dev_iterate_begin(cache);
+    blkid_dev dev;
 
-    unsigned major, minor, dummy;
-    major = minor = dummy = 0;
-    char dev_name[200];
-    char line[PATH_MAX];
+    while(blkid_dev_next(iter, &dev) >= 0) {
+        struct stat stat_buf;
+        if(stat(blkid_dev_devname(dev), &stat_buf) == -1) {
+            rm_perror("stat on device failed");
+            continue;
+        }
 
-    while(fgets(line, PATH_MAX, proc_fd)) {
-        memset(dev_name, 0, sizeof(dev_name));
-        sscanf(
-            line, "%d%d%d%200s",
-            &major, &minor, &dummy, dev_name
+        if(S_ISBLK(stat_buf.st_mode) == 0 && S_ISCHR(stat_buf.st_mode) == 0) {
+            continue;
+        }
+
+        dev_t whole_disk = 0;
+        char diskname[32];
+        if(blkid_devno_to_wholedisk(stat_buf.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
+            continue;
+        }
+
+        info("%02d:%02d %10s -> %02d:%02d %s",
+             major(stat_buf.st_rdev), minor(stat_buf.st_rdev),
+             blkid_dev_devname(dev),
+             major(whole_disk), minor(whole_disk),
+             diskname
+            );
+
+        g_hash_table_insert(
+            self->part_table,
+            GINT_TO_POINTER(stat_buf.st_rdev),
+            GINT_TO_POINTER(whole_disk)
         );
 
-        if(*dev_name) {
+        /* small hack, so also the full disk id can be given to the api below */
+        g_hash_table_insert(
+            self->part_table,
+            GINT_TO_POINTER(whole_disk),
+            GINT_TO_POINTER(whole_disk)
+        );
+
+        gchar is_rotational = rm_mounts_is_rotational_blockdev(diskname);
+        info("    %s is rotational: %s", diskname, is_rotational ? "yes" : "no");
+
+        if(is_rotational != -1) {
             g_hash_table_insert(
-                part_table,
-                g_strdup(dev_name),
-                GINT_TO_POINTER(makedev(major, minor))
+                self->rotational_table,
+                GINT_TO_POINTER(whole_disk),
+                GINT_TO_POINTER(!is_rotational)
             );
         }
     }
 
-    fclose(proc_fd);
-    return part_table;
-}
-
-static void rm_mount_find_partitions(const char *blockdev_name, GHashTable *mount_table, gboolean non_rotational) {
-    GHashTableIter iter;
-    gpointer key, value;
-    gsize blockdev_name_len = strlen(blockdev_name);
-
-    g_once(&ONCE_PROC_MOUNTS, (GThreadFunc)rm_mounts_parse_proc_partitions, NULL);
-    GHashTable *partition_table = ONCE_PROC_MOUNTS.retval;
-
-    g_hash_table_iter_init(&iter, partition_table);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        if(strncmp(blockdev_name, (char *)key, blockdev_name_len) == 0) {
-            dev_t part_devid = GPOINTER_TO_INT(value);
-
-            debug(
-                "%02u:%02u: %5s is a %srotational device\n",
-                major(part_devid), minor(part_devid),
-                (char *)key, (non_rotational) ? "non-" : ""
-            );
-            g_hash_table_insert(
-                mount_table,
-                GINT_TO_POINTER(part_devid),
-                GINT_TO_POINTER(non_rotational)
-            );
-        }
-    }
-}
-
-static GHashTable *rm_mounts_create_table(void) {
-    GError *error = NULL;
-    GDir *dir_handle = g_dir_open("/sys/block", 0, &error);
-    GHashTable *mount_table = g_hash_table_new(g_direct_hash, g_direct_equal);
-
-    if (dir_handle == NULL) {
-        debug("Cannot read /sys/block/: %s\n", error->message);
-        g_error_free(error);
-        return mount_table;
-    }
-
-    const char *dir_entry = NULL;
-    while ((dir_entry = g_dir_read_name(dir_handle)) != 0) {
-        gchar non_rotational = !rm_mount_is_rotational_blockdev(dir_entry);
-
-        if (non_rotational == -1) {
-            debug("Cannot determine if '%s' is rotational. Assuming not.\n", dir_entry);
-        } else {
-            rm_mount_find_partitions(dir_entry, mount_table, non_rotational);
-        }
-    }
-
-    g_dir_close(dir_handle);
-    return mount_table;
+    blkid_dev_iterate_end(iter);
+    blkid_put_cache(cache);
+#endif
 }
 
 /////////////////////////////////
 //         PUBLIC API          //
 /////////////////////////////////
 
-bool rm_mounts_file_is_on_sdd(dev_t device) {
-    g_once(&ONCE_RESULT_TABLE, (GThreadFunc)rm_mounts_create_table, NULL);
 
-    GHashTable *mount_table = ONCE_RESULT_TABLE.retval;
+RmMountTable *rm_mounts_table_new(void) {
+    RmMountTable *self = g_slice_new(RmMountTable);
+    rm_mounts_create_tables(self);
+    return self;
+}
+
+void rm_mounts_table_destroy(RmMountTable *self) {
+    g_hash_table_unref(self->part_table);
+    g_hash_table_unref(self->rotational_table);
+    g_slice_free(RmMountTable, self);
+}
+
+bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
+    dev_t disk_id = rm_mounts_get_disk_id(self, device);
     return GPOINTER_TO_INT(
                g_hash_table_lookup(
-                   mount_table, GINT_TO_POINTER(device)
+                   self->rotational_table, GINT_TO_POINTER(disk_id)
                )
            );
 }
 
-void rm_mounts_clear(void) {
-    GHashTable *table = NULL;
-
-    table = ONCE_RESULT_TABLE.retval;
-    if(table) {
-        g_hash_table_unref(table);
+bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
+    struct stat stat_buf;
+    if(stat(path, &stat_buf) == -1) {
+        return -1;
     }
 
-    table = ONCE_PROC_MOUNTS.retval;
-    if(table) {
-        g_hash_table_unref(table);
+    return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
+}
+
+dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
+#if HAVE_BLKID
+    return GPOINTER_TO_INT(
+               g_hash_table_lookup(
+                   self->part_table, GINT_TO_POINTER(partition)
+               )
+           );
+#else
+    return partition;
+#endif
+}
+
+dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
+    struct stat stat_buf;
+    if(stat(path, &stat_buf) == -1) {
+        return -1;
     }
+
+    return rm_mounts_get_disk_id(self, stat_buf.st_dev);
 }
 
 #ifdef _RM_COMPILE_MAIN
 
 int main(int argc, char **argv) {
+    RmMountTable *table = rm_mounts_table_new();
+    g_printerr("\n");
     for(int i = 1; i < argc; ++i) {
-        struct stat stat_buf;
-        stat(argv[i], &stat_buf);
-
-        g_printerr("%s is on %srotational device.\n",
+        g_printerr("%30s is on %4srotational device and on disk %02u:%02u\n",
                    argv[i],
-                   rm_mounts_file_is_on_sdd(stat_buf.st_dev) ? "non-" : ""
+                   rm_mounts_is_nonrotational_by_path(table, argv[i]) ? "non-" : "",
+                   major(rm_mounts_get_disk_id_by_path(table, argv[i])),
+                   minor(rm_mounts_get_disk_id_by_path(table, argv[i]))
                   );
     }
 
-    rm_mounts_clear();
-    return 0;
+    rm_mounts_table_destroy(table);
+    return EXIT_SUCCESS;
 }
 
 #endif

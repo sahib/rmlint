@@ -349,10 +349,10 @@ int rm_search_tree(RmSession *session) {
 
     /* initialise and launch list builder pool */
     session->list_build_pool = g_thread_pool_new (rm_add_file_to_list,
-                                                  session->list,
-                                                  settings->threads, /*TODO: rationalise this */
-                                                  true, /* share the thread pool */
-                                                  &g_err);
+                               session->list,
+                               settings->threads, /*TODO: rationalise this */
+                               true, /* share the thread pool */
+                               &g_err);
     if (g_err != NULL) {
         rm_error("Error %d creating thread pool session->list_build_pool\n", g_err->code);
         return -1;
@@ -446,8 +446,8 @@ int rm_search_tree(RmSession *session) {
 
     /* wait for list builder pool to finish */
     g_thread_pool_free(session->list_build_pool, false, true);
-      /*TODO: do we need to wait or can rmlint continue and let the list build finish in the background?
-        (in which case change last arg to false above) */
+    /*TODO: do we need to wait or can rmlint continue and let the list build finish in the background?
+      (in which case change last arg to false above) */
 
     return numfiles;
 }

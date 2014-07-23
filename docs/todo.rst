@@ -12,7 +12,7 @@ Stable Version
 - long psize = sysconf(_SC_PAGESIZE); // posix compatible page size
 - for lint types, instead of -kK -lL etc, we could have --types [enz...]
   (SeeSpotRun)
-- Integrate the filemap.c optimization.
+- Integrate the filemap.c optimization. For physical blocks of 0, sort by inode? 
 - Integrate new Scheduler (sahib?) and make use of mounttables.c
 - Make digest update iteratively (can be done before scheduler changes) - SeeSpotRun?
 - Implement // or -- for orig-path parsing.

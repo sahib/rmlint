@@ -2,6 +2,8 @@
 #define RM_CONFIG_H
 
 #define HAVE_GLIB {HAVE_GLIB}
+#define HAVE_BLKID {HAVE_BLKID}
+
 #define RMLINT_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
 #define RMLINT_VERSION_MAJOR {VERSION_MAJOR}
 #define RMLINT_VERSION_MINOR {VERSION_MINOR}
@@ -14,5 +16,10 @@
     || Y <= RM_VERSION_MINOR        \
     || Z <= RM_VERSION_MICRO        \
 )
+
+/* not supposed to be changed */
+#ifndef _RM_HASH_LEN
+    #define _RM_HASH_LEN 16
+#endif
 
 #endif
