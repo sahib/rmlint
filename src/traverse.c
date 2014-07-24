@@ -347,6 +347,7 @@ int rm_search_tree(RmSession *session) {
     guint64 numfiles = 0;
     GError *g_err = NULL;
 
+
     /* initialise and launch list builder pool */
     session->list_build_pool = g_thread_pool_new (rm_add_file_to_list,
                                session->list,
@@ -357,6 +358,7 @@ int rm_search_tree(RmSession *session) {
         rm_error("Error %d creating thread pool session->list_build_pool\n", g_err->code);
         return -1;
     }
+
 
     pthread_t *thread_ids = g_malloc0((settings->num_paths + 1) * sizeof(pthread_t));
     GHashTable *thread_table = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -379,14 +381,20 @@ int rm_search_tree(RmSession *session) {
 
     GList *first_used_list = NULL;
 
+    session->mount_table = rm_mounts_table_new();
+
+
     for(int idx = 0; settings->paths[idx] != NULL; ++idx) {
         if(g_file_test(settings->paths[idx], G_FILE_TEST_IS_REGULAR)) {
             /* Normal file */
             numfiles += process_file(session, NULL, settings->is_ppath[idx], idx, 0);
-        } else {
+        } else if (g_file_test(settings->paths[idx], G_FILE_TEST_IS_DIR)) {
             /* Directory - Traversing needed */
             struct stat stat_buf;
             stat(settings->paths[idx], &stat_buf);
+
+            dev_t physical_device = rm_mounts_get_disk_id (session->mount_table, stat_buf.st_dev);
+            info("Adding %s to traverse table for device %lu\n", settings->paths[idx], physical_device);
 
             RmTraversePathBuffer *thread_data = g_new0(RmTraversePathBuffer, 1);
             thread_data->session = session;
@@ -412,6 +420,8 @@ int rm_search_tree(RmSession *session) {
             }
 
             first_used_list = directories;
+        } else {
+            rm_error(RED"Path %s is not a directory or regular file\n"NCO, settings->paths[idx]);
         }
     }
 

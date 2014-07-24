@@ -37,6 +37,7 @@
 
 #include "config.h"
 #include "checksum.h"
+#include "mounttable.h"
 
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
@@ -211,6 +212,7 @@ typedef struct RmSession {
     FILE *log_out;
 
     RmUserGroupList **userlist;
+    RmMountTable *mount_table;
 
     gint activethreads;
     pthread_mutex_t threadlock;
