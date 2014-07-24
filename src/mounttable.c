@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 #include <glibtop/mountlist.h>
 
-#include "mounttable.h"
+//#include "mounttable.h" (already included in rmlint.h)
 #include "config.h"
 
 #if HAVE_BLKID
@@ -61,6 +61,11 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
 
 static void rm_mounts_create_tables(RmMountTable *self) {
     /* partition dev_t to disk dev_t */
+    gchar is_rotational;
+    dev_t disk_id=0;
+    char diskname[PATH_MAX];
+    memset(diskname, 0, sizeof(diskname));
+
     self->part_table = g_hash_table_new_full(
                            g_direct_hash, g_direct_equal,
                            NULL, NULL
@@ -72,7 +77,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                  NULL, NULL
                              );
 
-#if HAVE_BLKID && HAVE_MOUNTLIST
+#if HAVE_BLKID
 
     // TODO: Remove dependency to libgtop, use getmntent().
     //       Someone might want to implement a BSD port with getmntinfo().
@@ -86,50 +91,60 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 	}
 
      for(unsigned index = 0; index < mount_list.number; index++) {
-        struct stat stat_buf_dev;
-        if(stat(mount_entries[index].devname, &stat_buf_dev) == -1) {
-            continue;
-        }
 
         struct stat stat_buf_folder;
         if(stat(mount_entries[index].mountdir, &stat_buf_folder) == -1) {
             continue;
         }
 
-        dev_t whole_disk = 0;
-        char diskname[PATH_MAX];
-        memset(diskname, 0, sizeof(diskname));
+        struct stat stat_buf_dev;
+        if(stat(mount_entries[index].devname, &stat_buf_dev) == -1) {
+            /*---can't get device for this mount; assume non-rotational and add *
+             * to mount table using mountpoint device number ---*/
+            debug("%s:%d: Can't stat %s (%s)\n", __FILE__, __LINE__, mount_entries[index].mountdir, g_strerror(errno));
+            /* use debug level here rather than error, info or warn because using "true" for glibtop_get_mountlist *
+             * means we get a lot of stuff including NFS mounts whose devname's won't stat()  */
+            is_rotational = true;
+            disk_id=stat_buf_folder.st_dev;
+            strcpy(diskname, mount_entries[index].devname);
+            info("no stat: %s; assuming non-rotational\n", mount_entries[index].devname);
+        } else {
+            /*--- get device for this mount and check if rotational ---*/
+            dev_t whole_disk = 0;
 
-        if(blkid_devno_to_wholedisk(stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
-                continue;
+            if(blkid_devno_to_wholedisk(stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
+                /*---can't get device for this mount; assume non-rotational and add *
+                 * to mount table using mountpoint device number ---*/
+                is_rotational = true;
+                disk_id=stat_buf_folder.st_dev;
+                strcpy(diskname, mount_entries[index].devname);
+                info("no blkid_devno_to_wholedisk: %s; assuming non-rotational\n", mount_entries[index].devname);
+            } else {
+                /* got proper wholedisk data from blkid */
+                disk_id=whole_disk;
+                is_rotational = rm_mounts_is_rotational_blockdev(diskname);
+                info("    %s is rotational: %s\n", diskname, is_rotational ? "yes" : "no");
+
+                /* small hack, so also the full disk id can be given to the api below */
+                g_hash_table_insert(
+                    self->part_table,
+                    GINT_TO_POINTER(disk_id),
+                    GINT_TO_POINTER(disk_id)
+                );
+            }
         }
 
-        g_hash_table_insert(
-            self->part_table,
-            GINT_TO_POINTER(stat_buf_folder.st_dev),
-            GINT_TO_POINTER(whole_disk)
-        );
-
-        /* small hack, so also the full disk id can be given to the api below */
-        g_hash_table_insert(
-            self->part_table,
-            GINT_TO_POINTER(whole_disk),
-            GINT_TO_POINTER(whole_disk)
-        );
-
-        gchar is_rotational = rm_mounts_is_rotational_blockdev(diskname);
-        info("%02u:%02u %50s -> %02u:%02u %-10s (underlying disk: %s; rotational: %s)",
-             major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
+        info("%lu %s -> %lu (%02d:%02d) %s\n",
+             stat_buf_folder.st_dev,
              mount_entries[index].mountdir,
-             major(whole_disk), minor(whole_disk),
-             mount_entries[index].devname,
-             diskname, is_rotational ? "yes" : "no"
+             disk_id, major(disk_id), minor(disk_id),
+             diskname
             );
 
         if(is_rotational != -1) {
             g_hash_table_insert(
                 self->rotational_table,
-                GINT_TO_POINTER(whole_disk),
+                GINT_TO_POINTER(disk_id),
                 GINT_TO_POINTER(!is_rotational)
             );
         }
