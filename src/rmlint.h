@@ -49,8 +49,8 @@ int die(RmSession *session, int status);
 
 #define rm_perror(message)                                                      \
     if(errno) {                                                                 \
-        rm_error("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
+        rm_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
     }                                                                           \
- 
+
 
 #endif
