@@ -37,6 +37,7 @@
 
 #include "config.h"
 #include "checksum.h"
+#include "mounttable.h"
 
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
@@ -177,12 +178,15 @@ struct _RmFile {
     guint64 fsize;                       /* Size of the file (bytes) */
     time_t mtime;                        /* File modification date/time */
     bool filter;                         /* this is used in calculations  */
-    RmLintType lint_type;                  /* Is the file marked as duplicate? */
+    RmLintType lint_type;                /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
     ino_t node;
     dev_t dev;
-    uint64_t offset;                    /*offset in bytes from start of device*/
+    guint64 offset;                    /*offset in bytes from start of device*/
+    guint64 hash_offset;
+
+    RmDigest digest;
 
     GList *list_node;
     GSequenceIter *file_group;
@@ -190,6 +194,7 @@ struct _RmFile {
 };
 
 typedef struct RmFileList {
+    RmMountTable *mounts;
     GSequence *size_groups;
     GHashTable *size_table;
     GRecMutex lock;
@@ -202,6 +207,7 @@ typedef struct RmUserGroupList {
 typedef struct RmSession {
     RmFileList *list;
     RmSettings *settings;
+    RmMountTable *mounts;
 
     guint64 total_files;
     guint64 total_lint_size;

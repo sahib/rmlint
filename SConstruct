@@ -52,6 +52,7 @@ def BuildConfigTemplate(target, source, env):
         handle.write(text.format(
             HAVE_GLIB=int(conf.env['glib']),
             HAVE_BLKID=int(conf.env['blkid']),
+            HAVE_MOUNTLIST=int(conf.env['mountlist']),
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
@@ -147,7 +148,8 @@ conf.CheckPKGConfig('0.15.0')
 # Pkg-config to internal name
 DEPS = {
     'glib-2.0 >= 2.32': 'glib',
-    'blkid': 'blkid'
+    'blkid': 'blkid',
+    'libgtop-2.0': 'mountlist'
     # libelf has no .pc file :/
 }
 

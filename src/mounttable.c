@@ -31,7 +31,6 @@
 #include <sys/stat.h>
 #include <glibtop/mountlist.h>
 
-#include "mounttable.h"
 #include "config.h"
 
 #if HAVE_BLKID

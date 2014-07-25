@@ -33,6 +33,5 @@
 #include "defs.h"
 
 int rm_search_tree(RmSession *session);
-void search_init(void);
 
 #endif

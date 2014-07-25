@@ -59,7 +59,7 @@ typedef int (* RmFileListSortFunc)(RmFile *a, RmFile *b, gpointer);
  *
  * @return A newly allocated RmFileList.
  */
-RmFileList *rm_file_list_new(void);
+RmFileList *rm_file_list_new(RmMountTable *mounts);
 
 /**
  * @brief Set the checksum.
@@ -173,5 +173,9 @@ void rm_file_list_print(RmFileList *list);
  * @return The next file or NULL if none left.
  */
 RmFile *rm_file_list_iter_all(RmFileList *list, RmFile *previous);
+
+
+GHashTable *rm_file_list_create_devlist_table(RmFileList *list);
+void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward);
 
 #endif /* RM_LIST_H */

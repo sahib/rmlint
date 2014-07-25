@@ -51,8 +51,7 @@ RmFile *rm_file_new(const char *path,
     self->node = node;
     self->dev = dev;
     self->mtime = mtime;
-
-
+    self->hash_offset = 0;
 
     if(type == TYPE_DUPE_CANDIDATE) {
         self->offset = get_disk_offset(path, 0);
@@ -96,7 +95,6 @@ void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest) {
     g_rec_mutex_lock(&list->lock);
     {
         rm_digest_steal_buffer(digest, file->checksum, _RM_HASH_LEN);
-        // rm_digest_finalize(digest, file->checksum, _RM_HASH_LEN);
     }
     g_rec_mutex_unlock(&list->lock);
 }
@@ -105,7 +103,6 @@ void rm_file_set_fingerprint(RmFileList *list, RmFile *file, guint index, RmDige
     g_rec_mutex_lock(&list->lock);
     {
         rm_digest_steal_buffer(digest, file->fp[index], _RM_HASH_LEN);
-        // rm_digest_finalize(digest, file->fp[index], _RM_HASH_LEN);
     }
     g_rec_mutex_unlock(&list->lock);
 }
@@ -122,10 +119,11 @@ static void rm_file_list_destroy_queue(GQueue *queue) {
     g_queue_free_full(queue, (GDestroyNotify)rm_file_destroy);
 }
 
-RmFileList *rm_file_list_new(void) {
+RmFileList *rm_file_list_new(RmMountTable *mounts) {
     RmFileList *list = g_slice_new0(RmFileList);
     list->size_groups = g_sequence_new((GDestroyNotify)rm_file_list_destroy_queue);
     list->size_table = g_hash_table_new(g_direct_hash, g_direct_equal);
+    list->mounts = mounts;
     g_rec_mutex_init(&list->lock);
     return list;
 }
@@ -135,6 +133,7 @@ void rm_file_list_destroy(RmFileList *list) {
     {
         g_sequence_free(list->size_groups);
         g_hash_table_unref(list->size_table);
+        rm_mounts_table_destroy(list->mounts);
     }
     g_rec_mutex_unlock(&list->lock);
     g_rec_mutex_clear(&list->lock);
@@ -158,8 +157,10 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
 }
 
 void rm_file_list_append(RmFileList *list, RmFile *file) {
-    g_rec_mutex_lock(&list->lock);
-    {
+    /* Normalize the device id to the whole disk */
+    file->dev = rm_mounts_get_disk_id(list->mounts, file->dev);
+
+    g_rec_mutex_lock(&list->lock); {
         GSequenceIter *old_iter = g_hash_table_lookup(
                                       list->size_table, GINT_TO_POINTER(file->fsize)
                                   );
@@ -222,9 +223,26 @@ static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSE
         return fa->dev - fb->dev;
     else
         return strcmp(rm_basename(fa->path), rm_basename(fb->path));
+
 }
 
+static gint rm_file_list_cmp_file_offset(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
+    const RmFile *fa = a, *fb = b;
+    const bool forward = (bool)data;
 
+    /* offset can get very large, so returning the difference
+     * can lead to a overflow in gint, therefore these detailed ifs
+     */
+    if(fa->offset < fb->offset) {
+        return -1 ? forward : +1;
+    }
+
+    if(fa->offset > fb->offset) {
+        return +1 ? forward : -1;
+    }
+
+    return 0;
+}
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
@@ -265,17 +283,15 @@ long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
     return 0;
 }
 
-/* ------------------------------------------------------------- */
-/* If we have more than one path, or a fs loop, several RMFILEs  *
- * may point to the same (physically same!) file.  *
- * This would result in potentially dangerous false positives where *
- * the "duplicate" that gets deleted is actually the original*
- * RM_FILE_LIST_REMOVE_DOUBLE_PATHS searches for and removes items in
- * LIST  which are pointing to the same file.
- * Depending on settings, also removes hardlinked duplicates sets, keeping
- * just one of each set.
- * Note: LIST must be sorted by dev/node or node/dev before callind.
- * Returns number of files removed from FP. */
+/* If we have more than one path, or a fs loop, several RMFILEs may point to the
+ * same (physically same!) file.  This would result in potentially dangerous
+ * false positives where the "duplicate" that gets deleted is actually the
+ * original rm_file_list_remove_double_paths() searches for and removes items in
+ * LIST  which are pointing to the same file.  Depending on settings, also
+ * removes hardlinked duplicates sets, keeping just one of each set.  Note: LIST
+ * must be sorted by dev/node or node/dev before callind.  Returns number of
+ * files removed from FP. 
+ * */
 static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, RmSession *session) {
     RmSettings *settings = session->settings;
     guint removed_cnt = 0;
@@ -449,26 +465,62 @@ void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDat
     g_rec_mutex_unlock(&list->lock);
 }
 
+void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward) {
+    for(GList * iter = dev_list->head; iter; iter = iter->next) {
+        RmFile * file = iter->data;
+        file->offset = get_disk_offset(file->path, file->hash_offset);
+    }
+
+    g_queue_sort(dev_list, rm_file_list_cmp_file_offset, GINT_TO_POINTER(forward));
+}
+
+GHashTable *rm_file_list_create_devlist_table(RmFileList *list) {
+    RmFile *file_iter = NULL;
+    GHashTable *dev_list_table = g_hash_table_new_full(
+        g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)g_queue_free
+    );
+
+    g_rec_mutex_lock(&list->lock); {
+        while((file_iter = rm_file_list_iter_all(list, file_iter))) {
+            gpointer dev_key = GINT_TO_POINTER(file_iter->dev);
+            GQueue * dev_list = g_hash_table_lookup(dev_list_table, dev_key);
+            if(dev_list == NULL) {
+                dev_list = g_queue_new();
+                g_hash_table_insert(dev_list_table, dev_key, dev_list);
+            }
+            g_queue_push_head(dev_list, file_iter);
+        }
+
+        GHashTableIter iter;
+        gpointer key, value;
+
+        g_hash_table_iter_init(&iter, dev_list_table);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            rm_file_list_resort_device_offsets((GQueue *)value, true);
+        }
+    }
+    g_rec_mutex_unlock(&list->lock);
+    return dev_list_table;
+}
 
 static void rm_file_list_print_cb(gpointer data, gpointer G_GNUC_UNUSED user_data) {
     GQueue *queue = data;
     for(GList *iter = queue->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        g_printerr("  %lu:%ld:%ld:%s\n", file->fsize, file->dev, file->node, file->path);
+        g_printerr("  %lu:%lu:%ld:%ld:%s\n", file->offset, file->fsize, file->dev, file->node, file->path);
     }
     g_printerr("----\n");
 }
 
 void rm_file_list_print(RmFileList *list) {
-    g_rec_mutex_lock(&list->lock);
-    {
+    g_rec_mutex_lock(&list->lock); {
         g_printerr("### PRINT ###\n");
         g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
     }
     g_rec_mutex_unlock(&list->lock);
 }
 
-#if 0 /* Testcase */
+#ifdef _RM_COMPILE_MAIN_LIST /* Testcase */
 
 int main(int argc, const char **argv) {
     RmFileList *list = rm_file_list_new();
@@ -477,36 +529,50 @@ int main(int argc, const char **argv) {
         struct stat buf;
         stat(argv[i], &buf);
 
-        RmFile *file = rm_file_new(argv[i], &buf, TYPE_DUPE_CANDIDATE, 1, 1);
+        RmFile *file = rm_file_new(argv[i], buf.st_size, buf.st_ino, buf.st_dev, 0, TYPE_DUPE_CANDIDATE, 1, 0);
         rm_file_list_append(list, file);
     }
-    g_printerr("### INITIAL\n");
-    rm_file_list_print(list);
-    RmSettings settings;
-    settings.must_match_original = FALSE;
-    settings.keep_all_originals = FALSE;
-    settings.find_hardlinked_dupes = TRUE;
-    g_printerr("### SORT AND CLEAN\n");
-    rm_file_list_sort_groups(list, &session);
-    rm_file_list_print(list);
 
-    g_printerr("### REMOVE LAST ELEMENT OF EACH\n");
-    GSequenceIter *iter = rm_file_list_get_iter(list);
-    while(!g_sequence_iter_is_end(iter)) {
-        /* Remove the last element of the group - for no particular reason */
-        GQueue *group = g_sequence_get(iter);
-        rm_file_list_remove(list, group->tail->data);
-        iter = g_sequence_iter_next(iter);
+    GHashTable * table = rm_file_list_create_devlist_table(list);
+
+    GHashTableIter iter;
+    gpointer key, value;
+
+    g_hash_table_iter_init(&iter, table);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        g_printerr("On device: %d:\n", GPOINTER_TO_INT(key));
+        rm_file_list_print_cb(value, NULL);
     }
 
-    rm_file_list_print(list);
+    g_hash_table_unref(table);
 
-    g_printerr("### CLEAR LAST\n");
+    // g_printerr("### INITIAL\n");
+    // rm_file_list_print(list);
+    // RmSettings settings;
+    // settings.must_match_original = FALSE;
+    // settings.keep_all_originals = FALSE;
+    // settings.find_hardlinked_dupes = TRUE;
+    // g_printerr("### SORT AND CLEAN\n");
+    // rm_file_list_sort_groups(list, &session);
+    // rm_file_list_print(list);
 
-    /* Clear the first group */
-    rm_file_list_clear(list, rm_file_list_get_iter(list));
+    // g_printerr("### REMOVE LAST ELEMENT OF EACH\n");
+    // GSequenceIter *iter = rm_file_list_get_iter(list);
+    // while(!g_sequence_iter_is_end(iter)) {
+    //     /* Remove the last element of the group - for no particular reason */
+    //     GQueue *group = g_sequence_get(iter);
+    //     rm_file_list_remove(list, group->tail->data);
+    //     iter = g_sequence_iter_next(iter);
+    // }
 
-    rm_file_list_print(list);
+    // rm_file_list_print(list);
+
+    // g_printerr("### CLEAR LAST\n");
+
+    // /* Clear the first group */
+    // rm_file_list_clear(list, rm_file_list_get_iter(list));
+
+    // rm_file_list_print(list);
 
     rm_file_list_destroy(list);
     return 0;
