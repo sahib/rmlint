@@ -21,7 +21,6 @@ typedef struct RmBufferPool {
     gsize size;
 } RmBufferPool;
 
-
 static gsize rm_buffer_pool_size(RmBufferPool * pool) {
     return pool->size; 
 }
@@ -72,10 +71,8 @@ typedef struct RmMainTag {
 
 typedef struct RmSchedTag {
     RmMainTag *main;
-    GQueue *device_list;
     GThreadPool *hash_pool;
     GThreadPool *read_pool;
-    int iteration_counter;
 } RmSchedTag;
 
 
@@ -165,32 +162,34 @@ static void scheduler_factory(GQueue *device_queue, RmMainTag *main) {
         ((RmFile *)device_queue->head->data)->dev
     );
 
-    tag->hash_pool = g_thread_pool_new(
-        (GFunc)hash_factory,
-        tag,
-        main->session->settings->threads,
-        FALSE, NULL
-    );
-    tag->read_pool = g_thread_pool_new(
-        (GFunc)read_factory, 
-        tag,
-        (nonrotational) ? main->session->settings->threads : 1,
-        FALSE, NULL
-    );
+    while(1 /* TODO: Quit criteria */ ) {
+        tag->hash_pool = g_thread_pool_new(
+            (GFunc)hash_factory,
+            tag,
+            main->session->settings->threads,
+            FALSE, NULL
+        );
+        tag->read_pool = g_thread_pool_new(
+            (GFunc)read_factory, 
+            tag,
+            (nonrotational) ? main->session->settings->threads : 1,
+            FALSE, NULL
+        );
 
-    /* TODO: Sort devlist by current offset and blocknumber,
-     * alternating between reverse and forward. (alternate the true/false)
-     * Also only resort every few 100MB
-     */
-    rm_file_list_resort_device_offsets(device_queue, true);
+        /* TODO: Sort devlist by current offset and blocknumber,
+         * alternating between reverse and forward. (alternate the true/false)
+         * Also only resort every few 100MB
+         */
+        rm_file_list_resort_device_offsets(device_queue, true);
 
-    for(GList *iter = device_queue->head; iter; iter = iter->next) {
-        g_thread_pool_push(tag->read_pool, iter->data, NULL);
-    }
+        for(GList *iter = device_queue->head; iter; iter = iter->next) {
+            g_thread_pool_push(tag->read_pool, iter->data, NULL);
+        }
     
-    /* Block until this iteration is over */
-    g_thread_pool_free(tag->read_pool, FALSE, TRUE);
-    g_thread_pool_free(tag->hash_pool, FALSE, TRUE);
+        /* Block until this iteration is over */
+        g_thread_pool_free(tag->read_pool, FALSE, TRUE);
+        g_thread_pool_free(tag->hash_pool, FALSE, TRUE);
+    }
 }
 
 static gsize scheduler_get_next_read_size(gsize read_size) {
@@ -230,9 +229,6 @@ static void scheduler_start(RmSession *session) {
     tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + sysconf(_SC_PAGESIZE));
     tag.join_queue = g_async_queue_new();
 
-    GHashTable *files = NULL; /* TODO */
-
-    while(scheduler_iterate(&tag, files));
 }
 
 int main(int argc, char const* argv[]) {
