@@ -173,7 +173,7 @@ struct _RmFile {
 
     char *path;                          /* absolute path from working dir */
     bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
-    unsigned int pnum;                   /* numerical index of user-input paths */
+    unsigned long pnum;                  /* numerical index of user-input paths */
     guint64 fsize;                       /* Size of the file (bytes) */
     time_t mtime;                        /* File modification date/time */
     bool filter;                         /* this is used in calculations  */
@@ -210,12 +210,8 @@ typedef struct RmSession {
     FILE *script_out;
     FILE *log_out;
 
-    RmUserGroupList **userlist;
-
     gint activethreads;
     pthread_mutex_t threadlock;
-
-    GThreadPool *list_build_pool;
 
     volatile bool aborted;
 } RmSession;

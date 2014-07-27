@@ -625,10 +625,6 @@ int die(RmSession *session, int status) {
         fclose(session->script_out);
     }
 
-    if(session->userlist) {
-        userlist_destroy(session->userlist);
-    }
-
     exit(status);
     return status;
 }
@@ -825,7 +821,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->dup_counter = 0;
     session->total_lint_size = 0;
     session->total_files = 0;
-    session->userlist = userlist_new();
+    /* session->userlist = userlist_new(); (moved to traverse) */
     session->list = rm_file_list_new();
     session->settings = settings;
     session->aborted = FALSE;
