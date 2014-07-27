@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <alloca.h>
 #include <fcntl.h>
@@ -162,7 +163,7 @@ static void scheduler_factory(GQueue *device_queue, RmMainTag *main) {
         ((RmFile *)device_queue->head->data)->dev
     );
 
-    while(1 /* TODO: Quit criteria */ ) {
+    while(device_queue->length > 0 /* TODO: Quit criteria */ ) {
         tag->hash_pool = g_thread_pool_new(
             (GFunc)hash_factory,
             tag,
@@ -189,6 +190,9 @@ static void scheduler_factory(GQueue *device_queue, RmMainTag *main) {
         /* Block until this iteration is over */
         g_thread_pool_free(tag->read_pool, FALSE, TRUE);
         g_thread_pool_free(tag->hash_pool, FALSE, TRUE);
+
+        /* TODO: Explain. */
+        g_async_queue_push(main->join_queue, main->join_queue);
     }
 }
 
@@ -196,11 +200,68 @@ static gsize scheduler_get_next_read_size(gsize read_size) {
     return read_size * 2;
 }
 
-static gboolean scheduler_iterate(RmMainTag *tag, GHashTable *dev_table) {
+static void scheduler_findmatches(GQueue *same_size_list) {
+    /* same_size_list is a list of files with the same size,
+     * find out which are no duplicates.
+     * */
+    GHashTable * check_table = g_hash_table_new_full(
+        g_str_hash, g_str_equal,
+        g_free, (GDestroyNotify)g_queue_free
+    );
+
+    /* struct for easier handling - think of a string with handles. */
+    struct {
+        char checksum[_RM_HASH_LEN];
+        guint64 hash_offset;
+        guint64 file_size;
+        char nulbyte;
+    } keybuf;
+
+    /* Make that memory block act like a string */
+    keybuf.nulbyte = '\0';
+
+    for(GList *iter = same_size_list->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+
+        /* Generate the key */
+        rm_digest_steal_buffer(&file->digest, keybuf.checksum, sizeof(keybuf.checksum));
+        memcpy(&keybuf.hash_offset, &file->hash_offset, sizeof(file->hash_offset));
+        memcpy(&keybuf.file_size, &file->fsize, sizeof(file->fsize));
+
+        GQueue * queue = g_hash_table_lookup(check_table, &keybuf);
+        if(queue == NULL) {
+            queue = g_queue_new();
+            g_hash_table_insert(check_table, g_strdup((char *)&keybuf), queue);
+        }
+
+        g_queue_push_head(queue, file);
+    }
+    
+    for(GList *iter = g_hash_table_get_values(check_table); iter; iter = iter->next) {
+        GQueue *dupe_list = iter->data;
+        if(dupe_list->length == 1) {
+            /* We can ignore this file, it has evolved to a different checksum */
+            RmFile * lone_wolf = dupe_list->head->data;
+            // TODO: Mark lone_wolf to be a bad, bad dog?
+        } else {
+
+        }
+    }
+
+    g_hash_table_unref(check_table);
+}
+
+static void scheduler_start(RmSession *session, GHashTable *dev_table) {
+    RmMainTag tag; 
+    tag.session = session;
+    tag.read_size = sysconf(_SC_PAGESIZE) * 16; /* Read 16 pages initially */
+    tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + sysconf(_SC_PAGESIZE));
+    tag.join_queue = g_async_queue_new();
+
     GThreadPool * sched_pool = g_thread_pool_new(
         (GFunc)scheduler_factory, 
         &tag,
-        tag->session->settings->threads,
+        tag.session->settings->threads,
         FALSE, NULL
     );
 
@@ -212,23 +273,24 @@ static gboolean scheduler_iterate(RmMainTag *tag, GHashTable *dev_table) {
         g_thread_pool_push(sched_pool, value, NULL);
     }
 
-    /* Read more next time */
-    tag->read_size = scheduler_get_next_read_size(tag->read_size);
+    GHashTable *size_table = g_hash_table_new(NULL, NULL);
+
+    RmFile * join_file = NULL;
+    while((join_file = g_async_queue_pop(tag.join_queue))) {
+        GQueue *size_list = g_hash_table_lookup(size_table, GINT_TO_POINTER(join_file->fsize));
+        if(size_list == NULL) {
+            size_list = g_queue_new();
+            g_hash_table_insert(size_table, GINT_TO_POINTER(join_file->fsize), size_list);
+        }
+
+        g_queue_push_head(size_list, join_file);
+
+        if(g_queue_get_length(size_list) == /* TODO */ 42) {
+            /* FINDMATCHES */
+        }
+    }
 
     g_thread_pool_free(sched_pool, FALSE, TRUE);
-
-    // TODO: Do find matches stuff.
-    //
-    return FALSE;
-}
-
-static void scheduler_start(RmSession *session) {
-    RmMainTag tag; 
-    tag.session = session;
-    tag.read_size = sysconf(_SC_PAGESIZE) * 16; /* Read 16 pages initially */
-    tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + sysconf(_SC_PAGESIZE));
-    tag.join_queue = g_async_queue_new();
-
 }
 
 int main(int argc, char const* argv[]) {
@@ -238,6 +300,6 @@ int main(int argc, char const* argv[]) {
     RmSession session;
     session.settings = &settings;
 
-    scheduler_start(&session);
+    scheduler_start(&session, NULL);
     return 0;
 }
