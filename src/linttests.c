@@ -68,22 +68,20 @@ ino_t parent_node(const char *apath) {
 
 /* checks uid and gid; returns 0 if both ok, else TYPE_ corresponding *
  * to RmFile->filter types                                            */
-int uid_gid_check(G_GNUC_UNUSED const char *path, struct stat *statp, RmSession *session) {
-    if (session->settings->findbadids) {
-        bool has_gid, has_uid;
-        if (userlist_contains(
-                    session->userlist, statp->st_uid,
-                    statp->st_gid, &has_uid, &has_gid)
-           ) {
-            if(has_gid == false) {
-                if(has_uid == false) {
-                    return TYPE_BADUGID;
-                } else {
-                    return TYPE_BADGID;
-                }
-            } else if (has_uid == false) {
-                return TYPE_BADUID;
+int uid_gid_check(struct stat *statp, RmUserGroupList **userlist) {
+    bool has_gid, has_uid;
+    if (userlist_contains(
+                userlist, statp->st_uid,
+                statp->st_gid, &has_uid, &has_gid)
+       ) {
+        if(has_gid == false) {
+            if(has_uid == false) {
+                return TYPE_BADUGID;
+            } else {
+                return TYPE_BADGID;
             }
+        } else if (has_uid == false) {
+            return TYPE_BADUID;
         }
     }
     /* no bad gid or uid */
@@ -91,25 +89,21 @@ int uid_gid_check(G_GNUC_UNUSED const char *path, struct stat *statp, RmSession 
 }
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
-bool is_nonstripped(const char *path, G_GNUC_UNUSED struct stat *statp,  RmSettings *settings) {
+bool is_nonstripped(const char *path) {
     bool is_ns = false;
-    if ((settings->nonstripped) && path) {
+    if (path) {
         /* inspired by "jschmier"'s answer at http://stackoverflow.com/a/5159890 */
         int fd;
 
         Elf *elf;       /* ELF pointer for libelf */
         Elf_Scn *scn;   /* section descriptor pointer */
         GElf_Shdr shdr; /* section header */
-        static char CWD_BUF[PATH_MAX];
-
-        char *abs_path = g_build_filename(getcwd(CWD_BUF, PATH_MAX), rm_basename((char *)path), NULL);
-        /* TODO: will the above work for all cases, eg NOCHDIR case with multi threads*/
+        //static char CWD_BUF[PATH_MAX];
 
         /* Open ELF file to obtain file descriptor */
-        if((fd = open(abs_path, O_RDONLY)) < 0) {
-            warning("Error opening file '%s' for nostripped test: ", path);
+        if((fd = open(path, O_RDONLY)) < 0) {
+            warning("Error opening file '%s' for nonstripped test: ", path);
             rm_perror("");
-            g_free(abs_path);
             return 0;
         }
 
@@ -138,10 +132,8 @@ bool is_nonstripped(const char *path, G_GNUC_UNUSED struct stat *statp,  RmSetti
                 break;
             }
         }
-
         elf_end(elf);
         close(fd);
-        g_free(abs_path);
     }
     return is_ns;
 }
