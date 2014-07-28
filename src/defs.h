@@ -165,9 +165,13 @@ typedef struct RmSettings {
     char *iwd;                   /* cwd when rmlint called */
 } RmSettings;
 
-typedef struct _RmFile RmFile;
+typedef enum RmFileState {
+    RM_FILE_STATE_PROCESS,
+    RM_FILE_STATE_IGNORE,
+    RM_FILE_STATE_FINISH
+} RmFileState;
 
-struct _RmFile {
+typedef struct _RmFile {
     unsigned char checksum[_RM_HASH_LEN];   /* md5sum of the file */
     unsigned char fp[2][_RM_HASH_LEN];        /* A short fingerprint of a file - start and back */
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
@@ -190,8 +194,9 @@ struct _RmFile {
 
     GList *list_node;
     GSequenceIter *file_group;
-    RmFile *hardlinked_original;
-};
+    struct _RmFile *hardlinked_original;
+    RmFileState state;
+} RmFile;
 
 typedef struct RmFileList {
     RmMountTable *mounts;
