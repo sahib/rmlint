@@ -108,6 +108,10 @@ static void read_factory(RmFile *file, RmSchedTag *tag) {
 
     int bytes = 0;
     int fd = open(file->path, O_RDONLY);
+    if(fd == -1) {
+        perror("open failed");
+        return;
+    }
 
     if(lseek(fd, (guint64)g_atomic_pointer_get(&file->hash_offset), SEEK_SET) == -1) {
         perror("lseek failed");
@@ -274,7 +278,7 @@ static void scheduler_findmatches(GQueue *same_size_list) {
              */
             for(GList *iter = dupe_list->head; iter; iter = iter->next) {
                 RmFile *possible_dupe = iter->data;
-                if(possible_dupe->hash_offset >= possible_dupe->fsize) {
+                if((guint64)g_atomic_pointer_get(&possible_dupe->hash_offset) >= possible_dupe->fsize) {
                     g_atomic_int_set(&possible_dupe->state, RM_FILE_STATE_FINISH);
                 }
             }
@@ -336,7 +340,7 @@ static void scheduler_start(RmSession *session, GHashTable *dev_table) {
         }
 
         sizekey.size = join_file->fsize;
-        sizekey.hash_offset = join_file->hash_offset;
+        sizekey.hash_offset = (guint64)g_atomic_pointer_get(&join_file->hash_offset);
 
         GQueue *size_list = g_hash_table_lookup(size_table, &sizekey);
         if(size_list == NULL) {
@@ -360,7 +364,7 @@ static void scheduler_start(RmSession *session, GHashTable *dev_table) {
             for(GList *iter = g_hash_table_get_keys(size_table); iter; iter = iter->next) {
                 key_struct = iter->data;
                 /* Same size, but less hashed? Forget about it */
-                if(key_struct->size == join_file->fsize && key_struct->hash_offset < join_file->hash_offset) {
+                if(key_struct->size == sizekey.size && key_struct->hash_offset < sizekey.hash_offset) {
                     g_hash_table_remove(size_table, key_struct);
                 }
             }
