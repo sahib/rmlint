@@ -7,6 +7,7 @@
 #include <sys/uio.h>
 
 #include "src/checksum.h"
+#include "src/checksums/city.h"
 #include "src/list.h"
 
 /* This is the scheduler of rmlint.
@@ -327,23 +328,39 @@ static void sched_factory(GQueue *device_queue, RmMainTag *main) {
     g_async_queue_push(tag->main->join_queue, tag->main->join_queue);
 }
 
+#define CREATE_HASH_FUNCTIONS(name, HashType)                                  \
+    static gboolean sched_cmp_##name(const HashType* a, const HashType *b) {   \
+        return !memcmp(a, b, sizeof(HashType));                                \
+    }                                                                          \
+                                                                               \
+    static guint sched_hash_##name(const HashType * k) {                       \
+        return CityHash64((const char *)k, sizeof(HashType));                  \
+    }                                                                          \
+                                                                               \
+    static HashType * sched_copy_##name(const HashType * self) {               \
+        HashType *mem = g_new0(HashType, 1);                                   \
+        memcpy(mem, self, sizeof(HashType));                                   \
+        return mem;                                                            \
+    }                                                                          \
+
+typedef struct RmCksumKey {
+    guint8 checksum[_RM_HASH_LEN];
+} RmCksumKey;
+
+
+CREATE_HASH_FUNCTIONS(cksum_key, RmCksumKey);
+
 static void sched_findmatches(GQueue *same_size_list) {
     /* same_size_list is a list of files with the same size,
      * find out which are no duplicates.
      * */
     GHashTable * check_table = g_hash_table_new_full(
-        g_str_hash, g_str_equal,
+        (GHashFunc) sched_hash_cksum_key,
+        (GEqualFunc) sched_cmp_cksum_key,
         g_free, (GDestroyNotify)g_queue_free
     );
 
-    /* struct for easier handling - think of a string with handles. */
-    struct {
-        guint8 checksum[_RM_HASH_LEN];
-        char nulbyte;
-    } keybuf;
-
-    /* Make that memory block act like a string */
-    keybuf.nulbyte = '\0';
+    RmCksumKey keybuf;
 
     for(GList *iter = same_size_list->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
@@ -354,7 +371,7 @@ static void sched_findmatches(GQueue *same_size_list) {
         GQueue * queue = g_hash_table_lookup(check_table, &keybuf);
         if(queue == NULL) {
             queue = g_queue_new();
-            g_hash_table_insert(check_table, g_strdup((char *)&keybuf), queue);
+            g_hash_table_insert(check_table, sched_copy_cksum_key(&keybuf), queue);
         }
 
         g_queue_push_head(queue, file);
@@ -388,6 +405,13 @@ static void sched_findmatches(GQueue *same_size_list) {
     g_hash_table_unref(check_table);
 }
 
+typedef struct RmSizeKey {
+    guint64 size;
+    guint64 hash_offset;
+} RmSizeKey;
+
+CREATE_HASH_FUNCTIONS(size_key, RmSizeKey);
+
 static void sched_start(RmSession *session, GHashTable *dev_table) {
     // TODO: clean is a bit up.
     RmMainTag tag; 
@@ -408,20 +432,13 @@ static void sched_start(RmSession *session, GHashTable *dev_table) {
     }
 
     GHashTable *size_table = g_hash_table_new_full(
-        g_str_hash, g_str_equal,
+        (GHashFunc) sched_hash_size_key,
+        (GEqualFunc) sched_cmp_size_key,
         g_free, (GDestroyNotify) g_queue_free
     );
 
-    struct sizekey_struct {
-        guint64 size;
-        guint64 hash_offset;
-        char nulbyte;
-    } sizekey;
-
-    sizekey.nulbyte = '\0';
-
+    RmSizeKey sizekey;
     RmFile * join_file = NULL;
-
     int gc_counter = 1;
     int dev_finished_counter = g_hash_table_size(dev_table);
 
@@ -444,7 +461,7 @@ static void sched_start(RmSession *session, GHashTable *dev_table) {
         GQueue *size_list = g_hash_table_lookup(size_table, &sizekey);
         if(size_list == NULL) {
             size_list = g_queue_new();
-            g_hash_table_insert(size_table, g_strdup((char *)&sizekey), size_list);
+            g_hash_table_insert(size_table, sched_copy_size_key(&sizekey), size_list);
         }
 
         g_queue_push_head(size_list, join_file);
@@ -457,11 +474,11 @@ static void sched_start(RmSession *session, GHashTable *dev_table) {
 
         /* Garbage collect the size_table from unused entries in regular intervals.
          * This is to keep the memory footprint low.
+         * TODO: Own function.
          * */
         if(gc_counter++ % 100 == 0) {
-            struct sizekey_struct * key_struct = NULL;
             for(GList *iter = g_hash_table_get_keys(size_table); iter; iter = iter->next) {
-                key_struct = iter->data;
+                RmSizeKey *key_struct = iter->data;
                 /* Same size, but less hashed? Forget about it */
                 if(key_struct->size == sizekey.size && key_struct->hash_offset < sizekey.hash_offset) {
                     g_hash_table_remove(size_table, key_struct);
