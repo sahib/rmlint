@@ -174,8 +174,8 @@ void rm_file_list_print(RmFileList *list);
  */
 RmFile *rm_file_list_iter_all(RmFileList *list, RmFile *previous);
 
-
+// TODO: Doc
 GHashTable *rm_file_list_create_devlist_table(RmFileList *list);
-void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward);
+void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool force_update);
 
 #endif /* RM_LIST_H */

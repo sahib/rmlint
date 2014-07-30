@@ -53,6 +53,9 @@ RmFile *rm_file_new(const char *path,
     self->mtime = mtime;
     self->hash_offset = 0;
     self->state = RM_FILE_STATE_PROCESS;
+    
+    // TODO: Use the actualy type from session -> pass it.
+    rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
 
     if(type == TYPE_DUPE_CANDIDATE) {
         self->offset = get_disk_offset(path, 0);
@@ -89,6 +92,7 @@ RmFile *rm_file_new(const char *path,
 
 void rm_file_destroy(RmFile *file) {
     g_free(file->path);
+    rm_digest_finalize(&file->digest);
     g_slice_free(RmFile, file);
 }
 
@@ -466,10 +470,12 @@ void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDat
     g_rec_mutex_unlock(&list->lock);
 }
 
-void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward) {
-    for(GList * iter = dev_list->head; iter; iter = iter->next) {
-        RmFile * file = iter->data;
-        file->offset = get_disk_offset(file->path, file->hash_offset);
+void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool force_update) {
+    if(force_update) {
+        for(GList * iter = dev_list->head; iter; iter = iter->next) {
+            RmFile * file = iter->data;
+            file->offset = get_disk_offset(file->path, file->hash_offset);
+        }
     }
 
     g_queue_sort(dev_list, rm_file_list_cmp_file_offset, GINT_TO_POINTER(forward));
@@ -497,7 +503,7 @@ GHashTable *rm_file_list_create_devlist_table(RmFileList *list) {
 
         g_hash_table_iter_init(&iter, dev_list_table);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
-            rm_file_list_resort_device_offsets((GQueue *)value, true);
+            rm_file_list_resort_device_offsets((GQueue *)value, true, true);
         }
     }
     g_rec_mutex_unlock(&list->lock);
