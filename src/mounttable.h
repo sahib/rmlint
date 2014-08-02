@@ -32,11 +32,12 @@
 typedef struct RmMountTable {
     GHashTable *part_table;
     GHashTable *rotational_table;
+    GList *mounted_paths;
 } RmMountTable;
 
 /**
  * @brief Allocates a new mounttable.
- * 
+ *
  * @return The mounttable. Free with rm_mounts_table_destroy.
  */
 RmMountTable *rm_mounts_table_new(void);

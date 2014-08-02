@@ -72,6 +72,8 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                  NULL, NULL
                              );
 
+    self->mounted_paths=NULL;
+
 #if HAVE_BLKID
 
     // TODO: Remove dependency to libgtop, use getmntent().
@@ -141,8 +143,9 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         g_hash_table_insert(
             self->part_table,
             GINT_TO_POINTER(stat_buf_folder.st_dev),
-            GINT_TO_POINTER(whole_disk)
-        );
+            GINT_TO_POINTER(whole_disk));
+
+        self->mounted_paths = g_list_prepend(self->mounted_paths, g_strdup(mount_entries[index].mountdir));
 
         /* small hack, so also the full disk id can be given to the api below */
         g_hash_table_insert(
@@ -187,6 +190,7 @@ RmMountTable *rm_mounts_table_new(void) {
 void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->part_table);
     g_hash_table_unref(self->rotational_table);
+    g_list_free_full(self->mounted_paths, g_free);
     g_slice_free(RmMountTable, self);
 }
 
