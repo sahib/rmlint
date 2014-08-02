@@ -52,6 +52,7 @@ RmFile *rm_file_new(const char *path,
     self->dev = dev;
     self->mtime = mtime;
     self->hash_offset = 0;
+    self->seek_offset = 0;
     self->state = RM_FILE_STATE_PROCESS;
     
     // TODO: Use the actualy type from session -> pass it.

@@ -189,6 +189,7 @@ typedef struct _RmFile {
     dev_t dev;
     guint64 offset;                    /*offset in bytes from start of device*/
     guint64 hash_offset;
+    guint64 seek_offset;
 
     RmDigest digest;
 

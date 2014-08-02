@@ -9,6 +9,7 @@
 #include "src/checksum.h"
 #include "src/checksums/city.h"
 #include "src/list.h"
+#include "src/filemap.h"
 
 /* This is the scheduler of rmlint.
  *
@@ -38,7 +39,7 @@
  * hasher threads from two more GTHreadPools. The initial thread works as
  * manager for the spawnend threads. The manager repeats reading the files on
  * its device until no file is flagged with RM_FILE_STATE_PROCESS as state.
- * (devlist_factory). On each iteration the block size is incremented, so the
+ * (sched_devlist_factory). On each iteration the block size is incremented, so the
  * next round reads more data, since it gets increasingly less likely to find
  * differences in files. Additionally on every few iterations the files in the
  * devlist are resorted according to their physical block on the device.
@@ -65,20 +66,25 @@
  * The controls are sorted by subjectve importanceness.
  */
 
-/* Determines the next amount of bytes to read.
+/* Determines the next amount of bytes_read to read.
  * Currently just doubles the amount.
  * */
-static gsize sched_get_next_read_size(gsize read_size) {
-    return read_size * 2;
+static int sched_get_next_read_size(int read_size) {
+    /* Protect agains integer overflows */
+    if(read_size >= 1024 * 1024 * 1024) {
+        return 1024 * 1024 * 1024;
+    }  else {
+        return read_size * 2;
+    }
 }
 
 /* How many pages are read initially at max.  This value is important since it
  * decides how much data will be read for small files, so it should not be too
  * large nor too small, since reading small files twice is very slow.
  */
-#define SCHED_INITIAL_PAGES   (16)
+#define SCHED_N_PAGES   (16)
 
-/* After which amount of bytes the devlist is resorted to their physical block.
+/* After which amount of bytes_read the devlist is resorted to their physical block.
  * The reprobing of the blocks has some cost and makes no sense if we did not
  * jump far. 
  */
@@ -99,13 +105,13 @@ typedef struct RmBufferPool {
     GTrashStack *stack;
 
     /* how many buffers are available? */
-    gsize size;
+    guint64 size;
 
     /* concurrent accesses may happen */
     GMutex lock;
 } RmBufferPool;
 
-static gsize rm_buffer_pool_size(RmBufferPool * pool) {
+static guint64 rm_buffer_pool_size(RmBufferPool * pool) {
     return pool->size; 
 }
 
@@ -156,8 +162,6 @@ typedef struct RmMainTag {
     RmSession *session;
     RmBufferPool *mem_pool;
     GAsyncQueue *join_queue;
-    GMutex hash_mtx;
-    GMutex hash_offset_mtx;
     GMutex file_state_mtx;
 } RmMainTag;
 
@@ -167,11 +171,16 @@ typedef struct RmDevlistTag {
     RmMainTag *main;
 
     /* Pool for the hashing workers */
-    // GThreadPool *hash_pool;
     GThread *hash_thread;
     GAsyncQueue *hash_queue;
-    GThreadPool *read_pool;
-    gsize read_size;
+
+    int read_size;
+    int readable_files;
+    RmFile *finished_file;
+
+    GCond pool_sync_cond;
+    GMutex pool_sync_mtx;
+    GMutex hash_mtx;
 } RmDevlistTag;
 
 /* Represents one block of read data */
@@ -180,13 +189,34 @@ typedef struct RmBuffer {
     RmFile *file; 
 
     /* len of the read input */
-    gsize len;
+    guint64 len;
 
     /* *must* be last member of RmBuffer,
      * gets all the rest of the allocated space 
      * */
     guint8 data[];
 } RmBuffer;
+
+/* Copied file-metadata relevant for match filtering.
+ * Data needs to be copied since the ref_file might be
+ * modified at any time. Plus: lock times can be kept low.
+ */
+typedef struct RmFileSnapshot {
+    guint8 checksum[_RM_HASH_LEN];
+    guint64 hash_offset;
+    guint64 file_size;
+    RmFile *ref_file;
+} RmFileSnapshot;
+
+static RmFileSnapshot * sched_create_snapshot(RmFile * file) {
+    RmFileSnapshot * self = g_slice_new0(RmFileSnapshot);
+    self->hash_offset = file->hash_offset;
+    self->file_size = file->fsize;
+    self->ref_file = file;
+
+    rm_digest_steal_buffer(&file->digest, self->checksum, sizeof(self->checksum));
+    return self;
+}
 
 static void sched_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state) {
     g_mutex_lock(&tag->file_state_mtx); {
@@ -204,22 +234,6 @@ static RmFileState sched_get_file_state(RmMainTag *tag, RmFile *file) {
     return state;
 }
 
-static void sched_set_hash_offset(RmMainTag *tag, RmFile *file, guint64 off) {
-    g_mutex_lock(&tag->hash_offset_mtx); {
-        file->hash_offset = off;
-    }
-    g_mutex_unlock(&tag->hash_offset_mtx);
-}
-
-static guint64 sched_get_hash_offset(RmMainTag *tag, RmFile *file) {
-    guint64 off = 0; 
-    g_mutex_lock(&tag->hash_offset_mtx); {
-        off = file->hash_offset;
-    }
-    g_mutex_unlock(&tag->hash_offset_mtx);
-    return off;
-}
-
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
@@ -228,80 +242,100 @@ static void sched_read_factory(RmFile *file, RmDevlistTag *tag) {
     g_assert(tag);
     g_assert(file);
 
+    bool was_readable = TRUE;
+
     if(sched_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
-        return;
+        goto failure;
     }
 
-    const int N = SCHED_INITIAL_PAGES; 
-    struct iovec readvec[N];
-
-    gsize read_sum = sched_get_hash_offset(tag->main, file);
-    gsize buf_size = rm_buffer_pool_size(tag->main->mem_pool) - offsetof(RmBuffer, data);
-    gsize may_read_max = MIN(tag->read_size + read_sum, file->fsize);
-
-    if(sched_get_hash_offset(tag->main, file) >= file->fsize) {
-        g_printerr("File hash_offset is larger than file size, doing nothing.\n");
-        return;
-    }
-
-    for(int i = 0; i < N; ++i) {
-        /* buffer is one contignous memory block */
-        RmBuffer * buffer = rm_buffer_pool_get(tag->main->mem_pool);
-        readvec[i].iov_base = buffer->data;
-        readvec[i].iov_len = buf_size;
+    if(file->seek_offset >= file->fsize) {
+        goto failure;
     }
 
     /* get a handle */
     int fd = open(file->path, O_RDONLY);
     if(fd == -1) {
         perror("open failed");
-        return;
+        was_readable = FALSE;
+        goto failure;
     }
 
-    /* Fast forward to the last position */
-    if(lseek(fd, sched_get_hash_offset(tag->main, file), SEEK_SET) == -1) {
-        perror("lseek failed");
-        return;
+    /* The buffer is actually a tad larger, since we need to store information 
+     * at the beginngin, so we need to get the real size of the buffer.
+     */
+    int buf_size = rm_buffer_pool_size(tag->main->mem_pool) - offsetof(RmBuffer, data);
+    int bytes_read = 0;
+    int read_maximum = -1;
+    struct iovec readvec[SCHED_N_PAGES];
+
+    g_mutex_lock(&tag->pool_sync_mtx); {
+        read_maximum = MIN(tag->read_size, (int)ABS(file->fsize - file->seek_offset));
+        g_printerr("read_max: %d\n", read_maximum);
+    } g_mutex_unlock(&tag->pool_sync_mtx);
+
+    /* Initialize the buffers to begin with.
+     * After a buffer is full, a new one is retrieved.
+     */
+    for(int i = 0; i < SCHED_N_PAGES; ++i) {
+        /* buffer is one contignous memory block */
+        RmBuffer * buffer = rm_buffer_pool_get(tag->main->mem_pool);
+        readvec[i].iov_base = buffer->data;
+        readvec[i].iov_len = buf_size;
     }
 
-    int bytes = 0;
-    while(read_sum < may_read_max && (bytes = readv(fd, readvec, N)) > 0) {
-        // g_printerr("I may read %u bytes at max. (have %u, got %d)\n", may_read_max, read_sum, bytes);
-        int blocks = bytes / buf_size + (bytes % buf_size) ? 1 : 0;
-        read_sum += MAX(0, bytes);
+    while(read_maximum > 0 && (bytes_read = preadv(fd, readvec, SCHED_N_PAGES, file->seek_offset)) > 0) {
+        int remain = bytes_read % buf_size;
+        int blocks = bytes_read / buf_size + !!remain;
 
-        guint64 off = 0;
+        read_maximum -= bytes_read;
+        file->seek_offset += bytes_read;
 
         for(int i = 0; i < blocks; ++i) {
             /* Get the RmBuffer from the datapointer */
             RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
             buffer->file = file;
-            buffer->len = readvec[i].iov_len;
-            
-            off += buffer->len;
-            g_printerr("[%lu %lu (%ld)]\n", read_sum, off, buffer->file->fsize);
-            // g_printerr("    Sending pack %u/%u (%lu)\n", read_sum, may_read_max, buffer->len);
+
+            if(i + 1 == blocks) {
+                buffer->len = (remain > 0) ? remain : buf_size;
+            } else {
+                buffer->len = buf_size;
+            }
 
             /* Send it to the hasher */
             g_async_queue_push(tag->hash_queue, buffer);
-            // g_thread_pool_push(tag->hash_pool, buffer, NULL);
 
             /* Allocate a new buffer - hasher will release the old buffer */            
             buffer = rm_buffer_pool_get(tag->main->mem_pool);
             readvec[i].iov_base = buffer->data;
             readvec[i].iov_len = buf_size;
-
-            off += buffer->len;
         }
     }
 
     /* Release the rest of the buffers */
-    for(int i = 0; i < N; ++i) {
+    for(int i = 0; i < SCHED_N_PAGES; ++i) {
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
         rm_buffer_pool_release(tag->main->mem_pool, buffer);
     }
     
+    if(file->seek_offset < file->fsize) {
+        file->offset = get_disk_offset_openfile(fd, RM_OFFSET_ABSOLUTE, file->offset);
+    } else {
+        was_readable = FALSE;
+    }
+
     close(fd);
+
+failure:
+    g_mutex_lock(&tag->pool_sync_mtx); {
+        if(!was_readable) {
+            tag->readable_files--;
+            if(file->seek_offset < file->fsize) {
+                tag->finished_file = file;
+            }
+        }
+        g_cond_signal(&tag->pool_sync_cond);
+    }
+    g_mutex_unlock(&tag->pool_sync_mtx);
 }
 
 static gpointer sched_hash_factory(RmDevlistTag *tag) {
@@ -309,62 +343,65 @@ static gpointer sched_hash_factory(RmDevlistTag *tag) {
 
     RmBuffer * buffer = NULL;
     while((buffer = g_async_queue_pop(tag->hash_queue)) != (RmBuffer *)tag->hash_queue) {
-        if(sched_get_file_state(tag->main, buffer->file) != RM_FILE_STATE_PROCESS) {
-            return NULL;
-        }
+        g_assert(sched_get_file_state(tag->main, buffer->file) == RM_FILE_STATE_PROCESS);
 
-        g_mutex_lock(&tag->main->hash_mtx); {
-            /* Hash buffer->len bytes of buffer->data into buffer->file */
+        g_mutex_lock(&tag->hash_mtx); {
+            /* Hash buffer->len bytes_read of buffer->data into buffer->file */
             rm_digest_update(&buffer->file->digest, buffer->data, buffer->len);
-
-            guint64 s = sched_get_hash_offset(tag->main, buffer->file) + buffer->len;
-            sched_set_hash_offset(
-                tag->main, buffer->file, s
-            );
-
-            g_printerr("#%lu (%ld)#\n", sched_get_hash_offset(tag->main, buffer->file), buffer->file->fsize);
+            buffer->file->hash_offset += buffer->len;
 
             /* Report the progress to the joiner */
-            g_async_queue_push(tag->main->join_queue, buffer->file);
+            g_async_queue_push(tag->main->join_queue, sched_create_snapshot(buffer->file));
         }
-        g_mutex_unlock(&tag->main->hash_mtx);
+        g_mutex_unlock(&tag->hash_mtx);
 
         /* Return this buffer to the pool */
-        // TODO can this be removed? 
-        memset(buffer->data, 0, buffer->len);
         rm_buffer_pool_release(tag->main->mem_pool, buffer);
     }
 
+    g_async_queue_push(tag->main->join_queue, tag->main->join_queue);
     return NULL;
 }
 
-static int sched_n_processable(RmMainTag *tag, GQueue *queue) {
+static int sched_iteration_needed(RmMainTag *tag, GQueue *queue) {
     g_assert(queue);
 
     int processable = 0;
-    for(GList * iter = queue->head; iter; iter = iter->next) {
+    for(GList * iter = queue->head; iter && processable < 2; iter = iter->next) {
         RmFile * file = iter->data;
         processable += sched_get_file_state(tag, file) == RM_FILE_STATE_PROCESS;
     }
 
-    // g_printerr("Still to process: %d\n", processable);
-    return processable;
+    return processable >= 2;
 }
 
-static void devlist_factory(GQueue *device_queue, RmMainTag *main) {
+static bool sched_devlist_add_job(RmDevlistTag *tag, GThreadPool * pool, RmFile * file) {
+    if(sched_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
+        return false; 
+    }
+
+    g_thread_pool_push(pool, file, NULL);
+    return true;
+}
+
+static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
+    // TODO: no heap needed.
     RmDevlistTag *tag = g_slice_new(RmDevlistTag);
-    tag->read_size = sysconf(_SC_PAGESIZE) * SCHED_INITIAL_PAGES; 
+    tag->read_size = sysconf(_SC_PAGESIZE) * SCHED_N_PAGES; 
     tag->hash_queue = g_async_queue_new();
     tag->hash_thread = g_thread_new("hasher", (GThreadFunc)sched_hash_factory, tag);
+    tag->readable_files = g_queue_get_length(device_queue);
+    tag->finished_file = NULL;
     tag->main = main;
- 
-    /* Get the device of the devlist by asking the first file */
-    dev_t current_device = ((RmFile *)device_queue->head->data)->dev;
+
+    g_cond_init(&tag->pool_sync_cond);
+    g_mutex_init(&tag->pool_sync_mtx);
+    g_mutex_init(&tag->hash_mtx);
 
     /* Get the device of the files in this list */
     bool nonrotational = rm_mounts_is_nonrotational(
         main->session->mounts, 
-        current_device
+        ((RmFile *)device_queue->head->data)->dev
     );
 
     /* In this case the devlist is sorted ascending. 
@@ -373,62 +410,60 @@ static void devlist_factory(GQueue *device_queue, RmMainTag *main) {
      * */
     bool read_direction_is_forward = TRUE;
 
-    /* Sum of the read bytes (not of all files) */
-    guint64 read_sum = 0;
+    int max_threads = (nonrotational) ? main->session->settings->threads : 1;
 
-    /* Iterate until no processable files are available.
-     * This is of course hard to get right. 
-     */
-    while(sched_n_processable(main, device_queue)) {
-        // tag->hash_pool = g_thread_pool_new(
-        //     (GFunc)sched_hash_factory,
-        //     tag,
-        //     1, // main->session->settings->threads,
-        //     FALSE, NULL
-        // );
+    g_printerr("Threads: %d\n", max_threads);
 
-        
-        tag->read_pool = g_thread_pool_new(
-            (GFunc)sched_read_factory, 
-            tag,
-            (nonrotational) ? main->session->settings->threads : 1,
-            FALSE, NULL
-        );
+    GThreadPool *read_pool = g_thread_pool_new(
+        (GFunc)sched_read_factory, 
+        tag,
+        max_threads,
+        FALSE, NULL
+    );
 
-        bool force_reprobe = false;
-        if(read_sum > SCHED_RESORT_INTERVAL) {
-            force_reprobe = true;
-            read_sum = 0;
-        }
-
-        rm_file_list_resort_device_offsets(
-            device_queue, read_direction_is_forward, force_reprobe && 0
-        );
+    while(tag->readable_files > 0 && sched_iteration_needed(main, device_queue)) {
+        rm_file_list_resort_device_offsets(device_queue, read_direction_is_forward, false);
         read_direction_is_forward = !read_direction_is_forward;
 
+        int jobs_pushed = 0;
         for(GList *iter = device_queue->head; iter; iter = iter->next) {
-            RmFile *to_be_read = iter->data;
-            if(sched_get_file_state(main, to_be_read) == RM_FILE_STATE_PROCESS) {
-                g_thread_pool_push(tag->read_pool, iter->data, NULL);
-            }
+            jobs_pushed += sched_devlist_add_job(tag, read_pool, iter->data);
         }
     
-        /* Block until this iteration is over */
-        g_thread_pool_free(tag->read_pool, FALSE, TRUE);
-        // g_thread_pool_free(tag->hash_pool, FALSE, TRUE);
+        if(jobs_pushed) {
+            g_mutex_lock(&tag->pool_sync_mtx); {
+                int thread_counter = MIN(max_threads, jobs_pushed);
+                do {
+                    g_printerr("COND WAIT\n");
+                    g_cond_wait(&tag->pool_sync_cond, &tag->pool_sync_mtx);
+                    g_printerr("WAIT THREADS=%d READABLE=%d %d\n", thread_counter, tag->readable_files, g_thread_pool_get_num_unused_threads());
+                    // TODO: possibility: push a new job.
+                    sched_devlist_add_job(tag, read_pool, tag->finished_file);
+                } while(--thread_counter && tag->readable_files);
 
-        /* Read more next time */
-        read_sum += tag->read_size;
-        tag->read_size = sched_get_next_read_size(tag->read_size);
+                /* Read more next time */
+                tag->read_size = sched_get_next_read_size(tag->read_size);
+            }
+            g_mutex_unlock(&tag->pool_sync_mtx);
+        }
+
+        g_printerr("-\n");
     }
 
     /* Send the queue itself to make the join thread check if we're
      * finished already
      * */
+    g_thread_pool_set_max_threads(read_pool, 0, NULL);
+    g_thread_pool_free(read_pool, TRUE, TRUE);
+    g_cond_clear(&tag->pool_sync_cond);
+    g_mutex_clear(&tag->pool_sync_mtx);
+
     g_async_queue_push(tag->hash_queue, tag->hash_queue);
     g_thread_join(tag->hash_thread);
-    g_async_queue_push(tag->main->join_queue, tag->main->join_queue);
     g_async_queue_unref(tag->hash_queue);
+
+    g_mutex_clear(&tag->hash_mtx);
+
     g_slice_free(RmDevlistTag, tag);
 }
 
@@ -468,21 +503,14 @@ static void sched_findmatches(RmMainTag *tag, GQueue *same_size_list) {
         g_free, (GDestroyNotify)g_queue_free
     );
 
-    g_printerr("-\n");
     for(GList *iter = same_size_list->head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        if(sched_get_file_state(tag, file) != RM_FILE_STATE_PROCESS) {
-            return;
+        RmFileSnapshot * meta = iter->data;
+        if(sched_get_file_state(tag, meta->ref_file) != RM_FILE_STATE_PROCESS) {
+            continue;
         }
-        g_printerr("Check %s %lu %p\n", file->path, sched_get_hash_offset(tag, file), file);
 
         RmCksumKey keybuf;
-
-            rm_digest_steal_buffer(&file->digest, keybuf.checksum, sizeof(keybuf.checksum));
-            for(int i = 0; i < _RM_HASH_LEN; ++i) {
-                g_printerr("%02x", keybuf.checksum[i]);
-            }
-            g_printerr("\n");
+        memcpy(keybuf.checksum, meta->checksum, sizeof(keybuf.checksum));
 
         GQueue * queue = g_hash_table_lookup(check_table, &keybuf);
         if(queue == NULL) {
@@ -490,7 +518,7 @@ static void sched_findmatches(RmMainTag *tag, GQueue *same_size_list) {
             g_hash_table_insert(check_table, sched_copy_cksum_key(&keybuf), queue);
         }
 
-        g_queue_push_head(queue, file);
+        g_queue_push_head(queue, meta);
     }
     
     GList * check_table_values = g_hash_table_get_values(check_table);
@@ -502,19 +530,26 @@ static void sched_findmatches(RmMainTag *tag, GQueue *same_size_list) {
              * cumbersome threading, where reference counting would need to be
              * used.
              * */
-            RmFile * lone_wolf = dupe_list->head->data;
-            // sched_set_file_state(tag, lone_wolf, RM_FILE_STATE_IGNORE);
-            g_printerr("Ignoring: %s\n", lone_wolf->path);
+            RmFileSnapshot * lonely = dupe_list->head->data;
+            sched_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
+            g_printerr("Ignoring: %p %s %lu\n", lonely->ref_file, lonely->ref_file->path, lonely->hash_offset);
         } else {
             /* For the others we check if they were fully read. 
              * In this case we know that those are duplicates.
              */
             for(GList *iter = dupe_list->head; iter; iter = iter->next) {
-                RmFile *possible_dupe = iter->data;
-                g_printerr("Finished: %lu %lu\n", sched_get_hash_offset(tag, possible_dupe), possible_dupe->fsize);
-                if(sched_get_hash_offset(tag, possible_dupe) >= possible_dupe->fsize) {
-                    sched_set_file_state(tag, possible_dupe, RM_FILE_STATE_FINISH);
-                    g_printerr("%s\n", possible_dupe->path);
+                RmFileSnapshot *candidate = iter->data;
+                if(candidate->hash_offset >= candidate->file_size) {
+                    sched_set_file_state(tag, candidate->ref_file, RM_FILE_STATE_FINISH);
+                    g_printerr(
+                        "--> %s hashed=%lu size=%lu cksum=",
+                        candidate->ref_file->path, candidate->hash_offset, candidate->file_size
+                    );
+
+                    for(int i = 0; i < _RM_HASH_LEN; ++i) {
+                        g_printerr("%02x", candidate->checksum[i]);
+                    }
+                    g_printerr("\n");
                 }
             }
 
@@ -556,7 +591,7 @@ static void sched_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
 
 static GThreadPool * sched_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     GThreadPool * devmgr_pool = g_thread_pool_new(
-        (GFunc)devlist_factory, 
+        (GFunc)sched_devlist_factory, 
         tag,
         tag->session->settings->threads,
         FALSE, NULL
@@ -574,6 +609,13 @@ static GThreadPool * sched_create_devpool(RmMainTag *tag, GHashTable *dev_table)
     return devmgr_pool;
 }
 
+static void sched_free_snapshots(GQueue *snapshots) {
+    for(GList * iter = snapshots->head; iter; iter = iter->next) {
+        g_slice_free(RmFileSnapshot, iter->data);
+    }
+    g_queue_free(snapshots);
+}
+
 static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * size_table) {
     g_assert(session);
     g_assert(dev_table);
@@ -584,8 +626,7 @@ static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * 
     tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + sysconf(_SC_PAGESIZE));
     tag.join_queue = g_async_queue_new();
 
-    g_mutex_init(&tag.hash_mtx);
-    g_mutex_init(&tag.hash_offset_mtx);
+    /* would use g_atomic, but helgrind does not like that */
     g_mutex_init(&tag.file_state_mtx);
 
     /* Create a pool fo the devlists and push each queue */
@@ -595,46 +636,45 @@ static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * 
     GHashTable *join_table = g_hash_table_new_full(
         (GHashFunc) sched_hash_size_key,
         (GEqualFunc) sched_equal_size_key,
-        g_free, (GDestroyNotify) g_queue_free
+        g_free, (GDestroyNotify) sched_free_snapshots
     );
 
     /* Remember how many devlists we had - so we know when to stop */
     int dev_finished_counter = g_hash_table_size(dev_table);
 
     /* This is the joiner part */
-    RmFile * join_file = NULL;
-    while((join_file = g_async_queue_pop(tag.join_queue))) {
+    RmFileSnapshot * snapshot = NULL;
+    while((snapshot = g_async_queue_pop(tag.join_queue))) {
         /* Check if the received pointer is the queue itself.
          * The devlist threads notify us this way when they finish.
          * In this case we check if need to quit already.
          */
-        if((GAsyncQueue *)join_file == tag.join_queue) {
+        if((GAsyncQueue *)snapshot == tag.join_queue) {
             if(--dev_finished_counter) {
                 continue;
             } else {
                 break;
             }
         } else {
-            g_mutex_lock(&tag.hash_mtx);
-            /* It is a regular RmFile. */
+            /* It is a regular RmFileSnapshot with updates. */
             RmSizeKey key;
-            key.size = join_file->fsize;
-            key.hash_offset = sched_get_hash_offset(&tag, join_file);
+            key.size = snapshot->file_size;
+            key.hash_offset = snapshot->hash_offset;
 
             /* See if we already have had this combination, if not create new entry */
             GQueue *size_list = g_hash_table_lookup(join_table, &key);
             if(size_list == NULL) {
                 size_list = g_queue_new();
                 g_hash_table_insert(join_table, sched_copy_size_key(&key), size_list);
-            }
+            } 
 
             /* Append to the list */
-            g_queue_push_head(size_list, join_file);
-
+            g_queue_push_head(size_list, snapshot);
+            
             /* Find out if the size group has as many items already as the full
              * group - in this case we have a full set and can compare it.
              * */
-            guint64 count = GPOINTER_TO_INT(g_hash_table_lookup(size_table, GINT_TO_POINTER(join_file->fsize)));
+            guint64 count = GPOINTER_TO_INT(g_hash_table_lookup(size_table, GINT_TO_POINTER(snapshot->file_size)));
             if(count > 1 && g_queue_get_length(size_list) == count) {
                 sched_findmatches(&tag, size_list);
             }
@@ -642,24 +682,17 @@ static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * 
             /* Garbage collect the join_table from unused entries in regular intervals.
              * This is to keep the memory footprint low.
              * */
-            // sched_gc_join_table(join_table, &key);
-            //}
-            g_mutex_unlock(&tag.hash_mtx);
+            sched_gc_join_table(join_table, &key);
         }
     }
 
-    g_printerr("Joining...\n");
-
     /* This should not block, or at least only very short. */
     g_thread_pool_free(devmgr_pool, FALSE, TRUE);
-    g_printerr("Exiting...\n");
 
     g_async_queue_unref(tag.join_queue);
     g_hash_table_unref(join_table);
     rm_buffer_pool_destroy(tag.mem_pool);
 
-    g_mutex_clear(&tag.hash_mtx);
-    g_mutex_clear(&tag.hash_offset_mtx);
     g_mutex_clear(&tag.file_state_mtx);
 }
 
