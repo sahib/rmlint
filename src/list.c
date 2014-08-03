@@ -55,7 +55,9 @@ RmFile *rm_file_new(const char *path,
 
 
     if(type == TYPE_DUPE_CANDIDATE) {
-        self->offset = get_disk_offset(path, 0);
+        self->offset = 0;
+        /* could do ->offset=get_disk_offset(path, 0) here but this is expensive
+         * so better to delay this until we have matched file sizes*/
         self->fsize = fsize;
     } else {
         self->fsize = 0;
