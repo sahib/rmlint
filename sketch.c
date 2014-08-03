@@ -384,6 +384,14 @@ static bool sched_devlist_add_job(RmDevlistTag *tag, GThreadPool * pool, RmFile 
     return true;
 }
 
+// static int sched_compare_file_order(const RmFile * a, const RmFile *b, gpointer user_data) {
+//     return a->offset - b->offset;
+// }
+
+// static int sched_find_next_offset(const RmFile * a, const RmFile *b, guint64 **goal) {
+//     
+// }
+
 static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     // TODO: no heap needed.
     RmDevlistTag *tag = g_slice_new(RmDevlistTag);
@@ -393,6 +401,12 @@ static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     tag->readable_files = g_queue_get_length(device_queue);
     tag->finished_file = NULL;
     tag->main = main;
+
+    // GSequence *seq = g_sequence_new(NULL);
+    // for(GList * iter = device_queue->head; iter; iter = iter->next) {
+    //     g_sequence_append(seq, iter->data);
+    // }
+    // g_sequence_sort(seq, (GCompareDataFunc)sched_compare_file_order, NULL);
 
     g_cond_init(&tag->pool_sync_cond);
     g_mutex_init(&tag->pool_sync_mtx);

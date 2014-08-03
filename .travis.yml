@@ -6,5 +6,6 @@ compiler:
 notifications:
   email:
     - sahib@online.de
+    - thomas_d_j@yahoo.com.au
 
 script: scons VERBOSE=1 && sudo python maketestdir.py create && ./rmlint testdir
