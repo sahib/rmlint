@@ -51,6 +51,7 @@ static void logging_callback(
     GLogLevelFlags log_level,
     const gchar *message,
     gpointer user_data) {
+
     RmSession *session = user_data;
     if(session->settings->verbosity >= log_level) {
         if(!session->settings->color) {

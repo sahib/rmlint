@@ -37,6 +37,7 @@
 
 #include "config.h"
 #include "checksum.h"
+#include "mounttable.h"
 
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
@@ -164,9 +165,13 @@ typedef struct RmSettings {
     char *iwd;                   /* cwd when rmlint called */
 } RmSettings;
 
-typedef struct _RmFile RmFile;
+typedef enum RmFileState {
+    RM_FILE_STATE_PROCESS,
+    RM_FILE_STATE_IGNORE,
+    RM_FILE_STATE_FINISH
+} RmFileState;
 
-struct _RmFile {
+typedef struct _RmFile {
     unsigned char checksum[_RM_HASH_LEN];   /* md5sum of the file */
     unsigned char fp[2][_RM_HASH_LEN];        /* A short fingerprint of a file - start and back */
     unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
@@ -177,19 +182,25 @@ struct _RmFile {
     guint64 fsize;                       /* Size of the file (bytes) */
     time_t mtime;                        /* File modification date/time */
     bool filter;                         /* this is used in calculations  */
-    RmLintType lint_type;                  /* Is the file marked as duplicate? */
+    RmLintType lint_type;                /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
     ino_t node;
     dev_t dev;
-    uint64_t offset;                    /*offset in bytes from start of device*/
+    guint64 offset;                    /*offset in bytes from start of device*/
+    guint64 hash_offset;
+    guint64 seek_offset;
+
+    RmDigest digest;
 
     GList *list_node;
     GSequenceIter *file_group;
-    RmFile *hardlinked_original;
-};
+    struct _RmFile *hardlinked_original;
+    RmFileState state;
+} RmFile;
 
 typedef struct RmFileList {
+    RmMountTable *mounts;
     GSequence *size_groups;
     GHashTable *size_table;
     GRecMutex lock;
@@ -202,6 +213,7 @@ typedef struct RmUserGroupList {
 typedef struct RmSession {
     RmFileList *list;
     RmSettings *settings;
+    RmMountTable *mounts;
 
     guint64 total_files;
     guint64 total_lint_size;

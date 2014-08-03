@@ -37,7 +37,6 @@
 #include "rmlint.h"
 #include "filter.h"
 #include "linttests.h"
-#include "mounttable.h"
 #include "filemap.h"
 
 #define MAX_EMPTYDIR_DEPTH (PATH_MAX / 2) /* brute force option */
@@ -46,7 +45,6 @@
 
 /* structure containing all settings relevant to traversal */
 typedef struct RmTraverseSession {
-    RmMountTable *disk_mapper_table;
     GHashTable *disk_table;  /*TODO: combine disk_table into
             disk_mapper_table as disk_mapper_table->used_disks? */
     GThreadPool *list_build_pool;
@@ -78,6 +76,7 @@ RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
                                                   unsigned long pnum,
                                                   RmTraverseSession *trav_session) {
     RmTraversePathBuffer *self = g_new0(RmTraversePathBuffer, 1);
+    RmSession *session = trav_session->rm_session;
     dev_t whole_disk;
 
     self->path = g_strdup(path);
@@ -91,7 +90,7 @@ RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
         self->disk = 0;
         self->path_num_for_disk = 1;
     } else {
-        whole_disk = rm_mounts_get_disk_id (trav_session->disk_mapper_table, self->stat_buf.st_dev);
+        whole_disk = rm_mounts_get_disk_id (session->mounts, self->stat_buf.st_dev);
 
         /* crude balancing algorithm: paths on each disk are numbered 1,2,3 etc; threadpool sort function will
          * process all the 1's first then move to the 2's etc.  This helps ensure disks get processed in parallel */
@@ -389,9 +388,6 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
     self->numfiles = 0;
     self->fts_flags = fts_flags_from_settings(settings);
 
-    /* create table of disks associated with mountpoint dev's */
-    self->disk_mapper_table = rm_mounts_table_new();
-
     /* create empty table of disk pathqueues */
     self->disk_table = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                                                NULL,
@@ -444,10 +440,6 @@ guint64 traverse_session_join_and_free(RmTraverseSession *traverse_session){
         info("Joined traversers; %d in listbuilder queue", g_thread_pool_unprocessed (traverse_session->list_build_pool)); /*TODO: cleanup*/
         if (traverse_session->list_build_pool) {
             g_thread_pool_free (traverse_session->list_build_pool, false, true);
-        }
-
-        if (traverse_session->disk_mapper_table) {
-            rm_mounts_table_destroy(traverse_session->disk_mapper_table);
         }
         if (traverse_session->disk_table) {
             g_hash_table_destroy(traverse_session->disk_table);
@@ -507,7 +499,7 @@ int rm_search_tree(RmSession *session) {
            traverse_session->paths using the same is_ppath and pnum values as the closest
            matched input path */
         GList *mt_pt;
-        for (mt_pt = traverse_session->disk_mapper_table->mounted_paths;
+        for (mt_pt = session->mounts->mounted_paths;
              mt_pt;
              mt_pt=mt_pt->next) {
             char *path = g_strdup(mt_pt->data);
@@ -568,9 +560,9 @@ int rm_search_tree(RmSession *session) {
                 info("Pushing %s to traversing pool as path #%d for %srotational disk %s (%02d:%02d)\n",
                          pathbuf->path,
                          pathbuf->path_num_for_disk,
-                         rm_mounts_is_nonrotational(traverse_session->disk_mapper_table, pathbuf->disk)
+                         rm_mounts_is_nonrotational(session->mounts, pathbuf->disk)
                             ? "non-" : "",
-                         rm_mounts_get_name(traverse_session->disk_mapper_table, pathbuf->disk),
+                         rm_mounts_get_name(session->mounts, pathbuf->disk),
                          major(pathbuf->disk), minor(pathbuf->disk));
                 g_thread_pool_push(traverse_session->traverse_pool, pathbuf, NULL);
             }

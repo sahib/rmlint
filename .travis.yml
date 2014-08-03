@@ -3,4 +3,8 @@ install: sudo apt-get install libelf-dev libglib2.0-dev python-docutils libblkid
 compiler:
   - clang
   - gcc
+notifications:
+  email:
+    - sahib@online.de
+
 script: scons VERBOSE=1 && sudo python maketestdir.py create && ./rmlint testdir

@@ -821,11 +821,12 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->dup_counter = 0;
     session->total_lint_size = 0;
     session->total_files = 0;
-    /* session->userlist = userlist_new(); (moved to traverse) */
-    session->list = rm_file_list_new();
+    session->mounts = rm_mounts_table_new();
+    session->list = rm_file_list_new(session->mounts);
     session->settings = settings;
     session->aborted = FALSE;
     session->activethreads = 0; /* foreground thread not counted as 1 */
+
     pthread_mutex_init(&session->threadlock , NULL);/*lock for manipulating activethreads var*/
 
     init_filehandler(session);

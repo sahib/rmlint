@@ -31,7 +31,6 @@
 #include <sys/stat.h>
 #include <glibtop/mountlist.h>
 
-#include "mounttable.h"
 #include "config.h"
 
 #if HAVE_BLKID
@@ -39,6 +38,7 @@
 #endif
 
 #include "rmlint.h"
+
 
 static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     char sys_path[PATH_MAX];
