@@ -39,7 +39,7 @@
  * hasher threads from two more GTHreadPools. The initial thread works as
  * manager for the spawnend threads. The manager repeats reading the files on
  * its device until no file is flagged with RM_FILE_STATE_PROCESS as state.
- * (sched_devlist_factory). On each iteration the block size is incremented, so the
+ * (schredder_devlist_factory). On each iteration the block size is incremented, so the
  * next round reads more data, since it gets increasingly less likely to find
  * differences in files. Additionally on every few iterations the files in the
  * devlist are resorted according to their physical block on the device.
@@ -56,7 +56,7 @@
  * list found during traversing, we know that we compare these files with each
  * other. 
  *
- * On comparable groups sched_findmatches() is called, which finds files
+ * On comparable groups schredder_findmatches() is called, which finds files
  * that can be ignored and files that are finished already. In both cases
  * file->state is modified accordingly. In the latter case the group is
  * processed; i.e. written to log, stdout and script.
@@ -70,32 +70,32 @@
  * decides how much data will be read for small files, so it should not be too
  * large nor too small, since reading small files twice is very slow.
  */
-#define SCHED_N_PAGES         (16)
+#define schredder_N_PAGES         (16)
 
 /* After which amount of bytes_read the devlist is resorted to their physical block.
  * The reprobing of the blocks has some cost and makes no sense if we did not
  * jump far.
  */
-#define SCHED_RESORT_INTERVAL (128 * 1024 * 1024)
+#define schredder_RESORT_INTERVAL (128 * 1024 * 1024)
 
 /* After how many files the join-table is cleaned up from old entries.  This
  * settings will not have much performance impact, just keeps memory a bit
  * lower.
  */
-#define SCHED_GC_INTERVAL     (100)
+#define schredder_GC_INTERVAL     (100)
 
 /* Maximum number of bytes to read in one pass.
  * Never goes beyond this value.
  */
-#define SCHED_MAX_READ_SIZE   (1024 * 1024 * 1024)
+#define schredder_MAX_READ_SIZE   (1024 * 1024 * 1024)
 
 /* Determines the next amount of bytes_read to read.
  * Currently just doubles the amount.
  * */
-static int sched_get_next_read_size(int read_size) {
+static int schredder_get_next_read_size(int read_size) {
     /* Protect agains integer overflows */
-    if(read_size >= SCHED_MAX_READ_SIZE) {
-        return SCHED_MAX_READ_SIZE;
+    if(read_size >= schredder_MAX_READ_SIZE) {
+        return schredder_MAX_READ_SIZE;
     }  else {
         return read_size * 2;
     }
@@ -178,13 +178,13 @@ typedef struct RmDevlistTag {
     /* Pool for the hashing workers */
     GThreadPool *hash_pool;
 
-    /* How many bytes sched_read_factory is supposed to read */
+    /* How many bytes schredder_read_factory is supposed to read */
     int read_size;
 
     /* Count of readable files, drops to 0 when done */
     int readable_files;
 
-    /* Queue from sched_read_factory to sched_devlist_factory:
+    /* Queue from schredder_read_factory to schredder_devlist_factory:
      * The reader notifes the manager to push a new job 
      * this way. 
      */
@@ -216,7 +216,7 @@ typedef struct RmFileSnapshot {
     RmFile *ref_file;
 } RmFileSnapshot;
 
-static RmFileSnapshot * sched_create_snapshot(RmFile * file) {
+static RmFileSnapshot * schredder_create_snapshot(RmFile * file) {
     RmFileSnapshot * self = g_slice_new0(RmFileSnapshot);
     self->hash_offset = file->hash_offset;
     self->file_size = file->fsize;
@@ -226,14 +226,14 @@ static RmFileSnapshot * sched_create_snapshot(RmFile * file) {
     return self;
 }
 
-static void sched_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state) {
+static void schredder_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state) {
     g_mutex_lock(&tag->file_state_mtx); {
         file->state = state;
     }
     g_mutex_unlock(&tag->file_state_mtx);
 }
 
-static RmFileState sched_get_file_state(RmMainTag *tag, RmFile *file) {
+static RmFileState schredder_get_file_state(RmMainTag *tag, RmFile *file) {
     RmFileState state = 0; 
     g_mutex_lock(&tag->file_state_mtx); {
         state = file->state;
@@ -246,7 +246,7 @@ static RmFileState sched_get_file_state(RmMainTag *tag, RmFile *file) {
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
-static void sched_read_factory(RmFile *file, RmDevlistTag *tag) {
+static void schredder_read_factory(RmFile *file, RmDevlistTag *tag) {
     g_assert(tag);
     g_assert(file);
 
@@ -254,9 +254,9 @@ static void sched_read_factory(RmFile *file, RmDevlistTag *tag) {
     int bytes_read = 0;
     int read_maximum = -1;
     int buf_size = rm_buffer_pool_size(tag->main->mem_pool) - offsetof(RmBuffer, data);
-    struct iovec readvec[SCHED_N_PAGES];
+    struct iovec readvec[schredder_N_PAGES];
 
-    if(sched_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
+    if(schredder_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
         goto finish;
     }
 
@@ -284,14 +284,14 @@ static void sched_read_factory(RmFile *file, RmDevlistTag *tag) {
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
      */
-    for(int i = 0; i < SCHED_N_PAGES; ++i) {
+    for(int i = 0; i < schredder_N_PAGES; ++i) {
         /* buffer is one contignous memory block */
         RmBuffer * buffer = rm_buffer_pool_get(tag->main->mem_pool);
         readvec[i].iov_base = buffer->data;
         readvec[i].iov_len = buf_size;
     }
 
-    while(read_maximum > 0 && (bytes_read = preadv(fd, readvec, SCHED_N_PAGES, file->seek_offset)) > 0) {
+    while(read_maximum > 0 && (bytes_read = preadv(fd, readvec, schredder_N_PAGES, file->seek_offset)) > 0) {
         int remain = bytes_read % buf_size;
         int blocks = bytes_read / buf_size + !!remain;
 
@@ -320,7 +320,7 @@ static void sched_read_factory(RmFile *file, RmDevlistTag *tag) {
     }
 
     /* Release the rest of the buffers */
-    for(int i = 0; i < SCHED_N_PAGES; ++i) {
+    for(int i = 0; i < schredder_N_PAGES; ++i) {
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
         rm_buffer_pool_release(tag->main->mem_pool, buffer);
     }
@@ -350,11 +350,11 @@ finish:
     }
 }
 
-static void sched_hash_factory(RmBuffer * buffer, RmDevlistTag *tag) {
+static void schredder_hash_factory(RmBuffer * buffer, RmDevlistTag *tag) {
     g_assert(tag);
     g_assert(buffer);
 
-    if(sched_get_file_state(tag->main, buffer->file) != RM_FILE_STATE_PROCESS) {
+    if(schredder_get_file_state(tag->main, buffer->file) != RM_FILE_STATE_PROCESS) {
         return;
     }
 
@@ -364,7 +364,7 @@ static void sched_hash_factory(RmBuffer * buffer, RmDevlistTag *tag) {
         buffer->file->hash_offset += buffer->len;
 
         /* Report the progress to the joiner */
-        g_async_queue_push(tag->main->join_queue, sched_create_snapshot(buffer->file));
+        g_async_queue_push(tag->main->join_queue, schredder_create_snapshot(buffer->file));
     }
     g_mutex_unlock(&buffer->file->file_lock);
 
@@ -372,30 +372,30 @@ static void sched_hash_factory(RmBuffer * buffer, RmDevlistTag *tag) {
     rm_buffer_pool_release(tag->main->mem_pool, buffer);
 }
 
-static void sched_devlist_add_job(RmDevlistTag *tag, GThreadPool * pool, RmFile * file, GHashTable *processing_table) {
+static void schredder_devlist_add_job(RmDevlistTag *tag, GThreadPool * pool, RmFile * file, GHashTable *processing_table) {
     if(file != NULL) {
-        if(sched_get_file_state(tag->main, file) == RM_FILE_STATE_PROCESS) {
+        if(schredder_get_file_state(tag->main, file) == RM_FILE_STATE_PROCESS) {
             g_hash_table_insert(processing_table, file, NULL);
             g_thread_pool_push(pool, file, NULL);
         }
     }
 }
 
-static RmFile * sched_devlist_pop_next(RmDevlistTag *tag, GQueue *work_queue, GList *work_list, GHashTable *processing_table) {
+static RmFile * schredder_devlist_pop_next(RmDevlistTag *tag, GQueue *work_queue, GList *work_list, GHashTable *processing_table) {
     if(work_list == NULL) {
         return NULL;
     }
 
     RmFile * file = work_list->data;
-    if(g_hash_table_contains(processing_table, file) || sched_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
-        return sched_devlist_pop_next(tag, work_queue, work_list->next, processing_table);
+    if(g_hash_table_contains(processing_table, file) || schredder_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
+        return schredder_devlist_pop_next(tag, work_queue, work_list->next, processing_table);
     } else {
         g_queue_delete_link(work_queue, work_list);
         return file;
     }
 }
 
-static int sched_compare_file_order(const RmFile * a, const RmFile *b, G_GNUC_UNUSED gpointer user_data) {
+static int schredder_compare_file_order(const RmFile * a, const RmFile *b, G_GNUC_UNUSED gpointer user_data) {
     int diff = a->offset - b->offset;
     if(diff == 0) {
         /* Sort after inode as secondary criteria.
@@ -407,26 +407,26 @@ static int sched_compare_file_order(const RmFile * a, const RmFile *b, G_GNUC_UN
     }
 }
 
-static GQueue * sched_create_work_queue(RmDevlistTag * tag, GQueue *device_queue, bool sort) {
+static GQueue * schredder_create_work_queue(RmDevlistTag * tag, GQueue *device_queue, bool sort) {
     GQueue *work_queue = g_queue_new();
     for(GList * iter = device_queue->head; iter; iter = iter->next) {
         RmFile * file = iter->data;
-        if(sched_get_file_state(tag->main, file) == RM_FILE_STATE_PROCESS) {
+        if(schredder_get_file_state(tag->main, file) == RM_FILE_STATE_PROCESS) {
             g_queue_push_head(work_queue, file);
         }
     }
 
     if(sort) {
-        g_queue_sort(work_queue, (GCompareDataFunc)sched_compare_file_order, NULL);
+        g_queue_sort(work_queue, (GCompareDataFunc)schredder_compare_file_order, NULL);
     }
     return work_queue;
 }
 
-static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
+static void schredder_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
 
     tag.main = main;
-    tag.read_size = sysconf(_SC_PAGESIZE) * SCHED_N_PAGES; 
+    tag.read_size = sysconf(_SC_PAGESIZE) * schredder_N_PAGES; 
     tag.readable_files = g_queue_get_length(device_queue);
     tag.finished_queue = g_async_queue_new();
 
@@ -445,25 +445,25 @@ static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     );
 
     GThreadPool *read_pool = g_thread_pool_new(
-        (GFunc)sched_read_factory, 
+        (GFunc)schredder_read_factory, 
         &tag,
         max_threads,
         FALSE, NULL
     );
 
     tag.hash_pool = g_thread_pool_new(
-        (GFunc) sched_hash_factory,
+        (GFunc) schredder_hash_factory,
         &tag,
         1,
         FALSE, NULL
     );
 
-    GQueue *work_queue = sched_create_work_queue(&tag, device_queue, !nonrotational);
+    GQueue *work_queue = schredder_create_work_queue(&tag, device_queue, !nonrotational);
     GHashTable *processing_table = g_hash_table_new(NULL, NULL);
 
     /* Push the initial batch to the pool */
     for(int i = 0; i < max_threads; ++i) {
-        sched_devlist_add_job(&tag, read_pool, g_queue_pop_head(work_queue), processing_table);
+        schredder_devlist_add_job(&tag, read_pool, g_queue_pop_head(work_queue), processing_table);
     }
     
     /* Wait for the completion of the first jobs and push new ones
@@ -477,16 +477,16 @@ static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
         
             if(tag.readable_files > 0 && g_queue_get_length(work_queue) == 0) {
                 g_queue_free(work_queue);
-                work_queue = sched_create_work_queue(&tag, device_queue, !nonrotational);
-                tag.read_size = sched_get_next_read_size(tag.read_size);
+                work_queue = schredder_create_work_queue(&tag, device_queue, !nonrotational);
+                tag.read_size = schredder_get_next_read_size(tag.read_size);
             }
         }
         g_async_queue_unlock(tag.finished_queue);
 
         /* Find the next file to process (with nearest offset) and push it */
-        sched_devlist_add_job(
+        schredder_devlist_add_job(
             &tag, read_pool,
-            sched_devlist_pop_next(&tag, work_queue, work_queue->head, processing_table),
+            schredder_devlist_pop_next(&tag, work_queue, work_queue->head, processing_table),
             processing_table
         );
     }
@@ -504,19 +504,19 @@ static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
 }
 
 /* Easy way to use arbitary structs as key in a GHastTable.
- * Creates a fitting sched_equal, sched_hash and sched_copy 
+ * Creates a fitting schredder_equal, schredder_hash and schredder_copy 
  * function for every data type that works with sizeof().
  */
 #define CREATE_HASH_FUNCTIONS(name, HashType)                                  \
-    static gboolean sched_equal_##name(const HashType* a, const HashType *b) { \
+    static gboolean schredder_equal_##name(const HashType* a, const HashType *b) { \
         return !memcmp(a, b, sizeof(HashType));                                \
     }                                                                          \
                                                                                \
-    static guint sched_hash_##name(const HashType * k) {                       \
+    static guint schredder_hash_##name(const HashType * k) {                       \
         return CityHash64((const char *)k, sizeof(HashType));                  \
     }                                                                          \
                                                                                \
-    static HashType * sched_copy_##name(const HashType * self) {               \
+    static HashType * schredder_copy_##name(const HashType * self) {               \
         HashType *mem = g_new0(HashType, 1);                                   \
         memcpy(mem, self, sizeof(HashType));                                   \
         return mem;                                                            \
@@ -529,19 +529,19 @@ typedef struct RmCksumKey {
 /* create GHastTable boilerplate implicitly */
 CREATE_HASH_FUNCTIONS(cksum_key, RmCksumKey);
 
-static void sched_findmatches(RmMainTag *tag, GQueue *same_size_list) {
+static void schredder_findmatches(RmMainTag *tag, GQueue *same_size_list) {
     /* same_size_list is a list of files with the same size,
      * find out which are no duplicates.
      * */
     GHashTable * check_table = g_hash_table_new_full(
-        (GHashFunc) sched_hash_cksum_key,
-        (GEqualFunc) sched_equal_cksum_key,
+        (GHashFunc) schredder_hash_cksum_key,
+        (GEqualFunc) schredder_equal_cksum_key,
         g_free, (GDestroyNotify)g_queue_free
     );
 
     for(GList *iter = same_size_list->head; iter; iter = iter->next) {
         RmFileSnapshot * meta = iter->data;
-        if(sched_get_file_state(tag, meta->ref_file) != RM_FILE_STATE_PROCESS) {
+        if(schredder_get_file_state(tag, meta->ref_file) != RM_FILE_STATE_PROCESS) {
             continue;
         }
 
@@ -551,7 +551,7 @@ static void sched_findmatches(RmMainTag *tag, GQueue *same_size_list) {
         GQueue * queue = g_hash_table_lookup(check_table, &keybuf);
         if(queue == NULL) {
             queue = g_queue_new();
-            g_hash_table_insert(check_table, sched_copy_cksum_key(&keybuf), queue);
+            g_hash_table_insert(check_table, schredder_copy_cksum_key(&keybuf), queue);
         }
 
         g_queue_push_head(queue, meta);
@@ -567,7 +567,7 @@ static void sched_findmatches(RmMainTag *tag, GQueue *same_size_list) {
              * used.
              * */
             RmFileSnapshot * lonely = dupe_list->head->data;
-            sched_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
+            schredder_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
             g_printerr("Ignoring: %p %s %lu\n", lonely->ref_file, lonely->ref_file->path, lonely->hash_offset);
         } else {
             /* For the others we check if they were fully read. 
@@ -576,7 +576,7 @@ static void sched_findmatches(RmMainTag *tag, GQueue *same_size_list) {
             for(GList *iter = dupe_list->head; iter; iter = iter->next) {
                 RmFileSnapshot *candidate = iter->data;
                 if(candidate->hash_offset >= candidate->file_size) {
-                    sched_set_file_state(tag, candidate->ref_file, RM_FILE_STATE_FINISH);
+                    schredder_set_file_state(tag, candidate->ref_file, RM_FILE_STATE_FINISH);
                     g_printerr(
                         "--> %s hashed=%lu size=%lu cksum=",
                         candidate->ref_file->path, candidate->hash_offset, candidate->file_size
@@ -603,10 +603,10 @@ typedef struct RmSizeKey {
 
 CREATE_HASH_FUNCTIONS(size_key, RmSizeKey);
 
-static void sched_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
+static void schredder_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
     static int gc_counter = 1;
 
-    if(gc_counter++ % SCHED_GC_INTERVAL) {
+    if(gc_counter++ % schredder_GC_INTERVAL) {
         return;
     }
 
@@ -624,9 +624,9 @@ static void sched_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
     g_list_free(join_table_keys);
 }
 
-static GThreadPool * sched_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
+static GThreadPool * schredder_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     GThreadPool * devmgr_pool = g_thread_pool_new(
-        (GFunc)sched_devlist_factory, 
+        (GFunc)schredder_devlist_factory, 
         tag,
         tag->session->settings->threads,
         FALSE, NULL
@@ -644,14 +644,14 @@ static GThreadPool * sched_create_devpool(RmMainTag *tag, GHashTable *dev_table)
     return devmgr_pool;
 }
 
-static void sched_free_snapshots(GQueue *snapshots) {
+static void schredder_free_snapshots(GQueue *snapshots) {
     for(GList * iter = snapshots->head; iter; iter = iter->next) {
         g_slice_free(RmFileSnapshot, iter->data);
     }
     g_queue_free(snapshots);
 }
 
-static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * size_table) {
+static void schredder_start(RmSession *session, GHashTable *dev_table, GHashTable * size_table) {
     g_assert(session);
     g_assert(dev_table);
     g_assert(size_table);
@@ -665,13 +665,13 @@ static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * 
     g_mutex_init(&tag.file_state_mtx);
 
     /* Create a pool fo the devlists and push each queue */
-    GThreadPool *devmgr_pool = sched_create_devpool(&tag, dev_table);
+    GThreadPool *devmgr_pool = schredder_create_devpool(&tag, dev_table);
 
     /* Key: hash_offset & size Value: GQueue of fitting files */
     GHashTable *join_table = g_hash_table_new_full(
-        (GHashFunc) sched_hash_size_key,
-        (GEqualFunc) sched_equal_size_key,
-        g_free, (GDestroyNotify) sched_free_snapshots
+        (GHashFunc) schredder_hash_size_key,
+        (GEqualFunc) schredder_equal_size_key,
+        g_free, (GDestroyNotify) schredder_free_snapshots
     );
 
     /* Remember how many devlists we had - so we know when to stop */
@@ -700,7 +700,7 @@ static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * 
             GQueue *size_list = g_hash_table_lookup(join_table, &key);
             if(size_list == NULL) {
                 size_list = g_queue_new();
-                g_hash_table_insert(join_table, sched_copy_size_key(&key), size_list);
+                g_hash_table_insert(join_table, schredder_copy_size_key(&key), size_list);
             } 
 
             /* Append to the list */
@@ -714,13 +714,13 @@ static void sched_start(RmSession *session, GHashTable *dev_table, GHashTable * 
             );
 
             if(count > 1 && g_queue_get_length(size_list) == count) {
-                sched_findmatches(&tag, size_list);
+                schredder_findmatches(&tag, size_list);
             }
 
             /* Garbage collect the join_table from unused entries in regular intervals.
              * This is to keep the memory footprint low.
              * */
-            sched_gc_join_table(join_table, &key);
+            schredder_gc_join_table(join_table, &key);
         }
     }
 
@@ -785,7 +785,7 @@ int main(int argc, char const* argv[]) {
         g_queue_push_head(dev_list, file);
     }
 
-    sched_start(&session, dev_table, size_table);
+    schredder_start(&session, dev_table, size_table);
 
     g_hash_table_unref(size_table);
     g_hash_table_unref(dev_table);
