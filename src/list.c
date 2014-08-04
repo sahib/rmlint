@@ -57,6 +57,7 @@ RmFile *rm_file_new(const char *path,
     
     // TODO: Use the actualy type from session -> pass it.
     rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
+    g_mutex_init(&self->file_lock);
 
     if(type == TYPE_DUPE_CANDIDATE) {
         self->offset = get_disk_offset(path, 0);
@@ -94,6 +95,7 @@ RmFile *rm_file_new(const char *path,
 void rm_file_destroy(RmFile *file) {
     g_free(file->path);
     rm_digest_finalize(&file->digest);
+    g_mutex_clear(&file->file_lock);
     g_slice_free(RmFile, file);
 }
 

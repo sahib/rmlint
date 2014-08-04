@@ -172,16 +172,16 @@ typedef enum RmFileState {
 } RmFileState;
 
 typedef struct _RmFile {
-    unsigned char checksum[_RM_HASH_LEN];   /* md5sum of the file */
-    unsigned char fp[2][_RM_HASH_LEN];        /* A short fingerprint of a file - start and back */
-    unsigned char bim[BYTE_MIDDLE_SIZE]; /* Place where the infamouse byInThMiddle are stored */
+    unsigned char checksum[_RM_HASH_LEN];// TODO: remove.   /* md5sum of the file */
+    unsigned char fp[2][_RM_HASH_LEN];// TODO: remove.        /* A short fingerprint of a file - start and back */
+    unsigned char bim[BYTE_MIDDLE_SIZE];// TODO: remove. /* Place where the infamouse byInThMiddle are stored */
 
     char *path;                          /* absolute path from working dir */
     bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
-    unsigned int pnum;                   /* numerical index of user-input paths */
+    unsigned pnum;                   /* numerical index of user-input paths */
     guint64 fsize;                       /* Size of the file (bytes) */
     time_t mtime;                        /* File modification date/time */
-    bool filter;                         /* this is used in calculations  */
+    bool filter;// TODO: remove.                         /* this is used in calculations  */
     RmLintType lint_type;                /* Is the file marked as duplicate? */
 
     /* This is used to find pointers to the physically same file */
@@ -193,10 +193,12 @@ typedef struct _RmFile {
 
     RmDigest digest;
 
-    GList *list_node;
-    GSequenceIter *file_group;
+    GList *list_node; // TODO: remove.
+    GSequenceIter *file_group;// TODO: remove.
     struct _RmFile *hardlinked_original;
     RmFileState state;
+
+    GMutex file_lock;
 } RmFile;
 
 typedef struct RmFileList {
