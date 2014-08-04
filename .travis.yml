@@ -1,5 +1,5 @@
 language: c
-install: sudo apt-get install libelf-dev libglib2.0-dev python-docutils libblkid-dev
+install: sudo apt-get install libelf-dev libglib2.0-dev python-docutils libblkid-dev libgtop2-dev
 compiler:
   - clang
   - gcc

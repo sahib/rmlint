@@ -54,7 +54,7 @@ RmFile *rm_file_new(const char *path,
     self->hash_offset = 0;
     self->seek_offset = 0;
     self->state = RM_FILE_STATE_PROCESS;
-    
+
     // TODO: Use the actualy type from session -> pass it.
     rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
     g_mutex_init(&self->file_lock);
@@ -168,7 +168,8 @@ void rm_file_list_append(RmFileList *list, RmFile *file) {
     /* Normalize the device id to the whole disk */
     file->dev = rm_mounts_get_disk_id(list->mounts, file->dev);
 
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         GSequenceIter *old_iter = g_hash_table_lookup(
                                       list->size_table, GINT_TO_POINTER(file->fsize)
                                   );
@@ -298,7 +299,7 @@ long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
  * LIST  which are pointing to the same file.  Depending on settings, also
  * removes hardlinked duplicates sets, keeping just one of each set.  Note: LIST
  * must be sorted by dev/node or node/dev before callind.  Returns number of
- * files removed from FP. 
+ * files removed from FP.
  * */
 static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, RmSession *session) {
     RmSettings *settings = session->settings;
@@ -475,8 +476,8 @@ void rm_file_list_sort_group(RmFileList *list, GSequenceIter *group, GCompareDat
 
 void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool force_update) {
     if(force_update) {
-        for(GList * iter = dev_list->head; iter; iter = iter->next) {
-            RmFile * file = iter->data;
+        for(GList *iter = dev_list->head; iter; iter = iter->next) {
+            RmFile *file = iter->data;
             file->offset = get_disk_offset(file->path, file->hash_offset);
         }
     }
@@ -487,13 +488,14 @@ void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool for
 GHashTable *rm_file_list_create_devlist_table(RmFileList *list) {
     RmFile *file_iter = NULL;
     GHashTable *dev_list_table = g_hash_table_new_full(
-        g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)g_queue_free
-    );
+                                     g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)g_queue_free
+                                 );
 
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         while((file_iter = rm_file_list_iter_all(list, file_iter))) {
             gpointer dev_key = GINT_TO_POINTER(file_iter->dev);
-            GQueue * dev_list = g_hash_table_lookup(dev_list_table, dev_key);
+            GQueue *dev_list = g_hash_table_lookup(dev_list_table, dev_key);
             if(dev_list == NULL) {
                 dev_list = g_queue_new();
                 g_hash_table_insert(dev_list_table, dev_key, dev_list);
@@ -523,7 +525,8 @@ static void rm_file_list_print_cb(gpointer data, gpointer G_GNUC_UNUSED user_dat
 }
 
 void rm_file_list_print(RmFileList *list) {
-    g_rec_mutex_lock(&list->lock); {
+    g_rec_mutex_lock(&list->lock);
+    {
         g_printerr("### PRINT ###\n");
         g_sequence_foreach(list->size_groups, rm_file_list_print_cb, NULL);
     }
@@ -543,7 +546,7 @@ int main(int argc, const char **argv) {
         rm_file_list_append(list, file);
     }
 
-    GHashTable * table = rm_file_list_create_devlist_table(list);
+    GHashTable *table = rm_file_list_create_devlist_table(list);
 
     GHashTableIter iter;
     gpointer key, value;

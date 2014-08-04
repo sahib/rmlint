@@ -36,7 +36,7 @@ typedef struct RmMountTable {
 
 /**
  * @brief Allocates a new mounttable.
- * 
+ *
  * @return The mounttable. Free with rm_mounts_table_destroy.
  */
 RmMountTable *rm_mounts_table_new(void);

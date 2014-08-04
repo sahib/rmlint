@@ -34,7 +34,7 @@
 #include "config.h"
 
 #if HAVE_BLKID
-    #include <blkid.h>
+#include <blkid.h>
 #endif
 
 #include "rmlint.h"
@@ -80,12 +80,12 @@ static void rm_mounts_create_tables(RmMountTable *self) {
     glibtop_mountlist mount_list;
     glibtop_mountentry *mount_entries = glibtop_get_mountlist(&mount_list, true);
 
-	if (mount_entries == NULL) {
-		info("can't get glibtop_get_mountlist, some optimizations are disabled.");
-		return;
-	}
+    if (mount_entries == NULL) {
+        info("can't get glibtop_get_mountlist, some optimizations are disabled.");
+        return;
+    }
 
-     for(unsigned index = 0; index < mount_list.number; index++) {
+    for(unsigned index = 0; index < mount_list.number; index++) {
         struct stat stat_buf_dev;
         if(stat(mount_entries[index].devname, &stat_buf_dev) == -1) {
             continue;
@@ -101,7 +101,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         memset(diskname, 0, sizeof(diskname));
 
         if(blkid_devno_to_wholedisk(stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
-                continue;
+            continue;
         }
 
         g_hash_table_insert(

@@ -310,7 +310,6 @@ static void sched_read_factory(RmFile *file, RmDevlistTag *tag) {
             }
 
             /* Send it to the hasher */
-            //g_async_queue_push(tag->hash_queue, buffer);
             g_thread_pool_push(tag->hash_pool, buffer, NULL);
 
             /* Allocate a new buffer - hasher will release the old buffer */            
@@ -355,7 +354,6 @@ static void sched_hash_factory(RmBuffer * buffer, RmDevlistTag *tag) {
     g_assert(tag);
     g_assert(buffer);
 
-    //while((buffer = g_async_queue_pop(tag->hash_queue)) != (RmBuffer *)tag->hash_queue) {
     if(sched_get_file_state(tag->main, buffer->file) != RM_FILE_STATE_PROCESS) {
         return;
     }
@@ -374,18 +372,6 @@ static void sched_hash_factory(RmBuffer * buffer, RmDevlistTag *tag) {
     rm_buffer_pool_release(tag->main->mem_pool, buffer);
 }
 
-static int sched_iteration_needed(RmMainTag *tag, GQueue *queue) {
-    g_assert(queue);
-
-    int processable = 0;
-    for(GList * iter = queue->head; iter && processable < 2; iter = iter->next) {
-        RmFile * file = iter->data;
-        processable += sched_get_file_state(tag, file) == RM_FILE_STATE_PROCESS;
-    }
-
-    return processable >= 2;
-}
-
 static void sched_devlist_add_job(RmDevlistTag *tag, GThreadPool * pool, RmFile * file, GHashTable *processing_table) {
     if(file != NULL) {
         if(sched_get_file_state(tag->main, file) == RM_FILE_STATE_PROCESS) {
@@ -401,7 +387,7 @@ static RmFile * sched_devlist_pop_next(RmDevlistTag *tag, GQueue *work_queue, GL
     }
 
     RmFile * file = work_list->data;
-    if(g_hash_table_contains(processing_table, file) ||  sched_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
+    if(g_hash_table_contains(processing_table, file) || sched_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
         return sched_devlist_pop_next(tag, work_queue, work_list->next, processing_table);
     } else {
         g_queue_delete_link(work_queue, work_list);
@@ -412,13 +398,16 @@ static RmFile * sched_devlist_pop_next(RmDevlistTag *tag, GQueue *work_queue, GL
 static int sched_compare_file_order(const RmFile * a, const RmFile *b, G_GNUC_UNUSED gpointer user_data) {
     int diff = a->offset - b->offset;
     if(diff == 0) {
+        /* Sort after inode as secondary criteria.
+         * This is meant for files with an offset of 0 as fallback.
+         */
         return a->node - b->node;
     } else {
         return diff;
     }
 }
 
-static GQueue * sched_create_work_queue(RmDevlistTag * tag, GQueue *device_queue) {
+static GQueue * sched_create_work_queue(RmDevlistTag * tag, GQueue *device_queue, bool sort) {
     GQueue *work_queue = g_queue_new();
     for(GList * iter = device_queue->head; iter; iter = iter->next) {
         RmFile * file = iter->data;
@@ -427,21 +416,19 @@ static GQueue * sched_create_work_queue(RmDevlistTag * tag, GQueue *device_queue
         }
     }
 
-    g_queue_sort(work_queue, (GCompareDataFunc)sched_compare_file_order, NULL);
+    if(sort) {
+        g_queue_sort(work_queue, (GCompareDataFunc)sched_compare_file_order, NULL);
+    }
     return work_queue;
 }
 
 static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
-    tag.read_size = sysconf(_SC_PAGESIZE) * SCHED_N_PAGES; 
+
     tag.main = main;
-    // tag.hash_queue = g_async_queue_new();
-    // tag.hash_thread = g_thread_new("hasher", (GThreadFunc)sched_hash_factory, &tag);
+    tag.read_size = sysconf(_SC_PAGESIZE) * SCHED_N_PAGES; 
     tag.readable_files = g_queue_get_length(device_queue);
     tag.finished_queue = g_async_queue_new();
-
-    // TODO: clean this mess up and only resort the work_queue when
-    // rotational...
 
     /* Get the device of the files in this list */
     bool nonrotational = rm_mounts_is_nonrotational(
@@ -449,8 +436,13 @@ static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
         ((RmFile *)device_queue->head->data)->dev
     );
 
-    int max_threads = (nonrotational) ? main->session->settings->threads : 1;
-    max_threads = MIN(tag.readable_files, max_threads);
+    // TODO: Respect --threads, i.e. calculate how many other device lists there
+    // are.
+    int max_threads = CLAMP(
+        (int)((nonrotational) ? main->session->settings->threads : 1),
+        1,
+        tag.readable_files
+    );
 
     GThreadPool *read_pool = g_thread_pool_new(
         (GFunc)sched_read_factory, 
@@ -466,31 +458,26 @@ static void sched_devlist_factory(GQueue *device_queue, RmMainTag *main) {
         FALSE, NULL
     );
 
+    GQueue *work_queue = sched_create_work_queue(&tag, device_queue, !nonrotational);
     GHashTable *processing_table = g_hash_table_new(NULL, NULL);
-
-    GQueue *work_queue = sched_create_work_queue(&tag, device_queue);
 
     /* Push the initial batch to the pool */
     for(int i = 0; i < max_threads; ++i) {
         sched_devlist_add_job(&tag, read_pool, g_queue_pop_head(work_queue), processing_table);
     }
     
-    bool run_manager = true;
-
     /* Wait for the completion of the first jobs and push new ones
      * once they report as finished. Choose a file with near offset.
      */
-    while(run_manager && sched_iteration_needed(tag.main, device_queue)) {
+    while(tag.readable_files > 0) {
         RmFile * finished = NULL;
         g_async_queue_lock(tag.finished_queue); {
             finished = g_async_queue_pop_unlocked(tag.finished_queue);
             g_hash_table_remove(processing_table, finished);
         
-            if(tag.readable_files <= 0) {
-                run_manager = false;
-            } else if(g_queue_get_length(work_queue) == 0) {
+            if(tag.readable_files > 0 && g_queue_get_length(work_queue) == 0) {
                 g_queue_free(work_queue);
-                work_queue = sched_create_work_queue(&tag, device_queue);
+                work_queue = sched_create_work_queue(&tag, device_queue, !nonrotational);
                 tag.read_size = sched_get_next_read_size(tag.read_size);
             }
         }
