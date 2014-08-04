@@ -54,7 +54,7 @@ RmFile *rm_file_new(const char *path,
     self->hash_offset = 0;
     self->seek_offset = 0;
     self->state = RM_FILE_STATE_PROCESS;
-    
+
     // TODO: Use the actualy type from session -> pass it.
     rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
 
@@ -298,7 +298,7 @@ long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
  * LIST  which are pointing to the same file.  Depending on settings, also
  * removes hardlinked duplicates sets, keeping just one of each set.  Note: LIST
  * must be sorted by dev/node or node/dev before callind.  Returns number of
- * files removed from FP. 
+ * files removed from FP.
  * */
 static guint rm_file_list_remove_double_paths(RmFileList *list, GQueue *group, RmSession *session) {
     RmSettings *settings = session->settings;
@@ -477,7 +477,7 @@ void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool for
     if(force_update) {
         for(GList * iter = dev_list->head; iter; iter = iter->next) {
             RmFile * file = iter->data;
-            file->offset = get_disk_offset(file->path, file->hash_offset);
+            file->offset = 0;//get_disk_offset(file->disk_offsets, file->hash_offset);
         }
     }
 

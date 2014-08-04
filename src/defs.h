@@ -197,6 +197,8 @@ typedef struct _RmFile {
     GSequenceIter *file_group;
     struct _RmFile *hardlinked_original;
     RmFileState state;
+
+    GSequence *disk_offsets;
 } RmFile;
 
 typedef struct RmFileList {
