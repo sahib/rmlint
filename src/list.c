@@ -60,7 +60,9 @@ RmFile *rm_file_new(const char *path,
     g_mutex_init(&self->file_lock);
 
     if(type == TYPE_DUPE_CANDIDATE) {
-        self->offset = get_disk_offset(path, 0);
+        self->disk_offsets = get_fiemap_extents(self->path);
+        self->offset = get_disk_offset(self->disk_offsets, 0);
+         /* TODO: delay this until we have matched file sizes */
         self->fsize = fsize;
     } else {
         self->fsize = 0;
@@ -96,6 +98,7 @@ void rm_file_destroy(RmFile *file) {
     g_free(file->path);
     rm_digest_finalize(&file->digest);
     g_mutex_clear(&file->file_lock);
+    g_sequence_free(file->disk_offsets);
     g_slice_free(RmFile, file);
 }
 
@@ -478,7 +481,7 @@ void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool for
     if(force_update) {
         for(GList *iter = dev_list->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            file->offset = get_disk_offset(file->path, file->hash_offset);
+            file->offset = get_disk_offset(file->disk_offsets, file->hash_offset);
         }
     }
 
