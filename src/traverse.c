@@ -77,7 +77,7 @@ RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
                                                   RmTraverseSession *trav_session) {
     RmTraversePathBuffer *self = g_new0(RmTraversePathBuffer, 1);
     RmSession *session = trav_session->rm_session;
-    dev_t whole_disk;
+    dev_t whole_disk = 0;
 
     self->path = g_strdup(path);
     self->depth = depth;
