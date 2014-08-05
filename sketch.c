@@ -22,7 +22,7 @@
  * | | Read |-->| Hash |----->| Joiner  |<-----| Hash |<--| Read | | 
  * | +------+   +------+ |    | Thread  |    | +------+   +------+ | 
  * |     ^         ^     |    |         |    |    ^          ^     | 
- * |     | n       | n   |    |---------|    |  n |        n |     | 
+ * |     | n       | 1   |    |---------|    |  1 |        n |     | 
  * |     +-------------+ |    |         |    | +-------------+     | 
  * |     | Devlist Mgr |<-----|  Init   |----->| Devlist Mgr |     | 
  * |     +-------------+ |    +---------+    | +-------------+     | 
@@ -88,6 +88,11 @@
  * Never goes beyond this value.
  */
 #define schredder_MAX_READ_SIZE   (1024 * 1024 * 1024)
+
+/* Flags for the fadvise() call that tells the kernel
+ * what we want to do with the file.
+ */
+#define schredder_FADVISE_FLAGS   (POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED | POSIX_FADV_NOREUSE)
 
 /* Determines the next amount of bytes_read to read.
  * Currently just doubles the amount.
@@ -278,6 +283,9 @@ static void schredder_read_factory(RmFile *file, RmDevlistTag *tag) {
 
         goto finish;
     }
+ 
+    // TODO: test if this makes any difference.
+    posix_fadvise(fd, file->seek_offset, 0, schredder_FADVISE_FLAGS);
 
     // TODO: a bit of a hack, or rather misuse of a mutex.
     g_async_queue_lock(tag->finished_queue); {
