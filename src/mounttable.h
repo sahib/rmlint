@@ -29,14 +29,19 @@
 #include <sys/types.h>
 #include <glib.h>
 
+#ifndef RM_MOUNT_TABLE_H
+#define RM_MOUNT_TABLE_H
+
 typedef struct RmMountTable {
     GHashTable *part_table;
     GHashTable *rotational_table;
+    GHashTable *diskname_table;
+    GList *mounted_paths;
 } RmMountTable;
 
 /**
  * @brief Allocates a new mounttable.
- * 
+ *
  * @return The mounttable. Free with rm_mounts_table_destroy.
  */
 RmMountTable *rm_mounts_table_new(void);
@@ -60,6 +65,19 @@ void rm_mounts_table_destroy(RmMountTable *self);
  */
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
 
+
+/**
+ * @brief Return name of device/disk.
+ *
+ * This operation has constant time.
+ *
+ * @param self the table to lookup from.
+ * @param device the dev_t of a disk
+ *
+ * @return pointer to disk name.
+ */
+char *rm_mounts_get_name(RmMountTable *self, dev_t device);
+
 /**
  * @brief Same as above, but calls stat(2) on path for you.
  */
@@ -79,3 +97,5 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition);
  * @brief Same as above, but calls stat(2) on path for you.
  */
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
+
+#endif /* end of include guard */

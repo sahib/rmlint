@@ -96,7 +96,7 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
-        digest->num_128bit_blocks += 2; /*XXX: will = 4 after fallthrough */
+        digest->num_128bit_blocks += 2;
         digest->hash[3].first  = 0xaaaaaaaaaaaaaaaa ^ seed1;
         digest->hash[3].second = 0xaaaaaaaaaaaaaaaa ^ seed2;
         digest->hash[2].first  = 0x3333333333333333 ^ seed1;

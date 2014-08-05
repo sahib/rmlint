@@ -31,14 +31,14 @@
 #include <sys/stat.h>
 #include <glibtop/mountlist.h>
 
-#include "mounttable.h"
 #include "config.h"
 
 #if HAVE_BLKID
-    #include <blkid.h>
+#include <blkid.h>
 #endif
 
 #include "rmlint.h"
+
 
 static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     char sys_path[PATH_MAX];
@@ -71,6 +71,12 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                  g_direct_hash, g_direct_equal,
                                  NULL, NULL
                              );
+    self->diskname_table = g_hash_table_new_full(
+                                 g_direct_hash, g_direct_equal,
+                                 NULL, g_free
+                             );
+
+    self->mounted_paths=NULL;
 
 #if HAVE_BLKID
 
@@ -141,8 +147,9 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         g_hash_table_insert(
             self->part_table,
             GINT_TO_POINTER(stat_buf_folder.st_dev),
-            GINT_TO_POINTER(whole_disk)
-        );
+            GINT_TO_POINTER(whole_disk));
+
+        self->mounted_paths = g_list_prepend(self->mounted_paths, g_strdup(mount_entries[index].mountdir));
 
         /* small hack, so also the full disk id can be given to the api below */
         g_hash_table_insert(
@@ -167,6 +174,11 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 GINT_TO_POINTER(!is_rotational)
             );
         }
+        g_hash_table_insert(
+                self->diskname_table,
+                GINT_TO_POINTER(whole_disk),
+                g_strdup(diskname)
+        );
     }
 
     g_free(mount_entries);
@@ -187,6 +199,8 @@ RmMountTable *rm_mounts_table_new(void) {
 void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->part_table);
     g_hash_table_unref(self->rotational_table);
+    g_hash_table_unref(self->diskname_table);
+    g_list_free_full(self->mounted_paths, g_free);
     g_slice_free(RmMountTable, self);
 }
 
@@ -227,6 +241,10 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
     }
 
     return rm_mounts_get_disk_id(self, stat_buf.st_dev);
+}
+
+char *rm_mounts_get_name(RmMountTable *self, dev_t device) {
+    return (gpointer)g_hash_table_lookup (self->diskname_table, GINT_TO_POINTER(device));
 }
 
 #ifdef _RM_COMPILE_MAIN
