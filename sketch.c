@@ -167,6 +167,7 @@ typedef struct RmMainTag {
     RmBufferPool *mem_pool;
     GAsyncQueue *join_queue;
     GMutex file_state_mtx;
+    int devices_left;
 } RmMainTag;
 
 /* Every devlist manager has additional private */
@@ -428,6 +429,14 @@ static GQueue * shred_create_work_queue(RmDevlistTag * tag, GQueue *device_queue
     return work_queue;
 }
 
+static int schred_get_read_threads(RmMainTag *tag, bool nonrotational, int max_threads) {
+    if(!nonrotational) {
+        return 1;
+    } else {
+        return CLAMP((max_threads - tag->devices_left) / tag->devices_left, 1, 16);
+    }
+}
+
 static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
 
@@ -442,12 +451,8 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
         ((RmFile *)device_queue->head->data)->dev
     );
 
-    // TODO: Respect --threads, i.e. calculate how many other device lists there
-    // are.
-    int max_threads = CLAMP(
-        (int)((nonrotational) ? main->session->settings->threads : 1),
-        1,
-        tag.readable_files
+    int max_threads = schred_get_read_threads(
+        main, nonrotational, main->session->settings->threads
     );
 
     GThreadPool *read_pool = g_thread_pool_new(
@@ -488,6 +493,13 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                 g_queue_free(work_queue);
                 work_queue = shred_create_work_queue(&tag, device_queue, !nonrotational);
                 tag.read_size = shred_get_next_read_size(tag.read_size);
+
+                /* Maybe we can take more threads now? */
+                g_thread_pool_set_max_threads(
+                    read_pool,
+                    schred_get_read_threads(main, nonrotational, main->session->settings->threads),
+                    NULL
+                );
             }
         }
         g_async_queue_unlock(tag.finished_queue);
@@ -673,6 +685,9 @@ static void shred_start(RmSession *session, GHashTable *dev_table, GHashTable * 
     /* would use g_atomic, but helgrind does not like that */
     g_mutex_init(&tag.file_state_mtx);
 
+    /* Remember how many devlists we had - so we know when to stop */
+    tag.devices_left = g_hash_table_size(dev_table);
+
     /* Create a pool fo the devlists and push each queue */
     GThreadPool *devmgr_pool = shred_create_devpool(&tag, dev_table);
 
@@ -683,9 +698,6 @@ static void shred_start(RmSession *session, GHashTable *dev_table, GHashTable * 
         g_free, (GDestroyNotify) shred_free_snapshots
     );
 
-    /* Remember how many devlists we had - so we know when to stop */
-    int dev_finished_counter = g_hash_table_size(dev_table);
-
     /* This is the joiner part */
     RmFileSnapshot * snapshot = NULL;
     while((snapshot = g_async_queue_pop(tag.join_queue))) {
@@ -694,7 +706,7 @@ static void shred_start(RmSession *session, GHashTable *dev_table, GHashTable * 
          * In this case we check if need to quit already.
          */
         if((GAsyncQueue *)snapshot == tag.join_queue) {
-            if(--dev_finished_counter) {
+            if(--tag.devices_left) {
                 continue;
             } else {
                 break;
@@ -753,7 +765,7 @@ static void main_free_func(gconstpointer p) {
 
 int main(int argc, char const* argv[]) {
     RmSettings settings;
-    settings.threads = 4;
+    settings.threads = 16;
     settings.checksum_type = RM_DIGEST_SPOOKY;
 
     RmSession session;
