@@ -316,8 +316,8 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             {"no-namecluster"      ,  no_argument       ,  0 ,  'N'},
             {"nonstripped"         ,  no_argument       ,  0 ,  'b'},
             {"no-nonstripped"      ,  no_argument       ,  0 ,  'B'},
-            {"no-hidden"           ,  no_argument       ,  0 ,  'r'},
-            {"hidden"              ,  no_argument       ,  0 ,  'R'},
+            {"no-hidden"           ,  no_argument       ,  0 ,  'R'},
+            {"hidden"              ,  no_argument       ,  0 ,  'r'},
             {"badids"              ,  no_argument       ,  0 ,  'g'},
             {"no-badids"           ,  no_argument       ,  0 ,  'G'},
             {"dups"                ,  no_argument       ,  0 ,  'u'},
@@ -625,10 +625,6 @@ int die(RmSession *session, int status) {
         fclose(session->script_out);
     }
 
-    if(session->userlist) {
-        userlist_destroy(session->userlist);
-    }
-
     exit(status);
     return status;
 }
@@ -826,7 +822,6 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->total_lint_size = 0;
     session->total_files = 0;
     session->mounts = rm_mounts_table_new();
-    session->userlist = userlist_new();
     session->list = rm_file_list_new(session->mounts);
     session->settings = settings;
     session->aborted = FALSE;

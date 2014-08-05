@@ -60,7 +60,9 @@ RmFile *rm_file_new(const char *path,
     g_mutex_init(&self->file_lock);
 
     if(type == TYPE_DUPE_CANDIDATE) {
-        self->offset = get_disk_offset(path, 0);
+        self->disk_offsets = get_fiemap_extents(self->path);
+        self->offset = get_disk_offset(self->disk_offsets, 0);
+         /* TODO: delay this until we have matched file sizes */
         self->fsize = fsize;
     } else {
         self->fsize = 0;
@@ -96,6 +98,9 @@ void rm_file_destroy(RmFile *file) {
     g_free(file->path);
     rm_digest_finalize(&file->digest);
     g_mutex_clear(&file->file_lock);
+    if (file->disk_offsets) {
+        g_sequence_free(file->disk_offsets);
+    }
     g_slice_free(RmFile, file);
 }
 
@@ -161,7 +166,10 @@ GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
 static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
     const GQueue *qa = a, *qb = b;
     RmFile *fa = qa->head->data, *fb = qb->head->data;
-    return fa->fsize - fb->fsize;
+    return (fa->fsize >  fb->fsize ? 1
+           :fa->fsize == fb->fsize ? 0
+           :-1
+           );
 }
 
 void rm_file_list_append(RmFileList *list, RmFile *file) {
@@ -423,12 +431,13 @@ gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session) {
                 iter = g_sequence_iter_next(iter);
                 g_sequence_remove(old_iter);
             } else {
+                /* this is really slow so I deleted:
                 for(GList *iter = queue->head; iter; iter = iter->next) {
                     RmFile *file = iter->data;
                     int fd = open(file->path, O_RDONLY);
                     readahead(fd, 0, file->fsize);
                     close(fd);
-                }
+                } */
                 iter = g_sequence_iter_next(iter);
             }
         }
@@ -478,7 +487,7 @@ void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool for
     if(force_update) {
         for(GList *iter = dev_list->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            file->offset = get_disk_offset(file->path, file->hash_offset);
+            file->offset = get_disk_offset(file->disk_offsets, file->hash_offset);
         }
     }
 

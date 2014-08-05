@@ -567,7 +567,7 @@ static int find_double_bases(RmSession *session) {
 
 static long cmp_sort_lint_type(RmFile *a, RmFile *b, gpointer user_data) {
     (void) user_data;
-    if (a->lint_type == TYPE_EDIR && a->lint_type == TYPE_EDIR)
+    if (a->lint_type == TYPE_EDIR && b->lint_type == TYPE_EDIR)
         return (long)strcmp(b->path, a->path);
     else
         return ((long)a->lint_type - (long)b->lint_type);
@@ -666,9 +666,6 @@ void start_processing(RmSession *session) {
         handle_other_lint(session, first, first_group);
     }
 
-    info("\nNow sorting list based on filesize... ");
-    gsize rem_counter = rm_file_list_sort_groups(list, session);
-    info("done.\n");
 
     if(settings->searchdup == 0) {
         /* rmlint was originally supposed to find duplicates only
@@ -676,6 +673,10 @@ void start_processing(RmSession *session) {
            dup search before dieing */
         die(session, EXIT_SUCCESS);
     }
+
+    info("\nNow sorting list based on filesize... ");
+    gsize rem_counter = rm_file_list_sort_groups(list, session);
+    info("done.\n");
 
     info("Now attempting to find duplicates. This may take a while...\n");
     info("Now removing files with unique sizes from list...");
