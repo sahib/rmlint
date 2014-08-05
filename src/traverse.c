@@ -47,7 +47,6 @@
 typedef struct RmTraverseSession {
     GHashTable *disk_table;  /*TODO: combine disk_table into
             disk_mapper_table as disk_mapper_table->used_disks? */
-    GThreadPool *list_build_pool;
     GThreadPool *traverse_pool;
     RmUserGroupList **userlist;
     int fts_flags;
@@ -135,35 +134,11 @@ int fts_flags_from_settings(RmSettings *settings) {
     return self;
 }
 
-/* Threadpool worker for creating RmFiles and adding them to list
- * Why separate thread: to avoid slowing down the FTS traverses
- * Receives: RmFiles from FTS traversal threadpool
- * Work: Appends file to list.
- * Signals to other threads: none */
-void rm_add_file_to_list (gpointer data, gpointer user_data) {
-    RmFile *file = (gpointer)data;
-    RmFileList *list = (gpointer)user_data;
-    //TODO:  delete following debug messages
-    if (file->disk_offsets) {
-        info("%sRmFile %s has %d extents, start block %"PRId64", end %"PRId64"\n"NCO,
-            (g_sequence_get_length (file->disk_offsets) > 3 ? BLU : GRE),
-            file->path,
-            g_sequence_get_length (file->disk_offsets),
-            get_disk_offset(file->disk_offsets, 0) / 4096,
-            get_disk_offset(file->disk_offsets, file->fsize) / 4096
-            );
-    } else {
-        info(YEL"Unable to get offset info for RmFile %s\n"NCO, file->path);
-    }
-    rm_file_list_append(list, file);
-}
 
 
 static int process_file(RmTraverseSession *traverse_session, struct stat *statp, char *path, bool is_ppath, unsigned long pnum, RmLintType file_type) {
-
-    RmSettings *settings=traverse_session->rm_session->settings;
-    GError *g_err = NULL;
-    RmFile *file = NULL;
+    RmSession *session=traverse_session->rm_session;
+    RmSettings *settings=session->settings;
 
     if (file_type == 0) {
         RmLintType gid_check;
@@ -186,16 +161,28 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
         }
     }
 
-    file = rm_file_new(path, statp->st_size, statp->st_ino, statp->st_dev, statp->st_mtim.tv_sec, file_type, is_ppath, pnum);
+    RmFile *file = rm_file_new(path, statp->st_size, statp->st_ino, statp->st_dev, statp->st_mtim.tv_sec, file_type, is_ppath, pnum);
 
-    if (!g_thread_pool_push (traverse_session->list_build_pool, file, &g_err)) {
-        rm_error("Error %d %s pushing RmFile %s to list build pool", g_err->code, g_err->message, path);
-        return 0;
+    if (file) {
+        rm_file_list_append(session->list, file);
+        { //TODO:  delete this debug message block
+            if (file->disk_offsets) {
+                info("%sRmFile %s has %d extents, start block %"PRId64", end %"PRId64"\n"NCO,
+                    (g_sequence_get_length (file->disk_offsets) > 3 ? BLU : GRE),
+                    file->path,
+                    g_sequence_get_length (file->disk_offsets),
+                    get_disk_offset(file->disk_offsets, 0) / 4096,
+                    get_disk_offset(file->disk_offsets, file->fsize) / 4096
+                    );
+            } else {
+                info(YEL"Unable to get offset info for RmFile %s\n"NCO, file->path);
+            }
+        }
+    return 1;
     } else {
-        return 1;
+    return 0;
     }
 }
-
 
 
 /* Traverse the file hierarchies 0named in session->paths[pathnum]. *
@@ -352,12 +339,6 @@ void traverse_path(gpointer data, gpointer userdata) {
                     }
                     clear_emptydir_flags = false;
                 }
-                /* TODO: delete the following debug message which provides info on threadpool backlogs*/
-                if (numfiles % 1000 == 0) {
-                    debug("Numfiles %lu; listbuilders active %d; unprocessed RmFiles %d\n", numfiles,
-                         g_thread_pool_get_num_threads (traverse_session->list_build_pool),
-                         g_thread_pool_unprocessed (traverse_session->list_build_pool));
-                }
                 /*current dir may not be empty; by association, all open dirs are non-empty*/
             }
         } /*end while ((p = fts_read(ftsp)) != NULL)*/
@@ -388,8 +369,6 @@ gint load_leveller(gconstpointer a, gconstpointer b) {
 }
 
 
-
-
 /* initialise RmTraverseSession */
 RmTraverseSession *traverse_session_init(RmSession *session) {
     RmSettings *settings = session->settings;
@@ -406,24 +385,6 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
     self->userlist = userlist_new();
     /* initialise and launch list builder pool */
     GError *g_err = NULL;
-    self->list_build_pool = g_thread_pool_new (rm_add_file_to_list,   /* func */
-                               session->list,                     /* userdata */
-                               1,                       /* max number threads */
-                               false,   /* don't share the thread pool threads*/
-                               &g_err);
-        /* NOTE: currently limited to 1 thread above because more than one just
-         * compete with each other since they are pushing to the same session->list,
-         * which is mutex locked for most of its operations.
-         * TODO: check advantage of having a separate session->list for each
-         * traverser thread and then mergin them later */
-
-    if (g_err != NULL) {
-        rm_error("Error %d creating thread pool traverse_session->list_build_pool\n", g_err->code);
-        return NULL;
-    }
-
-    /* initialise and launch traverser pool */
-    g_err = NULL;
     self->traverse_pool = g_thread_pool_new (traverse_path,          /* func */
                                self,                             /* userdata */
                                -1,      /* will later set to number of disks */
@@ -447,10 +408,6 @@ guint64 traverse_session_join_and_free(RmTraverseSession *traverse_session){
         /* join and destroy threadpools */
         if (traverse_session->traverse_pool) {
             g_thread_pool_free (traverse_session->traverse_pool, false, true);
-        }
-        info("Joined traversers; %d in listbuilder queue", g_thread_pool_unprocessed (traverse_session->list_build_pool)); /*TODO: cleanup*/
-        if (traverse_session->list_build_pool) {
-            g_thread_pool_free (traverse_session->list_build_pool, false, true);
         }
         if (traverse_session->disk_table) {
             g_hash_table_destroy(traverse_session->disk_table);
