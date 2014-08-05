@@ -34,7 +34,7 @@
 #include "config.h"
 
 #if HAVE_BLKID
-    #include <blkid.h>
+#include <blkid.h>
 #endif
 
 #include "rmlint.h"

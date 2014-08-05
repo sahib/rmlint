@@ -146,7 +146,7 @@ void rm_add_file_to_list (gpointer data, gpointer user_data) {
     /* file->offset=get_disk_offset(file->path, 0); better to delay this until we have matched file sizes*/
     file->disk_offsets = get_fiemap_extents(file->path);
     file->seek_offset=file->fsize/2;
-    info("Disk offset for midpoint of %s (logical %llu) is %llu\n", file->path, file->seek_offset, get_disk_offset(file->disk_offsets, file->seek_offset));
+    info("Disk offset for midpoint of %s (logical %"PRId64") is %"PRId64"\n", file->path, file->seek_offset, get_disk_offset(file->disk_offsets, file->seek_offset));
     rm_file_list_append(list, file);
 }
 

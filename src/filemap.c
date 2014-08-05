@@ -53,10 +53,10 @@ int find_logical (gconstpointer a, gconstpointer b){
     }
 }
 
-void printoffset(gpointer data){
+/*void printoffset(gpointer data){
     OffsetEntry *offset = (gpointer)data;
-    //info("%llu:%llu\n", offset->logical, offset->physical);
-}
+    info("%llu:%llu\n", offset->logical, offset->physical);
+} */
 
 GSequence *get_fiemap_extents(char *path) {
 
@@ -121,7 +121,7 @@ GSequence *get_fiemap_extents(char *path) {
     close(fd);
     g_sequence_sort(self, (GCompareDataFunc)sort_logical, NULL);
 
-    g_sequence_foreach(self, (GFunc)printoffset, NULL);
+    /*g_sequence_foreach(self, (GFunc)printoffset, NULL);*/
     return self;
 }
 
