@@ -159,7 +159,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         );
 
 
-        info("%02u:%02u %50s -> %02u:%02u %-10s (underlying disk: %s; rotational: %s)\n",
+        info("%02u:%02u %50s -> %02u:%02u %-10s (underlying disk: %s; rotational: %s)",
              major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
              mount_entries[index].mountdir,
              major(whole_disk), minor(whole_disk),

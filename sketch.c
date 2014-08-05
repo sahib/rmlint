@@ -475,13 +475,16 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     /* Wait for the completion of the first jobs and push new ones
      * once they report as finished. Choose a file with near offset.
      */
-    while(tag.readable_files > 0) {
+    bool run_manager = true;
+    while(run_manager) {
         RmFile * finished = NULL;
         g_async_queue_lock(tag.finished_queue); {
             finished = g_async_queue_pop_unlocked(tag.finished_queue);
             g_hash_table_remove(processing_table, finished);
         
-            if(tag.readable_files > 0 && g_queue_get_length(work_queue) == 0) {
+            if(tag.readable_files <= 0) {
+                run_manager = false;
+            } else if(g_queue_get_length(work_queue) == 0) {
                 g_queue_free(work_queue);
                 work_queue = shred_create_work_queue(&tag, device_queue, !nonrotational);
                 tag.read_size = shred_get_next_read_size(tag.read_size);
