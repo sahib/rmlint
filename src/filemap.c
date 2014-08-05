@@ -67,12 +67,11 @@ GSequence *get_fiemap_extents(char *path) {
     int fd = open(path, O_RDONLY);
 #endif
     if (fd < 0) {
-        rm_error("Error opening %s in setup_fiemap_extents\n", path);
+        info("Error opening %s in setup_fiemap_extents\n", path);
         return NULL;
     }
 
     GSequence *self = g_sequence_new(g_free);
-    rm_error("created\n");
 
     char buf[16384];
     struct fiemap *fiemap = (struct fiemap *)buf;
@@ -90,7 +89,7 @@ GSequence *get_fiemap_extents(char *path) {
         fiemap->fm_flags = 0;
         fiemap->fm_extent_count = count;  /* only ask for as many extents as we can fit in our buffer */
         if ( ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) < 0 ){
-            rm_error("FIEMAP failed in setup_fiemap_extents for file %s\n",
+            info("FIEMAP failed in setup_fiemap_extents for file %s\n",
                        path);
         } else {
             for (i = 0; i < fiemap->fm_mapped_extents; i++) {

@@ -567,7 +567,7 @@ static int find_double_bases(RmSession *session) {
 
 static long cmp_sort_lint_type(RmFile *a, RmFile *b, gpointer user_data) {
     (void) user_data;
-    if (a->lint_type == TYPE_EDIR && a->lint_type == TYPE_EDIR)
+    if (a->lint_type == TYPE_EDIR && b->lint_type == TYPE_EDIR)
         return (long)strcmp(b->path, a->path);
     else
         return ((long)a->lint_type - (long)b->lint_type);
