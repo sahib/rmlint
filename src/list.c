@@ -166,7 +166,10 @@ GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
 static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
     const GQueue *qa = a, *qb = b;
     RmFile *fa = qa->head->data, *fb = qb->head->data;
-    return fa->fsize - fb->fsize;
+    return (fa->fsize >  fb->fsize ? 1
+           :fa->fsize == fb->fsize ? 0
+           :-1
+           );
 }
 
 void rm_file_list_append(RmFileList *list, RmFile *file) {
@@ -428,12 +431,13 @@ gsize rm_file_list_sort_groups(RmFileList *list, RmSession *session) {
                 iter = g_sequence_iter_next(iter);
                 g_sequence_remove(old_iter);
             } else {
+                /* this is really slow so I deleted:
                 for(GList *iter = queue->head; iter; iter = iter->next) {
                     RmFile *file = iter->data;
                     int fd = open(file->path, O_RDONLY);
                     readahead(fd, 0, file->fsize);
                     close(fd);
-                }
+                } */
                 iter = g_sequence_iter_next(iter);
             }
         }
