@@ -329,7 +329,7 @@ finish:
     g_async_queue_lock(tag->finished_queue); {
         if(file->seek_offset < file->fsize) {
             if(fd > 0) {
-                file->offset = get_disk_offset_openfile(fd, RM_OFFSET_ABSOLUTE, file->offset);
+                file->offset = get_disk_offset(file->disk_offsets, file->offset);
             }
         } else if(file->seek_offset == file->fsize) {
             tag->readable_files--;

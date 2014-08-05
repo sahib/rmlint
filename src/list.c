@@ -60,9 +60,9 @@ RmFile *rm_file_new(const char *path,
     g_mutex_init(&self->file_lock);
 
     if(type == TYPE_DUPE_CANDIDATE) {
-        self->offset = 0;
-        /* could do ->offset=get_disk_offset(path, 0) here but this is expensive
-         * so better to delay this until we have matched file sizes*/
+        self->disk_offsets = get_fiemap_extents(self->path);
+        self->offset = get_disk_offset(self->disk_offsets, 0);
+         /* TODO: delay this until we have matched file sizes */
         self->fsize = fsize;
     } else {
         self->fsize = 0;
