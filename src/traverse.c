@@ -143,10 +143,18 @@ int fts_flags_from_settings(RmSettings *settings) {
 void rm_add_file_to_list (gpointer data, gpointer user_data) {
     RmFile *file = (gpointer)data;
     RmFileList *list = (gpointer)user_data;
-    /* file->offset=get_disk_offset(file->path, 0); better to delay this until we have matched file sizes*/
-    file->disk_offsets = get_fiemap_extents(file->path);
-    file->seek_offset=file->fsize/2;
-    info("Disk offset for midpoint of %s (logical %"PRId64") is %"PRId64"\n", file->path, file->seek_offset, get_disk_offset(file->disk_offsets, file->seek_offset));
+    //TODO:  delete following debug messages
+    if (file->disk_offsets) {
+        info("%sRmFile %s has %d extents, start block %"PRId64", end %"PRId64"\n"NCO,
+            (g_sequence_get_length (file->disk_offsets) > 3 ? BLU : GRE),
+            file->path,
+            g_sequence_get_length (file->disk_offsets),
+            get_disk_offset(file->disk_offsets, 0) / 4096,
+            get_disk_offset(file->disk_offsets, file->fsize) / 4096
+            );
+    } else {
+        info(YEL"Unable to get offset info for RmFile %s\n"NCO, file->path);
+    }
     rm_file_list_append(list, file);
 }
 
