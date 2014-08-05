@@ -271,7 +271,11 @@ static void schredder_read_factory(RmFile *file, RmDevlistTag *tag) {
         /* act like this file was fully read.  Otherwise it would be counted as
          * unreadable on every try, which would result in BadThings™.
          */
-        file->seek_offset = file->fsize;
+        schredder_set_file_state(tag->main, file, RM_FILE_STATE_IGNORE);
+        if(file->seek_offset < file->fsize) {
+            file->seek_offset = file->fsize;
+        }
+
         goto finish;
     }
 
