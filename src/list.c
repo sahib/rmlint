@@ -98,6 +98,7 @@ void rm_file_destroy(RmFile *file) {
     g_free(file->path);
     rm_digest_finalize(&file->digest);
     g_mutex_clear(&file->file_lock);
+    g_sequence_free(file->disk_offsets);
     g_slice_free(RmFile, file);
 }
 
