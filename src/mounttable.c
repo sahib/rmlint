@@ -40,6 +40,31 @@
 #include "rmlint.h"
 
 
+rm_part_info *rm_part_info_new(char *name, dev_t disk) {
+    rm_part_info *self = g_new0(rm_part_info, 1);
+    self->name = g_strdup(name);
+    self->disk = disk;
+    return self;
+}
+
+void rm_part_info_free(rm_part_info *self){
+    g_free(self->name);
+    g_free(self);
+}
+
+rm_disk_info *rm_disk_info_new(char *name, char is_rotational) {
+    rm_disk_info *self = g_new0(rm_disk_info, 1);
+    self->name = g_strdup(name);
+    self->is_rotational = is_rotational;
+    return self;
+}
+
+void rm_disk_info_free(rm_disk_info *self){
+    g_free(self->name);
+    g_free(self);
+}
+
+
 static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     char sys_path[PATH_MAX];
     gchar is_rotational = -1;
@@ -63,20 +88,14 @@ static void rm_mounts_create_tables(RmMountTable *self) {
     /* partition dev_t to disk dev_t */
     self->part_table = g_hash_table_new_full(
                            g_direct_hash, g_direct_equal,
-                           NULL, NULL
+                           NULL, (GDestroyNotify)rm_part_info_free
                        );
 
     /* disk dev_t to boolean indication if disk is rotational */
-    self->rotational_table = g_hash_table_new_full(
+    self->disk_table = g_hash_table_new_full(
                                  g_direct_hash, g_direct_equal,
-                                 NULL, NULL
+                                 NULL, (GDestroyNotify)rm_disk_info_free
                              );
-    self->diskname_table = g_hash_table_new_full(
-                                 g_direct_hash, g_direct_equal,
-                                 NULL, g_free
-                             );
-
-    self->mounted_paths=NULL;
 
 #if HAVE_BLKID
 
@@ -91,12 +110,11 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 		return;
 	}
 
-     for(unsigned index = 0; index < mount_list.number; index++) {
+    for(unsigned index = 0; index < mount_list.number; index++) {
         struct stat stat_buf_folder;
         if(stat(mount_entries[index].mountdir, &stat_buf_folder) == -1) {
             continue;
         }
-
         dev_t whole_disk = 0;
         gchar is_rotational;
         char diskname[PATH_MAX];
@@ -144,20 +162,28 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 is_rotational = rm_mounts_is_rotational_blockdev(diskname);
             }
         }
+
         g_hash_table_insert(
             self->part_table,
             GINT_TO_POINTER(stat_buf_folder.st_dev),
-            GINT_TO_POINTER(whole_disk));
-
-        self->mounted_paths = g_list_prepend(self->mounted_paths, g_strdup(mount_entries[index].mountdir));
+            rm_part_info_new(mount_entries[index].mountdir, whole_disk));
 
         /* small hack, so also the full disk id can be given to the api below */
-        g_hash_table_insert(
-            self->part_table,
-            GINT_TO_POINTER(whole_disk),
-            GINT_TO_POINTER(whole_disk)
-        );
+        if (!g_hash_table_contains(self->part_table, GINT_TO_POINTER(whole_disk))) {
+            g_hash_table_insert(
+                self->part_table,
+                GINT_TO_POINTER(whole_disk),
+                rm_part_info_new(mount_entries[index].mountdir, whole_disk)
+            );
+        }
 
+        if (!g_hash_table_contains(self->disk_table, GINT_TO_POINTER(whole_disk))) {
+            g_hash_table_insert(
+                self->disk_table,
+                GINT_TO_POINTER(whole_disk),
+                rm_disk_info_new(diskname, is_rotational)
+            );
+        }
 
         info("%02u:%02u %50s -> %02u:%02u %-10s (underlying disk: %s; rotational: %s)\n",
              major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
@@ -167,20 +193,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
              diskname, is_rotational ? "yes" : "no"
             );
 
-        if(is_rotational != -1) {
-            g_hash_table_insert(
-                self->rotational_table,
-                GINT_TO_POINTER(whole_disk),
-                GINT_TO_POINTER(!is_rotational)
-            );
-        }
-        g_hash_table_insert(
-                self->diskname_table,
-                GINT_TO_POINTER(whole_disk),
-                g_strdup(diskname)
-        );
     }
-
     g_free(mount_entries);
 #endif
 }
@@ -198,19 +211,14 @@ RmMountTable *rm_mounts_table_new(void) {
 
 void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->part_table);
-    g_hash_table_unref(self->rotational_table);
-    g_hash_table_unref(self->diskname_table);
-    g_list_free_full(self->mounted_paths, g_free);
+    g_hash_table_unref(self->disk_table);
     g_slice_free(RmMountTable, self);
 }
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
-    dev_t disk_id = rm_mounts_get_disk_id(self, device);
-    return GPOINTER_TO_INT(
-               g_hash_table_lookup(
-                   self->rotational_table, GINT_TO_POINTER(disk_id)
-               )
-           );
+    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    rm_disk_info *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+    return !disk->is_rotational;
 }
 
 bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
@@ -218,17 +226,13 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
     if(stat(path, &stat_buf) == -1) {
         return -1;
     }
-
     return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
 }
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
 #if HAVE_BLKID
-    return GPOINTER_TO_INT(
-               g_hash_table_lookup(
-                   self->part_table, GINT_TO_POINTER(partition)
-               )
-           );
+    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
+    return part->disk;
 #else
     return partition;
 #endif
@@ -243,8 +247,10 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
     return rm_mounts_get_disk_id(self, stat_buf.st_dev);
 }
 
-char *rm_mounts_get_name(RmMountTable *self, dev_t device) {
-    return (gpointer)g_hash_table_lookup (self->diskname_table, GINT_TO_POINTER(device));
+char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
+    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    rm_disk_info *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+    return disk->name;
 }
 
 #ifdef _RM_COMPILE_MAIN

@@ -30,11 +30,20 @@
 #include <glib.h>
 
 typedef struct RmMountTable {
-    GHashTable *part_table;
-    GHashTable *rotational_table;
-    GHashTable *diskname_table;
-    GList *mounted_paths;
+    GHashTable *part_table;  /* maps all mounted partitions to a parent disk using partition dev_t as key */
+    GHashTable *disk_table;  /* contains info about each parent disk using disk dev_t as key              */
 } RmMountTable;
+
+typedef struct rm_disk_info {
+    char *name;
+    char is_rotational;
+} rm_disk_info;
+
+typedef struct rm_part_info {
+    char *name;
+    dev_t disk;
+} rm_part_info;
+
 
 /**
  * @brief Allocates a new mounttable.
@@ -73,7 +82,7 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
  *
  * @return pointer to disk name.
  */
-char *rm_mounts_get_name(RmMountTable *self, dev_t device);
+char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device);
 
 /**
  * @brief Same as above, but calls stat(2) on path for you.

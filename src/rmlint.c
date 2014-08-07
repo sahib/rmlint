@@ -823,9 +823,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->total_files = 0;
     info("0");
     session->mounts = rm_mounts_table_new();
-    info("1");
     session->list = rm_file_list_new(session->mounts);
-    info("2");
     session->settings = settings;
     session->aborted = FALSE;
     session->activethreads = 0; /* foreground thread not counted as 1 */

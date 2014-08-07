@@ -92,6 +92,9 @@ void rm_traverse_path_buffer_free(gpointer data) {
     RmTraversePathBuffer *self = (gpointer)data;
     g_free(self->path);
     g_free(self);
+    if (self->stat_buf) {
+        g_free(self->stat_buf);
+    }
 }
 
 
@@ -143,7 +146,6 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
     RmFile *file = rm_file_new(path, statp->st_size, statp->st_ino, statp->st_dev, statp->st_mtim.tv_sec, file_type, is_ppath, pnum);
 
     if (file) {
-        rm_file_list_append(session->list, file);
         { //TODO:  delete this debug message block
             if (file->disk_offsets) {
                 info("%sRmFile %s has %d extents, start block %"PRId64", end %"PRId64"\n"NCO,
@@ -157,7 +159,8 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
                 info(YEL"Unable to get offset info for RmFile %s\n"NCO, file->path);
             }
         }
-    return 1;
+        rm_file_list_append(session->list, file);
+        return 1;
     } else {
     return 0;
     }
@@ -331,6 +334,7 @@ void traverse_path(gpointer data, gpointer userdata) {
     pthread_mutex_lock(&traverse_session->rm_session->threadlock);
     traverse_session->numfiles += numfiles;
     pthread_mutex_unlock(&traverse_session->rm_session->threadlock);
+    rm_traverse_path_buffer_free(traverse_path_args);
 
 }
 
@@ -366,11 +370,11 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
     /* create empty table of disk pathqueues */
     self->disks_to_traverse = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                                                NULL,
-                                                               NULL);
+                                                               (GDestroyNotify)g_list_free);
     self->userlist = userlist_new();
     /* initialise and launch list builder pool */
 
-    self->paths=g_hash_table_new_full(g_str_hash, g_str_equal, NULL, rm_traverse_path_buffer_free);
+    self->paths=g_hash_table_new_full(g_str_hash, g_str_equal, NULL, (GDestroyNotify)rm_traverse_path_buffer_free);
 
     return self;
 }
@@ -410,13 +414,17 @@ void add_path_to_traverse_queue_table (RmTraverseSession *traverse_session, RmTr
     GList *disk_pathlist = g_hash_table_lookup(traverse_session->disks_to_traverse, GINT_TO_POINTER(path_disk));
     if (!disk_pathlist) {
         /* insert new empty list into hash table */
+        disk_pathlist = g_list_append(disk_pathlist, traverse_path_buffer);
         g_hash_table_insert (traverse_session->disks_to_traverse,
                              GINT_TO_POINTER(path_disk),
                              disk_pathlist);
+        info ("added new\n");
+    } else {
+        /* add path to list */
+        disk_pathlist = g_list_append(disk_pathlist, traverse_path_buffer);
+        info ("appended\n");
     }
 
-    /* add path to list */
-    disk_pathlist = g_list_append(disk_pathlist, traverse_path_buffer);
 
     info("Added %s as path #%d for device %02d:%02d\n",
          traverse_path_buffer->path,
@@ -434,11 +442,9 @@ void add_path_to_traverse_queue_table (RmTraverseSession *traverse_session, RmTr
 
 int rm_search_tree(RmSession *session) {
     RmSettings *settings = session->settings;
-    unsigned short num_disks = 0;
 
     settings->threads = MAX(1, settings->threads);
 
-    info("Hello world");
     /* set up RmTraverseSession */
     RmTraverseSession *traverse_session = traverse_session_init(session);
     if (traverse_session == NULL) {
@@ -475,13 +481,15 @@ int rm_search_tree(RmSession *session) {
            any of the traverse_session->paths elements; if yes then add to
            traverse_session->paths using the same is_ppath and pnum values as the closest
            matched input path */
-        GList *mt_pt;
-        for (mt_pt = session->mounts->mounted_paths;
-             mt_pt;
-             mt_pt=mt_pt->next) {
-            /* check if mt_pt already in path hashtable */
-            if (!g_hash_table_contains (traverse_session->paths, mt_pt->data) ) {
-                char *path = g_strdup(mt_pt->data);
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init (&iter, session->mounts->part_table);
+        while (g_hash_table_iter_next (&iter, &key, &value))
+        {
+            rm_part_info *part_info = value;
+            /* check if mt_pt already in traverse path hashtable */
+            if (!g_hash_table_contains (traverse_session->paths, part_info->name) ) {
+                char *path = g_strdup(part_info->name);
                 short depth_diff = 0;
                 /* progressively drop char's off the end of path until we match a search path */
                 for (unsigned short len = strlen(path)-1; len > 1; len--) {
@@ -494,7 +502,7 @@ int rm_search_tree(RmSession *session) {
                             && bestmatch->depth - depth_diff > 0
                             ) {
                             /* add the mountpoint to the traverse list hashtable*/
-                            RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new((gpointer)mt_pt->data,
+                            RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new((gpointer)part_info->name,
                                                            bestmatch->depth - depth_diff,
                                                            bestmatch->is_ppath,
                                                            bestmatch->pnum
@@ -513,10 +521,10 @@ int rm_search_tree(RmSession *session) {
     } /* end if !settings->samepart */
 
     GError *g_err = NULL;
-    traverse_session->traverse_pool = g_thread_pool_new (traverse_path,  /* func */
-                       traverse_session,                             /* userdata */
-                       settings->threads,                   /* max number threads*/
-                       false,             /* don't share the thread pool threads */
+    traverse_session->traverse_pool = g_thread_pool_new (traverse_pathlist, /* func */
+                       traverse_session,                                /* userdata */
+                       settings->threads,                      /* max number threads*/
+                       false,                /* don't share the thread pool threads */
                        &g_err);
     if (g_err != NULL) {
         rm_error("Error %d creating thread pool traverse_session->traverse_pool\n", g_err->code);
@@ -528,9 +536,12 @@ int rm_search_tree(RmSession *session) {
 
     g_hash_table_iter_init (&iter, traverse_session->disks_to_traverse);
     while (g_hash_table_iter_next (&iter, &key, &value)) {
-        g_thread_pool_push (traverse_session->traverse_pool,
-                            value,
+        GList *list = value;
+        if (list) {
+            g_thread_pool_push (traverse_session->traverse_pool,
+                            list,
                             NULL);
+        }
     }
 
     guint64 numfiles = traverse_session_join_and_free(traverse_session);
