@@ -179,6 +179,7 @@ typedef struct _RmFile {
     char *path;                          /* absolute path from working dir */
     bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
     unsigned pnum;                   /* numerical index of user-input paths */
+    //TODO: is this long enough for case where we pipe output of find to rmlint - ??
     guint64 fsize;                       /* Size of the file (bytes) */
     time_t mtime;                        /* File modification date/time */
     bool filter;// TODO: remove.                         /* this is used in calculations  */
@@ -198,6 +199,7 @@ typedef struct _RmFile {
     struct _RmFile *hardlinked_original;
     RmFileState state;
 
+    GSequence *disk_offsets;
     GMutex file_lock;
 } RmFile;
 
@@ -224,12 +226,8 @@ typedef struct RmSession {
     FILE *script_out;
     FILE *log_out;
 
-    RmUserGroupList **userlist;
-
     gint activethreads;
     pthread_mutex_t threadlock;
-
-    GThreadPool *list_build_pool;
 
     volatile bool aborted;
 } RmSession;

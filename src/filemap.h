@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <glib.h>
+
 
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -19,6 +21,10 @@
 
 #define FILEFRAG_FIEMAP_FLAGS_COMPAT (FIEMAP_FLAG_SYNC | FIEMAP_FLAG_XATTR)
 
+typedef struct OffsetEntry {
+    uint64_t logical;
+    uint64_t physical;
+} OffsetEntry;
 
 typedef enum RmFileOffsetType {
     RM_OFFSET_START = 0,
@@ -28,7 +34,7 @@ typedef enum RmFileOffsetType {
 } RmFileOffsetType;
 
 
-uint64_t get_disk_offset(const char *path, uint64_t file_offset);
-uint64_t get_disk_offset_openfile (const int fd, RmFileOffsetType offset_type, int64_t offset );
+uint64_t get_disk_offset(GSequence *offset_list, uint64_t file_offset);
+GSequence *get_fiemap_extents(char *path);
 
 #endif // FILEMAP_H_INCLUDED
