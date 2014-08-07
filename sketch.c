@@ -70,31 +70,37 @@
  * decides how much data will be read for small files, so it should not be too
  * large nor too small, since reading small files twice is very slow.
  */
-#define SCHRED_N_PAGES         (16)
+#define SHRED_N_PAGES         (16)
 
 /* After how many files the join-table is cleaned up from old entries.  This
  * settings will not have much performance impact, just keeps memory a bit
  * lower.
  */
-#define SCHRED_GC_INTERVAL     (100)
+#define SHRED_GC_INTERVAL     (100)
 
 /* Maximum number of bytes to read in one pass.
  * Never goes beyond this value.
  */
-#define SCHRED_MAX_READ_SIZE   (1024 * 1024 * 1024)
+#define SHRED_MAX_READ_SIZE   (1024 * 1024 * 1024)
 
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
  */
-#define SCHRED_FADVISE_FLAGS   (POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED | POSIX_FADV_NOREUSE)
+#define SHRED_FADVISE_FLAGS   (POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED | POSIX_FADV_NOREUSE)
+
+/* How many pages to use during paranoid byte-by-byte comparasion?
+ * More pages use more memory but result in less syscalls.
+ */
+#define SHRED_PARANOIA_PAGES  (64)
+
 
 /* Determines the next amount of bytes_read to read.
  * Currently just doubles the amount.
  * */
 static int shred_get_next_read_size(int read_size) {
     /* Protect agains integer overflows */
-    if(read_size >= SCHRED_MAX_READ_SIZE) {
-        return SCHRED_MAX_READ_SIZE;
+    if(read_size >= SHRED_MAX_READ_SIZE) {
+        return SHRED_MAX_READ_SIZE;
     }  else {
         return read_size * 2;
     }
@@ -242,6 +248,76 @@ static RmFileState shred_get_file_state(RmMainTag *tag, RmFile *file) {
     return state;
 }
 
+static bool shred_byte_compare_files(RmMainTag * tag, RmFile * a, RmFile *b) {
+    g_assert(a->fsize == b->fsize);
+
+    g_printerr("Paranoia: %s vs. %s\n", a->path, b->path);
+
+    int fd_a = open(a->path, O_RDONLY);
+    if(fd_a == -1) {
+        return false;
+    } else {
+        posix_fadvise(fd_a, 0, 0, SHRED_FADVISE_FLAGS);
+    }
+
+    int fd_b = open(b->path, O_RDONLY);
+    if(fd_b == -1) {
+        return false;
+    } else {
+        posix_fadvise(fd_b, 0, 0, SHRED_FADVISE_FLAGS);
+    }
+
+    bool result = true;
+    int buf_size = rm_buffer_pool_size(tag->mem_pool) - offsetof(RmBuffer, data);
+
+    struct iovec readvec_a[SHRED_PARANOIA_PAGES];
+    struct iovec readvec_b[SHRED_PARANOIA_PAGES];
+
+    for(int i = 0; i < SHRED_PARANOIA_PAGES; ++i) {
+        RmBuffer * buffer = rm_buffer_pool_get(tag->mem_pool);
+        readvec_a[i].iov_base = buffer->data;
+        readvec_a[i].iov_len = buf_size;
+        
+        buffer = rm_buffer_pool_get(tag->mem_pool);
+        readvec_b[i].iov_base = buffer->data;
+        readvec_b[i].iov_len = buf_size;
+    }
+
+    while(result) {
+        int bytes_a = readv(fd_a, readvec_a, SHRED_N_PAGES);
+        int bytes_b = readv(fd_b, readvec_b, SHRED_N_PAGES);
+        if(bytes_a <= 0 || bytes_b <= 0) {
+            break;
+        }
+
+        g_assert(bytes_a == bytes_b);
+
+        int remain = bytes_a % buf_size;
+        int blocks = bytes_a / buf_size + !!remain;
+
+        for(int i = 0; i < blocks && result; ++i) {
+            RmBuffer *buf_a = readvec_a[i].iov_base - offsetof(RmBuffer, data);
+            RmBuffer *buf_b = readvec_b[i].iov_base - offsetof(RmBuffer, data);
+            int size = buf_size;
+
+            if(i + 1 == blocks && remain > 0) {
+                size = remain;
+            }
+
+            result = !memcmp(buf_a->data, buf_b->data, size);
+        }
+    }
+
+    for(int i = 0; i < SHRED_PARANOIA_PAGES; ++i) {
+        RmBuffer *buf_a = readvec_a[i].iov_base - offsetof(RmBuffer, data);
+        RmBuffer *buf_b = readvec_b[i].iov_base - offsetof(RmBuffer, data);
+        rm_buffer_pool_release(tag->mem_pool, buf_a);
+        rm_buffer_pool_release(tag->mem_pool, buf_b);
+    }
+
+    return result;
+}
+
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
@@ -254,7 +330,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     int bytes_read = 0;
     int read_maximum = -1;
     int buf_size = rm_buffer_pool_size(tag->main->mem_pool) - offsetof(RmBuffer, data);
-    struct iovec readvec[SCHRED_N_PAGES];
+    struct iovec readvec[SHRED_N_PAGES];
 
     if(shred_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
         goto finish;
@@ -280,9 +356,8 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     }
  
     // TODO: test if this makes any difference.
-    posix_fadvise(fd, file->seek_offset, 0, SCHRED_FADVISE_FLAGS);
+    posix_fadvise(fd, file->seek_offset, 0, SHRED_FADVISE_FLAGS);
 
-    // TODO: a bit of a hack, or rather misuse of a mutex.
     g_async_queue_lock(tag->finished_queue); {
         read_maximum = MIN(tag->read_size, (int)(file->fsize - file->seek_offset));
     } 
@@ -291,14 +366,14 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
      */
-    for(int i = 0; i < SCHRED_N_PAGES; ++i) {
+    for(int i = 0; i < SHRED_N_PAGES; ++i) {
         /* buffer is one contignous memory block */
         RmBuffer * buffer = rm_buffer_pool_get(tag->main->mem_pool);
         readvec[i].iov_base = buffer->data;
         readvec[i].iov_len = buf_size;
     }
 
-    while(read_maximum > 0 && (bytes_read = preadv(fd, readvec, SCHRED_N_PAGES, file->seek_offset)) > 0) {
+    while(read_maximum > 0 && (bytes_read = preadv(fd, readvec, SHRED_N_PAGES, file->seek_offset)) > 0) {
         int remain = bytes_read % buf_size;
         int blocks = bytes_read / buf_size + !!remain;
 
@@ -309,11 +384,10 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
             /* Get the RmBuffer from the datapointer */
             RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
             buffer->file = file;
+            buffer->len = buf_size; 
 
-            if(i + 1 == blocks) {
-                buffer->len = (remain > 0) ? remain : buf_size;
-            } else {
-                buffer->len = buf_size;
+            if(i + 1 == blocks && remain > 0) {
+                buffer->len = remain;
             }
 
             /* Send it to the hasher */
@@ -327,7 +401,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     }
 
     /* Release the rest of the buffers */
-    for(int i = 0; i < SCHRED_N_PAGES; ++i) {
+    for(int i = 0; i < SHRED_N_PAGES; ++i) {
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
         rm_buffer_pool_release(tag->main->mem_pool, buffer);
     }
@@ -441,7 +515,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
 
     tag.main = main;
-    tag.read_size = sysconf(_SC_PAGESIZE) * SCHRED_N_PAGES; 
+    tag.read_size = sysconf(_SC_PAGESIZE) * SHRED_N_PAGES; 
     tag.readable_files = g_queue_get_length(device_queue);
     tag.finished_queue = g_async_queue_new();
 
@@ -524,6 +598,85 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     g_queue_free(work_queue);
 }
 
+static int shred_check_paranoia(RmMainTag * tag, GQueue *candidates) {
+    int failure_count = 0;
+
+    for(GList * iter_a = candidates->head; iter_a; iter_a = iter_a->next) {
+        RmFile *a = iter_a->data;
+        if(shred_get_file_state(tag, a) != RM_FILE_STATE_PROCESS) {
+            continue;
+        }
+
+        for(GList * iter_b = iter_a->next; iter_b; iter_b = iter_b->next) {
+            RmFile *b = iter_b->data;
+            if(shred_get_file_state(tag, b) == RM_FILE_STATE_PROCESS && !shred_byte_compare_files(tag, a, b)) {
+                failure_count++;
+                shred_set_file_state(tag, b, RM_FILE_STATE_IGNORE);
+            }
+        }
+    }
+    return failure_count;
+}
+
+static GQueue * shred_create_result_group(RmMainTag *tag, GQueue *candidates) {
+    RmSettings *settings = tag->session->settings;
+    int num_no_orig = 0, num_is_orig = 0;
+    GQueue * results = g_queue_new();
+
+    for(GList *iter = candidates->head; iter; iter = iter->next) {
+        RmFileSnapshot *candidate = iter->data;
+        if(candidate->hash_offset >= candidate->file_size) {
+            g_queue_push_head(results, candidate->ref_file);
+            num_is_orig += candidate->ref_file->in_ppath;
+            num_no_orig += !candidate->ref_file->in_ppath;
+
+            g_printerr(
+                "--> %s hashed=%lu size=%lu cksum=",
+                candidate->ref_file->path, candidate->hash_offset, candidate->file_size
+            );
+
+            for(int i = 0; i < _RM_HASH_LEN; ++i) {
+                g_printerr("%02x", candidate->checksum[i]);
+            }
+            g_printerr("\n");
+        }
+    }
+
+    if(0
+       || (g_queue_get_length(results) == 0) 
+       || (settings->keep_all_originals && num_no_orig == 0) 
+       || (settings->must_match_original && num_is_orig == 0)) {
+        for(GList *iter = results->head; iter; iter = iter->next) {
+            shred_set_file_state(tag, iter->data, RM_FILE_STATE_IGNORE);
+        }
+        g_queue_free(results);
+        return NULL;
+    }
+
+    if(tag->session->settings->paranoid) {
+        int failure_count = shred_check_paranoia(tag, results);
+        if(failure_count > 0) {
+            g_printerr("Removed %d files during paranoia check.", failure_count);
+        }
+    }
+
+    int dupe_count = 0;
+    for(GList *iter = results->head; iter; iter = iter->next) {
+        RmFile * file = iter->data;
+        if(shred_get_file_state(tag, file) == RM_FILE_STATE_PROCESS) {
+            shred_set_file_state(tag, file, RM_FILE_STATE_FINISH);
+            dupe_count += 1;
+        }
+    }
+
+    if(dupe_count > 0) {
+        return results;
+    } else {
+        g_queue_free(results);
+        return NULL;
+    }
+}
+
 /* Easy way to use arbitary structs as key in a GHastTable.
  * Creates a fitting shred_equal, shred_hash and shred_copy 
  * function for every data type that works with sizeof().
@@ -594,22 +747,11 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
             /* For the others we check if they were fully read. 
              * In this case we know that those are duplicates.
              */
-            for(GList *iter = dupe_list->head; iter; iter = iter->next) {
-                RmFileSnapshot *candidate = iter->data;
-                if(candidate->hash_offset >= candidate->file_size) {
-                    shred_set_file_state(tag, candidate->ref_file, RM_FILE_STATE_FINISH);
-                    g_printerr(
-                        "--> %s hashed=%lu size=%lu cksum=",
-                        candidate->ref_file->path, candidate->hash_offset, candidate->file_size
-                    );
-
-                    for(int i = 0; i < _RM_HASH_LEN; ++i) {
-                        g_printerr("%02x", candidate->checksum[i]);
-                    }
-                    g_printerr("\n");
-                }
+            GQueue *result_group = shred_create_result_group(tag, dupe_list);
+            if(result_group != NULL) {
+                // TODO: Call group processing here.
+                g_queue_free(result_group);
             }
-            // TODO: Call processing of dupe_list here.
         }
     }
 
@@ -627,7 +769,7 @@ CREATE_HASH_FUNCTIONS(size_key, RmSizeKey);
 static void shred_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
     static int gc_counter = 1;
 
-    if(gc_counter++ % SCHRED_GC_INTERVAL) {
+    if(gc_counter++ % SHRED_GC_INTERVAL) {
         return;
     }
 
@@ -766,6 +908,9 @@ static void main_free_func(gconstpointer p) {
 int main(int argc, char const* argv[]) {
     RmSettings settings;
     settings.threads = 16;
+    settings.paranoid = true;
+    settings.keep_all_originals = true;
+    settings.must_match_original = true;
     settings.checksum_type = RM_DIGEST_SPOOKY;
 
     RmSession session;

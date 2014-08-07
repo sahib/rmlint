@@ -71,6 +71,7 @@ GSequence *get_fiemap_extents(char *path) {
         return NULL;
     }
 
+    return NULL;
     GSequence *self = g_sequence_new(g_free);
 
     char buf[16384];
