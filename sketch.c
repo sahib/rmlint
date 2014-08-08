@@ -15,18 +15,24 @@
  *
  * The threading looks somewhat like this for two devices:
  *
- * Device #1                  Mainthread                  Device #2
+ * Device #1                                              Device #2
+ *
+ *                           +----------+
+ *                           | Finisher |
+ *                           |  Thread  |
+ *                           +----------+
  *                                 ^
  * +---------------------+         |         +---------------------+  
  * | +------+   +------+ |    +---------+    | +------+   +------+ | 
  * | | Read |-->| Hash |----->| Joiner  |<-----| Hash |<--| Read | | 
- * | +------+   +------+ |    | Thread  |    | +------+   +------+ | 
- * |     ^         ^     |    |         |    |    ^          ^     | 
+ * | +------+   +------+ |    |         |    | +------+   +------+ | 
+ * |     ^         ^     |    |  Main   |    |    ^          ^     | 
  * |     | n       | 1   |    |---------|    |  1 |        n |     | 
- * |     +-------------+ |    |         |    | +-------------+     | 
- * |     | Devlist Mgr |<-----|  Init   |----->| Devlist Mgr |     | 
- * |     +-------------+ |    +---------+    | +-------------+     | 
- * +---------------------+         ^         +---------------------+
+ * |     +-------------+ |    | Thread  |    | +-------------+     | 
+ * |     | Devlist Mgr |<-----|         |----->| Devlist Mgr |     | 
+ * |     +-------------+ |    |  Init   |    | +-------------+     | 
+ * +---------------------+    +---------+    +---------------------+
+ *                                 ^
  *                                 |
  *                                 
  * Every subbox left and right are the task that are performed. 
@@ -39,16 +45,16 @@
  * hasher threads from two more GTHreadPools. The initial thread works as
  * manager for the spawnend threads. The manager repeats reading the files on
  * its device until no file is flagged with RM_FILE_STATE_PROCESS as state.
- * (shred_devlist_factory). On each iteration the block size is incremented, so the
- * next round reads more data, since it gets increasingly less likely to find
- * differences in files. Additionally on every few iterations the files in the
- * devlist are resorted according to their physical block on the device.
+ * (shred_devlist_factory). On each iteration the block size is incremented, so
+ * the next round reads more data, since it gets increasingly less likely to
+ * find differences in files. Additionally on every few iterations the files in
+ * the devlist are resorted according to their physical block on the device.
  *
  * The reader thread(s) read one file at a time using readv(). The buffers for
  * it come from a central buffer pool that allocates some and just reuses them
- * over and over. The buffer which contain the read data are pusehd to an
- * available hasher thread, where the data-block is hashed into file->digest.
- * The buffer is released back to the pool after use. 
+ * over and over. The buffer which contain the read data are pusehd to the
+ * hasher thread, where the data-block is hashed into file->digest.  The buffer
+ * is released back to the pool after use. 
  *
  * Once the hasher is done, the file is send back to the mainthread via a
  * GAsyncQueue. There a table with the hash_offset and the file_size as key and
@@ -56,14 +62,14 @@
  * list found during traversing, we know that we compare these files with each
  * other. 
  *
- * On comparable groups shred_findmatches() is called, which finds files
- * that can be ignored and files that are finished already. In both cases
- * file->state is modified accordingly. In the latter case the group is
- * processed; i.e. written to log, stdout and script.
+ * On comparable groups shred_findmatches() is called, which finds files that
+ * can be ignored and files that are finished already. In both cases file->state
+ * is modified accordingly. In the latter case the group is processed; i.e.
+ * written to log, stdout and script.
  *
- * Below some performance controls are listed that maby impact performance.
- * Benchmarks are left to determine reasonable defaults. TODO therefore.
- * The controls are sorted by subjectve importanceness.
+ * Below some performance controls are listed that may impact performance.
+ * Benchmarks are left to determine reasonable defaults. TODO therefore.  The
+ * controls are sorted by subjectve importanceness.
  */
 
 /* How many pages are read initially at max.  This value is important since it
@@ -86,7 +92,11 @@
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
  */
-#define SHRED_FADVISE_FLAGS   (POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED | POSIX_FADV_NOREUSE)
+#define SHRED_FADVISE_FLAGS   (0                                                         \
+                               | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */ \
+                               | POSIX_FADV_WILLNEED   /* Tell the kernel to readhead */ \
+                               | POSIX_FADV_NOREUSE    /* We will not reuse old data  */ \
+                              )                                                          \
 
 /* How many pages to use during paranoid byte-by-byte comparasion?
  * More pages use more memory but result in less syscalls.
