@@ -76,7 +76,7 @@ void rm_set_default_settings(RmSettings *pset) {
     pset->paranoid              = 0;                  /* dont be bush */
     pset->depth                 = PATH_MAX / 2;       /* max tree depth*/
     pset->followlinks           = 0;                  /* fol. link    */
-    pset->threads               = 16;                 /* Quad*quad.   */
+    pset->threads               = 32;                 
     pset->verbosity             = G_LOG_LEVEL_INFO;   /* Most relev.  */
     pset->samepart              = 0;                  /* Stay parted  */
     pset->paths                 = NULL;               /* Startnode    */

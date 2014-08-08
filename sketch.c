@@ -173,6 +173,7 @@ typedef struct RmMainTag {
     RmBufferPool *mem_pool;
     GAsyncQueue *join_queue;
     GMutex file_state_mtx;
+    GThreadPool *device_pool;
     int devices_left;
 } RmMainTag;
 
@@ -250,8 +251,6 @@ static RmFileState shred_get_file_state(RmMainTag *tag, RmFile *file) {
 
 static bool shred_byte_compare_files(RmMainTag * tag, RmFile * a, RmFile *b) {
     g_assert(a->fsize == b->fsize);
-
-    g_printerr("Paranoia: %s vs. %s\n", a->path, b->path);
 
     int fd_a = open(a->path, O_RDONLY);
     if(fd_a == -1) {
@@ -507,7 +506,8 @@ static int schred_get_read_threads(RmMainTag *tag, bool nonrotational, int max_t
     if(!nonrotational) {
         return 1;
     } else {
-        return CLAMP((max_threads - tag->devices_left) / tag->devices_left, 1, 16);
+        int devices_running = g_thread_pool_get_num_threads(tag->device_pool);
+        return CLAMP((max_threads - devices_running) / devices_running, 1, 16);
     }
 }
 
@@ -787,11 +787,11 @@ static void shred_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
     g_list_free(join_table_keys);
 }
 
-static GThreadPool * shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
-    GThreadPool * devmgr_pool = g_thread_pool_new(
+static void shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
+    tag->device_pool = g_thread_pool_new(
         (GFunc)shred_devlist_factory, 
         tag,
-        tag->session->settings->threads,
+        tag->session->settings->threads / 2 + 1,
         FALSE, NULL
     );
     
@@ -801,10 +801,8 @@ static GThreadPool * shred_create_devpool(RmMainTag *tag, GHashTable *dev_table)
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         GQueue *device_queue = value;
-        g_thread_pool_push(devmgr_pool, device_queue, NULL);
+        g_thread_pool_push(tag->device_pool, device_queue, NULL);
     }
-
-    return devmgr_pool;
 }
 
 static void shred_free_snapshots(GQueue *snapshots) {
@@ -814,7 +812,7 @@ static void shred_free_snapshots(GQueue *snapshots) {
     g_queue_free(snapshots);
 }
 
-static void shred_start(RmSession *session, GHashTable *dev_table, GHashTable * size_table) {
+static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable * size_table) {
     g_assert(session);
     g_assert(dev_table);
     g_assert(size_table);
@@ -828,10 +826,10 @@ static void shred_start(RmSession *session, GHashTable *dev_table, GHashTable * 
     g_mutex_init(&tag.file_state_mtx);
 
     /* Remember how many devlists we had - so we know when to stop */
-    tag.devices_left = g_hash_table_size(dev_table);
+    int devices_left = g_hash_table_size(dev_table);
 
     /* Create a pool fo the devlists and push each queue */
-    GThreadPool *devmgr_pool = shred_create_devpool(&tag, dev_table);
+    shred_create_devpool(&tag, dev_table);
 
     /* Key: hash_offset & size Value: GQueue of fitting files */
     GHashTable *join_table = g_hash_table_new_full(
@@ -848,7 +846,7 @@ static void shred_start(RmSession *session, GHashTable *dev_table, GHashTable * 
          * In this case we check if need to quit already.
          */
         if((GAsyncQueue *)snapshot == tag.join_queue) {
-            if(--tag.devices_left) {
+            if(--devices_left) {
                 continue;
             } else {
                 break;
@@ -888,7 +886,7 @@ static void shred_start(RmSession *session, GHashTable *dev_table, GHashTable * 
     }
 
     /* This should not block, or at least only very short. */
-    g_thread_pool_free(devmgr_pool, TRUE, TRUE);
+    g_thread_pool_free(tag.device_pool, TRUE, TRUE);
 
     g_async_queue_unref(tag.join_queue);
     g_hash_table_unref(join_table);
@@ -907,7 +905,7 @@ static void main_free_func(gconstpointer p) {
 
 int main(int argc, char const* argv[]) {
     RmSettings settings;
-    settings.threads = 16;
+    settings.threads = 32;
     settings.paranoid = true;
     settings.keep_all_originals = true;
     settings.must_match_original = false;
@@ -951,7 +949,7 @@ int main(int argc, char const* argv[]) {
         g_queue_push_head(dev_list, file);
     }
 
-    shred_start(&session, dev_table, size_table);
+    shred_run(&session, dev_table, size_table);
 
     g_hash_table_unref(size_table);
     g_hash_table_unref(dev_table);
