@@ -62,7 +62,7 @@ RmFile *rm_file_new(const char *path,
     if(type == TYPE_DUPE_CANDIDATE) {
         self->disk_offsets = get_fiemap_extents(self->path);
         self->offset = get_disk_offset(self->disk_offsets, 0);
-         /* TODO: delay this until we have matched file sizes */
+        /* TODO: delay this until we have matched file sizes */
         self->fsize = fsize;
     } else {
         self->fsize = 0;
@@ -167,8 +167,8 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
     const GQueue *qa = a, *qb = b;
     RmFile *fa = qa->head->data, *fb = qb->head->data;
     return (fa->fsize >  fb->fsize ? 1
-           :fa->fsize == fb->fsize ? 0
-           :-1
+            : fa->fsize == fb->fsize ? 0
+            : -1
            );
 }
 

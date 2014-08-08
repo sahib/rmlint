@@ -72,11 +72,11 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                  NULL, NULL
                              );
     self->diskname_table = g_hash_table_new_full(
-                                 g_direct_hash, g_direct_equal,
-                                 NULL, g_free
-                             );
+                               g_direct_hash, g_direct_equal,
+                               NULL, g_free
+                           );
 
-    self->mounted_paths=NULL;
+    self->mounted_paths = NULL;
 
 #if HAVE_BLKID
 
@@ -86,12 +86,12 @@ static void rm_mounts_create_tables(RmMountTable *self) {
     glibtop_mountlist mount_list;
     glibtop_mountentry *mount_entries = glibtop_get_mountlist(&mount_list, true);
 
-	if (mount_entries == NULL) {
-		info("can't get glibtop_get_mountlist, some optimizations are disabled.\n");
-		return;
-	}
+    if (mount_entries == NULL) {
+        info("can't get glibtop_get_mountlist, some optimizations are disabled.\n");
+        return;
+    }
 
-     for(unsigned index = 0; index < mount_list.number; index++) {
+    for(unsigned index = 0; index < mount_list.number; index++) {
         struct stat stat_buf_folder;
         if(stat(mount_entries[index].mountdir, &stat_buf_folder) == -1) {
             continue;
@@ -112,17 +112,17 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 whole_disk = stat_buf_folder.st_dev;
             } else if ( strstr(mount_entries[index].devname, ":/") != NULL ) {
                 unsigned long i;
-                for (i=0;
-                    mount_entries[index].devname[i] != '/' && i < sizeof(diskname);
-                    i++ ) {
-                    diskname[i]=mount_entries[index].devname[i];
+                for (i = 0;
+                        mount_entries[index].devname[i] != '/' && i < sizeof(diskname);
+                        i++ ) {
+                    diskname[i] = mount_entries[index].devname[i];
                 }
-                diskname[i]=0;
+                diskname[i] = 0;
                 is_rotational = 1;
                 whole_disk = 0;  /* treat all NFS mounts as a single rotational    *
                                   * TODO: make this different for each nfs server? */
             } else {
-                strcpy(diskname,"unknown");
+                strcpy(diskname, "unknown");
                 whole_disk = 0;
                 is_rotational = 1;
             }
@@ -136,8 +136,8 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 whole_disk = stat_buf_dev.st_dev;
                 is_rotational = 0;
                 size_t safe_copy = strlen(mount_entries[index].devname) < sizeof(diskname)
-                                ? strlen(mount_entries[index].devname)
-                                : sizeof(diskname) - 1;
+                                   ? strlen(mount_entries[index].devname)
+                                   : sizeof(diskname) - 1;
                 strncpy(diskname, mount_entries[index].devname, safe_copy );
 
             } else {
@@ -175,9 +175,9 @@ static void rm_mounts_create_tables(RmMountTable *self) {
             );
         }
         g_hash_table_insert(
-                self->diskname_table,
-                GINT_TO_POINTER(whole_disk),
-                g_strdup(diskname)
+            self->diskname_table,
+            GINT_TO_POINTER(whole_disk),
+            g_strdup(diskname)
         );
     }
 

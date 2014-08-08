@@ -51,6 +51,6 @@ int die(RmSession *session, int status);
     if(errno) {                                                                 \
         rm_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
     }                                                                           \
-
+ 
 
 #endif

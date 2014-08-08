@@ -32,7 +32,7 @@
 
 
 /* sort sequence into decreasing order of logical offsets */
-int sort_logical (gconstpointer a, gconstpointer b){
+int sort_logical (gconstpointer a, gconstpointer b) {
     struct OffsetEntry *offset_a = (gpointer) a;
     struct OffsetEntry *offset_b = (gpointer) b;
     if (offset_b->logical > offset_a->logical) {
@@ -43,7 +43,7 @@ int sort_logical (gconstpointer a, gconstpointer b){
 }
 
 /* find first item in sequence with logical offset <= target */
-int find_logical (gconstpointer a, gconstpointer b){
+int find_logical (gconstpointer a, gconstpointer b) {
     struct OffsetEntry *offset_a = (gpointer) a;
     struct OffsetEntry *offset_b = (gpointer) b;
     if (offset_b->logical >= offset_a->logical) {
@@ -59,19 +59,15 @@ int find_logical (gconstpointer a, gconstpointer b){
 } */
 
 GSequence *get_fiemap_extents(char *path) {
-
-    /* ---open the file--- */
-#if defined(HAVE_OPEN64) && !defined(__OSX_AVAILABLE_BUT_DEPRECATED)
-    int fd = open64(file->path, O_RDONLY);
-#else
     int fd = open(path, O_RDONLY);
-#endif
     if (fd < 0) {
         info("Error opening %s in setup_fiemap_extents\n", path);
         return NULL;
     }
 
+    close(fd);
     return NULL;
+
     GSequence *self = g_sequence_new(g_free);
 
     char buf[16384];
@@ -79,7 +75,7 @@ GSequence *get_fiemap_extents(char *path) {
     struct fiemap_extent *fm_ext = &fiemap->fm_extents[0];
 
     int count = (sizeof(buf) - sizeof(*fiemap)) /
-            sizeof(struct fiemap_extent); /* max number of extents we can get in one read */
+                sizeof(struct fiemap_extent); /* max number of extents we can get in one read */
     unsigned long long expected = 0; /* used for detecting contiguous extents, which we ignore */
     unsigned int i;
     int last = 0; /*flag for when we reach last extent of file */
@@ -89,9 +85,9 @@ GSequence *get_fiemap_extents(char *path) {
         fiemap->fm_length = FIEMAP_MAX_OFFSET;
         fiemap->fm_flags = 0;
         fiemap->fm_extent_count = count;  /* only ask for as many extents as we can fit in our buffer */
-        if ( ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) < 0 ){
+        if ( ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) < 0 ) {
             info("FIEMAP failed in setup_fiemap_extents for file %s\n",
-                       path);
+                 path);
         } else {
             for (i = 0; i < fiemap->fm_mapped_extents; i++) {
                 if (i == 0 || fm_ext[i].fe_physical != expected) {
@@ -100,8 +96,8 @@ GSequence *get_fiemap_extents(char *path) {
                     //     fm_ext[i].fe_logical,
                     //     fm_ext[i].fe_physical);
                     OffsetEntry *offset_entry = g_new0(OffsetEntry, 1);
-                    offset_entry->logical=fm_ext[i].fe_logical;
-                    offset_entry->physical=fm_ext[i].fe_physical;
+                    offset_entry->logical = fm_ext[i].fe_logical;
+                    offset_entry->physical = fm_ext[i].fe_physical;
                     g_sequence_append(self, offset_entry);
                 }
                 expected = fm_ext[i].fe_physical + fm_ext[i].fe_length;
@@ -113,7 +109,7 @@ GSequence *get_fiemap_extents(char *path) {
             if (last != 1) {
                 /* set start for next ioctl read */
                 fiemap->fm_start = (fm_ext[i - 1].fe_logical +
-                    fm_ext[i - 1].fe_length);
+                                    fm_ext[i - 1].fe_length);
             }
         }
     } while (last == 0);
@@ -135,13 +131,13 @@ uint64_t get_disk_offset(GSequence *offset_list, uint64_t file_offset) {
         return 0;
     } else {
         struct OffsetEntry dummy;
-        dummy.logical=file_offset;
-        dummy.physical=0;
+        dummy.logical = file_offset;
+        dummy.physical = 0;
         GSequenceIter *nearest = g_sequence_search (offset_list,
-                                                    &dummy,
-                                                    (GCompareDataFunc)find_logical,
-                                                    NULL
-                                                    );
+                                 &dummy,
+                                 (GCompareDataFunc)find_logical,
+                                 NULL
+                                                   );
         if (nearest) {
             OffsetEntry *off = g_sequence_get(nearest);
             //info("Nearest to %llu is %llu, %llu\n", file_offset, off->logical, off->physical);

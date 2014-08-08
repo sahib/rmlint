@@ -70,10 +70,10 @@ typedef struct RmTraversePathBuffer {
 
 /* initialiser and destroyer for RmTraversePathBuffer*/
 RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
-                                                  short depth,
-                                                  bool is_ppath,
-                                                  unsigned long pnum,
-                                                  RmTraverseSession *trav_session) {
+        short depth,
+        bool is_ppath,
+        unsigned long pnum,
+        RmTraverseSession *trav_session) {
     RmTraversePathBuffer *self = g_new0(RmTraversePathBuffer, 1);
     RmSession *session = trav_session->rm_session;
     dev_t whole_disk = 0;
@@ -137,8 +137,8 @@ int fts_flags_from_settings(RmSettings *settings) {
 
 
 static int process_file(RmTraverseSession *traverse_session, struct stat *statp, char *path, bool is_ppath, unsigned long pnum, RmLintType file_type) {
-    RmSession *session=traverse_session->rm_session;
-    RmSettings *settings=session->settings;
+    RmSession *session = traverse_session->rm_session;
+    RmSettings *settings = session->settings;
 
     if (file_type == 0) {
         RmLintType gid_check;
@@ -165,22 +165,23 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
 
     if (file) {
         rm_file_list_append(session->list, file);
-        { //TODO:  delete this debug message block
+        {
+            //TODO:  delete this debug message block
             if (file->disk_offsets) {
                 info("%sRmFile %s has %d extents, start block %"PRId64", end %"PRId64"\n"NCO,
-                    (g_sequence_get_length (file->disk_offsets) > 3 ? BLU : GRE),
-                    file->path,
-                    g_sequence_get_length (file->disk_offsets),
-                    get_disk_offset(file->disk_offsets, 0) / 4096,
-                    get_disk_offset(file->disk_offsets, file->fsize) / 4096
+                     (g_sequence_get_length (file->disk_offsets) > 3 ? BLU : GRE),
+                     file->path,
+                     g_sequence_get_length (file->disk_offsets),
+                     get_disk_offset(file->disk_offsets, 0) / 4096,
+                     get_disk_offset(file->disk_offsets, file->fsize) / 4096
                     );
             } else {
                 info(YEL"Unable to get offset info for RmFile %s\n"NCO, file->path);
             }
         }
-    return 1;
+        return 1;
     } else {
-    return 0;
+        return 0;
     }
 }
 
@@ -195,9 +196,9 @@ void traverse_path(gpointer data, gpointer userdata) {
     char is_ppath = traverse_path_args->is_ppath;
     short depth = traverse_path_args->depth;
     unsigned long pnum = traverse_path_args->pnum;
-    guint64 numfiles=0;
+    guint64 numfiles = 0;
     RmSession *session = traverse_session->rm_session;
-    RmSettings *settings=session->settings;
+    RmSettings *settings = session->settings;
 
     if (path == NULL) {
         rm_error("Error: no path defined for traverse_path");
@@ -205,20 +206,20 @@ void traverse_path(gpointer data, gpointer userdata) {
     }
 
     if(g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
-            /* Normal file - process directly without FTS overhead*/
+        /* Normal file - process directly without FTS overhead*/
         numfiles += process_file(traverse_session,
-                                &traverse_path_args->stat_buf,
-                                path,
-                                is_ppath,
-                                pnum,
-                                0);
+                                 &traverse_path_args->stat_buf,
+                                 path,
+                                 is_ppath,
+                                 pnum,
+                                 0);
     } else if (!g_file_test(path, G_FILE_TEST_IS_DIR)) {
         rm_error("Error trying to process path %s - not a dir\n", path);
         return;
     } else {
         info(BLU"Starting traversal of %s (index %d on disk %02d:%02d)\n"NCO, path, traverse_path_args->path_num_for_disk,
-                                                                        major(traverse_path_args->disk),
-                                                                        minor(traverse_path_args->disk) ); /*TODO: cleanup*/
+             major(traverse_path_args->disk),
+             minor(traverse_path_args->disk) ); /*TODO: cleanup*/
         int fts_flags = traverse_session->fts_flags;
         /* build char** structure for passing to fts */
         char *ftspaths[2];
@@ -249,9 +250,9 @@ void traverse_path(gpointer data, gpointer userdata) {
 
         while (!traverse_session->rm_session->aborted && (p = fts_read(ftsp)) != NULL) {
             if ( 1
-                && settings->ignore_hidden
-                && p->fts_level > 0
-                && p->fts_name[0] == '.') {
+                    && settings->ignore_hidden
+                    && p->fts_level > 0
+                    && p->fts_name[0] == '.') {
                 /* ignoring hidden folders*/
                 if (p->fts_info == FTS_D) {
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
@@ -262,9 +263,9 @@ void traverse_path(gpointer data, gpointer userdata) {
                 switch (p->fts_info) {
                 case FTS_D:         /* preorder directory */
                     if ( 1
-                        && p->fts_level > 0
-                        && g_hash_table_contains (traverse_session->paths, p->fts_path)
-                        ) {
+                            && p->fts_level > 0
+                            && g_hash_table_contains (traverse_session->paths, p->fts_path)
+                       ) {
                         fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                         clear_emptydir_flags = true; /*flag current dir as not empty*/
                         info(BLU"Traverse of %s skipping %s because it will be traversed in another thread\n"NCO, path, p->fts_path);
@@ -292,9 +293,9 @@ void traverse_path(gpointer data, gpointer userdata) {
                     break;
                 case FTS_DP:        /* postorder directory */
                     if ( 1
-                        && is_emptydir[ (p->fts_level + 1) ] == 'E'
-                        && settings->findemptydirs
-                        ) {
+                            && is_emptydir[ (p->fts_level + 1) ] == 'E'
+                            && settings->findemptydirs
+                       ) {
                         numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, TYPE_EDIR);
                     }
                     break;
@@ -380,16 +381,16 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
 
     /* create empty table of disk pathqueues */
     self->disk_table = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-                                                               NULL,
-                                                               NULL);
+                       NULL,
+                       NULL);
     self->userlist = userlist_new();
     /* initialise and launch list builder pool */
     GError *g_err = NULL;
     self->traverse_pool = g_thread_pool_new (traverse_path,          /* func */
-                               self,                             /* userdata */
-                               -1,      /* will later set to number of disks */
-                               false, /* don't share the thread pool threads */
-                               &g_err);
+                          self,                             /* userdata */
+                          -1,      /* will later set to number of disks */
+                          false, /* don't share the thread pool threads */
+                          &g_err);
     if (g_err != NULL) {
         rm_error("Error %d creating thread pool traverse_session->traverse_pool\n", g_err->code);
         return NULL;
@@ -397,13 +398,13 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
 
     g_thread_pool_set_sort_function (self->traverse_pool, (GCompareDataFunc)load_leveller, NULL);
 
-    self->paths=g_hash_table_new_full(g_str_hash, g_str_equal, NULL, rm_traverse_path_buffer_free);
+    self->paths = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, rm_traverse_path_buffer_free);
 
     return self;
 }
 
 /* detructor for RmTraverseSession */
-guint64 traverse_session_join_and_free(RmTraverseSession *traverse_session){
+guint64 traverse_session_join_and_free(RmTraverseSession *traverse_session) {
     if (traverse_session) {
         /* join and destroy threadpools */
         if (traverse_session->traverse_pool) {
@@ -418,7 +419,7 @@ guint64 traverse_session_join_and_free(RmTraverseSession *traverse_session){
         if(traverse_session->paths) {
             g_hash_table_destroy(traverse_session->paths);
         }
-        guint64 numfiles=traverse_session->numfiles;
+        guint64 numfiles = traverse_session->numfiles;
         g_free(traverse_session);
         return numfiles;
     }
@@ -449,14 +450,16 @@ int rm_search_tree(RmSession *session) {
 
     /* put list of paths into traverse_session->paths hashtable*/
     /* TODO: do this directly from input args, bypassing settings->paths */
-    for(unsigned long idx = 0;  settings->paths[idx]!= NULL; ++idx) {
+    for(unsigned long idx = 0;  settings->paths[idx] != NULL; ++idx) {
         if (!g_hash_table_contains (traverse_session->paths, settings->paths[idx]) ) {
             RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new(settings->paths[idx],
-                                           settings->depth,
-                                           settings->is_ppath[idx],
-                                           idx,
-                                           traverse_session);
-            if (new_path->path_num_for_disk == 1) {num_disks++;}
+                                             settings->depth,
+                                             settings->is_ppath[idx],
+                                             idx,
+                                             traverse_session);
+            if (new_path->path_num_for_disk == 1) {
+                num_disks++;
+            }
             g_hash_table_insert(traverse_session->paths, settings->paths[idx], new_path);
         }
     }
@@ -468,32 +471,32 @@ int rm_search_tree(RmSession *session) {
            matched input path */
         GList *mt_pt;
         for (mt_pt = session->mounts->mounted_paths;
-             mt_pt;
-             mt_pt=mt_pt->next) {
+                mt_pt;
+                mt_pt = mt_pt->next) {
             char *path = g_strdup(mt_pt->data);
             short depth_diff = 0;
             /* progressively drop char's off the end of path until we match a search path */
-            for (unsigned short idx = strlen(path)-1; idx > 1; idx--) {
+            for (unsigned short idx = strlen(path) - 1; idx > 1; idx--) {
                 if (path[idx] == '/') {
                     depth_diff++;
-                    path[idx+1] = 0;
+                    path[idx + 1] = 0;
                     RmTraversePathBuffer *bestmatch = (gpointer)g_hash_table_lookup(traverse_session->paths, path);
                     if (bestmatch == NULL) {
                         path[idx] = 0;
                         bestmatch = (gpointer)g_hash_table_lookup(traverse_session->paths, path);
                     }
                     if (1
-                        && bestmatch != NULL
-                        && bestmatch->depth - depth_diff > 0
-                        ) {
+                            && bestmatch != NULL
+                            && bestmatch->depth - depth_diff > 0
+                       ) {
                         /* add the mountpoint to the traverse list hashtable*/
                         RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new((gpointer)mt_pt->data,
-                                                       bestmatch->depth - depth_diff,
-                                                       bestmatch->is_ppath,
-                                                       bestmatch->pnum,
-                                                       traverse_session);
+                                                         bestmatch->depth - depth_diff,
+                                                         bestmatch->is_ppath,
+                                                         bestmatch->pnum,
+                                                         traverse_session);
                         info(BLU"Adding mountpoint %s as subdir of %s with depth difference %d\n"NCO,
-                                  new_path->path, bestmatch->path, depth_diff);
+                             new_path->path, bestmatch->path, depth_diff);
                         if (new_path->path_num_for_disk == 1) {
                             /* this is the first traverser to reference this disk */
                             num_disks++;
@@ -507,7 +510,7 @@ int rm_search_tree(RmSession *session) {
         } /* end for mt_pt */
     } /* end if !settings->samepart */
 
-    g_thread_pool_set_max_threads(traverse_session->traverse_pool, MIN(num_disks,settings->threads), NULL);
+    g_thread_pool_set_max_threads(traverse_session->traverse_pool, MIN(num_disks, settings->threads), NULL);
 
     /* push pathbufs to traverse pool in increasing order of pathbuf->path_num_for_disk.
      * This is to ensure the first few traversing threads are spread across different disks.
@@ -515,23 +518,23 @@ int rm_search_tree(RmSession *session) {
      * situation at the start of pushing to the pool which makes it necessary to feed the
      * paths in in this way.   The load_leveller is still needed for the case where the
      * path list is longer than the number of disks */
-    bool done=false;
+    bool done = false;
     GHashTableIter paths;
     gpointer key, value;
-    for (int path_num_for_disk=1; !done; path_num_for_disk++) {
-        done=true; /* assume finished unless we find some more paths matching path_num_for_disk*/
+    for (int path_num_for_disk = 1; !done; path_num_for_disk++) {
+        done = true; /* assume finished unless we find some more paths matching path_num_for_disk*/
         g_hash_table_iter_init(&paths, traverse_session->paths);
         while (g_hash_table_iter_next (&paths, &key, &value)) {
             RmTraversePathBuffer *pathbuf = (gpointer)value;
             if (pathbuf->path_num_for_disk == path_num_for_disk) {
-                done=false;
+                done = false;
                 info("Pushing %s to traversing pool as path #%d for %srotational disk %s (%02d:%02d)\n",
-                         pathbuf->path,
-                         pathbuf->path_num_for_disk,
-                         rm_mounts_is_nonrotational(session->mounts, pathbuf->disk)
-                            ? "non-" : "",
-                         rm_mounts_get_name(session->mounts, pathbuf->disk),
-                         major(pathbuf->disk), minor(pathbuf->disk));
+                     pathbuf->path,
+                     pathbuf->path_num_for_disk,
+                     rm_mounts_is_nonrotational(session->mounts, pathbuf->disk)
+                     ? "non-" : "",
+                     rm_mounts_get_name(session->mounts, pathbuf->disk),
+                     major(pathbuf->disk), minor(pathbuf->disk));
                 g_thread_pool_push(traverse_session->traverse_pool, pathbuf, NULL);
             }
         }

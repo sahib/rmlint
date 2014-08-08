@@ -171,7 +171,8 @@ static void *rm_buffer_pool_get(RmBufferPool * pool) {
 static void rm_buffer_pool_release(RmBufferPool * pool, void * buf) {
     g_mutex_lock(&pool->lock); {
         g_trash_stack_push(&pool->stack, buf);
-    } g_mutex_unlock(&pool->lock); 
+    }
+    g_mutex_unlock(&pool->lock); 
 }
 
 //////////////////////////////
@@ -497,6 +498,15 @@ static void shred_devlist_add_job(RmDevlistTag *tag, GThreadPool * pool, RmFile 
     }
 }
 
+static bool shred_devlist_iteration_needed(RmDevlistTag *tag, GQueue *work_queue) {
+    for(GList *iter = work_queue->head; iter; iter = iter->next) {
+        if(shred_get_file_state(tag->main, iter->data) == RM_FILE_STATE_PROCESS) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static RmFile * shred_devlist_pop_next(RmDevlistTag *tag, GQueue *work_queue, GList *work_list, GHashTable *processing_table) {
     if(work_list == NULL) {
         return NULL;
@@ -591,7 +601,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
             finished = g_async_queue_pop_unlocked(tag.finished_queue);
             g_hash_table_remove(processing_table, finished);
         
-            if(tag.readable_files <= 0) {
+            if(tag.readable_files <= 0 || !shred_devlist_iteration_needed(&tag, work_queue)) {
                 run_manager = false;
             } else if(g_queue_get_length(work_queue) == 0) {
                 g_queue_free(work_queue);
@@ -944,11 +954,11 @@ static void main_free_func(gconstpointer p) {
     g_queue_free_full((GQueue *)p, (GDestroyNotify)rm_file_destroy);
 }
 
-int main(int argc, char const* argv[]) {
+int main(void) {
     RmSettings settings;
     settings.threads = 32;
-    settings.paranoid = true;
-    settings.keep_all_originals = true;
+    settings.paranoid = false;
+    settings.keep_all_originals = false;
     settings.must_match_original = false;
     settings.checksum_type = RM_DIGEST_SPOOKY;
 
@@ -964,13 +974,15 @@ int main(int argc, char const* argv[]) {
             g_direct_hash, g_direct_equal
     );
 
-    for(int i = 1; i < argc; ++i) {
+    char path[PATH_MAX];
+    while(fgets(path, sizeof(path),  stdin)) {
+        path[strlen(path) - 1] = '\0';
         struct stat stat_buf;
-        stat(argv[i], &stat_buf);
+        stat(path, &stat_buf);
 
         dev_t whole_disk = rm_mounts_get_disk_id(session.mounts, stat_buf.st_dev);
         RmFile * file =  rm_file_new(
-            argv[i], stat_buf.st_size, stat_buf.st_ino, whole_disk,
+            path, stat_buf.st_size, stat_buf.st_ino, whole_disk,
             0, TYPE_DUPE_CANDIDATE, 0, 0
         );
 
