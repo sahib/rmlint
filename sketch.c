@@ -10,6 +10,7 @@
 #include "src/checksums/city.h"
 #include "src/list.h"
 #include "src/filemap.h"
+#include "src/rmlint.h"
 
 /* This is the scheduler of rmlint.
  *
@@ -264,6 +265,7 @@ static bool shred_byte_compare_files(RmMainTag * tag, RmFile * a, RmFile *b) {
 
     int fd_a = open(a->path, O_RDONLY);
     if(fd_a == -1) {
+        rm_perror("Unable to open file_a for paranoia");
         return false;
     } else {
         posix_fadvise(fd_a, 0, 0, SHRED_FADVISE_FLAGS);
@@ -271,6 +273,7 @@ static bool shred_byte_compare_files(RmMainTag * tag, RmFile * a, RmFile *b) {
 
     int fd_b = open(b->path, O_RDONLY);
     if(fd_b == -1) {
+        rm_perror("Unable to open file_b for paranoia");
         return false;
     } else {
         posix_fadvise(fd_b, 0, 0, SHRED_FADVISE_FLAGS);
@@ -324,6 +327,9 @@ static bool shred_byte_compare_files(RmMainTag * tag, RmFile * a, RmFile *b) {
         rm_buffer_pool_release(tag->mem_pool, buf_b);
     }
 
+    close(fd_a);
+    close(fd_b);
+
     return result;
 }
 
@@ -331,7 +337,7 @@ static void shred_thread_pool_push(GThreadPool *pool, gpointer data) {
     GError *error = NULL;
     g_thread_pool_push(pool, data, &error);
     if(error != NULL) {
-        g_printerr("Unable to push thread to pool %p: %s\n", pool, error->message);
+        rm_error("Unable to push thread to pool %p: %s\n", pool, error->message);
         g_error_free(error);
     }
 }
@@ -341,7 +347,7 @@ static GThreadPool * shred_thread_pool_new(GFunc func, gpointer data, int thread
     GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
 
     if(error != NULL) {
-        g_printerr("Unable to create thread pool.\n");
+        rm_error("Unable to create thread pool.\n");
         g_error_free(error);
     }
     return pool;
@@ -601,7 +607,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                 );
 
                 if(error != NULL) {
-                    g_printerr("Unable to set different amount of threads.\n");
+                    rm_error("Unable to set different amount of threads.\n");
                     g_error_free(error);
                 }
             }
@@ -674,12 +680,14 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
         for(GList *iter = results->head; iter; iter = iter->next) {
             shred_set_file_state(tag, iter->data, RM_FILE_STATE_IGNORE);
         }
+        g_queue_free(results);
+        return;
     }
 
     if(tag->session->settings->paranoid) {
         int failure_count = shred_check_paranoia(tag, results);
         if(failure_count > 0) {
-            g_printerr("Removed %d files during paranoia check.", failure_count);
+            warning("Removed %d files during paranoia check.\n", failure_count);
         }
     }
 
@@ -764,7 +772,6 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
              * */
             RmFileSnapshot * lonely = dupe_list->head->data;
             shred_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
-            g_printerr("Ignoring: %p %s %lu\n", lonely->ref_file, lonely->ref_file->path, lonely->hash_offset);
         } else {
             /* For the others we check if they were fully read. 
              * In this case we know that those are duplicates.
@@ -919,8 +926,8 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable * si
     }
 
     /* This should not block, or at least only very short. */
-    g_thread_pool_free(tag.device_pool, TRUE, TRUE);
-    g_thread_pool_free(tag.result_pool, TRUE, TRUE);
+    g_thread_pool_free(tag.device_pool, FALSE, TRUE);
+    g_thread_pool_free(tag.result_pool, FALSE, TRUE);
 
     g_async_queue_unref(tag.join_queue);
     g_hash_table_unref(join_table);
@@ -939,7 +946,7 @@ static void main_free_func(gconstpointer p) {
 
 int main(int argc, char const* argv[]) {
     RmSettings settings;
-    settings.threads = 1;
+    settings.threads = 32;
     settings.paranoid = true;
     settings.keep_all_originals = true;
     settings.must_match_original = false;
