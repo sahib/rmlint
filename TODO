@@ -14,6 +14,7 @@ Further Developement
 
 - Multithreaded directory tree traversal? (SeeSpotRun) -- mostly done?
 - Some of https://github.com/sahib/rmlint/issues
+- cache calls to open/close if they turn out to be expensive? (bench first)
 
 
 Done items

@@ -910,7 +910,7 @@ int main(int argc, char const* argv[]) {
     settings.threads = 16;
     settings.paranoid = true;
     settings.keep_all_originals = true;
-    settings.must_match_original = true;
+    settings.must_match_original = false;
     settings.checksum_type = RM_DIGEST_SPOOKY;
 
     RmSession session;

@@ -162,7 +162,7 @@ Traversal Options
     Do cross over mount points (``-x``)? Or stay always on the same device
     (``-X``)?
 
-**-r --no-hidden** (*default*) **/ -R --hidden**
+**-r --hidden / -R --no-hidden** (*default*)
 
     Also traverse hidden directories? This is often not a good idea, since
     directories like `.git/` would be investigated.
@@ -244,11 +244,17 @@ PROBLEMS
 
 1. **False Positives:** Depending on the options you use, there is a very slight risk 
    of false positives (files that are erroneously detected as duplicate).
-   Internally a hasfunctions is used to compute a *fingerprint* of a file. These
+   Internally a hashfunctions is used to compute a *fingerprint* of a file. These
    hashfunctions may, in theory, map two different files to the same
    fingerprint. This happens about once in 2 ** 64 files. Since `rmlint` computes 
    at least 3 hashes per file and requires them to be the same size, it's very
    unlikely to happen. If you're really wary, try the *--paranoid* option.
+2. **File modification during or after rmlint run:** It is possible that a file
+   that rmlint recognized as duplicate is modified afterwards, resulting in a
+   different file.  This is a general problem and cannot be solved from rmlint's
+   side alone. You should **never modify the data until rmlint and the
+   shellscript has been run through**. Careful persons might even consider to
+   mount the filesystem you are scanning readonly.
 
 SEE ALSO
 ========
@@ -301,4 +307,3 @@ Also see the THANKS file for other people that helped us.
 If you consider a donation you can use *Flattr* or buy us a beer if we meet:
 
 https://flattr.com/thing/302682/libglyr
-
