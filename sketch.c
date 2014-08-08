@@ -512,7 +512,7 @@ static GQueue * shred_create_work_queue(RmDevlistTag * tag, GQueue *device_queue
     return work_queue;
 }
 
-static int schred_get_read_threads(RmMainTag *tag, bool nonrotational, int max_threads) {
+static int shred_get_read_threads(RmMainTag *tag, bool nonrotational, int max_threads) {
     if(!nonrotational) {
         return 1;
     } else {
@@ -535,7 +535,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
         ((RmFile *)device_queue->head->data)->dev
     );
 
-    int max_threads = schred_get_read_threads(
+    int max_threads = shred_get_read_threads(
         main, nonrotational, main->session->settings->threads
     );
 
@@ -581,7 +581,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                 /* Maybe we can take more threads now? */
                 g_thread_pool_set_max_threads(
                     read_pool,
-                    schred_get_read_threads(main, nonrotational, main->session->settings->threads),
+                    shred_get_read_threads(main, nonrotational, main->session->settings->threads),
                     NULL
                 );
             }
