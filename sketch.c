@@ -327,6 +327,26 @@ static bool shred_byte_compare_files(RmMainTag * tag, RmFile * a, RmFile *b) {
     return result;
 }
 
+static void shred_thread_pool_push(GThreadPool *pool, gpointer data) {
+    GError *error = NULL;
+    g_thread_pool_push(pool, data, &error);
+    if(error != NULL) {
+        g_printerr("Unable to push thread to pool %p: %s\n", pool, error->message);
+        g_error_free(error);
+    }
+}
+
+static GThreadPool * shred_thread_pool_new(GFunc func, gpointer data, int threads) {
+    GError *error = NULL;
+    GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
+
+    if(error != NULL) {
+        g_printerr("Unable to create thread pool.\n");
+        g_error_free(error);
+    }
+    return pool;
+}
+
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
@@ -400,7 +420,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
             }
 
             /* Send it to the hasher */
-            g_thread_pool_push(tag->hash_pool, buffer, NULL);
+            shred_thread_pool_push(tag->hash_pool, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */            
             buffer = rm_buffer_pool_get(tag->main->mem_pool);
@@ -466,7 +486,7 @@ static void shred_devlist_add_job(RmDevlistTag *tag, GThreadPool * pool, RmFile 
     if(file != NULL) {
         if(shred_get_file_state(tag->main, file) == RM_FILE_STATE_PROCESS) {
             g_hash_table_insert(processing_table, file, NULL);
-            g_thread_pool_push(pool, file, NULL);
+            shred_thread_pool_push(pool, file);
         }
     }
 }
@@ -539,18 +559,12 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
         main, nonrotational, main->session->settings->threads
     );
 
-    GThreadPool *read_pool = g_thread_pool_new(
-        (GFunc)shred_read_factory, 
-        &tag,
-        max_threads,
-        FALSE, NULL
+    GThreadPool *read_pool = shred_thread_pool_new(
+        (GFunc)shred_read_factory, &tag, max_threads
     );
 
-    tag.hash_pool = g_thread_pool_new(
-        (GFunc) shred_hash_factory,
-        &tag,
-        1,
-        FALSE, NULL
+    tag.hash_pool = shred_thread_pool_new(
+        (GFunc) shred_hash_factory, &tag, 1
     );
 
     GQueue *work_queue = shred_create_work_queue(&tag, device_queue, !nonrotational);
@@ -579,11 +593,17 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                 tag.read_size = shred_get_next_read_size(tag.read_size);
 
                 /* Maybe we can take more threads now? */
+                GError * error = NULL;
                 g_thread_pool_set_max_threads(
                     read_pool,
                     shred_get_read_threads(main, nonrotational, main->session->settings->threads),
-                    NULL
+                    &error
                 );
+
+                if(error != NULL) {
+                    g_printerr("Unable to set different amount of threads.\n");
+                    g_error_free(error);
+                }
             }
         }
         g_async_queue_unlock(tag.finished_queue);
@@ -759,7 +779,7 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
                 }
             }
 
-            g_thread_pool_push(tag->result_pool, results, NULL);
+            shred_thread_pool_push(tag->result_pool, results);
         }
     }
 
@@ -796,11 +816,8 @@ static void shred_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
 }
 
 static void shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
-    tag->device_pool = g_thread_pool_new(
-        (GFunc)shred_devlist_factory, 
-        tag,
-        tag->session->settings->threads / 2 + 1,
-        FALSE, NULL
+    tag->device_pool = shred_thread_pool_new(
+        (GFunc)shred_devlist_factory, tag, tag->session->settings->threads / 2 + 1
     );
     
     GHashTableIter iter;
@@ -809,7 +826,7 @@ static void shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         GQueue *device_queue = value;
-        g_thread_pool_push(tag->device_pool, device_queue, NULL);
+        shred_thread_pool_push(tag->device_pool, device_queue);
     }
 }
 
@@ -843,11 +860,8 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable * si
      * This would clog up the main thread, which is supposed 
      * to flag bad files as soon as possible.
      */
-    tag.result_pool = g_thread_pool_new(
-        (GFunc)shred_result_factory, 
-        &tag,
-        1,
-        FALSE, NULL
+    tag.result_pool = shred_thread_pool_new(
+        (GFunc)shred_result_factory, &tag, 1
     );
 
     /* Key: hash_offset & size Value: GQueue of fitting files */
