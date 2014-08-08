@@ -174,7 +174,7 @@ typedef struct RmMainTag {
     GAsyncQueue *join_queue;
     GMutex file_state_mtx;
     GThreadPool *device_pool;
-    int devices_left;
+    GThreadPool *result_pool;
 } RmMainTag;
 
 /* Every devlist manager has additional private */
@@ -618,28 +618,23 @@ static int shred_check_paranoia(RmMainTag * tag, GQueue *candidates) {
     return failure_count;
 }
 
-static GQueue * shred_create_result_group(RmMainTag *tag, GQueue *candidates) {
+static void shred_result_factory(GQueue *results, RmMainTag *tag) {
     RmSettings *settings = tag->session->settings;
     int num_no_orig = 0, num_is_orig = 0;
-    GQueue * results = g_queue_new();
 
-    for(GList *iter = candidates->head; iter; iter = iter->next) {
-        RmFileSnapshot *candidate = iter->data;
-        if(candidate->hash_offset >= candidate->file_size) {
-            g_queue_push_head(results, candidate->ref_file);
-            num_is_orig += candidate->ref_file->in_ppath;
-            num_no_orig += !candidate->ref_file->in_ppath;
+    for(GList *iter = results->head; iter; iter = iter->next) {
+        RmFile *candidate = iter->data;
+        num_is_orig += candidate->in_ppath;
+        num_no_orig += !candidate->in_ppath;
 
-            g_printerr(
-                "--> %s hashed=%lu size=%lu cksum=",
-                candidate->ref_file->path, candidate->hash_offset, candidate->file_size
-            );
+        g_printerr("--> %s size=%lu cksum=", candidate->path, candidate->fsize);
 
-            for(int i = 0; i < _RM_HASH_LEN; ++i) {
-                g_printerr("%02x", candidate->checksum[i]);
-            }
-            g_printerr("\n");
+        guint8 checksum[_RM_HASH_LEN];
+        rm_digest_steal_buffer(&candidate->digest, checksum, sizeof(checksum));
+        for(int i = 0; i < _RM_HASH_LEN; ++i) {
+            g_printerr("%02x", checksum[i]);
         }
+        g_printerr("\n");
     }
 
     if(0
@@ -649,8 +644,6 @@ static GQueue * shred_create_result_group(RmMainTag *tag, GQueue *candidates) {
         for(GList *iter = results->head; iter; iter = iter->next) {
             shred_set_file_state(tag, iter->data, RM_FILE_STATE_IGNORE);
         }
-        g_queue_free(results);
-        return NULL;
     }
 
     if(tag->session->settings->paranoid) {
@@ -670,11 +663,10 @@ static GQueue * shred_create_result_group(RmMainTag *tag, GQueue *candidates) {
     }
 
     if(dupe_count > 0) {
-        return results;
-    } else {
-        g_queue_free(results);
-        return NULL;
-    }
+        // TODO Call processing of results here.
+    } 
+
+    g_queue_free(results);
 }
 
 /* Easy way to use arbitary structs as key in a GHastTable.
@@ -746,12 +738,18 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
         } else {
             /* For the others we check if they were fully read. 
              * In this case we know that those are duplicates.
+             *
+             * If those files are not fully read nothing happens.
              */
-            GQueue *result_group = shred_create_result_group(tag, dupe_list);
-            if(result_group != NULL) {
-                // TODO: Call group processing here.
-                g_queue_free(result_group);
+            GQueue *results = g_queue_new();
+            for(GList *iter = dupe_list->head; iter; iter = iter->next) {
+                RmFileSnapshot *candidate = iter->data;
+                if(candidate->hash_offset >= candidate->file_size) {
+                    g_queue_push_head(results, candidate->ref_file);
+                }
             }
+
+            g_thread_pool_push(tag->result_pool, results, NULL);
         }
     }
 
@@ -831,6 +829,17 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable * si
     /* Create a pool fo the devlists and push each queue */
     shred_create_devpool(&tag, dev_table);
 
+    /* For results that need to be check with --paranoid.
+     * This would clog up the main thread, which is supposed 
+     * to flag bad files as soon as possible.
+     */
+    tag.result_pool = g_thread_pool_new(
+        (GFunc)shred_result_factory, 
+        &tag,
+        1,
+        FALSE, NULL
+    );
+
     /* Key: hash_offset & size Value: GQueue of fitting files */
     GHashTable *join_table = g_hash_table_new_full(
         (GHashFunc) shred_hash_size_key,
@@ -887,6 +896,7 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable * si
 
     /* This should not block, or at least only very short. */
     g_thread_pool_free(tag.device_pool, TRUE, TRUE);
+    g_thread_pool_free(tag.result_pool, TRUE, TRUE);
 
     g_async_queue_unref(tag.join_queue);
     g_hash_table_unref(join_table);
@@ -905,7 +915,7 @@ static void main_free_func(gconstpointer p) {
 
 int main(int argc, char const* argv[]) {
     RmSettings settings;
-    settings.threads = 32;
+    settings.threads = 1;
     settings.paranoid = true;
     settings.keep_all_originals = true;
     settings.must_match_original = false;
