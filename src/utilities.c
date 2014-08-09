@@ -334,7 +334,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 
                 /* Assign different dev ids (with major id 0) to different nfs servers */
                 whole_disk = makedev(0, nfs_counter);
-                if(g_hash_table_contains(self->diskname_table, GINT_TO_POINTER(whole_disk))) {
+                if(g_hash_table_contains(self->diskname_table, GUINT_TO_POINTER(whole_disk))) {
                     nfs_counter += 1;
                     whole_disk = makedev(0, nfs_counter);  
                 }
@@ -365,16 +365,16 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 
         g_hash_table_insert(
             self->part_table,
-            GINT_TO_POINTER(stat_buf_folder.st_dev),
-            GINT_TO_POINTER(whole_disk));
+            GUINT_TO_POINTER(stat_buf_folder.st_dev),
+            GUINT_TO_POINTER(whole_disk));
 
         self->mounted_paths = g_list_prepend(self->mounted_paths, g_strdup(entry->mnt_dir));
 
         /* small hack, so also the full disk id can be given to the api below */
         g_hash_table_insert(
             self->part_table,
-            GINT_TO_POINTER(whole_disk),
-            GINT_TO_POINTER(whole_disk)
+            GUINT_TO_POINTER(whole_disk),
+            GUINT_TO_POINTER(whole_disk)
         );
 
         info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %15s; rotational: %3s)",
@@ -387,13 +387,13 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         if(is_rotational != -1) {
             g_hash_table_insert(
                 self->rotational_table,
-                GINT_TO_POINTER(whole_disk),
-                GINT_TO_POINTER(!is_rotational)
+                GUINT_TO_POINTER(whole_disk),
+                GUINT_TO_POINTER(!is_rotational)
             );
         }
         g_hash_table_insert(
             self->diskname_table,
-            GINT_TO_POINTER(whole_disk),
+            GUINT_TO_POINTER(whole_disk),
             g_strdup(diskname)
         );
     }
@@ -421,9 +421,9 @@ void rm_mounts_table_destroy(RmMountTable *self) {
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     dev_t disk_id = rm_mounts_get_disk_id(self, device);
-    return GPOINTER_TO_INT(
+    return GPOINTER_TO_UINT(
                g_hash_table_lookup(
-                   self->rotational_table, GINT_TO_POINTER(disk_id)
+                   self->rotational_table, GUINT_TO_POINTER(disk_id)
                )
            );
 }
@@ -438,9 +438,9 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
 }
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
-    return GPOINTER_TO_INT(
+    return GPOINTER_TO_UINT(
                g_hash_table_lookup(
-                   self->part_table, GINT_TO_POINTER(partition)
+                   self->part_table, GUINT_TO_POINTER(partition)
                )
            );
 }

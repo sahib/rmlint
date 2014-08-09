@@ -9,8 +9,8 @@
 #include "src/checksum.h"
 #include "src/checksums/city.h"
 #include "src/list.h"
-#include "src/filemap.h"
-#include "src/rmlint.h"
+#include "src/utilities.h"
+#include "src/cmdline.h"
 
 /* This is the scheduler of rmlint.
  *
@@ -944,8 +944,8 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *siz
             /* Find out if the size group has as many items already as the full
              * group - in this case we have a full set and can compare it.
              * */
-            guint64 count = GPOINTER_TO_INT(
-                                g_hash_table_lookup(size_table, GINT_TO_POINTER(snapshot->file_size))
+            guint64 count = GPOINTER_TO_UINT(
+                                g_hash_table_lookup(size_table, GUINT_TO_POINTER(snapshot->file_size))
                             );
 
             if(count > 1 && g_queue_get_length(size_list) == count) {
@@ -1014,7 +1014,7 @@ int main(int argc, const char **argv) {
         dev_t whole_disk = rm_mounts_get_disk_id(session.mounts, stat_buf.st_dev);
         RmFile *file =  rm_file_new(
                             path, stat_buf.st_size, stat_buf.st_ino, whole_disk,
-                            0, TYPE_DUPE_CANDIDATE, 0, 0
+                            0, RM_LINT_TYPE_DUPE_CANDIDATE, 0, 0
                         );
 
         bool nonrotational = rm_mounts_is_nonrotational(session.mounts, whole_disk);
@@ -1025,15 +1025,15 @@ int main(int argc, const char **argv) {
 
         g_hash_table_insert(
             size_table,
-            GINT_TO_POINTER(stat_buf.st_size),
+            GUINT_TO_POINTER(stat_buf.st_size),
             g_hash_table_lookup(
-                size_table, GINT_TO_POINTER(stat_buf.st_size)) + 1
+                size_table, GUINT_TO_POINTER(stat_buf.st_size)) + 1
         );
 
-        GQueue *dev_list = g_hash_table_lookup(dev_table, GINT_TO_POINTER(whole_disk));
+        GQueue *dev_list = g_hash_table_lookup(dev_table, GUINT_TO_POINTER(whole_disk));
         if(dev_list == NULL) {
             dev_list = g_queue_new();
-            g_hash_table_insert(dev_table, GINT_TO_POINTER(whole_disk), dev_list);
+            g_hash_table_insert(dev_table, GUINT_TO_POINTER(whole_disk), dev_list);
         }
 
         g_queue_push_head(dev_list, file);
