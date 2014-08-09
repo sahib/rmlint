@@ -38,6 +38,7 @@
 #include "config.h"
 #include "checksum.h"
 #include "mounttable.h"
+#include "filemap.h"
 
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
@@ -126,6 +127,7 @@ typedef enum RmHandleMode {
     RM_MODE_CMD = 5
 } RmHandleMode;
 
+/* TODO: lookup if all variables still needed. */
 /* all available settings see rmlint -h */
 typedef struct RmSettings {
     RmHandleMode mode;
@@ -171,6 +173,7 @@ typedef enum RmFileState {
     RM_FILE_STATE_FINISH
 } RmFileState;
 
+/* TODO: Reduce size of RmFile */
 typedef struct _RmFile {
     unsigned char checksum[_RM_HASH_LEN];// TODO: remove.   /* md5sum of the file */
     unsigned char fp[2][_RM_HASH_LEN];// TODO: remove.        /* A short fingerprint of a file - start and back */
@@ -198,7 +201,7 @@ typedef struct _RmFile {
     struct _RmFile *hardlinked_original;
     RmFileState state;
 
-    GSequence *disk_offsets;
+    RmOffsetTable disk_offsets;
     GMutex file_lock;
 } RmFile;
 

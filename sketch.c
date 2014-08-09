@@ -454,7 +454,7 @@ finish:
     {
         if(file->seek_offset < file->fsize) {
             if(fd > 0) {
-                file->offset = get_disk_offset(file->disk_offsets, file->offset);
+                file->offset = rm_offset_lookup(file->disk_offsets, file->offset);
             }
         } else if(file->seek_offset == file->fsize) {
             tag->readable_files--;
@@ -531,15 +531,29 @@ static RmFile *shred_devlist_pop_next(RmDevlistTag *tag, GQueue *work_queue, GLi
 }
 
 static int shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_UNUSED gpointer user_data) {
-    int diff = a->offset - b->offset;
-    if(diff == 0) {
-        /* Sort after inode as secondary criteria.
-         * This is meant for files with an offset of 0 as fallback.
-         */
-        return a->node - b->node;
-    } else {
-        return diff;
+    /* offset is a guint64, so do not substract them.
+     * (will cause over or underflows on regular base)
+     */
+    if(a->offset < b->offset) {
+        return -1;
     }
+
+    if(a->offset > b->offset) {
+        return +1;
+    }
+
+    /* Sort after inode as secondary criteria.
+     * This is meant for files with an offset of 0 as fallback.
+     */
+    if(a->node < b->node) {
+        return -1;
+    }
+
+    if(a->node > b->node) {
+        return -1;
+    }
+
+    return 0;
 }
 
 static GQueue *shred_create_work_queue(RmDevlistTag *tag, GQueue *device_queue, bool sort) {
@@ -964,13 +978,20 @@ static void main_free_func(gconstpointer p) {
     g_queue_free_full((GQueue *)p, (GDestroyNotify)rm_file_destroy);
 }
 
-int main(void) {
+#ifdef _RM_COMPILE_MAIN_SHRED
+
+int main(int argc, const char **argv) {
     RmSettings settings;
     settings.threads = 32;
     settings.paranoid = false;
     settings.keep_all_originals = false;
     settings.must_match_original = false;
     settings.checksum_type = RM_DIGEST_SPOOKY;
+
+    bool offset_sort_optimisation = true;
+    if(argc > 1 && g_ascii_strcasecmp(argv[1], "--no-offsets") == 0)  {
+        offset_sort_optimisation = false;
+    }
 
     RmSession session;
     session.settings = &settings;
@@ -996,6 +1017,12 @@ int main(void) {
                             0, TYPE_DUPE_CANDIDATE, 0, 0
                         );
 
+        bool nonrotational = rm_mounts_is_nonrotational(session.mounts, whole_disk);
+        if(!nonrotational && offset_sort_optimisation) {
+            file->disk_offsets = rm_offset_create_table(path);
+            file->offset = rm_offset_lookup(file->disk_offsets, 0);
+        }
+
         g_hash_table_insert(
             size_table,
             GINT_TO_POINTER(stat_buf.st_size),
@@ -1019,3 +1046,5 @@ int main(void) {
     rm_mounts_table_destroy(session.mounts);
     return 0;
 }
+
+#endif

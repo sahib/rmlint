@@ -26,26 +26,39 @@
 /* Credits: filemap.c based heavily on short test program by dkrotx-prg
  (http://dkrotx-prg.blogspot.com.au/2012/08/speedup-file-reading-on-linux.html) */
 
-
 #include "filemap.h"
-#include "rmlint.h"  /* for error reporting TODO: do we need this??*/
+#include "rmlint.h"
 
+#include <linux/fs.h>
+#include <linux/fiemap.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <glib.h>
+
+typedef struct RmOffsetEntry {
+    guint64 logical;
+    guint64 physical;
+} RmOffsetEntry;
 
 /* sort sequence into decreasing order of logical offsets */
-int sort_logical (gconstpointer a, gconstpointer b) {
-    struct OffsetEntry *offset_a = (gpointer) a;
-    struct OffsetEntry *offset_b = (gpointer) b;
+static int sort_logical(gconstpointer a, gconstpointer b) {
+    const RmOffsetEntry *offset_a = a;
+    const RmOffsetEntry *offset_b = b;
     if (offset_b->logical > offset_a->logical) {
         return 1;
     } else if (offset_b->logical == offset_a->logical) {
         return 0;
-    } else return -1;
+    } else {
+        return -1;
+    }
 }
 
 /* find first item in sequence with logical offset <= target */
-int find_logical (gconstpointer a, gconstpointer b) {
-    struct OffsetEntry *offset_a = (gpointer) a;
-    struct OffsetEntry *offset_b = (gpointer) b;
+static int find_logical(gconstpointer a, gconstpointer b) {
+    const RmOffsetEntry *offset_a = a;
+    const RmOffsetEntry *offset_b = b;
     if (offset_b->logical >= offset_a->logical) {
         return 1;
     } else {
@@ -53,105 +66,104 @@ int find_logical (gconstpointer a, gconstpointer b) {
     }
 }
 
-/*void printoffset(gpointer data){
-    OffsetEntry *offset = (gpointer)data;
-    info("%llu:%llu\n", offset->logical, offset->physical);
-} */
+static void free_offsets(RmOffsetEntry *entry) {
+    g_slice_free(RmOffsetEntry, entry);
+}
 
-GSequence *get_fiemap_extents(char *path) {
+RmOffsetTable rm_offset_create_table(const char *path) {
     int fd = open(path, O_RDONLY);
-    if (fd < 0) {
+    if(fd < 0) {
         info("Error opening %s in setup_fiemap_extents\n", path);
         return NULL;
     }
 
-    close(fd);
-    return NULL;
+    /* struct fiemap does not allocate any extents by default, 
+     * so we choose ourself how many of them we allocate. 
+     * */
+    const int n_extents = 256;
+    struct fiemap *fiemap = g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
+    struct fiemap_extent *fm_ext = fiemap->fm_extents;
 
-    GSequence *self = g_sequence_new(g_free);
+    /* data structure we save our offsets in */
+    GSequence *self = g_sequence_new((GFreeFunc)free_offsets);
 
-    char buf[16384];
-    struct fiemap *fiemap = (struct fiemap *)buf;
-    struct fiemap_extent *fm_ext = &fiemap->fm_extents[0];
-
-    int count = (sizeof(buf) - sizeof(*fiemap)) /
-                sizeof(struct fiemap_extent); /* max number of extents we can get in one read */
-    unsigned long long expected = 0; /* used for detecting contiguous extents, which we ignore */
-    unsigned int i;
-    int last = 0; /*flag for when we reach last extent of file */
-
-    memset(fiemap, 0, sizeof(struct fiemap));
-    do {
-        fiemap->fm_length = FIEMAP_MAX_OFFSET;
+    bool last = false;
+    while(!last) {
         fiemap->fm_flags = 0;
-        fiemap->fm_extent_count = count;  /* only ask for as many extents as we can fit in our buffer */
-        if ( ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) < 0 ) {
-            info("FIEMAP failed in setup_fiemap_extents for file %s\n",
-                 path);
-        } else {
-            for (i = 0; i < fiemap->fm_mapped_extents; i++) {
-                if (i == 0 || fm_ext[i].fe_physical != expected) {
-                    /*not contiguous extents*/
-                    //info("File offset %llu Disk offset %llu\n",
-                    //     fm_ext[i].fe_logical,
-                    //     fm_ext[i].fe_physical);
-                    OffsetEntry *offset_entry = g_new0(OffsetEntry, 1);
-                    offset_entry->logical = fm_ext[i].fe_logical;
-                    offset_entry->physical = fm_ext[i].fe_physical;
-                    g_sequence_append(self, offset_entry);
-                }
-                expected = fm_ext[i].fe_physical + fm_ext[i].fe_length;
-                if (fm_ext[i].fe_flags & FIEMAP_EXTENT_LAST) {
-                    last = 1;
-                }
+        fiemap->fm_extent_count = n_extents;
+        fiemap->fm_length = FIEMAP_MAX_OFFSET;
+
+        if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) < 0) {
+            break;
+        }
+
+        /* This might happen on empty files - those have no 
+         * extents, but they have a offset on the disk.
+         */
+        if(fiemap->fm_mapped_extents <= 0) {
+            break;
+        }
+
+        /* used for detecting contiguous extents, which we ignore */
+        unsigned long expected = 0;
+
+        unsigned i;
+        for (i = 0; i < fiemap->fm_mapped_extents && !last; i++) {
+            if (i == 0 || fm_ext[i].fe_physical != expected) {
+                /* not a contiguous extents */
+                RmOffsetEntry *offset_entry = g_slice_new(RmOffsetEntry);
+                offset_entry->logical = fm_ext[i].fe_logical;
+                offset_entry->physical = fm_ext[i].fe_physical;
+                g_sequence_append(self, offset_entry);
             }
 
-            if (last != 1) {
-                /* set start for next ioctl read */
-                fiemap->fm_start = (fm_ext[i - 1].fe_logical +
-                                    fm_ext[i - 1].fe_length);
-            }
+            expected = fm_ext[i].fe_physical + fm_ext[i].fe_length;
+            fiemap->fm_start = fm_ext[i].fe_logical + fm_ext[i].fe_length;
+            last = fm_ext[i].fe_flags & FIEMAP_EXTENT_LAST;
         }
-    } while (last == 0);
+    }
 
     close(fd);
-    g_sequence_sort(self, (GCompareDataFunc)sort_logical, NULL);
+    g_free(fiemap);
 
-    /*g_sequence_foreach(self, (GFunc)printoffset, NULL);*/
+    g_sequence_sort(self, (GCompareDataFunc)sort_logical, NULL);
     return self;
 }
 
-uint64_t get_disk_offset(GSequence *offset_list, uint64_t file_offset) {
+guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
+#ifdef __linux__   
+    if (offset_list != NULL) {
+        RmOffsetEntry token;
+        token.physical = 0;
+        token.logical = file_offset;
 
-#if !defined (__linux__) && 0  /*TODO - fix this*/
-    return 0;  /*for now, no file map info for non-linux systems*/
-#else
+        GSequenceIter * nearest = g_sequence_search(
+                             offset_list, &token,
+                             (GCompareDataFunc)find_logical, NULL
+                         );
 
-    if (offset_list == NULL) {
-        return 0;
-    } else {
-        struct OffsetEntry dummy;
-        dummy.logical = file_offset;
-        dummy.physical = 0;
-        GSequenceIter *nearest = g_sequence_search (offset_list,
-                                 &dummy,
-                                 (GCompareDataFunc)find_logical,
-                                 NULL
-                                                   );
-        if (nearest) {
-            OffsetEntry *off = g_sequence_get(nearest);
-            //info("Nearest to %llu is %llu, %llu\n", file_offset, off->logical, off->physical);
+        if(!g_sequence_iter_is_end(nearest)) {
+            RmOffsetEntry *off = g_sequence_get(nearest);
             return off->physical + file_offset - off->logical ;
-        } else {
-            return 0;
-        }
+        } 
     }
+#endif
+    /* default to 0 always */
+    return 0;
 }
 
+#ifdef _RM_COMPILE_MAIN_FIEMAP
+    int main(int argc, char const *argv[]) {
+        if(argc < 3) {
+            return EXIT_FAILURE;
+        }
 
+        GSequence *db = rm_offset_create_table(argv[1]);
+        guint64 off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
 
+        g_printerr("Offset: %lu\n", off);
+        g_sequence_free(db);
 
-
+        return EXIT_SUCCESS;
+    }
 #endif
-
-

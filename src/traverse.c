@@ -165,20 +165,6 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
 
     if (file) {
         rm_file_list_append(session->list, file);
-        {
-            //TODO:  delete this debug message block
-            if (file->disk_offsets) {
-                info("%sRmFile %s has %d extents, start block %"PRId64", end %"PRId64"\n"NCO,
-                     (g_sequence_get_length (file->disk_offsets) > 3 ? BLU : GRE),
-                     file->path,
-                     g_sequence_get_length (file->disk_offsets),
-                     get_disk_offset(file->disk_offsets, 0) / 4096,
-                     get_disk_offset(file->disk_offsets, file->fsize) / 4096
-                    );
-            } else {
-                info(YEL"Unable to get offset info for RmFile %s\n"NCO, file->path);
-            }
-        }
         return 1;
     } else {
         return 0;
@@ -543,4 +529,3 @@ int rm_search_tree(RmSession *session) {
     guint64 numfiles = traverse_session_join_and_free(traverse_session);
     return numfiles;
 }
-

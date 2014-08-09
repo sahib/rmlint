@@ -60,8 +60,8 @@ RmFile *rm_file_new(const char *path,
     g_mutex_init(&self->file_lock);
 
     if(type == TYPE_DUPE_CANDIDATE) {
-        self->disk_offsets = get_fiemap_extents(self->path);
-        self->offset = get_disk_offset(self->disk_offsets, 0);
+        // self->disk_offsets = rm_offset_create_table(self->path);
+        // self->offset = rm_offset_lookup(self->disk_offsets, 0);
         /* TODO: delay this until we have matched file sizes */
         self->fsize = fsize;
     } else {
@@ -175,6 +175,7 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
 void rm_file_list_append(RmFileList *list, RmFile *file) {
     /* Normalize the device id to the whole disk */
     file->dev = rm_mounts_get_disk_id(list->mounts, file->dev);
+
 
     g_rec_mutex_lock(&list->lock);
     {
@@ -487,7 +488,7 @@ void rm_file_list_resort_device_offsets(GQueue *dev_list, bool forward, bool for
     if(force_update) {
         for(GList *iter = dev_list->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            file->offset = get_disk_offset(file->disk_offsets, file->hash_offset);
+            file->offset = rm_offset_lookup(file->disk_offsets, file->hash_offset);
         }
     }
 
