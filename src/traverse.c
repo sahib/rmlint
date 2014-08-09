@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <pthread.h>
 #include <glib.h>
 #include <error.h>
 #include <fts.h>

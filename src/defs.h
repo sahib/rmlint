@@ -33,7 +33,6 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <glib.h>
-#include <pthread.h>
 
 #include "config.h"
 #include "checksum.h"

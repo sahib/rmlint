@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <pthread.h>
 #include <stdlib.h>
 
 #include "cmdline.h"
@@ -42,6 +41,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
+static GMutex PRINT_MUTEX;
 pthread_mutex_t mutex_printage = PTHREAD_MUTEX_INITIALIZER;
 
 gchar *strsubs(const char *string, const char *subs, const char *with) {
@@ -378,6 +378,7 @@ bool process_island(RmSession *session, GQueue *group) {
     /* If a specific directory is specified to have the 'originals':  */
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
+    bool return_val = false;
 
     RmSettings *sets = session->settings;
     GList *i = group->head;
@@ -407,7 +408,7 @@ bool process_island(RmSession *session, GQueue *group) {
         original->filter = false;
     }
 
-    pthread_mutex_lock(&mutex_printage);
+    g_mutex_lock(&PRINT_MUTEX);
 
     /* Now do the actual printout.. */
     i = group->head;
@@ -451,12 +452,13 @@ bool process_island(RmSession *session, GQueue *group) {
             session->dup_counter++;
             session->total_lint_size += fi->fsize;
             if(handle_item(session, fi, original)) {
-                pthread_mutex_unlock(&mutex_printage);
-                return true;
+                return_val = true;
+                break;
             }
         }
         i = i->next;
     }
-    pthread_mutex_unlock(&mutex_printage);
-    return false;
+
+    g_mutex_unlock(&PRINT_MUTEX);
+    return return_val;
 }
