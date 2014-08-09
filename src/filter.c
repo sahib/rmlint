@@ -44,7 +44,7 @@
 #include "read.h"
 #include "list.h"
 #include "defs.h"
-#include "linttests.h"
+#include "utilities.h"
 
 typedef struct RmSchedulerTag {
     RmSession *session;
@@ -518,7 +518,7 @@ static int find_double_bases(RmSession *session) {
         while((fj = rm_file_list_iter_all(session->list, fj))) {
             /* compare basenames */
             if(1
-                    && !strcmp(rm_basename(fi->path), rm_basename(fj->path))
+                    && !strcmp(rm_util_basename(fi->path), rm_util_basename(fj->path))
                     && fi->node != fj->node
                     && fj->lint_type != RM_LINT_TYPE_BASE
               ) {
@@ -600,8 +600,8 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
 static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *first_group) {
     RmLintType flag = RM_LINT_TYPE_UNKNOWN;
     RmSettings *sets = session->settings;
-    const char *user = get_username();
-    const char *group = get_groupname();
+    const char *user = rm_util_get_username();
+    const char *group = rm_util_get_groupname();
 
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;

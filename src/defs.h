@@ -37,8 +37,7 @@
 
 #include "config.h"
 #include "checksum.h"
-#include "mounttable.h"
-#include "filemap.h"
+#include "utilities.h"
 
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
@@ -103,8 +102,6 @@ From man 2 open:
 #define CMD_DUPL "<dupl>"
 #define CMD_ORIG "<orig>"
 
-/* ------------------------------------------------------------- */
-
 /* types of lint */
 typedef enum RmLintType {
     RM_LINT_TYPE_UNKNOWN = 0,
@@ -118,8 +115,8 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADUGID,
     /* Border */
     RM_LINT_TYPE_OTHER_LINT,
-    RM_LINT_TYPE_DUPE_CANDIDATE /* note: this needs to be last item in list so*
-						 * that "other" lint gets handled first       */
+    /* note: this needs to be last item in list */
+    RM_LINT_TYPE_DUPE_CANDIDATE 
 } RmLintType;
 
 typedef enum RmHandleMode {
@@ -213,10 +210,6 @@ typedef struct RmFileList {
     GHashTable *size_table;
     GRecMutex lock;
 } RmFileList;
-
-typedef struct RmUserGroupNode {
-    gulong gid, uid;
-} RmUserGroupNode;
 
 typedef struct RmSession {
     RmFileList *list;

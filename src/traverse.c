@@ -37,8 +37,8 @@
 #include "list.h"
 #include "cmdline.h"
 #include "filter.h"
-#include "linttests.h"
-#include "filemap.h"
+#include "utilities.h"
+#include "utilities.h"
 
 #define MAX_EMPTYDIR_DEPTH (PATH_MAX / 2) /* brute force option */
 
@@ -144,9 +144,9 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
     if (file_type == 0) {
         RmLintType gid_check;
         /*see if we can find a lint type*/
-        if (settings->findbadids && (gid_check = uid_gid_check(statp, traverse_session->userlist))) {
+        if (settings->findbadids && (gid_check = rm_util_uid_gid_check(statp, traverse_session->userlist))) {
             file_type = gid_check;
-        } else if(settings->nonstripped && is_nonstripped(path)) {
+        } else if(settings->nonstripped && rm_util_is_nonstripped(path)) {
             file_type = RM_LINT_TYPE_NBIN;
         } else {
             guint64 file_size = statp->st_size;

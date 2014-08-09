@@ -47,7 +47,7 @@
 #include "list.h"
 #include "traverse.h"
 #include "filter.h"
-#include "linttests.h"
+#include "utilities.h"
 
 /* Version string */
 static void print_version(void) {

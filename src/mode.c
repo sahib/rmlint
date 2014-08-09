@@ -36,7 +36,7 @@
 #include "mode.h"
 #include "list.h"
 #include "filter.h"
-#include "linttests.h"
+#include "utilities.h"
 
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -335,7 +335,7 @@ void init_filehandler(RmSession *session) {
                 "  usage\n"
                 "  ask \n"
                 "fi\n");
-        fprintf(session->script_out, "user='%s'\ngroup='%s'\n", get_username(), get_groupname());
+        fprintf(session->script_out, "user='%s'\ngroup='%s'\n", rm_util_get_username(), rm_util_get_groupname());
     }
 
     if(session->log_out) {
