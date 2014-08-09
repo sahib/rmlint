@@ -38,20 +38,62 @@ typedef struct RmUserGroupNode {
     gulong gid, uid;
 } RmUserGroupNode;
 
+/**
+ * @brief Create a new list of users.
+ */
 RmUserGroupNode **rm_userlist_new(void);
+
+/**
+ * @brief Check if a uid and gid is contained in the list.
+ *
+ * @param valid_uid (out)
+ * @param valid_gid (out)
+ *
+ * @return true if both are valid.
+ */
 bool rm_userlist_contains(RmUserGroupNode **list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid);
+
+/**
+ * @brief Deallocate the memory allocated by rm_userlist_new()
+ */
 void rm_userlist_destroy(RmUserGroupNode **list);
+
+/**
+ * @brief Get the name of the user running rmlint.
+ */
 char *rm_util_get_username(void);
+
+/**
+ * @brief Get the group of the user running rmlint.
+ */
 char *rm_util_get_groupname(void);
 
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
 
+/**
+ * @brief Check if a file has a invalid gid/uid or both.
+ *
+ * @return the appropiate RmLintType for the file
+ */
 int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist);
+
+/**
+ * @brief Check if a file is a binary that is not stripped.
+  */
 bool rm_util_is_nonstripped(const char *path);
+
+/**
+ * @brief Get the basename part of the file. It does not change filename. 
+ *
+ * @return NULL on failure, the pointer after the last / on success.
+ */
 char *rm_util_basename(const char *filename);
 
+/**
+ * @brief Get the inode of the directory of the file specified in path.
+ */
 ino_t rm_util_parent_node(const char *path);
 
 /////////////////////////////////////

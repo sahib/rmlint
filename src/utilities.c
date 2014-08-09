@@ -64,7 +64,7 @@
 ////////////////////////////////////
 
 char *rm_util_basename(const char *filename) {
-    char *base = strrchr(filename, '/');
+    char *base = strrchr(filename, G_DIR_SEPARATOR);
     if(base != NULL) {
         /* Return a pointer to the part behind it
          * (which may be the empty string)
