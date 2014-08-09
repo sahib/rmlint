@@ -43,7 +43,7 @@ typedef struct RmOffsetEntry {
 } RmOffsetEntry;
 
 /* sort sequence into decreasing order of logical offsets */
-static int sort_logical(gconstpointer a, gconstpointer b) {
+static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {
     const RmOffsetEntry *offset_a = a;
     const RmOffsetEntry *offset_b = b;
     if (offset_b->logical > offset_a->logical) {
@@ -56,7 +56,7 @@ static int sort_logical(gconstpointer a, gconstpointer b) {
 }
 
 /* find first item in sequence with logical offset <= target */
-static int find_logical(gconstpointer a, gconstpointer b) {
+static int rm_offset_find_logical(gconstpointer a, gconstpointer b) {
     const RmOffsetEntry *offset_a = a;
     const RmOffsetEntry *offset_b = b;
     if (offset_b->logical >= offset_a->logical) {
@@ -66,9 +66,13 @@ static int find_logical(gconstpointer a, gconstpointer b) {
     }
 }
 
-static void free_offsets(RmOffsetEntry *entry) {
+static void rm_offset_free_func(RmOffsetEntry *entry) {
     g_slice_free(RmOffsetEntry, entry);
 }
+
+/////////////////////////////////
+//         PUBLIC API          //
+/////////////////////////////////
 
 RmOffsetTable rm_offset_create_table(const char *path) {
     int fd = open(path, O_RDONLY);
@@ -85,7 +89,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
     struct fiemap_extent *fm_ext = fiemap->fm_extents;
 
     /* data structure we save our offsets in */
-    GSequence *self = g_sequence_new((GFreeFunc)free_offsets);
+    GSequence *self = g_sequence_new((GFreeFunc)rm_offset_free_func);
 
     bool last = false;
     while(!last) {
@@ -126,7 +130,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
     close(fd);
     g_free(fiemap);
 
-    g_sequence_sort(self, (GCompareDataFunc)sort_logical, NULL);
+    g_sequence_sort(self, (GCompareDataFunc)rm_offset_sort_logical, NULL);
     return self;
 }
 
@@ -139,7 +143,7 @@ guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
 
         GSequenceIter * nearest = g_sequence_search(
                              offset_list, &token,
-                             (GCompareDataFunc)find_logical, NULL
+                             (GCompareDataFunc)rm_offset_find_logical, NULL
                          );
 
         if(!g_sequence_iter_is_end(nearest)) {

@@ -39,7 +39,6 @@
 
 #include "rmlint.h"
 
-
 static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     char sys_path[PATH_MAX];
     gchar is_rotational = -1;
@@ -188,7 +187,6 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 /////////////////////////////////
 //         PUBLIC API          //
 /////////////////////////////////
-
 
 RmMountTable *rm_mounts_table_new(void) {
     RmMountTable *self = g_slice_new(RmMountTable);
