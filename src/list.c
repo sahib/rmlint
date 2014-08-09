@@ -59,7 +59,7 @@ RmFile *rm_file_new(const char *path,
     rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
     g_mutex_init(&self->file_lock);
 
-    if(type == TYPE_DUPE_CANDIDATE) {
+    if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
         // self->disk_offsets = rm_offset_create_table(self->path);
         // self->offset = rm_offset_lookup(self->disk_offsets, 0);
         /* TODO: delay this until we have matched file sizes */
@@ -552,7 +552,7 @@ int main(int argc, const char **argv) {
         struct stat buf;
         stat(argv[i], &buf);
 
-        RmFile *file = rm_file_new(argv[i], buf.st_size, buf.st_ino, buf.st_dev, 0, TYPE_DUPE_CANDIDATE, 1, 0);
+        RmFile *file = rm_file_new(argv[i], buf.st_size, buf.st_ino, buf.st_dev, 0, RM_LINT_TYPE_DUPE_CANDIDATE, 1, 0);
         rm_file_list_append(list, file);
     }
 

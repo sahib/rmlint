@@ -65,7 +65,6 @@ void rm_mounts_table_destroy(RmMountTable *self);
  */
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
 
-
 /**
  * @brief Return name of device/disk.
  *

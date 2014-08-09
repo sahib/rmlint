@@ -46,6 +46,8 @@
 #define GRE "\x1b[32;01m"
 #define BLU "\x1b[34;01m"
 
+
+// TODO: Remove all that once new scheduler is in.
 /* Which scheduler to take
  * + 1) Always single threaded on each group
  * + 2) Run max. n (where n may be max. set->threads) at the same time.
@@ -105,18 +107,18 @@ From man 2 open:
 
 /* types of lint */
 typedef enum RmLintType {
-    TYPE_UNKNOWN = 0,
-    TYPE_BLNK,
-    TYPE_EDIR,
-    TYPE_EFILE,
-    TYPE_NBIN,
-    TYPE_BASE,
-    TYPE_BADUID,
-    TYPE_BADGID,
-    TYPE_BADUGID,
+    RM_LINT_TYPE_UNKNOWN = 0,
+    RM_LINT_TYPE_BLNK,
+    RM_LINT_TYPE_EDIR,
+    RM_LINT_TYPE_EFILE,
+    RM_LINT_TYPE_NBIN,
+    RM_LINT_TYPE_BASE,
+    RM_LINT_TYPE_BADUID,
+    RM_LINT_TYPE_BADGID,
+    RM_LINT_TYPE_BADUGID,
     /* Border */
-    TYPE_OTHER_LINT,
-    TYPE_DUPE_CANDIDATE /* note: this needs to be last item in list so*
+    RM_LINT_TYPE_OTHER_LINT,
+    RM_LINT_TYPE_DUPE_CANDIDATE /* note: this needs to be last item in list so*
 						 * that "other" lint gets handled first       */
 } RmLintType;
 
@@ -212,9 +214,9 @@ typedef struct RmFileList {
     GRecMutex lock;
 } RmFileList;
 
-typedef struct RmUserGroupList {
+typedef struct RmUserGroupNode {
     gulong gid, uid;
-} RmUserGroupList;
+} RmUserGroupNode;
 
 typedef struct RmSession {
     RmFileList *list;
@@ -227,9 +229,6 @@ typedef struct RmSession {
 
     FILE *script_out;
     FILE *log_out;
-
-    gint activethreads;
-    pthread_mutex_t threadlock;
 
     volatile bool aborted;
 } RmSession;

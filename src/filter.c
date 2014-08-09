@@ -493,7 +493,7 @@ void size_to_human_readable(guint64 num, char *in, size_t len) {
 
 static void handle_double_base_file(RmSession *session, RmFile *file) {
     char *abs_path = realpath(file->path, NULL);
-    file->lint_type = TYPE_BASE;
+    file->lint_type = RM_LINT_TYPE_BASE;
     rm_error("   %sls%s %s\n", (session->settings->verbosity != 1) ? GRE : "", NCO, abs_path);
     write_to_log(session, file, false, NULL);
     g_free(abs_path);
@@ -508,7 +508,7 @@ static int find_double_bases(RmSession *session) {
 
     RmFile *fi = NULL;
     while((fi = rm_file_list_iter_all(session->list, fi))) {
-        if(fi->lint_type == TYPE_BASE) {
+        if(fi->lint_type == RM_LINT_TYPE_BASE) {
             continue;
         }
 
@@ -520,7 +520,7 @@ static int find_double_bases(RmSession *session) {
             if(1
                     && !strcmp(rm_basename(fi->path), rm_basename(fj->path))
                     && fi->node != fj->node
-                    && fj->lint_type != TYPE_BASE
+                    && fj->lint_type != RM_LINT_TYPE_BASE
               ) {
                 if(header_printed) {
                     rm_error("\n%s#"NCO" Double basename(s):\n", GRE);
@@ -538,7 +538,7 @@ static int find_double_bases(RmSession *session) {
                     RmFile *fx = fj;
                     while((fx = rm_file_list_iter_all(session->list, fx))) {
                         if(fx->node == fj->node) {
-                            fx->lint_type = TYPE_BASE;
+                            fx->lint_type = RM_LINT_TYPE_BASE;
                         }
                     }
                 }
@@ -567,52 +567,52 @@ static int find_double_bases(RmSession *session) {
 
 static long cmp_sort_lint_type(RmFile *a, RmFile *b, gpointer user_data) {
     (void) user_data;
-    if (a->lint_type == TYPE_EDIR && b->lint_type == TYPE_EDIR)
+    if (a->lint_type == RM_LINT_TYPE_EDIR && b->lint_type == RM_LINT_TYPE_EDIR)
         return (long)strcmp(b->path, a->path);
     else
         return ((long)a->lint_type - (long)b->lint_type);
 }
 
-static const char *TYPE_TO_DESCRIPTION[] = {
-    [TYPE_UNKNOWN]      = "",
-    [TYPE_BLNK]         = "Bad link(s)",
-    [TYPE_EDIR]         = "Empty dir(s)",
-    [TYPE_NBIN]         = "Non stripped binarie(s)",
-    [TYPE_BADUID]       = "Bad UID(s)",
-    [TYPE_BADGID]       = "Bad GID(s)",
-    [TYPE_BADUGID]      = "Bad UID and GID(s)",
-    [TYPE_EFILE]        = "Empty file(s)",
-    [TYPE_DUPE_CANDIDATE] = "Duplicate(s)"
+static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
+    [RM_LINT_TYPE_UNKNOWN]      = "",
+    [RM_LINT_TYPE_BLNK]         = "Bad link(s)",
+    [RM_LINT_TYPE_EDIR]         = "Empty dir(s)",
+    [RM_LINT_TYPE_NBIN]         = "Non stripped binarie(s)",
+    [RM_LINT_TYPE_BADUID]       = "Bad UID(s)",
+    [RM_LINT_TYPE_BADGID]       = "Bad GID(s)",
+    [RM_LINT_TYPE_BADUGID]      = "Bad UID and GID(s)",
+    [RM_LINT_TYPE_EFILE]        = "Empty file(s)",
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = "Duplicate(s)"
 };
 
-static const char *TYPE_TO_COMMAND[] = {
-    [TYPE_UNKNOWN]      = "",
-    [TYPE_BLNK]         = "rm",
-    [TYPE_EDIR]         = "rmdir",
-    [TYPE_NBIN]         = "strip --strip-debug",
-    [TYPE_BADUID]       = "chown %s",
-    [TYPE_BADGID]       = "chgrp %s",
-    [TYPE_BADUGID]      = "chown %s:%s",
-    [TYPE_EFILE]        = "rm",
-    [TYPE_DUPE_CANDIDATE] = "ls"
+static const char *RM_LINT_TYPE_TO_COMMAND[] = {
+    [RM_LINT_TYPE_UNKNOWN]      = "",
+    [RM_LINT_TYPE_BLNK]         = "rm",
+    [RM_LINT_TYPE_EDIR]         = "rmdir",
+    [RM_LINT_TYPE_NBIN]         = "strip --strip-debug",
+    [RM_LINT_TYPE_BADUID]       = "chown %s",
+    [RM_LINT_TYPE_BADGID]       = "chgrp %s",
+    [RM_LINT_TYPE_BADUGID]      = "chown %s:%s",
+    [RM_LINT_TYPE_EFILE]        = "rm",
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = "ls"
 };
 
 static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *first_group) {
-    RmLintType flag = TYPE_UNKNOWN;
+    RmLintType flag = RM_LINT_TYPE_UNKNOWN;
     RmSettings *sets = session->settings;
     const char *user = get_username();
     const char *group = get_groupname();
 
     for(GList *iter = first_group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if(file->lint_type >= TYPE_OTHER_LINT) {
+        if(file->lint_type >= RM_LINT_TYPE_OTHER_LINT) {
             rm_error("Unknown filetype: %d (thats a bug)\n", file->lint_type);
             continue;
         }
 
         if(flag != file->lint_type) {
             rm_error(YEL"\n# "NCO);
-            rm_error("%s", TYPE_TO_DESCRIPTION[file->lint_type]);
+            rm_error("%s", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]);
             rm_error(": \n"NCO);
             flag = file->lint_type;
         }
@@ -620,15 +620,15 @@ static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *
         rm_error(GRE);
         rm_error("   ");
 
-        const char *format = TYPE_TO_COMMAND[file->lint_type];
+        const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
         switch(file->lint_type) {
-        case TYPE_BADUID:
+        case RM_LINT_TYPE_BADUID:
             rm_error(format, user);
             break;
-        case TYPE_BADGID:
+        case RM_LINT_TYPE_BADGID:
             rm_error(format, group);
             break;
-        case TYPE_BADUGID:
+        case RM_LINT_TYPE_BADUGID:
             rm_error(format, user, group);
             break;
         default:

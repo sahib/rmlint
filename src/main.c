@@ -28,7 +28,6 @@
 #include <locale.h>
 
 #include "rmlint.h"
-#include "useridcheck.h"
 #include "list.h"
 
 

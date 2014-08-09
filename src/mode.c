@@ -36,7 +36,7 @@
 #include "mode.h"
 #include "list.h"
 #include "filter.h"
-#include "useridcheck.h"
+#include "linttests.h"
 
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -115,7 +115,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
     if(session->log_out && session->script_out && sets->output_log) {
         char *fpath = realpath(file->path, NULL);
         if(!fpath) {
-            if(file->lint_type != TYPE_BLNK) {
+            if(file->lint_type != RM_LINT_TYPE_BLNK) {
                 rm_error(YEL"WARN: "NCO"Unable to get full path [of %s] ", file->path);
                 rm_perror("(write_to_log():mode.c)");
             }
@@ -129,25 +129,25 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
             fpath = strsubs(fpath, "'", "'\"'\"'");
             free(tmp_copy);
         }
-        if(file->lint_type == TYPE_BLNK) {
+        if(file->lint_type == RM_LINT_TYPE_BLNK) {
             script_print(session, _sd_("rm -f '%s' # bad link pointing nowhere.\n", fpath));
             log_print(session, session->log_out, "BLNK");
-        } else if(file->lint_type == TYPE_BASE) {
+        } else if(file->lint_type == RM_LINT_TYPE_BASE) {
             log_print(session, session->log_out, "BASE");
             script_print(session, _sd_("echo  '%s' # double basename.\n", fpath));
-        } else if(file->lint_type == TYPE_EDIR) {
+        } else if(file->lint_type == RM_LINT_TYPE_EDIR) {
             script_print(session, _sd_("rmdir '%s' # empty folder.\n", fpath));
             log_print(session, session->log_out, "EDIR");
-        } else if(file->lint_type == TYPE_NBIN) {
+        } else if(file->lint_type == RM_LINT_TYPE_NBIN) {
             script_print(session, _sd_("strip --strip-debug '%s' # binary with debugsymbols.\n", fpath));
             log_print(session, session->log_out, "NBIN");
-        } else if(file->lint_type == TYPE_BADUID) {
+        } else if(file->lint_type == RM_LINT_TYPE_BADUID) {
             script_print(session, _sd_("%s '%s' # bad uid\n", chown_cmd_baduid, fpath));
             log_print(session, session->log_out, "BUID");
-        } else if(file->lint_type == TYPE_BADGID) {
+        } else if(file->lint_type == RM_LINT_TYPE_BADGID) {
             script_print(session, _sd_("%s '%s' # bad gid\n", chown_cmd_badgid, fpath));
             log_print(session, session->log_out, "BGID");
-        } else if(file->lint_type == TYPE_BADUGID) {
+        } else if(file->lint_type == RM_LINT_TYPE_BADUGID) {
             script_print(session, _sd_("%s '%s' # bad gid and uid\n", chown_cmd_badugid, fpath));
             log_print(session, session->log_out, "BGID");
         } else if(file->fsize == 0) {
@@ -186,7 +186,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
         }
         fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
 #undef INT_CAST
-        if(free_fullpath && fpath && file->lint_type != TYPE_BLNK) {
+        if(free_fullpath && fpath && file->lint_type != RM_LINT_TYPE_BLNK) {
             g_free(fpath);
         }
     }

@@ -30,6 +30,7 @@
 #include <pthread.h>
 #include <glib.h>
 #include <error.h>
+#include <fts.h>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -48,7 +49,7 @@ typedef struct RmTraverseSession {
     GHashTable *disk_table;  /*TODO: combine disk_table into
             disk_mapper_table as disk_mapper_table->used_disks? */
     GThreadPool *traverse_pool;
-    RmUserGroupList **userlist;
+    RmUserGroupNode **userlist;
     int fts_flags;
     guint64 numfiles;
     RmSession *rm_session;
@@ -146,14 +147,14 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
         if (settings->findbadids && (gid_check = uid_gid_check(statp, traverse_session->userlist))) {
             file_type = gid_check;
         } else if(settings->nonstripped && is_nonstripped(path)) {
-            file_type = TYPE_NBIN;
+            file_type = RM_LINT_TYPE_NBIN;
         } else {
             guint64 file_size = statp->st_size;
             if(!settings->limits_specified || (settings->minsize <= file_size && file_size <= settings->maxsize)) {
                 if(statp->st_size == 0) {
-                    file_type = TYPE_EFILE;
+                    file_type = RM_LINT_TYPE_EFILE;
                 } else {
-                    file_type = TYPE_DUPE_CANDIDATE;
+                    file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
                 }
             } else {
                 return 0;
@@ -282,7 +283,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                             && is_emptydir[ (p->fts_level + 1) ] == 'E'
                             && settings->findemptydirs
                        ) {
-                        numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, TYPE_EDIR);
+                        numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, RM_LINT_TYPE_EDIR);
                     }
                     break;
                 case FTS_ERR:       /* error; errno is set */
@@ -293,7 +294,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     break;
                 case FTS_SLNONE:    /* symbolic link without target */
                     warning(RED"Warning: symlink without target: %s\n"NCO, p->fts_path);
-                    numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, TYPE_BLNK);
+                    numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, RM_LINT_TYPE_BLNK);
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
                 case FTS_W:         /* whiteout object */
@@ -338,10 +339,8 @@ void traverse_path(gpointer data, gpointer userdata) {
         info(GRE"Finished traversing path %s, got %lu files.\n"NCO, traverse_path_args->path, (unsigned long)numfiles);
         //rm_traverse_path_buffer_free(traverse_path_args);
     }
-    pthread_mutex_lock(&traverse_session->rm_session->threadlock);
-    traverse_session->numfiles += numfiles;
-    pthread_mutex_unlock(&traverse_session->rm_session->threadlock);
 
+    traverse_session->numfiles += numfiles;
 }
 
 
@@ -369,7 +368,7 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
     self->disk_table = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                        NULL,
                        NULL);
-    self->userlist = userlist_new();
+    self->userlist = rm_userlist_new();
     /* initialise and launch list builder pool */
     GError *g_err = NULL;
     self->traverse_pool = g_thread_pool_new (traverse_path,          /* func */
@@ -400,7 +399,7 @@ guint64 traverse_session_join_and_free(RmTraverseSession *traverse_session) {
             g_hash_table_destroy(traverse_session->disk_table);
         }
         if(traverse_session->userlist) {
-            userlist_destroy(traverse_session->userlist);
+            rm_userlist_destroy(traverse_session->userlist);
         }
         if(traverse_session->paths) {
             g_hash_table_destroy(traverse_session->paths);
