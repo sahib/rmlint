@@ -183,6 +183,18 @@ char *rm_util_get_groupname(void) {
     }
 }
 
+void rm_util_size_to_human_readable(guint64 num, char *in, gsize len) {
+    if(num < 512) {
+        snprintf(in, len, "%lu B", num);
+    } else if(num < 512 * 1024) {
+        snprintf(in, len, "%.2f KB", num / 1024.0);
+    } else if(num < 512 * 1024 * 1024) {
+        snprintf(in, len, "%.2f MB", num / (1024.0 * 1024.0));
+    } else {
+        snprintf(in, len, "%.2f GB", num / (1024.0 * 1024.0 * 1024.0));
+    }
+}
+
 /////////////////////////////////////
 //   UID/GID VALIDITY CHECKING     //
 /////////////////////////////////////

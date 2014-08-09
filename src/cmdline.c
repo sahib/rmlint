@@ -704,8 +704,8 @@ char rm_echo_settings(RmSettings *settings) {
 
     if (settings->limits_specified) {
         char size_buf_min[128], size_buf_max[128];
-        size_to_human_readable(settings->minsize, size_buf_min, sizeof(size_buf_min));
-        size_to_human_readable(settings->maxsize, size_buf_max, sizeof(size_buf_max));
+        rm_util_size_to_human_readable(settings->minsize, size_buf_min, sizeof(size_buf_min));
+        rm_util_size_to_human_readable(settings->maxsize, size_buf_max, sizeof(size_buf_max));
         info("\tFile size between %s and %s bytes\n", size_buf_min, size_buf_max);
 
     } else {

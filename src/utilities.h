@@ -96,6 +96,11 @@ char *rm_util_basename(const char *filename);
  */
 ino_t rm_util_parent_node(const char *path);
 
+/*
+ * @brief Takes num and converts into some human readable string. 1024 -> 1KB 
+ */
+void rm_util_size_to_human_readable(guint64 num, char *in, gsize len);
+
 /////////////////////////////////////
 //    MOUNTTABLE IMPLEMENTATION    //
 /////////////////////////////////////
