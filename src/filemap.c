@@ -76,7 +76,7 @@ static void rm_offset_free_func(RmOffsetEntry *entry) {
 
 RmOffsetTable rm_offset_create_table(const char *path) {
     int fd = open(path, O_RDONLY);
-    if(fd < 0) {
+    if(fd == -1) {
         info("Error opening %s in setup_fiemap_extents\n", path);
         return NULL;
     }
@@ -97,7 +97,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
         fiemap->fm_extent_count = n_extents;
         fiemap->fm_length = FIEMAP_MAX_OFFSET;
 
-        if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) < 0) {
+        if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) == -1) {
             break;
         }
 
@@ -111,10 +111,9 @@ RmOffsetTable rm_offset_create_table(const char *path) {
         /* used for detecting contiguous extents, which we ignore */
         unsigned long expected = 0;
 
-        unsigned i;
-        for (i = 0; i < fiemap->fm_mapped_extents && !last; i++) {
+        /* Remember all non contiguous extents */
+        for(unsigned i = 0; i < fiemap->fm_mapped_extents && !last; i++) {
             if (i == 0 || fm_ext[i].fe_physical != expected) {
-                /* not a contiguous extents */
                 RmOffsetEntry *offset_entry = g_slice_new(RmOffsetEntry);
                 offset_entry->logical = fm_ext[i].fe_logical;
                 offset_entry->physical = fm_ext[i].fe_physical;
