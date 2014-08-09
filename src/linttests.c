@@ -44,7 +44,7 @@
 #include <libelf.h>
 #include <gelf.h>
 
-#include "rmlint.h"
+#include "cmdline.h"
 #include "linttests.h"
 #include "defs.h"
 
@@ -60,7 +60,6 @@ char *rm_basename(const char *filename) {
     /* It's the full path anyway */
     return (char *)filename;
 }
-
 
 ino_t parent_node(const char *path) {
     char *dummy  = g_strdup(path);
@@ -231,11 +230,9 @@ void rm_userlist_destroy(RmUserGroupNode **list) {
     g_free(list);
 }
 
-/* /////////////////////////// */
-
 #ifdef _RM_COMPILE_MAIN_USERLIST
 
-#define bool2str(v) (v) ? "True" : "False"
+#define yes(v) (v) ? "True" : "False"
 
 int main(int argc, char *argv[]) {
     struct stat stat_buf;
@@ -253,8 +250,8 @@ int main(int argc, char *argv[]) {
            (unsigned long)stat_buf.st_gid
     );
     rm_userlist_contains(list, stat_buf.st_uid, stat_buf.st_gid, &has_uid, &has_gid);
-    printf("=> Valid UID = %s\n", bool2str(has_uid));
-    printf("=> Valid GID = %s\n", bool2str(has_gid));
+    printf("=> Valid UID = %s\n", yes(has_uid));
+    printf("=> Valid GID = %s\n", yes(has_gid));
     rm_userlist_destroy(list);
     return EXIT_SUCCESS;
 }

@@ -36,7 +36,7 @@
 #include "list.h"
 #include "linttests.h"
 #include "filemap.h"
-#include "rmlint.h"
+#include "cmdline.h"
 
 RmFile *rm_file_new(const char *path,
                     guint64 fsize,

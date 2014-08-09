@@ -38,7 +38,7 @@
 #include <math.h>
 #include <dirent.h>
 
-#include "rmlint.h"
+#include "cmdline.h"
 #include "filter.h"
 #include "mode.h"
 #include "read.h"

@@ -32,7 +32,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#include "rmlint.h"
+#include "cmdline.h"
 #include "mode.h"
 #include "list.h"
 #include "filter.h"

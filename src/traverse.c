@@ -35,7 +35,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "list.h"
-#include "rmlint.h"
+#include "cmdline.h"
 #include "filter.h"
 #include "linttests.h"
 #include "filemap.h"

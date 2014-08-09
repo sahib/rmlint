@@ -24,7 +24,7 @@
  */
 
 #include "read.h"
-#include "rmlint.h"
+#include "cmdline.h"
 #include "list.h"
 
 #include <stdio.h>

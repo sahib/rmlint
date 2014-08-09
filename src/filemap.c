@@ -27,7 +27,7 @@
  (http://dkrotx-prg.blogspot.com.au/2012/08/speedup-file-reading-on-linux.html) */
 
 #include "filemap.h"
-#include "rmlint.h"
+#include "cmdline.h"
 
 #include <linux/fs.h>
 #include <linux/fiemap.h>

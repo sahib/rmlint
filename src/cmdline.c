@@ -42,7 +42,7 @@
 
 #include <sys/time.h>
 
-#include "rmlint.h"
+#include "cmdline.h"
 #include "mode.h"
 #include "list.h"
 #include "traverse.h"
