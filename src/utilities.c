@@ -359,7 +359,6 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         struct stat stat_buf_dev;
         if(stat(entry->mnt_fsname, &stat_buf_dev) == -1) {
             char *nfs_marker = NULL;
-
             /* folder stat() is ok but devname stat() is not; this happens for example
              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
              * */
@@ -373,7 +372,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 is_rotational = true;
 
                 /* Assign different dev ids (with major id 0) to different nfs servers */
-                if(g_hash_table_contains(self->nfs_table, diskname)) {
+                if(!g_hash_table_contains(self->nfs_table, diskname)) {
                     g_hash_table_insert(self->nfs_table, diskname, NULL);
                 }
                 whole_disk = makedev(0, g_hash_table_size(self->nfs_table));
@@ -466,7 +465,11 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
     rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
-    return part->disk;
+    if (part) {
+        return part->disk;
+    } else {
+        return partition;
+    }
 }
 
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
