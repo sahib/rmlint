@@ -333,7 +333,7 @@ void rm_digest_finalize(RmDigest *digest) {
     }
 }
 
-#ifdef _RM_COMPILE_MAIN
+#ifdef _RM_COMPILE_MAIN_CKSUM
 
 #include <alloca.h>
 #include <sys/types.h>
