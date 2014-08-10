@@ -1002,7 +1002,7 @@ int main(int argc, const char **argv) {
                                 NULL, (GDestroyNotify)main_free_func
                             );
 
-    GHashTable *size_table = g_hash_table_new( NULL,NULL );
+    GHashTable *size_table = g_hash_table_new( NULL, NULL);
 
     char path[PATH_MAX];
     while(fgets(path, sizeof(path),  stdin)) {
