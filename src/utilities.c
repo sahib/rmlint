@@ -56,7 +56,7 @@
 #include <gelf.h>
 
 #if HAVE_BLKID
-    #include <blkid.h>
+#include <blkid.h>
 #endif
 
 ////////////////////////////////////
@@ -96,13 +96,11 @@ int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist) {
     if (rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid, &has_gid)) {
         if(has_gid == false && has_uid == false) {
             return RM_LINT_TYPE_BADUGID;
-        } else
-        if(has_gid == false && has_uid == true) {
-                return RM_LINT_TYPE_BADGID;
-        } else
-        if(has_gid == true && has_uid == false) {
+        } else if(has_gid == false && has_uid == true) {
+            return RM_LINT_TYPE_BADGID;
+        } else if(has_gid == true && has_uid == false) {
             return RM_LINT_TYPE_BADUID;
-        } 
+        }
     }
 
     return RM_LINT_TYPE_UNKNOWN;
@@ -117,13 +115,13 @@ bool rm_util_is_nonstripped(const char *path) {
     int fd;
 
     /* ELF handle */
-    Elf *elf;       
+    Elf *elf;
 
     /* section descriptor pointer */
-    Elf_Scn *scn;   
+    Elf_Scn *scn;
 
     /* section header */
-    GElf_Shdr shdr; 
+    GElf_Shdr shdr;
 
     /* Open ELF file to obtain file descriptor */
     if((fd = open(path, O_RDONLY)) == -1) {
@@ -142,7 +140,7 @@ bool rm_util_is_nonstripped(const char *path) {
     elf = elf_begin(fd, ELF_C_READ, NULL);
 
     /* Initialize section descriptor pointer so that elf_nextscn()
-     * returns a pointer to the section descriptor at index 1. 
+     * returns a pointer to the section descriptor at index 1.
      * */
     scn = NULL;
 
@@ -164,7 +162,7 @@ bool rm_util_is_nonstripped(const char *path) {
     return is_ns;
 }
 
-char * rm_util_get_username(void) {
+char *rm_util_get_username(void) {
     struct passwd *user = getpwuid(geteuid());
     if(user) {
         return user->pw_name;
@@ -207,7 +205,7 @@ RmUserGroupNode **rm_userlist_new(void) {
 
     setpwent();
     while((node = getpwent()) != NULL) {
-        RmUserGroupNode * item = g_malloc0(sizeof(RmUserGroupNode));
+        RmUserGroupNode *item = g_malloc0(sizeof(RmUserGroupNode));
         item->gid = node->pw_gid;
         item->uid = node->pw_uid;
         g_array_append_val(array, item);
@@ -215,7 +213,7 @@ RmUserGroupNode **rm_userlist_new(void) {
 
     /* add all groups, not just those that are user primary gid's */
     while((grp = getgrent()) != NULL) {
-        RmUserGroupNode * item = g_malloc0(sizeof(RmUserGroupNode));
+        RmUserGroupNode *item = g_malloc0(sizeof(RmUserGroupNode));
         item->gid = grp->gr_gid;
         item->uid = 0;
         g_array_append_val(array, item);
@@ -265,6 +263,31 @@ void rm_userlist_destroy(RmUserGroupNode **list) {
 //    MOUNTTABLE IMPLEMENTATION    //
 /////////////////////////////////////
 
+rm_part_info *rm_part_info_new(char *name, dev_t disk) {
+    rm_part_info *self = g_new0(rm_part_info, 1);
+    self->name = g_strdup(name);
+    self->disk = disk;
+    return self;
+}
+
+void rm_part_info_free(rm_part_info *self) {
+    g_free(self->name);
+    g_free(self);
+}
+
+rm_disk_info *rm_disk_info_new(char *name, char is_rotational) {
+    rm_disk_info *self = g_new0(rm_disk_info, 1);
+    self->name = g_strdup(name);
+    self->is_rotational = is_rotational;
+    return self;
+}
+
+void rm_disk_info_free(rm_disk_info *self) {
+    g_free(self->name);
+    g_free(self);
+}
+
+
 static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     char sys_path[PATH_MAX];
     gchar is_rotational = -1;
@@ -302,18 +325,23 @@ static bool rm_mounts_is_ramdisk(const char *fs_type) {
 
 static void rm_mounts_create_tables(RmMountTable *self) {
     /* partition dev_t to disk dev_t */
-    self->part_table = g_hash_table_new(NULL, NULL);
+    self->part_table = g_hash_table_new_full(g_direct_hash,
+                       g_direct_equal,
+                       NULL,
+                       (GDestroyNotify)rm_part_info_free);
 
     /* disk dev_t to boolean indication if disk is rotational */
-    self->rotational_table = g_hash_table_new(NULL, NULL);
+    self->disk_table = g_hash_table_new_full(g_direct_hash,
+                       g_direct_equal,
+                       NULL,
+                       (GDestroyNotify)rm_disk_info_free);
 
-    /* Mapping from disk dev_t to diskname */
-    self->diskname_table = g_hash_table_new_full(NULL, NULL, NULL, g_free);
-
-    self->mounted_paths = NULL;
+    self->nfs_table = g_hash_table_new_full(g_str_hash,
+                                            g_str_equal,
+                                            g_free,
+                                            NULL);
 
     /* 0:0 is reserved for the completely unknown */
-    int nfs_counter = 1;
     FILE *mnt_file = setmntent("/etc/mtab", "r");
 
     struct mntent *entry = NULL;
@@ -340,16 +368,15 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 is_rotational = false;
                 whole_disk = stat_buf_folder.st_dev;
             } else if((nfs_marker = strstr(entry->mnt_fsname, ":/")) != NULL) {
-                size_t until_slash = MIN((int)sizeof(diskname), entry->mnt_fsname - nfs_marker);
+                size_t until_slash = MIN((int)sizeof(entry->mnt_fsname), nfs_marker - entry->mnt_fsname);
                 strncpy(diskname, entry->mnt_fsname, until_slash);
                 is_rotational = true;
 
                 /* Assign different dev ids (with major id 0) to different nfs servers */
-                whole_disk = makedev(0, nfs_counter);
-                if(g_hash_table_contains(self->diskname_table, GUINT_TO_POINTER(whole_disk))) {
-                    nfs_counter += 1;
-                    whole_disk = makedev(0, nfs_counter);  
+                if(g_hash_table_contains(self->nfs_table, diskname)) {
+                    g_hash_table_insert(self->nfs_table, diskname, NULL);
                 }
+                whole_disk = makedev(0, g_hash_table_size(self->nfs_table));
             } else {
                 strncpy(diskname, "unknown", sizeof(diskname));
                 is_rotational = true;
@@ -378,38 +405,31 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         g_hash_table_insert(
             self->part_table,
             GUINT_TO_POINTER(stat_buf_folder.st_dev),
-            GUINT_TO_POINTER(whole_disk));
-
-        self->mounted_paths = g_list_prepend(self->mounted_paths, g_strdup(entry->mnt_dir));
+            rm_part_info_new (entry->mnt_dir, whole_disk));
 
         /* small hack, so also the full disk id can be given to the api below */
-        g_hash_table_insert(
-            self->part_table,
-            GUINT_TO_POINTER(whole_disk),
-            GUINT_TO_POINTER(whole_disk)
-        );
+        if (!g_hash_table_contains(self->part_table, GINT_TO_POINTER(whole_disk))) {
+            g_hash_table_insert(
+                self->part_table,
+                GUINT_TO_POINTER(whole_disk),
+                rm_part_info_new (entry->mnt_dir, whole_disk));
+        }
+
+        if (!g_hash_table_contains(self->disk_table, GINT_TO_POINTER(whole_disk))) {
+            g_hash_table_insert(
+                self->disk_table,
+                GINT_TO_POINTER(whole_disk),
+                rm_disk_info_new(diskname, is_rotational));
+        }
 
         info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %15s; rotational: %3s)",
              major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
              entry->mnt_dir,
              major(whole_disk), minor(whole_disk),
              entry->mnt_fsname, diskname, is_rotational ? "yes" : "no"
-        );
-
-        if(is_rotational != -1) {
-            g_hash_table_insert(
-                self->rotational_table,
-                GUINT_TO_POINTER(whole_disk),
-                GUINT_TO_POINTER(!is_rotational)
             );
-        }
-        g_hash_table_insert(
-            self->diskname_table,
-            GUINT_TO_POINTER(whole_disk),
-            g_strdup(diskname)
-        );
-    }
 
+    }
     endmntent(mnt_file);
 }
 
@@ -425,19 +445,15 @@ RmMountTable *rm_mounts_table_new(void) {
 
 void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->part_table);
-    g_hash_table_unref(self->rotational_table);
-    g_hash_table_unref(self->diskname_table);
-    g_list_free_full(self->mounted_paths, g_free);
+    g_hash_table_unref(self->disk_table);
+    g_hash_table_unref(self->nfs_table);
     g_slice_free(RmMountTable, self);
 }
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
-    dev_t disk_id = rm_mounts_get_disk_id(self, device);
-    return GPOINTER_TO_UINT(
-               g_hash_table_lookup(
-                   self->rotational_table, GUINT_TO_POINTER(disk_id)
-               )
-           );
+    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    rm_disk_info *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+    return !disk->is_rotational;
 }
 
 bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
@@ -445,16 +461,12 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
     if(stat(path, &stat_buf) == -1) {
         return -1;
     }
-
     return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
 }
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
-    return GPOINTER_TO_UINT(
-               g_hash_table_lookup(
-                   self->part_table, GUINT_TO_POINTER(partition)
-               )
-           );
+    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
+    return part->disk;
 }
 
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
@@ -466,8 +478,10 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
     return rm_mounts_get_disk_id(self, stat_buf.st_dev);
 }
 
-char *rm_mounts_get_name(RmMountTable *self, dev_t device) {
-    return (gpointer)g_hash_table_lookup (self->diskname_table, GINT_TO_POINTER(device));
+char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
+    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    rm_disk_info *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+    return disk->name;
 }
 
 /////////////////////////////////
@@ -514,8 +528,8 @@ RmOffsetTable rm_offset_create_table(const char *path) {
         return NULL;
     }
 
-    /* struct fiemap does not allocate any extents by default, 
-     * so we choose ourself how many of them we allocate. 
+    /* struct fiemap does not allocate any extents by default,
+     * so we choose ourself how many of them we allocate.
      * */
     const int n_extents = 256;
     struct fiemap *fiemap = g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
@@ -534,7 +548,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
             break;
         }
 
-        /* This might happen on empty files - those have no 
+        /* This might happen on empty files - those have no
          * extents, but they have a offset on the disk.
          */
         if(fiemap->fm_mapped_extents <= 0) {
@@ -567,21 +581,21 @@ RmOffsetTable rm_offset_create_table(const char *path) {
 }
 
 guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
-#ifdef __linux__   
+#ifdef __linux__
     if (offset_list != NULL) {
         RmOffsetEntry token;
         token.physical = 0;
         token.logical = file_offset;
 
-        GSequenceIter * nearest = g_sequence_search(
-                             offset_list, &token,
-                             (GCompareDataFunc)rm_offset_find_logical, NULL
-                         );
+        GSequenceIter *nearest = g_sequence_search(
+                                     offset_list, &token,
+                                     (GCompareDataFunc)rm_offset_find_logical, NULL
+                                 );
 
         if(!g_sequence_iter_is_end(nearest)) {
             RmOffsetEntry *off = g_sequence_get(nearest);
             return off->physical + file_offset - off->logical ;
-        } 
+        }
     }
 #endif
     /* default to 0 always */
@@ -593,19 +607,19 @@ guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
 /////////////////////////////////
 
 #ifdef _RM_COMPILE_MAIN_FIEMAP
-    int main(int argc, char const *argv[]) {
-        if(argc < 3) {
-            return EXIT_FAILURE;
-        }
-
-        GSequence *db = rm_offset_create_table(argv[1]);
-        guint64 off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
-
-        g_printerr("Offset: %lu\n", off);
-        g_sequence_free(db);
-
-        return EXIT_SUCCESS;
+int main(int argc, char const *argv[]) {
+    if(argc < 3) {
+        return EXIT_FAILURE;
     }
+
+    GSequence *db = rm_offset_create_table(argv[1]);
+    guint64 off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
+
+    g_printerr("Offset: %lu\n", off);
+    g_sequence_free(db);
+
+    return EXIT_SUCCESS;
+}
 #endif
 #ifdef _RM_COMPILE_MAIN_MOUNTS
 
@@ -646,7 +660,7 @@ int main(int argc, char *argv[]) {
     printf("File has UID %lu and GID %lu\n",
            (unsigned long)stat_buf.st_uid,
            (unsigned long)stat_buf.st_gid
-    );
+          );
     rm_userlist_contains(list, stat_buf.st_uid, stat_buf.st_gid, &has_uid, &has_gid);
     printf("=> Valid UID = %s\n", yes(has_uid));
     printf("=> Valid GID = %s\n", yes(has_gid));
@@ -654,3 +668,4 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 #endif
+
