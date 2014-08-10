@@ -85,7 +85,7 @@ int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist);
 bool rm_util_is_nonstripped(const char *path);
 
 /**
- * @brief Get the basename part of the file. It does not change filename. 
+ * @brief Get the basename part of the file. It does not change filename.
  *
  * @return NULL on failure, the pointer after the last / on success.
  */
@@ -97,7 +97,7 @@ char *rm_util_basename(const char *filename);
 ino_t rm_util_parent_node(const char *path);
 
 /*
- * @brief Takes num and converts into some human readable string. 1024 -> 1KB 
+ * @brief Takes num and converts into some human readable string. 1024 -> 1KB
  */
 void rm_util_size_to_human_readable(guint64 num, char *in, gsize len);
 
@@ -107,10 +107,20 @@ void rm_util_size_to_human_readable(guint64 num, char *in, gsize len);
 
 typedef struct RmMountTable {
     GHashTable *part_table;
-    GHashTable *rotational_table;
-    GHashTable *diskname_table;
-    GList *mounted_paths;
+    GHashTable *disk_table;
+    GHashTable *nfs_table;
 } RmMountTable;
+
+typedef struct rm_disk_info {
+    char *name;
+    char is_rotational;
+} rm_disk_info;
+
+typedef struct rm_part_info {
+    char *name;
+    dev_t disk;
+} rm_part_info;
+
 
 /**
  * @brief Allocates a new mounttable.
@@ -148,7 +158,7 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
  *
  * @return pointer to disk name.
  */
-char *rm_mounts_get_name(RmMountTable *self, dev_t device);
+char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device);
 
 /**
  * @brief Same as above, but calls stat(2) on path for you.
@@ -177,7 +187,7 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
 /* typedef it, in case we need to exchange
  * the data structure at any point.
  */
-typedef GSequence * RmOffsetTable;
+typedef GSequence *RmOffsetTable;
 
 /**
  * @brief Create a table with the extents for a file at path.
