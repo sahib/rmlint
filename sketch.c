@@ -79,17 +79,6 @@
  */
 #define SHRED_N_PAGES         (16)
 
-/* After how many files the join-table is cleaned up from old entries.  This
- * settings will not have much performance impact, just keeps memory a bit
- * lower.
- */
-#define SHRED_GC_INTERVAL     (100)
-
-/* Maximum number of bytes to read in one pass.
- * Never goes beyond this value.
- */
-#define SHRED_MAX_READ_SIZE   (1024 * 1024 * 1024)
-
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
  */
@@ -99,6 +88,17 @@
                                | POSIX_FADV_NOREUSE    /* We will not reuse old data  */ \
                               )                                                          \
  
+/* After how many files the join-table is cleaned up from old entries.  This
+ * settings will not have much performance impact, just keeps memory a bit
+ * lower.
+ */
+#define SHRED_GC_INTERVAL     (2000)
+
+/* Maximum number of bytes to read in one pass.
+ * Never goes beyond this value.
+ */
+#define SHRED_MAX_READ_SIZE   (1024 * 1024 * 1024)
+
 /* How many pages to use during paranoid byte-by-byte comparasion?
  * More pages use more memory but result in less syscalls.
  */
@@ -370,8 +370,8 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
 
     int fd = 0;
     int bytes_read = 0;
-    int read_maximum = -1;
     int buf_size = rm_buffer_pool_size(tag->main->mem_pool) - offsetof(RmBuffer, data);
+    guint64 read_maximum = 0;
     struct iovec readvec[SHRED_N_PAGES];
 
     if(shred_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
@@ -397,12 +397,15 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
         goto finish;
     }
 
-    // TODO: test if this makes any difference.
     posix_fadvise(fd, file->seek_offset, 0, SHRED_FADVISE_FLAGS);
 
     g_async_queue_lock(tag->finished_queue);
     {
-        read_maximum = MIN(tag->read_size, (int)(file->fsize - file->seek_offset));
+        if(file->seek_offset + tag->read_size < file->fsize) {
+            read_maximum = tag->read_size;
+        } else {
+            read_maximum = file->fsize - file->seek_offset;
+        }
     }
     g_async_queue_unlock(tag->finished_queue);
 
@@ -453,9 +456,7 @@ finish:
     g_async_queue_lock(tag->finished_queue);
     {
         if(file->seek_offset < file->fsize) {
-            if(fd > 0) {
-                file->offset = rm_offset_lookup(file->disk_offsets, file->offset);
-            }
+            file->offset = rm_offset_lookup(file->disk_offsets, file->offset);
         } else if(file->seek_offset == file->fsize) {
             tag->readable_files--;
 
@@ -508,6 +509,10 @@ static void shred_devlist_add_job(RmDevlistTag *tag, GThreadPool *pool, RmFile *
 }
 
 static bool shred_devlist_iteration_needed(RmDevlistTag *tag, GQueue *work_queue) {
+    if(work_queue->length == 0) {
+        return true;
+    }
+
     for(GList *iter = work_queue->head; iter; iter = iter->next) {
         if(shred_get_file_state(tag->main, iter->data) == RM_FILE_STATE_PROCESS) {
             return true;
@@ -618,14 +623,14 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
      * once they report as finished. Choose a file with near offset.
      */
     bool run_manager = true;
-    while(run_manager) {
+    while(run_manager && shred_devlist_iteration_needed(&tag, work_queue)) {
         RmFile *finished = NULL;
         g_async_queue_lock(tag.finished_queue);
         {
             finished = g_async_queue_pop_unlocked(tag.finished_queue);
             g_hash_table_remove(processing_table, finished);
 
-            if(tag.readable_files <= 0 || !shred_devlist_iteration_needed(&tag, work_queue)) {
+            if(tag.readable_files <= 0) {
                 run_manager = false;
             } else if(g_queue_get_length(work_queue) == 0) {
                 g_queue_free(work_queue);
