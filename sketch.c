@@ -1001,9 +1001,8 @@ int main(int argc, const char **argv) {
                                 g_direct_hash, g_direct_equal,
                                 NULL, (GDestroyNotify)main_free_func
                             );
-    GHashTable *size_table = g_hash_table_new(
-                                 g_direct_hash, g_direct_equal
-                             );
+
+    GHashTable *size_table = g_hash_table_new( NULL,NULL );
 
     char path[PATH_MAX];
     while(fgets(path, sizeof(path),  stdin)) {
