@@ -288,14 +288,15 @@ static const char delimiter = ',';
 static const char enable    = '+';
 static const char disable   = '-';
 void set_lint_types(RmSettings *sets, char *lint_types) {
+    char *ltypes = lint_types;
     char *lt;
     char set_to;
     int index = 0;
     do {
-        lt = lint_types;
-        if ((lint_types = strchr(lint_types, delimiter))) {
-            lint_types[0] = 0;
-            lint_types++;
+        lt = ltypes;
+        if ((ltypes = strchr(ltypes, delimiter))) {
+            ltypes[0] = 0;
+            ltypes++;
         }
         set_to = true;
         if (lt[0] == enable) {
@@ -351,7 +352,8 @@ void set_lint_types(RmSettings *sets, char *lint_types) {
         } else {
             rm_error(RED"Lint type %s not recognised - ignoring\n"NCO, lt);
         }
-    } while (lint_types);
+    } while (ltypes);
+    g_free(lint_types);
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
@@ -419,7 +421,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         case '?':
             return 0;
         case 'T':
-            set_lint_types(sets, optarg);
+            set_lint_types(sets, g_strdup(optarg));
             break;
         case 't':
             sets->threads = atoi(optarg);
