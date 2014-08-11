@@ -79,6 +79,9 @@
  */
 #define SHRED_N_PAGES         (16)
 
+
+#define SHRED_PAGE_SIZE       (sysconf(_SC_PAGESIZE))
+
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
  */
@@ -111,8 +114,10 @@
 static int shred_get_next_read_size(int read_size) {
     /* Protect agains integer overflows */
     if(read_size >= SHRED_MAX_READ_SIZE) {
+        // g_printerr("## MAX\n");
         return SHRED_MAX_READ_SIZE;
     }  else {
+        // g_printerr("\n\n############### New readsize: %dKB\n\n", read_size / 4096);
         return read_size * 2;
     }
 }
@@ -303,8 +308,8 @@ static bool shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
     }
 
     while(result) {
-        int bytes_a = readv(fd_a, readvec_a, SHRED_N_PAGES);
-        int bytes_b = readv(fd_b, readvec_b, SHRED_N_PAGES);
+        int bytes_a = readv(fd_a, readvec_a, SHRED_PARANOIA_PAGES);
+        int bytes_b = readv(fd_b, readvec_b, SHRED_PARANOIA_PAGES);
         if(bytes_a <= 0 || bytes_b <= 0) {
             break;
         }
@@ -372,7 +377,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     int bytes_read = 0;
     int buf_size = rm_buffer_pool_size(tag->main->mem_pool) - offsetof(RmBuffer, data);
     guint64 read_maximum = 0;
-    struct iovec readvec[SHRED_N_PAGES];
+    struct iovec readvec[32 + 1];
 
     if(shred_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
         goto finish;
@@ -395,10 +400,13 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
         }
 
         goto finish;
+    } else {
+        // TODO: specify offset.
+        /* Give the kernel scheduler some hints */
+        posix_fadvise(fd, file->seek_offset, 0, SHRED_FADVISE_FLAGS);
     }
 
-    posix_fadvise(fd, file->seek_offset, 0, SHRED_FADVISE_FLAGS);
-
+    int N_BUFFERS = 0;
     g_async_queue_lock(tag->finished_queue);
     {
         if(file->seek_offset + tag->read_size < file->fsize) {
@@ -406,20 +414,23 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
         } else {
             read_maximum = file->fsize - file->seek_offset;
         }
+        N_BUFFERS = MIN(32, read_maximum / SHRED_PAGE_SIZE + !!(read_maximum % SHRED_PAGE_SIZE));
     }
     g_async_queue_unlock(tag->finished_queue);
+
+    // g_printerr("Reading buffers: %d %lu %lu\n", N_BUFFERS, read_maximum, SHRED_PAGE_SIZE);
 
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
      */
-    for(int i = 0; i < SHRED_N_PAGES; ++i) {
+    for(int i = 0; i < N_BUFFERS; ++i) {
         /* buffer is one contignous memory block */
         RmBuffer *buffer = rm_buffer_pool_get(tag->main->mem_pool);
         readvec[i].iov_base = buffer->data;
         readvec[i].iov_len = buf_size;
     }
 
-    while(read_maximum > 0 && (bytes_read = preadv(fd, readvec, SHRED_N_PAGES, file->seek_offset)) > 0) {
+    while(read_maximum > 0 && (bytes_read = preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
         int remain = bytes_read % buf_size;
         int blocks = bytes_read / buf_size + !!remain;
 
@@ -447,7 +458,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     }
 
     /* Release the rest of the buffers */
-    for(int i = 0; i < SHRED_N_PAGES; ++i) {
+    for(int i = 0; i < N_BUFFERS; ++i) {
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
         rm_buffer_pool_release(tag->main->mem_pool, buffer);
     }
@@ -458,6 +469,7 @@ finish:
         if(file->seek_offset < file->fsize) {
             file->offset = rm_offset_lookup(file->disk_offsets, file->offset);
         } else if(file->seek_offset == file->fsize) {
+            g_printerr("Decrementing!\n");
             tag->readable_files--;
 
             /* Remember that we had this file already
@@ -518,6 +530,7 @@ static bool shred_devlist_iteration_needed(RmDevlistTag *tag, GQueue *work_queue
             return true;
         }
     }
+    g_printerr("END OF ITER\n");
     return false;
 }
 
@@ -589,7 +602,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
 
     tag.main = main;
-    tag.read_size = sysconf(_SC_PAGESIZE) * SHRED_N_PAGES;
+    tag.read_size = SHRED_PAGE_SIZE;
     tag.readable_files = g_queue_get_length(device_queue);
     tag.finished_queue = g_async_queue_new();
 
@@ -631,8 +644,10 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
             g_hash_table_remove(processing_table, finished);
 
             if(tag.readable_files <= 0) {
+                g_printerr("#### stop manager\n");
                 run_manager = false;
             } else if(g_queue_get_length(work_queue) == 0) {
+                g_printerr("####### reloading queue\n");
                 g_queue_free(work_queue);
                 work_queue = shred_create_work_queue(&tag, device_queue, !nonrotational);
                 tag.read_size = shred_get_next_read_size(tag.read_size);
@@ -890,7 +905,7 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *siz
 
     RmMainTag tag;
     tag.session = session;
-    tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + sysconf(_SC_PAGESIZE));
+    tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + SHRED_PAGE_SIZE);
     tag.join_queue = g_async_queue_new();
 
     /* would use g_atomic, but helgrind does not like that */
