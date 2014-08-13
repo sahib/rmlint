@@ -77,10 +77,12 @@
  * decides how much data will be read for small files, so it should not be too
  * large nor too small, since reading small files twice is very slow.
  */
-#define SHRED_N_PAGES         (16)
+#define SHRED_MAX_PAGES       (32)
 
 
 #define SHRED_PAGE_SIZE       (sysconf(_SC_PAGESIZE))
+
+#define SHRED_INITIAL_FACTOR  (1)
 
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
@@ -117,7 +119,7 @@ static int shred_get_next_read_size(int read_size) {
         // g_printerr("## MAX\n");
         return SHRED_MAX_READ_SIZE;
     }  else {
-        // g_printerr("\n\n############### New readsize: %dKB\n\n", read_size / 4096);
+        // g_printerr("\n\n############### New rweadsize: %dKB\n\n", read_size / 4096);
         return read_size * 2;
     }
 }
@@ -377,7 +379,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     int bytes_read = 0;
     int buf_size = rm_buffer_pool_size(tag->main->mem_pool) - offsetof(RmBuffer, data);
     guint64 read_maximum = 0;
-    struct iovec readvec[32 + 1];
+    struct iovec readvec[SHRED_MAX_PAGES + 1];
 
     if(shred_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
         goto finish;
@@ -414,7 +416,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
         } else {
             read_maximum = file->fsize - file->seek_offset;
         }
-        N_BUFFERS = MIN(32, read_maximum / SHRED_PAGE_SIZE + !!(read_maximum % SHRED_PAGE_SIZE));
+        N_BUFFERS = MIN(SHRED_MAX_PAGES, read_maximum / SHRED_PAGE_SIZE + !!(read_maximum % SHRED_PAGE_SIZE));
     }
     g_async_queue_unlock(tag->finished_queue);
 
@@ -443,12 +445,16 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
             buffer->file = file;
             buffer->len = buf_size;
 
+            static x = 0;
             if(i + 1 == blocks && remain > 0) {
                 buffer->len = remain;
+                x++;
             }
 
             /* Send it to the hasher */
+            g_printerr("Pushing to hasher: %d\n", x);
             shred_thread_pool_push(tag->hash_pool, buffer);
+            g_printerr("Pushing to hasher done\n");
 
             /* Allocate a new buffer - hasher will release the old buffer */
             buffer = rm_buffer_pool_get(tag->main->mem_pool);
@@ -469,7 +475,7 @@ finish:
         if(file->seek_offset < file->fsize) {
             file->offset = rm_offset_lookup(file->disk_offsets, file->offset);
         } else if(file->seek_offset == file->fsize) {
-            g_printerr("Decrementing!\n");
+            // g_printerr("Decrementing!\n");
             tag->readable_files--;
 
             /* Remember that we had this file already
@@ -502,6 +508,13 @@ static void shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
         rm_digest_update(&buffer->file->digest, buffer->data, buffer->len);
         buffer->file->hash_offset += buffer->len;
 
+        static int i = 0;
+        if(buffer->file->hash_offset >= buffer->file->hash_offset) {
+            i++;
+        }
+
+        g_printerr("HASH PUSH %d\n", i);
+
         /* Report the progress to the joiner */
         g_async_queue_push(tag->main->join_queue, shred_create_snapshot(buffer->file));
     }
@@ -515,7 +528,9 @@ static void shred_devlist_add_job(RmDevlistTag *tag, GThreadPool *pool, RmFile *
     if(file != NULL) {
         if(shred_get_file_state(tag->main, file) == RM_FILE_STATE_PROCESS) {
             g_hash_table_insert(processing_table, file, NULL);
+            g_printerr("Pushing to reader\n");
             shred_thread_pool_push(pool, file);
+            g_printerr("Pushing to reader done\n");
         }
     }
 }
@@ -530,7 +545,7 @@ static bool shred_devlist_iteration_needed(RmDevlistTag *tag, GQueue *work_queue
             return true;
         }
     }
-    g_printerr("END OF ITER\n");
+    // g_printerr("END OF ITER\n");
     return false;
 }
 
@@ -602,7 +617,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
 
     tag.main = main;
-    tag.read_size = SHRED_PAGE_SIZE;
+    tag.read_size = SHRED_PAGE_SIZE * SHRED_INITIAL_FACTOR;
     tag.readable_files = g_queue_get_length(device_queue);
     tag.finished_queue = g_async_queue_new();
 
@@ -647,7 +662,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                 g_printerr("#### stop manager\n");
                 run_manager = false;
             } else if(g_queue_get_length(work_queue) == 0) {
-                g_printerr("####### reloading queue\n");
+                //g_printerr("####### reloading queue\n");
                 g_queue_free(work_queue);
                 work_queue = shred_create_work_queue(&tag, device_queue, !nonrotational);
                 tag.read_size = shred_get_next_read_size(tag.read_size);
@@ -675,6 +690,8 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
             processing_table
         );
     }
+
+    g_printerr("JOINING: %d\n", tag.readable_files);
 
     /* Send the queue itself to make the join thread check if we're
      * finished already
@@ -840,7 +857,9 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
                 }
             }
 
+            g_printerr("Pushing to checker\n");
             shred_thread_pool_push(tag->result_pool, results);
+            g_printerr("Pushing to checker done\n");
         }
     }
 
@@ -933,18 +952,17 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *siz
                              );
 
     /* This is the joiner part */
-    RmFileSnapshot *snapshot = NULL;
-    while((snapshot = g_async_queue_pop(tag.join_queue))) {
+    while(devices_left > 0 || g_async_queue_length(tag.join_queue) > 0) {
+        RmFileSnapshot *snapshot = g_async_queue_pop(tag.join_queue);
+
         /* Check if the received pointer is the queue itself.
          * The devlist threads notify us this way when they finish.
          * In this case we check if need to quit already.
          */
+        // g_printerr("\n\n[[LEN=%d]]\n\n", g_async_queue_length(tag.join_queue));
         if((GAsyncQueue *)snapshot == tag.join_queue) {
-            if(--devices_left) {
-                continue;
-            } else {
-                break;
-            }
+            --devices_left;
+            continue;
         } else {
             /* It is a regular RmFileSnapshot with updates. */
             RmSizeKey key;
@@ -978,6 +996,7 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *siz
             shred_gc_join_table(join_table, &key);
         }
     }
+    g_printerr("\n\n--[[LEN=%d]]--\n\n", g_async_queue_length(tag.join_queue));
 
     /* This should not block, or at least only very short. */
     g_thread_pool_free(tag.device_pool, FALSE, TRUE);
