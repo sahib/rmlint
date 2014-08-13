@@ -283,6 +283,88 @@ static int read_paths_from_stdin(RmSession *session, int index) {
     return paths_added;
 }
 
+
+/* parse comma-separated strong of lint types and set settings accordingly */
+static const char *delimiter     = ",";
+static const char enable_char    = '+';
+static const char disable_char   = '-';
+#define NUM_LINT_TYPES 6
+#define MAX_LINT_TYPE_OPTIONS 20
+void set_lint_types(RmSettings *sets, char *lint_types) {
+    struct {
+        const char *group;
+        const unsigned short min_match;
+        const char *abbrev;
+        char *enable[NUM_LINT_TYPES + 1];
+        char *disable[NUM_LINT_TYPES + 1];
+    } option_table[] = {
+        {
+            .group = "all", .min_match = 2, .abbrev = "",
+            .enable =  {&sets->findbadids, &sets->findemptydirs, &sets->listemptyfiles, &sets->namecluster, &sets->nonstripped, &sets->searchdup, NULL},
+            .disable = {NULL}
+        },
+        {
+            .group = "defaults", .min_match = 3, .abbrev = "",
+            .enable =  {&sets->findbadids, &sets->findemptydirs, &sets->listemptyfiles, &sets->searchdup, NULL},
+            .disable = {&sets->namecluster, &sets->nonstripped, NULL}
+        },
+        {
+            .group = "none", .min_match = 2, .abbrev = "",
+            .enable = {NULL},
+            .disable = {&sets->findbadids, &sets->findemptydirs, &sets->listemptyfiles, &sets->namecluster, &sets->nonstripped, &sets->searchdup, NULL},
+        },
+        {   .group = "badids",       .min_match = 3, .abbrev = "bi", .enable = {&sets->findbadids, NULL},     .disable = {NULL} },
+        {   .group = "emptydirs",    .min_match = 6, .abbrev = "ed", .enable = {&sets->findemptydirs, NULL},  .disable = {NULL} },
+        {   .group = "emptyfiles",   .min_match = 6, .abbrev = "ef", .enable = {&sets->listemptyfiles, NULL}, .disable = {NULL} },
+        {   .group = "nameclusters", .min_match = 4, .abbrev = "nc", .enable = {&sets->namecluster, NULL},    .disable = {NULL} },
+        {   .group = "nonstripped",  .min_match = 3, .abbrev = "ns", .enable = {&sets->nonstripped, NULL},    .disable = {NULL} },
+        {   .group = "duplicates",   .min_match = 2, .abbrev = "df", .enable = {&sets->searchdup, NULL},      .disable = {NULL} },
+        {   .group = NULL }
+    };
+
+    char **l_types = g_strsplit(lint_types, delimiter, MAX_LINT_TYPE_OPTIONS + 1);
+    if ( g_strv_length(l_types) == MAX_LINT_TYPE_OPTIONS + 1 ) {
+        rm_error(YEL"Warning - too many lint type options specified - %s ignored\n",
+                 l_types[MAX_LINT_TYPE_OPTIONS]);
+    }
+    for (int index = 0; index < MAX_LINT_TYPE_OPTIONS && l_types[index]; index++) {
+        char *lt = l_types[index];
+
+        if (strlen(lt) < 2 ) {
+            warning(YEL"Warning: lint type %s not recognised\n"NCO, lt);
+            continue;
+        } else if (lt[0] == enable_char || lt[0] == disable_char) {
+            lt++;
+        } else if (index != 0) {
+            warning(YEL"Warning: lint types after first should be prefixed with + or - or they will over-ride previous options [%s]\n"NCO, lt);
+        }
+
+        bool match = false;
+        for (int idx = 0; option_table[idx].group; idx++) {
+            if ( 0
+                    || strncmp(lt, option_table[idx].group, option_table[idx].min_match) == 0
+                    || strcmp (lt, option_table[idx].abbrev) == 0 ) {
+                match = true;
+
+                for ( int i = 0; option_table[idx].enable[i]; i++ ) {
+                    *option_table[idx].enable[i] = (l_types[index][0] != disable_char);
+                }
+
+                if (l_types[index][0] != disable_char && l_types[index][0] != enable_char) {
+                    for ( int i = 0; option_table[idx].disable[i]; i++ ) {
+                        *option_table[idx].disable[i] = 0;
+                    }
+                }
+                break;
+            }
+        }
+        if (!match) {
+            rm_error(YEL"Warning: lint type %s not recognised\n"NCO, lt);
+        }
+    }
+    g_strfreev(l_types);
+}
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 char rm_parse_arguments(int argc, char **argv, RmSession *session) {
     RmSettings *sets = session->settings;
@@ -294,6 +376,8 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
 
     while(1) {
         static struct option long_options[] = {
+            {"types"               ,  required_argument ,  0 ,  'T'},
+            {"linttypes"           ,  required_argument ,  0 ,  'T'},
             {"threads"             ,  required_argument ,  0 ,  't'},
             {"mode"                ,  required_argument ,  0 ,  'm'},
             {"maxdepth"            ,  required_argument ,  0 ,  'd'},
@@ -306,34 +390,22 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             {"output-log"          ,  optional_argument ,  0 ,  'O'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
             {"quiet"               ,  no_argument       ,  0 ,  'V'},
-            {"emptyfiles"          ,  no_argument       ,  0 ,  'e'},
-            {"no-emptyfiles"       ,  no_argument       ,  0 ,  'E'},
             {"with-color"          ,  no_argument       ,  0 ,  'w'},
             {"no-with-color"       ,  no_argument       ,  0 ,  'W'},
-            {"emptydirs"           ,  no_argument       ,  0 ,  'z'},
-            {"no-emptydirs"        ,  no_argument       ,  0 ,  'Z'},
-            {"namecluster"         ,  no_argument       ,  0 ,  'n'},
-            {"no-namecluster"      ,  no_argument       ,  0 ,  'N'},
-            {"nonstripped"         ,  no_argument       ,  0 ,  'b'},
-            {"no-nonstripped"      ,  no_argument       ,  0 ,  'B'},
             {"no-hidden"           ,  no_argument       ,  0 ,  'R'},
             {"hidden"              ,  no_argument       ,  0 ,  'r'},
-            {"badids"              ,  no_argument       ,  0 ,  'g'},
-            {"no-badids"           ,  no_argument       ,  0 ,  'G'},
-            {"dups"                ,  no_argument       ,  0 ,  'u'},
-            {"no-dups"             ,  no_argument       ,  0 ,  'U'},
             {"followlinks"         ,  no_argument       ,  0 ,  'f'},
             {"no-followlinks"      ,  no_argument       ,  0 ,  'F'},
             {"crossdev"            ,  no_argument       ,  0 ,  'x'},
             {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
             {"paranoid"            ,  no_argument       ,  0 ,  'p'},
             {"no-paranoid"         ,  no_argument       ,  0 ,  'P'},
-            {"keepallorig"         ,  no_argument       ,  0 ,  'k'},
-            {"no-keepallorig"      ,  no_argument       ,  0 ,  'K'},
-            {"mustmatchorig"       ,  no_argument       ,  0 ,  'm'},
-            {"no-mustmatchorig"    ,  no_argument       ,  0 ,  'M'},
-            {"invertorig"          ,  no_argument       ,  0 ,  'i'},
-            {"no-invertorig"       ,  no_argument       ,  0 ,  'I'},
+            {"keepall//"           ,  no_argument       ,  0 ,  'k'},
+            {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
+            {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},
+            //{"no-mustmatch//"      ,  no_argument       ,  0 ,  'M'},
+            {"invert//"            ,  no_argument       ,  0 ,  'i'},
+            {"no-invert//"         ,  no_argument       ,  0 ,  'I'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
@@ -346,7 +418,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, argv,
-                     "t:m:d:c:C:s:o::O::S:a:vVeEwWzZnNbBrRgGuUfFXxpPkKmMiIlLqQhH",
+                     "T:t:m:d:c:C:s:o::O::S:a:vVwWrRfFXxpPkKmMiIlLqQhH",
                      long_options, &option_index
                  );
 
@@ -357,6 +429,9 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         switch(choice) {
         case '?':
             return 0;
+        case 'T':
+            set_lint_types(sets, optarg);
+            break;
         case 't':
             sets->threads = atoi(optarg);
             if(!sets->threads) {
