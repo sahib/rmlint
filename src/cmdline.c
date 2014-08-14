@@ -39,6 +39,7 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 #include <glib/gstdio.h>
+#include <search.h>
 
 #include <sys/time.h>
 
@@ -90,6 +91,7 @@ void rm_set_default_settings(RmSettings *pset) {
     pset->searchdup             = 1;
     pset->color                 = isatty(fileno(stdout));
     pset->findbadids            = 1;
+    pset->findbadlinks          = 1;
     pset->output_log            = "rmlint.log";
     pset->output_script         = "rmlint.sh";
     pset->limits_specified      = 0;
@@ -285,51 +287,79 @@ static int read_paths_from_stdin(RmSession *session, int index) {
 
 
 /* parse comma-separated strong of lint types and set settings accordingly */
-static const char *delimiter     = ",";
-static const char enable_char    = '+';
-static const char disable_char   = '-';
-#define NUM_LINT_TYPES 6
-#define MAX_LINT_TYPE_OPTIONS 20
+//static const char *delimiter     = ",";
+//static const char enable_char    = '+';
+//static const char disable_char   = '-';
+
+#define delimiter ","
+#define enable_char '+'
+#define disable_char '-'
+#define NUM_LINT_TYPES (7)
+#define MAX_LINT_TYPE_OPTIONS (20)
+
+typedef struct RmLintTypeOption {
+    const char *group;
+    const unsigned short min_match;
+    const char *abbrev;
+    char *enable[NUM_LINT_TYPES + 1];
+} RmLintTypeOption;
+
+/* compare function for parsing lint type arguments */
+int compare(char *input, RmLintTypeOption *option) {
+    if ( strcmp(option->abbrev, input) == 0) {
+        return 0;
+    } else {
+        return strncmp(option->group, input, option->min_match);
+    }
+}
+
 void set_lint_types(RmSettings *sets, char *lint_types) {
-    struct {
-        const char *group;
-        const unsigned short min_match;
-        const char *abbrev;
-        char *enable[NUM_LINT_TYPES + 1];
-        char *disable[NUM_LINT_TYPES + 1];
-    } option_table[] = {
+    RmLintTypeOption option_table[] = {
         {
             .group = "all", .min_match = 2, .abbrev = "",
-            .enable =  {&sets->findbadids, &sets->findemptydirs, &sets->listemptyfiles, &sets->namecluster, &sets->nonstripped, &sets->searchdup, NULL},
-            .disable = {NULL}
+            .enable = {
+                &sets->findbadids,
+                &sets->findbadlinks,
+                &sets->findemptydirs,
+                &sets->listemptyfiles,
+                &sets->namecluster,
+                &sets->nonstripped,
+                &sets->searchdup,
+                NULL
+            },
         },
         {
             .group = "defaults", .min_match = 3, .abbrev = "",
-            .enable =  {&sets->findbadids, &sets->findemptydirs, &sets->listemptyfiles, &sets->searchdup, NULL},
-            .disable = {&sets->namecluster, &sets->nonstripped, NULL}
+            .enable =  {
+                &sets->findbadids, &sets->findbadlinks, &sets->findemptydirs,
+                &sets->listemptyfiles, &sets->searchdup, NULL
+            },
         },
         {
             .group = "none", .min_match = 2, .abbrev = "",
             .enable = {NULL},
-            .disable = {&sets->findbadids, &sets->findemptydirs, &sets->listemptyfiles, &sets->namecluster, &sets->nonstripped, &sets->searchdup, NULL},
         },
-        {   .group = "badids",       .min_match = 3, .abbrev = "bi", .enable = {&sets->findbadids, NULL},     .disable = {NULL} },
-        {   .group = "emptydirs",    .min_match = 6, .abbrev = "ed", .enable = {&sets->findemptydirs, NULL},  .disable = {NULL} },
-        {   .group = "emptyfiles",   .min_match = 6, .abbrev = "ef", .enable = {&sets->listemptyfiles, NULL}, .disable = {NULL} },
-        {   .group = "nameclusters", .min_match = 4, .abbrev = "nc", .enable = {&sets->namecluster, NULL},    .disable = {NULL} },
-        {   .group = "nonstripped",  .min_match = 3, .abbrev = "ns", .enable = {&sets->nonstripped, NULL},    .disable = {NULL} },
-        {   .group = "duplicates",   .min_match = 2, .abbrev = "df", .enable = {&sets->searchdup, NULL},      .disable = {NULL} },
-        {   .group = NULL }
+        {   .group = "badids",       .min_match = 4, .abbrev = "bi", .enable = {&sets->findbadids,     NULL} },
+        {   .group = "badlinks",     .min_match = 4, .abbrev = "bl", .enable = {&sets->findbadlinks,   NULL} },
+        {   .group = "emptydirs",    .min_match = 6, .abbrev = "ed", .enable = {&sets->findemptydirs,  NULL} },
+        {   .group = "emptyfiles",   .min_match = 6, .abbrev = "ef", .enable = {&sets->listemptyfiles, NULL} },
+        {   .group = "nameclusters", .min_match = 4, .abbrev = "nc", .enable = {&sets->namecluster,    NULL} },
+        {   .group = "nonstripped",  .min_match = 3, .abbrev = "ns", .enable = {&sets->nonstripped,    NULL} },
+        {   .group = "duplicates",   .min_match = 2, .abbrev = "df", .enable = {&sets->searchdup,      NULL} },
     };
+    RmLintTypeOption *all_opts = &option_table[0];
 
+    /* split the comma-separates list of options */
     char **l_types = g_strsplit(lint_types, delimiter, MAX_LINT_TYPE_OPTIONS + 1);
     if ( g_strv_length(l_types) == MAX_LINT_TYPE_OPTIONS + 1 ) {
         rm_error(YEL"Warning - too many lint type options specified - %s ignored\n",
                  l_types[MAX_LINT_TYPE_OPTIONS]);
     }
-    for (int index = 0; index < MAX_LINT_TYPE_OPTIONS && l_types[index]; index++) {
-        char *lt = l_types[index];
 
+    /* iterate over the separated option strings */
+    for (int index = 0; index < MAX_LINT_TYPE_OPTIONS && l_types[index]; index++) {
+
+        char *lt = l_types[index];
         if (strlen(lt) < 2 ) {
             warning(YEL"Warning: lint type %s not recognised\n"NCO, lt);
             continue;
@@ -339,29 +369,28 @@ void set_lint_types(RmSettings *sets, char *lint_types) {
             warning(YEL"Warning: lint types after first should be prefixed with + or - or they will over-ride previous options [%s]\n"NCO, lt);
         }
 
-        bool match = false;
-        for (int idx = 0; option_table[idx].group; idx++) {
-            if ( 0
-                    || strncmp(lt, option_table[idx].group, option_table[idx].min_match) == 0
-                    || strcmp (lt, option_table[idx].abbrev) == 0 ) {
-                match = true;
+        /* use lfind to find matching option from array*/
+        size_t width = sizeof (RmLintTypeOption);
+        size_t elems = sizeof(option_table) / width;
+        RmLintTypeOption *option = lfind (lt, &option_table, &elems, width, (int(*) (const void *, const void *)) compare);
 
-                for ( int i = 0; option_table[idx].enable[i]; i++ ) {
-                    *option_table[idx].enable[i] = (l_types[index][0] != disable_char);
+        /* apply the found option */
+        if ( option ) {
+            if (l_types[index][0] != disable_char && l_types[index][0] != enable_char) {
+                /* not a + or - option - reset all options to off */
+                for ( int i = 0; all_opts->enable[i]; i++ ) {
+                    *all_opts->enable[i] = 0;
                 }
-
-                if (l_types[index][0] != disable_char && l_types[index][0] != enable_char) {
-                    for ( int i = 0; option_table[idx].disable[i]; i++ ) {
-                        *option_table[idx].disable[i] = 0;
-                    }
-                }
-                break;
             }
-        }
-        if (!match) {
+            /* enable options as appropriate */
+            for ( int i = 0; option->enable[i]; i++ ) {
+                *option->enable[i] = (l_types[index][0] != disable_char);
+            }
+        } else {
             rm_error(YEL"Warning: lint type %s not recognised\n"NCO, lt);
         }
     }
+    /* clean up */
     g_strfreev(l_types);
 }
 
@@ -445,29 +474,11 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
                 die(session, EXIT_FAILURE);
             }
             break;
-        case 'e':
-            sets->listemptyfiles = 1;
-            break;
-        case 'E':
-            sets->listemptyfiles = 0;
-            break;
         case 'f':
             sets->followlinks = 1;
             break;
         case 'F':
             sets->followlinks = 0;
-            break;
-        case 'u':
-            sets->searchdup = 1;
-            break;
-        case 'U':
-            sets->searchdup = 0;
-            break;
-        case 'n':
-            sets->namecluster = 1;
-            break;
-        case 'N':
-            sets->namecluster = 0;
             break;
         case 'w':
             sets->color = isatty(fileno(stdout));
@@ -489,18 +500,6 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             break;
         case 'L':
             sets->find_hardlinked_dupes = 0;
-            break;
-        case 'z':
-            sets->findemptydirs = 1;
-            break;
-        case 'Z':
-            sets->findemptydirs = 0;
-            break;
-        case 'b':
-            sets->nonstripped = 1;
-            break;
-        case 'B':
-            sets->nonstripped = 0;
             break;
         case 'o':
             sets->output_script = (optarg && *optarg) ? optarg : NULL;
@@ -565,12 +564,6 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         case 's':
             sets->limits_specified = 1;
             parse_limit_sizes(session, optarg);
-            break;
-        case 'g':
-            sets->findbadids = true;
-            break;
-        case 'G':
-            sets->findbadids = false;
             break;
         case 'P':
             sets->paranoid = 0;

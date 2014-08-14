@@ -288,8 +288,9 @@ void traverse_path(gpointer data, gpointer userdata) {
                 case FTS_INIT:      /* initialized only */
                     break;
                 case FTS_SLNONE:    /* symbolic link without target */
-                    warning(RED"Warning: symlink without target: %s\n"NCO, p->fts_path);
-                    numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, RM_LINT_TYPE_BLNK);
+                    if (settings->findbadlinks) {
+                        numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, RM_LINT_TYPE_BLNK);
+                    }
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
                 case FTS_W:         /* whiteout object */

@@ -115,7 +115,7 @@ typedef enum RmLintType {
     /* Border */
     RM_LINT_TYPE_OTHER_LINT,
     /* note: this needs to be last item in list */
-    RM_LINT_TYPE_DUPE_CANDIDATE 
+    RM_LINT_TYPE_DUPE_CANDIDATE
 } RmLintType;
 
 typedef enum RmHandleMode {
@@ -137,6 +137,7 @@ typedef struct RmSettings {
     char paranoid;
     char namecluster;
     char findbadids;
+    char findbadlinks;
     char searchdup;
     char findemptydirs;
     char nonstripped;
