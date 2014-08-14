@@ -129,20 +129,20 @@ typedef enum RmHandleMode {
 /* all available settings see rmlint -h */
 typedef struct RmSettings {
     RmHandleMode mode;
-    char color;
-    char collide;
-    char samepart;
-    char ignore_hidden;
-    char followlinks;
-    char paranoid;
-    char namecluster;
-    char findbadids;
-    char findbadlinks;
-    char searchdup;
-    char findemptydirs;
-    char nonstripped;
+    bool color;
+    bool collide;
+    bool samepart;
+    bool ignore_hidden;
+    bool followlinks;
+    bool paranoid;
+    bool namecluster;
+    bool findbadids;
+    bool findbadlinks;
+    bool searchdup;
+    bool findemptydirs;
+    bool nonstripped;
     char verbosity;
-    char listemptyfiles;
+    bool listemptyfiles;
     char **paths;
     char *is_ppath;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
     int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
@@ -151,15 +151,15 @@ typedef struct RmSettings {
     char *output_script;
     char *output_log;
     char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
-    char limits_specified;
+    bool limits_specified;
     guint64 minsize;
     guint64 maxsize;
-    char keep_all_originals;     /* NEW - if set, will ONLY delete dupes that are not in ppath */
-    char must_match_original;    /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
-    char invert_original;        /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
-    char find_hardlinked_dupes;  /* NEW - if set, will also search for hardlinked duplicates*/
-    char skip_confirm;           /* NEW - if set, bypasses user confirmation of input settings*/
-    char confirm_settings;       /* NEW - if set, pauses for user confirmation of input settings*/
+    bool keep_all_originals;     /* NEW - if set, will ONLY delete dupes that are not in ppath */
+    bool must_match_original;    /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
+    bool invert_original;        /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
+    bool find_hardlinked_dupes;  /* NEW - if set, will also search for hardlinked duplicates*/
+    bool skip_confirm;           /* NEW - if set, bypasses user confirmation of input settings*/
+    bool confirm_settings;       /* NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
     RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
