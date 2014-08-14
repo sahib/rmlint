@@ -422,7 +422,6 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
     while(1) {
         static struct option long_options[] = {
             {"types"               ,  required_argument ,  0 ,  'T'},
-            {"linttypes"           ,  required_argument ,  0 ,  'T'},
             {"threads"             ,  required_argument ,  0 ,  't'},
             {"mode"                ,  required_argument ,  0 ,  'm'},
             {"maxdepth"            ,  required_argument ,  0 ,  'd'},
