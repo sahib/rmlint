@@ -73,15 +73,16 @@
  * controls are sorted by subjectve importanceness.
  */
 
+/* How much buffers to keep allocated at max. */
+#define SHRED_MAX_PAGES       (64)
+
+/* How large a single page is */
+#define SHRED_PAGE_SIZE       (sysconf(_SC_PAGESIZE))
+
 /* How many pages are read initially at max.  This value is important since it
  * decides how much data will be read for small files, so it should not be too
  * large nor too small, since reading small files twice is very slow.
  */
-#define SHRED_MAX_PAGES       (32)
-
-
-#define SHRED_PAGE_SIZE       (sysconf(_SC_PAGESIZE))
-
 #define SHRED_INITIAL_FACTOR  (8)
 
 /* Flags for the fadvise() call that tells the kernel
@@ -97,7 +98,7 @@
  * settings will not have much performance impact, just keeps memory a bit
  * lower.
  */
-#define SHRED_GC_INTERVAL     (1000)
+#define SHRED_GC_INTERVAL     (2000)
 
 /* Maximum number of bytes to read in one pass.
  * Never goes beyond this value.
@@ -211,6 +212,11 @@ typedef struct RmDevlistTag {
 
     /* protect read_size */
     GMutex read_size_mtx;
+
+    /* size of one page, cached, so
+     * sysconf() does not need to be called always.
+     */
+    guint64 page_size;
 
     /* Queue from shred_read_factory to shred_devlist_factory:
      * The reader notifes the manager to push a new job
@@ -403,7 +409,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
         } else {
             read_maximum = file->fsize - file->seek_offset;
         }
-        N_BUFFERS = MIN(SHRED_MAX_PAGES, read_maximum / SHRED_PAGE_SIZE + !!(read_maximum % SHRED_PAGE_SIZE));
+        N_BUFFERS = MIN(SHRED_MAX_PAGES, read_maximum / tag->page_size + !!(read_maximum % tag->page_size));
     }
     g_mutex_unlock(&tag->read_size_mtx);
 
@@ -529,7 +535,8 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
 
     tag.main = main;
-    tag.read_size = SHRED_PAGE_SIZE * SHRED_INITIAL_FACTOR;
+    tag.page_size = SHRED_PAGE_SIZE;
+    tag.read_size = tag.page_size * SHRED_INITIAL_FACTOR;
     tag.finished_queue = g_async_queue_new();
 
     g_mutex_init(&tag.read_size_mtx);
@@ -935,9 +942,10 @@ static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *siz
             shred_gc_join_table(join_table, &key);
         }
     }
+
     /* This should not block, or at least only very short. */
-    g_thread_pool_free(tag.result_pool, FALSE, TRUE);
     g_thread_pool_free(tag.device_pool, FALSE, TRUE);
+    g_thread_pool_free(tag.result_pool, FALSE, TRUE);
 
     g_async_queue_unref(tag.join_queue);
     g_hash_table_unref(join_table);
