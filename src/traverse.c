@@ -35,7 +35,7 @@
 #include <unistd.h>
 #include "list.h"
 #include "cmdline.h"
-#include "filter.h"
+#include "preprocess.h"
 #include "utilities.h"
 #include "utilities.h"
 

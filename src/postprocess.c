@@ -32,9 +32,9 @@
 #include <stdlib.h>
 
 #include "cmdline.h"
-#include "mode.h"
+#include "postprocess.h"
 #include "list.h"
-#include "filter.h"
+#include "preprocess.h"
 #include "utilities.h"
 
 #include <sys/mman.h>

@@ -44,10 +44,10 @@
 #include <sys/time.h>
 
 #include "cmdline.h"
-#include "mode.h"
+#include "postprocess.h"
 #include "list.h"
 #include "traverse.h"
-#include "filter.h"
+#include "preprocess.h"
 #include "utilities.h"
 
 /* Version string */

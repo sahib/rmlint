@@ -39,8 +39,8 @@
 #include <dirent.h>
 
 #include "cmdline.h"
-#include "filter.h"
-#include "mode.h"
+#include "preprocess.h"
+#include "postprocess.h"
 #include "read.h"
 #include "list.h"
 #include "defs.h"
