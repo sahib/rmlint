@@ -26,9 +26,11 @@
 #ifndef MODE_H
 #define MODE_H
 
-//#include "defs.h"
+#include "traverse.h"
 
 /* Mostly used by filter.c  */
+typedef struct RmSession RmSession;
+
 bool process_island(RmSession *session, GQueue *group);
 void init_filehandler(RmSession *session);
 void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFile *p_to_orig);

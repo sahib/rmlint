@@ -8,6 +8,7 @@
 
 //#include "checksum.h"
 //#include "checksums/city.h"
+#include "postprocess.h"
 #include "preprocess.h"
 #include "utilities.h"
 #include "cmdline.h"
@@ -691,6 +692,7 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
 
     if(dupe_count > 0) {
         // TODO Call processing of results here.
+        process_island(tag->session, results);
     }
 
     g_queue_free(results);
