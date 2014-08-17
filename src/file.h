@@ -136,15 +136,17 @@ typedef struct RmFile {
     GMutex file_lock;
 } RmFile;
 
-RmFile *rm_file_new(const char *path,
-                    guint64 fsize,
-                    ino_t node,
-                    dev_t dev,
-                    time_t mtime,
-                    RmLintType type,
-                    bool is_ppath,
-                    unsigned pnum);
+/**
+ * @brief Create a new RmFile handle.
+ */
+RmFile *rm_file_new(
+    const char *path, struct stat *statp, RmLintType type,
+    RmDigestType cksum_type, bool is_ppath, unsigned pnum
+);
 
+/**
+ * @brief Deallocate the memory allocated by rm_file_destroy
+ */
 void rm_file_destroy(RmFile *file);
 
 #endif /* end of include guard */

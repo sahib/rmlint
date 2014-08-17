@@ -1006,9 +1006,10 @@ int main(int argc, const char **argv) {
         }
 
         dev_t whole_disk = rm_mounts_get_disk_id(session.mounts, stat_buf.st_dev);
+        stat_buf.st_dev = whole_disk;
+
         RmFile *file =  rm_file_new(
-                            path, stat_buf.st_size, stat_buf.st_ino, whole_disk,
-                            0, RM_LINT_TYPE_DUPE_CANDIDATE, 0, 0
+                            path, &stat_buf, RM_LINT_TYPE_DUPE_CANDIDATE, RM_DIGEST_SPOOKY, 0, 0
                         );
 
         bool nonrotational = rm_mounts_is_nonrotational(session.mounts, whole_disk);

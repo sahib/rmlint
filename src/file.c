@@ -25,45 +25,27 @@
 
 #include "file.h"
 
-RmFile *rm_file_new(const char *path,
-                    guint64 fsize,
-                    ino_t node,
-                    dev_t dev,
-                    time_t mtime,
-                    RmLintType type,
-                    bool is_ppath,
-                    unsigned pnum) {
+RmFile *rm_file_new(
+    const char *path, struct stat *statp, RmLintType type,
+    RmDigestType cksum_type, bool is_ppath, unsigned pnum
+) {
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
-    self->inode = node;
-    self->dev = dev;
-    self->mtime = mtime;
-    self->hash_offset = 0;
-    self->seek_offset = 0;
+    self->inode = statp->st_ino;
+    self->dev = statp->st_dev;
+    self->mtime = statp->st_mtim.tv_sec;
     self->state = RM_FILE_STATE_PROCESS;
 
-    // TODO: Use the actualy type from session -> pass it.
-    rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
-    g_mutex_init(&self->file_lock);
-
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        // self->disk_offsets = rm_offset_create_table(self->path);
-        // self->phys_offset = rm_offset_lookup(self->disk_offsets, 0);
-        /* TODO: delay this until we have matched file sizes */
-        self->file_size = fsize;
-    } else {
-        self->file_size = 0;
-        self->phys_offset = 0;
+        self->file_size = statp->st_size;
     }
 
     self->lint_type = type;
-
     self->is_prefd = is_ppath;
     self->path_index = pnum;
 
-    /* initialised with no hardlink*/
-    self->hardlinked_original = NULL;
-
+    rm_digest_init(&self->digest, cksum_type, 0, 0);
+    g_mutex_init(&self->file_lock);
     return self;
 }
 

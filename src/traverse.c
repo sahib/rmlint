@@ -157,7 +157,7 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
         }
     }
 
-    RmFile *file = rm_file_new(path, statp->st_size, statp->st_ino, statp->st_dev, statp->st_mtim.tv_sec, file_type, is_ppath, pnum);
+    RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_ppath, pnum);
 
     if (file) {
         rm_file_table_insert(session->table, file);
