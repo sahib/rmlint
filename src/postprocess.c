@@ -42,45 +42,6 @@
 
 static GMutex PRINT_MUTEX;
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
-long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
-    RmSession *session = user_data;
-    RmSettings *sets = session->settings;
-
-    if (a->is_prefd != b->is_prefd) {
-        return a->is_prefd - b->is_prefd;
-    } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
-        for (int i = 0; i < sort_criteria_len; i++) {
-            long cmp = 0;
-            switch (sets->sort_criteria[i]) {
-            case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'M':
-                cmp = (long)(b->mtime) - (long)(a->mtime);
-                break;
-            case 'a':
-                cmp = strcmp (rm_util_basename(a->path), rm_util_basename (b->path));
-                break;
-            case 'A':
-                cmp = strcmp (rm_util_basename(b->path), rm_util_basename (a->path));
-                break;
-            case 'p':
-                cmp = (long)a->path_index - (long)b->path_index;
-                break;
-            case 'P':
-                cmp = (long)b->path_index - (long)a->path_index;
-                break;
-            }
-            if (cmp) {
-                return cmp;
-            }
-        }
-    }
-    return 0;
-}
-
 /* Simple wrapper around unlink() syscall */
 static void remfile(const char *r_path) {
     if(r_path) {
@@ -404,6 +365,8 @@ bool process_island(RmSession *session, GQueue *group) {
     /* Find the (first) element being in this directory and swap it with the first */
     /* --> First one is the original otherwise */
     bool return_val = false;
+
+    session->dup_group_counter++;
 
     RmSettings *sets = session->settings;
     GList *i = group->head;

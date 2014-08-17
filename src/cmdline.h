@@ -27,7 +27,6 @@
 #define RM_CMDLINE_H
 
 #include "session.h"
-#include "traverse.h"
 #include "config.h"
 
 char rm_parse_arguments(int argc, char **argv, RmSession *session);
