@@ -38,7 +38,6 @@
 #include <math.h>
 #include <dirent.h>
 
-#include "cmdline.h"
 #include "preprocess.h"
 #include "postprocess.h"
 #include "shredder.h"
@@ -57,6 +56,7 @@ RmFileTable *rm_file_table_new(RmSession *session) {
     table->size_table = g_hash_table_new( NULL, NULL);
 
     RmSettings *settings = session->settings;
+
     g_assert(settings);
     g_assert(settings->namecluster == 0);
 
@@ -182,18 +182,6 @@ static int find_double_bases(RmSession *session) {
                     node_handled = true;
                     handle_double_base_file(session, file);
                     num_found++;
-
-// TODO: do we need this?
-//                    /* At this point files with same inode and device are NOT handled yet.
-//                       Therefore this foolish, but well working approach is made.
-//                       (So it works also with more than one dir in the cmd)  */
-//
-//                    RmFile *fx = fj;
-//                    while((fx = rm_file_list_iter_all(session->list, fx))) {
-//                        if(fx->inode == fj->inode) {
-//                            fx->lint_type = RM_LINT_TYPE_BASE;
-//                        }
-//                    }
                 }
 
                 list = list->next;
@@ -204,28 +192,9 @@ static int find_double_bases(RmSession *session) {
         }
     }
 
-//    if(sets->collide) {
-//        GHashTableIter iter;
-//        gpointer key, value;
-//
-//        g_hash_table_iter_init(&iter, name_table);
-//        while (g_hash_table_iter_next(&iter, &key, &value)) {
-//            RmFile *file = key;
-//            rm_file_list_remove(session->table, file);
-//        }
-//    }
     g_hash_table_destroy(name_table);
     return num_found;
 }
-
-//static long cmp_sort_lint_type(RmFile *a, RmFile *b, gpointer user_data) {
-//    (void) user_data;
-//    if (a->lint_type == RM_LINT_TYPE_EDIR && b->lint_type == RM_LINT_TYPE_EDIR)
-//        return (long)strcmp(b->path, a->path);
-//    else
-//        //TODO: change rm_file_table_insert so this is not neccessary
-//        return ((long)a->lint_type - (long)b->lint_type);
-//}
 
 static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
     [RM_LINT_TYPE_UNKNOWN]      = "",
@@ -420,7 +389,7 @@ static uint handle_other_lint(RmSession *session) {
 }
 
 /* This does preprocessing including handling of "other lint" (non-dupes) */
-void do_pre_processing(RmSession *session) {
+void rm_preprocess(RmSession *session) {
     char lintbuf[128] = {0};
     guint64 other_lint = 0;
 

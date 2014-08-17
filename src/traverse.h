@@ -28,6 +28,11 @@
 
 #include "session.h"
 
+/**
+ * @brief Traverse all specified paths.
+ *
+ * @returns: the number of added files.
+ */
 guint64 rm_search_tree(RmSession *session);
 
 #endif

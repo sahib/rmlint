@@ -50,14 +50,12 @@
 #include "utilities.h"
 
 /* Version string */
-static void print_version(void) {
+static void show_version(void) {
     fprintf(stderr, "rmlint-version %s compiled: [%s]-[%s] (rev %s)\n", RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION);
 }
 
-/* ------------------------------------------------------------- */
-
 /* Help text */
-static void print_help(void) {
+static void show_help(void) {
     if(system("man rmlint") == 0) {
         return;
     }
@@ -67,8 +65,6 @@ static void print_help(void) {
 
     g_printerr("You have no manpage for rmlint.\n");
 }
-
-/* ------------------------------------------------------------- */
 
 /* Check if this is the 'preferred' dir */
 bool check_if_preferred(const char *dir) {
@@ -433,16 +429,19 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'T':
             parse_lint_types(sets, optarg);
             break;
-        case 't':
-            sets->threads = atoi(optarg);
-            if(!sets->threads) {
-                sets->threads = 8;
+        case 't': {
+            int parsed_threads = strtol(optarg, NULL, 10);
+            if(parsed_threads > 0) {
+                sets->threads = parsed_threads;
+            } else {
+                rm_error(RED"Invalid thread count supplied: %s\n"NCO, optarg);
             }
-            break;
+        }
+        break;
         case 'a':
             sets->checksum_type = rm_string_to_digest_type(optarg);
             if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
-                rm_error(RED"Unknown hash algorithm: '%s'\n", optarg);
+                rm_error(RED"Unknown hash algorithm: '%s'\n"NCO, optarg);
                 die(session, EXIT_FAILURE);
             }
             break;
@@ -459,12 +458,12 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             sets->color = 0;
             break;
         case 'H':
-            print_version();
+            show_version();
             die(session, EXIT_SUCCESS);
             break;
         case 'h':
-            print_help();
-            print_version();
+            show_help();
+            show_version();
             die(session, EXIT_SUCCESS);
             break;
         case 'l':
@@ -624,15 +623,13 @@ static int check_cmd(const char *cmd) {
 }
 
 /* exit and return to calling method */
-int die(RmSession *session, int status) {
+void die(RmSession *session, int status) {
     rm_session_clear(session);
     if(status) {
         info("Abnormal exit\n");
     }
 
     exit(status);
-    // TODO: what?
-    return status;
 }
 
 char rm_echo_settings(RmSettings *settings) {
@@ -859,21 +856,24 @@ int rm_main(RmSession *session) {
 
     if(session->total_files < 2) {
         warning("No files in cache to search through => No duplicates.\n");
-        die(session, 0);
+        die(session, EXIT_SUCCESS);
     }
 
     info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
     if(session->settings->threads > session->total_files) {
         session->settings->threads = session->total_files + 1;
     }
+
     /* Till this point the list is unsorted
      * The filter alorithms requires the list to be size-sorted,
      * so it can easily filter unique sizes, and build "groups"
      * */
     info("Now finding easy lint...\n");
 
+    // TODO: Call all toplevel functions here.
     /* Apply the prefilter and outsort unique sizes */
-    do_pre_processing(session);
+    rm_preprocess(session);
 
-    return die(session, EXIT_SUCCESS);
+    rm_session_clear(session);
+    return EXIT_SUCCESS;
 }

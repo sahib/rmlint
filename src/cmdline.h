@@ -31,9 +31,7 @@
 
 char rm_parse_arguments(int argc, char **argv, RmSession *session);
 char rm_echo_settings(RmSettings *settings);
-void rm_set_default_settings(RmSettings *set);
-void rm_session_init(RmSession *session, RmSettings *settings);
 int rm_main(RmSession *session);
-int die(RmSession *session, int status);
+void die(RmSession *session, int status);
 
 #endif

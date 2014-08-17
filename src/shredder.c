@@ -12,7 +12,6 @@
 #include "postprocess.h"
 #include "preprocess.h"
 #include "utilities.h"
-#include "cmdline.h"
 
 //TODO: for hardlinked originals, only hash one of each set
 
@@ -692,7 +691,6 @@ static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
     }
 
     if(dupe_count > 0) {
-        // TODO Call processing of results here.
         process_island(tag->session, results);
     }
 

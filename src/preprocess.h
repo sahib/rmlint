@@ -32,10 +32,8 @@
 
 /**
  * @brief Do some pre-processing (eg remove path doubles) and process "other lint".
- *
- * TODO: better name.
  */
-void do_pre_processing(RmSession *session);
+void rm_preprocess(RmSession *session);
 
 /**
  * @brief Create a new RmFileTable object.
@@ -44,12 +42,10 @@ void do_pre_processing(RmSession *session);
  */
 RmFileTable *rm_file_table_new(RmSession *session);
 
-
 /**
 * @brief Free a previous RmFileTable
 */
 void rm_file_table_destroy(RmFileTable *list);
-
 
 /**
  * @brief Insert a file in appropriate part of RmFileTable.
@@ -59,6 +55,5 @@ void rm_file_table_destroy(RmFileTable *list);
  * @param file The file to append; ownership is taken.
  */
 void rm_file_table_insert(RmFileTable *list, RmFile *file);
-
 
 #endif

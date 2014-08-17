@@ -47,7 +47,7 @@
 /* Internal headers */
 #include "config.h"
 #include "utilities.h"
-#include "cmdline.h"
+#include "file.h"
 
 /* External libraries */
 #include <glib.h>

@@ -35,7 +35,6 @@
 #include <unistd.h>
 
 #include "preprocess.h"
-#include "cmdline.h"
 #include "utilities.h"
 #include "file.h"
 

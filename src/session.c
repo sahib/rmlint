@@ -64,14 +64,13 @@ void rm_set_default_settings(RmSettings *settings) {
 }
 
 void rm_session_init(RmSession *session, RmSettings *settings) {
-    session->settings = settings;
-
     memset(session, 0, sizeof(RmSession));
+
+    session->settings = settings;
+    init_filehandler(session);
 
     session->mounts = rm_mounts_table_new();
     session->table = rm_file_table_new(session);
-
-    init_filehandler(session);
 }
 
 void rm_session_clear(RmSession *session) {
@@ -92,6 +91,8 @@ void rm_session_clear(RmSession *session) {
     if(session->log_out) {
         fclose(session->log_out);
     }
+
+    rm_file_table_destroy(session->table);
 
     /* Close scriptfile */
     if(session->script_out) {
