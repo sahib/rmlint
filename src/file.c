@@ -48,12 +48,12 @@ RmFile *rm_file_new(const char *path,
 
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
         // self->disk_offsets = rm_offset_create_table(self->path);
-        // self->offset = rm_offset_lookup(self->disk_offsets, 0);
+        // self->phys_offset = rm_offset_lookup(self->disk_offsets, 0);
         /* TODO: delay this until we have matched file sizes */
         self->fsize = fsize;
     } else {
         self->fsize = 0;
-        self->offset = 0;
+        self->phys_offset = 0;
     }
 
     self->lint_type = type;

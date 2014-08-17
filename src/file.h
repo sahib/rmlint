@@ -57,7 +57,7 @@ typedef enum RmLintType {
 } RmLintType;
 
 /* TODO: Reduce size of RmFile */
-typedef struct _RmFile {
+typedef struct RmFile {
     char *path;                          /* absolute path from working dir */
     bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
     time_t mtime;                        /* File modification date/time */
@@ -69,16 +69,16 @@ typedef struct _RmFile {
     guint64 pnum;                        /* numerical index of user-input paths */
     guint64 fsize;                       /* Size of the file (bytes) */
 
-    guint64 offset;                      /* offset in bytes from start of device */
+    guint64 phys_offset;
     guint64 hash_offset;
     guint64 seek_offset;
 
     RmDigest digest;
     RmFileState state;
     RmOffsetTable disk_offsets;
-    RmLintType lint_type;                /* Is the file marked as duplicate? */
+    RmLintType lint_type;
 
-    struct _RmFile *hardlinked_original;
+    struct RmFile *hardlinked_original;
 
     GMutex file_lock;
 } RmFile;

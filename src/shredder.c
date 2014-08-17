@@ -461,7 +461,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
         rm_buffer_pool_release(tag->main->mem_pool, buffer);
     }
 
-    file->offset = rm_offset_lookup(file->disk_offsets, file->offset);
+    file->phys_offset = rm_offset_lookup(file->disk_offsets, file->phys_offset);
 
 finish:
     g_async_queue_lock(tag->finished_queue);
@@ -502,11 +502,11 @@ static int shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_UNU
     /* offset is a guint64, so do not substract them.
      * (will cause over or underflows on regular base)
      */
-    if(a->offset < b->offset) {
+    if(a->phys_offset < b->phys_offset) {
         return -1;
     }
 
-    if(a->offset > b->offset) {
+    if(a->phys_offset > b->phys_offset) {
         return +1;
     }
 
@@ -1011,7 +1011,7 @@ int main(int argc, const char **argv) {
         bool nonrotational = rm_mounts_is_nonrotational(session.mounts, whole_disk);
         if(!nonrotational && offset_sort_optimisation) {
             file->disk_offsets = rm_offset_create_table(path);
-            file->offset = rm_offset_lookup(file->disk_offsets, 0);
+            file->phys_offset = rm_offset_lookup(file->disk_offsets, 0);
         }
 
         g_hash_table_insert(

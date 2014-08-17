@@ -123,7 +123,7 @@ void rm_file_table_insert(RmFileTable *table, RmFile *file) {
                 && ( file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE
                      || file->lint_type == RM_LINT_TYPE_NBIN ) ) {
             file->disk_offsets = rm_offset_create_table(file->path);
-            file->offset = rm_offset_lookup(file->disk_offsets, 0);
+            file->phys_offset = rm_offset_lookup(file->disk_offsets, 0);
         }
         g_hash_table_insert(
             table->size_table,
@@ -149,7 +149,7 @@ void rm_file_table_insert(RmFileTable *table, RmFile *file) {
             g_hash_table_insert(table->dev_table, GUINT_TO_POINTER(file->disk), dev_list);
         }
         g_queue_push_head(dev_list, file);
-        debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
+        debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->phys_offset, file->path);
     }
 
     g_rec_mutex_unlock(&table->lock);
