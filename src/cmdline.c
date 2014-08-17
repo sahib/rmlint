@@ -44,7 +44,6 @@
 #include <sys/time.h>
 
 #include "cmdline.h"
-//#include "traverse.h"
 #include "preprocess.h"
 #include "shredder.h"
 #include "postprocess.h"
@@ -70,48 +69,6 @@ static void print_help(void) {
 }
 
 /* ------------------------------------------------------------- */
-
-/* Options not specified by commandline get a default option - this called before rm_parse_arguments */
-void rm_set_default_settings(RmSettings *pset) {
-    pset->mode                  = RM_MODE_LIST;       /* list only    */
-    pset->paranoid              = 0;                  /* dont be bush */
-    pset->depth                 = PATH_MAX / 2;       /* max tree depth*/
-    pset->followlinks           = 0;                  /* fol. link    */
-    pset->threads               = 32;
-    pset->verbosity             = G_LOG_LEVEL_INFO;   /* Most relev.  */
-    pset->samepart              = 0;                  /* Stay parted  */
-    pset->paths                 = NULL;               /* Startnode    */
-    pset->is_ppath              = NULL;               /* Startnode    */
-    pset->cmd_path              = NULL;               /* Cmd,if used  */
-    pset->cmd_orig              = NULL;               /* Origcmd, -"- */
-    pset->ignore_hidden         = 1;
-    pset->findemptydirs         = 1;
-    pset->namecluster           = 0;
-    pset->nonstripped           = 0;
-    pset->searchdup             = 1;
-    pset->color                 = isatty(fileno(stdout));
-    pset->findbadids            = 1;
-    pset->findbadlinks          = 1;
-    pset->output_log            = "rmlint.log";
-    pset->output_script         = "rmlint.sh";
-    pset->limits_specified      = 0;
-    pset->checksum_type         = RM_DIGEST_SPOOKY;
-    pset->minsize               = 0;
-    pset->maxsize               = G_MAXUINT64;
-    pset->listemptyfiles        = 1;
-    pset->keep_all_originals    = 0;                  /* Keep just one file from ppath "originals" indicated by "//" */
-    pset->must_match_original   = 0;                  /* search for any dupes, not just ones which include ppath members*/
-    pset->invert_original       = 0;                  /* search for any dupes, not just ones which include ppath members*/
-    pset->find_hardlinked_dupes = 0;                  /* ignore hardlinked dupes*/
-    pset->sort_criteria         = "m";                /* default ranking order for choosing originals - keep oldest mtime*/
-    pset->confirm_settings      = 0;                  /* default setting is no user confirmation of settings */
-
-    /* There is no cmdline option for this one    *
-     * It controls wether 'other lint' is also    *
-     * investigated to be replicas of other files */
-    pset->collide               = 0;
-    pset->num_paths             = 0;
-}
 
 /* Check if this is the 'preferred' dir */
 bool check_if_preferred(const char *dir) {
@@ -668,47 +625,13 @@ static int check_cmd(const char *cmd) {
 
 /* exit and return to calling method */
 int die(RmSession *session, int status) {
-    RmSettings *sets = session->settings;
-
-    /* Free mem */
-    if(sets->paths) {
-        for(int i = 0; sets->paths[i]; ++i) {
-            g_free(sets->paths[i]);
-        }
-        g_free(sets->paths);
-    }
-
-    g_free(sets->is_ppath);
-    g_free(sets->iwd);
-
+    rm_session_clear(session);
     if(status) {
         info("Abnormal exit\n");
     }
 
-    /* Close logfile */
-    if(session->log_out) {
-        fclose(session->log_out);
-    }
-
-    /* Close scriptfile */
-    if(session->script_out) {
-        fprintf(
-            session->script_out,
-            "                      \n"
-            "if [ -z $DO_REMOVE ]  \n"
-            "then                  \n"
-            "  %s %s;              \n"
-            "  %s %s;              \n"
-            "fi                    \n",
-            (session->settings->output_script) ? "rm -rf" : "",
-            (session->settings->output_script) ? (session->settings->output_script) : "",
-            (session->settings->output_log) ? "rm -rf" : "",
-            (session->settings->output_log) ? (session->settings->output_log) : ""
-        );
-        fclose(session->script_out);
-    }
-
     exit(status);
+    // TODO: what?
     return status;
 }
 
@@ -898,19 +821,6 @@ char rm_echo_settings(RmSettings *settings) {
 
     settings->verbosity = save_verbosity;
     return 1;
-}
-
-void rm_session_init(RmSession *session, RmSettings *settings) {
-    session->dup_counter = 0;
-    session->total_lint_size = 0;
-    session->total_files = 0;
-    session->settings = settings;
-    /* session->userlist = rm_userlist_new(); (moved to traverse) */
-    session->mounts = rm_mounts_table_new();
-    session->table = rm_file_table_new(session);
-    session->aborted = FALSE;
-
-    init_filehandler(session);
 }
 
 int rm_main(RmSession *session) {

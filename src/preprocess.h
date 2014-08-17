@@ -23,26 +23,17 @@
 *
 **/
 
-#ifndef FILTER_H
-#define FILTER_H
+#ifndef RM_PREPROCESS_H
+#define RM_PREPROCESS_H
 
+#include "session.h"
 #include "traverse.h"
-
-typedef struct RmMountTable RmMountTable;
-
-typedef struct RmFileTable {
-    RmMountTable *mounts;
-    GHashTable *dev_table;
-    GHashTable *size_table;
-    GHashTable *name_table;
-    GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE]; // one list for each lint type other than dupe candidates
-    GRecMutex lock;
-} RmFileTable;
-
+#include "file.h"
 
 /**
  * @brief Do some pre-processing (eg remove path doubles) and process "other lint".
  *
+ * TODO: better name.
  */
 void do_pre_processing(RmSession *session);
 

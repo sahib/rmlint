@@ -31,7 +31,7 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 
-#include "cmdline.h"
+#include "traverse.h"
 #include "preprocess.h"
 #include "postprocess.h"
 #include "utilities.h"
@@ -41,18 +41,44 @@
 #include <fcntl.h>
 
 static GMutex PRINT_MUTEX;
-pthread_mutex_t mutex_printage = PTHREAD_MUTEX_INITIALIZER;
 
-gchar *strsubs(const char *string, const char *subs, const char *with) {
-    gchar *result = NULL;
-    if (string != NULL && string[0] != '\0') {
-        gchar **split = g_strsplit (string, subs, 0);
-        if (split != NULL) {
-            result = g_strjoinv (with, split);
+/* Sort criteria for sorting by preferred path (first) then user-input criteria */
+long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
+    RmSession *session = user_data;
+    RmSettings *sets = session->settings;
+
+    if (a->in_ppath != b->in_ppath) {
+        return a->in_ppath - b->in_ppath;
+    } else {
+        int sort_criteria_len = strlen(sets->sort_criteria);
+        for (int i = 0; i < sort_criteria_len; i++) {
+            long cmp = 0;
+            switch (sets->sort_criteria[i]) {
+            case 'm':
+                cmp = (long)(a->mtime) - (long)(b->mtime);
+                break;
+            case 'M':
+                cmp = (long)(b->mtime) - (long)(a->mtime);
+                break;
+            case 'a':
+                cmp = strcmp (rm_util_basename(a->path), rm_util_basename (b->path));
+                break;
+            case 'A':
+                cmp = strcmp (rm_util_basename(b->path), rm_util_basename (a->path));
+                break;
+            case 'p':
+                cmp = (long)a->pnum - (long)b->pnum;
+                break;
+            case 'P':
+                cmp = (long)b->pnum - (long)a->pnum;
+                break;
+            }
+            if (cmp) {
+                return cmp;
+            }
         }
-        g_strfreev (split);
     }
-    return result;
+    return 0;
 }
 
 /* Simple wrapper around unlink() syscall */
@@ -76,13 +102,13 @@ void log_print(RmSession *session, FILE *stream, const char *string) {
 static char *make_cmd_ready(RmSettings *sets, bool is_orig, const char *orig, const char *dupl) {
     char *repl_orig = NULL;
     if(!is_orig) {
-        repl_orig = strsubs(sets->cmd_path, CMD_ORIG, orig);
+        repl_orig = rm_util_strsub(sets->cmd_path, CMD_ORIG, orig);
     } else {
-        repl_orig = strsubs(sets->cmd_orig, CMD_ORIG, orig);
+        repl_orig = rm_util_strsub(sets->cmd_orig, CMD_ORIG, orig);
     }
 
     if(repl_orig != NULL && !is_orig) {
-        char *repl_dups = strsubs(repl_orig, CMD_DUPL, dupl);
+        char *repl_dups = rm_util_strsub(repl_orig, CMD_DUPL, dupl);
         if(repl_dups != NULL) {
             free(repl_orig);
             repl_orig = repl_dups;
@@ -125,7 +151,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
             /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
              * for more info on this */
             char *tmp_copy = fpath;
-            fpath = strsubs(fpath, "'", "'\"'\"'");
+            fpath = rm_util_strsub(fpath, "'", "'\"'\"'");
             free(tmp_copy);
         }
         if(file->lint_type == RM_LINT_TYPE_BLNK) {
@@ -158,7 +184,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
                 char *opath = realpath(p_to_orig->path, NULL);
                 if(opath != NULL) {
                     /*script_print(sets, _sd_(set->cmd_path,fpath,opath));*/
-                    char *tmp_opath = strsubs(opath, "'", "'\"'\"'");
+                    char *tmp_opath = rm_util_strsub(opath, "'", "'\"'\"'");
                     if(tmp_opath != NULL) {
                         script_print(session, make_cmd_ready(sets, false, tmp_opath, fpath));
                         script_print(session, _sd_("\n"));
@@ -234,8 +260,8 @@ static bool handle_item(RmSession *session, RmFile *file_path, RmFile *file_orig
     break;
     case RM_MODE_CMD: {
         /* Exec a command on it */
-        char *tmp_opath = strsubs(orig, "'", "'\"'\"'");
-        char *tmp_fpath = strsubs(path, "'", "'\"'\"'");
+        char *tmp_opath = rm_util_strsub(orig, "'", "'\"'\"'");
+        char *tmp_fpath = rm_util_strsub(path, "'", "'\"'\"'");
         if(tmp_opath && tmp_fpath) {
             char *cmd = NULL;
             if(path) {
@@ -384,27 +410,26 @@ bool process_island(RmSession *session, GQueue *group) {
     bool tagged_original = false;
     RmFile *original = NULL;
 
+    GHashTable *orig_table = g_hash_table_new(NULL, NULL);
+
     while(i) {
         RmFile *fi = i->data;
         if (
             ((fi->in_ppath) && (sets->keep_all_originals)) ||
             ((fi->in_ppath) && (!tagged_original))
         ) {
-            fi->filter = false;
+            g_hash_table_insert(orig_table, fi, GUINT_TO_POINTER(1));
             if (!tagged_original) {
                 tagged_original = true;
                 original = fi;
             }
-        } else {
-            /*tag as duplicate*/
-            fi->filter = true;
         }
         i = i->next;
     }
     if (!tagged_original) {
         /* tag first file as the original*/
         original = group->head->data;
-        original->filter = false;
+        g_hash_table_insert(orig_table, original, GUINT_TO_POINTER(1));
     }
 
     g_mutex_lock(&PRINT_MUTEX);
@@ -413,7 +438,7 @@ bool process_island(RmSession *session, GQueue *group) {
     i = group->head;
     while(i) {
         RmFile *fi = i->data;
-        if(!fi->filter) {
+        if(g_hash_table_contains(orig_table, fi)) {
             /* original(s) of a duplicate set*/
             if(0
                     || sets->mode == RM_MODE_LIST
@@ -433,7 +458,7 @@ bool process_island(RmSession *session, GQueue *group) {
     i = group->head;
     while(i) {
         RmFile *fi = i->data;
-        if(fi->filter) {
+        if(!g_hash_table_contains(orig_table, fi)) {
             /* duplicates(s) of a duplicate sets*/
             if(0
                     || sets->mode == RM_MODE_LIST
@@ -459,5 +484,8 @@ bool process_island(RmSession *session, GQueue *group) {
     }
 
     g_mutex_unlock(&PRINT_MUTEX);
+
+    g_hash_table_unref(orig_table);
+
     return return_val;
 }

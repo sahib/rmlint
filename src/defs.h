@@ -92,14 +92,6 @@ From man 2 open:
 /* This almost cost nothing, but helps a lot with lots of similiar datasets */
 #define BYTE_MIDDLE_SIZE 16
 
-/* Use double slashes, so we can easily split the line to an array */
-#define LOGSEP "//"
-
-/* ------------------------------------------------------------- */
-
-/* -cC */
-#define CMD_DUPL "<dupl>"
-#define CMD_ORIG "<orig>"
 
 
 

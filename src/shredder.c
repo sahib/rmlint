@@ -6,8 +6,8 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 
-//#include "checksum.h"
-//#include "checksums/city.h"
+#include "checksum.h"
+#include "checksums/city.h"
 #include "preprocess.h"
 #include "utilities.h"
 #include "cmdline.h"
@@ -963,11 +963,11 @@ void shred_run(RmSession *session) {//, GHashTable *dev_table, GHashTable *size_
 //    TEST MAIN    //
 /////////////////////
 
+#ifdef _RM_COMPILE_MAIN_SHRED
+
 static void main_free_func(gconstpointer p) {
     g_queue_free_full((GQueue *)p, (GDestroyNotify)rm_file_destroy);
 }
-
-#ifdef _RM_COMPILE_MAIN_SHRED
 
 int main(int argc, const char **argv) {
     RmSettings settings;

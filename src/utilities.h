@@ -23,15 +23,12 @@
  *
  */
 
-#ifndef UTILITIES_H_INCLUDE
-#define UTILITIES_H_INCLUDE
+#ifndef RM_UTILITIES_H_INCLUDE
+#define RM_UTILITIES_H_INCLUDE
 
 #include <glib.h>
 #include <sys/stat.h>
 #include <stdbool.h>
-
-//#include "cmdline.h"
-#include "traverse.h"
 
 /////////////////////////////////////
 //   UID/GID VALIDITY CHECKING     //
@@ -76,10 +73,11 @@ char *rm_util_get_groupname(void);
 ////////////////////////////////////
 
 /**
- * @brief compare two files to see which is more "original" after a user-defined criteria.
+ * @brief Replace {subs} with {with} in {string}
+ *
+ * @return a newly allocated string, g_free it.
  */
-long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data);
-
+char *rm_util_strsub(const char *string, const char *subs, const char *with);
 
 /**
  * @brief Check if a file has a invalid gid/uid or both.
@@ -120,16 +118,15 @@ typedef struct RmMountTable {
     GHashTable *nfs_table;
 } RmMountTable;
 
-typedef struct rm_disk_info {
+typedef struct RmDiskInfo {
     char *name;
     char is_rotational;
-} rm_disk_info;
+} RmDiskInfo;
 
-typedef struct rm_part_info {
+typedef struct RmPartitionInfo {
     char *name;
     dev_t disk;
-} rm_part_info;
-
+} RmPartitionInfo;
 
 /**
  * @brief Allocates a new mounttable.
@@ -193,6 +190,11 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
 //    FIEMAP IMPLEMENATION     //
 /////////////////////////////////
 
+/* typedef RmOffsetTable, in case we need to exchange
+ * the data structure at any point.
+ */
+typedef GSequence *RmOffsetTable;
+
 /**
  * @brief Create a table with the extents for a file at path.
  */
@@ -208,6 +210,8 @@ guint64 rm_offset_lookup(RmOffsetTable table, guint64 file_offset);
 /**
  * @brief Free the allocated table.
  */
-#define rm_offset_free g_sequence_free
+inline void rm_offset_free(RmOffsetTable table) {
+    g_sequence_free(table);
+}
 
-#endif /* UTILITIES_H_INCLUDE*/
+#endif /* RM_UTILITIES_H_INCLUDE*/

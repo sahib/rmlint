@@ -48,7 +48,6 @@
 #include "config.h"
 #include "utilities.h"
 #include "cmdline.h"
-//#include "defs.h"
 
 /* External libraries */
 #include <glib.h>
@@ -59,49 +58,22 @@
 #include <blkid.h>
 #endif
 
+
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
-long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
-    RmSession *session = user_data;
-    RmSettings *sets = session->settings;
-
-    if (a->in_ppath != b->in_ppath) {
-        return a->in_ppath - b->in_ppath;
-    } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
-        for (int i = 0; i < sort_criteria_len; i++) {
-            long cmp = 0;
-            switch (sets->sort_criteria[i]) {
-            case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'M':
-                cmp = (long)(b->mtime) - (long)(a->mtime);
-                break;
-            case 'a':
-                cmp = strcmp (rm_util_basename(a->path), rm_util_basename (b->path));
-                break;
-            case 'A':
-                cmp = strcmp (rm_util_basename(b->path), rm_util_basename (a->path));
-                break;
-            case 'p':
-                cmp = (long)a->pnum - (long)b->pnum;
-                break;
-            case 'P':
-                cmp = (long)b->pnum - (long)a->pnum;
-                break;
-            }
-            if (cmp) {
-                return cmp;
-            }
+char *rm_util_strsub(const char *string, const char *subs, const char *with) {
+    gchar *result = NULL;
+    if (string != NULL && string[0] != '\0') {
+        gchar **split = g_strsplit (string, subs, 0);
+        if (split != NULL) {
+            result = g_strjoinv (with, split);
         }
+        g_strfreev (split);
     }
-    return 0;
+    return result;
 }
-
 
 char *rm_util_basename(const char *filename) {
     char *base = strrchr(filename, G_DIR_SEPARATOR);
@@ -303,26 +275,26 @@ void rm_userlist_destroy(RmUserGroupNode **list) {
 //    MOUNTTABLE IMPLEMENTATION    //
 /////////////////////////////////////
 
-rm_part_info *rm_part_info_new(char *name, dev_t disk) {
-    rm_part_info *self = g_new0(rm_part_info, 1);
+RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
+    RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
     self->name = g_strdup(name);
     self->disk = disk;
     return self;
 }
 
-void rm_part_info_free(rm_part_info *self) {
+void rm_part_info_free(RmPartitionInfo *self) {
     g_free(self->name);
     g_free(self);
 }
 
-rm_disk_info *rm_disk_info_new(char *name, char is_rotational) {
-    rm_disk_info *self = g_new0(rm_disk_info, 1);
+RmDiskInfo *rm_disk_info_new(char *name, char is_rotational) {
+    RmDiskInfo *self = g_new0(RmDiskInfo, 1);
     self->name = g_strdup(name);
     self->is_rotational = is_rotational;
     return self;
 }
 
-void rm_disk_info_free(rm_disk_info *self) {
+void rm_disk_info_free(RmDiskInfo *self) {
     g_free(self->name);
     g_free(self);
 }
@@ -490,8 +462,8 @@ void rm_mounts_table_destroy(RmMountTable *self) {
 }
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
-    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    rm_disk_info *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
     return !disk->is_rotational;
 }
 
@@ -504,7 +476,7 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
 }
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
-    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
+    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
     if (part) {
         return part->disk;
     } else {
@@ -522,8 +494,8 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
 }
 
 char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
-    rm_part_info *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    rm_disk_info *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
     return disk->name;
 }
 

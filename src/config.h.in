@@ -19,7 +19,39 @@
 
 /* not supposed to be changed */
 #ifndef _RM_HASH_LEN
-    #define _RM_HASH_LEN 16
+#define _RM_HASH_LEN 16
 #endif
+
+#define RED "\x1b[31;01m"
+#define YEL "\x1b[33;01m"
+#define NCO "\x1b[0m"
+#define GRE "\x1b[32;01m"
+#define BLU "\x1b[34;01m"
+
+// TODO: left to delete after rewriting postprocess.c
+
+/* Use double slashes, so we can easily split the line to an array */
+#define LOGSEP "//"
+#define CMD_DUPL "<dupl>"
+#define CMD_ORIG "<orig>"
+
+#include <errno.h>
+
+#define debug(...) \
+    g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define info(...) \
+    g_log("rmlint", G_LOG_LEVEL_MESSAGE, __VA_ARGS__)
+#define fyi(...) \
+    g_log("rmlint", G_LOG_LEVEL_MESSAGE, __VA_ARGS__)
+#define warning(...) \
+    g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
+#define rm_error(...) \
+    g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+
+#define rm_perror(message)                                                           \
+    if(errno)                                                                        \
+        rm_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
+                                                                                     \
+ 
 
 #endif

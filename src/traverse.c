@@ -33,85 +33,15 @@
 
 #include <sys/stat.h>
 #include <unistd.h>
+
 #include "preprocess.h"
 #include "cmdline.h"
 #include "utilities.h"
+#include "file.h"
 
 #define MAX_EMPTYDIR_DEPTH (PATH_MAX / 2) /* brute force option */
 
 #define RM_MAX_LIST_BUILD_POOL_THREADS 20 /* for testing */
-
-///////////////////////////////
-// RmFile defs and utilities //
-///////////////////////////////
-
-/**
- * @brief Allocate and new RmFile and populate with args
- */
-
-RmFile *rm_file_new(const char *path,
-                    guint64 fsize,
-                    ino_t node,
-                    dev_t dev,
-                    time_t mtime,
-                    RmLintType type,
-                    bool is_ppath,
-                    unsigned pnum) {
-    RmFile *self = g_slice_new0(RmFile);
-    self->path = g_strdup(path);
-    self->node = node;
-    self->dev = dev;
-    self->mtime = mtime;
-    self->hash_offset = 0;
-    self->seek_offset = 0;
-    self->state = RM_FILE_STATE_PROCESS;
-
-    // TODO: Use the actualy type from session -> pass it.
-    rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
-    g_mutex_init(&self->file_lock);
-
-    if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        // self->disk_offsets = rm_offset_create_table(self->path);
-        // self->offset = rm_offset_lookup(self->disk_offsets, 0);
-        /* TODO: delay this until we have matched file sizes */
-        self->fsize = fsize;
-    } else {
-        self->fsize = 0;
-        self->offset = 0;
-    }
-
-    self->lint_type = type;
-    self->filter = TRUE;
-
-    self->in_ppath = is_ppath;
-    self->pnum = pnum;
-
-    /* Make sure the fp arrays are filled with 0
-     This is important if a file has a smaller size
-     than the size read in for the fingerprint -
-     The backsum might not be calculated then, what might
-     cause inaccurate results.
-    */
-//    memset(self->fp[0], 0, _RM_HASH_LEN);
-//    memset(self->fp[1], 0, _RM_HASH_LEN);
-//    memset(self->bim, 0, BYTE_MIDDLE_SIZE);
-
-    /* initialised with no hardlink*/
-    self->hardlinked_original = NULL;
-
-    return self;
-}
-
-void rm_file_destroy(RmFile *file) {
-    g_free(file->path);
-    rm_digest_finalize(&file->digest);
-    g_mutex_clear(&file->file_lock);
-    if (file->disk_offsets) {
-        g_sequence_free(file->disk_offsets);
-    }
-    g_slice_free(RmFile, file);
-}
-
 
 ///////////////////////////////////////////
 // Buffer for starting traversal threads //
@@ -573,7 +503,7 @@ guint64 rm_search_tree(RmSession *session) {
         gpointer key, value;
         g_hash_table_iter_init (&iter, session->mounts->part_table);
         while (g_hash_table_iter_next (&iter, &key, &value)) {
-            rm_part_info *part_info = value;
+            RmPartitionInfo *part_info = value;
             /* check if mt_pt already in traverse path hashtable */
             if (!g_hash_table_contains (traverse_session->paths, part_info->name) ) {
                 char *path = g_strdup(part_info->name);
