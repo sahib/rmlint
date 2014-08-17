@@ -902,6 +902,7 @@ char rm_echo_settings(RmSettings *settings) {
 
 void rm_session_init(RmSession *session, RmSettings *settings) {
     session->dup_counter = 0;
+    session->dup_group_counter = 0;
     session->total_lint_size = 0;
     session->total_files = 0;
     session->settings = settings;

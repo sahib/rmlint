@@ -263,6 +263,80 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_DUPE_CANDIDATE] = "ls"
 };
 
+static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
+    const RmFile *fa = a, *fb = b;
+    if (fa->node != fb->node)
+        return fa->node - fb->node;
+    else if (fa->dev != fb->dev)
+        return fa->dev - fb->dev;
+    else
+        return strcmp(rm_util_basename(fa->path), rm_util_basename(fb->path));
+}
+
+/* If we have more than one path, or a fs loop, several RMFILEs may point to the
+ * same (physically same!) file.  This would result in potentially dangerous
+ * false positives where the "duplicate" that gets deleted is actually the
+ * original rm_file_list_remove_double_paths() searches for and removes items in
+ * GROUP  which are pointing to the same file.  Depending on settings, also
+ * removes hardlinked duplicates sets, keeping just one of each set.
+ * Returns number of files removed from GROUP.
+ * */
+static guint rm_file_list_remove_double_paths(GQueue *group, RmSession *session) {
+    RmSettings *settings = session->settings;
+    guint removed_cnt = 0;
+    g_assert(group);
+
+    g_queue_sort(group, rm_file_list_cmp_file, NULL);
+
+    GList *iter = group->head;
+    while(iter && iter->next) {
+        RmFile *file = iter->data, *next_file = iter->next->data;
+
+        if (file->node == next_file->node && file->dev == next_file->dev) {
+            /* files have same dev and inode:  might be hardlink (safe to delete), or
+             * two paths to the same original (not safe to delete) */
+            if   (0
+                    || (!settings->find_hardlinked_dupes)
+                    /* not looking for hardlinked dupes so kick out all dev/inode collisions*/
+                    ||  (1
+                         && (strcmp(rm_util_basename(file->path), rm_util_basename(next_file->path)) == 0)
+                         /* double paths and loops will always have same basename */
+                         && (rm_util_parent_node(file->path) == rm_util_parent_node(next_file->path))
+                         /* double paths and loops will always have same dir inode number*/
+                        )
+                 ) {
+                /* kick FILE or NEXT_FILE out */
+                if ( cmp_orig_criteria(file, next_file, session) >= 0 ) {
+                    /* FILE does not outrank NEXT_FILE in terms of ppath */
+                    iter = iter->next;
+                    g_queue_delete_link (group, iter->prev); /*TODO: this breaks size_table because we delete the file
+                                                              * without updating the size group */
+                    rm_file_destroy(file);
+
+                } else {
+                    /*iter = iter->next->next;  no, actually we want to leave FILE where it is */
+                    g_queue_delete_link (group, iter->next);
+                    rm_file_destroy(next_file);
+                }
+
+                removed_cnt++;
+            } else {
+                /*hardlinked - store the hardlink to save time later building checksums*/
+                if (file->hardlinked_original)
+                    next_file->hardlinked_original = file->hardlinked_original;
+                else
+                    next_file->hardlinked_original = file;
+                iter = iter->next;
+            }
+        } else {
+            iter = iter->next;
+        }
+    }
+
+    return removed_cnt;
+}
+
+
 static uint handle_other_lint(RmSession *session) {
     uint num_handled = 0;
 
@@ -325,6 +399,8 @@ void do_pre_processing(RmSession *session) {
 
     RmSettings *settings = session->settings;
 
+    //TODO: remove double paths for other lint types
+
     if(settings->namecluster) {
         other_lint += find_double_bases(session);
         rm_error("\n");
@@ -355,6 +431,16 @@ void do_pre_processing(RmSession *session) {
      * The scheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
 
+    guint path_doubles = 0;
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, session->table->dev_table);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        GQueue *group = value;
+        path_doubles += rm_file_list_remove_double_paths(group, session);
+        rm_error("Path doubles removed %u\n", path_doubles);
+    }
+
     shred_run(session);
     if(session->dup_counter == 0) {
         rm_error("\r                    ");
@@ -364,8 +450,8 @@ void do_pre_processing(RmSession *session) {
 
     rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
     warning(
-        "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s)",
-        session->total_files, session->dup_counter
+        "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s) in "RED"%lu"NCO" groups",
+        session->total_files, session->dup_counter, session->dup_group_counter
     );
 
     if(other_lint > 0) {

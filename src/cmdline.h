@@ -94,6 +94,7 @@ typedef struct RmSession {
     guint64 total_files;
     guint64 total_lint_size;
     guint64 dup_counter;
+    guint64 dup_group_counter;
 
     FILE *script_out;
     FILE *log_out;

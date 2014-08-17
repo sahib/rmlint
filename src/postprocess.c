@@ -379,6 +379,8 @@ bool process_island(RmSession *session, GQueue *group) {
     /* --> First one is the original otherwise */
     bool return_val = false;
 
+    session->dup_group_counter++;
+
     RmSettings *sets = session->settings;
     GList *i = group->head;
     bool tagged_original = false;
