@@ -437,7 +437,7 @@ void do_pre_processing(RmSession *session) {
     g_hash_table_iter_init(&iter, session->table->dev_table);
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         GQueue *group = value;
-        path_doubles += rm_file_list_remove_double_paths(group, session);
+        path_doubles += 0;//rm_file_list_remove_double_paths(group, session);
         rm_error("Path doubles removed %u\n", path_doubles);
     }
 
