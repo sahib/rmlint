@@ -149,7 +149,7 @@ void rm_file_table_insert(RmFileTable *table, RmFile *file) {
             g_hash_table_insert(table->dev_table, GUINT_TO_POINTER(file->disk), dev_list);
         }
         g_queue_push_head(dev_list, file);
-        debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->phys_offset, file->path);
+        debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->inode, file->phys_offset, file->path);
     }
 
     g_rec_mutex_unlock(&table->lock);
@@ -202,7 +202,7 @@ static int find_double_bases(RmSession *session) {
 //
 //                    RmFile *fx = fj;
 //                    while((fx = rm_file_list_iter_all(session->list, fx))) {
-//                        if(fx->node == fj->node) {
+//                        if(fx->inode == fj->inode) {
 //                            fx->lint_type = RM_LINT_TYPE_BASE;
 //                        }
 //                    }

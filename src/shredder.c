@@ -513,11 +513,11 @@ static int shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_UNU
     /* Sort after inode as secondary criteria.
      * This is meant for files with an offset of 0 as fallback.
      */
-    if(a->node < b->node) {
+    if(a->inode < b->inode) {
         return -1;
     }
 
-    if(a->node > b->node) {
+    if(a->inode > b->inode) {
         return -1;
     }
 
@@ -648,8 +648,8 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
 
     for(GList *iter = results->head; iter; iter = iter->next) {
         RmFile *candidate = iter->data;
-        num_is_orig += candidate->in_ppath;
-        num_no_orig += !candidate->in_ppath;
+        num_is_orig += candidate->is_prefd;
+        num_no_orig += !candidate->is_prefd;
 
         g_printerr("--> %s size=%lu cksum=", candidate->path, candidate->file_size);
 

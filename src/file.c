@@ -35,7 +35,7 @@ RmFile *rm_file_new(const char *path,
                     unsigned pnum) {
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
-    self->node = node;
+    self->inode = node;
     self->dev = dev;
     self->mtime = mtime;
     self->hash_offset = 0;
@@ -58,7 +58,7 @@ RmFile *rm_file_new(const char *path,
 
     self->lint_type = type;
 
-    self->in_ppath = is_ppath;
+    self->is_prefd = is_ppath;
     self->path_index = pnum;
 
     /* initialised with no hardlink*/

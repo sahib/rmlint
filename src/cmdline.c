@@ -215,8 +215,8 @@ static bool add_path(RmSession *session, int index, const char *path) {
         rm_error(YEL"FATAL: "NCO"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
-        settings->is_ppath = g_realloc(settings->is_ppath, sizeof(char) * (index + 1));
-        settings->is_ppath[index] = is_pref;
+        settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
+        settings->is_prefd[index] = is_pref;
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
 
         if (path[0] == '/') {
@@ -591,8 +591,8 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         sets->paths = g_malloc0(sizeof(char *) * 2);
         sets->paths[0] = getcwd(NULL, 0);
         sets->paths[1] = NULL;
-        sets->is_ppath = g_malloc0(sizeof(char));
-        sets->is_ppath[0] = 0;
+        sets->is_prefd = g_malloc0(sizeof(char));
+        sets->is_prefd[0] = 0;
         sets->num_paths++;
         if(!sets->paths[0]) {
             rm_error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
@@ -679,7 +679,7 @@ char rm_echo_settings(RmSettings *settings) {
     /*---------------- search paths ---------------*/
     info(NCO"Search paths:\n");
     for(int i = 0; settings->paths[i] != NULL; ++i) {
-        if (settings->is_ppath[i]) {
+        if (settings->is_prefd[i]) {
             has_ppath = true;
             warning (GRE"\t(orig)\t+ %s\n"NCO, settings->paths[i] );
         } else {

@@ -52,9 +52,9 @@ typedef struct RmTraversePathBuffer {
     struct stat *stat_buf;
     char *path;
     short depth;  // NOTE: need this because mountpoints may have different maxdepth to session->settings
-    bool is_ppath;
-    unsigned long pnum;
-    dev_t disk; //NOTE: this is disk dev_t, not partition dev_t
+    bool is_prefd;
+    guint64 path_index;
+    dev_t disk; // NOTE: this is disk dev_t, not partition dev_t
     int path_num_for_disk;
 } RmTraversePathBuffer;
 
@@ -67,7 +67,7 @@ RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
     RmTraversePathBuffer *self = g_new0(RmTraversePathBuffer, 1);
     self->path = g_strdup(path);
     self->depth = depth;
-    self->is_ppath = is_ppath;
+    self->is_prefd = is_ppath;
     self->path_index = pnum;
     self->stat_buf = g_new0(struct stat, 1);
     if ( stat(path, self->stat_buf) == -1) {
@@ -175,7 +175,7 @@ void traverse_path(gpointer data, gpointer userdata) {
     RmTraversePathBuffer *traverse_path_args = (gpointer)data;
 
     char *path = traverse_path_args->path;
-    char is_ppath = traverse_path_args->is_ppath;
+    char is_ppath = traverse_path_args->is_prefd;
     short depth = traverse_path_args->depth;
     unsigned long pnum = traverse_path_args->path_index;
     guint64 numfiles = 0;
@@ -486,7 +486,7 @@ guint64 rm_search_tree(RmSession *session) {
             info("adding %s to paths hashtable\n", settings->paths[idx]);
             RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new(settings->paths[idx],
                                              settings->depth,
-                                             settings->is_ppath[idx],
+                                             settings->is_prefd[idx],
                                              idx);
             g_hash_table_insert (traverse_session->paths, settings->paths[idx], new_path);
             info(BLU"Adding path %s\n"NCO, new_path->path);
@@ -523,7 +523,7 @@ guint64 rm_search_tree(RmSession *session) {
                             /* add the mountpoint to the traverse list hashtable*/
                             RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new((gpointer)part_info->name,
                                                              bestmatch->depth - depth_diff,
-                                                             bestmatch->is_ppath,
+                                                             bestmatch->is_prefd,
                                                              bestmatch->path_index
                                                                                         );
                             info(BLU"Adding mountpoint %s as subdir of %s with depth difference %d\n"NCO,

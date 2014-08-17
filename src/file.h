@@ -34,8 +34,17 @@
 #include "utilities.h"
 
 typedef enum RmFileState {
+    /* File still processing
+     */
     RM_FILE_STATE_PROCESS,
+
+    /* File can be ignored, has a unique hash,
+     * or is elsewhise not noteworthy.
+     */
     RM_FILE_STATE_IGNORE,
+
+    /* File that is already finished
+     */
     RM_FILE_STATE_FINISH
 } RmFileState;
 
@@ -50,32 +59,76 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADUID,
     RM_LINT_TYPE_BADGID,
     RM_LINT_TYPE_BADUGID,
+
     /* Border */
     RM_LINT_TYPE_OTHER_LINT,
+
     /* note: this needs to be last item in list */
     RM_LINT_TYPE_DUPE_CANDIDATE
 } RmLintType;
 
 /* TODO: Reduce size of RmFile */
 typedef struct RmFile {
-    char *path;                          /* absolute path from working dir */
-    bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
-    time_t mtime;                        /* File modification date/time */
+    /* Absolute path of the file
+     * */
+    char *path;
 
-    ino_t node;
+    /* File modification date/time
+     * */
+    time_t mtime;
+
+    /* The inode, device and disk of this file.
+     * Used to filter double hardlinks.
+     *
+     * TODO: both needed? probably yes...
+     */
+    ino_t inode;
     dev_t dev;
     dev_t disk;
 
+    /* True if this file is in one of the preferred paths,
+     * i.e. paths prefixed with // on the commandline.
+     */
+    bool is_prefd;
+
+    /* The index of the path this file belongs to.
+     * TODO: just use a pointer?
+     */
     guint64 path_index;
+
+    /* Filesize in bytes
+     */
     guint64 file_size;
 
+    /* Physical offset from the start of the disk.
+     * This gets updated on a change of seek_offset,
+     * so it reflects always the current readposition.
+     */
     guint64 phys_offset;
+    /* How many bytes were already hashed
+     * (lower or equal seek_offset)
+     */
     guint64 hash_offset;
+
+    /* How many bytes were already read.
+     * (lower or equal file_size)
+     */
     guint64 seek_offset;
 
+    /* digest of this file updated on every hash iteration.
+     */
     RmDigest digest;
+
+    /* State of the file, initially always RM_FILE_STATE_PROCESS
+     */
     RmFileState state;
+
+    /* Table of this file's extents.
+     */
     RmOffsetTable disk_offsets;
+
+    /* What kind of lint this file is.
+     */
     RmLintType lint_type;
 
     struct RmFile *hardlinked_original;

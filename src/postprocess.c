@@ -47,8 +47,8 @@ long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
     RmSession *session = user_data;
     RmSettings *sets = session->settings;
 
-    if (a->in_ppath != b->in_ppath) {
-        return a->in_ppath - b->in_ppath;
+    if (a->is_prefd != b->is_prefd) {
+        return a->is_prefd - b->is_prefd;
     } else {
         int sort_criteria_len = strlen(sets->sort_criteria);
         for (int i = 0; i < sort_criteria_len; i++) {
@@ -207,9 +207,9 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
         }
 #define INT_CAST long unsigned
         if(sets->verbosity == 4) {
-            fprintf(stdout, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->file_size, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
+            fprintf(stdout, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->file_size, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->inode);
         }
-        fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->file_size, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
+        fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->file_size, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->inode);
 #undef INT_CAST
         if(free_fullpath && fpath && file->lint_type != RM_LINT_TYPE_BLNK) {
             g_free(fpath);
@@ -415,8 +415,8 @@ bool process_island(RmSession *session, GQueue *group) {
     while(i) {
         RmFile *fi = i->data;
         if (
-            ((fi->in_ppath) && (sets->keep_all_originals)) ||
-            ((fi->in_ppath) && (!tagged_original))
+            ((fi->is_prefd) && (sets->keep_all_originals)) ||
+            ((fi->is_prefd) && (!tagged_original))
         ) {
             g_hash_table_insert(orig_table, fi, GUINT_TO_POINTER(1));
             if (!tagged_original) {

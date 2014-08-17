@@ -45,12 +45,12 @@ void rm_set_default_settings(RmSettings *settings) {
     settings->maxsize = G_MAXUINT64;
 
     /* Lint Types */
-    settings->ignore_hidden         = true;
-    settings->findemptydirs         = true;
-    settings->listemptyfiles        = true;
-    settings->searchdup             = true;
-    settings->findbadids            = true;
-    settings->findbadlinks          = true;
+    settings->ignore_hidden  = true;
+    settings->findemptydirs  = true;
+    settings->listemptyfiles = true;
+    settings->searchdup      = true;
+    settings->findbadids     = true;
+    settings->findbadlinks   = true;
 
     /* Misc options */
     settings->output_log    = "rmlint.log";
@@ -85,7 +85,7 @@ void rm_session_clear(RmSession *session) {
         g_free(sets->paths);
     }
 
-    g_free(sets->is_ppath);
+    g_free(sets->is_prefd);
     g_free(sets->iwd);
 
     /* Close logfile */

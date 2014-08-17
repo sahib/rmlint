@@ -60,7 +60,7 @@ typedef struct RmSettings {
     short verbosity;
     bool listemptyfiles;
     char **paths;
-    char *is_ppath;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
+    char *is_prefd;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
     int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
     char *cmd_path;
     char *cmd_orig;
