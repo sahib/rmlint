@@ -867,12 +867,9 @@ static void shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table
     g_list_free(values);
 }
 
-void shred_run(RmSession *session) {//, GHashTable *dev_table, GHashTable *size_table) {
+void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table) {
     g_assert(session);
-    RmFileTable *table = session->table;
-    GHashTable *dev_table = table->dev_table;
     g_assert(dev_table);
-    GHashTable *size_table = table->size_table;
     g_assert(size_table);
 
     RmMainTag tag;

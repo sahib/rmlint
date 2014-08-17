@@ -23,14 +23,12 @@
  *
  */
 
-#ifndef HASH_H
-#define HASH_H
+#ifndef RM_SHREDDER_H
+#define RM_SHREDDER_H
 
-#include <stdlib.h>
-//#include "defs.h"
-#include "cmdline.h"
+#include <glib.h>
+#include "session.h"
 
-void shred_run(RmSession *session);
-
+void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table);
 
 #endif
