@@ -50,9 +50,9 @@ RmFile *rm_file_new(const char *path,
         // self->disk_offsets = rm_offset_create_table(self->path);
         // self->phys_offset = rm_offset_lookup(self->disk_offsets, 0);
         /* TODO: delay this until we have matched file sizes */
-        self->fsize = fsize;
+        self->file_size = fsize;
     } else {
-        self->fsize = 0;
+        self->file_size = 0;
         self->phys_offset = 0;
     }
 

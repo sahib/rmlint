@@ -279,7 +279,7 @@ static RmFileState shred_get_file_state(RmMainTag *tag, RmFile *file) {
 }
 
 static bool shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
-    g_assert(a->fsize == b->fsize);
+    g_assert(a->file_size == b->file_size);
 
     int fd_a = open(a->path, O_RDONLY);
     if(fd_a == -1) {
@@ -392,7 +392,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
         goto finish;
     }
 
-    if(file->seek_offset >= file->fsize) {
+    if(file->seek_offset >= file->file_size) {
         goto finish;
     }
 
@@ -406,10 +406,10 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     int N_BUFFERS = 0;
     g_mutex_lock(&tag->read_size_mtx);
     {
-        if(file->seek_offset + tag->read_size < file->fsize) {
+        if(file->seek_offset + tag->read_size < file->file_size) {
             read_maximum = tag->read_size;
         } else {
-            read_maximum = file->fsize - file->seek_offset;
+            read_maximum = file->file_size - file->seek_offset;
         }
         N_BUFFERS = MIN(SHRED_MAX_PAGES, read_maximum / tag->page_size + !!(read_maximum % tag->page_size));
     }
@@ -590,7 +590,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                     g_hash_table_insert(checkmark_table, finished, GUINT_TO_POINTER(1));
                 }
 
-                if(finished->seek_offset >= finished->fsize) {
+                if(finished->seek_offset >= finished->file_size) {
                     g_hash_table_insert(checkmark_table, finished, GUINT_TO_POINTER(1));
                 }
             }
@@ -651,7 +651,7 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
         num_is_orig += candidate->in_ppath;
         num_no_orig += !candidate->in_ppath;
 
-        g_printerr("--> %s size=%lu cksum=", candidate->path, candidate->fsize);
+        g_printerr("--> %s size=%lu cksum=", candidate->path, candidate->file_size);
 
         guint8 checksum[_RM_HASH_LEN];
         rm_digest_steal_buffer(&candidate->digest, checksum, sizeof(checksum));
@@ -766,7 +766,7 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
             GQueue *results = g_queue_new();
             for(GList *iter = dupe_list->head; iter; iter = iter->next) {
                 RmFileSnapshot *candidate = iter->data;
-                if(candidate->hash_offset >= candidate->ref_file->fsize) {
+                if(candidate->hash_offset >= candidate->ref_file->file_size) {
                     g_queue_push_head(results, candidate->ref_file);
                 }
             }
@@ -838,7 +838,7 @@ static void shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table
 
         for(GList *file_link = value->head; file_link; file_link = file_link->next) {
             RmFile *file = file_link->data;
-            guint64 count = GPOINTER_TO_UINT(g_hash_table_lookup(size_table, GUINT_TO_POINTER(file->fsize)));
+            guint64 count = GPOINTER_TO_UINT(g_hash_table_lookup(size_table, GUINT_TO_POINTER(file->file_size)));
 
             if(count == 1) {
                 g_queue_push_head(&to_delete, file_link);
@@ -852,9 +852,9 @@ static void shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table
 
             g_hash_table_insert(
                 size_table,
-                GUINT_TO_POINTER(file->fsize),
+                GUINT_TO_POINTER(file->file_size),
                 g_hash_table_lookup(
-                    size_table, GUINT_TO_POINTER(file->fsize)) - 1
+                    size_table, GUINT_TO_POINTER(file->file_size)) - 1
             );
         }
 
@@ -917,7 +917,7 @@ void shred_run(RmSession *session) {//, GHashTable *dev_table, GHashTable *size_
         } else {
             /* It is a regular RmFileSnapshot with updates. */
             RmSizeKey key;
-            key.size = snapshot->ref_file->fsize;
+            key.size = snapshot->ref_file->file_size;
             key.hash_offset = snapshot->hash_offset;
 
             /* See if we already have had this combination, if not create new entry */
@@ -934,7 +934,7 @@ void shred_run(RmSession *session) {//, GHashTable *dev_table, GHashTable *size_
              * group - in this case we have a full set and can compare it.
              * */
             guint64 count = GPOINTER_TO_UINT(
-                                g_hash_table_lookup(size_table, GUINT_TO_POINTER(snapshot->ref_file->fsize))
+                                g_hash_table_lookup(size_table, GUINT_TO_POINTER(snapshot->ref_file->file_size))
                             );
 
             if(count > 1 && g_queue_get_length(size_list) == count) {

@@ -127,9 +127,9 @@ void rm_file_table_insert(RmFileTable *table, RmFile *file) {
         }
         g_hash_table_insert(
             table->size_table,
-            GUINT_TO_POINTER(file->fsize), //TODO: check overflow for >4GB files
+            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files
             g_hash_table_lookup(
-                table->size_table, GUINT_TO_POINTER(file->fsize)) + 1
+                table->size_table, GUINT_TO_POINTER(file->file_size)) + 1
         );
         if (table->name_table) {
             //insert file into hashtable of basename lists

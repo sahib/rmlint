@@ -175,7 +175,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
         } else if(file->lint_type == RM_LINT_TYPE_BADUGID) {
             script_print(session, _sd_("%s '%s' # bad gid and uid\n", chown_cmd_badugid, fpath));
             log_print(session, session->log_out, "BGID");
-        } else if(file->fsize == 0) {
+        } else if(file->file_size == 0) {
             script_print(session, _sd_("rm -f '%s' # empty file.\n", fpath));
             log_print(session, session->log_out, "ZERO");
         } else if(orig == false) {
@@ -207,9 +207,9 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
         }
 #define INT_CAST long unsigned
         if(sets->verbosity == 4) {
-            fprintf(stdout, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
+            fprintf(stdout, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->file_size, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
         }
-        fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->fsize, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
+        fprintf(session->log_out, "%s%s%s%lu%s%lu%s%lu\n", LOGSEP, fpath, LOGSEP, (INT_CAST)file->file_size, LOGSEP, (INT_CAST)file->dev, LOGSEP, (INT_CAST)file->node);
 #undef INT_CAST
         if(free_fullpath && fpath && file->lint_type != RM_LINT_TYPE_BLNK) {
             g_free(fpath);
@@ -474,7 +474,7 @@ bool process_island(RmSession *session, GQueue *group) {
             }
             write_to_log(session, fi, false, original);
             session->dup_counter++;
-            session->total_lint_size += fi->fsize;
+            session->total_lint_size += fi->file_size;
             if(handle_item(session, fi, original)) {
                 return_val = true;
                 break;
