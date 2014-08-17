@@ -66,7 +66,7 @@ typedef struct RmFile {
     dev_t dev;
     dev_t disk;
 
-    guint64 pnum;                        /* numerical index of user-input paths */
+    guint64 path_index;
     guint64 file_size;
 
     guint64 phys_offset;

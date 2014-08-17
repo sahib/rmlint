@@ -68,7 +68,7 @@ RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
     self->path = g_strdup(path);
     self->depth = depth;
     self->is_ppath = is_ppath;
-    self->pnum = pnum;
+    self->path_index = pnum;
     self->stat_buf = g_new0(struct stat, 1);
     if ( stat(path, self->stat_buf) == -1) {
         rm_perror(path);
@@ -177,7 +177,7 @@ void traverse_path(gpointer data, gpointer userdata) {
     char *path = traverse_path_args->path;
     char is_ppath = traverse_path_args->is_ppath;
     short depth = traverse_path_args->depth;
-    unsigned long pnum = traverse_path_args->pnum;
+    unsigned long pnum = traverse_path_args->path_index;
     guint64 numfiles = 0;
     RmSession *session = traverse_session->rm_session;
     RmSettings *settings = session->settings;
@@ -524,7 +524,7 @@ guint64 rm_search_tree(RmSession *session) {
                             RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new((gpointer)part_info->name,
                                                              bestmatch->depth - depth_diff,
                                                              bestmatch->is_ppath,
-                                                             bestmatch->pnum
+                                                             bestmatch->path_index
                                                                                         );
                             info(BLU"Adding mountpoint %s as subdir of %s with depth difference %d\n"NCO,
                                  new_path->path, bestmatch->path, depth_diff);

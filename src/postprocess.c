@@ -67,10 +67,10 @@ long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
                 cmp = strcmp (rm_util_basename(b->path), rm_util_basename (a->path));
                 break;
             case 'p':
-                cmp = (long)a->pnum - (long)b->pnum;
+                cmp = (long)a->path_index - (long)b->path_index;
                 break;
             case 'P':
-                cmp = (long)b->pnum - (long)a->pnum;
+                cmp = (long)b->path_index - (long)a->path_index;
                 break;
             }
             if (cmp) {

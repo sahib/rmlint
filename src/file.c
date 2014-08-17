@@ -59,7 +59,7 @@ RmFile *rm_file_new(const char *path,
     self->lint_type = type;
 
     self->in_ppath = is_ppath;
-    self->pnum = pnum;
+    self->path_index = pnum;
 
     /* initialised with no hardlink*/
     self->hardlinked_original = NULL;
