@@ -29,6 +29,6 @@
 #include <glib.h>
 #include "session.h"
 
-void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table);
+void rm_shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table);
 
 #endif

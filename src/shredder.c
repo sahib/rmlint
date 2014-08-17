@@ -50,7 +50,7 @@
  * hasher threads from two more GTHreadPools. The initial thread works as
  * manager for the spawnend threads. The manager repeats reading the files on
  * its device until no file is flagged with RM_FILE_STATE_PROCESS as state.
- * (shred_devlist_factory). On each iteration the block size is incremented, so
+ * (rm_shred_devlist_factory). On each iteration the block size is incremented, so
  * the next round reads more data, since it gets increasingly less likely to
  * find differences in files. Additionally on every few iterations the files in
  * the devlist are resorted according to their physical block on the device.
@@ -67,7 +67,7 @@
  * list found during traversing, we know that we compare these files with each
  * other.
  *
- * On comparable groups shred_findmatches() is called, which finds files that
+ * On comparable groups rm_shred_findmatches() is called, which finds files that
  * can be ignored and files that are finished already. In both cases file->state
  * is modified accordingly. In the latter case the group is processed; i.e.
  * written to log, stdout and script.
@@ -118,7 +118,7 @@
 /* Determines the next amount of bytes_read to read.
  * Currently just doubles the amount.
  * */
-static guint64 shred_get_next_read_size(int read_size) {
+static guint64 rm_shred_get_next_read_size(int read_size) {
     /* Protect agains integer overflows */
     if(read_size >= SHRED_MAX_READ_SIZE) {
         return SHRED_MAX_READ_SIZE;
@@ -211,7 +211,7 @@ typedef struct RmDevlistTag {
     /* Pool for the hashing workers */
     GThreadPool *hash_pool;
 
-    /* How many bytes shred_read_factory is supposed to read */
+    /* How many bytes rm_shred_read_factory is supposed to read */
     gint64 read_size;
 
     /* protect read_size */
@@ -222,7 +222,7 @@ typedef struct RmDevlistTag {
      */
     guint64 page_size;
 
-    /* Queue from shred_read_factory to shred_devlist_factory:
+    /* Queue from rm_shred_read_factory to rm_shred_devlist_factory:
      * The reader notifes the manager to push a new job
      * this way.
      */
@@ -253,7 +253,7 @@ typedef struct RmFileSnapshot {
     RmFile *ref_file;
 } RmFileSnapshot;
 
-static RmFileSnapshot *shred_create_snapshot(RmFile *file) {
+static RmFileSnapshot *rm_shred_create_snapshot(RmFile *file) {
     RmFileSnapshot *self = g_slice_new0(RmFileSnapshot);
     self->hash_offset = file->hash_offset;
     self->ref_file = file;
@@ -262,7 +262,7 @@ static RmFileSnapshot *shred_create_snapshot(RmFile *file) {
     return self;
 }
 
-static void shred_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state) {
+static void rm_shred_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state) {
     g_mutex_lock(&tag->file_state_mtx);
     {
         file->state = state;
@@ -270,7 +270,7 @@ static void shred_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state
     g_mutex_unlock(&tag->file_state_mtx);
 }
 
-static RmFileState shred_get_file_state(RmMainTag *tag, RmFile *file) {
+static RmFileState rm_shred_get_file_state(RmMainTag *tag, RmFile *file) {
     RmFileState state = 0;
     g_mutex_lock(&tag->file_state_mtx);
     {
@@ -280,7 +280,7 @@ static RmFileState shred_get_file_state(RmMainTag *tag, RmFile *file) {
     return state;
 }
 
-static bool shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
+static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
     g_assert(a->file_size == b->file_size);
 
     int fd_a = open(a->path, O_RDONLY);
@@ -353,7 +353,7 @@ static bool shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
     return result;
 }
 
-static bool shred_thread_pool_push(GThreadPool *pool, gpointer data) {
+static bool rm_shred_thread_pool_push(GThreadPool *pool, gpointer data) {
     GError *error = NULL;
     g_thread_pool_push(pool, data, &error);
     if(error != NULL) {
@@ -365,7 +365,7 @@ static bool shred_thread_pool_push(GThreadPool *pool, gpointer data) {
     }
 }
 
-static GThreadPool *shred_thread_pool_new(GFunc func, gpointer data, int threads) {
+static GThreadPool *rm_shred_thread_pool_new(GFunc func, gpointer data, int threads) {
     GError *error = NULL;
     GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
 
@@ -380,7 +380,7 @@ static GThreadPool *shred_thread_pool_new(GFunc func, gpointer data, int threads
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
-static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
+static void rm_shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     g_assert(tag);
     g_assert(file);
 
@@ -390,7 +390,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     guint64 read_maximum = 0;
     struct iovec readvec[SHRED_MAX_PAGES + 1];
 
-    if(shred_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
+    if(rm_shred_get_file_state(tag->main, file) != RM_FILE_STATE_PROCESS) {
         goto finish;
     }
 
@@ -401,7 +401,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     fd = open(file->path, O_RDONLY);
     if(fd == -1) {
         perror("open failed");
-        shred_set_file_state(tag->main, file, RM_FILE_STATE_IGNORE);
+        rm_shred_set_file_state(tag->main, file, RM_FILE_STATE_IGNORE);
         goto finish;
     }
 
@@ -448,7 +448,7 @@ static void shred_read_factory(RmFile *file, RmDevlistTag *tag) {
             }
 
             /* Send it to the hasher */
-            shred_thread_pool_push(tag->hash_pool, buffer);
+            rm_shred_thread_pool_push(tag->hash_pool, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */
             buffer = rm_buffer_pool_get(tag->main->mem_pool);
@@ -477,11 +477,11 @@ finish:
     }
 }
 
-static void shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
+static void rm_shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
     g_assert(tag);
     g_assert(buffer);
 
-    if(shred_get_file_state(tag->main, buffer->file) != RM_FILE_STATE_PROCESS) {
+    if(rm_shred_get_file_state(tag->main, buffer->file) != RM_FILE_STATE_PROCESS) {
         return;
     }
 
@@ -492,7 +492,7 @@ static void shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
         buffer->file->hash_offset += buffer->len;
 
         /* Report the progress to the joiner */
-        g_async_queue_push(tag->main->join_queue, shred_create_snapshot(buffer->file));
+        g_async_queue_push(tag->main->join_queue, rm_shred_create_snapshot(buffer->file));
     }
     g_mutex_unlock(&buffer->file->file_lock);
 
@@ -500,7 +500,7 @@ static void shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
     rm_buffer_pool_release(tag->main->mem_pool, buffer);
 }
 
-static int shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_UNUSED gpointer user_data) {
+static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_UNUSED gpointer user_data) {
     /* offset is a guint64, so do not substract them.
      * (will cause over or underflows on regular base)
      */
@@ -526,7 +526,7 @@ static int shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_UNU
     return 0;
 }
 
-static int shred_get_read_threads(RmMainTag *tag, bool nonrotational, int max_threads) {
+static int rm_shred_get_read_threads(RmMainTag *tag, bool nonrotational, int max_threads) {
     if(!nonrotational) {
         return 1;
     } else {
@@ -535,7 +535,7 @@ static int shred_get_read_threads(RmMainTag *tag, bool nonrotational, int max_th
     }
 }
 
-static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
+static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     RmDevlistTag tag;
 
     tag.main = main;
@@ -551,30 +551,30 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                              ((RmFile *)device_queue->head->data)->dev
                          );
 
-    int max_threads = shred_get_read_threads(
+    int max_threads = rm_shred_get_read_threads(
                           main, nonrotational, main->session->settings->threads
                       );
 
-    GThreadPool *read_pool = shred_thread_pool_new(
-                                 (GFunc)shred_read_factory, &tag, max_threads
+    GThreadPool *read_pool = rm_shred_thread_pool_new(
+                                 (GFunc)rm_shred_read_factory, &tag, max_threads
                              );
 
-    tag.hash_pool = shred_thread_pool_new(
-                        (GFunc) shred_hash_factory, &tag, 1
+    tag.hash_pool = rm_shred_thread_pool_new(
+                        (GFunc) rm_shred_hash_factory, &tag, 1
                     );
 
     GHashTable *checkmark_table = g_hash_table_new(NULL, NULL);
 
     if(!nonrotational) {
-        g_queue_sort(device_queue, (GCompareDataFunc)shred_compare_file_order, NULL);
+        g_queue_sort(device_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
     }
 
     while(g_hash_table_size(checkmark_table) < g_queue_get_length(device_queue)) {
         int pushed = 0;
         for(GList *iter = device_queue->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            if(shred_get_file_state(tag.main, file) == RM_FILE_STATE_PROCESS) {
-                pushed += shred_thread_pool_push(read_pool, file);
+            if(rm_shred_get_file_state(tag.main, file) == RM_FILE_STATE_PROCESS) {
+                pushed += rm_shred_thread_pool_push(read_pool, file);
             } else {
                 g_hash_table_insert(checkmark_table, file, GUINT_TO_POINTER(1));
             }
@@ -588,7 +588,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
         {
             for(int i = 0; i < pushed; ++i) {
                 RmFile *finished = g_async_queue_pop_unlocked(tag.finished_queue);
-                if(shred_get_file_state(tag.main, finished) != RM_FILE_STATE_PROCESS) {
+                if(rm_shred_get_file_state(tag.main, finished) != RM_FILE_STATE_PROCESS) {
                     g_hash_table_insert(checkmark_table, finished, GUINT_TO_POINTER(1));
                 }
 
@@ -598,7 +598,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
             }
 
             if(!nonrotational) {
-                g_queue_sort(device_queue, (GCompareDataFunc)shred_compare_file_order, NULL);
+                g_queue_sort(device_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
             }
         }
         g_async_queue_unlock(tag.finished_queue);
@@ -606,7 +606,7 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
 
         g_mutex_lock(&tag.read_size_mtx);
         {
-            tag.read_size = shred_get_next_read_size(tag.read_size);
+            tag.read_size = rm_shred_get_next_read_size(tag.read_size);
         }
         g_mutex_unlock(&tag.read_size_mtx);
     }
@@ -624,27 +624,27 @@ static void shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     g_async_queue_unref(tag.finished_queue);
 }
 
-static int shred_check_paranoia(RmMainTag *tag, GQueue *candidates) {
+static int rm_shred_check_paranoia(RmMainTag *tag, GQueue *candidates) {
     int failure_count = 0;
 
     for(GList *iter_a = candidates->head; iter_a; iter_a = iter_a->next) {
         RmFile *a = iter_a->data;
-        if(shred_get_file_state(tag, a) != RM_FILE_STATE_PROCESS) {
+        if(rm_shred_get_file_state(tag, a) != RM_FILE_STATE_PROCESS) {
             continue;
         }
 
         for(GList *iter_b = iter_a->next; iter_b; iter_b = iter_b->next) {
             RmFile *b = iter_b->data;
-            if(shred_get_file_state(tag, b) == RM_FILE_STATE_PROCESS && !shred_byte_compare_files(tag, a, b)) {
+            if(rm_shred_get_file_state(tag, b) == RM_FILE_STATE_PROCESS && !rm_shred_byte_compare_files(tag, a, b)) {
                 failure_count++;
-                shred_set_file_state(tag, b, RM_FILE_STATE_IGNORE);
+                rm_shred_set_file_state(tag, b, RM_FILE_STATE_IGNORE);
             }
         }
     }
     return failure_count;
 }
 
-static void shred_result_factory(GQueue *results, RmMainTag *tag) {
+static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
     RmSettings *settings = tag->session->settings;
     int num_no_orig = 0, num_is_orig = 0;
 
@@ -668,7 +668,7 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
             || (settings->keep_all_originals && num_no_orig == 0)
             || (settings->must_match_original && num_is_orig == 0)) {
         for(GList *iter = results->head; iter; iter = iter->next) {
-            shred_set_file_state(tag, iter->data, RM_FILE_STATE_IGNORE);
+            rm_shred_set_file_state(tag, iter->data, RM_FILE_STATE_IGNORE);
 
         }
         g_queue_free(results);
@@ -676,7 +676,7 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
     }
 
     if(tag->session->settings->paranoid) {
-        int failure_count = shred_check_paranoia(tag, results);
+        int failure_count = rm_shred_check_paranoia(tag, results);
         if(failure_count > 0) {
             warning("Removed %d files during paranoia check.\n", failure_count);
         }
@@ -685,8 +685,8 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
     int dupe_count = 0;
     for(GList *iter = results->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if(shred_get_file_state(tag, file) == RM_FILE_STATE_PROCESS) {
-            shred_set_file_state(tag, file, RM_FILE_STATE_FINISH);
+        if(rm_shred_get_file_state(tag, file) == RM_FILE_STATE_PROCESS) {
+            rm_shred_set_file_state(tag, file, RM_FILE_STATE_FINISH);
             dupe_count += 1;
         }
     }
@@ -700,19 +700,19 @@ static void shred_result_factory(GQueue *results, RmMainTag *tag) {
 }
 
 /* Easy way to use arbitary structs as key in a GHashTable.
- * Creates a fitting shred_equal, shred_hash and shred_copy
+ * Creates a fitting rm_shred_equal, rm_shred_hash and rm_shred_copy
  * function for every data type that works with sizeof().
  */
 #define CREATE_HASH_FUNCTIONS(name, HashType)                                  \
-    static gboolean shred_equal_##name(const HashType* a, const HashType *b) { \
+    static gboolean rm_shred_equal_##name(const HashType* a, const HashType *b) { \
         return !memcmp(a, b, sizeof(HashType));                                \
     }                                                                          \
                                                                                \
-    static guint shred_hash_##name(const HashType * k) {                       \
+    static guint rm_shred_hash_##name(const HashType * k) {                       \
         return CityHash64((const char *)k, sizeof(HashType));                  \
     }                                                                          \
                                                                                \
-    static HashType * shred_copy_##name(const HashType * self) {               \
+    static HashType * rm_shred_copy_##name(const HashType * self) {               \
         HashType *mem = g_new0(HashType, 1);                                   \
         memcpy(mem, self, sizeof(HashType));                                   \
         return mem;                                                            \
@@ -725,13 +725,13 @@ typedef struct RmCksumKey {
 /* create GHastTable boilerplate implicitly */
 CREATE_HASH_FUNCTIONS(cksum_key, RmCksumKey);
 
-static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
+static void rm_shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
     /* same_size_list is a list of files with the same size,
      * find out which are no duplicates.
      * */
     GHashTable *check_table = g_hash_table_new_full(
-                                  (GHashFunc) shred_hash_cksum_key,
-                                  (GEqualFunc) shred_equal_cksum_key,
+                                  (GHashFunc) rm_shred_hash_cksum_key,
+                                  (GEqualFunc) rm_shred_equal_cksum_key,
                                   g_free, (GDestroyNotify)g_queue_free
                               );
 
@@ -743,7 +743,7 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
         GQueue *queue = g_hash_table_lookup(check_table, &keybuf);
         if(queue == NULL) {
             queue = g_queue_new();
-            g_hash_table_insert(check_table, shred_copy_cksum_key(&keybuf), queue);
+            g_hash_table_insert(check_table, rm_shred_copy_cksum_key(&keybuf), queue);
         }
 
         g_queue_push_head(queue, meta);
@@ -759,7 +759,7 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
              * used.
              * */
             RmFileSnapshot *lonely = dupe_list->head->data;
-            shred_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
+            rm_shred_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
         } else {
             /* For the others we check if they were fully read.
              * In this case we know that those are duplicates.
@@ -774,7 +774,7 @@ static void shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
                 }
             }
 
-            shred_thread_pool_push(tag->result_pool, results);
+            rm_shred_thread_pool_push(tag->result_pool, results);
         }
     }
 
@@ -789,7 +789,7 @@ typedef struct RmSizeKey {
 
 CREATE_HASH_FUNCTIONS(size_key, RmSizeKey);
 
-static void shred_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
+static void rm_shred_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
     static int gc_counter = 1;
 
     if(gc_counter++ % SHRED_GC_INTERVAL) {
@@ -810,9 +810,9 @@ static void shred_gc_join_table(GHashTable *join_table, RmSizeKey *current) {
     g_list_free(join_table_keys);
 }
 
-static void shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
-    tag->device_pool = shred_thread_pool_new(
-                           (GFunc)shred_devlist_factory, tag, tag->session->settings->threads / 2 + 1
+static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
+    tag->device_pool = rm_shred_thread_pool_new(
+                           (GFunc)rm_shred_devlist_factory, tag, tag->session->settings->threads / 2 + 1
                        );
 
     GHashTableIter iter;
@@ -821,18 +821,18 @@ static void shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         GQueue *device_queue = value;
-        shred_thread_pool_push(tag->device_pool, device_queue);
+        rm_shred_thread_pool_push(tag->device_pool, device_queue);
     }
 }
 
-static void shred_free_snapshots(GQueue *snapshots) {
+static void rm_shred_free_snapshots(GQueue *snapshots) {
     for(GList *iter = snapshots->head; iter; iter = iter->next) {
         g_slice_free(RmFileSnapshot, iter->data);
     }
     g_queue_free(snapshots);
 }
 
-static void shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table) {
+static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table) {
     // TODO: this is slightly ugly and leaks a bit of memory.
     GList *values = g_hash_table_get_values(dev_table);
     for(GList *value_link = values; value_link; value_link = value_link->next) {
@@ -867,7 +867,7 @@ static void shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table
     g_list_free(values);
 }
 
-void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table) {
+void rm_shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table) {
     g_assert(session);
     g_assert(dev_table);
     g_assert(size_table);
@@ -880,27 +880,27 @@ void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table
     /* would use g_atomic, but helgrind does not like that */
     g_mutex_init(&tag.file_state_mtx);
 
-    shred_preprocess_input(dev_table, size_table);
+    rm_shred_preprocess_input(dev_table, size_table);
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(dev_table);
 
     /* Create a pool fo the devlists and push each queue */
-    shred_create_devpool(&tag, dev_table);
+    rm_shred_create_devpool(&tag, dev_table);
 
     /* For results that need to be check with --paranoid.
      * This would clog up the main thread, which is supposed
      * to flag bad files as soon as possible.
      */
-    tag.result_pool = shred_thread_pool_new(
-                          (GFunc)shred_result_factory, &tag, 1
+    tag.result_pool = rm_shred_thread_pool_new(
+                          (GFunc)rm_shred_result_factory, &tag, 1
                       );
 
     /* Key: hash_offset & size Value: GQueue of fitting files */
     GHashTable *join_table = g_hash_table_new_full(
-                                 (GHashFunc) shred_hash_size_key,
-                                 (GEqualFunc) shred_equal_size_key,
-                                 g_free, (GDestroyNotify) shred_free_snapshots
+                                 (GHashFunc) rm_shred_hash_size_key,
+                                 (GEqualFunc) rm_shred_equal_size_key,
+                                 g_free, (GDestroyNotify) rm_shred_free_snapshots
                              );
 
     /* This is the joiner part */
@@ -924,7 +924,7 @@ void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table
             GQueue *size_list = g_hash_table_lookup(join_table, &key);
             if(size_list == NULL) {
                 size_list = g_queue_new();
-                g_hash_table_insert(join_table, shred_copy_size_key(&key), size_list);
+                g_hash_table_insert(join_table, rm_shred_copy_size_key(&key), size_list);
             }
 
             /* Append to the list */
@@ -938,13 +938,13 @@ void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table
                             );
 
             if(count > 1 && g_queue_get_length(size_list) == count) {
-                shred_findmatches(&tag, size_list);
+                rm_shred_findmatches(&tag, size_list);
             }
 
             /* Garbage collect the join_table from unused entries in regular intervals.
              * This is to keep the memory footprint low.
              * */
-            shred_gc_join_table(join_table, &key);
+            rm_shred_gc_join_table(join_table, &key);
         }
     }
 
@@ -1031,7 +1031,7 @@ int main(int argc, const char **argv) {
         g_queue_push_head(dev_list, file);
     }
 
-    shred_run(&session, dev_table, size_table);
+    rm_shred_run(&session, dev_table, size_table);
 
     g_hash_table_unref(size_table);
     g_hash_table_unref(dev_table);

@@ -467,7 +467,7 @@ void do_pre_processing(RmSession *session) {
         rm_error("Path doubles removed %u\n", path_doubles);
     }
 
-    shred_run(session, session->table->dev_table, session->table->size_table);
+    rm_shred_run(session, session->table->dev_table, session->table->size_table);
 
     if(session->dup_counter == 0) {
         rm_error("\r                    ");
