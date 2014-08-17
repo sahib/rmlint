@@ -27,10 +27,10 @@
 #define HASH_H
 
 #include <stdlib.h>
-#include "defs.h"
+//#include "defs.h"
+#include "cmdline.h"
 
-/* Additional functions not in original md5.c */
-void hash_fingerprint(RmSession *session, RmFile *file, const guint64 readsize);
-void hash_file(RmSession *session, RmFile *file);
+void shred_run(RmSession *session);
+
 
 #endif

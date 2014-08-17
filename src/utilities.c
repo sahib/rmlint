@@ -48,7 +48,7 @@
 #include "config.h"
 #include "utilities.h"
 #include "cmdline.h"
-#include "defs.h"
+//#include "defs.h"
 
 /* External libraries */
 #include <glib.h>
@@ -62,6 +62,46 @@
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
+
+/* Sort criteria for sorting by preferred path (first) then user-input criteria */
+long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
+    RmSession *session = user_data;
+    RmSettings *sets = session->settings;
+
+    if (a->in_ppath != b->in_ppath) {
+        return a->in_ppath - b->in_ppath;
+    } else {
+        int sort_criteria_len = strlen(sets->sort_criteria);
+        for (int i = 0; i < sort_criteria_len; i++) {
+            long cmp = 0;
+            switch (sets->sort_criteria[i]) {
+            case 'm':
+                cmp = (long)(a->mtime) - (long)(b->mtime);
+                break;
+            case 'M':
+                cmp = (long)(b->mtime) - (long)(a->mtime);
+                break;
+            case 'a':
+                cmp = strcmp (rm_util_basename(a->path), rm_util_basename (b->path));
+                break;
+            case 'A':
+                cmp = strcmp (rm_util_basename(b->path), rm_util_basename (a->path));
+                break;
+            case 'p':
+                cmp = (long)a->pnum - (long)b->pnum;
+                break;
+            case 'P':
+                cmp = (long)b->pnum - (long)a->pnum;
+                break;
+            }
+            if (cmp) {
+                return cmp;
+            }
+        }
+    }
+    return 0;
+}
+
 
 char *rm_util_basename(const char *filename) {
     char *base = strrchr(filename, G_DIR_SEPARATOR);

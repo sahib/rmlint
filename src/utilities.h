@@ -30,6 +30,9 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 
+//#include "cmdline.h"
+#include "traverse.h"
+
 /////////////////////////////////////
 //   UID/GID VALIDITY CHECKING     //
 /////////////////////////////////////
@@ -71,6 +74,12 @@ char *rm_util_get_groupname(void);
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
+
+/**
+ * @brief compare two files to see which is more "original" after a user-defined criteria.
+ */
+long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data);
+
 
 /**
  * @brief Check if a file has a invalid gid/uid or both.
@@ -183,11 +192,6 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
 /////////////////////////////////
 //    FIEMAP IMPLEMENATION     //
 /////////////////////////////////
-
-/* typedef it, in case we need to exchange
- * the data structure at any point.
- */
-typedef GSequence *RmOffsetTable;
 
 /**
  * @brief Create a table with the extents for a file at path.

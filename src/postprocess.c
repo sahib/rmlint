@@ -32,9 +32,8 @@
 #include <stdlib.h>
 
 #include "cmdline.h"
-#include "postprocess.h"
-#include "list.h"
 #include "preprocess.h"
+#include "postprocess.h"
 #include "utilities.h"
 
 #include <sys/mman.h>

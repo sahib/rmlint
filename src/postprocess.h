@@ -26,7 +26,7 @@
 #ifndef MODE_H
 #define MODE_H
 
-#include "defs.h"
+//#include "defs.h"
 
 /* Mostly used by filter.c  */
 bool process_island(RmSession *session, GQueue *group);
@@ -36,5 +36,7 @@ void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFil
 /* Method to substitute $subs in $string with $with */
 /* Something should really get a std method */
 char *strsubs(const char *string, const char *subs, const char *with);
+
+
 
 #endif

@@ -41,442 +41,120 @@
 #include "cmdline.h"
 #include "preprocess.h"
 #include "postprocess.h"
-#include "read.h"
-#include "list.h"
-#include "defs.h"
+#include "shredder.h"
+//#include "defs.h"
 #include "utilities.h"
+#include "traverse.h"
 
-typedef struct RmSchedulerTag {
-    RmSession *session;
-    GQueue *group;
-} RmSchedulerTag;
+//typedef struct RmSchedulerTag {
+//    RmSession *session;
+//    GQueue *group;
+//} RmSchedulerTag;
 
 
-/* Compares the "fp" array of the RmFile a and b */
-static int cmp_fingerprints(RmFile *_a, RmFile *_b) {
-    int i, j;
-    RmFile *a = ( _a->hardlinked_original ? _a->hardlinked_original : _a );
-    RmFile *b = ( _b->hardlinked_original ? _b->hardlinked_original : _b );
 
-    /* compare both fp-arrays */
-    for(i = 0; i < 2; i++) {
-        for(j = 0; j < _RM_HASH_LEN; j++) {
-            if(a->fp[i][j] != b->fp[i][j]) {
-                return  0;
-            }
-        }
+//static void rm_file_table_destroy_queue(GQueue *queue) {
+//    g_queue_free_full(queue, (GDestroyNotify)rm_file_destroy);
+//}
+
+RmFileTable *rm_file_table_new(RmSession *session) {
+
+    RmFileTable *table = g_slice_new0(RmFileTable);
+
+    table->dev_table = g_hash_table_new_full(
+                           g_direct_hash, g_direct_equal,
+                           NULL, NULL //TODO (GDestroyNotify)main_free_func
+                       );
+
+    table->size_table = g_hash_table_new( NULL, NULL);
+
+    RmSettings *settings = session->settings;
+    g_assert(settings);
+    g_assert(settings->namecluster == 0);
+
+    if (session->settings->namecluster) {
+        table->name_table = g_hash_table_new_full(
+                                g_str_hash, g_str_equal,
+                                g_free, (GDestroyNotify)g_list_free );
+    } else {
+        g_assert(table->name_table ==  NULL);
     }
-    /* Also compare the bytes which were read 'on the fly' */
-    for(i = 0; i < BYTE_MIDDLE_SIZE; i++) {
-        if(a->bim[i] != b->bim[i]) {
-            return 0;
-        }
-    }
-    /* Let it pass! */
-    return 1;
+
+    /* table->other_lint needs no initialising*/
+    table->mounts = session->mounts;
+
+    g_rec_mutex_init(&table->lock);
+    return table;
 }
 
-/* Compare criteria of checksums */
-static int cmp_f(RmFile *_a, RmFile *_b) {
-    RmFile *a = ( _a->hardlinked_original ? _a->hardlinked_original : _a );
-    RmFile *b = ( _b->hardlinked_original ? _b->hardlinked_original : _b );
-    int i, fp_i, x;
-    int is_empty[2][3] = { {1, 1, 1}, {1, 1, 1} };
-    for(i = 0; i < _RM_HASH_LEN; i++) {
-        if(a->checksum[i] != b->checksum[i]) {
-            return 1;
+void rm_file_table_destroy(RmFileTable *table) {
+    g_rec_mutex_lock(&table->lock);
+    {
+        g_hash_table_unref(table->dev_table);
+        g_hash_table_unref(table->size_table);
+        rm_mounts_table_destroy(table->mounts);
+        if (table->name_table) {
+            g_hash_table_unref(table->name_table);
         }
-        if(a->checksum[i] != 0) {
-            is_empty[0][0] = 0;
-        }
-        if(b->checksum[i] != 0) {
-            is_empty[1][0] = 0;
+        for (uint i = 0; i < sizeof(table->other_lint) / sizeof(table->other_lint[0]); i++) {
+            g_list_free(table->other_lint[i]); //TODO: free_full
         }
     }
-    for(fp_i = 0; fp_i < 2; fp_i++) {
-        for(i = 0; i < _RM_HASH_LEN; i++) {
-            if(a->fp[fp_i][i] != b->fp[fp_i][i]) {
-                return 1;
-            }
-            if(a->fp[fp_i][i] != 0) {
-                is_empty[0][fp_i + 1] = 0;
-            }
-            if(b->fp[fp_i][i] != 0) {
-                is_empty[1][fp_i + 1] = 0;
-            }
-        }
-    }
-    /* check for empty checkusm AND fingerprints - refuse and warn */
-    for(x = 0; x < 2; x++) {
-        if(is_empty[x][0] && is_empty[x][1] && is_empty[x][2]) {
-            warning(YEL"\nWARN: "NCO"Refusing file with empty checksum and empty fingerprint."
-                    "  Trying to compare:\n%s (lint type %d size %" PRId64 ")\n%s (lint type %d size %" PRId64 ")\n",
-                    _a->path, _a->lint_type, _a->fsize, _b->path, _b->lint_type, _b->fsize );
-            return 1;
-        }
-    }
-    return 0;
+    g_rec_mutex_unlock(&table->lock);
+    g_rec_mutex_clear(&table->lock);
+    g_slice_free(RmFileTable, table);
 }
 
-static int paranoid(const RmFile *p1, const RmFile *p2) {
-    int result = 0, file_a, file_b;
-    char *file_map_a, * file_map_b;
-    if(!p1 || !p2)
-        return 0;
-    if(p1->fsize != p2->fsize)
-        return 0;
-    if((file_a = open(p1->path, HASH_FILE_FLAGS)) == -1) {
-        rm_perror(RED"ERROR:"NCO"sys:open()");
-        return 0;
-    }
-    if((file_b = open(p2->path, HASH_FILE_FLAGS)) == -1) {
-        rm_perror(RED"ERROR:"NCO"sys:open()");
-        return 0;
-    }
-    if(p1->fsize < MMAP_LIMIT && p1->fsize > HASH_IO_BLOCKSIZE >> 1) {
-        file_map_a = mmap(NULL, (size_t)p1->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
-        if(file_map_a != MAP_FAILED) {
-            if(madvise(file_map_a, p1->fsize, MADV_SEQUENTIAL) == -1) {
-                rm_perror("madvise");
-            }
-            file_map_b = mmap(NULL, (size_t)p2->fsize, PROT_READ, MAP_PRIVATE, file_a, 0);
-            if(file_map_b != MAP_FAILED) {
-                if(madvise(file_map_b, p2->fsize, MADV_SEQUENTIAL) == -1)
-                    rm_perror("madvise");
-                result = !memcmp(file_map_a, file_map_b, p1->fsize);
-                munmap(file_map_b, p1->fsize);
-            } else {
-                rm_perror("paranoid->mmap");
-                result = 0;
-            }
-            munmap(file_map_a, p1->fsize);
-        } else {
-            rm_perror("paranoid->mmap");
-            result = 0;
+void rm_file_table_insert(RmFileTable *table, RmFile *file) {
+    g_assert(file);
+    g_assert(table);
+
+    g_rec_mutex_lock(&table->lock);
+
+    if (file->lint_type < RM_LINT_TYPE_DUPE_CANDIDATE) {
+        table->other_lint[file->lint_type] = g_list_prepend(table->other_lint[file->lint_type], file);
+    } else {
+
+        file->disk = rm_mounts_get_disk_id(table->mounts, file->dev);
+
+        /* TODO: save lookup; traverse should already have this info */
+        bool nonrotational = rm_mounts_is_nonrotational(table->mounts, file->disk);
+        if(!nonrotational /*TODO: && offset_sort_optimisation */
+                && ( file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE
+                     || file->lint_type == RM_LINT_TYPE_NBIN ) ) {
+            file->disk_offsets = rm_offset_create_table(file->path);
+            file->offset = rm_offset_lookup(file->disk_offsets, 0);
         }
-    } else { /* use fread() */
-        guint64 blocksize = HASH_IO_BLOCKSIZE / 2;
-        char *read_buf_a = g_alloca(blocksize);
-        char *read_buf_b = g_alloca(blocksize);
-        int read_a = -1, read_b = -1;
-        while(read_a && read_b) {
-            if((read_a = read(file_a, read_buf_a, blocksize) == -1)) {
-                result = 0;
-                break;
-            }
-            if((read_b = read(file_b, read_buf_b, blocksize) == -1)) {
-                result = 0;
-                break;
-            }
-            if(read_a == read_b) {
-                if((result = !memcmp(read_buf_a, read_buf_b, read_a)) == 0) {
-                    break;
-                }
-            } else {
-                result = 0;
-                break;
-            }
-        }
-    }
-    if(close(file_a) == -1)
-        rm_perror(RED"ERROR:"NCO"close()");
-    if(close(file_b) == -1)
-        rm_perror(RED"ERROR:"NCO"close()");
-    return result;
-}
-
-/* ------------------------------------------------------------- */
-
-/* Callback from build_checksums */
-static void *cksum_cb(void *vp) {
-    RmSchedulerTag *tag = vp;
-
-    /* Iterate over all files in group */
-    for(GList *iter = tag->group->head; iter; iter = iter->next) {
-        RmFile *iter_file = iter->data;
-        if (!iter_file->hardlinked_original)
-            /* do checksum unless this is a hardlink of a file which is
-             * already going to be checksummed */
-            hash_file(tag->session, iter->data);
-        /* FUTURE OPTIMISATION: as-is, we _always_ do checksum of _one_ file
-         * in each a group of hardlinks; but if the group contains _only_
-         * hardlinks then we in theory don't need to checksum _any_ of them  */
-    }
-
-    /* Do not use g_queue_free(), that would delete all GLists in it */
-    g_free(tag->group);
-    return NULL;
-}
-
-static void build_fingerprints (RmSession *session, GQueue *group) {
-    /* Prevent crashes (should not happen too often) */
-    if(group == NULL || group->head == NULL) {
-        return;
-    }
-
-    RmFile *file = group->head->data;
-    guint64 grp_sz;
-
-    /* The size read in to build a fingerprint */
-    grp_sz = HASH_FPSIZE_FORM(file->fsize);
-
-    /* Clamp it to some maximum (4KB) */
-    grp_sz = (grp_sz > HASH_FP_MAX_RSZ) ? HASH_FP_MAX_RSZ : grp_sz;
-
-    /* Calc fingerprints  */
-    for(GList *iter = group->head; iter; iter = iter->next) {
-        /* see md5.c for explanations */
-        RmFile *iter_file = iter->data;
-
-        if (!iter_file->hardlinked_original)
-            /* do fingerprint unless this is a hardlink of a file which is
-             * already going to be fingerprinted */
-            hash_fingerprint(session, iter_file, grp_sz);
-    }
-}
-
-static void build_checksums(RmSession *session, GQueue *group) {
-    if(group == NULL || group->head == NULL) {
-        if(group) {
-            g_printerr("Warning: Empty group received. That's a bug.\n");
-        }
-        return;
-    }
-
-    RmSettings *set = session->settings;
-    gulong byte_size = rm_file_list_byte_size(session->list, group);
-
-    if(set->threads == 1 ||  byte_size < (2 * HASH_MTHREAD_SIZE)) {
-        /* Just loop through this group and built the checksum */
-        RmSchedulerTag tag;
-        tag.session = session;
-        tag.group = g_new0(GQueue, 1);
-        memcpy(tag.group, group, sizeof(GQueue));
-
-        cksum_cb((void *) &tag);
-    } else { /* split group in subgroups and start a seperate thread for each */
-        guint64  sz = 0;
-        GList *ptr, *lst;
-        ptr = lst = group->head;
-
-        GList *thread_list = NULL;
-        GList *tag_list = NULL;
-        gint subgroup_len = 0;
-
-        while(ptr) {
-            sz += ((RmFile *)ptr->data)->fsize;
-            if(sz >= HASH_MTHREAD_SIZE || ptr->next == NULL) {
-                GQueue *subgroup = g_new0(GQueue, 1);
-                subgroup->head = lst;
-                subgroup->tail = ptr->next;
-                subgroup->length = subgroup_len;
-                subgroup_len = 0;
-
-                /* Update */
-                ptr = ptr->next;
-                lst = ptr;
-
-                RmSchedulerTag *tag = g_new0(RmSchedulerTag, 1);
-                tag->session = session;
-                tag->group = subgroup;
-                tag_list = g_list_prepend(tag_list, tag);
-
-                pthread_t *thread = g_new0(pthread_t, 1);
-                thread_list = g_list_prepend(thread_list, thread);
-
-                /* Now create the thread */
-                if(pthread_create(thread, NULL, cksum_cb, tag)) {
-                    rm_perror(RED"ERROR: "NCO"pthread_create in build_checksums()");
-                }
-            } else {
-                subgroup_len++;
-                ptr = ptr->next;
-            }
-        }
-        /* Make sure all threads are joined */
-        for(GList *iter = thread_list; iter; iter = iter->next) {
-            pthread_t *thread = iter->data;
-            if(pthread_join(*thread, NULL)) {
-                rm_perror(RED"ERROR: "NCO"pthread_join in build_checksums()");
-            }
+        g_hash_table_insert(
+            table->size_table,
+            GUINT_TO_POINTER(file->fsize), //TODO: check overflow for >4GB files
+            g_hash_table_lookup(
+                table->size_table, GUINT_TO_POINTER(file->fsize)) + 1
+        );
+        if (table->name_table) {
+            //insert file into hashtable of basename lists
+            char *basename = g_strdup(rm_util_basename(file->path));
+            g_hash_table_insert(table->name_table,
+                                basename,
+                                g_list_prepend(g_hash_table_lookup(
+                                                   table->name_table,
+                                                   basename),
+                                               file)
+                               );
         }
 
-        g_list_free_full(thread_list, g_free);
-        g_list_free_full(tag_list, g_free);
-    }
-}
-
-static void free_island(GQueue *island) {
-    for(GList *iter = island->head; iter; iter = iter->next) {
-        rm_file_destroy((RmFile *)iter->data);
-    }
-    g_queue_clear(island);
-}
-
-static bool findmatches(RmSession *session, GQueue *group, int testlevel) {
-    RmSettings *sets = session->settings;
-    GList *i = group->head, *j = NULL;
-    int returnval = 0;  /* not sure what we are using this for */
-
-    if(i == NULL) {
-        return false;
-    }
-
-    switch (testlevel) {
-    case 1:
-        /*fingerprint compare - calculate fingerprints*/
-        build_fingerprints(session, group);
-        break;
-    case 2:
-        /*md5 compare - calculate checksums*/
-        build_checksums(session, group);
-        break;
-    case 3:
-        break;
-    default:
-        break;
-    }
-
-    warning(NCO);
-    while(i) {
-        GQueue island = G_QUEUE_INIT;
-        int num_orig = 0;
-        int num_non_orig = 0;
-        /*start new island of matched files  */
-        /* first remove i from mainland */
-        i = g_queue_pop_head_link(group);
-        g_queue_push_head_link(&island, i);
-        j = group->head;
-
-        while(j) {
-            int match = 0;
-            switch (testlevel) {
-            case 1:
-                /*fingerprint compare*/
-                match = (cmp_fingerprints(i->data, j->data) == 1);
-                break;
-            case 2:
-                /*md5 compare*/
-                match = (cmp_f(i->data, j->data) == 0);
-                break;
-            case 3:
-                /* If we're bothering with paranoid users - Take the gatling! */
-                match = ((sets->paranoid) ? paranoid(i->data, j->data) : 1);
-                break;
-            default:
-                match = 0;
-                break;
-            }
-            if (match) {
-                /* move j from grp onto island*/
-                /* first get pointer to j before we start messing with j*/
-                GList *tmp = j->next;
-                g_queue_unlink(group, j);
-                g_queue_push_tail_link(&island, j);
-
-                RmFile *current = j->data;
-                num_orig += current->in_ppath;
-                num_non_orig += !current->in_ppath;
-                j = tmp;
-            } else {
-                j = j->next;
-            }
+        GQueue *dev_list = g_hash_table_lookup(table->dev_table, GUINT_TO_POINTER(file->dev));
+        if(dev_list == NULL) {
+            dev_list = g_queue_new();
+            g_hash_table_insert(table->dev_table, GUINT_TO_POINTER(file->disk), dev_list);
         }
-
-        /* So we have created an island of everything that matched i.
-           Now check if it is singleton or if it fails the other
-           criteria related to setting must_match_original or
-           keep_all_originals
-        */
-        if (0
-                || (g_queue_get_length(&island) <= 1)
-                || ((sets->keep_all_originals == 1) && (num_non_orig == 0))
-                || ((sets->must_match_original == 1) && (num_orig == 0))
-           ) {
-            free_island(&island);
-        } else {
-            if ((testlevel == 3) || (!sets->paranoid && (testlevel == 2))) {
-                /* done testing; process the island */
-                g_queue_sort(&island, (GCompareDataFunc) cmp_orig_criteria, session);
-                returnval = (returnval || process_island(session, &island));
-            } else {
-                /* go to next level */
-                returnval = (returnval || findmatches(session, &island, testlevel + 1));
-            }
-        }
-
-        free_island(&island);
-        i = group->head;
+        g_queue_push_head(dev_list, file);
+        debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
     }
 
-    return returnval;
+    g_rec_mutex_unlock(&table->lock);
 }
 
-/* Callback from scheduler that actually does the work for ONE group */
-static void *scheduler_cb(void *tag_pointer) {
-    /* cast from *void */
-    RmSchedulerTag *tag = tag_pointer;
-    GQueue *group = tag->group;
-
-    if(group == NULL || group->head == NULL) {
-        return NULL;
-    }
-    /* start matching (start at level 1 (fingerprint filter)) then
-     * recursively escalates to higher levels */
-    findmatches(tag->session, group, 1);
-    return NULL;
-}
-
-/* Joins the threads launched by scheduler */
-static void scheduler_jointhreads(pthread_t *threads, guint64 n) {
-    for(guint64 i = 0; i < n; i++) {
-        if(pthread_join(threads[i], NULL)) {
-            rm_perror(RED"ERROR: "NCO"pthread_join in scheduler()");
-        }
-    }
-}
-
-/* Distributes the groups on the ressources */
-static void start_scheduler(RmSession *session) {
-    RmFileList *list = session->list;
-    RmSettings *sets = session->settings;
-
-    /* There might be at max. sets->threads tags at the same time. */
-    pthread_t threads[sets->threads + 1];
-    RmSchedulerTag tags[sets->threads + 1];
-
-    /* If size of certain group exceeds limit start an own thread, else run in 'foreground'
-     * Run max set->threads at the same time. */
-    unsigned nrun = 0;
-    GSequenceIter *iter = rm_file_list_get_iter(list);
-
-    while(!g_sequence_iter_is_end(iter)) {
-        GQueue *group = g_sequence_get(iter);
-        gulong byte_size = rm_file_list_byte_size(session->list, group);
-
-        if(byte_size > THREAD_SHEDULER_MTLIMIT && sets->threads > 1) { /* Group exceeds limit */
-            tags[nrun].group = group;
-            tags[nrun].session = session;
-
-            if(pthread_create(&threads[nrun], NULL, scheduler_cb, &tags[nrun])) {
-                rm_perror(RED"ERROR: "NCO"pthread_create in scheduler()");
-            }
-            if(nrun >= sets->threads - 1) {
-                scheduler_jointhreads(threads, nrun + 1);
-                nrun = 0;
-                continue;
-            }
-            nrun++;
-        } else { /* run in foreground */
-            RmSchedulerTag tag;
-            tag.group = group;
-            tag.session = session;
-            scheduler_cb(&tag);
-        }
-        iter = g_sequence_iter_next(iter);
-    }
-    scheduler_jointhreads(threads, nrun);
-}
 
 static void handle_double_base_file(RmSession *session, RmFile *file) {
     char *abs_path = realpath(file->path, NULL);
@@ -487,78 +165,79 @@ static void handle_double_base_file(RmSession *session, RmFile *file) {
 }
 
 static int find_double_bases(RmSession *session) {
-    bool header_printed = true;
+    // TODO:  Finish re-write of this (got part way then realised I didn't fully understand what we are trying to do */
+    bool header_printed = false;
     int num_found = 0;
-    RmSettings *sets = session->settings;
 
-    GHashTable *found_table = g_hash_table_new(g_direct_hash, g_direct_equal);
+    GHashTableIter iter;
+    gpointer key, value;
 
-    RmFile *fi = NULL;
-    while((fi = rm_file_list_iter_all(session->list, fi))) {
-        if(fi->lint_type == RM_LINT_TYPE_BASE) {
-            continue;
-        }
+    GHashTable *name_table = session->table->size_table;
+
+    g_hash_table_iter_init(&iter, name_table);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
 
         bool node_handled = false;
+        GList *list = value;
+        g_assert(list);
 
-        RmFile *fj = rm_file_list_iter_all(session->list, fi);
-        while((fj = rm_file_list_iter_all(session->list, fj))) {
-            /* compare basenames */
-            if(1
-                    && !strcmp(rm_util_basename(fi->path), rm_util_basename(fj->path))
-                    && fi->node != fj->node
-                    && fj->lint_type != RM_LINT_TYPE_BASE
-              ) {
-                if(header_printed) {
+        if (list->next) {
+            /* list is at least 2 files long */
+            while (list) {
+                RmFile *file = list->data;
+                if(!header_printed) {
                     rm_error("\n%s#"NCO" Double basename(s):\n", GRE);
-                    header_printed = false;
+                    header_printed = true;
                 }
 
                 if(!node_handled) {
                     node_handled = true;
-                    handle_double_base_file(session, fi);
+                    handle_double_base_file(session, file);
+                    num_found++;
 
-                    /* At this point files with same inode and device are NOT handled yet.
-                       Therefore this foolish, but well working approach is made.
-                       (So it works also with more than one dir in the cmd)  */
-
-                    RmFile *fx = fj;
-                    while((fx = rm_file_list_iter_all(session->list, fx))) {
-                        if(fx->node == fj->node) {
-                            fx->lint_type = RM_LINT_TYPE_BASE;
-                        }
-                    }
+// TODO: do we need this?
+//                    /* At this point files with same inode and device are NOT handled yet.
+//                       Therefore this foolish, but well working approach is made.
+//                       (So it works also with more than one dir in the cmd)  */
+//
+//                    RmFile *fx = fj;
+//                    while((fx = rm_file_list_iter_all(session->list, fx))) {
+//                        if(fx->node == fj->node) {
+//                            fx->lint_type = RM_LINT_TYPE_BASE;
+//                        }
+//                    }
                 }
 
-                handle_double_base_file(session, fj);
-                num_found++;
-
-                g_hash_table_insert(found_table, fj, NULL /* value is not important */);
+                list = list->next;
             }
+        } else {
+            /* only one file in list */
+            g_hash_table_remove(name_table, &key);
         }
     }
 
-    if(sets->collide) {
-        GHashTableIter iter;
-        gpointer key, value;
-
-        g_hash_table_iter_init(&iter, found_table);
-        while (g_hash_table_iter_next(&iter, &key, &value)) {
-            RmFile *file = key;
-            rm_file_list_remove(session->list, file);
-        }
-    }
-    g_hash_table_destroy(found_table);
+//    if(sets->collide) {
+//        GHashTableIter iter;
+//        gpointer key, value;
+//
+//        g_hash_table_iter_init(&iter, name_table);
+//        while (g_hash_table_iter_next(&iter, &key, &value)) {
+//            RmFile *file = key;
+//            rm_file_list_remove(session->table, file);
+//        }
+//    }
+    g_hash_table_destroy(name_table);
     return num_found;
 }
 
-static long cmp_sort_lint_type(RmFile *a, RmFile *b, gpointer user_data) {
-    (void) user_data;
-    if (a->lint_type == RM_LINT_TYPE_EDIR && b->lint_type == RM_LINT_TYPE_EDIR)
-        return (long)strcmp(b->path, a->path);
-    else
-        return ((long)a->lint_type - (long)b->lint_type);
-}
+//static long cmp_sort_lint_type(RmFile *a, RmFile *b, gpointer user_data) {
+//    (void) user_data;
+//    if (a->lint_type == RM_LINT_TYPE_EDIR && b->lint_type == RM_LINT_TYPE_EDIR)
+//        return (long)strcmp(b->path, a->path);
+//    else
+//        //TODO: change rm_file_table_insert so this is not neccessary
+//        return ((long)a->lint_type - (long)b->lint_type);
+//}
 
 static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
     [RM_LINT_TYPE_UNKNOWN]      = "",
@@ -584,74 +263,75 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_DUPE_CANDIDATE] = "ls"
 };
 
-static void handle_other_lint(RmSession *session, GSequenceIter *first, GQueue *first_group) {
+static uint handle_other_lint(RmSession *session) {
+    uint num_handled = 0;
+
     RmLintType flag = RM_LINT_TYPE_UNKNOWN;
     RmSettings *sets = session->settings;
+    RmFileTable *table = session->table;
+
     const char *user = rm_util_get_username();
     const char *group = rm_util_get_groupname();
 
-    for(GList *iter = first_group->head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        if(file->lint_type >= RM_LINT_TYPE_OTHER_LINT) {
-            rm_error("Unknown filetype: %d (thats a bug)\n", file->lint_type);
-            continue;
-        }
+    for (uint type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
+        GList *list = table->other_lint[type];
+        for(GList *iter = list; iter; iter = iter->next) {
+            /* TODO: RM_LINT_TYPE_EDIR list needs sorting into reverse alphabetical order */
+            RmFile *file = iter->data;
+            g_assert(file);
+            g_assert(type == file->lint_type);
+            g_assert(type < RM_LINT_TYPE_DUPE_CANDIDATE);
+            num_handled++;
+            if(flag != file->lint_type) {
+                rm_error(YEL"\n# "NCO);
+                rm_error("%s", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]);
+                rm_error(": \n"NCO);
+                flag = file->lint_type;
+            }
 
-        if(flag != file->lint_type) {
-            rm_error(YEL"\n# "NCO);
-            rm_error("%s", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]);
-            rm_error(": \n"NCO);
-            flag = file->lint_type;
-        }
+            rm_error(GRE);
+            rm_error("   ");
 
-        rm_error(GRE);
-        rm_error("   ");
+            const char *format = RM_LINT_TYPE_TO_COMMAND[type];
+            switch(type) {
+            case RM_LINT_TYPE_BADUID:
+                rm_error(format, user);
+                break;
+            case RM_LINT_TYPE_BADGID:
+                rm_error(format, group);
+                break;
+            case RM_LINT_TYPE_BADUGID:
+                rm_error(format, user, group);
+                break;
+            default:
+                rm_error("%s", format);
+            }
 
-        const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
-        switch(file->lint_type) {
-        case RM_LINT_TYPE_BADUID:
-            rm_error(format, user);
-            break;
-        case RM_LINT_TYPE_BADGID:
-            rm_error(format, group);
-            break;
-        case RM_LINT_TYPE_BADUGID:
-            rm_error(format, user, group);
-            break;
-        default:
-            rm_error("%s", format);
+            rm_error(NCO);
+            rm_error(" %s\n", file->path);
+            if(sets->output_log) {
+                write_to_log(session, file, false, NULL);
+            }
         }
-
-        rm_error(NCO);
-        rm_error(" %s\n", file->path);
-        if(sets->output_log) {
-            write_to_log(session, file, false, NULL);
-        }
+        g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
     }
-    rm_file_list_clear(session->list, first);
+    return num_handled;
 }
 
-/* This the actual main() of rmlint */
-void start_processing(RmSession *session) {
+/* This does preprocessing including handling of "other lint" (non-dupes) */
+void do_pre_processing(RmSession *session) {
     char lintbuf[128] = {0};
     guint64 other_lint = 0;
 
     RmSettings *settings = session->settings;
-    RmFileList *list = session->list;
 
     if(settings->namecluster) {
         other_lint += find_double_bases(session);
         rm_error("\n");
     }
 
-    GSequenceIter *first = rm_file_list_get_iter(list);
-    rm_file_list_sort_group(list, first, (GCompareDataFunc)cmp_sort_lint_type, NULL);
-    GQueue *first_group = g_sequence_get(first);
+    other_lint += handle_other_lint(session);
 
-    if(rm_file_list_byte_size(session->list, first_group) == 0) {
-        other_lint += g_queue_get_length(first_group);
-        handle_other_lint(session, first, first_group);
-    }
 
 
     if(settings->searchdup == 0) {
@@ -661,20 +341,21 @@ void start_processing(RmSession *session) {
         die(session, EXIT_SUCCESS);
     }
 
-    info("\nNow sorting list based on filesize... ");
-    gsize rem_counter = rm_file_list_sort_groups(list, session);
-    info("done.\n");
+    //info("\nNow sorting list based on filesize... ");
+    //gsize rem_counter = rm_file_list_sort_groups(list, session);
+    //info("done.\n");
 
-    info("Now attempting to find duplicates. This may take a while...\n");
-    info("Now removing files with unique sizes from list...");
-    info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
-    info(" done. \nNow doing fingerprints and full checksums.\n");
+    //info("Now attempting to find duplicates. This may take a while...\n");
+    //info("Now removing files with unique sizes from list...");
+    //info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
+    //info(" done. \nNow doing fingerprints and full checksums.\n");
     rm_error("\n%s Duplicate(s):\n", YEL"#"NCO);
 
     /* Groups are splitted, now give it to the scheduler
      * The scheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
-    start_scheduler(session);
+
+    shred_run(session);
     if(session->dup_counter == 0) {
         rm_error("\r                    ");
     } else {

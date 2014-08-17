@@ -38,71 +38,6 @@
 #include "utilities.h"
 #include "cmdline.h"
 
-RmFile *rm_file_new(const char *path,
-                    guint64 fsize,
-                    ino_t node,
-                    dev_t dev,
-                    time_t mtime,
-                    RmLintType type,
-                    bool is_ppath,
-                    unsigned pnum) {
-    RmFile *self = g_slice_new0(RmFile);
-    self->path = g_strdup(path);
-    self->node = node;
-    self->dev = dev;
-    self->mtime = mtime;
-    self->hash_offset = 0;
-    self->seek_offset = 0;
-    self->state = RM_FILE_STATE_PROCESS;
-
-    // TODO: Use the actualy type from session -> pass it.
-    rm_digest_init(&self->digest, RM_DIGEST_SPOOKY, 0, 0);
-    g_mutex_init(&self->file_lock);
-
-    if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        // self->disk_offsets = rm_offset_create_table(self->path);
-        // self->offset = rm_offset_lookup(self->disk_offsets, 0);
-        /* TODO: delay this until we have matched file sizes */
-        self->fsize = fsize;
-    } else {
-        self->fsize = 0;
-        self->offset = 0;
-    }
-
-    self->lint_type = type;
-    self->filter = TRUE;
-
-    self->in_ppath = is_ppath;
-    self->pnum = pnum;
-
-    /* Make sure the fp arrays are filled with 0
-     This is important if a file has a smaller size
-     than the size read in for the fingerprint -
-     The backsum might not be calculated then, what might
-     cause inaccurate results.
-    */
-    memset(self->fp[0], 0, _RM_HASH_LEN);
-    memset(self->fp[1], 0, _RM_HASH_LEN);
-    memset(self->bim, 0, BYTE_MIDDLE_SIZE);
-
-    /* Clear the md5 digest array too */
-    memset(self->checksum, 0, _RM_HASH_LEN);
-
-    /* initialised with no hardlink*/
-    self->hardlinked_original = NULL;
-
-    return self;
-}
-
-void rm_file_destroy(RmFile *file) {
-    g_free(file->path);
-    rm_digest_finalize(&file->digest);
-    g_mutex_clear(&file->file_lock);
-    if (file->disk_offsets) {
-        g_sequence_free(file->disk_offsets);
-    }
-    g_slice_free(RmFile, file);
-}
 
 void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest) {
     g_rec_mutex_lock(&list->lock);
@@ -128,31 +63,6 @@ void rm_file_set_middle_bytes(RmFileList *list, RmFile *file, const char *bytes,
     g_rec_mutex_unlock(&list->lock);
 }
 
-static void rm_file_list_destroy_queue(GQueue *queue) {
-    g_queue_free_full(queue, (GDestroyNotify)rm_file_destroy);
-}
-
-RmFileList *rm_file_list_new(RmMountTable *mounts) {
-    RmFileList *list = g_slice_new0(RmFileList);
-    list->size_groups = g_sequence_new((GDestroyNotify)rm_file_list_destroy_queue);
-    list->size_table = g_hash_table_new(g_direct_hash, g_direct_equal);
-    list->mounts = mounts;
-    g_rec_mutex_init(&list->lock);
-    return list;
-}
-
-void rm_file_list_destroy(RmFileList *list) {
-    g_rec_mutex_lock(&list->lock);
-    {
-        g_sequence_free(list->size_groups);
-        g_hash_table_unref(list->size_table);
-        rm_mounts_table_destroy(list->mounts);
-    }
-    g_rec_mutex_unlock(&list->lock);
-    g_rec_mutex_clear(&list->lock);
-    g_slice_free(RmFileList, list);
-}
-
 GSequenceIter *rm_file_list_get_iter(RmFileList *list) {
     GSequenceIter *first = NULL;
     g_rec_mutex_lock(&list->lock);
@@ -172,41 +82,6 @@ static gint rm_file_list_cmp_file_size(gconstpointer a, gconstpointer b, G_GNUC_
            );
 }
 
-void rm_file_list_append(RmFileList *list, RmFile *file) {
-    /* Normalize the device id to the whole disk */
-    file->dev = rm_mounts_get_disk_id(list->mounts, file->dev);
-
-
-    g_rec_mutex_lock(&list->lock);
-    {
-        GSequenceIter *old_iter = g_hash_table_lookup(
-                                      list->size_table, GINT_TO_POINTER(file->fsize)
-                                  );
-
-        g_assert(file);
-
-        if(old_iter == NULL) {
-            /* Insert a new group */
-            GQueue *old_group = g_queue_new();
-
-            g_queue_push_head(old_group, file);
-            file->list_node = old_group->head;
-            file->file_group = g_sequence_insert_sorted(
-                                   list->size_groups, old_group, rm_file_list_cmp_file_size, NULL
-                               );
-            g_hash_table_insert(
-                list->size_table, GINT_TO_POINTER(file->fsize), file->file_group
-            );
-        } else {
-            GQueue *old_group = g_sequence_get(old_iter);
-            g_queue_push_head(old_group, file);
-            file->file_group = old_iter;
-            file->list_node = old_group->head;
-        }
-    }
-    debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->node, file->offset, file->path);
-    g_rec_mutex_unlock(&list->lock);
-}
 
 void rm_file_list_clear(RmFileList *list, GSequenceIter *iter) {
     g_rec_mutex_lock(&list->lock);
@@ -262,44 +137,6 @@ static gint rm_file_list_cmp_file_offset(gconstpointer a, gconstpointer b, G_GNU
     return 0;
 }
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
-long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data) {
-    RmSession *session = user_data;
-    RmSettings *sets = session->settings;
-
-    if (a->in_ppath != b->in_ppath) {
-        return a->in_ppath - b->in_ppath;
-    } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
-        for (int i = 0; i < sort_criteria_len; i++) {
-            long cmp = 0;
-            switch (sets->sort_criteria[i]) {
-            case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'M':
-                cmp = (long)(b->mtime) - (long)(a->mtime);
-                break;
-            case 'a':
-                cmp = strcmp (rm_util_basename(a->path), rm_util_basename (b->path));
-                break;
-            case 'A':
-                cmp = strcmp (rm_util_basename(b->path), rm_util_basename (a->path));
-                break;
-            case 'p':
-                cmp = (long)a->pnum - (long)b->pnum;
-                break;
-            case 'P':
-                cmp = (long)b->pnum - (long)a->pnum;
-                break;
-            }
-            if (cmp) {
-                return cmp;
-            }
-        }
-    }
-    return 0;
-}
 
 /* If we have more than one path, or a fs loop, several RMFILEs may point to the
  * same (physically same!) file.  This would result in potentially dangerous

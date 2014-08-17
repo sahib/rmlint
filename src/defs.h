@@ -34,9 +34,9 @@
 #include <stdbool.h>
 #include <glib.h>
 
-#include "config.h"
-#include "checksum.h"
-#include "utilities.h"
+//#include "config.h"
+//#include "checksum.h"
+//#include "utilities.h"
 
 #define RED "\x1b[31;01m"
 #define YEL "\x1b[33;01m"
@@ -101,129 +101,6 @@ From man 2 open:
 #define CMD_DUPL "<dupl>"
 #define CMD_ORIG "<orig>"
 
-/* types of lint */
-typedef enum RmLintType {
-    RM_LINT_TYPE_UNKNOWN = 0,
-    RM_LINT_TYPE_BLNK,
-    RM_LINT_TYPE_EDIR,
-    RM_LINT_TYPE_EFILE,
-    RM_LINT_TYPE_NBIN,
-    RM_LINT_TYPE_BASE,
-    RM_LINT_TYPE_BADUID,
-    RM_LINT_TYPE_BADGID,
-    RM_LINT_TYPE_BADUGID,
-    /* Border */
-    RM_LINT_TYPE_OTHER_LINT,
-    /* note: this needs to be last item in list */
-    RM_LINT_TYPE_DUPE_CANDIDATE
-} RmLintType;
 
-typedef enum RmHandleMode {
-    RM_MODE_LIST = 1,
-    RM_MODE_NOASK = 3,
-    RM_MODE_LINK = 4,
-    RM_MODE_CMD = 5
-} RmHandleMode;
-
-/* TODO: lookup if all variables still needed. */
-/* all available settings see rmlint -h */
-typedef struct RmSettings {
-    RmHandleMode mode;
-    bool color;
-    bool collide;
-    bool samepart;
-    bool ignore_hidden;
-    bool followlinks;
-    bool paranoid;
-    bool namecluster;
-    bool findbadids;
-    bool findbadlinks;
-    bool searchdup;
-    bool findemptydirs;
-    bool nonstripped;
-    char verbosity;
-    bool listemptyfiles;
-    char **paths;
-    char *is_ppath;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
-    int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
-    char *cmd_path;
-    char *cmd_orig;
-    char *output_script;
-    char *output_log;
-    char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
-    bool limits_specified;
-    guint64 minsize;
-    guint64 maxsize;
-    bool keep_all_originals;     /* NEW - if set, will ONLY delete dupes that are not in ppath */
-    bool must_match_original;    /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath*/
-    bool invert_original;        /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred*/
-    bool find_hardlinked_dupes;  /* NEW - if set, will also search for hardlinked duplicates*/
-    bool skip_confirm;           /* NEW - if set, bypasses user confirmation of input settings*/
-    bool confirm_settings;       /* NEW - if set, pauses for user confirmation of input settings*/
-    guint64 threads;
-    short depth;
-    RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
-    char *iwd;                   /* cwd when rmlint called */
-} RmSettings;
-
-typedef enum RmFileState {
-    RM_FILE_STATE_PROCESS,
-    RM_FILE_STATE_IGNORE,
-    RM_FILE_STATE_FINISH
-} RmFileState;
-
-/* TODO: Reduce size of RmFile */
-typedef struct _RmFile {
-    unsigned char checksum[_RM_HASH_LEN];// TODO: remove.   /* md5sum of the file */
-    unsigned char fp[2][_RM_HASH_LEN];// TODO: remove.        /* A short fingerprint of a file - start and back */
-    unsigned char bim[BYTE_MIDDLE_SIZE];// TODO: remove. /* Place where the infamouse byInThMiddle are stored */
-
-    char *path;                          /* absolute path from working dir */
-    bool in_ppath;                       /* set if this file is in one of the preferred (originals) paths */
-    unsigned long pnum;                  /* numerical index of user-input paths */
-    guint64 fsize;                       /* Size of the file (bytes) */
-    time_t mtime;                        /* File modification date/time */
-    bool filter;// TODO: remove.                         /* this is used in calculations  */
-    RmLintType lint_type;                /* Is the file marked as duplicate? */
-
-    /* This is used to find pointers to the physically same file */
-    ino_t node;
-    dev_t dev;
-    guint64 offset;                    /*offset in bytes from start of device*/
-    guint64 hash_offset;
-    guint64 seek_offset;
-
-    RmDigest digest;
-
-    GList *list_node; // TODO: remove.
-    GSequenceIter *file_group;// TODO: remove.
-    struct _RmFile *hardlinked_original;
-    RmFileState state;
-
-    RmOffsetTable disk_offsets;
-    GMutex file_lock;
-} RmFile;
-
-typedef struct RmFileList {
-    RmMountTable *mounts;
-    GSequence *size_groups;
-    GHashTable *size_table;
-    GRecMutex lock;
-} RmFileList;
-
-typedef struct RmSession {
-    RmFileList *list;
-    RmSettings *settings;
-    RmMountTable *mounts;
-
-    guint64 total_files;
-    guint64 total_lint_size;
-    guint64 dup_counter;
-
-    FILE *script_out;
-    FILE *log_out;
-
-    volatile bool aborted;
-} RmSession;
 
 #endif

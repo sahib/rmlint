@@ -6,11 +6,13 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 
-#include "src/checksum.h"
-#include "src/checksums/city.h"
-#include "src/list.h"
-#include "src/utilities.h"
-#include "src/cmdline.h"
+//#include "checksum.h"
+//#include "checksums/city.h"
+#include "preprocess.h"
+#include "utilities.h"
+#include "cmdline.h"
+
+//TODO: for hardlinked originals, only hash one of each set
 
 /* This is the scheduler of rmlint.
  *
@@ -862,9 +864,12 @@ static void shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table
     g_list_free(values);
 }
 
-static void shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table) {
+void shred_run(RmSession *session) {//, GHashTable *dev_table, GHashTable *size_table) {
     g_assert(session);
+    RmFileTable *table = session->table;
+    GHashTable *dev_table = table->dev_table;
     g_assert(dev_table);
+    GHashTable *size_table = table->size_table;
     g_assert(size_table);
 
     RmMainTag tag;

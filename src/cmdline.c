@@ -44,10 +44,10 @@
 #include <sys/time.h>
 
 #include "cmdline.h"
-#include "postprocess.h"
-#include "list.h"
-#include "traverse.h"
+//#include "traverse.h"
 #include "preprocess.h"
+#include "shredder.h"
+#include "postprocess.h"
 #include "utilities.h"
 
 /* Version string */
@@ -904,10 +904,10 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->dup_counter = 0;
     session->total_lint_size = 0;
     session->total_files = 0;
+    session->settings = settings;
     /* session->userlist = rm_userlist_new(); (moved to traverse) */
     session->mounts = rm_mounts_table_new();
-    session->list = rm_file_list_new(session->mounts);
-    session->settings = settings;
+    session->table = rm_file_table_new(session);
     session->aborted = FALSE;
 
     init_filehandler(session);
@@ -962,8 +962,8 @@ int rm_main(RmSession *session) {
      * */
     info("Now finding easy lint...\n");
 
-    /* Apply the prefilter and outsort inique sizes */
-    start_processing(session);
+    /* Apply the prefilter and outsort unique sizes */
+    do_pre_processing(session);
 
     return die(session, EXIT_SUCCESS);
 }

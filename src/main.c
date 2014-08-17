@@ -28,7 +28,7 @@
 #include <locale.h>
 
 #include "cmdline.h"
-#include "list.h"
+#include "preprocess.h"
 
 
 static char *remove_color_escapes(char *message) {
@@ -125,6 +125,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    rm_file_list_destroy(session.list);
+    rm_file_table_destroy(session.table);
     return exit_state;
 }

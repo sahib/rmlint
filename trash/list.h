@@ -33,33 +33,10 @@
 
 #include "defs.h"
 
-/**
- * @brief Allocate and new RmFile and populate with args
- */
-
-RmFile *rm_file_new(const char *path,
-                    guint64 fsize,
-                    ino_t node,
-                    dev_t dev,
-                    time_t mtime,
-                    RmLintType type,
-                    bool is_ppath,
-                    unsigned pnum);
-
-/**
- * @brief Free the memory allocated by rm_file_new()
- */
-void rm_file_destroy(RmFile *file);
-
 
 typedef int (* RmFileListSortFunc)(RmFile *a, RmFile *b, gpointer);
 
-/**
- * @brief Create a new RmFileList object.
- *
- * @return A newly allocated RmFileList.
- */
-RmFileList *rm_file_list_new(RmMountTable *mounts);
+
 
 /**
  * @brief Set the checksum.
@@ -74,10 +51,6 @@ void rm_file_set_checksum(RmFileList *list, RmFile *file, RmDigest *digest);
 void rm_file_set_fingerprint(RmFileList *list, RmFile *file, guint index, RmDigest *digest);
 void rm_file_set_middle_bytes(RmFileList *list, RmFile *file, const char *bytes, gsize len);
 
-/**
- * @brief Free a previous RmFileList
- */
-void rm_file_list_destroy(RmFileList *list);
 
 /**
  * @brief Get a subgroup (or isle) of the list.
@@ -90,14 +63,6 @@ void rm_file_list_destroy(RmFileList *list);
  */
 GSequenceIter *rm_file_list_get_iter(RmFileList *list);
 
-/**
- * @brief Append a file to the List.
- *
- * Chooses the appropiate group automatically.
- *
- * @param file The file to append; ownership is taken.
- */
-void rm_file_list_append(RmFileList *list, RmFile *file);
 
 /**
  * @brief Clear a subgroup.
@@ -106,11 +71,6 @@ void rm_file_list_append(RmFileList *list, RmFile *file);
  */
 void rm_file_list_clear(RmFileList *list, GSequenceIter *iter);
 
-
-/**
- * @brief compare two files after a user-defined criteria.
- */
-long cmp_orig_criteria(RmFile *a, RmFile *b, gpointer user_data);
 
 
 /**

@@ -9,7 +9,7 @@
 #include <assert.h>
 
 #include "checksum.h"
-#include "defs.h"
+//#include "defs.h"
 
 /* Less than 16 byte is not allowed */
 G_STATIC_ASSERT(_RM_HASH_LEN >= 16);

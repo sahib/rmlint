@@ -26,8 +26,48 @@
 #ifndef FILTER_H
 #define FILTER_H
 
-#include "defs.h"
+#include "traverse.h"
 
-void start_processing(RmSession *session);
+typedef struct RmMountTable RmMountTable;
+
+typedef struct RmFileTable {
+    RmMountTable *mounts;
+    GHashTable *dev_table;
+    GHashTable *size_table;
+    GHashTable *name_table;
+    GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE]; // one list for each lint type other than dupe candidates
+    GRecMutex lock;
+} RmFileTable;
+
+
+/**
+ * @brief Do some pre-processing (eg remove path doubles) and process "other lint".
+ *
+ */
+void do_pre_processing(RmSession *session);
+
+/**
+ * @brief Create a new RmFileTable object.
+ *
+ * @return A newly allocated RmFileTable.
+ */
+RmFileTable *rm_file_table_new(RmSession *session);
+
+
+/**
+* @brief Free a previous RmFileTable
+*/
+void rm_file_table_destroy(RmFileTable *list);
+
+
+/**
+ * @brief Insert a file in appropriate part of RmFileTable.
+ *
+ * Chooses the appropiate group automatically.
+ *
+ * @param file The file to append; ownership is taken.
+ */
+void rm_file_table_insert(RmFileTable *list, RmFile *file);
+
 
 #endif
