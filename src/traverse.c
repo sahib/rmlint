@@ -159,9 +159,9 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
     RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_ppath, pnum);
 
     if (file) {
-        rm_file_table_insert(session->table, file);
-        return 1;
+        return rm_file_list_insert(session, file);
     } else {
+        rm_error("Problem creating RmFile %s\n", path);
         return 0;
     }
 }
@@ -266,6 +266,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                         info("Not descending into %s because max depth reached\n", p->fts_path);
                     } else {
                         /* recurse dir; assume empty until proven otherwise */
+                        //info("descending into %s (parent %s)\n",p->fts_path,path);
                         is_emptydir[ (p->fts_level + 1) ] = 'E';
                         have_open_emptydirs = true;
                     }
@@ -482,13 +483,13 @@ guint64 rm_search_tree(RmSession *session) {
         }
 
         if (!g_hash_table_contains (traverse_session->paths, settings->paths[idx]) ) {
-            info("adding %s to paths hashtable\n", settings->paths[idx]);
             RmTraversePathBuffer *new_path = rm_traverse_path_buffer_new(settings->paths[idx],
                                              settings->depth,
                                              settings->is_prefd[idx],
                                              idx);
-            g_hash_table_insert (traverse_session->paths, settings->paths[idx], new_path);
             info(BLU"Adding path %s\n"NCO, new_path->path);
+            g_hash_table_insert (traverse_session->paths, new_path->path, new_path);
+            //TODO: combine preceding with following
             add_path_to_traverse_queue_table(traverse_session, new_path);
         }
     }
@@ -528,6 +529,8 @@ guint64 rm_search_tree(RmSession *session) {
                             info(BLU"Adding mountpoint %s as subdir of %s with depth difference %d\n"NCO,
                                  new_path->path, bestmatch->path, depth_diff);
 
+                            g_hash_table_insert (traverse_session->paths, new_path->path, new_path);
+                            //TODO: combine preceding with following
                             add_path_to_traverse_queue_table(traverse_session, new_path);
                             break; /* move on to next mount point */
                         }
