@@ -90,13 +90,15 @@ char *rm_util_basename(const char *filename) {
 
 ino_t rm_util_parent_node(const char *path) {
     char *dummy  = g_strdup(path);
-    char *parent_path = dirname(dummy);
+    char *parent_path = g_strdup(dirname(dummy));
     g_free(dummy);
 
     struct stat stat_buf;
     if(!stat(parent_path, &stat_buf)) {
+        g_free(parent_path);
         return stat_buf.st_ino;
     } else {
+        g_free(parent_path);
         return -1;
     }
 }
@@ -385,7 +387,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 
                 /* Assign different dev ids (with major id 0) to different nfs servers */
                 if(!g_hash_table_contains(self->nfs_table, diskname)) {
-                    g_hash_table_insert(self->nfs_table, diskname, NULL);
+                    g_hash_table_insert(self->nfs_table, g_strdup(diskname), NULL);
                 }
                 whole_disk = makedev(0, g_hash_table_size(self->nfs_table));
             } else {

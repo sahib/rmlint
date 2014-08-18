@@ -40,20 +40,22 @@ void rm_preprocess(RmSession *session);
  *
  * @return A newly allocated RmFileTable.
  */
-RmFileTable *rm_file_table_new(RmSession *session);
+RmFileTables *rm_file_tables_new(RmSession *session);
 
 /**
 * @brief Free a previous RmFileTable
 */
-void rm_file_table_destroy(RmFileTable *list);
+void rm_file_tables_destroy(RmFileTables *list);
 
 /**
- * @brief Insert a file in appropriate part of RmFileTable.
+ * @brief Insert a file in RmFileTables->node_table.
  *
- * Chooses the appropiate group automatically.
+ * Checks for path doubles and kicks accordingly; groups hardlinks.
  *
- * @param file The file to append; ownership is taken.
+ * @param file The file to insert; ownership is taken.
+ *
+ * @return 1 if successful insertion, 0 if path double.
  */
-void rm_file_table_insert(RmFileTable *list, RmFile *file);
+uint rm_file_list_insert(RmSession *session, RmFile *file);
 
 #endif

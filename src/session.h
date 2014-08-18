@@ -82,18 +82,19 @@ typedef struct RmSettings {
     char *iwd;                   /* cwd when rmlint called */
 } RmSettings;
 
-typedef struct RmFileTable {
+typedef struct RmFileTables {
     struct RmMountTable *mounts;
     GHashTable *dev_table;
     GHashTable *size_table;
+    GHashTable *node_table;
     GHashTable *name_table;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
     GRecMutex lock;
-} RmFileTable;
+} RmFileTables;
 
 typedef struct RmSession {
     RmSettings *settings;
-    struct RmFileTable *table;
+    struct RmFileTables *tables;
     struct RmMountTable *mounts;
 
     guint64 total_files;

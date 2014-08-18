@@ -70,7 +70,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     init_filehandler(session);
 
     session->mounts = rm_mounts_table_new();
-    session->table = rm_file_table_new(session);
+    session->tables = rm_file_tables_new(session);
 }
 
 void rm_session_clear(RmSession *session) {
@@ -92,7 +92,7 @@ void rm_session_clear(RmSession *session) {
         fclose(session->log_out);
     }
 
-    rm_file_table_destroy(session->table);
+    rm_file_tables_destroy(session->tables);
 
     /* Close scriptfile */
     if(session->script_out) {
