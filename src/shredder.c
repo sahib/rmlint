@@ -545,6 +545,9 @@ static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     g_mutex_init(&tag.read_size_mtx);
 
     /* Get the device of the files in this list */
+    g_assert(device_queue);
+    g_assert(device_queue->head);
+    g_assert(device_queue->head->data);
     bool nonrotational = rm_mounts_is_nonrotational(
                              main->session->mounts,
                              ((RmFile *)device_queue->head->data)->dev
@@ -857,8 +860,8 @@ static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_ta
                 g_hash_table_lookup(
                     size_table, GUINT_TO_POINTER(file->file_size)) - 1
             );
+            rm_file_destroy(file);
         }
-
         g_queue_clear(&to_delete);
     }
 
