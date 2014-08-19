@@ -497,10 +497,10 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             verbosity_counter++;
             break;
         case 'x':
-            sets->samepart = 1;
+            sets->samepart = 0;
             break;
         case 'X':
-            sets->samepart = 0;
+            sets->samepart = 1;
             break;
         case 'd':
             sets->depth = ABS(atoi(optarg));
