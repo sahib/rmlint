@@ -118,7 +118,7 @@ int fts_flags_from_settings(RmSettings *settings) {
     }
     /* don't follow symlinks except those passed in command line */
     if (settings->samepart) {
-        self |= FTS_XDEV;
+        //self |= FTS_XDEV; NOTE: easier to handle this during the traverse
     }
 
     self |= FTS_NOCHDIR;  /*TODO: we can probably have 1 running with CHDIR optimisations -
@@ -264,6 +264,11 @@ void traverse_path(gpointer data, gpointer userdata) {
                         fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                         clear_emptydir_flags = true; /*flag current dir as not empty*/
                         info("Not descending into %s because max depth reached\n", p->fts_path);
+                    } else if (settings->samepart && p->fts_dev != chp->fts_dev) {
+                        /* continuing into folder would cross file systems*/
+                        fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
+                        clear_emptydir_flags = true; /*flag current dir as not empty*/
+                        info("Not descending into %s because it is a different filesystem\n", p->fts_path);
                     } else {
                         /* recurse dir; assume empty until proven otherwise */
                         //info("descending into %s (parent %s)\n",p->fts_path,path);

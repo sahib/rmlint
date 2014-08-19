@@ -313,8 +313,8 @@ static void rm_preprocess_file(gpointer data, gpointer user_data) {
     RmFileTables *tables = session->tables;
     if (file->lint_type < RM_LINT_TYPE_DUPE_CANDIDATE) {
         tables->other_lint[file->lint_type] = g_list_prepend(tables->other_lint[file->lint_type], file);
-    } else {
-        file->disk = rm_mounts_get_disk_id(tables->mounts, file->dev);
+    } else if (file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE ) {
+        file->disk = rm_mounts_get_disk_id(tables->mounts, file->dev); //TODO: don't think we need this
 
         g_hash_table_insert(
             tables->size_table,
@@ -335,10 +335,11 @@ static void rm_preprocess_file(gpointer data, gpointer user_data) {
                                );
         }
 
-        GQueue *dev_list = g_hash_table_lookup(tables->dev_table, GUINT_TO_POINTER(file->dev));
+        GQueue *dev_list = g_hash_table_lookup(tables->dev_table, GUINT_TO_POINTER(file->disk));
         if(dev_list == NULL) {
             dev_list = g_queue_new();
             g_hash_table_insert(tables->dev_table, GUINT_TO_POINTER(file->disk), dev_list);
+            rm_error("new device queue for disk %lu\n", file->disk);
         }
         g_queue_push_head(dev_list, file);
 
@@ -351,8 +352,9 @@ static void rm_preprocess_file(gpointer data, gpointer user_data) {
         }
 
         debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->inode, file->phys_offset, file->path);
+    } else {
+        rm_error("Unknow lint type %d for file %s\n", file->lint_type, file->path);
     }
-
 
 }
 
@@ -365,8 +367,12 @@ static gboolean rm_preprocess_hardlink_group(gpointer key, GList *hardlink_clust
             && !settings->find_hardlinked_dupes
             && first->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
         /* ignore hardlinks */
-        g_list_free_full(hardlink_cluster->next, (GDestroyNotify)rm_file_destroy);
-        hardlink_cluster->next = NULL;
+        GList *tail;
+        tail = g_list_remove_link(hardlink_cluster, hardlink_cluster);
+        info("keeping %s, discarding hardlinks starting with %s\n",
+             ((RmFile *)hardlink_cluster->data)->path,
+             ((RmFile *)tail->data)->path ); //TODO: delete
+        g_list_free_full(tail, (GDestroyNotify)rm_file_destroy);
     }
     g_assert(hardlink_cluster);
     g_list_foreach(hardlink_cluster, (GFunc)rm_preprocess_file, session);
@@ -381,8 +387,7 @@ static void rm_file_tables_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     g_assert(tables);
 
-    GHashTable *node_table = session->tables->node_table;
-
+    GHashTable *node_table = tables->node_table;
     g_hash_table_foreach_remove(node_table,
                                 (GHRFunc)rm_preprocess_hardlink_group,
                                 session);
@@ -536,14 +541,15 @@ void rm_preprocess(RmSession *session) {
      * The scheduler will do another filterstep, build checkusm
      * and compare 'em. The result is printed afterwards */
 
-    guint path_doubles = 0;
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, session->tables->dev_table);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        path_doubles += 0;//rm_file_list_remove_double_paths(group, session);
-        rm_error("Path doubles removed %u\n", path_doubles);
-    }
+//    guint path_doubles = 0;
+//    GHashTableIter iter;
+//    gpointer key, value;
+//    g_hash_table_iter_init(&iter, session->tables->dev_table);
+//    while (g_hash_table_iter_next(&iter, &key, &value)) {
+//        path_doubles += 0;//rm_file_list_remove_double_paths(group, session);
+//        rm_error("Path doubles removed %u\n", path_doubles);
+//    }
+
 
     rm_shred_run(session, session->tables->dev_table, session->tables->size_table);
 

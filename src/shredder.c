@@ -550,8 +550,11 @@ static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     g_assert(device_queue->head->data);
     bool nonrotational = rm_mounts_is_nonrotational(
                              main->session->mounts,
-                             ((RmFile *)device_queue->head->data)->dev
+                             ((RmFile *)device_queue->head->data)->disk
                          );
+    rm_error(BLU"Started rm_shred_devlist_factory for disk %u:%u\n"NCO,
+             major(((RmFile *)device_queue->head->data)->disk),
+             minor(((RmFile *)device_queue->head->data)->disk) );
 
     int max_threads = rm_shred_get_read_threads(
                           main, nonrotational, main->session->settings->threads
@@ -860,7 +863,7 @@ static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_ta
                 g_hash_table_lookup(
                     size_table, GUINT_TO_POINTER(file->file_size)) - 1
             );
-            rm_file_destroy(file);
+            //rm_file_destroy(file);
         }
         g_queue_clear(&to_delete);
     }
