@@ -506,7 +506,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_
 
     /* check if files are on same partition of disk */
     if (a->dev != b->dev) {
-        return (a->dev - b->dev) /* dev_t is unsigned long so should be ok to subtract */
+        return (a->dev - b->dev); /* dev_t is unsigned long so should be ok to subtract */
     }
 
 
