@@ -503,6 +503,13 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_
     /* offset is a guint64, so do not substract them.
      * (will cause over or underflows on regular base)
      */
+
+    /* check if files are on same partition of disk */
+    if (a->dev != b->dev) {
+        return (a->dev - b->dev) /* dev_t is unsigned long so should be ok to subtract */
+    }
+
+
     if(a->phys_offset < b->phys_offset) {
         return -1;
     }
