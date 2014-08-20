@@ -50,6 +50,29 @@ static void dev_queue_free_func(gconstpointer p) {
 }
 
 
+
+typedef struct RmGroup {
+    GQueue *queue;
+    gulong num_pref;
+    gulong num_non_pref;
+    bool needs_hashing;
+} RmGroup;
+
+static RmGroup *rm_group_new(void) {
+    RmGroup *self = g_slice_new0(RmGroup);
+    self->queue = g_queue_new();
+    g_assert(self->num_pref == 0);
+    g_assert(self->num_non_pref == 0);
+    g_assert(!self->needs_hashing);
+    return self;
+}
+
+void rm_group_destroy(RmGroup *group) {
+    g_queue_free_full(group->queue, (GDestroyNotify)rm_file_destroy);
+    g_slice_free(RmGroup, group);
+}
+
+
 RmFileTables *rm_file_tables_new(RmSession *session) {
 
     RmFileTables *tables = g_slice_new0(RmFileTables);
@@ -61,7 +84,9 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->size_table = g_hash_table_new( NULL, NULL);
 
-    tables->node_table = g_hash_table_new( NULL, NULL ); //TODO _full?
+    tables->size_groups = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)rm_group_destroy);
+
+    tables->node_table = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)g_queue_free );
 
     RmSettings *settings = session->settings;
 
@@ -94,6 +119,9 @@ void rm_file_tables_destroy(RmFileTables *tables) {
 
         g_assert(tables->size_table);
         g_hash_table_unref(tables->size_table);
+
+        g_assert(tables->size_groups);
+        g_hash_table_unref(tables->size_groups);
 
         g_assert(tables->mounts);
         rm_mounts_table_destroy(tables->mounts);
@@ -155,7 +183,9 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
 
     RmSettings *sets = session->settings;
 
-    if (a->is_prefd != b->is_prefd) {
+    if (a->lint_type != b->lint_type) {
+        return a->lint_type - b->lint_type;
+    } else if (a->is_prefd != b->is_prefd) {
         return a->is_prefd - b->is_prefd;
     } else {
         int sort_criteria_len = strlen(sets->sort_criteria);
@@ -192,19 +222,20 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
 uint rm_file_list_insert(RmSession *session, RmFile *file) {
     RmFileTables *tables = session->tables;
+
     GHashTable *node_table = tables->node_table;
     guint64 node_key = (ulong)file->dev << 32 | (ulong)file->inode;
 
     g_rec_mutex_lock(&tables->lock);
 
-    GList *hardlink_group = g_hash_table_lookup(node_table, (gpointer)node_key );
+    GQueue *hardlink_group = g_hash_table_lookup(node_table, (gpointer)node_key );
     if (!hardlink_group) {
-        hardlink_group = g_list_append(NULL, file);
+        hardlink_group = g_queue_new();
         g_hash_table_insert(node_table, (gpointer)node_key, hardlink_group);
     } else {
         /* file(s) with matching dev,inode already in table; compare this file to all of the
            existing ones to check if it's a path double; if yes then swap or discard */
-        for (GList *iter = hardlink_group; iter; iter = iter->next) {
+        for (GList *iter = hardlink_group->head; iter; iter = iter->next) {
             RmFile *current = iter->data;
             g_assert(current);
             if (1
@@ -229,14 +260,12 @@ uint rm_file_list_insert(RmSession *session, RmFile *file) {
             }
         }
         /* no path double found; must be hardlink */
-        hardlink_group = g_list_insert_sorted_with_data (hardlink_group,
-                         file,
-                         (GCompareDataFunc)cmp_orig_criteria,
-                         session);
-        g_hash_table_replace(node_table,
-                             (gpointer)node_key,
-                             hardlink_group);
     }
+    g_queue_insert_sorted (
+        hardlink_group,
+        file,
+        (GCompareDataFunc)cmp_orig_criteria,
+        session);
     g_rec_mutex_unlock(&tables->lock);
     return 1;
 }
@@ -307,90 +336,150 @@ uint rm_file_list_insert(RmSession *session, RmFile *file) {
 //}
 
 
-static void rm_preprocess_file(gpointer data, gpointer user_data) {
-    RmFile *file = data;
-    RmSession *session = user_data;
+static gboolean rm_move_files_to_queue(gpointer key, RmGroup *group, RmSession *session) {
+    g_assert(key); //void
     RmFileTables *tables = session->tables;
-    if (file->lint_type < RM_LINT_TYPE_DUPE_CANDIDATE) {
-        tables->other_lint[file->lint_type] = g_list_prepend(tables->other_lint[file->lint_type], file);
-    } else if (file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE ) {
-        file->disk = rm_mounts_get_disk_id(tables->mounts, file->dev); //TODO: don't think we need this
 
-        g_hash_table_insert(
-            tables->size_table,
-            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files
-            g_hash_table_lookup(
-                tables->size_table, GUINT_TO_POINTER(file->file_size)) + 1
-        );
-
-        if (tables->name_table) {
-            //insert file into hashtable of basename lists
-            char *basename = g_strdup(rm_util_basename(file->path));
-            g_hash_table_insert(tables->name_table,
-                                basename,
-                                g_list_prepend(g_hash_table_lookup(
-                                                   tables->name_table,
-                                                   basename),
-                                               file)
-                               );
-        }
-
-        GQueue *dev_list = g_hash_table_lookup(tables->dev_table, GUINT_TO_POINTER(file->disk));
-        if(dev_list == NULL) {
-            dev_list = g_queue_new();
-            g_hash_table_insert(tables->dev_table, GUINT_TO_POINTER(file->disk), dev_list);
-            rm_error("new device queue for disk %lu\n", file->disk);
-        }
-        g_queue_push_head(dev_list, file);
-
-        bool nonrotational = rm_mounts_is_nonrotational(tables->mounts, file->disk);
-        if(!nonrotational /*TODO: && offset_sort_optimisation */
-                && ( file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE
-                     || file->lint_type == RM_LINT_TYPE_NBIN ) ) {
-            file->disk_offsets = rm_offset_create_table(file->path);
-            file->phys_offset = rm_offset_lookup(file->disk_offsets, 0);
-        }
-
-        debug("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->inode, file->phys_offset, file->path);
-    } else {
-        rm_error("Unknow lint type %d for file %s\n", file->lint_type, file->path);
+    GList *iter = group->queue->head;
+    while (iter) {
+        RmFile *file = iter->data;
+        GList *next = iter->next;
+        g_queue_delete_link (group->queue, iter);
+        iter = next;
+        g_assert(file->lint_type  == RM_LINT_TYPE_DUPE_CANDIDATE);
+        g_queue_push_head(tables->file_queue, file);
     }
-
-}
-
-static gboolean rm_preprocess_hardlink_group(gpointer key, GList *hardlink_cluster, RmSession *session) {
-    key = key;
-    RmSettings *settings = session->settings;
-    RmFile *first = hardlink_cluster->data;
-    g_assert(first);
-    if (hardlink_cluster->next
-            && !settings->find_hardlinked_dupes
-            && first->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        /* ignore hardlinks */
-        GList *tail;
-        tail = g_list_remove_link(hardlink_cluster, hardlink_cluster);
-        info("keeping %s, discarding hardlinks starting with %s\n",
-             ((RmFile *)hardlink_cluster->data)->path,
-             ((RmFile *)tail->data)->path ); //TODO: delete
-        g_list_free_full(tail, (GDestroyNotify)rm_file_destroy);
-    }
-    g_assert(hardlink_cluster);
-    g_list_foreach(hardlink_cluster, (GFunc)rm_preprocess_file, session);
-    g_list_free(hardlink_cluster);
     return true;
 }
 
 
-static void rm_file_tables_preprocess(RmSession *session) {
-    /* NOTE: called from foreground when no other threads running, so no mutex protection required */
-    g_assert(session);
+static void rm_preprocess_files(RmFile *file, RmSession *session) {
     RmFileTables *tables = session->tables;
-    g_assert(tables);
 
-    GHashTable *node_table = tables->node_table;
-    g_hash_table_foreach_remove(node_table,
-                                (GHRFunc)rm_preprocess_hardlink_group,
-                                session);
+    file->disk = rm_mounts_get_disk_id(tables->mounts, file->dev); //TODO: don't think we need this
+
+    g_hash_table_insert(
+        tables->size_table,
+        GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files
+        g_hash_table_lookup(
+            tables->size_table, GUINT_TO_POINTER(file->file_size)) + 1
+    );
+
+    if (tables->name_table) {
+        //insert file into hashtable of basename lists
+        char *basename = g_strdup(rm_util_basename(file->path));
+        g_hash_table_insert(tables->name_table,
+                            basename,
+                            g_list_prepend(g_hash_table_lookup(
+                                               tables->name_table,
+                                               basename),
+                                           file)
+                           );
+    }
+
+    GQueue *dev_list = g_hash_table_lookup(tables->dev_table, GUINT_TO_POINTER(file->disk));
+    if(dev_list == NULL) {
+        dev_list = g_queue_new();
+        g_hash_table_insert(tables->dev_table, GUINT_TO_POINTER(file->disk), dev_list);
+        rm_error("new device queue for disk %lu\n", file->disk);
+    }
+    g_queue_push_head(dev_list, file);
+
+    bool nonrotational = rm_mounts_is_nonrotational(tables->mounts, file->disk);
+    if(!nonrotational /*TODO: && offset_sort_optimisation */
+            && ( file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE )
+            && ( file->file_size > 0 ) ) {
+        //TODO: if(file->hardlinked_original) we can avoid this:
+        //gdouble start = g_timer_elapsed(session->timer, NULL);
+        file->disk_offsets = rm_offset_create_table(file->path);
+        session->offsets_read++;
+        if(file->disk_offsets) {
+            session->offset_fragments += g_sequence_get_length((GSequence *)file->disk_offsets);
+        } else {
+            session->offset_fails++;
+        }
+        file->phys_offset = rm_offset_lookup(file->disk_offsets, 0);
+        //rm_error("fiemap finished read time %f.6\n", g_timer_elapsed(session->timer, NULL)-start);
+    }
+
+    info("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->inode, file->phys_offset, file->path);
+}
+
+
+static bool rm_is_group_non_candidate( gpointer key, RmGroup *group, RmSession *session) {
+    g_assert(key && session); //void
+    g_assert(group);
+    return (!group->needs_hashing);
+}
+
+
+static bool rm_is_group_candidate(RmGroup *group, RmSession *session) {
+    g_assert(session);
+    return (group->num_non_pref + group->num_non_pref >= 2); //TODO
+}
+
+static void rm_group_add_file(RmGroup *group, RmFile *file, RmSession *session) {
+    g_assert(session);
+    g_queue_push_head(group->queue, file);
+    if (file->is_prefd) {
+        group->num_pref++;
+    } else {
+        group->num_non_pref++;
+    }
+    if (!group->needs_hashing) {
+        group->needs_hashing = rm_is_group_candidate(group, session);
+    }
+}
+
+static void rm_add_file_to_size_groups(RmFile *file, RmSession *session) {
+    RmGroup *group = g_hash_table_lookup(
+                         session->tables->size_groups,
+                         GUINT_TO_POINTER(file->file_size));
+    if (!group) {
+        group = rm_group_new();
+        g_hash_table_insert(
+            session->tables->size_groups,
+            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files
+            group);
+    }
+    rm_group_add_file(group, file, session);
+}
+
+
+static gboolean rm_populate_size_groups(gpointer key, GQueue *hardlink_cluster, RmSession *session) {
+    g_assert(key); //key not used
+    g_queue_foreach (hardlink_cluster,
+                     (GFunc)rm_add_file_to_size_groups,
+                     session);
+    return true;
+}
+
+static gboolean rm_handle_hardlinks(gpointer key, GQueue *hardlink_cluster, RmSession *session) {
+    g_assert(key); //void
+    RmSettings *settings = session->settings;
+    GList *iter = hardlink_cluster->head;
+    while (iter) {
+        RmFile *file = iter->data;
+        GList *next = iter->next;
+        if (file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
+            /* move the file to tables->other_lint */
+            session->tables->other_lint[file->lint_type] = g_list_prepend(session->tables->other_lint[file->lint_type], file);
+            g_queue_delete_link(hardlink_cluster, iter);
+        } else if (iter != hardlink_cluster->head) {
+            if (!settings->find_hardlinked_dupes) {
+                rm_file_destroy(file);
+                g_queue_delete_link(hardlink_cluster, iter);
+            } else {
+                file->hardlinked_original = hardlink_cluster->head->data;
+            }
+        }
+        iter = next;
+    }
+    return g_queue_is_empty(hardlink_cluster);
+}
+
+gint rm_sort_inode(RmFile *a, RmFile *b) {
+    return (a->inode > b->inode) - (a->inode < b->inode);
 }
 
 
@@ -508,15 +597,16 @@ void rm_preprocess(RmSession *session) {
     guint64 other_lint = 0;
 
     RmSettings *settings = session->settings;
+    RmFileTables *tables = session->tables;
 
-    rm_file_tables_preprocess(session);
-
-    if(settings->namecluster) {
-        other_lint += find_double_bases(session);
-        rm_error("\n");
-    }
+    /* process hardlink groups, and move other_lint into tables- */
+    g_hash_table_foreach_remove(tables->node_table,
+                                (GHRFunc)rm_handle_hardlinks,
+                                session);
+    rm_error("process hardlink groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     other_lint += handle_other_lint(session);
+    rm_error("Other lint handling finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
 
 
@@ -527,31 +617,43 @@ void rm_preprocess(RmSession *session) {
         die(session, EXIT_SUCCESS);
     }
 
-    //info("\nNow sorting list based on filesize... ");
-    //gsize rem_counter = rm_file_list_sort_groups(list, session);
-    //info("done.\n");
+    /* move remaining files to size_groups */
+    g_hash_table_foreach_remove(tables->node_table,
+                                (GHRFunc)rm_populate_size_groups,
+                                session);
+    rm_error("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
-    //info("Now attempting to find duplicates. This may take a while...\n");
-    //info("Now removing files with unique sizes from list...");
-    //info(""YEL"%ld item(s) less"NCO" in list.", rem_counter);
-    //info(" done. \nNow doing fingerprints and full checksums.\n");
+    /* delete irrelevant size groups */
+    g_hash_table_foreach_remove(tables->size_groups,
+                                (GHRFunc)rm_is_group_non_candidate,
+                                session);
+    rm_error("delete irrelevant size groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+
+    /* move files from remaining groups into inode-sorted queue for faster fiemap */
+    tables->file_queue = g_queue_new();
+    g_hash_table_foreach_remove(tables->size_groups,
+                                (GHRFunc)rm_move_files_to_queue,
+                                session);
+    g_queue_sort(tables->file_queue, (GCompareDataFunc)rm_sort_inode, NULL);
+    rm_error("move files from remaining groups into inode-sorted queue finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+
+    /* move remaining groups into dev_queues for shredder */
+    g_queue_foreach(tables->file_queue, (GFunc)rm_preprocess_files, session );
+    g_queue_free(tables->file_queue);
+    rm_error("move remaining groups into dev_queues finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+
+    rm_error("fiemap'd %lu files containing %lu fragments (failed another %lu files)\n", session->offsets_read - session->offset_fails, session->offset_fragments, session->offset_fails);
+
+    if(settings->namecluster) {
+        other_lint += find_double_bases(session);
+        rm_error("\n");
+        rm_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    }
+
     rm_error("\n%s Duplicate(s):\n", YEL"#"NCO);
 
-    /* Groups are splitted, now give it to the scheduler
-     * The scheduler will do another filterstep, build checkusm
-     * and compare 'em. The result is printed afterwards */
-
-//    guint path_doubles = 0;
-//    GHashTableIter iter;
-//    gpointer key, value;
-//    g_hash_table_iter_init(&iter, session->tables->dev_table);
-//    while (g_hash_table_iter_next(&iter, &key, &value)) {
-//        path_doubles += 0;//rm_file_list_remove_double_paths(group, session);
-//        rm_error("Path doubles removed %u\n", path_doubles);
-//    }
-
-
     rm_shred_run(session, session->tables->dev_table, session->tables->size_table);
+    rm_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     if(session->dup_counter == 0) {
         rm_error("\r                    ");
@@ -572,6 +674,7 @@ void rm_preprocess(RmSession *session) {
 
     warning("\n");
     if(!session->aborted) {
+        rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
         warning(
             RED"=> "NCO"Totally "GRE" %s "NCO" [%lu Bytes] can be removed.\n",
             lintbuf, session->total_lint_size
@@ -588,6 +691,7 @@ void rm_preprocess(RmSession *session) {
             session->total_files, session->dup_counter
         );
         if(!session->aborted) {
+            rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
             info(
                 RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%lu"NCO" Bytes] can be removed without dataloss.\n",
                 lintbuf, session->total_lint_size

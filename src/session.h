@@ -86,8 +86,10 @@ typedef struct RmFileTables {
     struct RmMountTable *mounts;
     GHashTable *dev_table;
     GHashTable *size_table;
+    GHashTable *size_groups;
     GHashTable *node_table;
     GHashTable *name_table;
+    GQueue *file_queue;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
     GRecMutex lock;
 } RmFileTables;
@@ -106,6 +108,11 @@ typedef struct RmSession {
     FILE *log_out;
 
     volatile bool aborted;
+
+    GTimer *timer;
+    glong offset_fragments;
+    glong offsets_read;
+    glong offset_fails;
 } RmSession;
 
 void rm_set_default_settings(RmSettings *settings);

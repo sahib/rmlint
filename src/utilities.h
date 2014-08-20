@@ -29,6 +29,8 @@
 #include <glib.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+#include <linux/fiemap.h>
+
 
 /////////////////////////////////////
 //   UID/GID VALIDITY CHECKING     //

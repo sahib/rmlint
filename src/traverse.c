@@ -112,13 +112,17 @@ typedef struct RmTraverseSession {
 int fts_flags_from_settings(RmSettings *settings) {
     int self = 0;
     if (!settings->followlinks) {
+        /* don't follow symlinks except those passed in command line */
         self |= FTS_COMFOLLOW | FTS_PHYSICAL;
     } else {
         self |= FTS_LOGICAL;
-    }
-    /* don't follow symlinks except those passed in command line */
+    } //TODO: this probably leads to false positives for empty dirs - safer to handle it in traverse_path()
+
+
+
     if (settings->samepart) {
-        //self |= FTS_XDEV; NOTE: easier to handle this during the traverse
+        //self |= FTS_XDEV; NOTE: this was causing mountpoints to be flagged as empty dirs; moved this to manual check during traverse_path().
+        //TODO: remove
     }
 
     self |= FTS_NOCHDIR;  /*TODO: we can probably have 1 running with CHDIR optimisations -

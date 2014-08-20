@@ -65,12 +65,16 @@ void rm_set_default_settings(RmSettings *settings) {
 
 void rm_session_init(RmSession *session, RmSettings *settings) {
     memset(session, 0, sizeof(RmSession));
+    session->timer = g_timer_new();
 
     session->settings = settings;
     init_filehandler(session);
 
     session->mounts = rm_mounts_table_new();
     session->tables = rm_file_tables_new(session);
+    session->offsets_read = 0;
+    session->offset_fragments = 0;
+    session->offset_fails = 0;
 }
 
 void rm_session_clear(RmSession *session) {
@@ -91,7 +95,7 @@ void rm_session_clear(RmSession *session) {
     if(session->log_out) {
         fclose(session->log_out);
     }
-
+    g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
 
     /* Close scriptfile */

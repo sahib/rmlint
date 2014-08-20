@@ -870,7 +870,7 @@ static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_ta
                 g_hash_table_lookup(
                     size_table, GUINT_TO_POINTER(file->file_size)) - 1
             );
-            //rm_file_destroy(file);
+            rm_file_destroy(file);
         }
         g_queue_clear(&to_delete);
     }

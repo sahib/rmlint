@@ -822,8 +822,6 @@ char rm_echo_settings(RmSettings *settings) {
 
 int rm_main(RmSession *session) {
     /* Used only for infomessage */
-    struct timeval start, end;
-    float secs_used;
 
     session->total_files = 0;
 
@@ -846,13 +844,9 @@ int rm_main(RmSession *session) {
         warning("      Take care of what you're doing!\n\n");
     }
 
-
-    gettimeofday(&start, NULL);
     session->total_files = rm_search_tree(session);
-    gettimeofday(&end, NULL);
-    secs_used = (float)(end.tv_sec - start.tv_sec) + (float)(end.tv_usec - start.tv_usec) / 1000000.0;
 
-    warning("List build time %.6f with %d files\n", secs_used, (int)session->total_files);
+    warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
 
     if(session->total_files < 2) {
         warning("No files in cache to search through => No duplicates.\n");
