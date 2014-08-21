@@ -415,7 +415,7 @@ static bool rm_is_group_non_candidate( gpointer key, RmGroup *group, RmSession *
 
 static bool rm_is_group_candidate(RmGroup *group, RmSession *session) {
     g_assert(session);
-    return (group->num_non_pref + group->num_non_pref >= 2); //TODO
+    return (group->num_non_pref + group->num_pref >= 2 ); //TODO: ppath tests
 }
 
 static void rm_group_add_file(RmGroup *group, RmFile *file, RmSession *session) {
