@@ -676,12 +676,11 @@ static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
     }
 
     if(0
-            || (g_queue_get_length(results) == 0)
+            || (g_queue_get_length(results) <= 1)
             || (settings->keep_all_originals && num_no_orig == 0)
             || (settings->must_match_original && num_is_orig == 0)) {
         for(GList *iter = results->head; iter; iter = iter->next) {
             rm_shred_set_file_state(tag, iter->data, RM_FILE_STATE_IGNORE);
-
         }
         g_queue_free(results);
         return;
