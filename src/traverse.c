@@ -108,29 +108,6 @@ typedef struct RmTraverseSession {
 
 
 
-/* Return appropriate fts search flags based on settings. */
-int fts_flags_from_settings(RmSettings *settings) {
-    int self = 0;
-    if (!settings->followlinks) {
-        /* don't follow symlinks except those passed in command line */
-        self |= FTS_COMFOLLOW | FTS_PHYSICAL;
-    } else {
-        self |= FTS_LOGICAL;
-    } //TODO: this probably leads to false positives for empty dirs - safer to handle it in traverse_path()
-
-
-
-    if (settings->samepart) {
-        //self |= FTS_XDEV; NOTE: this was causing mountpoints to be flagged as empty dirs; moved this to manual check during traverse_path().
-        //TODO: remove
-    }
-
-    self |= FTS_NOCHDIR;  /*TODO: we can probably have 1 running with CHDIR optimisations -
-                            but need threadpool threads to cooperate for this to work*/
-    return self;
-}
-
-
 
 static int process_file(RmTraverseSession *traverse_session, struct stat *statp, char *path, bool is_ppath, unsigned long pnum, RmLintType file_type) {
     RmSession *session = traverse_session->rm_session;
@@ -275,7 +252,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                         info("Not descending into %s because it is a different filesystem\n", p->fts_path);
                     } else {
                         /* recurse dir; assume empty until proven otherwise */
-                        //info("descending into %s (parent %s)\n",p->fts_path,path);
+                        info("descending into %s (parent %s)\n", p->fts_path, path);
                         is_emptydir[ (p->fts_level + 1) ] = 'E';
                         have_open_emptydirs = true;
                     }
@@ -320,12 +297,21 @@ void traverse_path(gpointer data, gpointer userdata) {
                     break;
                 case FTS_SL:        /* symbolic link */
                     clear_emptydir_flags = true; /*current dir not empty*/
+                    if (!settings->followlinks) {
+                        if (p->fts_level != 0) {
+                            info("Not following symlink %s because of settings\n", p->fts_path);
+                        }
+                    } else {
+                        info("Following symlink %s\n", p->fts_path);
+                        fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
+                    }
                     break;
                 case FTS_NSOK:      /* no stat(2) requested */
                 case FTS_F:         /* regular file */
                 case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                     clear_emptydir_flags = true; /*current dir not empty*/
                     numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
+                    info("..%s:%d\n", p->fts_path, p->fts_info);
                     break;
                 default:
                     /* unknown case; assume current dir not empty but otherwise do nothing */
@@ -371,14 +357,14 @@ void traverse_pathlist(gpointer data, gpointer userdata) {
 
 /* initialise RmTraverseSession */
 RmTraverseSession *traverse_session_init(RmSession *session) {
-    RmSettings *settings = session->settings;
     RmTraverseSession *self = g_new(RmTraverseSession, 1);
     self->rm_session = session;
     self->numfiles = 0;
     self->ignored_folders = 0;
     self->ignored_files = 0;
 
-    self->fts_flags = fts_flags_from_settings(settings);
+    self->fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
+
     self->userlist = rm_userlist_new();
 
     /* create empty table of disk pathqueues */
