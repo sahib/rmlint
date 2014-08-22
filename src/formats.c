@@ -1,7 +1,32 @@
+/*
+ *  This file is part of rmlint.
+ *
+ *  rmlint is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  rmlint is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors:
+ *
+ *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+ *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+ *
+ * Hosted on http://github.com/sahib/rmlint
+ *
+ */
+
 #include <stdlib.h>
 #include <string.h>
 
-#include "outputs.h"
+#include "formats.h"
 
 const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
     static const char *table[] = {
@@ -21,11 +46,15 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     self->name_to_handler = g_hash_table_new(g_str_hash, g_str_equal);
     self->handler_to_file = g_hash_table_new(NULL, NULL);
     self->session = session;
+
+    extern RmFmtHandler * PROGRESS_HANDLER;
+    rm_fmt_register(self, PROGRESS_HANDLER);
+
     return self;
 }
 
-void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler, const char *name) {
-    g_hash_table_insert(self->name_to_handler, (char *) name, handler);
+void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
+    g_hash_table_insert(self->name_to_handler, (char *) handler->name, handler);
 }
 
 #define RM_FMT_FOR_EACH_HANDLER(self)                                             \
@@ -101,85 +130,9 @@ void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, guint64 count,
 
 #ifdef _RM_COMPILE_MAIN_OUTPUTS
 
-typedef struct RmFmtHandlerProgress {
-    /* must be first */
-    RmFmtHandler parent;
-
-    /* user data */
-    char percent;
-    RmFmtProgressState last_state;
-    guint64 n, N;
-} RmFmtHandlerProgress;
-
-static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
-    fprintf(out, " Hi, Im a progressbar!\r");
-    fflush(out);
-}
-
-static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out, G_GNUC_UNUSED RmFile *file) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
-    if(self->percent > 100) {
-        self->percent = 100;
-    }
-
-    fprintf(out, " [");
-
-    for(int i = 0; i < self->percent; ++i) {
-        if(i == self->percent - 1) {
-            fprintf(out, "->");
-        } else {
-            fprintf(out, "-");
-        }
-    }
-
-    int left = 100 - self->percent;
-    for(int i = 0; i < left; ++i)  {
-        fprintf(out, " ");
-    }
-
-    fprintf(out, "] %-30s (%lu/%lu)    \r", rm_fmt_progress_to_string(self->last_state), self->n , self->N);
-    fflush(out);
-
-    self->percent++;
-}
-
-static void rm_fmt_prog(
-    G_GNUC_UNUSED RmSession *session,
-    RmFmtHandler *parent,
-    G_GNUC_UNUSED FILE *out,
-    RmFmtProgressState state,
-    guint64 n, guint64 N
-) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
-    self->n = n;
-    self->N = N;
-    self->last_state = state;
-}
-
-static void rm_fmt_foot(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
-    fprintf(out, "End of demonstration.%150s\n", " ");
-    fflush(out);
-}
-
-static RmFmtHandlerProgress PROGRESS_HANDLER = {
-    /* Initialize parent */
-    .parent = {
-        .name = "progressbar",
-        .head = rm_fmt_head,
-        .elem = rm_fmt_elem,
-        .prog = rm_fmt_prog,
-        .foot = rm_fmt_foot
-    },
-
-    /* Initialize own stuff */
-    .percent = 0,
-    .last_state = RM_PROGRESS_STATE_INIT
-};
-
 int main(void) {
     RmSession session;
     RmFmtTable *table = rm_fmt_open(&session);
-    rm_fmt_register(table, (RmFmtHandler *) &PROGRESS_HANDLER, "progressbar");
     if(!rm_fmt_add(table, "progressbar", "stdout")) {
         g_printerr("You've screwed up.\n");
         return EXIT_FAILURE;
@@ -187,7 +140,7 @@ int main(void) {
 
     g_usleep(1000 * 1000);
 
-    for(int i = 0 ; i <= 100; ++i) {
+    for(int i = 0 ; i <= 50; ++i) {
         if(i <= 20) {
             rm_fmt_set_state(table, RM_PROGRESS_STATE_TRAVERSE, i, 0);
         } else if(i <= 25) {

@@ -258,7 +258,10 @@ manpage = env.Command(
 )
 
 env.AlwaysBuild(manpage)
-program = env.Program('rmlint', Glob('src/*.c') + Glob('src/checksums/*.c'))
+program = env.Program(
+    'rmlint',
+    Glob('src/*.c') + Glob('src/checksums/*.c') + Glob('src/formats/*.c')
+)
 
 
 if 'install' in COMMAND_LINE_TARGETS:
