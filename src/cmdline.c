@@ -248,6 +248,7 @@ static bool parse_output_pair(RmSession * session, const char * pair) {
 
     char * full_path = separator + 1;
     char format_name[100];
+    memset(format_name, 0, sizeof(format_name));
     strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
 
     if(!rm_fmt_add(session->formats, format_name, full_path)) {

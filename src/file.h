@@ -133,6 +133,7 @@ typedef struct RmFile {
 
     struct RmFile *hardlinked_original;
 
+    // TODO: remove, mutexes take too much space...
     GMutex file_lock;
 } RmFile;
 

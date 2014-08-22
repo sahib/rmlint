@@ -50,6 +50,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler * PROGRESS_HANDLER;
     rm_fmt_register(self, PROGRESS_HANDLER);
 
+    extern RmFmtHandler * CSV_HANDLER;
+    rm_fmt_register(self, CSV_HANDLER);
+
     return self;
 }
 
@@ -69,7 +72,6 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
 #define RM_FMT_CALLBACK(func, ...)                             \
     if(func) {                                                 \
         g_mutex_lock(&handler->print_mtx); {                   \
-                                                               \
             func(self->session, handler, file, ##__VA_ARGS__); \
         }                                                      \
         g_mutex_unlock(&handler->print_mtx);                   \

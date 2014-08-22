@@ -265,7 +265,18 @@ static RmFileSnapshot *rm_shred_create_snapshot(RmFile *file) {
 static void rm_shred_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state) {
     g_mutex_lock(&tag->file_state_mtx);
     {
+        static int update_cnt = 0;
+
         file->state = state;
+
+        if(update_cnt++ % 50) {
+            rm_fmt_set_state(
+                tag->session->formats,
+                RM_PROGRESS_STATE_SHREDDER,
+                0, // TODO
+                tag->session->total_files
+            );
+        }
     }
     g_mutex_unlock(&tag->file_state_mtx);
 }
@@ -772,12 +783,6 @@ static void rm_shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
              * */
             RmFileSnapshot *lonely = dupe_list->head->data;
             rm_shred_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
-            rm_fmt_set_state(
-                tag->session->formats,
-                RM_PROGRESS_STATE_SHREDDER,
-                0, // TODO
-                tag->session->total_files
-            );
         } else {
             /* For the others we check if they were fully read.
              * In this case we know that those are duplicates.
@@ -793,12 +798,6 @@ static void rm_shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
             }
 
             rm_shred_thread_pool_push(tag->result_pool, results);
-            rm_fmt_set_state(
-                tag->session->formats,
-                RM_PROGRESS_STATE_SHREDDER,
-                0, // TODO
-                tag->session->total_files
-            );
         }
     }
 

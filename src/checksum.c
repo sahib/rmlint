@@ -293,7 +293,7 @@ int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
 }
 
 int rm_digest_hexstring(RmDigest *digest, char *buffer) {
-    const char *hex = "0123456789abcdef";
+    static const char *hex = "0123456789abcdef";
 
     guint8 input[_RM_HASH_LEN];
     memset(input, 0, sizeof(input));
@@ -302,9 +302,15 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     for(gsize i = 0; i < digest_len; ++i) {
         buffer[0] = hex[input[i] / 16];
         buffer[1] = hex[input[i] % 16];
+
+        if(i == digest_len -1) {
+            buffer[2] = '\0';
+        }
+
         buffer += 2;
     }
-    return digest_len * 2;
+
+    return digest_len * 2 + 1;
 }
 
 
