@@ -265,7 +265,7 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
 }
 
 //////////////////////////////
-//    INTERAL STRUCTURES    //
+//    INTERNAL STRUCTURES    //
 //////////////////////////////
 
 /* The main extra data for the scheduler */
@@ -285,12 +285,6 @@ typedef struct RmDevlistTag {
 
     /* Pool for the hashing workers */
     GThreadPool *hash_pool;
-
-    /* How many bytes rm_shred_read_factory is supposed to read */
-    gint64 read_size;
-
-    /* protect read_size */
-    GMutex read_size_mtx;
 
     /* size of one page, cached, so
      * sysconf() does not need to be called always.
@@ -617,27 +611,15 @@ static int rm_shred_get_read_threads(RmMainTag *tag, bool nonrotational, int max
     }
 }
 
-static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
+static void rm_shred_devlist_factory(ShredDevice *device, RmMainTag *main) {
     RmDevlistTag tag;
 
     tag.main = main;
     tag.page_size = SHRED_PAGE_SIZE;
-    tag.read_size = tag.page_size * SHRED_INITIAL_FACTOR;
-    tag.finished_queue = g_async_queue_new();
 
-    g_mutex_init(&tag.read_size_mtx);
-
-    /* Get the device of the files in this list */
-    g_assert(device_queue);
-    g_assert(device_queue->head);
-    g_assert(device_queue->head->data);
-    bool nonrotational = rm_mounts_is_nonrotational(
-                             main->session->mounts,
-                             ((RmFile *)device_queue->head->data)->disk
-                         );
     rm_error(BLU"Started rm_shred_devlist_factory for disk %u:%u\n"NCO,
-             major(((RmFile *)device_queue->head->data)->disk),
-             minor(((RmFile *)device_queue->head->data)->disk) );
+             major(device->disk),
+             minor(device->disk) );
 
     int max_threads = rm_shred_get_read_threads(
                           main, nonrotational, main->session->settings->threads
