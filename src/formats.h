@@ -72,6 +72,11 @@ typedef struct RmFmtHandler {
     RmFmtElemCallback elem;
     RmFmtProgCallback prog;
     RmFmtFootCallback foot;
+
+    /* mutex to protect against parallel calls.
+     * Handlers do not need to care about it.
+     */
+    GMutex print_mtx;
 } RmFmtHandler;
 
 ////////////////////

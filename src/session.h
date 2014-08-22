@@ -94,16 +94,20 @@ typedef struct RmFileTables {
     GRecMutex lock;
 } RmFileTables;
 
+struct RmFmtTable;
+
 typedef struct RmSession {
     RmSettings *settings;
     struct RmFileTables *tables;
     struct RmMountTable *mounts;
+    struct RmFmtTable *formats;
 
     guint64 total_files;
     guint64 total_lint_size;
     guint64 dup_counter;
     guint64 dup_group_counter;
 
+    // TODO: remove.
     FILE *script_out;
     FILE *log_out;
 

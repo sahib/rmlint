@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include "session.h"
+#include "formats.h"
 #include "traverse.h"
 #include "preprocess.h"
 #include "postprocess.h"
@@ -72,6 +73,8 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
 
     session->mounts = rm_mounts_table_new();
     session->tables = rm_file_tables_new(session);
+    session->formats = rm_fmt_open(session);
+
     session->offsets_read = 0;
     session->offset_fragments = 0;
     session->offset_fails = 0;
@@ -97,6 +100,7 @@ void rm_session_clear(RmSession *session) {
     }
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
+    rm_fmt_close(session->formats);
 
     /* Close scriptfile */
     if(session->script_out) {

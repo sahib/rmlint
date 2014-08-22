@@ -12,6 +12,7 @@
 #include "postprocess.h"
 #include "preprocess.h"
 #include "utilities.h"
+#include "formats.h"
 
 //TODO: for hardlinked originals, only hash one of each set
 
@@ -771,6 +772,12 @@ static void rm_shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
              * */
             RmFileSnapshot *lonely = dupe_list->head->data;
             rm_shred_set_file_state(tag, lonely->ref_file, RM_FILE_STATE_IGNORE);
+            rm_fmt_set_state(
+                tag->session->formats,
+                RM_PROGRESS_STATE_SHREDDER,
+                0, // TODO
+                tag->session->total_files
+            );
         } else {
             /* For the others we check if they were fully read.
              * In this case we know that those are duplicates.
@@ -786,6 +793,12 @@ static void rm_shred_findmatches(RmMainTag *tag, GQueue *same_size_list) {
             }
 
             rm_shred_thread_pool_push(tag->result_pool, results);
+            rm_fmt_set_state(
+                tag->session->formats,
+                RM_PROGRESS_STATE_SHREDDER,
+                0, // TODO
+                tag->session->total_files
+            );
         }
     }
 

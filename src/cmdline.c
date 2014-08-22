@@ -48,6 +48,7 @@
 #include "shredder.h"
 #include "postprocess.h"
 #include "utilities.h"
+#include "formats.h"
 
 /* Version string */
 static void show_version(void) {
@@ -238,6 +239,25 @@ static int read_paths_from_stdin(RmSession *session, int index) {
     return paths_added;
 }
 
+static bool parse_output_pair(RmSession * session, const char * pair) {
+    char * separator = strchr(pair, ':');
+    if(separator == NULL) {
+        g_printerr("No format specified in '%s'\n", pair);
+        return false;
+    }
+
+    char * full_path = separator + 1;
+    char format_name[100];
+    strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
+
+    if(!rm_fmt_add(session->formats, format_name, full_path)) {
+        g_printerr("Adding -o %s as output failed.\n", pair);
+        return false;
+    }
+
+    return true;
+}
+
 /* parse comma-separated strong of lint types and set settings accordingly */
 typedef struct RmLintTypeOption {
     const char **names;
@@ -369,6 +389,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
 
     int choice = -1;
     int verbosity_counter = 2;
+    int output_flag_cnt = -1;
     int option_index = 0;
     int path_index = 0;
 
@@ -383,8 +404,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             {"size"                ,  required_argument ,  0 ,  's'},
             {"sortcriteria"        ,  required_argument ,  0 ,  'S'},
             {"algorithm"           ,  required_argument ,  0 ,  'a'},
-            {"output-script"       ,  optional_argument ,  0 ,  'o'},
-            {"output-log"          ,  optional_argument ,  0 ,  'O'},
+            {"output"              ,  required_argument ,  0 ,  'o'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
             {"quiet"               ,  no_argument       ,  0 ,  'V'},
             {"with-color"          ,  no_argument       ,  0 ,  'w'},
@@ -415,7 +435,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, argv,
-                     "T:t:m:d:c:C:s:o::O::S:a:vVwWrRfFXxpPkKmMiIlLqQhH",
+                     "T:t:m:d:c:C:s:o:S:a:vVwWrRfFXxpPkKmMiIlLqQhH",
                      long_options, &option_index
                  );
 
@@ -473,10 +493,10 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             sets->find_hardlinked_dupes = 0;
             break;
         case 'o':
-            sets->output_script = (optarg && *optarg) ? optarg : NULL;
-            break;
-        case 'O':
-            sets->output_log = (optarg && *optarg) ? optarg : NULL;
+            if(output_flag_cnt < 0) {
+                output_flag_cnt = 0;
+            }
+            output_flag_cnt += parse_output_pair(session, optarg);
             break;
         case 'c':
             sets->cmd_path = optarg;
@@ -564,6 +584,18 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         default:
             return 0;
         }
+    }
+
+    if(output_flag_cnt == -1) {
+        /* Set default outputs */
+
+        // TODO: sane defaults
+        rm_fmt_add(session->formats, "progressbar", "stdout");
+        rm_fmt_add(session->formats, "progressbar", "rmlint.log");
+    } else if(output_flag_cnt == 0) {
+        /* There was no valid output flag given, but the user tried */
+        g_printerr("No valid -o flag encountered.\n");
+        exit(EXIT_FAILURE);
     }
 
     sets->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
@@ -838,12 +870,7 @@ int rm_main(RmSession *session) {
         }
     }
 
-    /* Warn if started with sudo. Hack: Just try to get read access to /bin/ls */
-    if(!access("/bin/ls", R_OK | W_OK)) {
-        warning(YEL"WARN: "NCO"You're running rmlint with privileged rights - \n");
-        warning("      Take care of what you're doing!\n\n");
-    }
-
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
     session->total_files = rm_search_tree(session);
 
     warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
@@ -853,21 +880,18 @@ int rm_main(RmSession *session) {
         die(session, EXIT_SUCCESS);
     }
 
+
     info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
     if(session->settings->threads > session->total_files) {
         session->settings->threads = session->total_files + 1;
     }
 
-    /* Till this point the list is unsorted
-     * The filter alorithms requires the list to be size-sorted,
-     * so it can easily filter unique sizes, and build "groups"
-     * */
-    info("Now finding easy lint...\n");
-
     // TODO: Call all toplevel functions here.
     /* Apply the prefilter and outsort unique sizes */
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
     rm_preprocess(session);
 
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
     rm_session_clear(session);
     return EXIT_SUCCESS;
 }

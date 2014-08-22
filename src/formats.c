@@ -55,6 +55,7 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
 
 void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_hash_table_insert(self->name_to_handler, (char *) handler->name, handler);
+    g_mutex_init(&handler->print_mtx);
 }
 
 #define RM_FMT_FOR_EACH_HANDLER(self)                                             \
@@ -65,10 +66,14 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_hash_table_iter_init(&iter, self->handler_to_file);                         \
     while(g_hash_table_iter_next(&iter, (gpointer *)&handler, (gpointer *)&file)) \
  
-#define RM_FMT_CALLBACK(func, ...)                         \
-    if(func) {                                             \
-        func(self->session, handler, file, ##__VA_ARGS__); \
-    }                                                      \
+#define RM_FMT_CALLBACK(func, ...)                             \
+    if(func) {                                                 \
+        g_mutex_lock(&handler->print_mtx); {                   \
+                                                               \
+            func(self->session, handler, file, ##__VA_ARGS__); \
+        }                                                      \
+        g_mutex_unlock(&handler->print_mtx);                   \
+    }                                                          \
  
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler = g_hash_table_lookup(self->name_to_handler, handler_name);
@@ -109,6 +114,7 @@ void rm_fmt_close(RmFmtTable *self) {
     RM_FMT_FOR_EACH_HANDLER(self) {
         RM_FMT_CALLBACK(handler->foot);
         fclose(file);
+        g_mutex_clear(&handler->print_mtx);
     }
 
     g_hash_table_unref(self->name_to_handler);
