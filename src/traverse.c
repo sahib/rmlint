@@ -23,6 +23,17 @@
  *
  */
 
+// TODO: In general:
+// - This needs to be cleaned up.
+// - Where is the advantage of all this? 
+//   Probably launching a thread when encountering a mount point?
+//   Is it really worth the extra-hassle? (i.e. small benchmark vs. find)
+// - Why duplicating the work of FTS?
+// - stat() seems to be called (also implicitly) far more often than needed.
+// - Functions are partly are far too large. Especially rm_search_tree 
+//
+// I feel a lot of this code can be removed without speed regression...
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -119,6 +130,7 @@ int fts_flags_from_settings(RmSettings *settings) {
     } //TODO: this probably leads to false positives for empty dirs - safer to handle it in traverse_path()
 
 
+    // TODO: wat.
 
     if (settings->samepart) {
         //self |= FTS_XDEV; NOTE: this was causing mountpoints to be flagged as empty dirs; moved this to manual check during traverse_path().
@@ -190,6 +202,7 @@ void traverse_path(gpointer data, gpointer userdata) {
         return;
     }
 
+    // TODO: You call stat there all the time!
     if(g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
         /* Normal file - process directly without FTS overhead*/
         numfiles += process_file(traverse_session,
@@ -387,10 +400,9 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
                               NULL,
                               (GDestroyNotify)g_list_free);
 
-    self->paths = g_hash_table_new_full(g_str_hash,
-                                        g_str_equal,
-                                        NULL,
-                                        NULL );
+    self->paths = g_hash_table_new(g_str_hash, g_str_equal);
+
+    // TODO: simply store Gmutex in self without a pointer
     self->mutex = g_new0(GMutex, 1);
     g_mutex_init(self->mutex);
 
@@ -444,12 +456,14 @@ void add_path_to_traverse_queue_table (RmTraverseSession *traverse_session, RmTr
     GList *disk_pathlist = g_hash_table_lookup(traverse_session->disks_to_traverse, GINT_TO_POINTER(path_disk));
     if (!disk_pathlist) {
         /* insert new list into hash table */
+        // TODO: list_append needs linear time, use GQueue or g_list_prepend
         disk_pathlist = g_list_append(disk_pathlist, traverse_path_buffer);
         g_hash_table_insert (traverse_session->disks_to_traverse,
                              GINT_TO_POINTER(path_disk),
                              disk_pathlist);
     } else {
         /* add path to list */
+        // TODO: list_append needs linear time, use GQueue or g_list_prepend
         disk_pathlist = g_list_append(disk_pathlist, traverse_path_buffer);
     }
 
