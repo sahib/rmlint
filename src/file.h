@@ -67,6 +67,9 @@ typedef enum RmLintType {
     RM_LINT_TYPE_DUPE_CANDIDATE
 } RmLintType;
 
+
+typedef ShredGroup ShredGroup;
+
 /* TODO: Reduce size of RmFile */
 typedef struct RmFile {
     /* Absolute path of the file
@@ -77,14 +80,11 @@ typedef struct RmFile {
      * */
     time_t mtime;
 
-    /* The inode, device and disk of this file.
-     * Used to filter double hardlinks.
-     *
-     * TODO: both needed? probably yes...
+    /* The inode and device of this file.
+     * Used to filter double paths and hardlinks.
      */
     ino_t inode;
     dev_t dev;
-    dev_t disk;
 
     /* True if this file is in one of the preferred paths,
      * i.e. paths prefixed with // on the commandline.
@@ -93,6 +93,9 @@ typedef struct RmFile {
 
     /* The index of the path this file belongs to.
      * TODO: just use a pointer?
+     * alternatively, 64 bits is overkill unless we expect find / -type f | rmlint _ is expected to give
+     * more than 4 billion files (and path_index is probably meaningless in terms of ranking of originals
+     *  in this case anyway). So could use say guint8 and truncate paths after the 255th to path_index=255
      */
     guint64 path_index;
 
@@ -103,6 +106,7 @@ typedef struct RmFile {
     /* Physical offset from the start of the disk.
      * This gets updated on a change of seek_offset,
      * so it reflects always the current readposition.
+     * TODO: do we need to store this in the RmFile?  We can recalculate when needed from disk_offsets and hash_offset.
      */
     guint64 phys_offset;
     /* How many bytes were already hashed
@@ -131,8 +135,14 @@ typedef struct RmFile {
      */
     RmLintType lint_type;
 
+    /* If this file is a hardlink, link to (the highest ranked) hardlinked RmFile.
+     * This is used to avoid hashing every file within a hardlinked set */
     struct RmFile *hardlinked_original;
 
+    /* Link to the ShredGroup that the file currently belogs to */
+    ShredGroup *parent;
+
+    /* TODO: can we find a way around having a lock on every single file? */
     GMutex file_lock;
 } RmFile;
 
@@ -145,7 +155,7 @@ RmFile *rm_file_new(
 );
 
 /**
- * @brief Deallocate the memory allocated by rm_file_destroy
+ * @brief Deallocate the memory allocated by rm_file_new
  */
 void rm_file_destroy(RmFile *file);
 

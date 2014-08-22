@@ -19,25 +19,39 @@
  *
  * The threading looks somewhat like this for two devices:
  *
- * Device #1                                              Device #2
+  * Device #1                                              Device #2
  *
  *                           +----------+
  *                           | Finisher |
  *                           |  Thread  |
+ *                           |  incl    |
+ *                           | paranoid |
  *                           +----------+
  *                                 ^
- * +---------------------+         |         +---------------------+
- * | +------+   +------+ |    +---------+    | +------+   +------+ |
- * | | Read |-->| Hash |----->| Joiner  |<-----| Hash |<--| Read | |
- * | +------+   +------+ |    |         |    | +------+   +------+ |
- * |     ^         ^     |    |  Main   |    |    ^          ^     |
- * |     | n       | 1   |    |---------|    |  1 |        n |     |
- * |     +-------------+ |    | Thread  |    | +-------------+     |
- * |     | Devlist Mgr |<-----|         |----->| Devlist Mgr |     |
- * |     +-------------+ |    |  Init   |    | +-------------+     |
- * +---------------------+    +---------+    +---------------------+
- *                                 ^
  *                                 |
+ *                         +--------------+
+ *                         | Matched      |
+ *                         | fully-hashed |
+ *                         | dupe groups  |
+ *                         +--------------+
+ *                                 ^
+ * +---------------------+         |         +---------------------+
+ * |     +-------------+ |    +---------+    | +-------------+     |
+ * |     | Devlist Mgr |<-----| Matched |----->| Devlist Mgr |     |
+ * |     +-------------+ |    | partial |    | +-------------+     |
+ * |    pop              |    | hashes  |    |              pop    |
+ * |  nearest            |    |         |    |            nearest  |
+ * |  offset             |    |         |    |            offset   |
+ * |     |               |    |---------|    |               |     |
+ * |     v               |    |         |    |               v     |
+ * | +------+   +------+ |    | Shred   |    | +------+   +------+ |
+ * | | Read |-->| Hash |----->| Groups  |<-----| Hash |<--| Read | |
+ * | |  (n) |   | (1)  |<-cont| (mutex) |cont->| (1)  |   |(n)   | |
+ * | +------+   +------+ |    +---------+      +------+   +------+ |
+ * +---------------------+         ^         +---------------------+
+ *                                 |
+ *                           Initial file list
+ *
  *
  * Every subbox left and right are the task that are performed.
  *
@@ -71,10 +85,72 @@
  * is modified accordingly. In the latter case the group is processed; i.e.
  * written to log, stdout and script.
  *
- * Below some performance controls are listed that may impact performance.
- * Benchmarks are left to determine reasonable defaults. TODO therefore.  The
- * controls are sorted by subjectve importanceness.
+ *
+ *+-------------------------------------------------------------------------+
+ *|     Initial list after filtering and preprocessing                      |
+ *+-------------------------------------------------------------------------+
+ *          | same size                   | same size           | same size
+ *   +------------------+           +------------------+    +----------------+
+ *   |   ShredGroup 1   |           |   ShredGroup 2   |    |   ShredGroup 3 |
+ *   |F1,F2,F3,F4,F5,F6 |           |F7,F8,F9,F10,F11  |    |   F12,F13      |
+ *   +------------------+           +------------------+    +----------------+
+ *       |            |                 |            |
+ *  +------------+ +----------+     +------------+  +---------+  +----+ +----+
+ *  | Child 1.1  | |Child 1.2 |     | Child 2.1  |  |Child 2.2|  |3.1 | |3.2 |
+ *  | F1,F2,F3   | |F4,F5,F6  |     |F7,F8,F9,F10|  |  F11    |  |F12 | |F13 |
+ *  |(hash=hash1 | |(hash=h2) |     |(hash=h3)   |  |(hash=h4)|  |(h5)| |(h6)|
+ *  +------------+ +----------+     +------------+  +---------+  +----+ +----+
+ *       |            |                |        |              \       \
+ *   +----------+ +-----------+  +-----------+ +-----------+    free!   free!
+ *   |Child1.1.1| |Child 1.2.1|  |Child 2.2.1| |Child 2.2.2|
+ *   |F1,F3,F6  | |F2,F4,F5   |  |F7,F9,F10  | |   F8      |
+ *   +----------+ +-----------+  +-----------+ +-----------+
+ *               \             \              \             \
+ *                rm!           rm!            rm!           free!
+ *
+ * The basic workflow is:
+ * 1. Pick a file from the device_queue
+ * 2. Hash the next increment
+ * 3. Check back with the child's parent to see if there is a child ShredGroup with
+ *    matching hash; if not then create a new one.
+ * 4. Add the file into the child ShredGroup and unlink it from its parent(see note
+ *    below on Unlinking from Parent)
+ * 5. Check if the child ShredGroup meets criteria for hashing; if no then loop
+ *    back to (1) for another file to hash
+ * 6. If file meets criteria and is not finished hash then loop back to 2 and
+ *    hash its next increment
+ * 7. If file meets criteria and is fully hashed then flag it as ready for post-
+ *    processing (possibly via paranoid check).  Note that post-processing can't
+ *    start until the ShredGroup's parent is dead (because new siblings may still
+ *    be coming).
+ *
+ * The above is all carried out by xxxx, which is called from the device worker thread(s).
+ *
+ *
+ * Unlinking a file from parent:
+ * Decrease child_file counter; if that is zero then check if the parent's parent is
+ * dead; if yes then kill the parent.
+ * When killing the parent, tell all its children that they are now orphans and check
+ * if it is time for them to die too.
+ * Note that we need to be careful here to avoid threadlock, eg:
+ *    Child file 1 on device 1 has finished an increment.  It takes a lonk on its new
+ *    RmGroup so that it can add itself.  It then locks its parent ShredGroup so that
+ *    it can do the unlinking.  If it turns out it is time for the parent to die, we
+ *    we need to lock each of its children so that we can make them orphans:
+ *        Q: What if another one of its other children was also trying to unlink?
+ *        A: No problem, can't happen (since parent can't be ready to die if it has
+ *           any active children left)
+ *        Q: What about the mutex loop from this child which is doing the unlinking?
+ *        A: No problem, either unlock the child's mutex before calling parent unlink,
+ *           or handle the calling child differently from the other children
  */
+
+/*
+*
+* Below some performance controls are listed that may impact performance.
+* Benchmarks are left to determine reasonable defaults. TODO therefore.  The
+* controls are sorted by subjectve importanceness.
+*/
 
 /* How much buffers to keep allocated at max. */
 #define SHRED_MAX_PAGES       (64)
@@ -842,45 +918,241 @@ static void rm_shred_free_snapshots(GQueue *snapshots) {
     g_queue_free(snapshots);
 }
 
-static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table) {
-    // TODO: this is slightly ugly and leaks a bit of memory.
-    GList *values = g_hash_table_get_values(dev_table);
-    for(GList *value_link = values; value_link; value_link = value_link->next) {
-        GQueue *value = value_link->data;
-        GQueue to_delete = G_QUEUE_INIT;
+//static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_table) {
+//    // TODO: this is slightly ugly and leaks a bit of memory.
+//    GList *values = g_hash_table_get_values(dev_table);
+//    for(GList *value_link = values; value_link; value_link = value_link->next) {
+//        GQueue *value = value_link->data;
+//        GQueue to_delete = G_QUEUE_INIT;
+//
+//        for(GList *file_link = value->head; file_link; file_link = file_link->next) {
+//            RmFile *file = file_link->data;
+//            guint64 count = GPOINTER_TO_UINT(g_hash_table_lookup(size_table, GUINT_TO_POINTER(file->file_size)));
+//
+//            if(count == 1) {
+//                g_queue_push_head(&to_delete, file_link);
+//            }
+//        }
+//
+//        for(GList *del_link = to_delete.head; del_link; del_link = del_link->next) {
+//            GList *actual_link = del_link->data;
+//            RmFile *file = actual_link->data;
+//            g_queue_delete_link(value, actual_link);
+//
+//            g_hash_table_insert(
+//                size_table,
+//                GUINT_TO_POINTER(file->file_size),
+//                g_hash_table_lookup(
+//                    size_table, GUINT_TO_POINTER(file->file_size)) - 1
+//            );
+//            rm_file_destroy(file);
+//        }
+//        g_queue_clear(&to_delete);
+//    }
+//
+//    g_list_free(values);
+//}
 
-        for(GList *file_link = value->head; file_link; file_link = file_link->next) {
-            RmFile *file = file_link->data;
-            guint64 count = GPOINTER_TO_UINT(g_hash_table_lookup(size_table, GUINT_TO_POINTER(file->file_size)));
+ShredGroup *shred_group_new(ShredGroup *parent) {
 
-            if(count == 1) {
-                g_queue_push_head(&to_delete, file_link);
-            }
-        }
+    ShredGroup *self = g_slice_new0(ShredGroup);
 
-        for(GList *del_link = to_delete.head; del_link; del_link = del_link->next) {
-            GList *actual_link = del_link->data;
-            RmFile *file = actual_link->data;
-            g_queue_delete_link(value, actual_link);
+    self->parent = parent;
 
-            g_hash_table_insert(
-                size_table,
-                GUINT_TO_POINTER(file->file_size),
-                g_hash_table_lookup(
-                    size_table, GUINT_TO_POINTER(file->file_size)) - 1
-            );
-            rm_file_destroy(file);
-        }
-        g_queue_clear(&to_delete);
-    }
+    self->held_files = g_queue_new();
+    self->children   = g_queue_new();
 
-    g_list_free(values);
+    g_assert(self->remaining == 0);  //TODO: remove asserts
+    g_assert(!self->has_pref);
+    g_assert(!self->has_npref);
+    g_assert(!self->needs_hashing);
+
+    g_mutex_init(&(self->lock));
+    return self;
 }
 
-void rm_shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_table) {
+void shred_group_free(ShredGroup *self) {
+    g_assert(self->parent == NULL);  // children should outlive their parents!
+
+    /** discard RmFiles which failed file duplicate criteria */
+    g_queue_free_full(self->held_files, (GDestroyNotify)shred_discard_file);
+
+    /** give our children the bad news */
+    g_queue_free_full(self->children, (GDestroyNotify)shred_group_make_orphan);
+
+    /** clean up */
+    g_mutex_clear(&self->lock);
+    g_slice_free(self);
+}
+
+gboolean shred_group_is_candidate(ShredGroup *group, RmSession *session) {
+    RmSettings *settings = session->settings;
+    return (0
+            || group->is_candidate  // already triggered
+            || (1
+                && group->remaining >= 2  // it take 2 to tango
+                && (group->has_pref || !settings->must_match_original)
+                //we have at least one file from preferred path, or we don't care
+                && (group->has_npref || !settings->keep_all_originals)
+                //we have at least one file from non-pref path, or we don't care
+               )
+           );
+}
+
+void shred_discard_file(RmFile *file) {
+    ShredDevice *device = file->device;
+    g_mutex_lock(&(device->lock));
+    device->remaining_files--;
+    device->remaining_bytes -= (file->fsize - file->offset);
+    g_mutex_unlock(&(device->lock));
+    rm_file_destroy(file);
+    //TODO: SHRED_FADVISE no longer required
+}
+
+void shred_group_make_orphan(ShredGroup *self);
+
+void shred_group_free(ShredGroup *self) {
+    g_assert(self->parent == NULL);
+    g_queue_free_full(self->queue, (GDestroyNotify)shred_discard_file);
+    g_queue_free_full(self->children, (GDestroyNotify)shred_group_make_orphan);
+    g_mutex_clear(&self->lock);
+    //g_free(self->cksum_key);
+    g_free(self);
+}
+
+void shred_group_make_orphan(ShredGroup *self) {
+    g_mutex_lock(&(self->lock));
+    self->parent = NULL;
+    if (!(self->flags & SHRED_GROUP_ACTIVE)) {
+        /* group doesn't need hashing, and not expecting any more since,
+           parent is dead, so this group is now also dead */
+        g_mutex_unlock(&(self->lock));
+        shred_group_free(self);
+    } else {
+        g_mutex_unlock(&(self->lock));
+    }
+}
+
+
+
+void shred_group_unref(ShredGroup *group) {
+    //assert (g_mutex_trylock(group->lock) == FALSE); // should already be locked by calling routine
+    g_assert(group);
+    g_mutex_lock(&(group->lock));
+    if ( (--group->remaining) == 0
+            && group->parent == NULL ) {
+        /* no reason for living any more */
+        g_mutex_unlock(&(group->lock));
+        shred_group_free(group);
+    } else {
+        g_mutex_unlock(&(group->lock));
+    }
+}
+
+void shred_device_queue_insert(RmFile *file) {
+    ShredDevice *device = file->device;
+    g_assert(device);
+    GTree *queue = device->queue;
+
+    g_mutex_lock(&device->lock);
+
+    g_tree_insert(queue,
+                  g_memdup(&file->offset, sizeof(file->offset)),
+                  g_list_prepend(g_tree_lookup(queue, (gpointer)file->offset), file)
+                 );
+
+    g_mutex_unlock(&device->lock);
+}
+
+
+void shred_add_file_to_group(ShredGroup *shred_group, RmFile *file, bool try_bounce) {
+
+    g_mutex_lock(&(shred_group->lock));
+
+    ShredGroup *parent = file->group;
+
+    shred_group->flags &= file->flags;
+
+    shred_group->remaining++;
+    g_assert(file->hash_offset <= file->fsize);
+
+    file->group = shred_group;
+
+    if ( (shred_group->flags & SHRED_GROUP_ACTIVE == 0)
+            && (shred_group->remaining > 1 /*TODO: test criteria to go active*/) ) {
+        shred_group->flags &= SHRED_GROUP_ACTIVE;
+        /* clear the queue and push all its rmfiles to the appropriate device queue */
+        g_assert(shred_group->queue);
+        if (file->hash_offset < file->fsize) {
+            g_queue_free_full(shred_group->queue, (GDestroyNotify)shred_device_queue_insert);
+            shred_group->queue = NULL; /* won't need shred_group queue any more */
+        } else {
+            shred_group->flags &= SHRED_GROUP_FINISHED;
+            //TODO: insert queue into hash_match table
+        }
+    }
+
+    if ( (shred_group->flags & SHRED_GROUP_ACTIVE == 0)
+            || (shred_group->flags & SHRED_GROUP_FINISHED != 0) ) {
+        /* add file to group queue */
+        g_assert(shred_group->queue);
+        g_queue_push_head(shred_group->queue, file);
+        file = NULL;
+        !!
+    } else if (!try_bounce) {
+        shred_device_queue_insert(file);
+        file = NULL;
+    } else {
+        /* calling routine will handle the file */
+    }
+
+    g_mutex_unlock(&(shred_group->lock));
+
+    /* decrease parent's child count*/
+    if(parent) {
+        shred_group_unref(parent);
+    }
+}
+
+
+
+
+/* After partial hashing of RmFile, add it back into the sieve for further hashing
+   if required.  If try_bounce option is set, then try to return the RmFile to the calling
+   routine so it can continue with the next hashing increment (this bypasses the normal device
+   queue and so avoids an unnecessary file seek operation )   */
+void shred_sift(RmFile *file, bool *try_bounce) {
+
+    /* take snapshot of current file status (can be partially hashed or fully hashed */
+    RmCksumKey cksum_key;
+    rm_digest_steal_buffer(&file->digest, &cksum_key.checksum, sizeof(cksum_key.checksum));
+
+    //RmFileSnapshot *snap = shred_create_snapshot(file);
+    ShredGroup *child_group;
+    ShredGroup *parent_group = file->group;
+
+    g_mutex_lock(&(parent_group->lock));
+
+    GList *child = g_queue_find_custom (parent_group->children, &cksum_key, (GCompareFunc)shred_equal_cksum_key );
+    if (!child) {
+        child_group = shred_group_new(&cksum_key);
+        g_queue_push_tail(parent_group->children, child_group);
+    } else {
+        child_group = child->data;
+    }
+    g_mutex_unlock(&(parent_group->lock));
+
+    shred_add_file_to_group(child_group, file, try_bounce);
+
+}
+
+
+
+void rm_shred_run(RmSession *session) {
     g_assert(session);
-    g_assert(dev_table);
-    g_assert(size_table);
+
+    GHashTable *dev_table = session->tables->dev_table;
+    GHashTable *size_table = session->tables->size_table;
 
     RmMainTag tag;
     tag.session = session;
@@ -969,6 +1241,7 @@ void rm_shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_ta
     g_mutex_clear(&tag.file_state_mtx);
 }
 
+
 /////////////////////
 //    TEST MAIN    //
 /////////////////////
@@ -1050,3 +1323,4 @@ int main(int argc, const char **argv) {
 }
 
 #endif
+// was line 1054
