@@ -24,15 +24,12 @@
  */
 
 // TODO: In general:
-// - This needs to be cleaned up.
-// - Where is the advantage of all this? 
+// - Where is the killer advantage of all this? 
 //   Probably launching a thread when encountering a mount point?
 //   Is it really worth the extra-hassle? (i.e. small benchmark vs. find)
 // - Why duplicating the work of FTS?
 // - stat() seems to be called (also implicitly) far more often than needed.
 // - Functions are partly are far too large. Especially rm_search_tree 
-//
-// I feel a lot of this code can be removed without speed regression...
 
 #include <errno.h>
 #include <stdlib.h>
