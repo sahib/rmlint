@@ -227,6 +227,11 @@ typedef struct RmDevlistTag {
      * this way.
      */
     GAsyncQueue *finished_queue;
+
+    /* Mutex for locking the hashing procedure to protect against
+     * parallel hashes on the same digest 
+     */
+    GMutex hash_mtx;
 } RmDevlistTag;
 
 /* Represents one block of read data */
@@ -496,8 +501,7 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
         return;
     }
 
-    g_mutex_lock(&buffer->file->file_lock);
-    {
+    g_mutex_lock(&tag->hash_mtx); {
         /* Hash buffer->len bytes_read of buffer->data into buffer->file */
         rm_digest_update(&buffer->file->digest, buffer->data, buffer->len);
         buffer->file->hash_offset += buffer->len;
@@ -505,7 +509,7 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
         /* Report the progress to the joiner */
         g_async_queue_push(tag->main->join_queue, rm_shred_create_snapshot(buffer->file));
     }
-    g_mutex_unlock(&buffer->file->file_lock);
+    g_mutex_unlock(&tag->hash_mtx);
 
     /* Return this buffer to the pool */
     rm_buffer_pool_release(tag->main->mem_pool, buffer);
@@ -562,6 +566,7 @@ static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     tag.finished_queue = g_async_queue_new();
 
     g_mutex_init(&tag.read_size_mtx);
+    g_mutex_init(&tag.hash_mtx);
 
     /* Get the device of the files in this list */
     g_assert(device_queue);
@@ -645,6 +650,7 @@ static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
     g_async_queue_push(tag.main->join_queue, tag.main->join_queue);
 
     g_mutex_clear(&tag.read_size_mtx);
+    g_mutex_clear(&tag.hash_mtx);
     g_async_queue_unref(tag.finished_queue);
 }
 
