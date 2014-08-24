@@ -24,9 +24,26 @@
  */
 
 #include "../formats.h"
+#include "../utilities.h"
 
 #include <glib.h>
 #include <stdio.h>
+#include <string.h>
+
+#define CSV_SEP  ","
+#define CSV_FORMAT "%s"CSV_SEP"%s"CSV_SEP"%lu"CSV_SEP"%s\n"
+
+static const char *LINT_TYPE_TO_COLUMN[] = {
+    [RM_LINT_TYPE_UNKNOWN]      = "",
+    [RM_LINT_TYPE_EDIR]         = "emptydir",
+    [RM_LINT_TYPE_NBIN]         = "nonstripped",
+    [RM_LINT_TYPE_BLNK]         = "badlink",
+    [RM_LINT_TYPE_BADUID]       = "baduid",
+    [RM_LINT_TYPE_BADGID]       = "badgid",
+    [RM_LINT_TYPE_BADUGID]      = "badugid",
+    [RM_LINT_TYPE_EFILE]        = "emptyfile",
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate"
+};
 
 typedef struct RmFmtHandlerCSV {
     /* must be first */
@@ -34,33 +51,28 @@ typedef struct RmFmtHandlerCSV {
 } RmFmtHandlerProgress;
 
 static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
-}
-
-static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out, G_GNUC_UNUSED RmFile *file) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
-    const char *separator = "//";
-
-    char checksum_str[_RM_HASH_LEN * 2 + 1];
-    rm_digest_hexstring(&file->digest, checksum_str);
-
-    fprintf(out, "%s%s%lu%s%s%s\n",
-        file->path, separator,
-        file->file_size, separator,
-        checksum_str, separator
+    fprintf(out, "%s%s%s%s%s%s%s\n",
+        "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP, "checksum"
     );
 }
 
-static void rm_fmt_prog(
+static void rm_fmt_elem(
     G_GNUC_UNUSED RmSession *session,
-    RmFmtHandler *parent,
-    G_GNUC_UNUSED FILE *out,
-    RmFmtProgressState state,
-    guint64 n, guint64 N
+    G_GNUC_UNUSED RmFmtHandler *parent,
+    FILE *out, RmFile *file
 ) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
-}
+    char checksum_str[_RM_HASH_LEN * 2 + 1];
+    memset(checksum_str, 0, sizeof(checksum_str));
+    rm_digest_hexstring(&file->digest, checksum_str);
+    
+    /* Escape any possible separator character in the path */
+    char *clean_path = rm_util_strsub(file->path, CSV_SEP, "\\"CSV_SEP);
 
-static void rm_fmt_foot(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
+    fprintf(out, CSV_FORMAT, 
+        LINT_TYPE_TO_COLUMN[file->lint_type], clean_path, file->file_size, checksum_str
+    );
+
+    g_free(clean_path);
 }
 
 static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
@@ -69,8 +81,8 @@ static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
         .name = "csv",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
-        .prog = rm_fmt_prog,
-        .foot = rm_fmt_foot
+        .prog = NULL,
+        .foot = NULL
     }
 };
 

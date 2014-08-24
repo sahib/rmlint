@@ -268,22 +268,31 @@ static RmFileSnapshot *rm_shred_create_snapshot(RmFile *file) {
 }
 
 static void rm_shred_set_file_state(RmMainTag *tag, RmFile *file, RmFileState state) {
+    int current_cnt = 0;
     g_mutex_lock(&tag->file_state_mtx);
     {
         static int update_cnt = 0;
+        current_cnt = update_cnt++;
 
         file->state = state;
 
-        if(update_cnt++ % 50) {
-            rm_fmt_set_state(
-                tag->session->formats,
-                RM_PROGRESS_STATE_SHREDDER,
-                0, // TODO
-                tag->session->total_files
-            );
-        }
     }
     g_mutex_unlock(&tag->file_state_mtx);
+
+    if(current_cnt ++ % 50) {
+        /* Give formatters some chance to update
+         * some progressbar during shreddering.
+         */
+        rm_fmt_set_state(
+            tag->session->formats, RM_PROGRESS_STATE_SHREDDER,
+            current_cnt, tag->session->total_files
+        );
+    }
+
+    /* Writeout finished files */
+    if(state == RM_FILE_STATE_FINISH) {
+        rm_fmt_write(tag->session->formats, file);
+    }
 }
 
 static RmFileState rm_shred_get_file_state(RmMainTag *tag, RmFile *file) {
@@ -870,7 +879,11 @@ static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_ta
 
         for(GList *file_link = value->head; file_link; file_link = file_link->next) {
             RmFile *file = file_link->data;
-            guint64 count = GPOINTER_TO_UINT(g_hash_table_lookup(size_table, GUINT_TO_POINTER(file->file_size)));
+            guint64 count = GPOINTER_TO_UINT(
+                g_hash_table_lookup(
+                    size_table, GUINT_TO_POINTER(file->file_size)
+                )
+            );
 
             if(count == 1) {
                 g_queue_push_head(&to_delete, file_link);
@@ -909,6 +922,7 @@ void rm_shred_run(RmSession *session, GHashTable *dev_table, GHashTable *size_ta
     /* would use g_atomic, but helgrind does not like that */
     g_mutex_init(&tag.file_state_mtx);
 
+    // TODO: Is this still needed? (should have belong to the testmain)
     rm_shred_preprocess_input(dev_table, size_table);
 
     /* Remember how many devlists we had - so we know when to stop */
