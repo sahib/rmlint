@@ -68,7 +68,8 @@ typedef enum RmLintType {
 } RmLintType;
 
 
-typedef ShredGroup ShredGroup;
+typedef struct ShredGroup ShredGroup;
+typedef struct ShredDevice ShredDevice;
 
 /* TODO: Reduce size of RmFile */
 typedef struct RmFile {
@@ -103,7 +104,7 @@ typedef struct RmFile {
      */
     guint64 file_size;
 
-    /* Physical offset from the start of the disk.
+    /* Physical offset from the start of the disk for the next byte to read.
      * This gets updated on a change of seek_offset,
      * so it reflects always the current readposition.
      * TODO: do we need to store this in the RmFile?  We can recalculate when needed from disk_offsets and hash_offset.
@@ -119,13 +120,16 @@ typedef struct RmFile {
      */
     guint64 seek_offset;
 
+    /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
+    gboolean fragment_hash;
+
     /* digest of this file updated on every hash iteration.
      */
     RmDigest digest;
 
-    /* State of the file, initially always RM_FILE_STATE_PROCESS
-     */
-    RmFileState state;
+    //~ /* State of the file, initially always RM_FILE_STATE_PROCESS
+    //~ */
+    //~ RmFileState state;
 
     /* Table of this file's extents.
      */
@@ -139,10 +143,13 @@ typedef struct RmFile {
      * This is used to avoid hashing every file within a hardlinked set */
     struct RmFile *hardlinked_original;
 
-    /* Link to the ShredGroup that the file currently belogs to */
-    ShredGroup *parent;
+    /* Link to the ShredGroup that the file currently belongs to */
+    ShredGroup *shred_group;
 
-    /* TODO: can we find a way around having a lock on every single file? */
+    /* Link to the ShredDevice that the file is associated with */
+    ShredDevice *device;
+
+    /* TODO: find a way around having a lock on every single file */
     GMutex file_lock;
 } RmFile;
 

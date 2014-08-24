@@ -61,7 +61,7 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->size_table = g_hash_table_new( NULL, NULL);
 
-    tables->size_groups = g_hash_table( NULL, NULL, NULL, (GDestroyNotify)shred_group_free);
+    //tables->size_groups = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)shred_group_free);
 
     tables->node_table = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)g_queue_free );
 
@@ -313,114 +313,25 @@ uint rm_file_list_insert(RmSession *session, RmFile *file) {
 //}
 
 
-static gboolean rm_move_files_to_queue(gpointer key, ShredGroup *group, RmSession *session) {
-    g_assert(key); //void
-    RmFileTables *tables = session->tables;
+//static gboolean rm_move_files_to_queue(gpointer key, ShredGroup *group, RmSession *session) {
+//(void)(key); //suppress compiler warnings
+//RmFileTables *tables = session->tables;
 
-    GList *iter = group->queue->head;
-    while (iter) {
-        RmFile *file = iter->data;
-        GList *next = iter->next;
-        g_queue_delete_link (group->queue, iter);
-        iter = next;
-        g_assert(file->lint_type  == RM_LINT_TYPE_DUPE_CANDIDATE);
-        g_queue_push_head(tables->file_queue, file);
-    }
-    return true;
-}
-
-
-static void rm_preprocess_files(RmFile *file, RmSession *session) {
-    RmFileTables *tables = session->tables;
-
-    g_assert(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
-    g_assert(file->file_size > 0 );
-
-    dev_t disk = rm_mounts_get_disk_id(tables->mounts, file->dev);
-
-    GQueue *dev_list = g_hash_table_lookup(tables->dev_table, GUINT_TO_POINTER(disk));
-    if(dev_list == NULL) {
-        dev_list = g_queue_new();
-        g_hash_table_insert(tables->dev_table, GUINT_TO_POINTER(disk), dev_list);
-        rm_error("new device queue for disk %lu\n", disk);
-    }
-    g_queue_push_head(dev_list, file);
-
-    bool nonrotational = rm_mounts_is_nonrotational(tables->mounts, disk);
-    if(!nonrotational
-            && !file->hardlinked_original
-            /*TODO: && settings->offset_sort_optimisation? */ ) {
-        g_assert(!file->disk_offsets);
-        file->disk_offsets = rm_offset_create_table(file->path);
-
-        session->offsets_read++;
-        if(file->disk_offsets) {
-            session->offset_fragments += g_sequence_get_length((GSequence *)file->disk_offsets);
-        } else {
-            session->offset_fails++;
-        }
-        file->phys_offset = rm_offset_lookup(file->disk_offsets, 0); /* TODO: workaround this so we
-            can drop phys_offset from RmFile structure?? */
-    }
-
-    info("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->inode, file->phys_offset, file->path);
-}
+//GList *iter = group->held_files->head;
+//while (iter) {
+//RmFile *file = iter->data;
+//GList *next = iter->next;
+//g_queue_delete_link (group->held_files, iter);
+//iter = next;
+//g_assert(file->lint_type  == RM_LINT_TYPE_DUPE_CANDIDATE);
+//g_queue_push_head(tables->file_queue, file);
+//}
+//return true;
+//}
 
 
-static gboolean rm_preprocess_groups(gpoint key, ShredGroup *group, RmSession *session) {
-    g_assert(key); //Void
-
-    /* push files into appropriate dev_list queue*/
-    g_queue_foreach(group->held_files, (GFunc)rm_preprocess_files, Session);
-
-    /* disown the files */
-    g_queue_clear(group->held_files);
-
-    /* tell caller it can delete the ShredGroup
-       (but note it will not destroy the ShredGroup because */
-    return true;
-}
 
 
-static bool rm_group_can_discard( gpointer key, ShredGroup *group, RmSession *session) {
-    g_assert(key && session); //void
-    g_assert(group);
-    if (!group->is_candidate) {
-        group->is_candidate = shred_group_is_candidate(group, session);
-    }
-    return (!group->is_candidate);
-}
-
-
-static void rm_group_add_file(ShredGroup *group, RmFile *file, RmSession *session) {
-    g_assert(session);
-    g_queue_push_head(group->held_files, file);
-    group->has_pref |= file->is_prefd;
-    group->has_npref |= !file->is_prefd;
-}
-
-static void rm_add_file_to_size_groups(RmFile *file, RmSession *session) {
-    ShredGroup *group = g_hash_table_lookup(
-                            session->tables->size_groups,
-                            GUINT_TO_POINTER(file->file_size));
-    if (!group) {
-        group = shred_group_new();
-        g_hash_table_insert(
-            session->tables->size_groups,
-            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files
-            group);
-    }
-    rm_group_add_file(group, file, session);
-}
-
-
-static gboolean rm_populate_size_groups(gpointer key, GQueue *hardlink_cluster, RmSession *session) {
-    g_assert(key); //key not used
-    g_queue_foreach (hardlink_cluster,
-                     (GFunc)rm_add_file_to_size_groups,
-                     session);
-    return true;
-}
 
 static gboolean rm_handle_hardlinks(gpointer key, GQueue *hardlink_cluster, RmSession *session) {
     g_assert(key); //void
@@ -585,28 +496,6 @@ void rm_preprocess(RmSession *session) {
         die(session, EXIT_SUCCESS);
     }
 
-    /* move remaining files to size_groups */
-    g_hash_table_foreach_remove(tables->node_table,
-                                (GHRFunc)rm_populate_size_groups,
-                                session);
-    rm_error("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-    /* delete irrelevant size groups */
-    g_hash_table_foreach_remove(tables->size_groups,
-                                (GHRFunc)rm_group_can_discard,
-                                session);
-    rm_error("delete irrelevant size groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-
-    /* move files from remaining groups into dev queues */
-    g_hash_table_foreach_remove(tables->size_groups,
-                                (GHRFunc)rm_preprocess_groups,
-                                session );
-
-    rm_error("move remaining groups into dev_queues finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-    rm_error("fiemap'd %lu files containing %lu fragments (failed another %lu files)\n", session->offsets_read - session->offset_fails, session->offset_fragments, session->offset_fails);
-    //TODO: is this another kind of lint (heavily fragmented files)?
 
 
     if(settings->namecluster) {

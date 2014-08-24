@@ -209,6 +209,8 @@ RmOffsetTable rm_offset_create_table(const char *path);
  */
 guint64 rm_offset_lookup(RmOffsetTable table, guint64 file_offset);
 
+guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable table, guint64 file_offset);
+
 /**
  * @brief Free the allocated table.
  */

@@ -34,7 +34,7 @@ RmFile *rm_file_new(
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
     self->mtime = statp->st_mtim.tv_sec;
-    self->state = RM_FILE_STATE_PROCESS;
+    //~ self->state = RM_FILE_STATE_PROCESS;
 
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
         self->file_size = statp->st_size;

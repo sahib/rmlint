@@ -566,7 +566,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
         }
 
         /* This might happen on empty files - those have no
-         * extents, but they have a offset on the disk.
+         * extents, but they have an offset on the disk.
          */
         if(fiemap->fm_mapped_extents <= 0) {
             break;
@@ -618,6 +618,32 @@ guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
     /* default to 0 always */
     return 0;
 }
+
+guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, guint64 file_offset) {
+#ifdef __linux__
+    if (offset_list != NULL) {
+        RmOffsetEntry token;
+        token.physical = 0;
+        token.logical = file_offset;
+
+        GSequenceIter *next_fragment = g_sequence_iter_prev(
+                                           g_sequence_search(
+                                               offset_list, &token,
+                                               (GCompareDataFunc)rm_offset_find_logical, NULL
+                                           )
+                                       );
+
+        if(!g_sequence_iter_is_end(next_fragment)
+                && !g_sequence_iter_is_begin(next_fragment) ) {
+            RmOffsetEntry *off = g_sequence_get(next_fragment);
+            return off->logical - file_offset ;
+        }
+    }
+#endif
+    /* default to 0 always */
+    return 0;
+}
+
 
 /////////////////////////////////
 //     IFDEFD TEST MAINS       //
