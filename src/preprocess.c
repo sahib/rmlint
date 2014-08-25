@@ -45,23 +45,15 @@
 #include "traverse.h"
 #include "cmdline.h"
 
-static void dev_queue_free_func(gconstpointer p) {
-    g_queue_free_full((GQueue *)p, (GDestroyNotify)rm_file_destroy);
-}
-
 
 RmFileTables *rm_file_tables_new(RmSession *session) {
-
+    rm_error("Creating tables \n");
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
-    tables->dev_table = g_hash_table_new_full(
-                            g_direct_hash, g_direct_equal,
-                            NULL, (GDestroyNotify)dev_queue_free_func
-                        );
 
     tables->size_table = g_hash_table_new( NULL, NULL);
 
-    //tables->size_groups = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)shred_group_free);
+    tables->size_groups = g_hash_table_new_full( NULL, NULL, NULL, NULL); //TODO (GDestroyNotify)shred_group_free);
 
     tables->node_table = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)g_queue_free );
 
@@ -90,9 +82,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     {
         g_assert(tables->node_table);
         g_hash_table_unref(tables->node_table);
-
-        g_assert(tables->dev_table);
-        g_hash_table_unref(tables->dev_table);
 
         g_assert(tables->size_table);
         g_hash_table_unref(tables->size_table);

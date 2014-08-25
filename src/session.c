@@ -72,6 +72,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
 
     session->mounts = rm_mounts_table_new();
     session->tables = rm_file_tables_new(session);
+    g_assert(session->tables->node_table);
     session->offsets_read = 0;
     session->offset_fragments = 0;
     session->offset_fails = 0;
