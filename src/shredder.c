@@ -283,7 +283,7 @@ static void rm_shred_set_file_state(RmMainTag *tag, RmFile *file, RmFileState st
          * some progressbar during shreddering.
          */
         rm_fmt_set_state(
-            tag->session->formats, RM_PROGRESS_STATE_SHREDDER,
+            tag->session->formats, RM_PROGREENSS_STATE_SHREDDER,
             current_cnt, tag->session->total_files
         );
     }
@@ -580,7 +580,7 @@ static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                              main->session->mounts,
                              ((RmFile *)device_queue->head->data)->disk
                          );
-    rm_error(BLU"Started rm_shred_devlist_factory for disk %u:%u\n"NCO,
+    rm_error(BLUE"Started rm_shred_devlist_factory for disk %u:%u\n"RESET,
              major(((RmFile *)device_queue->head->data)->disk),
              minor(((RmFile *)device_queue->head->data)->disk) );
 

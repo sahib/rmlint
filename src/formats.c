@@ -30,15 +30,15 @@
 
 const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
     static const char *table[] = {
-        [RM_PROGRESS_STATE_INIT]       = "Initializing",
-        [RM_PROGRESS_STATE_TRAVERSE]   = "Traversing",
-        [RM_PROGRESS_STATE_PREPROCESS] = "Preprocessing",
-        [RM_PROGRESS_STATE_SHREDDER]   = "Shreddering",
-        [RM_PROGRESS_STATE_SUMMARY]    = "Finalizing",
-        [RM_PROGRESS_STATE_N]          = "Unknown state"
+        [RM_PROGREENSS_STATE_INIT]       = "Initializing",
+        [RM_PROGREENSS_STATE_TRAVERSE]   = "Traversing",
+        [RM_PROGREENSS_STATE_PREPROCESS] = "Preprocessing",
+        [RM_PROGREENSS_STATE_SHREDDER]   = "Shreddering",
+        [RM_PROGREENSS_STATE_SUMMARY]    = "Finalizing",
+        [RM_PROGREENSS_STATE_N]          = "Unknown state"
     };
 
-    return table[(state < RM_PROGRESS_STATE_N) ? state : RM_PROGRESS_STATE_N];
+    return table[(state < RM_PROGREENSS_STATE_N) ? state : RM_PROGREENSS_STATE_N];
 }
 
 RmFmtTable *rm_fmt_open(RmSession *session) {
@@ -47,8 +47,8 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     self->handler_to_file = g_hash_table_new_full(NULL, NULL, g_free, NULL);
     self->session = session;
 
-    extern RmFmtHandler *PROGRESS_HANDLER;
-    rm_fmt_register(self, PROGRESS_HANDLER);
+    extern RmFmtHandler *PROGREENSS_HANDLER;
+    rm_fmt_register(self, PROGREENSS_HANDLER);
 
     extern RmFmtHandler *CSV_HANDLER;
     rm_fmt_register(self, CSV_HANDLER);
@@ -162,13 +162,13 @@ int main(void) {
 
     for(int i = 0 ; i <= 50; ++i) {
         if(i <= 20) {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_TRAVERSE, i, 0);
+            rm_fmt_set_state(table, RM_PROGREENSS_STATE_TRAVERSE, i, 0);
         } else if(i <= 25) {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
+            rm_fmt_set_state(table, RM_PROGREENSS_STATE_PREPROCESS, 0, 0);
         } else if(i <= 95) {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_SHREDDER, i, 95);
+            rm_fmt_set_state(table, RM_PROGREENSS_STATE_SHREDDER, i, 95);
         } else {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_SUMMARY, 0, 0);
+            rm_fmt_set_state(table, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
         }
 
         RmFile dummy;

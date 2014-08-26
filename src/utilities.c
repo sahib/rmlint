@@ -401,7 +401,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 /* folder and devname stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
-                rm_error(RED"blkid_devno_to_wholedisk failed for %s\n"NCO, entry->mnt_fsname);
+                rm_error(RED"blkid_devno_to_wholedisk failed for %s\n"RESET, entry->mnt_fsname);
                 whole_disk = stat_buf_dev.st_dev;
                 strncpy(diskname, entry->mnt_fsname, sizeof(diskname));
                 is_rotational = false;

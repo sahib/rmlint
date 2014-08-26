@@ -45,13 +45,13 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_UNKNOWN]        = "",
     [RM_LINT_TYPE_BLNK]           = RED"rm",
     [RM_LINT_TYPE_EDIR]           = RED"rmdir",
-    [RM_LINT_TYPE_NBIN]           = BLU"strip --strip-debug",
-    [RM_LINT_TYPE_BADUID]         = BLU"chown %s",
-    [RM_LINT_TYPE_BADGID]         = BLU"chgrp %s",
-    [RM_LINT_TYPE_BADUGID]        = BLU"chown %s:%s",
+    [RM_LINT_TYPE_NBIN]           = BLUE"strip --strip-debug",
+    [RM_LINT_TYPE_BADUID]         = BLUE"chown %s",
+    [RM_LINT_TYPE_BADGID]         = BLUE"chgrp %s",
+    [RM_LINT_TYPE_BADUGID]        = BLUE"chown %s:%s",
     [RM_LINT_TYPE_EFILE]          = RED"rm",
     [RM_LINT_TYPE_DUPE_CANDIDATE] = RED"rm",
-    [RM_LINT_TYPE_ORIGINAL_TAG]   = GRE"ls"
+    [RM_LINT_TYPE_ORIGINAL_TAG]   = GREEN"ls"
 };
 
 typedef struct RmFmtHandlerPretty {
@@ -76,7 +76,7 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
 
     if(file->lint_type != self->last_lint_type) {
-        fprintf(out, "\n"YEL"#"NCO" %s:\n", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]);
+        fprintf(out, "\n"YELLOW"#"RESET" %s:\n", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]);
         self->last_lint_type = file->lint_type;
     }
 
@@ -105,7 +105,7 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
         fprintf(out, "%s", format);
     }
 
-    fprintf(out, NCO" %s\n", file->path);
+    fprintf(out, RESET" %s\n", file->path);
 }
 
 static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {

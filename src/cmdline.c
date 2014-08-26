@@ -202,7 +202,7 @@ static bool add_path(RmSession *session, int index, const char *path) {
     }
 
     if(access(path, R_OK) != 0) {
-        rm_error(YEL"FATAL: "NCO"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
+        rm_error(YELLOW"FATAL: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
         settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
@@ -339,8 +339,8 @@ void parse_lint_types(RmSettings *sets, const char *lint_string) {
 
 
         if(index > 0 && sign == 0) {
-            g_printerr(YEL"Warning: lint types after first should be prefixed with '+' or '-'\n"NCO);
-            g_printerr(YEL"         or they would over-ride previously set options: [%s]\n"NCO, lint_type);
+            g_printerr(YELLOW"Warning: lint types after first should be prefixed with '+' or '-'\n"RESET);
+            g_printerr(YELLOW"         or they would over-ride previously set options: [%s]\n"RESET, lint_type);
             continue;
         } else {
             lint_type += ABS(sign);
@@ -356,7 +356,7 @@ void parse_lint_types(RmSettings *sets, const char *lint_string) {
 
         /* apply the found option */
         if(option == NULL) {
-            g_printerr(YEL"Warning: lint type %s not recognised\n"NCO, lint_type);
+            g_printerr(YELLOW"Warning: lint type %s not recognised\n"RESET, lint_type);
             continue;
         }
 
@@ -450,14 +450,14 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             if(parsed_threads > 0) {
                 sets->threads = parsed_threads;
             } else {
-                rm_error(RED"Invalid thread count supplied: %s\n"NCO, optarg);
+                rm_error(RED"Invalid thread count supplied: %s\n"RESET, optarg);
             }
         }
         break;
         case 'a':
             sets->checksum_type = rm_string_to_digest_type(optarg);
             if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
-                rm_error(RED"Unknown hash algorithm: '%s'\n"NCO, optarg);
+                rm_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
                 die(session, EXIT_FAILURE);
             }
             break;
@@ -592,7 +592,7 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
         sets->is_prefd[0] = 0;
         sets->num_paths++;
         if(!sets->paths[0]) {
-            rm_error(YEL"FATAL: "NCO"Cannot get working directory: "YEL"%s\n"NCO, strerror(errno));
+            rm_error(YELLOW"FATAL: "RESET"Cannot get working directory: "YELLOW"%s\n"RESET, strerror(errno));
             rm_error("       Are you maybe in a dir that just had been removed?\n");
             g_free(sets->paths);
             return 0;
@@ -625,17 +625,17 @@ char rm_echo_settings(RmSettings *settings) {
     if ((settings->confirm_settings) && (settings->verbosity < 3))
         settings->verbosity = G_LOG_LEVEL_INFO; /* need verbosity at least 3 if user is going to confirm settings*/
 
-    info (BLU"Running rmlint with the following settings:\n"NCO);
-    info ("(Note "BLU"[*]"NCO" hints below to change options)\n"NCO);
+    info (BLUE"Running rmlint with the following settings:\n"RESET);
+    info ("(Note "BLUE"[*]"RESET" hints below to change options)\n"RESET);
 
     /*---------------- lint types ---------------*/
     info ("Looking for lint types:\n");
-    if (settings->searchdup)		info ("\t+ duplicates "RED"(%s)"NCO" [-U]\n", settings->cmd_path ? "cmd" : "rm");
-    if (settings->findemptydirs)	info ("\t+ empty directories "RED"(rm)"NCO" [-Y]\n");
-    if (settings->listemptyfiles)	info ("\t+ zero size files "RED"(rm)"NCO" [-K]\n");
-    if (settings->findbadids)		info ("\t+ files with bad UID/GID "BLU"(chown)"NCO" [-L]\n");
-    if (settings->namecluster)		info ("\t+ files with same name "GRE"(info only)"NCO" [-N]\n");
-    if (settings->nonstripped)		info ("\t+ non-stripped binaries"BLU"(strip)"RED"(slow)"NCO" [-A]\n");
+    if (settings->searchdup)		info ("\t+ duplicates "RED"(%s)"RESET" [-U]\n", settings->cmd_path ? "cmd" : "rm");
+    if (settings->findemptydirs)	info ("\t+ empty directories "RED"(rm)"RESET" [-Y]\n");
+    if (settings->listemptyfiles)	info ("\t+ zero size files "RED"(rm)"RESET" [-K]\n");
+    if (settings->findbadids)		info ("\t+ files with bad UID/GID "BLUE"(chown)"RESET" [-L]\n");
+    if (settings->namecluster)		info ("\t+ files with same name "GREEN"(info only)"RESET" [-N]\n");
+    if (settings->nonstripped)		info ("\t+ non-stripped binaries"BLUE"(strip)"RED"(slow)"RESET" [-A]\n");
     if (!settings->searchdup ||
             !settings->findemptydirs ||
             !settings->listemptyfiles ||
@@ -643,7 +643,7 @@ char rm_echo_settings(RmSettings *settings) {
             !settings->namecluster ||
             !settings->nonstripped
        ) {
-        info (NCO"\tNot looking for:\n");
+        info (RESET"\tNot looking for:\n");
         if (!settings->searchdup)		info ("\t\tduplicates[-u];\n");
         if (!settings->findemptydirs)	info ("\t\tempty directories[-y];\n");
         if (!settings->listemptyfiles)	info ("\t\tzero size files[-k];\n");
@@ -653,11 +653,11 @@ char rm_echo_settings(RmSettings *settings) {
     }
 
     /*---------------- search paths ---------------*/
-    info(NCO"Search paths:\n");
+    info(RESET"Search paths:\n");
     for(int i = 0; settings->paths[i] != NULL; ++i) {
         if (settings->is_prefd[i]) {
             has_ppath = true;
-            warning (GRE"\t(orig)\t+ %s\n"NCO, settings->paths[i] );
+            warning (GREEN"\t(orig)\t+ %s\n"RESET, settings->paths[i] );
         } else {
             info("\t\t+ %s\n", settings->paths[i]);
         }
@@ -668,13 +668,13 @@ char rm_echo_settings(RmSettings *settings) {
 
     /*---------------- search tree options---------*/
     info ("Tree search parameters:\n");
-    info ("\t%s hidden files and folders [-%s]\n"NCO,
+    info ("\t%s hidden files and folders [-%s]\n"RESET,
           settings->ignore_hidden ? "Excluding" : "Including",
           settings->ignore_hidden ? "G" :  "g" );
-    info ("\t%s symlinked files and folders [-%s]\n"NCO,
+    info ("\t%s symlinked files and folders [-%s]\n"RESET,
           settings->followlinks ? "Following" : "Excluding",
           settings->followlinks ? "F" : "f" );
-    info ("\t%srossing filesystem / mount point boundaries [-%s]\n"NCO,
+    info ("\t%srossing filesystem / mount point boundaries [-%s]\n"RESET,
           settings->samepart ? "Not c" : "C",
           settings->samepart ? "S" : "s");
 
@@ -694,20 +694,20 @@ char rm_echo_settings(RmSettings *settings) {
         info("\tNo file size limits [-z \"min-max\"]\n");
     }
     if (settings->must_match_original) {
-        info("\tDuplicates must have at least one member in the "GRE"(orig)"NCO" paths indicated above\n");
+        info("\tDuplicates must have at least one member in the "GREEN"(orig)"RESET" paths indicated above\n");
         if (!has_ppath)
-            rm_error(RED"\tWarning: no "GRE"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"NCO);
+            rm_error(RED"\tWarning: no "GREEN"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"RESET);
     }
 
     if (settings->find_hardlinked_dupes) {
         info("\tHardlinked file sets will be treated as duplicates (%s)\n", settings->cmd_path ? settings->cmd_path : "rm");
-        info(RED"\t\tBUG"NCO": rmlint currently does not deduplicate hardlinked files with same basename\n");
+        info(RED"\t\tBUG"RESET": rmlint currently does not deduplicate hardlinked files with same basename\n");
     } else info("\tHardlinked file sets will not be deduplicated [-H]\n");
 
     /*---------------- originals selection ranking ---------*/
 
-    info(NCO"Originals selected based on (decreasing priority):    [-D <criteria>]\n");
-    if (has_ppath) info("\tpaths indicated "GRE"(orig)"NCO" above\n");
+    info(RESET"Originals selected based on (decreasing priority):    [-D <criteria>]\n");
+    if (has_ppath) info("\tpaths indicated "GREEN"(orig)"RESET" above\n");
 
     for (int i = 0; settings->sort_criteria[i]; ++i) {
         switch(settings->sort_criteria[i]) {
@@ -730,31 +730,31 @@ char rm_echo_settings(RmSettings *settings) {
             info("\tKeep last alphabetically\n");
             break;
         default:
-            rm_error(RED"\tWarning: invalid originals ranking option '-D %c'\n"NCO, settings->sort_criteria[i]);
+            rm_error(RED"\tWarning: invalid originals ranking option '-D %c'\n"RESET, settings->sort_criteria[i]);
             break;
         }
     }
 
     if (settings->keep_all_originals) {
-        info("\tNote: all originals in "GRE"(orig)"NCO" paths will be kept\n");
+        info("\tNote: all originals in "GREEN"(orig)"RESET" paths will be kept\n");
     }
-    info("\t      "RED"but"NCO" other lint in "GRE"(orig)"NCO" paths may still be deleted\n");
+    info("\t      "RED"but"RESET" other lint in "GREEN"(orig)"RESET" paths may still be deleted\n");
 
     /*--------------- paranoia ---------*/
 
     if (settings->paranoid) {
-        info("Note: paranoid (bit-by-bit) comparison will be used to verify duplicates "RED"(slow)\n"NCO);
+        info("Note: paranoid (bit-by-bit) comparison will be used to verify duplicates "RED"(slow)\n"RESET);
     } else {
-        info("Note: fingerprint and md5 comparison will be used to identify duplicates "RED"(very slight risk of false positives)"NCO" [-p]");
+        info("Note: fingerprint and md5 comparison will be used to identify duplicates "RED"(very slight risk of false positives)"RESET" [-p]");
     }
 
     /*--------------- confirmation ---------*/
 
     if (settings->confirm_settings) {
-        info(YEL"\n\nPress y or enter to continue, any other key to abort\n");
+        info(YELLOW"\n\nPress y or enter to continue, any other key to abort\n");
 
         if(scanf("%c", &confirm) == EOF) {
-            info(RED"Reading your input failed."NCO);
+            info(RED"Reading your input failed."RESET);
         }
 
         settings->verbosity = save_verbosity;
@@ -766,7 +766,7 @@ char rm_echo_settings(RmSettings *settings) {
 }
 
 int rm_main(RmSession *session) {
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_TRAVERSE, 0, 0);
     session->total_files = rm_search_tree(session);
 
     warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
@@ -776,19 +776,19 @@ int rm_main(RmSession *session) {
         die(session, EXIT_SUCCESS);
     }
 
-    info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
+    info("Now in total "YELLOW"%ld useable file(s)"RESET" in cache.\n", session->total_files);
     if(session->settings->threads > session->total_files) {
         session->settings->threads = session->total_files + 1;
     }
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_PREPROCESS, 0, 0);
     guint64 other_lint = rm_preprocess(session);
     char lintbuf[128];
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SHREDDER, 0, 0);
     rm_shred_run(session, session->tables->dev_table, session->tables->size_table);
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
 
     // TODO: remove this below and add a summary-formatter.
     rm_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
@@ -801,25 +801,25 @@ int rm_main(RmSession *session) {
 
     rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
     warning(
-        "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s) in "RED"%lu"NCO" groups",
+        "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",
         session->total_files, session->dup_counter, session->dup_group_counter
     );
 
     if(other_lint > 0) {
         rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
-        warning(RED"\n=> %lu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
+        warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
     }
 
     warning("\n");
     if(!session->aborted) {
         rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
         warning(
-            RED"=> "NCO"Totally "GRE" %s "NCO" [%lu Bytes] can be removed.\n",
+            RED"=> "RESET"Totally "GREEN" %s "RESET" [%lu Bytes] can be removed.\n",
             lintbuf, session->total_lint_size
         );
     }
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
     rm_session_clear(session);
     return EXIT_SUCCESS;
 }

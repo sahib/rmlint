@@ -24,12 +24,12 @@
  */
 
 // TODO: In general:
-// - Where is the killer advantage of all this? 
+// - Where is the killer advantage of all this?
 //   Probably launching a thread when encountering a mount point?
 //   Is it really worth the extra-hassle? (i.e. small benchmark vs. find)
 // - Why duplicating the work of FTS?
 // - stat() seems to be called (also implicitly) far more often than needed.
-// - Functions are partly are far too large. Especially rm_search_tree 
+// - Functions are partly are far too large. Especially rm_search_tree
 
 #include <errno.h>
 #include <stdlib.h>
@@ -212,7 +212,7 @@ void traverse_path(gpointer data, gpointer userdata) {
         rm_error("Error trying to process path %s - not a dir\n", path);
         return;
     } else {
-        info(BLU"Starting traversal of %s (index %d on disk %02d:%02d)\n"NCO, path, traverse_path_args->path_num_for_disk,
+        info(BLUE"Starting traversal of %s (index %d on disk %02d:%02d)\n"RESET, path, traverse_path_args->path_num_for_disk,
              major(traverse_path_args->disk),
              minor(traverse_path_args->disk) ); /*TODO: cleanup*/
         int fts_flags = traverse_session->fts_flags;
@@ -272,7 +272,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                        ) {
                         fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                         clear_emptydir_flags = true; /*flag current dir as not empty*/
-                        info(BLU"Traverse of %s skipping %s because it will be traversed in another thread\n"NCO, path, p->fts_path);
+                        info(BLUE"Traverse of %s skipping %s because it will be traversed in another thread\n"RESET, path, p->fts_path);
                     } else if (depth != 0 && p->fts_level >= depth) {
                         /* continuing into folder would exceed maxdepth*/
                         fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
@@ -291,7 +291,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     }
                     break;
                 case FTS_DC:        /* directory that causes cycles */
-                    warning(RED"Warning: filesystem loop detected at %s (skipping)\n"NCO,
+                    warning(RED"Warning: filesystem loop detected at %s (skipping)\n"RESET,
                             p->fts_path);
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
@@ -310,7 +310,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     }
                     break;
                 case FTS_ERR:       /* error; errno is set */
-                    warning(RED"Warning: error %d in fts_read for %s (skipping)\n"NCO, errno, p->fts_path);
+                    warning(RED"Warning: error %d in fts_read for %s (skipping)\n"RESET, errno, p->fts_path);
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
                 case FTS_INIT:      /* initialized only */
@@ -326,7 +326,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     break;
                 case FTS_NS:        /* stat(2) failed */
                     clear_emptydir_flags = true; /*current dir not empty*/
-                    warning(RED"Warning: cannot stat file %s (skipping)\n"NCO, p->fts_path);
+                    warning(RED"Warning: cannot stat file %s (skipping)\n"RESET, p->fts_path);
                     break;
                 case FTS_SL:        /* symbolic link */
                     clear_emptydir_flags = true; /*current dir not empty*/
@@ -340,7 +340,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                 default:
                     /* unknown case; assume current dir not empty but otherwise do nothing */
                     clear_emptydir_flags = true;
-                    rm_error(RED"Unknown fts_info flag %d for file %s\n"NCO, p->fts_info, p->fts_path);
+                    rm_error(RED"Unknown fts_info flag %d for file %s\n"RESET, p->fts_info, p->fts_path);
                     break;
                 } /* end switch(p->fts_info)*/
                 if (clear_emptydir_flags) {
@@ -360,7 +360,7 @@ void traverse_path(gpointer data, gpointer userdata) {
 
         fts_close(ftsp);
 
-        info(GRE"Finished traversing path %s, got %lu files.\n"NCO, traverse_path_args->path, (unsigned long)numfiles);
+        info(GREEN"Finished traversing path %s, got %lu files.\n"RESET, traverse_path_args->path, (unsigned long)numfiles);
         //rm_traverse_path_buffer_free(traverse_path_args);
     }
 
@@ -507,7 +507,7 @@ guint64 rm_search_tree(RmSession *session) {
                                              settings->depth,
                                              settings->is_prefd[idx],
                                              idx);
-            info(BLU"Adding path %s\n"NCO, new_path->path);
+            info(BLUE"Adding path %s\n"RESET, new_path->path);
             g_hash_table_insert (traverse_session->paths, new_path->path, new_path);
             //TODO: combine preceding with following
             add_path_to_traverse_queue_table(traverse_session, new_path);
@@ -546,7 +546,7 @@ guint64 rm_search_tree(RmSession *session) {
                                                              bestmatch->is_prefd,
                                                              bestmatch->path_index
                                                                                         );
-                            info(BLU"Adding mountpoint %s as subdir of %s with depth difference %d\n"NCO,
+                            info(BLUE"Adding mountpoint %s as subdir of %s with depth difference %d\n"RESET,
                                  new_path->path, bestmatch->path, depth_diff);
 
                             g_hash_table_insert (traverse_session->paths, new_path->path, new_path);

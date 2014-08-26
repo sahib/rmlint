@@ -492,7 +492,7 @@ static int find_double_bases(RmSession *session) {
             while (list) {
                 RmFile *file = list->data;
                 if(!header_printed) {
-                    rm_error("\n%s#"NCO" Double basename(s):\n", GRE);
+                    rm_error("\n%s#"RESET" Double basename(s):\n", GREEN);
                     header_printed = true;
                 }
 
