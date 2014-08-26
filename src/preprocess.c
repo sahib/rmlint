@@ -645,20 +645,4 @@ void rm_preprocess(RmSession *session) {
             lintbuf, session->total_lint_size
         );
     }
-
-    warning("\n");
-    if(settings->verbosity == 6) {
-        info("Now calculation finished.. now writing end of log...\n");
-        info(
-            RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s)\n",
-            session->total_files, session->dup_counter
-        );
-        if(!session->aborted) {
-            rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-            info(
-                RED"=> "NCO"In total "GRE" %s "NCO" ["BLU"%lu"NCO" Bytes] can be removed without dataloss.\n",
-                lintbuf, session->total_lint_size
-            );
-        }
-    }
 }

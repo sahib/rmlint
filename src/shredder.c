@@ -708,6 +708,7 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     rm_fmt_write(session->formats, original_file);
     for(GList *iter = group->head; iter; iter = iter->next) {
         if(iter->data != original_file) {
+            session->dup_counter += 1;
             rm_fmt_write(session->formats, iter->data);
         }
     }
