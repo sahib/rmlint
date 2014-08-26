@@ -43,16 +43,30 @@ static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
 
 static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_UNKNOWN]        = "",
-    [RM_LINT_TYPE_BLNK]           = RED"rm",
-    [RM_LINT_TYPE_EDIR]           = RED"rmdir",
-    [RM_LINT_TYPE_NBIN]           = BLUE"strip --strip-debug",
-    [RM_LINT_TYPE_BADUID]         = BLUE"chown %s",
-    [RM_LINT_TYPE_BADGID]         = BLUE"chgrp %s",
-    [RM_LINT_TYPE_BADUGID]        = BLUE"chown %s:%s",
-    [RM_LINT_TYPE_EFILE]          = RED"rm",
-    [RM_LINT_TYPE_DUPE_CANDIDATE] = RED"rm",
-    [RM_LINT_TYPE_ORIGINAL_TAG]   = GREEN"ls"
+    [RM_LINT_TYPE_BLNK]           = "rm",
+    [RM_LINT_TYPE_EDIR]           = "rmdir",
+    [RM_LINT_TYPE_NBIN]           = "strip --strip-debug",
+    [RM_LINT_TYPE_BADUID]         = "chown %s",
+    [RM_LINT_TYPE_BADGID]         = "chgrp %s",
+    [RM_LINT_TYPE_BADUGID]        = "chown %s:%s",
+    [RM_LINT_TYPE_EFILE]          = "rm",
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
+    [RM_LINT_TYPE_ORIGINAL_TAG]   = "ls"
 };
+
+static const char *rm_fmt_command_color(RmSession *session, RmLintType type) {
+    switch(type) {
+    case RM_LINT_TYPE_NBIN:
+    case RM_LINT_TYPE_BADUID:
+    case RM_LINT_TYPE_BADGID:
+    case RM_LINT_TYPE_BADUGID:
+        return MAYBE_BLUE(session);
+    case RM_LINT_TYPE_ORIGINAL_TAG:
+        return MAYBE_GREEN(session);
+    default:
+        return MAYBE_RED(session);
+    }
+}
 
 typedef struct RmFmtHandlerPretty {
     /* must be first */
@@ -76,11 +90,15 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
 
     if(file->lint_type != self->last_lint_type) {
-        fprintf(out, "\n"YELLOW"#"RESET" %s:\n", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]);
+        fprintf(
+            out, "\n%s#%s %s:\n", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type],
+            MAYBE_YELLOW(session),
+            MAYBE_RESET(session)
+        );
         self->last_lint_type = file->lint_type;
     }
 
-    fprintf(out, "    ");
+    fprintf(out, "    %s", rm_fmt_command_color(session, file->lint_type));
 
     const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
 
@@ -105,7 +123,7 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
         fprintf(out, "%s", format);
     }
 
-    fprintf(out, RESET" %s\n", file->path);
+    fprintf(out, "%s %s\n", MAYBE_RESET(session), file->path);
 }
 
 static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {

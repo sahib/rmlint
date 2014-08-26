@@ -112,5 +112,14 @@ void rm_set_default_settings(RmSettings *settings);
 void rm_session_init(RmSession *session, RmSettings *settings);
 void rm_session_clear(RmSession *session);
 
+/* Maybe colors, for use outside of the rm_log macros,
+ * in order to work with the --with-no-color option
+ * */
+#define MAYBE_RED(s)    ((s->settings->color) ? RED : "")
+#define MAYBE_YELLOW(s) ((s->settings->color) ? YELLOW : "")
+#define MAYBE_RESET(s)  ((s->settings->color) ? RESET : "")
+#define MAYBE_GREEN(s)  ((s->settings->color) ? GREEN : "")
+#define MAYBE_BLUE(s)   ((s->settings->color) ? BLUE : "")
+
 #endif /* end of include guard */
 
