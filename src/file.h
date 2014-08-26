@@ -64,7 +64,8 @@ typedef enum RmLintType {
     RM_LINT_TYPE_OTHER_LINT,
 
     /* note: this needs to be last item in list */
-    RM_LINT_TYPE_DUPE_CANDIDATE
+    RM_LINT_TYPE_DUPE_CANDIDATE,
+    RM_LINT_TYPE_ORIGINAL_TAG
 } RmLintType;
 
 /* TODO: Reduce size of RmFile */

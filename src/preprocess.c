@@ -43,6 +43,7 @@
 #include "shredder.h"
 #include "utilities.h"
 #include "traverse.h"
+#include "formats.h"
 #include "cmdline.h"
 
 static void dev_queue_free_func(gconstpointer p) {
@@ -88,6 +89,8 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->node_table = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)g_queue_free );
 
+    tables->orig_table = g_hash_table_new(NULL, NULL);
+
     RmSettings *settings = session->settings;
 
     g_assert(settings);
@@ -126,6 +129,9 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->mounts);
         rm_mounts_table_destroy(tables->mounts);
 
+        g_assert(tables->orig_table);
+        g_hash_table_unref(tables->orig_table);
+
         if (tables->name_table) {
             g_hash_table_unref(tables->name_table);
         }
@@ -141,32 +147,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_rec_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }
-
-
-
-static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
-    [RM_LINT_TYPE_UNKNOWN]      = "",
-    [RM_LINT_TYPE_BLNK]         = "Bad link(s)",
-    [RM_LINT_TYPE_EDIR]         = "Empty dir(s)",
-    [RM_LINT_TYPE_NBIN]         = "Non stripped binarie(s)",
-    [RM_LINT_TYPE_BADUID]       = "Bad UID(s)",
-    [RM_LINT_TYPE_BADGID]       = "Bad GID(s)",
-    [RM_LINT_TYPE_BADUGID]      = "Bad UID and GID(s)",
-    [RM_LINT_TYPE_EFILE]        = "Empty file(s)",
-    [RM_LINT_TYPE_DUPE_CANDIDATE] = "Duplicate(s)"
-};
-
-static const char *RM_LINT_TYPE_TO_COMMAND[] = {
-    [RM_LINT_TYPE_UNKNOWN]      = "",
-    [RM_LINT_TYPE_BLNK]         = "rm",
-    [RM_LINT_TYPE_EDIR]         = "rmdir",
-    [RM_LINT_TYPE_NBIN]         = "strip --strip-debug",
-    [RM_LINT_TYPE_BADUID]       = "chown %s",
-    [RM_LINT_TYPE_BADGID]       = "chgrp %s",
-    [RM_LINT_TYPE_BADUGID]      = "chown %s:%s",
-    [RM_LINT_TYPE_EFILE]        = "rm",
-    [RM_LINT_TYPE_DUPE_CANDIDATE] = "ls"
-};
 
 //static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
 //    const RmFile *fa = a, *fb = b;
@@ -217,6 +197,25 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         }
     }
     return 0;
+}
+
+void rm_file_tables_remember_original(RmFileTables *table, RmFile *file) {
+    g_rec_mutex_lock(&table->lock);
+    {
+        g_hash_table_insert(table->orig_table, file, NULL);
+    }
+    g_rec_mutex_unlock(&table->lock);
+}
+
+bool rm_file_tables_is_original(RmFileTables *table, RmFile *file) {
+    bool result = false;
+    g_rec_mutex_lock(&table->lock);
+    {
+        result = g_hash_table_contains(table->orig_table, file);
+    }
+    g_rec_mutex_unlock(&table->lock);
+
+    return result;
 }
 
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
@@ -536,58 +535,28 @@ static int find_double_bases(RmSession *session) {
 }
 
 
-static uint handle_other_lint(RmSession *session) {
-    uint num_handled = 0;
+static guint64 handle_other_lint(RmSession *session) {
+    guint64 num_handled = 0;
 
-    RmLintType flag = RM_LINT_TYPE_UNKNOWN;
-    RmSettings *sets = session->settings;
     RmFileTables *tables = session->tables;
 
-    const char *user = rm_util_get_username();
-    const char *group = rm_util_get_groupname();
-
-    for (uint type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
+    for(guint64 type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
+        /* TODO: RM_LINT_TYPE_EDIR list needs sorting into reverse alphabetical order */
         GList *list = tables->other_lint[type];
         for(GList *iter = list; iter; iter = iter->next) {
-            /* TODO: RM_LINT_TYPE_EDIR list needs sorting into reverse alphabetical order */
             RmFile *file = iter->data;
+
             g_assert(file);
             g_assert(type == file->lint_type);
-            g_assert(type < RM_LINT_TYPE_DUPE_CANDIDATE);
+
             num_handled++;
-            if(flag != file->lint_type) {
-                rm_error(YEL"\n# "NCO);
-                rm_error("%s", RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]);
-                rm_error(": \n"NCO);
-                flag = file->lint_type;
-            }
 
-            rm_error(GRE);
-            rm_error("   ");
-
-            const char *format = RM_LINT_TYPE_TO_COMMAND[type];
-            switch(type) {
-            case RM_LINT_TYPE_BADUID:
-                rm_error(format, user);
-                break;
-            case RM_LINT_TYPE_BADGID:
-                rm_error(format, group);
-                break;
-            case RM_LINT_TYPE_BADUGID:
-                rm_error(format, user, group);
-                break;
-            default:
-                rm_error("%s", format);
-            }
-
-            rm_error(NCO);
-            rm_error(" %s\n", file->path);
-            if(sets->output_log) {
-                write_to_log(session, file, false, NULL);
-            }
+            rm_fmt_write(session->formats, file);
         }
+
         g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
     }
+
     return num_handled;
 }
 

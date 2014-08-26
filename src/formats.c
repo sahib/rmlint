@@ -47,11 +47,14 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     self->handler_to_file = g_hash_table_new(NULL, NULL);
     self->session = session;
 
-    extern RmFmtHandler * PROGRESS_HANDLER;
+    extern RmFmtHandler *PROGRESS_HANDLER;
     rm_fmt_register(self, PROGRESS_HANDLER);
 
-    extern RmFmtHandler * CSV_HANDLER;
+    extern RmFmtHandler *CSV_HANDLER;
     rm_fmt_register(self, CSV_HANDLER);
+
+    extern RmFmtHandler *PRETTY_HANDLER;
+    rm_fmt_register(self, PRETTY_HANDLER);
 
     return self;
 }

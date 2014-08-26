@@ -31,7 +31,7 @@
 #include "session.h"
 #include "file.h"
 
-bool process_island(RmSession *session, GQueue *group);
+void process_island(RmSession *session, GQueue *group);
 void init_filehandler(RmSession *session);
 void write_to_log(RmSession *session, const RmFile *file, bool orig, const RmFile *p_to_orig);
 

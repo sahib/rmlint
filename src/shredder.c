@@ -229,7 +229,7 @@ typedef struct RmDevlistTag {
     GAsyncQueue *finished_queue;
 
     /* Mutex for locking the hashing procedure to protect against
-     * parallel hashes on the same digest 
+     * parallel hashes on the same digest
      */
     GMutex hash_mtx;
 } RmDevlistTag;
@@ -287,11 +287,6 @@ static void rm_shred_set_file_state(RmMainTag *tag, RmFile *file, RmFileState st
             tag->session->formats, RM_PROGRESS_STATE_SHREDDER,
             current_cnt, tag->session->total_files
         );
-    }
-
-    /* Writeout finished files */
-    if(state == RM_FILE_STATE_FINISH) {
-        rm_fmt_write(tag->session->formats, file);
     }
 }
 
@@ -510,7 +505,8 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmDevlistTag *tag) {
         return;
     }
 
-    g_mutex_lock(&tag->hash_mtx); {
+    g_mutex_lock(&tag->hash_mtx);
+    {
         /* Hash buffer->len bytes_read of buffer->data into buffer->file */
         rm_digest_update(&buffer->file->digest, buffer->data, buffer->len);
         buffer->file->hash_offset += buffer->len;
@@ -692,14 +688,14 @@ static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
         num_is_orig += candidate->is_prefd;
         num_no_orig += !candidate->is_prefd;
 
-        g_printerr("--> %s size=%lu cksum=", candidate->path, candidate->file_size);
+        // g_printerr("--> %s size=%lu cksum=", candidate->path, candidate->file_size);
 
         guint8 checksum[_RM_HASH_LEN];
         rm_digest_steal_buffer(&candidate->digest, checksum, sizeof(checksum));
-        for(int i = 0; i < _RM_HASH_LEN; ++i) {
-            g_printerr("%02x", checksum[i]);
-        }
-        g_printerr("\n");
+        // for(int i = 0; i < _RM_HASH_LEN; ++i) {
+        //     g_printerr("%02x", checksum[i]);
+        // }
+        // g_printerr("\n");
     }
 
     if(0
@@ -880,10 +876,10 @@ static void rm_shred_preprocess_input(GHashTable *dev_table, GHashTable *size_ta
         for(GList *file_link = value->head; file_link; file_link = file_link->next) {
             RmFile *file = file_link->data;
             guint64 count = GPOINTER_TO_UINT(
-                g_hash_table_lookup(
-                    size_table, GUINT_TO_POINTER(file->file_size)
-                )
-            );
+                                g_hash_table_lookup(
+                                    size_table, GUINT_TO_POINTER(file->file_size)
+                                )
+                            );
 
             if(count == 1) {
                 g_queue_push_head(&to_delete, file_link);

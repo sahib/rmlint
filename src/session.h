@@ -89,6 +89,7 @@ typedef struct RmFileTables {
     GHashTable *size_groups;
     GHashTable *node_table;
     GHashTable *name_table;
+    GHashTable *orig_table;
     GQueue *file_queue;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
     GRecMutex lock;

@@ -58,4 +58,9 @@ void rm_file_tables_destroy(RmFileTables *list);
  */
 uint rm_file_list_insert(RmSession *session, RmFile *file);
 
+// TODO dox.
+void rm_file_tables_remember_original(RmFileTables *table, RmFile *file);
+bool rm_file_tables_is_original(RmFileTables *table, RmFile *file);
+
+
 #endif
