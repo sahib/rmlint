@@ -202,7 +202,7 @@ static bool add_path(RmSession *session, int index, const char *path) {
     }
 
     if(access(path, R_OK) != 0) {
-        rm_error(YELLOW"FATAL: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
+        rm_log_error(YELLOW"FATAL: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
         settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
@@ -450,14 +450,14 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             if(parsed_threads > 0) {
                 sets->threads = parsed_threads;
             } else {
-                rm_error(RED"Invalid thread count supplied: %s\n"RESET, optarg);
+                rm_log_error(RED"Invalid thread count supplied: %s\n"RESET, optarg);
             }
         }
         break;
         case 'a':
             sets->checksum_type = rm_string_to_digest_type(optarg);
             if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
-                rm_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
+                rm_log_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
                 die(session, EXIT_FAILURE);
             }
             break;
@@ -592,8 +592,8 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
         sets->is_prefd[0] = 0;
         sets->num_paths++;
         if(!sets->paths[0]) {
-            rm_error(YELLOW"FATAL: "RESET"Cannot get working directory: "YELLOW"%s\n"RESET, strerror(errno));
-            rm_error("       Are you maybe in a dir that just had been removed?\n");
+            rm_log_error(YELLOW"FATAL: "RESET"Cannot get working directory: "YELLOW"%s\n"RESET, strerror(errno));
+            rm_log_error("       Are you maybe in a dir that just had been removed?\n");
             g_free(sets->paths);
             return 0;
         }
@@ -605,7 +605,7 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
 void die(RmSession *session, int status) {
     rm_session_clear(session);
     if(status) {
-        info("Abnormal exit\n");
+        rm_log_info("Abnormal exit\n");
     }
 
     exit(status);
@@ -625,17 +625,17 @@ char rm_echo_settings(RmSettings *settings) {
     if ((settings->confirm_settings) && (settings->verbosity < 3))
         settings->verbosity = G_LOG_LEVEL_INFO; /* need verbosity at least 3 if user is going to confirm settings*/
 
-    info (BLUE"Running rmlint with the following settings:\n"RESET);
-    info ("(Note "BLUE"[*]"RESET" hints below to change options)\n"RESET);
+    rm_log_info(BLUE"Running rmlint with the following settings:\n"RESET);
+    rm_log_info("(Note "BLUE"[*]"RESET" hints below to change options)\n"RESET);
 
     /*---------------- lint types ---------------*/
-    info ("Looking for lint types:\n");
-    if (settings->searchdup)		info ("\t+ duplicates "RED"(%s)"RESET" [-U]\n", settings->cmd_path ? "cmd" : "rm");
-    if (settings->findemptydirs)	info ("\t+ empty directories "RED"(rm)"RESET" [-Y]\n");
-    if (settings->listemptyfiles)	info ("\t+ zero size files "RED"(rm)"RESET" [-K]\n");
-    if (settings->findbadids)		info ("\t+ files with bad UID/GID "BLUE"(chown)"RESET" [-L]\n");
-    if (settings->namecluster)		info ("\t+ files with same name "GREEN"(info only)"RESET" [-N]\n");
-    if (settings->nonstripped)		info ("\t+ non-stripped binaries"BLUE"(strip)"RED"(slow)"RESET" [-A]\n");
+    rm_log_info("Looking for lint types:\n");
+    if (settings->searchdup)	rm_log_info("\t+ duplicates "RED"(%s)"RESET" [-U]\n", settings->cmd_path ? "cmd" : "rm");
+    if (settings->findemptydirs)rm_log_info("\t+ empty directories "RED"(rm)"RESET" [-Y]\n");
+    if (settings->listemptyfiles)rm_log_info("\t+ zero size files "RED"(rm)"RESET" [-K]\n");
+    if (settings->findbadids)	rm_log_info("\t+ files with bad UID/GID "BLUE"(chown)"RESET" [-L]\n");
+    if (settings->namecluster)	rm_log_info("\t+ files with same name "GREEN"(info only)"RESET" [-N]\n");
+    if (settings->nonstripped)	rm_log_info("\t+ non-stripped binaries"BLUE"(strip)"RED"(slow)"RESET" [-A]\n");
     if (!settings->searchdup ||
             !settings->findemptydirs ||
             !settings->listemptyfiles ||
@@ -643,118 +643,118 @@ char rm_echo_settings(RmSettings *settings) {
             !settings->namecluster ||
             !settings->nonstripped
        ) {
-        info (RESET"\tNot looking for:\n");
-        if (!settings->searchdup)		info ("\t\tduplicates[-u];\n");
-        if (!settings->findemptydirs)	info ("\t\tempty directories[-y];\n");
-        if (!settings->listemptyfiles)	info ("\t\tzero size files[-k];\n");
-        if (!settings->findbadids)		info ("\t\tfiles with bad UID/GID[-l];\n");
-        if (!settings->namecluster)		info ("\t\tfiles with same name[-n];\n");
-        if (!settings->nonstripped)		info ("\t\tnon-stripped binaries[-a];\n");
+        rm_log_info(RESET"\tNot looking for:\n");
+        if (!settings->searchdup)	rm_log_info("\t\tduplicates[-u];\n");
+        if (!settings->findemptydirs)rm_log_info("\t\tempty directories[-y];\n");
+        if (!settings->listemptyfiles)rm_log_info("\t\tzero size files[-k];\n");
+        if (!settings->findbadids)	rm_log_info("\t\tfiles with bad UID/GID[-l];\n");
+        if (!settings->namecluster)	rm_log_info("\t\tfiles with same name[-n];\n");
+        if (!settings->nonstripped)	rm_log_info("\t\tnon-stripped binaries[-a];\n");
     }
 
     /*---------------- search paths ---------------*/
-    info(RESET"Search paths:\n");
+    rm_log_info(RESET"Search paths:\n");
     for(int i = 0; settings->paths[i] != NULL; ++i) {
         if (settings->is_prefd[i]) {
             has_ppath = true;
-            warning (GREEN"\t(orig)\t+ %s\n"RESET, settings->paths[i] );
+            rm_log_warning (GREEN"\t(orig)\t+ %s\n"RESET, settings->paths[i] );
         } else {
-            info("\t\t+ %s\n", settings->paths[i]);
+            rm_log_info("\t\t+ %s\n", settings->paths[i]);
         }
     }
     if ((settings->paths[1]) && !has_ppath) {
-        info("\t[prefix one or more paths with // to flag location of originals]\n");
+        rm_log_info("\t[prefix one or more paths with // to flag location of originals]\n");
     }
 
     /*---------------- search tree options---------*/
-    info ("Tree search parameters:\n");
-    info ("\t%s hidden files and folders [-%s]\n"RESET,
-          settings->ignore_hidden ? "Excluding" : "Including",
-          settings->ignore_hidden ? "G" :  "g" );
-    info ("\t%s symlinked files and folders [-%s]\n"RESET,
-          settings->followlinks ? "Following" : "Excluding",
-          settings->followlinks ? "F" : "f" );
-    info ("\t%srossing filesystem / mount point boundaries [-%s]\n"RESET,
-          settings->samepart ? "Not c" : "C",
-          settings->samepart ? "S" : "s");
+    rm_log_info("Tree search parameters:\n");
+    rm_log_info("\t%s hidden files and folders [-%s]\n"RESET,
+                settings->ignore_hidden ? "Excluding" : "Including",
+                settings->ignore_hidden ? "G" :  "g" );
+    rm_log_info("\t%s symlinked files and folders [-%s]\n"RESET,
+                settings->followlinks ? "Following" : "Excluding",
+                settings->followlinks ? "F" : "f" );
+    rm_log_info("\t%srossing filesystem / mount point boundaries [-%s]\n"RESET,
+                settings->samepart ? "Not c" : "C",
+                settings->samepart ? "S" : "s");
 
-    if (settings->depth) info("\t Only search %i levels deep into search paths\n", settings->depth);
+    if (settings->depth) rm_log_info("\t Only search %i levels deep into search paths\n", settings->depth);
 
     /*---------------- file filters ---------------*/
 
-    info("Filtering search based on:\n");
+    rm_log_info("Filtering search based on:\n");
 
     if (settings->limits_specified) {
         char size_buf_min[128], size_buf_max[128];
         rm_util_size_to_human_readable(settings->minsize, size_buf_min, sizeof(size_buf_min));
         rm_util_size_to_human_readable(settings->maxsize, size_buf_max, sizeof(size_buf_max));
-        info("\tFile size between %s and %s bytes\n", size_buf_min, size_buf_max);
+        rm_log_info("\tFile size between %s and %s bytes\n", size_buf_min, size_buf_max);
 
     } else {
-        info("\tNo file size limits [-z \"min-max\"]\n");
+        rm_log_info("\tNo file size limits [-z \"min-max\"]\n");
     }
     if (settings->must_match_original) {
-        info("\tDuplicates must have at least one member in the "GREEN"(orig)"RESET" paths indicated above\n");
+        rm_log_info("\tDuplicates must have at least one member in the "GREEN"(orig)"RESET" paths indicated above\n");
         if (!has_ppath)
-            rm_error(RED"\tWarning: no "GREEN"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"RESET);
+            rm_log_error(RED"\tWarning: no "GREEN"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"RESET);
     }
 
     if (settings->find_hardlinked_dupes) {
-        info("\tHardlinked file sets will be treated as duplicates (%s)\n", settings->cmd_path ? settings->cmd_path : "rm");
-        info(RED"\t\tBUG"RESET": rmlint currently does not deduplicate hardlinked files with same basename\n");
-    } else info("\tHardlinked file sets will not be deduplicated [-H]\n");
+        rm_log_info("\tHardlinked file sets will be treated as duplicates (%s)\n", settings->cmd_path ? settings->cmd_path : "rm");
+        rm_log_info(RED"\t\tBUG"RESET": rmlint currently does not deduplicate hardlinked files with same basename\n");
+    } else rm_log_info("\tHardlinked file sets will not be deduplicated [-H]\n");
 
     /*---------------- originals selection ranking ---------*/
 
-    info(RESET"Originals selected based on (decreasing priority):    [-D <criteria>]\n");
-    if (has_ppath) info("\tpaths indicated "GREEN"(orig)"RESET" above\n");
+    rm_log_info(RESET"Originals selected based on (decreasing priority):    [-D <criteria>]\n");
+    if (has_ppath) rm_log_info("\tpaths indicated "GREEN"(orig)"RESET" above\n");
 
     for (int i = 0; settings->sort_criteria[i]; ++i) {
         switch(settings->sort_criteria[i]) {
         case 'm':
-            info("\tKeep oldest modified time\n");
+            rm_log_info("\tKeep oldest modified time\n");
             break;
         case 'M':
-            info("\tKeep newest modified time\n");
+            rm_log_info("\tKeep newest modified time\n");
             break;
         case 'p':
-            info("\tKeep first-listed path (above)\n");
+            rm_log_info("\tKeep first-listed path (above)\n");
             break;
         case 'P':
-            info("\tKeep last-listed path (above)\n");
+            rm_log_info("\tKeep last-listed path (above)\n");
             break;
         case 'a':
-            info("\tKeep first alphabetically\n");
+            rm_log_info("\tKeep first alphabetically\n");
             break;
         case 'A':
-            info("\tKeep last alphabetically\n");
+            rm_log_info("\tKeep last alphabetically\n");
             break;
         default:
-            rm_error(RED"\tWarning: invalid originals ranking option '-D %c'\n"RESET, settings->sort_criteria[i]);
+            rm_log_error(RED"\tWarning: invalid originals ranking option '-D %c'\n"RESET, settings->sort_criteria[i]);
             break;
         }
     }
 
     if (settings->keep_all_originals) {
-        info("\tNote: all originals in "GREEN"(orig)"RESET" paths will be kept\n");
+        rm_log_info("\tNote: all originals in "GREEN"(orig)"RESET" paths will be kept\n");
     }
-    info("\t      "RED"but"RESET" other lint in "GREEN"(orig)"RESET" paths may still be deleted\n");
+    rm_log_info("\t      "RED"but"RESET" other lint in "GREEN"(orig)"RESET" paths may still be deleted\n");
 
     /*--------------- paranoia ---------*/
 
     if (settings->paranoid) {
-        info("Note: paranoid (bit-by-bit) comparison will be used to verify duplicates "RED"(slow)\n"RESET);
+        rm_log_info("Note: paranoid (bit-by-bit) comparison will be used to verify duplicates "RED"(slow)\n"RESET);
     } else {
-        info("Note: fingerprint and md5 comparison will be used to identify duplicates "RED"(very slight risk of false positives)"RESET" [-p]");
+        rm_log_info("Note: fingerprint and md5 comparison will be used to identify duplicates "RED"(very slight risk of false positives)"RESET" [-p]");
     }
 
     /*--------------- confirmation ---------*/
 
     if (settings->confirm_settings) {
-        info(YELLOW"\n\nPress y or enter to continue, any other key to abort\n");
+        rm_log_info(YELLOW"\n\nPress y or enter to continue, any other key to abort\n");
 
         if(scanf("%c", &confirm) == EOF) {
-            info(RED"Reading your input failed."RESET);
+            rm_log_info(RED"Reading your input failed."RESET);
         }
 
         settings->verbosity = save_verbosity;
@@ -769,14 +769,14 @@ int rm_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_TRAVERSE, 0, 0);
     session->total_files = rm_search_tree(session);
 
-    warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
+    rm_log_warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
 
     if(session->total_files < 2) {
-        warning("No files in cache to search through => No duplicates.\n");
+        rm_log_warning("No files in cache to search through => No duplicates.\n");
         die(session, EXIT_SUCCESS);
     }
 
-    info("Now in total "YELLOW"%ld useable file(s)"RESET" in cache.\n", session->total_files);
+    rm_log_info("Now in total "YELLOW"%ld useable file(s)"RESET" in cache.\n", session->total_files);
     if(session->settings->threads > session->total_files) {
         session->settings->threads = session->total_files + 1;
     }
@@ -791,29 +791,29 @@ int rm_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
 
     // TODO: remove this below and add a summary-formatter.
-    rm_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     if(session->dup_counter == 0) {
-        rm_error("\r                    ");
+        rm_log_error("\r                    ");
     } else {
-        rm_error("\n");
+        rm_log_error("\n");
     }
 
     rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-    warning(
+    rm_log_warning(
         "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",
         session->total_files, session->dup_counter, session->dup_group_counter
     );
 
     if(other_lint > 0) {
         rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
-        warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
+        rm_log_warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
     }
 
-    warning("\n");
+    rm_log_warning("\n");
     if(!session->aborted) {
         rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-        warning(
+        rm_log_warning(
             RED"=> "RESET"Totally "GREEN" %s "RESET" [%lu Bytes] can be removed.\n",
             lintbuf, session->total_lint_size
         );

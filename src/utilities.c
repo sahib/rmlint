@@ -139,14 +139,14 @@ bool rm_util_is_nonstripped(const char *path) {
 
     /* Open ELF file to obtain file descriptor */
     if((fd = open(path, O_RDONLY)) == -1) {
-        warning("Error opening file '%s' for nonstripped test: ", path);
-        rm_perror("");
+        rm_log_warning("Error opening file '%s' for nonstripped test: ", path);
+        rm_log_perror("");
         return 0;
     }
 
     /* Protect program from using an older library */
     if(elf_version(EV_CURRENT) == EV_NONE) {
-        rm_error("ERROR - ELF Library is out of date!\n");
+        rm_log_error("ERROR - ELF Library is out of date!\n");
         return false;
     }
 
@@ -401,7 +401,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 /* folder and devname stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
-                rm_error(RED"blkid_devno_to_wholedisk failed for %s\n"RESET, entry->mnt_fsname);
+                rm_log_error(RED"blkid_devno_to_wholedisk failed for %s\n"RESET, entry->mnt_fsname);
                 whole_disk = stat_buf_dev.st_dev;
                 strncpy(diskname, entry->mnt_fsname, sizeof(diskname));
                 is_rotational = false;
@@ -435,12 +435,12 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 rm_disk_info_new(diskname, is_rotational));
         }
 
-        info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %15s; rotational: %3s)",
-             major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
-             entry->mnt_dir,
-             major(whole_disk), minor(whole_disk),
-             entry->mnt_fsname, diskname, is_rotational ? "yes" : "no"
-            );
+        rm_log_info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %15s; rotational: %3s)",
+                    major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
+                    entry->mnt_dir,
+                    major(whole_disk), minor(whole_disk),
+                    entry->mnt_fsname, diskname, is_rotational ? "yes" : "no"
+                   );
 
     }
     endmntent(mnt_file);
@@ -541,7 +541,7 @@ static void rm_offset_free_func(RmOffsetEntry *entry) {
 RmOffsetTable rm_offset_create_table(const char *path) {
     int fd = open(path, O_RDONLY);
     if(fd == -1) {
-        info("Error opening %s in setup_fiemap_extents\n", path);
+        rm_log_info("Error opening %s in setup_fiemap_extents\n", path);
         return NULL;
     }
 

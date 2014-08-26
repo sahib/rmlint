@@ -303,7 +303,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
         buffer[0] = hex[input[i] / 16];
         buffer[1] = hex[input[i] % 16];
 
-        if(i == digest_len -1) {
+        if(i == digest_len - 1) {
             buffer[2] = '\0';
         }
 

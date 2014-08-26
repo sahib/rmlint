@@ -103,7 +103,7 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
 
 static void rm_fmt_head(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
-        rm_perror("Could not chmod +x sh script");
+        rm_log_perror("Could not chmod +x sh script");
     }
 
     char *joined_argv = NULL;

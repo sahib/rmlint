@@ -31,21 +31,19 @@
 
 #include <errno.h>
 
-#define debug(...) \
+#define rm_log_debug(...) \
     g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define info(...) \
+#define rm_log_info(...) \
     g_log("rmlint", G_LOG_LEVEL_INFO, __VA_ARGS__)
-#define fyi(...) \
-    g_log("rmlint", G_LOG_LEVEL_MESSAGE, __VA_ARGS__)
-#define warning(...) \
+#define rm_log_warning(...) \
     g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
-#define rm_error(...) \
+#define rm_log_error(...) \
     g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
 
-#define rm_perror(message)                                                           \
-    if(errno) {{                                                                     \
-        rm_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
-    }}                                                                               \
+#define rm_log_perror(message)                                                           \
+    if(errno) {{                                                                         \
+        rm_log_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
+    }}                                                                                   \
  
 
 #endif

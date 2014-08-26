@@ -304,7 +304,7 @@ static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
 
     int fd_a = open(a->path, O_RDONLY);
     if(fd_a == -1) {
-        rm_perror("Unable to open file_a for paranoia");
+        rm_log_perror("Unable to open file_a for paranoia");
         return false;
     } else {
         posix_fadvise(fd_a, 0, 0, SHRED_FADVISE_FLAGS);
@@ -312,7 +312,7 @@ static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
 
     int fd_b = open(b->path, O_RDONLY);
     if(fd_b == -1) {
-        rm_perror("Unable to open file_b for paranoia");
+        rm_log_perror("Unable to open file_b for paranoia");
         return false;
     } else {
         posix_fadvise(fd_b, 0, 0, SHRED_FADVISE_FLAGS);
@@ -376,7 +376,7 @@ static bool rm_shred_thread_pool_push(GThreadPool *pool, gpointer data) {
     GError *error = NULL;
     g_thread_pool_push(pool, data, &error);
     if(error != NULL) {
-        rm_error("Unable to push thread to pool %p: %s\n", pool, error->message);
+        rm_log_error("Unable to push thread to pool %p: %s\n", pool, error->message);
         g_error_free(error);
         return false;
     } else {
@@ -389,7 +389,7 @@ static GThreadPool *rm_shred_thread_pool_new(GFunc func, gpointer data, int thre
     GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
 
     if(error != NULL) {
-        rm_error("Unable to create thread pool.\n");
+        rm_log_error("Unable to create thread pool.\n");
         g_error_free(error);
     }
     return pool;
@@ -580,9 +580,9 @@ static void rm_shred_devlist_factory(GQueue *device_queue, RmMainTag *main) {
                              main->session->mounts,
                              ((RmFile *)device_queue->head->data)->disk
                          );
-    rm_error(BLUE"Started rm_shred_devlist_factory for disk %u:%u\n"RESET,
-             major(((RmFile *)device_queue->head->data)->disk),
-             minor(((RmFile *)device_queue->head->data)->disk) );
+    rm_log_error(BLUE"Started rm_shred_devlist_factory for disk %u:%u\n"RESET,
+                 major(((RmFile *)device_queue->head->data)->disk),
+                 minor(((RmFile *)device_queue->head->data)->disk) );
 
     int max_threads = rm_shred_get_read_threads(
                           main, nonrotational, main->session->settings->threads
@@ -748,7 +748,7 @@ static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
     if(tag->session->settings->paranoid) {
         int failure_count = rm_shred_check_paranoia(tag, results);
         if(failure_count > 0) {
-            warning("Removed %d files during paranoia check.\n", failure_count);
+            rm_log_warning("Removed %d files during paranoia check.\n", failure_count);
         }
     }
 

@@ -230,11 +230,11 @@ bool rm_file_list_insert(RmSession *session, RmFile *file) {
                 /* file is path double or filesystem loop - kick one or the other */
                 if ( cmp_orig_criteria(file, current, session) > 0) {
                     /* file outranks current */
-                    info("Ignoring path double %s, keeping %s\n", current->path, file->path);
+                    rm_log_info("Ignoring path double %s, keeping %s\n", current->path, file->path);
                     rm_file_destroy(current);
                     iter->data = file;
                 } else {
-                    info("Ignoring path double %s, keeping %s\n", file->path, current->path);
+                    rm_log_info("Ignoring path double %s, keeping %s\n", file->path, current->path);
                     rm_file_destroy(file);
                 }
                 g_rec_mutex_unlock(&tables->lock);
@@ -363,7 +363,7 @@ static void rm_preprocess_files(RmFile *file, RmSession *session) {
     if(dev_list == NULL) {
         dev_list = g_queue_new();
         g_hash_table_insert(tables->dev_table, GUINT_TO_POINTER(file->disk), dev_list);
-        rm_error("new device queue for disk %lu\n", file->disk);
+        rm_log_error("new device queue for disk %lu\n", file->disk);
     }
     g_queue_push_head(dev_list, file);
 
@@ -381,10 +381,10 @@ static void rm_preprocess_files(RmFile *file, RmSession *session) {
             session->offset_fails++;
         }
         file->phys_offset = rm_offset_lookup(file->disk_offsets, 0);
-        //rm_error("fiemap finished read time %f.6\n", g_timer_elapsed(session->timer, NULL)-start);
+        //rm_log_error("fiemap finished read time %f.6\n", g_timer_elapsed(session->timer, NULL)-start);
     }
 
-    info("Added Inode: %d Offset: %lu file: %s\n", (int)file->inode, file->phys_offset, file->path);
+    rm_log_info("Added Inode: %d Offset: %lu file: %s\n", (int)file->inode, file->phys_offset, file->path);
 }
 
 
@@ -492,7 +492,7 @@ static int find_double_bases(RmSession *session) {
             while (list) {
                 RmFile *file = list->data;
                 if(!header_printed) {
-                    rm_error("\n%s#"RESET" Double basename(s):\n", GREEN);
+                    rm_log_error("\n%s#"RESET" Double basename(s):\n", GREEN);
                     header_printed = true;
                 }
 
@@ -551,10 +551,10 @@ guint64 rm_preprocess(RmSession *session) {
     g_hash_table_foreach_remove(tables->node_table,
                                 (GHRFunc)rm_handle_hardlinks,
                                 session);
-    rm_error("process hardlink groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("process hardlink groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     other_lint += handle_other_lint(session);
-    rm_error("Other lint handling finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("Other lint handling finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
 
 
@@ -569,13 +569,13 @@ guint64 rm_preprocess(RmSession *session) {
     g_hash_table_foreach_remove(tables->node_table,
                                 (GHRFunc)rm_populate_size_groups,
                                 session);
-    rm_error("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     /* delete irrelevant size groups */
     g_hash_table_foreach_remove(tables->size_groups,
                                 (GHRFunc)rm_is_group_non_candidate,
                                 session);
-    rm_error("delete irrelevant size groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("delete irrelevant size groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     /* move files from remaining groups into inode-sorted queue for faster fiemap */
     tables->file_queue = g_queue_new();
@@ -583,19 +583,19 @@ guint64 rm_preprocess(RmSession *session) {
                                 (GHRFunc)rm_move_files_to_queue,
                                 session);
     g_queue_sort(tables->file_queue, (GCompareDataFunc)rm_sort_inode, NULL);
-    rm_error("move files from remaining groups into inode-sorted queue finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("move files from remaining groups into inode-sorted queue finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     /* move remaining groups into dev_queues for shredder */
     g_queue_foreach(tables->file_queue, (GFunc)rm_preprocess_files, session );
     g_queue_free(tables->file_queue);
-    rm_error("move remaining groups into dev_queues finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("move remaining groups into dev_queues finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
-    rm_error("fiemap'd %lu files containing %lu fragments (failed another %lu files)\n", session->offsets_read - session->offset_fails, session->offset_fragments, session->offset_fails);
+    rm_log_error("fiemap'd %lu files containing %lu fragments (failed another %lu files)\n", session->offsets_read - session->offset_fails, session->offset_fragments, session->offset_fails);
 
     if(settings->namecluster) {
         other_lint += find_double_bases(session);
-        rm_error("\n");
-        rm_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+        rm_log_error("\n");
+        rm_log_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
     }
 
     return other_lint;
