@@ -32,8 +32,10 @@
 
 /**
  * @brief Do some pre-processing (eg remove path doubles) and process "other lint".
+ *
+ * Returns: number of other lint items found.
  */
-void rm_preprocess(RmSession *session);
+guint64 rm_preprocess(RmSession *session);
 
 /**
  * @brief Create a new RmFileTable object.
@@ -56,7 +58,7 @@ void rm_file_tables_destroy(RmFileTables *list);
  *
  * @return 1 if successful insertion, 0 if path double.
  */
-uint rm_file_list_insert(RmSession *session, RmFile *file);
+bool rm_file_list_insert(RmSession *session, RmFile *file);
 
 /**
  * @brief Save file as original in a table.

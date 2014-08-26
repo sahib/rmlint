@@ -30,18 +30,13 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include <ftw.h>
 #include <signal.h>
-#include <regex.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <math.h>
 #include <dirent.h>
 
 #include "preprocess.h"
-#include "shredder.h"
 #include "utilities.h"
-#include "traverse.h"
 #include "formats.h"
 #include "cmdline.h"
 
@@ -218,7 +213,7 @@ bool rm_file_tables_is_original(RmFileTables *table, RmFile *file) {
 }
 
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
-uint rm_file_list_insert(RmSession *session, RmFile *file) {
+bool rm_file_list_insert(RmSession *session, RmFile *file) {
     RmFileTables *tables = session->tables;
 
     GHashTable *node_table = tables->node_table;
@@ -254,7 +249,7 @@ uint rm_file_list_insert(RmSession *session, RmFile *file) {
                     rm_file_destroy(file);
                 }
                 g_rec_mutex_unlock(&tables->lock);
-                return 0;
+                return false;
             }
         }
         /* no path double found; must be hardlink */
@@ -265,7 +260,7 @@ uint rm_file_list_insert(RmSession *session, RmFile *file) {
         (GCompareDataFunc)cmp_orig_criteria,
         session);
     g_rec_mutex_unlock(&tables->lock);
-    return 1;
+    return true;
 }
 
 
@@ -557,8 +552,7 @@ static guint64 handle_other_lint(RmSession *session) {
 }
 
 /* This does preprocessing including handling of "other lint" (non-dupes) */
-void rm_preprocess(RmSession *session) {
-    char lintbuf[128] = {0};
+guint64 rm_preprocess(RmSession *session) {
     guint64 other_lint = 0;
 
     RmSettings *settings = session->settings;
@@ -615,34 +609,5 @@ void rm_preprocess(RmSession *session) {
         rm_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
     }
 
-    rm_error("\n%s Duplicate(s):\n", YEL"#"NCO);
-
-    rm_shred_run(session, session->tables->dev_table, session->tables->size_table);
-    rm_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-    if(session->dup_counter == 0) {
-        rm_error("\r                    ");
-    } else {
-        rm_error("\n");
-    }
-
-    rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-    warning(
-        "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s) in "RED"%lu"NCO" groups",
-        session->total_files, session->dup_counter, session->dup_group_counter
-    );
-
-    if(other_lint > 0) {
-        rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
-        warning(RED"\n=> %lu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
-    }
-
-    warning("\n");
-    if(!session->aborted) {
-        rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-        warning(
-            RED"=> "NCO"Totally "GRE" %s "NCO" [%lu Bytes] can be removed.\n",
-            lintbuf, session->total_lint_size
-        );
-    }
+    return other_lint;
 }

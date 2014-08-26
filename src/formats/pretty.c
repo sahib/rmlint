@@ -96,13 +96,13 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         if(rm_file_tables_is_original(session->tables, file)) {
-            fprintf(out, RM_LINT_TYPE_TO_COMMAND[RM_LINT_TYPE_ORIGINAL_TAG]);
+            fprintf(out, "%s", RM_LINT_TYPE_TO_COMMAND[RM_LINT_TYPE_ORIGINAL_TAG]);
         } else {
-            fprintf(out, format);
+            fprintf(out, "%s", format);
         }
         break;
     default:
-        fprintf(out, format);
+        fprintf(out, "%s", format);
     }
 
     fprintf(out, NCO" %s\n", file->path);

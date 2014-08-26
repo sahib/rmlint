@@ -23,6 +23,7 @@
  *
  */
 
+// TODO: we can probably can get rid of most headers?
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -772,10 +773,6 @@ char rm_echo_settings(RmSettings *settings) {
 }
 
 int rm_main(RmSession *session) {
-    /* Used only for infomessage */
-
-    session->total_files = 0;
-
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
     session->total_files = rm_search_tree(session);
 
@@ -786,16 +783,48 @@ int rm_main(RmSession *session) {
         die(session, EXIT_SUCCESS);
     }
 
-
     info("Now in total "YEL"%ld useable file(s)"NCO" in cache.\n", session->total_files);
     if(session->settings->threads > session->total_files) {
         session->settings->threads = session->total_files + 1;
     }
 
-    // TODO: Call all toplevel functions here.
-    /* Apply the prefilter and outsort unique sizes */
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
-    rm_preprocess(session);
+    guint64 other_lint = rm_preprocess(session);
+    char lintbuf[128];
+
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
+    rm_shred_run(session, session->tables->dev_table, session->tables->size_table);
+
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
+
+    // TODO: remove this below and add a summary-formatter.
+    rm_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+
+    if(session->dup_counter == 0) {
+        rm_error("\r                    ");
+    } else {
+        rm_error("\n");
+    }
+
+    rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
+    warning(
+        "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s) in "RED"%lu"NCO" groups",
+        session->total_files, session->dup_counter, session->dup_group_counter
+    );
+
+    if(other_lint > 0) {
+        rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
+        warning(RED"\n=> %lu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
+    }
+
+    warning("\n");
+    if(!session->aborted) {
+        rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
+        warning(
+            RED"=> "NCO"Totally "GRE" %s "NCO" [%lu Bytes] can be removed.\n",
+            lintbuf, session->total_lint_size
+        );
+    }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
     rm_session_clear(session);
