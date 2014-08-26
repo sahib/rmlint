@@ -54,15 +54,19 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_ORIGINAL_TAG]   = "ls"
 };
 
-static const char *rm_fmt_command_color(RmSession *session, RmLintType type) {
-    switch(type) {
+static const char *rm_fmt_command_color(RmSession *session, RmFile *file) {
+    switch(file->lint_type) {
     case RM_LINT_TYPE_NBIN:
     case RM_LINT_TYPE_BADUID:
     case RM_LINT_TYPE_BADGID:
     case RM_LINT_TYPE_BADUGID:
         return MAYBE_BLUE(session);
-    case RM_LINT_TYPE_ORIGINAL_TAG:
-        return MAYBE_GREEN(session);
+    case RM_LINT_TYPE_DUPE_CANDIDATE:
+        if(rm_file_tables_is_original(session->tables, file)) {
+            return MAYBE_GREEN(session);
+        } else {
+            return MAYBE_RED(session);
+        }
     default:
         return MAYBE_RED(session);
     }
@@ -98,7 +102,7 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
         self->last_lint_type = file->lint_type;
     }
 
-    fprintf(out, "    %s", rm_fmt_command_color(session, file->lint_type));
+    fprintf(out, "    %s", rm_fmt_command_color(session, file));
 
     const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
 
