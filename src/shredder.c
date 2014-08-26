@@ -9,7 +9,6 @@
 #include "checksum.h"
 #include "checksums/city.h"
 
-#include "postprocess.h"
 #include "preprocess.h"
 #include "utilities.h"
 #include "formats.h"
@@ -679,6 +678,41 @@ static int rm_shred_check_paranoia(RmMainTag *tag, GQueue *candidates) {
     return failure_count;
 }
 
+void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+    session->dup_group_counter++;
+
+    bool tagged_original = false;
+    RmFile *original_file = NULL;
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if (
+            ((file->is_prefd) && (session->settings->keep_all_originals)) ||
+            ((file->is_prefd) && (!tagged_original))
+        ) {
+            rm_file_tables_remember_original(session->tables, file);
+            if(!tagged_original) {
+                tagged_original = true;
+                original_file = file;
+            }
+        }
+    }
+
+    if(!tagged_original) {
+        /* tag first file as the original */
+        original_file = group->head->data;
+        rm_file_tables_remember_original(session->tables, original_file);
+    }
+
+    /* Hand it over to the printing module */
+    rm_fmt_write(session->formats, original_file);
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        if(iter->data != original_file) {
+            rm_fmt_write(session->formats, iter->data);
+        }
+    }
+}
+
 static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
     RmSettings *settings = tag->session->settings;
     int num_no_orig = 0, num_is_orig = 0;
@@ -727,7 +761,7 @@ static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
     }
 
     if(dupe_count > 0) {
-        process_island(tag->session, results);
+        rm_shred_forward_to_output(tag->session, results);
     }
 
     g_queue_free(results);

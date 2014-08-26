@@ -31,7 +31,6 @@
 #include "formats.h"
 #include "traverse.h"
 #include "preprocess.h"
-#include "postprocess.h"
 
 /* Options not specified by commandline get a default option - this called before rm_parse_arguments */
 void rm_set_default_settings(RmSettings *settings) {
