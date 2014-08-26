@@ -65,7 +65,7 @@ typedef struct RmFmtHandlerPretty {
     const char *group;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, G_GNUC_UNUSED FILE *out) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
 
     self->user = rm_util_get_username();
@@ -111,6 +111,7 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
 static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {
     /* Initialize parent */
     .parent = {
+        .size = sizeof(PRETTY_HANDLER_IMPL),
         .name = "pretty",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,

@@ -91,6 +91,7 @@ static void rm_fmt_foot(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHan
 static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     /* Initialize parent */
     .parent = {
+        .size = sizeof(PROGRESS_HANDLER_IMPL),
         .name = "progressbar",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
@@ -104,4 +105,4 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .last_state = RM_PROGRESS_STATE_INIT
 };
 
-RmFmtHandler * PROGRESS_HANDLER = (RmFmtHandler *) &PROGRESS_HANDLER_IMPL;
+RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *) &PROGRESS_HANDLER_IMPL;

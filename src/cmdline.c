@@ -239,14 +239,14 @@ static int read_paths_from_stdin(RmSession *session, int index) {
     return paths_added;
 }
 
-static bool parse_output_pair(RmSession * session, const char * pair) {
-    char * separator = strchr(pair, ':');
+static bool parse_output_pair(RmSession *session, const char *pair) {
+    char *separator = strchr(pair, ':');
     if(separator == NULL) {
         g_printerr("No format specified in '%s'\n", pair);
         return false;
     }
 
-    char * full_path = separator + 1;
+    char *full_path = separator + 1;
     char format_name[100];
     memset(format_name, 0, sizeof(format_name));
     strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
@@ -385,7 +385,7 @@ void parse_lint_types(RmSettings *sets, const char *lint_string) {
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-char rm_parse_arguments(int argc, char **argv, RmSession *session) {
+char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
     RmSettings *sets = session->settings;
 
     int choice = -1;
@@ -394,14 +394,15 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
     int option_index = 0;
     int path_index = 0;
 
+    /* Rememver arg[cv] for use in the script formatter */
+    sets->argv = argv;
+    sets->argc = argc;
+
     while(1) {
         static struct option long_options[] = {
             {"types"               ,  required_argument ,  0 ,  'T'},
             {"threads"             ,  required_argument ,  0 ,  't'},
-            {"mode"                ,  required_argument ,  0 ,  'm'},
             {"maxdepth"            ,  required_argument ,  0 ,  'd'},
-            {"cmd-dup"             ,  required_argument ,  0 ,  'c'},
-            {"cmd-orig"            ,  required_argument ,  0 ,  'C'},
             {"size"                ,  required_argument ,  0 ,  's'},
             {"sortcriteria"        ,  required_argument ,  0 ,  'S'},
             {"algorithm"           ,  required_argument ,  0 ,  'a'},
@@ -421,7 +422,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             {"keepall//"           ,  no_argument       ,  0 ,  'k'},
             {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
             {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},
-            //{"no-mustmatch//"      ,  no_argument       ,  0 ,  'M'},
+            {"no-mustmatch//"      ,  no_argument       ,  0 ,  'm'},
             {"invert//"            ,  no_argument       ,  0 ,  'i'},
             {"no-invert//"         ,  no_argument       ,  0 ,  'I'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
@@ -435,8 +436,8 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
 
         /* getopt_long stores the option index here. */
         choice = getopt_long(
-                     argc, argv,
-                     "T:t:m:d:c:C:s:o:S:a:vVwWrRfFXxpPkKmMiIlLqQhH",
+                     argc, (char **)argv,
+                     "T:t:d:s:o:S:a:vVwWrRfFXxpPkKmMiIlLqQhH",
                      long_options, &option_index
                  );
 
@@ -446,6 +447,7 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         }
         switch(choice) {
         case '?':
+            show_help();
             return 0;
         case 'T':
             parse_lint_types(sets, optarg);
@@ -498,12 +500,6 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
                 output_flag_cnt = 0;
             }
             output_flag_cnt += parse_output_pair(session, optarg);
-            break;
-        case 'c':
-            sets->cmd_path = optarg;
-            break;
-        case 'C':
-            sets->cmd_orig = optarg;
             break;
         case 'R':
             sets->ignore_hidden = 1;
@@ -560,28 +556,6 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
         case 'P':
             sets->paranoid = 0;
             break;
-        case 'm':
-            sets->mode = 0;
-            if(!strcasecmp(optarg, "list")) {
-                sets->mode = RM_MODE_LIST;
-            }
-            if(!strcasecmp(optarg, "noask")) {
-                sets->mode = RM_MODE_NOASK;
-            }
-            if(!strcasecmp(optarg, "link")) {
-                sets->mode = RM_MODE_LINK;
-            }
-            if(!strcasecmp(optarg, "cmd")) {
-                sets->mode = RM_MODE_CMD;
-            }
-
-            if(!sets->mode) {
-                rm_error(YEL"FATAL: "NCO"Invalid value for --mode [-m]\n");
-                rm_error("       Available modes are: list | link | noask | cmd\n");
-                die(session, EXIT_FAILURE);
-                return 0;
-            }
-            break;
         default:
             return 0;
         }
@@ -589,10 +563,8 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
 
     if(output_flag_cnt == -1) {
         /* Set default outputs */
-
-        // TODO: sane defaults
-        rm_fmt_add(session->formats, "progressbar", "stdout");
-        rm_fmt_add(session->formats, "progressbar", "rmlint.log");
+        rm_fmt_add(session->formats, "pretty", "stdout");
+        rm_fmt_add(session->formats, "sh", "rmlint.log");
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
         g_printerr("No valid -o flag encountered.\n");
@@ -633,25 +605,6 @@ char rm_parse_arguments(int argc, char **argv, RmSession *session) {
             return 0;
         }
     }
-    return 1;
-}
-
-/* User  may specify in -cC a command that get's excuted on every hit - check for being a safe one */
-static int check_cmd(const char *cmd) {
-    gboolean invalid = FALSE;
-    int len = strlen(cmd);
-    for(int i = 0; i < (len - 1); i++) {
-        if(cmd[i] == '%' && cmd[i + 1] != '%') {
-            invalid = TRUE;
-            continue;
-        }
-    }
-    if(invalid) {
-        puts(YEL"FATAL: "NCO"--command [-cC]: printfstyle markups (e.g. %s) are not allowed!");
-        puts(YEL"       "NCO"                 Escape '%' with '%%' to get around.");
-        return 0;
-    }
-
     return 1;
 }
 
@@ -794,40 +747,6 @@ char rm_echo_settings(RmSettings *settings) {
     }
     info("\t      "RED"but"NCO" other lint in "GRE"(orig)"NCO" paths may still be deleted\n");
 
-    /*---------------- action mode ---------------*/
-    if (settings->mode == RM_MODE_LIST) {
-        /* same mode for duplicates and everything else */
-        info ("Action for all Lint types:\n");
-    } else {
-        /* different mode for duplicated vs everything else */
-        info("Action for Duplicates:\n\t");
-        switch (settings->mode) {
-        case RM_MODE_NOASK:
-            info(RED"Delete files without asking\n"NCO);
-            break;
-        case RM_MODE_LINK:
-            info(YEL"Replace duplicates with symlink to original\n"NCO);
-            break;
-        case RM_MODE_CMD:
-            info(YEL"Execute command:\n\t\tdupe:'%s'\n\t\torig:'%s'\n"NCO, settings->cmd_path, settings->cmd_orig);
-            break;
-        default:
-            break;
-        }
-        info ("Action for all other Lint types:\n");
-    }
-
-    if (settings->output_script) {
-        info("\tGenerate script %s to run later\n", settings->output_script);
-    } else {
-        info("\tWrite no script.\n");
-    }
-    if (settings->output_log) {
-        info("\tGenerate log %s\n", settings->output_log);
-    } else {
-        info("\tWrite no log.\n");
-    }
-
     /*--------------- paranoia ---------*/
 
     if (settings->paranoid) {
@@ -857,19 +776,6 @@ int rm_main(RmSession *session) {
     /* Used only for infomessage */
 
     session->total_files = 0;
-
-    if(session->settings->mode == RM_MODE_CMD) {
-        if(session->settings->cmd_orig) {
-            if(check_cmd(session->settings->cmd_orig) == 0) {
-                die(session, EXIT_FAILURE);
-            }
-        }
-        if(session->settings->cmd_path) {
-            if(check_cmd(session->settings->cmd_path) == 0) {
-                die(session, EXIT_FAILURE);
-            }
-        }
-    }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
     session->total_files = rm_search_tree(session);

@@ -483,11 +483,8 @@ gint rm_sort_inode(RmFile *a, RmFile *b) {
 
 
 static void handle_double_base_file(RmSession *session, RmFile *file) {
-    char *abs_path = realpath(file->path, NULL);
     file->lint_type = RM_LINT_TYPE_BASE;
-    rm_error("   %sls%s %s\n", (session->settings->verbosity != 1) ? GRE : "", NCO, abs_path);
-    write_to_log(session, file, false, NULL);
-    g_free(abs_path);
+    rm_fmt_write(session->formats, file);
 }
 
 static int find_double_bases(RmSession *session) {
@@ -649,9 +646,7 @@ void rm_preprocess(RmSession *session) {
             lintbuf, session->total_lint_size
         );
     }
-    if(settings->mode == RM_MODE_LIST && session->dup_counter) {
-        warning(RED"=> "NCO"Nothing removed yet!\n");
-    }
+
     warning("\n");
     if(settings->verbosity == 6) {
         info("Now calculation finished.. now writing end of log...\n");
@@ -666,16 +661,5 @@ void rm_preprocess(RmSession *session) {
                 lintbuf, session->total_lint_size
             );
         }
-    }
-
-    if(session->log_out == NULL && settings->output_log) {
-        rm_error(RED"\nERROR: "NCO);
-        fflush(stdout);
-        rm_perror("Unable to write log - target file:");
-        rm_perror(settings->output_log);
-        putchar('\n');
-    } else if(settings->output_log && settings->output_script) {
-        warning("A log has been written to "BLU"%s "NCO".\n", settings->output_script);
-        warning("A ready to use shellscript to "BLU"%s"NCO".\n", settings->output_log);
     }
 }

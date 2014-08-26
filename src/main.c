@@ -84,7 +84,7 @@ static void signal_handler(int signum) {
     }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
 
     RmSettings settings;

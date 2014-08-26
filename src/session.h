@@ -35,17 +35,9 @@
 #include "utilities.h"
 #include "file.h"
 
-typedef enum RmHandleMode {
-    RM_MODE_LIST = 1,
-    RM_MODE_NOASK = 3,
-    RM_MODE_LINK = 4,
-    RM_MODE_CMD = 5
-} RmHandleMode;
-
 /* TODO: lookup if all variables still needed. */
 /* all available settings - see rmlint -h */
 typedef struct RmSettings {
-    RmHandleMode mode;
     bool color;
     bool samepart;
     bool ignore_hidden;
@@ -64,8 +56,6 @@ typedef struct RmSettings {
     int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
     char *cmd_path;
     char *cmd_orig;
-    char *output_script;
-    char *output_log;
     char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
     bool limits_specified;
     guint64 minsize;
@@ -80,6 +70,8 @@ typedef struct RmSettings {
     short depth;
     RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
     char *iwd;                   /* cwd when rmlint called */
+    int argc;                    /* arguments rmlint was called with or NULL */
+    const char **argv;           /* arguments rmlint was called with or NULL */
 } RmSettings;
 
 typedef struct RmFileTables {
@@ -107,10 +99,6 @@ typedef struct RmSession {
     guint64 total_lint_size;
     guint64 dup_counter;
     guint64 dup_group_counter;
-
-    // TODO: remove.
-    FILE *script_out;
-    FILE *log_out;
 
     volatile bool aborted;
 

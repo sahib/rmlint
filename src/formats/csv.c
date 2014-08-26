@@ -52,8 +52,8 @@ typedef struct RmFmtHandlerCSV {
 
 static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
     fprintf(out, "%s%s%s%s%s%s%s\n",
-        "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP, "checksum"
-    );
+            "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP, "checksum"
+           );
 }
 
 static void rm_fmt_elem(
@@ -64,13 +64,13 @@ static void rm_fmt_elem(
     char checksum_str[_RM_HASH_LEN * 2 + 1];
     memset(checksum_str, 0, sizeof(checksum_str));
     rm_digest_hexstring(&file->digest, checksum_str);
-    
+
     /* Escape any possible separator character in the path */
     char *clean_path = rm_util_strsub(file->path, CSV_SEP, "\\"CSV_SEP);
 
-    fprintf(out, CSV_FORMAT, 
-        LINT_TYPE_TO_COLUMN[file->lint_type], clean_path, file->file_size, checksum_str
-    );
+    fprintf(out, CSV_FORMAT,
+            LINT_TYPE_TO_COLUMN[file->lint_type], clean_path, file->file_size, checksum_str
+           );
 
     g_free(clean_path);
 }
@@ -78,6 +78,7 @@ static void rm_fmt_elem(
 static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
     /* Initialize parent */
     .parent = {
+        .size = sizeof(CSV_HANDLER_IMPL),
         .name = "csv",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
@@ -86,4 +87,4 @@ static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
     }
 };
 
-RmFmtHandler * CSV_HANDLER = (RmFmtHandler *) &CSV_HANDLER_IMPL;
+RmFmtHandler *CSV_HANDLER = (RmFmtHandler *) &CSV_HANDLER_IMPL;

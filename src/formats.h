@@ -65,7 +65,9 @@ typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {
     /* Name of the Handler */
+    const int size;
     const char *name;
+    const char *path;
 
     /* Callbacks, might be NULL */
     RmFmtHeadCallback head;
@@ -165,6 +167,7 @@ static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, FILE *out) {
 
 static RmFmtHandlerProgress PROGRESS_HANDLER = {
     .parent = {
+        .size = sizeof(PROGRESS_HANDLER),
         .name = "progressbar",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,

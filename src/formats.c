@@ -44,7 +44,7 @@ const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
 RmFmtTable *rm_fmt_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
     self->name_to_handler = g_hash_table_new(g_str_hash, g_str_equal);
-    self->handler_to_file = g_hash_table_new(NULL, NULL);
+    self->handler_to_file = g_hash_table_new_full(NULL, NULL, g_free, NULL);
     self->session = session;
 
     extern RmFmtHandler *PROGRESS_HANDLER;
@@ -55,6 +55,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
 
     extern RmFmtHandler *PRETTY_HANDLER;
     rm_fmt_register(self, PRETTY_HANDLER);
+
+    extern RmFmtHandler *SH_SCRIPT_HANDLER;
+    rm_fmt_register(self, SH_SCRIPT_HANDLER);
 
     return self;
 }
@@ -106,10 +109,16 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         return false;
     }
 
-    g_hash_table_insert(self->handler_to_file, new_handler, file_handle);
+    /* Make a copy of the handler so we can more than one per handler type.
+     * Plus we have to set the handler specific path.
+     */
+    RmFmtHandler *new_handler_copy = g_malloc0(new_handler->size);
+    memcpy(new_handler_copy, new_handler, new_handler->size);
+    new_handler_copy->path = path;
+    g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
 
-    if(new_handler->head) {
-        new_handler->head(self->session, new_handler, file_handle);
+    if(new_handler_copy->head) {
+        new_handler_copy->head(self->session, new_handler_copy, file_handle);
     }
 
     return true;
