@@ -28,13 +28,6 @@
 #define GRE "\x1b[32;01m"
 #define BLU "\x1b[34;01m"
 
-// TODO: left to delete after rewriting postprocess.c
-
-/* Use double slashes, so we can easily split the line to an array */
-#define LOGSEP "//"
-#define CMD_DUPL "<dupl>"
-#define CMD_ORIG "<orig>"
-
 #include <errno.h>
 
 #define debug(...) \
