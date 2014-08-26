@@ -22,18 +22,9 @@
  * Hosted on http://github.com/sahib/rmlint
  */
 
-#include <sys/mman.h>
-#include <fcntl.h>
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <inttypes.h>
-
-#include <signal.h>
-#include <unistd.h>
-#include <math.h>
-#include <dirent.h>
 
 #include "preprocess.h"
 #include "utilities.h"
@@ -43,8 +34,6 @@
 static void dev_queue_free_func(gconstpointer p) {
     g_queue_free_full((GQueue *)p, (GDestroyNotify)rm_file_destroy);
 }
-
-
 
 typedef struct RmGroup {
     GQueue *queue;
@@ -395,7 +384,7 @@ static void rm_preprocess_files(RmFile *file, RmSession *session) {
         //rm_error("fiemap finished read time %f.6\n", g_timer_elapsed(session->timer, NULL)-start);
     }
 
-    info("Added Inode: %d Offset: %" PRId64 " file: %s\n", (int)file->inode, file->phys_offset, file->path);
+    info("Added Inode: %d Offset: %lu file: %s\n", (int)file->inode, file->phys_offset, file->path);
 }
 
 

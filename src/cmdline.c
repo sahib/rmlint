@@ -23,26 +23,17 @@
  *
  */
 
-// TODO: we can probably can get rid of most headers?
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
 
-#include <sys/stat.h>
-#include <stdarg.h>
 #include <errno.h>
 #include <getopt.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <setjmp.h>
-#include <glib.h>
-#include <glib/gprintf.h>
-#include <glib/gstdio.h>
 #include <search.h>
-
 #include <sys/time.h>
+#include <glib.h>
 
 #include "cmdline.h"
 #include "preprocess.h"
@@ -50,12 +41,14 @@
 #include "utilities.h"
 #include "formats.h"
 
-/* Version string */
 static void show_version(void) {
-    fprintf(stderr, "rmlint-version %s compiled: [%s]-[%s] (rev %s)\n", RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION);
+    fprintf(
+        stderr,
+        "rmlint-version %s compiled: [%s]-[%s] (rev %s)\n",
+        RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION
+    );
 }
 
-/* Help text */
 static void show_help(void) {
     if(system("man rmlint") == 0) {
         return;
@@ -208,7 +201,7 @@ static bool add_path(RmSession *session, int index, const char *path) {
         path += 2;  /* skip first two characters ie "//" */
     }
 
-    if(g_access(path, R_OK) != 0) {
+    if(access(path, R_OK) != 0) {
         rm_error(YEL"FATAL: "NCO"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
