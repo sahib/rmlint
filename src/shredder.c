@@ -442,6 +442,7 @@ static void rm_shred_read_factory(RmFile *file, RmDevlistTag *tag) {
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
      */
+    memset(readvec, 0, sizeof(readvec));
     for(int i = 0; i < N_BUFFERS; ++i) {
         /* buffer is one contignous memory block */
         RmBuffer *buffer = rm_buffer_pool_get(tag->main->mem_pool);

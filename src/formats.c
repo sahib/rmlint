@@ -90,6 +90,8 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         return false;
     }
 
+    g_return_val_if_fail(path, false);
+
     size_t path_len = (path) ? strlen(path) : 0;
     FILE *file_handle = NULL;
 
