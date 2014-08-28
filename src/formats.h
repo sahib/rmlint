@@ -51,6 +51,7 @@ typedef enum RmFmtProgressState {
 typedef struct RmFmtTable {
     GHashTable *name_to_handler;
     GHashTable *handler_to_file;
+    GHashTable *config;
     RmSession *session;
 } RmFmtTable;
 
@@ -65,9 +66,21 @@ typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {
     /* Name of the Handler */
-    const int size;
     const char *name;
+
+    /* Size in bytes of the *real* handler */
+    const int size;
+
+    /* Path to which the Handler is pointed or 
+     * NULL if it the original template.
+     */
     const char *path;
+
+    /* False at beginnging, is set to true once
+     * the head() callback was called, i.e. on the
+     * first write(). Used for lazy init.
+     */
+    bool was_initialized;
 
     /* Callbacks, might be NULL */
     RmFmtHeadCallback head;
@@ -140,6 +153,22 @@ void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, guint64 count,
  * @brief Convert state to a human readable string. Static storage, do not free.
  */
 const char *rm_fmt_progress_to_string(RmFmtProgressState state);
+
+/**
+ * @brief Set a configuration value. Overwrites previously set.
+ *
+ * @param formatter Name of the formatter to configure.
+ * @param key The key to set. 
+ * @param value The value to set.
+ */
+void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key, const char *value);
+
+/**
+ * @brief Get a configuration value. 
+ *
+ * @return NULL if not foumd, the value for this key. Memory owned by RmFmtTable.
+ */
+const char * rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, const char * key);
 
 /**
  *

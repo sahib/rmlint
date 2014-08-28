@@ -51,9 +51,13 @@ typedef struct RmFmtHandlerCSV {
 } RmFmtHandlerProgress;
 
 static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
+    if(rm_fmt_get_config_value(session->formats, "csv", "no_header")) {
+        return;
+    }
+
     fprintf(out, "%s%s%s%s%s%s%s\n",
-            "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP, "checksum"
-           );
+        "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP, "checksum"
+    );
 }
 
 static void rm_fmt_elem(

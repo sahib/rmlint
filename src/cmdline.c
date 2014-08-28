@@ -252,6 +252,38 @@ static bool parse_output_pair(RmSession *session, const char *pair) {
     return true;
 }
 
+static bool parse_config_pair(RmSession *session, const char *pair) {
+    char *domain = strchr(pair, ':');
+    if(domain == NULL) {
+        g_printerr("No format (format:key[=val]) specified in '%s'\n", pair);
+        return false;
+    }
+
+    char *key = NULL, *value = NULL;
+    char **key_val = g_strsplit(&domain[1], "=", 2);
+    int len = g_strv_length(key_val);
+
+    if(len < 1) {
+        g_printerr("Missing key (format:key[=val]) in '%s'\n", pair);
+        g_strfreev(key_val);
+        return false;
+    } 
+    
+    key = g_strdup(key_val[0]);
+    if(len == 2) {
+        value = g_strdup(key_val[1]);
+    } else {
+        value = g_strdup("1");
+    }
+    
+    char *formatter = g_strndup(pair, domain - pair);
+    rm_fmt_set_config_value(session->formats, formatter, key, value);
+
+    g_strfreev(key_val);
+    return true;
+}
+
+
 /* parse comma-separated strong of lint types and set settings accordingly */
 typedef struct RmLintTypeOption {
     const char **names;
@@ -430,7 +462,7 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:S:a:vVwWrRfFXxpPkKmMiIlLqQhH",
+                     "T:t:d:s:o:S:a:c:vVwWrRfFXxpPkKmMiIlLqQhH",
                      long_options, &option_index
                  );
 
@@ -442,6 +474,9 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
         case '?':
             show_help();
             return 0;
+        case 'c':
+            parse_config_pair(session, optarg);
+            break;
         case 'T':
             parse_lint_types(sets, optarg);
             break;

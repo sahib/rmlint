@@ -158,7 +158,11 @@ static void rm_fmt_elem(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, 
         if(rm_file_tables_is_original(session->tables, file)) {
             fprintf(out, "echo  '%s' # original\n", fpath);
         } else {
-            fprintf(out, "rm -f '%s' # duplicate\n", fpath);
+            if(rm_fmt_get_config_value(session->formats, "sh", "use_ln")) {
+                // TODO: Implement autoln;
+            } else {
+                fprintf(out, "rm -f '%s' # duplicate\n", fpath);
+            }
         }
         break;
     default:

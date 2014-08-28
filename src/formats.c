@@ -45,6 +45,10 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
     self->name_to_handler = g_hash_table_new(g_str_hash, g_str_equal);
     self->handler_to_file = g_hash_table_new_full(NULL, NULL, g_free, NULL);
+    self->config = g_hash_table_new_full(
+        g_str_hash, g_str_equal, 
+        g_free, (GDestroyNotify)g_hash_table_unref
+    );
     self->session = session;
 
     extern RmFmtHandler *PROGREENSS_HANDLER;
@@ -74,14 +78,20 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     GHashTableIter iter;                                                          \
     g_hash_table_iter_init(&iter, self->handler_to_file);                         \
     while(g_hash_table_iter_next(&iter, (gpointer *)&handler, (gpointer *)&file)) \
- 
-#define RM_FMT_CALLBACK(func, ...)                             \
-    if(func) {                                                 \
-        g_mutex_lock(&handler->print_mtx); {                   \
-            func(self->session, handler, file, ##__VA_ARGS__); \
-        }                                                      \
-        g_mutex_unlock(&handler->print_mtx);                   \
-    }                                                          \
+
+#define RM_FMT_CALLBACK(func, ...)                               \
+    if(func) {                                                   \
+        g_mutex_lock(&handler->print_mtx); {                     \
+            if(!handler->was_initialized && handler->head) {     \
+                if(handler->head) {                              \
+                    handler->head(self->session, handler, file); \
+                }                                                \
+                handler->was_initialized = true;                 \
+            }                                                    \
+            func(self->session, handler, file, ##__VA_ARGS__);   \
+        }                                                        \
+        g_mutex_unlock(&handler->print_mtx);                     \
+    }                                                            \
  
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler = g_hash_table_lookup(self->name_to_handler, handler_name);
@@ -119,9 +129,10 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     new_handler_copy->path = path;
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
 
-    if(new_handler_copy->head) {
-        new_handler_copy->head(self->session, new_handler_copy, file_handle);
-    }
+    // TODO
+    // if(new_handler_copy->head) {
+    //     new_handler_copy->head(self->session, new_handler_copy, file_handle);
+    // }
 
     return true;
 }
@@ -135,6 +146,7 @@ void rm_fmt_close(RmFmtTable *self) {
 
     g_hash_table_unref(self->name_to_handler);
     g_hash_table_unref(self->handler_to_file);
+    g_hash_table_unref(self->config);
     g_slice_free(RmFmtTable, self);
 }
 
@@ -148,6 +160,29 @@ void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, guint64 count,
     RM_FMT_FOR_EACH_HANDLER(self) {
         RM_FMT_CALLBACK(handler->prog, state, count, total);
     }
+}
+
+void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key, const char *value) {
+    GHashTable * key_to_vals = g_hash_table_lookup(self->config, formatter);
+
+    if(key_to_vals == NULL) {
+        key_to_vals = g_hash_table_new_full(
+            g_str_hash, g_str_equal, g_free, g_free
+        );
+        g_hash_table_insert(self->config, (char *) formatter, key_to_vals);
+    }
+
+    g_hash_table_insert(key_to_vals, (char *) key, (char *) value);
+}
+
+const char * rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, const char * key) {
+    GHashTable * key_to_vals = g_hash_table_lookup(self->config, formatter);
+
+    if(key_to_vals == NULL) {
+        return NULL;
+    }
+
+    return g_hash_table_lookup(key_to_vals, key);
 }
 
 #ifdef _RM_COMPILE_MAIN_OUTPUTS
