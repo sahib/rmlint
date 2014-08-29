@@ -33,8 +33,11 @@
 
 typedef struct RmFmtHandlerShScript {
     RmFmtHandler parent;
-} RmFmtHandlerShScript;
+    RmFile *last_original;
 
+    bool opt_use_ln;
+    bool opt_symlinks_only;
+} RmFmtHandlerShScript;
 
 static const char *SH_SCRIPT_TEMPLATE_HEAD =
     "#!/bin/sh                                           \n"
@@ -101,7 +104,12 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "fi                    \n"
     ;
 
-static void rm_fmt_head(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
+    RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
+
+    self->opt_symlinks_only = rm_fmt_get_config_value(session->formats, "sh", "symlinks_only");
+    self->opt_use_ln = rm_fmt_get_config_value(session->formats, "sh", "use_ln");
+
     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
         rm_log_perror("Could not chmod +x sh script");
     }
@@ -123,45 +131,62 @@ static void rm_fmt_head(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, 
     g_free(joined_argv);
 }
 
+static char * rm_fmt_sh_escape_path(char *path) {
+    return rm_util_strsub(path, "'", "'\"'\"'");
+}
+
 static void rm_fmt_elem(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out, RmFile *file) {
+    RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
+
     /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
      * for more info on this
      * */
-    char *fpath = rm_util_strsub(file->path, "'", "'\"'\"'");
+    char *dupe_path = rm_fmt_sh_escape_path(file->path);
 
     switch(file->lint_type) {
     case RM_LINT_TYPE_BLNK:
-        fprintf(out, "rm -f '%s' # bad symlink pointing nowhere\n", fpath);
+        fprintf(out, "rm -f '%s' # bad symlink pointing nowhere\n", dupe_path);
         break;
     case RM_LINT_TYPE_BASE:
-        fprintf(out, "echo  '%s' # double basename\n", fpath);
+        fprintf(out, "echo  '%s' # double basename\n", dupe_path);
         break;
     case RM_LINT_TYPE_EDIR:
-        fprintf(out, "rmdir '%s' # empty folder\n", fpath);
+        fprintf(out, "rmdir '%s' # empty folder\n", dupe_path);
         break;
     case RM_LINT_TYPE_NBIN:
-        fprintf(out, "strip --strip-debug '%s' # binary with debugsymbols\n", fpath);
+        fprintf(out, "strip --strip-debug '%s' # binary with debugsymbols\n", dupe_path);
         break;
     case RM_LINT_TYPE_BADUID:
-        fprintf(out, "%s '%s' # bad uid\n", "chown \"$user\"", fpath);
+        fprintf(out, "%s '%s' # bad uid\n", "chown \"$user\"", dupe_path);
         break;
     case RM_LINT_TYPE_BADGID:
-        fprintf(out, "%s '%s' # bad gid\n", "chgrp \"$group\"", fpath);
+        fprintf(out, "%s '%s' # bad gid\n", "chgrp \"$group\"", dupe_path);
         break;
     case RM_LINT_TYPE_BADUGID:
-        fprintf(out, "%s '%s' # bad gid and uid\n", "chown \"$user\":\"$group\"", fpath);
+        fprintf(out, "%s '%s' # bad gid and uid\n", "chown \"$user\":\"$group\"", dupe_path);
         break;
     case RM_LINT_TYPE_EFILE:
-        fprintf(out, "rm -f '%s' # empty file\n", fpath);
+        fprintf(out, "rm -f '%s' # empty file\n", dupe_path);
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         if(rm_file_tables_is_original(session->tables, file)) {
-            fprintf(out, "echo  '%s' # original\n", fpath);
+            fprintf(out, "echo  '%s' # original\n", dupe_path);
+            self->last_original = file;
         } else {
-            if(rm_fmt_get_config_value(session->formats, "sh", "use_ln")) {
-                // TODO: Implement autoln;
+            if(self->opt_use_ln) {
+                bool use_hardlink = false;
+                if(self->last_original->dev == file->dev) {
+                    use_hardlink = !self->opt_symlinks_only;
+                }
+
+                char *orig_path = rm_fmt_sh_escape_path(file->path);
+                fprintf(
+                    out, "rm -f '%s' && ln %s '%s' '%s' # duplicate\n",
+                    dupe_path, (use_hardlink) ? "" : "-s" , orig_path, dupe_path
+                );
+                g_free(orig_path);
             } else {
-                fprintf(out, "rm -f '%s' # duplicate\n", fpath);
+                fprintf(out, "rm -f '%s' # duplicate\n", dupe_path);
             }
         }
         break;
@@ -170,7 +195,7 @@ static void rm_fmt_elem(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, 
         break;
     }
 
-    g_free(fpath);
+    g_free(dupe_path);
 }
 
 static void rm_fmt_foot(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out) {
@@ -188,7 +213,8 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .elem = rm_fmt_elem,
         .prog = NULL,
         .foot = rm_fmt_foot
-    }
+    },
+    .last_original = NULL
 };
 
 RmFmtHandler *SH_SCRIPT_HANDLER = (RmFmtHandler *) &SH_SCRIPT_HANDLER_IMPL;

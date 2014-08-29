@@ -49,6 +49,7 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
         g_str_hash, g_str_equal, 
         g_free, (GDestroyNotify)g_hash_table_unref
     );
+
     self->session = session;
 
     extern RmFmtHandler *PROGREENSS_HANDLER;
@@ -126,13 +127,9 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
      */
     RmFmtHandler *new_handler_copy = g_malloc0(new_handler->size);
     memcpy(new_handler_copy, new_handler, new_handler->size);
+    g_mutex_init(&new_handler->print_mtx);
     new_handler_copy->path = path;
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
-
-    // TODO
-    // if(new_handler_copy->head) {
-    //     new_handler_copy->head(self->session, new_handler_copy, file_handle);
-    // }
 
     return true;
 }
