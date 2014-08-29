@@ -611,7 +611,7 @@ guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
 
         if(!g_sequence_iter_is_end(nearest)) {
             RmOffsetEntry *off = g_sequence_get(nearest);
-            return off->physical + file_offset - off->logical ;
+            return (guint64)((gint64)(off->physical + file_offset) - (gint64)off->logical) ;
         }
     }
 #endif

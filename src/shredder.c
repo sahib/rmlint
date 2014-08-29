@@ -223,7 +223,7 @@
 /* define what we consider cheap as a fraction of total cost, for example a cheap read has
  * a read time less than 1/50th the seek time, or a cheap seek has a seek time less then 1/50th
  * the total read time */
-#define CHEAP (50)
+#define CHEAP (10)
 
 /* how many pages can we read in (seek_time)? (eg 5ms seeking folled by 5ms reading) */
 #define BALANCED_READ_BYTES (SEEK_MS * READRATE * 1024) // ( * 1024 / 1000 to be exact)
@@ -425,6 +425,11 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
             }
 
             group->next_offset = group->hash_offset + target_bytes;
+            //~ if (group->next_offset < file->file_size) {
+            //~ rm_error("Group hash offset %lu out of %lu for file %s\n", group->next_offset, file->file_size, file->path);
+            //~ } else {
+            //~ rm_error("Group final %lu for file %s\n", group->next_offset,  file->path);
+            //~ }
         }
     }
     g_mutex_unlock(&group->lock);
@@ -620,6 +625,10 @@ static void rm_shred_read_factory(RmFile *file, ShredDevice *device) {
     g_assert(device->main);
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
 
+    //~ if (bytes_to_read + file->hash_offset < file->file_size) {
+    //~ //rm_error(BLU"Reading %d out of %d for %s\n"NCO, bytes_to_read, file->file_size - file->hash_offset);
+    //~ }
+
     g_assert(bytes_to_read > 0);
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
     g_assert(file->seek_offset == file->hash_offset);
@@ -637,7 +646,7 @@ static void rm_shred_read_factory(RmFile *file, ShredDevice *device) {
     }
 
     /* how many buffers to read half of bytes_to_read? */
-    gint16 N_BUFFERS = MIN(SHRED_MAX_PAGES, DIVIDE_ROUND_UP(bytes_to_read, device->main->page_size) );
+    gint16 N_BUFFERS = 1; //MIN(SHRED_MAX_PAGES, DIVIDE_ROUND_UP(bytes_to_read, device->main->page_size) );
 
     /* Give the kernel scheduler some hints */
     posix_fadvise(fd, file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
@@ -691,6 +700,8 @@ static void rm_shred_read_factory(RmFile *file, ShredDevice *device) {
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
         rm_buffer_pool_release(device->main->mem_pool, buffer);
     }
+    //rm_error(GRE"Finished reading; %d in hash queue (%s)\n"NCO, g_thread_pool_unprocessed(device->hash_pool), file->path);
+
 
     //huh? file->phys_offset = rm_offset_lookup(file->disk_offsets, file->phys_offset);
 
@@ -703,8 +714,9 @@ finish:
 //    }
 //    g_async_queue_unlock(device->hashed_file_return);
 
-    device->current_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset - 1);
-    device->current_dev = file->dev;
+    //~ device->current_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset - 1);
+    //~ rm_error("dev_off %llu\n", device->current_offset);
+    //~ device->current_dev = file->dev;
     if(fd > 0) {
         close(fd);
     }
@@ -762,40 +774,41 @@ static void rm_shred_file_queue_push(ShredDevice *device, RmFile *file) {
     g_mutex_unlock(&device->lock);
 }
 
-static GList *rm_shred_file_queue_get_next(ShredDevice *device, GList *start) {
-    GList *iter = start;
-    g_mutex_lock(&device->lock);
-    {
-        if (iter) {
-            if (device->current_offset != 0) {
-                RmFile *file = iter->data;
-                g_assert(file);
-                while(iter
-                        && iter->next
-                        && (file = iter->data)
-                        && file->phys_offset != 0
-                        && file->phys_offset < device->current_offset
-                        && file->dev == device->current_dev) {
-                    rm_error("+");
-                    iter = iter->next;
-                }
-                while(iter
-                        && iter->prev
-                        && (file = iter->prev->data)
-                        && file->phys_offset != 0
-                        && file->phys_offset > device->current_offset
-                        && file->dev == device->current_dev) {
-                    rm_error("-");
-                    iter = iter->prev;
-                }
-            }
-        } else {
-            iter = device->file_queue->head;
-        }
-    }
-    g_mutex_unlock(&device->lock);
-    return iter;
-}
+//~ static GList *rm_shred_file_queue_get_next(ShredDevice *device, GList *start) {
+//~ GList *iter = start;
+//~ g_mutex_lock(&device->lock);
+//~ {
+//~ if (iter) {
+//~ if (device->current_offset != 0) {
+//~ RmFile *file = iter->data;
+//~ g_assert(file);
+//~ while(iter
+//~ && iter->next
+//~ && (file = iter->data)
+//~ && file->phys_offset != 0
+//~ && file->phys_offset < device->current_offset
+//~ && file->dev == device->current_dev) {
+//~ rm_error("+");
+//~ iter = iter->next;
+//~ }
+//~ while(iter
+//~ && iter->prev
+//~ && (file = iter->prev->data)
+//~ && file->phys_offset != 0
+//~ && file->phys_offset > device->current_offset
+//~ && file->dev == device->current_dev) {
+//~ rm_error("-");
+//~ iter = iter->prev;
+//~ }
+//~ }
+//~ } else {
+//~ rm_error("<");
+//~ iter = device->file_queue->head;
+//~ }
+//~ }
+//~ g_mutex_unlock(&device->lock);
+//~ return iter;
+//~ }
 
 
 void shred_discard_file(RmFile *file) {
@@ -851,6 +864,8 @@ void shred_group_free(ShredGroup *self) {
             g_queue_free_full(self->held_files, (GDestroyNotify)shred_discard_file);
             break;
         case RM_SHRED_GROUP_FINISHING:
+        case RM_SHRED_GROUP_HASHING:
+        case RM_SHRED_GROUP_START_HASHING:
             rm_error("Shouldn't be here");
             break;
         default:
@@ -1118,7 +1133,7 @@ static void rm_add_file_to_size_groups(RmFile *file, RmMainTag *main) {
     device->remaining_bytes += file->file_size;
 
     if(device->is_rotational
-            && !file->hardlinked_original
+            //TODO: && !file->hardlinked_original
             /*TODO: && settings->offset_sort_optimisation? */ ) {
         g_assert(!file->disk_offsets);
         file->disk_offsets = rm_offset_create_table(file->path);
@@ -1227,7 +1242,7 @@ gboolean rm_shred_sift(RmFile *file) {
 }
 
 static void rm_shred_devlist_factory(ShredDevice *device, RmMainTag *main) {
-
+    gdouble max_wait = 0;
     rm_error(BLU"Started rm_shred_devlist_factory for disk %s (%u:%u) with %lu files in queue\n"NCO,
              device->disk_name,
              major(device->disk),
@@ -1254,20 +1269,28 @@ static void rm_shred_devlist_factory(ShredDevice *device, RmMainTag *main) {
 
     if (max_threads == 1) {
         /* scheduler for one file at a time, optimised to minimise seeks */
-        GList *iter = rm_shred_file_queue_get_next(device, NULL);
+        GList *iter = device->file_queue->head;  //rm_shred_file_queue_get_next(device, NULL);
         while (iter) {
             RmFile *file = iter->data;
             //rm_error("Starting %s at phys offset %llu\n", file->path, file->phys_offset);
-            GList *next = iter->next;
             /* hash the next increment of the file */
+            gdouble start = g_timer_elapsed(main->session->timer, NULL);
             rm_shred_read_factory(file, device);
 
             /* wait until the increment has finished hashing */
+            gdouble read_finished = g_timer_elapsed(main->session->timer, NULL);
             g_assert(file == g_async_queue_pop(device->hashed_file_return));
+
+            gdouble hash_finished = g_timer_elapsed(main->session->timer, NULL);
+            /*rm_error("Wait time %.2f ms = %.2f percent\n",
+            		hash_finished - read_finished,
+            		(hash_finished - read_finished)*100.0/(read_finished - start));*/
+
+            max_wait = MAX(max_wait, hash_finished - read_finished);
 
             if (file->fragment_hash) {
                 /* file is not ready for checking yet; push it back into the queue */
-                rm_error("Fragment read for %s\n", file->path);
+                //~ rm_error("fragment read for %s\n", file->path);
                 rm_shred_file_queue_push(device, file);
             } else if (rm_shred_sift(file)) {
                 /* continue hashing same file, ie no change to iter */
@@ -1275,8 +1298,10 @@ static void rm_shred_devlist_factory(ShredDevice *device, RmMainTag *main) {
             } else {
                 /* rm_shred_sift has taken responsibility for the file */
             }
+
+            GList *next = iter->next;
             g_queue_delete_link(device->file_queue, iter);
-            iter = rm_shred_file_queue_get_next(device, next);
+            iter = next;//rm_shred_file_queue_get_next(device, next);
         }
 
     } else {
@@ -1287,6 +1312,7 @@ static void rm_shred_devlist_factory(ShredDevice *device, RmMainTag *main) {
      * the device_return queue
      */
     g_async_queue_push(main->device_return, device);
+    rm_error(RED"Max wait %.2f ms\n"NCO, max_wait);
 }
 
 static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
@@ -1354,7 +1380,7 @@ void rm_shred_run(RmSession *session) {
 
 
     /* This is the joiner part */
-    int loopkiller = 10;  // debugging only - prevents infinite loop
+    int loopkiller = 20;  // debugging only - prevents infinite loop
     while(loopkiller-- > 0
             && (devices_left > 0 || g_async_queue_length(tag.device_return) > 0)) {
         ShredDevice *device = g_async_queue_pop(tag.device_return);
