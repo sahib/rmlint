@@ -798,10 +798,10 @@ int rm_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_TRAVERSE, 0, 0);
     session->total_files = rm_search_tree(session);
 
-    rm_log_warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
+    rm_log_debug("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
 
     if(session->total_files < 1) {
-        rm_log_warning("No files in cache to search through => No lint.\n");
+        rm_log_info("No files in cache to search through => No lint.\n");
         die(session, EXIT_SUCCESS);
     }
 
@@ -819,15 +819,9 @@ int rm_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
 
+    rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+
     // TODO: remove this below and add a summary-formatter.
-    rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-    if(session->dup_counter == 0) {
-        rm_log_error("\r                    ");
-    } else {
-        rm_log_error("\n");
-    }
-
     rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
     rm_log_warning(
         "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",

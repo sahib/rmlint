@@ -346,6 +346,5 @@ guint64 rm_preprocess(RmSession *session) {
         rm_log_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
     }
 
-    rm_log_error("\n%s Duplicate(s):\n", YELLOW"#"RESET);
     return other_lint;
 }

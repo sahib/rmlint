@@ -46,10 +46,6 @@ typedef enum RmFileState {
     /* File hashed to end of (disk) fragment but not yet to target bytes hashed
      */
     RM_FILE_STATE_FRAGMENT,
-
-    /* File that is already finished
-     */
-    //RM_FILE_STATE_FINISH
 } RmFileState;
 
 /* types of lint */

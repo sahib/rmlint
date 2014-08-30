@@ -77,8 +77,8 @@ RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
     self->is_prefd = is_ppath;
     self->path_index = pnum;
     self->stat_buf = g_new0(struct stat, 1);
-    if ( stat(path, self->stat_buf) == -1) {
-        rm_log_perror(path);
+    if (stat(path, self->stat_buf) == -1) {
+        rm_log_perror("Unable to stat file");
         g_free(self->stat_buf);
         g_assert(self->stat_buf == NULL);
     }
@@ -98,7 +98,6 @@ void rm_traverse_path_buffer_free(gpointer data) {
 //////////////////////
 // Traverse Session //
 //////////////////////
-
 
 /* structure containing all settings relevant to traversal */
 typedef struct RmTraverseSession {
@@ -295,7 +294,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
                 case FTS_DNR:       /* unreadable directory */
-                    error( 0, p->fts_errno, "Warning: cannot read directory %s\n", p->fts_path);
+                    rm_log_warning(YELLOW"Warning: cannot read directory"RESET" %s: %s\n", p->fts_path, g_strerror(p->fts_errno));
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
                 case FTS_DOT:       /* dot or dot-dot */
@@ -594,6 +593,5 @@ guint64 rm_search_tree(RmSession *session) {
         }
     }
 
-    guint64 numfiles = traverse_session_join_and_free(traverse_session);
-    return numfiles;
+    return traverse_session_join_and_free(traverse_session);
 }
