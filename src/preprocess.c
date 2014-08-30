@@ -361,15 +361,15 @@ guint64 rm_preprocess(RmSession *session) {
 
     rm_log_error("\n%s Duplicate(s):\n", YELLOW"#"RESET);
 
-    rm_shred_run(session);
-
-    rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-    if(session->dup_counter == 0) {
-        rm_log_error("\r                    ");
-    } else {
-        rm_log_error("\n");
-    }
+    //~ rm_shred_run(session);
+//~
+    //~ rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+//~
+    //~ if(session->dup_counter == 0) {
+    //~ rm_log_error("\r                    ");
+    //~ } else {
+    //~ rm_log_error("\n");
+    //~ }
 
     //~ rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
     //~ warning(
