@@ -801,56 +801,54 @@ int rm_main(RmSession *session) {
     rm_log_warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
 
     if(session->total_files < 1) {
-        warning("No files in cache to search through => No lint.\n");
-        if(session->total_files < 2) {
-            rm_log_warning("No files in cache to search through => No duplicates.\n");
-            die(session, EXIT_SUCCESS);
-        }
+        rm_log_warning("No files in cache to search through => No lint.\n");
+        die(session, EXIT_SUCCESS);
+    }
 
-        rm_log_info("Now in total "YELLOW"%ld useable file(s)"RESET" in cache.\n", session->total_files);
-        if(session->settings->threads > session->total_files) {
-            session->settings->threads = session->total_files + 1;
-        }
+    rm_log_info("Now in total "YELLOW"%ld useable file(s)"RESET" in cache.\n", session->total_files);
+    if(session->settings->threads > session->total_files) {
+        session->settings->threads = session->total_files + 1;
+    }
 
-        rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_PREPROCESS, 0, 0);
-        guint64 other_lint = rm_preprocess(session);
-        char lintbuf[128];
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_PREPROCESS, 0, 0);
+    guint64 other_lint = rm_preprocess(session);
+    char lintbuf[128];
 
-        rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SHREDDER, 0, 0);
-        rm_shred_run(session, session->tables->dev_table, session->tables->size_table);
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SHREDDER, 0, 0);
+    rm_shred_run(session);
 
-        rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
 
-        // TODO: remove this below and add a summary-formatter.
-        rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    // TODO: remove this below and add a summary-formatter.
+    rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
-        if(session->dup_counter == 0) {
-            rm_log_error("\r                    ");
-        } else {
-            rm_log_error("\n");
-        }
+    if(session->dup_counter == 0) {
+        rm_log_error("\r                    ");
+    } else {
+        rm_log_error("\n");
+    }
 
+    rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
+    rm_log_warning(
+        "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",
+        session->total_files, session->dup_counter, session->dup_group_counter
+    );
+
+    if(other_lint > 0) {
+        rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
+        rm_log_warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
+    }
+
+    rm_log_warning("\n");
+    if(!session->aborted) {
         rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
         rm_log_warning(
-            "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",
-            session->total_files, session->dup_counter, session->dup_group_counter
+            RED"=> "RESET"Totally "GREEN" %s "RESET" [%lu Bytes] can be removed.\n",
+            lintbuf, session->total_lint_size
         );
-
-        if(other_lint > 0) {
-            rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
-            rm_log_warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
-        }
-
-        rm_log_warning("\n");
-        if(!session->aborted) {
-            rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-            rm_log_warning(
-                RED"=> "RESET"Totally "GREEN" %s "RESET" [%lu Bytes] can be removed.\n",
-                lintbuf, session->total_lint_size
-            );
-        }
-
-        rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
-        rm_session_clear(session);
-        return EXIT_SUCCESS;
     }
+
+    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
+    rm_session_clear(session);
+    return EXIT_SUCCESS;
+}

@@ -30,10 +30,11 @@
 #include "utilities.h"
 #include "formats.h"
 #include "cmdline.h"
+#include "shredder.h"
 
 
 RmFileTables *rm_file_tables_new(RmSession *session) {
-    rm_error("Creating tables \n");
+    rm_log_error("Creating tables \n");
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
 
@@ -354,32 +355,32 @@ guint64 rm_preprocess(RmSession *session) {
     if(settings->namecluster) {
         //TODO/FIXME: need to clarify the workflow for double bases and the potential collision with duplicates search
         other_lint += find_double_bases(session);
-        rm_error("\n");
-        rm_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+        rm_log_error("\n");
+        rm_log_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
     }
 
-    rm_error("\n%s Duplicate(s):\n", YEL"#"NCO);
+    rm_log_error("\n%s Duplicate(s):\n", YELLOW"#"RESET);
 
     rm_shred_run(session);
 
-    rm_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     if(session->dup_counter == 0) {
-        rm_error("\r                    ");
+        rm_log_error("\r                    ");
     } else {
-        rm_error("\n");
+        rm_log_error("\n");
     }
 
-    rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-    warning(
-        "\n"RED"=> "NCO"In total "RED"%lu"NCO" files, whereof "RED"%lu"NCO" are duplicate(s) in "RED"%lu"NCO" groups",
-        session->total_files, session->dup_counter, session->dup_group_counter
-    );
+    //~ rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
+    //~ warning(
+    //~ "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",
+    //~ session->total_files, session->dup_counter, session->dup_group_counter
+    //~ );
 
-    if(other_lint > 0) {
-        rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
-        warning(RED"\n=> %lu"NCO" other suspicious items found ["GRE"%s"NCO"]", other_lint, lintbuf);
-    }
+    //~ if(other_lint > 0) {
+    //~ rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
+    //~ warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
+    //~ }
 
     return other_lint;
 }

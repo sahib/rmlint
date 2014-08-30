@@ -470,11 +470,11 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
         if (disk) {
             return !disk->is_rotational;
         } else {
-            rm_error(RED"Disk not found in rm_mounts_is_nonrotational\n"NCO);
+            rm_log_error(RED"Disk not found in rm_mounts_is_nonrotational\n"RESET);
             return true;
         }
     } else {
-        rm_error(RED"Partition not found in rm_mounts_is_nonrotational\n"NCO);
+        rm_log_error(RED"Partition not found in rm_mounts_is_nonrotational\n"RESET);
         return true;
     }
 }

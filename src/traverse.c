@@ -331,10 +331,10 @@ void traverse_path(gpointer data, gpointer userdata) {
                     clear_emptydir_flags = true; /*current dir not empty*/
                     if (!settings->followlinks) {
                         if (p->fts_level != 0) {
-                            info("Not following symlink %s because of settings\n", p->fts_path);
+                            rm_log_info("Not following symlink %s because of settings\n", p->fts_path);
                         }
                     } else {
-                        info("Following symlink %s\n", p->fts_path);
+                        rm_log_info("Following symlink %s\n", p->fts_path);
                         fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
                     }
                     break;
@@ -343,7 +343,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                 case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                     clear_emptydir_flags = true; /*current dir not empty*/
                     numfiles += process_file(traverse_session, p->fts_statp, p->fts_path, is_ppath, pnum, 0); /* this is for any of FTS_NSOK, FTS_SL, FTS_F, FTS_DEFAULT*/
-                    info("..%s:%d\n", p->fts_path, p->fts_info);
+                    rm_log_info("..%s:%d\n", p->fts_path, p->fts_info);
                     break;
                 default:
                     /* unknown case; assume current dir not empty but otherwise do nothing */

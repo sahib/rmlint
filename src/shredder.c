@@ -278,7 +278,7 @@ static bool rm_shred_thread_pool_push(GThreadPool *pool, gpointer data) {
     GError *error = NULL;
     g_thread_pool_push(pool, data, &error);
     if(error != NULL) {
-        rm_error("Unable to push thread to pool %p: %s\n", pool, error->message);
+        rm_log_error("Unable to push thread to pool %p: %s\n", pool, error->message);
         g_error_free(error);
         return false;
     } else {
@@ -292,7 +292,7 @@ static GThreadPool *rm_shred_thread_pool_new(GFunc func, gpointer data, int thre
     GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
 
     if(error != NULL) {
-        rm_error("Unable to create thread pool.\n");
+        rm_log_error("Unable to create thread pool.\n");
         g_error_free(error);
     }
     return pool;
@@ -538,10 +538,10 @@ void rm_shred_group_free(RmShredGroup *self) {
         case RM_SHRED_GROUP_FINISHING:
         case RM_SHRED_GROUP_HASHING:
         case RM_SHRED_GROUP_START_HASHING:
-            rm_error("Shouldn't be here");
+            rm_log_error("Shouldn't be here");
             break;
         default:
-            rm_error("Unexpected group status in rm_shred_group_free\n");
+            rm_log_error("Unexpected group status in rm_shred_group_free\n");
         }
     }
 
@@ -881,7 +881,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmMainTag *main) {
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
     if(device == NULL) {
 
-        rm_error(GRE"Creating new RmShredDevice for disk %lu\n"NCO, disk);
+        rm_log_error(GREEN"Creating new RmShredDevice for disk %lu\n"RESET, disk);
         device = rm_shred_device_new(
                      !rm_mounts_is_nonrotational(session->tables->mounts, disk),
                      rm_mounts_get_disk_name(session->tables->mounts, disk),
@@ -899,14 +899,14 @@ static void rm_shred_file_preprocess(RmFile *file, RmMainTag *main) {
                               GUINT_TO_POINTER(file->file_size));
 
     if (!group) {
-        rm_error("+");
+        rm_log_error("+");
         group = rm_shred_group_new(file);
         g_hash_table_insert(
             session->tables->size_groups,
             GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files
             group);
     } else {
-        rm_error(".");
+        rm_log_error(".");
     }
 
     (void) rm_shred_group_push_file(group, file, true);
@@ -921,10 +921,10 @@ static gboolean rm_shred_hardlink_cluster_preprocess(gpointer key, GQueue *hardl
         RmFile *first = hardlink_cluster->head->data;
         if (first) {
         } else {
-            rm_error("rm_shred_hardlink_cluster_preprocess for no path\n");
+            rm_log_error("rm_shred_hardlink_cluster_preprocess for no path\n");
         }
     } else {
-        rm_error("rm_shred_hardlink_cluster_preprocess for no queue\n");
+        rm_log_error("rm_shred_hardlink_cluster_preprocess for no queue\n");
     }
     g_queue_foreach (hardlink_cluster,
                      (GFunc)rm_shred_file_preprocess,
@@ -959,23 +959,23 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     /* move remaining files to RmShredGroups */
     g_assert(session->tables->node_table);
 
-    rm_error("Moving files into size_groups...");
+    rm_log_error("Moving files into size_groups...");
     g_hash_table_foreach_remove(session->tables->node_table,
                                 (GHRFunc)rm_shred_hardlink_cluster_preprocess,
                                 main);
-    rm_error("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
-    rm_error("Discarding unique sizes and read fiemap data for others...");
+    rm_log_error("Discarding unique sizes and read fiemap data for others...");
     g_hash_table_foreach_remove(session->tables->size_groups,
                                 (GHRFunc)rm_shred_group_preprocess,
                                 main);
-    rm_error("done at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("done at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
-    rm_error("Looking up fiemap data for files on rotational devices...");
+    rm_log_error("Looking up fiemap data for files on rotational devices...");
     g_hash_table_foreach(session->tables->dev_table, (GHFunc)rm_shred_device_preprocess, main);
-    rm_error("done at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_error("done at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
-    rm_error("fiemap'd %lu files containing %lu fragments (failed another %lu files)\n", session->offsets_read - session->offset_fails, session->offset_fragments, session->offset_fails);
+    rm_log_error("fiemap'd %lu files containing %lu fragments (failed another %lu files)\n", session->offsets_read - session->offset_fails, session->offset_fragments, session->offset_fails);
     //TODO: is this another kind of lint (heavily fragmented files)?
 
 }
@@ -1284,7 +1284,7 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     }
 }
 
-static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
+static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     RmSettings *settings = tag->session->settings;
 
     if(tag->session->settings->paranoid) {
@@ -1303,17 +1303,17 @@ static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
 }
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
-    rm_error(BLU"Started rm_shred_devlist_factory for disk %s (%u:%u) with %lu files in queue\n"NCO,
-             device->disk_name,
-             major(device->disk),
-             minor(device->disk),
-             (unsigned long)g_queue_get_length(device->file_queue) );
+    rm_log_error(BLUE"Started rm_shred_devlist_factory for disk %s (%u:%u) with %lu files in queue\n"RESET,
+                 device->disk_name,
+                 major(device->disk),
+                 minor(device->disk),
+                 (unsigned long)g_queue_get_length(device->file_queue) );
 
 
     if(device->is_rotational) {
-        rm_error(RED"Sorting...");  //TODO: do we need this other than for first run, since we push sorted after that?
+        rm_log_error(RED"Sorting...");  //TODO: do we need this other than for first run, since we push sorted after that?
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
-        rm_error(GRE"done!\n"NCO);
+        rm_log_error(GREEN"done!\n"RESET);
     }
 
     int max_threads = 1; /*rm_shred_get_read_threads(
@@ -1344,8 +1344,8 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             /* wait until the increment has finished hashing */
             RmFile *popped = g_async_queue_timeout_pop(device->hashed_file_return, 10000000); //TODO: remove this debugging extra steps
             if (popped == NULL) {
-                rm_error(RED"file %s not recieved back from reading/hashing - discarding\n"NCO,
-                         file->path);
+                rm_log_error(RED"file %s not recieved back from reading/hashing - discarding\n"RESET,
+                             file->path);
             }
 
             if (!popped || file->status == RM_FILE_STATE_IGNORE) {
@@ -1359,13 +1359,13 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
                 if (file->status == RM_FILE_STATE_FRAGMENT) {
                     /* file is not ready for checking yet; push it back into the queue */
-                    //~ rm_error("fragment read for %s\n", file->path);
+                    //~ rm_log_error("fragment read for %s\n", file->path);
                     rm_shred_push_queue_sorted(file);
                 } else if (rm_shred_sift(file)) {
                     /* continue hashing same file, ie no change to iter */
-                    rm_error(">");
+                    rm_log_error(">");
                     if (start_offset == file->hash_offset) {
-                        rm_error(RED"Offset stuck at %llu\n", start_offset);
+                        rm_log_error(RED"Offset stuck at %llu\n", start_offset);
                     }
                     continue;
                 } else {
@@ -1378,13 +1378,13 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         }
 
     } else {
-        rm_error("Multiple threads per disk not implemented yet");
+        rm_log_error("Multiple threads per disk not implemented yet");
     }
 
     /* threadpool thread terminates but the device will be recycled via
      * the device_return queue
      */
-    rm_error(BLU"Pushing back device %d\n"NCO, (int)device->disk);
+    rm_log_error(BLUE"Pushing back device %d\n"RESET, (int)device->disk);
     g_async_queue_push(main->device_return, device);
 }
 
@@ -1400,7 +1400,7 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
-        rm_error(GRE"Pushing device %s to threadpool\n", device->disk_name);
+        rm_log_error(GREEN"Pushing device %s to threadpool\n", device->disk_name);
         rm_shred_thread_pool_push(tag->device_pool, device);
     }
 }
@@ -1423,7 +1423,7 @@ void rm_shred_run(RmSession *session) {
 
     /*TODO: move to rm_shred_session_init */
 
-    rm_error("Creating dev_table\n");
+    rm_log_error("Creating dev_table\n");
     session->tables->dev_table = g_hash_table_new_full(
                                      g_direct_hash, g_direct_equal,
                                      NULL, (GDestroyNotify)rm_shred_device_free
@@ -1433,7 +1433,7 @@ void rm_shred_run(RmSession *session) {
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
-    rm_error(BLU"Devices = %d\n", devices_left);
+    rm_log_error(BLUE"Devices = %d\n", devices_left);
 
     /* Create a pool fo the devlists and push each queue */
     rm_shred_create_devpool(&tag, session->tables->dev_table);
@@ -1450,15 +1450,15 @@ void rm_shred_run(RmSession *session) {
     /* This is the joiner part */
     while (devices_left > 0 || g_async_queue_length(tag.device_return) > 0) {
         RmShredDevice *device = g_async_queue_pop(tag.device_return);
-        rm_error(BLU"Got device %s back with %d in queue and %llu bytes remaining in %d remaining files\n"NCO,
-                 device->disk_name,
-                 g_queue_get_length(device->file_queue),
-                 (unsigned long long)device->remaining_bytes,
-                 device->remaining_files);
+        rm_log_error(BLUE"Got device %s back with %d in queue and %llu bytes remaining in %d remaining files\n"RESET,
+                     device->disk_name,
+                     g_queue_get_length(device->file_queue),
+                     (unsigned long long)device->remaining_bytes,
+                     device->remaining_files);
         if (device->remaining_files > 0) {
             /* recycle the device */
             rm_shred_thread_pool_push(tag.device_pool , device);
-            rm_error(">");
+            rm_log_error(">");
         } else {
             devices_left--;
         }
