@@ -465,8 +465,18 @@ void rm_mounts_table_destroy(RmMountTable *self) {
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
-    return !disk->is_rotational;
+    if (part) {
+        RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+        if (disk) {
+            return !disk->is_rotational;
+        } else {
+            rm_error(RED"Disk not found in rm_mounts_is_nonrotational\n"NCO);
+            return true;
+        }
+    } else {
+        rm_error(RED"Partition not found in rm_mounts_is_nonrotational\n"NCO);
+        return true;
+    }
 }
 
 bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
@@ -497,8 +507,12 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
 
 char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
-    return disk->name;
+    if(part) {
+        RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+        return disk->name;
+    } else {
+        return NULL;
+    }
 }
 
 /////////////////////////////////

@@ -45,14 +45,14 @@ RmFile *rm_file_new(
     self->path_index = pnum;
 
     rm_digest_init(&self->digest, cksum_type, 0, 0);
-    g_mutex_init(&self->file_lock);
+    //g_mutex_init(&self->file_lock);
     return self;
 }
 
 void rm_file_destroy(RmFile *file) {
     g_free(file->path);
     rm_digest_finalize(&file->digest);
-    g_mutex_clear(&file->file_lock);
+    //g_mutex_clear(&file->file_lock);
     if (file->disk_offsets) {
         g_sequence_free(file->disk_offsets);
     }

@@ -848,7 +848,7 @@ int rm_main(RmSession *session) {
 
     warning("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
 
-    if(session->total_files < 2) {
+    if(session->total_files < 1) {
         warning("No files in cache to search through => No duplicates.\n");
         die(session, EXIT_SUCCESS);
     }

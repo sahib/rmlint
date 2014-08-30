@@ -36,16 +36,20 @@
 typedef enum RmFileState {
     /* File still processing
      */
-    RM_FILE_STATE_PROCESS,
+    RM_FILE_STATE_NORMAL,
 
-    /* File can be ignored, has a unique hash,
+    /* File can be ignored, has a unique hash, gets read failure
      * or is elsewhise not noteworthy.
      */
     RM_FILE_STATE_IGNORE,
 
+    /* File hashed to end of (disk) fragment but not yet to target bytes hashed
+     */
+    RM_FILE_STATE_FRAGMENT,
+
     /* File that is already finished
      */
-    RM_FILE_STATE_FINISH
+    //RM_FILE_STATE_FINISH
 } RmFileState;
 
 /* types of lint */
@@ -68,8 +72,8 @@ typedef enum RmLintType {
 } RmLintType;
 
 
-typedef struct ShredGroup ShredGroup;
-typedef struct ShredDevice ShredDevice;
+typedef struct RmShredGroup RmShredGroup;
+typedef struct RmShredDevice RmShredDevice;
 
 /* TODO: Reduce size of RmFile */
 typedef struct RmFile {
@@ -121,7 +125,8 @@ typedef struct RmFile {
     guint64 seek_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
-    gboolean fragment_hash;
+    char status;
+
 
     /* digest of this file updated on every hash iteration.
      */
@@ -143,14 +148,14 @@ typedef struct RmFile {
      * This is used to avoid hashing every file within a hardlinked set */
     struct RmFile *hardlinked_original;
 
-    /* Link to the ShredGroup that the file currently belongs to */
-    ShredGroup *shred_group;
+    /* Link to the RmShredGroup that the file currently belongs to */
+    RmShredGroup *rm_shred_group;
 
-    /* Link to the ShredDevice that the file is associated with */
-    ShredDevice *device;
+    /* Link to the RmShredDevice that the file is associated with */
+    RmShredDevice *device;
 
     /* TODO: find a way around having a lock on every single file */
-    GMutex file_lock;
+    //GMutex file_lock;
 } RmFile;
 
 /**
