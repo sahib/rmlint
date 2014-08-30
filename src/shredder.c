@@ -353,14 +353,11 @@ typedef struct RmMainTag {
     guint32 totalfiles;
 } RmMainTag;
 
-
-
 /////////// RmCkSumKey ////////////////
 
 typedef struct RmCksumKey {
     guint8 data[_RM_HASH_LEN];
 } RmCksumKey;
-
 
 /////////// RmShredDevice ////////////////
 
@@ -401,11 +398,73 @@ typedef struct RmShredDevice {
     RmMainTag *main;
 } RmShredDevice;
 
+typedef enum RmShredGroupStatus {
+    RM_SHRED_GROUP_DORMANT = 0,
+    RM_SHRED_GROUP_START_HASHING,
+    RM_SHRED_GROUP_HASHING,
+    RM_SHRED_GROUP_FINISHING
+} RmShredGroupStatus;
+
+typedef struct RmShredGroup {
+    /* holding queue for files; they are held here until the group first meets
+     * criteria for further hashing (normally just 2 or more files, but sometimes
+     * related to preferred path counts) 
+     * */
+    GQueue *held_files; 
+                        
+    /* link(s) to next generation of RmShredGroups(s) which have this RmShredGroup as parent*/
+    GQueue *children;   
+
+    /* RmShredGroup of the same size files but with lower RmFile->hash_offset;
+     * getsset to null when parent dies
+     * */
+    struct RmShredGroup *parent; 
+
+    /* number of child group files that have not completed next level of hashing */
+    gulong remaining;    
+
+    /* set if group has 1 or more files from "preferred" paths */
+    gboolean has_pref;   
+
+    /* set if group has 1 or more files from "non-preferred" paths */
+    gboolean has_npref;  
+
+    /* set based on settings->must_match_original */
+    gboolean needs_pref; 
+
+    /* set based on settings->keep_all_originals */
+    gboolean needs_npref;
+
+    /* initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files
+     * and meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
+     * RM_SHRED_GROUP_FINISHING.  When switching from dormant to hashing, all
+     * held_files are released and future arrivals go straight to hashing 
+     * */
+    RmShredGroupStatus status; 
+
+    /* file size of files in this group */
+    guint64 file_size;   
+
+    /* file hash_offset when files arrived in this group */
+    guint64 hash_offset; 
+
+    /* file hash_offset for next increment */
+    guint64 next_offset; 
+
+    /* needed because different device threads read and write to this structure */
+    GMutex lock;        
+
+    /* key which distinguishes this group from its siblings */
+    RmCksumKey checksum; 
+
+    /* Reference to main */
+    RmMainTag *main;
+} RmShredGroup;
+
 /* header to avoid implicit reference warning  */
 static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device);
 
 RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMainTag *main) {
-
     RmShredDevice *self = g_slice_new0(RmShredDevice);
     self->main = main;
 
@@ -431,7 +490,6 @@ void rm_shred_device_free(RmShredDevice *self) {
     g_assert(self->remaining_bytes == 0);
     g_assert(g_queue_is_empty(self->file_queue));
     g_assert(g_async_queue_length(self->hashed_file_return) == 0);
-    g_assert(g_thread_pool_unprocessed(self->hash_pool) == 0);
     //TODO: clean up the above to the minimum
 
     g_async_queue_unref(self->hashed_file_return);
@@ -449,44 +507,6 @@ void rm_shred_device_free(RmShredDevice *self) {
 
 /* header for rm_shred_group_make_orphan since it and rm_shred_group_free reference each other  */
 void rm_shred_group_make_orphan(RmShredGroup *self);
-
-typedef enum RmShredGroupStatus {
-    RM_SHRED_GROUP_DORMANT = 0,
-    RM_SHRED_GROUP_START_HASHING,
-    RM_SHRED_GROUP_HASHING,
-    RM_SHRED_GROUP_FINISHING
-} RmShredGroupStatus;
-
-typedef struct RmShredGroup {
-    GQueue *held_files; /** holding queue for files; they are held here until the group first meets
-                         * criteria for further hashing (normally just 2 or more files, but sometimes
-                         * related to preferred path counts) */
-
-    GQueue *children;   /** link(s) to next generation of RmShredGroups(s) which have this RmShredGroup as parent*/
-
-    struct RmShredGroup *parent; /** RmShredGroup of the same size files but with lower RmFile->hash_offset; gets
-                                * set to null when parent dies*/
-
-    gulong remaining;    /** number of child group files that have not completed next level of hashing */
-    gboolean has_pref;   /** set if group has 1 or more files from "preferred" paths */
-    gboolean has_npref;  /** set if group has 1 or more files from "non-preferred" paths */
-    gboolean needs_pref; /** set based on settings->must_match_original */
-    gboolean needs_npref;/** set based on settings->keep_all_originals */
-
-    RmShredGroupStatus status; /** initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files and
-						 * meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
-						 * RM_SHRED_GROUP_FINISHING.  When switching from dormant to hashing, all held_files
-						 * are released and future arrivals go straight to hashing */
-
-    guint64 file_size;   /** file size of files in this group */
-    guint64 hash_offset; /** file hash_offset when files arrived in this group */
-    guint64 next_offset; /** file hash_offset for next increment */
-
-    GMutex lock;        /** needed because different device threads read and write to this structure */
-    RmCksumKey checksum; /** key which distinguishes this group from its siblings */
-    RmMainTag *main;
-} RmShredGroup;
-
 
 RmShredGroup *rm_shred_group_new(RmFile *file) {
 
@@ -810,12 +830,12 @@ static gboolean rm_shred_group_push_file(RmShredGroup *rm_shred_group, RmFile *f
     return result;
 }
 
-
-/* After partial hashing of RmFile, add it back into the sieve for further hashing
- * if required.  If try_bounce option is set, then try to return the RmFile to the calling
- * routine so it can continue with the next hashing increment (this bypasses the normal device
- * queue and so avoids an unnecessary file seek operation )
- * returns true if the file can be immediately be hashed some more
+/* After partial hashing of RmFile, add it back into the sieve for further
+ * hashing if required.  If try_bounce option is set, then try to return the
+ * RmFile to the calling routine so it can continue with the next hashing
+ * increment (this bypasses the normal device queue and so avoids an unnecessary
+ * file seek operation ) returns true if the file can be immediately be hashed
+ * some more.
  * */
 static gboolean rm_shred_sift(RmFile *file) {
     g_assert(file);
@@ -832,9 +852,11 @@ static gboolean rm_shred_sift(RmFile *file) {
         /*check if there is already a descendent of current_group which
          * matches snap... if yes then move this file into it; if not then
          * create a new group */
-        GList *child = g_queue_find_custom (current_group->children,
+        GList *child = g_queue_find_custom(
+            current_group->children,
                                             &key,
-                                            (GCompareFunc)rm_cksum_matches_group);
+                                            (GCompareFunc)rm_cksum_matches_group
+        );
         if (!child) {
             child_group = rm_shred_group_new(file);
             g_queue_push_tail(current_group->children, child_group);
@@ -845,8 +867,6 @@ static gboolean rm_shred_sift(RmFile *file) {
     g_mutex_unlock(&(current_group->lock));
     return rm_shred_group_push_file(child_group, file, false);
 }
-
-
 
 ////////////////////////////////////
 //  SHRED-SPECIFIC PREPROCESSING  //
@@ -863,7 +883,6 @@ static gboolean rm_shred_sift(RmFile *file) {
  * 3. Use g_hash_table_foreach to do the FIEMAP lookup for all remaining
  * 	  files via rm_shred_device_preprocess.
  * */
-
 
 /* Insert RmFiles into size_groups
  * */
@@ -905,7 +924,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmMainTag *main) {
         group = rm_shred_group_new(file);
         g_hash_table_insert(
             session->tables->size_groups,
-            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files
+            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files --- sahib:why?
             group);
     } else {
         rm_log_error(".");
@@ -916,13 +935,10 @@ static void rm_shred_file_preprocess(RmFile *file, RmMainTag *main) {
 
 /* send hardlink clusters from node_table to size_groups via rm_shred_file_preprocess
  * */
-static gboolean rm_shred_hardlink_cluster_preprocess(gpointer key, GQueue *hardlink_cluster, RmMainTag *main) {
-    (void)key; //key not used
-
+static gboolean rm_shred_hardlink_cluster_preprocess(G_GNUC_UNUSED gpointer key, GQueue *hardlink_cluster, RmMainTag *main) {
     if (hardlink_cluster) {
         RmFile *first = hardlink_cluster->head->data;
-        if (first) {
-        } else {
+        if(!first) {
             rm_log_error("rm_shred_hardlink_cluster_preprocess for no path\n");
         }
     } else {
@@ -952,8 +968,6 @@ static void rm_shred_device_preprocess(gpointer key, RmShredDevice *device, RmMa
     g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_offset_table, main->session);
 }
 
-
-//// The main preprocessor /////////////////////////
 static void rm_shred_preprocess_input(RmMainTag *main) {
     RmSession *session = main->session;
 
@@ -978,9 +992,9 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 
     rm_log_error("fiemap'd %lu files containing %lu fragments (failed another %lu files)\n", session->offsets_read - session->offset_fails, session->offset_fragments, session->offset_fails);
     //TODO: is this another kind of lint (heavily fragmented files)?
-
+    // XXX-TODO: What would do against those? Filesystems are usually better
+    // than us fixing this.
 }
-
 
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
@@ -1109,7 +1123,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  * directly from rm_devlist_factory.
  * */
 static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
-
     int fd = 0;
     gint32 bytes_read = 0;
     gint64 total_bytes_read = 0;
@@ -1137,11 +1150,22 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         goto finish;
     }
 
+    /* XXX-TODO: preadv() is benifitial for large files since it can cut the
+     *           number of syscall heavily.  I suggest N_BUFFERS=4 as good
+     *           compromise between memory and cpu.
+     *
+     * With 16 buffers: 43% cpu 33,871 total
+     * With  8 buffers: 43% cpu 32,098 total
+     * With  4 buffers: 43% cpu 32,091 total
+     * With  2 buffers: 44% cpu 32,245 total
+     * With  1 buffers: 45% cpu 34,491 total
+     */
+    
     /* how many buffers to read? */
-    gint16 N_BUFFERS = 1; /*TODO: optimise.  If 1 is optimum then change
-			from preadv to pread and simplify related stuff */
+    const gint16 N_BUFFERS = 4; 
 
     /* Give the kernel scheduler some hints */
+    // XXX-TODO: Benchmark and think of placing this somehwere earlier.
     posix_fadvise(fd, file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
 
     /* Initialize the buffers to begin with.
@@ -1155,10 +1179,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         readvec[i].iov_len = buf_size;
     }
 
-    gint16 buffers_to_read = N_BUFFERS;
-
-    while(bytes_to_read > 0 && (bytes_read = preadv(fd, readvec, buffers_to_read, file->seek_offset)) > 0) {
-
+    while(bytes_to_read > 0 && (bytes_read = preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
         int blocks = DIVIDE_ROUND_UP(bytes_read,  buf_size);
 
         bytes_to_read -= bytes_read;
@@ -1186,7 +1207,6 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         }
     }
 
-
     /* Release the rest of the buffers */
     for(int i = 0; i < N_BUFFERS; ++i) {
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
@@ -1194,14 +1214,16 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     }
 
 finish:
-
     if(fd > 0) {
         close(fd);
     }
 
+    // XXX-TODO: What happens for files we cannot open? 
+
     /* Update totals for device */
-    g_mutex_lock(&(file->device->lock));
-    file->device->remaining_bytes -= total_bytes_read;
+    g_mutex_lock(&(file->device->lock)); {
+        file->device->remaining_bytes -= total_bytes_read;
+    }
     g_mutex_unlock(&(device->lock));
 
 }
@@ -1352,7 +1374,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                 rm_shred_group_unref(file->rm_shred_group);
                 rm_shred_discard_file(file);
             } else {
-
                 file = popped;
 
                 //TODO: Test what happens if we shrink a file after list build but before reading...
@@ -1389,7 +1410,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 }
 
 static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
-
     tag->device_pool = rm_shred_thread_pool_new(
                            (GFunc)rm_shred_devlist_factory, tag, tag->session->settings->threads / 2 + 1
                        );
@@ -1407,6 +1427,8 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
 
 void rm_shred_run(RmSession *session) {
     g_assert(session);
+    g_assert(session->tables);
+    g_assert(session->tables->node_table);
 
     RmMainTag tag;
     tag.session = session;
@@ -1417,9 +1439,6 @@ void rm_shred_run(RmSession *session) {
 
     /* would use g_atomic, but helgrind does not like that */
     g_mutex_init(&tag.file_state_mtx);
-
-    g_assert(session->tables);
-    g_assert(session->tables->node_table);
 
     /*TODO: move to rm_shred_session_init */
 
@@ -1473,13 +1492,11 @@ void rm_shred_run(RmSession *session) {
     g_thread_pool_free(tag.result_pool, FALSE, TRUE);
 
     g_async_queue_unref(tag.device_return);
-    //g_hash_table_unref(join_table);
     rm_buffer_pool_destroy(tag.mem_pool);
 
     g_hash_table_unref(session->tables->dev_table);
     g_mutex_clear(&tag.file_state_mtx);
 }
-
 
 /////////////////////
 //    TEST MAIN    //
@@ -1528,7 +1545,7 @@ int main(int argc, const char **argv) {
         dev_t whole_disk = rm_mounts_get_disk_id(session.mounts, stat_buf.st_dev);
         stat_buf.st_dev = whole_disk;
 
-        RmFile *file =  rm_file_new(
+        RmFile *file = rm_file_new(
                             path, &stat_buf, RM_LINT_TYPE_DUPE_CANDIDATE, RM_DIGEST_SPOOKY, 0, 0
                         );
 

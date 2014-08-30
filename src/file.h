@@ -73,8 +73,8 @@ typedef enum RmLintType {
 } RmLintType;
 
 
-typedef struct RmShredGroup RmShredGroup;
-typedef struct RmShredDevice RmShredDevice;
+struct RmShredGroup;
+struct RmShredDevice;
 
 /* TODO: Reduce size of RmFile */
 typedef struct RmFile {
@@ -150,10 +150,10 @@ typedef struct RmFile {
     struct RmFile *hardlinked_original;
 
     /* Link to the RmShredGroup that the file currently belongs to */
-    RmShredGroup *rm_shred_group;
+    struct RmShredGroup *rm_shred_group;
 
     /* Link to the RmShredDevice that the file is associated with */
-    RmShredDevice *device;
+    struct RmShredDevice *device;
 
 } RmFile;
 
