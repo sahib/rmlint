@@ -1285,7 +1285,6 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
-    RmSettings *settings = tag->session->settings;
 
     if(tag->session->settings->paranoid) {
         int failure_count = rm_shred_check_paranoia(tag, group->held_files);
