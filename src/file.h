@@ -109,12 +109,6 @@ typedef struct RmFile {
      */
     guint64 file_size;
 
-    /* Physical offset from the start of the disk for the next byte to read.
-     * This gets updated on a change of seek_offset,
-     * so it reflects always the current readposition.
-     * TODO: do we need to store this in the RmFile?  We can recalculate when needed from disk_offsets and hash_offset.
-     */
-    guint64 phys_offset;
     /* How many bytes were already hashed
      * (lower or equal seek_offset)
      */
@@ -126,16 +120,11 @@ typedef struct RmFile {
     guint64 seek_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
-    char status;
-
+    RmFileState status;
 
     /* digest of this file updated on every hash iteration.
      */
     RmDigest digest;
-
-    //~ /* State of the file, initially always RM_FILE_STATE_PROCESS
-    //~ */
-    //~ RmFileState state;
 
     /* Table of this file's extents.
      */

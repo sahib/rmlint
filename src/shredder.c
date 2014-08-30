@@ -630,11 +630,13 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_
      * guint64, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead 
      */
+    guint64 phys_offset_a = rm_offset_lookup(a->disk_offsets, a->seek_offset);
+    guint64 phys_offset_b = rm_offset_lookup(b->disk_offsets, b->seek_offset);
 
     // XXX-TODO: Clever. Just saying.
     return (0 
             + 4 * SIGN_DIFF(a->dev, b->dev)
-            + 2 * SIGN_DIFF(a->phys_offset, b->phys_offset)
+            + 2 * SIGN_DIFF(phys_offset_a, phys_offset_b)
             + 1 * SIGN_DIFF(a->inode, b->inode)
     );
 }
@@ -654,9 +656,6 @@ static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
         } else {
             session->offset_fails++;
         }
-
-        file->phys_offset = rm_offset_lookup(file->disk_offsets, 0); /* TODO: workaround this so we
-			can drop phys_offset from RmFile structure?? */
     }
 }
 
@@ -668,7 +667,6 @@ static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
 static void rm_shred_push_queue(RmFile *file) {
     RmShredDevice *device = file->device;
 
-    file->phys_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
     g_mutex_lock (&device->lock);
     {
         g_queue_push_head (device->file_queue, file);
@@ -678,7 +676,6 @@ static void rm_shred_push_queue(RmFile *file) {
 static void rm_shred_push_queue_sorted(RmFile *file) {
     RmShredDevice *device = file->device;
 
-    file->phys_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
     g_mutex_lock (&device->lock);
     {
         g_queue_insert_sorted (device->file_queue, file, (GCompareDataFunc)rm_shred_compare_file_order, NULL);

@@ -34,15 +34,13 @@
 
 
 RmFileTables *rm_file_tables_new(RmSession *session) {
-    rm_log_error("Creating tables \n");
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
+    tables->size_table = g_hash_table_new(NULL, NULL);
 
-    tables->size_table = g_hash_table_new( NULL, NULL);
+    tables->size_groups = g_hash_table_new_full(NULL, NULL, NULL, NULL); //TODO (GDestroyNotify)shred_group_free);
 
-    tables->size_groups = g_hash_table_new_full( NULL, NULL, NULL, NULL); //TODO (GDestroyNotify)shred_group_free);
-
-    tables->node_table = g_hash_table_new_full( NULL, NULL, NULL, (GDestroyNotify)g_queue_free );
+    tables->node_table = g_hash_table_new_full(NULL, NULL, NULL, (GDestroyNotify)g_queue_free );
 
     tables->orig_table = g_hash_table_new(NULL, NULL);
 
@@ -54,7 +52,8 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
     if (session->settings->namecluster) {
         tables->name_table = g_hash_table_new_full(
                                  g_str_hash, g_str_equal,
-                                 g_free, (GDestroyNotify)g_list_free );
+                                 g_free, (GDestroyNotify)g_list_free
+        );
     } else {
         g_assert(tables->name_table ==  NULL);
     }
@@ -87,32 +86,14 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         if (tables->name_table) {
             g_hash_table_unref(tables->name_table);
         }
-
-//   not needed because freed by handle_other_lint:
-//        for (uint i = 0; i < sizeof(tables->other_lint) / sizeof(tables->other_lint[0]); i++) {
-//            if (tables->other_lint[i]) {
-//                g_list_free(tables->other_lint[i]); //TODO: free_full??
-//            }
-//        }
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }
 
-//static gint rm_file_list_cmp_file(gconstpointer a, gconstpointer b, G_GNUC_UNUSED gpointer data) {
-//    const RmFile *fa = a, *fb = b;
-//    if (fa->inode != fb->inode)
-//        return fa->inode - fb->inode;
-//    else if (fa->dev != fb->dev)
-//        return fa->dev - fb->dev;
-//    else
-//        return strcmp(rm_util_basename(fa->path), rm_util_basename(fb->path));
-//}
-
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 static long cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
-
     RmSettings *sets = session->settings;
 
     if (a->lint_type != b->lint_type) {
@@ -197,7 +178,7 @@ bool rm_file_list_insert(RmSession *session, RmFile *file) {
                     /* double paths and loops will always have same dir inode number*/
                ) {
                 /* file is path double or filesystem loop - kick one or the other */
-                if ( cmp_orig_criteria(file, current, session) > 0) {
+                if (cmp_orig_criteria(file, current, session) > 0) {
                     /* file outranks current */
                     rm_log_info("Ignoring path double %s, keeping %s\n", current->path, file->path);
                     rm_file_destroy(current);
@@ -216,7 +197,8 @@ bool rm_file_list_insert(RmSession *session, RmFile *file) {
         hardlink_group,
         file,
         (GCompareDataFunc)cmp_orig_criteria,
-        session);
+        session
+    );
     g_rec_mutex_unlock(&tables->lock);
     return true;
 }
@@ -319,7 +301,6 @@ static guint64 handle_other_lint(RmSession *session) {
 
             rm_fmt_write(session->formats, file);
         }
-
         g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
     }
 
@@ -334,15 +315,22 @@ guint64 rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
 
     /* process hardlink groups, and move other_lint into tables- */
-    g_hash_table_foreach_remove(tables->node_table,
-                                (GHRFunc)rm_handle_hardlinks,
-                                session);
-    rm_log_error("process hardlink groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    g_hash_table_foreach_remove(
+        tables->node_table,
+        (GHRFunc)rm_handle_hardlinks,
+        session
+    );
+
+    rm_log_debug(
+        "process hardlink groups finished at time %.3f\n",
+        g_timer_elapsed(session->timer, NULL)
+    );
 
     other_lint += handle_other_lint(session);
-    rm_log_error("Other lint handling finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-
+    rm_log_debug(
+        "Other lint handling finished at time %.3f\n",
+        g_timer_elapsed(session->timer, NULL)
+    );
 
     if(settings->searchdup == 0) {
         /* rmlint was originally supposed to find duplicates only
@@ -350,7 +338,6 @@ guint64 rm_preprocess(RmSession *session) {
            dup search before dieing */
         die(session, EXIT_SUCCESS);
     }
-
 
     if(settings->namecluster) {
         //TODO/FIXME: need to clarify the workflow for double bases and the potential collision with duplicates search
@@ -360,28 +347,5 @@ guint64 rm_preprocess(RmSession *session) {
     }
 
     rm_log_error("\n%s Duplicate(s):\n", YELLOW"#"RESET);
-
-    //~ rm_shred_run(session);
-//~
-    //~ rm_log_error("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-//~
-    //~ if(session->dup_counter == 0) {
-    //~ rm_log_error("\r                    ");
-    //~ } else {
-    //~ rm_log_error("\n");
-    //~ }
-
-    //~ rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-    //~ warning(
-    //~ "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",
-    //~ session->total_files, session->dup_counter, session->dup_group_counter
-    //~ );
-
-    //~ if(other_lint > 0) {
-    //~ rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
-    //~ warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
-    //~ }
-
     return other_lint;
 }
-// was 713
