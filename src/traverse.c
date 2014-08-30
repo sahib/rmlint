@@ -23,6 +23,14 @@
  *
  */
 
+// TODO: In general:
+// - Where is the killer advantage of all this?
+//   Probably launching a thread when encountering a mount point?
+//   Is it really worth the extra-hassle? (i.e. small benchmark vs. find)
+// - Why duplicating the work of FTS?
+// - stat() seems to be called (also implicitly) far more often than needed.
+// - Functions are partly are far too large. Especially rm_search_tree
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,7 +78,7 @@ RmTraversePathBuffer *rm_traverse_path_buffer_new(char *path,
     self->path_index = pnum;
     self->stat_buf = g_new0(struct stat, 1);
     if ( stat(path, self->stat_buf) == -1) {
-        rm_perror(path);
+        rm_log_perror(path);
         g_free(self->stat_buf);
         g_assert(self->stat_buf == NULL);
     }
@@ -108,6 +116,29 @@ typedef struct RmTraverseSession {
 
 
 
+/* Return appropriate fts search flags based on settings. */
+int fts_flags_from_settings(RmSettings *settings) {
+    int self = 0;
+    if (!settings->followlinks) {
+        /* don't follow symlinks except those passed in command line */
+        self |= FTS_COMFOLLOW | FTS_PHYSICAL;
+    } else {
+        self |= FTS_LOGICAL;
+    } //TODO: this probably leads to false positives for empty dirs - safer to handle it in traverse_path()
+
+
+    // TODO: wat.
+
+    if (settings->samepart) {
+        //self |= FTS_XDEV; NOTE: this was causing mountpoints to be flagged as empty dirs; moved this to manual check during traverse_path().
+        //TODO: remove
+    }
+
+    self |= FTS_NOCHDIR;  /*TODO: we can probably have 1 running with CHDIR optimisations -
+                            but need threadpool threads to cooperate for this to work*/
+    return self;
+}
+
 
 static int process_file(RmTraverseSession *traverse_session, struct stat *statp, char *path, bool is_ppath, unsigned long pnum, RmLintType file_type) {
     RmSession *session = traverse_session->rm_session;
@@ -142,7 +173,7 @@ static int process_file(RmTraverseSession *traverse_session, struct stat *statp,
     if (file) {
         return rm_file_list_insert(session, file);
     } else {
-        rm_error("Problem creating RmFile %s\n", path);
+        rm_log_error("Problem creating RmFile %s\n", path);
         return 0;
     }
 }
@@ -163,10 +194,11 @@ void traverse_path(gpointer data, gpointer userdata) {
     RmSettings *settings = session->settings;
 
     if (path == NULL) {
-        rm_error("Error: no path defined for traverse_path");
+        rm_log_error("Error: no path defined for traverse_path");
         return;
     }
 
+    // TODO: You call stat there all the time!
     if(g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
         /* Normal file - process directly without FTS overhead*/
         numfiles += process_file(traverse_session,
@@ -176,12 +208,12 @@ void traverse_path(gpointer data, gpointer userdata) {
                                  pnum,
                                  0);
     } else if (!g_file_test(path, G_FILE_TEST_IS_DIR)) {
-        rm_error("Error trying to process path %s - not a dir\n", path);
+        rm_log_error("Error trying to process path %s - not a dir\n", path);
         return;
     } else {
-        info(BLU"Starting traversal of %s (index %d on disk %02d:%02d)\n"NCO, path, traverse_path_args->path_num_for_disk,
-             major(traverse_path_args->disk),
-             minor(traverse_path_args->disk) ); /*TODO: cleanup*/
+        rm_log_info(BLUE"Starting traversal of %s (index %d on disk %02d:%02d)\n"RESET, path, traverse_path_args->path_num_for_disk,
+                    major(traverse_path_args->disk),
+                    minor(traverse_path_args->disk) ); /*TODO: cleanup*/
         int fts_flags = traverse_session->fts_flags;
         /* build char** structure for passing to fts */
         char *ftspaths[2];
@@ -192,14 +224,14 @@ void traverse_path(gpointer data, gpointer userdata) {
         FTS *ftsp;
         /* Initialize ftsp */
         if ((ftsp = fts_open(ftspaths, fts_flags, NULL)) == NULL) {
-            rm_error("fts_open failed");
+            rm_log_error("fts_open failed");
             return;
         }
 
         FTSENT *p, *chp;
         chp = fts_children(ftsp, 0);
         if (chp == NULL) {
-            warning("fts_children: can't initialise");
+            rm_log_warning("fts_children: can't initialise");
             return;
         }
 
@@ -221,7 +253,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     g_mutex_lock(traverse_session->mutex);
                     if (traverse_session->ignored_folders++ == 1) {
-                        info("Not descending into %s because it is a hidden folder (suppressing future warnings)\n", p->fts_path);
+                        rm_log_info("Not descending into %s because it is a hidden folder (suppressing future rm_log_warnings)\n", p->fts_path);
                     }
                     g_mutex_unlock(traverse_session->mutex);
                 } else {
@@ -239,27 +271,27 @@ void traverse_path(gpointer data, gpointer userdata) {
                        ) {
                         fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                         clear_emptydir_flags = true; /*flag current dir as not empty*/
-                        info(BLU"Traverse of %s skipping %s because it will be traversed in another thread\n"NCO, path, p->fts_path);
+                        rm_log_info(BLUE"Traverse of %s skipping %s because it will be traversed in another thread\n"RESET, path, p->fts_path);
                     } else if (depth != 0 && p->fts_level >= depth) {
                         /* continuing into folder would exceed maxdepth*/
                         fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                         clear_emptydir_flags = true; /*flag current dir as not empty*/
-                        info("Not descending into %s because max depth reached\n", p->fts_path);
+                        rm_log_info("Not descending into %s because max depth reached\n", p->fts_path);
                     } else if (settings->samepart && p->fts_dev != chp->fts_dev) {
                         /* continuing into folder would cross file systems*/
                         fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                         clear_emptydir_flags = true; /*flag current dir as not empty*/
-                        info("Not descending into %s because it is a different filesystem\n", p->fts_path);
+                        rm_log_info("Not descending into %s because it is a different filesystem\n", p->fts_path);
                     } else {
                         /* recurse dir; assume empty until proven otherwise */
-                        info("descending into %s (parent %s)\n", p->fts_path, path);
+                        //rm_log_info("descending into %s (parent %s)\n",p->fts_path,path);
                         is_emptydir[ (p->fts_level + 1) ] = 'E';
                         have_open_emptydirs = true;
                     }
                     break;
                 case FTS_DC:        /* directory that causes cycles */
-                    warning(RED"Warning: filesystem loop detected at %s (skipping)\n"NCO,
-                            p->fts_path);
+                    rm_log_warning(RED"Warning: filesystem loop detected at %s (skipping)\n"RESET,
+                                   p->fts_path);
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
                 case FTS_DNR:       /* unreadable directory */
@@ -277,7 +309,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     }
                     break;
                 case FTS_ERR:       /* error; errno is set */
-                    warning(RED"Warning: error %d in fts_read for %s (skipping)\n"NCO, errno, p->fts_path);
+                    rm_log_warning(RED"Warning: error %d in fts_read for %s (skipping)\n"RESET, errno, p->fts_path);
                     clear_emptydir_flags = true; /*current dir not empty*/
                     break;
                 case FTS_INIT:      /* initialized only */
@@ -293,7 +325,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                     break;
                 case FTS_NS:        /* stat(2) failed */
                     clear_emptydir_flags = true; /*current dir not empty*/
-                    warning(RED"Warning: cannot stat file %s (skipping)\n"NCO, p->fts_path);
+                    rm_log_warning(RED"Warning: cannot stat file %s (skipping)\n"RESET, p->fts_path);
                     break;
                 case FTS_SL:        /* symbolic link */
                     clear_emptydir_flags = true; /*current dir not empty*/
@@ -316,7 +348,7 @@ void traverse_path(gpointer data, gpointer userdata) {
                 default:
                     /* unknown case; assume current dir not empty but otherwise do nothing */
                     clear_emptydir_flags = true;
-                    rm_error(RED"Unknown fts_info flag %d for file %s\n"NCO, p->fts_info, p->fts_path);
+                    rm_log_error(RED"Unknown fts_info flag %d for file %s\n"RESET, p->fts_info, p->fts_path);
                     break;
                 } /* end switch(p->fts_info)*/
                 if (clear_emptydir_flags) {
@@ -331,12 +363,12 @@ void traverse_path(gpointer data, gpointer userdata) {
             }
         } /*end while ((p = fts_read(ftsp)) != NULL)*/
         if (errno != 0) {
-            rm_error("Error '%s': fts_read failed on %s\n", g_strerror(errno), ftsp->fts_path);
+            rm_log_error("Error '%s': fts_read failed on %s\n", g_strerror(errno), ftsp->fts_path);
         }
 
         fts_close(ftsp);
 
-        info(GRE"Finished traversing path %s, got %lu files.\n"NCO, traverse_path_args->path, (unsigned long)numfiles);
+        rm_log_info(GREEN"Finished traversing path %s, got %lu files.\n"RESET, traverse_path_args->path, (unsigned long)numfiles);
         //rm_traverse_path_buffer_free(traverse_path_args);
     }
 
@@ -373,10 +405,9 @@ RmTraverseSession *traverse_session_init(RmSession *session) {
                               NULL,
                               (GDestroyNotify)g_list_free);
 
-    self->paths = g_hash_table_new_full(g_str_hash,
-                                        g_str_equal,
-                                        NULL,
-                                        NULL );
+    self->paths = g_hash_table_new(g_str_hash, g_str_equal);
+
+    // TODO: simply store Gmutex in self without a pointer
     self->mutex = g_new0(GMutex, 1);
     g_mutex_init(self->mutex);
 
@@ -403,11 +434,11 @@ guint64 traverse_session_join_and_free(RmTraverseSession *traverse_session) {
         g_mutex_clear(traverse_session->mutex);
         g_free(traverse_session->mutex);
 
-        info("Found %" G_GUINT64_FORMAT " files, ignored %" G_GUINT64_FORMAT
-             " hidden files and %" G_GUINT64_FORMAT " hidden folders\n",
-             traverse_session->numfiles,
-             traverse_session->ignored_files,
-             traverse_session->ignored_folders );
+        rm_log_info("Found %" G_GUINT64_FORMAT " files, ignored %" G_GUINT64_FORMAT
+                    " hidden files and %" G_GUINT64_FORMAT " hidden folders\n",
+                    traverse_session->numfiles,
+                    traverse_session->ignored_files,
+                    traverse_session->ignored_folders );
 
 
         guint64 numfiles = traverse_session->numfiles;
@@ -430,21 +461,23 @@ void add_path_to_traverse_queue_table (RmTraverseSession *traverse_session, RmTr
     GList *disk_pathlist = g_hash_table_lookup(traverse_session->disks_to_traverse, GINT_TO_POINTER(path_disk));
     if (!disk_pathlist) {
         /* insert new list into hash table */
+        // TODO: list_append needs linear time, use GQueue or g_list_prepend
         disk_pathlist = g_list_append(disk_pathlist, traverse_path_buffer);
         g_hash_table_insert (traverse_session->disks_to_traverse,
                              GINT_TO_POINTER(path_disk),
                              disk_pathlist);
     } else {
         /* add path to list */
+        // TODO: list_append needs linear time, use GQueue or g_list_prepend
         disk_pathlist = g_list_append(disk_pathlist, traverse_path_buffer);
     }
 
 
-    info("Added %s as path #%d for device %02d:%02d\n",
-         traverse_path_buffer->path,
-         g_list_length(disk_pathlist),
-         major(path_disk),
-         minor(path_disk));
+    rm_log_info("Added %s as path #%d for device %02d:%02d\n",
+                traverse_path_buffer->path,
+                g_list_length(disk_pathlist),
+                major(path_disk),
+                minor(path_disk));
 }
 
 
@@ -462,7 +495,7 @@ guint64 rm_search_tree(RmSession *session) {
     /* set up RmTraverseSession */
     RmTraverseSession *traverse_session = traverse_session_init(session);
     if (traverse_session == NULL) {
-        rm_error("NO SESSION");
+        rm_log_error("NO SESSION");
         /*TODO: die gracefully*/
         return -1;
     }
@@ -482,7 +515,7 @@ guint64 rm_search_tree(RmSession *session) {
                                              settings->depth,
                                              settings->is_prefd[idx],
                                              idx);
-            info(BLU"Adding path %s\n"NCO, new_path->path);
+            rm_log_info(BLUE"Adding path %s\n"RESET, new_path->path);
             g_hash_table_insert (traverse_session->paths, new_path->path, new_path);
             //TODO: combine preceding with following
             add_path_to_traverse_queue_table(traverse_session, new_path);
@@ -521,8 +554,8 @@ guint64 rm_search_tree(RmSession *session) {
                                                              bestmatch->is_prefd,
                                                              bestmatch->path_index
                                                                                         );
-                            info(BLU"Adding mountpoint %s as subdir of %s with depth difference %d\n"NCO,
-                                 new_path->path, bestmatch->path, depth_diff);
+                            rm_log_info(BLUE"Adding mountpoint %s as subdir of %s with depth difference %d\n"RESET,
+                                        new_path->path, bestmatch->path, depth_diff);
 
                             g_hash_table_insert (traverse_session->paths, new_path->path, new_path);
                             //TODO: combine preceding with following
@@ -544,7 +577,7 @@ guint64 rm_search_tree(RmSession *session) {
                                       false,                /* don't share the thread pool threads */
                                       &g_err);
     if (g_err != NULL) {
-        rm_error("Error %d creating thread pool traverse_session->traverse_pool\n", g_err->code);
+        rm_log_error("Error %d creating thread pool traverse_session->traverse_pool\n", g_err->code);
         return 0;
     }
 

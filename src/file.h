@@ -68,7 +68,8 @@ typedef enum RmLintType {
     RM_LINT_TYPE_OTHER_LINT,
 
     /* note: this needs to be last item in list */
-    RM_LINT_TYPE_DUPE_CANDIDATE
+    RM_LINT_TYPE_DUPE_CANDIDATE,
+    RM_LINT_TYPE_ORIGINAL_TAG
 } RmLintType;
 
 
@@ -154,8 +155,6 @@ typedef struct RmFile {
     /* Link to the RmShredDevice that the file is associated with */
     RmShredDevice *device;
 
-    /* TODO: find a way around having a lock on every single file */
-    //GMutex file_lock;
 } RmFile;
 
 /**

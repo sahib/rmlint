@@ -35,17 +35,9 @@
 #include "utilities.h"
 #include "file.h"
 
-typedef enum RmHandleMode {
-    RM_MODE_LIST = 1,
-    RM_MODE_NOASK = 3,
-    RM_MODE_LINK = 4,
-    RM_MODE_CMD = 5
-} RmHandleMode;
-
 /* TODO: lookup if all variables still needed. */
 /* all available settings - see rmlint -h */
 typedef struct RmSettings {
-    RmHandleMode mode;
     bool color;
     bool samepart;
     bool ignore_hidden;
@@ -64,8 +56,6 @@ typedef struct RmSettings {
     int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
     char *cmd_path;
     char *cmd_orig;
-    char *output_script;
-    char *output_log;
     char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
     bool limits_specified;
     guint64 minsize;
@@ -80,6 +70,8 @@ typedef struct RmSettings {
     short depth;
     RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
     char *iwd;                   /* cwd when rmlint called */
+    int argc;                    /* arguments rmlint was called with or NULL */
+    const char **argv;           /* arguments rmlint was called with or NULL */
 } RmSettings;
 
 typedef struct RmFileTables {
@@ -89,23 +81,24 @@ typedef struct RmFileTables {
     GHashTable *size_groups;
     GHashTable *node_table;
     GHashTable *name_table;
+    GHashTable *orig_table;
     GQueue *file_queue;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
     GRecMutex lock;
 } RmFileTables;
 
+struct RmFmtTable;
+
 typedef struct RmSession {
     RmSettings *settings;
     struct RmFileTables *tables;
     struct RmMountTable *mounts;
+    struct RmFmtTable *formats;
 
     guint64 total_files;
     guint64 total_lint_size;
     guint64 dup_counter;
     guint64 dup_group_counter;
-
-    FILE *script_out;
-    FILE *log_out;
 
     volatile bool aborted;
 
@@ -118,6 +111,15 @@ typedef struct RmSession {
 void rm_set_default_settings(RmSettings *settings);
 void rm_session_init(RmSession *session, RmSettings *settings);
 void rm_session_clear(RmSession *session);
+
+/* Maybe colors, for use outside of the rm_log macros,
+ * in order to work with the --with-no-color option
+ * */
+#define MAYBE_RED(s)    ((s->settings->color) ? RED : "")
+#define MAYBE_YELLOW(s) ((s->settings->color) ? YELLOW : "")
+#define MAYBE_RESET(s)  ((s->settings->color) ? RESET : "")
+#define MAYBE_GREEN(s)  ((s->settings->color) ? GREEN : "")
+#define MAYBE_BLUE(s)   ((s->settings->color) ? BLUE : "")
 
 #endif /* end of include guard */
 

@@ -1,3 +1,28 @@
+/*
+ *  This file is part of rmlint.
+ *
+ *  rmlint is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  rmlint is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors:
+ *
+ *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+ *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+ *
+ * Hosted on http://github.com/sahib/rmlint
+ *
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <glib.h>
@@ -268,7 +293,7 @@ int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
 }
 
 int rm_digest_hexstring(RmDigest *digest, char *buffer) {
-    const char *hex = "0123456789abcdef";
+    static const char *hex = "0123456789abcdef";
 
     guint8 input[_RM_HASH_LEN];
     memset(input, 0, sizeof(input));
@@ -277,9 +302,15 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     for(gsize i = 0; i < digest_len; ++i) {
         buffer[0] = hex[input[i] / 16];
         buffer[1] = hex[input[i] % 16];
+
+        if(i == digest_len - 1) {
+            buffer[2] = '\0';
+        }
+
         buffer += 2;
     }
-    return digest_len * 2;
+
+    return digest_len * 2 + 1;
 }
 
 

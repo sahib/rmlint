@@ -27,9 +27,8 @@
 #define RM_CMDLINE_H
 
 #include "session.h"
-#include "config.h"
 
-char rm_parse_arguments(int argc, char **argv, RmSession *session);
+char rm_parse_arguments(int argc, const char **argv, RmSession *session);
 char rm_echo_settings(RmSettings *settings);
 int rm_main(RmSession *session);
 void die(RmSession *session, int status);

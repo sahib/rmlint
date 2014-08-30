@@ -28,9 +28,9 @@
 #include <unistd.h>
 
 #include "session.h"
+#include "formats.h"
 #include "traverse.h"
 #include "preprocess.h"
-#include "postprocess.h"
 
 /* Options not specified by commandline get a default option - this called before rm_parse_arguments */
 void rm_set_default_settings(RmSettings *settings) {
@@ -53,10 +53,7 @@ void rm_set_default_settings(RmSettings *settings) {
     settings->findbadlinks   = true;
 
     /* Misc options */
-    settings->output_log    = "rmlint.log";
-    settings->output_script = "rmlint.sh";
     settings->sort_criteria = "m";
-    settings->mode          = RM_MODE_LIST;
     settings->checksum_type = RM_DIGEST_SPOOKY;
     settings->color         = isatty(fileno(stdout));
     settings->threads       = 32;
@@ -68,11 +65,12 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->timer = g_timer_new();
 
     session->settings = settings;
-    init_filehandler(session);
 
     session->mounts = rm_mounts_table_new();
     session->tables = rm_file_tables_new(session);
-    g_assert(session->tables->node_table);
+
+    session->formats = rm_fmt_open(session);
+
     session->offsets_read = 0;
     session->offset_fragments = 0;
     session->offset_fails = 0;
@@ -89,31 +87,10 @@ void rm_session_clear(RmSession *session) {
         g_free(sets->paths);
     }
 
-    g_free(sets->is_prefd);
-    g_free(sets->iwd);
-
-    /* Close logfile */
-    if(session->log_out) {
-        fclose(session->log_out);
-    }
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
+    rm_fmt_close(session->formats);
 
-    /* Close scriptfile */
-    if(session->script_out) {
-        fprintf(
-            session->script_out,
-            "                      \n"
-            "if [ -z $DO_REMOVE ]  \n"
-            "then                  \n"
-            "  %s %s;              \n"
-            "  %s %s;              \n"
-            "fi                    \n",
-            (session->settings->output_script) ? "rm -rf" : "",
-            (session->settings->output_script) ? (session->settings->output_script) : "",
-            (session->settings->output_log) ? "rm -rf" : "",
-            (session->settings->output_log) ? (session->settings->output_log) : ""
-        );
-        fclose(session->script_out);
-    }
+    g_free(sets->is_prefd);
+    g_free(sets->iwd);
 }

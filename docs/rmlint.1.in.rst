@@ -58,12 +58,23 @@ OPTIONS
 General Options
 ---------------
 
-**-o --output-script[=path]** (*default:* ./rmlint.sh)
+**-o --output=format:path** (*default:* -o sh:rmlint.sh -o pretty:stdout)
 
-**-O --output-log[=path]** (*default:* ./rmlint.log)
+    Configure the way rmlint ouputs it's results. You link a formatter to a
+    file. A file might either be an arbitary path or ``stdout`` or ``stderr``.
 
-    Specify where to output the script or log file. The path is optional, if
-    none is specified, no script or logfile is written.
+    If this options is specified, rmlint's defaults are overwritten. 
+
+    The following formatters are currently available:
+
+        * ``csv``: Output a csv file with column headers listing each lint type.
+        * ``sh``: Output findings as */bin/sh/* compatible shellscript.
+        * ``progressbar``: Show a progressbar during rmlint's run. This is meant
+          for ``stdout`` or ``stderr``.
+        * ``pretty``: Nicely colored realtime output of the findings for
+          ``stdout`` or ``stderr``.
+
+    TODO: update this when done.
 
 **-a --algorithm=name** (*default:* spooky)
 
@@ -94,23 +105,6 @@ General Options
     
     Print a screen of the used settings and the options that you need to change
     them. Requires confirmation before proceeding.
-
-**-m --mode=name** (*default:* list)             
-
-    Tell `rmlint` what to do with found duplicates. The mode is ignored for other
-    lint types than duplicates.
-
-    + ``--mode list``:  Only list files with the command that would be executed on ``--mode cmd``.
-    + ``--mode noask``: Remove files without asking.
-    + ``--mode cmd``:   Execute a command given with `-c / -C` on the duplicate / original. 
-    + ``--mode link``:  Replace duplicates with symbolic links to their original.
-
-**-c --cmd-dup=cmd** (*default:* rm)
-
-**-C --cmd-orig=cmd** (*default:* ls)
-
-    If `--mode cmd` is used you can specify the commands that are used
-    on duplicate files and their respective originals. 
 
 **-h --help / -H --version**
 

@@ -9,9 +9,9 @@
 #include "checksum.h"
 #include "checksums/city.h"
 
-#include "postprocess.h"
 #include "preprocess.h"
 #include "utilities.h"
+#include "formats.h"
 
 #include "shredder.h"
 #include <inttypes.h>
@@ -965,7 +965,6 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
                                 main);
     rm_error("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
-
     rm_error("Discarding unique sizes and read fiemap data for others...");
     g_hash_table_foreach_remove(session->tables->size_groups,
                                 (GHRFunc)rm_shred_group_preprocess,
@@ -982,7 +981,6 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 }
 
 
-
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
@@ -996,7 +994,7 @@ static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
 
     int fd_a = open(a->path, O_RDONLY);
     if(fd_a == -1) {
-        rm_perror("Unable to open file_a for paranoia");
+        rm_log_perror("Unable to open file_a for paranoia");
         return false;
     } else {
         posix_fadvise(fd_a, 0, 0, SHRED_FADVISE_FLAGS);
@@ -1004,7 +1002,7 @@ static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
 
     int fd_b = open(b->path, O_RDONLY);
     if(fd_b == -1) {
-        rm_perror("Unable to open file_b for paranoia");
+        rm_log_perror("Unable to open file_b for paranoia");
         return false;
     } else {
         posix_fadvise(fd_b, 0, 0, SHRED_FADVISE_FLAGS);
@@ -1148,6 +1146,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
      */
+    memset(readvec, 0, sizeof(readvec));
     for(int i = 0; i < N_BUFFERS; ++i) {
         /* buffer is one contignous memory block */
         RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
@@ -1213,7 +1212,6 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     g_assert(device);
     g_assert(buffer);
 
-    //g_mutex_lock(&buffer->file->file_lock);  //TODO: don't need this with the new scheduler?
     {
         /* Hash buffer->len bytes_read of buffer->data into buffer->file */
         rm_digest_update(&buffer->file->digest, buffer->data, buffer->len);
@@ -1224,12 +1222,10 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
             g_async_queue_push(device->hashed_file_return, buffer->file);
         }
     }
-    //g_mutex_unlock(&buffer->file->file_lock);
 
     /* Return this buffer to the pool */
     rm_buffer_pool_release(device->main->mem_pool, buffer);
 }
-
 
 static int rm_shred_check_paranoia(RmMainTag *tag, GQueue *candidates) {
     int failure_count = 0;
@@ -1252,17 +1248,56 @@ static int rm_shred_check_paranoia(RmMainTag *tag, GQueue *candidates) {
     return failure_count;
 }
 
-static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
+void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+    session->dup_group_counter++;
+
+    bool tagged_original = false;
+    RmFile *original_file = NULL;
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if (
+            ((file->is_prefd) && (session->settings->keep_all_originals)) ||
+            ((file->is_prefd) && (!tagged_original))
+        ) {
+            rm_file_tables_remember_original(session->tables, file);
+            if(!tagged_original) {
+                tagged_original = true;
+                original_file = file;
+            }
+        }
+    }
+
+    if(!tagged_original) {
+        /* tag first file as the original */
+        original_file = group->head->data;
+        rm_file_tables_remember_original(session->tables, original_file);
+    }
+
+    /* Hand it over to the printing module */
+    rm_fmt_write(session->formats, original_file);
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        if(iter->data != original_file) {
+            session->dup_counter += 1;
+            rm_fmt_write(session->formats, iter->data);
+        }
+    }
+}
+
+static void rm_shred_result_factory(GQueue *results, RmMainTag *tag) {
+    RmSettings *settings = tag->session->settings;
+
     if(tag->session->settings->paranoid) {
         int failure_count = rm_shred_check_paranoia(tag, group->held_files);
         if(failure_count > 0) {
-            warning("Removed %d files during paranoia check.\n", failure_count);
+            rm_log_warning("Removed %d files during paranoia check.\n", failure_count);
         }
     }
 
     if(g_queue_get_length(group->held_files) > 0) {
-        process_island(tag->session, group->held_files);
+        rm_shred_forward_to_output(tag->session, group->held_files);
     }
+
     group->status = 0;
     rm_shred_group_free(group);
 }
@@ -1369,7 +1404,6 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
         rm_shred_thread_pool_push(tag->device_pool, device);
     }
 }
-
 
 void rm_shred_run(RmSession *session) {
     g_assert(session);
