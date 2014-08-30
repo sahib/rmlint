@@ -150,11 +150,10 @@ typedef struct RmFile {
     struct RmFile *hardlinked_original;
 
     /* Link to the RmShredGroup that the file currently belongs to */
-    struct RmShredGroup *rm_shred_group;
+    struct RmShredGroup *shred_group;
 
     /* Link to the RmShredDevice that the file is associated with */
     struct RmShredDevice *device;
-
 } RmFile;
 
 /**
