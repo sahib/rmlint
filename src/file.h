@@ -98,6 +98,12 @@ typedef struct RmFile {
      * alternatively, 64 bits is overkill unless we expect find / -type f | rmlint _ is expected to give
      * more than 4 billion files (and path_index is probably meaningless in terms of ranking of originals
      *  in this case anyway). So could use say guint8 and truncate paths after the 255th to path_index=255
+     *
+     *  XXX-TODO: I doubt this would be the problem. There are other members
+     *            like digest and disk_offsets that eat 8 bytes for breakfast.
+     *            RmDigest is 312 bytes according to sizeof, apparently 304
+     *            bytes of this are due to struct spooky_state - there's our enemy.
+     *            God knows what GSequence is.
      */
     guint64 path_index;
 

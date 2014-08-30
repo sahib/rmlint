@@ -53,6 +53,9 @@ typedef enum RmDigestType {
 typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
+
+        // TODO: That thing is 304 bytes large.
+        //       Somehow shrink this beast.
         struct spooky_state spooky_state;
         uint128 hash[_RM_HASH_LEN / 16];
     };
@@ -115,8 +118,3 @@ void rm_digest_finalize(RmDigest *digest);
 int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen);
 
 #endif /* end of include guard */
-
-
-/* Additional functions not in original md5.c */
-//void hash_fingerprint(RmSession *session, RmFile *file, const guint64 readsize);
-//void hash_file(RmSession *session, RmFile *file);
