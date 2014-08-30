@@ -414,14 +414,12 @@ RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMa
 
     self->is_rotational = is_rotational;
     self->disk_name = g_strdup(disk_name);
-
     self->file_queue = g_queue_new();
-
     self->hash_pool = rm_shred_thread_pool_new(
                           (GFunc)rm_shred_hash_factory, self, 1
                       );
-    self->hashed_file_return = g_async_queue_new();
 
+    self->hashed_file_return = g_async_queue_new();
     self->page_size = SHRED_PAGE_SIZE;
 
     g_mutex_init(&(self->lock));
@@ -452,12 +450,12 @@ void rm_shred_device_free(RmShredDevice *self) {
 /* header for rm_shred_group_make_orphan since it and rm_shred_group_free reference each other  */
 void rm_shred_group_make_orphan(RmShredGroup *self);
 
-enum RM_SHRED_GROUP_STATUS {
+typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_DORMANT = 0,
     RM_SHRED_GROUP_START_HASHING,
     RM_SHRED_GROUP_HASHING,
     RM_SHRED_GROUP_FINISHING
-};
+} RmShredGroupStatus;
 
 typedef struct RmShredGroup {
     GQueue *held_files; /** holding queue for files; they are held here until the group first meets
@@ -475,7 +473,7 @@ typedef struct RmShredGroup {
     gboolean needs_pref; /** set based on settings->must_match_original */
     gboolean needs_npref;/** set based on settings->keep_all_originals */
 
-    uint8 status;        /** initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files and
+    RmShredGroupStatus status; /** initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files and
 						 * meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
 						 * RM_SHRED_GROUP_FINISHING.  When switching from dormant to hashing, all held_files
 						 * are released and future arrivals go straight to hashing */
@@ -938,8 +936,7 @@ static gboolean rm_shred_hardlink_cluster_preprocess(gpointer key, GQueue *hardl
 
 /* delete file size groups which don't meet criteria (eg <2 files);
  * for other groups, get fiemap data */
-static gboolean rm_shred_group_preprocess(gpointer key, RmShredGroup *group) { //, gpointer user_data) {
-    //(void) user_data;
+static gboolean rm_shred_group_preprocess(gpointer key, RmShredGroup *group) {
     (void) key;
     g_assert(group);
     if (group->status == RM_SHRED_GROUP_DORMANT) {
@@ -1301,7 +1298,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
         rm_shred_forward_to_output(tag->session, group->held_files);
     }
 
-    group->status = 0;
+    group->status = RM_SHRED_GROUP_DORMANT;
     rm_shred_group_free(group);
 }
 
@@ -1438,9 +1435,6 @@ void rm_shred_run(RmSession *session) {
     int devices_left = g_hash_table_size(session->tables->dev_table);
     rm_log_error(BLUE"Devices = %d\n", devices_left);
 
-    /* Create a pool fo the devlists and push each queue */
-    rm_shred_create_devpool(&tag, session->tables->dev_table);
-
     /* For results that need to be check with --paranoid.
      * This would clog up the main thread, which is supposed
      * to flag bad files as soon as possible.
@@ -1449,22 +1443,29 @@ void rm_shred_run(RmSession *session) {
                           (GFunc)rm_shred_result_factory, &tag, 1
                       );
 
+    /* Create a pool fo the devlists and push each queue */
+    rm_shred_create_devpool(&tag, session->tables->dev_table);
 
     /* This is the joiner part */
     while (devices_left > 0 || g_async_queue_length(tag.device_return) > 0) {
         RmShredDevice *device = g_async_queue_pop(tag.device_return);
-        rm_log_error(BLUE"Got device %s back with %d in queue and %llu bytes remaining in %d remaining files\n"RESET,
-                     device->disk_name,
-                     g_queue_get_length(device->file_queue),
-                     (unsigned long long)device->remaining_bytes,
-                     device->remaining_files);
-        if (device->remaining_files > 0) {
-            /* recycle the device */
-            rm_shred_thread_pool_push(tag.device_pool , device);
-            rm_log_error(">");
-        } else {
-            devices_left--;
+        g_mutex_lock(&device->lock); {
+            rm_log_error(BLUE"Got device %s back with %d in queue and %llu bytes remaining in %d remaining files\n"RESET,
+                         device->disk_name,
+                         g_queue_get_length(device->file_queue),
+                         (unsigned long long)device->remaining_bytes,
+                         device->remaining_files
+            );
+
+            if (device->remaining_files > 0) {
+                /* recycle the device */
+                rm_shred_thread_pool_push(tag.device_pool , device);
+                rm_log_error(">");
+            } else {
+                devices_left--;
+            }
         }
+        g_mutex_unlock(&device->lock);
     }
 
     /* This should not block, or at least only very short. */
@@ -1475,9 +1476,7 @@ void rm_shred_run(RmSession *session) {
     //g_hash_table_unref(join_table);
     rm_buffer_pool_destroy(tag.mem_pool);
 
-    g_assert(session->tables->dev_table);
     g_hash_table_unref(session->tables->dev_table);
-
     g_mutex_clear(&tag.file_state_mtx);
 }
 
