@@ -175,7 +175,7 @@ if 'LDFLAGS' in os.environ:
 
 # Needed/Adviceable flags:
 conf.env.Append(CCFLAGS=[
-    '-std=c99', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE', '-pthread'
+    '-std=c99', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE'
 ])
 
 if ARGUMENTS.get('DEBUG') == "1":
@@ -203,7 +203,7 @@ conf.env.Append(CFLAGS=[
 env.ParseConfig('pkg-config --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=[
-    '-pthread', '-lm', '-lelf'
+    '-lm', '-lelf'
 ])
 
 # Your extra checks here
