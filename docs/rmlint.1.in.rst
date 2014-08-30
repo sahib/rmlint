@@ -50,31 +50,31 @@ Quick clues for adjusting settings are available by using the `-q` option.
 OPTIONS
 =======
 
-.. all: ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 
-.. use:  BC EFGHI KLMN PQRS UVWX Z abcdefghi klmnopqrstuvwx z
-.. nop: A  D     J    O    T    Y           j              y
-.. opt: t:m:d:c:C:s:o:O:S:a:vVeEwWzZnNbBrRgGuUfFXxpPkKmMiIlLqQhH
-
 General Options
 ---------------
 
-**-o --output=format:path** (*default:* -o sh:rmlint.sh -o pretty:stdout)
+TODO: Add --type
+
+**-o --output=formatter:file** (*default:* -o sh:rmlint.sh -o pretty:stdout)
 
     Configure the way rmlint ouputs it's results. You link a formatter to a
     file. A file might either be an arbitary path or ``stdout`` or ``stderr``.
 
     If this options is specified, rmlint's defaults are overwritten. 
+    The option can be specified several times and formatters can be specified
+    more than once for different files. Specifying the same file more than once
+    is not a good idea.
 
-    The following formatters are currently available:
+    For a list of formatters and their options, look at the **Formatters**
+    section below.
 
-        * ``csv``: Output a csv file with column headers listing each lint type.
-        * ``sh``: Output findings as */bin/sh/* compatible shellscript.
-        * ``progressbar``: Show a progressbar during rmlint's run. This is meant
-          for ``stdout`` or ``stderr``.
-        * ``pretty``: Nicely colored realtime output of the findings for
-          ``stdout`` or ``stderr``.
+**-c --config=formatter:key[=value]** (*default:* none)
 
-    TODO: update this when done.
+    Configure a formatter. This option can be used to finetune the behaviour of 
+    the existing formatters. See the **Formatters** section for details on the
+    available keys.
+
+    If the value is omitted it is set to a truthy value.
 
 **-a --algorithm=name** (*default:* spooky)
 
@@ -215,6 +215,34 @@ Lint options
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
     
+FORMATTERS
+==========
+
+* ``csv``: Format all found lint as comma-separated-value list. 
+  
+  Available options:
+
+  * *no_header*: Do not write a first line describing the column headers.
+
+* ``sh``: Format all found lint as shellscript. Sane defaults for most
+  lint-types are set. This formatter is activated as default.
+  
+  Available options:
+
+  * *use_ln*: Instead of just deleting duplicates remove them and replace them
+    with hardlinks (if they are on the same partition) or with symlinks if
+    they're on different devices.
+  * *symlinks_only*: Only relevant with *use_ln*, always use symbolic links,
+    never use hardlinks.
+
+* ``progressbar``: Shows a progressbar. This is meant for use with **stdout** or
+  **stderr**.
+
+* ``pretty``: Shows all found items in realtimes nicely colored. This formatter
+  is activated as default.
+
+
+TODO: Write ``summary`` and ``py``.
 
 EXAMPLES
 ========
