@@ -52,7 +52,7 @@
  *       |            |                 |            |
  *  +------------+ +----------+     +------------+  +---------+  +----+ +----+
  *  | Child 1.1  | |Child 1.2 |     | Child 2.1  |  |Child 2.2|  |3.1 | |3.2 |
- *  | F1,F2,F3   | |F4,F5,F6  |     |F7,F8,F9,F10|  |  F11    |  |F12 | |F13 |
+ *  | F1,F3,F6   | |F2,F4,F5  |     |F7,F8,F9,F10|  |  F11    |  |F12 | |F13 |
  *  |(hash=hash1 | |(hash=h2) |     |(hash=h3)   |  |(hash=h4)|  |(h5)| |(h6)|
  *  +------------+ +----------+     +------------+  +---------+  +----+ +----+
  *       |            |                |        |              \       \
@@ -80,7 +80,11 @@
  *    start until the RmShredGroup's parent is dead (because new siblings may still
  *    be coming).
  *
- *
+ * In the above example, the hashing order will end up being something like:
+ * F1.1 F2.1 (F3.1,F3.2), (F4.1,F4.2), (F5.1,F5.2)...
+ *                ^            ^            ^
+ *  (^ indicates where hashing could continue on to a second increment because there
+ * 	   was already a matching file after the first increment)
  *
  * The threading looks somewhat like this for two devices:
  *
