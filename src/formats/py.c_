@@ -46,7 +46,6 @@ static const char *PY_SCRIPT_TEMPLATE_FOOT =
     ;
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
-    RmFmtHandlerPyScript *self = (RmFmtHandlerPyScript *)parent;
 
 }
 
