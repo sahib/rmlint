@@ -140,7 +140,7 @@ static void rm_traverse_file(RmTravSession *trav_session, struct stat *statp, ch
 
     RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_prefd, pnum);
     g_mutex_lock(&trav_session->lock); {
-        trav_session->numfiles += rm_file_list_insert(session, file);
+        trav_session->numfiles += rm_file_tables_insert(session, file);
     }
     g_mutex_unlock(&trav_session->lock);
 }
@@ -305,7 +305,7 @@ static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_sess
 // PUBLIC API //
 ////////////////
 
-guint64 rm_search_tree(RmSession *session) {
+guint64 rm_traverse_tree(RmSession *session) {
     RmSettings *settings = session->settings;
     RmTravSession *trav_session = rm_traverse_session_new(session);
 

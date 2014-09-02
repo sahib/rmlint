@@ -796,7 +796,7 @@ char rm_echo_settings(RmSettings *settings) {
 
 int rm_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_TRAVERSE, 0, 0);
-    session->total_files = rm_search_tree(session);
+    session->total_files = rm_traverse_tree(session);
 
     rm_log_debug("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
 

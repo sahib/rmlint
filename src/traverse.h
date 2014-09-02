@@ -33,6 +33,6 @@
  *
  * @returns: the number of added files.
  */
-guint64 rm_search_tree(RmSession *session);
+guint64 rm_traverse_tree(RmSession *session);
 
 #endif

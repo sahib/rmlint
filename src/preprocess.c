@@ -152,7 +152,7 @@ bool rm_file_tables_is_original(RmFileTables *table, RmFile *file) {
 }
 
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
-bool rm_file_list_insert(RmSession *session, RmFile *file) {
+bool rm_file_tables_insert(RmSession *session, RmFile *file) {
     RmFileTables *tables = session->tables;
 
     GHashTable *node_table = tables->node_table;
