@@ -50,15 +50,22 @@ typedef struct RmTravBuffer {
 } RmTravBuffer;
 
 /* initialiser and destroyer for RmTravBuffer*/
-static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd, unsigned long pnum) {
+static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd, unsigned long path_index) {
     RmTravBuffer *self = g_new0(RmTravBuffer, 1);
     self->path = path; 
     self->disk = rm_mounts_get_disk_id_by_path(session->mounts, path);
     self->is_prefd = is_prefd;
-    self->path_index = pnum;
+    self->path_index = path_index;
     self->is_first_path = false;
 
-    if (stat(path, &self->stat_buf) == -1) {
+    int stat_state;
+    if(session->settings->followlinks) {
+        stat_state = stat(path, &self->stat_buf);
+    } else {
+        stat_state = lstat(path, &self->stat_buf);
+    }
+
+    if(stat_state == -1) {
         rm_log_perror("Unable to stat file");
     }
     return self;
@@ -72,7 +79,6 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 // TRAVERSE SESSION //
 //////////////////////
 
-/* structure containing all settings relevant to traversal */
 typedef struct RmTravSession {
     RmUserGroupNode **userlist;
     RmSession *session;
@@ -82,7 +88,6 @@ typedef struct RmTravSession {
     GMutex lock;
 } RmTravSession;
 
-/* initialise RmTravSession */
 static RmTravSession *rm_traverse_session_new(RmSession *session) {
     RmTravSession *self = g_new0(RmTravSession, 1);
     self->session = session;
@@ -112,7 +117,7 @@ static guint64 rm_traverse_session_free(RmTravSession *trav_session) {
 // ACTUAL WORK HERE //
 //////////////////////
 
-static void rm_traverse_file(RmTravSession *trav_session, struct stat *statp, char *path, bool is_prefd, unsigned long pnum, RmLintType file_type) {
+static void rm_traverse_file(RmTravSession *trav_session, struct stat *statp, char *path, bool is_prefd, unsigned long path_index, RmLintType file_type) {
     RmSession *session = trav_session->session;
     RmSettings *settings = session->settings;
 
@@ -138,7 +143,7 @@ static void rm_traverse_file(RmTravSession *trav_session, struct stat *statp, ch
         }
     }
 
-    RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_prefd, pnum);
+    RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_prefd, path_index);
     g_mutex_lock(&trav_session->lock); {
         trav_session->numfiles += rm_file_tables_insert(session, file);
     }
@@ -152,12 +157,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     char *path = (char *)buffer->path;
     char is_prefd = buffer->is_prefd;
     short depth = settings->depth;
-    guint64 pnum = buffer->path_index;
-
-    rm_log_info(BLUE"Starting traversal of %s (disk %02d:%02d)\n"RESET, path, 
-                major(buffer->disk),
-                minor(buffer->disk) 
-    ); 
+    guint64 path_index = buffer->path_index;
 
     /* Initialize ftsp */
     int fts_flags =  FTS_PHYSICAL | FTS_COMFOLLOW;
@@ -231,7 +231,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_DP:        /* postorder directory */
                 if (is_emptydir[p->fts_level + 1] == 'E' && settings->findemptydirs) {
-                    rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, pnum, RM_LINT_TYPE_EDIR);
+                    rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_EDIR);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -242,7 +242,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 if (settings->findbadlinks) {
-                    rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, pnum, RM_LINT_TYPE_BLNK);
+                    rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_BLNK);
                 }
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
@@ -257,10 +257,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 clear_emptydir_flags = true; /* current dir not empty */
                 if (!settings->followlinks) {
                     if (p->fts_level != 0) {
-                        rm_log_info("Not following symlink %s because of settings\n", p->fts_path);
+                        rm_log_debug("Not following symlink %s because of settings\n", p->fts_path);
                     }
                 } else {
-                    rm_log_info("Following symlink %s\n", p->fts_path);
+                    rm_log_debug("Following symlink %s\n", p->fts_path);
                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
                 }
                 break;
@@ -268,7 +268,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /* current dir not empty*/
-                rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, pnum, RM_LINT_TYPE_UNKNOWN); 
+                rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN); 
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
@@ -309,7 +309,6 @@ guint64 rm_traverse_tree(RmSession *session) {
     RmSettings *settings = session->settings;
     RmTravSession *trav_session = rm_traverse_session_new(session);
 
-    // TODO: use 1 thread per rotational disk, 1 thread per non-rotational partition. 
     GHashTable *paths_per_disk = g_hash_table_new_full(
         NULL, NULL, NULL, (GDestroyNotify)g_queue_free
     );
@@ -356,7 +355,5 @@ guint64 rm_traverse_tree(RmSession *session) {
     }
 
     g_thread_pool_free(traverse_pool, false, true);
-    g_printerr("Exiting: %lu\n", trav_session->numfiles);
-
     return rm_traverse_session_free(trav_session);
 }
