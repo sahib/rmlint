@@ -393,7 +393,7 @@ static int eval_file(const char *path, const struct stat *ptr, int flag, struct 
                 }
             }
             /* Check this to be a valid file and NOT a blockfile (reading /dev/null does funny things) */
-            if(flag == FTW_F && ptr->st_rdev == 0 && (set->listemptyfiles || ptr->st_size != 0))
+            if(flag == FTW_F && !(S_ISCHR(ptr->st_mode) || S_ISBLK(ptr->st_mode)) && (set->listemptyfiles || ptr->st_size != 0))
             {
                 if(!access(path,R_OK))
                 {
