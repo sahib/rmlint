@@ -193,6 +193,7 @@ bool rm_file_list_insert(RmSession *session, RmFile *file) {
         }
         /* no path double found; must be hardlink */
     }
+
     g_queue_insert_sorted (
         hardlink_group,
         file,
@@ -205,7 +206,8 @@ bool rm_file_list_insert(RmSession *session, RmFile *file) {
 
 
 static gboolean rm_handle_hardlinks(gpointer key, GQueue *hardlink_cluster, RmSession *session) {
-    g_assert(key); //void
+    g_assert(key); 
+
     RmSettings *settings = session->settings;
     GList *iter = hardlink_cluster->head;
     while (iter) {
