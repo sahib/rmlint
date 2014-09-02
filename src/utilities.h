@@ -212,6 +212,24 @@ guint64 rm_offset_lookup(RmOffsetTable table, guint64 file_offset);
 guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable table, guint64 file_offset);
 
 /**
+ * @brief Create a new GThreadPool with default settings.
+ *
+ * @param func func to execute
+ * @param data user_data to pass
+ * @param threads how many threads at max to use.
+ *
+ * @return newly allocated GThreadPool
+ */
+GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads);
+
+/**
+ * @brief Push a new job to a threadpool.
+ *
+ * @return true on success.
+ */
+bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
+
+/**
  * @brief Free the allocated table.
  */
 inline void rm_offset_free(RmOffsetTable table) {

@@ -75,15 +75,15 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 /* structure containing all settings relevant to traversal */
 typedef struct RmTravSession {
     RmUserGroupNode **userlist;
+    RmSession *session;
     guint64 numfiles;
     guint64 ignored_files;
     guint64 ignored_folders;
-    RmSession *session;
     GMutex lock;
 } RmTravSession;
 
 /* initialise RmTravSession */
-static RmTravSession *traverse_session_new(RmSession *session) {
+static RmTravSession *rm_traverse_session_new(RmSession *session) {
     RmTravSession *self = g_new0(RmTravSession, 1);
     self->session = session;
     self->userlist = rm_userlist_new();
@@ -92,7 +92,8 @@ static RmTravSession *traverse_session_new(RmSession *session) {
 }
 
 /* detructor for RmTravSession */
-static void traverse_session_free(RmTravSession *trav_session) {
+static guint64 rm_traverse_session_free(RmTravSession *trav_session) {
+    guint64 saved_numfiles = trav_session->numfiles;
     rm_log_info("Found %" G_GUINT64_FORMAT " files, ignored %" G_GUINT64_FORMAT
                 " hidden files and %" G_GUINT64_FORMAT " hidden folders\n",
                 trav_session->numfiles,
@@ -103,6 +104,8 @@ static void traverse_session_free(RmTravSession *trav_session) {
     rm_userlist_destroy(trav_session->userlist);
     g_mutex_clear(&trav_session->lock);
     g_free(trav_session);
+    exit(0); // TODO
+    return saved_numfiles;
 }
 
 //////////////////////
@@ -274,7 +277,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             } 
 
-            if (clear_emptydir_flags) {
+            if(clear_emptydir_flags) {
                 /* non-empty dir found above; need to clear emptydir flags for all open levels */
                 if (have_open_emptydirs) {
                     memset(&is_emptydir[0], 'N', sizeof(is_emptydir) - 1);
@@ -304,18 +307,12 @@ static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_sess
 
 guint64 rm_search_tree(RmSession *session) {
     RmSettings *settings = session->settings;
-    RmTravSession *trav_session = traverse_session_new(session);
-
-    g_assert(trav_session);
+    RmTravSession *trav_session = rm_traverse_session_new(session);
 
     // TODO: use 1 thread per rotational disk, 1 thread per non-rotational partition. 
-
-    GError *error = NULL;
     GHashTable *paths_per_disk = g_hash_table_new_full(
         NULL, NULL, NULL, (GDestroyNotify)g_queue_free
     );
-
-    bool is_first_path = true;
 
     for(guint64 idx = 0; settings->paths[idx] != NULL; ++idx) {
         char * path = settings->paths[idx];
@@ -327,50 +324,39 @@ guint64 rm_search_tree(RmSession *session) {
 
         /* Append normal paths directly */
         if(S_ISREG(buffer->stat_buf.st_mode)) { // TODO: test with links.
-            rm_traverse_file(trav_session, &buffer->stat_buf, path, is_prefd, idx, 0); 
+            rm_traverse_file(trav_session, &buffer->stat_buf, path, is_prefd, idx, RM_LINT_TYPE_UNKNOWN); 
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
+            buffer->is_first_path = (g_hash_table_size(paths_per_disk) == 0);
+
             GQueue * path_queue = g_hash_table_lookup(paths_per_disk, GUINT_TO_POINTER(buffer->disk));
             if(path_queue == NULL) {
                 path_queue = g_queue_new();
                 g_hash_table_insert(paths_per_disk, GUINT_TO_POINTER(buffer->disk), path_queue);
             }
 
-            buffer->is_first_path = is_first_path;
-            is_first_path = false;
             g_queue_push_tail(path_queue, buffer);
         } else {
-            g_printerr("That's not a path: %s\n", path);
             rm_trav_buffer_free(buffer);
         }
     }
 
-    // TODO use rm_shred_create_devpool
-    GThreadPool *traverse_pool = g_thread_pool_new(
-            (GFunc) rm_traverse_directories, 
-            trav_session,                                
-            CLAMP(settings->threads, 1, g_hash_table_size(paths_per_disk)),      
-            true,                
-            &error
+    GThreadPool *traverse_pool = rm_util_thread_pool_new(
+        (GFunc) rm_traverse_directories, 
+        trav_session,                                
+        CLAMP(settings->threads, 1, g_hash_table_size(paths_per_disk))
     );
 
-    if (error != NULL) {
-        rm_log_error("Error %s creating thread pool trav_session->traverse_pool\n", error->message);
-        g_error_free(error);
-        return 0;
-    }
+    GHashTableIter iter;
+    GQueue *path_queue = NULL;
 
-    GList * path_queues = g_hash_table_get_values(paths_per_disk);
-    for(GList * iter = path_queues; iter; iter = iter->next) {
-        GQueue *path_queue = iter->data;
-        g_thread_pool_push(traverse_pool, path_queue, &error);
+    g_hash_table_iter_init(&iter, paths_per_disk);
+    while(g_hash_table_iter_next(&iter, NULL, (gpointer *)&path_queue)) {
+        rm_util_thread_pool_push(traverse_pool, path_queue);
     }
-    g_list_free(path_queues);
 
     g_thread_pool_free(traverse_pool, false, true);
     g_printerr("Exiting: %lu\n", trav_session->numfiles);
 
-    traverse_session_free(trav_session);
-    exit(0);
-    return trav_session->numfiles;
+    return rm_traverse_session_free(trav_session);
 }
