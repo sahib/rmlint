@@ -795,7 +795,7 @@ char rm_echo_settings(RmSettings *settings) {
 }
 
 int rm_main(RmSession *session) {
-    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_TRAVERSE, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
     session->total_files = rm_traverse_tree(session);
 
     rm_log_debug("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
@@ -810,14 +810,14 @@ int rm_main(RmSession *session) {
         session->settings->threads = session->total_files + 1;
     }
 
-    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_PREPROCESS, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
     guint64 other_lint = rm_preprocess(session);
     char lintbuf[128];
 
-    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SHREDDER, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
     rm_shred_run(session);
 
-    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
 
     rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
@@ -842,7 +842,7 @@ int rm_main(RmSession *session) {
         );
     }
 
-    rm_fmt_set_state(session->formats, RM_PROGREENSS_STATE_SUMMARY, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
     rm_session_clear(session);
     return EXIT_SUCCESS;
 }

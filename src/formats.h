@@ -39,12 +39,12 @@
 
 /* Current state of rmlint */
 typedef enum RmFmtProgressState {
-    RM_PROGREENSS_STATE_INIT,
-    RM_PROGREENSS_STATE_TRAVERSE,
-    RM_PROGREENSS_STATE_PREPROCESS,
-    RM_PROGREENSS_STATE_SHREDDER,
-    RM_PROGREENSS_STATE_SUMMARY,
-    RM_PROGREENSS_STATE_N
+    RM_PROGRESS_STATE_INIT,
+    RM_PROGRESS_STATE_TRAVERSE,
+    RM_PROGRESS_STATE_PREPROCESS,
+    RM_PROGRESS_STATE_SHREDDER,
+    RM_PROGRESS_STATE_SUMMARY,
+    RM_PROGRESS_STATE_N
 } RmFmtProgressState;
 
 /* Container and API-endpoint for individual RmFmtHandlers */
@@ -194,9 +194,9 @@ static void rm_fmt_prog(RmSession *session, RmFmtHandler *parent, FILE *out, RmF
 static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, FILE *out) {
 }
 
-static RmFmtHandlerProgress PROGREENSS_HANDLER = {
+static RmFmtHandlerProgress PROGRESS_HANDLER = {
     .parent = {
-        .size = sizeof(PROGREENSS_HANDLER),
+        .size = sizeof(PROGRESS_HANDLER),
         .name = "progressbar",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
