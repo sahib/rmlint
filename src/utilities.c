@@ -625,7 +625,7 @@ guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
 
         if(!g_sequence_iter_is_end(nearest)) {
             RmOffsetEntry *off = g_sequence_get(nearest);
-            return (guint64)((gint64)(off->physical + file_offset) - (gint64)off->logical) ;
+            return (gint64)(off->physical + file_offset) - (gint64)off->logical;
         }
     }
 #endif
@@ -647,8 +647,7 @@ guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, guint64 file
                                            )
                                        );
 
-        if(!g_sequence_iter_is_end(next_fragment)
-                && !g_sequence_iter_is_begin(next_fragment) ) {
+        if(!g_sequence_iter_is_end(next_fragment) && !g_sequence_iter_is_begin(next_fragment) ) {
             RmOffsetEntry *off = g_sequence_get(next_fragment);
             return off->logical - file_offset ;
         }
@@ -753,4 +752,3 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 #endif
-
