@@ -53,7 +53,7 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
         tables->name_table = g_hash_table_new_full(
                                  g_str_hash, g_str_equal,
                                  g_free, (GDestroyNotify)g_list_free
-        );
+                             );
     } else {
         g_assert(tables->name_table ==  NULL);
     }
@@ -206,7 +206,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
 
 static gboolean rm_handle_hardlinks(gpointer key, GQueue *hardlink_cluster, RmSession *session) {
-    g_assert(key); 
+    g_assert(key);
 
     RmSettings *settings = session->settings;
     GList *iter = hardlink_cluster->head;

@@ -1,12 +1,11 @@
-Stable Version
+table Version
 --------------
 
 - Add a test target to the build system.
-- Put rmlint on TravisCI.
 - Write a tutorial.
-- add additional steps in findmatches? (SeeSpotRun)
 - Tickle packagers.
 - Integrate 'ack TODO | wc -l' to 0.
+- Make rmlint abortable fast on any step.
 - ...
 
 Further Developement
@@ -22,3 +21,4 @@ Done items
 
 - Add Daniel to AUTHORS and file headers.
 - Implement several hashing algorithms (CityHash, GChecksum(md5, sha1-256), Murmur3)
+- Put rmlint on TravisCI.

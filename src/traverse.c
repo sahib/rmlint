@@ -41,19 +41,16 @@
 ///////////////////////////////////////////
 
 typedef struct RmTravBuffer {
-    struct stat stat_buf;
-    const char *path;
-    bool is_prefd;
-    guint64 path_index;
+    struct stat stat_buf;  /* stat(2) information about the directory */
+    const char *path;      /* The path of the directory, as passed on command line. */
+    bool is_prefd;         /* Was this file in a preferred path? */
+    guint64 path_index;    /* Index of path, as passed on the commadline */
     bool is_first_path;    /* True if the first path and FTS_NOCHDIR might be disabled */
-    dev_t disk; 
 } RmTravBuffer;
 
-/* initialiser and destroyer for RmTravBuffer*/
 static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd, unsigned long path_index) {
     RmTravBuffer *self = g_new0(RmTravBuffer, 1);
-    self->path = path; 
-    self->disk = rm_mounts_get_disk_id_by_path(session->mounts, path);
+    self->path = path;
     self->is_prefd = is_prefd;
     self->path_index = path_index;
     self->is_first_path = false;
@@ -96,20 +93,18 @@ static RmTravSession *rm_traverse_session_new(RmSession *session) {
     return self;
 }
 
-/* detructor for RmTravSession */
 static guint64 rm_traverse_session_free(RmTravSession *trav_session) {
     guint64 saved_numfiles = trav_session->numfiles;
     rm_log_info("Found %" G_GUINT64_FORMAT " files, ignored %" G_GUINT64_FORMAT
                 " hidden files and %" G_GUINT64_FORMAT " hidden folders\n",
                 trav_session->numfiles,
                 trav_session->ignored_files,
-                trav_session->ignored_folders 
-    );
+                trav_session->ignored_folders
+               );
 
     rm_userlist_destroy(trav_session->userlist);
     g_mutex_clear(&trav_session->lock);
     g_free(trav_session);
-    exit(0); // TODO
     return saved_numfiles;
 }
 
@@ -117,7 +112,10 @@ static guint64 rm_traverse_session_free(RmTravSession *trav_session) {
 // ACTUAL WORK HERE //
 //////////////////////
 
-static void rm_traverse_file(RmTravSession *trav_session, struct stat *statp, char *path, bool is_prefd, unsigned long path_index, RmLintType file_type) {
+static void rm_traverse_file(
+    RmTravSession *trav_session, struct stat *statp,
+    char *path, bool is_prefd, unsigned long path_index, RmLintType file_type
+) {
     RmSession *session = trav_session->session;
     RmSettings *settings = session->settings;
 
@@ -139,12 +137,13 @@ static void rm_traverse_file(RmTravSession *trav_session, struct stat *statp, ch
             guint64 file_size = statp->st_size;
             if(!settings->limits_specified || (settings->minsize <= file_size && file_size <= settings->maxsize)) {
                 file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
-            } 
+            }
         }
     }
 
     RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_prefd, path_index);
-    g_mutex_lock(&trav_session->lock); {
+    g_mutex_lock(&trav_session->lock);
+    {
         trav_session->numfiles += rm_file_tables_insert(session, file);
     }
     g_mutex_unlock(&trav_session->lock);
@@ -156,16 +155,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     char *path = (char *)buffer->path;
     char is_prefd = buffer->is_prefd;
-    short depth = settings->depth;
     guint64 path_index = buffer->path_index;
 
     /* Initialize ftsp */
-    int fts_flags =  FTS_PHYSICAL | FTS_COMFOLLOW;
-    if(!buffer->is_first_path) {
-        fts_flags |= FTS_NOCHDIR;
-    }
-        
-    FTS *ftsp = fts_open((char *[2]){path, NULL}, fts_flags, NULL);
+    int fts_flags =  FTS_PHYSICAL | FTS_COMFOLLOW | (buffer->is_first_path * FTS_NOCHDIR);
+    FTS *ftsp = fts_open((char *[2]) {path, NULL}, fts_flags, NULL);
 
     if (ftsp == NULL) {
         rm_log_error("fts_open failed");
@@ -190,7 +184,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         /* check for hidden file or folder */
         if (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
             /* ignoring hidden folders*/
-            g_mutex_lock(&trav_session->lock); {
+            g_mutex_lock(&trav_session->lock);
+            {
                 if (p->fts_info == FTS_D) {
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     trav_session->ignored_folders++;
@@ -203,7 +198,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         } else {
             switch (p->fts_info) {
             case FTS_D:         /* preorder directory */
-                if (depth != 0 && p->fts_level >= depth) {
+                if (settings->depth != 0 && p->fts_level >= settings->depth) {
                     /* continuing into folder would exceed maxdepth*/
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags = true; /* flag current dir as not empty */
@@ -268,14 +263,14 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /* current dir not empty*/
-                rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN); 
+                rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
                 clear_emptydir_flags = true;
                 rm_log_error(RED"Unknown fts_info flag %d for file %s\n"RESET, p->fts_info, p->fts_path);
                 break;
-            } 
+            }
 
             if(clear_emptydir_flags) {
                 /* non-empty dir found above; need to clear emptydir flags for all open levels */
@@ -287,11 +282,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             }
             /* current dir may not be empty; by association, all open dirs are non-empty */
         }
-    } 
+    }
 
     if (errno != 0) {
         rm_log_error("Error '%s': fts_read failed on %s\n", g_strerror(errno), ftsp->fts_path);
-    } 
+    }
 
     fts_close(ftsp);
     rm_trav_buffer_free(buffer);
@@ -310,28 +305,29 @@ guint64 rm_traverse_tree(RmSession *session) {
     RmTravSession *trav_session = rm_traverse_session_new(session);
 
     GHashTable *paths_per_disk = g_hash_table_new_full(
-        NULL, NULL, NULL, (GDestroyNotify)g_queue_free
-    );
+                                     NULL, NULL, NULL, (GDestroyNotify)g_queue_free
+                                 );
 
     for(guint64 idx = 0; settings->paths[idx] != NULL; ++idx) {
-        char * path = settings->paths[idx];
+        char *path = settings->paths[idx];
         bool is_prefd = settings->is_prefd[idx];
 
-        RmTravBuffer * buffer = rm_trav_buffer_new(
-            session, path, is_prefd, idx
-        );
+        RmTravBuffer *buffer = rm_trav_buffer_new(
+                                   session, path, is_prefd, idx
+                               );
 
         /* Append normal paths directly */
-        if(S_ISREG(buffer->stat_buf.st_mode)) { // TODO: test with links.
-            rm_traverse_file(trav_session, &buffer->stat_buf, path, is_prefd, idx, RM_LINT_TYPE_UNKNOWN); 
+        if(S_ISREG(buffer->stat_buf.st_mode)) {
+            rm_traverse_file(trav_session, &buffer->stat_buf, path, is_prefd, idx, RM_LINT_TYPE_UNKNOWN);
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
+            dev_t disk = rm_mounts_get_disk_id_by_path(session->mounts, path);
             buffer->is_first_path = (g_hash_table_size(paths_per_disk) == 0);
 
-            GQueue * path_queue = g_hash_table_lookup(paths_per_disk, GUINT_TO_POINTER(buffer->disk));
+            GQueue *path_queue = g_hash_table_lookup(paths_per_disk, GUINT_TO_POINTER(disk));
             if(path_queue == NULL) {
                 path_queue = g_queue_new();
-                g_hash_table_insert(paths_per_disk, GUINT_TO_POINTER(buffer->disk), path_queue);
+                g_hash_table_insert(paths_per_disk, GUINT_TO_POINTER(disk), path_queue);
             }
 
             g_queue_push_tail(path_queue, buffer);
@@ -341,10 +337,10 @@ guint64 rm_traverse_tree(RmSession *session) {
     }
 
     GThreadPool *traverse_pool = rm_util_thread_pool_new(
-        (GFunc) rm_traverse_directories, 
-        trav_session,                                
-        CLAMP(settings->threads, 1, g_hash_table_size(paths_per_disk))
-    );
+                                     (GFunc) rm_traverse_directories,
+                                     trav_session,
+                                     CLAMP(settings->threads, 1, g_hash_table_size(paths_per_disk))
+                                 );
 
     GHashTableIter iter;
     GQueue *path_queue = NULL;
