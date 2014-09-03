@@ -42,7 +42,7 @@
 #include "formats.h"
 
 /* exit and return to calling method */
-static void die(RmSession *session, int status) {
+static void rm_cmd_die(RmSession *session, int status) {
     rm_session_clear(session);
     if(status) {
         rm_log_info("Abnormal exit\n");
@@ -51,7 +51,7 @@ static void die(RmSession *session, int status) {
     exit(status);
 }
 
-static void show_version(void) {
+static void rm_cmd_show_version(void) {
     fprintf(
         stderr,
         "rmlint-version %s compiled: [%s]-[%s] (rev %s)\n",
@@ -59,7 +59,7 @@ static void show_version(void) {
     );
 }
 
-static void show_help(void) {
+static void rm_cmd_show_help(void) {
     if(system("man doc/rmlint.1.gz") == 0) {
         return;
     }
@@ -71,7 +71,7 @@ static void show_help(void) {
 }
 
 /* Check if this is the 'preferred' dir */
-bool check_if_preferred(const char *dir) {
+bool rm_cmd_check_if_preferred(const char *dir) {
     if(dir != NULL) {
         size_t length = strlen(dir);
         if(length >= 2 && dir[0] == '/' && dir[1] == '/')
@@ -107,29 +107,29 @@ typedef struct FormatSpec FormatSpec;
 
 static const int SIZE_FORMAT_TABLE_N = sizeof(SIZE_FORMAT_TABLE) / sizeof(FormatSpec);
 
-static int size_format_error(const char **error, const char *msg) {
+static int rm_cmd_size_format_error(const char **error, const char *msg) {
     if(error) {
         *error = msg;
     }
     return 0;
 }
 
-static int compare_spec_elem(const void *fmt_a, const void *fmt_b) {
+static int rm_cmd_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
     return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
 }
 
-guint64 size_string_to_bytes(const char *size_spec, const char **error) {
+guint64 rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
     if (size_spec == NULL) {
-        return size_format_error(error, "Input size is NULL");
+        return rm_cmd_size_format_error(error, "Input size is NULL");
     }
 
     char *format = NULL;
     long double decimal = strtold(size_spec, &format);
 
     if (decimal == 0 && format == size_spec) {
-        return size_format_error(error, "This does not look like a number");
+        return rm_cmd_size_format_error(error, "This does not look like a number");
     } else if (decimal < 0) {
-        return size_format_error(error, "Negativ sizes are no good idea");
+        return rm_cmd_size_format_error(error, "Negativ sizes are no good idea");
     } else if (*format) {
         format = g_strstrip(format);
     } else {
@@ -140,21 +140,21 @@ guint64 size_string_to_bytes(const char *size_spec, const char **error) {
     FormatSpec *found = bsearch(
                             &key, SIZE_FORMAT_TABLE,
                             SIZE_FORMAT_TABLE_N, sizeof(FormatSpec),
-                            compare_spec_elem
+                            rm_cmd_compare_spec_elem
                         );
 
     if (found != NULL) {
         /* No overflow check */
         return decimal * powl(found->base, found->exponent);
     } else {
-        return size_format_error(error, "Given format specifier not found");
+        return rm_cmd_size_format_error(error, "Given format specifier not found");
     }
 }
 
 /* Size spec parsing implemented by qitta (http://github.com/qitta)
  * Thanks and go blame him if this breaks!
  */
-static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min, guint64 *max, const char **error) {
+static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, guint64 *min, guint64 *max, const char **error) {
     *min = 0;
     *max = G_MAXULONG;
 
@@ -162,11 +162,11 @@ static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min,
     gchar **split = g_strsplit(range_spec, "-", 2);
 
     if(split[0] != NULL) {
-        *min = size_string_to_bytes(split[0], &tmp_error);
+        *min = rm_cmd_size_string_to_bytes(split[0], &tmp_error);
     }
 
     if(split[1] != NULL && tmp_error == NULL) {
-        *max = size_string_to_bytes(split[1], &tmp_error);
+        *max = rm_cmd_size_string_to_bytes(split[1], &tmp_error);
     }
 
     g_strfreev(split);
@@ -182,16 +182,16 @@ static gboolean size_range_string_to_bytes(const char *range_spec, guint64 *min,
     return (tmp_error == NULL);
 }
 
-static void parse_limit_sizes(RmSession *session, char *range_spec) {
+static void rm_cmd_parse_limit_sizes(RmSession *session, char *range_spec) {
     const char *error = NULL;
-    if(!size_range_string_to_bytes(
+    if(!rm_cmd_size_range_string_to_bytes(
                 range_spec,
                 &session->settings->minsize,
                 &session->settings->maxsize,
                 &error
             )) {
         g_printerr(RED"Error while parsing --limit: %s\n", error);
-        die(session, EXIT_FAILURE);
+        rm_cmd_die(session, EXIT_FAILURE);
     }
 }
 
@@ -203,9 +203,9 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
     [4] = G_LOG_LEVEL_DEBUG
 };
 
-static bool add_path(RmSession *session, int index, const char *path) {
+static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
     RmSettings *settings = session->settings;
-    bool is_pref = check_if_preferred(path);
+    bool is_pref = rm_cmd_check_if_preferred(path);
 
     if(is_pref) {
         path += 2;  /* skip first two characters ie "//" */
@@ -231,18 +231,18 @@ static bool add_path(RmSession *session, int index, const char *path) {
     }
 }
 
-static int read_paths_from_stdin(RmSession *session, int index) {
+static int rm_cmd_read_paths_from_stdin(RmSession *session, int index) {
     int paths_added = 0;
     char path_buf[PATH_MAX];
 
     while(fgets(path_buf, PATH_MAX, stdin)) {
-        paths_added += add_path(session, index + paths_added, strtok(path_buf, "\n"));
+        paths_added += rm_cmd_add_path(session, index + paths_added, strtok(path_buf, "\n"));
     }
 
     return paths_added;
 }
 
-static bool parse_output_pair(RmSession *session, const char *pair) {
+static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
     char *separator = strchr(pair, ':');
     if(separator == NULL) {
         g_printerr("No format specified in '%s'\n", pair);
@@ -262,7 +262,7 @@ static bool parse_output_pair(RmSession *session, const char *pair) {
     return true;
 }
 
-static bool parse_config_pair(RmSession *session, const char *pair) {
+static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     char *domain = strchr(pair, ':');
     if(domain == NULL) {
         g_printerr("No format (format:key[=val]) specified in '%s'\n", pair);
@@ -300,7 +300,7 @@ typedef struct RmLintTypeOption {
 } RmLintTypeOption;
 
 /* compare function for parsing lint type arguments */
-int find_line_type_func(const void *v_input, const void *v_option) {
+int rm_cmd_find_line_type_func(const void *v_input, const void *v_option) {
     const char *input = v_input;
     const RmLintTypeOption *option = v_option;
 
@@ -315,7 +315,7 @@ int find_line_type_func(const void *v_input, const void *v_option) {
 #define OPTS  (bool *[])
 #define NAMES (const char *[])
 
-static void parse_lint_types(RmSettings *sets, const char *lint_string) {
+static void rm_cmd_parse_lint_types(RmSettings *sets, const char *lint_string) {
     RmLintTypeOption option_table[] = {{
             .names = NAMES{"all", 0},
             .enable = OPTS{
@@ -392,7 +392,7 @@ static void parse_lint_types(RmSettings *sets, const char *lint_string) {
         RmLintTypeOption *option = lfind(
                                        lint_type, &option_table,
                                        &elems, sizeof(RmLintTypeOption),
-                                       find_line_type_func
+                                       rm_cmd_find_line_type_func
                                    );
 
         /* apply the found option */
@@ -419,7 +419,7 @@ static void parse_lint_types(RmSettings *sets, const char *lint_string) {
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
+bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     RmSettings *sets = session->settings;
 
     int choice = -1;
@@ -481,13 +481,13 @@ bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
         }
         switch(choice) {
         case '?':
-            show_help();
+            rm_cmd_show_help();
             return false;
         case 'c':
-            parse_config_pair(session, optarg);
+            rm_cmd_parse_config_pair(session, optarg);
             break;
         case 'T':
-            parse_lint_types(sets, optarg);
+            rm_cmd_parse_lint_types(sets, optarg);
             break;
         case 't': {
             int parsed_threads = strtol(optarg, NULL, 10);
@@ -502,7 +502,7 @@ bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             sets->checksum_type = rm_string_to_digest_type(optarg);
             if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
                 rm_log_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
-                die(session, EXIT_FAILURE);
+                rm_cmd_die(session, EXIT_FAILURE);
             }
             break;
         case 'f':
@@ -518,13 +518,13 @@ bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             sets->color = false;
             break;
         case 'H':
-            show_version();
-            die(session, EXIT_SUCCESS);
+            rm_cmd_show_version();
+            rm_cmd_die(session, EXIT_SUCCESS);
             break;
         case 'h':
-            show_help();
-            show_version();
-            die(session, EXIT_SUCCESS);
+            rm_cmd_show_help();
+            rm_cmd_show_version();
+            rm_cmd_die(session, EXIT_SUCCESS);
             break;
         case 'l':
             sets->find_hardlinked_dupes = true;
@@ -536,7 +536,7 @@ bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             if(output_flag_cnt < 0) {
                 output_flag_cnt = false;
             }
-            output_flag_cnt += parse_output_pair(session, optarg);
+            output_flag_cnt += rm_cmd_parse_output_pair(session, optarg);
             break;
         case 'R':
             sets->ignore_hidden = true;
@@ -588,7 +588,7 @@ bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             break;
         case 's':
             sets->limits_specified = true;
-            parse_limit_sizes(session, optarg);
+            rm_cmd_parse_limit_sizes(session, optarg);
             break;
         case 'P':
             sets->paranoid = false;
@@ -622,15 +622,15 @@ bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
     while(optind < argc) {
         const char *dir_path = argv[optind];
         if(strlen(dir_path) == 1 && *dir_path == '-') {
-            path_index += read_paths_from_stdin(session, path_index);
+            path_index += rm_cmd_read_paths_from_stdin(session, path_index);
         } else {
-            path_index += add_path(session, path_index, argv[optind]);
+            path_index += rm_cmd_add_path(session, path_index, argv[optind]);
         }
         optind++;
     }
     if(path_index == 0) {
         /* Still no path set? - use `pwd` */
-        path_index += add_path(session, path_index, sets->iwd);
+        path_index += rm_cmd_add_path(session, path_index, sets->iwd);
     }
 
     return true;
@@ -784,7 +784,7 @@ char rm_echo_settings(RmSettings *settings) {
     return 1;
 }
 
-int rm_main(RmSession *session) {
+int rm_cmd_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT, 0, 0);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
     rm_traverse_tree(session);
