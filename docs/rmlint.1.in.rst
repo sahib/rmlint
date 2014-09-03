@@ -24,7 +24,7 @@ DESCRIPTION
 ===========
 
 `rmlint` finds space waste and other broken things on your filesystem and offers
-to remove it. This includes:
+to remove it. 
 
 * Duplicate files.
 * Nonstripped Binaries (Binaries with debug symbols).
@@ -45,7 +45,8 @@ originals you can prefix the path with **//**,
 
 Quick clues for adjusting settings are available by using the `-q` option.
 
-**Note:** `rmlint` will not delete any files by itself unless you command it!
+**Note:** `rmlint` will not delete any files. It only produces executable output
+for you to remove it.
 
 OPTIONS
 =======
@@ -53,17 +54,39 @@ OPTIONS
 General Options
 ---------------
 
-TODO: Add --type
+**-T --types="description"** (*default:* -T defaults)
 
-**-o --output=formatter:file** (*default:* -o sh:rmlint.sh -o pretty:stdout)
+    Configure the types of lint rmlint is supposed to find. The `description`
+    string enumerates the types that shall be investigated, separted by a space.
+    At the beginning of the string certain groups may be specified. 
+
+    * ``all``: Enables all lint types.
+    * ``defaults``: Enables all lint types, but ``namecluster`` and ``nonstripped``.
+    * ``none``: Disable all lint types.
+
+    All following lint types must be one of the following, optionally prefixed
+    with a **+** or **-** to select or deselect it:
+
+    * ``badids``, ``bi``: Find bad UID, GID or files with both.
+    * ``badlinks``, ``bl``: Find bad symlinks pointing nowhere.
+    * ``emptydirs``, ``ed``: Find empty directories.
+    * ``emptyfiles``, ``ef``: Find empty files.
+    * ``nameclusters``, ``nc``: Find files with same basename.
+    * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
+    * ``duplicates``, ``df``: Find duplicate files.
+
+**-o --output=formatter:file** (*default:* -o sh:rmlint.sh -o pretty:stdout -o summary:stdout)
+**-O --add-output=formatter:file** 
 
     Configure the way rmlint ouputs it's results. You link a formatter to a
     file. A file might either be an arbitary path or ``stdout`` or ``stderr``.
 
     If this options is specified, rmlint's defaults are overwritten. 
     The option can be specified several times and formatters can be specified
-    more than once for different files. Specifying the same file more than once
-    is not a good idea.
+    more than once for different files. 
+
+    **--add-output** works the same way, but does not overwrite the defaults.
+    Both **-o** and **-O** may not be specified at the same time.
 
     For a list of formatters and their options, look at the **Formatters**
     section below.
@@ -89,7 +112,7 @@ TODO: Add --type
 **-v --loud / -V --quiet**
 
     Increase or decrease the verbosity. You can pass these options several
-    times. 
+    times. This only affects rmlint's logging on *stderr*.
 
 **-p --paranoid / -P --no-paranoid** (*default*)    
 
@@ -99,12 +122,13 @@ TODO: Add --type
 **-w --with-color** (*default*) **/ -W --no-with-color**
 
     Use color escapes for pretty output or disable them. 
-    If you pipe `rmlints` output to a file -W is assumed.
+    If you pipe `rmlints` output to a file -W is assumed automatically.
 
 **-q --confirm-settings / -Q --no-confirm-settings** (*default*)
     
     Print a screen of the used settings and the options that you need to change
-    them. Requires confirmation before proceeding.
+    them. Requires confirmation before proceeding. This option has only effect
+    when ``-o confirm:stdout`` is specified.
 
 **-h --help / -H --version**
 
@@ -132,7 +156,7 @@ Traversal Options
     It's also possible to specify only one size. In this case the size is
     interpreted as "up to this size".
 
-**-d --maxdepth=depth** (*default:* INF) 
+**-d --max-depth=depth** (*default:* INF) 
 
     Only recurse up to this depth. A depth of 1 would disable recursion and is
     equivalent to a directory listing.
@@ -161,43 +185,17 @@ Traversal Options
     Also traverse hidden directories? This is often not a good idea, since
     directories like `.git/` would be investigated.
 
-Lint options
-------------
+Original Detection Options
+--------------------------
 
-**-e --emptyfiles** (*default*) **/ -E --no-emptyfiles**
-    
-    Find and list empty files?
-
-**-z --emptydirs** (*default*) **/ -Z --no-emptydirs**
-
-    Find and list empty directories?
-
-**-n --namecluster / -N --no-namecluster** (*default*)
-
-    Find files with the same basename? Files that have the same basename 
-    are still checked to be duplicates if `-U` was not passed.
-
-**-b --nonstripped / -B --no-nonstripped** (*default*)
-
-    Find binaries with debug symbols. Debug symbols can be removed via the
-    `strip` utility. *Warning:* Slow if applied to many binaries.
-
-**-g --badids** (*default*) **/ -G --no-badids**
-
-    Find files or directories with bad *UID*, *GID* or *both*.
-
-**-u --dups** (*default*) **/ -U --no-dups** 
-
-    Find duplicate files?
-
-**-k --keepallorig / -K --no-keepallorig** (*default*)
+**-k --keepall// / -K --no-keepall//** (*default*)
 
     Don't delete any duplicates that are in original paths.
     (Paths that were prefixed with **//**).
     
     **Note:** for lint types other than duplicates, `--keepallorig` option is ignored.
 
-**-m --mustmatchorig / -M --no-mustmatchorig** (*default*)
+**-m --mustmatch// / -M --no-mustmatch//** (*default*)
 
     Only look for duplicates of which one is in original paths.
     (Paths that were prefixed with **//**).
@@ -241,8 +239,11 @@ FORMATTERS
 * ``pretty``: Shows all found items in realtimes nicely colored. This formatter
   is activated as default.
 
+* ``summary``: Shows counts of files and their respective size after the run.
+  Also list all written files.
 
-TODO: Write ``summary`` and ``py``.
+* ``confirm``: Print a confirmation message before running. If ``-q`` is
+  specified, wait till user entered his confirmation.
 
 EXAMPLES
 ========
@@ -255,7 +256,7 @@ EXAMPLES
 
   Read paths from *stdin* and check all png files for duplicates.
 
-- ``rmlint //files files_backup --keepallorig --mustmatchorig``
+- ``rmlint //files files_backup --keepall// --mustmatch//``
 
   Check for duplicate files between the current files and the backup of it. 
   Only files in *files_backup* would be reported as duplicate. 

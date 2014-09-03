@@ -3,5 +3,10 @@ Stable Version
 
 - Add a test target to the build system.
 - Write a tutorial.
+- Only elf-check executable files.
+- invertorig option?
+- see if extended paranoid is less code.
+- add some bastard-hash algorithm. 
+- implement several -p -pp -ppp options.
 - Integrate 'ack TODO | wc -l' to 0.
 - ...

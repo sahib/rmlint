@@ -377,7 +377,6 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
             sign = (*lint_type == '+') ? +1 : -1;
         }
 
-
         if(index > 0 && sign == 0) {
             rm_log_warning(YELLOW"Warning: lint types after first should be prefixed with '+' or '-'\n"RESET);
             rm_log_warning(YELLOW"         or they would over-ride previously set options: [%s]\n"RESET, lint_type);
@@ -434,7 +433,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         static struct option long_options[] = {
             {"types"               ,  required_argument ,  0 ,  'T'},
             {"threads"             ,  required_argument ,  0 ,  't'},
-            {"maxdepth"            ,  required_argument ,  0 ,  'd'},
+            {"max-depth"           ,  required_argument ,  0 ,  'd'},
             {"size"                ,  required_argument ,  0 ,  's'},
             {"sortcriteria"        ,  required_argument ,  0 ,  'S'},
             {"algorithm"           ,  required_argument ,  0 ,  'a'},
