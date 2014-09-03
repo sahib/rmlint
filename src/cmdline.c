@@ -455,8 +455,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
             {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},
             {"no-mustmatch//"      ,  no_argument       ,  0 ,  'm'},
-            {"invert//"            ,  no_argument       ,  0 ,  'i'},
-            {"no-invert//"         ,  no_argument       ,  0 ,  'I'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
@@ -469,7 +467,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMiIlLqQhH",
+                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMlLqQhH",
                      long_options, &option_index
                  );
 
@@ -578,11 +576,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'M':
             settings->must_match_original = true;
             break;
-        case 'i':
-            settings->invert_original = true;
-            break;
-        case 'I':
-            settings->invert_original = false;
             break;
         case 'Q':
             settings->confirm_settings = false;

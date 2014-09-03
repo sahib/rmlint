@@ -200,10 +200,6 @@ Original Detection Options
     Only look for duplicates of which one is in original paths.
     (Paths that were prefixed with **//**).
 
-**-i --invertorig / -I --no-invertorig** (*default*)
-
-    Paths prefixed with **//** are non-originals and all other paths are originals.
-
 **-S --sortcriteria=criteria** (*default*: m)
 
     - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)

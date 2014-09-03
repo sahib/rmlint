@@ -58,7 +58,6 @@ typedef struct RmSettings {
     guint64 maxsize;
     bool keep_all_originals;     /* if set, will ONLY delete dupes that are not in ppath */
     bool must_match_original;    /* if set, will ONLY search for dupe sets where at least one file is in ppath */
-    bool invert_original;        /* if set, inverts selection so that paths _not_ prefixed with // are preferred */
     bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
     bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
     guint64 threads;
