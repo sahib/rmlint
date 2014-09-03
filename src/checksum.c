@@ -34,7 +34,6 @@
 #include <assert.h>
 
 #include "checksum.h"
-//#include "defs.h"
 
 /* Less than 16 byte is not allowed */
 G_STATIC_ASSERT(_RM_HASH_LEN >= 16);
@@ -171,7 +170,6 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
 #endif
     case RM_DIGEST_MURMUR:
         for (guint8 i = 0; i < digest->num_128bit_blocks; i++) {
-            /*TODO: multithread this if num_128bit_blocks > 1 */
 #if UINTPTR_MAX == 0xffffffff
             /* 32 bit */
             MurmurHash3_x86_128(data, size, (uint32_t)digest->hash[i].first, &digest->hash[i]);

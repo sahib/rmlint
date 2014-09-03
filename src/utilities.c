@@ -649,7 +649,7 @@ guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, guint64 file
 
         if(!g_sequence_iter_is_end(next_fragment) && !g_sequence_iter_is_begin(next_fragment) ) {
             RmOffsetEntry *off = g_sequence_get(next_fragment);
-            return off->logical - file_offset ;
+            return off->logical - file_offset;
         }
     }
 #endif

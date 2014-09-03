@@ -55,7 +55,7 @@ static void rm_fmt_prog(
 
     /*---------------- lint types ---------------*/
     rm_log_warning("Looking for lint types:\n");
-    if (settings->searchdup)	rm_log_warning("\t+ duplicates "RED"(%s)"RESET" [-U]\n", settings->cmd_path ? "cmd" : "rm");
+    if (settings->searchdup)	rm_log_warning("\t+ duplicates "RED"(rm)"RESET" [-U]\n");
     if (settings->findemptydirs)rm_log_warning("\t+ empty directories "RED"(rm)"RESET" [-Y]\n");
     if (settings->listemptyfiles)rm_log_warning("\t+ zero size files "RED"(rm)"RESET" [-K]\n");
     if (settings->findbadids)	rm_log_warning("\t+ files with bad UID/GID "BLUE"(chown)"RESET" [-L]\n");
@@ -125,7 +125,7 @@ static void rm_fmt_prog(
     }
 
     if (settings->find_hardlinked_dupes) {
-        rm_log_warning("\tHardlinked file sets will be treated as duplicates (%s)\n", settings->cmd_path ? settings->cmd_path : "rm");
+        rm_log_warning("\tHardlinked file sets will be treated as duplicates\n");
         rm_log_warning(RED"\t\tBUG"RESET": rmlint currently does not deduplicate hardlinked files with same basename\n");
     } else rm_log_warning("\tHardlinked file sets will not be deduplicated [-H]\n");
 

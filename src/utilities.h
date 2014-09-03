@@ -122,7 +122,7 @@ typedef struct RmMountTable {
 
 typedef struct RmDiskInfo {
     char *name;
-    char is_rotational;
+    bool is_rotational;
 } RmDiskInfo;
 
 typedef struct RmPartitionInfo {
@@ -209,6 +209,9 @@ RmOffsetTable rm_offset_create_table(const char *path);
  */
 guint64 rm_offset_lookup(RmOffsetTable table, guint64 file_offset);
 
+/**
+ * @return next logical offset.
+ */
 guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable table, guint64 file_offset);
 
 /**

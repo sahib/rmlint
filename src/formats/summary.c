@@ -83,9 +83,8 @@ static void rm_fmt_prog(
 
     if(session->other_lint_cnt > 0) {
         ARROW fprintf(
-            out, "%s%lu%s other suspicious item(s) found, which are at least %s%s%s large.\n",
-            MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session),
-            MAYBE_RED(session), "TODO", MAYBE_RESET(session)
+            out, "%s%lu%s other suspicious item(s) found, which may vary in size.\n",
+            MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
         );
     }
 

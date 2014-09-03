@@ -38,7 +38,7 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->size_table = g_hash_table_new(NULL, NULL);
 
-    tables->size_groups = g_hash_table_new_full(NULL, NULL, NULL, NULL); //TODO (GDestroyNotify)shred_group_free);
+    tables->size_groups = g_hash_table_new_full(NULL, NULL, NULL, NULL);
 
     tables->node_table = g_hash_table_new(NULL, NULL);
 
@@ -268,11 +268,6 @@ static gboolean rm_handle_hardlinks(gpointer key, RmFile *file, RmSession *sessi
      * file, unless all the files are "other lint"*/
     return rm_handle_other_lint(file, session);
 }
-
-//~ gint rm_sort_inode(RmFile *a, RmFile *b) {
-//~ return (a->inode > b->inode) - (a->inode < b->inode);
-//~ }
-
 
 static void handle_double_base_file(RmSession *session, RmFile *file) {
     file->lint_type = RM_LINT_TYPE_BASE;

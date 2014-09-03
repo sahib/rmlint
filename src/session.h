@@ -49,13 +49,10 @@ typedef struct RmSettings {
     bool searchdup;
     bool findemptydirs;
     bool nonstripped;
-    short verbosity;
+    char verbosity;
     bool listemptyfiles;
     char **paths;
     char *is_prefd;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
-    int  num_paths;              /* NEW - counter to make life easier when multi-threading the paths */
-    char *cmd_path;
-    char *cmd_orig;
     char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
     bool limits_specified;
     guint64 minsize;
@@ -64,7 +61,6 @@ typedef struct RmSettings {
     bool must_match_original;    /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath */
     bool invert_original;        /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred */
     bool find_hardlinked_dupes;  /* NEW - if set, will also search for hardlinked duplicates*/
-    bool skip_confirm;           /* NEW - if set, bypasses user confirmation of input settings*/
     bool confirm_settings;       /* NEW - if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;

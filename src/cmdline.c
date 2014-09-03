@@ -226,7 +226,6 @@ static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
             settings->paths[index + 0] = g_strdup_printf("%s%s", settings->iwd, path);
         }
         settings->paths[index + 1] = NULL;
-        settings->num_paths++;
         return TRUE;
     }
 }
