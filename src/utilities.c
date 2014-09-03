@@ -121,9 +121,13 @@ int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist) {
 }
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
-bool rm_util_is_nonstripped(const char *path) {
+bool rm_util_is_nonstripped(const char *path, struct stat *statp) {
     bool is_ns = false;
     g_return_val_if_fail(path, false);
+
+    if(statp && (statp->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
+        return false;
+    }
 
     /* inspired by "jschmier"'s answer at http://stackoverflow.com/a/5159890 */
     int fd;

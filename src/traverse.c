@@ -120,7 +120,7 @@ static void rm_traverse_file(
         /*see if we can find a lint type*/
         if (settings->findbadids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
             file_type = gid_check;
-        } else if(settings->nonstripped && rm_util_is_nonstripped(path)) {
+        } else if(settings->nonstripped && rm_util_is_nonstripped(path, statp)) {
             file_type = RM_LINT_TYPE_NBIN;
         } else if(statp->st_size == 0) {
             if (!settings->listemptyfiles) {

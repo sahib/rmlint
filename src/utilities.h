@@ -91,7 +91,7 @@ int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist);
 /**
  * @brief Check if a file is a binary that is not stripped.
   */
-bool rm_util_is_nonstripped(const char *path);
+bool rm_util_is_nonstripped(const char *path, struct stat *statp);
 
 /**
  * @brief Get the basename part of the file. It does not change filename.
