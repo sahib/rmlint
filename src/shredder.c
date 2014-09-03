@@ -418,8 +418,10 @@ RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMa
     RmShredDevice *self = g_slice_new0(RmShredDevice);
     self->main = main;
 
-    g_assert (self->remaining_files == 0);
-    g_assert (self->remaining_bytes == 0);
+    if(!rm_session_was_aborted(main->session)) {
+        g_assert (self->remaining_files == 0);
+        g_assert (self->remaining_bytes == 0);
+    }
 
     self->is_rotational = is_rotational;
     self->disk_name = g_strdup(disk_name);
@@ -436,10 +438,12 @@ RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMa
 }
 
 void rm_shred_device_free(RmShredDevice *self) {
-    g_assert(self->remaining_files == 0);
-    g_assert(self->remaining_bytes == 0);
-    g_assert(g_queue_is_empty(self->file_queue));
-    g_assert(g_async_queue_length(self->hashed_file_return) == 0);
+    if(!rm_session_was_aborted(self->main->session)) {
+        g_assert(self->remaining_files == 0);
+        g_assert(self->remaining_bytes == 0);
+        g_assert(g_queue_is_empty(self->file_queue));
+        g_assert(g_async_queue_length(self->hashed_file_return) == 0);
+    }
 
     g_async_queue_unref(self->hashed_file_return);
     g_thread_pool_free(self->hash_pool, false, false);
@@ -1291,7 +1295,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
     /* scheduler for one file at a time, optimised to minimise seeks */
     GList *iter = device->file_queue->head;
-    while(iter) {
+    while(iter && !rm_session_was_aborted(main->session)) {
         RmFile *file = iter->data;
         guint64 start_offset = file->hash_offset;
 
@@ -1391,7 +1395,7 @@ void rm_shred_run(RmSession *session) {
     rm_shred_create_devpool(&tag, session->tables->dev_table);
 
     /* This is the joiner part */
-    while (devices_left > 0 || g_async_queue_length(tag.device_return) > 0) {
+    while(devices_left > 0 || g_async_queue_length(tag.device_return) > 0) {
         RmShredDevice *device = g_async_queue_pop(tag.device_return);
         g_mutex_lock(&device->lock);
         {
@@ -1410,6 +1414,10 @@ void rm_shred_run(RmSession *session) {
             }
         }
         g_mutex_unlock(&device->lock);
+
+        if(rm_session_was_aborted(session)) {
+            break;
+        }
     }
 
     /* This should not block, or at least only very short. */

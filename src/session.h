@@ -111,6 +111,8 @@ typedef struct RmSession {
 void rm_set_default_settings(RmSettings *settings);
 void rm_session_init(RmSession *session, RmSettings *settings);
 void rm_session_clear(RmSession *session);
+void rm_session_abort(RmSession *session);
+bool rm_session_was_aborted(RmSession *session);
 
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option

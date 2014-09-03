@@ -65,7 +65,7 @@ static void signal_handler(int signum) {
     switch(signum) {
     case SIGINT:
         if(CTRLC_COUNTER++ == 0) {
-            SESSION_POINTER->aborted = TRUE;
+            rm_session_abort((RmSession *)SESSION_POINTER);
             rm_log_warning(GREEN"\nINFO: "RESET"Received Interrupt, stopping...\n");
         } else {
             rm_log_warning(GREEN"\nINFO: "RESET"Received second Interrupt, stopping hard.\n");

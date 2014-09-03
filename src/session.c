@@ -95,3 +95,23 @@ void rm_session_clear(RmSession *session) {
     g_free(settings->is_prefd);
     g_free(settings->iwd);
 }
+
+static GMutex ABORT_MTX;
+
+void rm_session_abort(RmSession *session) {
+    g_mutex_lock(&ABORT_MTX);
+    {
+        session->aborted = true;
+    }
+    g_mutex_unlock(&ABORT_MTX);
+}
+
+bool rm_session_was_aborted(RmSession *session) {
+    bool was_aborted = false;
+    g_mutex_lock(&ABORT_MTX);
+    {
+        was_aborted = session->aborted;
+    }
+    g_mutex_unlock(&ABORT_MTX);
+    return was_aborted;
+}

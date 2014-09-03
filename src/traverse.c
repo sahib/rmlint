@@ -177,7 +177,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     memset(&is_emptydir[0], 'N', sizeof(is_emptydir) - 1);
     is_emptydir[sizeof(is_emptydir) - 1] = '\0';
 
-    while(!trav_session->session->aborted && (p = fts_read(ftsp)) != NULL) {
+    while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
             /* ignoring hidden folders*/

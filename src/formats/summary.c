@@ -63,6 +63,10 @@ static void rm_fmt_prog(
     /* Separate from previous formatter (most likely "pretty") */
     fprintf(out, "\n");
 
+    if(rm_session_was_aborted(session)) {
+        ARROW fprintf(out, "Early shutdown, probably not all lint was found.\n");
+    }
+
     ARROW fprintf(
         out, "In total %s%lu%s files, whereof %s%lu%s are duplicates in %s%lu%s groups.\n",
         MAYBE_RED(session), session->total_files, MAYBE_RESET(session),

@@ -1,24 +1,7 @@
-table Version
+Stable Version
 --------------
 
 - Add a test target to the build system.
 - Write a tutorial.
-- Tickle packagers.
 - Integrate 'ack TODO | wc -l' to 0.
-- Make rmlint abortable fast on any step.
 - ...
-
-Further Developement
---------------------
-
-- Multithreaded directory tree traversal? (SeeSpotRun) -- mostly done?
-- Some of https://github.com/sahib/rmlint/issues
-- cache calls to open/close if they turn out to be expensive? (bench first)
-
-
-Done items
-----------
-
-- Add Daniel to AUTHORS and file headers.
-- Implement several hashing algorithms (CityHash, GChecksum(md5, sha1-256), Murmur3)
-- Put rmlint on TravisCI.
