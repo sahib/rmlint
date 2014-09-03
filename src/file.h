@@ -69,11 +69,17 @@ typedef enum RmLintType {
 } RmLintType;
 
 
+/**
+ * RmFile structure; used by pretty much all rmlint modules.
+ */
+
+/* Sub-structures defined and used in shredder.c:*/
 struct RmShredGroup;
 struct RmShredDevice;
 
-/* TODO: Reduce size of RmFile */
 typedef struct RmFile {
+    /* TODO: Reduce size of RmFile */
+
     /* Absolute path of the file
      * */
     char *path;
@@ -90,6 +96,9 @@ typedef struct RmFile {
 
     /* True if this file is in one of the preferred paths,
      * i.e. paths prefixed with // on the commandline.
+     * In the case of hardlink clusters, the head of the cluster
+     * contains information about the preferred path status of the other
+     * files in the cluster
      */
     bool is_prefd;
 
@@ -121,6 +130,7 @@ typedef struct RmFile {
      */
     guint64 seek_offset;
 
+
     /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
     RmFileState status;
 
@@ -136,9 +146,14 @@ typedef struct RmFile {
      */
     RmLintType lint_type;
 
-    /* If this file is a hardlink, link to (the highest ranked) hardlinked RmFile.
-     * This is used to avoid hashing every file within a hardlinked set */
-    struct RmFile *hardlinked_original;
+    /* If this file is the head of a hardlink cluster, the following structure
+     * contains the other hardlinked RmFile's.  This is used to avoid
+     * hashing every file within a hardlink set */
+    struct {
+        GQueue *files;
+        bool has_prefd; // use bool, gboolean is actually a gint
+        bool has_non_prefd;
+    } hardlinks;
 
     /* Link to the RmShredGroup that the file currently belongs to */
     struct RmShredGroup *shred_group;

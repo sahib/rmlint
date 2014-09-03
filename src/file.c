@@ -45,6 +45,11 @@ RmFile *rm_file_new(
     self->path_index = pnum;
 
     rm_digest_init(&self->digest, cksum_type, 0, 0);
+
+    self->hardlinks.files = NULL;
+    self->hardlinks.has_non_prefd = FALSE;
+    self->hardlinks.has_prefd = FALSE;
+
     return self;
 }
 
@@ -54,5 +59,9 @@ void rm_file_destroy(RmFile *file) {
     if (file->disk_offsets) {
         g_sequence_free(file->disk_offsets);
     }
+    if (file->hardlinks.files) {
+        g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
+    }
+
     g_slice_free(RmFile, file);
 }
