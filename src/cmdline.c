@@ -67,7 +67,7 @@ static void rm_cmd_show_help(void) {
     if(system("man rmlint") == 0) {
         return;
     }
-    g_printerr("You seem to have no manpage for rmlint.\n");
+    rm_log_error("You seem to have no manpage for rmlint.\n");
 }
 
 /* Check if this is the 'preferred' dir */
@@ -190,7 +190,7 @@ static void rm_cmd_parse_limit_sizes(RmSession *session, char *range_spec) {
                 &session->settings->maxsize,
                 &error
             )) {
-        g_printerr(RED"Error while parsing --limit: %s\n", error);
+        rm_log_error(RED"Error while parsing --limit: %s\n"RESET, error);
         rm_cmd_die(session, EXIT_FAILURE);
     }
 }
@@ -244,7 +244,7 @@ static int rm_cmd_read_paths_from_stdin(RmSession *session, int index) {
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
     char *separator = strchr(pair, ':');
     if(separator == NULL) {
-        g_printerr("No format specified in '%s'\n", pair);
+        rm_log_error(RED"No format specified in '%s'\n"RESET, pair);
         return false;
     }
 
@@ -254,7 +254,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
     strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
 
     if(!rm_fmt_add(session->formats, format_name, full_path)) {
-        g_printerr("Adding -o %s as output failed.\n", pair);
+        rm_log_warning(YELLOW"Adding -o %s as output failed.\n"RESET, pair);
         return false;
     }
 
@@ -264,7 +264,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
 static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     char *domain = strchr(pair, ':');
     if(domain == NULL) {
-        g_printerr("No format (format:key[=val]) specified in '%s'\n", pair);
+        rm_log_warning(YELLOW"No format (format:key[=val]) specified in '%s'\n"RESET, pair);
         return false;
     }
 
@@ -273,7 +273,7 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     int len = g_strv_length(key_val);
 
     if(len < 1) {
-        g_printerr("Missing key (format:key[=val]) in '%s'\n", pair);
+        rm_log_warning(YELLOW"Missing key (format:key[=val]) in '%s'\n"RESET, pair);
         g_strfreev(key_val);
         return false;
     }
@@ -379,8 +379,8 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
 
 
         if(index > 0 && sign == 0) {
-            g_printerr(YELLOW"Warning: lint types after first should be prefixed with '+' or '-'\n"RESET);
-            g_printerr(YELLOW"         or they would over-ride previously set options: [%s]\n"RESET, lint_type);
+            rm_log_warning(YELLOW"Warning: lint types after first should be prefixed with '+' or '-'\n"RESET);
+            rm_log_warning(YELLOW"         or they would over-ride previously set options: [%s]\n"RESET, lint_type);
             continue;
         } else {
             lint_type += ABS(sign);
@@ -396,7 +396,7 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
 
         /* apply the found option */
         if(option == NULL) {
-            g_printerr(YELLOW"Warning: lint type %s not recognised\n"RESET, lint_type);
+            rm_log_warning(YELLOW"Warning: lint type %s not recognised\n"RESET, lint_type);
             continue;
         }
 
@@ -427,6 +427,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     int option_index = 0;
     int path_index = 0;
 
+    /* set to true if -o or -O is specified */
+    bool oO_specified[2] = {false, false};
+
     while(1) {
         static struct option long_options[] = {
             {"types"               ,  required_argument ,  0 ,  'T'},
@@ -436,6 +439,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"sortcriteria"        ,  required_argument ,  0 ,  'S'},
             {"algorithm"           ,  required_argument ,  0 ,  'a'},
             {"output"              ,  required_argument ,  0 ,  'o'},
+            {"add-output"          ,  required_argument ,  0 ,  'O'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
             {"quiet"               ,  no_argument       ,  0 ,  'V'},
             {"with-color"          ,  no_argument       ,  0 ,  'w'},
@@ -466,7 +470,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:S:a:c:vVwWrRfFXxpPkKmMiIlLqQhH",
+                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMiIlLqQhH",
                      long_options, &option_index
                  );
 
@@ -527,7 +531,13 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'L':
             settings->find_hardlinked_dupes = false;
             break;
+        case 'O':
+            oO_specified[1] = true;
+            output_flag_cnt = -1;
+            rm_cmd_parse_output_pair(session, optarg);
+            break;
         case 'o':
+            oO_specified[0] = true;
             if(output_flag_cnt < 0) {
                 output_flag_cnt = false;
             }
@@ -593,14 +603,17 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         }
     }
 
-    if(output_flag_cnt == -1) {
+    if(oO_specified[0] && oO_specified[1]) {
+        rm_log_error(RED"Specifiyng both -o and -O is not allowed.\n"RESET);
+        exit(EXIT_FAILURE);
+    } else if(output_flag_cnt == -1) {
         /* Set default outputs */
         rm_fmt_add(session->formats, "pretty", "stdout");
         rm_fmt_add(session->formats, "summary", "stdout");
         rm_fmt_add(session->formats, "sh", "rmlint.sh");
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
-        g_printerr("No valid -o flag encountered.\n");
+        rm_log_error("No valid -o flag encountered.\n");
         exit(EXIT_FAILURE);
     }
 
