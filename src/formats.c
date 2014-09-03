@@ -43,12 +43,22 @@ const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
 
 RmFmtTable *rm_fmt_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
-    self->name_to_handler = g_hash_table_new(g_str_hash, g_str_equal);
-    self->handler_to_file = g_hash_table_new_full(NULL, NULL, g_free, NULL);
+
+    self->name_to_handler = g_hash_table_new_full(
+        g_str_hash, g_str_equal, NULL, NULL
+    );
+
+    self->path_to_handler = g_hash_table_new_full(
+        g_str_hash, g_str_equal, NULL, NULL
+    );
+
+    self->handler_to_file = g_hash_table_new_full(
+        NULL, NULL, g_free, NULL
+    );
+    
     self->config = g_hash_table_new_full(
-                       g_str_hash, g_str_equal,
-                       g_free, (GDestroyNotify)g_hash_table_unref
-                   );
+        g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_hash_table_unref
+    );
 
     self->session = session;
 
@@ -63,6 +73,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
 
     extern RmFmtHandler *SH_SCRIPT_HANDLER;
     rm_fmt_register(self, SH_SCRIPT_HANDLER);
+
+    extern RmFmtHandler *SUMMARY_HANDLER;
+    rm_fmt_register(self, SUMMARY_HANDLER);
 
     return self;
 }
@@ -129,7 +142,13 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     memcpy(new_handler_copy, new_handler, new_handler->size);
     g_mutex_init(&new_handler->print_mtx);
     new_handler_copy->path = path;
-    g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
+
+    g_hash_table_insert(
+        self->handler_to_file, new_handler_copy, file_handle
+    );
+    g_hash_table_insert(
+        self->path_to_handler, (char *)new_handler_copy->path, new_handler
+    );
 
     return true;
 }
@@ -143,6 +162,7 @@ void rm_fmt_close(RmFmtTable *self) {
 
     g_hash_table_unref(self->name_to_handler);
     g_hash_table_unref(self->handler_to_file);
+    g_hash_table_unref(self->path_to_handler);
     g_hash_table_unref(self->config);
     g_slice_free(RmFmtTable, self);
 }
@@ -180,6 +200,10 @@ const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, con
     }
 
     return g_hash_table_lookup(key_to_vals, key);
+}
+
+void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
+    g_hash_table_iter_init(iter, self->path_to_handler);
 }
 
 #ifdef _RM_COMPILE_MAIN_OUTPUTS

@@ -283,7 +283,6 @@ static bool parse_config_pair(RmSession *session, const char *pair) {
     return true;
 }
 
-
 /* parse comma-separated strong of lint types and set settings accordingly */
 typedef struct RmLintTypeOption {
     const char **names;
@@ -592,7 +591,8 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
     if(output_flag_cnt == -1) {
         /* Set default outputs */
         rm_fmt_add(session->formats, "pretty", "stdout");
-        rm_fmt_add(session->formats, "sh", "rmlint.log");
+        rm_fmt_add(session->formats, "summary", "stdout");
+        rm_fmt_add(session->formats, "sh", "rmlint.sh");
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
         g_printerr("No valid -o flag encountered.\n");
@@ -796,50 +796,21 @@ char rm_echo_settings(RmSettings *settings) {
 
 int rm_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
-    session->total_files = rm_traverse_tree(session);
+    rm_traverse_tree(session);
 
-    rm_log_debug("List build finished at %.3f with %d files\n", g_timer_elapsed(session->timer, NULL), (int)session->total_files);
-
-    if(session->total_files < 1) {
-        rm_log_info("No files in cache to search through => No lint.\n");
-        die(session, EXIT_SUCCESS);
-    }
-
-    rm_log_info("Now in total "YELLOW"%ld useable file(s)"RESET" in cache.\n", session->total_files);
-    if(session->settings->threads > session->total_files) {
-        session->settings->threads = session->total_files + 1;
-    }
-
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
-    guint64 other_lint = rm_preprocess(session);
-    char lintbuf[128];
-
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
-    rm_shred_run(session);
-
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
-
-    rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-
-    // TODO: remove this below and add a summary-formatter.
-    rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-    rm_log_warning(
-        "\n"RED"=> "RESET"In total "RED"%lu"RESET" files, whereof "RED"%lu"RESET" are duplicate(s) in "RED"%lu"RESET" groups",
-        session->total_files, session->dup_counter, session->dup_group_counter
+    rm_log_debug(
+        "List build finished at %.3f with %lu files\n",
+        g_timer_elapsed(session->timer, NULL), session->total_files
     );
 
-    if(other_lint > 0) {
-        rm_util_size_to_human_readable(other_lint, lintbuf, sizeof(lintbuf));
-        rm_log_warning(RED"\n=> %lu"RESET" other suspicious items found ["GREEN"%s"RESET"]", other_lint, lintbuf);
-    }
+    if(session->total_files >= 1) {
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
+        rm_preprocess(session);
 
-    rm_log_warning("\n");
-    if(!session->aborted) {
-        rm_util_size_to_human_readable(session->total_lint_size, lintbuf, sizeof(lintbuf));
-        rm_log_warning(
-            RED"=> "RESET"Totally "GREEN" %s "RESET" [%lu Bytes] can be removed.\n",
-            lintbuf, session->total_lint_size
-        );
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
+        rm_shred_run(session);
+
+        rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
     }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);

@@ -95,10 +95,16 @@ typedef struct RmSession {
     struct RmMountTable *mounts;
     struct RmFmtTable *formats;
 
+    /* Counters for printing useful statistics */
     guint64 total_files;
     guint64 total_lint_size;
     guint64 dup_counter;
     guint64 dup_group_counter;
+
+    guint64 ignored_files;
+    guint64 ignored_folders;
+
+    guint64 other_lint_cnt;
 
     volatile bool aborted;
 

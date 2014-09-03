@@ -310,9 +310,7 @@ static guint64 handle_other_lint(RmSession *session) {
 }
 
 /* This does preprocessing including handling of "other lint" (non-dupes) */
-guint64 rm_preprocess(RmSession *session) {
-    guint64 other_lint = 0;
-
+void rm_preprocess(RmSession *session) {
     RmSettings *settings = session->settings;
     RmFileTables *tables = session->tables;
 
@@ -328,7 +326,7 @@ guint64 rm_preprocess(RmSession *session) {
         g_timer_elapsed(session->timer, NULL)
     );
 
-    other_lint += handle_other_lint(session);
+    session->other_lint_cnt += handle_other_lint(session);
     rm_log_debug(
         "Other lint handling finished at time %.3f\n",
         g_timer_elapsed(session->timer, NULL)
@@ -343,10 +341,8 @@ guint64 rm_preprocess(RmSession *session) {
 
     if(settings->namecluster) {
         //TODO/FIXME: need to clarify the workflow for double bases and the potential collision with duplicates search
-        other_lint += find_double_bases(session);
+        session->other_lint_cnt += find_double_bases(session);
         rm_log_error("\n");
         rm_log_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
     }
-
-    return other_lint;
 }

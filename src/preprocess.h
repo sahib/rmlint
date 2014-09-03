@@ -35,7 +35,7 @@
  *
  * Returns: number of other lint items found.
  */
-guint64 rm_preprocess(RmSession *session);
+void rm_preprocess(RmSession *session);
 
 /**
  * @brief Create a new RmFileTable object.

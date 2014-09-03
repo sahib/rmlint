@@ -79,9 +79,6 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 typedef struct RmTravSession {
     RmUserGroupNode **userlist;
     RmSession *session;
-    guint64 numfiles;
-    guint64 ignored_files;
-    guint64 ignored_folders;
     GMutex lock;
 } RmTravSession;
 
@@ -93,19 +90,17 @@ static RmTravSession *rm_traverse_session_new(RmSession *session) {
     return self;
 }
 
-static guint64 rm_traverse_session_free(RmTravSession *trav_session) {
-    guint64 saved_numfiles = trav_session->numfiles;
+static void rm_traverse_session_free(RmTravSession *trav_session) {
     rm_log_info("Found %" G_GUINT64_FORMAT " files, ignored %" G_GUINT64_FORMAT
                 " hidden files and %" G_GUINT64_FORMAT " hidden folders\n",
-                trav_session->numfiles,
-                trav_session->ignored_files,
-                trav_session->ignored_folders
-               );
+                trav_session->session->total_files,
+                trav_session->session->ignored_files,
+                trav_session->session->ignored_folders
+    );
 
     rm_userlist_destroy(trav_session->userlist);
     g_mutex_clear(&trav_session->lock);
     g_free(trav_session);
-    return saved_numfiles;
 }
 
 //////////////////////
@@ -144,7 +139,7 @@ static void rm_traverse_file(
     RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_prefd, path_index);
     g_mutex_lock(&trav_session->lock);
     {
-        trav_session->numfiles += rm_file_tables_insert(session, file);
+        trav_session->session->total_files += rm_file_tables_insert(session, file);
     }
     g_mutex_unlock(&trav_session->lock);
 }
@@ -188,9 +183,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             {
                 if (p->fts_info == FTS_D) {
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
-                    trav_session->ignored_folders++;
+                    trav_session->session->ignored_folders++;
                 } else {
-                    trav_session->ignored_files++;
+                    trav_session->session->ignored_files++;
                 }
             }
             g_mutex_unlock(&trav_session->lock);
@@ -300,7 +295,7 @@ static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_sess
 // PUBLIC API //
 ////////////////
 
-guint64 rm_traverse_tree(RmSession *session) {
+void rm_traverse_tree(RmSession *session) {
     RmSettings *settings = session->settings;
     RmTravSession *trav_session = rm_traverse_session_new(session);
 
@@ -351,5 +346,6 @@ guint64 rm_traverse_tree(RmSession *session) {
     }
 
     g_thread_pool_free(traverse_pool, false, true);
-    return rm_traverse_session_free(trav_session);
+    g_hash_table_unref(paths_per_disk);
+    rm_traverse_session_free(trav_session);
 }

@@ -30,9 +30,7 @@
 
 /**
  * @brief Traverse all specified paths.
- *
- * @returns: the number of added files.
  */
-guint64 rm_traverse_tree(RmSession *session);
+void rm_traverse_tree(RmSession *session);
 
 #endif

@@ -50,6 +50,7 @@ typedef enum RmFmtProgressState {
 /* Container and API-endpoint for individual RmFmtHandlers */
 typedef struct RmFmtTable {
     GHashTable *name_to_handler;
+    GHashTable *path_to_handler;
     GHashTable *handler_to_file;
     GHashTable *config;
     RmSession *session;
@@ -171,7 +172,16 @@ void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char
 const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, const char *key);
 
 /**
+ * @brief Initialize a GHashTableIter with the pairs of registerd
+ * paths/handlers.
  *
+ * Call g_hash_table_iter_next() to retrieve the values.
+ *
+ * Key is the path, value the handler name.
+ */
+void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter);
+
+/**
  * You can use this template for implementing new RmFmtHandlers.
  * All callbacks are not required to be implemented, leave them to NULL if
  * you do not implement them:
