@@ -114,13 +114,8 @@ int main(int argc, const char **argv) {
 
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, argv, &session) != 0) {
-        /* Check settings */
-        if (rm_echo_settings(session.settings)) {
-            /* Do all the real work */
-            exit_state = rm_cmd_main(&session);
-        } else {
-            rm_log_error(RED"Aborting.\n"RESET);
-        }
+        /* Do all the real work */
+        exit_state = rm_cmd_main(&session);
     }
 
     return exit_state;

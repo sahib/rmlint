@@ -29,7 +29,6 @@
 #include "session.h"
 
 bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session);
-char rm_echo_settings(RmSettings *settings);
 int rm_cmd_main(RmSession *session);
 
 #endif
