@@ -658,6 +658,34 @@ guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, guint64 file
     return 0;
 }
 
+/////////////////////////////////
+//  GTHREADPOOL WRAPPERS       //
+/////////////////////////////////
+
+/* wrapper for g_thread_pool_push with error reporting */
+bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data) {
+    GError *error = NULL;
+    g_thread_pool_push(pool, data, &error);
+    if(error != NULL) {
+        rm_log_error("Unable to push thread to pool %p: %s\n", pool, error->message);
+        g_error_free(error);
+        return false;
+    } else {
+        return true;
+    }
+}
+
+/* wrapper for g_thread_pool_new with error reporting */
+GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
+    GError *error = NULL;
+    GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
+
+    if(error != NULL) {
+        rm_log_error("Unable to create thread pool.\n");
+        g_error_free(error);
+    }
+    return pool;
+}
 
 /////////////////////////////////
 //     IFDEFD TEST MAINS       //

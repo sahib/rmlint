@@ -95,7 +95,7 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
 
     if(file->lint_type != self->last_lint_type) {
         fprintf(
-            out, "\n%s#%s %s:\n", 
+            out, "\n%s#%s %s:\n",
             MAYBE_YELLOW(session),
             MAYBE_RESET(session),
             RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]

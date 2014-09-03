@@ -273,42 +273,9 @@
 
 
 
-/////////////////////////////////
-//  GThreadPool Wrappers       //
-/////////////////////////////////
-
-/* wrapper for g_thread_pool_push with error reporting */
-static bool rm_shred_thread_pool_push(GThreadPool *pool, gpointer data) {
-    GError *error = NULL;
-    g_thread_pool_push(pool, data, &error);
-    if(error != NULL) {
-        rm_log_error("Unable to push thread to pool %p: %s\n", pool, error->message);
-        g_error_free(error);
-        return false;
-    } else {
-        return true;
-    }
-}
-
-/* wrapper for g_thread_pool_new with error reporting */
-static GThreadPool *rm_shred_thread_pool_new(GFunc func, gpointer data, int threads) {
-    GError *error = NULL;
-    GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
-
-    if(error != NULL) {
-        rm_log_error("Unable to create thread pool.\n");
-        g_error_free(error);
-    }
-    return pool;
-}
-
-
-
 ///////////////////////////////////////////////////////////////////////
 //    INTERNAL STRUCTURES, WITH THEIR INITIALISERS AND DESTROYERS    //
 ///////////////////////////////////////////////////////////////////////
-
-
 
 /////////// RmBufferPool and RmBuffer ////////////////
 
@@ -474,7 +441,7 @@ RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMa
     self->is_rotational = is_rotational;
     self->disk_name = g_strdup(disk_name);
     self->file_queue = g_queue_new();
-    self->hash_pool = rm_shred_thread_pool_new(
+    self->hash_pool = rm_util_thread_pool_new(
                           (GFunc)rm_shred_hash_factory, self, 1
                       );
 
@@ -747,7 +714,7 @@ void rm_shred_group_make_orphan(RmShredGroup *self) {
         break;
     case RM_SHRED_GROUP_FINISHING:
         /* groups is finished, and meets criteria for a duplicate group; send it to finisher */
-        rm_shred_thread_pool_push(self->main->result_pool, self);
+        rm_util_thread_pool_push(self->main->result_pool, self);
         break;
     default:
         break;
@@ -1186,7 +1153,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
             }
 
             /* Send it to the hasher */
-            rm_shred_thread_pool_push(device->hash_pool, buffer);
+            rm_util_thread_pool_push(device->hash_pool, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */
             buffer = rm_buffer_pool_get(device->main->mem_pool);
@@ -1392,7 +1359,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 }
 
 static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
-    tag->device_pool = rm_shred_thread_pool_new(
+    tag->device_pool = rm_util_thread_pool_new(
                            (GFunc)rm_shred_devlist_factory, tag, tag->session->settings->threads / 2 + 1
                        );
 
@@ -1403,7 +1370,7 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
         rm_log_debug(GREEN"Pushing device %s to threadpool\n", device->disk_name);
-        rm_shred_thread_pool_push(tag->device_pool, device);
+        rm_util_thread_pool_push(tag->device_pool, device);
     }
 }
 
@@ -1438,7 +1405,7 @@ void rm_shred_run(RmSession *session) {
      * This would clog up the main thread, which is supposed
      * to flag bad files as soon as possible.
      */
-    tag.result_pool = rm_shred_thread_pool_new(
+    tag.result_pool = rm_util_thread_pool_new(
                           (GFunc)rm_shred_result_factory, &tag, 1
                       );
 
@@ -1459,7 +1426,7 @@ void rm_shred_run(RmSession *session) {
 
             if (device->remaining_files > 0) {
                 /* recycle the device */
-                rm_shred_thread_pool_push(tag.device_pool , device);
+                rm_util_thread_pool_push(tag.device_pool , device);
             } else {
                 devices_left--;
             }

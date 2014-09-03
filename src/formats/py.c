@@ -41,16 +41,16 @@ static const char *PY_SCRIPT_TEMPLATE_HEAD =
     ;
 
 
-static const char *PY_SCRIPT_TEMPLATE_FOOT = 
+static const char *PY_SCRIPT_TEMPLATE_FOOT =
     ""
     ;
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerPyScript *self = (RmFmtHandlerPyScript *)parent;
 
- }
+}
 
-static char * rm_fmt_py_escape_path(char *path) {
+static char *rm_fmt_py_escape_path(char *path) {
     return rm_util_strsub(path, "'", "\\'");
 }
 

@@ -58,7 +58,7 @@ void rm_file_tables_destroy(RmFileTables *list);
  *
  * @return 1 if successful insertion, 0 if path double.
  */
-bool rm_file_list_insert(RmSession *session, RmFile *file);
+bool rm_file_tables_insert(RmSession *session, RmFile *file);
 
 /**
  * @brief Save file as original in a table.
