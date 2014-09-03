@@ -28,7 +28,19 @@
 
 #include "session.h"
 
+/**
+ * @brief Parse all arguments specified in argc/argv and set the aprop. settings
+ * in session->settings.
+ *
+ * @return false on parse error (running makes no sense then)
+ */
 bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session);
+
+/**
+ * @brief Trigger the main method of rmlint.
+ *
+ * @return exit_status for exit()
+ */
 int rm_cmd_main(RmSession *session);
 
 #endif
