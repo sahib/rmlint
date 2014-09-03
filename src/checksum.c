@@ -113,7 +113,6 @@ void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_
         break;
 #endif
     case RM_DIGEST_SPOOKY:
-        spooky_init(&digest->spooky_state, seed1, seed2);
         digest->hash[0].first = seed1;
         digest->hash[0].second = seed2;
         break;
@@ -160,7 +159,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
         g_checksum_update(digest->glib_checksum, (const guchar *)data, size);
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_update(&digest->spooky_state, data, size);
+        spooky_hash128(data, size, &digest->hash[0].first, &digest->hash[0].second);
         break;
 #if _RM_HASH_LEN >= 64
     case RM_DIGEST_MURMUR512:
@@ -224,8 +223,6 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         self->glib_checksum = g_checksum_copy(digest->glib_checksum);
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_copy(&self->spooky_state, &digest->spooky_state);
-    /* Fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
 #if _RM_HASH_LEN >= 32
@@ -266,8 +263,6 @@ int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen) {
         bytes_written = buflen;
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_final(&copy->spooky_state, &copy->hash[0].first, &copy->hash[0].second);
-    /* Fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
 #if _RM_HASH_LEN >= 32
@@ -311,7 +306,6 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     return digest_len * 2 + 1;
 }
 
-
 int rm_digest_compare(RmDigest *a, RmDigest *b) {
     guint8 buf_a[_RM_HASH_LEN];
     guint8 buf_b[_RM_HASH_LEN];
@@ -344,8 +338,6 @@ void rm_digest_finalize(RmDigest *digest) {
         g_checksum_free(digest->glib_checksum);
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_final(&digest->spooky_state, &digest->hash[0].first, &digest->hash[0].second);
-    /* fallthrough */
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
 #if _RM_HASH_LEN >= 32

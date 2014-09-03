@@ -53,10 +53,6 @@ typedef enum RmDigestType {
 typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
-
-        // TODO: That thing is 304 bytes large.
-        //       Somehow shrink this beast.
-        struct spooky_state spooky_state;
         uint128 hash[_RM_HASH_LEN / 16];
     };
     RmDigestType type;
