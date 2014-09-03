@@ -373,10 +373,7 @@ void rm_preprocess(RmSession *session) {
     );
 
     if(settings->searchdup == 0) {
-        /* rmlint was originally supposed to find duplicates only
-           So we have to free list that whould have been used for
-           dup search before dieing */
-        die(session, EXIT_SUCCESS);
+        return;
     }
 
     if(settings->namecluster) {

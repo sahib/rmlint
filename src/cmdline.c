@@ -41,6 +41,16 @@
 #include "utilities.h"
 #include "formats.h"
 
+/* exit and return to calling method */
+static void die(RmSession *session, int status) {
+    rm_session_clear(session);
+    if(status) {
+        rm_log_info("Abnormal exit\n");
+    }
+
+    exit(status);
+}
+
 static void show_version(void) {
     fprintf(
         stderr,
@@ -50,14 +60,14 @@ static void show_version(void) {
 }
 
 static void show_help(void) {
-    if(system("man rmlint") == 0) {
-        return;
-    }
     if(system("man doc/rmlint.1.gz") == 0) {
         return;
     }
 
-    g_printerr("You have no manpage for rmlint.\n");
+    if(system("man rmlint") == 0) {
+        return;
+    }
+    g_printerr("You seem to have no manpage for rmlint.\n");
 }
 
 /* Check if this is the 'preferred' dir */
@@ -305,7 +315,7 @@ int find_line_type_func(const void *v_input, const void *v_option) {
 #define OPTS  (bool *[])
 #define NAMES (const char *[])
 
-void parse_lint_types(RmSettings *sets, const char *lint_string) {
+static void parse_lint_types(RmSettings *sets, const char *lint_string) {
     RmLintTypeOption option_table[] = {{
             .names = NAMES{"all", 0},
             .enable = OPTS{
@@ -409,7 +419,7 @@ void parse_lint_types(RmSettings *sets, const char *lint_string) {
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
+bool rm_parse_arguments(int argc, const char **argv, RmSession *session) {
     RmSettings *sets = session->settings;
 
     int choice = -1;
@@ -472,7 +482,7 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
         switch(choice) {
         case '?':
             show_help();
-            return 0;
+            return false;
         case 'c':
             parse_config_pair(session, optarg);
             break;
@@ -496,16 +506,16 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             }
             break;
         case 'f':
-            sets->followlinks = 1;
+            sets->followlinks = true;
             break;
         case 'F':
-            sets->followlinks = 0;
+            sets->followlinks = false;
             break;
         case 'w':
             sets->color = isatty(fileno(stdout));
             break;
         case 'W':
-            sets->color = 0;
+            sets->color = false;
             break;
         case 'H':
             show_version();
@@ -517,22 +527,22 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             die(session, EXIT_SUCCESS);
             break;
         case 'l':
-            sets->find_hardlinked_dupes = 1;
+            sets->find_hardlinked_dupes = true;
             break;
         case 'L':
-            sets->find_hardlinked_dupes = 0;
+            sets->find_hardlinked_dupes = false;
             break;
         case 'o':
             if(output_flag_cnt < 0) {
-                output_flag_cnt = 0;
+                output_flag_cnt = false;
             }
             output_flag_cnt += parse_output_pair(session, optarg);
             break;
         case 'R':
-            sets->ignore_hidden = 1;
+            sets->ignore_hidden = true;
             break;
         case 'r':
-            sets->ignore_hidden = 0;
+            sets->ignore_hidden = false;
             break;
         case 'V':
             verbosity_counter--;
@@ -541,10 +551,10 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             verbosity_counter++;
             break;
         case 'x':
-            sets->samepart = 0;
+            sets->samepart = false;
             break;
         case 'X':
-            sets->samepart = 1;
+            sets->samepart = true;
             break;
         case 'd':
             sets->depth = ABS(atoi(optarg));
@@ -553,38 +563,38 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
             sets->sort_criteria = optarg;
             break;
         case 'p':
-            sets->paranoid = 1;
+            sets->paranoid = true;
             break;
         case 'k':
-            sets->keep_all_originals = 1;
+            sets->keep_all_originals = true;
             break;
         case 'K':
-            sets->keep_all_originals = 1;
+            sets->keep_all_originals = true;
             break;
         case 'M':
-            sets->must_match_original = 1;
+            sets->must_match_original = true;
             break;
         case 'i':
-            sets->invert_original = 1;
+            sets->invert_original = true;
             break;
         case 'I':
-            sets->invert_original = 0;
+            sets->invert_original = false;
             break;
         case 'Q':
-            sets->confirm_settings = 0;
+            sets->confirm_settings = false;
             break;
         case 'q':
-            sets->confirm_settings = 1;
+            sets->confirm_settings = true;
             break;
         case 's':
-            sets->limits_specified = 1;
+            sets->limits_specified = true;
             parse_limit_sizes(session, optarg);
             break;
         case 'P':
-            sets->paranoid = 0;
+            sets->paranoid = false;
             break;
         default:
-            return 0;
+            return false;
         }
     }
 
@@ -620,30 +630,10 @@ char rm_parse_arguments(int argc, const char **argv, RmSession *session) {
     }
     if(path_index == 0) {
         /* Still no path set? - use `pwd` */
-        sets->paths = g_malloc0(sizeof(char *) * 2);
-        sets->paths[0] = getcwd(NULL, 0);
-        sets->paths[1] = NULL;
-        sets->is_prefd = g_malloc0(sizeof(char));
-        sets->is_prefd[0] = 0;
-        sets->num_paths++;
-        if(!sets->paths[0]) {
-            rm_log_error(YELLOW"FATAL: "RESET"Cannot get working directory: "YELLOW"%s\n"RESET, strerror(errno));
-            rm_log_error("       Are you maybe in a dir that just had been removed?\n");
-            g_free(sets->paths);
-            return 0;
-        }
-    }
-    return 1;
-}
-
-/* exit and return to calling method */
-void die(RmSession *session, int status) {
-    rm_session_clear(session);
-    if(status) {
-        rm_log_info("Abnormal exit\n");
+        path_index += add_path(session, path_index, sets->iwd);
     }
 
-    exit(status);
+    return true;
 }
 
 char rm_echo_settings(RmSettings *settings) {
@@ -795,6 +785,7 @@ char rm_echo_settings(RmSettings *settings) {
 }
 
 int rm_main(RmSession *session) {
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT, 0, 0);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
     rm_traverse_tree(session);
 

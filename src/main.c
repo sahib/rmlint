@@ -69,7 +69,7 @@ static void signal_handler(int signum) {
             rm_log_warning(GREEN"\nINFO: "RESET"Received Interrupt, stopping...\n");
         } else {
             rm_log_warning(GREEN"\nINFO: "RESET"Received second Interrupt, stopping hard.\n");
-            die((RmSession *)SESSION_POINTER, EXIT_FAILURE);
+            rm_session_clear((RmSession *)SESSION_POINTER);
             exit(EXIT_FAILURE);
         }
         break;

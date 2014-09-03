@@ -35,7 +35,7 @@ typedef struct RmFmtHandlerSummary {
     RmFmtHandler parent;
 } RmFmtHandlerSummary;
 
-#define ARROW fprintf(out, "%s==>%s ", MAYBE_RED(session), MAYBE_RESET(session));
+#define ARROW fprintf(out, "%s==>%s ", MAYBE_YELLOW(session), MAYBE_RESET(session));
 
 static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {
     return strcmp((char *)key, *(char **)value);
