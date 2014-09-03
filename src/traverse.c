@@ -154,7 +154,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     /* Initialize ftsp */
     int fts_flags =  FTS_PHYSICAL | FTS_COMFOLLOW | (buffer->is_first_path * FTS_NOCHDIR);
-    FTS *ftsp = fts_open((char *[2]) {path, NULL}, fts_flags, NULL);
+    FTS *ftsp = fts_open((char *[2]) {
+        path, NULL
+    }, fts_flags, NULL);
 
     if (ftsp == NULL) {
         rm_log_error("fts_open failed");
