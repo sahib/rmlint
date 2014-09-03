@@ -35,7 +35,6 @@
 #include "utilities.h"
 #include "file.h"
 
-/* TODO: lookup if all variables still needed. */
 /* all available settings - see rmlint -h */
 typedef struct RmSettings {
     bool color;
@@ -52,22 +51,21 @@ typedef struct RmSettings {
     char verbosity;
     bool listemptyfiles;
     char **paths;
-    char *is_prefd;              /* NEW - flag for each path; 1 if preferred/orig, 0 otherwise*/
-    char *sort_criteria;         /* NEW - sets criteria for ranking and selecting "original"*/
+    char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/
+    char *sort_criteria;         /* sets criteria for ranking and selecting "original"*/
     bool limits_specified;
     guint64 minsize;
     guint64 maxsize;
-    bool keep_all_originals;     /* NEW - if set, will ONLY delete dupes that are not in ppath */
-    bool must_match_original;    /* NEW - if set, will ONLY search for dupe sets where at least one file is in ppath */
-    bool invert_original;        /* NEW - if set, inverts selection so that paths _not_ prefixed with // are preferred */
-    bool find_hardlinked_dupes;  /* NEW - if set, will also search for hardlinked duplicates*/
-    bool confirm_settings;       /* NEW - if set, pauses for user confirmation of input settings*/
+    bool keep_all_originals;     /* if set, will ONLY delete dupes that are not in ppath */
+    bool must_match_original;    /* if set, will ONLY search for dupe sets where at least one file is in ppath */
+    bool invert_original;        /* if set, inverts selection so that paths _not_ prefixed with // are preferred */
+    bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
+    bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
     guint64 threads;
     short depth;
-    RmDigestType checksum_type;  /* NEW - determines the checksum algorithm used */
+    RmDigestType checksum_type;  /* determines the checksum algorithm used */
     char *iwd;                   /* cwd when rmlint called */
-    int argc;                    /* arguments rmlint was called with or NULL */
-    const char **argv;           /* arguments rmlint was called with or NULL */
+    char *joined_argv;           /* arguments rmlint was called with or NULL when not available */
 } RmSettings;
 
 typedef struct RmFileTables {

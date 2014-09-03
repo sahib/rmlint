@@ -114,21 +114,13 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         rm_log_perror("Could not chmod +x sh script");
     }
 
-    char *joined_argv = NULL;
-    const char *argv_nul[session->settings->argc + 1];
-    memset(argv_nul, 0, sizeof(argv_nul));
-    memcpy(argv_nul, session->settings->argv, session->settings->argc * sizeof(char *));
-    joined_argv = g_strjoinv(" ", (gchar **)argv_nul);
-
     fprintf(
         out, SH_SCRIPT_TEMPLATE_HEAD,
         session->settings->iwd,
-        (joined_argv) ? (joined_argv) : "[unknown]",
+        (session->settings->joined_argv) ? (session->settings->joined_argv) : "[unknown]",
         rm_util_get_username(),
         rm_util_get_groupname()
     );
-
-    g_free(joined_argv);
 }
 
 static char *rm_fmt_sh_escape_path(char *path) {

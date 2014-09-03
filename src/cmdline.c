@@ -314,27 +314,27 @@ int rm_cmd_find_line_type_func(const void *v_input, const void *v_option) {
 #define OPTS  (bool *[])
 #define NAMES (const char *[])
 
-static void rm_cmd_parse_lint_types(RmSettings *sets, const char *lint_string) {
+static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_string) {
     RmLintTypeOption option_table[] = {{
             .names = NAMES{"all", 0},
             .enable = OPTS{
-                &sets->findbadids,
-                &sets->findbadlinks,
-                &sets->findemptydirs,
-                &sets->listemptyfiles,
-                &sets->namecluster,
-                &sets->nonstripped,
-                &sets->searchdup,
+                &settings->findbadids,
+                &settings->findbadlinks,
+                &settings->findemptydirs,
+                &settings->listemptyfiles,
+                &settings->namecluster,
+                &settings->nonstripped,
+                &settings->searchdup,
                 0
             }
         }, {
             .names = NAMES{"defaults", 0},
             .enable = OPTS{
-                &sets->findbadids,
-                &sets->findbadlinks,
-                &sets->findemptydirs,
-                &sets->listemptyfiles,
-                &sets->searchdup,
+                &settings->findbadids,
+                &settings->findbadlinks,
+                &settings->findemptydirs,
+                &settings->listemptyfiles,
+                &settings->searchdup,
                 0
             },
         }, {
@@ -342,25 +342,25 @@ static void rm_cmd_parse_lint_types(RmSettings *sets, const char *lint_string) {
             .enable = OPTS{0},
         }, {
             .names = NAMES{"badids", "bi", 0},
-            .enable = OPTS{&sets->findbadids, 0}
+            .enable = OPTS{&settings->findbadids, 0}
         }, {
             .names = NAMES{"badlinks", "bl", 0},
-            .enable = OPTS{&sets->findbadlinks, 0}
+            .enable = OPTS{&settings->findbadlinks, 0}
         }, {
             .names = NAMES{"emptydirs", "ed", 0},
-            .enable = OPTS{&sets->findemptydirs, 0}
+            .enable = OPTS{&settings->findemptydirs, 0}
         }, {
             .names = NAMES{"emptyfiles", "ef", 0},
-            .enable = OPTS{&sets->listemptyfiles, 0}
+            .enable = OPTS{&settings->listemptyfiles, 0}
         }, {
             .names = NAMES{"nameclusters", "nc", 0},
-            .enable = OPTS{&sets->namecluster, 0}
+            .enable = OPTS{&settings->namecluster, 0}
         }, {
             .names = NAMES{"nonstripped", "ns", 0},
-            .enable = OPTS{&sets->nonstripped, 0}
+            .enable = OPTS{&settings->nonstripped, 0}
         }, {
             .names = NAMES{"duplicates", "df", "dupes", 0},
-            .enable = OPTS{&sets->searchdup, 0}
+            .enable = OPTS{&settings->searchdup, 0}
         },
     };
 
@@ -419,17 +419,13 @@ static void rm_cmd_parse_lint_types(RmSettings *sets, const char *lint_string) {
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
-    RmSettings *sets = session->settings;
+    RmSettings *settings = session->settings;
 
     int choice = -1;
     int verbosity_counter = 2;
     int output_flag_cnt = -1;
     int option_index = 0;
     int path_index = 0;
-
-    /* Rememver arg[cv] for use in the script formatter */
-    sets->argv = argv;
-    sets->argc = argc;
 
     while(1) {
         static struct option long_options[] = {
@@ -486,35 +482,35 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             rm_cmd_parse_config_pair(session, optarg);
             break;
         case 'T':
-            rm_cmd_parse_lint_types(sets, optarg);
+            rm_cmd_parse_lint_types(settings, optarg);
             break;
         case 't': {
             int parsed_threads = strtol(optarg, NULL, 10);
             if(parsed_threads > 0) {
-                sets->threads = parsed_threads;
+                settings->threads = parsed_threads;
             } else {
                 rm_log_error(RED"Invalid thread count supplied: %s\n"RESET, optarg);
             }
         }
         break;
         case 'a':
-            sets->checksum_type = rm_string_to_digest_type(optarg);
-            if(sets->checksum_type == RM_DIGEST_UNKNOWN) {
+            settings->checksum_type = rm_string_to_digest_type(optarg);
+            if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
                 rm_log_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
                 rm_cmd_die(session, EXIT_FAILURE);
             }
             break;
         case 'f':
-            sets->followlinks = true;
+            settings->followlinks = true;
             break;
         case 'F':
-            sets->followlinks = false;
+            settings->followlinks = false;
             break;
         case 'w':
-            sets->color = isatty(fileno(stdout));
+            settings->color = isatty(fileno(stdout));
             break;
         case 'W':
-            sets->color = false;
+            settings->color = false;
             break;
         case 'H':
             rm_cmd_show_version();
@@ -526,10 +522,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             rm_cmd_die(session, EXIT_SUCCESS);
             break;
         case 'l':
-            sets->find_hardlinked_dupes = true;
+            settings->find_hardlinked_dupes = true;
             break;
         case 'L':
-            sets->find_hardlinked_dupes = false;
+            settings->find_hardlinked_dupes = false;
             break;
         case 'o':
             if(output_flag_cnt < 0) {
@@ -538,10 +534,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             output_flag_cnt += rm_cmd_parse_output_pair(session, optarg);
             break;
         case 'R':
-            sets->ignore_hidden = true;
+            settings->ignore_hidden = true;
             break;
         case 'r':
-            sets->ignore_hidden = false;
+            settings->ignore_hidden = false;
             break;
         case 'V':
             verbosity_counter--;
@@ -550,47 +546,47 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             verbosity_counter++;
             break;
         case 'x':
-            sets->samepart = false;
+            settings->samepart = false;
             break;
         case 'X':
-            sets->samepart = true;
+            settings->samepart = true;
             break;
         case 'd':
-            sets->depth = ABS(atoi(optarg));
+            settings->depth = ABS(atoi(optarg));
             break;
         case 'S':
-            sets->sort_criteria = optarg;
+            settings->sort_criteria = optarg;
             break;
         case 'p':
-            sets->paranoid = true;
+            settings->paranoid = true;
             break;
         case 'k':
-            sets->keep_all_originals = true;
+            settings->keep_all_originals = true;
             break;
         case 'K':
-            sets->keep_all_originals = true;
+            settings->keep_all_originals = true;
             break;
         case 'M':
-            sets->must_match_original = true;
+            settings->must_match_original = true;
             break;
         case 'i':
-            sets->invert_original = true;
+            settings->invert_original = true;
             break;
         case 'I':
-            sets->invert_original = false;
+            settings->invert_original = false;
             break;
         case 'Q':
-            sets->confirm_settings = false;
+            settings->confirm_settings = false;
             break;
         case 'q':
-            sets->confirm_settings = true;
+            settings->confirm_settings = true;
             break;
         case 's':
-            sets->limits_specified = true;
+            settings->limits_specified = true;
             rm_cmd_parse_limit_sizes(session, optarg);
             break;
         case 'P':
-            sets->paranoid = false;
+            settings->paranoid = false;
             break;
         default:
             return false;
@@ -608,14 +604,14 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         exit(EXIT_FAILURE);
     }
 
-    sets->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
+    settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
                           verbosity_counter, 0, G_LOG_LEVEL_DEBUG
                       )];
 
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
     getcwd(cwd_buf, PATH_MAX);
-    sets->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
+    settings->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
 
     /* Check the directory to be valid */
     while(optind < argc) {
@@ -629,8 +625,16 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     }
     if(path_index == 0) {
         /* Still no path set? - use `pwd` */
-        path_index += rm_cmd_add_path(session, path_index, sets->iwd);
+        path_index += rm_cmd_add_path(session, path_index, settings->iwd);
     }
+
+    /* Copy commandline rmlint was invoked with by copying argv into a 
+     * NULL padded array and join that with g_strjoinv. GLib made me lazy.
+     */
+    const char *argv_nul[argc + 1];
+    memset(argv_nul, 0, sizeof(argv_nul));
+    memcpy(argv_nul, argv, argc * sizeof(const char *));
+    settings->joined_argv = g_strjoinv(" ", (gchar **)argv_nul);
 
     return true;
 }

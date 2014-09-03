@@ -77,20 +77,21 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
 }
 
 void rm_session_clear(RmSession *session) {
-    RmSettings *sets = session->settings;
+    RmSettings *settings = session->settings;
 
     /* Free mem */
-    if(sets->paths) {
-        for(int i = 0; sets->paths[i]; ++i) {
-            g_free(sets->paths[i]);
+    if(settings->paths) {
+        for(int i = 0; settings->paths[i]; ++i) {
+            g_free(settings->paths[i]);
         }
-        g_free(sets->paths);
+        g_free(settings->paths);
     }
 
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
 
-    g_free(sets->is_prefd);
-    g_free(sets->iwd);
+    g_free(settings->joined_argv);
+    g_free(settings->is_prefd);
+    g_free(settings->iwd);
 }
