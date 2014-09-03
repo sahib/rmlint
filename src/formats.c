@@ -113,7 +113,7 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler = g_hash_table_lookup(self->name_to_handler, handler_name);
     if(new_handler == NULL) {
-        g_printerr("No such new_handler with this name: %s\n", handler_name);
+        rm_log_error("No such new_handler with this name: %s\n", handler_name);
         return false;
     }
 
@@ -134,7 +134,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     }
 
     if(file_handle == NULL) {
-        g_printerr("Unable to open file for writing: %s\n", path);
+        rm_log_error("Unable to open file for writing: %s\n", path);
         return false;
     }
 
@@ -215,7 +215,7 @@ int main(void) {
     RmSession session;
     RmFmtTable *table = rm_fmt_open(&session);
     if(!rm_fmt_add(table, "progressbar", "stdout")) {
-        g_printerr("You've screwed up.\n");
+        rm_log_error("You've screwed up.\n");
         return EXIT_FAILURE;
     }
 

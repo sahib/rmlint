@@ -699,7 +699,7 @@ int main(int argc, char const *argv[]) {
     GSequence *db = rm_offset_create_table(argv[1]);
     guint64 off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
 
-    g_printerr("Offset: %lu\n", off);
+    rm_log_warning("Offset: %lu\n", off);
     g_sequence_free(db);
 
     return EXIT_SUCCESS;

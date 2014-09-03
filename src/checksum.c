@@ -386,10 +386,6 @@ static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb,
             rm_digest_update(&digest, data, bytes);
 
             gsize digest_len = rm_digest_hexstring(&digest, buffer);
-            // for(gsize i = 0; i < digest_len; i++) {
-            //     g_printerr("%c", buffer[i]);
-            // }
-            //g_printerr(" (%ld Bytes)\n", bytes);
         }
     } while(bytes > 0);
 

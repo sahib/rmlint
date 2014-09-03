@@ -183,7 +183,7 @@ static void rm_fmt_elem(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, 
         }
         break;
     default:
-        g_printerr("Warning: unknown type in write_to_log %d\n", file->lint_type);
+        rm_log_warning("Warning: unknown type in write_to_log %d\n", file->lint_type);
         break;
     }
 
