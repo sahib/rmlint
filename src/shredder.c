@@ -891,14 +891,17 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 
     RmShredGroup *group = g_hash_table_lookup(
                               session->tables->size_groups,
-                              GUINT_TO_POINTER(file->file_size)
+                              &file->file_size
                           );
 
     if (group == NULL) {
+	guint64 *file_size_cpy = g_malloc0(sizeof(guint64));
+	*file_size_cpy = file->file_size;
+
         group = rm_shred_group_new(file, NULL);
         g_hash_table_insert(
             session->tables->size_groups,
-            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files 
+            file_size_cpy,  
             group
         );
     }
@@ -1082,13 +1085,13 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  * */
 static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     int fd = 0;
-    gint32 bytes_read = 0;
-    gint64 total_bytes_read = 0;
+    gint64 bytes_read = 0;
+    guint64 total_bytes_read = 0;
 
-    gint32 buf_size = rm_buffer_pool_size(device->main->mem_pool);
+    guint64 buf_size = rm_buffer_pool_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
-    gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
+    gint64 bytes_to_read = rm_shred_get_read_size(file, device->main);
 
     g_assert(bytes_to_read > 0);
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
@@ -1096,6 +1099,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
     struct iovec readvec[SHRED_MAX_PAGES + 1];
 
+g_printerr("reading %"LLU" %"LLU"\n", file->seek_offset, file->file_size);
     if(file->seek_offset >= file->file_size) {
         goto finish;
     }
@@ -1136,7 +1140,8 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         readvec[i].iov_len = buf_size;
     }
 
-    while(bytes_to_read > 0 && (bytes_read = preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
+    // XXX-TODO: bug suspection: off_t is too small on 64bit.
+    while(bytes_to_read > 0 && (bytes_read = preadv64(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
         int blocks = DIVIDE_CEIL(bytes_read,  buf_size);
 
         bytes_to_read -= bytes_read;
@@ -1148,7 +1153,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
             RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
             buffer->file = file;
             buffer->len = MIN (buf_size, bytes_read - i * buf_size);
-            buffer->is_last = (i + 1 >= blocks && bytes_to_read <= 0); //TODO: why does bytes_to_read sometimes go negative?
+            buffer->is_last = (i + 1 >= blocks && bytes_to_read <= 0); //TODO: why does bytes_to_read sometimes go negative? 
 
             if (buffer->is_last) {
                 //TODO: add check for expect byte count; if wrong then set state to ignore.

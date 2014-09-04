@@ -32,13 +32,12 @@
 #include "cmdline.h"
 #include "shredder.h"
 
-
 RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
     tables->size_table = g_hash_table_new(NULL, NULL);
 
-    tables->size_groups = g_hash_table_new_full(NULL, NULL, NULL, NULL);
+    tables->size_groups = g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, NULL);
 
     tables->node_table = g_hash_table_new(NULL, NULL);
 

@@ -62,6 +62,8 @@
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
+
+// TODO: use correct version for 32/64 bit.
 int rm_sys_stat(const char *path, RmStat *buf) {
     return stat64(path, buf);
 }
