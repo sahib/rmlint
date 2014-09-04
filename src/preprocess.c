@@ -144,7 +144,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
     RmFileTables *tables = session->tables;
 
     GHashTable *node_table = tables->node_table;
-    guint64 node_key = (ulong)file->dev << 32 | (ulong)file->inode;
+    guint64 node_key = ((guint64)file->dev << 32) | ((guint64)file->inode);
 
     g_rec_mutex_lock(&tables->lock);
 
