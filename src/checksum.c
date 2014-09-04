@@ -270,7 +270,7 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
 
     guint8 *result = g_slice_alloc0(digest->bytes);
     RmDigest *copy = NULL;
-    gsize buflen;  //TODO: this shouldn't be needed, just here for debugging
+    gsize buflen;  
 
     switch(digest->type) {
     case RM_DIGEST_MD5:

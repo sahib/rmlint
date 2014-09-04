@@ -900,8 +900,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
         group = rm_shred_group_new(file, NULL);
         g_hash_table_insert(
             session->tables->size_groups,
-            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files --- XXX-TODO why?
-            //DJT-TODO: not convinced that on a 32-bit system we can fit a 33-bit number into
+            GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files 
             group
         );
     }
@@ -1171,11 +1170,6 @@ finish:
         close(fd);
     }
 
-    // XXX-TODO: What happens for files we cannot open?
-    //           are those counted as 0-bytes?
-    // XXX-DJT: these get free'd and their remaining bytes deducted from
-    //			the device totals
-
     /* Update totals for device */
     g_mutex_lock(&(file->device->lock));
     {
@@ -1338,9 +1332,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         } else {
             file = popped;
 
-            // TODO: Test what happens if we shrink a file after list build but before reading...
-            // XXX-TODO: BadThings™ obviously.
-
             if (file->status == RM_FILE_STATE_FRAGMENT) {
                 /* file is not ready for checking yet; push it back into the queue */
                 //~ rm_log_error("fragment read for %s\n", file->path);
@@ -1399,7 +1390,6 @@ void rm_shred_run(RmSession *session) {
     /* would use g_atomic, but helgrind does not like that */
     g_mutex_init(&tag.file_state_mtx);
 
-    /*TODO: move to rm_shred_session_init */
     session->tables->dev_table = g_hash_table_new_full(
                                      g_direct_hash, g_direct_equal,
                                      NULL, (GDestroyNotify)rm_shred_device_free
