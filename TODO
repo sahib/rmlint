@@ -9,4 +9,7 @@ Stable Version
 - add some bastard-hash algorithm. 
 - implement several -p -pp -ppp options.
 - Integrate 'ack TODO | wc -l' to 0.
+- Add option for finding only dupes with double basename
+- add basename member to RmFile
+- ifdef sha512.
 - ...
