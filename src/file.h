@@ -81,6 +81,10 @@ typedef struct RmFile {
      * */
     char *path;
 
+    /* Pointer to last part of the path
+     * */
+    char *basename;
+
     /* File modification date/time
      * */
     time_t mtime;

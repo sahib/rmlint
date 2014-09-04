@@ -99,10 +99,10 @@ static long cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
                 cmp = (long)(b->mtime) - (long)(a->mtime);
                 break;
             case 'a':
-                cmp = strcmp (rm_util_basename(a->path), rm_util_basename (b->path));
+                cmp = +strcmp(a->basename, b->basename);
                 break;
             case 'A':
-                cmp = strcmp (rm_util_basename(b->path), rm_util_basename (a->path));
+                cmp = -strcmp(a->basename, b->basename);
                 break;
             case 'p':
                 cmp = (long)a->path_index - (long)b->path_index;
@@ -258,7 +258,7 @@ static gboolean rm_handle_hardlinks(gpointer key, RmFile *file, RmSession *sessi
 
 
 int cmp_reverse_alphabetical(char *a, char *b) {
-    return strcmp(b, a);
+    return -strcmp(a, b);
 }
 
 static guint64 handle_other_lint(RmSession *session) {

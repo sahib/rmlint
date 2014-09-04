@@ -24,6 +24,7 @@
  */
 
 #include "file.h"
+#include "utilities.h"
 
 RmFile *rm_file_new(
     const char *path, struct stat *statp, RmLintType type,
@@ -31,10 +32,11 @@ RmFile *rm_file_new(
 ) {
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
+    self->basename = rm_util_basename(path);
+
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
     self->mtime = statp->st_mtim.tv_sec;
-    //~ self->state = RM_FILE_STATE_PROCESS;
 
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
         self->file_size = statp->st_size;
@@ -43,8 +45,6 @@ RmFile *rm_file_new(
     self->lint_type = type;
     self->is_prefd = is_ppath;
     self->path_index = pnum;
-
-    //rm_digest_init(&self->digest, cksum_type, 0, 0); (this now gets initialised by rm_shred_devlist_factory)
 
     self->hardlinks.files = NULL;
     self->hardlinks.has_non_prefd = FALSE;
