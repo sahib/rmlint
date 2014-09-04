@@ -16,7 +16,6 @@
 #include "shredder.h"
 #include <inttypes.h>
 
-//TODO: for hardlinked originals, only hash one of each set
 
 /* This is the scheduler of rmlint.
  *
@@ -617,10 +616,9 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpoi
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
-    if (file->device->is_rotational
-            /*TODO: && !file->hardlinked_original */) {
+    if (file->device->is_rotational {
 
-        g_assert(!file->disk_offsets);
+    g_assert(!file->disk_offsets);
         file->disk_offsets = rm_offset_create_table(file->path);
 
         session->offsets_read++;
@@ -710,7 +708,7 @@ void rm_shred_group_make_orphan(RmShredGroup *self) {
         /* group doesn't need hashing, and not expecting any more (since
          * parent is dead), so this group is now also dead
          * NOTE: there is no potential race here
-         * because parent can only die once - TODO: double check
+         * because parent can only die once
          * */
         rm_shred_group_free(self);
 
@@ -954,11 +952,6 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
         session->offsets_read - session->offset_fails,
         session->offset_fragments, session->offset_fails
     );
-    //TODO: is this another kind of lint (heavily fragmented files)?
-    // XXX-TODO: What would do against those? Filesystems are usually better
-    // than us fixing this.
-    //DJT-TODO was thinking just give a warning if say average num frags > 2 or any individual
-    //file > 10
 }
 
 /////////////////////////////////
