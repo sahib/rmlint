@@ -38,12 +38,12 @@ typedef struct RmFmtHandlerProgress {
     guint64 n, N;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
     fprintf(out, " Hi, Im a progressbar!\r");
     fflush(out);
 }
 
-static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out, G_GNUC_UNUSED RmFile *file) {
+static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, _U RmFile *file) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
     if(self->percent > 100) {
         self->percent = 100;
@@ -71,9 +71,9 @@ static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, 
 }
 
 static void rm_fmt_prog(
-    G_GNUC_UNUSED RmSession *session,
+    _U RmSession *session,
     RmFmtHandler *parent,
-    G_GNUC_UNUSED FILE *out,
+    _U FILE *out,
     RmFmtProgressState state,
     guint64 n, guint64 N
 ) {
@@ -83,7 +83,7 @@ static void rm_fmt_prog(
     self->last_state = state;
 }
 
-static void rm_fmt_foot(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
     fprintf(out, "End of demonstration.%150s\n", " ");
     fflush(out);
 }

@@ -46,4 +46,6 @@
     }}                                                                                   \
  
 
+#define _U G_GNUC_UNUSED
+
 #endif

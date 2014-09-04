@@ -83,14 +83,14 @@ typedef struct RmFmtHandlerPretty {
     const char *group;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, G_GNUC_UNUSED FILE *out) {
+static void rm_fmt_head(_U RmSession *session, RmFmtHandler *parent, _U FILE *out) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
 
     self->user = rm_util_get_username();
     self->group = rm_util_get_groupname();
 }
 
-static void rm_fmt_elem(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
+static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
 
     if(file->lint_type != self->last_lint_type) {

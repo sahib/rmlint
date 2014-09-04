@@ -397,7 +397,7 @@ static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb,
     return digest_len;
 }
 
-static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED double buf_size_mb, char *buffer) {
+static int rm_hash_file_mmap(const char *file, RmDigestType type, _U double buf_size_mb, char *buffer) {
     int fd = 0;
     unsigned char *f_map = NULL;
 
@@ -436,7 +436,7 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, G_GNUC_UNUSED 
     return digest_len;
 }
 
-static int rm_hash_file_readv(const char *file, RmDigestType type, G_GNUC_UNUSED double buf_size_mb, char *buffer) {
+static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf_size_mb, char *buffer) {
     const int N = 4;
     const int S = 4096 * 4;
     struct iovec readvec[N];

@@ -48,24 +48,26 @@ typedef struct RmSettings {
     bool searchdup;
     bool findemptydirs;
     bool nonstripped;
-    char verbosity;
     bool listemptyfiles;
+    bool keep_all_originals;     /* if set, will ONLY delete dupes that are not in ppath */
+    bool must_match_original;    /* if set, will ONLY search for dupe sets where at least one file is in ppath */
+    bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
+    bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
+    bool limits_specified;
+
+    int depth;
+    int verbosity;
+
     char **paths;
     char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/
     char *sort_criteria;         /* sets criteria for ranking and selecting "original"*/
-    bool limits_specified;
-    guint64 minsize;
-    guint64 maxsize;
-    bool keep_all_originals;     /* if set, will ONLY delete dupes that are not in ppath */
-    bool must_match_original;    /* if set, will ONLY search for dupe sets where at least one file is in ppath */
-    bool invert_original;        /* if set, inverts selection so that paths _not_ prefixed with // are preferred */
-    bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
-    bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
-    guint64 threads;
-    short depth;
-    RmDigestType checksum_type;  /* determines the checksum algorithm used */
     char *iwd;                   /* cwd when rmlint called */
     char *joined_argv;           /* arguments rmlint was called with or NULL when not available */
+
+    guint64 minsize;
+    guint64 maxsize;
+    guint64 threads;
+    RmDigestType checksum_type;  /* determines the checksum algorithm used */
 } RmSettings;
 
 typedef struct RmFileTables {
@@ -85,8 +87,14 @@ struct RmFmtTable;
 
 typedef struct RmSession {
     RmSettings *settings;
+
+    /* Stores for RmFile during traversal, preproces and shredder */
     struct RmFileTables *tables;
+
+    /* Table of mountpoints used in the system */
     struct RmMountTable *mounts;
+
+    /* Output formatting control */
     struct RmFmtTable *formats;
 
     /* Counters for printing useful statistics */
@@ -94,24 +102,51 @@ typedef struct RmSession {
     guint64 total_lint_size;
     guint64 dup_counter;
     guint64 dup_group_counter;
-
     guint64 ignored_files;
     guint64 ignored_folders;
-
     guint64 other_lint_cnt;
 
+    /* flag indicating if rmlint was aborted early */
     volatile bool aborted;
 
     GTimer *timer;
+
+    /* Debugging counters */
     glong offset_fragments;
     glong offsets_read;
     glong offset_fails;
 } RmSession;
 
+/**
+ * @brief Reset RmSettings to default settings and all other vars to 0.
+ */
 void rm_set_default_settings(RmSettings *settings);
+
+/**
+ * @brief Initialize session according to settings.
+ */
 void rm_session_init(RmSession *session, RmSettings *settings);
+
+/**
+ * @brief Clear all memory allocated by rm_session_init.
+ */
 void rm_session_clear(RmSession *session);
+
+/**
+ * @brief Set the abort flag of RmSession. 
+ *
+ * This flag is checked periodically on strategic points,
+ * leading to an early but planned exit.
+ *
+ * Threadsafe.
+ */
 void rm_session_abort(RmSession *session);
+
+/**
+ * @brief Check if rmlint was aborted early.
+ *
+ * Threadsafe.
+ */
 bool rm_session_was_aborted(RmSession *session);
 
 /* Maybe colors, for use outside of the rm_log macros,

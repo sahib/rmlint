@@ -377,7 +377,6 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
             sign = (*lint_type == '+') ? +1 : -1;
         }
 
-
         if(index > 0 && sign == 0) {
             rm_log_warning(YELLOW"Warning: lint types after first should be prefixed with '+' or '-'\n"RESET);
             rm_log_warning(YELLOW"         or they would over-ride previously set options: [%s]\n"RESET, lint_type);
@@ -434,7 +433,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         static struct option long_options[] = {
             {"types"               ,  required_argument ,  0 ,  'T'},
             {"threads"             ,  required_argument ,  0 ,  't'},
-            {"maxdepth"            ,  required_argument ,  0 ,  'd'},
+            {"max-depth"           ,  required_argument ,  0 ,  'd'},
             {"size"                ,  required_argument ,  0 ,  's'},
             {"sortcriteria"        ,  required_argument ,  0 ,  'S'},
             {"algorithm"           ,  required_argument ,  0 ,  'a'},
@@ -456,8 +455,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
             {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},
             {"no-mustmatch//"      ,  no_argument       ,  0 ,  'm'},
-            {"invert//"            ,  no_argument       ,  0 ,  'i'},
-            {"no-invert//"         ,  no_argument       ,  0 ,  'I'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
@@ -470,7 +467,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMiIlLqQhH",
+                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMlLqQhH",
                      long_options, &option_index
                  );
 
@@ -579,11 +576,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'M':
             settings->must_match_original = true;
             break;
-        case 'i':
-            settings->invert_original = true;
-            break;
-        case 'I':
-            settings->invert_original = false;
             break;
         case 'Q':
             settings->confirm_settings = false;
@@ -638,7 +630,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     }
     if(path_index == 0) {
         /* Still no path set? - use `pwd` */
-        path_index += rm_cmd_add_path(session, path_index, settings->iwd);
+        rm_cmd_add_path(session, path_index, settings->iwd);
     }
 
     /* Copy commandline rmlint was invoked with by copying argv into a 
