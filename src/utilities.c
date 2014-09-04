@@ -201,7 +201,7 @@ char *rm_util_get_groupname(void) {
 
 void rm_util_size_to_human_readable(guint64 num, char *in, gsize len) {
     if(num < 512) {
-        snprintf(in, len, "%lu B", num);
+        snprintf(in, len, "%"LLU" B", num);
     } else if(num < 512 * 1024) {
         snprintf(in, len, "%.2f KB", num / 1024.0);
     } else if(num < 512 * 1024 * 1024) {
@@ -703,7 +703,7 @@ int main(int argc, char const *argv[]) {
     GSequence *db = rm_offset_create_table(argv[1]);
     guint64 off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
 
-    rm_log_warning("Offset: %lu\n", off);
+    rm_log_warning("Offset: %"LLU"\n", off);
     g_sequence_free(db);
 
     return EXIT_SUCCESS;
@@ -745,7 +745,7 @@ int main(int argc, char *argv[]) {
     if(stat(argv[1], &stat_buf) != 0) {
         return EXIT_FAILURE;
     }
-    printf("File has UID %lu and GID %lu\n",
+    printf("File has UID %"LLU" and GID %"LLU"\n",
            (unsigned long)stat_buf.st_uid,
            (unsigned long)stat_buf.st_gid
           );

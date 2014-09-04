@@ -64,7 +64,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
         fprintf(out, " ");
     }
 
-    fprintf(out, "] %-30s (%lu/%lu)    \r", rm_fmt_progress_to_string(self->last_state), self->n , self->N);
+    fprintf(out, "] %-30s (%"LLU"/%"LLU")    \r", rm_fmt_progress_to_string(self->last_state), self->n , self->N);
     fflush(out);
 
     self->percent++;

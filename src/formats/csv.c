@@ -31,7 +31,7 @@
 #include <string.h>
 
 #define CSV_SEP  ","
-#define CSV_FORMAT "%s"CSV_SEP"%s"CSV_SEP"%lu"CSV_SEP"%s\n"
+#define CSV_FORMAT "%s"CSV_SEP"%s"CSV_SEP"%"LLU""CSV_SEP"%s\n"
 
 static const char *LINT_TYPE_TO_COLUMN[] = {
     [RM_LINT_TYPE_UNKNOWN]      = "",

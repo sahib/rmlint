@@ -876,7 +876,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
     if(device == NULL) {
 
-        rm_log_debug(GREEN"Creating new RmShredDevice for disk %lu\n"RESET, disk);
+        rm_log_debug(GREEN"Creating new RmShredDevice for disk %"LLU"\n"RESET, disk);
         device = rm_shred_device_new(
                      !rm_mounts_is_nonrotational(session->tables->mounts, disk),
                      rm_mounts_get_disk_name(session->tables->mounts, disk),
@@ -945,7 +945,7 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     rm_log_debug("done at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     rm_log_debug(
-        "fiemap'd %lu files containing %lu fragments (failed another %lu files)\n",
+        "fiemap'd %"LLU" files containing %"LLU" fragments (failed another %"LLU" files)\n",
         session->offsets_read - session->offset_fails,
         session->offset_fragments, session->offset_fails
     );
@@ -1303,11 +1303,11 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     g_assert(device);
     g_assert(device->hash_pool); /* created when device created */
 
-    rm_log_debug(BLUE"Started rm_shred_devlist_factory for disk %s (%u:%u) with %lu files in queue\n"RESET,
+    rm_log_debug(BLUE"Started rm_shred_devlist_factory for disk %s (%u:%u) with %"LLU" files in queue\n"RESET,
                  device->disk_name,
                  major(device->disk),
                  minor(device->disk),
-                 (unsigned long)g_queue_get_length(device->file_queue)
+                 (guint64)g_queue_get_length(device->file_queue)
                 );
 
     if(device->is_rotational) {
@@ -1349,7 +1349,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             } else if(rm_shred_sift(file)) {
                 /* continue hashing same file, ie no change to iter */
                 if (start_offset == file->hash_offset) {
-                    rm_log_error(RED"Offset stuck at %lu\n", start_offset);
+                    rm_log_error(RED"Offset stuck at %"LLU"\n", start_offset);
                 }
                 continue;
             } else {

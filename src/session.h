@@ -111,9 +111,9 @@ typedef struct RmSession {
     GTimer *timer;
 
     /* Debugging counters */
-    glong offset_fragments;
-    glong offsets_read;
-    glong offset_fails;
+    guint64 offset_fragments;
+    guint64 offsets_read;
+    guint64 offset_fails;
 } RmSession;
 
 /**

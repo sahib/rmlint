@@ -47,5 +47,6 @@
  
 
 #define _U G_GNUC_UNUSED
+#define LLU G_GUINT64_FORMAT
 
 #endif

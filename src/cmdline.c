@@ -694,7 +694,7 @@ int rm_cmd_main(RmSession *session) {
     rm_traverse_tree(session);
 
     rm_log_debug(
-        "List build finished at %.3f with %lu files\n",
+        "List build finished at %.3f with %"LLU" files\n",
         g_timer_elapsed(session->timer, NULL), session->total_files
     );
 

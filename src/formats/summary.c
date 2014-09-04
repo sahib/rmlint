@@ -54,7 +54,7 @@ static void rm_fmt_prog(
     }
     
     if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%lu%s file(s) after investigation, nothing to search through.",
+        ARROW fprintf(out, "%s%"LLU"%s file(s) after investigation, nothing to search through.",
             MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
         );
         return;
@@ -68,7 +68,7 @@ static void rm_fmt_prog(
     }
 
     ARROW fprintf(
-        out, "In total %s%lu%s files, whereof %s%lu%s are duplicates in %s%lu%s groups.\n",
+        out, "In total %s%"LLU"%s files, whereof %s%"LLU"%s are duplicates in %s%"LLU"%s groups.\n",
         MAYBE_RED(session), session->total_files, MAYBE_RESET(session),
         MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
         MAYBE_RED(session), session->dup_group_counter, MAYBE_RESET(session)
@@ -87,7 +87,7 @@ static void rm_fmt_prog(
 
     if(session->other_lint_cnt > 0) {
         ARROW fprintf(
-            out, "%s%lu%s other suspicious item(s) found, which may vary in size.\n",
+            out, "%s%"LLU"%s other suspicious item(s) found, which may vary in size.\n",
             MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
         );
     }
