@@ -84,8 +84,14 @@ struct RmFmtTable;
 
 typedef struct RmSession {
     RmSettings *settings;
+
+    /* Stores for RmFile during traversal, preproces and shredder */
     struct RmFileTables *tables;
+
+    /* Table of mountpoints used in the system */
     struct RmMountTable *mounts;
+
+    /* Output formatting control */
     struct RmFmtTable *formats;
 
     /* Counters for printing useful statistics */
@@ -93,24 +99,51 @@ typedef struct RmSession {
     guint64 total_lint_size;
     guint64 dup_counter;
     guint64 dup_group_counter;
-
     guint64 ignored_files;
     guint64 ignored_folders;
-
     guint64 other_lint_cnt;
 
+    /* flag indicating if rmlint was aborted early */
     volatile bool aborted;
 
     GTimer *timer;
+
+    /* Debugging counters */
     glong offset_fragments;
     glong offsets_read;
     glong offset_fails;
 } RmSession;
 
+/**
+ * @brief Reset RmSettings to default settings and all other vars to 0.
+ */
 void rm_set_default_settings(RmSettings *settings);
+
+/**
+ * @brief Initialize session according to settings.
+ */
 void rm_session_init(RmSession *session, RmSettings *settings);
+
+/**
+ * @brief Clear all memory allocated by rm_session_init.
+ */
 void rm_session_clear(RmSession *session);
+
+/**
+ * @brief Set the abort flag of RmSession. 
+ *
+ * This flag is checked periodically on strategic points,
+ * leading to an early but planned exit.
+ *
+ * Threadsafe.
+ */
 void rm_session_abort(RmSession *session);
+
+/**
+ * @brief Check if rmlint was aborted early.
+ *
+ * Threadsafe.
+ */
 bool rm_session_was_aborted(RmSession *session);
 
 /* Maybe colors, for use outside of the rm_log macros,
