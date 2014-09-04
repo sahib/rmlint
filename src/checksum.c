@@ -53,17 +53,17 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_MURMUR256;
     } else if(!strcasecmp(string, "sha1")) {
         return RM_DIGEST_SHA1;
-    } else if(!strcasecmp(string, "murmur")) {
-        return RM_DIGEST_MURMUR;
     } else if(!strcasecmp(string, "spooky32")) {
         return RM_DIGEST_SPOOKY32;
     } else if(!strcasecmp(string, "spooky64")) {
         return RM_DIGEST_SPOOKY64;
-    } else if(!strcasecmp(string, "spooky")) {
+    } else if(!strcasecmp(string, "murmur") || !strcasecmp(string, "murmur128")) {
+        return RM_DIGEST_MURMUR;
+    } else if(!strcasecmp(string, "spooky") || !strcasecmp(string, "spooky128")) {
         return RM_DIGEST_SPOOKY;
-    } else if(!strcasecmp(string, "city")) {
+    } else if(!strcasecmp(string, "city") || !strcasecmp(string, "city128")) {
         return RM_DIGEST_CITY;
-    } else if(!strcasecmp(string, "bastard")) {
+    } else if(!strcasecmp(string, "bastard")|| !strcasecmp(string, "bastard128")) {
         return RM_DIGEST_BASTARD;
     } else {
         return RM_DIGEST_UNKNOWN;
