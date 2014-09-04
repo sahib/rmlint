@@ -136,7 +136,10 @@ static void rm_traverse_file(
         }
     }
 
-    RmFile *file = rm_file_new(path, statp, file_type, is_prefd, path_index);
+    RmFile *file = rm_file_new(
+        settings->lock_files, path, statp, file_type, is_prefd, path_index
+    );
+
     g_mutex_lock(&trav_session->lock);
     {
         trav_session->session->total_files += rm_file_tables_insert(session, file);

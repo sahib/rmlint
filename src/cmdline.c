@@ -463,6 +463,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
             {"no-confirm-settings" ,  no_argument       ,  0 ,  'Q'},
+            {"flock-files"         ,  no_argument       ,  0 ,  'z'},
+            {"no-flock-files"      ,  no_argument       ,  0 ,  'Z'},
             {"help"                ,  no_argument       ,  0 ,  'h'},
             {"version"             ,  no_argument       ,  0 ,  'H'},
             {0, 0, 0, 0}
@@ -471,7 +473,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMlLqQhH",
+                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMlLqQhHzZ",
                      long_options, &option_index
                  );
 
@@ -594,6 +596,12 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'P':
             settings->paranoid -= 1;
+            break;
+        case 'z':
+            settings->lock_files = true;
+            break;
+        case 'Z':
+            settings->lock_files = false;
             break;
         default:
             return false;

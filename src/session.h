@@ -52,6 +52,7 @@ typedef struct RmSettings {
     bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
     bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
     bool limits_specified;
+    bool lock_files;             /* if set, flock(2) each file before proceeding */
 
     int depth;
     int verbosity;

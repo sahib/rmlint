@@ -120,6 +120,8 @@ typedef struct RmFile {
      */
     guint64 seek_offset;
 
+    /* unlock (with flock(2)) the file on destroy? */
+    bool unlock_file;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
     RmFileState status;
@@ -156,7 +158,7 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(
-    const char *path, struct stat *statp, RmLintType type,
+    bool lock_file, const char *path, struct stat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 );
 

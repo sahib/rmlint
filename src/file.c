@@ -26,8 +26,21 @@
 #include "file.h"
 #include "utilities.h"
 
+#include <unistd.h>
+#include <sys/file.h>
+
+static void rm_file_set_lock_flags(const char *path, int flags) {
+    int fd = 0;
+    if((fd = open(path, R_OK)) > 0) {
+        if(flock(fd, flags) != 0) {
+            rm_log_perror("flock(2) failed");
+        }
+        close(fd);
+    }
+}
+
 RmFile *rm_file_new(
-    const char *path, struct stat *statp, RmLintType type,
+    bool lock_file, const char *path, struct stat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 ) {
     RmFile *self = g_slice_new0(RmFile);
@@ -50,15 +63,22 @@ RmFile *rm_file_new(
     self->hardlinks.has_non_prefd = FALSE;
     self->hardlinks.has_prefd = FALSE;
 
+    if(lock_file) {
+        rm_file_set_lock_flags(path, LOCK_EX);
+        self->unlock_file = true;
+    }
+
     return self;
 }
 
 void rm_file_destroy(RmFile *file) {
-    g_free(file->path);
-
     if (file->digest) {
         rm_digest_free(file->digest);
         file->digest = NULL;
+    }
+
+    if(file->unlock_file) {
+        rm_file_set_lock_flags(file->path, LOCK_UN);
     }
 
     if (file->disk_offsets) {
@@ -68,5 +88,6 @@ void rm_file_destroy(RmFile *file) {
         g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
     }
 
+    g_free(file->path);
     g_slice_free(RmFile, file);
 }
