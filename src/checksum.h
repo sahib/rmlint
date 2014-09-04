@@ -54,7 +54,7 @@ typedef enum RmDigestType {
 typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
-        uint128 *rm_checksum; //uint128 hash[_RM_HASH_LEN / 16]
+        uint128 *checksum;
     };
     RmDigestType type;
     gsize bytes;
