@@ -47,16 +47,6 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
     RmSettings *settings = session->settings;
 
     g_assert(settings);
-    g_assert(settings->namecluster == 0);
-
-    if (session->settings->namecluster) {
-        tables->name_table = g_hash_table_new_full(
-                                 g_str_hash, g_str_equal,
-                                 g_free, (GDestroyNotify)g_list_free
-                             );
-    } else {
-        g_assert(tables->name_table ==  NULL);
-    }
 
     /* table->other_lint needs no initialising*/
     tables->mounts = session->mounts;
@@ -83,9 +73,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->orig_table);
         g_hash_table_unref(tables->orig_table);
 
-        if (tables->name_table) {
-            g_hash_table_unref(tables->name_table);
-        }
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
@@ -269,54 +256,6 @@ static gboolean rm_handle_hardlinks(gpointer key, RmFile *file, RmSession *sessi
     return rm_handle_other_lint(file, session);
 }
 
-static void handle_double_base_file(RmSession *session, RmFile *file) {
-    file->lint_type = RM_LINT_TYPE_BASE;
-    rm_fmt_write(session->formats, file);
-}
-
-static int find_double_bases(RmSession *session) {
-    // TODO:  Finish re-write of this (got part way then realised I didn't fully understand what we are trying to do */
-    bool header_printed = false;
-    int num_found = 0;
-
-    GHashTableIter iter;
-    gpointer key, value;
-
-    GHashTable *name_table = session->tables->name_table;
-
-    g_hash_table_iter_init(&iter, name_table);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-
-        bool node_handled = false;
-        GList *list = value;
-        g_assert(list);
-
-        if (list->next) {
-            /* list is at least 2 files long */
-            while (list) {
-                RmFile *file = list->data;
-                if(!header_printed) {
-                    rm_log_error("\n%s#"RESET" Double basename(s):\n", GREEN);
-                    header_printed = true;
-                }
-
-                if(!node_handled) {
-                    node_handled = true;
-                    handle_double_base_file(session, file);
-                    num_found++;
-                }
-
-                list = list->next;
-            }
-        } else {
-            /* only one file in list */
-            g_hash_table_remove(name_table, &key);
-        }
-    }
-
-    g_hash_table_destroy(name_table);
-    return num_found;
-}
 
 int cmp_reverse_alphabetical(char *a, char *b) {
     return strcmp(b, a);
@@ -380,10 +319,4 @@ void rm_preprocess(RmSession *session) {
         return;
     }
 
-    if(settings->namecluster) {
-        //TODO/FIXME: need to clarify the workflow for double bases and the potential collision with duplicates search
-        session->other_lint_cnt += find_double_bases(session);
-        rm_log_error("\n");
-        rm_log_error("Double basenames finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
-    }
 }
