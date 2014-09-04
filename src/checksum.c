@@ -435,16 +435,16 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, _U double buf_
     unsigned char *f_map = NULL;
 
 
-    if((fd = open(file, O_RDONLY)) == -1) {
-        perror("ERROR:sys:open()");
+    if((fd = rm_sys_open(file, O_RDONLY)) == -1) {
+        perror("ERROR:sys:rm_sys_open()");
         return 0;
     }
 
     RmDigest digest;
     rm_digest_init(&digest, type, 0, 0);
 
-    struct stat stat_buf;
-    stat(file, &stat_buf);
+    RmStat stat_buf;
+    rm_sys_stat(file, &stat_buf);
 
     f_map = mmap(NULL, stat_buf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 
@@ -482,7 +482,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
     rm_digest_init(&digest, type, 0, 0);
 
     int bytes = 0;
-    int fd = open(file, O_RDONLY);
+    int fd = rm_sys_open(file, O_RDONLY);
     while((bytes = readv(fd, readvec, N)) > 0) {
         int blocks = bytes / S + 1;
         int remainder = bytes % S;

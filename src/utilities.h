@@ -31,6 +31,13 @@
 #include <stdbool.h>
 #include <linux/fiemap.h>
 
+typedef struct stat64 RmStat;
+
+int rm_sys_stat(const char *path, RmStat *buf);
+
+int rm_sys_lstat(const char *path, RmStat *buf);
+
+int rm_sys_open(const char *path, int mode);
 
 /////////////////////////////////////
 //   UID/GID VALIDITY CHECKING     //
@@ -86,7 +93,7 @@ char *rm_util_strsub(const char *string, const char *subs, const char *with);
  *
  * @return the appropiate RmLintType for the file
  */
-int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist);
+int rm_util_uid_gid_check(RmStat *statp, RmUserGroupNode **userlist);
 
 /**
  * @brief Check if a file is a binary that is not stripped.
@@ -96,7 +103,7 @@ int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist);
  *
  * @return: if it is a binary with debug symbols.
   */
-bool rm_util_is_nonstripped(const char *path, struct stat *statp);
+bool rm_util_is_nonstripped(const char *path, RmStat *statp);
 
 /**
  * @brief Get the basename part of the file. It does not change filename.
@@ -155,7 +162,7 @@ void rm_mounts_table_destroy(RmMountTable *self);
  * This operation has constant time.
  *
  * @param self the table to lookup from.
- * @param device the dev_t of a file, e.g. looked up from stat(2)
+ * @param device the dev_t of a file, e.g. looked up from rm_sys_stat(2)
  *
  * @return true if it is non a nonrational device.
  */
@@ -174,7 +181,7 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
 char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device);
 
 /**
- * @brief Same as above, but calls stat(2) on path for you.
+ * @brief Same as above, but calls rm_sys_stat(2) on path for you.
  */
 bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path);
 
@@ -182,14 +189,14 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path);
  * @brief Get the disk behind the partition.
  *
  * @param self the table to lookup from.
- * @param partition the dev_t of a partition (sda1 -> 8:1), e.g. looked up from stat(2)
+ * @param partition the dev_t of a partition (sda1 -> 8:1), e.g. looked up from rm_sys_stat(2)
  *
  * @return the dev_t of the whole disk. (sda 8:0)
  */
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition);
 
 /**
- * @brief Same as above, but calls stat(2) on path for you.
+ * @brief Same as above, but calls rm_sys_stat(2) on path for you.
  */
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
 

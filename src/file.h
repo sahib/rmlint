@@ -158,7 +158,7 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(
-    bool lock_file, const char *path, struct stat *statp, RmLintType type,
+    bool lock_file, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 );
 

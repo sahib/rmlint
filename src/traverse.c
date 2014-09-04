@@ -41,7 +41,7 @@
 ///////////////////////////////////////////
 
 typedef struct RmTravBuffer {
-    struct stat stat_buf;  /* stat(2) information about the directory */
+    RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
     const char *path;      /* The path of the directory, as passed on command line. */
     bool is_prefd;         /* Was this file in a preferred path? */
     guint64 path_index;    /* Index of path, as passed on the commadline */
@@ -57,9 +57,9 @@ static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_
 
     int stat_state;
     if(session->settings->followlinks) {
-        stat_state = stat(path, &self->stat_buf);
+        stat_state = rm_sys_stat(path, &self->stat_buf);
     } else {
-        stat_state = lstat(path, &self->stat_buf);
+        stat_state = rm_sys_stat(path, &self->stat_buf);
     }
 
     if(stat_state == -1) {
@@ -108,7 +108,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 //////////////////////
 
 static void rm_traverse_file(
-    RmTravSession *trav_session, struct stat *statp,
+    RmTravSession *trav_session, RmStat *statp,
     char *path, bool is_prefd, unsigned long path_index, RmLintType file_type
 ) {
     RmSession *session = trav_session->session;
@@ -226,7 +226,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_DP:        /* postorder directory */
                 if (is_emptydir[p->fts_level + 1] == 'E' && settings->findemptydirs) {
-                    rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_EDIR);
+                    rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_EDIR);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -237,14 +237,14 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 if (settings->findbadlinks) {
-                    rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_BLNK);
+                    rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_BLNK);
                 }
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
             case FTS_W:         /* whiteout object */
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
-            case FTS_NS:        /* stat(2) failed */
+            case FTS_NS:        /* rm_sys_stat(2) failed */
                 clear_emptydir_flags = true; /*current dir not empty*/
                 rm_log_warning(RED"Warning: cannot stat file %s (skipping)\n"RESET, p->fts_path);
                 break;
@@ -259,11 +259,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
                 }
                 break;
-            case FTS_NSOK:      /* no stat(2) requested */
+            case FTS_NSOK:      /* no rm_sys_stat(2) requested */
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /* current dir not empty*/
-                rm_traverse_file(trav_session, p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
+                rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */

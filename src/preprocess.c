@@ -178,7 +178,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
             if (1
                     && (strcmp(rm_util_basename(file->path), rm_util_basename(iter_file->path)) == 0)
                     /* double paths and loops will always have same basename
-                     * (cheap call to potentially avoid the next call which requires a stat()) */
+                     * (cheap call to potentially avoid the next call which requires a rm_sys_stat()) */
                     && (rm_util_parent_node(file->path) == rm_util_parent_node(iter_file->path))
                     /* double paths and loops will always have same dir inode number*/
                ) {

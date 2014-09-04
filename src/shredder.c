@@ -962,7 +962,7 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
     g_assert(a->file_size == b->file_size);
 
-    int fd_a = open(a->path, O_RDONLY);
+    int fd_a = rm_sys_open(a->path, O_RDONLY);
     if(fd_a == -1) {
         rm_log_perror("Unable to open file_a for paranoia");
         return false;
@@ -970,7 +970,7 @@ static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
         posix_fadvise(fd_a, 0, 0, SHRED_FADVISE_FLAGS);
     }
 
-    int fd_b = open(b->path, O_RDONLY);
+    int fd_b = rm_sys_open(b->path, O_RDONLY);
     if(fd_b == -1) {
         rm_log_perror("Unable to open file_b for paranoia");
         return false;
@@ -1100,7 +1100,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         goto finish;
     }
 
-    fd = open(file->path, O_RDONLY);
+    fd = rm_sys_open(file->path, O_RDONLY);
     if(fd == -1) {
         perror("open failed");
         file->status = RM_FILE_STATE_IGNORE;

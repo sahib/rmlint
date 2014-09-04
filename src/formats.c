@@ -41,7 +41,7 @@ const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
     return table[(state < RM_PROGRESS_STATE_N) ? state : RM_PROGRESS_STATE_N];
 }
 
-RmFmtTable *rm_fmt_open(RmSession *session) {
+RmFmtTable *rm_fmt_rm_sys_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
 
     self->name_to_handler = g_hash_table_new_full(
@@ -213,7 +213,7 @@ void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
 
 int main(void) {
     RmSession session;
-    RmFmtTable *table = rm_fmt_open(&session);
+    RmFmtTable *table = rm_fmt_rm_sys_open(&session);
     if(!rm_fmt_add(table, "progressbar", "stdout")) {
         rm_log_error("You've screwed up.\n");
         return EXIT_FAILURE;

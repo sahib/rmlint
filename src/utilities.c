@@ -58,6 +58,21 @@
 #include <blkid.h>
 #endif
 
+////////////////////////////////////
+//       SYSCALL WRAPPERS         //
+////////////////////////////////////
+
+int rm_sys_stat(const char *path, RmStat *buf) {
+    return stat64(path, buf);
+}
+
+int rm_sys_lstat(const char *path, RmStat *buf) {
+    return lstat64(path, buf);
+}
+
+int rm_sys_open(const char *path, int mode) {
+    return open(path, mode | O_LARGEFILE);
+}
 
 ////////////////////////////////////
 //       GENERAL UTILITES         //
@@ -93,8 +108,8 @@ ino_t rm_util_parent_node(const char *path) {
     char *parent_path = g_strdup(dirname(dummy));
     g_free(dummy);
 
-    struct stat stat_buf;
-    if(!stat(parent_path, &stat_buf)) {
+    RmStat stat_buf;
+    if(!rm_sys_stat(parent_path, &stat_buf)) {
         g_free(parent_path);
         return stat_buf.st_ino;
     } else {
@@ -105,7 +120,7 @@ ino_t rm_util_parent_node(const char *path) {
 
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
-int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist) {
+int rm_util_uid_gid_check(RmStat *statp, RmUserGroupNode **userlist) {
     bool has_gid, has_uid;
     if (rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid, &has_gid)) {
         if(has_gid == false && has_uid == false) {
@@ -121,7 +136,7 @@ int rm_util_uid_gid_check(struct stat *statp, RmUserGroupNode **userlist) {
 }
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
-bool rm_util_is_nonstripped(const char *path, struct stat *statp) {
+bool rm_util_is_nonstripped(const char *path, RmStat *statp) {
     bool is_ns = false;
     g_return_val_if_fail(path, false);
 
@@ -142,7 +157,7 @@ bool rm_util_is_nonstripped(const char *path, struct stat *statp) {
     GElf_Shdr shdr;
 
     /* Open ELF file to obtain file descriptor */
-    if((fd = open(path, O_RDONLY)) == -1) {
+    if((fd = rm_sys_open(path, O_RDONLY)) == -1) {
         rm_log_warning("Error opening file '%s' for nonstripped test: ", path);
         rm_log_perror("");
         return 0;
@@ -364,8 +379,8 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 
     struct mntent *entry = NULL;
     while((entry = getmntent(mnt_file))) {
-        struct stat stat_buf_folder;
-        if(stat(entry->mnt_dir, &stat_buf_folder) == -1) {
+        RmStat stat_buf_folder;
+        if(rm_sys_stat(entry->mnt_dir, &stat_buf_folder) == -1) {
             continue;
         }
 
@@ -374,10 +389,10 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         char diskname[PATH_MAX];
         memset(diskname, 0, sizeof(diskname));
 
-        struct stat stat_buf_dev;
-        if(stat(entry->mnt_fsname, &stat_buf_dev) == -1) {
+        RmStat stat_buf_dev;
+        if(rm_sys_stat(entry->mnt_fsname, &stat_buf_dev) == -1) {
             char *nfs_marker = NULL;
-            /* folder stat() is ok but devname stat() is not; this happens for example
+            /* folder rm_sys_stat() is ok but devname rm_sys_stat() is not; this happens for example
              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
              * */
             if(rm_mounts_is_ramdisk(entry->mnt_fsname)) {
@@ -402,7 +417,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         } else {
 #if HAVE_BLKID
             if(blkid_devno_to_wholedisk(stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
-                /* folder and devname stat() are ok but blkid failed; this happens when?
+                /* folder and devname rm_sys_stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
                 rm_log_error(RED"blkid_devno_to_wholedisk failed for %s\n"RESET, entry->mnt_fsname);
@@ -484,8 +499,8 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
 }
 
 bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
-    struct stat stat_buf;
-    if(stat(path, &stat_buf) == -1) {
+    RmStat stat_buf;
+    if(rm_sys_stat(path, &stat_buf) == -1) {
         return -1;
     }
     return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
@@ -501,8 +516,8 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
 }
 
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
-    struct stat stat_buf;
-    if(stat(path, &stat_buf) == -1) {
+    RmStat stat_buf;
+    if(rm_sys_stat(path, &stat_buf) == -1) {
         return 0;
     }
 
@@ -557,7 +572,7 @@ static void rm_offset_free_func(RmOffsetEntry *entry) {
 }
 
 RmOffsetTable rm_offset_create_table(const char *path) {
-    int fd = open(path, O_RDONLY);
+    int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in setup_fiemap_extents\n", path);
         return NULL;
@@ -735,14 +750,14 @@ int main(int argc, char **argv) {
 #define yes(v) (v) ? "True" : "False"
 
 int main(int argc, char *argv[]) {
-    struct stat stat_buf;
+    RmStat stat_buf;
     bool has_gid, has_uid;
     RmUserGroupNode **list = rm_userlist_new();
     if(argc < 2) {
         puts("Usage: prog <path>");
         return EXIT_FAILURE;
     }
-    if(stat(argv[1], &stat_buf) != 0) {
+    if(rm_sys_stat(argv[1], &stat_buf) != 0) {
         return EXIT_FAILURE;
     }
     printf("File has UID %"LLU" and GID %"LLU"\n",

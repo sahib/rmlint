@@ -107,7 +107,7 @@ typedef struct RmFmtHandler {
  *
  * @return A newly allocated RmFmtTable.
  */
-RmFmtTable *rm_fmt_open(RmSession *session);
+RmFmtTable *rm_fmt_rm_sys_open(RmSession *session);
 
 /**
  * @brief Close all open file, but write a footer to them if the handler wants it.

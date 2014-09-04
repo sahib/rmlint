@@ -31,7 +31,7 @@
 
 static void rm_file_set_lock_flags(const char *path, int flags) {
     int fd = 0;
-    if((fd = open(path, R_OK)) > 0) {
+    if((fd = rm_sys_open(path, R_OK)) > 0) {
         if(flock(fd, flags) != 0) {
             rm_log_perror("flock(2) failed");
         }
@@ -40,7 +40,7 @@ static void rm_file_set_lock_flags(const char *path, int flags) {
 }
 
 RmFile *rm_file_new(
-    bool lock_file, const char *path, struct stat *statp, RmLintType type,
+    bool lock_file, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 ) {
     RmFile *self = g_slice_new0(RmFile);

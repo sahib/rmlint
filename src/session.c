@@ -69,7 +69,7 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->mounts = rm_mounts_table_new();
     session->tables = rm_file_tables_new(session);
 
-    session->formats = rm_fmt_open(session);
+    session->formats = rm_fmt_rm_sys_open(session);
 
     session->offsets_read = 0;
     session->offset_fragments = 0;
