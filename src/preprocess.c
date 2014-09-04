@@ -318,6 +318,9 @@ static int find_double_bases(RmSession *session) {
     return num_found;
 }
 
+int cmp_reverse_alphabetical(char *a, char *b) {
+    return strcmp(b, a);
+}
 
 static guint64 handle_other_lint(RmSession *session) {
     guint64 num_handled = 0;
@@ -325,7 +328,13 @@ static guint64 handle_other_lint(RmSession *session) {
     RmFileTables *tables = session->tables;
 
     for(guint64 type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
-        /* TODO: RM_LINT_TYPE_EDIR list needs sorting into reverse alphabetical order */
+        if (type == RM_LINT_TYPE_EDIR) {
+            tables->other_lint[type] = g_list_sort(
+                                           tables->other_lint[type],
+                                           (GCompareFunc)cmp_reverse_alphabetical
+                                       );
+        }
+
         GList *list = tables->other_lint[type];
         for(GList *iter = list; iter; iter = iter->next) {
             RmFile *file = iter->data;
