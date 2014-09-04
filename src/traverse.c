@@ -96,7 +96,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
                 trav_session->session->total_files,
                 trav_session->session->ignored_files,
                 trav_session->session->ignored_folders
-    );
+               );
 
     rm_userlist_destroy(trav_session->userlist);
     g_mutex_clear(&trav_session->lock);
@@ -136,7 +136,7 @@ static void rm_traverse_file(
         }
     }
 
-    RmFile *file = rm_file_new(path, statp, file_type, settings->checksum_type, is_prefd, path_index);
+    RmFile *file = rm_file_new(path, statp, file_type, is_prefd, path_index);
     g_mutex_lock(&trav_session->lock);
     {
         trav_session->session->total_files += rm_file_tables_insert(session, file);

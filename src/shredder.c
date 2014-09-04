@@ -16,7 +16,6 @@
 #include "shredder.h"
 #include <inttypes.h>
 
-//TODO: for hardlinked originals, only hash one of each set
 
 /* This is the scheduler of rmlint.
  *
@@ -303,11 +302,6 @@ typedef struct RmMainTag {
     guint32 totalfiles;
 } RmMainTag;
 
-/////////// RmCkSumKey ////////////////
-
-typedef struct RmCksumKey {
-    guint8 data[_RM_HASH_LEN];
-} RmCksumKey;
 
 /////////// RmShredDevice ////////////////
 
@@ -404,8 +398,12 @@ typedef struct RmShredGroup {
     /* needed because different device threads read and write to this structure */
     GMutex lock;
 
-    /* key which distinguishes this group from its siblings */
-    RmCksumKey checksum;
+    /* checksum structure taken from first file to enter the group.  This allows
+     * digests to be released from RmFiles and memory freed up until they
+     * are required again for further hashing.*/
+    RmDigest *digest;
+    /* checksum result (length is given by digest->bytes) */
+    guint8 *checksum;
 
     /* Reference to main */
     RmMainTag *main;
@@ -460,10 +458,18 @@ void rm_shred_device_free(RmShredDevice *self) {
 /* prototype for rm_shred_group_make_orphan since it and rm_shred_group_free reference each other  */
 void rm_shred_group_make_orphan(RmShredGroup *self);
 
-RmShredGroup *rm_shred_group_new(RmFile *file) {
+/* allocate and initialise new RmShredGroup
+ */
+RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
     RmShredGroup *self = g_slice_new0(RmShredGroup);
 
-    rm_digest_steal_buffer(&file->digest, self->checksum.data, sizeof(self->checksum));
+    if (file->digest) {
+        self->digest = rm_digest_copy(file->digest);
+        self->checksum = key;
+    } else {
+        /* initial groups have no checksum */
+    }
+
     self->parent = file->shred_group;
 
     if(self->parent) {
@@ -484,6 +490,8 @@ RmShredGroup *rm_shred_group_new(RmFile *file) {
     return self;
 }
 
+/* Unlink RmFile from device queue
+ */
 void rm_shred_discard_file(RmFile *file) {
     RmShredDevice *device = file->device;
     g_mutex_lock(&(device->lock));
@@ -495,6 +503,8 @@ void rm_shred_discard_file(RmFile *file) {
     rm_file_destroy(file);
 }
 
+/* Free RmShredGroup and any dormant files still in its queue
+ */
 void rm_shred_group_free(RmShredGroup *self) {
     g_assert(self->parent == NULL);  // children should outlive their parents!
 
@@ -519,6 +529,11 @@ void rm_shred_group_free(RmShredGroup *self) {
     /** give our children the bad news */
     g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
     g_queue_free(self->children);
+
+    if (self->digest) {
+        g_slice_free1(self->digest->bytes, self->checksum);
+        rm_digest_free(self->digest);
+    }
 
     /** clean up */
     g_mutex_clear(&self->lock);
@@ -601,8 +616,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpoi
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
-    if (file->device->is_rotational
-            /*TODO: && !file->hardlinked_original */) {
+    if (file->device->is_rotational) {
 
         g_assert(!file->disk_offsets);
         file->disk_offsets = rm_offset_create_table(file->path);
@@ -644,12 +658,13 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 //    RmShredGroup UTILITIES    //
 //////////////////////////////////
 
-/* compares checksums of a RmShredGroup and a RmFileSnapshot */
-gint rm_cksum_matches_group(RmShredGroup *group, RmCksumKey *key) {
+/* compares checksum with that of a RmShredGroup with a  */
+gint rm_cksum_matches_group(RmShredGroup *group, guint8 *checksum) {
     g_assert(group);
-    g_assert(key);
-    return memcmp(&group->checksum, key->data, sizeof(RmCksumKey));
+    g_assert(checksum);
+    return memcmp(group->checksum, checksum, group->digest->bytes);
 }
+
 
 /* Checks whether group qualifies as duplicate candidate (ie more than
  * two members and meets has_pref and needs_pref criteria).
@@ -685,18 +700,18 @@ void rm_shred_group_make_orphan(RmShredGroup *self) {
     g_mutex_unlock(&(self->lock));
 
     switch (status) {
-    /* decide fate of files, triggered by death of parent.  
+    /* decide fate of files, triggered by death of parent.
      * NOTE: If files are still hashing, then fate will be decided later via
      * rm_shred_group_unref
      * */
     case RM_SHRED_GROUP_DORMANT:
         /* group doesn't need hashing, and not expecting any more (since
-         * parent is dead), so this group is now also dead 
-         * NOTE: there is no potential race here 
-         * because parent can only die once - TODO: double check 
+         * parent is dead), so this group is now also dead
+         * NOTE: there is no potential race here
+         * because parent can only die once
          * */
-        rm_shred_group_free(self); 
-						
+        rm_shred_group_free(self);
+
         break;
     case RM_SHRED_GROUP_FINISHING:
         /* groups is finished, and meets criteria for a duplicate group; send it to finisher */
@@ -726,6 +741,12 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     g_mutex_lock(&(shred_group->lock));
     {
         file->shred_group = shred_group;
+
+        /* group owns the digest; file doesn't need its own copy */
+        if (file->digest) {
+            rm_digest_free(file->digest);
+            file->digest = NULL;
+        }
 
         shred_group->has_pref |= file->is_prefd | file->hardlinks.has_prefd;
         shred_group->has_npref |= !file->is_prefd | file->hardlinks.has_non_prefd;
@@ -787,8 +808,7 @@ static gboolean rm_shred_sift(RmFile *file) {
     g_assert(file);
     g_assert(file->shred_group);
 
-    RmCksumKey key;
-    rm_digest_steal_buffer(&file->digest, key.data, sizeof(key.data));
+    guint8 *key = rm_digest_steal_buffer(file->digest);
 
     RmShredGroup *child_group = NULL;
     RmShredGroup *current_group = file->shred_group;
@@ -800,15 +820,16 @@ static gboolean rm_shred_sift(RmFile *file) {
          * create a new group */
         GList *child = g_queue_find_custom(
                            current_group->children,
-                           &key,
+                           key,
                            (GCompareFunc)rm_cksum_matches_group
                        );
 
         if (!child) {
-            child_group = rm_shred_group_new(file);
+            child_group = rm_shred_group_new(file, key);
             g_queue_push_tail(current_group->children, child_group);
         } else {
             child_group = child->data;
+            g_slice_free1(file->digest->bytes, key);
         }
     }
     g_mutex_unlock(&(current_group->lock));
@@ -876,7 +897,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                           );
 
     if (group == NULL) {
-        group = rm_shred_group_new(file);
+        group = rm_shred_group_new(file, NULL);
         g_hash_table_insert(
             session->tables->size_groups,
             GUINT_TO_POINTER(file->file_size), //TODO: check overflow for >4GB files --- XXX-TODO why?
@@ -931,11 +952,6 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
         session->offsets_read - session->offset_fails,
         session->offset_fragments, session->offset_fails
     );
-    //TODO: is this another kind of lint (heavily fragmented files)?
-    // XXX-TODO: What would do against those? Filesystems are usually better
-    // than us fixing this.
-    //DJT-TODO was thinking just give a warning if say average num frags > 2 or any individual
-    //file > 10
 }
 
 /////////////////////////////////
@@ -1176,7 +1192,7 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     g_assert(buffer);
 
     /* Hash buffer->len bytes_read of buffer->data into buffer->file */
-    rm_digest_update(&buffer->file->digest, buffer->data, buffer->len);
+    rm_digest_update(buffer->file->digest, buffer->data, buffer->len);
     buffer->file->hash_offset += buffer->len;
 
     if (buffer->is_last) {
@@ -1298,6 +1314,18 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     while(iter && !rm_session_was_aborted(main->session)) {
         RmFile *file = iter->data;
         guint64 start_offset = file->hash_offset;
+
+        /* initialise hash (or recovery progressive hash so far) */
+        if (!file->digest) {
+            g_assert(file->shred_group);
+            if (!file->shred_group->digest) {
+                /* this is first time */
+                g_assert(file->hash_offset == 0);
+                file->digest = rm_digest_new(main->session->settings->checksum_type, 0, 0); //TODO: seeds?
+            } else {
+                file->digest = rm_digest_copy(file->shred_group->digest);
+            }
+        }
 
         /* hash the next increment of the file */
         rm_shred_read_factory(file, device);

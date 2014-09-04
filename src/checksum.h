@@ -40,6 +40,7 @@ typedef enum RmDigestType {
     RM_DIGEST_SHA512,
     RM_DIGEST_MURMUR256,
     RM_DIGEST_CITY256,
+    RM_DIGEST_BASTARD,
     RM_DIGEST_MURMUR512,
     RM_DIGEST_CITY512
 } RmDigestType;
@@ -53,11 +54,12 @@ typedef enum RmDigestType {
 typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
-        uint128 hash[_RM_HASH_LEN / 16];
+        uint128 *checksum;
     };
     RmDigestType type;
-    guint8 num_128bit_blocks;
+    gsize bytes;
 } RmDigest;
+
 
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
@@ -69,13 +71,18 @@ typedef struct RmDigest {
 RmDigestType rm_string_to_digest_type(const char *string);
 
 /**
- * @brief Init a RmDigest.
+ * @brief Allocate and initialise a RmDigest.
  *
- * @param digest A pointer to a RmDigest.
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
  */
-void rm_digest_init(RmDigest *digest, RmDigestType type, uint64_t seed1, uint64_t seed2);
+RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2);
+
+/**
+ * @brief Deallocate memory assocated with a RmDigest.
+ */
+void rm_digest_free(RmDigest *digest);
+
 
 /**
  * @brief Hash a datablock and add it to the current checksum.
@@ -111,6 +118,33 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
  */
 void rm_digest_finalize(RmDigest *digest);
 
-int rm_digest_steal_buffer(RmDigest *digest, guint8 *buf, gsize buflen);
+/**
+ * @brief steal digest result into allocated memory slice.
+ *
+ * @param digest a pointer to a RmDigest
+ *
+ * @return pointer to result (note: result length will = digest->bytes)
+ */
+guint8 *rm_digest_steal_buffer(RmDigest *digest);
+
+/**
+ * @brief Compare two RmDigest checksums (without modifying them).
+ *
+ * @param a a pointer to a RmDigest
+ * @param b a pointer to another RmDigest.
+ *
+ * @return true if digests match
+ */
+gboolean rm_digest_compare(RmDigest *a, RmDigest *b);
+
+
+/**
+ * @brief Make a copy of a RMDigest.
+ *
+ * @param digest a pointer to a RmDigest
+ *
+ * @return copy of digest
+ */
+RmDigest *rm_digest_copy(RmDigest *digest);
 
 #endif /* end of include guard */
