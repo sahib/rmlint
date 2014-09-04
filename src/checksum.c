@@ -65,34 +65,65 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_SPOOKY;
     } else if(!strcasecmp(string, "city") || !strcasecmp(string, "city128")) {
         return RM_DIGEST_CITY;
-    } else if(!strcasecmp(string, "bastard")|| !strcasecmp(string, "bastard128")) {
+    } else if(!strcasecmp(string, "bastard") || !strcasecmp(string, "bastard256")) {
         return RM_DIGEST_BASTARD;
+    } else if(!strcasecmp(string, "paranoid")) {
+        return RM_DIGEST_PARANOID;
     } else {
         return RM_DIGEST_UNKNOWN;
     }
 }
 
-#define add_seed(digest, seed) {                                                           \
-    if(seed) {                                                                             \
-        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(uint64_t)); \
-    }                                                                                      \
+guint64 rm_digest_paranoia_bytes(void) {
+    return 0.5 * 1024 * 1024;
 }
 
-
-RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
-
-    RmDigest *digest = g_slice_new0(RmDigest);
+static void rm_digest_allocate(RmDigest *self) {
     /* starting values to let us generate up to 4 different hashes in parallel with
-     * different starting seeds: */
-    const uint64 seeds[4] = {
+     * different starting seeds:
+     * */
+    static const guint64 seeds[4] = {
         0x0000000000000000,
         0xf0f0f0f0f0f0f0f0,
         0x3333333333333333,
         0xaaaaaaaaaaaaaaaa
     };
 
+    if(self->checksum == NULL) {
+        if (self->bytes > 0) {
+            const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);
+
+            /* checksum type - allocate memory and initialise */
+            self->checksum = g_slice_alloc0(self->bytes);
+            for (gsize block = 0; block < (self->bytes / 16); block++) {
+                self->checksum[block].first = seeds[block % n_seeds] ^ self->initial_seed1;
+                self->checksum[block].second = seeds[block % n_seeds] ^ self->initial_seed2;
+            }
+        }
+
+        if (self->type == RM_DIGEST_BASTARD) {
+            /* bastard type *always* has *pure* murmur hash for first checksum
+             * and seeded city for second checksum */
+            self->checksum[0].first = self->checksum[0].second = 0;
+        }
+    }
+}
+
+#define ADD_SEED(digest, seed) {                                                           \
+    if(seed) {                                                                             \
+        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(uint64_t)); \
+    }                                                                                      \
+}
+
+RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
+    RmDigest *digest = g_slice_new0(RmDigest);
+
+    digest->checksum = NULL;
     digest->type = type;
     digest->bytes = 0;
+
+    digest->initial_seed1 = seed1;
+    digest->initial_seed2 = seed2;
 
     switch(type) {
     case RM_DIGEST_SPOOKY32:
@@ -103,24 +134,24 @@ RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
         break;
     case RM_DIGEST_MD5:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_MD5);
-        add_seed(digest, seed1);
+        ADD_SEED(digest, seed1);
         digest->bytes = 128 / 8;
         return digest;
 #ifdef G_CHECKSUM_SHA512
     case RM_DIGEST_SHA512:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA512);
-        add_seed(digest, seed1);
+        ADD_SEED(digest, seed1);
         digest->bytes = 512 / 8;
         return digest;
 #endif
     case RM_DIGEST_SHA256:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA256);
-        add_seed(digest, seed1);
+        ADD_SEED(digest, seed1);
         digest->bytes = 256 / 8;
         return digest;
     case RM_DIGEST_SHA1:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA1);
-        add_seed(digest, seed1);
+        ADD_SEED(digest, seed1);
         digest->bytes = 160 / 8;
         return digest;
     case RM_DIGEST_MURMUR512:
@@ -137,25 +168,14 @@ RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
     case RM_DIGEST_CITY:
         digest->bytes = 128 / 8;
         break;
+    case RM_DIGEST_PARANOID:
+        digest->bytes = rm_digest_paranoia_bytes();
+        break;
     default:
         g_assert_not_reached();
     }
 
-    if (digest->bytes > 0) {
-        /* checksum type - allocate memory and initialise */
-        digest->checksum = g_slice_alloc0( digest->bytes );
-        for (gsize block = 0; block < (digest->bytes / 16); block++) {
-            digest->checksum[block].first = seeds[block] ^ seed1;
-            digest->checksum[block].second = seeds[block] ^ seed2;
-        }
-    }
-
-    if (type == RM_DIGEST_BASTARD) {
-        /* bastard type *always* has *pure* murmur hash for first checksum
-         * and seeded city for second checksum */
-        digest->checksum[0].first = digest->checksum[0].second = 0;
-    }
-
+    /* Allocation is done later */
     return digest;
 }
 
@@ -166,7 +186,9 @@ void rm_digest_free(RmDigest *digest) {
     case RM_DIGEST_SHA256:
     case RM_DIGEST_SHA1:
         g_checksum_free(digest->glib_checksum);
+        digest->glib_checksum = NULL;
         break;
+    case RM_DIGEST_PARANOID:
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR256:
@@ -177,7 +199,10 @@ void rm_digest_free(RmDigest *digest) {
     case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-        g_slice_free1(digest->bytes, digest->checksum);
+        if(digest->checksum) {
+            g_slice_free1(digest->bytes, digest->checksum);
+            digest->checksum = NULL;
+        }
         break;
     default:
         g_assert_not_reached();
@@ -186,6 +211,8 @@ void rm_digest_free(RmDigest *digest) {
 }
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size) {
+    rm_digest_allocate(digest);
+
     switch(digest->type) {
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:
@@ -245,14 +272,20 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
         digest->checksum[1] = CityHash128WithSeed((const char *) data, size, digest->checksum[1]);
 #endif
         break;
+    case RM_DIGEST_PARANOID:
+        g_assert(size <= rm_digest_paranoia_bytes());
+        memcpy((char *)digest->checksum, data, size);
+        break;
     default:
         g_assert_not_reached();
     }
 }
 
 RmDigest *rm_digest_copy(RmDigest *digest) {
-    RmDigest *self = NULL;
+    g_assert(digest); 
 
+    RmDigest *self = NULL;
+    rm_digest_allocate(digest);
 
     switch(digest->type) {
     case RM_DIGEST_MD5:
@@ -274,11 +307,10 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_BASTARD:
+    case RM_DIGEST_PARANOID:
         self = rm_digest_new(digest->type, 0, 0);
-        for (guint8 block = 0; block < ( digest->bytes / 16 ); block++) {
-            self->checksum[block].first = digest->checksum[block].first;
-            self->checksum[block].second = digest->checksum[block].second;
-        }
+        rm_digest_allocate(self);
+        memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
         break;
     default:
         g_assert_not_reached();
@@ -288,10 +320,11 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
 }
 
 guint8 *rm_digest_steal_buffer(RmDigest *digest) {
-
     guint8 *result = g_slice_alloc0(digest->bytes);
     RmDigest *copy = NULL;
-    gsize buflen;  
+    gsize buflen = digest->bytes;   
+
+    rm_digest_allocate(digest);
 
     switch(digest->type) {
     case RM_DIGEST_MD5:
@@ -306,7 +339,6 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
         rm_digest_finalize(copy);
         g_slice_free(RmDigest, copy);
         break;
-
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_SPOOKY:
@@ -317,6 +349,7 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_BASTARD:
+    case RM_DIGEST_PARANOID:
         memcpy(result, digest->checksum, digest->bytes);
         break;
 
@@ -329,7 +362,6 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
 
 int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     static const char *hex = "0123456789abcdef";
-
     guint8 *input = rm_digest_steal_buffer(digest);
 
     for(gsize i = 0; i < digest->bytes; ++i) {
@@ -347,7 +379,6 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
 }
 
 gboolean rm_digest_compare(RmDigest *a, RmDigest *b) {
-
     if(a->bytes != b->bytes) {
         return a->bytes < b->bytes;
     } else {
@@ -374,6 +405,7 @@ void rm_digest_finalize(RmDigest *digest) {
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR512:
+    case RM_DIGEST_PARANOID:
         break;
     default:
         g_assert_not_reached();

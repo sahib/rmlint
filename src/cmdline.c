@@ -609,7 +609,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->checksum_type = RM_DIGEST_SPOOKY64;
             break;
         case 0:
-            /* leave users choice of -a */
+            /* leave users choice of -a (default) */
             break;
         case 1:
             settings->checksum_type = RM_DIGEST_BASTARD;

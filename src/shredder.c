@@ -291,6 +291,7 @@ typedef struct RmBuffer {
 } RmBuffer;
 
 /////////* The main extra data for the scheduler *///////////
+
 typedef struct RmMainTag {
     RmSession *session;
     RmBufferPool *mem_pool;
@@ -301,7 +302,6 @@ typedef struct RmMainTag {
     gint32 page_size;
     guint32 totalfiles;
 } RmMainTag;
-
 
 /////////// RmShredDevice ////////////////
 
@@ -455,7 +455,7 @@ void rm_shred_device_free(RmShredDevice *self) {
 
 /////////// RmShredGroup ////////////////
 
-/* prototype for rm_shred_group_make_orphan since it and rm_shred_group_free reference each other  */
+/* prototype for rm_shred_group_make_orphan since it and rm_shred_group_free reference each other */
 void rm_shred_group_make_orphan(RmShredGroup *self);
 
 /* allocate and initialise new RmShredGroup
@@ -506,7 +506,7 @@ void rm_shred_discard_file(RmFile *file) {
 /* Free RmShredGroup and any dormant files still in its queue
  */
 void rm_shred_group_free(RmShredGroup *self) {
-    g_assert(self->parent == NULL);  // children should outlive their parents!
+    g_assert(self->parent == NULL);  /* children should outlive their parents! */
 
     /** discard RmFiles which failed file duplicate criteria */
     if (self->held_files) {
@@ -537,7 +537,6 @@ void rm_shred_group_free(RmShredGroup *self) {
 
     /** clean up */
     g_mutex_clear(&self->lock);
-    //g_free(self->checksum);
     g_slice_free(RmShredGroup, self);
 }
 
@@ -662,9 +661,9 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 gint rm_cksum_matches_group(RmShredGroup *group, guint8 *checksum) {
     g_assert(group);
     g_assert(checksum);
+
     return memcmp(group->checksum, checksum, group->digest->bytes);
 }
-
 
 /* Checks whether group qualifies as duplicate candidate (ie more than
  * two members and meets has_pref and needs_pref criteria).
@@ -673,11 +672,11 @@ gint rm_cksum_matches_group(RmShredGroup *group, guint8 *checksum) {
 static char rm_shred_group_get_status_locked(RmShredGroup *group) {
     if (!group->status) {
         if (1
-                && group->remaining >= 2  // it takes 2 to tango
+                && group->remaining >= 2  /* it takes 2 to tango */
                 && (group->has_pref || !group->needs_pref)
-                //we have at least one file from preferred path, or we don't care
+                /* we have at least one file from preferred path, or we don't care */
                 && (group->has_npref || !group->needs_npref)
-                //we have at least one file from non-pref path, or we don't care
+                /* we have at least one file from non-pref path, or we don't care */
            ) {
             /* group can go active */
             if (group->hash_offset < group->file_size) {
@@ -742,6 +741,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     {
         file->shred_group = shred_group;
 
+        // TODO: csv formatter (or others) might need the checksum for display.
         /* group owns the digest; file doesn't need its own copy */
         if (file->digest) {
             rm_digest_free(file->digest);
@@ -1038,6 +1038,8 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;
     g_assert(group);
 
+    guint32 result = 0;
+
     g_mutex_lock(&group->lock);
     {
         /* calculate next_offset property of the RmShredGroup, if not already done */
@@ -1063,11 +1065,17 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
 
     if (bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
         file->status = RM_FILE_STATE_FRAGMENT;
-        return(bytes_to_next_fragment);
+        result = (bytes_to_next_fragment);
     } else {
         file->status = RM_FILE_STATE_NORMAL;
-        return (group->next_offset - file->seek_offset);
+        result = (group->next_offset - file->seek_offset);
     }
+
+    if(file->digest->type == RM_DIGEST_PARANOID) {
+        result = MIN(result, rm_digest_paranoia_bytes());
+    }
+
+    return result;
 }
 
 /* Read from file and send to hasher
@@ -1117,7 +1125,6 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     const gint16 N_BUFFERS = 4;
 
     /* Give the kernel scheduler some hints */
-    // XXX-TODO: Benchmark and think of placing this somehwere earlier.
     posix_fadvise(fd, file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
 
     /* Initialize the buffers to begin with.
@@ -1334,7 +1341,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
             if (file->status == RM_FILE_STATE_FRAGMENT) {
                 /* file is not ready for checking yet; push it back into the queue */
-                //~ rm_log_error("fragment read for %s\n", file->path);
                 rm_shred_push_queue_sorted(file);
             } else if(rm_shred_sift(file)) {
                 /* continue hashing same file, ie no change to iter */

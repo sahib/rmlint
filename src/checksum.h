@@ -45,9 +45,8 @@ typedef enum RmDigestType {
     RM_DIGEST_BASTARD,
     RM_DIGEST_MURMUR512,
     RM_DIGEST_CITY512,
-    RM_DIGEST_PARANOID // TODO: Implementation.
+    RM_DIGEST_PARANOID
 } RmDigestType;
-
 
 #include "checksums/city.h"
 #include "checksums/citycrc.h"
@@ -61,6 +60,9 @@ typedef struct RmDigest {
     };
     RmDigestType type;
     gsize bytes;
+
+    guint64 initial_seed1;
+    guint64 initial_seed2;
 } RmDigest;
 
 
@@ -149,5 +151,11 @@ gboolean rm_digest_compare(RmDigest *a, RmDigest *b);
  * @return copy of digest
  */
 RmDigest *rm_digest_copy(RmDigest *digest);
+
+/**
+ * @brief Return the number of bytes RM_DIGEST_PARANOID allocates for
+ * it's checksum.
+ */
+guint64 rm_digest_paranoia_bytes(void);
 
 #endif /* end of include guard */
