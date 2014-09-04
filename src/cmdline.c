@@ -602,8 +602,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 
     /* Handle the paranoia option */
     switch(settings->paranoid) {
+        case -2:
+            settings->checksum_type = RM_DIGEST_SPOOKY32;
+            break;
         case -1:
-            settings->checksum_type = RM_DIGEST_CITY;
+            settings->checksum_type = RM_DIGEST_SPOOKY64;
             break;
         case 0:
             /* leave users choice of -a */

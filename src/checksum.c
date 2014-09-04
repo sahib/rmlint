@@ -55,6 +55,10 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_SHA1;
     } else if(!strcasecmp(string, "murmur")) {
         return RM_DIGEST_MURMUR;
+    } else if(!strcasecmp(string, "spooky32")) {
+        return RM_DIGEST_SPOOKY32;
+    } else if(!strcasecmp(string, "spooky64")) {
+        return RM_DIGEST_SPOOKY64;
     } else if(!strcasecmp(string, "spooky")) {
         return RM_DIGEST_SPOOKY;
     } else if(!strcasecmp(string, "city")) {
@@ -89,6 +93,12 @@ RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
     digest->bytes = 0;
 
     switch(type) {
+    case RM_DIGEST_SPOOKY32:
+        digest->bytes = 32 / 8;
+        break;
+    case RM_DIGEST_SPOOKY64:
+        digest->bytes = 64 / 8;
+        break;
     case RM_DIGEST_MD5:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_MD5);
         add_seed(digest, seed1);
@@ -159,6 +169,8 @@ void rm_digest_free(RmDigest *digest) {
     case RM_DIGEST_CITY256:
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_SPOOKY:
+    case RM_DIGEST_SPOOKY32:
+    case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
         g_slice_free1(digest->bytes, digest->checksum);
@@ -176,6 +188,12 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
     case RM_DIGEST_SHA256:
     case RM_DIGEST_SHA1:
         g_checksum_update(digest->glib_checksum, (const guchar *)data, size);
+        break;
+    case RM_DIGEST_SPOOKY32:
+        digest->checksum[0].first = spooky_hash32(data, size, digest->checksum[0].first);
+        break;
+    case RM_DIGEST_SPOOKY64:
+        digest->checksum[0].first = spooky_hash64(data, size, digest->checksum[0].first);
         break;
     case RM_DIGEST_SPOOKY:
         spooky_hash128(data, size, &digest->checksum[0].first, &digest->checksum[0].second);
@@ -243,6 +261,8 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         self->glib_checksum = g_checksum_copy(digest->glib_checksum);
         break;
     case RM_DIGEST_SPOOKY:
+    case RM_DIGEST_SPOOKY32:
+    case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
     case RM_DIGEST_CITY256:
@@ -283,6 +303,8 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
         g_slice_free(RmDigest, copy);
         break;
 
+    case RM_DIGEST_SPOOKY32:
+    case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
@@ -339,6 +361,8 @@ void rm_digest_finalize(RmDigest *digest) {
     case RM_DIGEST_SHA1:
         g_checksum_free(digest->glib_checksum);
         break;
+    case RM_DIGEST_SPOOKY32:
+    case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
