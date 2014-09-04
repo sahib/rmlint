@@ -615,7 +615,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->checksum_type = RM_DIGEST_BASTARD;
             break;
         case 2:
+#ifdef G_CHECKSUM_SHA512
             settings->checksum_type = RM_DIGEST_SHA512;
+#else
+            settings->checksum_type = RM_DIGEST_SHA256;
+#endif
             break;
         case 3:
             settings->checksum_type = RM_DIGEST_PARANOID;
