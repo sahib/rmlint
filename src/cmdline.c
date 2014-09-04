@@ -59,14 +59,22 @@ static void rm_cmd_show_version(void) {
     );
 }
 
-static void rm_cmd_show_help(void) {
-    if(system("man doc/rmlint.1.gz") == 0) {
-        return;
+static void rm_cmd_show_help(bool use_pager) {
+    static const char *commands[] = {
+        "man %s doc/rmlint.1.gz",
+        "man %s rmlint",
+        NULL
+    };
+
+    for(int i = 0; commands[i]; ++i) {
+        char * command = g_strdup_printf(commands[i], (use_pager) ? "" : "-P cat");
+        if(system(command) == 0) {
+            break;
+        }
+
+        g_free(command);
     }
 
-    if(system("man rmlint") == 0) {
-        return;
-    }
     rm_log_error("You seem to have no manpage for rmlint.\n");
 }
 
@@ -477,7 +485,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         }
         switch(choice) {
         case '?':
-            rm_cmd_show_help();
+            rm_cmd_show_help(false);
+            rm_cmd_show_version();
             return false;
         case 'c':
             rm_cmd_parse_config_pair(session, optarg);
@@ -518,7 +527,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             rm_cmd_die(session, EXIT_SUCCESS);
             break;
         case 'h':
-            rm_cmd_show_help();
+            rm_cmd_show_help(true);
             rm_cmd_show_version();
             rm_cmd_die(session, EXIT_SUCCESS);
             break;
