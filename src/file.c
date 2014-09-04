@@ -57,8 +57,8 @@ void rm_file_destroy(RmFile *file) {
     g_free(file->path);
 
     if (file->digest) {
-        rm_digest_finalize(file->digest);
         rm_digest_free(file->digest);
+        file->digest = NULL;
     }
 
     if (file->disk_offsets) {

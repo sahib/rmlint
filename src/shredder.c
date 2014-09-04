@@ -741,8 +741,6 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     {
         file->shred_group = shred_group;
 
-        // TODO: csv formatter (or others) might need the checksum for display.
-        /* group owns the digest; file doesn't need its own copy */
         if (file->digest) {
             rm_digest_free(file->digest);
             file->digest = NULL;
@@ -1246,23 +1244,27 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group/*, gbool
     return result;
 }
 
-static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *original_file /*, gboolean recurse*/) {
+static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQueue *group, RmFile *original_file /*, gboolean recurse*/) {
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if (/*recurse &&*/ file->hardlinks.files) {
-            rm_group_fmt_write(session, file->hardlinks.files, original_file/*, false*/);
+            rm_group_fmt_write(session, shred_group, file->hardlinks.files, original_file/*, false*/);
         } else {
             if(iter->data != original_file) {
                 RmFile *lint = iter->data;
                 session->dup_counter += 1;
                 session->total_lint_size += lint->file_size;
+
+                /* Fake file->digest for a moment */
+                lint->digest = shred_group->digest;
                 rm_fmt_write(session->formats, lint);
+                lint->digest = NULL;
             }
         }
     }
 }
 
-void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+void rm_shred_forward_to_output(RmSession *session, RmShredGroup *shred_group, GQueue *group) {
     session->dup_group_counter++;
 
     RmFile *original_file = rm_group_find_original(session, group/*, true*/);
@@ -1274,9 +1276,11 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     }
 
     /* Hand it over to the printing module */
+    original_file->digest = shred_group->digest;
     rm_fmt_write(session->formats, original_file);
+    original_file->digest = NULL;
 
-    rm_group_fmt_write(session, group, original_file/*, true*/);
+    rm_group_fmt_write(session, shred_group, group, original_file/*, true*/);
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
@@ -1288,7 +1292,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     }
 
     if(g_queue_get_length(group->held_files) > 0) {
-        rm_shred_forward_to_output(tag->session, group->held_files);
+        rm_shred_forward_to_output(tag->session, group, group->held_files);
     }
 
     group->status = RM_SHRED_GROUP_DORMANT;

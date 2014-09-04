@@ -336,8 +336,7 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
         copy = rm_digest_copy(digest);
         g_checksum_get_digest(copy->glib_checksum, result, &buflen);
         g_assert(buflen == digest->bytes);
-        rm_digest_finalize(copy);
-        g_slice_free(RmDigest, copy);
+        rm_digest_free(copy);
         break;
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
@@ -375,6 +374,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
         buffer += 2;
     }
 
+    g_slice_free1(digest->bytes, input);
     return digest->bytes * 2 + 1;
 }
 
@@ -385,30 +385,6 @@ gboolean rm_digest_compare(RmDigest *a, RmDigest *b) {
         guint8 *buf_a = rm_digest_steal_buffer(a);
         guint8 *buf_b = rm_digest_steal_buffer(b);
         return memcmp(buf_a, buf_b, a->bytes);
-    }
-}
-
-void rm_digest_finalize(RmDigest *digest) {
-    switch(digest->type) {
-    case RM_DIGEST_MD5:
-    case RM_DIGEST_SHA512:
-    case RM_DIGEST_SHA256:
-    case RM_DIGEST_SHA1:
-        g_checksum_free(digest->glib_checksum);
-        break;
-    case RM_DIGEST_SPOOKY32:
-    case RM_DIGEST_SPOOKY64:
-    case RM_DIGEST_SPOOKY:
-    case RM_DIGEST_MURMUR:
-    case RM_DIGEST_CITY:
-    case RM_DIGEST_CITY256:
-    case RM_DIGEST_MURMUR256:
-    case RM_DIGEST_CITY512:
-    case RM_DIGEST_MURMUR512:
-    case RM_DIGEST_PARANOID:
-        break;
-    default:
-        g_assert_not_reached();
     }
 }
 
@@ -450,7 +426,7 @@ static int rm_hash_file(const char *file, RmDigestType type, double buf_size_mb,
     fclose(fd);
 
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
-    rm_digest_finalize(&digest);
+    rm_digest_free(&digest);
     return digest_len;
 }
 
@@ -489,7 +465,7 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, _U double buf_
     }
 
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
-    rm_digest_finalize(&digest);
+    rm_digest_free(&digest);
     return digest_len;
 }
 
@@ -516,7 +492,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
     }
 
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
-    rm_digest_finalize(&digest);
+    rm_digest_free(&digest);
 
     close(fd);
     return digest_len;

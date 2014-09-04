@@ -67,6 +67,7 @@ static void rm_fmt_elem(
 ) {
     char checksum_str[_RM_HASH_LEN * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
+    checksum_str[sizeof(checksum_str) - 1] = 0;
 
     if(file->digest && file->digest->type != RM_DIGEST_PARANOID) {
         rm_digest_hexstring(file->digest, checksum_str);
