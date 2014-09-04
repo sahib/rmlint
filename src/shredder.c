@@ -583,7 +583,7 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
 
 /* GCompareFunc for sorting files into optimum read order
  * */
-static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, G_GNUC_UNUSED gpointer user_data) {
+static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpointer user_data) {
     /* compare based on partition (dev), then offset, then inode offset is a
      * guint64, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead
@@ -832,7 +832,7 @@ static gboolean rm_shred_sift(RmFile *file) {
 
 /* Insert RmFiles into size_groups
  * */
-static void rm_shred_file_preprocess(G_GNUC_UNUSED gpointer key, RmFile *file, RmMainTag *main) {
+static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *main) {
     /* initial population of RmShredDevice's and first level RmShredGroup's */
     RmSession *session = main->session;
 
@@ -888,7 +888,7 @@ static void rm_shred_file_preprocess(G_GNUC_UNUSED gpointer key, RmFile *file, R
     rm_shred_group_push_file(group, file, true);
 }
 
-static gboolean rm_shred_group_preprocess(G_GNUC_UNUSED gpointer key, RmShredGroup *group) {
+static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
     g_assert(group);
     if (group->status == RM_SHRED_GROUP_DORMANT) {
         rm_shred_group_free(group);
@@ -898,7 +898,7 @@ static gboolean rm_shred_group_preprocess(G_GNUC_UNUSED gpointer key, RmShredGro
     }
 }
 
-static void rm_shred_device_preprocess(G_GNUC_UNUSED gpointer key, RmShredDevice *device, RmMainTag *main) {
+static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device, RmMainTag *main) {
     g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_offset_table, main->session);
 }
 

@@ -630,7 +630,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     }
     if(path_index == 0) {
         /* Still no path set? - use `pwd` */
-        path_index += rm_cmd_add_path(session, path_index, settings->iwd);
+        rm_cmd_add_path(session, path_index, settings->iwd);
     }
 
     /* Copy commandline rmlint was invoked with by copying argv into a 

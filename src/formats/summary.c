@@ -43,11 +43,11 @@ static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {
 
 static void rm_fmt_prog(
     RmSession *session,
-    G_GNUC_UNUSED RmFmtHandler *parent,
-    G_GNUC_UNUSED FILE *out,
+    _U RmFmtHandler *parent,
+    _U FILE *out,
     RmFmtProgressState state,
-    G_GNUC_UNUSED guint64 n,
-    G_GNUC_UNUSED guint64 N
+    _U guint64 n,
+    _U guint64 N
 ) {
     if(state != RM_PROGRESS_STATE_SUMMARY) {
         return;

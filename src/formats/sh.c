@@ -127,7 +127,7 @@ static char *rm_fmt_sh_escape_path(char *path) {
     return rm_util_strsub(path, "'", "'\"'\"'");
 }
 
-static void rm_fmt_elem(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out, RmFile *file) {
+static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
 
     /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
@@ -190,7 +190,7 @@ static void rm_fmt_elem(RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, 
     g_free(dupe_path);
 }
 
-static void rm_fmt_foot(G_GNUC_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
     fprintf(
         out, SH_SCRIPT_TEMPLATE_FOOT,
         "rm -f", parent->path

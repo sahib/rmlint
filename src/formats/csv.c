@@ -50,7 +50,7 @@ typedef struct RmFmtHandlerCSV {
     RmFmtHandler parent;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
     if(rm_fmt_get_config_value(session->formats, "csv", "no_header")) {
         return;
     }
@@ -61,8 +61,8 @@ static void rm_fmt_head(G_GNUC_UNUSED RmSession *session, G_GNUC_UNUSED RmFmtHan
 }
 
 static void rm_fmt_elem(
-    G_GNUC_UNUSED RmSession *session,
-    G_GNUC_UNUSED RmFmtHandler *parent,
+    _U RmSession *session,
+    _U RmFmtHandler *parent,
     FILE *out, RmFile *file
 ) {
     char checksum_str[_RM_HASH_LEN * 2 + 1];

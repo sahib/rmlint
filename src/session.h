@@ -48,23 +48,26 @@ typedef struct RmSettings {
     bool searchdup;
     bool findemptydirs;
     bool nonstripped;
-    char verbosity;
     bool listemptyfiles;
-    char **paths;
-    char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/
-    char *sort_criteria;         /* sets criteria for ranking and selecting "original"*/
-    bool limits_specified;
-    guint64 minsize;
-    guint64 maxsize;
     bool keep_all_originals;     /* if set, will ONLY delete dupes that are not in ppath */
     bool must_match_original;    /* if set, will ONLY search for dupe sets where at least one file is in ppath */
     bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
     bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
-    guint64 threads;
-    short depth;
-    RmDigestType checksum_type;  /* determines the checksum algorithm used */
+    bool limits_specified;
+
+    int depth;
+    int verbosity;
+
+    char **paths;
+    char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/
+    char *sort_criteria;         /* sets criteria for ranking and selecting "original"*/
     char *iwd;                   /* cwd when rmlint called */
     char *joined_argv;           /* arguments rmlint was called with or NULL when not available */
+
+    guint64 minsize;
+    guint64 maxsize;
+    guint64 threads;
+    RmDigestType checksum_type;  /* determines the checksum algorithm used */
 } RmSettings;
 
 typedef struct RmFileTables {

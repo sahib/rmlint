@@ -44,7 +44,7 @@ static char *remove_color_escapes(char *message) {
 }
 
 static void logging_callback(
-    G_GNUC_UNUSED const gchar *log_domain,
+    _U const gchar *log_domain,
     GLogLevelFlags log_level,
     const gchar *message,
     gpointer user_data) {
