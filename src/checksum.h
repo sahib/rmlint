@@ -42,7 +42,8 @@ typedef enum RmDigestType {
     RM_DIGEST_CITY256,
     RM_DIGEST_BASTARD,
     RM_DIGEST_MURMUR512,
-    RM_DIGEST_CITY512
+    RM_DIGEST_CITY512,
+    RM_DIGEST_PARANOID // TODO: Implementation.
 } RmDigestType;
 
 

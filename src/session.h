@@ -41,7 +41,6 @@ typedef struct RmSettings {
     bool samepart;
     bool ignore_hidden;
     bool followlinks;
-    bool paranoid;
     bool findbadids;
     bool findbadlinks;
     bool searchdup;
@@ -56,6 +55,7 @@ typedef struct RmSettings {
 
     int depth;
     int verbosity;
+    int paranoid;
 
     char **paths;
     char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/

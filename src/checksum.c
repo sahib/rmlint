@@ -34,9 +34,6 @@
 
 #include "checksum.h"
 
-/* Less than 16 byte is not allowed */
-G_STATIC_ASSERT(_RM_HASH_LEN >= 16);
-
 RmDigestType rm_string_to_digest_type(const char *string) {
     if(string == NULL) {
         return RM_DIGEST_UNKNOWN;

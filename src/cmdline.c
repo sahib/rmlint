@@ -570,7 +570,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->sort_criteria = optarg;
             break;
         case 'p':
-            settings->paranoid = true;
+            settings->paranoid += 1;
             break;
         case 'k':
             settings->keep_all_originals = true;
@@ -593,16 +593,40 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             rm_cmd_parse_limit_sizes(session, optarg);
             break;
         case 'P':
-            settings->paranoid = false;
+            settings->paranoid -= 1;
             break;
         default:
             return false;
         }
     }
 
+    /* Handle the paranoia option */
+    switch(settings->paranoid) {
+        case -1:
+            settings->checksum_type = RM_DIGEST_CITY;
+            break;
+        case 0:
+            /* leave users choice of -a */
+            break;
+        case 1:
+            settings->checksum_type = RM_DIGEST_BASTARD;
+            break;
+        case 2:
+            settings->checksum_type = RM_DIGEST_SHA512;
+            break;
+        case 3:
+            settings->checksum_type = RM_DIGEST_PARANOID;
+            break;
+        default:
+            rm_log_error(RED"Only up to -ppp or down to -P flags allowed.\n"RESET);
+            rm_cmd_die(session, EXIT_FAILURE);
+            break;
+    }
+
+    /* Handle output flags */
     if(oO_specified[0] && oO_specified[1]) {
         rm_log_error(RED"Specifiyng both -o and -O is not allowed.\n"RESET);
-        exit(EXIT_FAILURE);
+        rm_cmd_die(session, EXIT_FAILURE);
     } else if(output_flag_cnt == -1) {
         /* Set default outputs */
         rm_fmt_add(session->formats, "pretty", "stdout");
@@ -611,7 +635,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
         rm_log_error("No valid -o flag encountered.\n");
-        exit(EXIT_FAILURE);
+        rm_cmd_die(session, EXIT_FAILURE);
     }
 
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(

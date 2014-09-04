@@ -11,5 +11,7 @@ Stable Version
 - Integrate 'ack TODO | wc -l' to 0.
 - Add option for finding only dupes with double basename
 - add basename member to RmFile
+- implement flock() support - apparently all locks are released on program
+  termination - as optional option (-l)
 - ifdef sha512.
 - ...
