@@ -67,7 +67,7 @@ static void rm_fmt_elem(
 ) {
     char checksum_str[_RM_HASH_LEN * 2 + 1];
     memset(checksum_str, 0, sizeof(checksum_str));
-    rm_digest_hexstring(&file->digest, checksum_str);
+    rm_digest_hexstring(file->digest, checksum_str);
 
     /* Escape any possible separator character in the path */
     char *clean_path = rm_util_strsub(file->path, CSV_SEP, "\\"CSV_SEP);

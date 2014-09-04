@@ -27,7 +27,7 @@
 
 RmFile *rm_file_new(
     const char *path, struct stat *statp, RmLintType type,
-    RmDigestType cksum_type, bool is_ppath, unsigned pnum
+    bool is_ppath, unsigned pnum
 ) {
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
@@ -44,7 +44,7 @@ RmFile *rm_file_new(
     self->is_prefd = is_ppath;
     self->path_index = pnum;
 
-    rm_digest_init(&self->digest, cksum_type, 0, 0);
+    //rm_digest_init(&self->digest, cksum_type, 0, 0); (this now gets initialised by rm_shred_devlist_factory)
 
     self->hardlinks.files = NULL;
     self->hardlinks.has_non_prefd = FALSE;
@@ -55,7 +55,12 @@ RmFile *rm_file_new(
 
 void rm_file_destroy(RmFile *file) {
     g_free(file->path);
-    rm_digest_finalize(&file->digest);
+
+    if (file->digest) {
+        rm_digest_finalize(file->digest);
+        rm_digest_free(file->digest);
+    }
+
     if (file->disk_offsets) {
         g_sequence_free(file->disk_offsets);
     }

@@ -121,9 +121,9 @@ typedef struct RmFile {
     /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
     RmFileState status;
 
-    /* digest of this file updated on every hash iteration.
+    /* digest of this file updated on every hash iteration.  Use a pointer so we can share with RmShredGroup
      */
-    RmDigest digest;
+    RmDigest *digest;
 
     /* Table of this file's extents.
      */
@@ -154,7 +154,7 @@ typedef struct RmFile {
  */
 RmFile *rm_file_new(
     const char *path, struct stat *statp, RmLintType type,
-    RmDigestType cksum_type, bool is_ppath, unsigned pnum
+    bool is_ppath, unsigned pnum
 );
 
 /**
