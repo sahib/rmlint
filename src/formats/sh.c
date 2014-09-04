@@ -139,9 +139,6 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out, 
     case RM_LINT_TYPE_BLNK:
         fprintf(out, "rm -f '%s' # bad symlink pointing nowhere\n", dupe_path);
         break;
-    case RM_LINT_TYPE_BASE:
-        fprintf(out, "echo  '%s' # double basename\n", dupe_path);
-        break;
     case RM_LINT_TYPE_EDIR:
         fprintf(out, "rmdir '%s' # empty folder\n", dupe_path);
         break;

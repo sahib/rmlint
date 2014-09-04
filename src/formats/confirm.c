@@ -44,7 +44,7 @@ static void rm_fmt_prog(
     if(state != RM_PROGRESS_STATE_INIT) {
         return;
     }
-    
+
     RmSettings *settings = session->settings;
 
     char confirm;
@@ -59,13 +59,11 @@ static void rm_fmt_prog(
     if (settings->findemptydirs)rm_log_warning("\t+ empty directories "RED"(rm)"RESET" [-Y]\n");
     if (settings->listemptyfiles)rm_log_warning("\t+ zero size files "RED"(rm)"RESET" [-K]\n");
     if (settings->findbadids)	rm_log_warning("\t+ files with bad UID/GID "BLUE"(chown)"RESET" [-L]\n");
-    if (settings->namecluster)	rm_log_warning("\t+ files with same name "GREEN"(info only)"RESET" [-N]\n");
     if (settings->nonstripped)	rm_log_warning("\t+ non-stripped binaries"BLUE"(strip)"RED"(slow)"RESET" [-A]\n");
     if (!settings->searchdup ||
             !settings->findemptydirs ||
             !settings->listemptyfiles ||
             !settings->findbadids ||
-            !settings->namecluster ||
             !settings->nonstripped
        ) {
         rm_log_warning(RESET"\tNot looking for:\n");
@@ -73,7 +71,6 @@ static void rm_fmt_prog(
         if (!settings->findemptydirs)rm_log_warning("\t\tempty directories[-y];\n");
         if (!settings->listemptyfiles)rm_log_warning("\t\tzero size files[-k];\n");
         if (!settings->findbadids)	rm_log_warning("\t\tfiles with bad UID/GID[-l];\n");
-        if (!settings->namecluster)	rm_log_warning("\t\tfiles with same name[-n];\n");
         if (!settings->nonstripped)	rm_log_warning("\t\tnon-stripped binaries[-a];\n");
     }
 
@@ -198,7 +195,7 @@ static RmFmtHandlerSummary CONFIRM_HANDLER_IMPL = {
         .head = NULL,
         .elem = NULL,
         .prog = rm_fmt_prog,
-        .foot = NULL 
+        .foot = NULL
     },
 };
 

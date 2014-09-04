@@ -330,7 +330,6 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
                 &settings->findbadlinks,
                 &settings->findemptydirs,
                 &settings->listemptyfiles,
-                &settings->namecluster,
                 &settings->nonstripped,
                 &settings->searchdup,
                 0
@@ -360,9 +359,6 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
         }, {
             .names = NAMES{"emptyfiles", "ef", 0},
             .enable = OPTS{&settings->listemptyfiles, 0}
-        }, {
-            .names = NAMES{"nameclusters", "nc", 0},
-            .enable = OPTS{&settings->namecluster, 0}
         }, {
             .names = NAMES{"nonstripped", "ns", 0},
             .enable = OPTS{&settings->nonstripped, 0}
@@ -619,8 +615,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     }
 
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
-                          verbosity_counter, 0, G_LOG_LEVEL_DEBUG
-                      )];
+                              verbosity_counter, 0, G_LOG_LEVEL_DEBUG
+                          )];
 
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -642,7 +638,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_cmd_add_path(session, path_index, settings->iwd);
     }
 
-    /* Copy commandline rmlint was invoked with by copying argv into a 
+    /* Copy commandline rmlint was invoked with by copying argv into a
      * NULL padded array and join that with g_strjoinv. GLib made me lazy.
      */
     const char *argv_nul[argc + 1];

@@ -42,7 +42,6 @@ typedef struct RmSettings {
     bool ignore_hidden;
     bool followlinks;
     bool paranoid;
-    bool namecluster;
     bool findbadids;
     bool findbadlinks;
     bool searchdup;
@@ -76,7 +75,6 @@ typedef struct RmFileTables {
     GHashTable *size_table;
     GHashTable *size_groups;
     GHashTable *node_table;
-    GHashTable *name_table;
     GHashTable *orig_table;
     GQueue *file_queue;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
@@ -133,7 +131,7 @@ void rm_session_init(RmSession *session, RmSettings *settings);
 void rm_session_clear(RmSession *session);
 
 /**
- * @brief Set the abort flag of RmSession. 
+ * @brief Set the abort flag of RmSession.
  *
  * This flag is checked periodically on strategic points,
  * leading to an early but planned exit.
