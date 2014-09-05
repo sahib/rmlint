@@ -34,7 +34,6 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 
-
 typedef struct stat64 RmStat;
 
 ////////////////////////////////////
