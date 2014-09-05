@@ -1099,7 +1099,6 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
     struct iovec readvec[SHRED_MAX_PAGES + 1];
 
-g_printerr("reading %"LLU" %"LLU"\n", file->seek_offset, file->file_size);
     if(file->seek_offset >= file->file_size) {
         goto finish;
     }
