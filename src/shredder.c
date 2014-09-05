@@ -907,7 +907,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
         group->digest_type = session->settings->checksum_type;
         g_hash_table_insert(
             session->tables->size_groups,
-            file_size_cpy,  
+            file_size_cpy,
             group
         );
     }
@@ -1029,6 +1029,8 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     guint64 buf_size = rm_buffer_pool_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
+    g_assert(buf_size == 4096);  //TODO: debugging only, remove me later!
+
     gint64 bytes_to_read = rm_shred_get_read_size(file, device->main);
 
     g_assert(bytes_to_read > 0);
@@ -1090,7 +1092,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
             RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
             buffer->file = file;
             buffer->len = MIN (buf_size, bytes_read - i * buf_size);
-            buffer->is_last = (i + 1 >= blocks && bytes_to_read <= 0); //TODO: why does bytes_to_read sometimes go negative? 
+            buffer->is_last = (i + 1 >= blocks && bytes_to_read <= 0); //TODO: why does bytes_to_read sometimes go negative?
 
             if (buffer->is_last) {
                 //TODO: add check for expect byte count; if wrong then set state to ignore.
@@ -1114,7 +1116,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
 finish:
     if(fd > 0) {
-       rm_sys_close(fd);
+        rm_sys_close(fd);
     }
 
     /* Update totals for device */
@@ -1313,7 +1315,11 @@ void rm_shred_run(RmSession *session) {
 
     RmMainTag tag;
     tag.session = session;
-    tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + SHRED_PAGE_SIZE);
+
+    // TODO: buf_size wass coming in at 4100, probably because
+    // sizeof(RmBuffer) already allows 4 bytes for guint8 data[]?
+    // applying a "-4" hack for now but it would be nice if this were more exact
+    tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + SHRED_PAGE_SIZE - 4);
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
     tag.totalfiles = 0;
