@@ -67,7 +67,7 @@ typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {
     /* Name of the Handler */
-    char *name;
+    const char *name;
 
     /* Size in bytes of the *real* handler */
     const int size;
@@ -75,7 +75,7 @@ typedef struct RmFmtHandler {
     /* Path to which the Handler is pointed or
      * NULL if it the original template.
      */
-    const char *path;
+    char *path;
 
     /* False at beginnging, is set to true once
      * the head() callback was called, i.e. on the

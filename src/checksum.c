@@ -313,7 +313,9 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         self = rm_digest_new(digest->type, 0, 0);
         rm_digest_allocate(self);
         self->paranoid_offset = digest->paranoid_offset;
-        memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
+        if(self->checksum && digest->checksum) {
+            memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
+        }
         break;
     default:
         g_assert_not_reached();
@@ -492,7 +494,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
         for(int i = 0; i < blocks; ++i) {
             rm_digest_update(&digest, readvec[i].iov_base, (i == blocks - 1) ? remainder : S);
         }
-    }
+    3
 
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
     rm_digest_free(&digest);
