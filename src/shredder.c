@@ -401,6 +401,7 @@ typedef struct RmShredGroup {
     /* checksum structure taken from first file to enter the group.  This allows
      * digests to be released from RmFiles and memory freed up until they
      * are required again for further hashing.*/
+    RmDigestType digest_type;
     RmDigest *digest;
     /* checksum result (length is given by digest->bytes) */
     guint8 *checksum;
@@ -466,6 +467,7 @@ RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
     if (file->digest) {
         self->digest = rm_digest_copy(file->digest);
         self->checksum = key;
+        self->digest_type = file->digest->type;
     } else {
         /* initial groups have no checksum */
     }
@@ -902,6 +904,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
         *file_size_cpy = file->file_size;
 
         group = rm_shred_group_new(file, NULL);
+        group->digest_type = session->settings->checksum_type;
         g_hash_table_insert(
             session->tables->size_groups,
             file_size_cpy,  
@@ -1047,6 +1050,7 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     g_mutex_lock(&group->lock);
     {
         /* calculate next_offset property of the RmShredGroup, if not already done */
+        //TODO: do this as soon as the group goes active, rather than waiting for the call from the file
         if (group->next_offset == 0) {
             guint64 target_bytes = (group->hash_offset == 0) ? SHRED_CHEAP_READ_BYTES : SHRED_CHEAP_SEEK_BYTES;
 
@@ -1060,6 +1064,9 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
             }
 
             group->next_offset = group->hash_offset + target_bytes;
+            if(group->digest_type == RM_DIGEST_PARANOID) {
+                group->next_offset = MIN(group->next_offset, group->hash_offset + rm_digest_paranoia_bytes() );
+            }
         }
     }
     g_mutex_unlock(&group->lock);
@@ -1075,12 +1082,62 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
         result = (group->next_offset - file->seek_offset);
     }
 
-    if(file->digest->type == RM_DIGEST_PARANOID) {
-        result = MIN(result, rm_digest_paranoia_bytes());
+
+    if(file->digest && (file->digest->type == RM_DIGEST_PARANOID)) {
+        //g_assert(result <= file->digest->bytes - file->digest->paranoid_offset );
+        if (result > file->digest->bytes - file->digest->paranoid_offset) {
+            result = MIN(result, file->digest->bytes - file->digest->paranoid_offset);
+            file->status = RM_FILE_STATE_NORMAL;
+        }
     }
 
     return result;
 }
+
+
+//~ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
+//~ RmShredGroup *group = file->shred_group;
+//~ g_assert(group);
+//~
+//~ guint32 result = 0;
+//~
+//~ g_mutex_lock(&group->lock);
+//~ {
+//~ /* calculate next_offset property of the RmShredGroup, if not already done */
+//~ if (group->next_offset == 0) {
+//~ guint64 target_bytes = (group->hash_offset == 0) ? SHRED_CHEAP_READ_BYTES : SHRED_CHEAP_SEEK_BYTES;
+//~
+//~ /* round to even number of pages, round up to MIN_READ_PAGES */
+//~ guint64 target_pages = MAX(target_bytes / tag->page_size, SHRED_MIN_READ_PAGES);
+//~ target_bytes = target_pages * tag->page_size;
+//~
+//~ /* test if cost-effective to read the whole file */
+//~ if (group->hash_offset + target_bytes + SHRED_BALANCED_READ_BYTES >= group->file_size) {
+//~ target_bytes = group->file_size - group->hash_offset;
+//~ }
+//~
+//~ group->next_offset = group->hash_offset + target_bytes;
+//~ }
+//~ }
+//~ g_mutex_unlock(&group->lock);
+//~
+//~ /* read to end of current file fragment, or to group->next_offset, whichever comes first */
+//~ guint64 bytes_to_next_fragment = rm_offset_bytes_to_next_fragment(file->disk_offsets, file->seek_offset);
+//~
+//~ if (bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
+//~ file->status = RM_FILE_STATE_FRAGMENT;
+//~ result = (bytes_to_next_fragment);
+//~ } else {
+//~ file->status = RM_FILE_STATE_NORMAL;
+//~ result = (group->next_offset - file->seek_offset);
+//~ }
+//~
+//~ if(file->digest->type == RM_DIGEST_PARANOID) {
+//~ result = MIN(result, rm_digest_paranoia_bytes());
+//~ }
+//~
+//~ return result;
+//~ }
 
 /* Read from file and send to hasher
  * Note this was initially a separate thread but is currently just called
@@ -1126,7 +1183,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
      */
 
     /* how many buffers to read? */
-    const gint16 N_BUFFERS = 4;
+    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, buf_size) );
 
     /* Give the kernel scheduler some hints */
     posix_fadvise(fd, file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
@@ -1143,6 +1200,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     }
 
     while(bytes_to_read > 0 && (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
+        bytes_read = MIN(bytes_read, bytes_to_read); /* ignore over-reads */
         int blocks = DIVIDE_CEIL(bytes_read,  buf_size);
 
         bytes_to_read -= bytes_read;

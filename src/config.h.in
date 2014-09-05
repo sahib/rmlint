@@ -49,4 +49,13 @@
 #define _U G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT
 
+
+#define RM_PLATFORM_32 (UINTPTR_MAX == 0xffffffff)
+#define RM_PLATFORM_64 (UINTPTR_MAX == 0xffffffffffffffff)
+
+#ifdef __sse4_2__
+    #define RM_PLATFORM_HAVE_SSE42 1
+#endif
+
+
 #endif

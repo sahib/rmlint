@@ -234,19 +234,16 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_MURMUR:
         for (guint8 block = 0; block < ( digest->bytes / 16 ); block++) {
-#if UINTPTR_MAX == 0xffffffff
-            /* 32 bit */
+#if RM_PLATFORM_32
             MurmurHash3_x86_128(data, size,
                                 (uint32_t)digest->checksum[block].first,
                                 &digest->checksum[block]); //&
-#elif UINTPTR_MAX == 0xffffffffffffffff
-            /* 64 bit */
+#elif RM_PLATFORM_64
             MurmurHash3_x64_128(data, size,
                                 (uint32_t)digest->checksum[block].first,
                                 &digest->checksum[block]);
 #else
-            /* 16 bit or unknown */
-#error "Probably not a good idea to compile rmlint on 16bit."
+        #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
         }
         break;
@@ -258,7 +255,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
             * This needs the crc command of sse4.2
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
             */
-#ifdef __sse4_2__
+#ifdef RM_PLATFORM_HAVE_SSE42
             digest->checksum[block] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[block]);
 #else
             digest->checksum[block] = CityHash128WithSeed((const char *) data, size, digest->checksum[block]);
@@ -267,7 +264,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
         break;
     case RM_DIGEST_BASTARD:
         MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[0].first, &digest->checksum[0]);
-#ifdef __sse4_2__
+#ifdef RM_PLATFORM_HAVE_SSE42
         digest->checksum[1] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[1]);
 #else
         digest->checksum[1] = CityHash128WithSeed((const char *) data, size, digest->checksum[1]);
