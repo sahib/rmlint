@@ -46,7 +46,7 @@ static void rm_fmt_handler_free(RmFmtHandler *handler) {
     g_free(handler);
 }
 
-RmFmtTable *rm_fmt_rm_sys_open(RmSession *session) {
+RmFmtTable *rm_fmt_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
 
     self->name_to_handler = g_hash_table_new_full(
@@ -230,7 +230,7 @@ void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
 
 int main(void) {
     RmSession session;
-    RmFmtTable *table = rm_fmt_rm_sys_open(&session);
+    RmFmtTable *table = rm_fmt_open(&session);
     if(!rm_fmt_add(table, "progressbar", "stdout")) {
         rm_log_error("You've screwed up.\n");
         return EXIT_FAILURE;
