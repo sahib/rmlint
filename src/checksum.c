@@ -75,7 +75,7 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 }
 
 guint64 rm_digest_paranoia_bytes(void) {
-    return 8 * 1024 * 1024;
+    return 16 * 1024 * 1024;
 }
 
 static void rm_digest_allocate(RmDigest *self) {

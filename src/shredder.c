@@ -494,6 +494,11 @@ RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
     return self;
 }
 
+
+guint64 rm_shred_mem_allocation(RmFile *file) {
+    return MIN(file->file_size, rm_digest_paranoia_bytes()) * 2;
+}
+
 /* Unlink RmFile from device queue
  */
 void rm_shred_discard_file(RmFile *file) {
@@ -511,7 +516,7 @@ void rm_shred_discard_file(RmFile *file) {
     if (file->shred_group->digest_type == RM_DIGEST_PARANOID) {
         g_mutex_lock(&file->shred_group->main->hash_mem_mtx);
         {
-            file->shred_group->main->hash_mem_alloc += file->file_size * 2;
+            file->shred_group->main->hash_mem_alloc += rm_shred_mem_allocation(file);
             file->shred_group->main->active_files--;
         }
         g_mutex_unlock(&file->shred_group->main->hash_mem_mtx);
@@ -1228,6 +1233,8 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     rm_shred_group_free(group);
 }
 
+
+
 static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
     RmShredGroup *group = file->shred_group;
     if (0
@@ -1239,7 +1246,7 @@ static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
     }
 
     gboolean result;
-    gint64 mem_required = group->remaining * group->file_size * 2;
+    gint64 mem_required = group->remaining * rm_shred_mem_allocation(file);
     /* NOTE: the * 2 is because generally we have two active
      * digests at each generation, one stored in the RmShredGroup and
      * one in the file increment being hashed.  With multiple devices
@@ -1392,8 +1399,7 @@ void rm_shred_run(RmSession *session) {
 
     rm_shred_preprocess_input(&tag);
 
-    tag.hash_mem_alloc = 512 * 1024 * 1024;  /*NOTE: needs to be after preprocess*/
-    /* TODO: make hash_mem_alloc an optional input with -p option */
+    tag.hash_mem_alloc = session->settings->paranoid_mem;  /*NOTE: needs to be after preprocess*/
     tag.active_files = 0;				 	 /*NOTE: needs to be after preprocess*/
 
     /* Remember how many devlists we had - so we know when to stop */

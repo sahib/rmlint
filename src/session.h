@@ -68,6 +68,7 @@ typedef struct RmSettings {
     guint64 maxsize;
     guint64 threads;
     RmDigestType checksum_type;  /* determines the checksum algorithm used */
+    guint64 paranoid_mem;        /* memory allocation for paranoid buffers */
 } RmSettings;
 
 typedef struct RmFileTables {

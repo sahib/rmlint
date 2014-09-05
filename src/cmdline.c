@@ -67,7 +67,7 @@ static void rm_cmd_show_help(bool use_pager) {
     };
 
     for(int i = 0; commands[i]; ++i) {
-        char * command = g_strdup_printf(commands[i], (use_pager) ? "" : "-P cat");
+        char *command = g_strdup_printf(commands[i], (use_pager) ? "" : "-P cat");
         if(system(command) == 0) {
             break;
         }
@@ -453,7 +453,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-followlinks"      ,  no_argument       ,  0 ,  'F'},
             {"crossdev"            ,  no_argument       ,  0 ,  'x'},
             {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
-            {"paranoid"            ,  no_argument       ,  0 ,  'p'},
+            {"paranoid"            ,  optional_argument ,  0 ,  'p'},
             {"no-paranoid"         ,  no_argument       ,  0 ,  'P'},
             {"keepall//"           ,  no_argument       ,  0 ,  'k'},
             {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
@@ -473,7 +473,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxpPkKmMlLqQhHzZ",
+                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxp::PkKmMlLqQhHzZ",
                      long_options, &option_index
                  );
 
@@ -573,6 +573,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'p':
             settings->paranoid += 1;
+            if (optarg) {
+                settings->paranoid_mem = ABS(atoi(optarg));
+                rm_log_error("paranoid ram set to %li\n", settings->paranoid_mem);
+            }
             break;
         case 'k':
             settings->keep_all_originals = true;
@@ -610,35 +614,35 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 
     /* Handle the paranoia option */
     switch(settings->paranoid) {
-        case -2:
-            settings->checksum_type = RM_DIGEST_SPOOKY32;
-            break;
-        case -1:
-            settings->checksum_type = RM_DIGEST_SPOOKY64;
-            break;
-        case 0:
-            /* leave users choice of -a (default) */
-            break;
-        case 1:
-            settings->checksum_type = RM_DIGEST_BASTARD;
-            settings->lock_files = true;
-            break;
-        case 2:
+    case -2:
+        settings->checksum_type = RM_DIGEST_SPOOKY32;
+        break;
+    case -1:
+        settings->checksum_type = RM_DIGEST_SPOOKY64;
+        break;
+    case 0:
+        /* leave users choice of -a (default) */
+        break;
+    case 1:
+        settings->checksum_type = RM_DIGEST_BASTARD;
+        settings->lock_files = true;
+        break;
+    case 2:
 #ifdef G_CHECKSUM_SHA512
-            settings->checksum_type = RM_DIGEST_SHA512;
+        settings->checksum_type = RM_DIGEST_SHA512;
 #else
-            settings->checksum_type = RM_DIGEST_SHA256;
+        settings->checksum_type = RM_DIGEST_SHA256;
 #endif
-            settings->lock_files = true;
-            break;
-        case 3:
-            settings->checksum_type = RM_DIGEST_PARANOID;
-            settings->lock_files = true;
-            break;
-        default:
-            rm_log_error(RED"Only up to -ppp or down to -P flags allowed.\n"RESET);
-            rm_cmd_die(session, EXIT_FAILURE);
-            break;
+        settings->lock_files = true;
+        break;
+    case 3:
+        settings->checksum_type = RM_DIGEST_PARANOID;
+        settings->lock_files = true;
+        break;
+    default:
+        rm_log_error(RED"Only up to -ppp or down to -P flags allowed.\n"RESET);
+        rm_cmd_die(session, EXIT_FAILURE);
+        break;
     }
 
     /* Handle output flags */

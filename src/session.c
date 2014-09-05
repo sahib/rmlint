@@ -58,6 +58,7 @@ void rm_set_default_settings(RmSettings *settings) {
     settings->color         = isatty(fileno(stdout));
     settings->threads       = 32;
     settings->verbosity     = G_LOG_LEVEL_INFO;
+    settings->paranoid_mem  = 512 * 1024 * 1024;
 }
 
 void rm_session_init(RmSession *session, RmSettings *settings) {
