@@ -54,7 +54,7 @@ static void rm_fmt_prog(
     }
     
     if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%"LLU"%s file(s) after investigation, nothing to search through.",
+        ARROW fprintf(out, "%s%"LLU"%s file(s) after investigation, nothing to search through.\n",
             MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
         );
         return;
