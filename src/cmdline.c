@@ -443,6 +443,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"algorithm"           ,  required_argument ,  0 ,  'a'},
             {"output"              ,  required_argument ,  0 ,  'o'},
             {"add-output"          ,  required_argument ,  0 ,  'O'},
+            {"paranoid-ram"        ,  required_argument ,  0 ,  'u'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
             {"quiet"               ,  no_argument       ,  0 ,  'V'},
             {"with-color"          ,  no_argument       ,  0 ,  'w'},
@@ -453,7 +454,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-followlinks"      ,  no_argument       ,  0 ,  'F'},
             {"crossdev"            ,  no_argument       ,  0 ,  'x'},
             {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
-            {"paranoid"            ,  optional_argument ,  0 ,  'p'},
+            {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
             {"no-paranoid"         ,  no_argument       ,  0 ,  'P'},
             {"keepall//"           ,  no_argument       ,  0 ,  'k'},
             {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
@@ -473,7 +474,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:vVwWrRfFXxp::PkKmMlLqQhHzZ",
+                     "T:t:d:s:o:O:S:a:c:u:vVwWrRfFXxpPkKmMlLqQhHzZ",
                      long_options, &option_index
                  );
 
@@ -573,10 +574,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'p':
             settings->paranoid += 1;
-            if (optarg) {
-                settings->paranoid_mem = ABS(atoi(optarg));
-                rm_log_error("paranoid ram set to %li\n", settings->paranoid_mem);
-            }
+            break;
+        case 'u':
+            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, NULL); //TODO: error handling
+            rm_log_error("paranoid ram set to %li\n", settings->paranoid_mem);
             break;
         case 'k':
             settings->keep_all_originals = true;
