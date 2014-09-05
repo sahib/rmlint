@@ -296,7 +296,9 @@ typedef struct RmMainTag {
     RmSession *session;
     RmBufferPool *mem_pool;
     GAsyncQueue *device_return;
-    GMutex file_state_mtx;
+    GMutex hash_mem_mtx;
+    gint64 hash_mem_alloc; // how much memory to allocate for paranoid checks
+    gint32 active_files;   // how many files active (only used with paranoid a.t.m.)
     GThreadPool *device_pool;
     GThreadPool *result_pool;
     gint32 page_size;
@@ -496,12 +498,26 @@ RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
  */
 void rm_shred_discard_file(RmFile *file) {
     RmShredDevice *device = file->device;
+
+    /* update device counters */
     g_mutex_lock(&(device->lock));
     {
         device->remaining_files--;
         device->remaining_bytes -= (file->file_size - file->hash_offset);
     }
     g_mutex_unlock(&(device->lock));
+
+    /* update paranoid memory allocator */
+    if (file->shred_group->digest_type == RM_DIGEST_PARANOID) {
+        g_mutex_lock(&file->shred_group->main->hash_mem_mtx);
+        {
+            file->shred_group->main->hash_mem_alloc += file->file_size * 2;
+            file->shred_group->main->active_files--;
+        }
+        g_mutex_unlock(&file->shred_group->main->hash_mem_mtx);
+    }
+
+    /* toss the file */
     rm_file_destroy(file);
 }
 
@@ -757,16 +773,17 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
         switch (rm_shred_group_get_status_locked(shred_group)) {
         case RM_SHRED_GROUP_START_HASHING:
             /* clear the queue and push all its rmfiles to the appropriate device queue */
-            g_assert(shred_group->held_files);
-            if(initial) {
-                g_queue_free_full(shred_group->held_files,
-                                  (GDestroyNotify)rm_shred_push_queue);
-            } else {
-                g_queue_free_full(shred_group->held_files,
-                                  (GDestroyNotify)rm_shred_push_queue_sorted);
+            if(shred_group->held_files) {
+                if(initial) {
+                    g_queue_free_full(shred_group->held_files,
+                                      (GDestroyNotify)rm_shred_push_queue);
+                } else {
+                    g_queue_free_full(shred_group->held_files,
+                                      (GDestroyNotify)rm_shred_push_queue_sorted);
+                }
+                shred_group->held_files = NULL; /* won't need shred_group queue any more, since new arrivals will bypass */
             }
-            shred_group->held_files = NULL; /* won't need shred_group queue any more, since new arrivals will bypass */
-            shred_group->status = RM_SHRED_GROUP_HASHING;
+        //shred_group->status = RM_SHRED_GROUP_HASHING;
         /* FALLTHROUGH */
         case RM_SHRED_GROUP_HASHING:
             if (initial) {
@@ -1211,6 +1228,38 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     rm_shred_group_free(group);
 }
 
+static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
+    RmShredGroup *group = file->shred_group;
+    if (0
+            || group->hash_offset > 0
+            /* don't interrupt family tree once started */
+            || group->status == RM_SHRED_GROUP_HASHING) {
+        /* group already committed */
+        return true;
+    }
+
+    gboolean result;
+    gint64 mem_required = group->remaining * group->file_size * 2;
+    /* NOTE: the * 2 is because generally we have two active
+     * digests at each generation, one stored in the RmShredGroup and
+     * one in the file increment being hashed.  With multiple devices
+     * we could in theory have a bit more, but 2* is ok as an quick
+     * and dirty memory manager budget */
+
+    g_mutex_lock(&group->main->hash_mem_mtx);
+    {
+        result = (group->main->hash_mem_alloc > mem_required
+                  || group->main->active_files == 0);
+        if(result) {
+            group->main->hash_mem_alloc -= mem_required;
+            group->main->active_files += group->remaining;
+            group->status = RM_SHRED_GROUP_HASHING;
+        }
+    }
+    g_mutex_unlock(&group->main->hash_mem_mtx);
+    return result;
+}
+
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     g_assert(device);
     g_assert(device->hash_pool); /* created when device created */
@@ -1239,6 +1288,12 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             g_assert(file->shred_group);
 
             if ( file->shred_group->digest_type == RM_DIGEST_PARANOID ) {
+                /* check if memory allocation is ok */
+                if (!rm_shred_check_hash_mem_alloc(file)) {
+                    iter = iter->next;
+                    continue;
+                }
+
                 /* get the required target offset into file->shred_group->next_offset, so
                  * that we can make the paranoid RmDigest the right size*/
                 if (file->shred_group->next_offset == 0) {
@@ -1328,7 +1383,7 @@ void rm_shred_run(RmSession *session) {
     tag.totalfiles = 0;
 
     /* would use g_atomic, but helgrind does not like that */
-    g_mutex_init(&tag.file_state_mtx);
+    g_mutex_init(&tag.hash_mem_mtx);
 
     session->tables->dev_table = g_hash_table_new_full(
                                      g_direct_hash, g_direct_equal,
@@ -1336,6 +1391,10 @@ void rm_shred_run(RmSession *session) {
                                  );
 
     rm_shred_preprocess_input(&tag);
+
+    tag.hash_mem_alloc = 512 * 1024 * 1024;  /*NOTE: needs to be after preprocess*/
+    /* TODO: make hash_mem_alloc an optional input with -p option */
+    tag.active_files = 0;				 	 /*NOTE: needs to be after preprocess*/
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
@@ -1386,5 +1445,5 @@ void rm_shred_run(RmSession *session) {
     rm_buffer_pool_destroy(tag.mem_pool);
 
     g_hash_table_unref(session->tables->dev_table);
-    g_mutex_clear(&tag.file_state_mtx);
+    g_mutex_clear(&tag.hash_mem_mtx);
 }
