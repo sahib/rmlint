@@ -697,10 +697,12 @@ int rm_cmd_main(RmSession *session) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
         rm_preprocess(session);
 
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
-        rm_shred_run(session);
+        if(session->settings->searchdup) {
+            rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
+            rm_shred_run(session);
 
-        rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+            rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+        }
     }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);

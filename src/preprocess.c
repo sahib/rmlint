@@ -81,7 +81,7 @@ void rm_file_tables_destroy(RmFileTables *tables) {
 }
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static long cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     RmSettings *sets = session->settings;
 
     if (a->lint_type != b->lint_type) {
@@ -146,72 +146,77 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
     GHashTable *node_table = tables->node_table;
     guint64 node_key = ((guint64)file->dev << 32) | ((guint64)file->inode);
+    bool result = true;
 
     g_rec_mutex_lock(&tables->lock);
-
-    RmFile *inode_match = g_hash_table_lookup(node_table, (gpointer)node_key );
-    if (!inode_match) {
-        g_hash_table_insert(node_table, (gpointer)node_key, file);
-    } else {
-        /* file(s) with matching dev,inode already in table... */
-
-        /* if this is the first time, set up the hardlinks.files queue */
-        if (!inode_match->hardlinks.files) {
-            inode_match->hardlinks.files = g_queue_new();
-            g_queue_push_head(inode_match->hardlinks.files, inode_match);
-        }
-
-        /* make sure the highest-ranked hardlink is "boss" */
-        if ( cmp_orig_criteria(file, inode_match, session) > 0) {
-            /*this file outranks existing existing boss; swap */
-            /* NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE
-             * as head file, unless all the files are "other lint".  This is achieved via cmp_orig_criteria*/
-            file->hardlinks.files = inode_match->hardlinks.files;
-            inode_match->hardlinks.files = NULL;
+    {
+        RmFile *inode_match = g_hash_table_lookup(node_table, (gpointer)node_key );
+        if (!inode_match) {
             g_hash_table_insert(node_table, (gpointer)node_key, file);
-            inode_match = file;
-        }
+        } else {
+            /* file(s) with matching dev,inode already in table... */
 
-        /* compare this file to all of the existing ones in the cluster
-         * to check if it's a path double; if yes then swap or discard */
-        for (GList *iter = inode_match->hardlinks.files->head; iter; iter = iter->next) {
-            RmFile *iter_file = iter->data;
-            if (1
-                    && (strcmp(rm_util_basename(file->path), rm_util_basename(iter_file->path)) == 0)
-                    /* double paths and loops will always have same basename
-                     * (cheap call to potentially avoid the next call which requires a rm_sys_stat()) */
-                    && (rm_util_parent_node(file->path) == rm_util_parent_node(iter_file->path))
-                    /* double paths and loops will always have same dir inode number*/
-               ) {
-                /* file is path double or filesystem loop - kick one or the other */
-                if (cmp_orig_criteria(file, iter->data, session) > 0) {
-                    /* file outranks iter */
-                    rm_log_info("Ignoring path double %s, keeping %s\n", iter_file->path, file->path);
-                    iter->data = file;
-                    rm_file_destroy(iter_file);
-                } else {
-                    rm_log_info("Ignoring path double %s, keeping %s\n", file->path, iter_file->path);
-                    rm_file_destroy(file);
+            /* if this is the first time, set up the hardlinks.files queue */
+            if (!inode_match->hardlinks.files) {
+                inode_match->hardlinks.files = g_queue_new();
+                g_queue_push_head(inode_match->hardlinks.files, inode_match);
+            }
+
+            /* make sure the highest-ranked hardlink is "boss" */
+            if ( rm_pp_cmp_orig_criteria(file, inode_match, session) > 0) {
+                /*this file outranks existing existing boss; swap */
+                /* NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE
+                 * as head file, unless all the files are "other lint".  This is achieved via rm_pp_cmp_orig_criteria*/
+                file->hardlinks.files = inode_match->hardlinks.files;
+                inode_match->hardlinks.files = NULL;
+                g_hash_table_insert(node_table, (gpointer)node_key, file);
+                inode_match = file;
+            }
+
+            /* compare this file to all of the existing ones in the cluster
+             * to check if it's a path double; if yes then swap or discard */
+            for (GList *iter = inode_match->hardlinks.files->head; iter; iter = iter->next) {
+                RmFile *iter_file = iter->data;
+                if (1
+                        && (strcmp(rm_util_basename(file->path), rm_util_basename(iter_file->path)) == 0)
+                        /* double paths and loops will always have same basename
+                         * (cheap call to potentially avoid the next call which requires a rm_sys_stat()) */
+                        && (rm_util_parent_node(file->path) == rm_util_parent_node(iter_file->path))
+                        /* double paths and loops will always have same dir inode number*/
+                   ) {
+                    /* file is path double or filesystem loop - kick one or the other */
+                    if (rm_pp_cmp_orig_criteria(file, iter->data, session) > 0) {
+                        /* file outranks iter */
+                        rm_log_info("Ignoring path double %s, keeping %s\n", iter_file->path, file->path);
+                        iter->data = file;
+                        rm_file_destroy(iter_file);
+                    } else {
+                        rm_log_info("Ignoring path double %s, keeping %s\n", file->path, iter_file->path);
+                        rm_file_destroy(file);
+                    }
+                    result = false;
+                    break;
                 }
-                g_rec_mutex_unlock(&tables->lock);
-                return false;
+            }
+
+            if(result == true) {
+                /* no path double found; must be hardlink */
+                g_queue_insert_sorted (
+                    inode_match->hardlinks.files,
+                    file,
+                    (GCompareDataFunc)rm_pp_cmp_orig_criteria,
+                    session
+                );
             }
         }
-        /* no path double found; must be hardlink */
-        g_queue_insert_sorted (
-            inode_match->hardlinks.files,
-            file,
-            (GCompareDataFunc)cmp_orig_criteria,
-            session
-        );
     }
     g_rec_mutex_unlock(&tables->lock);
-    return true;
+    return result;
 }
 
 /* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint
  * and return true; else return false */
-static gboolean rm_handle_other_lint(RmFile *file, RmSession *session) {
+static gboolean rm_pp_handle_other_lint(RmFile *file, RmSession *session) {
     if (file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
         session->tables->other_lint[file->lint_type] = g_list_prepend(
                     session->tables->other_lint[file->lint_type],
@@ -222,7 +227,7 @@ static gboolean rm_handle_other_lint(RmFile *file, RmSession *session) {
     }
 }
 
-static bool rm_handle_own_files(RmSession *session, RmFile *file) {
+static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
     if(rm_fmt_is_a_output(session->formats, file->path)) {
         rm_file_destroy(file);
         return true;
@@ -231,11 +236,11 @@ static bool rm_handle_own_files(RmSession *session, RmFile *file) {
     }
 }
 
-/* preprocess hardlinked files via rm_handle_other_lint, stripping out
+/* preprocess hardlinked files via rm_pp_handle_other_lint, stripping out
  * "other lint".  If there are no files left at the end then destroy the
  * head file and return TRUE so that the cluster can be deleted from the
  * node_table hash table */
-static gboolean rm_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *session) {
+static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *session) {
     g_assert(file);
     RmSettings *settings = session->settings;
 
@@ -245,7 +250,7 @@ static gboolean rm_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *se
         for (GList *iter = file->hardlinks.files->head; iter; iter = next) {
             next = iter->next;
 
-            if ( rm_handle_other_lint(iter->data, session) ) {
+            if (rm_pp_handle_other_lint(iter->data, session)) {
                 g_queue_delete_link(file->hardlinks.files, iter);
             } else if (iter->data != file && !settings->find_hardlinked_dupes) {
                 /* settings say disregard hardlinked duplicates */
@@ -266,14 +271,14 @@ static gboolean rm_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *se
      * Also check if the file is a output of rmlint itself. Which we definitely
      * not want to handle. Creating a script that deletes itself is fun but useless.
      * */
-    return rm_handle_own_files(session, file) || rm_handle_other_lint(file, session);
+    return rm_pp_handle_own_files(session, file) || rm_pp_handle_other_lint(file, session);
 }
 
-int cmp_reverse_alphabetical(char *a, char *b) {
+static int rm_pp_cmp_reverse_alphabetical(const char *a, const char *b) {
     return -strcmp(a, b);
 }
 
-static guint64 handle_other_lint(RmSession *session) {
+static guint64 rm_pp_handler_other_lint(RmSession *session) {
     guint64 num_handled = 0;
 
     RmFileTables *tables = session->tables;
@@ -282,7 +287,7 @@ static guint64 handle_other_lint(RmSession *session) {
         if (type == RM_LINT_TYPE_EDIR) {
             tables->other_lint[type] = g_list_sort(
                                            tables->other_lint[type],
-                                           (GCompareFunc)cmp_reverse_alphabetical
+                                           (GCompareFunc)rm_pp_cmp_reverse_alphabetical
                                        );
         }
 
@@ -294,7 +299,6 @@ static guint64 handle_other_lint(RmSession *session) {
             g_assert(type == file->lint_type);
 
             num_handled++;
-
             rm_fmt_write(session->formats, file);
         }
         g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
@@ -305,15 +309,13 @@ static guint64 handle_other_lint(RmSession *session) {
 
 /* This does preprocessing including handling of "other lint" (non-dupes) */
 void rm_preprocess(RmSession *session) {
-    RmSettings *settings = session->settings;
     RmFileTables *tables = session->tables;
-
-    /* process hardlink groups, and move other_lint into tables- */
     g_assert(tables->node_table);
 
+    /* process hardlink groups, and move other_lint into tables- */
     g_hash_table_foreach_remove(
         tables->node_table,
-        (GHRFunc)rm_handle_hardlinks,
+        (GHRFunc)rm_pp_handle_hardlinks,
         session
     );
 
@@ -322,14 +324,9 @@ void rm_preprocess(RmSession *session) {
         g_timer_elapsed(session->timer, NULL)
     );
 
-    session->other_lint_cnt += handle_other_lint(session);
+    session->other_lint_cnt += rm_pp_handler_other_lint(session);
     rm_log_debug(
         "Other lint handling finished at time %.3f\n",
         g_timer_elapsed(session->timer, NULL)
     );
-
-    if(settings->searchdup == 0) {
-        return;
-    }
-
 }

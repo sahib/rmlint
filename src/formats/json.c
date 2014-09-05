@@ -30,8 +30,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// TODO: Go move this to utilities.c or file.c lazy brick!
-
 typedef struct RmFmtHandlerJSON {
     /* must be first */
     RmFmtHandler parent;
