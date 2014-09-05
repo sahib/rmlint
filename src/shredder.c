@@ -1328,11 +1328,16 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         if (!file->digest) {
             g_assert(file->shred_group);
             if (!file->shred_group->digest) {
-                /* this is first time */
+                /* this is first generation of RMGroups, so there is no progressive hash yet */
                 g_assert(file->hash_offset == 0);
                 file->digest = rm_digest_new(main->session->settings->checksum_type, 0, 0); //TODO: seeds?
             } else {
                 file->digest = rm_digest_copy(file->shred_group->digest);
+                if (file->digest->type == RM_DIGEST_PARANOID) {
+                    /* paranoid digest is non-cumulative, so needs to be reset to start each generation */
+                    file->digest->paranoid_offset = 0;
+                }
+
             }
         }
 

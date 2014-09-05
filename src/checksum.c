@@ -170,6 +170,7 @@ RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
         break;
     case RM_DIGEST_PARANOID:
         digest->bytes = rm_digest_paranoia_bytes();
+        digest->paranoid_offset = 0;
         break;
     default:
         g_assert_not_reached();
@@ -273,8 +274,9 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
 #endif
         break;
     case RM_DIGEST_PARANOID:
-        g_assert(size <= rm_digest_paranoia_bytes());
-        memcpy((char *)digest->checksum, data, size);
+        g_assert(size + digest->paranoid_offset <= rm_digest_paranoia_bytes());
+        memcpy((char *)digest->checksum + digest->paranoid_offset, data, size);
+        digest->paranoid_offset += size;
         break;
     default:
         g_assert_not_reached();
@@ -282,7 +284,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
 }
 
 RmDigest *rm_digest_copy(RmDigest *digest) {
-    g_assert(digest); 
+    g_assert(digest);
 
     RmDigest *self = NULL;
     rm_digest_allocate(digest);
@@ -310,6 +312,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_PARANOID:
         self = rm_digest_new(digest->type, 0, 0);
         rm_digest_allocate(self);
+        self->paranoid_offset = digest->paranoid_offset;
         memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
         break;
     default:
@@ -322,7 +325,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
 guint8 *rm_digest_steal_buffer(RmDigest *digest) {
     guint8 *result = g_slice_alloc0(digest->bytes);
     RmDigest *copy = NULL;
-    gsize buflen = digest->bytes;   
+    gsize buflen = digest->bytes;
 
     rm_digest_allocate(digest);
 

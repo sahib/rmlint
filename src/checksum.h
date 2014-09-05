@@ -60,6 +60,7 @@ typedef struct RmDigest {
     };
     RmDigestType type;
     gsize bytes;
+    gsize paranoid_offset;
 
     guint64 initial_seed1;
     guint64 initial_seed2;
