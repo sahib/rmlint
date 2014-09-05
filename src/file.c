@@ -91,3 +91,19 @@ void rm_file_destroy(RmFile *file) {
     g_free(file->path);
     g_slice_free(RmFile, file);
 }
+
+const char * rm_file_lint_type_to_string(RmLintType type) {
+    static const char *TABLE[] = {
+        [RM_LINT_TYPE_UNKNOWN]        = "",
+        [RM_LINT_TYPE_EDIR]           = "emptydir",
+        [RM_LINT_TYPE_NBIN]           = "nonstripped",
+        [RM_LINT_TYPE_BLNK]           = "badlink",
+        [RM_LINT_TYPE_BADUID]         = "baduid",
+        [RM_LINT_TYPE_BADGID]         = "badgid",
+        [RM_LINT_TYPE_BADUGID]        = "badugid",
+        [RM_LINT_TYPE_EFILE]          = "emptyfile",
+        [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate"
+    };
+    
+    return TABLE[CLAMP(type, RM_LINT_TYPE_UNKNOWN, RM_N_LINT_TYPES)];
+}

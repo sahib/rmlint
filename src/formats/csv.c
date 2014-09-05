@@ -33,18 +33,6 @@
 #define CSV_SEP  ","
 #define CSV_FORMAT "%s"CSV_SEP"%s"CSV_SEP"%"LLU""CSV_SEP"%s\n"
 
-static const char *LINT_TYPE_TO_COLUMN[] = {
-    [RM_LINT_TYPE_UNKNOWN]      = "",
-    [RM_LINT_TYPE_EDIR]         = "emptydir",
-    [RM_LINT_TYPE_NBIN]         = "nonstripped",
-    [RM_LINT_TYPE_BLNK]         = "badlink",
-    [RM_LINT_TYPE_BADUID]       = "baduid",
-    [RM_LINT_TYPE_BADGID]       = "badgid",
-    [RM_LINT_TYPE_BADUGID]      = "badugid",
-    [RM_LINT_TYPE_EFILE]        = "emptyfile",
-    [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate"
-};
-
 typedef struct RmFmtHandlerCSV {
     /* must be first */
     RmFmtHandler parent;
@@ -77,8 +65,8 @@ static void rm_fmt_elem(
     char *clean_path = rm_util_strsub(file->path, CSV_SEP, "\\"CSV_SEP);
 
     fprintf(out, CSV_FORMAT,
-            LINT_TYPE_TO_COLUMN[file->lint_type], clean_path, file->file_size, checksum_str
-           );
+            rm_file_lint_type_to_string(file->lint_type), clean_path, file->file_size, checksum_str
+    );
 
     g_free(clean_path);
 }

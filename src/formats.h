@@ -60,9 +60,9 @@ typedef struct RmFmtTable {
 struct RmFmtHandler;
 
 typedef void (* RmFmtHeadCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
+typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
 typedef void (* RmFmtElemCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFile *file);
 typedef void (* RmFmtProgCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFmtProgressState state, guint64 n, guint64 N);
-typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
 
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {

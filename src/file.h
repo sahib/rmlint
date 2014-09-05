@@ -64,7 +64,8 @@ typedef enum RmLintType {
 
     /* note: this needs to be last item in list */
     RM_LINT_TYPE_DUPE_CANDIDATE,
-    RM_LINT_TYPE_ORIGINAL_TAG
+    RM_LINT_TYPE_ORIGINAL_TAG,
+    RM_N_LINT_TYPES = RM_LINT_TYPE_DUPE_CANDIDATE
 } RmLintType;
 
 
@@ -166,5 +167,10 @@ RmFile *rm_file_new(
  * @brief Deallocate the memory allocated by rm_file_new
  */
 void rm_file_destroy(RmFile *file);
+
+/**
+ * @brief Convert RmLintType to a human readable short string.
+ */
+const char * rm_file_lint_type_to_string(RmLintType type);
 
 #endif /* end of include guard */
