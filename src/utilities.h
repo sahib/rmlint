@@ -27,13 +27,13 @@
 #define RM_UTILITIES_H_INCLUDE
 
 #include <glib.h>
-#include <sys/stat.h>
 #include <stdbool.h>
-#include <linux/fiemap.h>
 
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/uio.h>
+
 
 typedef struct stat64 RmStat;
 
@@ -57,6 +57,10 @@ static inline void rm_sys_close(int fd) {
     if(close(fd) == -1) {
         rm_log_perror("close(2) failed");
     }
+}
+
+static inline guint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, guint64 offset) {
+    return preadv(fd, iov, iovcnt, offset);
 }
 
 /////////////////////////////////////

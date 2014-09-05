@@ -463,8 +463,8 @@ static int rm_hash_file_mmap(const char *file, RmDigestType type, _U double buf_
         perror("ERROR:hash_file->mmap");
     }
 
-    if(close(fd) == -1) {
-        perror("ERROR:close()");
+    ifrm_sys_close(fd) == -1) {
+        perror("ERRORrm_sys_close()");
     }
 
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
@@ -497,7 +497,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
     gsize digest_len = rm_digest_hexstring(&digest, buffer);
     rm_digest_free(&digest);
 
-    close(fd);
+   rm_sys_close(fd);
     return digest_len;
 }
 

@@ -174,7 +174,7 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp) {
         }
     }
     elf_end(elf);
-    close(fd);
+    rm_sys_close(fd);
 
     return is_ns;
 }
@@ -607,7 +607,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
         }
     }
 
-    close(fd);
+    rm_sys_close(fd);
     g_free(fiemap);
 
     g_sequence_sort(self, (GCompareDataFunc)rm_offset_sort_logical, NULL);

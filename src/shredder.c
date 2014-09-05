@@ -1032,8 +1032,8 @@ static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
         rm_buffer_pool_release(tag->mem_pool, buf_b);
     }
 
-    close(fd_a);
-    close(fd_b);
+   rm_sys_close(fd_a);
+   rm_sys_close(fd_b);
 
     return result;
 }
@@ -1108,7 +1108,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
     fd = rm_sys_open(file->path, O_RDONLY);
     if(fd == -1) {
-        perror("open failed");
+        rm_log_perror("open failed");
         file->status = RM_FILE_STATE_IGNORE;
         g_async_queue_push(device->hashed_file_return, file);
         goto finish;
@@ -1142,8 +1142,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         readvec[i].iov_len = buf_size;
     }
 
-    // XXX-TODO: bug suspection: off_t is too small on 64bit.
-    while(bytes_to_read > 0 && (bytes_read = preadv64(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
+    while(bytes_to_read > 0 && (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
         int blocks = DIVIDE_CEIL(bytes_read,  buf_size);
 
         bytes_to_read -= bytes_read;
@@ -1179,7 +1178,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
 finish:
     if(fd > 0) {
-        close(fd);
+       rm_sys_close(fd);
     }
 
     /* Update totals for device */

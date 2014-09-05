@@ -35,7 +35,7 @@ static void rm_file_set_lock_flags(const char *path, int flags) {
         if(flock(fd, flags) != 0) {
             rm_log_perror("flock(2) failed");
         }
-        close(fd);
+       rm_sys_close(fd);
     }
 }
 
