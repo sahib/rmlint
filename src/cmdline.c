@@ -621,6 +621,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 1:
             settings->checksum_type = RM_DIGEST_BASTARD;
+            settings->lock_files = true;
             break;
         case 2:
 #ifdef G_CHECKSUM_SHA512
@@ -628,9 +629,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 #else
             settings->checksum_type = RM_DIGEST_SHA256;
 #endif
+            settings->lock_files = true;
             break;
         case 3:
             settings->checksum_type = RM_DIGEST_PARANOID;
+            settings->lock_files = true;
             break;
         default:
             rm_log_error(RED"Only up to -ppp or down to -P flags allowed.\n"RESET);
