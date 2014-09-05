@@ -59,24 +59,6 @@
 #endif
 
 ////////////////////////////////////
-//       SYSCALL WRAPPERS         //
-////////////////////////////////////
-
-
-// TODO: use correct version for 32/64 bit.
-int rm_sys_stat(const char *path, RmStat *buf) {
-    return stat64(path, buf);
-}
-
-int rm_sys_lstat(const char *path, RmStat *buf) {
-    return lstat64(path, buf);
-}
-
-int rm_sys_open(const char *path, int mode) {
-    return open(path, mode | O_LARGEFILE);
-}
-
-////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
 

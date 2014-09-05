@@ -31,13 +31,33 @@
 #include <stdbool.h>
 #include <linux/fiemap.h>
 
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 typedef struct stat64 RmStat;
 
-int rm_sys_stat(const char *path, RmStat *buf);
+////////////////////////////////////
+//       SYSCALL WRAPPERS         //
+////////////////////////////////////
 
-int rm_sys_lstat(const char *path, RmStat *buf);
+static inline int rm_sys_stat(const char *path, RmStat *buf) {
+    return stat64(path, buf);
+}
 
-int rm_sys_open(const char *path, int mode);
+static inline int rm_sys_lstat(const char *path, RmStat *buf) {
+    return lstat64(path, buf);
+}
+
+static inline int rm_sys_open(const char *path, int mode) {
+    return open(path, mode | O_LARGEFILE);
+}
+
+static inline void rm_sys_close(int fd) {
+    if(close(fd) == -1) {
+        rm_log_perror("close(2) failed");
+    }
+}
 
 /////////////////////////////////////
 //   UID/GID VALIDITY CHECKING     //
