@@ -895,8 +895,11 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                           );
 
     if (group == NULL) {
-	guint64 *file_size_cpy = g_malloc0(sizeof(guint64));
-	*file_size_cpy = file->file_size;
+        /* we cannot store a 8byte integer in 4 byte pointer
+         * on 32 bit (we can on 64 though), so allocate mem.
+         */
+        guint64 *file_size_cpy = g_malloc0(sizeof(guint64));
+        *file_size_cpy = file->file_size;
 
         group = rm_shred_group_new(file, NULL);
         g_hash_table_insert(

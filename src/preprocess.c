@@ -37,7 +37,9 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->size_table = g_hash_table_new(NULL, NULL);
 
-    tables->size_groups = g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, NULL);
+    tables->size_groups = g_hash_table_new_full(
+        g_int64_hash, g_int64_equal, g_free, NULL
+    );
 
     tables->node_table = g_hash_table_new(NULL, NULL);
 
