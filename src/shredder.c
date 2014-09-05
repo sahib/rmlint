@@ -987,6 +987,8 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
             }
 
             group->next_offset = group->hash_offset + target_bytes;
+
+            /* for paranoid digests, make sure next read is not > max size of paranoid buffer */
             if(group->digest_type == RM_DIGEST_PARANOID) {
                 group->next_offset = MIN(group->next_offset, group->hash_offset + rm_digest_paranoia_bytes() );
             }
@@ -999,19 +1001,10 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
 
     if (bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
         file->status = RM_FILE_STATE_FRAGMENT;
-        result = (bytes_to_next_fragment);
+        result = bytes_to_next_fragment;
     } else {
         file->status = RM_FILE_STATE_NORMAL;
         result = (group->next_offset - file->seek_offset);
-    }
-
-
-    if(file->digest && (file->digest->type == RM_DIGEST_PARANOID)) {
-        //g_assert(result <= file->digest->bytes - file->digest->paranoid_offset );
-        if (result > file->digest->bytes - file->digest->paranoid_offset) {
-            result = MIN(result, file->digest->bytes - file->digest->paranoid_offset);
-            file->status = RM_FILE_STATE_NORMAL;
-        }
     }
 
     return result;
@@ -1051,7 +1044,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         goto finish;
     }
 
-    /* preadv() is benifitial for large files since it can cut the
+    /* preadv() is beneficial for large files since it can cut the
      * number of syscall heavily.  I suggest N_BUFFERS=4 as good
      * compromise between memory and cpu.
      *
@@ -1135,6 +1128,7 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     g_assert(buffer);
 
     /* Hash buffer->len bytes_read of buffer->data into buffer->file */
+
     rm_digest_update(buffer->file->digest, buffer->data, buffer->len);
     buffer->file->hash_offset += buffer->len;
 
@@ -1236,22 +1230,31 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     GList *iter = device->file_queue->head;
     while(iter && !rm_session_was_aborted(main->session)) {
         RmFile *file = iter->data;
+
         guint64 start_offset = file->hash_offset;
 
         /* initialise hash (or recovery progressive hash so far) */
         if (!file->digest) {
+
             g_assert(file->shred_group);
-            if (!file->shred_group->digest) {
+
+            if ( file->shred_group->digest_type == RM_DIGEST_PARANOID ) {
+                /* get the required target offset into file->shred_group->next_offset, so
+                 * that we can make the paranoid RmDigest the right size*/
+                if (file->shred_group->next_offset == 0) {
+                    (void) rm_shred_get_read_size(file, main);
+                }
+                file->digest = rm_digest_new(
+                                   main->session->settings->checksum_type, 0, 0,
+                                   file->shred_group->next_offset - file->hash_offset
+                               );
+            } else if(file->shred_group->digest) {
+                /* pick up the digest-so-far from the RmShredGroup */
+                file->digest = rm_digest_copy(file->shred_group->digest);
+            } else {
                 /* this is first generation of RMGroups, so there is no progressive hash yet */
                 g_assert(file->hash_offset == 0);
-                file->digest = rm_digest_new(main->session->settings->checksum_type, 0, 0); //TODO: seeds?
-            } else {
-                file->digest = rm_digest_copy(file->shred_group->digest);
-                if (file->digest->type == RM_DIGEST_PARANOID) {
-                    /* paranoid digest is non-cumulative, so needs to be reset to start each generation */
-                    file->digest->paranoid_offset = 0;
-                }
-
+                file->digest = rm_digest_new(main->session->settings->checksum_type, 0, 0, 0); //TODO: seeds?
             }
         }
 

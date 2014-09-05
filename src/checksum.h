@@ -82,7 +82,8 @@ RmDigestType rm_string_to_digest_type(const char *string);
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
  */
-RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2);
+RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2, uint64_t paranoid_size);
+//TODO: we don't need seed if it's a paranoid type; can we somehow reduce number of args using a union?
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.

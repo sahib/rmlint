@@ -75,7 +75,7 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 }
 
 guint64 rm_digest_paranoia_bytes(void) {
-    return 0.5 * 1024 * 1024;
+    return 8 * 1024 * 1024;
 }
 
 static void rm_digest_allocate(RmDigest *self) {
@@ -115,7 +115,8 @@ static void rm_digest_allocate(RmDigest *self) {
     }                                                                                      \
 }
 
-RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
+RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2, uint64_t paranoid_size) {
+
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -169,7 +170,9 @@ RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2) {
         digest->bytes = 128 / 8;
         break;
     case RM_DIGEST_PARANOID:
-        digest->bytes = rm_digest_paranoia_bytes();
+        g_assert( paranoid_size <= rm_digest_paranoia_bytes() );
+        g_assert( paranoid_size > 0 );
+        digest->bytes = paranoid_size;
         digest->paranoid_offset = 0;
         break;
     default:
@@ -243,7 +246,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
                                 (uint32_t)digest->checksum[block].first,
                                 &digest->checksum[block]);
 #else
-        #error "Probably not a good idea to compile rmlint on 16bit."
+#error "Probably not a good idea to compile rmlint on 16bit."
 #endif
         }
         break;
@@ -271,7 +274,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size)
 #endif
         break;
     case RM_DIGEST_PARANOID:
-        g_assert(size + digest->paranoid_offset <= rm_digest_paranoia_bytes());
+        g_assert(size + digest->paranoid_offset <= digest->bytes);
         memcpy((char *)digest->checksum + digest->paranoid_offset, data, size);
         digest->paranoid_offset += size;
         break;
@@ -307,7 +310,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_PARANOID:
-        self = rm_digest_new(digest->type, 0, 0);
+        self = rm_digest_new(digest->type, 0, 0, digest->bytes);
         rm_digest_allocate(self);
         self->paranoid_offset = digest->paranoid_offset;
         if(self->checksum && digest->checksum) {
@@ -491,65 +494,65 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
         for(int i = 0; i < blocks; ++i) {
             rm_digest_update(&digest, readvec[i].iov_base, (i == blocks - 1) ? remainder : S);
         }
-    3
+        3
 
-    gsize digest_len = rm_digest_hexstring(&digest, buffer);
-    rm_digest_free(&digest);
+        gsize digest_len = rm_digest_hexstring(&digest, buffer);
+        rm_digest_free(&digest);
 
-   rm_sys_close(fd);
-    return digest_len;
-}
-
-
-int main(int argc, char **argv) {
-    if(argc < 3) {
-        printf("Specify a type and a file\n");
-        return EXIT_FAILURE;
+        rm_sys_close(fd);
+        return digest_len;
     }
 
-    for(int j = 2; j < argc; j++) {
-        const char *types[] = {
-            "city", "spooky", "murmur", "murmur256", "city256", "murmur512",
-            "city512", "md5", "sha1", "sha256", "sha512",
-            NULL
-        };
 
-        // printf("# %d MB\n", 1 << (j - 2));
-        for(int i = 0; types[i]; ++i) {
-            RmDigestType type = rm_string_to_digest_type(types[i]);
-            if(type == RM_DIGEST_UNKNOWN) {
-                printf("Unknown type: %s\n", types[i]);
-                return EXIT_FAILURE;
-            }
-
-            GTimer *timer = g_timer_new();
-            int digest_len = 0;
-
-            char buffer[_RM_HASH_LEN * 2];
-            memset(buffer, 0, sizeof(buffer));
-
-            if(!strcasecmp(argv[1], "mmap")) {
-                digest_len = rm_hash_file_mmap(argv[j], type, 1, buffer);
-            } else if(!strcasecmp(argv[1], "readv")) {
-                digest_len = rm_hash_file_readv(argv[j], type, 1, buffer);
-            } else {
-                digest_len = rm_hash_file(argv[j], type, strtod(argv[1], NULL), buffer);
-            }
-
-            for(int i = 0; i < digest_len; i++) {
-                printf("%c", buffer[i]);
-            }
-
-            while(digest_len++ < 128) {
-                putchar(' ');
-            }
-
-            printf(" %2.3fs %s\n", g_timer_elapsed(timer, NULL), types[i]);
-            g_timer_destroy(timer);
+    int main(int argc, char **argv) {
+        if(argc < 3) {
+            printf("Specify a type and a file\n");
+            return EXIT_FAILURE;
         }
-    }
 
-    return 0;
-}
+        for(int j = 2; j < argc; j++) {
+            const char *types[] = {
+                "city", "spooky", "murmur", "murmur256", "city256", "murmur512",
+                "city512", "md5", "sha1", "sha256", "sha512",
+                NULL
+            };
+
+            // printf("# %d MB\n", 1 << (j - 2));
+            for(int i = 0; types[i]; ++i) {
+                RmDigestType type = rm_string_to_digest_type(types[i]);
+                if(type == RM_DIGEST_UNKNOWN) {
+                    printf("Unknown type: %s\n", types[i]);
+                    return EXIT_FAILURE;
+                }
+
+                GTimer *timer = g_timer_new();
+                int digest_len = 0;
+
+                char buffer[_RM_HASH_LEN * 2];
+                memset(buffer, 0, sizeof(buffer));
+
+                if(!strcasecmp(argv[1], "mmap")) {
+                    digest_len = rm_hash_file_mmap(argv[j], type, 1, buffer);
+                } else if(!strcasecmp(argv[1], "readv")) {
+                    digest_len = rm_hash_file_readv(argv[j], type, 1, buffer);
+                } else {
+                    digest_len = rm_hash_file(argv[j], type, strtod(argv[1], NULL), buffer);
+                }
+
+                for(int i = 0; i < digest_len; i++) {
+                    printf("%c", buffer[i]);
+                }
+
+                while(digest_len++ < 128) {
+                    putchar(' ');
+                }
+
+                printf(" %2.3fs %s\n", g_timer_elapsed(timer, NULL), types[i]);
+                g_timer_destroy(timer);
+            }
+        }
+
+        return 0;
+    }
 
 #endif
