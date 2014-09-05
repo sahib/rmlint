@@ -74,8 +74,8 @@ static void rm_fmt_prog(
         MAYBE_RED(session), session->dup_group_counter, MAYBE_RESET(session)
     );
 
-    /* log10(2 ** 64) + 1 = 21; */
-    char size_string_buf[21] = {0};
+    /* log10(2 ** 64) + 2 = 21; */
+    char size_string_buf[22] = {0};
     rm_util_size_to_human_readable(
         session->total_lint_size, size_string_buf, sizeof(size_string_buf)
     );

@@ -81,10 +81,7 @@ void rm_session_clear(RmSession *session) {
 
     /* Free mem */
     if(settings->paths) {
-        for(int i = 0; settings->paths[i]; ++i) {
-            g_free(settings->paths[i]);
-        }
-        g_free(settings->paths);
+        g_strfreev(settings->paths);
     }
 
     g_timer_destroy(session->timer);

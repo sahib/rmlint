@@ -67,7 +67,7 @@ typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {
     /* Name of the Handler */
-    const char *name;
+    char *name;
 
     /* Size in bytes of the *real* handler */
     const int size;
@@ -170,6 +170,13 @@ void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char
  * @return NULL if not foumd, the value for this key. Memory owned by RmFmtTable.
  */
 const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, const char *key);
+
+/**
+ * @brief Check if path is a set output of RmFmtTable.
+ *
+ * @return true if it is.
+ */
+bool rm_fmt_is_a_output(RmFmtTable *self, const char *path);
 
 /**
  * @brief Initialize a GHashTableIter with the pairs of registerd

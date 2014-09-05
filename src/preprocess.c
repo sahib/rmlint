@@ -222,12 +222,20 @@ static gboolean rm_handle_other_lint(RmFile *file, RmSession *session) {
     }
 }
 
+static bool rm_handle_own_files(RmSession *session, RmFile *file) {
+    if(rm_fmt_is_a_output(session->formats, file->path)) {
+        rm_file_destroy(file);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 /* preprocess hardlinked files via rm_handle_other_lint, stripping out
  * "other lint".  If there are no files left at the end then destroy the
  * head file and return TRUE so that the cluster can be deleted from the
  * node_table hash table */
-static gboolean rm_handle_hardlinks(gpointer key, RmFile *file, RmSession *session) {
-    (void)key;
+static gboolean rm_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *session) {
     g_assert(file);
     RmSettings *settings = session->settings;
 
@@ -253,10 +261,13 @@ static gboolean rm_handle_hardlinks(gpointer key, RmFile *file, RmSession *sessi
     }
     /* handle the head file; if it's "other lint" then send it there, else keep it
      * NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE as head
-     * file, unless all the files are "other lint"*/
-    return rm_handle_other_lint(file, session);
+     * file, unless all the files are "other lint"
+     *
+     * Also check if the file is a output of rmlint itself. Which we definitely
+     * not want to handle. Creating a script that deletes itself is fun but useless.
+     * */
+    return rm_handle_own_files(session, file) || rm_handle_other_lint(file, session);
 }
-
 
 int cmp_reverse_alphabetical(char *a, char *b) {
     return -strcmp(a, b);
@@ -299,6 +310,7 @@ void rm_preprocess(RmSession *session) {
 
     /* process hardlink groups, and move other_lint into tables- */
     g_assert(tables->node_table);
+
     g_hash_table_foreach_remove(
         tables->node_table,
         (GHRFunc)rm_handle_hardlinks,

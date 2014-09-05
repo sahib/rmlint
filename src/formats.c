@@ -41,6 +41,11 @@ const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
     return table[(state < RM_PROGRESS_STATE_N) ? state : RM_PROGRESS_STATE_N];
 }
 
+static void rm_fmt_handler_free(RmFmtHandler *handler) {
+    g_free(handler->path);
+    g_free(handler);
+}
+
 RmFmtTable *rm_fmt_rm_sys_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
 
@@ -53,7 +58,7 @@ RmFmtTable *rm_fmt_rm_sys_open(RmSession *session) {
     );
 
     self->handler_to_file = g_hash_table_new_full(
-        NULL, NULL, g_free, NULL
+        NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL
     );
     
     self->config = g_hash_table_new_full(
@@ -121,6 +126,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
 
     size_t path_len = (path) ? strlen(path) : 0;
     FILE *file_handle = NULL;
+    bool needs_full_path = false;
 
     if(strncmp(path, "stdout", path_len) == 0) {
         file_handle = stdout;
@@ -130,6 +136,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         /* I bet someone finds a use for this :-) */
         file_handle = stdin;
     } else {
+        needs_full_path = true;
         file_handle = fopen(path, "w");
     }
 
@@ -144,13 +151,19 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler_copy = g_malloc0(new_handler->size);
     memcpy(new_handler_copy, new_handler, new_handler->size);
     g_mutex_init(&new_handler->print_mtx);
-    new_handler_copy->path = path;
+
+    if(needs_full_path == false) {
+        new_handler_copy->path = g_strdup(path);
+    } else {
+        new_handler_copy->path = realpath(path, NULL);
+    }
 
     g_hash_table_insert(
         self->handler_to_file, new_handler_copy, file_handle
     );
+
     g_hash_table_insert(
-        self->path_to_handler, (char *)new_handler_copy->path, new_handler
+        self->path_to_handler, new_handler_copy->path, new_handler
     );
 
     return true;
@@ -203,6 +216,10 @@ const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, con
     }
 
     return g_hash_table_lookup(key_to_vals, key);
+}
+
+bool rm_fmt_is_a_output(RmFmtTable *self, const char *path) {
+    return g_hash_table_contains(self->path_to_handler, path);
 }
 
 void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {

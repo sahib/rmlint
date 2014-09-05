@@ -227,12 +227,7 @@ static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
         settings->is_prefd[index] = is_pref;
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
 
-        if (path[0] == '/') {
-            /* It's the full path already*/
-            settings->paths[index + 0] = g_strdup(path);
-        } else {
-            settings->paths[index + 0] = g_strdup_printf("%s%s", settings->iwd, path);
-        }
+        settings->paths[index + 0] = realpath(path, NULL);
         settings->paths[index + 1] = NULL;
         return TRUE;
     }
@@ -429,6 +424,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     int output_flag_cnt = -1;
     int option_index = 0;
     int path_index = 0;
+
+    /* Get current directory */
+    char cwd_buf[PATH_MAX + 1];
+    getcwd(cwd_buf, PATH_MAX);
+    settings->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
 
     /* set to true if -o or -O is specified */
     bool oO_specified[2] = {false, false};
@@ -656,11 +656,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
                               verbosity_counter, 0, G_LOG_LEVEL_DEBUG
                           )];
-
-    /* Get current directory */
-    char cwd_buf[PATH_MAX + 1];
-    getcwd(cwd_buf, PATH_MAX);
-    settings->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
 
     /* Check the directory to be valid */
     while(optind < argc) {

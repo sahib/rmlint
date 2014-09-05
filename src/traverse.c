@@ -324,9 +324,7 @@ void rm_traverse_tree(RmSession *session) {
         char *path = settings->paths[idx];
         bool is_prefd = settings->is_prefd[idx];
 
-        RmTravBuffer *buffer = rm_trav_buffer_new(
-                                   session, path, is_prefd, idx
-                               );
+        RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);
 
         /* Append normal paths directly */
         if(S_ISREG(buffer->stat_buf.st_mode)) {
@@ -344,6 +342,7 @@ void rm_traverse_tree(RmSession *session) {
 
             g_queue_push_tail(path_queue, buffer);
         } else {
+            /* Probably a block device, fifo or something weird. */
             rm_trav_buffer_free(buffer);
         }
     }
