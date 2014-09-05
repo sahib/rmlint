@@ -5,10 +5,8 @@ Stable Version
 - Write a tutorial.
 - Implement py and json formatter.
 - Fix progressbar and script formatter.
+- Add option to only scan files new than mtime
 - see if extended paranoid is less code.
-- add some bastard-hash algorithm. 
 - Integrate 'ack TODO | wc -l' to 0.
 - Add option for finding only dupes with double basename
-- implement flock() support - apparently all locks are released on program
-  termination - as optional option (-l)
 - ...
