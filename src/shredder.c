@@ -964,83 +964,6 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
-/* Paranoid bitwise comparison of two rmfiles */
-/* TODO: pairwise comparison requires 2(n-1) reads eg 6 reads for a cluster of 4 files; consider
- * instead comparing larger groups in parallel - this would require more mem (or smaller reads)
- * but saves (n-2) times reading in a whole file */
-static bool rm_shred_byte_compare_files(RmMainTag *tag, RmFile *a, RmFile *b) {
-    g_assert(a->file_size == b->file_size);
-
-    int fd_a = rm_sys_open(a->path, O_RDONLY);
-    if(fd_a == -1) {
-        rm_log_perror("Unable to open file_a for paranoia");
-        return false;
-    } else {
-        posix_fadvise(fd_a, 0, 0, SHRED_FADVISE_FLAGS);
-    }
-
-    int fd_b = rm_sys_open(b->path, O_RDONLY);
-    if(fd_b == -1) {
-        rm_log_perror("Unable to open file_b for paranoia");
-        return false;
-    } else {
-        posix_fadvise(fd_b, 0, 0, SHRED_FADVISE_FLAGS);
-    }
-
-    bool result = true;
-    int buf_size = rm_buffer_pool_size(tag->mem_pool) - offsetof(RmBuffer, data);
-
-    struct iovec readvec_a[SHRED_PARANOIA_PAGES];
-    struct iovec readvec_b[SHRED_PARANOIA_PAGES];
-
-    for(int i = 0; i < SHRED_PARANOIA_PAGES; ++i) {
-        RmBuffer *buffer = rm_buffer_pool_get(tag->mem_pool);
-        readvec_a[i].iov_base = buffer->data;
-        readvec_a[i].iov_len = buf_size;
-
-        buffer = rm_buffer_pool_get(tag->mem_pool);
-        readvec_b[i].iov_base = buffer->data;
-        readvec_b[i].iov_len = buf_size;
-    }
-
-    while(result) {
-        int bytes_a = readv(fd_a, readvec_a, SHRED_PARANOIA_PAGES);
-        int bytes_b = readv(fd_b, readvec_b, SHRED_PARANOIA_PAGES);
-        if(bytes_a <= 0 || bytes_b <= 0) {
-            break;
-        }
-
-        g_assert(bytes_a == bytes_b);
-
-        int remain = bytes_a % buf_size;
-        int blocks = bytes_a / buf_size + !!remain;
-
-        for(int i = 0; i < blocks && result; ++i) {
-            RmBuffer *buf_a = readvec_a[i].iov_base - offsetof(RmBuffer, data);
-            RmBuffer *buf_b = readvec_b[i].iov_base - offsetof(RmBuffer, data);
-            int size = buf_size;
-
-            if(i + 1 == blocks && remain > 0) {
-                size = remain;
-            }
-
-            result = !memcmp(buf_a->data, buf_b->data, size);
-        }
-    }
-
-    for(int i = 0; i < SHRED_PARANOIA_PAGES; ++i) {
-        RmBuffer *buf_a = readvec_a[i].iov_base - offsetof(RmBuffer, data);
-        RmBuffer *buf_b = readvec_b[i].iov_base - offsetof(RmBuffer, data);
-        rm_buffer_pool_release(tag->mem_pool, buf_a);
-        rm_buffer_pool_release(tag->mem_pool, buf_b);
-    }
-
-   rm_sys_close(fd_a);
-   rm_sys_close(fd_b);
-
-    return result;
-}
-
 static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;
     g_assert(group);
@@ -1093,51 +1016,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
 
     return result;
 }
-
-
-//~ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
-//~ RmShredGroup *group = file->shred_group;
-//~ g_assert(group);
-//~
-//~ guint32 result = 0;
-//~
-//~ g_mutex_lock(&group->lock);
-//~ {
-//~ /* calculate next_offset property of the RmShredGroup, if not already done */
-//~ if (group->next_offset == 0) {
-//~ guint64 target_bytes = (group->hash_offset == 0) ? SHRED_CHEAP_READ_BYTES : SHRED_CHEAP_SEEK_BYTES;
-//~
-//~ /* round to even number of pages, round up to MIN_READ_PAGES */
-//~ guint64 target_pages = MAX(target_bytes / tag->page_size, SHRED_MIN_READ_PAGES);
-//~ target_bytes = target_pages * tag->page_size;
-//~
-//~ /* test if cost-effective to read the whole file */
-//~ if (group->hash_offset + target_bytes + SHRED_BALANCED_READ_BYTES >= group->file_size) {
-//~ target_bytes = group->file_size - group->hash_offset;
-//~ }
-//~
-//~ group->next_offset = group->hash_offset + target_bytes;
-//~ }
-//~ }
-//~ g_mutex_unlock(&group->lock);
-//~
-//~ /* read to end of current file fragment, or to group->next_offset, whichever comes first */
-//~ guint64 bytes_to_next_fragment = rm_offset_bytes_to_next_fragment(file->disk_offsets, file->seek_offset);
-//~
-//~ if (bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
-//~ file->status = RM_FILE_STATE_FRAGMENT;
-//~ result = (bytes_to_next_fragment);
-//~ } else {
-//~ file->status = RM_FILE_STATE_NORMAL;
-//~ result = (group->next_offset - file->seek_offset);
-//~ }
-//~
-//~ if(file->digest->type == RM_DIGEST_PARANOID) {
-//~ result = MIN(result, rm_digest_paranoia_bytes());
-//~ }
-//~
-//~ return result;
-//~ }
 
 /* Read from file and send to hasher
  * Note this was initially a separate thread but is currently just called
@@ -1267,25 +1145,6 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     rm_buffer_pool_release(device->main->mem_pool, buffer);
 }
 
-static int rm_shred_check_paranoia(RmMainTag *tag, GQueue *candidates) {
-    int failure_count = 0;
-
-    for(GList *iter_a = candidates->head; iter_a; iter_a = iter_a->next) {
-        RmFile *a = iter_a->data;
-
-        for(GList *iter_b = iter_a->next; iter_b; iter_b = iter_b->next) {
-            RmFile *b = iter_b->data;
-            if(!rm_shred_byte_compare_files(tag, a, b)) {
-                failure_count++;
-                //TODO: discard file
-                //rm_shred_set_file_state(tag, b, RM_FILE_STATE_IGNORE);
-            }
-        }
-    }
-
-    return failure_count;
-}
-
 static RmFile *rm_group_find_original(RmSession *session, GQueue *group/*, gboolean recurse*/) {
     RmFile *result = NULL;
     for(GList *iter = group->head; iter; iter = iter->next) {
@@ -1348,13 +1207,6 @@ void rm_shred_forward_to_output(RmSession *session, RmShredGroup *shred_group, G
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
-    if(tag->session->settings->paranoid) {
-        int failure_count = rm_shred_check_paranoia(tag, group->held_files);
-        if(failure_count > 0) {
-            rm_log_warning("Removed %d files during paranoia check.\n", failure_count);
-        }
-    }
-
     if(g_queue_get_length(group->held_files) > 0) {
         rm_shred_forward_to_output(tag->session, group, group->held_files);
     }
