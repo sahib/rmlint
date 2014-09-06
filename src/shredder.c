@@ -522,7 +522,7 @@ void rm_shred_discard_file(RmFile *file) {
         g_mutex_unlock(&file->shred_group->main->hash_mem_mtx);
     }
 
-    /* toss the file */
+    /* toss the file (and any embedded hardlinks)*/
     rm_file_destroy(file);
 }
 
@@ -776,6 +776,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
         g_assert(file->hash_offset == shred_group->hash_offset);
 
         switch (rm_shred_group_get_status_locked(shred_group)) {
+        case RM_SHRED_GROUP_HASHING:
         case RM_SHRED_GROUP_START_HASHING:
             /* clear the queue and push all its rmfiles to the appropriate device queue */
             if(shred_group->held_files) {
@@ -788,9 +789,9 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
                 }
                 shred_group->held_files = NULL; /* won't need shred_group queue any more, since new arrivals will bypass */
             }
-        //shred_group->status = RM_SHRED_GROUP_HASHING;
-        /* FALLTHROUGH */
-        case RM_SHRED_GROUP_HASHING:
+            //shred_group->status = RM_SHRED_GROUP_HASHING;
+            /* FALLTHROUGH */
+            //case RM_SHRED_GROUP_HASHING:
             if (initial) {
                 /* add file to device queue */
                 g_assert(file->device);
@@ -1256,8 +1257,12 @@ static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
     g_mutex_lock(&group->main->hash_mem_mtx);
     {
         result = (group->main->hash_mem_alloc > mem_required
-                  || group->main->active_files == 0);
+                  || group->main->active_files <= 0);
         if(result) {
+            if (group->main->active_files < 0) {
+                rm_log_error(RED"Error: active files %d, resetting to 0\n"RESET, group->main->active_files);
+                group->main->active_files = 0;
+            }
             group->main->hash_mem_alloc -= mem_required;
             group->main->active_files += group->remaining;
             group->status = RM_SHRED_GROUP_HASHING;
@@ -1268,28 +1273,33 @@ static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
 }
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
+    GList *iter = NULL;
     g_assert(device);
     g_assert(device->hash_pool); /* created when device created */
 
-    rm_log_debug(BLUE"Started rm_shred_devlist_factory for disk %s (%u:%u) with %"LLU" files in queue\n"RESET,
-                 device->disk_name,
-                 major(device->disk),
-                 minor(device->disk),
-                 (guint64)g_queue_get_length(device->file_queue)
-                );
+    g_mutex_lock(&device->lock);
+    {
+        rm_log_debug(BLUE"Started rm_shred_devlist_factory for disk %s (%u:%u) with %"LLU" files in queue\n"RESET,
+                     device->disk_name,
+                     major(device->disk),
+                     minor(device->disk),
+                     (guint64)g_queue_get_length(device->file_queue)
+                    );
 
-    if(device->is_rotational) {
-        g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
+        //if(device->is_rotational) {
+        //	g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
+        //}
+        iter = device->file_queue->head;
     }
+    g_mutex_unlock(&device->lock);
 
     /* scheduler for one file at a time, optimised to minimise seeks */
-    GList *iter = device->file_queue->head;
     while(iter && !rm_session_was_aborted(main->session)) {
         RmFile *file = iter->data;
 
         guint64 start_offset = file->hash_offset;
 
-        /* initialise hash (or recovery progressive hash so far) */
+        /* initialise hash (or recover progressive hash so far) */
         if (!file->digest) {
 
             g_assert(file->shred_group);
@@ -1297,7 +1307,11 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             if ( file->shred_group->digest_type == RM_DIGEST_PARANOID ) {
                 /* check if memory allocation is ok */
                 if (!rm_shred_check_hash_mem_alloc(file)) {
-                    iter = iter->next;
+                    g_mutex_lock(&device->lock);
+                    {
+                        iter = iter->next;
+                    }
+                    g_mutex_unlock(&device->lock);
                     continue;
                 }
 
@@ -1321,6 +1335,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         }
 
         /* hash the next increment of the file */
+        //rm_log_error("reading %s\n", file->path);
         rm_shred_read_factory(file, device);
 
         /* wait until the increment has finished hashing */
@@ -1345,9 +1360,13 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             }
         }
 
-        GList *next = iter->next;
-        g_queue_delete_link(device->file_queue, iter);
-        iter = next;
+        g_mutex_lock(&device->lock);
+        {
+            GList *next = iter->next;
+            g_queue_delete_link(device->file_queue, iter);
+            iter = next;
+        }
+        g_mutex_unlock(&device->lock);
     }
 
     /* threadpool thread terminates but the device will be recycled via
@@ -1368,6 +1387,7 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
+        g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
         rm_log_debug(GREEN"Pushing device %s to threadpool\n", device->disk_name);
         rm_util_thread_pool_push(tag->device_pool, device);
     }
@@ -1422,15 +1442,18 @@ void rm_shred_run(RmSession *session) {
         RmShredDevice *device = g_async_queue_pop(tag.device_return);
         g_mutex_lock(&device->lock);
         {
-            rm_log_debug(BLUE"Got device %s back with %d in queue and %llu bytes remaining in %d remaining files\n"RESET,
+            rm_log_debug(BLUE"Got device %s back with %d in queue and %llu bytes remaining in %d remaining files; active files %d and avail mem %li\n"RESET,
                          device->disk_name,
                          g_queue_get_length(device->file_queue),
                          (unsigned long long)device->remaining_bytes,
-                         device->remaining_files
+                         device->remaining_files,
+                         tag.active_files,
+                         tag.hash_mem_alloc
                         );
 
             if (device->remaining_files > 0) {
                 /* recycle the device */
+                usleep(1000);//TODO - remove
                 rm_util_thread_pool_push(tag.device_pool , device);
             } else {
                 devices_left--;
