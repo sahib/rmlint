@@ -538,17 +538,16 @@ void rm_shred_group_free(RmShredGroup *self) {
             g_queue_free_full(self->held_files, (GDestroyNotify)rm_shred_discard_file);
             break;
         case RM_SHRED_GROUP_FINISHING:
-            g_assert_not_reached();
         case RM_SHRED_GROUP_HASHING:
-            g_assert_not_reached();
         case RM_SHRED_GROUP_START_HASHING:
-            g_assert_not_reached();
         default:
+            rm_log_error("bug: Received invalid RmShredGroupStatus: %d\n", self->status);
             g_assert_not_reached();
         }
     }
 
     g_assert(self->children);
+
     /** give our children the bad news */
     g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
     g_queue_free(self->children);
@@ -1095,13 +1094,6 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     }
 
     while(bytes_to_read > 0 && (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
-        if (bytes_read == -1) {
-            rm_log_perror("preadv failed");
-            file->status = RM_FILE_STATE_IGNORE;
-            g_async_queue_push(device->hashed_file_return, file);
-            goto finish;
-        }
-
         bytes_read = MIN(bytes_read, bytes_to_read); /* ignore over-reads */
         int blocks = DIVIDE_CEIL(bytes_read,  buf_size);
 
@@ -1129,6 +1121,15 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
             readvec[i].iov_len = buf_size;
         }
     }
+
+    /* XXX-TODO: This was in the while loop, which will not be reached on bytes_read == -1? */
+    if (bytes_read == -1) {
+        rm_log_perror("preadv failed");
+        file->status = RM_FILE_STATE_IGNORE;
+        g_async_queue_push(device->hashed_file_return, file);
+        goto finish;
+    }
+
 
     /* Release the rest of the buffers */
     for(int i = 0; i < N_BUFFERS; ++i) {
@@ -1385,7 +1386,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     rm_log_debug(BLUE"Pushing back device %d\n"RESET, (int)device->disk);
     if (!progress) {
         /*didn't make any progress on this pass - add short delay before pushing back */
-        usleep(1000);
+        g_usleep(1000);
     }
     g_async_queue_push(main->device_return, device);
 }
