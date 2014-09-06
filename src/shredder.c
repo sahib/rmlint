@@ -1096,6 +1096,13 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     }
 
     while(bytes_to_read > 0 && (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
+        if (bytes_read == -1) {
+            rm_log_perror("preadv failed");
+            file->status = RM_FILE_STATE_IGNORE;
+            g_async_queue_push(device->hashed_file_return, file);
+            goto finish;
+        }
+
         bytes_read = MIN(bytes_read, bytes_to_read); /* ignore over-reads */
         int blocks = DIVIDE_CEIL(bytes_read,  buf_size);
 
