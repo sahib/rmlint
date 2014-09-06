@@ -1274,6 +1274,8 @@ static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     GList *iter = NULL;
+    gboolean progress = false;
+
     g_assert(device);
     g_assert(device->hash_pool); /* created when device created */
 
@@ -1337,6 +1339,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         /* hash the next increment of the file */
         //rm_log_error("reading %s\n", file->path);
         rm_shred_read_factory(file, device);
+        progress = true;
 
         /* wait until the increment has finished hashing */
         RmFile *popped = g_async_queue_pop(device->hashed_file_return);
@@ -1373,6 +1376,10 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
      * the device_return queue
      */
     rm_log_debug(BLUE"Pushing back device %d\n"RESET, (int)device->disk);
+    if (!progress) {
+        /*didn't make any progress on this pass - add short delay before pushing back */
+        usleep(1000);
+    }
     g_async_queue_push(main->device_return, device);
 }
 
@@ -1453,7 +1460,6 @@ void rm_shred_run(RmSession *session) {
 
             if (device->remaining_files > 0) {
                 /* recycle the device */
-                usleep(1000);//TODO - remove
                 rm_util_thread_pool_push(tag.device_pool , device);
             } else {
                 devices_left--;
