@@ -27,6 +27,9 @@
 
 #include <glib.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <sys/ioctl.h>
 
 typedef struct RmFmtHandlerProgress {
     /* must be first */
@@ -35,39 +38,70 @@ typedef struct RmFmtHandlerProgress {
     /* user data */
     char percent;
     RmFmtProgressState last_state;
+    bool state_changed;
     guint64 n, N;
+
+    struct winsize terminal;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    fprintf(out, " Hi, Im a progressbar!\r");
-    fflush(out);
+    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+    if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
+        rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
+    }
+
+    fprintf(out, "\e[?25l"); /* Hide the cursor */
 }
+
+static int X = 0;
 
 static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, _U RmFile *file) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
-    if(self->percent > 100) {
-        self->percent = 100;
+
+    if(self->state_changed) {
+        fprintf(out, "\n");
+        self->state_changed = false;
+    } else if(X++ % 10 != 0) {
+        return;
     }
 
-    fprintf(out, " [");
+    const int text_width = 30;
+    char text[text_width];
+    memset(text, 0, sizeof(text));
 
-    for(int i = 0; i < self->percent; ++i) {
-        if(i == self->percent - 1) {
-            fprintf(out, "->");
+    strcpy(text, " ");
+    strcpy(text, rm_file_lint_type_to_string(file->lint_type));
+
+
+    double reached_percent = self->n / (double)MAX(1, self->N);
+
+    /* 30 chars left for text */
+    int bar_len = self->terminal.ws_col - text_width;
+    int cells = bar_len * reached_percent;
+
+    switch(self->last_state) {
+        case RM_PROGRESS_STATE_TRAVERSE:
+            fprintf(out, MAYBE_BLUE(session));
+            break;
+        case RM_PROGRESS_STATE_SHREDDER:
+            fprintf(out, MAYBE_GREEN(session));
+            break;
+        default:
+            fprintf(out, MAYBE_YELLOW(session));
+            break;
+    }
+
+    fprintf(out, "[");
+    for(int i = 0; i < bar_len; ++i) {
+        if(i < cells) {
+            fprintf(out, "=");
+        } else if(i == cells) {
+            fprintf(out, ">");
         } else {
-            fprintf(out, "-");
+            fprintf(out, " ");
         }
-    }
-
-    int left = 50 - self->percent;
-    for(int i = 0; i < left; ++i)  {
-        fprintf(out, " ");
-    }
-
-    fprintf(out, "] %-30s (%"LLU"/%"LLU")    \r", rm_fmt_progress_to_string(self->last_state), self->n , self->N);
-    fflush(out);
-
-    self->percent++;
+    } 
+    fprintf(out, "] %s%s\r", rm_fmt_progress_to_string(self->last_state), MAYBE_RESET(session));
 }
 
 static void rm_fmt_prog(
@@ -80,11 +114,12 @@ static void rm_fmt_prog(
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
     self->n = n;
     self->N = N;
+    self->state_changed = !(state == self->last_state);
     self->last_state = state;
 }
 
 static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    fprintf(out, "End of demonstration.%150s\n", " ");
+    fprintf(out, "\e[?25h"); /* show the cursor */
     fflush(out);
 }
 

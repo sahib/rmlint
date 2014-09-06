@@ -279,10 +279,10 @@ typedef struct RmBuffer {
     RmFile *file;
 
     /* len of the read input */
-    guint64 len;
+    guint32 len;
 
     /* is this the last buffer of the current increment? */
-    gboolean is_last;
+    bool is_last;
 
     /* *must* be last member of RmBuffer,
      * gets all the rest of the allocated space
@@ -1022,11 +1022,10 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     guint64 buf_size = rm_buffer_pool_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
-    g_assert(buf_size == 4096);  //TODO: debugging only, remove me later!
-
     gint64 bytes_to_read = rm_shred_get_read_size(file, device->main);
 
     g_assert(bytes_to_read > 0);
+    g_assert(buf_size >= (guint64)SHRED_PAGE_SIZE);  
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
     g_assert(file->seek_offset == file->hash_offset);
 
@@ -1056,7 +1055,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
      */
 
     /* how many buffers to read? */
-    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, buf_size) );
+    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, buf_size));
 
     /* Give the kernel scheduler some hints */
     posix_fadvise(fd, file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
@@ -1200,6 +1199,7 @@ void rm_shred_forward_to_output(RmSession *session, RmShredGroup *shred_group, G
     original_file->digest = NULL;
 
     rm_group_fmt_write(session, shred_group, group, original_file/*, true*/);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, session->dup_counter, session->total_files);
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
@@ -1319,10 +1319,8 @@ void rm_shred_run(RmSession *session) {
     RmMainTag tag;
     tag.session = session;
 
-    // TODO: buf_size wass coming in at 4100, probably because
-    // sizeof(RmBuffer) already allows 4 bytes for guint8 data[]?
-    // applying a "-4" hack for now but it would be nice if this were more exact
-    tag.mem_pool = rm_buffer_pool_init(sizeof(RmBuffer) + SHRED_PAGE_SIZE - 4);
+    /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
+    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE);
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
     tag.totalfiles = 0;
