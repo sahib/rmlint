@@ -425,6 +425,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     int option_index = 0;
     int path_index = 0;
 
+    /* Size string parsing error */
+    const char *parse_error = NULL;
+
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
     getcwd(cwd_buf, PATH_MAX);
@@ -576,8 +579,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->paranoid += 1;
             break;
         case 'u':
-            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, NULL); //TODO: error handling
-            rm_log_error("paranoid ram set to %li\n", settings->paranoid_mem);
+            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error); 
+            if(parse_error != NULL) {
+                rm_log_error("Invalid size description \"%s\": %s\n", optarg, parse_error);
+                rm_cmd_die(session, EXIT_FAILURE);
+            }
             break;
         case 'k':
             settings->keep_all_originals = true;
