@@ -60,12 +60,15 @@ typedef struct RmDigest {
     };
     RmDigestType type;
     gsize bytes;
-    gsize paranoid_offset;
 
-    guint64 initial_seed1;
-    guint64 initial_seed2;
+    union {
+        gsize paranoid_offset;
+        struct {
+            guint64 initial_seed1;
+            guint64 initial_seed2;
+        };
+    };
 } RmDigest;
-
 
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
@@ -82,14 +85,13 @@ RmDigestType rm_string_to_digest_type(const char *string);
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
  */
-RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2, uint64_t paranoid_size);
-//TODO: we don't need seed if it's a paranoid type; can we somehow reduce number of args using a union?
+RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64 paranoid_size);
+// XXX-TODO: Possible, but not useful. Union'd the seed/paranoid members of RmDigest though.
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
  */
 void rm_digest_free(RmDigest *digest);
-
 
 /**
  * @brief Hash a datablock and add it to the current checksum.

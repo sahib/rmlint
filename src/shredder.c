@@ -1044,7 +1044,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     guint64 buf_size = rm_buffer_pool_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
-    gint64 bytes_to_read = rm_shred_get_read_size(file, device->main);
+    gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
 
     g_assert(bytes_to_read > 0);
     g_assert(buf_size >= (guint64)SHRED_PAGE_SIZE);  

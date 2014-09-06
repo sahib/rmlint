@@ -58,7 +58,7 @@ static inline void rm_sys_close(int fd) {
     }
 }
 
-static inline guint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, guint64 offset) {
+static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, guint64 offset) {
     return preadv(fd, iov, iovcnt, offset);
 }
 

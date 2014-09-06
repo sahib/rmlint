@@ -111,12 +111,11 @@ static void rm_digest_allocate(RmDigest *self) {
 
 #define ADD_SEED(digest, seed) {                                                           \
     if(seed) {                                                                             \
-        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(uint64_t)); \
+        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(guint64)); \
     }                                                                                      \
 }
 
-RmDigest *rm_digest_new(RmDigestType type, uint64_t seed1, uint64_t seed2, uint64_t paranoid_size) {
-
+RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64 paranoid_size) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
