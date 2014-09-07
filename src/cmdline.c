@@ -616,7 +616,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->samepart = true;
             break;
         case 'd':
-            settings->depth = ABS(atoi(optarg));
+            settings->depth = ABS(strtol(optarg, NULL, 10));
             break;
         case 'S':
             settings->sort_criteria = optarg;

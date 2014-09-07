@@ -712,9 +712,7 @@ time_t rm_iso8601_parse(const char *string) {
         return 0;
     }
 
-    time_t ts = mktime(&ctime) + timezone;
-    struct tm *local = localtime(&ts);
-    return mktime(local);
+    return mktime(&ctime) + timezone;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
