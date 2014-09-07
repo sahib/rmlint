@@ -78,37 +78,6 @@ guint64 rm_digest_paranoia_bytes(void) {
     return 16 * 1024 * 1024;
 }
 
-static void rm_digest_allocate(RmDigest *self) {
-    /* starting values to let us generate up to 4 different hashes in parallel with
-     * different starting seeds:
-     * */
-    static const guint64 seeds[4] = {
-        0x0000000000000000,
-        0xf0f0f0f0f0f0f0f0,
-        0x3333333333333333,
-        0xaaaaaaaaaaaaaaaa
-    };
-
-    if(self->checksum == NULL) {
-        if (self->bytes > 0) {
-            const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);
-
-            /* checksum type - allocate memory and initialise */
-            self->checksum = g_slice_alloc0(self->bytes);
-            for (gsize block = 0; block < (self->bytes / 16); block++) {
-                self->checksum[block].first = seeds[block % n_seeds] ^ self->initial_seed1;
-                self->checksum[block].second = seeds[block % n_seeds] ^ self->initial_seed2;
-            }
-        }
-
-        if (self->type == RM_DIGEST_BASTARD) {
-            /* bastard type *always* has *pure* murmur hash for first checksum
-             * and seeded city for second checksum */
-            self->checksum[0].first = self->checksum[0].second = 0;
-        }
-    }
-}
-
 #define ADD_SEED(digest, seed) {                                                           \
     if(seed) {                                                                             \
         g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(guint64)); \
@@ -178,7 +147,32 @@ RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64
         g_assert_not_reached();
     }
 
-    /* Allocation is done later */
+    /* starting values to let us generate up to 4 different hashes in parallel with
+     * different starting seeds:
+     * */
+    static const guint64 seeds[4] = {
+        0x0000000000000000,
+        0xf0f0f0f0f0f0f0f0,
+        0x3333333333333333,
+        0xaaaaaaaaaaaaaaaa
+    };
+
+    if(digest->bytes > 0) {
+        const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);
+
+        /* checksum type - allocate memory and initialise */
+        digest->checksum = g_slice_alloc0(digest->bytes);
+        for (gsize block = 0; block < (digest->bytes / 16); block++) {
+            digest->checksum[block].first = seeds[block % n_seeds] ^ digest->initial_seed1;
+            digest->checksum[block].second = seeds[block % n_seeds] ^ digest->initial_seed2;
+        }
+    }
+
+    if (digest->type == RM_DIGEST_BASTARD) {
+        /* bastard type *always* has *pure* murmur hash for first checksum
+         * and seeded city for second checksum */
+        digest->checksum[0].first = digest->checksum[0].second = 0;
+    }
     return digest;
 }
 
@@ -214,8 +208,6 @@ void rm_digest_free(RmDigest *digest) {
 }
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size) {
-    rm_digest_allocate(digest);
-
     switch(digest->type) {
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:
@@ -286,7 +278,6 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     g_assert(digest);
 
     RmDigest *self = NULL;
-    rm_digest_allocate(digest);
 
     switch(digest->type) {
     case RM_DIGEST_MD5:
@@ -310,7 +301,6 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_PARANOID:
         self = rm_digest_new(digest->type, 0, 0, digest->bytes);
-        rm_digest_allocate(self);
         self->paranoid_offset = digest->paranoid_offset;
         if(self->checksum && digest->checksum) {
             memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
@@ -327,8 +317,6 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
     guint8 *result = g_slice_alloc0(digest->bytes);
     RmDigest *copy = NULL;
     gsize buflen = digest->bytes;
-
-    rm_digest_allocate(digest);
 
     switch(digest->type) {
     case RM_DIGEST_MD5:
