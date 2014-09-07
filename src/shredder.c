@@ -7,7 +7,6 @@
 #include <sys/uio.h>
 
 #include "checksum.h"
-#include "checksums/city.h"
 
 #include "preprocess.h"
 #include "utilities.h"

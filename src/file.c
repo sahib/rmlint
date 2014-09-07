@@ -45,7 +45,7 @@ RmFile *rm_file_new(
 ) {
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
-    self->basename = rm_util_basename(path);
+    self->basename = rm_util_basename(self->path);
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;

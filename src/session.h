@@ -55,6 +55,7 @@ typedef struct RmSettings {
     bool lock_files;             /* if set, flock(2) each file before proceeding */
     bool filter_mtime;
     time_t min_mtime;
+    bool match_basename;         /* if set, dupes must have the same basename */
 
     int depth;
     int verbosity;
@@ -79,6 +80,7 @@ typedef struct RmFileTables {
     GHashTable *size_groups;
     GHashTable *node_table;
     GHashTable *mtime_filter;
+    GHashTable *basename_filter;
     GHashTable *orig_table;
     GQueue *file_queue;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];

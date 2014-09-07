@@ -515,6 +515,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-confirm-settings" ,  no_argument       ,  0 ,  'Q'},
             {"flock-files"         ,  no_argument       ,  0 ,  'z'},
             {"no-flock-files"      ,  no_argument       ,  0 ,  'Z'},
+            {"match-basename"      ,  no_argument       ,  0 ,  'b'},
+            {"no-match-basename"   ,  no_argument       ,  0 ,  'B'},
             {"help"                ,  no_argument       ,  0 ,  'h'},
             {"version"             ,  no_argument       ,  0 ,  'H'},
             {0, 0, 0, 0}
@@ -523,7 +525,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZ",
+                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbB",
                      long_options, &option_index
                  );
 
@@ -648,7 +650,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'M':
             settings->must_match_original = true;
             break;
-            break;
         case 'Q':
             settings->confirm_settings = false;
             break;
@@ -667,6 +668,12 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'Z':
             settings->lock_files = false;
+            break;
+        case 'b':
+            settings->match_basename = true;
+            break;
+        case 'B':
+            settings->match_basename = false;
             break;
         default:
             return false;
