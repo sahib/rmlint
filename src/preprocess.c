@@ -234,7 +234,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
 /* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint
  * and return true; else return false */
-static bool truerm_pp_handle_other_lint(RmSession *session, RmFile *file) {
+static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
     if (file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
         session->tables->other_lint[file->lint_type] = g_list_prepend(
                     session->tables->other_lint[file->lint_type],
