@@ -136,7 +136,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
 
     if(strncmp(path, "stdout", path_len) == 0) {
         file_handle = stdout;
-    } else if(strncmp(path, "stdout", path_len) == 0) {
+    } else if(strncmp(path, "stderr", path_len) == 0) {
         file_handle = stderr;
     } else if(strncmp(path, "stdin", path_len) == 0) {
         /* I bet someone finds a use for this :-) */

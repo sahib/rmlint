@@ -247,15 +247,18 @@ static int rm_cmd_read_paths_from_stdin(RmSession *session, int index) {
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
     char *separator = strchr(pair, ':');
-    if(separator == NULL) {
-        rm_log_error(RED"No format specified in '%s'\n"RESET, pair);
-        return false;
-    }
-
-    char *full_path = separator + 1;
+    char *full_path = NULL;
     char format_name[100];
     memset(format_name, 0, sizeof(format_name));
-    strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
+
+    if(separator == NULL) {
+        /* default to stdout */
+        full_path = "stdout";
+        strncpy(format_name, pair, strlen(pair));
+    } else {
+        full_path = separator + 1;
+        strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
+    }
 
     if(!rm_fmt_add(session->formats, format_name, full_path)) {
         rm_log_warning(YELLOW"Adding -o %s as output failed.\n"RESET, pair);
@@ -490,7 +493,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"algorithm"           ,  required_argument ,  0 ,  'a'},
             {"output"              ,  required_argument ,  0 ,  'o'},
             {"add-output"          ,  required_argument ,  0 ,  'O'},
-            {"paranoid-ram"        ,  required_argument ,  0 ,  'u'},
+            {"max-paranoid-mem"    ,  required_argument ,  0 ,  'u'},
             {"newer-than"          ,  required_argument ,  0 ,  'n'},
             {"iso8601-newer-than"  ,  required_argument ,  0 ,  'N'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
@@ -504,7 +507,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"crossdev"            ,  no_argument       ,  0 ,  'x'},
             {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
             {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
-            {"no-paranoid"         ,  no_argument       ,  0 ,  'P'},
+            {"less-paranoid"       ,  no_argument       ,  0 ,  'P'},
             {"keepall//"           ,  no_argument       ,  0 ,  'k'},
             {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
             {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},

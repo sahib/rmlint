@@ -71,15 +71,15 @@ General Options
     * ``badlinks``, ``bl``: Find bad symlinks pointing nowhere.
     * ``emptydirs``, ``ed``: Find empty directories.
     * ``emptyfiles``, ``ef``: Find empty files.
-    * ``nameclusters``, ``nc``: Find files with same basename.
     * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
     * ``duplicates``, ``df``: Find duplicate files.
 
 **-o --output=formatter:file** (*default:* -o sh:rmlint.sh -o pretty:stdout -o summary:stdout)
-**-O --add-output=formatter:file** 
+**-O --add-output=formatter[:file]** 
 
     Configure the way rmlint ouputs it's results. You link a formatter to a
     file. A file might either be an arbitary path or ``stdout`` or ``stderr``.
+    If file is omitted, ``stdout`` is assumed.
 
     If this options is specified, rmlint's defaults are overwritten. 
     The option can be specified several times and formatters can be specified
@@ -102,22 +102,49 @@ General Options
 **-a --algorithm=name** (*default:* spooky)
 
     Choose the hash algorithm to use for finding duplicate files.
-    The following algorithms are available:
-    **spooky**, **city**, **murmur**, **md5**. 
+    The following well-known algorithms are available:
 
-    If `rmlint` was compiled with `-D_RM_HASH_LEN=64` (not by default), then
-    additionally the following algorithms are available:
-    **sha1**, **sha256**, **sha512**.
+    **spooky**, **city**, **murmur**, **md5**.  **sha1**, **sha256**,
+    **sha512**.
+
+    If not explicitly stated in the name the hashfunctions use 128 bit.
+    There are variations of the above functions:
+
+    * **bastard:** 256bit, half seeded **city**, half **murmur**. 
+    * **spook32, spook64:** Faster version of **spooky** with less bits.
+    * **city32, city64:** Faster version of **city** with less bits.
+    * **paranoid:** No hash function, compares files byte-by-byte.
 
 **-v --loud / -V --quiet**
 
     Increase or decrease the verbosity. You can pass these options several
     times. This only affects rmlint's logging on *stderr*.
 
-**-p --paranoid / -P --no-paranoid** (*default*)    
+**-p --paranoid / -P --less-paranoid** (*default*)    
 
-    Do a byte by byte comparison of each duplicate file. Use this when you do
-    not trust hash functions. *Warning:* Slow.
+    Increase the paranoia of rmlints internals. Both options can be specified up
+    to three times. They do not do any work themselves, but set some other
+    options implicitly as a shortcut. 
+
+    * **-p** is equivalent to **--flock-files --algorithm=bastard**
+    * **-pp** is equivalent to **--flock-files --algorithm=sha512**
+    * **-ppp** is equivalent to **--flock-files --algorithm=paranoid**
+
+    The last one is not a hash function in the traditional meaning, but performs
+    a byte-by-byte comparison of each file. See also **--max-paranoid-ram**.
+
+    For the adventurous, it is also possible to decrease the default paranoia.
+
+    * **-P** is equivalent to **--algorithm spooky64**
+    * **-PP** is equivalent to **--algorithm spooky32**
+    * **-PPP** is equivalent to **--algorithm debian_random**
+
+    This is really not recommended. 
+
+**-u --max-paranoid-ram=size**
+
+    Apply a maximum number of bytes to use for **--paranoid**. 
+    The ``size``-description has the same format as for **--size**.
 
 **-w --with-color** (*default*) **/ -W --no-with-color**
 
@@ -184,6 +211,36 @@ Traversal Options
 
     Also traverse hidden directories? This is often not a good idea, since
     directories like `.git/` would be investigated.
+
+**-z --flock-files / -Z --no-flock-files** (*default*)
+
+    Lock all files during traversal with ``flock(2)``, so they cannot be
+    modified while rmlint runs. The files are guaranteed to be unlocked once 
+    rmlint exits. See also ``man 2 flock`` and the limitations of it.
+
+**-b --match-basename / -B --no-match-basename** (*default*)
+
+    Only consider those files as dupes that have the same basename.
+    See also ``man 1 basename``.
+
+**-n --newer-than=<unix_timestamp>**
+**-N --newer-than-iso8601=<iso8601_timestamp>**
+
+    Only consider files and their size siblings newer than a certain
+    modification time (*mtime*).  The age barrier may be given as seconds since
+    the epoch (**-n**) or as ISO8601-Timestamp like *2014-09-08T00:12:32+0200*
+    (**-N**). 
+
+    If you want to take **only** the files (and not their size siblings) you can
+    use ``find(1)``:
+
+        ``find -mtime -1 | rmlint # find all files younger than a day``
+
+    *Note:* you can make rmlint write out a compatible timestamp with:
+
+        ``-O stamp:stdout``
+
+        ``-O stamp:stdout -c stamp:iso8601``
 
 Original Detection Options
 --------------------------
