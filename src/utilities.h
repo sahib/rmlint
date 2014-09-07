@@ -155,16 +155,6 @@ typedef struct RmMountTable {
     GHashTable *nfs_table;
 } RmMountTable;
 
-typedef struct RmDiskInfo {
-    char *name;
-    bool is_rotational;
-} RmDiskInfo;
-
-typedef struct RmPartitionInfo {
-    char *name;
-    dev_t disk;
-} RmPartitionInfo;
-
 /**
  * @brief Allocates a new mounttable.
  *

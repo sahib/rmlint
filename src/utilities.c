@@ -280,6 +280,16 @@ void rm_userlist_destroy(RmUserGroupNode **list) {
 //    MOUNTTABLE IMPLEMENTATION    //
 /////////////////////////////////////
 
+typedef struct RmDiskInfo {
+    char *name;
+    bool is_rotational;
+} RmDiskInfo;
+
+typedef struct RmPartitionInfo {
+    char *name;
+    dev_t disk;
+} RmPartitionInfo;
+
 RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
     self->name = g_strdup(name);
