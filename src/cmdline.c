@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include <errno.h>
 #include <getopt.h>
@@ -415,6 +416,49 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
     g_strfreev(lint_types);
 }
 
+static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string, bool plain) {
+    time_t result = 0;
+
+    tzset();
+
+    if(plain) {
+        /* A simple integer is expected, just parse it as time_t */ 
+        result = strtoll(string, NULL, 10);
+    } else {
+        /* Parse ISO8601 timestamps like 2006-02-03T16:45:09.000Z */
+        result = rm_iso8601_parse(string);
+    }
+
+    if(result <= 0) {
+        rm_log_error("Unable to parse time spec \"%s\"\n", string);
+        rm_cmd_die(session, EXIT_FAILURE);
+        return 0;
+    }
+
+    if(result > time(NULL)) {
+        /* Not critical, maybe there are some uses for this,
+         * but print at least a small warning as indication.
+         * */
+        if(plain) {
+            rm_log_warning(
+                YELLOW"Warning: "RESET"-n %"LLU" is newer than current time (%"LLU").\n",
+                result, time(NULL)
+            );
+        } else {
+            char time_buf[256];
+            memset(time_buf, 0, sizeof(time_buf));
+            rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
+
+            rm_log_warning(
+                YELLOW"Warning: "RESET"-N %s is newer than current time (%s).\n",
+                optarg, time_buf
+            );
+        }
+    }
+
+    return result;
+}
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     RmSettings *settings = session->settings;
@@ -447,6 +491,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"output"              ,  required_argument ,  0 ,  'o'},
             {"add-output"          ,  required_argument ,  0 ,  'O'},
             {"paranoid-ram"        ,  required_argument ,  0 ,  'u'},
+            {"newer-than"          ,  required_argument ,  0 ,  'n'},
+            {"iso8601-newer-than"  ,  required_argument ,  0 ,  'N'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
             {"quiet"               ,  no_argument       ,  0 ,  'V'},
             {"with-color"          ,  no_argument       ,  0 ,  'w'},
@@ -477,7 +523,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:vVwWrRfFXxpPkKmMlLqQhHzZ",
+                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZ",
                      long_options, &option_index
                  );
 
@@ -584,6 +630,14 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
                 rm_log_error("Invalid size description \"%s\": %s\n", optarg, parse_error);
                 rm_cmd_die(session, EXIT_FAILURE);
             }
+            break;
+        case 'N':
+            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg, false);
+            settings->filter_mtime = true;
+            break;
+        case 'n':
+            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg, true);
+            settings->filter_mtime = true;
             break;
         case 'k':
             settings->keep_all_originals = true;

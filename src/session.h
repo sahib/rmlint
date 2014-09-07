@@ -53,6 +53,8 @@ typedef struct RmSettings {
     bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
     bool limits_specified;
     bool lock_files;             /* if set, flock(2) each file before proceeding */
+    bool filter_mtime;
+    time_t min_mtime;
 
     int depth;
     int verbosity;
@@ -76,6 +78,7 @@ typedef struct RmFileTables {
     GHashTable *dev_table;
     GHashTable *size_groups;
     GHashTable *node_table;
+    GHashTable *mtime_filter;
     GHashTable *orig_table;
     GQueue *file_queue;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];

@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <stdbool.h>
 
+#include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -240,6 +241,26 @@ guint64 rm_offset_lookup(RmOffsetTable table, guint64 file_offset);
 guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable table, guint64 file_offset);
 
 /**
+ * @brief Free the allocated table.
+ */
+static inline void rm_offset_free(RmOffsetTable table) {
+    g_sequence_free(table);
+}
+
+//////////////////////////////
+//    TIMESTAMP HELPERS     //
+//////////////////////////////
+
+time_t rm_iso8601_parse(const char *string);
+
+bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size);
+
+
+///////////////////////////////
+//    THREADPOOL HELPERS     //
+///////////////////////////////
+
+/**
  * @brief Create a new GThreadPool with default settings.
  *
  * @param func func to execute
@@ -256,12 +277,5 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads);
  * @return true on success.
  */
 bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
-
-/**
- * @brief Free the allocated table.
- */
-inline void rm_offset_free(RmOffsetTable table) {
-    g_sequence_free(table);
-}
 
 #endif /* RM_UTILITIES_H_INCLUDE*/

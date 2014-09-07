@@ -43,6 +43,13 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->orig_table = g_hash_table_new(NULL, NULL);
 
+    /* Checktable (size -> 0 or mtime) for checking if
+     * we have a size group with newer mtime files.
+     */
+    tables->mtime_filter = g_hash_table_new_full(
+        g_int64_hash, g_int64_equal, g_free, NULL
+    );
+
     RmSettings *settings = session->settings;
 
     g_assert(settings);
@@ -69,6 +76,8 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->orig_table);
         g_hash_table_unref(tables->orig_table);
 
+        g_assert(tables->mtime_filter);
+        g_hash_table_unref(tables->mtime_filter);
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
@@ -211,11 +220,12 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
 /* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint
  * and return true; else return false */
-static gboolean rm_pp_handle_other_lint(RmFile *file, RmSession *session) {
+static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
     if (file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
         session->tables->other_lint[file->lint_type] = g_list_prepend(
                     session->tables->other_lint[file->lint_type],
-                    file);
+                    file
+        );
         return true;
     } else {
         return false;
@@ -224,6 +234,19 @@ static gboolean rm_pp_handle_other_lint(RmFile *file, RmSession *session) {
 
 static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
     if(rm_fmt_is_a_output(session->formats, file->path)) {
+        rm_file_destroy(file);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static bool rm_pp_handle_bad_mtimes(RmSession *session, RmFile *file) {
+    if(!session->settings->filter_mtime /* mtime filtering isn't enabled? */) {
+        return false;
+    }
+
+    if(!g_hash_table_contains(session->tables->mtime_filter, &file->file_size)) {
         rm_file_destroy(file);
         return true;
     } else {
@@ -245,7 +268,7 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         for (GList *iter = file->hardlinks.files->head; iter; iter = next) {
             next = iter->next;
 
-            if (rm_pp_handle_other_lint(iter->data, session)) {
+            if (rm_pp_handle_other_lint(session, iter->data)) {
                 g_queue_delete_link(file->hardlinks.files, iter);
             } else if (iter->data != file && !settings->find_hardlinked_dupes) {
                 /* settings say disregard hardlinked duplicates */
@@ -254,19 +277,25 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
             }
         }
 
-        if ( !g_queue_is_empty(file->hardlinks.files) ) {
+        if (!g_queue_is_empty(file->hardlinks.files)) {
             /* remove self from the list to avoid messiness later */
-            g_assert(g_queue_remove(file->hardlinks.files, file) );
+            g_assert(g_queue_remove(file->hardlinks.files, file));
         }
     }
     /* handle the head file; if it's "other lint" then send it there, else keep it
      * NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE as head
-     * file, unless all the files are "other lint"
+     * file, unless all the files are "other lint".
      *
      * Also check if the file is a output of rmlint itself. Which we definitely
      * not want to handle. Creating a script that deletes itself is fun but useless.
+     *
+     * If mtime filtering is enabled, also check that.
      * */
-    return rm_pp_handle_own_files(session, file) || rm_pp_handle_other_lint(file, session);
+    return (0
+            || rm_pp_handle_own_files(session, file)
+            || rm_pp_handle_other_lint(session, file)
+            || rm_pp_handle_bad_mtimes(session, file)
+    );
 }
 
 static int rm_pp_cmp_reverse_alphabetical(const char *a, const char *b) {
@@ -302,10 +331,30 @@ static guint64 rm_pp_handler_other_lint(RmSession *session) {
     return num_handled;
 }
 
+static void rm_pp_mark_valid_mtimes(_U gpointer key, RmFile *file, RmSession *session) {
+    if(file->mtime >= session->settings->min_mtime) {
+        guint64 *file_size_key = g_malloc0(sizeof(guint64));
+        *file_size_key = file->file_size;
+        g_hash_table_insert(
+            session->tables->mtime_filter,
+            file_size_key, 
+            GINT_TO_POINTER(true)
+        );
+    }
+}
+
 /* This does preprocessing including handling of "other lint" (non-dupes) */
 void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     g_assert(tables->node_table);
+    
+    if(session->settings->filter_mtime) {
+        g_hash_table_foreach(
+            tables->node_table,
+            (GHFunc)rm_pp_mark_valid_mtimes,
+            session
+        );
+    }
 
     /* process hardlink groups, and move other_lint into tables- */
     g_hash_table_foreach_remove(

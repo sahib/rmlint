@@ -699,6 +699,29 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
     return pool;
 }
 
+//////////////////////////////
+//    TIMESTAMP HELPERS     //
+//////////////////////////////
+
+time_t rm_iso8601_parse(const char *string) {
+    struct tm ctime;
+    memset(&ctime, 0, sizeof(struct tm));
+
+    if(strptime(string, "%FT%T%z", &ctime) == NULL) {
+        rm_log_perror("strptime(3) failed");
+        return 0;
+    }
+
+    time_t ts = mktime(&ctime) + timezone;
+    struct tm *local = localtime(&ts);
+    return mktime(local);
+}
+
+bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
+    const struct tm *now_ctime = localtime(&stamp);
+    return (strftime(buf, buf_size, "%FT%T%z", now_ctime) != 0);
+}
+
 /////////////////////////////////
 //     IFDEFD TEST MAINS       //
 /////////////////////////////////
