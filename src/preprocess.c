@@ -35,8 +35,6 @@
 RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
-    tables->size_table = g_hash_table_new(NULL, NULL);
-
     tables->size_groups = g_hash_table_new_full(
         g_int64_hash, g_int64_equal, g_free, NULL
     );
@@ -61,9 +59,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     {
         g_assert(tables->node_table);
         g_hash_table_unref(tables->node_table);
-
-        g_assert(tables->size_table);
-        g_hash_table_unref(tables->size_table);
 
         g_assert(tables->size_groups);
         g_hash_table_unref(tables->size_groups);

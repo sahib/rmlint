@@ -3,7 +3,6 @@ Stable Version
 
 - Add a test target to the build system.
 - Write a tutorial.
-- Implement py and json formatter.
 - Fix progressbar and script formatter.
 - Add option to only scan files new than mtime
 - Integrate 'ack TODO | wc -l' to 0.

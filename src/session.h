@@ -74,7 +74,6 @@ typedef struct RmSettings {
 typedef struct RmFileTables {
     struct RmMountTable *mounts;
     GHashTable *dev_table;
-    GHashTable *size_table;
     GHashTable *size_groups;
     GHashTable *node_table;
     GHashTable *orig_table;
