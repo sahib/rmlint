@@ -234,7 +234,7 @@ Traversal Options
     If you want to take **only** the files (and not their size siblings) you can
     use ``find(1)``:
 
-        ``find -mtime -1 | rmlint # find all files younger than a day``
+        ``find -mtime -1 | rmlint - # find all files younger than a day``
 
     *Note:* you can make rmlint write out a compatible timestamp with:
 
