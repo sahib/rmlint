@@ -244,7 +244,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_W:         /* whiteout object */
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
-            case FTS_NS: {      /* rm_sys_stat(2) failed */
+            case FTS_NS: {      /* stat(2) failed */
                     clear_emptydir_flags = true; /*current dir not empty*/
                     RmStat stat_buf;
 
