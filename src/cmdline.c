@@ -419,8 +419,14 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
     g_strfreev(lint_types);
 }
 
-static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string, bool plain) {
+static bool rm_cmd_timestamp_is_plain(const char *stamp) {
+    return strchr(stamp, 'T') ? false : true;
+}
+
+static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
     time_t result = 0;
+    bool plain = rm_cmd_timestamp_is_plain(string);
+    session->settings->filter_mtime = false;
 
     tzset();
 
@@ -437,6 +443,9 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string, boo
         rm_cmd_die(session, EXIT_FAILURE);
         return 0;
     }
+
+    /* Some sort of success. */
+    session->settings->filter_mtime = true;
 
     if(result > time(NULL)) {
         /* Not critical, maybe there are some uses for this,
@@ -457,6 +466,39 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string, boo
                 optarg, time_buf
             );
         }
+    }
+
+    return result;
+}
+
+static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) {
+    time_t result = 0;
+    bool plain = true;
+    FILE *stamp_file = fopen(path, "r");
+
+    /* Assume failure */
+    session->settings->filter_mtime = false;
+
+    if(stamp_file) {
+        char stamp_buf[1024];
+        memset(stamp_buf, 0, sizeof(stamp_buf));
+        if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
+            result = rm_cmd_parse_timestamp(session, g_strstrip(stamp_buf));
+            plain = rm_cmd_timestamp_is_plain(stamp_buf);
+        }
+
+        fclose(stamp_file);
+    } else {
+        /* Cannot read... */
+        plain = false;
+    }
+
+    rm_fmt_add(session->formats, "stamp", path);
+    if(!plain) {
+        /* Enable iso8601 timestamp output */
+        rm_fmt_set_config_value(
+            session->formats, g_strdup("stamp"), g_strdup("iso8601"), g_strdup("true")
+        );
     }
 
     return result;
@@ -494,8 +536,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"output"              ,  required_argument ,  0 ,  'o'},
             {"add-output"          ,  required_argument ,  0 ,  'O'},
             {"max-paranoid-mem"    ,  required_argument ,  0 ,  'u'},
-            {"newer-than"          ,  required_argument ,  0 ,  'n'},
-            {"iso8601-newer-than"  ,  required_argument ,  0 ,  'N'},
+            {"newer-than-stamp"    ,  required_argument ,  0 ,  'n'},
+            {"newer-than"          ,  required_argument ,  0 ,  'N'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
             {"quiet"               ,  no_argument       ,  0 ,  'V'},
             {"with-color"          ,  no_argument       ,  0 ,  'w'},
@@ -637,12 +679,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             }
             break;
         case 'N':
-            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg, false);
-            settings->filter_mtime = true;
+            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg);
             break;
         case 'n':
-            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg, true);
-            settings->filter_mtime = true;
+            settings->min_mtime = rm_cmd_parse_timestamp_file(session, optarg);
             break;
         case 'k':
             settings->keep_all_originals = true;
