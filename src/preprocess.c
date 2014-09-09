@@ -236,6 +236,11 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
  * and return true; else return false */
 static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
     if (file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
+        if(session->settings->filter_mtime && file->mtime < session->settings->min_mtime) {
+            rm_file_destroy(file);
+            return true;
+        }
+
         session->tables->other_lint[file->lint_type] = g_list_prepend(
                     session->tables->other_lint[file->lint_type],
                     file
