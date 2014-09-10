@@ -185,6 +185,12 @@
 // TO COMPARE PROGRESSIVE HASHES          //
 ////////////////////////////////////////////
 
+/* How many milliseconds to sleep if we encounter an empty file queue.
+ * This prevents a "starving" RmShredDevice from hogging cpu by continually
+ * recycling back to the joiner.
+ */
+#define SHRED_EMPTYQUEUE_SLEEP_MS (100000)
+
 /* expected typical seek time in milliseconds - used to calculate optimum read*/
 #define SHRED_SEEK_MS (10)
 /** Note that 15 ms this would be appropriate value for random reads
@@ -296,7 +302,8 @@ typedef struct RmMainTag {
     RmBufferPool *mem_pool;
     GAsyncQueue *device_return;
     GMutex hash_mem_mtx;
-    //GMutex result_pool_mtx; //TODO: not sure if we really need this
+    //GMutex result_pool_mtx; //TODO: check with helgrind whether we night need this
+    //(not sure how well GThreadPool handles simultaneous pushes from multiple threads)
     GMutex group_lock;     // single lock for all access to any RmShredGroups
     gint64 hash_mem_alloc; // how much memory to allocate for paranoid checks
     gint32 active_files;   // how many files active (only used with paranoid a.t.m.)
@@ -512,6 +519,8 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
 
 /* Compute optimal size for next hash increment */
 /* call this with group locked */
+/* TODO: maybe split this into two procedures at //------// mark below and call the first
+ * half when we create the RmShredGroup and the other half when we has a file */
 static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;
     g_assert(group);
@@ -519,7 +528,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     guint32 result = 0;
 
     /* calculate next_offset property of the RmShredGroup, if not already done */
-    //TODO: do this as soon as the group goes active, rather than waiting for the call from the file
     if (group->next_offset == 0) {
         guint64 target_bytes = (group->hash_offset == 0) ? SHRED_CHEAP_READ_BYTES : SHRED_CHEAP_SEEK_BYTES;
 
@@ -539,7 +547,7 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
             group->next_offset = MIN(group->next_offset, group->hash_offset + rm_digest_paranoia_bytes() );
         }
     }
-
+    //------//
     /* read to end of current file fragment, or to group->next_offset, whichever comes first */
     guint64 bytes_to_next_fragment = 0;
     /* NOTE: need lock because queue sorting also accesses file->disk_offsets, which is not threadsafe */
@@ -735,7 +743,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpoi
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
-    //TODO: add setting --no-fiemap?
+    //TODO: add option --no-fiemap to settings?
     if (file->device->is_rotational) {
 
         g_assert(!file->disk_offsets);
@@ -892,13 +900,12 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     case RM_SHRED_GROUP_START_HASHING:
         /* clear the queue and push all its rmfiles to the appropriate device queue */
         if(shred_group->held_files) {
-            if(initial) {
-                g_queue_free_full(shred_group->held_files,
-                                  (GDestroyNotify)rm_shred_push_queue);
-            } else {
-                g_queue_free_full(shred_group->held_files,
-                                  (GDestroyNotify)rm_shred_push_queue_sorted);  //TODO: merge into 1 line using (initial)?rm_shred_push_queue:rm_shred_push_queue_sorted?
-            }
+            g_queue_free_full(shred_group->held_files,
+                              (GDestroyNotify)(initial ?
+                                               rm_shred_push_queue :
+                                               rm_shred_push_queue_sorted
+                                              )
+                             );
             shred_group->held_files = NULL; /* won't need shred_group queue any more, since new arrivals will bypass */
         }
     //shred_group->status = RM_SHRED_GROUP_HASHING;
@@ -952,8 +959,6 @@ static gboolean rm_shred_sift(RmFile *file) {
             rm_shred_discard_file(file);
 
         } else {
-
-            g_assert(!(current_group->ref_count == 0 && current_group->parent == NULL)); //TODO: remove
 
             g_assert(file->digest);
 
@@ -1374,8 +1379,9 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     g_mutex_unlock(&device->lock);
     if(emptyqueue) {
         /* brief sleep to stop starving devices from hogging too much cpu time */
-        g_usleep(100000); //TODO: move magic number to settings somewhere
-        //TODO: possible speed enhancement: if queue is empty, find some files in a dormant RmShredGroup and start hashing those anyway just in case they are needed later.
+        g_usleep(SHRED_EMPTYQUEUE_SLEEP_MS);
+        //TODO: possible speed enhancement?:
+        //     if queue is empty, find some files in a dormant RmShredGroup and start hashing those anyway just in case they are needed later.
     }
 
     /* scheduler for one file at a time, optimised to minimise seeks */
@@ -1416,7 +1422,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                 } else {
                     /* this is first generation of RMGroups, so there is no progressive hash yet */
                     g_assert(file->hash_offset == 0);
-                    file->digest = rm_digest_new(main->session->settings->checksum_type, 0, 0, 0); //TODO: seeds?
+                    file->digest = rm_digest_new(main->session->settings->checksum_type, 0, 0, 0); //TODO: seeds
                 }
             }
         }
