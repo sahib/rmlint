@@ -728,6 +728,13 @@ void rm_shred_group_make_orphan(RmShredGroup *self) {
         break;
     case RM_SHRED_GROUP_START_HASHING:
     case RM_SHRED_GROUP_HASHING:
+        if (self->held_files == NULL) {
+            if (self->remaining == 0) {
+                g_assert(self->children);
+                g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
+                rm_shred_group_free(self);
+            }
+        }
         break;
     default:
         g_assert_not_reached();
