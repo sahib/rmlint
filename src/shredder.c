@@ -624,6 +624,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpoi
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
+    //TODO: add setting --no-fiemap?
     if (file->device->is_rotational) {
 
         g_assert(!file->disk_offsets);
@@ -1023,7 +1024,14 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     }
 
     /* read to end of current file fragment, or to group->next_offset, whichever comes first */
-    guint64 bytes_to_next_fragment = rm_offset_bytes_to_next_fragment(file->disk_offsets, file->seek_offset);
+    guint64 bytes_to_next_fragment = 0;
+    /* NOTE: need lock because queue sorting also accesses file->disk_offsets, which is not threadsafe */
+    g_assert(file->device);
+    g_mutex_lock(&file->device->lock);
+    {
+        bytes_to_next_fragment = rm_offset_bytes_to_next_fragment(file->disk_offsets, file->seek_offset);
+    }
+    g_mutex_unlock(&file->device->lock);
 
     if (bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
         file->status = RM_FILE_STATE_FRAGMENT;
@@ -1042,8 +1050,8 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  * */
 static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     int fd = 0;
-    gint64 bytes_read = 0;
-    gint64 total_bytes_read = 0;
+    gint32 bytes_read = 0;
+    gint32 total_bytes_read = 0;
 
     guint64 buf_size = rm_buffer_pool_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
@@ -1117,7 +1125,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
             }
 
             if (buffer->is_last && total_bytes_read != bytes_to_read) {
-                rm_log_error(RED"Something went wrong reading %s; expected %d bytes, got %li; ignoring"RESET,
+                rm_log_error(RED"Something went wrong reading %s; expected %d bytes, got %d; ignoring"RESET,
                              file->path, bytes_to_read, total_bytes_read);
                 file->status = RM_FILE_STATE_IGNORE;
                 g_async_queue_push(device->hashed_file_return, file);
@@ -1133,7 +1141,6 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
         }
     }
 
-    /* XXX-TODO: This was in the while loop, which will not be reached on bytes_read == -1? */
     if (bytes_read == -1) {
         rm_log_perror("preadv failed");
         file->status = RM_FILE_STATE_IGNORE;
@@ -1175,6 +1182,8 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
 
     if (buffer->is_last) {
         /* Report the progress to rm_shred_devlist_factory */
+        g_assert(buffer->file->hash_offset == buffer->file->shred_group->next_offset
+                 || buffer->file->status == RM_FILE_STATE_FRAGMENT);
         g_async_queue_push(device->hashed_file_return, buffer->file);
     }
 
@@ -1182,16 +1191,17 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     rm_buffer_pool_release(device->main->mem_pool, buffer);
 }
 
-static RmFile *rm_group_find_original(RmSession *session, GQueue *group/*, gboolean recurse*/) {
+static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
     RmFile *result = NULL;
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if (/*recurse && */file->hardlinks.files) {
-            RmFile *hardlink_original = rm_group_find_original(session, file->hardlinks.files/*, false*/);
+        if (file->hardlinks.files) {
+            RmFile *hardlink_original = rm_group_find_original(session, file->hardlinks.files);
             if (!result) {
                 result = hardlink_original;
             }
-        } else if (
+        }
+        if (
             ((file->is_prefd) && (session->settings->keep_all_originals)) ||
             ((file->is_prefd) && (!result))
         ) {
@@ -1204,22 +1214,22 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group/*, gbool
     return result;
 }
 
-static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQueue *group, RmFile *original_file /*, gboolean recurse*/) {
+static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQueue *group, RmFile *original_file) {
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if (/*recurse &&*/ file->hardlinks.files) {
-            rm_group_fmt_write(session, shred_group, file->hardlinks.files, original_file/*, false*/);
-        } else {
-            if(iter->data != original_file) {
-                RmFile *lint = iter->data;
-                session->dup_counter += 1;
-                session->total_lint_size += lint->file_size;
+        if (file->hardlinks.files) {
+            rm_group_fmt_write(session, shred_group, file->hardlinks.files, original_file);
+        }
 
-                /* Fake file->digest for a moment */
-                lint->digest = shred_group->digest;
-                rm_fmt_write(session->formats, lint);
-                lint->digest = NULL;
-            }
+        if(iter->data != original_file) {
+            RmFile *lint = iter->data;
+            session->dup_counter += 1;
+            session->total_lint_size += lint->file_size;
+
+            /* Fake file->digest for a moment */
+            lint->digest = shred_group->digest;
+            rm_fmt_write(session->formats, lint);
+            lint->digest = NULL;
         }
     }
 }
@@ -1249,12 +1259,12 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
         rm_shred_forward_to_output(tag->session, group, group->held_files);
     }
 
-    group->status = RM_SHRED_GROUP_DORMANT;
+    group->status = RM_SHRED_GROUP_FINISHED;
     rm_shred_group_free(group);
 }
 
 
-
+//~ /* note: file->shred_group must be held before calling */
 static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
     RmShredGroup *group = file->shred_group;
     if (0
