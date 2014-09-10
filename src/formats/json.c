@@ -35,18 +35,6 @@ typedef struct RmFmtHandlerJSON {
     RmFmtHandler parent;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
-        /* TODO: write an informative header */
-    }
-
-    fprintf(out, "[");
-}
-
-static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    fprintf(out, "{\n}\n]\n");
-}
-
 //////////////////////////////////////////
 //  POOR MAN'S JSON FORMATTING TOOLBOX  //
 //////////////////////////////////////////
@@ -55,8 +43,12 @@ static void rm_fmt_json_key(FILE *out, const char *key, const char *value) {
     fprintf(out, "  \"%s\": \"%s\"", key, value);
 }
 
+static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {
+    fprintf(out, "  \"%s\": %s", key, value ? "true" : "false");
+}
+
 static void rm_fmt_json_key_int(FILE *out, const char *key, guint64 value) {
-    fprintf(out, "  \"%s\": \"%"LLU"\"", key, value);
+    fprintf(out, "  \"%s\": %"LLU"", key, value);
 }
 
 static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {
@@ -77,6 +69,51 @@ static void rm_fmt_json_sep(FILE *out) {
     fprintf(out, ",\n");
 }
 
+/////////////////////////
+//  ACTUAL CALLBACKS   //
+/////////////////////////
+
+static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+    fprintf(out, "[");
+
+    if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
+        rm_fmt_json_open(out); 
+        {
+            rm_fmt_json_key(out, "description", "rmlint json-dump of lint files");
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key(out, "cwd", session->settings->iwd);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key(out, "args", session->settings->joined_argv);
+        }
+        rm_fmt_json_close(out);
+    }
+}
+
+static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+    if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
+        fprintf(out, "{\n}");
+    } else {
+        rm_fmt_json_open(out); 
+        {
+            rm_fmt_json_key_bool(out, "aborted", rm_session_was_aborted(session));
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "total_files", session->total_files);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "ignored_files", session->ignored_files);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "ignored_folders", session->ignored_folders);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "duplicates", session->dup_counter);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "duplicate_sets", session->dup_group_counter);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "total_lint_size", session->total_lint_size);
+        }
+        fprintf(out, "\n}");
+    }
+
+    fprintf(out, "\n]\n");
+}
 static void rm_fmt_elem(
     _U RmSession *session,
     _U RmFmtHandler *parent,

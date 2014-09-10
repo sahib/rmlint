@@ -86,7 +86,6 @@ RmDigestType rm_string_to_digest_type(const char *string);
  * @param seed Initial seed. Pass 0 if not interested.
  */
 RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64 paranoid_size);
-// XXX-TODO: Possible, but not useful. Union'd the seed/paranoid members of RmDigest though.
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
