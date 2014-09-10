@@ -17,11 +17,6 @@
     || Z <= RM_VERSION_MICRO        \
 )
 
-/* not supposed to be changed */
-#ifndef _RM_HASH_LEN
-#define _RM_HASH_LEN 16
-#endif
-
 /* These colors should only be used with the rm_log_* macros below */
 #define RED    "\x1b[31;01m"
 #define YELLOW "\x1b[33;01m"

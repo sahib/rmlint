@@ -119,11 +119,13 @@ static void rm_fmt_elem(
     _U RmFmtHandler *parent,
     FILE *out, RmFile *file
 ) {
-    char checksum_str[_RM_HASH_LEN * 2 + 1];
+    bool has_checksum = false;
+    char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
 
     if(file->digest && file->digest->type != RM_DIGEST_PARANOID) {
+        has_checksum = true;
         rm_digest_hexstring(file->digest, checksum_str);
     }
 
@@ -132,8 +134,10 @@ static void rm_fmt_elem(
     {
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "checksum", checksum_str);
-        rm_fmt_json_sep(out);
+        if(has_checksum) {
+            rm_fmt_json_key(out, "checksum", checksum_str);
+            rm_fmt_json_sep(out);
+        }
         rm_fmt_json_key_unsafe(out, "path", file->path);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "size", file->file_size);

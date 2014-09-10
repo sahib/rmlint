@@ -53,7 +53,7 @@ static void rm_fmt_elem(
     _U RmFmtHandler *parent,
     FILE *out, RmFile *file
 ) {
-    char checksum_str[_RM_HASH_LEN * 2 + 1];
+    char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
 

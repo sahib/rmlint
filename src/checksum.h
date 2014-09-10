@@ -161,4 +161,9 @@ RmDigest *rm_digest_copy(RmDigest *digest);
  */
 guint64 rm_digest_paranoia_bytes(void);
 
+/**
+ * @return The number of bytes used for storing the checksum.
+ */
+int rm_digest_get_bytes(RmDigest *self);
+
 #endif /* end of include guard */

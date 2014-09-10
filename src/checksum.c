@@ -370,13 +370,11 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     return digest->bytes * 2 + 1;
 }
 
-gboolean rm_digest_compare(RmDigest *a, RmDigest *b) {
-    if(a->bytes != b->bytes) {
-        return a->bytes < b->bytes;
+int rm_digest_get_bytes(RmDigest *self) {
+    if(self && self->type != RM_DIGEST_PARANOID) {
+        return self->bytes;
     } else {
-        guint8 *buf_a = rm_digest_steal_buffer(a);
-        guint8 *buf_b = rm_digest_steal_buffer(b);
-        return memcmp(buf_a, buf_b, a->bytes);
+        return 16;
     }
 }
 
@@ -515,7 +513,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
                 GTimer *timer = g_timer_new();
                 int digest_len = 0;
 
-                char buffer[_RM_HASH_LEN * 2];
+                char buffer[512 + 1];
                 memset(buffer, 0, sizeof(buffer));
 
                 if(!strcasecmp(argv[1], "mmap")) {
