@@ -502,7 +502,7 @@ gboolean rm_shred_mem_take(RmMainTag *main, gint32 mem_amount, guint32 numfiles)
     g_mutex_lock(&main->hash_mem_mtx);
     {
         if (mem_amount <= 0 || mem_amount <= main->hash_mem_alloc || main->active_files <= 0) {
-            main->hash_mem_alloc += mem_amount;
+            main->hash_mem_alloc -= mem_amount;
             main->active_files += numfiles;
             rm_log_debug("%s"RESET, mem_amount > 0 ? GREEN"approved! " : "");
         } else {
