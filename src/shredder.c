@@ -918,7 +918,11 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     main->totalfiles++;
     dev_t disk = rm_mounts_get_disk_id(session->tables->mounts, file->dev);
 
+#ifdef THREADTEST
+    RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(main->totalfiles % 16));
+#else
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
+#endif
     if(device == NULL) {
 
         rm_log_debug(GREEN"Creating new RmShredDevice for disk %"LLU"\n"RESET, disk);
@@ -927,7 +931,11 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                      rm_mounts_get_disk_name(session->tables->mounts, disk),
                      main );
         device->disk = disk;
+#ifdef THREADTEST
+        g_hash_table_insert(session->tables->dev_table, GUINT_TO_POINTER(main->totalfiles % 16), device);
+#else
         g_hash_table_insert(session->tables->dev_table, GUINT_TO_POINTER(disk), device);
+#endif
     }
 
     file->device = device;
@@ -969,7 +977,9 @@ static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) 
 }
 
 static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device, RmMainTag *main) {
+    g_mutex_lock(&device->lock);
     g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_offset_table, main->session);
+    g_mutex_unlock(&device->lock);
 }
 
 static void rm_shred_preprocess_input(RmMainTag *main) {
@@ -1333,6 +1343,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     }
     g_mutex_unlock(&device->lock);
     if(emptyqueue) {
+        /* brief sleep to stop starving devices from hogging too much cpu time */
         g_usleep(100000); //TODO: move magic number to settings somewhere
         //TODO: possible speed enhancement: if queue is empty, find some files in a dormant RmShredGroup and start hashing those anyway just in case they are needed later.
     }
