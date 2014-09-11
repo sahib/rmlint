@@ -18,6 +18,7 @@ Table of Contents
    :maxdepth: 1
 
    rmlint.1.in
+   compile
    todo
 
 
