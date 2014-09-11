@@ -840,11 +840,7 @@ void rm_shred_group_make_orphan(RmShredGroup *self);
 static void rm_shred_decrement_file_cnt(RmSession *session, int amount) {
     rm_fmt_lock_state(session->formats); {
         session->total_filtered_files -= amount;
-        rm_fmt_set_state(
-            session->formats,
-            RM_PROGRESS_STATE_SHREDDER, 
-            0, session->total_filtered_files
-        );
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
     }
     rm_fmt_unlock_state(session->formats);
 }

@@ -331,12 +331,7 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
     }
 
     session->total_filtered_files -= remove;
-    rm_fmt_set_state(
-        session->formats,
-        RM_PROGRESS_STATE_PREPROCESS, 
-        session->total_filtered_files,
-        session->total_files
-    );
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
     return remove;
 }
@@ -434,10 +429,5 @@ void rm_preprocess(RmSession *session) {
         g_timer_elapsed(session->timer, NULL)
     );
 
-    rm_fmt_set_state(
-        session->formats,
-        RM_PROGRESS_STATE_PREPROCESS, 
-        session->total_filtered_files,
-        session->total_files
-    );
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 }

@@ -37,9 +37,7 @@ static void rm_fmt_prog(
     RmSession *session,
     _U RmFmtHandler *parent,
     _U FILE *out,
-    RmFmtProgressState state,
-    _U RmOff n,
-    _U RmOff N
+    RmFmtProgressState state
 ) {
     if(state != RM_PROGRESS_STATE_INIT) {
         return;

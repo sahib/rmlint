@@ -36,15 +36,14 @@ typedef struct RmFmtHandlerProgress {
     RmFmtHandler parent;
 
     /* user data */
-    double percent;
-    char text_buf[1024];
-    int text_len;
+    gdouble percent;
 
-    int update_counter;
+    char text_buf[1024];
+    guint32 text_len;
+    guint32 update_counter;
+    guint32 update_interval;
 
     RmFmtProgressState last_state;
-    RmOff n, N;
-
     struct winsize terminal;
 } RmFmtHandlerProgress;
 
@@ -55,7 +54,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
             self->text_len = g_snprintf(
                 self->text_buf, sizeof(self->text_buf),
                 "Traversing (%"LLU" usable files / %"LLU" + %"LLU" ignored files / folders)",
-                self->n, session->ignored_files, session->ignored_folders
+                session->total_files, session->ignored_files, session->ignored_folders
             );
             break;
         case RM_PROGRESS_STATE_PREPROCESS:
@@ -84,7 +83,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
 }
 
 static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FILE *out) {
-    for(int i = 0; i < width - self->text_len - 1; ++i) {
+    for(guint32 i = 0; i < width - self->text_len - 1; ++i) {
         fprintf(out, " ");
     }
 
@@ -108,17 +107,29 @@ static void rm_fmt_progress_print_bar(RmFmtHandlerProgress *self, int width, FIL
 }
 
 static void rm_fmt_prog(
-    _U RmSession *session,
+    RmSession *session,
     RmFmtHandler *parent,
-    _U FILE *out,
-    RmFmtProgressState state,
-    RmOff n, RmOff N
+    FILE *out,
+    RmFmtProgressState state
 ) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
 
     if(state == RM_PROGRESS_STATE_INIT) {
+        /* Do initializiation here */
         if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
             rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
+        }
+
+        const char * update_interval_str = rm_fmt_get_config_value(
+                session->formats, "progressbar", "update_interval"
+        );
+
+        if(update_interval_str) {
+            self->update_interval = g_ascii_strtoull(update_interval_str, NULL, 10);
+        }
+
+        if(self->update_interval == 0) {
+            self->update_interval = 15;
         }
 
         fprintf(out, "\e[?25l"); /* Hide the cursor */
@@ -126,28 +137,23 @@ static void rm_fmt_prog(
         return;
     }
 
-    if(state == RM_PROGRESS_STATE_SUMMARY) {
+    if(state == RM_PROGRESS_STATE_SUMMARY || rm_session_was_aborted(session)) {
         fprintf(out, "\e[?25h"); /* show the cursor */
         fflush(out);
         return;
     }
 
-    self->n = n;
-    self->N = N;
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
         fprintf(out, "\n");
-    } else if(self->update_counter++ % 5 > 0) {
+    } else if((self->update_counter++ % self->update_interval) > 0) {
         return;
     }
 
     self->last_state = state;
 
-    int text_len = self->terminal.ws_col * 0.5;
-    int bar_len = self->terminal.ws_col * 0.5;
-
     rm_fmt_progress_format_text(session, self);
-    rm_fmt_progress_print_bar(self, bar_len, out);
-    rm_fmt_progress_print_text(self, text_len, out);
+    rm_fmt_progress_print_bar(self, self->terminal.ws_col * 0.5, out);
+    rm_fmt_progress_print_text(self, self->terminal.ws_col * 0.5, out);
 
     if(state == RM_PROGRESS_STATE_SUMMARY) {
         fprintf(out, "\n");
@@ -167,8 +173,8 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
 
     /* Initialize own stuff */
     .percent = 0.0f,
-    .n = 0,
-    .N = 0,
+    .text_len = 0,
+    .text_buf = {0},
     .update_counter = 0,
     .last_state = RM_PROGRESS_STATE_INIT
 };

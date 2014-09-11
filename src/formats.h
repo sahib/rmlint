@@ -63,7 +63,7 @@ struct RmFmtHandler;
 typedef void (* RmFmtHeadCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
 typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
 typedef void (* RmFmtElemCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFile *file);
-typedef void (* RmFmtProgCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFmtProgressState state, RmOff n, RmOff N);
+typedef void (* RmFmtProgCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFmtProgressState state);
 
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {
@@ -143,13 +143,8 @@ void rm_fmt_write(RmFmtTable *self, RmFile *result);
  *
  * Callers should make sure that this function is not called on every increment,
  * as it needs to iterate over all handlers:
- *
- * if(new_count % 50) {  // Update every 50 somethings
- *     rm_fmt_set_state(table, state, new_count, total_count);
- * }
- *
  */
-void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, RmOff count, RmOff total);
+void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state);
 
 /**
  * @brief Convert state to a human readable string. Static storage, do not free.
@@ -189,7 +184,16 @@ bool rm_fmt_is_a_output(RmFmtTable *self, const char *path);
  */
 void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter);
 
+/**
+ * @brief Lock the state mutex. 
+ *
+ * Use this to threadsafely update statistic counters.
+ */
 void rm_fmt_lock_state(RmFmtTable *self);
+
+/**
+ * @brief Pendant to rm_fmt_lock_state()
+ */
 void rm_fmt_unlock_state(RmFmtTable *self);
 
 /**
@@ -209,7 +213,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 static void rm_fmt_elem(RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
 }
 
-static void rm_fmt_prog(RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state, RmOff n, RmOff N) {
+static void rm_fmt_prog(RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {
 }
 
 static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, FILE *out) {
