@@ -208,7 +208,7 @@
 #define SHRED_CHEAP (50)
 
 /* how many pages can we read in (seek_time)? (eg 5ms seeking folled by 5ms reading) */
-#define SHRED_BALANCED_READ_BYTES (SHRED_SEEK_MS * SHRED_READRATE * 1024) // ( * 1024 / 1000 to be exact)
+#define SHRED_BALANCED_READ_BYTES (SHRED_SEEK_MS * SHRED_READRATE * 1024) /* ( * 1024 / 1000 to be exact) */
 
 /* how many bytes do we have to read before seek_time becomes CHEAP relative to read time? */
 #define SHRED_CHEAP_SEEK_BYTES (SHRED_BALANCED_READ_BYTES * SHRED_CHEAP)
@@ -514,7 +514,9 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
 /* Compute optimal size for next hash increment */
 /* call this with group locked */
 /* TODO: maybe split this into two procedures at //------// mark below and call the first
- * half when we create the RmShredGroup and the other half when we has a file */
+ * half when we create the RmShredGroup and the other half when we has a file 
+ * XXX-TODO: Tried for a minute, did not work, left for you as last TODO :)
+ * */
 static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;
     g_assert(group);
@@ -1396,7 +1398,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
         if (can_process) {
             /* hash the next increment of the file */
-            //rm_log_error("reading %s\n", file->path);
             rm_shred_read_factory(file, device);
 
             /* wait until the increment has finished hashing */
@@ -1411,7 +1412,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             if (file->status == RM_FILE_STATE_FRAGMENT) {
                 /* file is not ready for checking yet; push it back into the queue */
                 rm_log_debug("Recycling fragment %s\n", file->path);
-                rm_shred_push_queue_sorted(file); //call with device unlocked
+                rm_shred_push_queue_sorted(file); /* call with device unlocked */
                 /* NOTE: this temporarily means there are two copies of file in the queue */
             } else if(rm_shred_sift(file)) {
                 /* continue hashing same file, ie no change to iter */
