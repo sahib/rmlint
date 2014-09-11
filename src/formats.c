@@ -50,20 +50,20 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
 
     self->name_to_handler = g_hash_table_new_full(
-        g_str_hash, g_str_equal, NULL, NULL
-    );
+                                g_str_hash, g_str_equal, NULL, NULL
+                            );
 
     self->path_to_handler = g_hash_table_new_full(
-        g_str_hash, g_str_equal, NULL, NULL
-    );
+                                g_str_hash, g_str_equal, NULL, NULL
+                            );
 
     self->handler_to_file = g_hash_table_new_full(
-        NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL
-    );
-    
+                                NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL
+                            );
+
     self->config = g_hash_table_new_full(
-        g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_hash_table_unref
-    );
+                       g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_hash_table_unref
+                   );
 
     self->session = session;
 

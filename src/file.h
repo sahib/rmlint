@@ -171,6 +171,6 @@ void rm_file_destroy(RmFile *file);
 /**
  * @brief Convert RmLintType to a human readable short string.
  */
-const char * rm_file_lint_type_to_string(RmLintType type);
+const char *rm_file_lint_type_to_string(RmLintType type);
 
 #endif /* end of include guard */

@@ -1326,7 +1326,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                     );
 
         if(device->is_rotational) {
-        	g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
+            g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
         }
 
         if (g_queue_get_length(device->file_queue) == 0) {

@@ -66,7 +66,7 @@ static void rm_fmt_elem(
 
     fprintf(out, CSV_FORMAT,
             rm_file_lint_type_to_string(file->lint_type), clean_path, file->file_size, checksum_str
-    );
+           );
 
     g_free(clean_path);
 }

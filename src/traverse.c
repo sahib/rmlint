@@ -137,8 +137,8 @@ static void rm_traverse_file(
     }
 
     RmFile *file = rm_file_new(
-        settings->lock_files, path, statp, file_type, is_prefd, path_index
-    );
+                       settings->lock_files, path, statp, file_type, is_prefd, path_index
+                   );
 
     g_mutex_lock(&trav_session->lock);
     {
@@ -245,21 +245,21 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
             case FTS_NS: {      /* rm_sys_stat(2) failed */
-                    clear_emptydir_flags = true; /*current dir not empty*/
-                    RmStat stat_buf;
+                clear_emptydir_flags = true; /*current dir not empty*/
+                RmStat stat_buf;
 
-                    /* See if your stat can do better. */
-                    if(rm_sys_stat(p->fts_path, &stat_buf) != -1) {
-                        /* normal stat failed but 64-bit stat worked 
-                         * -> must be a big file on 32 bit.
-                         */
-                        rm_traverse_file(trav_session, &stat_buf, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
-                        rm_log_warning(YELLOW"Warning:"RESET" Added big file %s\n", p->fts_path);
-                    } else {
-                        rm_log_warning(RED"Warning:"RESET" cannot stat file %s (skipping)\n", p->fts_path);
-                    }
+                /* See if your stat can do better. */
+                if(rm_sys_stat(p->fts_path, &stat_buf) != -1) {
+                    /* normal stat failed but 64-bit stat worked
+                     * -> must be a big file on 32 bit.
+                     */
+                    rm_traverse_file(trav_session, &stat_buf, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
+                    rm_log_warning(YELLOW"Warning:"RESET" Added big file %s\n", p->fts_path);
+                } else {
+                    rm_log_warning(RED"Warning:"RESET" cannot stat file %s (skipping)\n", p->fts_path);
                 }
-                break;
+            }
+            break;
             case FTS_SL:        /* symbolic link */
                 clear_emptydir_flags = true; /* current dir not empty */
                 if (!settings->followlinks) {

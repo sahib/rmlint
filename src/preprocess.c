@@ -36,12 +36,12 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
     tables->size_groups = g_hash_table_new_full(
-        g_int64_hash, g_int64_equal, g_free, NULL
-    );
+                              g_int64_hash, g_int64_equal, g_free, NULL
+                          );
 
     tables->node_table = g_hash_table_new_full(
-        g_int64_hash, g_int64_equal, g_free, NULL
-    );
+                             g_int64_hash, g_int64_equal, g_free, NULL
+                         );
 
     tables->orig_table = g_hash_table_new(NULL, NULL);
 
@@ -49,12 +49,12 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
      * we have a size group with newer mtime files.
      */
     tables->mtime_filter = g_hash_table_new_full(
-        g_int64_hash, g_int64_equal, g_free, NULL
-    );
+                               g_int64_hash, g_int64_equal, g_free, NULL
+                           );
 
     tables->basename_filter = g_hash_table_new_full(
-        g_str_hash, g_str_equal, NULL, NULL
-    );
+                                  g_str_hash, g_str_equal, NULL, NULL
+                              );
 
     RmSettings *settings = session->settings;
 
@@ -187,9 +187,9 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                 inode_match->hardlinks.files = NULL;
                 g_hash_table_insert(node_table, node_key, file);
                 inode_match = file;
-             } else {
-                 g_free(node_key);
-             }
+            } else {
+                g_free(node_key);
+            }
 
             /* compare this file to all of the existing ones in the cluster
              * to check if it's a path double; if yes then swap or discard */
@@ -244,7 +244,7 @@ static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
         session->tables->other_lint[file->lint_type] = g_list_prepend(
                     session->tables->other_lint[file->lint_type],
                     file
-        );
+                );
         return true;
     } else {
         return false;
@@ -269,8 +269,8 @@ static bool rm_pp_handle_basename_filter(RmSession *session, RmFile *file) {
     }
 
     guint basename_count = GPOINTER_TO_UINT(
-        g_hash_table_lookup(session->tables->basename_filter, file->basename)
-    );
+                               g_hash_table_lookup(session->tables->basename_filter, file->basename)
+                           );
 
     return (basename_count < 2);
 }
@@ -311,17 +311,17 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         return true;
     }
 
-     /*
-     * Also check if the file is a output of rmlint itself. Which we definitely
-     * not want to handle. Creating a script that deletes itself is fun but useless.
-     *
-     * If mtime filtering is enabled, also check that.
-     * */
+    /*
+    * Also check if the file is a output of rmlint itself. Which we definitely
+    * not want to handle. Creating a script that deletes itself is fun but useless.
+    *
+    * If mtime filtering is enabled, also check that.
+    * */
     bool remove = (0
-        || rm_pp_handle_own_files(session, file)
-        || rm_pp_handle_bad_mtimes(session, file)
-        || rm_pp_handle_basename_filter(session, file)
-    );
+                   || rm_pp_handle_own_files(session, file)
+                   || rm_pp_handle_bad_mtimes(session, file)
+                   || rm_pp_handle_basename_filter(session, file)
+                  );
 
     if(remove) {
         rm_file_destroy(file);
@@ -370,7 +370,7 @@ static void rm_pp_collect_data(_U gpointer key, RmFile *file, RmSession *session
         *file_size_key = file->file_size;
         g_hash_table_insert(
             session->tables->mtime_filter,
-            file_size_key, 
+            file_size_key,
             GINT_TO_POINTER(true)
         );
     }
@@ -394,7 +394,7 @@ static void rm_pp_collect_data(_U gpointer key, RmFile *file, RmSession *session
 void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     g_assert(tables->node_table);
-    
+
     if(session->settings->filter_mtime || session->settings->match_basename) {
         g_hash_table_foreach(
             tables->node_table,

@@ -80,15 +80,15 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
     int cells = bar_len * reached_percent;
 
     switch(self->last_state) {
-        case RM_PROGRESS_STATE_TRAVERSE:
-            fprintf(out, MAYBE_BLUE(session));
-            break;
-        case RM_PROGRESS_STATE_SHREDDER:
-            fprintf(out, MAYBE_GREEN(session));
-            break;
-        default:
-            fprintf(out, MAYBE_YELLOW(session));
-            break;
+    case RM_PROGRESS_STATE_TRAVERSE:
+        fprintf(out, MAYBE_BLUE(session));
+        break;
+    case RM_PROGRESS_STATE_SHREDDER:
+        fprintf(out, MAYBE_GREEN(session));
+        break;
+    default:
+        fprintf(out, MAYBE_YELLOW(session));
+        break;
     }
 
     fprintf(out, "[");
@@ -100,7 +100,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
         } else {
             fprintf(out, " ");
         }
-    } 
+    }
     fprintf(out, "] %s%s\r", rm_fmt_progress_to_string(self->last_state), MAYBE_RESET(session));
 }
 

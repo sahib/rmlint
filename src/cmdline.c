@@ -431,7 +431,7 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
     tzset();
 
     if(plain) {
-        /* A simple integer is expected, just parse it as time_t */ 
+        /* A simple integer is expected, just parse it as time_t */
         result = strtoll(string, NULL, 10);
     } else {
         /* Parse ISO8601 timestamps like 2006-02-03T16:45:09.000Z */
@@ -672,7 +672,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->paranoid += 1;
             break;
         case 'u':
-            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error); 
+            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error);
             if(parse_error != NULL) {
                 rm_log_error("Invalid size description \"%s\": %s\n", optarg, parse_error);
                 rm_cmd_die(session, EXIT_FAILURE);

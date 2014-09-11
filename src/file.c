@@ -35,7 +35,7 @@ static void rm_file_set_lock_flags(const char *path, int flags) {
         if(flock(fd, flags) != 0) {
             rm_log_perror("flock(2) failed");
         }
-       rm_sys_close(fd);
+        rm_sys_close(fd);
     }
 }
 
@@ -92,7 +92,7 @@ void rm_file_destroy(RmFile *file) {
     g_slice_free(RmFile, file);
 }
 
-const char * rm_file_lint_type_to_string(RmLintType type) {
+const char *rm_file_lint_type_to_string(RmLintType type) {
     static const char *TABLE[] = {
         [RM_LINT_TYPE_UNKNOWN]        = "",
         [RM_LINT_TYPE_EDIR]           = "emptydir",
@@ -104,6 +104,6 @@ const char * rm_file_lint_type_to_string(RmLintType type) {
         [RM_LINT_TYPE_EFILE]          = "emptyfile",
         [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate"
     };
-    
+
     return TABLE[CLAMP(type, RM_LINT_TYPE_UNKNOWN, RM_N_LINT_TYPES)];
 }

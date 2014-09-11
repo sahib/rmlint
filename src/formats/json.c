@@ -77,7 +77,7 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
     fprintf(out, "[");
 
     if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
-        rm_fmt_json_open(out); 
+        rm_fmt_json_open(out);
         {
             rm_fmt_json_key(out, "description", "rmlint json-dump of lint files");
             rm_fmt_json_sep(out);
@@ -93,7 +93,7 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
         fprintf(out, "{\n}");
     } else {
-        rm_fmt_json_open(out); 
+        rm_fmt_json_open(out);
         {
             rm_fmt_json_key_bool(out, "aborted", rm_session_was_aborted(session));
             rm_fmt_json_sep(out);
@@ -146,9 +146,9 @@ static void rm_fmt_elem(
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "disk_id", file->dev);
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "is_prefd", file->is_prefd ? "true" : "false"); 
+        rm_fmt_json_key(out, "is_prefd", file->is_prefd ? "true" : "false");
         rm_fmt_json_sep(out);
-        rm_fmt_json_key_int(out, "mtime", file->mtime); 
+        rm_fmt_json_key_int(out, "mtime", file->mtime);
     }
     rm_fmt_json_close(out);
 }
