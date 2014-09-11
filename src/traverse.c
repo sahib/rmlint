@@ -44,7 +44,7 @@ typedef struct RmTravBuffer {
     RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
     const char *path;      /* The path of the directory, as passed on command line. */
     bool is_prefd;         /* Was this file in a preferred path? */
-    guint64 path_index;    /* Index of path, as passed on the commadline */
+    RmOff path_index;    /* Index of path, as passed on the commadline */
     bool is_first_path;    /* True if the first path and FTS_NOCHDIR might be disabled */
 } RmTravBuffer;
 
@@ -129,7 +129,7 @@ static void rm_traverse_file(
                 file_type = RM_LINT_TYPE_EFILE;
             }
         } else {
-            guint64 file_size = statp->st_size;
+            RmOff file_size = statp->st_size;
             if(!settings->limits_specified || (settings->minsize <= file_size && file_size <= settings->maxsize)) {
                 file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
             }
@@ -153,7 +153,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     char *path = (char *)buffer->path;
     char is_prefd = buffer->is_prefd;
-    guint64 path_index = buffer->path_index;
+    RmOff path_index = buffer->path_index;
 
     /* Initialize ftsp */
     int fts_flags =  FTS_PHYSICAL | FTS_COMFOLLOW | (buffer->is_first_path * FTS_NOCHDIR);
@@ -320,7 +320,7 @@ void rm_traverse_tree(RmSession *session) {
                                      NULL, NULL, NULL, (GDestroyNotify)g_queue_free
                                  );
 
-    for(guint64 idx = 0; settings->paths[idx] != NULL; ++idx) {
+    for(RmOff idx = 0; settings->paths[idx] != NULL; ++idx) {
         char *path = settings->paths[idx];
         bool is_prefd = settings->is_prefd[idx];
 

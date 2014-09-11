@@ -105,21 +105,21 @@ typedef struct RmFile {
     bool is_prefd;
 
     /* The index of the path this file belongs to. */
-    guint64 path_index;
+    RmOff path_index;
 
     /* Filesize in bytes
      */
-    guint64 file_size;
+    RmOff file_size;
 
     /* How many bytes were already hashed
      * (lower or equal seek_offset)
      */
-    guint64 hash_offset;
+    RmOff hash_offset;
 
     /* How many bytes were already read.
      * (lower or equal file_size)
      */
-    guint64 seek_offset;
+    RmOff seek_offset;
 
     /* unlock (with flock(2)) the file on destroy? */
     bool unlock_file;

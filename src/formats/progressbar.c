@@ -39,7 +39,7 @@ typedef struct RmFmtHandlerProgress {
     char percent;
     RmFmtProgressState last_state;
     bool state_changed;
-    guint64 n, N;
+    RmOff n, N;
 
     struct winsize terminal;
 } RmFmtHandlerProgress;
@@ -109,7 +109,7 @@ static void rm_fmt_prog(
     RmFmtHandler *parent,
     _U FILE *out,
     RmFmtProgressState state,
-    guint64 n, guint64 N
+    RmOff n, RmOff N
 ) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
     self->n = n;

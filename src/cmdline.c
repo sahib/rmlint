@@ -127,7 +127,7 @@ static int rm_cmd_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
     return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
 }
 
-guint64 rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
+RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
     if (size_spec == NULL) {
         return rm_cmd_size_format_error(error, "Input size is NULL");
     }
@@ -163,7 +163,7 @@ guint64 rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
 /* Size spec parsing implemented by qitta (http://github.com/qitta)
  * Thanks and go blame him if this breaks!
  */
-static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, guint64 *min, guint64 *max, const char **error) {
+static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff *min, RmOff *max, const char **error) {
     *min = 0;
     *max = G_MAXULONG;
 

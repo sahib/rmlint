@@ -67,11 +67,11 @@ typedef struct RmSettings {
     char *iwd;                   /* cwd when rmlint called */
     char *joined_argv;           /* arguments rmlint was called with or NULL when not available */
 
-    guint64 minsize;
-    guint64 maxsize;
-    guint64 threads;
+    RmOff minsize;
+    RmOff maxsize;
+    RmOff threads;
     RmDigestType checksum_type;  /* determines the checksum algorithm used */
-    guint64 paranoid_mem;        /* memory allocation for paranoid buffers */
+    RmOff paranoid_mem;        /* memory allocation for paranoid buffers */
 } RmSettings;
 
 typedef struct RmFileTables {
@@ -102,13 +102,13 @@ typedef struct RmSession {
     struct RmFmtTable *formats;
 
     /* Counters for printing useful statistics */
-    guint64 total_files;
-    guint64 total_lint_size;
-    guint64 dup_counter;
-    guint64 dup_group_counter;
-    guint64 ignored_files;
-    guint64 ignored_folders;
-    guint64 other_lint_cnt;
+    RmOff total_files;
+    RmOff total_lint_size;
+    RmOff dup_counter;
+    RmOff dup_group_counter;
+    RmOff ignored_files;
+    RmOff ignored_folders;
+    RmOff other_lint_cnt;
 
     /* flag indicating if rmlint was aborted early */
     volatile bool aborted;
@@ -116,9 +116,9 @@ typedef struct RmSession {
     GTimer *timer;
 
     /* Debugging counters */
-    guint64 offset_fragments;
-    guint64 offsets_read;
-    guint64 offset_fails;
+    RmOff offset_fragments;
+    RmOff offsets_read;
+    RmOff offset_fails;
 } RmSession;
 
 /**

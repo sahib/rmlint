@@ -46,8 +46,8 @@ static void rm_fmt_prog(
     _U RmFmtHandler *parent,
     _U FILE *out,
     RmFmtProgressState state,
-    _U guint64 n,
-    _U guint64 N
+    _U RmOff n,
+    _U RmOff N
 ) {
     if(state != RM_PROGRESS_STATE_SUMMARY) {
         return;

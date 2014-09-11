@@ -195,7 +195,7 @@ void rm_fmt_write(RmFmtTable *self, RmFile *result) {
     }
 }
 
-void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, guint64 count, guint64 total) {
+void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, RmOff count, RmOff total) {
     RM_FMT_FOR_EACH_HANDLER(self) {
         RM_FMT_CALLBACK(handler->prog, state, count, total);
     }

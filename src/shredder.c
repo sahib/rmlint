@@ -271,7 +271,7 @@ typedef struct RmBufferPool {
     GTrashStack *stack;
 
     /* how many buffers are available? */
-    guint64 size;
+    RmOff size;
 
     /* concurrent accesses may happen */
     GMutex lock;
@@ -340,13 +340,13 @@ typedef struct RmShredDevice {
     dev_t disk;
 
     /* head position information, to optimise selection of next file */
-    guint64 current_offset;
+    RmOff current_offset;
     dev_t current_dev;
 
     /* size of one page, cached, so
      * sysconf() does not need to be called always.
      */
-    guint64 page_size;
+    RmOff page_size;
     RmMainTag *main;
 } RmShredDevice;
 
@@ -401,13 +401,13 @@ typedef struct RmShredGroup {
     RmShredGroupStatus status;
 
     /* file size of files in this group */
-    guint64 file_size;
+    RmOff file_size;
 
     /* file hash_offset when files arrived in this group */
-    guint64 hash_offset;
+    RmOff hash_offset;
 
     /* file hash_offset for next increment */
-    guint64 next_offset;
+    RmOff next_offset;
 
     /* checksum structure taken from first file to enter the group.  This allows
      * digests to be released from RmFiles and memory freed up until they
@@ -459,7 +459,7 @@ RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
 //    BUFFER POOL IMPLEMENTATION     //
 ///////////////////////////////////////
 
-static guint64 rm_buffer_pool_size(RmBufferPool *pool) {
+static RmOff rm_buffer_pool_size(RmBufferPool *pool) {
     return pool->size;
 }
 
@@ -523,10 +523,10 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
 
     /* calculate next_offset property of the RmShredGroup, if not already done */
     if (group->next_offset == 0) {
-        guint64 target_bytes = (group->hash_offset == 0) ? SHRED_CHEAP_READ_BYTES : SHRED_CHEAP_SEEK_BYTES;
+        RmOff target_bytes = (group->hash_offset == 0) ? SHRED_CHEAP_READ_BYTES : SHRED_CHEAP_SEEK_BYTES;
 
         /* round to even number of pages, round up to MIN_READ_PAGES */
-        guint64 target_pages = MAX(target_bytes / tag->page_size, SHRED_MIN_READ_PAGES);
+        RmOff target_pages = MAX(target_bytes / tag->page_size, SHRED_MIN_READ_PAGES);
         target_bytes = target_pages * tag->page_size;
 
         /* test if cost-effective to read the whole file */
@@ -543,7 +543,7 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     }
     //------//
     /* read to end of current file fragment, or to group->next_offset, whichever comes first */
-    guint64 bytes_to_next_fragment = 0;
+    RmOff bytes_to_next_fragment = 0;
     /* NOTE: need lock because queue sorting also accesses file->disk_offsets, which is not threadsafe */
     g_assert(file->device);
     g_mutex_lock(&file->device->lock);
@@ -569,7 +569,7 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  */
 
 /* defines mem allocation per file */
-guint64 rm_shred_mem_allocation(RmFile *file) {
+RmOff rm_shred_mem_allocation(RmFile *file) {
     return MIN(file->file_size, rm_digest_paranoia_bytes()) * 2;
 }
 
@@ -721,11 +721,11 @@ void rm_shred_discard_file(RmFile *file) {
  * */
 static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpointer user_data) {
     /* compare based on partition (dev), then offset, then inode offset is a
-     * guint64, so do not substract them (will cause over or underflows on
+     * RmOff, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead
      */
-    guint64 phys_offset_a = rm_offset_lookup(a->disk_offsets, a->seek_offset);
-    guint64 phys_offset_b = rm_offset_lookup(b->disk_offsets, b->seek_offset);
+    RmOff phys_offset_a = rm_offset_lookup(a->disk_offsets, a->seek_offset);
+    RmOff phys_offset_b = rm_offset_lookup(b->disk_offsets, b->seek_offset);
 
     return (0
             + 4 * SIGN_DIFF(a->dev, b->dev)
@@ -1044,7 +1044,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
         /* we cannot store a 8byte integer in 4 byte pointer
          * on 32 bit (we can on 64 though), so allocate mem.
          */
-        guint64 *file_size_cpy = g_malloc0(sizeof(guint64));
+        RmOff *file_size_cpy = g_malloc0(sizeof(RmOff));
         *file_size_cpy = file->file_size;
 
         group = rm_shred_group_new(file, NULL);
@@ -1194,14 +1194,14 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     gint32 bytes_read = 0;
     gint32 total_bytes_read = 0;
 
-    guint64 buf_size = rm_buffer_pool_size(device->main->mem_pool);
+    RmOff buf_size = rm_buffer_pool_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_left_to_read = bytes_to_read;
 
     g_assert(bytes_to_read > 0);
-    g_assert(buf_size >= (guint64)SHRED_PAGE_SIZE);
+    g_assert(buf_size >= (RmOff)SHRED_PAGE_SIZE);
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
     g_assert(file->seek_offset == file->hash_offset);
 
@@ -1322,7 +1322,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                      device->disk_name,
                      major(device->disk),
                      minor(device->disk),
-                     (guint64)g_queue_get_length(device->file_queue)
+                     (RmOff)g_queue_get_length(device->file_queue)
                     );
 
         if(device->is_rotational) {
@@ -1347,7 +1347,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         RmFile *file = iter->data;
         gboolean can_process = true;
 
-        guint64 start_offset = file->hash_offset;
+        RmOff start_offset = file->hash_offset;
 
         /* initialise hash (or recover progressive hash so far) */
         g_assert(file->shred_group);

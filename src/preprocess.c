@@ -158,7 +158,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
     GHashTable *node_table = tables->node_table;
 
-    guint32 *node_key = g_malloc0(sizeof(guint64));
+    guint32 *node_key = g_malloc0(sizeof(RmOff));
     node_key[0] = file->inode;
     node_key[1] = file->dev;
 
@@ -334,12 +334,12 @@ static int rm_pp_cmp_reverse_alphabetical(const char *a, const char *b) {
     return -strcmp(a, b);
 }
 
-static guint64 rm_pp_handler_other_lint(RmSession *session) {
-    guint64 num_handled = 0;
+static RmOff rm_pp_handler_other_lint(RmSession *session) {
+    RmOff num_handled = 0;
 
     RmFileTables *tables = session->tables;
 
-    for(guint64 type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
+    for(RmOff type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
         if (type == RM_LINT_TYPE_EDIR) {
             tables->other_lint[type] = g_list_sort(
                                            tables->other_lint[type],
@@ -366,7 +366,7 @@ static guint64 rm_pp_handler_other_lint(RmSession *session) {
 static void rm_pp_collect_data(_U gpointer key, RmFile *file, RmSession *session) {
     /* Mark all old mtimes */
     if(session->settings->filter_mtime && file->mtime >= session->settings->min_mtime) {
-        guint64 *file_size_key = g_malloc0(sizeof(guint64));
+        RmOff *file_size_key = g_malloc0(sizeof(RmOff));
         *file_size_key = file->file_size;
         g_hash_table_insert(
             session->tables->mtime_filter,

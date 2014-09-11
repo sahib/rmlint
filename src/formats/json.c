@@ -47,7 +47,7 @@ static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {
     fprintf(out, "  \"%s\": %s", key, value ? "true" : "false");
 }
 
-static void rm_fmt_json_key_int(FILE *out, const char *key, guint64 value) {
+static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
     fprintf(out, "  \"%s\": %"LLU"", key, value);
 }
 

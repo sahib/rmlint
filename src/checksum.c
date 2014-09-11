@@ -74,7 +74,7 @@ RmDigestType rm_string_to_digest_type(const char *string) {
     }
 }
 
-guint64 rm_digest_paranoia_bytes(void) {
+RmOff rm_digest_paranoia_bytes(void) {
     return 16 * 1024 * 1024;
     /* this is big enough buffer size to make seek time fairly insignificant relative to sequential read time,
      * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
@@ -82,11 +82,11 @@ guint64 rm_digest_paranoia_bytes(void) {
 
 #define ADD_SEED(digest, seed) {                                                           \
     if(seed) {                                                                             \
-        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(guint64)); \
+        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(RmOff)); \
     }                                                                                      \
 }
 
-RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64 paranoid_size) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -152,7 +152,7 @@ RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64
     /* starting values to let us generate up to 4 different hashes in parallel with
      * different starting seeds:
      * */
-    static const guint64 seeds[4] = {
+    static const RmOff seeds[4] = {
         0x0000000000000000,
         0xf0f0f0f0f0f0f0f0,
         0x3333333333333333,
@@ -209,7 +209,7 @@ void rm_digest_free(RmDigest *digest) {
     g_slice_free(RmDigest, digest);
 }
 
-void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size) {
+void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     switch(digest->type) {
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:

@@ -62,7 +62,7 @@ struct RmFmtHandler;
 typedef void (* RmFmtHeadCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
 typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
 typedef void (* RmFmtElemCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFile *file);
-typedef void (* RmFmtProgCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFmtProgressState state, guint64 n, guint64 N);
+typedef void (* RmFmtProgCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFmtProgressState state, RmOff n, RmOff N);
 
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {
@@ -148,7 +148,7 @@ void rm_fmt_write(RmFmtTable *self, RmFile *result);
  * }
  *
  */
-void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, guint64 count, guint64 total);
+void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, RmOff count, RmOff total);
 
 /**
  * @brief Convert state to a human readable string. Static storage, do not free.
@@ -205,7 +205,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 static void rm_fmt_elem(RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
 }
 
-static void rm_fmt_prog(RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state, guint64 n, guint64 N) {
+static void rm_fmt_prog(RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state, RmOff n, RmOff N) {
 }
 
 static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, FILE *out) {

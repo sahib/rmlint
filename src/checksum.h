@@ -64,8 +64,8 @@ typedef struct RmDigest {
     union {
         gsize paranoid_offset;
         struct {
-            guint64 initial_seed1;
-            guint64 initial_seed2;
+            RmOff initial_seed1;
+            RmOff initial_seed2;
         };
     };
 } RmDigest;
@@ -85,7 +85,7 @@ RmDigestType rm_string_to_digest_type(const char *string);
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
  */
-RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64 paranoid_size);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
@@ -99,7 +99,7 @@ void rm_digest_free(RmDigest *digest);
  * @param data a block of data.
  * @param size the size of data
  */
-void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size);
+void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size);
 
 /**
  * @brief Convert the checksum to a hexstring (like `md5sum`)
@@ -159,7 +159,7 @@ RmDigest *rm_digest_copy(RmDigest *digest);
  * @brief Return the number of bytes RM_DIGEST_PARANOID allocates for
  * it's checksum.
  */
-guint64 rm_digest_paranoia_bytes(void);
+RmOff rm_digest_paranoia_bytes(void);
 
 /**
  * @return The number of bytes used for storing the checksum.
