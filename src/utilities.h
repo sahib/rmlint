@@ -251,10 +251,21 @@ static inline void rm_offset_free(RmOffsetTable table) {
 //    TIMESTAMP HELPERS     //
 //////////////////////////////
 
+/**
+ * @brief Parse a ISO8601 timestamp to a unix timestamp.
+ */
 time_t rm_iso8601_parse(const char *string);
 
+/**
+ * @brief convert a unix timestamp as iso8601 timestamp string.
+ *
+ * @param stamp unix timestamp
+ * @param buf result buffer to hold the string.
+ * @param buf_size sizeof buf.
+ *
+ * @return true if conversion succeeded.
+ */
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size);
-
 
 ///////////////////////////////
 //    THREADPOOL HELPERS     //
