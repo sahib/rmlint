@@ -53,24 +53,29 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
             self->percent = 1.0;
             self->text_len = g_snprintf(
                 self->text_buf, sizeof(self->text_buf),
-                "Traversing (%"LLU" usable files / %"LLU" + %"LLU" ignored files / folders)",
-                session->total_files, session->ignored_files, session->ignored_folders
+                "Traversing (%s%"LLU"%s usable files / %s%"LLU"%s + %s%"LLU"%s ignored files / folders)",
+                MAYBE_GREEN(session), session->total_files, MAYBE_RESET(session),
+                MAYBE_RED(session), session->ignored_files, MAYBE_RESET(session),
+                MAYBE_RED(session), session->ignored_folders, MAYBE_RESET(session)
             );
             break;
         case RM_PROGRESS_STATE_PREPROCESS:
             self->percent = 1.0;
             self->text_len = g_snprintf(
                 self->text_buf, sizeof(self->text_buf),
-                "Preprocessing (reduced files to %"LLU" / found %"LLU" other lint)",
-                session->total_filtered_files, session->other_lint_cnt
+                "Preprocessing (reduced files to %s%"LLU"%s / found %s%"LLU"%s other lint)",
+                MAYBE_GREEN(session), session->total_filtered_files, MAYBE_RESET(session),
+                MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
             );
             break;
         case RM_PROGRESS_STATE_SHREDDER:
             self->percent = ((gdouble)session->dup_counter + session->dup_group_counter) / ((gdouble)session->total_filtered_files);
             self->text_len = g_snprintf(
                 self->text_buf, sizeof(self->text_buf),
-                "Shreddering files (%"LLU" dupes in %"LLU" sets of %"LLU" files)",
-                session->dup_counter, session->dup_group_counter, session->total_filtered_files
+                "Shreddering files (%s%"LLU"%s dupes in %s%"LLU"%s sets of %s%"LLU"%s files)",
+                MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
+                MAYBE_YELLOW(session), session->dup_group_counter, MAYBE_RESET(session),
+                MAYBE_GREEN(session), session->total_filtered_files, MAYBE_RESET(session)
             );
             break;
         case RM_PROGRESS_STATE_INIT:
@@ -79,6 +84,17 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
             self->percent = 0;
             memset(self->text_buf, 0, sizeof(self->text_buf));
             break;
+    }
+
+    /* Get rid of colors */
+    for(char *iter = &self->text_buf[0]; *iter; iter++) {
+        if(*iter == '\x1b') {
+            char *jump = strchr(iter, 'm');
+            if(jump != NULL) {
+                self->text_len -= jump - iter + 1;
+                iter = jump;
+            }
+        }
     }
 }
 
