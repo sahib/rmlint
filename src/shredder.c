@@ -189,7 +189,7 @@
  * This prevents a "starving" RmShredDevice from hogging cpu by continually
  * recycling back to the joiner.
  */
-#define SHRED_EMPTYQUEUE_SLEEP_MS (100000)
+#define SHRED_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 50ms */
 
 /* expected typical seek time in milliseconds - used to calculate optimum read*/
 #define SHRED_SEEK_MS (10)
@@ -302,11 +302,9 @@ typedef struct RmMainTag {
     RmBufferPool *mem_pool;
     GAsyncQueue *device_return;
     GMutex hash_mem_mtx;
-    //GMutex result_pool_mtx; //TODO: check with helgrind whether we night need this
-    //(not sure how well GThreadPool handles simultaneous pushes from multiple threads)
-    GMutex group_lock;     // single lock for all access to any RmShredGroups
-    gint64 hash_mem_alloc; // how much memory to allocate for paranoid checks
-    gint32 active_files;   // how many files active (only used with paranoid a.t.m.)
+    GMutex group_lock;     /* single lock for all access to any RmShredGroups */
+    gint64 hash_mem_alloc; /* how much memory to allocate for paranoid checks */
+    gint32 active_files;   /* how many files active (only used with paranoid a.t.m.) */
     GThreadPool *device_pool;
     GThreadPool *result_pool;
     gint32 page_size;
@@ -423,8 +421,6 @@ typedef struct RmShredGroup {
     RmMainTag *main;
 } RmShredGroup;
 
-
-
 /////////// RmShredGroup ////////////////
 
 /* allocate and initialise new RmShredGroup
@@ -458,7 +454,6 @@ RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
 
     return self;
 }
-
 
 ///////////////////////////////////////
 //    BUFFER POOL IMPLEMENTATION     //
@@ -510,7 +505,6 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
     }
     g_mutex_unlock(&pool->lock);
 }
-
 
 //////////////////////////////////
 // OPTIMISATION AND MEMORY      //
@@ -743,9 +737,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpoi
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
-    //TODO: add option --no-fiemap to settings?
     if (file->device->is_rotational) {
-
         g_assert(!file->disk_offsets);
         file->disk_offsets = rm_offset_create_table(file->path);
 
@@ -783,17 +775,14 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
     g_mutex_unlock (&device->lock);
 }
 
-
 //////////////////////////////////
-//    RmShredGroup UTILITIES    //
-//    and sifting algorithm     //
+//    RMSHREDGROUP UTILITIES    //
+//    AND SIFTING ALGORITHM     //
 //////////////////////////////////
-
 
 /* Free RmShredGroup and any dormant files still in its queue
  */
 void rm_shred_group_free(RmShredGroup *self) {
-
     g_assert(self->parent == NULL);  /* children should outlive their parents! */
 
     if (self->held_files) {
@@ -846,7 +835,6 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
 void rm_shred_group_make_orphan(RmShredGroup *self);
 
 void rm_shred_group_unref(RmShredGroup *self) {
-
     self->ref_count--;
 
     switch (self->status) {
@@ -908,7 +896,6 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
                              );
             shred_group->held_files = NULL; /* won't need shred_group queue any more, since new arrivals will bypass */
         }
-    //shred_group->status = RM_SHRED_GROUP_HASHING;
     /* FALLTHROUGH */
     case RM_SHRED_GROUP_HASHING:
         if (initial) {
@@ -955,11 +942,8 @@ static gboolean rm_shred_sift(RmFile *file) {
     g_mutex_lock(&tag->group_lock);
     {
         if (file->status == RM_FILE_STATE_IGNORE) {
-
             rm_shred_discard_file(file);
-
         } else {
-
             g_assert(file->digest);
 
             if (file->digest->type == RM_DIGEST_PARANOID) {
@@ -970,8 +954,6 @@ static gboolean rm_shred_sift(RmFile *file) {
              * matches snap... if yes then move this file into it; if not then
              * create a new group */
             guint8 *key = rm_digest_steal_buffer(file->digest);
-
-
             if (!current_group->children) {
                 /* create child queue */
                 current_group->children   = g_queue_new();
@@ -992,12 +974,10 @@ static gboolean rm_shred_sift(RmFile *file) {
             }
 
             result = rm_shred_group_push_file(child_group, file, false);
-
         }
 
         /* current_group now has one less file to process */
         rm_shred_group_unref(current_group);
-
     }
     g_mutex_unlock(&tag->group_lock);
     return result;
@@ -1018,8 +998,6 @@ static gboolean rm_shred_sift(RmFile *file) {
  * 	  files via rm_shred_device_preprocess.
  * */
 
-/* Insert RmFiles into size_groups
- * */
 static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *main) {
     /* initial population of RmShredDevice's and first level RmShredGroup's */
     RmSession *session = main->session;
@@ -1041,25 +1019,16 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     /* create RmShredDevice for this file if one doesn't exist yet */
     main->totalfiles++;
     dev_t disk = rm_mounts_get_disk_id(session->tables->mounts, file->dev);
-
-#ifdef THREADTEST
-    RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(main->totalfiles % 16));
-#else
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
-#endif
-    if(device == NULL) {
 
+    if(device == NULL) {
         rm_log_debug(GREEN"Creating new RmShredDevice for disk %"LLU"\n"RESET, disk);
         device = rm_shred_device_new(
                      !rm_mounts_is_nonrotational(session->tables->mounts, disk),
                      rm_mounts_get_disk_name(session->tables->mounts, disk),
                      main );
         device->disk = disk;
-#ifdef THREADTEST
-        g_hash_table_insert(session->tables->dev_table, GUINT_TO_POINTER(main->totalfiles % 16), device);
-#else
         g_hash_table_insert(session->tables->dev_table, GUINT_TO_POINTER(disk), device);
-#endif
     }
 
     file->device = device;
@@ -1136,11 +1105,9 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     );
 }
 
-
 /////////////////////////////////
 //       POST PROCESSING       //
 /////////////////////////////////
-
 
 static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
     RmFile *result = NULL;
@@ -1214,13 +1181,9 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     rm_shred_group_free(group);
 }
 
-
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
-
-
-
 
 /* Read from file and send to hasher
  * Note this was initially a separate thread but is currently just called
@@ -1344,11 +1307,7 @@ finish:
         file->device->remaining_bytes -= total_bytes_read;
     }
     g_mutex_unlock(&(device->lock));
-
 }
-
-
-
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     GList *iter = NULL;
@@ -1366,9 +1325,10 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                      (guint64)g_queue_get_length(device->file_queue)
                     );
 
-        //if(device->is_rotational) {
-        //	g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
-        //}
+        if(device->is_rotational) {
+        	g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
+        }
+
         if (g_queue_get_length(device->file_queue) == 0) {
             /* give the other device threads a chance to catch up, which will hopefully
              * release held files from RmShredGroups to give us some work to do */
@@ -1379,9 +1339,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     g_mutex_unlock(&device->lock);
     if(emptyqueue) {
         /* brief sleep to stop starving devices from hogging too much cpu time */
-        g_usleep(SHRED_EMPTYQUEUE_SLEEP_MS);
-        //TODO: possible speed enhancement?:
-        //     if queue is empty, find some files in a dormant RmShredGroup and start hashing those anyway just in case they are needed later.
+        g_usleep(SHRED_EMPTYQUEUE_SLEEP_US);
     }
 
     /* scheduler for one file at a time, optimised to minimise seeks */
