@@ -345,8 +345,7 @@ SEE ALSO
 
 Extended documentation and an in-depth tutorial can be found at:
 
-
-TODO: Actually write this tutorial.
+    http://rmlint.rtfd.org
 
 BUGS
 ====
