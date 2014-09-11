@@ -36,72 +36,75 @@ typedef struct RmFmtHandlerProgress {
     RmFmtHandler parent;
 
     /* user data */
-    char percent;
+    double percent;
+    char text_buf[1024];
+    int text_len;
+
+    int update_counter;
+
     RmFmtProgressState last_state;
-    bool state_changed;
     RmOff n, N;
 
     struct winsize terminal;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
-    if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
-        rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
+static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self) {
+    switch(self->last_state) {
+        case RM_PROGRESS_STATE_TRAVERSE:
+            self->percent = 1.0;
+            self->text_len = g_snprintf(
+                self->text_buf, sizeof(self->text_buf),
+                "Traversing (%"LLU" usable files / %"LLU" + %"LLU" ignored files / folders)",
+                self->n, session->ignored_files, session->ignored_folders
+            );
+            break;
+        case RM_PROGRESS_STATE_PREPROCESS:
+            self->percent = 1.0;
+            self->text_len = g_snprintf(
+                self->text_buf, sizeof(self->text_buf),
+                "Preprocessing (reduced files to %"LLU" / found %"LLU" other lint)",
+                session->total_filtered_files, session->other_lint_cnt
+            );
+            break;
+        case RM_PROGRESS_STATE_SHREDDER:
+            self->percent = ((gdouble)session->dup_counter + session->dup_group_counter) / ((gdouble)session->total_filtered_files);
+            self->text_len = g_snprintf(
+                self->text_buf, sizeof(self->text_buf),
+                "Shreddering files (%"LLU" dupes in %"LLU" sets of %"LLU" files)",
+                session->dup_counter, session->dup_group_counter, session->total_filtered_files
+            );
+            break;
+        case RM_PROGRESS_STATE_INIT:
+        case RM_PROGRESS_STATE_SUMMARY:
+        default:
+            self->percent = 0;
+            memset(self->text_buf, 0, sizeof(self->text_buf));
+            break;
     }
-
-    fprintf(out, "\e[?25l"); /* Hide the cursor */
 }
 
-static int X = 0;
-
-static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, _U RmFile *file) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
-
-    if(self->state_changed) {
-        fprintf(out, "\n");
-        self->state_changed = false;
-    } else if(X++ % 10 != 0) {
-        return;
+static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FILE *out) {
+    for(int i = 0; i < width - self->text_len - 1; ++i) {
+        fprintf(out, " ");
     }
 
-    const int text_width = 30;
-    char text[text_width];
-    memset(text, 0, sizeof(text));
+    fprintf(out, "%s\r", self->text_buf);
+}
 
-    strcpy(text, " ");
-    strcpy(text, rm_file_lint_type_to_string(file->lint_type));
-
-
-    double reached_percent = self->n / (double)MAX(1, self->N);
-
-    /* 30 chars left for text */
-    int bar_len = self->terminal.ws_col - text_width;
-    int cells = bar_len * reached_percent;
-
-    switch(self->last_state) {
-    case RM_PROGRESS_STATE_TRAVERSE:
-        fprintf(out, MAYBE_BLUE(session));
-        break;
-    case RM_PROGRESS_STATE_SHREDDER:
-        fprintf(out, MAYBE_GREEN(session));
-        break;
-    default:
-        fprintf(out, MAYBE_YELLOW(session));
-        break;
-    }
+static void rm_fmt_progress_print_bar(RmFmtHandlerProgress *self, int width, FILE *out) {
+    int cells = width * self->percent;
 
     fprintf(out, "[");
-    for(int i = 0; i < bar_len; ++i) {
+    for(int i = 0; i < width; ++i) {
         if(i < cells) {
-            fprintf(out, "=");
+            fprintf(out, "#");
         } else if(i == cells) {
             fprintf(out, ">");
         } else {
-            fprintf(out, " ");
+            fprintf(out, "-");
         }
     }
-    fprintf(out, "] %s%s\r", rm_fmt_progress_to_string(self->last_state), MAYBE_RESET(session));
+    fprintf(out, "]");
 }
 
 static void rm_fmt_prog(
@@ -112,15 +115,43 @@ static void rm_fmt_prog(
     RmOff n, RmOff N
 ) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+
+    if(state == RM_PROGRESS_STATE_INIT) {
+        if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
+            rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
+        }
+
+        fprintf(out, "\e[?25l"); /* Hide the cursor */
+        fflush(out);
+        return;
+    }
+
+    if(state == RM_PROGRESS_STATE_SUMMARY) {
+        fprintf(out, "\e[?25h"); /* show the cursor */
+        fflush(out);
+        return;
+    }
+
     self->n = n;
     self->N = N;
-    self->state_changed = !(state == self->last_state);
-    self->last_state = state;
-}
+    if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
+        fprintf(out, "\n");
+    } else if(self->update_counter++ % 5 > 0) {
+        return;
+    }
 
-static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    fprintf(out, "\e[?25h"); /* show the cursor */
-    fflush(out);
+    self->last_state = state;
+
+    int text_len = self->terminal.ws_col * 0.5;
+    int bar_len = self->terminal.ws_col * 0.5;
+
+    rm_fmt_progress_format_text(session, self);
+    rm_fmt_progress_print_bar(self, bar_len, out);
+    rm_fmt_progress_print_text(self, text_len, out);
+
+    if(state == RM_PROGRESS_STATE_SUMMARY) {
+        fprintf(out, "\n");
+    }
 }
 
 static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
@@ -128,15 +159,17 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .parent = {
         .size = sizeof(PROGRESS_HANDLER_IMPL),
         .name = "progressbar",
-        .head = rm_fmt_head,
-        .elem = rm_fmt_elem,
+        .head = NULL,
+        .elem = NULL,
         .prog = rm_fmt_prog,
-        .foot = rm_fmt_foot
+        .foot = NULL 
     },
 
     /* Initialize own stuff */
-    .percent = 0,
-    .n = 0, .N = 0,
+    .percent = 0.0f,
+    .n = 0,
+    .N = 0,
+    .update_counter = 0,
     .last_state = RM_PROGRESS_STATE_INIT
 };
 

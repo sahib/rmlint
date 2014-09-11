@@ -54,6 +54,7 @@ typedef struct RmFmtTable {
     GHashTable *handler_to_file;
     GHashTable *config;
     RmSession *session;
+    GRecMutex state_mtx;
 } RmFmtTable;
 
 /* Callback definitions */
@@ -187,6 +188,9 @@ bool rm_fmt_is_a_output(RmFmtTable *self, const char *path);
  * Key is the path, value the handler name.
  */
 void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter);
+
+void rm_fmt_lock_state(RmFmtTable *self);
+void rm_fmt_unlock_state(RmFmtTable *self);
 
 /**
  * You can use this template for implementing new RmFmtHandlers.

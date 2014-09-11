@@ -66,6 +66,7 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
                    );
 
     self->session = session;
+    g_rec_mutex_init(&self->state_mtx);
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     rm_fmt_register(self, PROGRESS_HANDLER);
@@ -186,6 +187,7 @@ void rm_fmt_close(RmFmtTable *self) {
     g_hash_table_unref(self->handler_to_file);
     g_hash_table_unref(self->path_to_handler);
     g_hash_table_unref(self->config);
+    g_rec_mutex_clear(&self->state_mtx);
     g_slice_free(RmFmtTable, self);
 }
 
@@ -195,10 +197,21 @@ void rm_fmt_write(RmFmtTable *self, RmFile *result) {
     }
 }
 
+void rm_fmt_lock_state(RmFmtTable *self) {
+    g_rec_mutex_lock(&self->state_mtx);
+}
+
+void rm_fmt_unlock_state(RmFmtTable *self) {
+    g_rec_mutex_unlock(&self->state_mtx);
+}
+
 void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, RmOff count, RmOff total) {
-    RM_FMT_FOR_EACH_HANDLER(self) {
-        RM_FMT_CALLBACK(handler->prog, state, count, total);
+    rm_fmt_lock_state(self); {
+        RM_FMT_FOR_EACH_HANDLER(self) {
+            RM_FMT_CALLBACK(handler->prog, state, count, total);
+        }
     }
+    rm_fmt_unlock_state(self);
 }
 
 void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key, const char *value) {

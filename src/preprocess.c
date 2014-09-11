@@ -307,25 +307,36 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
      * NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE as head
      * file, unless all the files are "other lint".
      */
+    bool remove = false;
+
     if(rm_pp_handle_other_lint(session, file)) {
-        return true;
+        remove = true;
+    } else {
+
+        /*
+        * Also check if the file is a output of rmlint itself. Which we definitely
+        * not want to handle. Creating a script that deletes itself is fun but useless.
+        *
+        * If mtime filtering is enabled, also check that.
+        * */
+        remove = (0
+                       || rm_pp_handle_own_files(session, file)
+                       || rm_pp_handle_bad_mtimes(session, file)
+                       || rm_pp_handle_basename_filter(session, file)
+                      );
+
+        if(remove) {
+            rm_file_destroy(file);
+        }
     }
 
-    /*
-    * Also check if the file is a output of rmlint itself. Which we definitely
-    * not want to handle. Creating a script that deletes itself is fun but useless.
-    *
-    * If mtime filtering is enabled, also check that.
-    * */
-    bool remove = (0
-                   || rm_pp_handle_own_files(session, file)
-                   || rm_pp_handle_bad_mtimes(session, file)
-                   || rm_pp_handle_basename_filter(session, file)
-                  );
-
-    if(remove) {
-        rm_file_destroy(file);
-    }
+    session->total_filtered_files -= remove;
+    rm_fmt_set_state(
+        session->formats,
+        RM_PROGRESS_STATE_PREPROCESS, 
+        session->total_filtered_files,
+        session->total_files
+    );
 
     return remove;
 }
@@ -395,6 +406,8 @@ void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     g_assert(tables->node_table);
 
+    session->total_filtered_files = session->total_files;
+
     if(session->settings->filter_mtime || session->settings->match_basename) {
         g_hash_table_foreach(
             tables->node_table,
@@ -419,5 +432,12 @@ void rm_preprocess(RmSession *session) {
     rm_log_debug(
         "Other lint handling finished at time %.3f\n",
         g_timer_elapsed(session->timer, NULL)
+    );
+
+    rm_fmt_set_state(
+        session->formats,
+        RM_PROGRESS_STATE_PREPROCESS, 
+        session->total_filtered_files,
+        session->total_files
     );
 }

@@ -308,7 +308,6 @@ typedef struct RmMainTag {
     GThreadPool *device_pool;
     GThreadPool *result_pool;
     gint32 page_size;
-    guint32 totalfiles;
 } RmMainTag;
 
 /////////// RmShredDevice ////////////////
@@ -838,12 +837,25 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
 /* prototype for rm_shred_group_make_orphan since it and rm_shred_group_unref reference each other */
 void rm_shred_group_make_orphan(RmShredGroup *self);
 
+static void rm_shred_decrement_file_cnt(RmSession *session, int amount) {
+    rm_fmt_lock_state(session->formats); {
+        session->total_filtered_files -= amount;
+        rm_fmt_set_state(
+            session->formats,
+            RM_PROGRESS_STATE_SHREDDER, 
+            0, session->total_filtered_files
+        );
+    }
+    rm_fmt_unlock_state(session->formats);
+}
+
 void rm_shred_group_unref(RmShredGroup *self) {
     self->ref_count--;
 
     switch (self->status) {
     case RM_SHRED_GROUP_DORMANT:
         /* group is not going to receive any more files; do required clean-up */
+        rm_shred_decrement_file_cnt(self->main->session, self->num_files);
         rm_shred_group_free(self);
         break;
     case RM_SHRED_GROUP_FINISHING:
@@ -947,6 +959,7 @@ static gboolean rm_shred_sift(RmFile *file) {
     {
         if (file->status == RM_FILE_STATE_IGNORE) {
             rm_shred_discard_file(file);
+            rm_shred_decrement_file_cnt(tag->session, 1);
         } else {
             g_assert(file->digest);
 
@@ -1021,7 +1034,6 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     }
 
     /* create RmShredDevice for this file if one doesn't exist yet */
-    main->totalfiles++;
     dev_t disk = rm_mounts_get_disk_id(session->tables->mounts, file->dev);
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
@@ -1065,6 +1077,9 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
     g_assert(group);
     if (group->status == RM_SHRED_GROUP_DORMANT) {
+        RmSession *session = group->main->session;
+
+        rm_shred_decrement_file_cnt(session, group->num_files);
         rm_shred_group_free(group);
         return true;
     } else {
@@ -1145,8 +1160,11 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
 
         if(iter->data != original_file) {
             RmFile *lint = iter->data;
-            session->dup_counter += 1;
-            session->total_lint_size += lint->file_size;
+            rm_fmt_lock_state(session->formats); {
+                session->dup_counter += 1;
+                session->total_lint_size += lint->file_size;
+            }
+            rm_fmt_unlock_state(session->formats);
 
             /* Fake file->digest for a moment */
             lint->digest = shred_group->digest;
@@ -1157,7 +1175,10 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
 }
 
 void rm_shred_forward_to_output(RmSession *session, RmShredGroup *shred_group, GQueue *group) {
-    session->dup_group_counter++;
+    rm_fmt_lock_state(session->formats); {
+        session->dup_group_counter++;
+    }
+    rm_fmt_unlock_state(session->formats);
 
     RmFile *original_file = rm_group_find_original(session, group/*, true*/);
 
@@ -1173,7 +1194,7 @@ void rm_shred_forward_to_output(RmSession *session, RmShredGroup *shred_group, G
     original_file->digest = NULL;
 
     rm_group_fmt_write(session, shred_group, group, original_file/*, true*/);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, session->dup_counter, session->total_files);
+    rm_shred_decrement_file_cnt(session, 0);
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
@@ -1474,7 +1495,6 @@ void rm_shred_run(RmSession *session) {
     tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE);
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
-    tag.totalfiles = 0;
 
     /* would use g_atomic, but helgrind does not like that */
     g_mutex_init(&tag.hash_mem_mtx);
@@ -1486,6 +1506,8 @@ void rm_shred_run(RmSession *session) {
                                  );
 
     rm_shred_preprocess_input(&tag);
+
+    rm_shred_decrement_file_cnt(session, 0);
 
     tag.hash_mem_alloc = session->settings->paranoid_mem;  /*NOTE: needs to be after preprocess*/
     tag.active_files = 0;				 	 /*NOTE: needs to be after preprocess*/

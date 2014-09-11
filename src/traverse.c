@@ -33,6 +33,7 @@
 #include <glib.h>
 
 #include "preprocess.h"
+#include "formats.h"
 #include "utilities.h"
 #include "file.h"
 
@@ -143,6 +144,12 @@ static void rm_traverse_file(
     g_mutex_lock(&trav_session->lock);
     {
         trav_session->session->total_files += rm_file_tables_insert(session, file);
+        rm_fmt_set_state(
+            session->formats,
+            RM_PROGRESS_STATE_TRAVERSE,
+            session->total_files,
+            0
+        );
     }
     g_mutex_unlock(&trav_session->lock);
 }

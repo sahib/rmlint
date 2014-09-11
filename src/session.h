@@ -103,6 +103,7 @@ typedef struct RmSession {
 
     /* Counters for printing useful statistics */
     RmOff total_files;
+    RmOff total_filtered_files;
     RmOff total_lint_size;
     RmOff dup_counter;
     RmOff dup_group_counter;
