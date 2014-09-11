@@ -268,7 +268,7 @@ static bool rm_pp_handle_basename_filter(RmSession *session, RmFile *file) {
         return false;
     }
 
-    guint basename_count = GPOINTER_TO_UINT(
+    RmOff basename_count = GPOINTER_TO_UINT(
                                g_hash_table_lookup(session->tables->basename_filter, file->basename)
                            );
 

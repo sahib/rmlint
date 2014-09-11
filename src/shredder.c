@@ -519,7 +519,7 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;
     g_assert(group);
 
-    guint32 result = 0;
+    gint32 result = 0;
 
     /* calculate next_offset property of the RmShredGroup, if not already done */
     if (group->next_offset == 0) {
@@ -755,24 +755,26 @@ static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
  * List re-inserts during Shredding are sorted so that
  * some seeks can be avoided
  * */
-static void rm_shred_push_queue(RmFile *file) {
+static void rm_shred_push_queue_sorted_impl(RmFile *file, bool sorted) {
     RmShredDevice *device = file->device;
     g_assert(!file->digest || file->status == RM_FILE_STATE_FRAGMENT);
-
     g_mutex_lock (&device->lock);
     {
-        g_queue_push_head (device->file_queue, file);
+        if(sorted) {
+            g_queue_insert_sorted (device->file_queue, file, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
+        } else {
+            g_queue_push_head (device->file_queue, file);
+        }
     }
     g_mutex_unlock (&device->lock);
 }
+
+static void rm_shred_push_queue(RmFile *file) {
+    rm_shred_push_queue_sorted_impl(file, false);
+}
+
 static void rm_shred_push_queue_sorted(RmFile *file) {
-    RmShredDevice *device = file->device;
-    g_assert(!file->digest || file->status == RM_FILE_STATE_FRAGMENT);
-    g_mutex_lock (&device->lock);
-    {
-        g_queue_insert_sorted (device->file_queue, file, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
-    }
-    g_mutex_unlock (&device->lock);
+    rm_shred_push_queue_sorted_impl(file, true);
 }
 
 //////////////////////////////////

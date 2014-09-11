@@ -144,7 +144,7 @@ typedef struct RmFile {
      * hashing every file within a hardlink set */
     struct {
         GQueue *files;
-        bool has_prefd; // use bool, gboolean is actually a gint
+        bool has_prefd; /* use bool, gboolean is actually a gint */
         bool has_non_prefd;
     } hardlinks;
 
