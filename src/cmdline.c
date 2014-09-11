@@ -603,6 +603,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
                 rm_log_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
                 rm_cmd_die(session, EXIT_FAILURE);
+            } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
+                session->hash_seed1 = time(NULL) * ((RmOff)session);
+                session->hash_seed2 = (RmOff)&session;
             }
             break;
         case 'f':

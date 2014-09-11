@@ -1382,7 +1382,12 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                 } else {
                     /* this is first generation of RMGroups, so there is no progressive hash yet */
                     g_assert(file->hash_offset == 0);
-                    file->digest = rm_digest_new(main->session->settings->checksum_type, 0, 0, 0); //TODO: seeds
+                    file->digest = rm_digest_new(
+                        main->session->settings->checksum_type, 
+                        main->session->hash_seed1,
+                        main->session->hash_seed2,
+                        0
+                    ); 
                 }
             }
         }

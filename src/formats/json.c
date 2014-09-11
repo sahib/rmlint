@@ -84,6 +84,12 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_key(out, "cwd", session->settings->iwd);
             rm_fmt_json_sep(out);
             rm_fmt_json_key(out, "args", session->settings->joined_argv);
+            if(session->hash_seed1 && session->hash_seed2) {
+                rm_fmt_json_sep(out);
+                rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
+                rm_fmt_json_sep(out);
+                rm_fmt_json_key_int(out, "hash_seed2", session->hash_seed2);
+            }
         }
         rm_fmt_json_close(out);
     }
