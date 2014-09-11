@@ -19,7 +19,6 @@ Table of Contents
 
    rmlint.1.in
    compile
-   todo
 
 
 **Indices and tables**

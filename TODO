@@ -4,7 +4,6 @@ Stable Version
 - Add a test target to the build system.
 - Write a tutorial.
 - Fix progressbar and script formatter.
-- Integrate 'ack TODO | wc -l' to 0.
 - add -e/--extension for finding only dupes with matching extension
 - add -E/--without-extension extension for finding only dupes with matching name without
   extension.
