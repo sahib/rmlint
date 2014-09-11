@@ -49,41 +49,42 @@ typedef struct RmFmtHandlerProgress {
 
 static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self) {
     switch(self->last_state) {
-        case RM_PROGRESS_STATE_TRAVERSE:
-            self->percent = 1.0;
-            self->text_len = g_snprintf(
-                self->text_buf, sizeof(self->text_buf),
-                "Traversing (%s%"LLU"%s usable files / %s%"LLU"%s + %s%"LLU"%s ignored files / folders)",
-                MAYBE_GREEN(session), session->total_files, MAYBE_RESET(session),
-                MAYBE_RED(session), session->ignored_files, MAYBE_RESET(session),
-                MAYBE_RED(session), session->ignored_folders, MAYBE_RESET(session)
-            );
-            break;
-        case RM_PROGRESS_STATE_PREPROCESS:
-            self->percent = 1.0;
-            self->text_len = g_snprintf(
-                self->text_buf, sizeof(self->text_buf),
-                "Preprocessing (reduced files to %s%"LLU"%s / found %s%"LLU"%s other lint)",
-                MAYBE_GREEN(session), session->total_filtered_files, MAYBE_RESET(session),
-                MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
-            );
-            break;
-        case RM_PROGRESS_STATE_SHREDDER:
-            self->percent = ((gdouble)session->dup_counter + session->dup_group_counter) / ((gdouble)session->total_filtered_files);
-            self->text_len = g_snprintf(
-                self->text_buf, sizeof(self->text_buf),
-                "Shreddering files (%s%"LLU"%s dupes in %s%"LLU"%s sets of %s%"LLU"%s files)",
-                MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
-                MAYBE_YELLOW(session), session->dup_group_counter, MAYBE_RESET(session),
-                MAYBE_GREEN(session), session->total_filtered_files, MAYBE_RESET(session)
-            );
-            break;
-        case RM_PROGRESS_STATE_INIT:
-        case RM_PROGRESS_STATE_SUMMARY:
-        default:
-            self->percent = 0;
-            memset(self->text_buf, 0, sizeof(self->text_buf));
-            break;
+    case RM_PROGRESS_STATE_TRAVERSE:
+        self->percent = 1.0;
+        self->text_len = g_snprintf(
+                             self->text_buf, sizeof(self->text_buf),
+                             "Traversing (%s%"LLU"%s usable files / %s%"LLU"%s + %s%"LLU"%s ignored files / folders)",
+                             MAYBE_GREEN(session), session->total_files, MAYBE_RESET(session),
+                             MAYBE_RED(session), session->ignored_files, MAYBE_RESET(session),
+                             MAYBE_RED(session), session->ignored_folders, MAYBE_RESET(session)
+                         );
+        break;
+    case RM_PROGRESS_STATE_PREPROCESS:
+        self->percent = 1.0;
+        self->text_len = g_snprintf(
+                             self->text_buf, sizeof(self->text_buf),
+                             "Preprocessing (reduced files to %s%"LLU"%s / found %s%"LLU"%s other lint)",
+                             MAYBE_GREEN(session), session->total_filtered_files, MAYBE_RESET(session),
+                             MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
+                         );
+        break;
+    case RM_PROGRESS_STATE_SHREDDER:
+        self->percent = ((gdouble)session->dup_counter + session->dup_group_counter) / ((gdouble)session->total_filtered_files);
+        self->text_len = g_snprintf(
+                             self->text_buf, sizeof(self->text_buf),
+                             "Matching files (%s%"LLU"%s dupes of %s%"LLU"%s originals; %s%.2f%s GiB to scan in %s%"LLU"%s files)",
+                             MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
+                             MAYBE_YELLOW(session), session->dup_group_counter, MAYBE_RESET(session),
+                             MAYBE_GREEN(session), (double)session->shred_bytes_remaining / 1024 / 1024 / 1024, MAYBE_RESET(session),
+                             MAYBE_GREEN(session), session->shred_files_remaining, MAYBE_RESET(session)
+                         );
+        break;
+    case RM_PROGRESS_STATE_INIT:
+    case RM_PROGRESS_STATE_SUMMARY:
+    default:
+        self->percent = 0;
+        memset(self->text_buf, 0, sizeof(self->text_buf));
+        break;
     }
 
     /* Get rid of colors */
@@ -136,9 +137,9 @@ static void rm_fmt_prog(
             rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
         }
 
-        const char * update_interval_str = rm_fmt_get_config_value(
-                session->formats, "progressbar", "update_interval"
-        );
+        const char *update_interval_str = rm_fmt_get_config_value(
+                                              session->formats, "progressbar", "update_interval"
+                                          );
 
         if(update_interval_str) {
             self->update_interval = g_ascii_strtoull(update_interval_str, NULL, 10);
@@ -184,7 +185,7 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
         .head = NULL,
         .elem = NULL,
         .prog = rm_fmt_prog,
-        .foot = NULL 
+        .foot = NULL
     },
 
     /* Initialize own stuff */
