@@ -31,7 +31,8 @@
 #include <string.h>
 
 #define CSV_SEP  ","
-#define CSV_FORMAT "%s"CSV_SEP"%s"CSV_SEP"%"LLU""CSV_SEP"%s\n"
+#define CSV_QUOTE "\""
+#define CSV_FORMAT "%s"CSV_SEP""CSV_QUOTE"%s"CSV_QUOTE""CSV_SEP"%"LLU""CSV_SEP"%s\n"
 
 typedef struct RmFmtHandlerCSV {
     /* must be first */
@@ -61,8 +62,8 @@ static void rm_fmt_elem(
         rm_digest_hexstring(file->digest, checksum_str);
     }
 
-    /* Escape any possible separator character in the path */
-    char *clean_path = rm_util_strsub(file->path, CSV_SEP, "\\"CSV_SEP);
+    /* Escape quotes in the path (refer http://tools.ietf.org/html/rfc4180, item 6)*/
+    char *clean_path = rm_util_strsub(file->path, CSV_QUOTE, CSV_QUOTE""CSV_QUOTE);
 
     fprintf(out, CSV_FORMAT,
             rm_file_lint_type_to_string(file->lint_type), clean_path, file->file_size, checksum_str
