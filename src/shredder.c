@@ -357,6 +357,10 @@ typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_FINISHED
 } RmShredGroupStatus;
 
+#define needs_pref(group)  (group->main->session->settings->must_match_original)
+#define needs_npref(group) (group->main->session->settings->keep_all_originals)
+#define needs_new(group)   (group->main->session->settings->min_mtime)
+
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
      * criteria for further hashing (normally just 2 or more files, but sometimes
@@ -386,11 +390,9 @@ typedef struct RmShredGroup {
     /* set if group has 1 or more files from "non-preferred" paths */
     bool has_npref;
 
-    /* set based on settings->must_match_original */
-    bool needs_pref;
+    /* set if group has 1 or more files newer than settings->min_mtime */
+    bool has_new;
 
-    /* set based on settings->keep_all_originals */
-    bool needs_npref;
 
     /* initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files
      * and meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
@@ -439,8 +441,6 @@ RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
 
     if(self->parent) {
         self->ref_count++;
-        self->needs_npref = self->parent->needs_npref;
-        self->needs_pref = self->parent->needs_pref;
     }
 
     self->held_files = g_queue_new();
@@ -837,10 +837,12 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
     if (group->status == RM_SHRED_GROUP_DORMANT) {
         if  (1
                 && group->num_files >= 2  /* it takes 2 to tango */
-                && (group->has_pref || !group->needs_pref)
+                && ( group->has_pref || !needs_pref(group) )
                 /* we have at least one file from preferred path, or we don't care */
-                && (group->has_npref || !group->needs_npref)
+                && ( group->has_npref || !needs_npref(group) )
                 /* we have at least one file from non-pref path, or we don't care */
+                && ( group->has_new || !needs_new(group) )
+                /* we have at least one file newer than settings->min_mtime, or we don't care */
             ) {
             /* group can go active */
             if (group->hash_offset < group->file_size) {
@@ -899,8 +901,10 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
         file->digest = NULL;
     }
 
-    shred_group->has_pref |= file->is_prefd | file->hardlinks.has_prefd;
+    shred_group->has_pref  |=  file->is_prefd | file->hardlinks.has_prefd;
     shred_group->has_npref |= !file->is_prefd | file->hardlinks.has_non_prefd;
+    shred_group->has_new   |=  file->is_new_or_has_new;
+
     shred_group->ref_count++;
     shred_group->num_files++;
 
@@ -1030,12 +1034,15 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     g_assert(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
     g_assert(file->file_size > 0);
 
+    file->is_new_or_has_new = (file->mtime >= session->settings->min_mtime);
+
     /* if file has hardlinks then set file->hardlinks.has_[non_]prefd*/
     if (file->hardlinks.files) {
         for (GList *iter = file->hardlinks.files->head; iter; iter = iter->next ) {
             RmFile *link = iter->data;
             file->hardlinks.has_non_prefd |= !link->is_prefd;
             file->hardlinks.has_prefd |= link->is_prefd;
+            file->is_new_or_has_new |= (link->mtime >= session->settings->min_mtime);
         }
     }
 

@@ -45,12 +45,6 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->orig_table = g_hash_table_new(NULL, NULL);
 
-    /* Checktable (size -> 0 or mtime) for checking if
-     * we have a size group with newer mtime files.
-     */
-    tables->mtime_filter = g_hash_table_new_full(
-                               g_int64_hash, g_int64_equal, g_free, NULL
-                           );
 
     tables->basename_filter = g_hash_table_new_full(
                                   g_str_hash, g_str_equal, NULL, NULL
@@ -81,9 +75,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
 
         g_assert(tables->orig_table);
         g_hash_table_unref(tables->orig_table);
-
-        g_assert(tables->mtime_filter);
-        g_hash_table_unref(tables->mtime_filter);
 
         g_assert(tables->basename_filter);
         g_hash_table_unref(tables->basename_filter);
@@ -255,13 +246,7 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
     return rm_fmt_is_a_output(session->formats, file->path);
 }
 
-static bool rm_pp_handle_bad_mtimes(RmSession *session, RmFile *file) {
-    if(!session->settings->filter_mtime /* mtime filtering isn't enabled? */) {
-        return false;
-    }
 
-    return (!g_hash_table_contains(session->tables->mtime_filter, &file->file_size));
-}
 
 static bool rm_pp_handle_basename_filter(RmSession *session, RmFile *file) {
     if(!session->settings->match_basename /* basename filtering isn't enabled? */) {
@@ -320,10 +305,9 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         * If mtime filtering is enabled, also check that.
         * */
         remove = (0
-                       || rm_pp_handle_own_files(session, file)
-                       || rm_pp_handle_bad_mtimes(session, file)
-                       || rm_pp_handle_basename_filter(session, file)
-                      );
+                  || rm_pp_handle_own_files(session, file)
+                  || rm_pp_handle_basename_filter(session, file)
+                 );
 
         if(remove) {
             rm_file_destroy(file);
@@ -370,16 +354,6 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
 }
 
 static void rm_pp_collect_data(_U gpointer key, RmFile *file, RmSession *session) {
-    /* Mark all old mtimes */
-    if(session->settings->filter_mtime && file->mtime >= session->settings->min_mtime) {
-        RmOff *file_size_key = g_malloc0(sizeof(RmOff));
-        *file_size_key = file->file_size;
-        g_hash_table_insert(
-            session->tables->mtime_filter,
-            file_size_key,
-            GINT_TO_POINTER(true)
-        );
-    }
 
     if(session->settings->match_basename) {
         /* Remember the basename count */

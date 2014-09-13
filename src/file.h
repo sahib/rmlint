@@ -104,6 +104,11 @@ typedef struct RmFile {
      */
     bool is_prefd;
 
+    /* True if this file, or at least one of its embedded hardlinks, are newer
+     * than settings->min_mtime
+     */
+    bool is_new_or_has_new;
+
     /* The index of the path this file belongs to. */
     RmOff path_index;
 
