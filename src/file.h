@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <glib.h>
 
+#include "settings.h"
 #include "checksum.h"
 #include "utilities.h"
 
@@ -158,13 +159,16 @@ typedef struct RmFile {
 
     /* Link to the RmShredDevice that the file is associated with */
     struct RmShredDevice *device;
+
+    /* Required for rm_file_equal for building initial match_table */
+    struct RmSettings *settings;
 } RmFile;
 
 /**
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(
-    bool lock_file, const char *path, RmStat *statp, RmLintType type,
+    RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 );
 

@@ -32,6 +32,25 @@
 #include "cmdline.h"
 #include "shredder.h"
 
+guint rm_file_hash(RmFile *file) {
+    //guint size =
+    return (file->file_size & 0xFFFFFFFF);
+    //return size;
+}
+
+gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
+    RmSettings *settings = file1->settings;
+    //gboolean result =
+    return (1
+            && (file1->file_size == file2->file_size)
+            && (1
+                || (!settings->match_basename)
+                || (strcmp(file1->basename, file2->basename) == 0)
+               )
+           );
+    //return result;
+}
+
 guint rm_node_hash(RmFile *file) {
     /* typically inode number will be less than 2^21 or so;
      * dev_t is devined via #define makedev(maj, min)  (((maj) << 8) | (min))
@@ -64,7 +83,7 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
     tables->size_groups = g_hash_table_new_full(
-                              g_int64_hash, g_int64_equal, g_free, NULL
+                              (GHashFunc)rm_file_hash, (GEqualFunc)rm_file_equal, NULL, NULL
                           );
 
     tables->node_table = g_hash_table_new_full(
@@ -73,10 +92,6 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
 
     tables->orig_table = g_hash_table_new(NULL, NULL);
 
-
-    tables->basename_filter = g_hash_table_new_full(
-                                  g_str_hash, g_str_equal, NULL, NULL
-                              );
 
     RmSettings *settings = session->settings;
 
@@ -104,8 +119,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->orig_table);
         g_hash_table_unref(tables->orig_table);
 
-        g_assert(tables->basename_filter);
-        g_hash_table_unref(tables->basename_filter);
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
@@ -277,18 +290,6 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
 
 
 
-static bool rm_pp_handle_basename_filter(RmSession *session, RmFile *file) {
-    if(!session->settings->match_basename /* basename filtering isn't enabled? */) {
-        return false;
-    }
-
-    RmOff basename_count = GPOINTER_TO_UINT(
-                               g_hash_table_lookup(session->tables->basename_filter, file->basename)
-                           );
-
-    return (basename_count < 2);
-}
-
 /* preprocess hardlinked files via rm_pp_handle_other_lint, stripping out
  * "other lint".  If there are no files left at the end then destroy the
  * head file and return TRUE so that the cluster can be deleted from the
@@ -330,13 +331,8 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         /*
         * Also check if the file is a output of rmlint itself. Which we definitely
         * not want to handle. Creating a script that deletes itself is fun but useless.
-        *
-        * If mtime filtering is enabled, also check that.
         * */
-        remove = (0
-                  || rm_pp_handle_own_files(session, file)
-                  || rm_pp_handle_basename_filter(session, file)
-                 );
+        remove = rm_pp_handle_own_files(session, file);
 
         if(remove) {
             rm_file_destroy(file);
@@ -382,22 +378,6 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
     return num_handled;
 }
 
-static void rm_pp_collect_data(_U gpointer key, RmFile *file, RmSession *session) {
-
-    if(session->settings->match_basename) {
-        /* Remember the basename count */
-        g_hash_table_insert(
-            session->tables->basename_filter,
-            file->basename,
-            GUINT_TO_POINTER(
-                g_hash_table_lookup(
-                    session->tables->basename_filter,
-                    file->basename
-                ) + 1
-            )
-        );
-    }
-}
 
 /* This does preprocessing including handling of "other lint" (non-dupes) */
 void rm_preprocess(RmSession *session) {
@@ -405,14 +385,6 @@ void rm_preprocess(RmSession *session) {
     g_assert(tables->node_table);
 
     session->total_filtered_files = session->total_files;
-
-    if(session->settings->filter_mtime || session->settings->match_basename) {
-        g_hash_table_foreach(
-            tables->node_table,
-            (GHFunc)rm_pp_collect_data,
-            session
-        );
-    }
 
     /* process hardlink groups, and move other_lint into tables- */
     g_hash_table_foreach_remove(

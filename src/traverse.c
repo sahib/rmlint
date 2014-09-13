@@ -138,7 +138,7 @@ static void rm_traverse_file(
     }
 
     RmFile *file = rm_file_new(
-                       settings->lock_files, path, statp, file_type, is_prefd, path_index
+                       settings, path, statp, file_type, is_prefd, path_index
                    );
 
     g_mutex_lock(&trav_session->lock);

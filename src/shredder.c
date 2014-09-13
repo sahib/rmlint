@@ -1066,21 +1066,16 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 
     RmShredGroup *group = g_hash_table_lookup(
                               session->tables->size_groups,
-                              &file->file_size
+                              file
                           );
 
     if (group == NULL) {
-        /* we cannot store a 8byte integer in 4 byte pointer
-         * on 32 bit (we can on 64 though), so allocate mem.
-         */
-        RmOff *file_size_cpy = g_malloc0(sizeof(RmOff));
-        *file_size_cpy = file->file_size;
 
         group = rm_shred_group_new(file, NULL);
         group->digest_type = session->settings->checksum_type;
         g_hash_table_insert(
             session->tables->size_groups,
-            file_size_cpy,
+            file,
             group
         );
     }
