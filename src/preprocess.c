@@ -283,38 +283,48 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
 }
 
 
+/* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
+ * that are "other lint" types are sent to rm_pp_handle_other_lint.  If the
+ * file itself is "other lint" types it is likewise sent to rm_pp_handle_other_lint.
+ * If there are no files left after this then return TRUE so that the
+ * cluster can be deleted from the node_table hash table.
+ * NOTE: we rely on rm_file_list_insert to select a RM_LINT_TYPE_DUPE_CANDIDATE as head
+ * file (unless ALL the files are "other lint"). */
 
-/* preprocess hardlinked files via rm_pp_handle_other_lint, stripping out
- * "other lint".  If there are no files left at the end then destroy the
- * head file and return TRUE so that the cluster can be deleted from the
- * node_table hash table */
 static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *session) {
     g_assert(file);
     RmSettings *settings = session->settings;
 
     if (file->hardlinks.files) {
-        /* it has a hardlink cluster - process each file */
+        /* it has a hardlink cluster - process each file (except self) */
+        /* remove self */
+        g_assert(g_queue_remove(file->hardlinks.files, file));
+
+        /* confirm self was only there once; TODO: should probably remove this*/
+        g_assert(!g_queue_remove(file->hardlinks.files, file));
+
         GList *next = NULL;
         for (GList *iter = file->hardlinks.files->head; iter; iter = next) {
             next = iter->next;
-
-            if (rm_pp_handle_other_lint(session, iter->data)) {
+            /* call self to handle each embedded hardlink */
+            RmFile *embedded = iter->data;
+            g_assert (!embedded->hardlinks.files);
+            if (rm_pp_handle_hardlinks(NULL, embedded, session) ) {
                 g_queue_delete_link(file->hardlinks.files, iter);
-            } else if (iter->data != file && !settings->find_hardlinked_dupes) {
-                /* settings say disregard hardlinked duplicates */
-                rm_file_destroy(iter->data);
+            } else if (!settings->find_hardlinked_dupes) {
+                rm_file_destroy(embedded);
                 g_queue_delete_link(file->hardlinks.files, iter);
             }
         }
 
-        if (!g_queue_is_empty(file->hardlinks.files)) {
-            /* remove self from the list to avoid messiness later */
-            g_assert(g_queue_remove(file->hardlinks.files, file));
+        if (g_queue_is_empty(file->hardlinks.files)) {
+            g_queue_free(file->hardlinks.files);
+            file->hardlinks.files = NULL;
         }
     }
-    /* handle the head file; if it's "other lint" then send it there, else keep it
-     * NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE as head
-     * file, unless all the files are "other lint".
+    /* handle the head file; if it's "other lint" then process it via rm_pp_handle_other_lint
+     * and return TRUE, else keep it
+
      */
     bool remove = false;
 
