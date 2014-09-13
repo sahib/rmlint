@@ -214,10 +214,11 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 
 static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
     RmSettings *settings = session->settings;
-    bool is_pref = rm_cmd_check_if_preferred(path);
+    bool is_pref = rm_cmd_check_if_preferred(path) ^ (settings->invert_original);
 
-    if(is_pref) {
+    if(is_pref ^ settings->invert_original) {
         path += 2;  /* skip first two characters ie "//" */
+        rm_log_debug("new path %s\n", path);
     }
 
     if(access(path, R_OK) != 0) {
@@ -551,9 +552,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
             {"less-paranoid"       ,  no_argument       ,  0 ,  'P'},
             {"keepall//"           ,  no_argument       ,  0 ,  'k'},
-            {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
-            {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},
-            {"no-mustmatch//"      ,  no_argument       ,  0 ,  'm'},
+            {"mustmatch//"         ,  no_argument       ,  0 ,  'm'},
+            {"invert//"            ,  no_argument       ,  0 ,  'M'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
@@ -693,8 +693,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'K':
             settings->keep_all_originals = true;
             break;
-        case 'M':
+        case 'm':
             settings->must_match_original = true;
+            break;
+        case 'M':
+            settings->invert_original = true;
             break;
         case 'Q':
             settings->confirm_settings = false;
@@ -781,6 +784,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     /* Check the directory to be valid */
     while(optind < argc) {
         const char *dir_path = argv[optind];
+        rm_log_debug("path %s\n", dir_path);
         if(strlen(dir_path) == 1 && *dir_path == '-') {
             path_index += rm_cmd_read_paths_from_stdin(session, path_index);
         } else {

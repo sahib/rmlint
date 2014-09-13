@@ -133,7 +133,11 @@ static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
-        return a->is_prefd - b->is_prefd;
+        if (sets->invert_original) {
+            return (b->is_prefd - a->is_prefd);
+        } else {
+            return (a->is_prefd - b->is_prefd);
+        }
     } else {
         int sort_criteria_len = strlen(sets->sort_criteria);
         for (int i = 0; i < sort_criteria_len; i++) {
