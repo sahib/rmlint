@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "preprocess.h"
 #include "utilities.h"
@@ -137,27 +138,20 @@ static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         int sort_criteria_len = strlen(sets->sort_criteria);
         for (int i = 0; i < sort_criteria_len; i++) {
             long cmp = 0;
-            switch (sets->sort_criteria[i]) {
+            switch (tolower(sets->sort_criteria[i])) {
             case 'm':
                 cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'M':
-                cmp = (long)(b->mtime) - (long)(a->mtime);
                 break;
             case 'a':
                 cmp = +strcmp(a->basename, b->basename);
                 break;
-            case 'A':
-                cmp = -strcmp(a->basename, b->basename);
-                break;
             case 'p':
                 cmp = (long)a->path_index - (long)b->path_index;
                 break;
-            case 'P':
-                cmp = (long)b->path_index - (long)a->path_index;
-                break;
             }
             if (cmp) {
+                /* reverse order if uppercase option (M|A|P) */
+                cmp = cmp * (isupper(sets->sort_criteria[i]) ? 1 : -1);
                 return cmp;
             }
         }
