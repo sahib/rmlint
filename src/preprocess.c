@@ -32,6 +32,34 @@
 #include "cmdline.h"
 #include "shredder.h"
 
+guint rm_node_hash(RmFile *file) {
+    /* typically inode number will be less than 2^21 or so;
+     * dev_t is devined via #define makedev(maj, min)  (((maj) << 8) | (min))
+     * (see coreutils/src/system.h)
+     * we want a simple hash to distribute these bits to give a reaonable
+     * chance of being unique.
+     * inode: 0000 0000 000X XXXX XXXX XXXX XXXX XXXX
+     * dev:   0000 0000 0000 0000 YYYY YYYY ZZZZ ZZZZ
+     * so if we rotate dev 16 bits left we should get a reasonable hash:
+     *        YYYY YYYY ZZZ? ???? XXXX XXXX XXXX XXXX
+     */
+    //guint hash=
+    return ( ((guint)file->inode) |
+             (((guint)file->dev) << 16) | (((guint)file->dev) >> 16) );
+    //return hash;
+}
+
+gboolean rm_node_equal(RmFile *file1, RmFile *file2) {
+    //gboolean result =
+    return (1
+            && (file1->inode == file2->inode)
+            && (file1->dev   == file2->dev)
+           );
+    //return result;
+}
+
+
+
 RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
@@ -40,7 +68,7 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
                           );
 
     tables->node_table = g_hash_table_new_full(
-                             g_int64_hash, g_int64_equal, g_free, NULL
+                             (GHashFunc)rm_node_hash, (GEqualFunc)rm_node_equal, NULL, NULL
                          );
 
     tables->orig_table = g_hash_table_new(NULL, NULL);
@@ -149,23 +177,25 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
     GHashTable *node_table = tables->node_table;
 
-    guint32 *node_key = g_malloc0(sizeof(RmOff));
-    node_key[0] = file->inode;
-    node_key[1] = file->dev;
 
     bool result = true;
 
     g_rec_mutex_lock(&tables->lock);
     {
-        RmFile *inode_match = g_hash_table_lookup(node_table, node_key);
+        RmFile *inode_match = g_hash_table_lookup(node_table, file);
         if (!inode_match) {
-            g_hash_table_insert(node_table, node_key, file);
+            g_hash_table_insert(node_table, file, file);
         } else {
             /* file(s) with matching dev, inode(, basename) already in table... */
-
+            g_assert(inode_match->file_size == file->file_size);
             /* if this is the first time, set up the hardlinks.files queue */
             if (!inode_match->hardlinks.files) {
                 inode_match->hardlinks.files = g_queue_new();
+                /*NOTE: during list build, the hardlinks.files queue includes the file
+                 * itself, as well as its hardlinks.  This makes operations
+                 * in rm_file_tables_insert much simpler but complicates things later on,
+                 * so the head file gets removed from the hardlinks.files queue
+                 * in rm_pp_handle_hardlinks() during preprocessing */
                 g_queue_push_head(inode_match->hardlinks.files, inode_match);
             }
 
@@ -176,10 +206,8 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                  * as head file, unless all the files are "other lint".  This is achieved via rm_pp_cmp_orig_criteria*/
                 file->hardlinks.files = inode_match->hardlinks.files;
                 inode_match->hardlinks.files = NULL;
-                g_hash_table_insert(node_table, node_key, file);
+                g_hash_table_insert(node_table, file, file); /* replaces key and data*/
                 inode_match = file;
-            } else {
-                g_free(node_key);
             }
 
             /* compare this file to all of the existing ones in the cluster
@@ -198,6 +226,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                         /* file outranks iter */
                         rm_log_debug("Ignoring path double %s, keeping %s\n", iter_file->path, file->path);
                         iter->data = file;
+                        g_assert (iter_file != inode_match); /* it would be a bad thing to destroy the hashtable key */
                         rm_file_destroy(iter_file);
                     } else {
                         rm_log_debug("Ignoring path double %s, keeping %s\n", file->path, iter_file->path);
