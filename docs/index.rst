@@ -45,22 +45,28 @@ to remove it. It is able to find:
 Manual
 ------
 
+Although **rmlint** is easy to use, you might want to read these chapters first.
+They show you the basic principles and most of the advanced options:
+
 .. toctree::
    :maxdepth: 2
 
+   install
    tutorial
    faq
 
 Reference
 ---------
 
+These chapters are informative and are not essential for the average
+user. People that want to extend **rmlint** might want to read this though: 
+
 .. toctree::
    :maxdepth: 1
        
-   install
-   Manpage of rmlint <rmlint.1.in>
-   rmlint_vs_the_world
    developers
+   rmlint_vs_the_world
+   Online-manpage of rmlint(1) <rmlint.1.in>
 
 Authors
 -------
