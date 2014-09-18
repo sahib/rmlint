@@ -19,6 +19,9 @@ to remove it. It is able to find:
    + Recursive empty directories.
    + Files with broken user or group id.
 
+.. image:: _static/screenshot.png
+   :width: 100%
+
 **Key Features:**
 
 .. hlist::
@@ -31,29 +34,6 @@ to remove it. It is able to find:
    + Possibility to update files with newer mtime.
    + Many options for originaldetection.
 
-TODO: Make this a picture like at old rmlint site.
-
-.. code-block:: bash
-
-   $ rmlint ~/
-   # Nonstripped Binarie(s):
-       strip --strip-debug /home/sahib/dev/rmlint
-       ...
-
-   # Empty File(s):
-       rm /home/sahib/empty
-       ...
-
-   # Duplicate(s):
-       ls /home/sahib/file_a
-       rm /home/sahib/file_b
-       ...
-
-   ==> In total 91298 files, whereof 9 are duplicates in 9 groups.
-   ==> This equals 0,64 MB of duplicates which could be removed.
-   ==> 351 other suspicious item(s) found, which may vary in size.
-
-   Wrote a sh file to /home/sahib/rmlint.sh.
 
 .. warning::
 
