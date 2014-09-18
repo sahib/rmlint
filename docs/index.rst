@@ -35,10 +35,12 @@ to remove it. It is able to find:
    + Many options for originaldetection.
 
 
-.. warning::
+.. NOTE::
 
-    rmlint is currently in the progress of being rewritten. 
-    This means that it still may contain bugs. Use at your own risk!
+    **rmlint** is currently in the progress of being rewritten. 
+    This means that it still may contain bugs that might burn your data.
+
+    Use at your own risk!
 
 Manual
 ------
