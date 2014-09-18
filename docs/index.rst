@@ -68,8 +68,6 @@ Authors
 - Christopher <sahib_> P. -- Original author 
 - Daniel <SeeSpotRun_> T. -- Emergency helper and duplicate author
 
-TODO: Donations? How to split them up?
-
 Additional thanks to:
 
 - TODO: list bug reporters and others. (kill old AUTHORS file)
@@ -82,3 +80,32 @@ License
 .. _GPLv3: http://www.gnu.org/copyleft/gpl.htm
 .. _sahib: https://github.com/sahib
 .. _SeeSpotRun: https://github.com/SeeSpotRun
+
+Donations
+---------
+
+If you think rmlint saved you some serious time and/or space, you might
+consider a donation. 
+
+* Either via *Flattr*:
+
+.. raw:: html
+
+   <a class="FlattrButton" style="display:none;" rev="flattr;button:compact;" href="https://github.com/sahib/glyr">
+   </a>
+   <a href="http://flattr.com/thing/302682/libglyr" target="_blank">
+      <img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" />
+   </a>
+
+* Or alternatively via *PayPal*:
+
+.. raw:: html
+
+   <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+       <input type="hidden" name="cmd" value="_s-xclick">
+       <input type="hidden" name="hosted_button_id" value="JXCXKRMS8EDVC">
+       <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+       <img alt="" border="0" src="https://www.paypalobjects.com/de_DE/i/scr/pixel.gif" width="1" height="1">
+   </form>
+
+* Or just buy us a beer if we ever meet. Nice emails are okay too.
