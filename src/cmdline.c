@@ -690,9 +690,17 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'k':
             settings->keep_all_tagged = true;
+            if (settings->keep_all_untagged) {
+                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-untagged\n");
+                settings->keep_all_untagged = false;
+            }
             break;
         case 'K':
             settings->keep_all_untagged = true;
+            if (settings->keep_all_tagged) {
+                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged\n");
+                settings->keep_all_tagged = false;
+            }
             break;
         case 'm':
             settings->must_match_tagged = true;
