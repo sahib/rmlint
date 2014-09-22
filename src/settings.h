@@ -47,9 +47,10 @@ typedef struct RmSettings {
     bool findemptydirs;
     bool nonstripped;
     bool listemptyfiles;
-    bool keep_all_originals;     /* if set, will ONLY delete dupes that are not in ppath */
-    bool must_match_original;    /* if set, will ONLY search for dupe sets where at least one file is in ppath */
-    bool invert_original;       /* if set, reverses tagging of original paths (ie // is non-original path) */
+    bool keep_all_tagged;        /* if set, will NOT delete dupes that are in paths tagged with // */
+    bool keep_all_untagged;      /* if set, will NOT delete dupes that are in paths NOT tagged with // */
+    bool must_match_tagged;      /* if set, will ONLY find dupe sets that have at least once file in a path tagged with // */
+    bool must_match_untagged;    /* if set, will ONLY find dupe sets that have at least once file in a path NOT tagged with // */
     bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
     bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
     bool limits_specified;

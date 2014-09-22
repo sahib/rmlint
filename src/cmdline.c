@@ -214,9 +214,9 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 
 static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
     RmSettings *settings = session->settings;
-    bool is_pref = rm_cmd_check_if_preferred(path) ^ (settings->invert_original);
+    bool is_pref = rm_cmd_check_if_preferred(path);
 
-    if(is_pref ^ settings->invert_original) {
+    if(is_pref) {
         path += 2;  /* skip first two characters ie "//" */
         rm_log_debug("new path %s\n", path);
     }
@@ -551,9 +551,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
             {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
             {"less-paranoid"       ,  no_argument       ,  0 ,  'P'},
-            {"keepall//"           ,  no_argument       ,  0 ,  'k'},
-            {"mustmatch//"         ,  no_argument       ,  0 ,  'm'},
-            {"invert//"            ,  no_argument       ,  0 ,  'M'},
+            {"keep-all-tagged"     ,  no_argument       ,  0 ,  'k'},
+            {"keep-all-untagged"   ,  no_argument       ,  0 ,  'M'},
+            {"must-match-tagged"   ,  no_argument       ,  0 ,  'm'},
+            {"must-match-untagged" ,  no_argument       ,  0 ,  'M'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
@@ -688,16 +689,16 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->min_mtime = rm_cmd_parse_timestamp_file(session, optarg);
             break;
         case 'k':
-            settings->keep_all_originals = true;
+            settings->keep_all_tagged = true;
             break;
         case 'K':
-            settings->keep_all_originals = true;
+            settings->keep_all_untagged = true;
             break;
         case 'm':
-            settings->must_match_original = true;
+            settings->must_match_tagged = true;
             break;
         case 'M':
-            settings->invert_original = true;
+            settings->must_match_untagged = true;
             break;
         case 'Q':
             settings->confirm_settings = false;

@@ -357,9 +357,9 @@ typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_FINISHED
 } RmShredGroupStatus;
 
-#define needs_pref(group)  (group->main->session->settings->must_match_original)
-#define needs_npref(group) (group->main->session->settings->keep_all_originals)
-#define needs_new(group)   (group->main->session->settings->min_mtime)
+#define NEEDS_PREF(group)  (group->main->session->settings->must_match_tagged   || group->main->session->settings->keep_all_untagged )
+#define NEEDS_NPREF(group) (group->main->session->settings->must_match_untagged || group->main->session->settings->keep_all_tagged)
+#define NEEDS_NEW(group)   (group->main->session->settings->min_mtime)
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
@@ -830,18 +830,18 @@ gint rm_cksum_matches_group(RmShredGroup *group, guint8 *checksum) {
 }
 
 /* Checks whether group qualifies as duplicate candidate (ie more than
- * two members and meets has_pref and needs_pref criteria).
+ * two members and meets has_pref and NEEDS_PREF criteria).
  * Assume group already protected by group_lock.
  * */
 static void rm_shred_group_update_status(RmShredGroup *group) {
     if (group->status == RM_SHRED_GROUP_DORMANT) {
         if  (1
                 && group->num_files >= 2  /* it takes 2 to tango */
-                && ( group->has_pref || !needs_pref(group) )
+                && ( group->has_pref || !NEEDS_PREF(group) )
                 /* we have at least one file from preferred path, or we don't care */
-                && ( group->has_npref || !needs_npref(group) )
+                && ( group->has_npref || !NEEDS_NPREF(group) )
                 /* we have at least one file from non-pref path, or we don't care */
-                && ( group->has_new || !needs_new(group) )
+                && ( group->has_new || !NEEDS_NEW(group) )
                 /* we have at least one file newer than settings->min_mtime, or we don't care */
             ) {
             /* group can go active */
@@ -1143,10 +1143,11 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
                 result = hardlink_original;
             }
         }
-        if (
-            ((file->is_prefd) && (session->settings->keep_all_originals)) ||
-            ((file->is_prefd) && (!result))
-        ) {
+        if (0
+                || ((file->is_prefd) && (session->settings->keep_all_tagged))
+                || ((!file->is_prefd) && (session->settings->keep_all_untagged))
+                || ((file->is_prefd) && (!result))
+           ) {
             rm_file_tables_remember_original(session->tables, file);
             if(!result) {
                 result = file;

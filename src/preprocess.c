@@ -34,14 +34,11 @@
 #include "shredder.h"
 
 guint rm_file_hash(RmFile *file) {
-    //guint size =
-    return (file->file_size & 0xFFFFFFFF);
-    //return size;
+    return (guint)(file->file_size & 0xFFFFFFFF);
 }
 
 gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
     RmSettings *settings = file1->settings;
-    //gboolean result =
     return (1
             && (file1->file_size == file2->file_size)
             && (1
@@ -49,7 +46,6 @@ gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
                 || (strcmp(file1->basename, file2->basename) == 0)
                )
            );
-    //return result;
 }
 
 guint rm_node_hash(RmFile *file) {
@@ -63,19 +59,18 @@ guint rm_node_hash(RmFile *file) {
      * so if we rotate dev 16 bits left we should get a reasonable hash:
      *        YYYY YYYY ZZZ? ???? XXXX XXXX XXXX XXXX
      */
-    //guint hash=
-    return ( ((guint)file->inode) |
-             (((guint)file->dev) << 16) | (((guint)file->dev) >> 16) );
-    //return hash;
+    return ((guint)file->inode) ^
+           (
+               (((guint)file->dev) << 16) |
+               (((guint)file->dev) >> 16)
+           );
 }
 
 gboolean rm_node_equal(RmFile *file1, RmFile *file2) {
-    //gboolean result =
     return (1
             && (file1->inode == file2->inode)
             && (file1->dev   == file2->dev)
            );
-    //return result;
 }
 
 
@@ -133,11 +128,7 @@ static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
-        if (sets->invert_original) {
-            return (b->is_prefd - a->is_prefd);
-        } else {
-            return (a->is_prefd - b->is_prefd);
-        }
+        return (a->is_prefd - b->is_prefd);
     } else {
         int sort_criteria_len = strlen(sets->sort_criteria);
         for (int i = 0; i < sort_criteria_len; i++) {
