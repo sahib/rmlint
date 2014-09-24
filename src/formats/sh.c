@@ -168,7 +168,7 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out, 
                     use_hardlink = !self->opt_symlinks_only;
                 }
 
-                char *orig_path = rm_fmt_sh_escape_path(file->path);
+                char *orig_path = rm_fmt_sh_escape_path(self->last_original->path);
                 fprintf(
                     out, "rm -f '%s' && ln %s '%s' '%s' # duplicate\n",
                     dupe_path, (use_hardlink) ? "" : "-s" , orig_path, dupe_path
