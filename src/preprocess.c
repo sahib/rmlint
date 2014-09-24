@@ -344,8 +344,8 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
     return remove;
 }
 
-static int rm_pp_cmp_reverse_alphabetical(const char *a, const char *b) {
-    return -strcmp(a, b);
+static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {
+    return strcmp(b->path, a->path);
 }
 
 static RmOff rm_pp_handler_other_lint(RmSession *session) {
