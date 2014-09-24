@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "preprocess.h"
 #include "utilities.h"
@@ -32,29 +33,61 @@
 #include "cmdline.h"
 #include "shredder.h"
 
+guint rm_file_hash(RmFile *file) {
+    return (guint)(file->file_size & 0xFFFFFFFF);
+}
+
+gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
+    RmSettings *settings = file1->settings;
+    return (1
+            && (file1->file_size == file2->file_size)
+            && (1
+                || (!settings->match_basename)
+                || (strcmp(file1->basename, file2->basename) == 0)
+               )
+           );
+}
+
+guint rm_node_hash(RmFile *file) {
+    /* typically inode number will be less than 2^21 or so;
+     * dev_t is devined via #define makedev(maj, min)  (((maj) << 8) | (min))
+     * (see coreutils/src/system.h)
+     * we want a simple hash to distribute these bits to give a reaonable
+     * chance of being unique.
+     * inode: 0000 0000 000X XXXX XXXX XXXX XXXX XXXX
+     * dev:   0000 0000 0000 0000 YYYY YYYY ZZZZ ZZZZ
+     * so if we rotate dev 16 bits left we should get a reasonable hash:
+     *        YYYY YYYY ZZZ? ???? XXXX XXXX XXXX XXXX
+     */
+    return ((guint)file->inode) ^
+           (
+               (((guint)file->dev) << 16) |
+               (((guint)file->dev) >> 16)
+           );
+}
+
+gboolean rm_node_equal(RmFile *file1, RmFile *file2) {
+    return (1
+            && (file1->inode == file2->inode)
+            && (file1->dev   == file2->dev)
+           );
+}
+
+
+
 RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
     tables->size_groups = g_hash_table_new_full(
-                              g_int64_hash, g_int64_equal, g_free, NULL
+                              (GHashFunc)rm_file_hash, (GEqualFunc)rm_file_equal, NULL, NULL
                           );
 
     tables->node_table = g_hash_table_new_full(
-                             g_int64_hash, g_int64_equal, g_free, NULL
+                             (GHashFunc)rm_node_hash, (GEqualFunc)rm_node_equal, NULL, NULL
                          );
 
     tables->orig_table = g_hash_table_new(NULL, NULL);
 
-    /* Checktable (size -> 0 or mtime) for checking if
-     * we have a size group with newer mtime files.
-     */
-    tables->mtime_filter = g_hash_table_new_full(
-                               g_int64_hash, g_int64_equal, g_free, NULL
-                           );
-
-    tables->basename_filter = g_hash_table_new_full(
-                                  g_str_hash, g_str_equal, NULL, NULL
-                              );
 
     RmSettings *settings = session->settings;
 
@@ -82,11 +115,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->orig_table);
         g_hash_table_unref(tables->orig_table);
 
-        g_assert(tables->mtime_filter);
-        g_hash_table_unref(tables->mtime_filter);
-
-        g_assert(tables->basename_filter);
-        g_hash_table_unref(tables->basename_filter);
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
@@ -100,32 +128,25 @@ static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
-        return a->is_prefd - b->is_prefd;
+        return (a->is_prefd - b->is_prefd);
     } else {
         int sort_criteria_len = strlen(sets->sort_criteria);
         for (int i = 0; i < sort_criteria_len; i++) {
             long cmp = 0;
-            switch (sets->sort_criteria[i]) {
+            switch (tolower(sets->sort_criteria[i])) {
             case 'm':
                 cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'M':
-                cmp = (long)(b->mtime) - (long)(a->mtime);
                 break;
             case 'a':
                 cmp = +strcmp(a->basename, b->basename);
                 break;
-            case 'A':
-                cmp = -strcmp(a->basename, b->basename);
-                break;
             case 'p':
                 cmp = (long)a->path_index - (long)b->path_index;
                 break;
-            case 'P':
-                cmp = (long)b->path_index - (long)a->path_index;
-                break;
             }
             if (cmp) {
+                /* reverse order if uppercase option (M|A|P) */
+                cmp = cmp * (isupper(sets->sort_criteria[i]) ? 1 : -1);
                 return cmp;
             }
         }
@@ -158,23 +179,25 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
     GHashTable *node_table = tables->node_table;
 
-    guint32 *node_key = g_malloc0(sizeof(RmOff));
-    node_key[0] = file->inode;
-    node_key[1] = file->dev;
 
     bool result = true;
 
     g_rec_mutex_lock(&tables->lock);
     {
-        RmFile *inode_match = g_hash_table_lookup(node_table, node_key);
+        RmFile *inode_match = g_hash_table_lookup(node_table, file);
         if (!inode_match) {
-            g_hash_table_insert(node_table, node_key, file);
+            g_hash_table_insert(node_table, file, file);
         } else {
             /* file(s) with matching dev, inode(, basename) already in table... */
-
+            g_assert(inode_match->file_size == file->file_size);
             /* if this is the first time, set up the hardlinks.files queue */
             if (!inode_match->hardlinks.files) {
                 inode_match->hardlinks.files = g_queue_new();
+                /*NOTE: during list build, the hardlinks.files queue includes the file
+                 * itself, as well as its hardlinks.  This makes operations
+                 * in rm_file_tables_insert much simpler but complicates things later on,
+                 * so the head file gets removed from the hardlinks.files queue
+                 * in rm_pp_handle_hardlinks() during preprocessing */
                 g_queue_push_head(inode_match->hardlinks.files, inode_match);
             }
 
@@ -185,10 +208,8 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                  * as head file, unless all the files are "other lint".  This is achieved via rm_pp_cmp_orig_criteria*/
                 file->hardlinks.files = inode_match->hardlinks.files;
                 inode_match->hardlinks.files = NULL;
-                g_hash_table_insert(node_table, node_key, file);
+                g_hash_table_insert(node_table, file, file); /* replaces key and data*/
                 inode_match = file;
-            } else {
-                g_free(node_key);
             }
 
             /* compare this file to all of the existing ones in the cluster
@@ -207,6 +228,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                         /* file outranks iter */
                         rm_log_debug("Ignoring path double %s, keeping %s\n", iter_file->path, file->path);
                         iter->data = file;
+                        g_assert (iter_file != inode_match); /* it would be a bad thing to destroy the hashtable key */
                         rm_file_destroy(iter_file);
                     } else {
                         rm_log_debug("Ignoring path double %s, keeping %s\n", file->path, iter_file->path);
@@ -255,57 +277,49 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
     return rm_fmt_is_a_output(session->formats, file->path);
 }
 
-static bool rm_pp_handle_bad_mtimes(RmSession *session, RmFile *file) {
-    if(!session->settings->filter_mtime /* mtime filtering isn't enabled? */) {
-        return false;
-    }
 
-    return (!g_hash_table_contains(session->tables->mtime_filter, &file->file_size));
-}
+/* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
+ * that are "other lint" types are sent to rm_pp_handle_other_lint.  If the
+ * file itself is "other lint" types it is likewise sent to rm_pp_handle_other_lint.
+ * If there are no files left after this then return TRUE so that the
+ * cluster can be deleted from the node_table hash table.
+ * NOTE: we rely on rm_file_list_insert to select a RM_LINT_TYPE_DUPE_CANDIDATE as head
+ * file (unless ALL the files are "other lint"). */
 
-static bool rm_pp_handle_basename_filter(RmSession *session, RmFile *file) {
-    if(!session->settings->match_basename /* basename filtering isn't enabled? */) {
-        return false;
-    }
-
-    RmOff basename_count = GPOINTER_TO_UINT(
-                               g_hash_table_lookup(session->tables->basename_filter, file->basename)
-                           );
-
-    return (basename_count < 2);
-}
-
-/* preprocess hardlinked files via rm_pp_handle_other_lint, stripping out
- * "other lint".  If there are no files left at the end then destroy the
- * head file and return TRUE so that the cluster can be deleted from the
- * node_table hash table */
 static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *session) {
     g_assert(file);
     RmSettings *settings = session->settings;
 
     if (file->hardlinks.files) {
-        /* it has a hardlink cluster - process each file */
+        /* it has a hardlink cluster - process each file (except self) */
+        /* remove self */
+        g_assert(g_queue_remove(file->hardlinks.files, file));
+
+        /* confirm self was only there once; TODO: should probably remove this*/
+        g_assert(!g_queue_remove(file->hardlinks.files, file));
+
         GList *next = NULL;
         for (GList *iter = file->hardlinks.files->head; iter; iter = next) {
             next = iter->next;
-
-            if (rm_pp_handle_other_lint(session, iter->data)) {
+            /* call self to handle each embedded hardlink */
+            RmFile *embedded = iter->data;
+            g_assert (!embedded->hardlinks.files);
+            if (rm_pp_handle_hardlinks(NULL, embedded, session) ) {
                 g_queue_delete_link(file->hardlinks.files, iter);
-            } else if (iter->data != file && !settings->find_hardlinked_dupes) {
-                /* settings say disregard hardlinked duplicates */
-                rm_file_destroy(iter->data);
+            } else if (!settings->find_hardlinked_dupes) {
+                rm_file_destroy(embedded);
                 g_queue_delete_link(file->hardlinks.files, iter);
             }
         }
 
-        if (!g_queue_is_empty(file->hardlinks.files)) {
-            /* remove self from the list to avoid messiness later */
-            g_assert(g_queue_remove(file->hardlinks.files, file));
+        if (g_queue_is_empty(file->hardlinks.files)) {
+            g_queue_free(file->hardlinks.files);
+            file->hardlinks.files = NULL;
         }
     }
-    /* handle the head file; if it's "other lint" then send it there, else keep it
-     * NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE as head
-     * file, unless all the files are "other lint".
+    /* handle the head file; if it's "other lint" then process it via rm_pp_handle_other_lint
+     * and return TRUE, else keep it
+
      */
     bool remove = false;
 
@@ -316,14 +330,8 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         /*
         * Also check if the file is a output of rmlint itself. Which we definitely
         * not want to handle. Creating a script that deletes itself is fun but useless.
-        *
-        * If mtime filtering is enabled, also check that.
         * */
-        remove = (0
-                       || rm_pp_handle_own_files(session, file)
-                       || rm_pp_handle_bad_mtimes(session, file)
-                       || rm_pp_handle_basename_filter(session, file)
-                      );
+        remove = rm_pp_handle_own_files(session, file);
 
         if(remove) {
             rm_file_destroy(file);
@@ -336,8 +344,8 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
     return remove;
 }
 
-static int rm_pp_cmp_reverse_alphabetical(const char *a, const char *b) {
-    return -strcmp(a, b);
+static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {
+    return strcmp(b->path, a->path);
 }
 
 static RmOff rm_pp_handler_other_lint(RmSession *session) {
@@ -369,32 +377,6 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
     return num_handled;
 }
 
-static void rm_pp_collect_data(_U gpointer key, RmFile *file, RmSession *session) {
-    /* Mark all old mtimes */
-    if(session->settings->filter_mtime && file->mtime >= session->settings->min_mtime) {
-        RmOff *file_size_key = g_malloc0(sizeof(RmOff));
-        *file_size_key = file->file_size;
-        g_hash_table_insert(
-            session->tables->mtime_filter,
-            file_size_key,
-            GINT_TO_POINTER(true)
-        );
-    }
-
-    if(session->settings->match_basename) {
-        /* Remember the basename count */
-        g_hash_table_insert(
-            session->tables->basename_filter,
-            file->basename,
-            GUINT_TO_POINTER(
-                g_hash_table_lookup(
-                    session->tables->basename_filter,
-                    file->basename
-                ) + 1
-            )
-        );
-    }
-}
 
 /* This does preprocessing including handling of "other lint" (non-dupes) */
 void rm_preprocess(RmSession *session) {
@@ -402,14 +384,6 @@ void rm_preprocess(RmSession *session) {
     g_assert(tables->node_table);
 
     session->total_filtered_files = session->total_files;
-
-    if(session->settings->filter_mtime || session->settings->match_basename) {
-        g_hash_table_foreach(
-            tables->node_table,
-            (GHFunc)rm_pp_collect_data,
-            session
-        );
-    }
 
     /* process hardlink groups, and move other_lint into tables- */
     g_hash_table_foreach_remove(

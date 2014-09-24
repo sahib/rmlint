@@ -32,35 +32,6 @@
 #include "traverse.h"
 #include "preprocess.h"
 
-/* Options not specified by commandline get a default option - this called before rm_cmd_parse_args */
-void rm_set_default_settings(RmSettings *settings) {
-    /* Set everything to 0 at first,
-     * only non-null options are listed below.
-     */
-    memset(settings, 0, sizeof(RmSettings));
-
-    /* Traversal options */
-    settings->depth   = PATH_MAX / 2;
-    settings->minsize = 0;
-    settings->maxsize = G_MAXUINT64;
-
-    /* Lint Types */
-    settings->ignore_hidden  = true;
-    settings->findemptydirs  = true;
-    settings->listemptyfiles = true;
-    settings->searchdup      = true;
-    settings->findbadids     = true;
-    settings->findbadlinks   = true;
-
-    /* Misc options */
-    settings->sort_criteria = "m";
-    settings->checksum_type = RM_DIGEST_SPOOKY;
-    settings->color         = isatty(fileno(stdout));
-    settings->threads       = 32;
-    settings->verbosity     = G_LOG_LEVEL_INFO;
-    settings->paranoid_mem  = 256 * 1024 * 1024;
-}
-
 void rm_session_init(RmSession *session, RmSettings *settings) {
     memset(session, 0, sizeof(RmSession));
     session->timer = g_timer_new();

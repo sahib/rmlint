@@ -218,6 +218,7 @@ static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
 
     if(is_pref) {
         path += 2;  /* skip first two characters ie "//" */
+        rm_log_debug("new path %s\n", path);
     }
 
     if(access(path, R_OK) != 0) {
@@ -550,10 +551,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
             {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
             {"less-paranoid"       ,  no_argument       ,  0 ,  'P'},
-            {"keepall//"           ,  no_argument       ,  0 ,  'k'},
-            {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
-            {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},
-            {"no-mustmatch//"      ,  no_argument       ,  0 ,  'm'},
+            {"keep-all-tagged"     ,  no_argument       ,  0 ,  'k'},
+            {"keep-all-untagged"   ,  no_argument       ,  0 ,  'M'},
+            {"must-match-tagged"   ,  no_argument       ,  0 ,  'm'},
+            {"must-match-untagged" ,  no_argument       ,  0 ,  'M'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
@@ -688,13 +689,24 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->min_mtime = rm_cmd_parse_timestamp_file(session, optarg);
             break;
         case 'k':
-            settings->keep_all_originals = true;
+            settings->keep_all_tagged = true;
+            if (settings->keep_all_untagged) {
+                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-untagged\n");
+                settings->keep_all_untagged = false;
+            }
             break;
         case 'K':
-            settings->keep_all_originals = true;
+            settings->keep_all_untagged = true;
+            if (settings->keep_all_tagged) {
+                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged\n");
+                settings->keep_all_tagged = false;
+            }
+            break;
+        case 'm':
+            settings->must_match_tagged = true;
             break;
         case 'M':
-            settings->must_match_original = true;
+            settings->must_match_untagged = true;
             break;
         case 'Q':
             settings->confirm_settings = false;
@@ -781,6 +793,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     /* Check the directory to be valid */
     while(optind < argc) {
         const char *dir_path = argv[optind];
+        rm_log_debug("path %s\n", dir_path);
         if(strlen(dir_path) == 1 && *dir_path == '-') {
             path_index += rm_cmd_read_paths_from_stdin(session, path_index);
         } else {

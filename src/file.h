@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <glib.h>
 
+#include "settings.h"
 #include "checksum.h"
 #include "utilities.h"
 
@@ -104,6 +105,11 @@ typedef struct RmFile {
      */
     bool is_prefd;
 
+    /* True if this file, or at least one of its embedded hardlinks, are newer
+     * than settings->min_mtime
+     */
+    bool is_new_or_has_new;
+
     /* The index of the path this file belongs to. */
     RmOff path_index;
 
@@ -153,13 +159,16 @@ typedef struct RmFile {
 
     /* Link to the RmShredDevice that the file is associated with */
     struct RmShredDevice *device;
+
+    /* Required for rm_file_equal for building initial match_table */
+    struct RmSettings *settings;
 } RmFile;
 
 /**
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(
-    bool lock_file, const char *path, RmStat *statp, RmLintType type,
+    RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 );
 

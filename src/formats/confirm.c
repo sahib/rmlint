@@ -77,7 +77,7 @@ static void rm_fmt_prog(
     for(int i = 0; settings->paths[i] != NULL; ++i) {
         if (settings->is_prefd[i]) {
             has_ppath = true;
-            rm_log_warning (GREEN"\t(orig)\t+ %s\n"RESET, settings->paths[i] );
+            rm_log_warning (GREEN"\t(tagged)\t+ %s\n"RESET, settings->paths[i] );
         } else {
             rm_log_warning("\t\t+ %s\n", settings->paths[i]);
         }
@@ -113,10 +113,10 @@ static void rm_fmt_prog(
     } else {
         rm_log_warning("\tNo file size limits [-z \"min-max\"]\n");
     }
-    if (settings->must_match_original) {
-        rm_log_warning("\tDuplicates must have at least one member in the "GREEN"(orig)"RESET" paths indicated above\n");
+    if (settings->must_match_tagged) {
+        rm_log_warning("\tDuplicates must have at least one member in the "GREEN"(tagged)"RESET" paths indicated above\n");
         if (!has_ppath)
-            rm_log_error(RED"\tWarning: no "GREEN"(orig)"RED" paths specified for option -M --mustmatchorig (use //)\n"RESET);
+            rm_log_error(RED"\tWarning: no "GREEN"(orig)"RED" paths specified for option -m --must-match-tagged (use //)\n"RESET);
     }
 
     if (settings->find_hardlinked_dupes) {
@@ -155,8 +155,8 @@ static void rm_fmt_prog(
         }
     }
 
-    if (settings->keep_all_originals) {
-        rm_log_warning("\tNote: all originals in "GREEN"(orig)"RESET" paths will be kept\n");
+    if (settings->keep_all_tagged) {
+        rm_log_warning("\tNote: all originals in "GREEN"(tagged)"RESET" paths will be kept\n");  //TODO: similar for reverse settings
     }
     rm_log_warning("\t      "RED"but"RESET" other lint in "GREEN"(orig)"RESET" paths may still be deleted\n");
 
