@@ -95,7 +95,7 @@ def create_bind_mount(name, idx, max_idx):
     os.makedirs(dir2)
 
     subprocess.call(
-        'mount -o rbind {dir1} {dir2}'.format(
+        'sudo mount -o rbind {dir1} {dir2}'.format(
             dir1=dir1, dir2=dir2),
         shell=True
     )
@@ -134,8 +134,8 @@ def remove_bind_mounts():
 
 if __name__ == '__main__':
     if os.getuid() is not 0:
-        print('You are not root. I need to be for mount --rbind.')
-        sys.exit(-1)
+        print('You are not root. Sudo will be requested for mount --rbind and for creating `bad` userids.')
+        #sys.exit(-1)
 
     if 'remove' in sys.argv:
         remove_bind_mounts()
