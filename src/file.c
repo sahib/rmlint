@@ -56,13 +56,13 @@ RmFile *rm_file_new(
     }
 
     self->lint_type = type;
-    self->is_prefd = is_ppath;
+    self->is_tagged = is_ppath;
     self->path_index = pnum;
 
     //TODO: remove?
     g_assert(self->hardlinks.files == NULL);
-    g_assert(self->hardlinks.has_non_prefd == FALSE);
-    g_assert(self->hardlinks.has_prefd == FALSE);
+    g_assert(self->hardlinks.has_untagged == FALSE);
+    g_assert(self->hardlinks.has_tagged == FALSE);
 
     if(settings->lock_files) {
         rm_file_set_lock_flags(path, LOCK_EX);

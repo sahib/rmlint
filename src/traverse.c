@@ -42,17 +42,17 @@
 ///////////////////////////////////////////
 
 typedef struct RmTravBuffer {
-    RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
-    const char *path;      /* The path of the directory, as passed on command line. */
-    bool is_prefd;         /* Was this file in a preferred path? */
+    RmStat stat_buf;     /* rm_sys_stat(2) information about the directory */
+    const char *path;    /* The path of the directory, as passed on command line. */
+    bool is_tagged;      /* Was this file/path tagged with //? */
     RmOff path_index;    /* Index of path, as passed on the commadline */
-    bool is_first_path;    /* True if the first path and FTS_NOCHDIR might be disabled */
+    bool is_first_path;  /* True if the first path and FTS_NOCHDIR might be disabled */
 } RmTravBuffer;
 
-static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd, unsigned long path_index) {
+static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_tagged, unsigned long path_index) {
     RmTravBuffer *self = g_new0(RmTravBuffer, 1);
     self->path = path;
-    self->is_prefd = is_prefd;
+    self->is_tagged = is_tagged;
     self->path_index = path_index;
     self->is_first_path = false;
 
@@ -110,7 +110,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 
 static void rm_traverse_file(
     RmTravSession *trav_session, RmStat *statp,
-    char *path, bool is_prefd, unsigned long path_index, RmLintType file_type
+    char *path, bool is_tagged, unsigned long path_index, RmLintType file_type
 ) {
     RmSession *session = trav_session->session;
     RmSettings *settings = session->settings;
@@ -138,7 +138,7 @@ static void rm_traverse_file(
     }
 
     RmFile *file = rm_file_new(
-                       settings, path, statp, file_type, is_prefd, path_index
+                       settings, path, statp, file_type, is_tagged, path_index
                    );
 
     g_mutex_lock(&trav_session->lock);
@@ -154,7 +154,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     RmSettings *settings = session->settings;
 
     char *path = (char *)buffer->path;
-    char is_prefd = buffer->is_prefd;
+    char is_tagged = buffer->is_tagged;
     RmOff path_index = buffer->path_index;
 
     /* Initialize ftsp */
@@ -228,7 +228,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_DP:        /* postorder directory */
                 if (is_emptydir[p->fts_level + 1] == 'E' && settings->findemptydirs) {
-                    rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_EDIR);
+                    rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_tagged, path_index, RM_LINT_TYPE_EDIR);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -239,7 +239,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 if (settings->findbadlinks) {
-                    rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_BLNK);
+                    rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_tagged, path_index, RM_LINT_TYPE_BLNK);
                 }
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
@@ -255,7 +255,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     /* normal stat failed but 64-bit stat worked
                      * -> must be a big file on 32 bit.
                      */
-                    rm_traverse_file(trav_session, &stat_buf, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
+                    rm_traverse_file(trav_session, &stat_buf, p->fts_path, is_tagged, path_index, RM_LINT_TYPE_UNKNOWN);
                     rm_log_warning(YELLOW"Warning:"RESET" Added big file %s\n", p->fts_path);
                 } else {
                     rm_log_warning(RED"Warning:"RESET" cannot stat file %s (skipping)\n", p->fts_path);
@@ -277,7 +277,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /* current dir not empty*/
-                rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
+                rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_tagged, path_index, RM_LINT_TYPE_UNKNOWN);
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
@@ -324,13 +324,13 @@ void rm_traverse_tree(RmSession *session) {
 
     for(RmOff idx = 0; settings->paths[idx] != NULL; ++idx) {
         char *path = settings->paths[idx];
-        bool is_prefd = settings->is_prefd[idx];
+        bool is_tagged = settings->is_tagged[idx];
 
-        RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);
+        RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_tagged, idx);
 
         /* Append normal paths directly */
         if(S_ISREG(buffer->stat_buf.st_mode)) {
-            rm_traverse_file(trav_session, &buffer->stat_buf, path, is_prefd, idx, RM_LINT_TYPE_UNKNOWN);
+            rm_traverse_file(trav_session, &buffer->stat_buf, path, is_tagged, idx, RM_LINT_TYPE_UNKNOWN);
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             dev_t disk = rm_mounts_get_disk_id_by_path(session->mounts, path);

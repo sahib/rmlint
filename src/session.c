@@ -60,7 +60,7 @@ void rm_session_clear(RmSession *session) {
     rm_fmt_close(session->formats);
 
     g_free(settings->joined_argv);
-    g_free(settings->is_prefd);
+    g_free(settings->is_tagged);
     g_free(settings->iwd);
 }
 

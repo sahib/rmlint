@@ -79,8 +79,8 @@ static void rm_cmd_show_help(bool use_pager) {
     rm_log_error("You seem to have no manpage for rmlint.\n");
 }
 
-/* Check if this is the 'preferred' dir */
-bool rm_cmd_check_if_preferred(const char *dir) {
+/* Check if this is a 'tagged' dir */
+bool rm_cmd_check_if_tagged(const char *dir) {
     if(dir != NULL) {
         size_t length = strlen(dir);
         if(length >= 2 && dir[0] == '/' && dir[1] == '/')
@@ -214,9 +214,9 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 
 static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
     RmSettings *settings = session->settings;
-    bool is_pref = rm_cmd_check_if_preferred(path);
+    bool is_tagged = rm_cmd_check_if_tagged(path);
 
-    if(is_pref) {
+    if(is_tagged) {
         path += 2;  /* skip first two characters ie "//" */
         rm_log_debug("new path %s\n", path);
     }
@@ -225,8 +225,8 @@ static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
         rm_log_error(YELLOW"FATAL: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
-        settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
-        settings->is_prefd[index] = is_pref;
+        settings->is_tagged = g_realloc(settings->is_tagged, sizeof(char) * (index + 1));
+        settings->is_tagged[index] = is_tagged;
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
 
         settings->paths[index + 0] = realpath(path, NULL);
@@ -552,7 +552,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
             {"less-paranoid"       ,  no_argument       ,  0 ,  'P'},
             {"keep-all-tagged"     ,  no_argument       ,  0 ,  'k'},
-            {"keep-all-untagged"   ,  no_argument       ,  0 ,  'M'},
+            {"keep-all-untagged"   ,  no_argument       ,  0 ,  'K'},
             {"must-match-tagged"   ,  no_argument       ,  0 ,  'm'},
             {"must-match-untagged" ,  no_argument       ,  0 ,  'M'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},

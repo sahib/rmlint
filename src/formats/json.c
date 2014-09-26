@@ -152,7 +152,7 @@ static void rm_fmt_elem(
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "disk_id", file->dev);
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "is_prefd", file->is_prefd ? "true" : "false");
+        rm_fmt_json_key(out, "tagged", file->is_tagged ? "true" : "false");
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "mtime", file->mtime);
     }

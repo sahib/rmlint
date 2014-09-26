@@ -357,14 +357,16 @@ typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_FINISHED
 } RmShredGroupStatus;
 
-#define NEEDS_PREF(group)  (group->main->session->settings->must_match_tagged   || group->main->session->settings->keep_all_untagged )
-#define NEEDS_NPREF(group) (group->main->session->settings->must_match_untagged || group->main->session->settings->keep_all_tagged)
+#define NEEDS_TAGGED(group) (group->main->session->settings->must_match_tagged || group->main->session->settings->keep_all_untagged)
+
+#define NEEDS_UNTAGGED(group) (group->main->session->settings->must_match_untagged || group->main->session->settings->keep_all_tagged )
+
 #define NEEDS_NEW(group)   (group->main->session->settings->min_mtime)
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
      * criteria for further hashing (normally just 2 or more files, but sometimes
-     * related to preferred path counts)
+     * related to tagged path counts)
      * */
     GQueue *held_files;
 
@@ -384,18 +386,18 @@ typedef struct RmShredGroup {
     /* number of files */
     gulong num_files;
 
-    /* set if group has 1 or more files from "preferred" paths */
-    bool has_pref;
+    /* set if group has 1 or more files from "tagged" paths */
+    bool has_tagged;
 
-    /* set if group has 1 or more files from "non-preferred" paths */
-    bool has_npref;
+    /* set if group has 1 or more files from "untagged" paths */
+    bool has_untagged;
 
     /* set if group has 1 or more files newer than settings->min_mtime */
     bool has_new;
 
 
     /* initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files
-     * and meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
+     * and meet tagged path requirementes and will go to either RM_SHRED_GROUP_HASHING or
      * RM_SHRED_GROUP_FINISHING.  When switching from dormant to hashing, all
      * held_files are released and future arrivals go straight to hashing
      * */
@@ -830,17 +832,17 @@ gint rm_cksum_matches_group(RmShredGroup *group, guint8 *checksum) {
 }
 
 /* Checks whether group qualifies as duplicate candidate (ie more than
- * two members and meets has_pref and NEEDS_PREF criteria).
+ * two members and meets has_tagged and NEEDS_TAGGED criteria).
  * Assume group already protected by group_lock.
  * */
 static void rm_shred_group_update_status(RmShredGroup *group) {
     if (group->status == RM_SHRED_GROUP_DORMANT) {
         if  (1
                 && group->num_files >= 2  /* it takes 2 to tango */
-                && ( group->has_pref || !NEEDS_PREF(group) )
-                /* we have at least one file from preferred path, or we don't care */
-                && ( group->has_npref || !NEEDS_NPREF(group) )
-                /* we have at least one file from non-pref path, or we don't care */
+                && ( group->has_tagged || !NEEDS_TAGGED(group) )
+                /* we have at least one file from tagged path, or we don't care */
+                && ( group->has_untagged || !NEEDS_UNTAGGED(group) )
+                /* we have at least one file from untagged path, or we don't care */
                 && ( group->has_new || !NEEDS_NEW(group) )
                 /* we have at least one file newer than settings->min_mtime, or we don't care */
             ) {
@@ -901,8 +903,8 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
         file->digest = NULL;
     }
 
-    shred_group->has_pref  |=  file->is_prefd | file->hardlinks.has_prefd;
-    shred_group->has_npref |= !file->is_prefd | file->hardlinks.has_non_prefd;
+    shred_group->has_tagged  |=  file->is_tagged | file->hardlinks.has_tagged;
+    shred_group->has_untagged |= !file->is_tagged | file->hardlinks.has_untagged;
     shred_group->has_new   |=  file->is_new_or_has_new;
 
     shred_group->ref_count++;
@@ -1036,12 +1038,12 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 
     file->is_new_or_has_new = (file->mtime >= session->settings->min_mtime);
 
-    /* if file has hardlinks then set file->hardlinks.has_[non_]prefd*/
+    /* if file has hardlinks then set file->hardlinks.has_[un]tagged*/
     if (file->hardlinks.files) {
         for (GList *iter = file->hardlinks.files->head; iter; iter = iter->next ) {
             RmFile *link = iter->data;
-            file->hardlinks.has_non_prefd |= !link->is_prefd;
-            file->hardlinks.has_prefd |= link->is_prefd;
+            file->hardlinks.has_tagged |= link->is_tagged;
+            file->hardlinks.has_untagged |= !link->is_tagged;
             file->is_new_or_has_new |= (link->mtime >= session->settings->min_mtime);
         }
     }
@@ -1144,9 +1146,8 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
             }
         }
         if (0
-                || ((file->is_prefd) && (session->settings->keep_all_tagged))
-                || ((!file->is_prefd) && (session->settings->keep_all_untagged))
-                || ((file->is_prefd) && (!result))
+                || ((file->is_tagged) && (session->settings->keep_all_tagged) && (!result))
+                || ((!file->is_tagged) && (session->settings->keep_all_untagged) && (!result))
            ) {
             rm_file_tables_remember_original(session->tables, file);
             if(!result) {
@@ -1164,19 +1165,23 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
             rm_group_fmt_write(session, shred_group, file->hardlinks.files, original_file);
         }
 
-        if(iter->data != original_file) {
-            RmFile *lint = iter->data;
+        if(1
+                && file != original_file
+                && !((file->is_tagged) && (session->settings->keep_all_tagged))
+                && !((!file->is_tagged) && (session->settings->keep_all_untagged))
+          ) {
+
             rm_fmt_lock_state(session->formats);
             {
                 session->dup_counter += 1;
-                session->total_lint_size += lint->file_size;
+                session->total_lint_size += file->file_size;
             }
             rm_fmt_unlock_state(session->formats);
 
             /* Fake file->digest for a moment */
-            lint->digest = shred_group->digest;
-            rm_fmt_write(session->formats, lint);
-            lint->digest = NULL;
+            file->digest = shred_group->digest;
+            rm_fmt_write(session->formats, file);
+            file->digest = NULL;
         }
     }
 }
@@ -1427,7 +1432,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             /* wait until the increment has finished hashing */
             file = g_async_queue_pop(device->hashed_file_return);
 
-            if (start_offset == file->hash_offset) {
+            if (start_offset == file->hash_offset && file->status != RM_FILE_STATE_IGNORE) {
                 rm_log_error(RED"Offset stuck at %"LLU";", start_offset);
                 file->status = RM_FILE_STATE_IGNORE;
                 /* rm_shred_sift will dispose of the file */

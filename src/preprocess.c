@@ -121,19 +121,19 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
+/* Sort criteria for sorting by tagged path (first) then user-input criteria */
 static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
-    RmSettings *sets = session->settings;
+    RmSettings *settings = session->settings;
 
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
-    } else if (a->is_prefd != b->is_prefd) {
-        return (a->is_prefd - b->is_prefd);
+    } else if (a->is_tagged != b->is_tagged) {
+        return (a->is_tagged - b->is_tagged) * ( (settings->keep_all_untagged || settings->must_match_untagged) ? -1 : 1 );
     } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
+        int sort_criteria_len = strlen(settings->sort_criteria);
         for (int i = 0; i < sort_criteria_len; i++) {
             long cmp = 0;
-            switch (tolower(sets->sort_criteria[i])) {
+            switch (tolower(settings->sort_criteria[i])) {
             case 'm':
                 cmp = (long)(a->mtime) - (long)(b->mtime);
                 break;
@@ -146,7 +146,7 @@ static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
             }
             if (cmp) {
                 /* reverse order if uppercase option (M|A|P) */
-                cmp = cmp * (isupper(sets->sort_criteria[i]) ? 1 : -1);
+                cmp = cmp * (isupper(settings->sort_criteria[i]) ? 1 : -1);
                 return cmp;
             }
         }
@@ -189,7 +189,10 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
             g_hash_table_insert(node_table, file, file);
         } else {
             /* file(s) with matching dev, inode(, basename) already in table... */
-            g_assert(inode_match->file_size == file->file_size);
+            if (inode_match->file_size != file->file_size) {
+                rm_log_error(RED"False positive inode match between %s and %s\n"RESET, inode_match->path, file->path);
+            }
+            g_assert (inode_match->file_size == file->file_size);
             /* if this is the first time, set up the hardlinks.files queue */
             if (!inode_match->hardlinks.files) {
                 inode_match->hardlinks.files = g_queue_new();

@@ -97,13 +97,10 @@ typedef struct RmFile {
     ino_t inode;
     dev_t dev;
 
-    /* True if this file is in one of the preferred paths,
+    /* True if this file is in one of the tagged paths,
      * i.e. paths prefixed with // on the commandline.
-     * In the case of hardlink clusters, the head of the cluster
-     * contains information about the preferred path status of the other
-     * files in the cluster
      */
-    bool is_prefd;
+    bool is_tagged;
 
     /* True if this file, or at least one of its embedded hardlinks, are newer
      * than settings->min_mtime
@@ -150,8 +147,8 @@ typedef struct RmFile {
      * hashing every file within a hardlink set */
     struct {
         GQueue *files;
-        bool has_prefd; /* use bool, gboolean is actually a gint */
-        bool has_non_prefd;
+        bool has_tagged; /* use bool, gboolean is actually a gint */
+        bool has_untagged;
     } hardlinks;
 
     /* Link to the RmShredGroup that the file currently belongs to */

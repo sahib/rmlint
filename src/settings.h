@@ -64,7 +64,7 @@ typedef struct RmSettings {
     int paranoid;
 
     char **paths;
-    char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/
+    char *is_tagged;             /* flag for each path; 1 if tagged with //, 0 otherwise*/
     char *sort_criteria;         /* sets criteria for ranking and selecting "original"*/
     char *iwd;                   /* cwd when rmlint called */
     char *joined_argv;           /* arguments rmlint was called with or NULL when not available */

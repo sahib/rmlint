@@ -75,7 +75,7 @@ static void rm_fmt_prog(
     /*---------------- search paths ---------------*/
     rm_log_warning(RESET"Search paths:\n");
     for(int i = 0; settings->paths[i] != NULL; ++i) {
-        if (settings->is_prefd[i]) {
+        if (settings->is_tagged[i]) {
             has_ppath = true;
             rm_log_warning (GREEN"\t(tagged)\t+ %s\n"RESET, settings->paths[i] );
         } else {
