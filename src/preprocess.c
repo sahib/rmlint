@@ -41,10 +41,10 @@ gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
     RmSettings *settings = file1->settings;
     return (1
             && (file1->file_size == file2->file_size)
-            && (1
-                || (!settings->match_basename)
-                || (strcmp(file1->basename, file2->basename) == 0)
-               )
+            && !(1
+                 && (settings->match_basename)
+                 && (g_strcmp0(file1->basename, file2->basename) != 0)
+                )
            );
 }
 
