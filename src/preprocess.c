@@ -128,7 +128,7 @@ static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
     } else if (a->is_tagged != b->is_tagged) {
-        return (a->is_tagged - b->is_tagged) * ( (settings->keep_all_untagged || settings->must_match_untagged) ? -1 : 1 );
+        return (a->is_tagged - b->is_tagged) * ( (settings->keep_all_untagged || settings->must_match_tagged) ? 1 : -1 );
     } else {
         int sort_criteria_len = strlen(settings->sort_criteria);
         for (int i = 0; i < sort_criteria_len; i++) {
