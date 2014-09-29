@@ -31,48 +31,11 @@
 #include <stdbool.h>
 #include <glib.h>
 
+//#include "settings.h"
 #include "checksum.h"
 #include "utilities.h"
 #include "file.h"
 
-/* all available settings - see rmlint -h */
-typedef struct RmSettings {
-    bool color;
-    bool samepart;
-    bool ignore_hidden;
-    bool followlinks;
-    bool findbadids;
-    bool findbadlinks;
-    bool searchdup;
-    bool findemptydirs;
-    bool nonstripped;
-    bool listemptyfiles;
-    bool keep_all_originals;     /* if set, will ONLY delete dupes that are not in ppath */
-    bool must_match_original;    /* if set, will ONLY search for dupe sets where at least one file is in ppath */
-    bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
-    bool confirm_settings;       /* if set, pauses for user confirmation of input settings*/
-    bool limits_specified;
-    bool lock_files;             /* if set, flock(2) each file before proceeding */
-    bool filter_mtime;
-    time_t min_mtime;
-    bool match_basename;         /* if set, dupes must have the same basename */
-
-    int depth;
-    int verbosity;
-    int paranoid;
-
-    char **paths;
-    char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/
-    char *sort_criteria;         /* sets criteria for ranking and selecting "original"*/
-    char *iwd;                   /* cwd when rmlint called */
-    char *joined_argv;           /* arguments rmlint was called with or NULL when not available */
-
-    guint64 minsize;
-    guint64 maxsize;
-    guint64 threads;
-    RmDigestType checksum_type;  /* determines the checksum algorithm used */
-    guint64 paranoid_mem;        /* memory allocation for paranoid buffers */
-} RmSettings;
 
 typedef struct RmFileTables {
     struct RmMountTable *mounts;
@@ -102,13 +65,16 @@ typedef struct RmSession {
     struct RmFmtTable *formats;
 
     /* Counters for printing useful statistics */
-    guint64 total_files;
-    guint64 total_lint_size;
-    guint64 dup_counter;
-    guint64 dup_group_counter;
-    guint64 ignored_files;
-    guint64 ignored_folders;
-    guint64 other_lint_cnt;
+    RmOff total_files;
+    RmOff total_filtered_files;
+    RmOff total_lint_size;
+    RmOff shred_bytes_remaining;
+    RmOff shred_files_remaining;
+    RmOff dup_counter;
+    RmOff dup_group_counter;
+    RmOff ignored_files;
+    RmOff ignored_folders;
+    RmOff other_lint_cnt;
 
     /* flag indicating if rmlint was aborted early */
     volatile bool aborted;
@@ -116,15 +82,14 @@ typedef struct RmSession {
     GTimer *timer;
 
     /* Debugging counters */
-    guint64 offset_fragments;
-    guint64 offsets_read;
-    guint64 offset_fails;
-} RmSession;
+    RmOff offset_fragments;
+    RmOff offsets_read;
+    RmOff offset_fails;
 
-/**
- * @brief Reset RmSettings to default settings and all other vars to 0.
- */
-void rm_set_default_settings(RmSettings *settings);
+    /* Daniels paranoia */
+    RmOff hash_seed1;
+    RmOff hash_seed2;
+} RmSession;
 
 /**
  * @brief Initialize session according to settings.

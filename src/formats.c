@@ -50,22 +50,23 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
 
     self->name_to_handler = g_hash_table_new_full(
-        g_str_hash, g_str_equal, NULL, NULL
-    );
+                                g_str_hash, g_str_equal, NULL, NULL
+                            );
 
     self->path_to_handler = g_hash_table_new_full(
-        g_str_hash, g_str_equal, NULL, NULL
-    );
+                                g_str_hash, g_str_equal, NULL, NULL
+                            );
 
     self->handler_to_file = g_hash_table_new_full(
-        NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL
-    );
-    
+                                NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL
+                            );
+
     self->config = g_hash_table_new_full(
-        g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_hash_table_unref
-    );
+                       g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_hash_table_unref
+                   );
 
     self->session = session;
+    g_rec_mutex_init(&self->state_mtx);
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     rm_fmt_register(self, PROGRESS_HANDLER);
@@ -186,6 +187,7 @@ void rm_fmt_close(RmFmtTable *self) {
     g_hash_table_unref(self->handler_to_file);
     g_hash_table_unref(self->path_to_handler);
     g_hash_table_unref(self->config);
+    g_rec_mutex_clear(&self->state_mtx);
     g_slice_free(RmFmtTable, self);
 }
 
@@ -195,10 +197,21 @@ void rm_fmt_write(RmFmtTable *self, RmFile *result) {
     }
 }
 
-void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state, guint64 count, guint64 total) {
-    RM_FMT_FOR_EACH_HANDLER(self) {
-        RM_FMT_CALLBACK(handler->prog, state, count, total);
+void rm_fmt_lock_state(RmFmtTable *self) {
+    g_rec_mutex_lock(&self->state_mtx);
+}
+
+void rm_fmt_unlock_state(RmFmtTable *self) {
+    g_rec_mutex_unlock(&self->state_mtx);
+}
+
+void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {
+    rm_fmt_lock_state(self); {
+        RM_FMT_FOR_EACH_HANDLER(self) {
+            RM_FMT_CALLBACK(handler->prog, state);
+        }
     }
+    rm_fmt_unlock_state(self);
 }
 
 void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key, const char *value) {
@@ -231,41 +244,3 @@ bool rm_fmt_is_a_output(RmFmtTable *self, const char *path) {
 void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
     g_hash_table_iter_init(iter, self->path_to_handler);
 }
-
-#ifdef _RM_COMPILE_MAIN_OUTPUTS
-
-int main(void) {
-    RmSession session;
-    RmFmtTable *table = rm_fmt_open(&session);
-    if(!rm_fmt_add(table, "progressbar", "stdout")) {
-        rm_log_error("You've screwed up.\n");
-        return EXIT_FAILURE;
-    }
-
-    g_usleep(1000 * 1000);
-
-    for(int i = 0 ; i <= 50; ++i) {
-        if(i <= 20) {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_TRAVERSE, i, 0);
-        } else if(i <= 25) {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
-        } else if(i <= 95) {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_SHREDDER, i, 95);
-        } else {
-            rm_fmt_set_state(table, RM_PROGRESS_STATE_SUMMARY, 0, 0);
-        }
-
-        RmFile dummy;
-        rm_fmt_write(table, &dummy);
-
-        g_usleep(1000 * 50);
-
-    }
-
-    g_usleep(1000 * 1000);
-
-    rm_fmt_close(table);
-    return EXIT_SUCCESS;
-}
-
-#endif

@@ -59,7 +59,7 @@ static inline void rm_sys_close(int fd) {
     }
 }
 
-static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, guint64 offset) {
+static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, RmOff offset) {
     return preadv(fd, iov, iovcnt, offset);
 }
 
@@ -144,7 +144,7 @@ ino_t rm_util_parent_node(const char *path);
 /*
  * @brief Takes num and converts into some human readable string. 1024 -> 1KB
  */
-void rm_util_size_to_human_readable(guint64 num, char *in, gsize len);
+void rm_util_size_to_human_readable(RmOff num, char *in, gsize len);
 
 /////////////////////////////////////
 //    MOUNTTABLE IMPLEMENTATION    //
@@ -233,12 +233,12 @@ RmOffsetTable rm_offset_create_table(const char *path);
  *
  * @return the physical offset starting from the disk.
  */
-guint64 rm_offset_lookup(RmOffsetTable table, guint64 file_offset);
+RmOff rm_offset_lookup(RmOffsetTable table, RmOff file_offset);
 
 /**
  * @return next logical offset.
  */
-guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable table, guint64 file_offset);
+RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable table, RmOff file_offset);
 
 /**
  * @brief Free the allocated table.
@@ -251,10 +251,21 @@ static inline void rm_offset_free(RmOffsetTable table) {
 //    TIMESTAMP HELPERS     //
 //////////////////////////////
 
+/**
+ * @brief Parse a ISO8601 timestamp to a unix timestamp.
+ */
 time_t rm_iso8601_parse(const char *string);
 
+/**
+ * @brief convert a unix timestamp as iso8601 timestamp string.
+ *
+ * @param stamp unix timestamp
+ * @param buf result buffer to hold the string.
+ * @param buf_size sizeof buf.
+ *
+ * @return true if conversion succeeded.
+ */
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size);
-
 
 ///////////////////////////////
 //    THREADPOOL HELPERS     //

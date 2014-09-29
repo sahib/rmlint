@@ -127,7 +127,7 @@ static int rm_cmd_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
     return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
 }
 
-guint64 rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
+RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
     if (size_spec == NULL) {
         return rm_cmd_size_format_error(error, "Input size is NULL");
     }
@@ -163,7 +163,7 @@ guint64 rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
 /* Size spec parsing implemented by qitta (http://github.com/qitta)
  * Thanks and go blame him if this breaks!
  */
-static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, guint64 *min, guint64 *max, const char **error) {
+static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff *min, RmOff *max, const char **error) {
     *min = 0;
     *max = G_MAXULONG;
 
@@ -218,6 +218,7 @@ static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
 
     if(is_pref) {
         path += 2;  /* skip first two characters ie "//" */
+        rm_log_debug("new path %s\n", path);
     }
 
     if(access(path, R_OK) != 0) {
@@ -419,13 +420,19 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
     g_strfreev(lint_types);
 }
 
-static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string, bool plain) {
+static bool rm_cmd_timestamp_is_plain(const char *stamp) {
+    return strchr(stamp, 'T') ? false : true;
+}
+
+static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
     time_t result = 0;
+    bool plain = rm_cmd_timestamp_is_plain(string);
+    session->settings->filter_mtime = false;
 
     tzset();
 
     if(plain) {
-        /* A simple integer is expected, just parse it as time_t */ 
+        /* A simple integer is expected, just parse it as time_t */
         result = strtoll(string, NULL, 10);
     } else {
         /* Parse ISO8601 timestamps like 2006-02-03T16:45:09.000Z */
@@ -437,6 +444,9 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string, boo
         rm_cmd_die(session, EXIT_FAILURE);
         return 0;
     }
+
+    /* Some sort of success. */
+    session->settings->filter_mtime = true;
 
     if(result > time(NULL)) {
         /* Not critical, maybe there are some uses for this,
@@ -457,6 +467,39 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string, boo
                 optarg, time_buf
             );
         }
+    }
+
+    return result;
+}
+
+static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) {
+    time_t result = 0;
+    bool plain = true;
+    FILE *stamp_file = fopen(path, "r");
+
+    /* Assume failure */
+    session->settings->filter_mtime = false;
+
+    if(stamp_file) {
+        char stamp_buf[1024];
+        memset(stamp_buf, 0, sizeof(stamp_buf));
+        if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
+            result = rm_cmd_parse_timestamp(session, g_strstrip(stamp_buf));
+            plain = rm_cmd_timestamp_is_plain(stamp_buf);
+        }
+
+        fclose(stamp_file);
+    } else {
+        /* Cannot read... */
+        plain = false;
+    }
+
+    rm_fmt_add(session->formats, "stamp", path);
+    if(!plain) {
+        /* Enable iso8601 timestamp output */
+        rm_fmt_set_config_value(
+            session->formats, g_strdup("stamp"), g_strdup("iso8601"), g_strdup("true")
+        );
     }
 
     return result;
@@ -494,8 +537,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"output"              ,  required_argument ,  0 ,  'o'},
             {"add-output"          ,  required_argument ,  0 ,  'O'},
             {"max-paranoid-mem"    ,  required_argument ,  0 ,  'u'},
-            {"newer-than"          ,  required_argument ,  0 ,  'n'},
-            {"iso8601-newer-than"  ,  required_argument ,  0 ,  'N'},
+            {"newer-than-stamp"    ,  required_argument ,  0 ,  'n'},
+            {"newer-than"          ,  required_argument ,  0 ,  'N'},
             {"loud"                ,  no_argument       ,  0 ,  'v'},
             {"quiet"               ,  no_argument       ,  0 ,  'V'},
             {"with-color"          ,  no_argument       ,  0 ,  'w'},
@@ -508,10 +551,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
             {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
             {"less-paranoid"       ,  no_argument       ,  0 ,  'P'},
-            {"keepall//"           ,  no_argument       ,  0 ,  'k'},
-            {"no-keepall//"        ,  no_argument       ,  0 ,  'K'},
-            {"mustmatch//"         ,  no_argument       ,  0 ,  'M'},
-            {"no-mustmatch//"      ,  no_argument       ,  0 ,  'm'},
+            {"keep-all-tagged"     ,  no_argument       ,  0 ,  'k'},
+            {"keep-all-untagged"   ,  no_argument       ,  0 ,  'M'},
+            {"must-match-tagged"   ,  no_argument       ,  0 ,  'm'},
+            {"must-match-untagged" ,  no_argument       ,  0 ,  'M'},
             {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
             {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
             {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
@@ -561,6 +604,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
                 rm_log_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
                 rm_cmd_die(session, EXIT_FAILURE);
+            } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
+                session->hash_seed1 = time(NULL) * ((RmOff)session);
+                session->hash_seed2 = (RmOff)&session;
             }
             break;
         case 'f':
@@ -630,28 +676,37 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->paranoid += 1;
             break;
         case 'u':
-            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error); 
+            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error);
             if(parse_error != NULL) {
                 rm_log_error("Invalid size description \"%s\": %s\n", optarg, parse_error);
                 rm_cmd_die(session, EXIT_FAILURE);
             }
             break;
         case 'N':
-            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg, false);
-            settings->filter_mtime = true;
+            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg);
             break;
         case 'n':
-            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg, true);
-            settings->filter_mtime = true;
+            settings->min_mtime = rm_cmd_parse_timestamp_file(session, optarg);
             break;
         case 'k':
-            settings->keep_all_originals = true;
+            settings->keep_all_tagged = true;
+            if (settings->keep_all_untagged) {
+                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-untagged\n");
+                settings->keep_all_untagged = false;
+            }
             break;
         case 'K':
-            settings->keep_all_originals = true;
+            settings->keep_all_untagged = true;
+            if (settings->keep_all_tagged) {
+                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged\n");
+                settings->keep_all_tagged = false;
+            }
+            break;
+        case 'm':
+            settings->must_match_tagged = true;
             break;
         case 'M':
-            settings->must_match_original = true;
+            settings->must_match_untagged = true;
             break;
         case 'Q':
             settings->confirm_settings = false;
@@ -738,6 +793,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     /* Check the directory to be valid */
     while(optind < argc) {
         const char *dir_path = argv[optind];
+        rm_log_debug("path %s\n", dir_path);
         if(strlen(dir_path) == 1 && *dir_path == '-') {
             path_index += rm_cmd_read_paths_from_stdin(session, path_index);
         } else {
@@ -762,8 +818,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 }
 
 int rm_cmd_main(RmSession *session) {
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT, 0, 0);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
     rm_traverse_tree(session);
 
     rm_log_debug(
@@ -772,18 +828,17 @@ int rm_cmd_main(RmSession *session) {
     );
 
     if(session->total_files >= 1) {
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS, 0, 0);
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
         if(session->settings->searchdup) {
-            rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER, 0, 0);
             rm_shred_run(session);
 
             rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
         }
     }
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY, 0, 0);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
     rm_session_clear(session);
     return EXIT_SUCCESS;
 }

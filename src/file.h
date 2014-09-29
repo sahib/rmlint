@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <glib.h>
 
+#include "settings.h"
 #include "checksum.h"
 #include "utilities.h"
 
@@ -104,22 +105,27 @@ typedef struct RmFile {
      */
     bool is_prefd;
 
+    /* True if this file, or at least one of its embedded hardlinks, are newer
+     * than settings->min_mtime
+     */
+    bool is_new_or_has_new;
+
     /* The index of the path this file belongs to. */
-    guint64 path_index;
+    RmOff path_index;
 
     /* Filesize in bytes
      */
-    guint64 file_size;
+    RmOff file_size;
 
     /* How many bytes were already hashed
      * (lower or equal seek_offset)
      */
-    guint64 hash_offset;
+    RmOff hash_offset;
 
     /* How many bytes were already read.
      * (lower or equal file_size)
      */
-    guint64 seek_offset;
+    RmOff seek_offset;
 
     /* unlock (with flock(2)) the file on destroy? */
     bool unlock_file;
@@ -144,7 +150,7 @@ typedef struct RmFile {
      * hashing every file within a hardlink set */
     struct {
         GQueue *files;
-        bool has_prefd; // use bool, gboolean is actually a gint
+        bool has_prefd; /* use bool, gboolean is actually a gint */
         bool has_non_prefd;
     } hardlinks;
 
@@ -153,13 +159,16 @@ typedef struct RmFile {
 
     /* Link to the RmShredDevice that the file is associated with */
     struct RmShredDevice *device;
+
+    /* Required for rm_file_equal for building initial match_table */
+    struct RmSettings *settings;
 } RmFile;
 
 /**
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(
-    bool lock_file, const char *path, RmStat *statp, RmLintType type,
+    RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 );
 
@@ -171,6 +180,6 @@ void rm_file_destroy(RmFile *file);
 /**
  * @brief Convert RmLintType to a human readable short string.
  */
-const char * rm_file_lint_type_to_string(RmLintType type);
+const char *rm_file_lint_type_to_string(RmLintType type);
 
 #endif /* end of include guard */

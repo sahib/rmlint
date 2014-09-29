@@ -35,12 +35,12 @@ static void rm_file_set_lock_flags(const char *path, int flags) {
         if(flock(fd, flags) != 0) {
             rm_log_perror("flock(2) failed");
         }
-       rm_sys_close(fd);
+        rm_sys_close(fd);
     }
 }
 
 RmFile *rm_file_new(
-    bool lock_file, const char *path, RmStat *statp, RmLintType type,
+    RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 ) {
     RmFile *self = g_slice_new0(RmFile);
@@ -59,14 +59,17 @@ RmFile *rm_file_new(
     self->is_prefd = is_ppath;
     self->path_index = pnum;
 
-    self->hardlinks.files = NULL;
-    self->hardlinks.has_non_prefd = FALSE;
-    self->hardlinks.has_prefd = FALSE;
+    //TODO: remove?
+    g_assert(self->hardlinks.files == NULL);
+    g_assert(self->hardlinks.has_non_prefd == FALSE);
+    g_assert(self->hardlinks.has_prefd == FALSE);
 
-    if(lock_file) {
+    if(settings->lock_files) {
         rm_file_set_lock_flags(path, LOCK_EX);
         self->unlock_file = true;
     }
+
+    self->settings = settings;
 
     return self;
 }
@@ -92,7 +95,7 @@ void rm_file_destroy(RmFile *file) {
     g_slice_free(RmFile, file);
 }
 
-const char * rm_file_lint_type_to_string(RmLintType type) {
+const char *rm_file_lint_type_to_string(RmLintType type) {
     static const char *TABLE[] = {
         [RM_LINT_TYPE_UNKNOWN]        = "",
         [RM_LINT_TYPE_EDIR]           = "emptydir",
@@ -104,6 +107,6 @@ const char * rm_file_lint_type_to_string(RmLintType type) {
         [RM_LINT_TYPE_EFILE]          = "emptyfile",
         [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate"
     };
-    
+
     return TABLE[CLAMP(type, RM_LINT_TYPE_UNKNOWN, RM_N_LINT_TYPES)];
 }

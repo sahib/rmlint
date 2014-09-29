@@ -45,18 +45,16 @@ static void rm_fmt_prog(
     RmSession *session,
     _U RmFmtHandler *parent,
     _U FILE *out,
-    RmFmtProgressState state,
-    _U guint64 n,
-    _U guint64 N
+    RmFmtProgressState state
 ) {
     if(state != RM_PROGRESS_STATE_SUMMARY) {
         return;
     }
-    
+
     if(session->total_files <= 1) {
         ARROW fprintf(out, "%s%"LLU"%s file(s) after investigation, nothing to search through.\n",
-            MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
-        );
+                      MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
+                     );
         return;
     }
 
@@ -79,7 +77,7 @@ static void rm_fmt_prog(
     rm_util_size_to_human_readable(
         session->total_lint_size, size_string_buf, sizeof(size_string_buf)
     );
-    
+
     ARROW fprintf(
         out, "This equals %s%s%s of duplicates which could be removed.\n",
         MAYBE_RED(session), size_string_buf, MAYBE_RESET(session)
@@ -127,7 +125,7 @@ static RmFmtHandlerSummary SUMMARY_HANDLER_IMPL = {
         .head = NULL,
         .elem = NULL,
         .prog = rm_fmt_prog,
-        .foot = NULL 
+        .foot = NULL
     },
 };
 

@@ -35,18 +35,6 @@ typedef struct RmFmtHandlerJSON {
     RmFmtHandler parent;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
-        /* TODO: write an informative header */
-    }
-
-    fprintf(out, "[");
-}
-
-static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
-    fprintf(out, "{\n}\n]\n");
-}
-
 //////////////////////////////////////////
 //  POOR MAN'S JSON FORMATTING TOOLBOX  //
 //////////////////////////////////////////
@@ -55,8 +43,12 @@ static void rm_fmt_json_key(FILE *out, const char *key, const char *value) {
     fprintf(out, "  \"%s\": \"%s\"", key, value);
 }
 
-static void rm_fmt_json_key_int(FILE *out, const char *key, guint64 value) {
-    fprintf(out, "  \"%s\": \"%"LLU"\"", key, value);
+static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {
+    fprintf(out, "  \"%s\": %s", key, value ? "true" : "false");
+}
+
+static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
+    fprintf(out, "  \"%s\": %"LLU"", key, value);
 }
 
 static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {
@@ -77,16 +69,69 @@ static void rm_fmt_json_sep(FILE *out) {
     fprintf(out, ",\n");
 }
 
+/////////////////////////
+//  ACTUAL CALLBACKS   //
+/////////////////////////
+
+static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+    fprintf(out, "[");
+
+    if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
+        rm_fmt_json_open(out);
+        {
+            rm_fmt_json_key(out, "description", "rmlint json-dump of lint files");
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key(out, "cwd", session->settings->iwd);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key(out, "args", session->settings->joined_argv);
+            if(session->hash_seed1 && session->hash_seed2) {
+                rm_fmt_json_sep(out);
+                rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
+                rm_fmt_json_sep(out);
+                rm_fmt_json_key_int(out, "hash_seed2", session->hash_seed2);
+            }
+        }
+        rm_fmt_json_close(out);
+    }
+}
+
+static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+    if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
+        fprintf(out, "{\n}");
+    } else {
+        rm_fmt_json_open(out);
+        {
+            rm_fmt_json_key_bool(out, "aborted", rm_session_was_aborted(session));
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "total_files", session->total_files);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "ignored_files", session->ignored_files);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "ignored_folders", session->ignored_folders);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "duplicates", session->dup_counter);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "duplicate_sets", session->dup_group_counter);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "total_lint_size", session->total_lint_size);
+        }
+        fprintf(out, "\n}");
+    }
+
+    fprintf(out, "\n]\n");
+}
 static void rm_fmt_elem(
     _U RmSession *session,
     _U RmFmtHandler *parent,
     FILE *out, RmFile *file
 ) {
-    char checksum_str[_RM_HASH_LEN * 2 + 1];
+    bool has_checksum = false;
+    char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
 
     if(file->digest && file->digest->type != RM_DIGEST_PARANOID) {
+        has_checksum = true;
         rm_digest_hexstring(file->digest, checksum_str);
     }
 
@@ -95,8 +140,10 @@ static void rm_fmt_elem(
     {
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "checksum", checksum_str);
-        rm_fmt_json_sep(out);
+        if(has_checksum) {
+            rm_fmt_json_key(out, "checksum", checksum_str);
+            rm_fmt_json_sep(out);
+        }
         rm_fmt_json_key_unsafe(out, "path", file->path);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "size", file->file_size);
@@ -105,9 +152,9 @@ static void rm_fmt_elem(
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "disk_id", file->dev);
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "is_prefd", file->is_prefd ? "true" : "false"); 
+        rm_fmt_json_key(out, "is_prefd", file->is_prefd ? "true" : "false");
         rm_fmt_json_sep(out);
-        rm_fmt_json_key_int(out, "mtime", file->mtime); 
+        rm_fmt_json_key_int(out, "mtime", file->mtime);
     }
     rm_fmt_json_close(out);
 }

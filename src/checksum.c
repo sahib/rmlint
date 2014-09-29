@@ -74,17 +74,19 @@ RmDigestType rm_string_to_digest_type(const char *string) {
     }
 }
 
-guint64 rm_digest_paranoia_bytes(void) {
+RmOff rm_digest_paranoia_bytes(void) {
     return 16 * 1024 * 1024;
+    /* this is big enough buffer size to make seek time fairly insignificant relative to sequential read time,
+     * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
 }
 
 #define ADD_SEED(digest, seed) {                                                           \
     if(seed) {                                                                             \
-        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(guint64)); \
+        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(RmOff)); \
     }                                                                                      \
 }
 
-RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64 paranoid_size) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -150,7 +152,7 @@ RmDigest *rm_digest_new(RmDigestType type, guint64 seed1, guint64 seed2, guint64
     /* starting values to let us generate up to 4 different hashes in parallel with
      * different starting seeds:
      * */
-    static const guint64 seeds[4] = {
+    static const RmOff seeds[4] = {
         0x0000000000000000,
         0xf0f0f0f0f0f0f0f0,
         0x3333333333333333,
@@ -207,7 +209,7 @@ void rm_digest_free(RmDigest *digest) {
     g_slice_free(RmDigest, digest);
 }
 
-void rm_digest_update(RmDigest *digest, const unsigned char *data, guint64 size) {
+void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     switch(digest->type) {
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:
@@ -370,13 +372,11 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     return digest->bytes * 2 + 1;
 }
 
-gboolean rm_digest_compare(RmDigest *a, RmDigest *b) {
-    if(a->bytes != b->bytes) {
-        return a->bytes < b->bytes;
+int rm_digest_get_bytes(RmDigest *self) {
+    if(self && self->type != RM_DIGEST_PARANOID) {
+        return self->bytes;
     } else {
-        guint8 *buf_a = rm_digest_steal_buffer(a);
-        guint8 *buf_b = rm_digest_steal_buffer(b);
-        return memcmp(buf_a, buf_b, a->bytes);
+        return 16;
     }
 }
 
@@ -515,7 +515,7 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
                 GTimer *timer = g_timer_new();
                 int digest_len = 0;
 
-                char buffer[_RM_HASH_LEN * 2];
+                char buffer[512 + 1];
                 memset(buffer, 0, sizeof(buffer));
 
                 if(!strcasecmp(argv[1], "mmap")) {

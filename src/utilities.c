@@ -198,7 +198,7 @@ char *rm_util_get_groupname(void) {
     }
 }
 
-void rm_util_size_to_human_readable(guint64 num, char *in, gsize len) {
+void rm_util_size_to_human_readable(RmOff num, char *in, gsize len) {
     if(num < 512) {
         snprintf(in, len, "%"LLU" B", num);
     } else if(num < 512 * 1024) {
@@ -533,8 +533,8 @@ char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
 /////////////////////////////////
 
 typedef struct RmOffsetEntry {
-    guint64 logical;
-    guint64 physical;
+    RmOff logical;
+    RmOff physical;
 } RmOffsetEntry;
 
 /* sort sequence into decreasing order of logical offsets */
@@ -624,7 +624,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
     return self;
 }
 
-guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
+RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
 #ifdef __linux__
     if (offset_list != NULL) {
         RmOffsetEntry token;
@@ -646,7 +646,7 @@ guint64 rm_offset_lookup(RmOffsetTable offset_list, guint64 file_offset) {
     return 0;
 }
 
-guint64 rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, guint64 file_offset) {
+RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_offset) {
 #ifdef __linux__
     if (offset_list != NULL) {
         RmOffsetEntry token;
@@ -731,7 +731,7 @@ int main(int argc, char const *argv[]) {
     }
 
     GSequence *db = rm_offset_create_table(argv[1]);
-    guint64 off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
+    RmOff off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
 
     rm_log_warning("Offset: %"LLU"\n", off);
     g_sequence_free(db);

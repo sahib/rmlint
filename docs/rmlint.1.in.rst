@@ -223,13 +223,18 @@ Traversal Options
     Only consider those files as dupes that have the same basename.
     See also ``man 1 basename``.
 
-**-n --newer-than=<unix_timestamp>**
-**-N --newer-than-iso8601=<iso8601_timestamp>**
+**-n --newer-than-stamp=<timestamp_filename>**
+**-N --newer-than=<iso8601_timestamp_or_unix_timestamp>**
 
-    Only consider files and their size siblings newer than a certain
-    modification time (*mtime*).  The age barrier may be given as seconds since
-    the epoch (**-n**) or as ISO8601-Timestamp like *2014-09-08T00:12:32+0200*
-    (**-N**). 
+    Only consider files (and their size siblings for duplicates) newer than a
+    certain modification time (*mtime*).  The age barrier may be given as
+    seconds since the epoch or as ISO8601-Timestamp like
+    *2014-09-08T00:12:32+0200*. 
+
+    **-n** expects a file from where it can read the timestamp from. After
+    rmlint run, the file will be updated with the current timestamp.
+    If the file does not initially exist, no filtering is done but the stampfile
+    is still written.
 
     If you want to take **only** the files (and not their size siblings) you can
     use ``find(1)``:
@@ -340,8 +345,7 @@ SEE ALSO
 
 Extended documentation and an in-depth tutorial can be found at:
 
-
-TODO: Actually write this tutorial.
+    http://rmlint.rtfd.org
 
 BUGS
 ====
