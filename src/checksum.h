@@ -145,7 +145,6 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest);
  */
 gboolean rm_digest_compare(RmDigest *a, RmDigest *b);
 
-
 /**
  * @brief Make a copy of a RMDigest.
  *
