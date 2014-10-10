@@ -15,13 +15,14 @@ typedef struct RmTreeMerger {
 } RmTreeMerger;
 
 typedef struct RmDirectory {
-    char *dirname;             /* Path to this directory without trailing slash       */
-    GQueue known_files;        /* RmFiles in this directory                           */
-    GQueue children;           /* Children for directories with level > 0             */
+    char *dirname;             /* Path to this directory without trailing slash        */
+    GQueue known_files;        /* RmFiles in this directory                            */
+    GQueue children;           /* Children for directories with level > 0              */
     guint64 common_hash;       /* TODO */
-    guint32 file_count;        /* Count of files actually in this directory           */
-    guint16 level;             /* Merge count, 0 without any merge                    */
-    guint8  finished;          /* Was this dir or one of his parents already printed? */
+    guint32 file_count;        /* Count of files actually in this directory            */
+    guint16 level;             /* Merge count, 0 without any merge                     */
+    guint8  finished;          /* Was this dir or one of his parents already printed?  */
+    art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure) */
 } RmDirectory;
 
 //////////////////////////
@@ -160,17 +161,29 @@ static RmDirectory * rm_directory_new(char *dirname) {
     self->finished = false;
     self->level = 0;
 
+    init_art_tree(&self->hash_trie);
+
     return self;
 }
 
 static void rm_directory_free(RmDirectory *self) {
+    destroy_art_tree(&self->hash_trie);
     g_queue_clear(&self->known_files);
     g_queue_clear(&self->children);
     g_free(self);
 }
 
-static bool rm_directory_equal(const RmDirectory *d1, const RmDirectory *d2) {
+static int rm_directory_equal_iter(RmDirectory *other, const unsigned char * key, uint32_t key_len, void * value) {
+    return !GPOINTER_TO_UINT(art_search(&other->hash_trie, (unsigned char *)key, key_len));
+}
+
+static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
     // TODO: Actually compare individual file hashes to prevent unlikely hash collisions?
+    //
+    //
+    bool is_not_equal = art_iter(&d1->hash_trie, (art_callback)rm_directory_equal_iter, &d2->hash_trie);
+
+
     return 1
         && d1->common_hash == d2->common_hash
         && d1->known_files.length == d2->known_files.length
