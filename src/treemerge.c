@@ -10,17 +10,16 @@ typedef struct RmTreeMerger {
     RmSession *session;        /* Session state variables / Settings       */
     art_tree dir_tree;         /* Path-Trie with all RmFiles as value      */
     art_tree count_tree;       /* Path-Trie with all file's count as value */
-    GPtrArray result_tables;   /* {hash => [RmDirectory]} for every level  */
+    GHashTable *result_table;  /* {hash => [RmDirectory]} mapping          */
     GQueue valid_dirs;         /* Directories consisting of RmFiles only   */
 } RmTreeMerger;
 
 typedef struct RmDirectory {
     char *dirname;             /* Path to this directory without trailing slash        */
     GQueue known_files;        /* RmFiles in this directory                            */
-    GQueue children;           /* Children for directories with level > 0              */
+    GQueue children;           /* Children for directories with subdirectories         */
     guint64 common_hash;       /* TODO */
     guint32 file_count;        /* Count of files actually in this directory            */
-    guint16 level;             /* Merge count, 0 without any merge                     */
     guint8  finished;          /* Was this dir or one of his parents already printed?  */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure) */
 } RmDirectory;
@@ -178,21 +177,22 @@ static int rm_directory_equal_iter(RmDirectory *other, const unsigned char * key
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
-    // TODO: Actually compare individual file hashes to prevent unlikely hash collisions?
-    //
-    //
-    bool is_not_equal = art_iter(&d1->hash_trie, (art_callback)rm_directory_equal_iter, &d2->hash_trie);
+    if(d1->common_hash != d2->common_hash) {
+        return false;
+    }
 
+    if(art_size(&d1->hash_trie) != art_size(&d2->hash_trie)) {
+        return false;
+    }
 
-    return 1
-        && d1->common_hash == d2->common_hash
-        && d1->known_files.length == d2->known_files.length
-        && d1->level == d2->level
-    ;
+    /* Take the bitter pill and compare all hashes manually.
+     * This should only happen on hash collisions of common_hash.
+     */
+    return !art_iter(&d1->hash_trie, (art_callback)rm_directory_equal_iter, &d2->hash_trie);
 }
 
 static guint rm_directory_hash(const RmDirectory *d) {
-    return d->common_hash ^ (d->level * 65599);
+    return d->common_hash;
 }
 
 static void rm_directory_add(RmDirectory *directory, RmFile *file) {
@@ -208,31 +208,20 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
     g_slice_free1(file->digest->bytes, file_digest);
 }
 
-static GHashTable *rm_tm_get_result_table(RmTreeMerger *self, int level) {
-    if(self->result_tables.len == 0 || self->result_tables.len < level) {
-        g_ptr_array_set_size(&self->result_tables, level);
-    }
-
-    GHashTable *table = g_ptr_array_index(&self->result_tables, level);
-    if(table == NULL) {
-        table = self->result_tables.pdata[level] = g_hash_table_new(
-            (GHashFunc)rm_directory_hash, (GEqualFunc)rm_directory_equal
-        );
-    }
-
-    return table;
-}
-
 ///////////////////////////
 // TREE MERGER ALGORITHM //
 ///////////////////////////
 
+RmTreeMerger * rm_tm_new(RmSession *session) {
+    // TODO: 
+    // - Make hash and equal function sanely defined
+}
+
 static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
-    GHashTable *result_table = rm_tm_get_result_table(self, directory->level);
-    GQueue *dir_queue = g_hash_table_lookup(result_table, directory);
+    GQueue *dir_queue = g_hash_table_lookup(self->result_table, directory);
     if(dir_queue == NULL) {
         dir_queue = g_queue_new();
-        g_hash_table_insert(result_table, directory, dir_queue);
+        g_hash_table_insert(self->result_table, directory, dir_queue);
     }
 
     g_queue_push_head(dir_queue, directory);
@@ -276,26 +265,43 @@ static void rm_tm_mark_finished(RmDirectory *directory) {
     }
 }
 
+static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U void *user_data) {
+    int depth_balance = 0;
+    char *a = da->dirname, *b = db->dirname;
+
+    for(int i = 0; a[i] && b[i]; ++i) {
+        depth_balance += (a[i] == '/');
+        depth_balance -= (b[i] == '/');
+    }    
+
+    return CLAMP(depth_balance, -1, +1);
+}
+
 static void rm_tm_extract(RmTreeMerger *self) {
     /* Go back from highest level to lowest */
-    for(int i = self->result_tables.len; i >= 0; --i) {
-        GHashTable *result_table = rm_tm_get_result_table(self, i);
-        GQueue *dir_list = NULL;
+    GHashTable *result_table = self->result_table;
+    
+    GQueue *dir_list = NULL;
 
-        GHashTableIter iter;
-        g_hash_table_iter_init(&iter, result_table);
+    GHashTableIter iter;
+    g_hash_table_iter_init(&iter, result_table);
 
-        /* Iterate over all directories per hash (which are same therefore) */
-        while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
-            for(GList *iter = dir_list->head; iter; iter = iter->next) {
-                RmDirectory *directory = iter->data;
-                if(directory->finished == false) {
-                    rm_tm_mark_finished(directory);
-                    g_printerr("%s\n", directory->dirname);
-                }
+    /* Iterate over all directories per hash (which are same therefore) */
+    while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
+        /* Sort the RmDirectory list by their path depth, lowest depth first */
+        g_queue_sort(dir_list, (GCompareDataFunc)rm_tm_sort_paths, NULL);
+
+        /* Output the directories and mark their children to prevent 
+         * duplicate directory reports. 
+         */
+        for(GList *iter = dir_list->head; iter; iter = iter->next) {
+            RmDirectory *directory = iter->data;
+            if(directory->finished == false) {
+                rm_tm_mark_finished(directory);
+                g_printerr("%s\n", directory->dirname);
             }
-            g_printerr("--\n");
         }
+        g_printerr("--\n");
     }
 }
 
@@ -318,7 +324,6 @@ static void rm_tm_finish(RmTreeMerger *self) {
                 /* none yet, basically copy child */
                 parent = rm_directory_new(parent_dir);
                 art_insert(&self->dir_tree, parent_dir, parent_len, parent);
-                parent->level = directory->level + 1;
 
                 /* Get the actual file count */
                 directory->file_count = GPOINTER_TO_UINT(
