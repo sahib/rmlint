@@ -481,7 +481,6 @@ static int rm_hash_file_readv(const char *file, RmDigestType type, _U double buf
         for(int i = 0; i < blocks; ++i) {
             rm_digest_update(&digest, readvec[i].iov_base, (i == blocks - 1) ? remainder : S);
         }
-        3
 
         gsize digest_len = rm_digest_hexstring(&digest, buffer);
         rm_digest_free(&digest);

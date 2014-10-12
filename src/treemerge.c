@@ -62,6 +62,8 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
             int new_key_len = MAX(0, i - 1) + 2;
 
             /* Accumulate the count ('n' above is the height of the trie)  */
+            // g_printerr("+1 : %s %d %d\n", path, strlen(path), new_key_len);
+
             art_insert(
                 dir_tree, (unsigned char *)path, new_key_len,
                 GUINT_TO_POINTER(
@@ -112,38 +114,6 @@ static bool rm_tm_count_files(art_tree *dir_tree, char **files, int bit_flags) {
     return true;
 }
 
-#ifdef _RM_COMPILE_MAIN_TM
-
-static int print_iter(_U void * data, const unsigned char * key, _U uint32_t key_len, _U void * value) {
-    int level = -1;
-    for(int i = 0; i < key_len; ++i) {
-        if(key[i] == '/') level ++;
-    }
-    g_printerr("%04u", GPOINTER_TO_UINT(value));
-    for(int i = 0; i < level; ++i) {
-        g_printerr("  ");
-    }
-
-    g_printerr("%s\n", key);
-    return 0;
-}
-
-int main(int argc, const char **argv) {
-    if(argc < 2) {
-        g_printerr("Go pass me some data\n");
-    }
-
-    char *dirs[2] = {(char *) argv[1], NULL};
-    art_tree dir_tree;
-    init_art_tree(&dir_tree);
-
-    rm_tm_count_files(&dir_tree, dirs, 0);
-    art_iter(&dir_tree, print_iter, NULL);
-    destroy_art_tree(&dir_tree);
-}
-
-#endif
-
 ///////////////////////////////
 // DIRECTORY STRUCT HANDLING //
 ///////////////////////////////
@@ -158,7 +128,6 @@ static RmDirectory * rm_directory_new(char *dirname) {
 
     self->dirname = dirname;
     self->finished = false;
-    self->level = 0;
 
     init_art_tree(&self->hash_trie);
 
@@ -172,8 +141,8 @@ static void rm_directory_free(RmDirectory *self) {
     g_free(self);
 }
 
-static int rm_directory_equal_iter(RmDirectory *other, const unsigned char * key, uint32_t key_len, void * value) {
-    return !GPOINTER_TO_UINT(art_search(&other->hash_trie, (unsigned char *)key, key_len));
+static int rm_directory_equal_iter(art_tree *other_hash_trie, const unsigned char * key, uint32_t key_len, _U void * value) {
+    return !GPOINTER_TO_UINT(art_search(other_hash_trie, (unsigned char *)key, key_len));
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
@@ -205,6 +174,9 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
      */
     guint8 *file_digest = rm_digest_steal_buffer(file->digest);
     directory->common_hash ^= *((guint64 *)file_digest);
+
+    /* The file value is not really used, but we need some non-null value */
+    art_insert(&directory->hash_trie, file_digest, file->digest->bytes, file); 
     g_slice_free1(file->digest->bytes, file_digest);
 }
 
@@ -213,8 +185,31 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
 ///////////////////////////
 
 RmTreeMerger * rm_tm_new(RmSession *session) {
-    // TODO: 
-    // - Make hash and equal function sanely defined
+    RmTreeMerger * self = g_slice_new(RmTreeMerger);
+    self->session = session;
+    g_queue_init(&self->valid_dirs);
+
+    // TODO: Free!
+    self->result_table = g_hash_table_new_full(
+        (GHashFunc)rm_directory_hash, 
+        (GEqualFunc)rm_directory_equal, 
+        NULL, NULL
+    );
+
+    init_art_tree(&self->dir_tree);
+    init_art_tree(&self->count_tree);
+
+    rm_tm_count_files(&self->count_tree, session->settings->paths, 0 /* TODO fts flags */);
+
+    return self;
+}
+
+void rm_tm_destroy(RmTreeMerger *self) {
+    g_hash_table_unref(self->result_table);
+    g_queue_clear(&self->valid_dirs);
+    destroy_art_tree(&self->dir_tree);
+    destroy_art_tree(&self->count_tree);
+    g_slice_free(RmTreeMerger, self);
 }
 
 static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
@@ -227,23 +222,25 @@ static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
     g_queue_push_head(dir_queue, directory);
 }
 
-static void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
+void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     char *dirname = g_path_get_dirname(file->path);
     guint dir_len = strlen(dirname) + 1;
-    bool free_dir = true;
     
     /* See if we know that directory already */    
-    RmDirectory *directory = art_search(&self->dir_tree, dirname, dir_len);
+    RmDirectory *directory = art_search(
+        &self->dir_tree, (unsigned char *)dirname, dir_len
+    );
+
     if(directory == NULL) {
         directory = rm_directory_new(dirname);
 
         /* Get the actual file count */
         directory->file_count = GPOINTER_TO_UINT(
-            art_search(&self->count_tree, dirname, dir_len
+            art_search(&self->count_tree, (unsigned char *)dirname, dir_len
         ));
 
         /* Make the new directory known */
-        art_insert(&self->dir_tree, dirname, dir_len, directory);
+        art_insert(&self->dir_tree, (unsigned char *)dirname, dir_len, directory);
 
         g_queue_push_head(&self->valid_dirs, directory);
     } 
@@ -286,6 +283,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
     GHashTableIter iter;
     g_hash_table_iter_init(&iter, result_table);
 
+    g_printerr("\nResults:\n\n");
+
     /* Iterate over all directories per hash (which are same therefore) */
     while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
         /* Sort the RmDirectory list by their path depth, lowest depth first */
@@ -298,14 +297,14 @@ static void rm_tm_extract(RmTreeMerger *self) {
             RmDirectory *directory = iter->data;
             if(directory->finished == false) {
                 rm_tm_mark_finished(directory);
-                g_printerr("%s\n", directory->dirname);
+                g_printerr("%x %s\n", directory->common_hash, directory->dirname);
             }
         }
         g_printerr("--\n");
     }
 }
 
-static void rm_tm_finish(RmTreeMerger *self) {
+void rm_tm_finish(RmTreeMerger *self) {
     while(self->valid_dirs.length > 0) {
         GQueue new_dirs = G_QUEUE_INIT;
 
@@ -318,16 +317,20 @@ static void rm_tm_finish(RmTreeMerger *self) {
             gsize parent_len = strlen(parent_dir) + 1;
 
             /* Lookup if we already found this parent before (if yes, merge with it) */
-            RmDirectory *parent = art_search(&self->dir_tree, parent_dir, parent_len);
+            RmDirectory *parent = art_search(
+                &self->dir_tree, (unsigned char *)parent_dir, parent_len
+            );
         
             if(parent == NULL) {
                 /* none yet, basically copy child */
                 parent = rm_directory_new(parent_dir);
-                art_insert(&self->dir_tree, parent_dir, parent_len, parent);
+                art_insert(
+                    &self->dir_tree, (unsigned char *)parent_dir, parent_len, parent
+                );
 
                 /* Get the actual file count */
                 directory->file_count = GPOINTER_TO_UINT(
-                    art_search(&self->count_tree, parent_dir, parent_len 
+                    art_search(&self->count_tree, (unsigned char *)parent_dir, parent_len 
                 ));
 
                 g_queue_push_head(&new_dirs, directory);               
@@ -358,3 +361,80 @@ static void rm_tm_finish(RmTreeMerger *self) {
     /* Fish the result dirs out of the result table */
     rm_tm_extract(self);
 }
+
+#ifdef _RM_COMPILE_MAIN_TM_ALL
+
+static int print_iter(_U void * data, const unsigned char * key, _U uint32_t key_len, _U void * value) {
+    int level = -1;
+    for(unsigned i = 0; i < key_len; ++i) {
+        if(key[i] == '/') level ++;
+    }
+    g_printerr("%4u", GPOINTER_TO_UINT(value));
+    for(int i = 0; i < level + 1; ++i) {
+        g_printerr("  ");
+    }
+
+    g_printerr("%s\n", key);
+    return 0;
+}
+
+// clang $(ls src/*.c | grep -v main.c) src/checksums/*.c src/formats/*.c src/libart/*.c  -std=c99  $(pkg-config --libs --cflags blkid glib-2.0) -Wall -Wextra -D_RM_COMPILE_MAIN -D_BSD_SOURCE -Wall -Wextra -D_GNU_SOURCE -DHAVE_BLKID=1 -lelf -lm -D_RM_COMPILE_MAIN_TM_ALL -ggdb3
+
+int main(_U int argc, char **argv) {
+    RmSession session;
+    RmSettings settings;
+
+    char *argv_copy[argc + 1];
+    memset(argv_copy, 0, sizeof(argv_copy));
+
+    for(int i = 0; i < argc - 1; ++i) {
+        argv_copy[i] = argv[i + 1];
+    }
+
+    for(int i = 0; argv_copy[i]; ++i) {
+        g_printerr("%s\n", argv_copy[i]);
+    }
+
+    session.settings = &settings;
+    settings.paths = argv_copy;
+    RmTreeMerger *merger = rm_tm_new(&session);
+
+    art_iter(&merger->count_tree, print_iter, NULL);
+
+    GQueue file_queue = G_QUEUE_INIT;
+
+    char path[PATH_MAX] = {0};
+    while(fgets(path, PATH_MAX, stdin)) {
+        RmFile *dummy = g_new0(RmFile, 1);
+        dummy->digest = rm_digest_new(RM_DIGEST_MURMUR, 0, 0, 0);
+        path[strlen(path) - 1] = 0;
+
+        FILE *handle = fopen(path, "r");
+        if(handle) {
+            unsigned char buffer[4096]; 
+            memset(buffer, 0, sizeof(buffer));
+            int bytes_read = 0;
+            while((bytes_read = fread(buffer, 1, sizeof(buffer), handle)) > 0) {
+                rm_digest_update(dummy->digest, buffer, bytes_read);
+            }
+
+            char hex[100];
+            rm_digest_hexstring(dummy->digest, hex);
+            g_printerr("Adding %20s %s\n", path, hex);
+
+            g_queue_push_head(&file_queue, dummy);
+            dummy->path = g_strdup(path);
+            rm_tm_feed(merger, dummy);
+        } else {
+            g_printerr("Unable to read: %s\n", path);
+            continue;
+        }
+
+    }
+
+    rm_tm_finish(merger);
+    rm_tm_destroy(merger);
+    return 0;
+}
+
+#endif
