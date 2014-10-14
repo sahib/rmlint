@@ -2,15 +2,18 @@
 SOURCEDIR=src
 DOCDIR=doc
 
+#install
+PREFIX=/usr
+INSTALLPATH=$(DESTDIR)$(PREFIX)
+UNAME := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+
+#BINDIR
+BINDIR=$(INSTALLPATH)/bin
 #MANDIR
-MANDIR=$(DESTDIR)/usr/share/man/man1
+MANDIR=$(INSTALLPATH)/share/man/man1
 #MANUAL
 MANDOC=rmlint.1
 MANDOC_COMPRESSED=rmlint.1.gz
-
-#install
-INSTALLPATH=$(DESTDIR)/usr/bin
-UNAME := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 #Programs 
 ECHO=echo
@@ -86,9 +89,9 @@ clean:
 
 .PHONY : install
 install: rmlint
-	@$(MKDIR) $(INSTALLPATH)
-	@$(ECHO) "++ Copying executable to $(INSTALLPATH)"
-	@$(CP) $(EXECUTABLE) $(INSTALLPATH)
+	@$(MKDIR) $(BINDIR)
+	@$(ECHO) "++ Copying executable to $(BINDIR)"
+	@$(CP) $(EXECUTABLE) $(BINDIR)
 	@$(MKDIR) $(MANDIR)
 	@$(ECHO) "++ Zipping manpage"
 	@$(GZIP) "$(DOCDIR)/$(MANDOC)" > "$(DOCDIR)/$(MANDOC_COMPRESSED)"
@@ -98,5 +101,5 @@ install: rmlint
 .PHONY : uninstall
 uninstall:
 	@$(ECHO) "-- Removing the lint of rmlint" 
-	$(RM) "$(INSTALLPATH)/$(EXECUTABLE)"
+	$(RM) "$(BINDIR)/$(EXECUTABLE)"
 	$(RM) "$(MANDIR)/$(MANDOC)"
