@@ -787,7 +787,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     }
 
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
-                              verbosity_counter, 0, G_LOG_LEVEL_DEBUG
+                              verbosity_counter,
+                              0,
+                              (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1
                           )];
 
     /* Check the directory to be valid */
