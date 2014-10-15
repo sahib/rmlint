@@ -95,6 +95,18 @@ static bool rm_tm_count_files(art_tree *dir_tree, char **files, int bit_flags) {
 
     FTSENT *ent = NULL;
     while((ent = fts_read(fts))) {
+        /* Handle large files (where fts fails with FTS_NS) */
+        if(ent->fts_info == FTS_NS) {
+            RmStat stat_buf;
+            if(rm_sys_stat(ent->fts_path, &stat_buf) == -1) {
+                rm_log_perror("stat(2) failed");
+                continue;
+            } else {
+                /* Must be a large file (or followed link to it) */
+                ent->fts_info = FTS_F;
+            }
+        }
+
         // TODO: Use same settings as traverse.c
         if(ent->fts_info == FTS_F) {
             art_insert(
