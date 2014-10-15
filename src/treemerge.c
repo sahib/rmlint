@@ -75,13 +75,20 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
     return 0;
 }
 
-static bool rm_tm_count_files(art_tree *dir_tree, char **files, int bit_flags) {
+static bool rm_tm_count_files(art_tree *dir_tree, char **files, RmSession *session) {
     if (*files == NULL) {
         rm_log_error("No files passed to rm_tm_count_files\n");
         return false;
     }
 
-    FTS *fts = fts_open(files, bit_flags, NULL);
+    int fts_flags = FTS_COMFOLLOW;
+    if(session->settings->followlinks) {
+        fts_flags |= FTS_LOGICAL;
+    } else {
+        fts_flags |= FTS_PHYSICAL;
+    }
+
+    FTS *fts = fts_open(files, fts_flags, NULL);
     if(fts == NULL) {
         rm_log_perror("fts_open failed");
         return false;
@@ -107,11 +114,15 @@ static bool rm_tm_count_files(art_tree *dir_tree, char **files, int bit_flags) {
             }
         }
 
-        // TODO: Use same settings as traverse.c
-        if(ent->fts_info == FTS_F) {
-            art_insert(
-                &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, NULL
-            );
+        switch(ent->fts_info) {
+            case FTS_F:
+            case FTS_SL:
+            case FTS_SLNONE:
+                art_insert(
+                    &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, NULL
+                );
+            default:
+                break;
         }
     }
 
@@ -233,7 +244,7 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
     init_art_tree(&self->dir_tree);
     init_art_tree(&self->count_tree);
 
-    rm_tm_count_files(&self->count_tree, session->settings->paths, 0 /* TODO fts flags */);
+    rm_tm_count_files(&self->count_tree, session->settings->paths, session);
 
     return self;
 }
