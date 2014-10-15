@@ -331,6 +331,13 @@ static void rm_tm_forward_unresolved(RmDirectory *directory) {
     g_printerr("--\n");
 }
 
+static int rm_tm_iter_unfinished_files(
+    _U RmTreeMerger * self, _U const unsigned char * key, _U uint32_t key_len, RmDirectory *directory
+) {
+    rm_tm_forward_unresolved(directory);
+    return 0;
+}
+
 static void rm_tm_extract(RmTreeMerger *self) {
     /* Go back from highest level to lowest */
     GHashTable *result_table = self->result_table;
@@ -366,13 +373,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     g_printerr("\nDupes among other files:\n\n");
 
-    g_hash_table_iter_init(&iter, result_table);
-    while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
-        for(GList *iter = dir_list->head; iter; iter = iter->next) {
-            RmDirectory *directory = iter->data;
-            rm_tm_forward_unresolved(directory);
-        }
-    }
+    /* Iterate over all non-finished dirs in the tree,
+     * and print their * unfinished non-matching files 
+     */
+    art_iter(&self->dir_tree, (art_callback)rm_tm_iter_unfinished_files, self);
 }
 
 void rm_tm_finish(RmTreeMerger *self) {
