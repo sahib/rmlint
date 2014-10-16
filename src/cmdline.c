@@ -563,6 +563,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-flock-files"      ,  no_argument       ,  0 ,  'Z'},
             {"match-basename"      ,  no_argument       ,  0 ,  'b'},
             {"no-match-basename"   ,  no_argument       ,  0 ,  'B'},
+            {"merge-directories"   ,  no_argument       ,  0 ,  'D'},
             {"help"                ,  no_argument       ,  0 ,  'h'},
             {"version"             ,  no_argument       ,  0 ,  'H'},
             {0, 0, 0, 0}

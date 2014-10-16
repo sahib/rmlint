@@ -898,7 +898,8 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
 
     if (file->digest) {
         rm_digest_free(file->digest);
-        file->digest = NULL;
+        file->digest = shred_group->digest;
+        file->free_digest = false;
     }
 
     shred_group->has_pref  |=  file->is_prefd | file->hardlinks.has_prefd;
@@ -1070,7 +1071,6 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                           );
 
     if (group == NULL) {
-
         group = rm_shred_group_new(file, NULL);
         group->digest_type = session->settings->checksum_type;
         g_hash_table_insert(
@@ -1174,9 +1174,7 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
             rm_fmt_unlock_state(session->formats);
 
             /* Fake file->digest for a moment */
-            lint->digest = shred_group->digest;
             rm_fmt_write(session->formats, lint);
-            lint->digest = NULL;
         }
     }
 }

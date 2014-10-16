@@ -327,7 +327,7 @@ static void rm_tm_mark_finished(RmDirectory *directory) {
     }
 }
 
-static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, RmTreeMerger *self) {
+static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U RmTreeMerger *self) {
     int depth_balance = 0;
     char *a = da->dirname, *b = db->dirname;
 

@@ -137,6 +137,11 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
+    /* If false rm_file_destroy will not destroy the digest. This is useful 
+     * for sharing the digest of duplicates in a group. 
+     */
+    bool free_digest;
+
     /* Table of this file's extents.
      */
     RmOffsetTable disk_offsets;
