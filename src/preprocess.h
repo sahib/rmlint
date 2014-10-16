@@ -70,4 +70,12 @@ void rm_file_tables_remember_original(RmFileTables *table, RmFile *file);
  */
 bool rm_file_tables_is_original(RmFileTables *table, RmFile *file);
 
+// TODO
+long rm_pp_cmp_orig_criteria_impl(
+    RmSession *session,
+    time_t mtime_a, time_t mtime_b,
+    const char *basename_a, const char *basename_b,
+    int path_index_a, int path_index_b
+);
+
 #endif

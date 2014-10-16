@@ -121,37 +121,51 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+long rm_pp_cmp_orig_criteria_impl(
+    RmSession *session,
+    time_t mtime_a, time_t mtime_b,
+    const char *basename_a, const char *basename_b,
+    int path_index_a, int path_index_b
+) {
     RmSettings *sets = session->settings;
 
+    int sort_criteria_len = strlen(sets->sort_criteria);
+    for (int i = 0; i < sort_criteria_len; i++) {
+        long cmp = 0;
+        switch (tolower(sets->sort_criteria[i])) {
+        case 'm':
+            cmp = (long)(mtime_a) - (long)(mtime_b);
+            break;
+        case 'a':
+            cmp = strcmp(basename_a, basename_b);
+            break;
+        case 'p':
+            cmp = (long)path_index_a - (long)path_index_b;
+            break;
+        }
+        if (cmp) {
+            /* reverse order if uppercase option (M|A|P) */
+            cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
+            return cmp;
+        }
+    }
+    return 0;
+}
+
+/* Sort criteria for sorting by preferred path (first) then user-input criteria */
+static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
         return (a->is_prefd - b->is_prefd);
     } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
-        for (int i = 0; i < sort_criteria_len; i++) {
-            long cmp = 0;
-            switch (tolower(sets->sort_criteria[i])) {
-            case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'a':
-                cmp = +strcmp(a->basename, b->basename);
-                break;
-            case 'p':
-                cmp = (long)a->path_index - (long)b->path_index;
-                break;
-            }
-            if (cmp) {
-                /* reverse order if uppercase option (M|A|P) */
-                cmp = cmp * (isupper(sets->sort_criteria[i]) ? 1 : -1);
-                return cmp;
-            }
-        }
+        return rm_pp_cmp_orig_criteria_impl(
+                session, 
+                a->mtime, b->mtime,
+                a->basename, b->basename,
+                a->path_index, b->path_index
+        );
     }
-    return 0;
 }
 
 void rm_file_tables_remember_original(RmFileTables *table, RmFile *file) {

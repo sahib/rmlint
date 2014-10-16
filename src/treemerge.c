@@ -4,6 +4,7 @@
 
 #include "file.h"
 #include "session.h"
+#include "preprocess.h"
 #include "libart/art.h"
 
 typedef struct RmTreeMerger {
@@ -18,6 +19,7 @@ typedef struct RmDirectory {
     char *dirname;             /* Path to this directory without trailing slash        */
     GQueue known_files;        /* RmFiles in this directory                            */
     GQueue children;           /* Children for directories with subdirectories         */
+    guint32 prefd_files;       /* Files in this directory that are tagged as original  */
     guint64 common_hash;       /* Short hash for this directory, used as HT-Index      */
     guint32 dupe_count;        /* Count of RmFiles actually in this directory          */
     guint32 file_count;        /* Count of files actually in this directory            */
@@ -145,6 +147,7 @@ static RmDirectory * rm_directory_new(char *dirname) {
     
     self->file_count = 0;
     self->dupe_count = 0;
+    self->prefd_files = 0;
     self->common_hash = 0;
 
     g_queue_init(&self->known_files);
@@ -214,10 +217,12 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
     g_slice_free1(file->digest->bytes, file_digest);
 
     directory->dupe_count += 1;
+    directory->prefd_files += file->is_prefd;
 }
 
 static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
     parent->file_count += subdir->file_count;
+    parent->prefd_files += subdir->prefd_files;
     g_queue_push_head(&parent->children, subdir);
 
     for(GList *iter = subdir->known_files.head; iter; iter = iter->next) {
@@ -322,7 +327,7 @@ static void rm_tm_mark_finished(RmDirectory *directory) {
     }
 }
 
-static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U void *user_data) {
+static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, RmTreeMerger *self) {
     int depth_balance = 0;
     char *a = da->dirname, *b = db->dirname;
 
@@ -331,7 +336,27 @@ static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U voi
         depth_balance -= (b[i] == '/');
     }    
 
-    return CLAMP(depth_balance, -1, +1);
+    return depth_balance;
+}
+
+static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db, RmTreeMerger *self) {
+    RmStat dir_stat_a, dir_stat_b; 
+    if(rm_sys_stat(da->dirname, &dir_stat_a) == -1) {
+        rm_log_perror("stat failed during sort");
+        return 0;
+    }
+    if(rm_sys_stat(db->dirname, &dir_stat_b) == -1) {
+        rm_log_perror("stat failed during sort");
+        return 0;
+    }
+    
+    return rm_pp_cmp_orig_criteria_impl(
+        self->session,
+        dir_stat_a.st_mtime, dir_stat_b.st_mtime,
+        rm_util_basename(da->dirname), rm_util_basename(db->dirname),
+        db->prefd_files, da->prefd_files
+ 
+    );
 }
 
 static void rm_tm_forward_unresolved(RmDirectory *directory) {
@@ -378,8 +403,11 @@ static void rm_tm_extract(RmTreeMerger *self) {
             continue;
         }
 
+        /* List of result directories */
+        GQueue result_dirs = G_QUEUE_INIT;
+
         /* Sort the RmDirectory list by their path depth, lowest depth first */
-        g_queue_sort(dir_list, (GCompareDataFunc)rm_tm_sort_paths, NULL);
+        g_queue_sort(dir_list, (GCompareDataFunc)rm_tm_sort_paths, self);
 
         /* Output the directories and mark their children to prevent 
          * duplicate directory reports. 
@@ -388,16 +416,24 @@ static void rm_tm_extract(RmTreeMerger *self) {
             RmDirectory *directory = iter->data;
             if(directory->finished == false) {
                 rm_tm_mark_finished(directory);
-                g_printerr("%lx %s\n", directory->common_hash, directory->dirname);
+                g_queue_push_head(&result_dirs, directory);
             }
         }
+
+        g_queue_sort(&result_dirs, (GCompareDataFunc)rm_tm_sort_orig_criteria, self);
+
+        for(GList *iter = result_dirs.head; iter; iter = iter->next) {
+            RmDirectory *directory = iter->data;
+            g_printerr("%lx %s\n", directory->common_hash, directory->dirname);
+        }
         g_printerr("--\n");
+        g_queue_clear(&result_dirs);
     }
 
     g_printerr("\nDupes among other files:\n\n");
 
     /* Iterate over all non-finished dirs in the tree,
-     * and print their * unfinished non-matching files 
+     * and print their unfinished non-matching files 
      */
     art_iter(&self->dir_tree, (art_callback)rm_tm_iter_unfinished_files, self);
 }
@@ -490,6 +526,7 @@ int main(_U int argc, char **argv) {
 
     session.settings = &settings;
     settings.paths = argv_copy;
+    settings.sort_criteria = "A";
     RmTreeMerger *merger = rm_tm_new(&session);
 
     art_iter(&merger->count_tree, print_iter, NULL);
