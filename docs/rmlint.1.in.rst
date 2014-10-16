@@ -141,6 +141,27 @@ General Options
 
     This is really not recommended. 
 
+**-D --merge-directories** (*experimental, disabled by default*)
+
+    Makes rmlint use a special mode where all found duplicates are collected and
+    checked wether whole directory trees are duplicates. This is an HIGHLY
+    EXPERIMENTAL FEATURE and was/is tricky to implement right. Use with caution.
+    You always should make sure that the investigated directory is not modified 
+    during rmlint or it's removal scripts run. 
+
+    Sole duplicate groups are printed after the directories.
+
+    **--sortcriteria** applies for directories too, but 'p' or 'P' (path index)
+    has a different meaning: The directory with the highest count of preferred
+    files is taken.
+
+    Notes: 
+
+        * This does not work with **--algorithm=paranoid** (or **-ppp**).
+        * This option implies **--flock-files**.
+        * Output is deferred until all duplicates were found.
+        * This feature might not deliver perfect result 
+
 **-u --max-paranoid-ram=size**
 
     Apply a maximum number of bytes to use for **--paranoid**. 

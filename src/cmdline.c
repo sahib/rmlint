@@ -571,7 +571,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbB",
+                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbBD",
                      long_options, &option_index
                  );
 
@@ -668,6 +668,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'd':
             settings->depth = ABS(strtol(optarg, NULL, 10));
+            break;
+        case 'D':
+            settings->merge_directories = true;
             break;
         case 'S':
             settings->sort_criteria = optarg;
@@ -784,6 +787,17 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* There was no valid output flag given, but the user tried */
         rm_log_error("No valid -o flag encountered.\n");
         rm_cmd_die(session, EXIT_FAILURE);
+    }
+
+    /* Handle special cases for -D */
+    if(settings->merge_directories) {
+        if(settings->checksum_type == RM_DIGEST_PARANOID) {
+            rm_log_error("Full paranoia will not work well with directory merging.\n");
+            rm_cmd_die(session, EXIT_FAILURE);
+        }
+
+        /* Make file locking the default for directory merging */
+        settings->lock_files = true;
     }
 
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
