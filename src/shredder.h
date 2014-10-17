@@ -29,40 +29,11 @@
 #include <glib.h>
 #include "session.h"
 
-
-
-//~ /**
-//~ * @brief Allocate and initialise new ShredGroup.
-//~ *
-//~ * @return Pointer to the new group.  Free using shred_group_free.
-//~ */
-//~ ShredGroup *shred_group_new(void);
-//~
-//~ /**
-//~ * @brief Discards any RmFiles still in held_files (for case when group didn't pass tests to require hashing).
-//~ *        Tells all children that their parent is dead.
-//~ *        Frees memory allocated to ShredGroup.
-//~ *
-//~ * @param group: the group to free.
-//~ */
-//~ void shred_group_free(ShredGroup *self);
-//~
-//~ /**
-//~ * @brief Test where a ShredGroup meets criteria for potential duplicate cluster.
-//~ *
-//~ * @return true if ShredGroup meets criteria, false otherwise.
-//~ */
-//~ gboolean shred_group_is_candidate(ShredGroup *self, RmSession *session);
-
-//void rm_add_file_to_size_groups(RmFile *file, RmSession *session);
-
 /**
  * @brief Find duplicate RmFile and pass them to postprocess; free/destroy all other RmFiles.
  *
  * @param session: rmlint session containing all settings and pseudo-globals
- *
  */
 void rm_shred_run(RmSession *session);
 
 #endif
-// was 35

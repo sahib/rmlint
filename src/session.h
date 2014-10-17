@@ -31,9 +31,9 @@
 #include <stdbool.h>
 #include <glib.h>
 
-//#include "settings.h"
-#include "checksum.h"
+#include "treemerge.h"
 #include "utilities.h"
+#include "checksum.h"
 #include "file.h"
 
 
@@ -51,6 +51,7 @@ typedef struct RmFileTables {
 } RmFileTables;
 
 struct RmFmtTable;
+struct RmTreeMerger;
 
 typedef struct RmSession {
     RmSettings *settings;
@@ -63,6 +64,9 @@ typedef struct RmSession {
 
     /* Output formatting control */
     struct RmFmtTable *formats;
+
+    /* Treemerging for -D */
+    struct RmTreeMerger *dir_merger;
 
     /* Counters for printing useful statistics */
     RmOff total_files;

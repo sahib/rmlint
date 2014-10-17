@@ -898,8 +898,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
 
     if (file->digest) {
         rm_digest_free(file->digest);
-        file->digest = shred_group->digest;
-        file->free_digest = false;
+        file->digest = NULL;
     }
 
     shred_group->has_pref  |=  file->is_prefd | file->hardlinks.has_prefd;
@@ -1071,6 +1070,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                           );
 
     if (group == NULL) {
+
         group = rm_shred_group_new(file, NULL);
         group->digest_type = session->settings->checksum_type;
         g_hash_table_insert(
@@ -1174,12 +1174,17 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
             rm_fmt_unlock_state(session->formats);
 
             /* Fake file->digest for a moment */
+            lint->digest = shred_group->digest;
             rm_fmt_write(session->formats, lint);
+            lint->free_digest = false;
         }
     }
 }
 
-void rm_shred_forward_to_output(RmSession *session, RmShredGroup *shred_group, GQueue *group) {
+static void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+    RmFile *first_file = group->head->data;
+    RmShredGroup *shred_group = first_file->shred_group;
+
     rm_fmt_lock_state(session->formats);
     {
         session->dup_group_counter++;
@@ -1197,14 +1202,14 @@ void rm_shred_forward_to_output(RmSession *session, RmShredGroup *shred_group, G
     /* Hand it over to the printing module */
     original_file->digest = shred_group->digest;
     rm_fmt_write(session->formats, original_file);
-    original_file->digest = NULL;
+    original_file->free_digest = false;
 
     rm_group_fmt_write(session, shred_group, group, original_file/*, true*/);
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     if(g_queue_get_length(group->held_files) > 0) {
-        rm_shred_forward_to_output(tag->session, group, group->held_files);
+        rm_shred_forward_to_output(tag->session, group->held_files);
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;
@@ -1243,7 +1248,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
     fd = rm_sys_open(file->path, O_RDONLY);
     if(fd == -1) {
-        rm_log_perror("open failed");
+        rm_log_info("open(2) failed for %s: %s", file->path, g_strerror(errno));
         file->status = RM_FILE_STATE_IGNORE;
         g_async_queue_push(device->hashed_file_return, file);
         goto finish;
@@ -1380,10 +1385,9 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         g_mutex_lock(&main->group_lock);
         {
             if (!file->digest) {
-
                 g_assert(file->shred_group);
 
-                if ( file->shred_group->digest_type == RM_DIGEST_PARANOID ) {
+                if (file->shred_group->digest_type == RM_DIGEST_PARANOID) {
                     /* check if memory allocation is ok */
                     if (!rm_shred_check_hash_mem_alloc(file)) {
                         can_process = false;
@@ -1426,7 +1430,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             file = g_async_queue_pop(device->hashed_file_return);
 
             if (start_offset == file->hash_offset) {
-                rm_log_error(RED"Offset stuck at %"LLU";", start_offset);
+                rm_log_debug(RED"Offset stuck at %"LLU";", start_offset);
                 file->status = RM_FILE_STATE_IGNORE;
                 /* rm_shred_sift will dispose of the file */
             }

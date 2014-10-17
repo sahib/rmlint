@@ -65,8 +65,12 @@ typedef enum RmLintType {
 
     /* note: this needs to be last item in list */
     RM_LINT_TYPE_DUPE_CANDIDATE,
+    RM_N_LINT_TYPES = RM_LINT_TYPE_DUPE_CANDIDATE,
+
+    /* Special values that are applied to special RmFiles */
     RM_LINT_TYPE_ORIGINAL_TAG,
-    RM_N_LINT_TYPES = RM_LINT_TYPE_DUPE_CANDIDATE
+    RM_LINT_TYPE_DUPLICATE_DIR,
+    RM_LINT_TYPE_ORIGINAL_DIR
 } RmLintType;
 
 

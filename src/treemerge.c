@@ -2,30 +2,32 @@
 #include <string.h>
 #include <fts.h>
 
-#include "file.h"
-#include "session.h"
-#include "preprocess.h"
+#include "treemerge.h"
+#include "shredder.h"
 #include "libart/art.h"
-
-typedef struct RmTreeMerger {
-    RmSession *session;        /* Session state variables / Settings       */
-    art_tree dir_tree;         /* Path-Trie with all RmFiles as value      */
-    art_tree count_tree;       /* Path-Trie with all file's count as value */
-    GHashTable *result_table;  /* {hash => [RmDirectory]} mapping          */
-    GQueue valid_dirs;         /* Directories consisting of RmFiles only   */
-} RmTreeMerger;
+#include "preprocess.h"
 
 typedef struct RmDirectory {
     char *dirname;             /* Path to this directory without trailing slash        */
     GQueue known_files;        /* RmFiles in this directory                            */
     GQueue children;           /* Children for directories with subdirectories         */
     guint32 prefd_files;       /* Files in this directory that are tagged as original  */
-    guint64 common_hash;       /* Short hash for this directory, used as HT-Index      */
     guint32 dupe_count;        /* Count of RmFiles actually in this directory          */
     guint32 file_count;        /* Count of files actually in this directory            */
     bool finished;             /* Was this dir or one of his parents already printed?  */
+    bool is_original;          /* Is this directory considered as original             */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure) */
+    RmDigest *digest;          /* Common digest of all RmFiles in this directory       */
 } RmDirectory;
+
+typedef struct RmTreeMerger {
+    RmSession *session;        /* Session state variables / Settings       */
+    art_tree dir_tree;         /* Path-Trie with all RmFiles as value      */
+    art_tree count_tree;       /* Path-Trie with all file's count as value */
+    GHashTable *result_table;  /* {hash => [RmDirectory]} mapping          */
+    GHashTable *file_groups;   /* Group files by hash */
+    GQueue valid_dirs;         /* Directories consisting of RmFiles only   */
+} RmTreeMerger;
 
 //////////////////////////
 // ACTUAL FILE COUNTING //
@@ -148,13 +150,15 @@ static RmDirectory * rm_directory_new(char *dirname) {
     self->file_count = 0;
     self->dupe_count = 0;
     self->prefd_files = 0;
-    self->common_hash = 0;
+
+    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0);
 
     g_queue_init(&self->known_files);
     g_queue_init(&self->children);
 
     self->dirname = dirname;
     self->finished = false;
+    self->is_original = false;
 
     init_art_tree(&self->hash_trie);
 
@@ -162,6 +166,7 @@ static RmDirectory * rm_directory_new(char *dirname) {
 }
 
 static void rm_directory_free(RmDirectory *self) {
+    rm_digest_free(self->digest);
     destroy_art_tree(&self->hash_trie);
     g_queue_clear(&self->known_files);
     g_queue_clear(&self->children);
@@ -177,7 +182,7 @@ static int rm_directory_equal_iter(
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
     /* TODO: Will this work with paranoid settings? Probably, but in a weird way. */
-    if(d1->common_hash != d2->common_hash) {
+    if(rm_digest_equal(d1->digest, d2->digest) == false) {
         return false;
     }
 
@@ -186,7 +191,7 @@ static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
     }
 
     /* Take the bitter pill and compare all hashes manually.
-     * This should only happen on hash collisions of common_hash.
+     * This should only happen on hash collisions of ->digest.
      */
     return !art_iter(&d1->hash_trie, (art_callback)rm_directory_equal_iter, &d2->hash_trie);
 }
@@ -197,7 +202,7 @@ static guint rm_directory_hash(const RmDirectory *d) {
      * To prevent this case, rm_directory_equal really compares
      * all the file's hashes with each other. 
      */
-    return d->common_hash ^ d->dupe_count;
+    return rm_digest_hash(d->digest) ^ d->dupe_count;
 }
 
 static void rm_directory_add(RmDirectory *directory, RmFile *file) {
@@ -210,7 +215,7 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
     /* + and not XOR, since ^ would yield 0 for same hashes always. No matter
      * which hashes. Also this would be confusing. For me and for debuggers.
      */
-    directory->common_hash += *((guint64 *)file_digest);
+    rm_digest_update(directory->digest, file_digest, file->digest->bytes);
 
     /* The file value is not really used, but we need some non-null value */
     art_insert(&directory->hash_trie, file_digest, file->digest->bytes, file); 
@@ -240,10 +245,13 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
     g_queue_init(&self->valid_dirs);
 
     self->result_table = g_hash_table_new_full(
-        (GHashFunc)rm_directory_hash, 
-        (GEqualFunc)rm_directory_equal, 
-        NULL,
-        (GDestroyNotify)g_queue_free
+        (GHashFunc)rm_directory_hash, (GEqualFunc)rm_directory_equal, 
+        NULL, (GDestroyNotify)g_queue_free
+    );
+
+    self->file_groups = g_hash_table_new_full(
+        (GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,
+        NULL, (GDestroyNotify)g_queue_free
     );
 
     init_art_tree(&self->dir_tree);
@@ -263,6 +271,7 @@ static int rm_tm_destroy_iter(
 
 void rm_tm_destroy(RmTreeMerger *self) {
     g_hash_table_unref(self->result_table);
+    g_hash_table_unref(self->file_groups);
     g_queue_clear(&self->valid_dirs);
 
     art_iter(&self->dir_tree, rm_tm_destroy_iter, NULL);
@@ -340,13 +349,17 @@ static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U RmT
 }
 
 static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db, RmTreeMerger *self) {
+    if(da->prefd_files - db->prefd_files) {
+        return da->prefd_files - db->prefd_files;
+    }
+
     RmStat dir_stat_a, dir_stat_b; 
     if(rm_sys_stat(da->dirname, &dir_stat_a) == -1) {
-        rm_log_perror("stat failed during sort");
+        rm_log_perror("stat(1) failed during sort");
         return 0;
     }
     if(rm_sys_stat(db->dirname, &dir_stat_b) == -1) {
-        rm_log_perror("stat failed during sort");
+        rm_log_perror("stat(2) failed during sort");
         return 0;
     }
     
@@ -354,12 +367,11 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
         self->session,
         dir_stat_a.st_mtime, dir_stat_b.st_mtime,
         rm_util_basename(da->dirname), rm_util_basename(db->dirname),
-        db->prefd_files, da->prefd_files
- 
+        0, 0
     );
 }
 
-static void rm_tm_forward_unresolved(RmDirectory *directory) {
+static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {
     if(directory->finished == true) {
         return; 
     } else {
@@ -368,21 +380,25 @@ static void rm_tm_forward_unresolved(RmDirectory *directory) {
 
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile * file = iter->data;
-        g_printerr("  %s\n", file->path);
+
+        GQueue *file_list = g_hash_table_lookup(self->file_groups, file->digest);
+        if(file_list == NULL) {
+            file_list = g_queue_new();
+            g_hash_table_insert(self->file_groups, file->digest, file_list);
+        }
+        g_queue_push_head(file_list, file);
     }
 
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
-        rm_tm_forward_unresolved((RmDirectory *)iter->data);
+        rm_tm_forward_unresolved(self, (RmDirectory *)iter->data);
     }
-
-    g_printerr("--\n");
 }
 
 static int rm_tm_iter_unfinished_files(
     _U RmTreeMerger * self, _U const unsigned char * key, _U uint32_t key_len, RmDirectory *directory
 ) {
-    rm_tm_forward_unresolved(directory);
+    rm_tm_forward_unresolved(self, directory);
     return 0;
 }
 
@@ -395,7 +411,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
     GHashTableIter iter;
     g_hash_table_iter_init(&iter, result_table);
 
-    g_printerr("\nResults:\n\n");
+    g_printerr("\nResults (%d):\n\n", g_hash_table_size(result_table));
 
     /* Iterate over all directories per hash (which are same therefore) */
     while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
@@ -424,7 +440,15 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
-            g_printerr("%lx %s\n", directory->common_hash, directory->dirname);
+            directory->is_original = (iter == result_dirs.head);
+
+            char cksum[512] = {0};
+            rm_digest_hexstring(directory->digest, cksum);
+
+            g_printerr(
+                "%s %s %s\n",
+                (directory->is_original) ? "ORIG" : "DUPL", cksum, directory->dirname
+            );
         }
         g_printerr("--\n");
         g_queue_clear(&result_dirs);
@@ -436,6 +460,23 @@ static void rm_tm_extract(RmTreeMerger *self) {
      * and print their unfinished non-matching files 
      */
     art_iter(&self->dir_tree, (art_callback)rm_tm_iter_unfinished_files, self);
+
+    g_hash_table_iter_init(&iter, self->file_groups); 
+
+    GQueue *file_list = NULL;
+    while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
+        if(file_list->length < 2) {
+            continue;
+        }
+
+        for(GList *iter = file_list->head; iter; iter = iter->next) {
+            RmFile *file = iter->data;
+            char cksum[512];
+            rm_digest_hexstring(file->digest, cksum);
+            g_printerr("  %s %s\n", cksum, file->path);
+        }
+        g_printerr("\n");
+    }
 }
 
 void rm_tm_finish(RmTreeMerger *self) {

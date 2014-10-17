@@ -37,6 +37,7 @@
 #include <glib.h>
 
 #include "cmdline.h"
+#include "treemerge.h"
 #include "preprocess.h"
 #include "shredder.h"
 #include "utilities.h"
@@ -844,6 +845,10 @@ int rm_cmd_main(RmSession *session) {
         g_timer_elapsed(session->timer, NULL), session->total_files
     );
 
+    if(session->settings->merge_directories) {
+        session->dir_merger = rm_tm_new(session);
+    }
+
     if(session->total_files >= 1) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
@@ -853,6 +858,11 @@ int rm_cmd_main(RmSession *session) {
 
             rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
         }
+    }
+
+    if(session->settings->merge_directories) {
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
+        rm_tm_finish(session->dir_merger);
     }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);

@@ -38,7 +38,8 @@ static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
     [RM_LINT_TYPE_BADGID]       = "Bad GID(s)",
     [RM_LINT_TYPE_BADUGID]      = "Bad UID and GID(s)",
     [RM_LINT_TYPE_EFILE]        = "Empty file(s)",
-    [RM_LINT_TYPE_DUPE_CANDIDATE] = "Duplicate(s)"
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = "Duplicate(s)",
+    [RM_LINT_TYPE_DUPLICATE_DIR] = "Duplicate Directorie(s)"
 };
 
 static const char *RM_LINT_TYPE_TO_COMMAND[] = {
@@ -51,7 +52,9 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_BADUGID]        = "chown %s:%s",
     [RM_LINT_TYPE_EFILE]          = "rm",
     [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
-    [RM_LINT_TYPE_ORIGINAL_TAG]   = "ls"
+    [RM_LINT_TYPE_ORIGINAL_TAG]   = "ls",
+    [RM_LINT_TYPE_DUPLICATE_DIR]  = "rm -r",
+    [RM_LINT_TYPE_ORIGINAL_DIR]   = "ls -la"
 };
 
 static const char *rm_fmt_command_color(RmSession *session, RmFile *file) {

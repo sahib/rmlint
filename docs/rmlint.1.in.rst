@@ -149,18 +149,19 @@ General Options
     You always should make sure that the investigated directory is not modified 
     during rmlint or it's removal scripts run. 
 
+    Output is deferred until all duplicates were found.
     Sole duplicate groups are printed after the directories.
 
     **--sortcriteria** applies for directories too, but 'p' or 'P' (path index)
-    has a different meaning: The directory with the highest count of preferred
-    files is taken.
+    has no defined (useful) meaning. Sorting takes only place when the number of
+    preferred files in the directory differs. 
 
-    Notes: 
+    *Notes:*
 
         * This does not work with **--algorithm=paranoid** (or **-ppp**).
         * This option implies **--flock-files**.
-        * Output is deferred until all duplicates were found.
         * This feature might not deliver perfect result 
+        * This feature might add some runtime.
 
 **-u --max-paranoid-ram=size**
 

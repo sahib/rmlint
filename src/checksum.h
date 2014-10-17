@@ -45,6 +45,7 @@ typedef enum RmDigestType {
     RM_DIGEST_BASTARD,
     RM_DIGEST_MURMUR512,
     RM_DIGEST_CITY512,
+    RM_DIGEST_CUMULATIVE,
     RM_DIGEST_PARANOID
 } RmDigestType;
 
@@ -136,6 +137,11 @@ void rm_digest_finalize(RmDigest *digest);
 guint8 *rm_digest_steal_buffer(RmDigest *digest);
 
 /**
+ * @brief Hash a Digest, suitable for GHashTable.
+ */
+guint rm_digest_hash(RmDigest *digest);
+
+/**
  * @brief Compare two RmDigest checksums (without modifying them).
  *
  * @param a a pointer to a RmDigest
@@ -143,7 +149,7 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest);
  *
  * @return true if digests match
  */
-gboolean rm_digest_compare(RmDigest *a, RmDigest *b);
+gboolean rm_digest_equal(RmDigest *a, RmDigest *b);
 
 /**
  * @brief Make a copy of a RMDigest.
