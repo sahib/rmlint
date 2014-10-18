@@ -51,8 +51,8 @@ BUGS
 
 If you found bugs, having trouble running `rmlint` or want to suggest new
 features please `read this <http://rmlint.readthedocs.org/en/latest/developers.html>`_.
-Also read the **BUGS** section of the manpage to find out how to provide nice
-debug information.
+Also read the **BUGS** section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.in.html>`_ 
+to find out how to provide nice debug information.
 
 AUTHORS
 -------
@@ -84,4 +84,5 @@ consider a donation. You can donate either via Flattr, PayPal or you buy us a
 beer if we ever meet. `See here for details <http://rmlint.readthedocs.org/en/latest/index.html#donations>`_. 
 
 .. [*] If it freed you from your beloved data: *Sorry* [*]_
-.. [*] But you checked the source before running, did you?
+.. [*] Please file a bug or read the source and provide a patch. [*]_
+.. [*] For more than 100GB of data loss we owe you one beer.
