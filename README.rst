@@ -85,4 +85,6 @@ beer if we ever meet. `See here for details <http://rmlint.readthedocs.org/en/la
 
 .. [*] If it freed you from your beloved data: *Sorry.* [*]_
 .. [*] Please file a bug or read the source and provide a patch. [*]_
-.. [*] For more than 100GB of data loss we owe you one beer.
+.. [*] For more than 100GB of data loss we owe you one beer. [*]_
+.. [*] If you don't like beer or there's only Budweiser available, you can order
+   a Club Mate.
