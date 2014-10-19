@@ -1,7 +1,9 @@
-.. title is not shown in flask theme:
+\ 
+==
 
-rmlint manual
-=============
+.. .. image:: _static/screenshot.png
+..    :align: center
+..    :width: 66%
 
 Introduction
 ------------
@@ -19,9 +21,6 @@ to remove it. It is able to find:
    + Recursive empty directories.
    + Files with broken user or group id.
 
-.. image:: _static/screenshot.png
-   :width: 100%
-
 **Key Features:**
 
 .. hlist::
@@ -35,7 +34,7 @@ to remove it. It is able to find:
    + Many options for originaldetection.
 
 
-.. NOTE::
+.. WARNING::
 
     **rmlint** is currently in the progress of being rewritten. 
     This means that it still may contain bugs that might burn your data.
@@ -73,8 +72,10 @@ Authors
 
 **rmlint** was and is written by: 
 
-- Christopher <sahib_> P. -- Original author 
-- Daniel <SeeSpotRun_> T. -- Emergency helper and duplicate author
+===================================  ============================= ===========================================
+*Christopher Pahl*                   https://github.com/sahib      2010-2014
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2014
+===================================  ============================= ===========================================
 
 Additional thanks to:
 
@@ -92,28 +93,30 @@ License
 Donations
 ---------
 
-If you think rmlint saved you some serious time and/or space, you might
-consider a donation. 
+If you think rmlint saved [*]_ you some serious time and/or space, you might
+consider a donation. You can donate either via *Flattr* or via *PayPal*:
 
-* Either via *Flattr*:
-
-.. raw:: html
-
-   <a class="FlattrButton" style="display:none;" rev="flattr;button:compact;" href="https://github.com/sahib/glyr">
-   </a>
-   <a href="http://flattr.com/thing/302682/libglyr" target="_blank">
-      <img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" />
-   </a>
-
-* Or alternatively via *PayPal*:
+.. image:: http://api.flattr.com/button/flattr-badge-large.png
+   :target: http://flattr.com/thing/302682/libglyr
+   :align: center 
 
 .. raw:: html
 
-   <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
-       <input type="hidden" name="cmd" value="_s-xclick">
-       <input type="hidden" name="hosted_button_id" value="JXCXKRMS8EDVC">
-       <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-       <img alt="" border="0" src="https://www.paypalobjects.com/de_DE/i/scr/pixel.gif" width="1" height="1">
-   </form>
+   <br />
+   <center>
+       <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+           <input type="hidden" name="cmd" value="_s-xclick">
+           <input type="hidden" name="hosted_button_id" value="JXCXKRMS8EDVC">
+           <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+           <img alt="" border="0" src="https://www.paypalobjects.com/de_DE/i/scr/pixel.gif" width="1" height="1">
+       </form>
+   </center>
+   <br />
 
-* Or just buy us a beer if we ever meet. Nice emails are okay too.
+Or just buy us a beer if we ever meet. Nice emails are okay too.
+
+.. [*] If it freed you from your beloved data: *Sorry.* [*]_
+.. [*] Please file a bug or read the source and provide a patch. [*]_
+.. [*] For more than 100GB of data loss we owe you one beer. [*]_
+.. [*] If you don't like beer or there's only Budweiser available, you can order
+   a Club Mate.

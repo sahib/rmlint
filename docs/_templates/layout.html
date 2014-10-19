@@ -1,0 +1,15 @@
+{# Import the theme's layout. #}
+{% extends "!layout.html" %}
+
+{# Add some extra stuff before and use existing with 'super()' call. #}
+{% block footer %}
+  {{ super() }}
+  <center> 
+      <b>Build Status:</b>
+      <a href="https://travis-ci.org/sahib/rmlint">
+        <img src="https://travis-ci.org/sahib/rmlint.svg?branch=develop">
+      </a>
+  </center>
+  <br />
+  <br />
+{% endblock %}

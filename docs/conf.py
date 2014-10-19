@@ -134,26 +134,107 @@ pygments_style = 'flask_theme_support.FlaskyStyle'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-if on_rtd:
-    # html_theme = 'sphinx_rtd_theme'
-    html_theme = 'default'
-else:
-    # html_theme = 'armstrong'
-    html_theme = 'default'
+# on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+# if on_rtd:
+#     # html_theme = 'sphinx_rtd_theme'
+#     html_theme = 'default'
+# else:
+#     # html_theme = 'armstrong'
+#     html_theme = 'default'
+#
 
+import sphinx_bootstrap_theme
+
+# Activate the theme.
+templates_path = ['_templates']
+html_theme = 'bootstrap'
+html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {}
+
+# (Optional) Logo. Should be small enough to fit the navbar (ideally 24x24).
+# Path should be relative to the ``_static`` files directory.
+html_logo = "logo_boot.png"
+
+# Theme options are theme-specific and customize the look and feel of a
+# theme further.
+html_theme_options = {
+    # Navigation bar title. (Default: ``project`` value)
+    'navbar_title': " ",
+
+    # Tab name for entire site. (Default: "Site")
+    'navbar_site_name': "ALL",
+
+    # A list of tuples containing pages or urls to link to.
+    # Valid tuples should be in the following forms:
+    #    (name, page)                 # a link to a page
+    #    (name, "/aa/bb", 1)          # a link to an arbitrary relative url
+    #    (name, "http://example.com", True) # arbitrary absolute url
+    # Note the "1" or "True" value above as the third argument to indicate
+    # an arbitrary url.
+    'navbar_links': [
+        ("GitHub", "https://github.com/sahib/rmlint", True),
+        ("Travis", "https://travis-ci.org/sahib/rmlint", True),
+        ("Downloads", "https://github.com/sahib/rmlint/releases")
+    ],
+
+    # Render the next and previous page links in navbar. (Default: true)
+    'navbar_sidebarrel': True,
+
+    # Render the current pages TOC in the navbar. (Default: true)
+    'navbar_pagenav': True,
+
+    # Tab name for the current pages TOC. (Default: "Page")
+    'navbar_pagenav_name': "THIS",
+
+    # Global TOC depth for "site" navbar tab. (Default: 1)
+    # Switching to -1 shows all levels.
+    'globaltoc_depth': 2,
+
+    # Include hidden TOCs in Site navbar?
+    #
+    # Note: If this is "false", you cannot have mixed ``:hidden:`` and
+    # non-hidden ``toctree`` directives in the same page, or else the build
+    # will break.
+    #
+    # Values: "true" (default) or "false"
+    'globaltoc_includehidden': "true",
+
+    # HTML navbar class (Default: "navbar") to attach to <div> element.
+    # For black navbar, do "navbar navbar-inverse"
+    'navbar_class': "navbar navbar-inverse",
+
+    # Fix navigation bar to top of page?
+    # Values: "true" (default) or "false"
+    'navbar_fixed_top': "true",
+
+    # Location of link to source.
+    # Options are "nav" (default), "footer" or anything else to exclude.
+    'source_link_position': "footer",
+
+    # Bootswatch (http://bootswatch.com/) theme.
+    #
+    # Options are nothing with "" (default) or the name of a valid theme
+    # such as "amelia" or "cosmo".
+    # 'bootswatch_theme': "journal",
+    # 'bootswatch_theme': "lumen",
+    # 'bootswatch_theme': "readable",
+    'bootswatch_theme': "sandstone",
+
+    # Choose Bootstrap version.
+    # Values: "3" (default) or "2" (in quotes)
+    'bootstrap_version': "3",
+}
+
 
 # html_theme_options = {
 #    'index_logo_height': '10px'
 # }
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ['_themes']
+# html_theme_path = ['_themes']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -164,7 +245,6 @@ html_title = 'rmlint (2.x.x) apidoc'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-
 github_fork = 'sahib'
 
 # The name of an image file (within the static path) to use as favicon of the
@@ -208,7 +288,7 @@ html_show_sourcelink = True
 html_show_sphinx = False
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-html_show_copyright = False
+html_show_copyright = True
 
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the
