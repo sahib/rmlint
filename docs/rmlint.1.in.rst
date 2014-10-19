@@ -31,7 +31,6 @@ to remove it.
 * Broken links.
 * Empty files and directories.
 * Files with broken user or group id.
-* Optionally: Double basenames.
 
 In order to find the lint, `rmlint` is given one or more directories to traverse.
 If no directory or file was given, the current working directory is assumed.
