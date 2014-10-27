@@ -1213,7 +1213,15 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_orig
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     if(g_queue_get_length(group->held_files) > 0) {
-        rm_shred_forward_to_output(tag->session, group->held_files, false);
+        if(tag->session->settings->merge_directories) {
+            /* Cache the files for merging them into directories */
+            for(GList *iter = group->held_files->head; iter; iter = iter->next) {
+                rm_tm_feed(tag->session->dir_merger, (RmFile *)iter->data);
+            }
+        } else {
+            /* Output them directly */
+            rm_shred_forward_to_output(tag->session, group->held_files, false);
+        }
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;

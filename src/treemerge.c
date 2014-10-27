@@ -18,6 +18,14 @@ typedef struct RmDirectory {
     bool is_original;          /* Is this directory considered as original?            */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure) */
     RmDigest *digest;          /* Common digest of all RmFiles in this directory       */
+
+    struct {
+        bool has_metadata;     /* stat(2) called already                */
+        ino_t dir_inode;       /* Directory Metadata: Inode             */
+        dev_t dir_dev;         /* Directory Metadata: Device ID         */
+        time_t dir_mtime;      /* Directory Metadata: Modification Time */
+    } metadata;
+
 } RmDirectory;
 
 typedef struct RmTreeMerger {
@@ -40,6 +48,12 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
        will only happen when rmlint ran for long anyways and since we can keep the
        code easy and memory efficient this way, Im against more clever but longer
        solutions. (Good way of saying "Im just too stupid", eh?)
+    // TODO: This can call stat very often...
+    RmStat dir_stat_a, dir_stat_b; 
+    if(rm_sys_stat(da->dirname, &dir_stat_a) == -1) {
+        rm_log_perror("stat(1) failed during sort");
+        return 0;
+    }
      */
     art_tree *dir_tree = data;
 
@@ -152,6 +166,19 @@ static RmDirectory * rm_directory_new(char *dirname) {
     self->dupe_count = 0;
     self->prefd_files = 0;
 
+    self->dirname = dirname;
+    self->finished = false;
+    self->is_original = false;
+
+    RmStat dir_stat;
+    if(rm_sys_stat(self->dirname, &dir_stat) == -1) {
+        rm_log_perror("stat(2) failed during sort");
+    } else {
+        self->metadata.dir_mtime = dir_stat.st_mtime;
+        self->metadata.dir_inode = dir_stat.st_ino;
+        self->metadata.dir_dev = dir_stat.st_dev;
+    }
+
     /* Special cumulative hashsum, that is not dependent on the
      * order in which the file hashes were added.
      * It is not used as full hash, but as sorting speedup.
@@ -160,10 +187,6 @@ static RmDirectory * rm_directory_new(char *dirname) {
 
     g_queue_init(&self->known_files);
     g_queue_init(&self->children);
-
-    self->dirname = dirname;
-    self->finished = false;
-    self->is_original = false;
 
     init_art_tree(&self->hash_trie);
 
@@ -210,9 +233,9 @@ static RmFile *rm_directory_as_file(RmDirectory *self) {
     file->digest = self->digest;
 
     /* Set these to invalid for now */
-    file->mtime = 0;
-    file->inode = 0;
-    file->dev = 0;
+    file->mtime = self->metadata.dir_mtime;
+    file->inode = self->metadata.dir_inode;
+    file->dev = self->metadata.dir_dev;
 
     /* Recursively calculate the file size */
     file->file_size = rm_tm_calc_file_size(self);
@@ -379,7 +402,6 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
  
     /* Check if the directory reached the number of actual files in it */
     if(directory->dupe_count == directory->file_count) {
-        g_printerr("Encountered full directory: %s\n", directory->dirname);
         rm_tm_insert_dir(self, directory);
     }
 }
@@ -422,20 +444,9 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
         return da->prefd_files - db->prefd_files;
     }
 
-    // TODO: This can call stat very often...
-    RmStat dir_stat_a, dir_stat_b; 
-    if(rm_sys_stat(da->dirname, &dir_stat_a) == -1) {
-        rm_log_perror("stat(1) failed during sort");
-        return 0;
-    }
-    if(rm_sys_stat(db->dirname, &dir_stat_b) == -1) {
-        rm_log_perror("stat(2) failed during sort");
-        return 0;
-    }
-    
     return rm_pp_cmp_orig_criteria_impl(
         self->session,
-        dir_stat_a.st_mtime, dir_stat_b.st_mtime,
+        da->metadata.dir_mtime, db->metadata.dir_mtime,
         rm_util_basename(da->dirname), rm_util_basename(db->dirname),
         0, 0
     );
@@ -473,15 +484,14 @@ static int rm_tm_iter_unfinished_files(
 }
 
 static void rm_tm_extract(RmTreeMerger *self) {
-    /* Go back from highest level to lowest */
+    // TODO: Make this blob prettier...
+
     GHashTable *result_table = self->result_table;
     
     GQueue *dir_list = NULL;
 
     GHashTableIter iter;
     g_hash_table_iter_init(&iter, result_table);
-
-    g_printerr("\nResults (%d):\n\n", g_hash_table_size(result_table));
 
     /* Iterate over all directories per hash (which are same therefore) */
     while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
@@ -518,29 +528,16 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 rm_tm_mark_original_files(self, directory);
             }
 
-            char cksum[512] = {0};
-            rm_digest_hexstring(directory->digest, cksum);
-
-            g_printerr(
-                "%s %s %s\n",
-                (directory->is_original) ? "ORIG" : "DUPL", cksum, directory->dirname
-            );
-
             RmFile *mask = rm_directory_as_file(directory);
-            // TODO
-            // rm_file_tables_remember_original(self->session->tables, mask);
+            rm_file_tables_remember_original(self->session->tables, mask);
             g_queue_push_tail(file_adaptor_group, mask);
         }
 
-        // TODO
-        // rm_shred_forward_to_output(self->session, &file_adaptor_group, true);
+        rm_shred_forward_to_output(self->session, file_adaptor_group, true);
 
-        g_printerr("--\n");
         g_queue_clear(&result_dirs);
         g_queue_free_full(file_adaptor_group, g_free);
     }
-
-    g_printerr("\nDupes among other files:\n\n");
 
     /* Iterate over all non-finished dirs in the tree,
      * and grab unfinished files that must be dupes elsewhise.
@@ -564,7 +561,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
      *
      *  For outputting files we need groups, which consist of at least 2 files.
      *  So how to group that, so we don't end up deleting a file many times?
-     *  Or not often enough?
+     *  We always choose which directories are originals first, so we flag all
+     *  files in it as originals. 
      */ 
 
     GQueue *file_list = NULL;
@@ -573,21 +571,16 @@ static void rm_tm_extract(RmTreeMerger *self) {
         for(GList *iter = file_list->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
             has_one_orig |= (g_hash_table_lookup(self->file_checks, file->digest) != NULL);
-
-            char cksum[512];
-            rm_digest_hexstring(file->digest, cksum);
-            g_printerr("FILE %s %s\n", cksum, file->path);
         }
-
-        // TODO
-        // rm_shred_forward_to_output(self->session, file_list, needs_original);
 
         if(file_list->length < 2 && !has_one_orig) {
             g_printerr("=> (Single file.)\n\n");
         } else if(has_one_orig) {
             g_printerr("=> (Group consists of dupes only.)\n\n");
+            rm_shred_forward_to_output(self->session, file_list, false);
         } else {
-            g_printerr("=> (Group with one original file.)\n\n");
+            g_printerr("=> (Group with (at least :) one original file.)\n\n");
+            rm_shred_forward_to_output(self->session, file_list, true);
         }
     }
 }
@@ -646,96 +639,3 @@ void rm_tm_finish(RmTreeMerger *self) {
     /* Fish the result dirs out of the result table */
     rm_tm_extract(self);
 }
-
-#ifdef _RM_COMPILE_MAIN_TM_ALL
-
-////////////////////////
-//  TEST MAIN METHOD  //
-////////////////////////
-
-static int print_iter(_U void * data, const unsigned char * key, _U uint32_t key_len, _U void * value) {
-    int level = -1;
-    for(unsigned i = 0; i < key_len; ++i) {
-        if(key[i] == '/') level ++;
-    }
-    g_printerr("%4u", GPOINTER_TO_UINT(value));
-    for(int i = 0; i < level + 1; ++i) {
-        g_printerr("  ");
-    }
-
-    g_printerr("%s\n", key);
-    return 0;
-}
-
-int main(_U int argc, char **argv) {
-    RmSession session;
-    RmSettings settings;
-
-    char *argv_copy[argc + 1];
-    memset(argv_copy, 0, sizeof(argv_copy));
-
-    for(int i = 0; i < argc - 1; ++i) {
-        argv_copy[i] = argv[i + 1];
-    }
-
-    for(int i = 0; argv_copy[i]; ++i) {
-        g_printerr("%s:\n", argv_copy[i]);
-    }
-
-    session.settings = &settings;
-    settings.paths = argv_copy;
-    settings.followlinks = true;
-    settings.sort_criteria = "A";
-    RmTreeMerger *merger = rm_tm_new(&session);
-
-    art_iter(&merger->count_tree, print_iter, NULL);
-
-    g_printerr("\n");
-
-    GQueue file_queue = G_QUEUE_INIT;
-
-    char path[PATH_MAX] = {0};
-    while(fgets(path, PATH_MAX, stdin)) {
-        RmFile *dummy = g_new0(RmFile, 1);
-        dummy->digest = rm_digest_new(RM_DIGEST_MURMUR, 0, 0, 0);
-        path[strlen(path) - 1] = 0;
-
-        FILE *handle = fopen(path, "r");
-        if(handle) {
-            unsigned char buffer[4096]; 
-            memset(buffer, 0, sizeof(buffer));
-            int bytes_read = 0;
-            while((bytes_read = fread(buffer, 1, sizeof(buffer), handle)) > 0) {
-                rm_digest_update(dummy->digest, buffer, bytes_read);
-            }
-
-            char hex[100];
-            rm_digest_hexstring(dummy->digest, hex);
-            g_printerr("Adding %20s %s\n", path, hex);
-
-            g_queue_push_head(&file_queue, dummy);
-            dummy->path = g_strdup(path);
-            rm_tm_feed(merger, dummy);
-        } else {
-            g_printerr("Unable to read: %s\n", path);
-            continue;
-        }
-
-    }
-
-    rm_tm_finish(merger);
-    rm_tm_destroy(merger);
-
-    for(GList *iter = file_queue.head; iter; iter = iter->next) {
-        RmFile *dummy = iter->data;
-        rm_digest_free(dummy->digest);
-        g_free(dummy->path);
-        g_free(dummy);
-    }
-
-    g_queue_clear(&file_queue);
-
-    return 0;
-}
-
-#endif

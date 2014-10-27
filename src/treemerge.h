@@ -36,6 +36,7 @@ typedef struct RmTreeMerger RmTreeMerger;
 /* RmTreeMerger is part of RmSession, therefore prototype it here */
 struct RmSession;
 
+// TODO: docs
 RmTreeMerger * rm_tm_new(struct RmSession *session);
 void rm_tm_feed(RmTreeMerger *self, RmFile *file);
 void rm_tm_finish(RmTreeMerger *self);
