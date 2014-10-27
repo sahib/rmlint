@@ -53,7 +53,7 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_EFILE]          = "rm",
     [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
     [RM_LINT_TYPE_ORIGINAL_TAG]   = "ls",
-    [RM_LINT_TYPE_DUPLICATE_DIR]  = "rm -r",
+    [RM_LINT_TYPE_DUPLICATE_DIR]  = "rm -rf",
     [RM_LINT_TYPE_ORIGINAL_DIR]   = "ls -la"
 };
 
@@ -65,6 +65,7 @@ static const char *rm_fmt_command_color(RmSession *session, RmFile *file) {
     case RM_LINT_TYPE_BADUGID:
         return MAYBE_BLUE(session);
     case RM_LINT_TYPE_DUPE_CANDIDATE:
+    case RM_LINT_TYPE_DUPLICATE_DIR:
         if(rm_file_tables_is_original(session->tables, file)) {
             return MAYBE_GREEN(session);
         } else {
@@ -108,6 +109,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
 
     fprintf(out, "    %s", rm_fmt_command_color(session, file));
 
+    bool is_original = rm_file_tables_is_original(session->tables, file);
     const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
 
     switch(file->lint_type) {
@@ -121,8 +123,15 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
         fprintf(out, format, self->user, self->group);
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
-        if(rm_file_tables_is_original(session->tables, file)) {
+        if(is_original) {
             fprintf(out, "%s", RM_LINT_TYPE_TO_COMMAND[RM_LINT_TYPE_ORIGINAL_TAG]);
+        } else {
+            fprintf(out, "%s", format);
+        }
+        break;
+    case RM_LINT_TYPE_DUPLICATE_DIR:
+        if(is_original) {
+            fprintf(out, "%s", RM_LINT_TYPE_TO_COMMAND[RM_LINT_TYPE_ORIGINAL_DIR]);
         } else {
             fprintf(out, "%s", format);
         }

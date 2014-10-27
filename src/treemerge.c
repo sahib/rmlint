@@ -15,7 +15,6 @@ typedef struct RmDirectory {
     guint32 dupe_count;        /* Count of RmFiles actually in this directory          */
     guint32 file_count;        /* Count of files actually in this directory            */
     bool finished;             /* Was this dir or one of his parents already printed?  */
-    bool is_original;          /* Is this directory considered as original?            */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure) */
     RmDigest *digest;          /* Common digest of all RmFiles in this directory       */
 
@@ -168,7 +167,6 @@ static RmDirectory * rm_directory_new(char *dirname) {
 
     self->dirname = dirname;
     self->finished = false;
-    self->is_original = false;
 
     RmStat dir_stat;
     if(rm_sys_stat(self->dirname, &dir_stat) == -1) {
@@ -224,11 +222,7 @@ static RmFile *rm_directory_as_file(RmDirectory *self) {
     file->path = self->dirname;
     file->basename = rm_util_basename(self->dirname);
 
-    if(self->is_original) {
-        file->lint_type = RM_LINT_TYPE_ORIGINAL_DIR;
-    } else {
-        file->lint_type = RM_LINT_TYPE_DUPLICATE_DIR;
-    }
+    file->lint_type = RM_LINT_TYPE_DUPLICATE_DIR;
 
     file->digest = self->digest;
 
@@ -283,6 +277,10 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
        Since we cannot be sure in which order the files come in
        we have to add the hash cummulatively.
      */
+    g_assert(file);
+    g_assert(file->digest);
+    g_assert(directory);
+
     guint8 *file_digest = rm_digest_steal_buffer(file->digest);
 
     /* + and not XOR, since ^ would yield 0 for same hashes always. No matter
@@ -522,15 +520,13 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
-            directory->is_original = (iter == result_dirs.head);
-
-            if(directory->is_original) {
-                rm_tm_mark_original_files(self, directory);
-            }
-
             RmFile *mask = rm_directory_as_file(directory);
-            rm_file_tables_remember_original(self->session->tables, mask);
             g_queue_push_tail(file_adaptor_group, mask);
+
+            if(iter == result_dirs.head) {
+                rm_tm_mark_original_files(self, directory);
+                rm_file_tables_remember_original(self->session->tables, mask);
+            }
         }
 
         rm_shred_forward_to_output(self->session, file_adaptor_group, true);
@@ -574,13 +570,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
         }
 
         if(file_list->length < 2 && !has_one_orig) {
-            g_printerr("=> (Single file.)\n\n");
         } else if(has_one_orig) {
-            g_printerr("=> (Group consists of dupes only.)\n\n");
-            rm_shred_forward_to_output(self->session, file_list, false);
-        } else {
-            g_printerr("=> (Group with (at least :) one original file.)\n\n");
             rm_shred_forward_to_output(self->session, file_list, true);
+        } else {
+            rm_shred_forward_to_output(self->session, file_list, false);
         }
     }
 }

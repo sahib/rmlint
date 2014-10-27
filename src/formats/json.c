@@ -156,7 +156,7 @@ static void rm_fmt_elem(
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "disk_id", file->dev);
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "is_orig", is_orig ? "true" : "false");
+        rm_fmt_json_key_bool(out, "is_orig", is_orig);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "mtime", file->mtime);
     }
