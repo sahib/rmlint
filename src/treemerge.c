@@ -25,7 +25,8 @@ typedef struct RmTreeMerger {
     art_tree dir_tree;         /* Path-Trie with all RmFiles as value      */
     art_tree count_tree;       /* Path-Trie with all file's count as value */
     GHashTable *result_table;  /* {hash => [RmDirectory]} mapping          */
-    GHashTable *file_groups;   /* Group files by hash */
+    GHashTable *file_groups;   /* Group files by hash                      */
+    GHashTable *file_checks;   /* Set of files that were handled already.  */
     GQueue valid_dirs;         /* Directories consisting of RmFiles only   */
 } RmTreeMerger;
 
@@ -151,6 +152,10 @@ static RmDirectory * rm_directory_new(char *dirname) {
     self->dupe_count = 0;
     self->prefd_files = 0;
 
+    /* Special cumulative hashsum, that is not dependent on the
+     * order in which the file hashes were added.
+     * It is not used as full hash, but as sorting speedup.
+     */
     self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0);
 
     g_queue_init(&self->known_files);
@@ -181,7 +186,10 @@ static int rm_directory_equal_iter(
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
-    /* TODO: Will this work with paranoid settings? Probably, but in a weird way. */
+    /* TODO: Will this work with paranoid settings? Probably, but in a weird way.
+     *       Also it might not be very secure when the last block of the file is 
+     *       compared...
+     * */
     if(rm_digest_equal(d1->digest, d2->digest) == false) {
         return false;
     }
@@ -254,6 +262,11 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
         NULL, (GDestroyNotify)g_queue_free
     );
 
+    self->file_checks = g_hash_table_new_full(
+        (GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,
+        NULL, NULL
+    );
+
     init_art_tree(&self->dir_tree);
     init_art_tree(&self->count_tree);
 
@@ -272,8 +285,10 @@ static int rm_tm_destroy_iter(
 void rm_tm_destroy(RmTreeMerger *self) {
     g_hash_table_unref(self->result_table);
     g_hash_table_unref(self->file_groups);
+    g_hash_table_unref(self->file_checks);
     g_queue_clear(&self->valid_dirs);
 
+    /* Kill all RmDirectories stored in the tree */
     art_iter(&self->dir_tree, rm_tm_destroy_iter, NULL);
     destroy_art_tree(&self->dir_tree);
     destroy_art_tree(&self->count_tree);
@@ -333,6 +348,18 @@ static void rm_tm_mark_finished(RmDirectory *directory) {
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
         rm_tm_mark_finished((RmDirectory *)iter->data);
+    }
+}
+
+static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory) {
+    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        g_hash_table_insert(self->file_checks, file->digest, file);
+    }
+
+    /* Recursively propagate to children */
+    for(GList *iter = directory->children.head; iter; iter = iter->next) {
+        rm_tm_mark_original_files(self, (RmDirectory *)iter->data);
     }
 }
 
@@ -442,6 +469,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
             RmDirectory *directory = iter->data;
             directory->is_original = (iter == result_dirs.head);
 
+            if(directory->is_original) {
+                rm_tm_mark_original_files(self, directory);
+            }
+
             char cksum[512] = {0};
             rm_digest_hexstring(directory->digest, cksum);
 
@@ -457,25 +488,51 @@ static void rm_tm_extract(RmTreeMerger *self) {
     g_printerr("\nDupes among other files:\n\n");
 
     /* Iterate over all non-finished dirs in the tree,
-     * and print their unfinished non-matching files 
+     * and grab unfinished files that must be dupes elsewhise.
      */
     art_iter(&self->dir_tree, (art_callback)rm_tm_iter_unfinished_files, self);
 
     g_hash_table_iter_init(&iter, self->file_groups); 
 
+    /* Now here's a problem. Consider an input like this:
+     *  /root
+     *  ├── a
+     *  ├── sub1
+     *  │   ├── a
+     *  │   └── b
+     *  └── sub2
+     *      ├── a
+     *      └── b
+     *
+     *  This yields two duplicate dirs (sub1, sub2)
+     *  and one duplicate, unmatched file (a).
+     *
+     *  For outputting files we need groups, which consist of at least 2 files.
+     *  So how to group that, so we don't end up deleting a file many times?
+     *  Or not often enough?
+     */ 
+
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
-        if(file_list->length < 2) {
-            continue;
-        }
-
+        bool has_one_orig = false;
         for(GList *iter = file_list->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
+            has_one_orig |= (g_hash_table_lookup(self->file_checks, file->digest) != NULL);
+
             char cksum[512];
             rm_digest_hexstring(file->digest, cksum);
-            g_printerr("  %s %s\n", cksum, file->path);
+            g_printerr("FILE %s %s\n", cksum, file->path);
         }
-        g_printerr("\n");
+
+        // rm_shred_forward_to_output(self->session, file_list, needs_original);
+
+        if(file_list->length < 2 && !has_one_orig) {
+            g_printerr("=> (Single file.)\n\n");
+        } else if(has_one_orig) {
+            g_printerr("=> (Group consists of dupes only.)\n\n");
+        } else {
+            g_printerr("=> (Group with one original file.)\n\n");
+        }
     }
 }
 
@@ -536,6 +593,10 @@ void rm_tm_finish(RmTreeMerger *self) {
 
 #ifdef _RM_COMPILE_MAIN_TM_ALL
 
+////////////////////////
+//  TEST MAIN METHOD  //
+////////////////////////
+
 static int print_iter(_U void * data, const unsigned char * key, _U uint32_t key_len, _U void * value) {
     int level = -1;
     for(unsigned i = 0; i < key_len; ++i) {
@@ -567,6 +628,7 @@ int main(_U int argc, char **argv) {
 
     session.settings = &settings;
     settings.paths = argv_copy;
+    settings.followlinks = true;
     settings.sort_criteria = "A";
     RmTreeMerger *merger = rm_tm_new(&session);
 

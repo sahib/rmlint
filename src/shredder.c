@@ -1181,7 +1181,7 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
     }
 }
 
-static void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_origs) {
     RmFile *first_file = group->head->data;
     RmShredGroup *shred_group = first_file->shred_group;
 
@@ -1191,25 +1191,29 @@ static void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     }
     rm_fmt_unlock_state(session->formats);
 
-    RmFile *original_file = rm_group_find_original(session, group/*, true*/);
+    if(!has_origs) {
+        RmFile *original_file = rm_group_find_original(session, group);
 
-    if(!original_file) {
-        /* tag first file as the original */
-        original_file = group->head->data;
-        rm_file_tables_remember_original(session->tables, original_file);
+        if(!original_file) {
+            /* tag first file as the original */
+            original_file = group->head->data;
+            rm_file_tables_remember_original(session->tables, original_file);
+        }
+
+        /* Hand it over to the printing module */
+        original_file->digest = shred_group->digest;
+        rm_fmt_write(session->formats, original_file);
+        original_file->free_digest = false;
+
+        rm_group_fmt_write(session, shred_group, group, original_file);
+    } else {
+        rm_group_fmt_write(session, shred_group, group, NULL);
     }
-
-    /* Hand it over to the printing module */
-    original_file->digest = shred_group->digest;
-    rm_fmt_write(session->formats, original_file);
-    original_file->free_digest = false;
-
-    rm_group_fmt_write(session, shred_group, group, original_file/*, true*/);
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     if(g_queue_get_length(group->held_files) > 0) {
-        rm_shred_forward_to_output(tag->session, group->held_files);
+        rm_shred_forward_to_output(tag->session, group->held_files, false);
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;

@@ -36,4 +36,6 @@
  */
 void rm_shred_run(RmSession *session);
 
+void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_origs);
+
 #endif
