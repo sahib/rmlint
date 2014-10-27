@@ -15,7 +15,7 @@ typedef struct RmDirectory {
     guint32 dupe_count;        /* Count of RmFiles actually in this directory          */
     guint32 file_count;        /* Count of files actually in this directory            */
     bool finished;             /* Was this dir or one of his parents already printed?  */
-    bool is_original;          /* Is this directory considered as original             */
+    bool is_original;          /* Is this directory considered as original?            */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure) */
     RmDigest *digest;          /* Common digest of all RmFiles in this directory       */
 } RmDirectory;
@@ -178,6 +178,48 @@ static void rm_directory_free(RmDirectory *self) {
     g_free(self->dirname);
     g_free(self);
 }
+
+static guint64 rm_tm_calc_file_size(RmDirectory *directory) {
+    guint64 acc = 0;
+
+    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        acc += file->file_size;
+    }
+
+    /* Recursively propagate to children */
+    for(GList *iter = directory->children.head; iter; iter = iter->next) {
+        acc += rm_tm_calc_file_size((RmDirectory *)iter->data);
+    }
+
+    return acc;
+}
+
+static RmFile *rm_directory_as_file(RmDirectory *self) {
+    /* Masquerades a RmDirectory as RmFile for purpose of output */
+    RmFile *file = g_malloc0(sizeof(RmFile));
+    file->path = self->dirname;
+    file->basename = rm_util_basename(self->dirname);
+
+    if(self->is_original) {
+        file->lint_type = RM_LINT_TYPE_ORIGINAL_DIR;
+    } else {
+        file->lint_type = RM_LINT_TYPE_DUPLICATE_DIR;
+    }
+
+    file->digest = self->digest;
+
+    /* Set these to invalid for now */
+    file->mtime = 0;
+    file->inode = 0;
+    file->dev = 0;
+
+    /* Recursively calculate the file size */
+    file->file_size = rm_tm_calc_file_size(self);
+
+    return file;
+}
+
 
 static int rm_directory_equal_iter(
     art_tree *other_hash_trie, const unsigned char * key, uint32_t key_len, _U void * value
@@ -380,6 +422,7 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
         return da->prefd_files - db->prefd_files;
     }
 
+    // TODO: This can call stat very often...
     RmStat dir_stat_a, dir_stat_b; 
     if(rm_sys_stat(da->dirname, &dir_stat_a) == -1) {
         rm_log_perror("stat(1) failed during sort");
@@ -465,6 +508,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         g_queue_sort(&result_dirs, (GCompareDataFunc)rm_tm_sort_orig_criteria, self);
 
+        GQueue *file_adaptor_group = g_queue_new();
+
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
             directory->is_original = (iter == result_dirs.head);
@@ -480,9 +525,19 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 "%s %s %s\n",
                 (directory->is_original) ? "ORIG" : "DUPL", cksum, directory->dirname
             );
+
+            RmFile *mask = rm_directory_as_file(directory);
+            // TODO
+            // rm_file_tables_remember_original(self->session->tables, mask);
+            g_queue_push_tail(file_adaptor_group, mask);
         }
+
+        // TODO
+        // rm_shred_forward_to_output(self->session, &file_adaptor_group, true);
+
         g_printerr("--\n");
         g_queue_clear(&result_dirs);
+        g_queue_free_full(file_adaptor_group, g_free);
     }
 
     g_printerr("\nDupes among other files:\n\n");
@@ -524,6 +579,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
             g_printerr("FILE %s %s\n", cksum, file->path);
         }
 
+        // TODO
         // rm_shred_forward_to_output(self->session, file_list, needs_original);
 
         if(file_list->length < 2 && !has_one_orig) {
