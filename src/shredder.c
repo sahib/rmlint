@@ -720,7 +720,6 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
 
     /* update device counters */
     if (device) {
-
         rm_shred_adjust_counters(device, -1, -(gint64)(file->file_size - file->hash_offset));
 
         /* update paranoid memory allocator */
@@ -733,9 +732,13 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
         }
     }
 
-    /* toss the file (and any embedded hardlinks)*/
     if(free_file) {
+        /* toss the file (and any embedded hardlinks)*/
         rm_file_destroy(file);
+    } else {
+        /* let the file live a bit more and copy the digest over */
+        file->digest = file->shred_group->digest;
+        file->free_digest = false;
     }
 }
 
@@ -818,6 +821,7 @@ void rm_shred_group_free(RmShredGroup *self) {
         self->held_files = NULL;
         // TODO
     }
+
     if (self->digest) {
         g_slice_free1(self->digest->bytes, self->checksum);
         if(needs_free) {
@@ -1168,11 +1172,11 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
     return result;
 }
 
-static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQueue *group, RmFile *original_file) {
+static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *original_file) {
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if (file->hardlinks.files) {
-            rm_group_fmt_write(session, shred_group, file->hardlinks.files, original_file);
+            rm_group_fmt_write(session, file->hardlinks.files, original_file);
         }
 
         if(iter->data != original_file) {
@@ -1183,21 +1187,12 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
                 session->total_lint_size += lint->file_size;
             }
             rm_fmt_unlock_state(session->formats);
-
-            /* Fake file->digest as the group digest for output */
-            if(lint->digest == NULL && shred_group) {
-                lint->digest = shred_group->digest;
-                lint->free_digest = false;
-            }
             rm_fmt_write(session->formats, lint);
         }
     }
 }
 
 void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_origs) {
-    RmFile *first_file = group->head->data;
-    RmShredGroup *shred_group = first_file->shred_group;
-
     if(!has_origs) {
         /* Group has no determined original yet, guess one. */
         RmFile *original_file = rm_group_find_original(session, group);
@@ -1208,13 +1203,11 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_orig
         }
 
         /* Hand it over to the printing module */
-        original_file->digest = shred_group->digest;
-        original_file->free_digest = false;
         rm_fmt_write(session->formats, original_file);
 
-        rm_group_fmt_write(session, shred_group, group, original_file);
+        rm_group_fmt_write(session, group, original_file);
     } else {
-        rm_group_fmt_write(session, shred_group, group, NULL);
+        rm_group_fmt_write(session, group, NULL);
     }
 }
 

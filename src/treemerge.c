@@ -303,10 +303,6 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
 // TREE MERGER ALGORITHM //
 ///////////////////////////
 
-static void rm_tm_free_file_group(GQueue *group) {
-    g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
-}
-
 RmTreeMerger * rm_tm_new(RmSession *session) {
     RmTreeMerger * self = g_slice_new(RmTreeMerger);
     self->session = session;
@@ -319,7 +315,7 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
 
     self->file_groups = g_hash_table_new_full(
         (GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,
-        (GDestroyNotify)rm_digest_free, (GDestroyNotify)rm_tm_free_file_group
+        (GDestroyNotify)rm_digest_free, (GDestroyNotify)g_queue_free
     );
 
     self->file_checks = g_hash_table_new_full(
@@ -338,7 +334,12 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
 static int rm_tm_destroy_iter(
     _U void * data, _U const unsigned char * key, _U uint32_t key_len,  void * value
 ) {
-    rm_directory_free((RmDirectory *)value);
+    RmDirectory *directory = value;
+    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        rm_file_destroy((RmFile *) iter->data);
+    }
+
+    rm_directory_free(directory);
     return 0;
 }
 
@@ -480,13 +481,10 @@ static int rm_tm_iter_unfinished_files(
 
 static void rm_tm_extract(RmTreeMerger *self) {
     // TODO: Make this blob prettier...
-
-    GHashTable *result_table = self->result_table;
-    
     GQueue *dir_list = NULL;
 
     GHashTableIter iter;
-    g_hash_table_iter_init(&iter, result_table);
+    g_hash_table_iter_init(&iter, self->result_table);
 
     /* Iterate over all directories per hash (which are same therefore) */
     while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
