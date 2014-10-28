@@ -60,17 +60,17 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADGID,
     RM_LINT_TYPE_BADUGID,
 
-    /* Border */
-    RM_LINT_TYPE_OTHER_LINT,
-
     /* note: this needs to be last item in list */
     RM_LINT_TYPE_DUPE_CANDIDATE,
-    RM_N_LINT_TYPES = RM_LINT_TYPE_DUPE_CANDIDATE,
 
-    /* Special values that are applied to special RmFiles */
-    RM_LINT_TYPE_ORIGINAL_TAG,
-    RM_LINT_TYPE_DUPLICATE_DIR,
-    RM_LINT_TYPE_ORIGINAL_DIR
+    /* Directories are no "normal" RmFiles, they are actual
+     * different structs that hide themselves as RmFile to 
+     * be compatible with the output system.
+     *
+     * Also they only appear at the very end of processing temporarily.
+     * So it does not matter if this type is behind RM_LINT_TYPE_DUPE_CANDIDATE.
+     */
+    RM_LINT_TYPE_DUPE_DIR_CANDIDATE
 } RmLintType;
 
 

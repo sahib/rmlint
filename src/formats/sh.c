@@ -127,7 +127,7 @@ static char *rm_fmt_sh_escape_path(char *path) {
     return rm_util_strsub(path, "'", "'\"'\"'");
 }
 
-static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
+static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
 
     /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
@@ -157,7 +157,7 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out, 
     case RM_LINT_TYPE_EFILE:
         fprintf(out, "rm -f '%s' # empty file\n", dupe_path);
         break;
-    case RM_LINT_TYPE_DUPLICATE_DIR:
+    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
         if(file->is_original) {
             fprintf(out, "rm -rf '%s' # original directory\n", dupe_path);
         } else {

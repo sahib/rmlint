@@ -215,7 +215,7 @@ static RmFile *rm_directory_as_file(RmDirectory *self) {
     file->path = self->dirname;
     file->basename = rm_util_basename(self->dirname);
 
-    file->lint_type = RM_LINT_TYPE_DUPLICATE_DIR;
+    file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
 
     file->digest = self->digest;
 

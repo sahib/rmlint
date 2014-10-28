@@ -108,7 +108,7 @@ const char *rm_file_lint_type_to_string(RmLintType type) {
         [RM_LINT_TYPE_BADUGID]        = "badugid",
         [RM_LINT_TYPE_EFILE]          = "emptyfile",
         [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file",
-        [RM_LINT_TYPE_DUPLICATE_DIR]  = "duplicate_dir"
+        [RM_LINT_TYPE_DUPE_DIR_CANDIDATE]  = "duplicate_dir"
     };
 
     return TABLE[CLAMP(type, RM_LINT_TYPE_UNKNOWN, sizeof(TABLE) / sizeof(const char *))];
