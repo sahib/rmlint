@@ -809,11 +809,11 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 
 /* Free RmShredGroup and any dormant files still in its queue
  */
-void rm_shred_group_free(RmShredGroup *self) {
+void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
     g_assert(self->parent == NULL);  /* children should outlive their parents! */
 
     /* For -D we need to hold back the memory a bit longer */
-    bool needs_free = !(self->main->session->settings->merge_directories);
+    bool needs_free = !(self->main->session->settings->merge_directories) || force_free;
 
     if (self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file, GUINT_TO_POINTER(needs_free));
@@ -834,6 +834,10 @@ void rm_shred_group_free(RmShredGroup *self) {
     }
 
     g_slice_free(RmShredGroup, self);
+}
+
+void rm_shred_group_free(RmShredGroup *self) {
+    rm_shred_group_free_full(self, true);
 }
 
 /* compares checksum with that of a RmShredGroup with a  */
@@ -1234,7 +1238,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;
-    rm_shred_group_free(group);
+    rm_shred_group_free_full(group, false);
 }
 
 /////////////////////////////////
