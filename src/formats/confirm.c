@@ -39,6 +39,8 @@ static void rm_fmt_prog(
     _U FILE *out,
     RmFmtProgressState state
 ) {
+    // TODO: This needs work...
+
     if(state != RM_PROGRESS_STATE_INIT) {
         return;
     }
