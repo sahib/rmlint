@@ -20,9 +20,9 @@ typedef struct RmDirectory {
 
     struct {
         bool has_metadata;     /* stat(2) called already                */
+        time_t dir_mtime;      /* Directory Metadata: Modification Time */
         ino_t dir_inode;       /* Directory Metadata: Inode             */
         dev_t dir_dev;         /* Directory Metadata: Device ID         */
-        time_t dir_mtime;      /* Directory Metadata: Modification Time */
     } metadata;
 } RmDirectory;
 
@@ -418,6 +418,10 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
 }
 
 static void rm_tm_mark_finished(RmDirectory *directory) {
+    if(directory->finished) {
+        return;
+    }
+
     directory->finished = true;
 
     /* Recursively propagate to children */
@@ -495,7 +499,6 @@ static int rm_tm_iter_unfinished_files(
 }
 
 static void rm_tm_extract(RmTreeMerger *self) {
-    // TODO: Make this blob prettier...
     GQueue *dir_list = NULL;
 
     GHashTableIter iter;
@@ -503,6 +506,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     /* Iterate over all directories per hash (which are same therefore) */
     while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
+        /* Needs at least two directories to be duplicate... */
         if(dir_list->length < 2) {
             continue;
         }
@@ -514,7 +518,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
         g_queue_sort(dir_list, (GCompareDataFunc)rm_tm_sort_paths, self);
 
         /* Output the directories and mark their children to prevent 
-         * duplicate directory reports. 
+         * duplicate directory reports in lower levels.
          */
         for(GList *iter = dir_list->head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
@@ -524,14 +528,18 @@ static void rm_tm_extract(RmTreeMerger *self) {
             }
         }
 
-        g_queue_sort(&result_dirs, (GCompareDataFunc)rm_tm_sort_orig_criteria, self);
+        /* Make sure the original directory lands as first 
+         * in the result_dirs queue. 
+         */
+        g_queue_sort(
+            &result_dirs, (GCompareDataFunc)rm_tm_sort_orig_criteria, self
+        );
 
-        GQueue *file_adaptor_group = g_queue_new();
-
+        GQueue file_adaptor_group = G_QUEUE_INIT;
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
             RmFile *mask = rm_directory_as_file(directory);
-            g_queue_push_tail(file_adaptor_group, mask);
+            g_queue_push_tail(&file_adaptor_group, mask);
 
             if(iter == result_dirs.head) {
                 /* First one in the group -> It's the original */
@@ -540,10 +548,11 @@ static void rm_tm_extract(RmTreeMerger *self) {
             }
         }
 
-        rm_shred_forward_to_output(self->session, file_adaptor_group, true);
+        rm_shred_forward_to_output(self->session, &file_adaptor_group, true);
 
+        g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
+        g_queue_clear(&file_adaptor_group);
         g_queue_clear(&result_dirs);
-        g_queue_free_full(file_adaptor_group, g_free);
     }
 
     /* Iterate over all non-finished dirs in the tree,
@@ -580,7 +589,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
         }
 
         if(file_list->length < 2 && !has_one_orig) {
-            rm_log_debug("Sole file encountered in treemerge. What did go wrong?");
+            rm_log_debug("Sole file encountered in treemerge. What's wrong?");
         } else {
             rm_shred_forward_to_output(self->session, file_list, has_one_orig);
         } 
