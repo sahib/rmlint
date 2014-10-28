@@ -1193,15 +1193,9 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_orig
     RmFile *first_file = group->head->data;
     RmShredGroup *shred_group = first_file->shred_group;
 
-    rm_fmt_lock_state(session->formats);
-    {
-        session->dup_group_counter++;
-    }
-    rm_fmt_unlock_state(session->formats);
-
     if(!has_origs) {
+        /* Group has no determined original yet, guess one. */
         RmFile *original_file = rm_group_find_original(session, group);
-
         if(!original_file) {
             /* tag first file as the original */
             original_file = group->head->data;
@@ -1233,6 +1227,12 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
             /* Output them directly */
             rm_shred_forward_to_output(tag->session, group->held_files, false);
         }
+
+        rm_fmt_lock_state(tag->session->formats);
+        {
+            tag->session->dup_group_counter++;
+        }
+        rm_fmt_unlock_state(tag->session->formats);
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;

@@ -24,7 +24,6 @@ typedef struct RmDirectory {
         dev_t dir_dev;         /* Directory Metadata: Device ID         */
         time_t dir_mtime;      /* Directory Metadata: Modification Time */
     } metadata;
-
 } RmDirectory;
 
 typedef struct RmTreeMerger {
@@ -47,13 +46,7 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
        will only happen when rmlint ran for long anyways and since we can keep the
        code easy and memory efficient this way, Im against more clever but longer
        solutions. (Good way of saying "Im just too stupid", eh?)
-    // TODO: This can call stat very often...
-    RmStat dir_stat_a, dir_stat_b; 
-    if(rm_sys_stat(da->dirname, &dir_stat_a) == -1) {
-        rm_log_perror("stat(1) failed during sort");
-        return 0;
-    }
-     */
+    */
     art_tree *dir_tree = data;
 
     unsigned char path[PATH_MAX];
@@ -579,56 +572,60 @@ static void rm_tm_extract(RmTreeMerger *self) {
 }
 
 void rm_tm_finish(RmTreeMerger *self) {
-    while(self->valid_dirs.length > 0) {
-        GQueue new_dirs = G_QUEUE_INIT;
+    if(self->valid_dirs.length == 0) {
+        /* Fish the result dirs out of the result table */
+        rm_tm_extract(self);
+        return;
+    } 
 
-        /* Iterate over all valid directories and try to level them one 
-           layer up. If there's already one one layer up, we'll merge with it.
-         */
-        for(GList *iter = self->valid_dirs.head; iter; iter = iter->next) {
-            RmDirectory *directory = iter->data;
-            char *parent_dir = g_path_get_dirname(directory->dirname);
-            gsize parent_len = strlen(parent_dir) + 1;
+    GQueue new_dirs = G_QUEUE_INIT;
 
-            /* Lookup if we already found this parent before (if yes, merge with it) */
-            RmDirectory *parent = art_search(
-                &self->dir_tree, (unsigned char *)parent_dir, parent_len
+    /* Iterate over all valid directories and try to level them one 
+       layer up. If there's already one one layer up, we'll merge with it.
+     */
+    for(GList *iter = self->valid_dirs.head; iter; iter = iter->next) {
+        RmDirectory *directory = iter->data;
+        char *parent_dir = g_path_get_dirname(directory->dirname);
+        gsize parent_len = strlen(parent_dir) + 1;
+
+        /* Lookup if we already found this parent before (if yes, merge with it) */
+        RmDirectory *parent = art_search(
+            &self->dir_tree, (unsigned char *)parent_dir, parent_len
+        );
+    
+        if(parent == NULL) {
+            /* none yet, basically copy child */
+            parent = rm_directory_new(parent_dir);
+            art_insert(
+                &self->dir_tree, (unsigned char *)parent_dir, parent_len, parent
             );
-        
-            if(parent == NULL) {
-                /* none yet, basically copy child */
-                parent = rm_directory_new(parent_dir);
-                art_insert(
-                    &self->dir_tree, (unsigned char *)parent_dir, parent_len, parent
-                );
 
-                /* Get the actual file count */
-                directory->file_count = GPOINTER_TO_UINT(
-                    art_search(&self->count_tree, (unsigned char *)parent_dir, parent_len 
-                ));
+            /* Get the actual file count */
+            directory->file_count = GPOINTER_TO_UINT(
+                art_search(&self->count_tree, (unsigned char *)parent_dir, parent_len 
+            ));
 
-                g_queue_push_head(&new_dirs, directory);               
-            } else {
-                g_free(parent_dir);
-            }
-
-            rm_directory_add_subdir(parent, directory);
-        } 
-        
-        /* Keep those level'd up dirs that are full now. 
-           Dirs that are not full until now, won't be in higher levels.
-         */
-        g_queue_clear(&self->valid_dirs);
-        for(GList *iter = new_dirs.head; iter; iter = iter->next) {
-            RmDirectory *directory = iter->data;
-            if(directory->dupe_count == directory->file_count) {
-                g_queue_push_head(&self->valid_dirs, directory);
-                rm_tm_insert_dir(self, directory);
-            }
+            g_queue_push_head(&new_dirs, directory);               
+        } else {
+            g_free(parent_dir);
         }
-        g_queue_clear(&new_dirs);
-    }
 
-    /* Fish the result dirs out of the result table */
-    rm_tm_extract(self);
+        rm_directory_add_subdir(parent, directory);
+    } 
+    
+    /* Keep those level'd up dirs that are full now. 
+       Dirs that are not full until now, won't be in higher levels.
+     */
+    g_queue_clear(&self->valid_dirs);
+    for(GList *iter = new_dirs.head; iter; iter = iter->next) {
+        RmDirectory *directory = iter->data;
+        if(directory->dupe_count == directory->file_count) {
+            g_queue_push_head(&self->valid_dirs, directory);
+            rm_tm_insert_dir(self, directory);
+        }
+    }
+    g_queue_clear(&new_dirs);
+
+    /* Recursively call self to march on */
+    rm_tm_finish(self);
 }
