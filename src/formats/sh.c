@@ -158,14 +158,14 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out, 
         fprintf(out, "rm -f '%s' # empty file\n", dupe_path);
         break;
     case RM_LINT_TYPE_DUPLICATE_DIR:
-        if(rm_file_tables_is_original(session->tables, file)) {
+        if(file->is_original) {
             fprintf(out, "rm -rf '%s' # original directory\n", dupe_path);
         } else {
             fprintf(out, "echo   '%s' # original directory\n", dupe_path);
         }
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
-        if(rm_file_tables_is_original(session->tables, file)) {
+        if(file->is_original) {
             fprintf(out, "echo  '%s' # original\n", dupe_path);
             self->last_original = file;
         } else {

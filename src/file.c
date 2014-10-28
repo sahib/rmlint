@@ -58,6 +58,7 @@ RmFile *rm_file_new(
 
     self->lint_type = type;
     self->is_prefd = is_ppath;
+    self->is_original = false;
     self->path_index = pnum;
 
     //TODO: remove?

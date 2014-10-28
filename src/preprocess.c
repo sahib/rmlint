@@ -86,8 +86,6 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
                              (GHashFunc)rm_node_hash, (GEqualFunc)rm_node_equal, NULL, NULL
                          );
 
-    tables->orig_table = g_hash_table_new(NULL, NULL);
-
 
     RmSettings *settings = session->settings;
 
@@ -111,10 +109,6 @@ void rm_file_tables_destroy(RmFileTables *tables) {
 
         g_assert(tables->mounts);
         rm_mounts_table_destroy(tables->mounts);
-
-        g_assert(tables->orig_table);
-        g_hash_table_unref(tables->orig_table);
-
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
@@ -166,25 +160,6 @@ static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
                 a->path_index, b->path_index
         );
     }
-}
-
-void rm_file_tables_remember_original(RmFileTables *table, RmFile *file) {
-    g_rec_mutex_lock(&table->lock);
-    {
-        g_hash_table_insert(table->orig_table, file, NULL);
-    }
-    g_rec_mutex_unlock(&table->lock);
-}
-
-bool rm_file_tables_is_original(RmFileTables *table, RmFile *file) {
-    bool result = false;
-    g_rec_mutex_lock(&table->lock);
-    {
-        result = g_hash_table_contains(table->orig_table, file);
-    }
-    g_rec_mutex_unlock(&table->lock);
-
-    return result;
 }
 
 /* initial list build, including kicking out path doubles and grouping of hardlinks */

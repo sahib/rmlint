@@ -1154,7 +1154,7 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
                 || ((!file->is_prefd) && (session->settings->keep_all_untagged))
                 || ((file->is_prefd) && (!result))
            ) {
-            rm_file_tables_remember_original(session->tables, file);
+            file->is_original = true;
             if(!result) {
                 result = file;
             }
@@ -1179,7 +1179,7 @@ static void rm_group_fmt_write(RmSession *session, RmShredGroup *shred_group, GQ
             }
             rm_fmt_unlock_state(session->formats);
 
-            /* Fake file->digest for a moment */
+            /* Fake file->digest as the group digest for output */
             if(lint->digest == NULL && shred_group) {
                 lint->digest = shred_group->digest;
                 lint->free_digest = false;
@@ -1199,7 +1199,7 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_orig
         if(!original_file) {
             /* tag first file as the original */
             original_file = group->head->data;
-            rm_file_tables_remember_original(session->tables, original_file);
+            original_file->is_original = true;
         }
 
         /* Hand it over to the printing module */

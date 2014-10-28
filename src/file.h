@@ -109,6 +109,11 @@ typedef struct RmFile {
      */
     bool is_prefd;
 
+    /* In the late processing, one file of a group may be set as original file.
+     * With this flag we indicate this.
+     */
+    bool is_original;
+
     /* True if this file, or at least one of its embedded hardlinks, are newer
      * than settings->min_mtime
      */

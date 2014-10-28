@@ -517,8 +517,9 @@ static void rm_tm_extract(RmTreeMerger *self) {
             g_queue_push_tail(file_adaptor_group, mask);
 
             if(iter == result_dirs.head) {
+                /* First one in the group -> It's the original */
                 rm_tm_mark_original_files(self, directory);
-                rm_file_tables_remember_original(self->session->tables, mask);
+                mask->is_original = true;
             }
         }
 

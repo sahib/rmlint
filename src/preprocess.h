@@ -60,16 +60,6 @@ void rm_file_tables_destroy(RmFileTables *list);
  */
 bool rm_file_tables_insert(RmSession *session, RmFile *file);
 
-/**
- * @brief Save file as original in a table.
- */
-void rm_file_tables_remember_original(RmFileTables *table, RmFile *file);
-
-/**
- * @brief Check if the orig_table contains file.
- */
-bool rm_file_tables_is_original(RmFileTables *table, RmFile *file);
-
 // TODO
 long rm_pp_cmp_orig_criteria_impl(
     RmSession *session,

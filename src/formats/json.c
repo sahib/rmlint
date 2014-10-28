@@ -146,8 +146,6 @@ static void rm_fmt_elem(
             rm_fmt_json_sep(out);
         }
         
-        bool is_orig = rm_file_tables_is_original(session->tables, file);
-
         rm_fmt_json_key_unsafe(out, "path", file->path);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "size", file->file_size);
@@ -156,7 +154,7 @@ static void rm_fmt_elem(
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "disk_id", file->dev);
         rm_fmt_json_sep(out);
-        rm_fmt_json_key_bool(out, "is_orig", is_orig);
+        rm_fmt_json_key_bool(out, "is_original", file->is_original);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "mtime", file->mtime);
     }
