@@ -27,13 +27,14 @@ typedef struct RmDirectory {
 } RmDirectory;
 
 typedef struct RmTreeMerger {
-    RmSession *session;        /* Session state variables / Settings       */
-    art_tree dir_tree;         /* Path-Trie with all RmFiles as value      */
-    art_tree count_tree;       /* Path-Trie with all file's count as value */
-    GHashTable *result_table;  /* {hash => [RmDirectory]} mapping          */
-    GHashTable *file_groups;   /* Group files by hash                      */
-    GHashTable *file_checks;   /* Set of files that were handled already.  */
-    GQueue valid_dirs;         /* Directories consisting of RmFiles only   */
+    RmSession *session;        /* Session state variables / Settings          */
+    art_tree dir_tree;         /* Path-Trie with all RmFiles as value         */
+    art_tree count_tree;       /* Path-Trie with all file's count as value    */
+    GHashTable *result_table;  /* {hash => [RmDirectory]} mapping             */
+    GHashTable *file_groups;   /* Group files by hash                         */
+    GHashTable *file_checks;   /* Set of files that were handled already.     */
+    GHashTable *known_hashs;   /* Set of known hashes, only used for cleanup. */
+    GQueue valid_dirs;         /* Directories consisting of RmFiles only      */
 } RmTreeMerger;
 
 //////////////////////////
@@ -315,11 +316,16 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
 
     self->file_groups = g_hash_table_new_full(
         (GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,
-        (GDestroyNotify)rm_digest_free, (GDestroyNotify)g_queue_free
+        NULL, (GDestroyNotify)g_queue_free
     );
 
     self->file_checks = g_hash_table_new_full(
         (GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,
+        NULL, NULL
+    );
+
+    self->known_hashs = g_hash_table_new_full(
+        NULL, NULL,
         NULL, NULL
     );
 
@@ -335,6 +341,7 @@ static int rm_tm_destroy_iter(
     _U void * data, _U const unsigned char * key, _U uint32_t key_len,  void * value
 ) {
     RmDirectory *directory = value;
+
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         rm_file_destroy((RmFile *) iter->data);
     }
@@ -347,6 +354,11 @@ void rm_tm_destroy(RmTreeMerger *self) {
     g_hash_table_unref(self->result_table);
     g_hash_table_unref(self->file_groups);
     g_hash_table_unref(self->file_checks);
+
+    GList *digest_keys = g_hash_table_get_keys(self->known_hashs);
+    g_list_free_full(digest_keys, (GDestroyNotify)rm_digest_free);
+    g_hash_table_unref(self->known_hashs);
+
     g_queue_clear(&self->valid_dirs);
 
     /* Kill all RmDirectories stored in the tree */
@@ -395,6 +407,9 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
 
     /* Add the file to this directory */   
     g_queue_push_head(&directory->known_files, file);
+
+    /* Remember the digest (if only to free it later...) */
+    g_hash_table_replace(self->known_hashs, file->digest, NULL);
  
     /* Check if the directory reached the number of actual files in it */
     if(directory->dupe_count == directory->file_count) {
