@@ -217,7 +217,6 @@ static RmFile *rm_directory_as_file(RmDirectory *self) {
     file->basename = rm_util_basename(self->dirname);
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
-
     file->digest = self->digest;
 
     /* Set these to invalid for now */
@@ -231,7 +230,6 @@ static RmFile *rm_directory_as_file(RmDirectory *self) {
     return file;
 }
 
-
 static int rm_directory_equal_iter(
     art_tree *other_hash_trie, const unsigned char * key, uint32_t key_len, _U void * value
 ) {
@@ -239,9 +237,9 @@ static int rm_directory_equal_iter(
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
-    /* TODO: Will this work with paranoid settings? Probably, but in a weird way.
-     *       Also it might not be very secure when the last block of the file is 
-     *       compared...
+    /* Will this work with paranoid settings? Probably, but in a weird way.
+     * Also it might not be very secure when the last block of the file is 
+     * compared...
      * */
     if(rm_digest_equal(d1->digest, d2->digest) == false) {
         return false;

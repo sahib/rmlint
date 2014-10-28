@@ -115,7 +115,7 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
-long rm_pp_cmp_orig_criteria_impl(
+int rm_pp_cmp_orig_criteria_impl(
     RmSession *session,
     time_t mtime_a, time_t mtime_b,
     const char *basename_a, const char *basename_b,
@@ -147,7 +147,7 @@ long rm_pp_cmp_orig_criteria_impl(
 }
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+static int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
@@ -266,7 +266,6 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
     return rm_fmt_is_a_output(session->formats, file->path);
 }
 
-
 /* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
  * that are "other lint" types are sent to rm_pp_handle_other_lint.  If the
  * file itself is "other lint" types it is likewise sent to rm_pp_handle_other_lint.
@@ -283,9 +282,6 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         /* it has a hardlink cluster - process each file (except self) */
         /* remove self */
         g_assert(g_queue_remove(file->hardlinks.files, file));
-
-        /* confirm self was only there once; TODO: should probably remove this*/
-        g_assert(!g_queue_remove(file->hardlinks.files, file));
 
         GList *next = NULL;
         for (GList *iter = file->hardlinks.files->head; iter; iter = next) {
