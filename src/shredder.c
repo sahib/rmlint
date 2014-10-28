@@ -1187,8 +1187,6 @@ static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *origin
             RmFile *lint = iter->data;
             rm_fmt_lock_state(session->formats);
             {
-                session->dup_counter += 1;
-                session->total_lint_size += lint->file_size;
             }
             rm_fmt_unlock_state(session->formats);
             rm_fmt_write(session->formats, lint);
@@ -1217,6 +1215,17 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_orig
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     if(g_queue_get_length(group->held_files) > 0) {
+        /* Update statistics */
+        rm_fmt_lock_state(tag->session->formats);
+        {
+            guint64 dupe_count = group->held_files->length - 1;
+            guint64 file_sizes = ((RmFile *)group->held_files->head->data)->file_size;
+            tag->session->dup_group_counter++;
+            tag->session->dup_counter += dupe_count;
+            tag->session->total_lint_size += dupe_count * file_sizes;
+        }
+        rm_fmt_unlock_state(tag->session->formats);
+
         if(tag->session->settings->merge_directories) {
             /* Cache the files for merging them into directories */
             for(GList *iter = group->held_files->head; iter; iter = iter->next) {
@@ -1229,12 +1238,6 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
             /* Output them directly */
             rm_shred_forward_to_output(tag->session, group->held_files, false);
         }
-
-        rm_fmt_lock_state(tag->session->formats);
-        {
-            tag->session->dup_group_counter++;
-        }
-        rm_fmt_unlock_state(tag->session->formats);
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;
