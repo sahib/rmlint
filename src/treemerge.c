@@ -303,6 +303,10 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
 // TREE MERGER ALGORITHM //
 ///////////////////////////
 
+static void rm_tm_free_file_group(GQueue *group) {
+    g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
+}
+
 RmTreeMerger * rm_tm_new(RmSession *session) {
     RmTreeMerger * self = g_slice_new(RmTreeMerger);
     self->session = session;
@@ -315,7 +319,7 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
 
     self->file_groups = g_hash_table_new_full(
         (GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,
-        NULL, (GDestroyNotify)g_queue_free
+        (GDestroyNotify)rm_digest_free, (GDestroyNotify)rm_tm_free_file_group
     );
 
     self->file_checks = g_hash_table_new_full(
@@ -534,8 +538,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
      */
     art_iter(&self->dir_tree, (art_callback)rm_tm_iter_unfinished_files, self);
 
-    g_hash_table_iter_init(&iter, self->file_groups); 
-
     /* Now here's a problem. Consider an input like this:
      *  /root
      *  ├── a
@@ -554,6 +556,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
      *  We always choose which directories are originals first, so we flag all
      *  files in it as originals. 
      */ 
+    g_hash_table_iter_init(&iter, self->file_groups); 
 
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
@@ -564,11 +567,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
         }
 
         if(file_list->length < 2 && !has_one_orig) {
-        } else if(has_one_orig) {
-            rm_shred_forward_to_output(self->session, file_list, true);
+            rm_log_debug("Sole file encountered in treemerge. What did go wrong?");
         } else {
-            rm_shred_forward_to_output(self->session, file_list, false);
-        }
+            rm_shred_forward_to_output(self->session, file_list, has_one_orig);
+        } 
     }
 }
 

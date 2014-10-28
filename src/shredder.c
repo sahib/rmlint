@@ -808,24 +808,29 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
  */
 void rm_shred_group_free(RmShredGroup *self) {
     g_assert(self->parent == NULL);  /* children should outlive their parents! */
-    bool needs_free = !self->main->session->settings->merge_directories;
+
+    /* For -D we need to hold back the memory a bit longer */
+    bool needs_free = !(self->main->session->settings->merge_directories);
 
     if (self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file, GUINT_TO_POINTER(needs_free));
+        g_queue_free(self->held_files);
+        self->held_files = NULL;
         // TODO
-        //g_queue_free_full(self->held_files, (GDestroyNotify)rm_shred_discard_file);
     }
-    if (self->digest && needs_free) {
+    if (self->digest) {
         g_slice_free1(self->digest->bytes, self->checksum);
-        rm_digest_free(self->digest);
+        if(needs_free) {
+            rm_digest_free(self->digest);
+        }
     }
 
     if (self->children) {
         g_queue_free(self->children);
     }
-    // g_slice_free(RmShredGroup, self);
-}
 
+    g_slice_free(RmShredGroup, self);
+}
 
 /* compares checksum with that of a RmShredGroup with a  */
 gint rm_cksum_matches_group(RmShredGroup *group, guint8 *checksum) {
