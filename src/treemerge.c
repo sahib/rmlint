@@ -66,7 +66,7 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
         if(path[i] == G_DIR_SEPARATOR) {
             /* Do not use an empty path, use a slash for root */
             if(i == 0) {
-                path[0] = '/'; path[1] = 0;
+                path[0] = G_DIR_SEPARATOR; path[1] = 0;
             } else {
                 path[i] = 0;
             }

@@ -29,6 +29,16 @@
 #include <glib.h>
 #include "file.h"
 
+/**
+ * Module to cluster RmFiles to directories.
+ * I.e. find duplicate directories. 
+ *  
+ * All API here is defined on the opaque RmTreeMerger structure.
+ * Files are feeded and the finished directories are wrapped
+ * as RmFiles and written to the output module.
+ */ 
+
+
 /* Opaque structure, details do not matter to caller */
 struct RmTreeMerger;
 typedef struct RmTreeMerger RmTreeMerger;
@@ -36,10 +46,24 @@ typedef struct RmTreeMerger RmTreeMerger;
 /* RmTreeMerger is part of RmSession, therefore prototype it here */
 struct RmSession;
 
-// TODO: docs
+/**
+ * @brief Allocate a new RmTreeMerger structure.
+ */
 RmTreeMerger * rm_tm_new(struct RmSession *session);
+
+/**
+ * @brief Add a RmFile to the pool of (to be) investigated files.
+ */
 void rm_tm_feed(RmTreeMerger *self, RmFile *file);
+
+/**
+ * @brief Find duplicate directories through all feeded RmFiles.
+ */
 void rm_tm_finish(RmTreeMerger *self);
+
+/**
+ * @brief Free all memory allocated previously.
+ */
 void rm_tm_destroy(RmTreeMerger *self);
 
 #endif /* RM_TREEMERGE_INCLUDE*/
