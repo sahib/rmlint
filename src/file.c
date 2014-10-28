@@ -46,6 +46,7 @@ RmFile *rm_file_new(
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
     self->basename = rm_util_basename(self->path);
+    self->free_digest = true;
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
@@ -57,12 +58,8 @@ RmFile *rm_file_new(
 
     self->lint_type = type;
     self->is_prefd = is_ppath;
+    self->is_original = false;
     self->path_index = pnum;
-
-    //TODO: remove?
-    g_assert(self->hardlinks.files == NULL);
-    g_assert(self->hardlinks.has_non_prefd == FALSE);
-    g_assert(self->hardlinks.has_prefd == FALSE);
 
     if(settings->lock_files) {
         rm_file_set_lock_flags(path, LOCK_EX);
@@ -75,7 +72,7 @@ RmFile *rm_file_new(
 }
 
 void rm_file_destroy(RmFile *file) {
-    if (file->digest) {
+    if (file->digest && file->free_digest) {
         rm_digest_free(file->digest);
         file->digest = NULL;
     }
@@ -105,8 +102,9 @@ const char *rm_file_lint_type_to_string(RmLintType type) {
         [RM_LINT_TYPE_BADGID]         = "badgid",
         [RM_LINT_TYPE_BADUGID]        = "badugid",
         [RM_LINT_TYPE_EFILE]          = "emptyfile",
-        [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate"
+        [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file",
+        [RM_LINT_TYPE_DUPE_DIR_CANDIDATE]  = "duplicate_dir"
     };
 
-    return TABLE[CLAMP(type, RM_LINT_TYPE_UNKNOWN, RM_N_LINT_TYPES)];
+    return TABLE[CLAMP(type, RM_LINT_TYPE_UNKNOWN, sizeof(TABLE) / sizeof(const char *))];
 }

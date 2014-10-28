@@ -39,6 +39,8 @@ static void rm_fmt_prog(
     _U FILE *out,
     RmFmtProgressState state
 ) {
+    // TODO: This needs work...
+
     if(state != RM_PROGRESS_STATE_INIT) {
         return;
     }
@@ -156,7 +158,7 @@ static void rm_fmt_prog(
     }
 
     if (settings->keep_all_tagged) {
-        rm_log_warning("\tNote: all originals in "GREEN"(tagged)"RESET" paths will be kept\n");  //TODO: similar for reverse settings
+        rm_log_warning("\tNote: all originals in "GREEN"(tagged)"RESET" paths will be kept\n");  
     }
     rm_log_warning("\t      "RED"but"RESET" other lint in "GREEN"(orig)"RESET" paths may still be deleted\n");
 

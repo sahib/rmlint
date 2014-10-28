@@ -25,6 +25,7 @@
 
 #include "../formats.h"
 #include "../utilities.h"
+#include "../preprocess.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -144,6 +145,7 @@ static void rm_fmt_elem(
             rm_fmt_json_key(out, "checksum", checksum_str);
             rm_fmt_json_sep(out);
         }
+        
         rm_fmt_json_key_unsafe(out, "path", file->path);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "size", file->file_size);
@@ -152,7 +154,7 @@ static void rm_fmt_elem(
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "disk_id", file->dev);
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "is_prefd", file->is_prefd ? "true" : "false");
+        rm_fmt_json_key_bool(out, "is_original", file->is_original);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "mtime", file->mtime);
     }

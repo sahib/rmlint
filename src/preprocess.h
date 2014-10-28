@@ -61,13 +61,16 @@ void rm_file_tables_destroy(RmFileTables *list);
 bool rm_file_tables_insert(RmSession *session, RmFile *file);
 
 /**
- * @brief Save file as original in a table.
+ * @brief Compare certain attributes (listed below) of files 
+ *        in order to find out which file is the original.
+ *
+ * Returns: 
  */
-void rm_file_tables_remember_original(RmFileTables *table, RmFile *file);
-
-/**
- * @brief Check if the orig_table contains file.
- */
-bool rm_file_tables_is_original(RmFileTables *table, RmFile *file);
+int rm_pp_cmp_orig_criteria_impl(
+    RmSession *session,
+    time_t mtime_a, time_t mtime_b,
+    const char *basename_a, const char *basename_b,
+    int path_index_a, int path_index_b
+);
 
 #endif

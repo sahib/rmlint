@@ -37,6 +37,7 @@
 #include <glib.h>
 
 #include "cmdline.h"
+#include "treemerge.h"
 #include "preprocess.h"
 #include "shredder.h"
 #include "utilities.h"
@@ -563,6 +564,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-flock-files"      ,  no_argument       ,  0 ,  'Z'},
             {"match-basename"      ,  no_argument       ,  0 ,  'b'},
             {"no-match-basename"   ,  no_argument       ,  0 ,  'B'},
+            {"merge-directories"   ,  no_argument       ,  0 ,  'D'},
             {"help"                ,  no_argument       ,  0 ,  'h'},
             {"version"             ,  no_argument       ,  0 ,  'H'},
             {0, 0, 0, 0}
@@ -571,7 +573,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbB",
+                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbBD",
                      long_options, &option_index
                  );
 
@@ -668,6 +670,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'd':
             settings->depth = ABS(strtol(optarg, NULL, 10));
+            break;
+        case 'D':
+            settings->merge_directories = true;
             break;
         case 'S':
             settings->sort_criteria = optarg;
@@ -786,8 +791,21 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
+    /* Handle special cases for -D */
+    if(settings->merge_directories) {
+        if(settings->checksum_type == RM_DIGEST_PARANOID) {
+            rm_log_error("Full paranoia will not work well with directory merging.\n");
+            rm_cmd_die(session, EXIT_FAILURE);
+        }
+
+        /* Make file locking the default for directory merging */
+        settings->lock_files = true;
+    }
+
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
-                              verbosity_counter, 0, G_LOG_LEVEL_DEBUG
+                              verbosity_counter,
+                              0,
+                              (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1
                           )];
 
     /* Check the directory to be valid */
@@ -827,6 +845,10 @@ int rm_cmd_main(RmSession *session) {
         g_timer_elapsed(session->timer, NULL), session->total_files
     );
 
+    if(session->settings->merge_directories) {
+        session->dir_merger = rm_tm_new(session);
+    }
+
     if(session->total_files >= 1) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
@@ -836,6 +858,11 @@ int rm_cmd_main(RmSession *session) {
 
             rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
         }
+    }
+
+    if(session->settings->merge_directories) {
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
+        rm_tm_finish(session->dir_merger);
     }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);

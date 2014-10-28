@@ -79,6 +79,10 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                              MAYBE_GREEN(session), session->shred_files_remaining, MAYBE_RESET(session)
                          );
         break;
+    case RM_PROGRESS_STATE_MERGE:
+        self->percent = 1.0;
+        self->text_len = g_snprintf(self->text_buf, sizeof(self->text_buf), "Merging files into directories\n");
+        break;
     case RM_PROGRESS_STATE_INIT:
     case RM_PROGRESS_STATE_SUMMARY:
     default:
@@ -100,7 +104,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
 }
 
 static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FILE *out) {
-    for(guint32 i = 0; i < width - self->text_len - 1; ++i) {
+    for(guint32 i = 0; i < width - self->text_len - 2; ++i) {
         fprintf(out, " ");
     }
 

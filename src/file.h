@@ -60,13 +60,17 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADGID,
     RM_LINT_TYPE_BADUGID,
 
-    /* Border */
-    RM_LINT_TYPE_OTHER_LINT,
-
     /* note: this needs to be last item in list */
     RM_LINT_TYPE_DUPE_CANDIDATE,
-    RM_LINT_TYPE_ORIGINAL_TAG,
-    RM_N_LINT_TYPES = RM_LINT_TYPE_DUPE_CANDIDATE
+
+    /* Directories are no "normal" RmFiles, they are actual
+     * different structs that hide themselves as RmFile to 
+     * be compatible with the output system.
+     *
+     * Also they only appear at the very end of processing temporarily.
+     * So it does not matter if this type is behind RM_LINT_TYPE_DUPE_CANDIDATE.
+     */
+    RM_LINT_TYPE_DUPE_DIR_CANDIDATE
 } RmLintType;
 
 
@@ -105,6 +109,11 @@ typedef struct RmFile {
      */
     bool is_prefd;
 
+    /* In the late processing, one file of a group may be set as original file.
+     * With this flag we indicate this.
+     */
+    bool is_original;
+
     /* True if this file, or at least one of its embedded hardlinks, are newer
      * than settings->min_mtime
      */
@@ -136,6 +145,11 @@ typedef struct RmFile {
     /* digest of this file updated on every hash iteration.  Use a pointer so we can share with RmShredGroup
      */
     RmDigest *digest;
+
+    /* If false rm_file_destroy will not destroy the digest. This is useful 
+     * for sharing the digest of duplicates in a group. 
+     */
+    bool free_digest;
 
     /* Table of this file's extents.
      */

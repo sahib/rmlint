@@ -34,6 +34,7 @@ const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
         [RM_PROGRESS_STATE_TRAVERSE]   = "Traversing",
         [RM_PROGRESS_STATE_PREPROCESS] = "Preprocessing",
         [RM_PROGRESS_STATE_SHREDDER]   = "Shreddering",
+        [RM_PROGRESS_STATE_MERGE]      = "Merging",
         [RM_PROGRESS_STATE_SUMMARY]    = "Finalizing",
         [RM_PROGRESS_STATE_N]          = "Unknown state"
     };

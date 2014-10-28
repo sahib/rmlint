@@ -59,6 +59,10 @@ void rm_session_clear(RmSession *session) {
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
 
+    if(session->dir_merger) {
+        rm_tm_destroy(session->dir_merger);
+    }
+
     g_free(settings->joined_argv);
     g_free(settings->is_prefd);
     g_free(settings->iwd);

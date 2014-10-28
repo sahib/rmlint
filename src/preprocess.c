@@ -86,8 +86,6 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
                              (GHashFunc)rm_node_hash, (GEqualFunc)rm_node_equal, NULL, NULL
                          );
 
-    tables->orig_table = g_hash_table_new(NULL, NULL);
-
 
     RmSettings *settings = session->settings;
 
@@ -111,66 +109,57 @@ void rm_file_tables_destroy(RmFileTables *tables) {
 
         g_assert(tables->mounts);
         rm_mounts_table_destroy(tables->mounts);
-
-        g_assert(tables->orig_table);
-        g_hash_table_unref(tables->orig_table);
-
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }
 
-/* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static long rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+int rm_pp_cmp_orig_criteria_impl(
+    RmSession *session,
+    time_t mtime_a, time_t mtime_b,
+    const char *basename_a, const char *basename_b,
+    int path_index_a, int path_index_b
+) {
     RmSettings *sets = session->settings;
 
-    if (a->lint_type != b->lint_type) {
-        return a->lint_type - b->lint_type;
-    } else if (a->is_prefd != b->is_prefd) {
-        return (a->is_prefd - b->is_prefd);
-    } else {
-        int sort_criteria_len = strlen(sets->sort_criteria);
-        for (int i = 0; i < sort_criteria_len; i++) {
-            long cmp = 0;
-            switch (tolower(sets->sort_criteria[i])) {
-            case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
-                break;
-            case 'a':
-                cmp = +strcmp(a->basename, b->basename);
-                break;
-            case 'p':
-                cmp = (long)a->path_index - (long)b->path_index;
-                break;
-            }
-            if (cmp) {
-                /* reverse order if uppercase option (M|A|P) */
-                cmp = cmp * (isupper(sets->sort_criteria[i]) ? 1 : -1);
-                return cmp;
-            }
+    int sort_criteria_len = strlen(sets->sort_criteria);
+    for (int i = 0; i < sort_criteria_len; i++) {
+        long cmp = 0;
+        switch (tolower(sets->sort_criteria[i])) {
+        case 'm':
+            cmp = (long)(mtime_a) - (long)(mtime_b);
+            break;
+        case 'a':
+            cmp = strcmp(basename_a, basename_b);
+            break;
+        case 'p':
+            cmp = (long)path_index_a - (long)path_index_b;
+            break;
+        }
+        if (cmp) {
+            /* reverse order if uppercase option (M|A|P) */
+            cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
+            return cmp;
         }
     }
     return 0;
 }
 
-void rm_file_tables_remember_original(RmFileTables *table, RmFile *file) {
-    g_rec_mutex_lock(&table->lock);
-    {
-        g_hash_table_insert(table->orig_table, file, NULL);
+/* Sort criteria for sorting by preferred path (first) then user-input criteria */
+static int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+    if (a->lint_type != b->lint_type) {
+        return a->lint_type - b->lint_type;
+    } else if (a->is_prefd != b->is_prefd) {
+        return (a->is_prefd - b->is_prefd);
+    } else {
+        return rm_pp_cmp_orig_criteria_impl(
+                session, 
+                a->mtime, b->mtime,
+                a->basename, b->basename,
+                a->path_index, b->path_index
+        );
     }
-    g_rec_mutex_unlock(&table->lock);
-}
-
-bool rm_file_tables_is_original(RmFileTables *table, RmFile *file) {
-    bool result = false;
-    g_rec_mutex_lock(&table->lock);
-    {
-        result = g_hash_table_contains(table->orig_table, file);
-    }
-    g_rec_mutex_unlock(&table->lock);
-
-    return result;
 }
 
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
@@ -277,7 +266,6 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
     return rm_fmt_is_a_output(session->formats, file->path);
 }
 
-
 /* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
  * that are "other lint" types are sent to rm_pp_handle_other_lint.  If the
  * file itself is "other lint" types it is likewise sent to rm_pp_handle_other_lint.
@@ -294,9 +282,6 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         /* it has a hardlink cluster - process each file (except self) */
         /* remove self */
         g_assert(g_queue_remove(file->hardlinks.files, file));
-
-        /* confirm self was only there once; TODO: should probably remove this*/
-        g_assert(!g_queue_remove(file->hardlinks.files, file));
 
         GList *next = NULL;
         for (GList *iter = file->hardlinks.files->head; iter; iter = next) {

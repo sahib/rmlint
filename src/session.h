@@ -31,9 +31,9 @@
 #include <stdbool.h>
 #include <glib.h>
 
-//#include "settings.h"
-#include "checksum.h"
+#include "treemerge.h"
 #include "utilities.h"
+#include "checksum.h"
 #include "file.h"
 
 
@@ -44,13 +44,13 @@ typedef struct RmFileTables {
     GHashTable *node_table;
     GHashTable *mtime_filter;
     GHashTable *basename_filter;
-    GHashTable *orig_table;
     GQueue *file_queue;
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
     GRecMutex lock;
 } RmFileTables;
 
 struct RmFmtTable;
+struct RmTreeMerger;
 
 typedef struct RmSession {
     RmSettings *settings;
@@ -63,6 +63,9 @@ typedef struct RmSession {
 
     /* Output formatting control */
     struct RmFmtTable *formats;
+
+    /* Treemerging for -D */
+    struct RmTreeMerger *dir_merger;
 
     /* Counters for printing useful statistics */
     RmOff total_files;

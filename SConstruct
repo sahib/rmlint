@@ -260,7 +260,7 @@ manpage = env.Command(
 env.AlwaysBuild(manpage)
 program = env.Program(
     'rmlint',
-    Glob('src/*.c') + Glob('src/checksums/*.c') + Glob('src/formats/*.c')
+    Glob('src/*.c') + Glob('src/checksums/*.c') + Glob('src/formats/*.c') + Glob('src/libart/*.c')
 )
 
 
