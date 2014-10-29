@@ -168,7 +168,6 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
     GHashTable *node_table = tables->node_table;
 
-
     bool result = true;
 
     g_rec_mutex_lock(&tables->lock);
@@ -304,23 +303,17 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
     }
     /* handle the head file; if it's "other lint" then process it via rm_pp_handle_other_lint
      * and return TRUE, else keep it
-
      */
-    bool remove = false;
+    bool remove = rm_pp_handle_own_files(session, file);
 
-    if(rm_pp_handle_other_lint(session, file)) {
+    if(remove == false && rm_pp_handle_other_lint(session, file)) {
         remove = true;
-    } else {
-
+    } else if(remove) {
         /*
         * Also check if the file is a output of rmlint itself. Which we definitely
         * not want to handle. Creating a script that deletes itself is fun but useless.
         * */
-        remove = rm_pp_handle_own_files(session, file);
-
-        if(remove) {
-            rm_file_destroy(file);
-        }
+        rm_file_destroy(file);
     }
 
     session->total_filtered_files -= remove;
