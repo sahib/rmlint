@@ -87,6 +87,15 @@ char *rm_util_basename(const char *filename) {
     return (char *)filename;
 }
 
+char *rm_util_path_extension(const char *basename) {
+    char * point = strrchr(basename, '.');
+    if(point) {
+        return point + 1;
+    } else {
+        return NULL;
+    }
+}
+
 ino_t rm_util_parent_node(const char *path) {
     char *dummy  = g_strdup(path);
     char *parent_path = g_strdup(dirname(dummy));

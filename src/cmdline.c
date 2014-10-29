@@ -529,51 +529,55 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 
     while(1) {
         static struct option long_options[] = {
-            {"types"               ,  required_argument ,  0 ,  'T'},
-            {"threads"             ,  required_argument ,  0 ,  't'},
-            {"max-depth"           ,  required_argument ,  0 ,  'd'},
-            {"size"                ,  required_argument ,  0 ,  's'},
-            {"sortcriteria"        ,  required_argument ,  0 ,  'S'},
-            {"algorithm"           ,  required_argument ,  0 ,  'a'},
-            {"output"              ,  required_argument ,  0 ,  'o'},
-            {"add-output"          ,  required_argument ,  0 ,  'O'},
-            {"max-paranoid-mem"    ,  required_argument ,  0 ,  'u'},
-            {"newer-than-stamp"    ,  required_argument ,  0 ,  'n'},
-            {"newer-than"          ,  required_argument ,  0 ,  'N'},
-            {"loud"                ,  no_argument       ,  0 ,  'v'},
-            {"quiet"               ,  no_argument       ,  0 ,  'V'},
-            {"with-color"          ,  no_argument       ,  0 ,  'w'},
-            {"no-with-color"       ,  no_argument       ,  0 ,  'W'},
-            {"no-hidden"           ,  no_argument       ,  0 ,  'R'},
-            {"hidden"              ,  no_argument       ,  0 ,  'r'},
-            {"followlinks"         ,  no_argument       ,  0 ,  'f'},
-            {"no-followlinks"      ,  no_argument       ,  0 ,  'F'},
-            {"crossdev"            ,  no_argument       ,  0 ,  'x'},
-            {"no-crossdev"         ,  no_argument       ,  0 ,  'X'},
-            {"paranoid"            ,  no_argument	    ,  0 ,  'p'},
-            {"less-paranoid"       ,  no_argument       ,  0 ,  'P'},
-            {"keep-all-tagged"     ,  no_argument       ,  0 ,  'k'},
-            {"keep-all-untagged"   ,  no_argument       ,  0 ,  'M'},
-            {"must-match-tagged"   ,  no_argument       ,  0 ,  'm'},
-            {"must-match-untagged" ,  no_argument       ,  0 ,  'M'},
-            {"hardlinked"          ,  no_argument       ,  0 ,  'l'},
-            {"no-hardlinked"       ,  no_argument       ,  0 ,  'L'},
-            {"confirm-settings"    ,  no_argument       ,  0 ,  'q'},
-            {"no-confirm-settings" ,  no_argument       ,  0 ,  'Q'},
-            {"flock-files"         ,  no_argument       ,  0 ,  'z'},
-            {"no-flock-files"      ,  no_argument       ,  0 ,  'Z'},
-            {"match-basename"      ,  no_argument       ,  0 ,  'b'},
-            {"no-match-basename"   ,  no_argument       ,  0 ,  'B'},
-            {"merge-directories"   ,  no_argument       ,  0 ,  'D'},
-            {"help"                ,  no_argument       ,  0 ,  'h'},
-            {"version"             ,  no_argument       ,  0 ,  'H'},
+            {"types"                      , required_argument , 0 , 'T'} ,
+            {"threads"                    , required_argument , 0 , 't'} ,
+            {"max-depth"                  , required_argument , 0 , 'd'} ,
+            {"size"                       , required_argument , 0 , 's'} ,
+            {"sortcriteria"               , required_argument , 0 , 'S'} ,
+            {"algorithm"                  , required_argument , 0 , 'a'} ,
+            {"output"                     , required_argument , 0 , 'o'} ,
+            {"add-output"                 , required_argument , 0 , 'O'} ,
+            {"max-paranoid-mem"           , required_argument , 0 , 'u'} ,
+            {"newer-than-stamp"           , required_argument , 0 , 'n'} ,
+            {"newer-than"                 , required_argument , 0 , 'N'} ,
+            {"loud"                       , no_argument       , 0 , 'v'} ,
+            {"quiet"                      , no_argument       , 0 , 'V'} ,
+            {"with-color"                 , no_argument       , 0 , 'w'} ,
+            {"no-with-color"              , no_argument       , 0 , 'W'} ,
+            {"no-hidden"                  , no_argument       , 0 , 'R'} ,
+            {"hidden"                     , no_argument       , 0 , 'r'} ,
+            {"followlinks"                , no_argument       , 0 , 'f'} ,
+            {"no-followlinks"             , no_argument       , 0 , 'F'} ,
+            {"crossdev"                   , no_argument       , 0 , 'x'} ,
+            {"no-crossdev"                , no_argument       , 0 , 'X'} ,
+            {"paranoid"                   , no_argument       , 0 , 'p'} ,
+            {"less-paranoid"              , no_argument       , 0 , 'P'} ,
+            {"keep-all-tagged"            , no_argument       , 0 , 'k'} ,
+            {"keep-all-untagged"          , no_argument       , 0 , 'M'} ,
+            {"must-match-tagged"          , no_argument       , 0 , 'm'} ,
+            {"must-match-untagged"        , no_argument       , 0 , 'M'} ,
+            {"hardlinked"                 , no_argument       , 0 , 'l'} ,
+            {"no-hardlinked"              , no_argument       , 0 , 'L'} ,
+            {"confirm-settings"           , no_argument       , 0 , 'q'} ,
+            {"no-confirm-settings"        , no_argument       , 0 , 'Q'} ,
+            {"flock-files"                , no_argument       , 0 , 'z'} ,
+            {"no-flock-files"             , no_argument       , 0 , 'Z'} ,
+            {"match-basename"             , no_argument       , 0 , 'b'} ,
+            {"no-match-basename"          , no_argument       , 0 , 'B'} ,
+            {"match-with-extension"       , no_argument       , 0 , 'e'} ,
+            {"no-match-with-extension"    , no_argument       , 0 , 'E'} ,
+            {"match-without-extension"    , no_argument       , 0 , 'i'} ,
+            {"no-match-without-extension" , no_argument       , 0 , 'I'} ,
+            {"merge-directories"          , no_argument       , 0 , 'D'} ,
+            {"help"                       , no_argument       , 0 , 'h'} ,
+            {"version"                    , no_argument       , 0 , 'H'} ,
             {0, 0, 0, 0}
         };
 
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbBD",
+                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbBeEiID",
                      long_options, &option_index
                  );
 
@@ -737,6 +741,18 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'B':
             settings->match_basename = false;
+            break;
+        case 'e':
+            settings->match_with_extension = true;
+            break;
+        case 'E':
+            settings->match_with_extension = false;
+            break;
+        case 'i':
+            settings->match_without_extension = true;
+            break;
+        case 'I':
+            settings->match_without_extension = false;
             break;
         default:
             return false;

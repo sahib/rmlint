@@ -137,6 +137,13 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp);
 char *rm_util_basename(const char *filename);
 
 /**
+ * @brief Return a pointer to the extension part of the file or NULL if none.
+ *
+ * @return: a pointer >= basename or NULL.
+ */ 
+char *rm_util_path_extension(const char *basename);
+
+/**
  * @brief Get the inode of the directory of the file specified in path.
  */
 ino_t rm_util_parent_node(const char *path);

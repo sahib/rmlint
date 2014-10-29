@@ -34,7 +34,36 @@
 #include "shredder.h"
 
 guint rm_file_hash(RmFile *file) {
-    return (guint)(file->file_size & 0xFFFFFFFF);
+    return (guint)(file->file_size);
+}
+
+static bool rm_file_check_with_extension(RmFile *file_a, RmFile *file_b) {
+    char *ext_a = rm_util_path_extension(file_a->basename);
+    char *ext_b = rm_util_path_extension(file_b->basename);
+
+    if(ext_a && ext_b && g_strcmp0(ext_a, ext_b) == 0) {
+        return true;
+    }
+
+    return false; 
+}
+
+static bool rm_file_check_without_extension(RmFile *file_a, RmFile *file_b) {
+    char *ext_a = rm_util_path_extension(file_a->basename);
+    char *ext_b = rm_util_path_extension(file_b->basename);
+
+    size_t a_len = (ext_a) ? (ext_a - file_a->basename) : strlen(file_a->basename);
+    size_t b_len = (ext_b) ? (ext_b - file_b->basename) : strlen(file_b->basename);
+
+    if(a_len != b_len) {
+        return false;
+    }
+
+    if(strncmp(file_a->basename, file_b->basename, a_len) == 0) {
+        return true;
+    }
+
+    return false; 
 }
 
 gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
@@ -43,7 +72,15 @@ gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
             && (file1->file_size == file2->file_size)
             && (0
                 || (!settings->match_basename)
-                || (strcmp(file1->basename, file2->basename) == 0)
+                || (g_strcmp0(file1->basename, file2->basename) == 0)
+               )
+            && (0
+                || (!settings->match_with_extension)
+                || (rm_file_check_with_extension(file1, file2))
+               )
+            && (0
+                || (!settings->match_without_extension)
+                || (rm_file_check_without_extension(file1, file2))
                )
            );
 }

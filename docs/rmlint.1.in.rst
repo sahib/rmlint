@@ -244,6 +244,17 @@ Traversal Options
     Only consider those files as dupes that have the same basename.
     See also ``man 1 basename``.
 
+**-e --match-with-extension / -E --no-match-with-extension** (*default*)
+
+    Only consider those files as dupes that have the same file extension.
+    For example two photos would only match if they are a ``.png``.
+
+**-i --match-without-extension / -I --no-match-without-extension** (*default*)
+
+    Only consider those files as dupes that have the same basename minus the file
+    extension. For example: ``banana.png`` and ``banana.jpeg`` would be considered,
+    while ``apple.png`` and ``peach.png`` won't.
+
 **-n --newer-than-stamp=<timestamp_filename>**
 **-N --newer-than=<iso8601_timestamp_or_unix_timestamp>**
 
