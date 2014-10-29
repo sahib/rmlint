@@ -58,6 +58,7 @@ typedef struct RmSettings {
     bool filter_mtime;
     time_t min_mtime;
     bool match_basename;         /* if set, dupes must have the same basename */
+    bool match_extension;        /* if set, dupes must have the same file extension (if any) */
     bool merge_directories;      /* if set, merge directories of duplicates (EXPERIMENTAL!) */
 
     int depth;

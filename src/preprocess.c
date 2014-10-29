@@ -41,7 +41,7 @@ gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
     RmSettings *settings = file1->settings;
     return (1
             && (file1->file_size == file2->file_size)
-            && (1
+            && (0
                 || (!settings->match_basename)
                 || (strcmp(file1->basename, file2->basename) == 0)
                )
@@ -59,10 +59,10 @@ guint rm_node_hash(RmFile *file) {
      * so if we rotate dev 16 bits left we should get a reasonable hash:
      *        YYYY YYYY ZZZ? ???? XXXX XXXX XXXX XXXX
      */
-    return ((guint)file->inode) ^
+    return (guint)((guint32)file->inode) ^
            (
-               (((guint)file->dev) << 16) |
-               (((guint)file->dev) >> 16)
+               (((guint32)file->dev) << 16) |
+               (((guint32)file->dev) >> 16)
            );
 }
 
@@ -72,8 +72,6 @@ gboolean rm_node_equal(RmFile *file1, RmFile *file2) {
             && (file1->dev   == file2->dev)
            );
 }
-
-
 
 RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);

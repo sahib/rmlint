@@ -28,9 +28,6 @@
 #include <unistd.h>
 
 #include "settings.h"
-//#include "formats.h"
-//#include "traverse.h"
-//#include "preprocess.h"
 
 /* Options not specified by commandline get a default option - this called before rm_cmd_parse_args */
 void rm_set_default_settings(RmSettings *settings) {
