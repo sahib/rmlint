@@ -14,7 +14,7 @@ TESTDIR_NAME = '/tmp/rmlint-unit-testdir'
 def create_testdir():
     try:
         os.makedirs(TESTDIR_NAME)
-    except FileExistsError:
+    except OSError:
         pass
 
 
@@ -30,7 +30,7 @@ def create_file(data, name):
     if '/' in name:
         try:
             os.makedirs(os.path.dirname(full_path))
-        except FileExistsError:
+        except OSError:
             pass
 
     with open(full_path, 'w') as handle:
