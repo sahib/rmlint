@@ -263,7 +263,6 @@ program = env.Program(
     Glob('src/*.c') + Glob('src/checksums/*.c') + Glob('src/formats/*.c') + Glob('src/libart/*.c')
 )
 
-
 if 'install' in COMMAND_LINE_TARGETS:
     env.Install('/usr/bin', [program])
     env.Install('/usr/share/man/man1', [manpage])
@@ -272,3 +271,15 @@ if 'install' in COMMAND_LINE_TARGETS:
 if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, "/usr/bin/rmlint")
     create_uninstall_target(env, '/usr/share/man/man1/rmlint.1.gz')
+
+
+def runTests(target = None, source = None, env = None) :
+    rc = subprocess.call('nosetests', env=env['ENV'], shell=True)
+    Exit(rc)
+
+
+if 'test' in COMMAND_LINE_TARGETS:
+    test_cmd = env.Command('runTests', None, Action(runTests, "Running tests"))
+    env.Depends(test_cmd, [program])
+    env.AlwaysBuild(test_cmd)
+    env.Alias('test', test_cmd)
