@@ -52,8 +52,8 @@ static bool rm_file_check_without_extension(RmFile *file_a, RmFile *file_b) {
     char *ext_a = rm_util_path_extension(file_a->basename);
     char *ext_b = rm_util_path_extension(file_b->basename);
 
-    size_t a_len = (ext_a) ? (ext_a - file_a->basename) : strlen(file_a->basename);
-    size_t b_len = (ext_b) ? (ext_b - file_b->basename) : strlen(file_b->basename);
+    size_t a_len = (ext_a) ? (ext_a - file_a->basename) : (int)strlen(file_a->basename);
+    size_t b_len = (ext_b) ? (ext_b - file_b->basename) : (int)strlen(file_b->basename);
 
     if(a_len != b_len) {
         return false;

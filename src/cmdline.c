@@ -801,6 +801,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_fmt_add(session->formats, "pretty", "stdout");
         rm_fmt_add(session->formats, "summary", "stdout");
         rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        if(settings->confirm_settings) {
+            rm_fmt_add(session->formats, "confirm", "stderr");
+        }
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
         rm_log_error("No valid -o flag encountered.\n");
