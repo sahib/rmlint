@@ -9,4 +9,4 @@ notifications:
     - sahib@online.de
     - thomas_d_j@yahoo.com.au
 
-script: scons VERBOSE=1 && sudo python maketestdir.py create && ./rmlint testdir && scons test
+script: scons VERBOSE=1 && sudo python maketestdir.py create && ./rmlint testdir && nosetests3
