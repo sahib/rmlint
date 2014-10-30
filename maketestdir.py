@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 
 def create_binary(path, stripped=False):
     path = path + '.stripped' if stripped else path + '.nonstripped'
-    command = 'echo -e \'{src}\' | gcc -o {path} {option} -xc -'.format(
+    command = 'echo \'{src}\' | gcc -o {path} {option} -xc -'.format(
         src=SOURCE, path=path, option=('-s' if stripped else '-ggdb3')
     )
     subprocess.call(command, shell=True)
