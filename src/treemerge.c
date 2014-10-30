@@ -534,6 +534,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
             continue;
         }
 
+        if(rm_session_was_aborted(self->session)) {
+            break;
+        }
+
         /* List of result directories */
         GQueue result_dirs = G_QUEUE_INIT;
 
@@ -674,6 +678,8 @@ void rm_tm_finish(RmTreeMerger *self) {
     }
     g_queue_clear(&new_dirs);
 
-    /* Recursively call self to march on */
-    rm_tm_finish(self);
+    if(!rm_session_was_aborted(self->session)) {
+        /* Recursively call self to march on */
+        rm_tm_finish(self);
+    }
 }
