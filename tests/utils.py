@@ -35,3 +35,11 @@ def create_file(data, name):
 
     with open(full_path, 'w') as handle:
         handle.write(data)
+
+
+def usual_setup_func():
+    create_testdir()
+
+
+def usual_teardown_func():
+    shutil.rmtree(TESTDIR_NAME)
