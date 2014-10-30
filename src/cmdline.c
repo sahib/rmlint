@@ -223,7 +223,7 @@ static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
     }
 
     if(access(path, R_OK) != 0) {
-        rm_log_error(YELLOW"FATAL: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
+        rm_log_error(YELLOW"WARNING: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
         settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
@@ -515,6 +515,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     int output_flag_cnt = -1;
     int option_index = 0;
     int path_index = 0;
+
+    /* True when an error occured during reading paths */
+    bool not_all_paths_read = false;
 
     /* Size string parsing error */
     const char *parse_error = NULL;
@@ -829,18 +832,30 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 
     /* Check the directory to be valid */
     while(optind < argc) {
+        int read_paths = 0;
         const char *dir_path = argv[optind];
         rm_log_debug("path %s\n", dir_path);
+
         if(strlen(dir_path) == 1 && *dir_path == '-') {
-            path_index += rm_cmd_read_paths_from_stdin(session, path_index);
+            read_paths = rm_cmd_read_paths_from_stdin(session, path_index);
         } else {
-            path_index += rm_cmd_add_path(session, path_index, argv[optind]);
+            read_paths = rm_cmd_add_path(session, path_index, argv[optind]);
         }
+
+        if(read_paths == 0) {
+            not_all_paths_read = true;
+        } else {
+            path_index += read_paths;
+        }
+
         optind++;
     }
-    if(path_index == 0) {
+    if(path_index == 0 && not_all_paths_read == false) {
         /* Still no path set? - use `pwd` */
         rm_cmd_add_path(session, path_index, settings->iwd);
+    } else if(path_index == 0 && not_all_paths_read) {
+        rm_log_error(RED"FATAL:"RESET" No valid paths given.\n");
+        rm_cmd_die(session, EXIT_FAILURE);
     }
 
     /* Copy commandline rmlint was invoked with by copying argv into a
