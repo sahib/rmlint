@@ -110,6 +110,7 @@ General Options
     There are variations of the above functions:
 
     * **bastard:** 256bit, half seeded **city**, half **murmur**. 
+    * **city256, city512, murmur256, murmur512:** Slower variations with more bits.
     * **spook32, spook64:** Faster version of **spooky** with less bits.
     * **city32, city64:** Faster version of **city** with less bits.
     * **paranoid:** No hash function, compares files byte-by-byte.
@@ -117,7 +118,8 @@ General Options
 **-v --loud / -V --quiet**
 
     Increase or decrease the verbosity. You can pass these options several
-    times. This only affects rmlint's logging on *stderr*.
+    times. This only affects rmlint's logging on *stderr*, but not the outputs
+    defined with **-o**.
 
 **-p --paranoid / -P --less-paranoid** (*default*)    
 
