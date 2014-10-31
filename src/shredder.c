@@ -735,11 +735,7 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
     if(free_file) {
         /* toss the file (and any embedded hardlinks)*/
         rm_file_destroy(file);
-    } else {
-        /* let the file live a bit more and copy the digest over */
-        file->digest = file->shred_group->digest;
-        file->free_digest = false;
-    }
+    } 
 }
 
 /* GCompareFunc for sorting files into optimum read order
@@ -819,7 +815,6 @@ void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file, GUINT_TO_POINTER(needs_free));
         g_queue_free(self->held_files);
         self->held_files = NULL;
-        // TODO
     }
 
     if (self->digest) {
@@ -1226,15 +1221,17 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
         }
         rm_fmt_unlock_state(tag->session->formats);
 
-        if(tag->session->settings->merge_directories) {
-            /* Cache the files for merging them into directories */
-            for(GList *iter = group->held_files->head; iter; iter = iter->next) {
-                RmFile *file = iter->data;
-                file->digest = group->digest;
-                file->free_digest = false;
+        /* Cache the files for merging them into directories */
+        for(GList *iter = group->held_files->head; iter; iter = iter->next) {
+            RmFile *file = iter->data;
+            file->digest = group->digest;
+            file->free_digest = false;
+            if(tag->session->settings->merge_directories) {
                 rm_tm_feed(tag->session->dir_merger, file);
             }
-        } else {
+        }
+
+        if(tag->session->settings->merge_directories == false) {
             /* Output them directly */
             rm_shred_forward_to_output(tag->session, group->held_files, false);
         }
