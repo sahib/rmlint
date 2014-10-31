@@ -222,9 +222,9 @@ formatters and their config options:
     then                  
       rm -f 'rmlint.sh';            
     fi                    
-     
-  
 
+
+  
 Paranoia
 --------
 
