@@ -202,10 +202,13 @@ formatters and their config options:
   do not want that you can pass the ``-d``. Addionally it will 
   delete itself after it ran, except you passed the ``-x`` switch.
 
+  It is enabled by default and writes to ``rmlint.sh``. 
+
   Example output:
 
   .. code-block:: bash
 
+    $ rmlint -o sh:stdout
     #!/bin/sh                                           
     # This file was autowritten by rmlint               
     # rmlint was executed from: /home/sahib/dev/rmlint/                      
@@ -223,7 +226,41 @@ formatters and their config options:
       rm -f 'rmlint.sh';            
     fi                    
 
+:csv: 
 
+    Outputs a csv formatted dump of all lint files. 
+    It looks like this:
+
+    .. code-block:: bash
+
+      $ rmlint -o csv -D
+      type,path,size,checksum
+      emptydir,"/home/sahib/dev/rmlint/tree2/b",0,00000000000000000000000000000000
+      duplicate_dir,"/home/sahib/dev/rmlint/test/b",4,f8772f6fda08bbc826543334663d6f13
+      duplicate_dir,"/home/sahib/dev/rmlint/test/a",4,f8772f6fda08bbc826543334663d6f13
+      duplicate_dir,"/home/sahib/dev/rmlint/tree/b",8,62202a79add28a72209b41b6c8f43400
+      duplicate_dir,"/home/sahib/dev/rmlint/tree/a",8,62202a79add28a72209b41b6c8f43400
+      duplicate_dir,"/home/sahib/dev/rmlint/tree2/a",4,311095bc5669453990cd205b647a1a00
+
+:pretty: 
+
+    Prettyprints the finds in a colorful output supposed to be printed on stdout
+    or stderr. This is what you see by default.
+
+:summary:
+
+    Sums up the run in a few lines with some statistics. This enabled by default
+    too. 
+
+:progressbar: 
+
+    Prints a progressbar during the run of ``rmlint``. This is recommended for
+    large runs where the ``pretty`` formatter would print thousands of lines.
+    U
+
+.. todo:: Add config parameters.
+
+   These have some: csv, json, sh
   
 Paranoia
 --------
@@ -268,3 +305,54 @@ We recommend never to use the ``-P`` option.
 
 Original detection
 ------------------
+
+As mentioned before, ``rmlint`` divides a group of dupes in one original and
+clones of that one. While the chosen original might not be the one that was
+there first, it is a good thing to keep one file of a group to prevent dataloss.
+
+The way ``rmlint`` chooses the original can be driven by the ``-S``
+(``--sortcriteria``) option. 
+
+Here's an example:
+
+.. code-block:: bash
+   
+   # Normal run:
+   $ rmlint  
+   ls c
+   rm a
+   rm b
+
+   # Use alphabetically first one as original
+   $ rmlit -S 
+   ls a
+   rm b
+   rm c
+
+Arguably, using the alphabetically first one does not make much sense, except
+for showing the feature. Therefore the default is **-S m** -- which takes the
+oldest file, determined by it's modification time. 
+
+Here's a table of letters you can supply to the ``-S`` option:
+
+    - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)
+    - **a**: keep first alphabetically   **A**: keep last alphabetically
+    - **p**: keep first named path       **P**: keep last named path
+
+With time, new letters might be implemented. 
+
+Flagging original directories
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+But what if you know better than ``rmlint``? What if your originals are in some
+specific path, while you know that the files in it are copied over and over?
+In this case you can prefix this directory on the commandline with //:
+
+.. code-block:: bash
+
+   # God damn use -- as sane tools would?
+
+Final notes
+-----------
+
+If you read so far, you know ``rmlint`` pretty well by now. 
