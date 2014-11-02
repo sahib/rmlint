@@ -76,9 +76,9 @@ static void signal_handler(int signum) {
     case SIGFPE:
     case SIGABRT:
     case SIGSEGV:
-        rm_log_error(RED"FATAL: "RESET"Aborting due to a fatal error. (signal received: %s)\n", g_strsignal(signum));
+        rm_log_error(_(RED"FATAL: "RESET"Aborting due to a fatal error. (signal received: %s)\n"), g_strsignal(signum));
     default:
-        rm_log_error(RED"FATAL: "RESET"Please file a bug report (See rmlint -h)\n");
+        rm_log_error(_(RED"FATAL: "RESET"Please file a bug report (See rmlint -h)\n"));
         exit(EXIT_FAILURE);
         break;
     }
@@ -98,6 +98,12 @@ int main(int argc, const char **argv) {
 
     /* Make printing umlauts work */
     setlocale(LC_ALL, "");
+    bindtextdomain(GETTEXT_PACKAGE, "");
+    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+    textdomain(GETTEXT_PACKAGE);
+
+    char *s = _("test");
+    g_printerr(_("test"));
 
     /* Register signals */
     SESSION_POINTER = &session;

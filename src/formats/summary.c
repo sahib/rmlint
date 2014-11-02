@@ -52,7 +52,8 @@ static void rm_fmt_prog(
     }
 
     if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%"LLU"%s file(s) after investigation, nothing to search through.\n",
+        ARROW fprintf(out,
+                      _("%s%"LLU"%s file(s) after investigation, nothing to search through.\n"),
                       MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
                      );
         return;
@@ -62,11 +63,12 @@ static void rm_fmt_prog(
     fprintf(out, "\n");
 
     if(rm_session_was_aborted(session)) {
-        ARROW fprintf(out, "Early shutdown, probably not all lint was found.\n");
+        ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
 
     ARROW fprintf(
-        out, "In total %s%"LLU"%s files, whereof %s%"LLU"%s are duplicates in %s%"LLU"%s groups.\n",
+        out,
+        _("In total %s%"LLU"%s files, whereof %s%"LLU"%s are duplicates in %s%"LLU"%s groups.\n"),
         MAYBE_RED(session), session->total_files, MAYBE_RESET(session),
         MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
         MAYBE_RED(session), session->dup_group_counter, MAYBE_RESET(session)
@@ -79,13 +81,15 @@ static void rm_fmt_prog(
     );
 
     ARROW fprintf(
-        out, "This equals %s%s%s of duplicates which could be removed.\n",
+        out,
+        _("This equals %s%s%s of duplicates which could be removed.\n"),
         MAYBE_RED(session), size_string_buf, MAYBE_RESET(session)
     );
 
     if(session->other_lint_cnt > 0) {
         ARROW fprintf(
-            out, "%s%"LLU"%s other suspicious item(s) found, which may vary in size.\n",
+            out,
+            _("%s%"LLU"%s other suspicious item(s) found, which may vary in size.\n"),
             MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
         );
     }
@@ -110,7 +114,8 @@ static void rm_fmt_prog(
         }
 
         fprintf(
-            out, "Wrote a %s%s%s file to %s%s%s.\n",
+            out,
+            _("Wrote a %s%s%s file to %s%s%s.\n"),
             MAYBE_BLUE(session), handler->name, MAYBE_RESET(session),
             MAYBE_GREEN(session), path, MAYBE_RESET(session)
         );

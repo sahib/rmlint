@@ -54,6 +54,14 @@
 
 #include <glib.h>
 
+#include <libintl.h>
+#define GETTEXT_PACKAGE "rmlint"
+//#include <glib/gi18n-lib.h>
+
+#define _(String) gettext (String)
+#define gettext_noop(String) String
+#define N_(String) gettext_noop (String)
+
 typedef guint64 RmOff;
 
 #endif
