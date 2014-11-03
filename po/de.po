@@ -1,0 +1,85 @@
+# German translations for rmlint package.
+# Copyright (C) 2014 THE rmlint'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the rmlint package.
+# Automatically generated, 2014.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: rmlint 2.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-11-03 22:22+0100\n"
+"PO-Revision-Date: 2014-11-03 22:22+0100\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ASCII\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/formats/pretty.c:34
+msgid "Bad symlink(s)"
+msgstr "Falsche symlink(s)"
+
+#: src/formats/pretty.c:35
+msgid "Empty dir(s)"
+msgstr "Leere Verzeichnisse"
+
+#: src/formats/pretty.c:36
+msgid "Non stripped binarie(s)"
+msgstr "Programme mit Debuginformation(en)"
+
+#: src/formats/pretty.c:37
+msgid "Bad UID(s)"
+msgstr "Falsche UID(s)"
+
+#: src/formats/pretty.c:38
+msgid "Bad GID(s)"
+msgstr "Falsche GID(s)"
+
+#: src/formats/pretty.c:39
+msgid "Bad UID and GID(s)"
+msgstr "Falsche UID und GID(s)"
+
+#: src/formats/pretty.c:40
+msgid "Empty file(s)"
+msgstr "Leere Dateien"
+
+#: src/formats/pretty.c:41
+msgid "Duplicate(s)"
+msgstr "Duplikate"
+
+#: src/formats/pretty.c:42
+msgid "Duplicate Directorie(s)"
+msgstr "Doppelte Verzeichnisse"
+
+#: src/formats/summary.c:58
+#, c-format
+msgid "file(s) after investigation, nothing to search through.\n"
+msgstr "Datein nach dem Traversieren, nichts zum durchsuchen.\n"
+
+#: src/formats/summary.c:66
+#, c-format
+msgid "Early shutdown, probably not all lint was found.\n"
+msgstr "Früher Abbruch, vermutlich wurde nicht alles gefunden.\n"
+
+#: src/formats/summary.c:76
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr "Insgesamt %s dateien, von denen %s Duplikate in %s Gruppen sind.\n"
+
+#: src/formats/summary.c:88
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr "Dies entspricht %s%s%s an Duplikaten die entfernt werden können.\n"
+
+#: src/formats/summary.c:99
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
+msgstr "andere merkwürdige Datei(en) gefunden, die in ihrer Größe variieren.\n"
+
+#: src/formats/summary.c:123
+#, c-format
+msgid "Wrote a %s%s%s file to %s%s%s.\n"
+msgstr "Eine %s%s%s Datei wurde nach %s%s%s geschrieben.\n"

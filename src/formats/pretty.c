@@ -30,16 +30,16 @@
 #include <stdio.h>
 
 static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
-    [RM_LINT_TYPE_UNKNOWN]      = "",
-    [RM_LINT_TYPE_BLNK]         = "Bad link(s)",
-    [RM_LINT_TYPE_EDIR]         = "Empty dir(s)",
-    [RM_LINT_TYPE_NBIN]         = "Non stripped binarie(s)",
-    [RM_LINT_TYPE_BADUID]       = "Bad UID(s)",
-    [RM_LINT_TYPE_BADGID]       = "Bad GID(s)",
-    [RM_LINT_TYPE_BADUGID]      = "Bad UID and GID(s)",
-    [RM_LINT_TYPE_EFILE]        = "Empty file(s)",
-    [RM_LINT_TYPE_DUPE_CANDIDATE] = "Duplicate(s)",
-    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "Duplicate Directorie(s)"
+    [RM_LINT_TYPE_UNKNOWN]            = "",
+    [RM_LINT_TYPE_BLNK]               = N_("Bad symlink(s)"),
+    [RM_LINT_TYPE_EDIR]               = N_("Empty dir(s)"),
+    [RM_LINT_TYPE_NBIN]               = N_("Non stripped binarie(s)"),
+    [RM_LINT_TYPE_BADUID]             = N_("Bad UID(s)"),
+    [RM_LINT_TYPE_BADGID]             = N_("Bad GID(s)"),
+    [RM_LINT_TYPE_BADUGID]            = N_("Bad UID and GID(s)"),
+    [RM_LINT_TYPE_EFILE]              = N_("Empty file(s)"),
+    [RM_LINT_TYPE_DUPE_CANDIDATE]     = N_("Duplicate(s)"),
+    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = N_("Duplicate Directorie(s)")
 };
 
 static const char *RM_LINT_TYPE_TO_COMMAND[] = {
@@ -100,7 +100,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
             out, "\n%s#%s %s:\n",
             MAYBE_YELLOW(session),
             MAYBE_RESET(session),
-            RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]
+            _(RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type])
         );
         self->last_lint_type = file->lint_type;
     }
