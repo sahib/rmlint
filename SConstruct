@@ -279,11 +279,11 @@ if 'test' in COMMAND_LINE_TARGETS:
 
 
 def xgettext(target=None, source=None, env=None):
-    rc = subrpocess.call('xgettext --package-name rmlint -k_ -kN_ --package-version 2.0.0 --default-domain rmlint --output rmlint.pot $(find src -iname "*.[ch]")', shell=True)
+    rc = subprocess.call('xgettext --package-name rmlint -k_ -kN_ --package-version 2.0.0 --default-domain rmlint --output rmlint.pot $(find src -iname "*.[ch]")', shell=True)
     Exit(rc)
 
 if 'xgettext' in COMMAND_LINE_TARGETS:
-    cmd = env.Command('')
+    cmd = env.Command('xgettext', None, Action(xgettext, "Running xgettext"))
 
 languages = []
 install_paths = []
