@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+# TODO: Cleanup this a bit.
+
 import os
 import sys
 import time
@@ -124,7 +126,7 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['CCCOMSTR']
     del options['LINKCOMSTR']
 
-env = Environment(**options)
+env = Environment(tools=['default', 'gettext'], **options)
 
 ###########################################################################
 #                              Actual Script                              #
@@ -258,20 +260,11 @@ manpage = env.Command(
 )
 
 env.AlwaysBuild(manpage)
+
 program = env.Program(
     'rmlint',
     Glob('src/*.c') + Glob('src/checksums/*.c') + Glob('src/formats/*.c') + Glob('src/libart/*.c')
 )
-
-if 'install' in COMMAND_LINE_TARGETS:
-    env.Install('/usr/bin', [program])
-    env.Install('/usr/share/man/man1', [manpage])
-    env.Alias('install', ['/usr/bin', '/usr/share/man/man1'])
-
-if 'uninstall' in COMMAND_LINE_TARGETS:
-    create_uninstall_target(env, "/usr/bin/rmlint")
-    create_uninstall_target(env, '/usr/share/man/man1/rmlint.1.gz')
-
 
 def runTests(target = None, source = None, env = None) :
     rc = subprocess.call('nosetests', env=env['ENV'], shell=True)
@@ -283,3 +276,34 @@ if 'test' in COMMAND_LINE_TARGETS:
     env.Depends(test_cmd, [program])
     env.AlwaysBuild(test_cmd)
     env.Alias('test', test_cmd)
+
+
+def xgettext(target=None, source=None, env=None):
+    rc = subrpocess.call('xgettext --package-name rmlint -k_ -kN_ --package-version 2.0.0 --default-domain rmlint --output rmlint.pot $(find src -iname "*.[ch]")', shell=True)
+    Exit(rc)
+
+if 'xgettext' in COMMAND_LINE_TARGETS:
+    cmd = env.Command('')
+
+languages = []
+install_paths = []
+for src in env.Glob('po/*.po'):
+    lng = os.path.basename(str(src)[:-3])
+    dst = lng + '.mo'
+    env.Command(dst, src, 'msgfmt $SOURCE -o po/$TARGET')
+
+    path = '$prefix/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
+    install_paths.append(path)
+    env.InstallAs(path, os.path.join('po', dst))
+
+if 'install' in COMMAND_LINE_TARGETS:
+    env.Install('$prefix/bin', [program])
+    env.Install('$prefix/share/man/man1', [manpage])
+    env.Alias('install', ['$prefix/bin', '$prefix/share/man/man1'] + install_paths)
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+    create_uninstall_target(env, "$prefix/bin/rmlint")
+    create_uninstall_target(env, '$prefix/share/man/man1/rmlint.1.gz')
+
+    for lang_path in install_paths:
+        create_uninstall_target(env, lang_path)
