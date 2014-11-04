@@ -52,9 +52,10 @@ static void rm_fmt_prog(
     }
 
     if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%"LLU"%s file(s) after investigation, nothing to search through.\n",
-                      MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
-                     );
+        ARROW fprintf(out, "%s%"LLU"%s",
+            MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
+        );
+        fprintf(out, _("file(s) after investigation, nothing to search through.\n"));
         return;
     }
 
@@ -62,14 +63,18 @@ static void rm_fmt_prog(
     fprintf(out, "\n");
 
     if(rm_session_was_aborted(session)) {
-        ARROW fprintf(out, "Early shutdown, probably not all lint was found.\n");
+        ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
 
+    char numbers[3][512];
+    snprintf(numbers[0], sizeof(numbers[0]), "%s%"LLU"%s", MAYBE_RED(session), session->total_files, MAYBE_RESET(session));
+    snprintf(numbers[1], sizeof(numbers[1]), "%s%"LLU"%s", MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session));
+    snprintf(numbers[2], sizeof(numbers[2]), "%s%"LLU"%s", MAYBE_RED(session), session->dup_group_counter, MAYBE_RESET(session));
+
     ARROW fprintf(
-        out, "In total %s%"LLU"%s files, whereof %s%"LLU"%s are duplicates in %s%"LLU"%s groups.\n",
-        MAYBE_RED(session), session->total_files, MAYBE_RESET(session),
-        MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
-        MAYBE_RED(session), session->dup_group_counter, MAYBE_RESET(session)
+        out,
+        _("In total %s files, whereof %s are duplicates in %s groups.\n"),
+        numbers[0], numbers[1], numbers[2]
     );
 
     /* log10(2 ** 64) + 2 = 21; */
@@ -79,15 +84,19 @@ static void rm_fmt_prog(
     );
 
     ARROW fprintf(
-        out, "This equals %s%s%s of duplicates which could be removed.\n",
+        out,
+        _("This equals %s%s%s of duplicates which could be removed.\n"),
         MAYBE_RED(session), size_string_buf, MAYBE_RESET(session)
     );
 
     if(session->other_lint_cnt > 0) {
         ARROW fprintf(
-            out, "%s%"LLU"%s other suspicious item(s) found, which may vary in size.\n",
+            out,
+            "%s%"LLU"%s ",
             MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
         );
+
+        fprintf(out, _("other suspicious item(s) found, which may vary in size.\n"));
     }
 
     bool first_print_flag = true;
@@ -110,7 +119,8 @@ static void rm_fmt_prog(
         }
 
         fprintf(
-            out, "Wrote a %s%s%s file to %s%s%s.\n",
+            out,
+            _("Wrote a %s%s%s file to %s%s%s.\n"),
             MAYBE_BLUE(session), handler->name, MAYBE_RESET(session),
             MAYBE_GREEN(session), path, MAYBE_RESET(session)
         );

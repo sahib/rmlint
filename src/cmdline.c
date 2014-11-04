@@ -80,16 +80,6 @@ static void rm_cmd_show_help(bool use_pager) {
     rm_log_error("You seem to have no manpage for rmlint.\n");
 }
 
-/* Check if this is the 'preferred' dir */
-bool rm_cmd_check_if_preferred(const char *dir) {
-    if(dir != NULL) {
-        size_t length = strlen(dir);
-        if(length >= 2 && dir[0] == '/' && dir[1] == '/')
-            return TRUE;
-    }
-    return FALSE;
-}
-
 static const struct FormatSpec {
     const char *id;
     unsigned base;
@@ -213,21 +203,15 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
     [4] = G_LOG_LEVEL_DEBUG
 };
 
-static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
+static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
     RmSettings *settings = session->settings;
-    bool is_pref = rm_cmd_check_if_preferred(path);
-
-    if(is_pref) {
-        path += 2;  /* skip first two characters ie "//" */
-        rm_log_debug("new path %s\n", path);
-    }
 
     if(access(path, R_OK) != 0) {
         rm_log_error(YELLOW"WARNING: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
         settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
-        settings->is_prefd[index] = is_pref;
+        settings->is_prefd[index] = is_prefd;
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
 
         settings->paths[index + 0] = realpath(path, NULL);
@@ -236,12 +220,12 @@ static bool rm_cmd_add_path(RmSession *session, int index, const char *path) {
     }
 }
 
-static int rm_cmd_read_paths_from_stdin(RmSession *session, int index) {
+static int rm_cmd_read_paths_from_stdin(RmSession *session,  bool is_prefd, int index) {
     int paths_added = 0;
     char path_buf[PATH_MAX];
 
     while(fgets(path_buf, PATH_MAX, stdin)) {
-        paths_added += rm_cmd_add_path(session, index + paths_added, strtok(path_buf, "\n"));
+        paths_added += rm_cmd_add_path(session, is_prefd, index + paths_added, strtok(path_buf, "\n"));
     }
 
     return paths_added;
@@ -830,16 +814,20 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
                               (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1
                           )];
 
+    bool is_prefd = false;
+
     /* Check the directory to be valid */
     while(optind < argc) {
         int read_paths = 0;
         const char *dir_path = argv[optind];
         rm_log_debug("path %s\n", dir_path);
 
-        if(strlen(dir_path) == 1 && *dir_path == '-') {
-            read_paths = rm_cmd_read_paths_from_stdin(session, path_index);
+        if(strncmp(dir_path, "-", 1) == 0) {
+            read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);
+        } else if(strncmp(dir_path, "//", 2) == 0) {
+            is_prefd = !is_prefd;
         } else {
-            read_paths = rm_cmd_add_path(session, path_index, argv[optind]);
+            read_paths = rm_cmd_add_path(session, is_prefd, path_index, argv[optind]);
         }
 
         if(read_paths == 0) {
@@ -852,7 +840,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     }
     if(path_index == 0 && not_all_paths_read == false) {
         /* Still no path set? - use `pwd` */
-        rm_cmd_add_path(session, path_index, settings->iwd);
+        rm_cmd_add_path(session, is_prefd, path_index, settings->iwd);
     } else if(path_index == 0 && not_all_paths_read) {
         rm_log_error(RED"FATAL:"RESET" No valid paths given.\n");
         rm_cmd_die(session, EXIT_FAILURE);

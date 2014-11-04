@@ -1,0 +1,84 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: rmlint 2.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-11-03 23:50+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/formats/pretty.c:34
+msgid "Bad symlink(s)"
+msgstr ""
+
+#: src/formats/pretty.c:35
+msgid "Empty dir(s)"
+msgstr ""
+
+#: src/formats/pretty.c:36
+msgid "Non stripped binarie(s)"
+msgstr ""
+
+#: src/formats/pretty.c:37
+msgid "Bad UID(s)"
+msgstr ""
+
+#: src/formats/pretty.c:38
+msgid "Bad GID(s)"
+msgstr ""
+
+#: src/formats/pretty.c:39
+msgid "Bad UID and GID(s)"
+msgstr ""
+
+#: src/formats/pretty.c:40
+msgid "Empty file(s)"
+msgstr ""
+
+#: src/formats/pretty.c:41
+msgid "Duplicate(s)"
+msgstr ""
+
+#: src/formats/pretty.c:42
+msgid "Duplicate Directorie(s)"
+msgstr ""
+
+#: src/formats/summary.c:58
+#, c-format
+msgid "file(s) after investigation, nothing to search through.\n"
+msgstr ""
+
+#: src/formats/summary.c:66
+#, c-format
+msgid "Early shutdown, probably not all lint was found.\n"
+msgstr ""
+
+#: src/formats/summary.c:76
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr ""
+
+#: src/formats/summary.c:88
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr ""
+
+#: src/formats/summary.c:99
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
+msgstr ""
+
+#: src/formats/summary.c:123
+#, c-format
+msgid "Wrote a %s%s%s file to %s%s%s.\n"
+msgstr ""

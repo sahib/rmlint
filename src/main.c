@@ -96,8 +96,14 @@ int main(int argc, const char **argv) {
     /* call logging_callback on every message */
     g_log_set_default_handler(logging_callback, &session);
 
+    bindtextdomain("rmlint", "/usr/share/locale");
+    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+
     /* Make printing umlauts work */
     setlocale(LC_ALL, "");
+
+    /* Say we're the textdomain "rmlint" */
+    textdomain("rmlint");
 
     /* Register signals */
     SESSION_POINTER = &session;

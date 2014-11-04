@@ -61,10 +61,10 @@ These chapters are informative and are not essential for the average
 user. People that want to extend **rmlint** might want to read this though: 
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
        
    developers
-   rmlint_vs_the_world
+   translators
    Online-manpage of rmlint(1) <rmlint.1.in>
 
 Authors
