@@ -9,7 +9,7 @@ Adding new languages
 .. code-block:: bash
 
    # Fork a new .po file from the po-template (here swedish):
-   $ msginit -i rmlint.pot -o po/se.po --locale se --no-translator
+   $ msginit -i po/rmlint.pot -o po/se.po --locale se --no-translator
 
    # Edit the po/se.po file, the format is self describing
    $ vim po/se.po
@@ -79,6 +79,6 @@ You need to add the new strings to the existing translations now:
 
 .. code-block:: bash
 
-   $ msgmerge po/de.po rmlint.pot
+   $ msgmerge po/de.po po/rmlint.pot
 
 After that you can translate the new strings and proceed like in the upper steps.
