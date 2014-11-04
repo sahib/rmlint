@@ -127,7 +127,6 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['LINKCOMSTR']
 
 env = Environment(**options)
-env.Tool('gettext')
 
 ###########################################################################
 #                              Actual Script                              #
