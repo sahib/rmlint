@@ -18,7 +18,7 @@ find duplicate files and other space waste efficiently
 SYNOPSIS
 ========
 
-rmlint [[//]TARGET_DIR ...] [FILE ...] [-] [OPTIONS]
+rmlint [TARGET_DIR_OR_FILES ...] [//] [TARGET_DIR_OR_FILES ...] [-] [OPTIONS]
 
 DESCRIPTION
 ===========
@@ -284,17 +284,17 @@ Traversal Options
 Original Detection Options
 --------------------------
 
-**-k --keepall// / -K --no-keepall//** (*default*)
+**-k --keep-all-tagged / -K --keep-all-untagged** (*default*)
 
     Don't delete any duplicates that are in original paths.
-    (Paths that were prefixed with **//**).
+    (Paths that were named after **//**).
     
-    **Note:** for lint types other than duplicates, `--keepallorig` option is ignored.
+    **Note:** for lint types other than duplicates, `--keep-all-tagged` option is ignored.
 
-**-m --mustmatch// / -M --no-mustmatch//** (*default*)
+**-m --must-match-tagged / -M --must-match-untagged** (*default*)
 
     Only look for duplicates of which one is in original paths.
-    (Paths that were prefixed with **//**).
+    (Paths that were named after **//**).
 
 **-S --sortcriteria=criteria** (*default*: m)
 
@@ -325,8 +325,32 @@ FORMATTERS
   * *symlinks_only*: Only relevant with *use_ln*, always use symbolic links,
     never use hardlinks.
 
+* ``json``: Print a JSON-formatted dump of all found reports.
+  Outputs all finds as a json document. The document is a list of dictionaries, 
+  where the first and last element is the header and the footer respectively,
+  everything between are data-dictionaries. 
+
+  Available options:
+
+  - *use_header=[true|false]:* Print the header with metadata.
+  - *use_footer=[true|false]:* Print the footer with statistics.
+
+* ``stamp``:
+
+  Outputs a timestamp of the time ``rmlint`` was run.
+
+  Available options:
+
+  - *iso8601=[true|false]:* Write an ISO8601 formatted timestamps or seconds
+    since epoch?
+
 * ``progressbar``: Shows a progressbar. This is meant for use with **stdout** or
   **stderr**.
+  
+  Available options:
+
+  * *update_interval=number:* Number of files to wait between updates.
+    Higher values use less resources. 
 
 * ``pretty``: Shows all found items in realtimes nicely colored. This formatter
   is activated as default.
@@ -348,7 +372,7 @@ EXAMPLES
 
   Read paths from *stdin* and check all png files for duplicates.
 
-- ``rmlint //files files_backup --keepall// --mustmatch//``
+- ``rmlint files_backup // files --keep-all-tagged --must-match-tagged``
 
   Check for duplicate files between the current files and the backup of it. 
   Only files in *files_backup* would be reported as duplicate. 

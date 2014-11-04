@@ -147,16 +147,16 @@ Here's an example:
 
 Here you would get this output printed on ``stderr``:
 
-.. code-block:: json
+.. code-block:: javascript
 
     [{
       "description": "rmlint json-dump of lint files",
-      "cwd": "/home/sahib/dev/rmlint/",
+      "cwd": "/home/user/",
       "args": "rmlint -o json:stderr"
     },
     {
       "type": "duplicate_file",
-      "path": "/home/sahib/dev/rmlint/test/b/one",
+      "path": "/home/user/test/b/one",
       "size": 2,
       "inode": 2492950,
       "disk_id": 64771,
@@ -185,46 +185,71 @@ formatters and their config options:
 
 :json:
 
-  Outputs all finds as a json document. The document is a list of dictionaries, 
-  where the first and last element is the header and the footer respectively,
-  everything between are data-dictionaries. This format was chosen to allow
-  application to parse the output in realtime while ``rmlint`` is still running. 
+    Outputs all finds as a json document. The document is a list of dictionaries, 
+    where the first and last element is the header and the footer respectively,
+    everything between are data-dictionaries. This format was chosen to allow
+    application to parse the output in realtime while ``rmlint`` is still running. 
 
-  The header contains information about the proram invocation, while the footer
-  contains statistics about the program-run. Every data element has a type which
-  identifies it's lint type (you can lookup all types here: ... TOOD ...).
+    The header contains information about the proram invocation, while the footer
+    contains statistics about the program-run. Every data element has a type which
+    identifies it's lint type (you can lookup all types here_).
+
+    **Config values:**
+
+    - *use_header=[true|false]:* Print the header with metadata.
+    - *use_footer=[true|false]:* Print the footer with statistics.
+
+.. _here: https://github.com/sahib/rmlint/blob/develop/src/file.c#L95
 
 :sh: 
 
-  Outputs a shell script that has default commands for all lint types.
-  The script can be executed (it is already `chmod +x``'d by ``rmlint``).
-  By default it will ask you if you really want to proceed. If you 
-  do not want that you can pass the ``-d``. Addionally it will 
-  delete itself after it ran, except you passed the ``-x`` switch.
+    Outputs a shell script that has default commands for all lint types.
+    The script can be executed (it is already `chmod +x``'d by ``rmlint``).
+    By default it will ask you if you really want to proceed. If you 
+    do not want that you can pass the ``-d``. Addionally it will 
+    delete itself after it ran, except you passed the ``-x`` switch.
 
-  It is enabled by default and writes to ``rmlint.sh``. 
+    It is enabled by default and writes to ``rmlint.sh``. 
 
-  Example output:
+    Example output:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
-    $ rmlint -o sh:stdout
-    #!/bin/sh                                           
-    # This file was autowritten by rmlint               
-    # rmlint was executed from: /home/sahib/dev/rmlint/                      
-    # You command line was: ./rmlint -o sh:rmlint.sh
-     
-    # ... snip ...
+      $ rmlint -o sh:stdout
+      #!/bin/sh                                           
+      # This file was autowritten by rmlint               
+      # rmlint was executed from: /home/user/                      
+      # You command line was: ./rmlint -o sh:rmlint.sh
+       
+      # ... snip ...
 
-    echo  '/home/sahib/dev/rmlint/test/b/one' # original
-    rm -f '/home/sahib/dev/rmlint/test/b/file' # duplicate
-    rm -f '/home/sahib/dev/rmlint/test/a/two' # duplicate
-    rm -f '/home/sahib/dev/rmlint/test/a/file' # duplicate
-                     
-    if [ -z $DO_REMOVE ]  
-    then                  
-      rm -f 'rmlint.sh';            
-    fi                    
+      echo  '/home/user/test/b/one' # original
+      rm -f '/home/user/test/b/file' # duplicate
+      rm -f '/home/user/test/a/two' # duplicate
+      rm -f '/home/user/test/a/file' # duplicate
+                       
+      if [ -z $DO_REMOVE ]  
+      then                  
+        rm -f 'rmlint.sh';            
+      fi                    
+
+    **Config values:**
+
+    - *use_ln=[true|false]:* Replace duplicate files with symbolic links (if on different
+      device as original) or with hardlinks (if on same device as original).
+    - *symlinks_only=[true|false]:* Always use symbolic links with *use_ln*, never
+      hardlinks.
+
+    **Example:**
+
+    .. code-block:: bash
+
+      $ rmlint -o sh:stdout -o sh:rmlint.sh -c sh:use_ln=true -c sh:symlinks_only=true
+      ...
+      echo  '/home/user/test/b/one' # original
+      ln -s '/home/user/test/b/file' # duplicate
+      $ ./rmlint.sh -d
+      /home/user/test/b/one
 
 :csv: 
 
@@ -235,17 +260,30 @@ formatters and their config options:
 
       $ rmlint -o csv -D
       type,path,size,checksum
-      emptydir,"/home/sahib/dev/rmlint/tree2/b",0,00000000000000000000000000000000
-      duplicate_dir,"/home/sahib/dev/rmlint/test/b",4,f8772f6fda08bbc826543334663d6f13
-      duplicate_dir,"/home/sahib/dev/rmlint/test/a",4,f8772f6fda08bbc826543334663d6f13
-      duplicate_dir,"/home/sahib/dev/rmlint/tree/b",8,62202a79add28a72209b41b6c8f43400
-      duplicate_dir,"/home/sahib/dev/rmlint/tree/a",8,62202a79add28a72209b41b6c8f43400
-      duplicate_dir,"/home/sahib/dev/rmlint/tree2/a",4,311095bc5669453990cd205b647a1a00
+      emptydir,"/home/user/tree2/b",0,00000000000000000000000000000000
+      duplicate_dir,"/home/user/test/b",4,f8772f6fda08bbc826543334663d6f13
+      duplicate_dir,"/home/user/test/a",4,f8772f6fda08bbc826543334663d6f13
+      duplicate_dir,"/home/user/tree/b",8,62202a79add28a72209b41b6c8f43400
+      duplicate_dir,"/home/user/tree/a",8,62202a79add28a72209b41b6c8f43400
+      duplicate_dir,"/home/user/tree2/a",4,311095bc5669453990cd205b647a1a00
+
+    **Config values:**
+
+    - *use_header=[true|false]:* Print the column name headers. 
+  
+:stamp:
+
+    Outputs a timestamp of the time ``rmlint`` was run.
+
+    **Config values:**
+
+    - *iso8601=[true|false]:* Write an ISO8601 formatted timestamps or seconds
+      since epoch?
 
 :pretty: 
 
-    Prettyprints the finds in a colorful output supposed to be printed on stdout
-    or stderr. This is what you see by default.
+    Prettyprints the finds in a colorful output supposed to be printed on
+    *stdout* or *stderr.* This is what you see by default.
 
 :summary:
 
@@ -256,11 +294,11 @@ formatters and their config options:
 
     Prints a progressbar during the run of ``rmlint``. This is recommended for
     large runs where the ``pretty`` formatter would print thousands of lines.
-    U
 
-.. todo:: Add config parameters.
+    **Config values:**
 
-   These have some: csv, json, sh
+    - *update_interval=number:* Number of files to wait between updates.
+      Higher values use less resources. 
   
 Paranoia
 --------
@@ -324,7 +362,7 @@ Here's an example:
    rm b
 
    # Use alphabetically first one as original
-   $ rmlit -S 
+   $ rmlint -S 
    ls a
    rm b
    rm c
@@ -335,9 +373,11 @@ oldest file, determined by it's modification time.
 
 Here's a table of letters you can supply to the ``-S`` option:
 
-    - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)
-    - **a**: keep first alphabetically   **A**: keep last alphabetically
-    - **p**: keep first named path       **P**: keep last named path
+===== =========================== ===== ===========================
+**m** keep lowest mtime (oldest)  **M** keep highest mtime (newest)
+**a** keep first alphabetically   **A** keep last alphabetically
+**p** keep first named path       **P** keep last named path
+===== =========================== ===== ===========================
 
 With time, new letters might be implemented. 
 
@@ -346,13 +386,55 @@ Flagging original directories
 
 But what if you know better than ``rmlint``? What if your originals are in some
 specific path, while you know that the files in it are copied over and over?
-In this case you can prefix this directory on the commandline with //:
+In this case you can flag directories on the commandline to be original:
 
 .. code-block:: bash
 
-   # God damn use -- as sane tools would?
+   # Every path behind the // is considered to be an original
+   $ rmlint a // b
+   ls b/file
+   rm a/file
 
-Final notes
------------
+There are two slightly esoteric related options to this:
+``-k`` (``--keep-all-tagged``) and ``-m`` (``--must-match-tagged``).
+``-k`` tells ``rmlint`` to never delete any duplicates that are in original
+paths. Even if this means to ignore them. ``-m`` only accepts duplicates if they
+have at least one related original in an original path.
+
+
+Misc options
+------------
 
 If you read so far, you know ``rmlint`` pretty well by now. 
+Here's just a list of options that are nice to know, but not essential:
+
+- ``-r`` (``--hidden``): Include hidden files and directories - this is to save
+  you from destroying git repositories (or similar programs) that save their
+  information in a ``.git`` directory where ``rmlint`` often finds duplicates. 
+
+  If you want to be safe you can do something like this:
+
+  .. code-block:: bash
+  
+      $ find . | grep -v '\(.git\|.svn\)' | rmlint -
+
+  But you would have checked the output anyways?
+
+- If something ever goes wrong, it might help to increase the verbosity with
+  ``-v`` (up to ``-vvv``).
+- Usually the commandline output is colored, but you can disable it explicitly
+  with ``-w`` (``--with-color``). If *stdout* or *stderr* is not an terminal
+  anyways, ``rmlint`` will disable colors itself.
+- You can limit the traversal depth with ``-d`` (``--max-depth``):
+
+  .. code-block
+
+      $ rmlint d 0 
+      <finds everything in the same working directory>
+
+- The still experimental ``-D`` (``--merge-directories``) option is able to
+  merge found duplicates into duplicate directories. Use with care!
+
+- If you want to prevent ``rmlint`` from crossing mountpoints (e.g. scan a home
+  directory, but no the HD mounted in there), you can use the ``-X``
+  (``--no-crossdev``) option.
