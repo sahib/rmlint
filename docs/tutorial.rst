@@ -1,8 +1,6 @@
 Tutorial
 ========
 
-.. todo:: Write it.
-
 Welcome to the Tutorial of ``rmlint``.
 
 We use a few terms that might not be obvious to you at first,
@@ -362,7 +360,7 @@ Here's an example:
    rm b
 
    # Use alphabetically first one as original
-   $ rmlint -S 
+   $ rmlint -S a
    ls a
    rm b
    rm c
