@@ -52,7 +52,6 @@ They show you the basic principles and most of the advanced options:
 
    install
    tutorial
-   faq
 
 Reference
 ---------

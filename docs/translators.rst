@@ -24,9 +24,9 @@ Adding new languages
 
 If you'd like to contribute your new translation you want to do a pull request 
 (if you really dislike that, you may also send the translation to us via mail).
-Here's a short introduction to pull requests on GitHub:
+Here_ is a small introduction on Pull Requests.
 
-    https://help.github.com/articles/using-pull-requests/
+.. _Here: http://rmlint.readthedocs.org/en/latest/developers.html
 
 Updating existing languages
 ---------------------------
