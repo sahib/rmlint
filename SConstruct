@@ -126,7 +126,8 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['CCCOMSTR']
     del options['LINKCOMSTR']
 
-env = Environment(tools=['default', 'gettext'], **options)
+env = Environment(**options)
+env.Tool('gettext')
 
 ###########################################################################
 #                              Actual Script                              #
