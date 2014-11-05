@@ -84,9 +84,6 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler *SUMMARY_HANDLER;
     rm_fmt_register(self, SUMMARY_HANDLER);
 
-    extern RmFmtHandler *CONFIRM_HANDLER;
-    rm_fmt_register(self, CONFIRM_HANDLER);
-
     extern RmFmtHandler *TIMESTAMP_HANDLER;
     rm_fmt_register(self, TIMESTAMP_HANDLER);
 

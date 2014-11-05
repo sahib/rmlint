@@ -545,8 +545,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"must-match-untagged"        , no_argument       , 0 , 'M'} ,
             {"hardlinked"                 , no_argument       , 0 , 'l'} ,
             {"no-hardlinked"              , no_argument       , 0 , 'L'} ,
-            {"confirm-settings"           , no_argument       , 0 , 'q'} ,
-            {"no-confirm-settings"        , no_argument       , 0 , 'Q'} ,
             {"flock-files"                , no_argument       , 0 , 'z'} ,
             {"no-flock-files"             , no_argument       , 0 , 'Z'} ,
             {"match-basename"             , no_argument       , 0 , 'b'} ,
@@ -564,7 +562,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLqQhHzZbBeEiID",
+                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLhHzZbBeEiID",
                      long_options, &option_index
                  );
 
@@ -704,12 +702,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'M':
             settings->must_match_untagged = true;
             break;
-        case 'Q':
-            settings->confirm_settings = false;
-            break;
-        case 'q':
-            settings->confirm_settings = true;
-            break;
         case 's':
             settings->limits_specified = true;
             rm_cmd_parse_limit_sizes(session, optarg);
@@ -788,9 +780,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_fmt_add(session->formats, "pretty", "stdout");
         rm_fmt_add(session->formats, "summary", "stdout");
         rm_fmt_add(session->formats, "sh", "rmlint.sh");
-        if(settings->confirm_settings) {
-            rm_fmt_add(session->formats, "confirm", "stderr");
-        }
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
         rm_log_error("No valid -o flag encountered.\n");
