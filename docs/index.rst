@@ -78,7 +78,20 @@ Authors
 
 Additional thanks to:
 
-- TODO: list bug reporters and others. (kill old AUTHORS file)
+.. hlist::
+    :columns: 3
+
+    - qitta_ (Ideas & Testing)
+    - dieterbe_ (Bugs & -D is his fault)
+    - `My cats`_.
+    - Attila Toth 
+    - All sane bugreporters (there are not many)
+    - All packagers, porters and patchers.
+
+
+.. _qitta: https://github.com/qitta
+.. _dieterbe: https://github.com/Diebterbe
+.. _`My cats`: http://imgur.com/gallery/rims0yl
 
 License
 -------
