@@ -93,6 +93,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler *JSON_HANDLER;
     rm_fmt_register(self, JSON_HANDLER);
 
+    extern RmFmtHandler *PY_HANDLER;
+    rm_fmt_register(self, PY_HANDLER);
+
     return self;
 }
 

@@ -34,7 +34,7 @@
 typedef struct RmFmtHandlerJSON {
     /* must be first */
     RmFmtHandler parent;
-} RmFmtHandlerProgress;
+} RmFmtHandlerJSON;
 
 //////////////////////////////////////////
 //  POOR MAN'S JSON FORMATTING TOOLBOX  //
@@ -121,6 +121,7 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
 
     fprintf(out, "\n]\n");
 }
+
 static void rm_fmt_elem(
     _U RmSession *session,
     _U RmFmtHandler *parent,
@@ -161,7 +162,7 @@ static void rm_fmt_elem(
     rm_fmt_json_close(out);
 }
 
-static RmFmtHandlerProgress JSON_HANDLER_IMPL = {
+static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
     /* Initialize parent */
     .parent = {
         .size = sizeof(JSON_HANDLER_IMPL),

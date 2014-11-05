@@ -1,6 +1,30 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+"""
+This file is part of rmlint.
+
+rmlint is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+rmlint is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+
+uthors:
+
+- Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+- Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+
+Hosted on http://github.com/sahib/rmlint
+"""
+
 import os
 import sys
 import pwd
@@ -74,7 +98,8 @@ def main(args, header, data, footer):
     seen_cksums = set()
     for item in data:
         if item['type'].startswith('duplicate_') and item['is_original']:
-            print("\nDeleting twins off " + item['path'])
+            print()
+            print("Deleting twins off " + item['path'])
             continue
 
         if not args.dry_run:
@@ -84,7 +109,7 @@ def main(args, header, data, footer):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Handle the files stored in rmlints json output')
     parser.add_argument(
         'json_docs', metavar='json_doc', type=open, nargs='*',
         help='A json output of rmlint to handle'
@@ -103,7 +128,7 @@ if __name__ == '__main__':
     if not args.json_docs:
         # None given on the commandline
         try:
-            args.json_docs.append(open('rmlint.json', 'r'))
+            args.json_docs.append(open('/tmp/.rmlint.json', 'r'))
         except FileNotFoundError as err:
             print('Cannot load default json document: ', str(err))
             sys.exit(-2)

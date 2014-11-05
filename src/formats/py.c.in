@@ -1,0 +1,101 @@
+/*
+ *  This file is part of rmlint.
+ *
+ *  rmlint is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  rmlint is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors:
+ *
+ *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+ *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+ *
+ * Hosted on http://github.com/sahib/rmlint
+ *
+ */
+
+#include "../formats.h"
+#include "../utilities.h"
+#include "../preprocess.h"
+
+#include <glib.h>
+#include <stdio.h>
+#include <string.h>
+
+static const char *PY_SOURCE = "<<PYTHON_SOURCE>>";
+
+typedef struct RmFmtHandlerPy {
+    /* must be first */
+    RmFmtHandler parent;
+    FILE *json_out;
+} RmFmtHandlerPy;
+
+/////////////////////////
+//  ACTUAL CALLBACKS   //
+/////////////////////////
+
+static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
+    RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
+
+    fprintf(out, "%s", PY_SOURCE);
+
+    self->json_out = fopen("/tmp/.rmlint.json", "w");
+    if(self->json_out == NULL)  {
+        return;
+    }
+
+    /* Delegate */
+    extern RmFmtHandler *JSON_HANDLER;
+    JSON_HANDLER->head(session, (RmFmtHandler *)self, self->json_out);
+}
+
+static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, _U FILE *out) {
+    RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
+    if(self->json_out == NULL) {
+        return;
+    }
+
+    /* Delegate */
+    extern RmFmtHandler *JSON_HANDLER;
+    JSON_HANDLER->foot(session, (RmFmtHandler *)self, self->json_out);
+
+    fclose(self->json_out);
+}
+
+static void rm_fmt_elem(
+    RmSession *session,
+    RmFmtHandler *parent,
+    _U FILE *out, RmFile *file
+) {
+    RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
+    if(self->json_out == NULL) {
+        return;
+    }
+
+    /* Delegate */
+    extern RmFmtHandler *JSON_HANDLER;
+    JSON_HANDLER->elem(session, (RmFmtHandler *)self, self->json_out, file);
+}
+
+static RmFmtHandlerPy PY_HANDLER_IMPL = {
+    /* Initialize parent */
+    .parent = {
+        .size = sizeof(PY_HANDLER_IMPL),
+        .name = "py",
+        .head = rm_fmt_head,
+        .elem = rm_fmt_elem,
+        .prog = NULL,
+        .foot = rm_fmt_foot
+    }
+};
+
+RmFmtHandler *PY_HANDLER = (RmFmtHandler *) &PY_HANDLER_IMPL;

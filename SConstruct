@@ -60,6 +60,20 @@ def BuildConfigTemplate(target, source, env):
             VERSION_GIT_REVISION=env['gitrev']
         ))
 
+def BuildPythonFormatter(target, source, env):
+    with codecs.open(str(source[0]), 'r') as handle:
+        text = handle.read()
+
+    with codecs.open('src/formats/py.py', 'r') as handle:
+        py_source = handle.read()
+
+    # Prepare the Python source to be compatible with C-strings
+    py_source = py_source.replace('"', '\\"')
+    py_source = '\\n"\n"'.join(py_source.splitlines())
+
+    with codecs.open(str(target[0]), 'w') as handle:
+        handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
+
 
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
@@ -214,6 +228,12 @@ env = conf.Finish()
 env.AlwaysBuild(
     env.Command(
         'src/config.h', 'src/config.h.in', BuildConfigTemplate
+    )
+)
+
+env.AlwaysBuild(
+    env.Command(
+        'src/formats/py.c', 'src/formats/py.c.in', BuildPythonFormatter
     )
 )
 
