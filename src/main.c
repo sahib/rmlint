@@ -84,6 +84,21 @@ static void signal_handler(int signum) {
     }
 }
 
+static void i18n_init(void) {
+    /* Tell gettext where to search for .mo files */
+    bindtextdomain("rmlint", INSTALL_PREFIX"/share/locale");
+    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+
+    /* Make printing umlauts work */
+    setlocale(LC_ALL, "");
+
+    /* Say we're the textdomain "rmlint"
+     * so gettext can find us in
+     * /usr/share/locale/de/LC_MESSAGEs/rmlint.mo
+     * */
+    textdomain("rmlint");
+}
+
 int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
 
@@ -96,14 +111,7 @@ int main(int argc, const char **argv) {
     /* call logging_callback on every message */
     g_log_set_default_handler(logging_callback, &session);
 
-    bindtextdomain("rmlint", "/usr/share/locale");
-    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
-
-    /* Make printing umlauts work */
-    setlocale(LC_ALL, "");
-
-    /* Say we're the textdomain "rmlint" */
-    textdomain("rmlint");
+    i18n_init();
 
     /* Register signals */
     SESSION_POINTER = &session;

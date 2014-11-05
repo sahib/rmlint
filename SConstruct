@@ -52,6 +52,7 @@ def BuildConfigTemplate(target, source, env):
 
     with codecs.open(str(target[0]), 'w') as handle:
         handle.write(text.format(
+            INSTALL_PREFIX=GetOption('prefix'),
             HAVE_GLIB=int(conf.env['glib']),
             HAVE_BLKID=int(conf.env['blkid']),
             VERSION_MAJOR=VERSION_MAJOR,
@@ -118,6 +119,16 @@ ranlib_library_message = '%sRanlib Library %s==> %s$TARGET%s' % \
 link_shared_library_message = '%sLinking Shared Library %s==> %s$TARGET%s' % \
     (colors['red'], colors['purple'], colors['yellow'], colors['end'])
 
+AddOption(
+    '--prefix',
+    dest='prefix',
+    type='string',
+    nargs=1,
+    default='/usr',
+    action='store',
+    metavar='DIR',
+    help='installation prefix'
+)
 
 # General Environment
 options = dict(
@@ -129,6 +140,7 @@ options = dict(
     RANLIBCOMSTR=ranlib_library_message,
     SHLINKCOMSTR=link_shared_library_message,
     LINKCOMSTR=link_program_message,
+    PREFIX=GetOption('prefix'),
     ENV={
         'PATH': os.environ['PATH'],
         'TERM': os.environ['TERM'],
@@ -141,6 +153,7 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['LINKCOMSTR']
 
 env = Environment(**options)
+
 
 ###########################################################################
 #                              Actual Script                              #
@@ -312,18 +325,18 @@ for src in env.Glob('po/*.po'):
     dst = lng + '.mo'
     env.Command(dst, src, 'msgfmt $SOURCE -o po/$TARGET')
 
-    path = '$prefix/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
+    path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
     install_paths.append(path)
     env.InstallAs(path, os.path.join('po', dst))
 
 if 'install' in COMMAND_LINE_TARGETS:
-    env.Install('$prefix/bin', [program])
-    env.Install('$prefix/share/man/man1', [manpage])
-    env.Alias('install', ['$prefix/bin', '$prefix/share/man/man1'] + install_paths)
+    env.Install('$PREFIX/bin', [program])
+    env.Install('$PREFIX/share/man/man1', [manpage])
+    env.Alias('install', ['$PREFIX/bin', '$PREFIX/share/man/man1'] + install_paths)
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
-    create_uninstall_target(env, "$prefix/bin/rmlint")
-    create_uninstall_target(env, '$prefix/share/man/man1/rmlint.1.gz')
+    create_uninstall_target(env, "$PREFIX/bin/rmlint")
+    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
 
     for lang_path in install_paths:
         create_uninstall_target(env, lang_path)

@@ -1,6 +1,8 @@
 #ifndef RM_CONFIG_H
 #define RM_CONFIG_H
 
+#define INSTALL_PREFIX "{INSTALL_PREFIX}"
+
 #define HAVE_GLIB {HAVE_GLIB}
 #define HAVE_BLKID {HAVE_BLKID}
 
