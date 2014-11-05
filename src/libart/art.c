@@ -257,7 +257,6 @@ void * art_search(art_tree * t, unsigned char * key, int key_len) {
         }
 
         // Recursively search
-        // TODO: Is that a bug?
         child = (depth < key_len) ? find_child(n, key[depth]) : NULL;
         n = (child) ? *child : NULL;
         depth++;
