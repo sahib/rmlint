@@ -2,12 +2,13 @@
 *.swp
 *.log
 *.status
+*.mo
 rmlint
 rmlint.sh
 src/config.h
-doc/rmlint.1.rst
-doc/rmlint.1.gz
-doc/rmlint.1
+docs/rmlint.1.rst
+docs/rmlint.1.gz
+docs/rmlint.1
 
 # Scons
 .scons*
@@ -16,3 +17,5 @@ doc/rmlint.1
 
 docs/_build
 __pycache__
+
+src/formats/py.c

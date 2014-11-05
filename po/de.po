@@ -57,7 +57,7 @@ msgstr "Doppelte Verzeichnisse"
 #: src/formats/summary.c:58
 #, c-format
 msgid "file(s) after investigation, nothing to search through.\n"
-msgstr "Datein nach dem Traversieren, nichts zum durchsuchen.\n"
+msgstr " Dateien nach dem Traversieren, nichts zum durchsuchen.\n"
 
 #: src/formats/summary.c:66
 #, c-format
