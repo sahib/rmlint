@@ -249,6 +249,29 @@ formatters and their config options:
       $ ./rmlint.sh -d
       /home/user/test/b/one
 
+:py: 
+
+    Outputs a python script and a JSON document, just like the **json** formatter.
+    The JSON document is written to ``.rmlint.json``, executing the script will
+    make it read from there. This formatter is mostly intented for complex usecases
+    where the lint needs special handling. Therefore the python script can be modified 
+    to do things standard ``rmlint`` is not able to do easily. You have the full power of
+    the Python language for your task, use it! 
+
+    **Example:**
+
+    .. cod-block:: bash
+
+       $ rmlint -o py:remover.py 
+       $ ./remover.py --dry-run    # Needs Python3
+       Deleting twins of /home/user/sub2/a
+       Handling (duplicate_file): /home/user/sub1/a
+       Handling (duplicate_file): /home/user/a
+
+       Deleting twins of /home/user/sub2/b
+       Handling (duplicate_file): /home/user/sub1/b
+       
+
 :csv: 
 
     Outputs a csv formatted dump of all lint files. 

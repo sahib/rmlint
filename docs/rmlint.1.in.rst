@@ -335,6 +335,12 @@ FORMATTERS
   - *use_header=[true|false]:* Print the header with metadata.
   - *use_footer=[true|false]:* Print the footer with statistics.
 
+* ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
+  The JSON document is written to ``.rmlint.json``, executing the script will
+  make it read from there. This formatter is mostly intented for complex usecases
+  where the lint needs special handling. Therefore the python script can be modified 
+  to do things standard ``rmlint`` is not able to do easily.
+
 * ``stamp``:
 
   Outputs a timestamp of the time ``rmlint`` was run.

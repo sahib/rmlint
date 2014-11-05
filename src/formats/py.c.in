@@ -47,8 +47,11 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
 
     fprintf(out, "%s", PY_SOURCE);
+    if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
+        rm_log_perror("Could not chmod +x python-script");
+    }
 
-    self->json_out = fopen("/tmp/.rmlint.json", "w");
+    self->json_out = fopen(".rmlint.json", "w");
     if(self->json_out == NULL)  {
         return;
     }

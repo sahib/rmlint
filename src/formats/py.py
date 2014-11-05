@@ -99,7 +99,7 @@ def main(args, header, data, footer):
     for item in data:
         if item['type'].startswith('duplicate_') and item['is_original']:
             print()
-            print("Deleting twins off " + item['path'])
+            print("Deleting twins of " + item['path'])
             continue
 
         if not args.dry_run:
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     if not args.json_docs:
         # None given on the commandline
         try:
-            args.json_docs.append(open('/tmp/.rmlint.json', 'r'))
+            args.json_docs.append(open('.rmlint.json', 'r'))
         except FileNotFoundError as err:
             print('Cannot load default json document: ', str(err))
             sys.exit(-2)
