@@ -146,7 +146,7 @@ static void rm_fmt_elem(
             rm_fmt_json_key(out, "checksum", checksum_str);
             rm_fmt_json_sep(out);
         }
-        
+
         rm_fmt_json_key_unsafe(out, "path", file->path);
         rm_fmt_json_sep(out);
         rm_fmt_json_key_int(out, "size", file->file_size);

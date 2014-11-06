@@ -195,11 +195,11 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
 }
 
 static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
-    if(0 
-        || strcmp(parent->path, "stdout") == 0
-        || strcmp(parent->path, "stderr") == 0
-        || strcmp(parent->path, "stdin") == 0
-    ) {
+    if(0
+            || strcmp(parent->path, "stdout") == 0
+            || strcmp(parent->path, "stderr") == 0
+            || strcmp(parent->path, "stdin") == 0
+      ) {
         /* You will have a hard time deleting standard streams. */
         return;
     }

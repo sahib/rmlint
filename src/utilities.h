@@ -140,7 +140,7 @@ char *rm_util_basename(const char *filename);
  * @brief Return a pointer to the extension part of the file or NULL if none.
  *
  * @return: a pointer >= basename or NULL.
- */ 
+ */
 char *rm_util_path_extension(const char *basename);
 
 /**

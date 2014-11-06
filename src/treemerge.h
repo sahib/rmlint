@@ -31,12 +31,12 @@
 
 /**
  * Module to cluster RmFiles to directories.
- * I.e. find duplicate directories. 
- *  
+ * I.e. find duplicate directories.
+ *
  * All API here is defined on the opaque RmTreeMerger structure.
  * Files are feeded and the finished directories are wrapped
  * as RmFiles and written to the output module.
- */ 
+ */
 
 
 /* Opaque structure, details do not matter to caller */

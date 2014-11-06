@@ -186,7 +186,7 @@ bool rm_fmt_is_a_output(RmFmtTable *self, const char *path);
 void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter);
 
 /**
- * @brief Lock the state mutex. 
+ * @brief Lock the state mutex.
  *
  * Use this to threadsafely update statistic counters.
  */

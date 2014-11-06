@@ -45,7 +45,7 @@ static bool rm_file_check_with_extension(RmFile *file_a, RmFile *file_b) {
         return true;
     }
 
-    return false; 
+    return false;
 }
 
 static bool rm_file_check_without_extension(RmFile *file_a, RmFile *file_b) {
@@ -63,7 +63,7 @@ static bool rm_file_check_without_extension(RmFile *file_a, RmFile *file_b) {
         return true;
     }
 
-    return false; 
+    return false;
 }
 
 gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
@@ -189,11 +189,11 @@ static int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         return (a->is_prefd - b->is_prefd);
     } else {
         return rm_pp_cmp_orig_criteria_impl(
-                session, 
-                a->mtime, b->mtime,
-                a->basename, b->basename,
-                a->path_index, b->path_index
-        );
+                   session,
+                   a->mtime, b->mtime,
+                   a->basename, b->basename,
+                   a->path_index, b->path_index
+               );
     }
 }
 

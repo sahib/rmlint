@@ -64,7 +64,7 @@ typedef enum RmLintType {
     RM_LINT_TYPE_DUPE_CANDIDATE,
 
     /* Directories are no "normal" RmFiles, they are actual
-     * different structs that hide themselves as RmFile to 
+     * different structs that hide themselves as RmFile to
      * be compatible with the output system.
      *
      * Also they only appear at the very end of processing temporarily.
@@ -146,8 +146,8 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
-    /* If false rm_file_destroy will not destroy the digest. This is useful 
-     * for sharing the digest of duplicates in a group. 
+    /* If false rm_file_destroy will not destroy the digest. This is useful
+     * for sharing the digest of duplicates in a group.
      */
     bool free_digest;
 

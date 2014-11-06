@@ -511,7 +511,7 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
 //////////////////////////////////
 
 /* Compute optimal size for next hash increment
- * call this with group locked 
+ * call this with group locked
  * */
 static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;
@@ -732,7 +732,7 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
     if(free_file) {
         /* toss the file (and any embedded hardlinks)*/
         rm_file_destroy(file);
-    } 
+    }
 }
 
 /* GCompareFunc for sorting files into optimum read order

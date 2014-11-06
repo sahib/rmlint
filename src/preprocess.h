@@ -61,10 +61,10 @@ void rm_file_tables_destroy(RmFileTables *list);
 bool rm_file_tables_insert(RmSession *session, RmFile *file);
 
 /**
- * @brief Compare certain attributes (listed below) of files 
+ * @brief Compare certain attributes (listed below) of files
  *        in order to find out which file is the original.
  *
- * Returns: 
+ * Returns:
  */
 int rm_pp_cmp_orig_criteria_impl(
     RmSession *session,
