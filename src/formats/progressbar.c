@@ -47,7 +47,7 @@ typedef struct RmFmtHandlerProgress {
     struct winsize terminal;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self) {
+static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self, int max_len) {
     switch(self->last_state) {
     case RM_PROGRESS_STATE_TRAVERSE:
         self->percent = 1.0;
@@ -92,30 +92,42 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
     }
 
     /* Get rid of colors */
+    int text_iter = 0;
     for(char *iter = &self->text_buf[0]; *iter; iter++) {
         if(*iter == '\x1b') {
             char *jump = strchr(iter, 'm');
             if(jump != NULL) {
                 self->text_len -= jump - iter + 1;
                 iter = jump;
+                continue;
             }
         }
+
+        if(text_iter >= max_len) {
+            *iter = 0;
+            self->text_len = text_iter;
+            break;
+        }
+
+        text_iter++;
     }
 }
 
 static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FILE *out) {
-    for(guint32 i = 0; i < width - self->text_len - 2; ++i) {
-        fprintf(out, " ");
+    if(self->text_len < (unsigned)width) {
+        for(guint32 i = 0; i < width - self->text_len; ++i) {
+            fprintf(out, " ");
+        }
     }
 
-    fprintf(out, "%s\r", self->text_buf);
+    fprintf(out, "%s", self->text_buf);
 }
 
 static void rm_fmt_progress_print_bar(RmFmtHandlerProgress *self, int width, FILE *out) {
     int cells = width * self->percent;
 
     fprintf(out, "[");
-    for(int i = 0; i < width; ++i) {
+    for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
             fprintf(out, "#");
         } else if(i == cells) {
@@ -137,10 +149,6 @@ static void rm_fmt_prog(
 
     if(state == RM_PROGRESS_STATE_INIT) {
         /* Do initializiation here */
-        if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
-            rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
-        }
-
         const char *update_interval_str = rm_fmt_get_config_value(
                                               session->formats, "progressbar", "update_interval"
                                           );
@@ -170,11 +178,17 @@ static void rm_fmt_prog(
         return;
     }
 
+    if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
+        rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
+    }
+
     self->last_state = state;
 
-    rm_fmt_progress_format_text(session, self);
-    rm_fmt_progress_print_bar(self, self->terminal.ws_col * 0.5, out);
-    rm_fmt_progress_print_text(self, self->terminal.ws_col * 0.5, out);
+    int text_width = self->terminal.ws_col * 0.7 - 1;
+    rm_fmt_progress_format_text(session, self, text_width);
+    rm_fmt_progress_print_bar(self, self->terminal.ws_col * 0.3, out);
+    rm_fmt_progress_print_text(self, text_width, out);
+    fprintf(out, "%s\r", MAYBE_RESET(session));
 
     if(state == RM_PROGRESS_STATE_SUMMARY) {
         fprintf(out, "\n");
