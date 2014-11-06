@@ -512,9 +512,6 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
 
 /* Compute optimal size for next hash increment */
 /* call this with group locked */
-/* TODO: maybe split this into two procedures at //------// mark below and call the first
- * half when we create the RmShredGroup and the other half when we has a file
- * XXX-TODO: Tried for a minute, did not work, left for you as last TODO :)
  * */
 static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;
