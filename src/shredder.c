@@ -510,8 +510,8 @@ static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
 // MANAGEMENT ALGORITHMS        //
 //////////////////////////////////
 
-/* Compute optimal size for next hash increment */
-/* call this with group locked */
+/* Compute optimal size for next hash increment
+ * call this with group locked 
  * */
 static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     RmShredGroup *group = file->shred_group;

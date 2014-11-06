@@ -52,5 +52,77 @@ Here are some other things to check before submitting your contribution:
 .. _`TravisCI`: https://travis-ci.org/sahib/rmlint
 
 For language-translations/updates it is also okay to send the ``.po`` files via
-mail at ``sahib@online.de``, since not every translator is necessarily a
+mail at sahib@online.de, since not every translator is necessarily a
 software developer.
+
+Buildsystem Helpers
+-------------------
+
+Environement Variables
+~~~~~~~~~~~~~~~~~~~~~~
+
+:CFLAGS:
+
+    Extra flags passed to the compiler.
+
+:LDFLAGS:
+
+    Extra flags passed to the linker.
+
+:CC:
+
+    Which compiler to use? 
+
+.. code-block:: bash
+
+   # Use clang and enable profiling, verbose build and enable debugging
+   CC=clang CFLAGS='-pg' LDFLAGS='-pg' scons VERBOSE=1 DEBUG=1
+
+Variables
+~~~~~~~~~
+
+:DEBUG:
+
+    Enable debugging symbols for ``rmlint``. This should always be enabled during
+    developement. Backtraces wouldn't be useful elsewhise.
+
+:VERBOSE:
+
+    Print the exact compiler and linker commands. Useful for troubleshooting
+    build errors.
+
+Arguments
+~~~~~~~~~
+
+:--prefix:
+
+    Change the installation prefix. By default this is ``/usr``, but some users
+    might prefer ``/usr/local`` or ``/opt``. 
+
+Notable targets
+~~~~~~~~~~~~~~~
+
+:install:
+
+    Install all program parts system-wide.
+
+:man:
+
+    Build the manpage.
+
+:test:
+
+    Build the tests (requires ``python`` and ``nosetest`` installed).
+
+:xgettext:
+
+    Extract a gettext ``.pot`` template from the source.
+
+Sourcecode layout
+-----------------
+
+- All C-source lives in ``src``, the file names should be self explanatory.
+- All documentation is inside ``docs``. 
+- All translation stuff should go to ``po``.
+- All packaging should be done in ``pkg/<distribution>``.
+- Tests are written in Python and live in ``tests``.

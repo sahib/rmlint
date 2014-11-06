@@ -32,7 +32,7 @@ formats to get rid of them yourself. These reports are called *outputs*.  By
 default a shellscript will be written to ``rmlint.sh`` that contains readily
 prepared shell commands to remove duplicates and other finds,
 
-.. _[*]: You could say it should be named ``findlint``.
+.. [*] You could say it should be named ``findlint``.
 
 Filtering
 ---------
@@ -260,7 +260,7 @@ formatters and their config options:
 
     **Example:**
 
-    .. cod-block:: bash
+    .. code-block:: bash
 
        $ rmlint -o py:remover.py 
        $ ./remover.py --dry-run    # Needs Python3

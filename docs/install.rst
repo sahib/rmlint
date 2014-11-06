@@ -1,13 +1,13 @@
 Installation
 ============
 
-Many major Linux distribution might already package rmlint -- but watch out for
-the version. This manual describes the rewrite of rmlint (i.e. version :math:`\geq 2`).
+Many major Linux distribution might already package ``rmlint`` -- but watch out for
+the version. This manual describes the rewrite of ``rmlint`` (i.e. version :math:`\geq 2`).
 Old versions before this might contain bugs, have design flaws or might eat your
 hamster. We recommend using the newest version.
 
 If there is no package yet or you want to try a development version, you gonna
-need to compile rmlint from source.
+need to compile ``rmlint`` from source.
 
 Dependencies
 ------------

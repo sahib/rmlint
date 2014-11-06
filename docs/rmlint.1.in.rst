@@ -42,8 +42,6 @@ are what `rmlint` thinks to be the file that was first there. You can drive
 the original detection with the `-S` option. If you know which path contains the
 originals you can prefix the path with **//**, 
 
-Quick clues for adjusting settings are available by using the `-q` option.
-
 **Note:** `rmlint` will not delete any files. It only produces executable output
 for you to remove it.
 
@@ -173,12 +171,6 @@ General Options
 
     Use color escapes for pretty output or disable them. 
     If you pipe `rmlints` output to a file -W is assumed automatically.
-
-**-q --confirm-settings / -Q --no-confirm-settings** (*default*)
-    
-    Print a screen of the used settings and the options that you need to change
-    them. Requires confirmation before proceeding. This option has only effect
-    when ``-o confirm:stdout`` is specified.
 
 **-h --help / -H --version**
 
@@ -363,9 +355,6 @@ FORMATTERS
 
 * ``summary``: Shows counts of files and their respective size after the run.
   Also list all written files.
-
-* ``confirm``: Print a confirmation message before running. If ``-q`` is
-  specified, wait till user entered his confirmation.
 
 EXAMPLES
 ========

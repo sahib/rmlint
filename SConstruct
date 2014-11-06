@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-# TODO: Cleanup this a bit.
-
 import os
 import sys
 import time
@@ -13,8 +11,11 @@ VERSION_MAJOR = 2
 VERSION_MINOR = 0
 VERSION_PATCH = 0
 
+###########################################################################
+#                                Utilities                                #
+###########################################################################
 
-def CheckPKGConfig(context, version):
+def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
     command = 'pkg-config --atleast-pkgconfig-version=%s' % version
     ret = context.TryAction(command)[0]
@@ -22,7 +23,7 @@ def CheckPKGConfig(context, version):
     return ret
 
 
-def CheckPKG(context, name, varname, required=True):
+def check_pkg(context, name, varname, required=True):
     context.Message('Checking for %s... ' % name)
     rc, text = context.TryAction('pkg-config --exists \'%s\'' % name)
     context.Result(rc)
@@ -38,7 +39,7 @@ def CheckPKG(context, name, varname, required=True):
     return rc, text
 
 
-def CheckGitRev(context):
+def check_git_rev(context):
     context.Message('Checking for git revision... ')
     rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
     context.Result(rev)
@@ -46,7 +47,7 @@ def CheckGitRev(context):
     return rev
 
 
-def BuildConfigTemplate(target, source, env):
+def build_config_template(target, source, env):
     with codecs.open(str(source[0]), 'r') as handle:
         text = handle.read()
 
@@ -61,7 +62,7 @@ def BuildConfigTemplate(target, source, env):
             VERSION_GIT_REVISION=env['gitrev']
         ))
 
-def BuildPythonFormatter(target, source, env):
+def build_python_formatter(target, source, env):
     with codecs.open(str(source[0]), 'r') as handle:
         text = handle.read()
 
@@ -86,7 +87,7 @@ def create_uninstall_target(env, path):
 #                                 Colors!                                 #
 ###########################################################################
 
-colors = {
+COLORS = {
     'cyan': '\033[96m',
     'purple': '\033[95m',
     'blue': '\033[94m',
@@ -96,38 +97,38 @@ colors = {
     'end': '\033[0m'
 }
 
-# If the output is not a terminal, remove the colors
+# If the output is not a terminal, remove the COLORS
 if not sys.stdout.isatty():
-    for key, value in colors.iteritems():
-        colors[key] = ''
+    for key, value in COLORS.iteritems():
+        COLORS[key] = ''
 
+# Configure the actual colors to our liking:
 compile_source_message = '%sCompiling %s==> %s$SOURCE%s' % \
-    (colors['blue'], colors['purple'], colors['yellow'], colors['end'])
+    (COLORS['blue'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
 
 compile_shared_source_message = '%sCompiling shared %s==> %s$SOURCE%s' % \
-    (colors['blue'], colors['purple'], colors['yellow'], colors['end'])
+    (COLORS['blue'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
 
 link_program_message = '%sLinking Program %s==> %s$TARGET%s' % \
-    (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
 
 link_library_message = '%sLinking Static Library %s==> %s$TARGET%s' % \
-    (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
 
 ranlib_library_message = '%sRanlib Library %s==> %s$TARGET%s' % \
-    (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
 
 link_shared_library_message = '%sLinking Shared Library %s==> %s$TARGET%s' % \
-    (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
+
+###########################################################################
+#                            Option Parsing                               #
+###########################################################################
 
 AddOption(
-    '--prefix',
-    dest='prefix',
-    type='string',
-    nargs=1,
-    default='/usr',
-    action='store',
-    metavar='DIR',
-    help='installation prefix'
+    '--prefix', default='/usr',
+    dest='prefix', type='string', nargs=1,
+    action='store', metavar='DIR', help='installation prefix'
 )
 
 # General Environment
@@ -152,26 +153,27 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['CCCOMSTR']
     del options['LINKCOMSTR']
 
+# Actually instance the Environement with all collected information:
 env = Environment(**options)
 
 
 ###########################################################################
-#                              Actual Script                              #
+#                           Dependency Checks                             #
 ###########################################################################
 
 # Configuration:
 conf = Configure(env, custom_tests={
-    'CheckPKGConfig': CheckPKGConfig,
-    'CheckPKG': CheckPKG,
-    'CheckGitRev': CheckGitRev
+    'check_pkgconfig': check_pkgconfig,
+    'check_pkg': check_pkg,
+    'check_git_rev': check_git_rev
 })
 
 if not conf.CheckCC():
     print('Error: Your compiler and/or environment is not correctly configured.')
     Exit(1)
 
-conf.CheckGitRev()
-conf.CheckPKGConfig('0.15.0')
+conf.check_git_rev()
+conf.check_pkgconfig('0.15.0')
 
 # Pkg-config to internal name
 DEPS = {
@@ -181,12 +183,15 @@ DEPS = {
 }
 
 for pkg, name in DEPS.items():
-    conf.CheckPKG(pkg, name)
+    conf.check_pkg(pkg, name)
 
 packages = []
 for pkg in DEPS.keys():
     packages.append(pkg.split()[0])
 
+###########################################################################
+#                           Compiler Flags                                #
+###########################################################################
 
 if 'CC' in os.environ:
     conf.env.Replace(CC=os.environ['CC'])
@@ -238,20 +243,24 @@ conf.env.Append(_LIBFLAGS=[
 # Your extra checks here
 env = conf.Finish()
 
+###########################################################################
+#                          Template Building                              #
+###########################################################################
+
 env.AlwaysBuild(
     env.Command(
-        'src/config.h', 'src/config.h.in', BuildConfigTemplate
+        'src/config.h', 'src/config.h.in', build_config_template
     )
 )
 
 env.AlwaysBuild(
     env.Command(
-        'src/formats/py.c', 'src/formats/py.c.in', BuildPythonFormatter
+        'src/formats/py.c', 'src/formats/py.c.in', build_python_formatter
     )
 )
 
 
-def TarFile(target, source, env):
+def tar_file(target, source, env):
     import tarfile
     tar = tarfile.open(str(target[0]), "w:gz")
     for item in source:
@@ -260,7 +269,7 @@ def TarFile(target, source, env):
     tar.close()
 
 
-def BuildMan(target, source, env):
+def build_man(target, source, env):
     rst_in_path = str(source[0])
     man_out_path = str(target[0])
 
@@ -283,41 +292,53 @@ def BuildMan(target, source, env):
 env.AlwaysBuild(
     env.Alias('man',
         env.Command(
-            'docs/rmlint.1', 'docs/rmlint.1.in.rst', BuildMan
+            'docs/rmlint.1', 'docs/rmlint.1.in.rst', build_man
         )
     )
 )
 
 manpage = env.Command(
-    'docs/rmlint.1.gz', 'docs/rmlint.1', TarFile
+    'docs/rmlint.1.gz', 'docs/rmlint.1', tar_file
 )
 
 env.AlwaysBuild(manpage)
 
+###########################################################################
+#                       Build of the actual Programs                      #
+###########################################################################
+
 program = env.Program(
     'rmlint',
-    Glob('src/*.c') + Glob('src/checksums/*.c') + Glob('src/formats/*.c') + Glob('src/libart/*.c')
+    Glob('src/*.c') +
+    Glob('src/checksums/*.c') +
+    Glob('src/formats/*.c') +
+    Glob('src/libart/*.c')
 )
 
-def runTests(target = None, source = None, env = None) :
-    rc = subprocess.call('nosetests', env=env['ENV'], shell=True)
-    Exit(rc)
+def run_tests(target = None, source = None, env = None) :
+    Exit(subprocess.call('nosetests', env=env['ENV'], shell=True))
 
 
 if 'test' in COMMAND_LINE_TARGETS:
-    test_cmd = env.Command('runTests', None, Action(runTests, "Running tests"))
+    test_cmd = env.Command('run_tests', None, Action(run_tests, "Running tests"))
     env.Depends(test_cmd, [program])
     env.AlwaysBuild(test_cmd)
     env.Alias('test', test_cmd)
 
 
 def xgettext(target=None, source=None, env=None):
-    rc = subprocess.call('xgettext --package-name rmlint -k_ -kN_ --package-version 2.0.0 --default-domain rmlint --output rmlint.pot $(find src -iname "*.[ch]")', shell=True)
-    Exit(rc)
+    Exit(subprocess.call(
+        'xgettext --package-name rmlint -k_ -kN_' \
+        '--package-version 2.0.0 --default-domain rmlint' \
+        '--output po/rmlint.pot' \
+        '$(find src -iname "*.[ch]")',
+        shell=True
+    ))
 
 if 'xgettext' in COMMAND_LINE_TARGETS:
     cmd = env.Command('xgettext', None, Action(xgettext, "Running xgettext"))
 
+# gettext handling:
 languages = []
 install_paths = []
 for src in env.Glob('po/*.po'):
