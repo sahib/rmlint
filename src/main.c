@@ -58,6 +58,7 @@ static void logging_callback(
     }
 }
 
+/* Global variables, signal handlers cannot be passed userdata */
 static volatile int CTRLC_COUNTER = 0;
 static volatile RmSession *SESSION_POINTER = NULL;
 
@@ -77,8 +78,8 @@ static void signal_handler(int signum) {
     case SIGABRT:
     case SIGSEGV:
         rm_log_error(RED"FATAL: "RESET"Aborting due to a fatal error. (signal received: %s)\n", g_strsignal(signum));
-    default:
         rm_log_error(RED"FATAL: "RESET"Please file a bug report (See rmlint -h)\n");
+    default:
         exit(EXIT_FAILURE);
         break;
     }

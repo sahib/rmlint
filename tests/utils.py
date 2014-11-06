@@ -18,8 +18,13 @@ def create_testdir():
         pass
 
 
-def run_rmlint(*args):
-    cmd = ' '.join(['./rmlint', TESTDIR_NAME, '-o json:stdout'] + list(args))
+def run_rmlint(*args, dir_suffix=None):
+    if dir_suffix:
+        target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
+    else:
+        target_dir = TESTDIR_NAME
+
+    cmd = ' '.join(['./rmlint', target_dir, '-o json:stdout'] + list(args))
     output = subprocess.check_output(cmd, shell=True)
     json_data = output.decode('utf-8')
     return json.loads(json_data)

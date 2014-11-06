@@ -362,8 +362,11 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
     for(int index = 0; lint_types[index]; index++) {
         char *lint_type = lint_types[index];
         char sign = 0;
-        if(strspn(lint_type, "+-")) {
-            sign = (*lint_type == '+') ? +1 : -1;
+
+        if(*lint_type == '+') {
+            sign = +1;
+        } else if(*lint_type == '-') {
+            sign = -1;
         }
 
         if(index > 0 && sign == 0) {
