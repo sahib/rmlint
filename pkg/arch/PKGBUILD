@@ -1,40 +1,28 @@
 # Maintainer: SahibBommelig <sahib@online.de>
-# rmlint PKBUILD for ArchLinux 
-pkgname=rmlint-git
-pkgver=20140626
+# rmlint PKBUILD for ArchLinux
+ 
+_pkgname=rmlint
+pkgname=${_pkgname}-git
+pkgver=156.9a0a7fe
 pkgrel=1
 pkgdesc="Tool to remove duplicates and other lint, being much faster than fdupes"
 arch=('i686' 'x86_64')
-depends=(glibc clang)
-provides=('rmlint')
-conflicts=('rmlint')
-makedepends=('git')
+url="https://github.com/sahib/rmlint"
 license=('GPL3')
-url=("https://github.com/sahib/rmlint")
-
-_gitroot="https://github.com/sahib/rmlint.git"
-_gitname="rmlint"
-
-build() 
-{
-    cd ${srcdir}/
-
-    msg "Connecting to the GIT server...."
-    if [[ -d ${srcdir}/${_gitname} ]] ; then
-        cd ${_gitname}
-        git pull origin --depth 1
-    msg "Updating existing repo..."
-    else
-        git clone --depth=1 ${_gitroot}
-    fi
-    
-    msg "GIT checkout done."
-    cd ${srcdir}/${_gitname}
-    
-    CC=clang make || return 1
+depends=('glibc')
+makedepends=('git')
+conflicts=("$_rmlint")
+provides=("$_pkgname")
+source=("$pkgname"::"git+https://github.com/sahib/${_pkgname}.git")
+md5sums=('SKIP')
+ 
+pkgver() {
+        cd "$pkgname"
+        printf "%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
-
+ 
 package() {
-  cd "$srcdir/${_gitname}"
-  make DESTDIR=$pkgdir install || return 1
+        cd "$pkgname"
+	git checkout develop  # Change this for after release
+        scons DEBUG=1 --prefix=/usr install
 }

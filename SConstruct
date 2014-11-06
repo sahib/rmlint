@@ -344,7 +344,9 @@ install_paths = []
 for src in env.Glob('po/*.po'):
     lng = os.path.basename(str(src)[:-3])
     dst = lng + '.mo'
-    env.Command(dst, src, 'msgfmt $SOURCE -o po/$TARGET')
+    env.AlwaysBuild(
+        env.Command(dst, src, 'msgfmt $SOURCE -o po/$TARGET')
+    )
 
     path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
     install_paths.append(path)
