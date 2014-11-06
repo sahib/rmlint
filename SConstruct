@@ -340,26 +340,30 @@ if 'xgettext' in COMMAND_LINE_TARGETS:
 
 # gettext handling:
 languages = []
-install_paths = []
+language_install_paths = []
+language_cmds = []
+
 for src in env.Glob('po/*.po'):
     lng = os.path.basename(str(src)[:-3])
     dst = lng + '.mo'
-    env.AlwaysBuild(
-        env.Command(dst, src, 'msgfmt $SOURCE -o po/$TARGET')
-    )
+
+    cmd = env.Command(dst, src, 'msgfmt $SOURCE -o po/$TARGET')
+    env.AlwaysBuild(cmd)
+    language_cmds.append(cmd)
 
     path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
-    install_paths.append(path)
+    language_install_paths.append(path)
     env.InstallAs(path, os.path.join('po', dst))
 
 if 'install' in COMMAND_LINE_TARGETS:
     env.Install('$PREFIX/bin', [program])
     env.Install('$PREFIX/share/man/man1', [manpage])
-    env.Alias('install', ['$PREFIX/bin', '$PREFIX/share/man/man1'] + install_paths)
+    install_alias = env.Alias('install', ['$PREFIX/bin', '$PREFIX/share/man/man1'] + language_install_paths)
+    env.Requires(install_alias, language_cmds)
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, "$PREFIX/bin/rmlint")
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
 
-    for lang_path in install_paths:
+    for lang_path in language_install_paths:
         create_uninstall_target(env, lang_path)
