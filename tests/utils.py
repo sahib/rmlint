@@ -30,6 +30,10 @@ def run_rmlint(*args, dir_suffix=None):
     return json.loads(json_data)
 
 
+def create_dirs(path):
+    os.makedirs(os.path.join(TESTDIR_NAME, path))
+
+
 def create_file(data, name):
     full_path = os.path.join(TESTDIR_NAME, name)
     if '/' in name:
