@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include <sys/ioctl.h>
 
@@ -37,6 +38,7 @@ typedef struct RmFmtHandlerProgress {
 
     /* user data */
     gdouble percent;
+    gdouble last_unknown_pos;
 
     char text_buf[1024];
     guint32 text_len;
@@ -48,9 +50,12 @@ typedef struct RmFmtHandlerProgress {
 } RmFmtHandlerProgress;
 
 static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self, int max_len) {
+    char num_buf[32] = {0};
+    memset(num_buf, 0, sizeof(num_buf));
+
     switch(self->last_state) {
     case RM_PROGRESS_STATE_TRAVERSE:
-        self->percent = 1.0;
+        self->percent = 2.0;
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
                              "Traversing (%s%"LLU"%s usable files / %s%"LLU"%s + %s%"LLU"%s ignored files / folders)",
@@ -60,7 +65,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                          );
         break;
     case RM_PROGRESS_STATE_PREPROCESS:
-        self->percent = 1.0;
+        self->percent = 2.0;
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
                              "Preprocessing (reduced files to %s%"LLU"%s / found %s%"LLU"%s other lint)",
@@ -69,19 +74,20 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                          );
         break;
     case RM_PROGRESS_STATE_SHREDDER:
-        self->percent = ((gdouble)session->dup_counter + session->dup_group_counter) / ((gdouble)session->total_filtered_files);
+        self->percent = 1.0 - ((gdouble)session->shred_files_remaining) / ((gdouble)session->total_filtered_files);
+        rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf, sizeof(num_buf));
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
-                             "Matching files (%s%"LLU"%s dupes of %s%"LLU"%s originals; %s%.2f%s GiB to scan in %s%"LLU"%s files)",
+                             "Matching files (%s%"LLU"%s dupes of %s%"LLU"%s originals; %s%s%s to scan in %s%"LLU"%s files)",
                              MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
                              MAYBE_YELLOW(session), session->dup_group_counter, MAYBE_RESET(session),
-                             MAYBE_GREEN(session), (double)session->shred_bytes_remaining / 1024 / 1024 / 1024, MAYBE_RESET(session),
+                             MAYBE_GREEN(session), num_buf, MAYBE_RESET(session),
                              MAYBE_GREEN(session), session->shred_files_remaining, MAYBE_RESET(session)
                          );
         break;
     case RM_PROGRESS_STATE_MERGE:
-        self->percent = 1.0;
-        self->text_len = g_snprintf(self->text_buf, sizeof(self->text_buf), "Merging files into directories\n");
+        self->percent = 2.0;
+        self->text_len = g_snprintf(self->text_buf, sizeof(self->text_buf), "Merging files into directories (stand by...)");
         break;
     case RM_PROGRESS_STATE_INIT:
     case RM_PROGRESS_STATE_SUMMARY:
@@ -123,20 +129,38 @@ static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FI
     fprintf(out, "%s", self->text_buf);
 }
 
-static void rm_fmt_progress_print_bar(RmFmtHandlerProgress *self, int width, FILE *out) {
+static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *self, int width, FILE *out) {
     int cells = width * self->percent;
+
+    /* true when we do not know when 100% is reached. 
+     * Show a moving something in this case.
+     * */
+    bool is_unknown = self->percent > 1.1;
+
 
     fprintf(out, "[");
     for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
-            fprintf(out, "#");
+            if(is_unknown) {
+                if((int)self->last_unknown_pos % 4 == i % 4) {
+                    fprintf(out, "%so%s", MAYBE_BLUE(session), MAYBE_RESET(session));
+                } else if((int)self->last_unknown_pos % 2 == i % 2) {
+                    fprintf(out, "%sO%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
+                } else {
+                    fprintf(out, " ");
+                }
+            } else {
+                fprintf(out, "#");
+            }
         } else if(i == cells) {
-            fprintf(out, ">");
+            fprintf(out, "%s>%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
         } else {
-            fprintf(out, "-");
+            fprintf(out, "%s-%s", MAYBE_BLUE(session), MAYBE_RESET(session));
         }
     }
     fprintf(out, "]");
+
+    self->last_unknown_pos = fmod(self->last_unknown_pos + 0.005, width - 2);
 }
 
 static void rm_fmt_prog(
@@ -161,6 +185,8 @@ static void rm_fmt_prog(
             self->update_interval = 15;
         }
 
+        self->last_unknown_pos = 0;
+
         fprintf(out, "\e[?25l"); /* Hide the cursor */
         fflush(out);
         return;
@@ -169,10 +195,11 @@ static void rm_fmt_prog(
     if(state == RM_PROGRESS_STATE_SUMMARY || rm_session_was_aborted(session)) {
         fprintf(out, "\e[?25h"); /* show the cursor */
         fflush(out);
-        return;
     }
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
+        self->percent = 1.0;
+        rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
         fprintf(out, "\n");
     } else if((self->update_counter++ % self->update_interval) > 0) {
         return;
@@ -186,13 +213,9 @@ static void rm_fmt_prog(
 
     int text_width = self->terminal.ws_col * 0.7 - 1;
     rm_fmt_progress_format_text(session, self, text_width);
-    rm_fmt_progress_print_bar(self, self->terminal.ws_col * 0.3, out);
+    rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
     rm_fmt_progress_print_text(self, text_width, out);
     fprintf(out, "%s\r", MAYBE_RESET(session));
-
-    if(state == RM_PROGRESS_STATE_SUMMARY) {
-        fprintf(out, "\n");
-    }
 }
 
 static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
