@@ -32,7 +32,7 @@ Here's a list of readily prepared commands for known distributions:
 
   .. code-block:: bash
   
-    $ yum -y install git scons python-docutils
+    $ yum -y install git scons python-docutils gettext
     $ yum -y install glib-devel libblkid-devel libelf-devel
 
 * **ArchLinux:**
@@ -41,6 +41,14 @@ Here's a list of readily prepared commands for known distributions:
 
     $ pacman -S git scons python-docutils
     $ pacman -S glib2 libutil-linux elfutils
+
+
+* **Ubuntu:**
+
+  .. code-block:: basj
+
+    $ apt-get install git scons python-docutils python3-nose gettext
+    $ apt-get install libelf-dev libglib2.0-dev libblkid-dev 
 
 Send us a note if you want to see your distribution here.
 
