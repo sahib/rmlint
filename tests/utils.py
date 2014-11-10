@@ -34,6 +34,13 @@ def create_dirs(path):
     os.makedirs(os.path.join(TESTDIR_NAME, path))
 
 
+def create_link(path, target):
+    os.link(
+        os.path.join(TESTDIR_NAME, path),
+        os.path.join(TESTDIR_NAME, target)
+    )
+
+
 def create_file(data, name):
     full_path = os.path.join(TESTDIR_NAME, name)
     if '/' in name:
