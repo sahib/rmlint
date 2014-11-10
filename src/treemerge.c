@@ -112,7 +112,6 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
 
     return 0;
 }
-
 static bool rm_tm_count_files(art_tree *dir_tree, char **files, RmSession *session) {
     if (*files == NULL) {
         rm_log_error("No files passed to rm_tm_count_files\n");
@@ -310,7 +309,11 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
     art_insert(&directory->hash_trie, file_digest, file->digest->bytes, file);
     g_slice_free1(file->digest->bytes, file_digest);
 
-    directory->dupe_count += 1;
+    if(file->hardlinks.files) {
+        directory->dupe_count += 1 + g_queue_get_length(file->hardlinks.files);
+    } else {
+        directory->dupe_count += 1;
+    }
     directory->prefd_files += file->is_prefd;
 }
 
