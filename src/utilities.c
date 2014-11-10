@@ -96,6 +96,18 @@ char *rm_util_path_extension(const char *basename) {
     }
 }
 
+GQueue *rm_hash_table_setdefault(
+        GHashTable *table, gpointer key, RmNewFunc default_func
+) {
+    gpointer value = g_hash_table_lookup(table, key);
+    if(value == NULL) {
+        value = default_func();
+        g_hash_table_insert(table, key, value);
+    }
+
+    return value;
+}
+
 ino_t rm_util_parent_node(const char *path) {
     char *dummy  = g_strdup(path);
     char *parent_path = g_strdup(dirname(dummy));

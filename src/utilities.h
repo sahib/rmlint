@@ -136,6 +136,23 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp);
  */
 char *rm_util_basename(const char *filename);
 
+
+typedef gpointer (*RmNewFunc)(void);
+
+/**
+ * @brief A setdefault supplementary function for GHashTable.
+ *
+ * This is about the same as dict.setdefault in python.
+ *
+ * @param table the table to use
+ * @param key key to lookup
+ * @param default_func if the key does not exist in table, return default_func
+ * and insert it into table
+ *
+ * @return value, which may be default_func() if key does not exist.
+ */
+GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key, RmNewFunc default_func);
+
 /**
  * @brief Return a pointer to the extension part of the file or NULL if none.
  *

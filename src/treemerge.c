@@ -393,12 +393,9 @@ void rm_tm_destroy(RmTreeMerger *self) {
 }
 
 static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
-    GQueue *dir_queue = g_hash_table_lookup(self->result_table, directory);
-    if(dir_queue == NULL) {
-        dir_queue = g_queue_new();
-        g_hash_table_insert(self->result_table, directory, dir_queue);
-    }
-
+    GQueue *dir_queue = rm_hash_table_setdefault(
+        self->result_table, directory, (RmNewFunc)g_queue_new
+    );
     g_queue_push_head(dir_queue, directory);
 }
 
@@ -501,11 +498,9 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile * file = iter->data;
 
-        GQueue *file_list = g_hash_table_lookup(self->file_groups, file->digest);
-        if(file_list == NULL) {
-            file_list = g_queue_new();
-            g_hash_table_insert(self->file_groups, file->digest, file_list);
-        }
+        GQueue *file_list = rm_hash_table_setdefault(
+                self->file_groups, file->digest, (RmNewFunc)g_queue_new
+        );
         g_queue_push_head(file_list, file);
     }
 

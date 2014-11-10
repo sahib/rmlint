@@ -328,20 +328,18 @@ void rm_traverse_tree(RmSession *session) {
 
         RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);
 
-        /* Append normal paths directly */
         if(S_ISREG(buffer->stat_buf.st_mode)) {
+            /* Append normal paths directly */
             rm_traverse_file(trav_session, &buffer->stat_buf, path, is_prefd, idx, RM_LINT_TYPE_UNKNOWN);
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
+            /* It's a directory, traverse it. */
             dev_t disk = rm_mounts_get_disk_id_by_path(session->mounts, path);
             buffer->is_first_path = (g_hash_table_size(paths_per_disk) == 0);
 
-            GQueue *path_queue = g_hash_table_lookup(paths_per_disk, GUINT_TO_POINTER(disk));
-            if(path_queue == NULL) {
-                path_queue = g_queue_new();
-                g_hash_table_insert(paths_per_disk, GUINT_TO_POINTER(disk), path_queue);
-            }
-
+            GQueue *path_queue = rm_hash_table_setdefault(
+                    paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new
+            );
             g_queue_push_tail(path_queue, buffer);
         } else {
             /* Probably a block device, fifo or something weird. */
