@@ -1,6 +1,3 @@
-\ 
-==
-
 .. .. image:: _static/screenshot.png
 ..    :align: center
 ..    :width: 66%

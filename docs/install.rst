@@ -45,7 +45,7 @@ Here's a list of readily prepared commands for known distributions:
 
 * **Ubuntu:**
 
-  .. code-block:: basj
+  .. code-block:: bash
 
     $ apt-get install git scons python-docutils python3-nose gettext
     $ apt-get install libelf-dev libglib2.0-dev libblkid-dev 
