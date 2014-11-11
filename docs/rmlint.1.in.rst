@@ -125,9 +125,9 @@ General Options
     to three times. They do not do any work themselves, but set some other
     options implicitly as a shortcut. 
 
-    * **-p** is equivalent to **--flock-files --algorithm=bastard**
-    * **-pp** is equivalent to **--flock-files --algorithm=sha512**
-    * **-ppp** is equivalent to **--flock-files --algorithm=paranoid**
+    * **-p** is equivalent to **--algorithm=bastard**
+    * **-pp** is equivalent to **--algorithm=sha512**
+    * **-ppp** is equivalent to **--algorithm=paranoid**
 
     The last one is not a hash function in the traditional meaning, but performs
     a byte-by-byte comparison of each file. See also **--max-paranoid-ram**.
@@ -158,7 +158,6 @@ General Options
     *Notes:*
 
         * This does not work with **--algorithm=paranoid** (or **-ppp**).
-        * This option implies **--flock-files**.
         * This feature might not deliver perfect result 
         * This feature might add some runtime.
 
@@ -226,12 +225,6 @@ Traversal Options
 
     Also traverse hidden directories? This is often not a good idea, since
     directories like `.git/` would be investigated.
-
-**-z --flock-files / -Z --no-flock-files** (*default*)
-
-    Lock all files during traversal with ``flock(2)``, so they cannot be
-    modified while rmlint runs. The files are guaranteed to be unlocked once 
-    rmlint exits. See also ``man 2 flock`` and the limitations of it.
 
 **-b --match-basename / -B --no-match-basename** (*default*)
 

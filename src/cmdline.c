@@ -548,8 +548,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"must-match-untagged"        , no_argument       , 0 , 'M'} ,
             {"hardlinked"                 , no_argument       , 0 , 'l'} ,
             {"no-hardlinked"              , no_argument       , 0 , 'L'} ,
-            {"flock-files"                , no_argument       , 0 , 'z'} ,
-            {"no-flock-files"             , no_argument       , 0 , 'Z'} ,
             {"match-basename"             , no_argument       , 0 , 'b'} ,
             {"no-match-basename"          , no_argument       , 0 , 'B'} ,
             {"match-with-extension"       , no_argument       , 0 , 'e'} ,
@@ -565,7 +563,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLhHzZbBeEiID",
+                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLhHbBeEiID",
                      long_options, &option_index
                  );
 
@@ -712,12 +710,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'P':
             settings->paranoid -= 1;
             break;
-        case 'z':
-            settings->lock_files = true;
-            break;
-        case 'Z':
-            settings->lock_files = false;
-            break;
         case 'b':
             settings->match_basename = true;
             break;
@@ -754,7 +746,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         break;
     case 1:
         settings->checksum_type = RM_DIGEST_BASTARD;
-        settings->lock_files = true;
         break;
     case 2:
 #ifdef G_CHECKSUM_SHA512
@@ -762,11 +753,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 #else
         settings->checksum_type = RM_DIGEST_SHA256;
 #endif
-        settings->lock_files = true;
         break;
     case 3:
         settings->checksum_type = RM_DIGEST_PARANOID;
-        settings->lock_files = true;
         break;
     default:
         rm_log_error(RED"Only up to -ppp or down to -P flags allowed.\n"RESET);
@@ -795,9 +784,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             rm_log_error("Full paranoia will not work well with directory merging.\n");
             rm_cmd_die(session, EXIT_FAILURE);
         }
-
-        /* Make file locking the default for directory merging */
-        settings->lock_files = true;
     }
 
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(

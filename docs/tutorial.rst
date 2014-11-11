@@ -342,15 +342,13 @@ option (which might be given up to three times each).
 
 Here's what they do in detail:
 
-    * ``-p`` is equivalent to ``--flock-files --algorithm=bastard``
-    * ``-pp`` is equivalent to ``--flock-files --algorithm=sha512``
-    * ``-ppp`` is equivalent to ``--flock-files --algorithm=paranoid``
+    * ``-p`` is equivalent to ``--algorithm=bastard``
+    * ``-pp`` is equivalent to ``--algorithm=sha512``
+    * ``-ppp`` is equivalent to ``--algorithm=paranoid``
 
-As you see, it just enables a bunch of other options. ``--flock-files`` will
-lock all files found during traversal using ``flock(2)`` to be sure that no
-modifications will be done during it's run. ``--algorithm`` changes the hash
-algorithm to someting more secure. ``bastard`` is a 256bit hash that consists
-of two 128bit subhashes (``murmur3`` and ``city`` if you're curious). 
+As you see, it just enables a certain hash algorithm. ``--algorithm`` changes
+the hash algorithm to someting more secure. ``bastard`` is a 256bit hash that
+consists of two 128bit subhashes (``murmur3`` and ``city`` if you're curious).
 One level up the well-known ``sha512`` (with 512bits obviously) is used.
 Another level up, no real hash function is used. Instead, files are compared
 byte-by-byte (which guarantees collision free output).

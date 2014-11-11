@@ -29,16 +29,6 @@
 #include <unistd.h>
 #include <sys/file.h>
 
-static void rm_file_set_lock_flags(const char *path, int flags) {
-    int fd = 0;
-    if((fd = rm_sys_open(path, R_OK)) > 0) {
-        if(flock(fd, flags) != 0) {
-            rm_log_perror("flock(2) failed");
-        }
-        rm_sys_close(fd);
-    }
-}
-
 RmFile *rm_file_new(
     RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
@@ -60,12 +50,6 @@ RmFile *rm_file_new(
     self->is_prefd = is_ppath;
     self->is_original = false;
     self->path_index = pnum;
-
-    if(settings->lock_files) {
-        rm_file_set_lock_flags(path, LOCK_EX);
-        self->unlock_file = true;
-    }
-
     self->settings = settings;
 
     return self;
@@ -75,10 +59,6 @@ void rm_file_destroy(RmFile *file) {
     if (file->digest && file->free_digest) {
         rm_digest_free(file->digest);
         file->digest = NULL;
-    }
-
-    if(file->unlock_file) {
-        rm_file_set_lock_flags(file->path, LOCK_UN);
     }
 
     if (file->disk_offsets) {

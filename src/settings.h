@@ -53,7 +53,6 @@ typedef struct RmSettings {
     bool must_match_untagged;    /* if set, will ONLY find dupe sets that have at least once file in a path NOT tagged with // */
     bool find_hardlinked_dupes;  /* if set, will also search for hardlinked duplicates*/
     bool limits_specified;
-    bool lock_files;             /* if set, flock(2) each file before proceeding */
     bool filter_mtime;
     time_t min_mtime;
     bool match_basename;         /* if set, dupes must have the same basename */
