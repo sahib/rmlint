@@ -133,17 +133,17 @@ static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *ses
         fts_flags |= FTS_PHYSICAL;
     }
 
-    FTS *fts = fts_open(files, fts_flags, NULL);
-    if(fts == NULL) {
-        rm_log_perror("fts_open failed");
-        return false;
-    }
-
     /* This tree stores the full file paths.
        It is joined into a full directory tree later.
      */
     art_tree file_tree;
     init_art_tree(&file_tree);
+
+    FTS *fts = fts_open(files, fts_flags, NULL);
+    if(fts == NULL) {
+        rm_log_perror("fts_open failed");
+        return false;
+    }
 
     FTSENT *ent = NULL;
     while((ent = fts_read(fts))) {
@@ -176,6 +176,11 @@ static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *ses
             art_insert(
                 &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, NULL
             );
+        case FTS_D:
+        case FTS_DNR:
+        case FTS_DOT:
+        case FTS_DP:
+        case FTS_NSOK:
         default:
             /* other fts states, that do not count as errors or files */
             break;
