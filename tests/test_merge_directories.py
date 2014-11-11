@@ -70,3 +70,39 @@ def test_hardlinks():
     assert data[1]['type'] == 'duplicate_file'
     assert data[1]['path'].endswith('a')
 
+'''
+Test idea for mountpoints:
+
+$ mkdir mounty/a/b -p
+$ cd mounty/a
+$ echo 'x' > 1
+$ sudo mount --rbind .. b
+$ cd .. && $ mkdir c && $ echo 'x' > c/2
+
+mounty
+├── a
+│   ├── 1
+│   └── b
+│       ├── a
+│       │   ├── 1
+│       │   └── b
+│       └── c
+│           └── 1
+└── c
+    └── 2
+
+Expected result:
+
+Warning: filesystem loop detected at /home/sahib/rmlint/mounty/a/b (skipping)
+
+# Duplikate:
+    ls /home/sahib/rmlint/mounty/a/1
+    rm /home/sahib/rmlint/mounty/c/2
+
+Problem: mount needs sudo.
+'''
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_mount_binds():
+    pass

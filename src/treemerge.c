@@ -33,15 +33,15 @@
 #include "preprocess.h"
 
 typedef struct RmDirectory {
-    char *dirname;             /* Path to this directory without trailing slash        */
-    GQueue known_files;        /* RmFiles in this directory                            */
-    GQueue children;           /* Children for directories with subdirectories         */
-    guint32 prefd_files;       /* Files in this directory that are tagged as original  */
-    guint32 dupe_count;        /* Count of RmFiles actually in this directory          */
-    guint32 file_count;        /* Count of files actually in this directory            */
-    bool finished;             /* Was this dir or one of his parents already printed?  */
-    art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure) */
-    RmDigest *digest;          /* Common digest of all RmFiles in this directory       */
+    char *dirname;             /* Path to this directory without trailing slash              */
+    GQueue known_files;        /* RmFiles in this directory                                  */
+    GQueue children;           /* Children for directories with subdirectories               */
+    guint32 prefd_files;       /* Files in this directory that are tagged as original        */
+    guint32 dupe_count;        /* Count of RmFiles actually in this directory                */
+    gint64 file_count;         /* Count of files actually in this directory (or -1 on error) */
+    bool finished;             /* Was this dir or one of his parents already printed?        */
+    art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure)       */
+    RmDigest *digest;          /* Common digest of all RmFiles in this directory             */
 
     struct {
         bool has_metadata;     /* stat(2) called already                */
@@ -66,14 +66,15 @@ typedef struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint32_t key_len, _U void * value) {
+static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint32_t key_len, void * value) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
        code easy and memory efficient this way, Im against more clever but longer
        solutions. (Good way of saying "Im just too stupid", eh?)
     */
-    art_tree *dir_tree = data;
+    art_tree *count_tree = data;
+    bool error_state = value;
 
     unsigned char path[PATH_MAX];
     memcpy(path, key, key_len);
@@ -99,20 +100,27 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
 
             /* Include the nulbyte */
             int new_key_len = MAX(0, i - 1) + 2;
+            int new_count = -1;
+
+            if(error_state == false) {
+                /* Lookup the count on this level */
+                int old_count = GPOINTER_TO_INT(art_search(count_tree, path, new_key_len));
+                
+                /* Propagate old error up or just increment the count */
+                new_count = (old_count == -1) ? -1 : old_count + 1;
+            }
 
             /* Accumulate the count ('n' above is the height of the trie)  */
             art_insert(
-                dir_tree, (unsigned char *)path, new_key_len,
-                GUINT_TO_POINTER(
-                    GPOINTER_TO_UINT(art_search(dir_tree, path, new_key_len)) + 1
-                )
+                count_tree, (unsigned char *)path, new_key_len,
+                GINT_TO_POINTER(new_count)
             );
         }
     }
 
     return 0;
 }
-static bool rm_tm_count_files(art_tree *dir_tree, char **files, RmSession *session) {
+static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *session) {
     if (*files == NULL) {
         rm_log_error("No files passed to rm_tm_count_files\n");
         return false;
@@ -152,13 +160,24 @@ static bool rm_tm_count_files(art_tree *dir_tree, char **files, RmSession *sessi
         }
 
         switch(ent->fts_info) {
+        case FTS_ERR:
+        case FTS_DC:
+            /* Save this path as an error */
+            art_insert(
+                &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, GINT_TO_POINTER(1) 
+            );
+            break;
         case FTS_F:
         case FTS_SL:
+        case FTS_NS: 
         case FTS_SLNONE:
+        case FTS_DEFAULT:
+            /* Save this path as countable file */
             art_insert(
                 &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, NULL
             );
         default:
+            /* other fts states, that do not count as errors or files */
             break;
         }
     }
@@ -168,7 +187,7 @@ static bool rm_tm_count_files(art_tree *dir_tree, char **files, RmSession *sessi
         return false;
     }
 
-    art_iter(&file_tree, rm_tm_count_art_callback, dir_tree);
+    art_iter(&file_tree, rm_tm_count_art_callback, count_tree);
     destroy_art_tree(&file_tree);
     return true;
 }
@@ -412,12 +431,15 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
                              );
 
     if(directory == NULL) {
-        directory = rm_directory_new(dirname);
-
         /* Get the actual file count */
-        directory->file_count = GPOINTER_TO_UINT(
-                                    art_search(&self->count_tree, (unsigned char *)dirname, dir_len
-                                              ));
+        int file_count = GPOINTER_TO_INT(art_search(&self->count_tree, (unsigned char *)dirname, dir_len));
+        if(file_count == 0) {
+            rm_log_error(RED"Empty directory or weird RmFile encountered; rejecting.\n"RESET);
+            file_count = -1;
+        } 
+
+        directory = rm_directory_new(dirname);
+        directory->file_count = file_count;
 
         /* Make the new directory known */
         art_insert(&self->dir_tree, (unsigned char *)dirname, dir_len, directory);
@@ -436,7 +458,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     g_hash_table_replace(self->known_hashs, file->digest, NULL);
 
     /* Check if the directory reached the number of actual files in it */
-    if(directory->dupe_count == directory->file_count) {
+    if(directory->dupe_count == directory->file_count && directory->file_count > 0) {
         rm_tm_insert_dir(self, directory);
     }
 }
