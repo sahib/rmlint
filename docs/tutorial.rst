@@ -34,14 +34,27 @@ prepared shell commands to remove duplicates and other finds,
 
 .. [*] You could say it should be named ``findlint``.
 
+So for the above example, the full process would be:
+
+.. code-block:: bash
+
+   $ rmlint
+   # (wait for rmlint to finish running)
+   $ gedit rmlint.sh
+   # (or any editor you prefer... review the content of rmlint.sh to
+   #  check what it plans to delete; make any edits as necessary)
+   $ ./rmlint.sh
+   # (the rmlint.sh script will ask for confirmation, then delete the
+   #  appropriate lint, then delete itself)
+
+
 Filtering
 ---------
 
-That was already a common usecase. What if we do not want to
-check all files as dupes? ``rmlint`` has a good reportoire of 
-options to select only certain files. We won't cover all options,
-but the useful ones. If those options do not suffice, you can always use
-external tools to feed ``rmlint's stdin``:
+What if we do not want to check all files as dupes? ``rmlint`` has a
+good reportoire of options to select only certain files. We won't cover
+all options, but the useful ones. If those options do not suffice, you
+can always use external tools to feed ``rmlint's stdin``:
 
 .. code-block:: bash
 
@@ -52,45 +65,61 @@ Limit files by size using ``--size``
 
 .. code-block:: bash
 
-   # only check files between 20 MB und 1 Gigabyte.
+   # only check files between 20 MB and 1 Gigabyte:
+   $ rmlint --size 20M-1G
+   # short form (-s) works just as well:
    $ rmlint -s 20M-1G
+   # only check files bigger than 4 kB:
+   $ rmlint -s 4K
+   # only check files smaller than 1234 bytes:
+   $ rmlint -s 0-1234
+   
+Valid units include:
 
-If you want to limit files by their size, you can use ``--size`` (or short
-``-s``). You give it  a size description, which tells ``rmlint`` the valid size
-range. Either end can be given a unit (if none, ``rmlint`` assumes bytes)
-similar to ``dd(2)``.
+|  K,M,G,T,P for powers of 1000
+|  KB, MB, GB etc for powers of 1024
+  
+If no units are given, ``rmlint`` assumes bytes.
+
 
 Limit files by their basename
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If only all files with the same basenames need to be checked you can use the
-``-b`` (``--match-basename``)  option and their silblings ``-e``
-(``--match-with-extension``) and ``-i`` (``--match-without-extension``) . 
+By default, ``rmlint`` compares file contents, regardless of file name.
+So if afile.jpg has the same content as bfile.txt (which is unlikely!),
+then rmlint will find and report this as a duplicate.
+You can speed things up a little bit by telling rmlint not to try to
+match files unless they have the same or similar file names.  The three
+options here are:
+
+|  ``-b`` (``--match-basename``)  
+|  ``-e`` (``--match-extension``)
+|  ``-i`` (``--match-without-extension``) . 
+  
+Examples:
 
 .. code-block:: bash
 
-   # Find all duplicate files with the same basename
+   # Find all duplicate files with the same basename:
    $ rmlint -b some_dir/ 
    ls some_dir/one/hello.c
    rm some_dir/two/hello.c
-
-   # Find all duplicate files that have the same extension
+   # Find all duplicate files that have the same extension:
    $ rmlint -e some_dir/ 
    ls some_dir/hello.c
    rm some_dir/hello_copy.c
-
-   # Find all duplicate files that have the same basename
+   # Find all duplicate files that have the same basename:
    # minus the extension
    $ rmlint -e some_dir/ 
    ls some_dir/hello.c
-   rm some_dir/hello.cc
+   rm some_dir/hello.bak
 
 Limit files by their modification time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is an useful feature if you want to investigate only files newer than 
 a certain date or if you want to progessively update the results, i.e. when you 
-run ``rmlint`` in a script that wathces a directory for duplicates.
+run ``rmlint`` in a script that watches a directory for duplicates.
 
 The most obvious way is using ``-N`` (``--newer-than=<timestamp>``):
 
@@ -105,26 +134,32 @@ The most obvious way is using ``-N`` (``--newer-than=<timestamp>``):
    # Alternatively use a ISO8601 formatted Timestamp
    $ rmlint -N 2014-09-08T00:12:32+0200
 
-A little more scriptable solution is using ``-n`` (``--newer-than-stamp``) and 
+If you are checking a large directory tree for duplicates, you can get
+a supstantial speedup by creating a timestamp file each time you run
+rmlint.  To do this, use command line options:
+``-n`` (``--newer-than-stamp``) and 
 ``-O stamp:stamp.file`` (we'll come to outputs in a minute):
+Here's an example for incrementally scanning your home folder:
 
 .. code-block:: bash
    
    # First run of rmlint:
-   $ rmlint some_dir/ -O stamp:stamp.file
-   ls some_dir/a.file
-   rm some_dir/b.file
+   $ rmlint /home/foobar -O stamp:/home/foobar/.rmlint.stamp
+   ls /home/foobar/a.file
+   rm /home/foobar/b.file
 
    # Second run, no changes:
-   $ rmlint some_dir/ -n stamp.file
+   $ rmlint /home/foobar -n /home/foobar/.rmlint.stamp
    <nothing>
 
    # Second run, new file copied:
-   $ cp some_dir/a.file some_dir/c.file
-   $ rmlint some_dir/ -n stamp.file
+   $ cp /home/foobar/a.file /home/foobar/c.file
+   $ rmlint /home/foobar -n /home/foobar/.rmlint.stamp
    ls some_dir/a.file
    rm some_dir/b.file
    rm some_dir/c.file
+   
+Note that ``-n`` updates the timestamp file each time it is run.
 
 Outputs
 -------
@@ -330,13 +365,12 @@ Technically it only computes a hash of your file which might, by it's nature,
 collide with the hash of a totally different file. If we assume a *perfect* hash
 function (i.e. one that distributes it's hash values perfectly even over all
 possible values), the probablilty of having a hash-collision is
-:math:`\frac{1}{2^{128}}` for the default 128-bit hash. In practice most hash
-functions have of course a much higher collision probablilty, since they trade
-speed against accuracy. 
+:math:`\frac{1}{2^{128}}` for the default 128-bit hash.  Of course hash
+functions are not totally random, so the collision probability is slightly higher.
 
 If you're wary you might want to make a bit more paranoid than it's default. 
 By default the ``spooky`` hash algorithm is used, which we consider a good
-tradeoff of speed and accuracy. ``rmlint's`` paranoia level can be easily 
+tradeoff of speed and accuracy. ``rmlint``'s paranoia level can be easily 
 inc/decreased using the ``-p`` (``--paranoid``)/ ``-P`` (``--less-paranoid``)
 option (which might be given up to three times each).
 
@@ -350,7 +384,7 @@ As you see, it just enables a certain hash algorithm. ``--algorithm`` changes
 the hash algorithm to someting more secure. ``bastard`` is a 256bit hash that
 consists of two 128bit subhashes (``murmur3`` and ``city`` if you're curious).
 One level up the well-known ``sha512`` (with 512bits obviously) is used.
-Another level up, no real hash function is used. Instead, files are compared
+Another level up, no hash function is used. Instead, files are compared
 byte-by-byte (which guarantees collision free output).
 
 There is a bunch of other hash functions you can lookup in the manpage.
@@ -358,7 +392,10 @@ We recommend never to use the ``-P`` option.
 
 .. note::
 
-   Bugs in ``rmlint`` are sadly (or happily?) more likely than hash collisions.
+   Even with the default options, the probability of a false positive doesn't
+   really start to get significant until you have around 1,000,000,000,000,000,000
+   files all of the same file size.  Bugs in ``rmlint`` are sadly (or happily?)
+   more likely than hash collisions.
 
 Original detection
 ------------------
@@ -386,9 +423,8 @@ Here's an example:
    rm b
    rm c
 
-Arguably, using the alphabetically first one does not make much sense, except
-for showing the feature. Therefore the default is **-S m** -- which takes the
-oldest file, determined by it's modification time. 
+Alphabetically first makes sense in the case of
+backup files, ie **a.txt.bak** comes after **a.txt**.
 
 Here's a table of letters you can supply to the ``-S`` option:
 
@@ -398,7 +434,13 @@ Here's a table of letters you can supply to the ``-S`` option:
 **p** keep first named path       **P** keep last named path
 ===== =========================== ===== ===========================
 
-With time, new letters might be implemented. 
+The default setting is ``-S m`` -- which takes the
+oldest file, determined by it's modification time.
+Multiple sort criteria can be specified, eg ``-S mpa`` will sort first by
+mtime, then (if tied), based on which path you specified first in the
+rmlint command, then finally based on alphabetical order of file name.
+Note that "original directory" criteria (see below) take precedence over
+the ``-S`` options.
 
 Flagging original directories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -419,6 +461,29 @@ There are two slightly esoteric related options to this:
 ``-k`` tells ``rmlint`` to never delete any duplicates that are in original
 paths. Even if this means to ignore them. ``-m`` only accepts duplicates if they
 have at least one related original in an original path.
+
+In the case of nested mountpoints, it sometimes makes sense to use the 
+opposite variations, ``-K`` (``--keep-all-untagged``) and ``-M`` (``--must-match-untagged``).
+
+Here's a real world example using these features:  I have an portable backup drive with some
+old backups on it.  I have just backed up my home folder to a new backup drive.  I want
+to reformat the old backup drive and use it for something else.  But first I want to
+check that there are no "originals" on the drive.  The drive is mounted at /media/portable.  
+
+.. code-block:: bash
+
+   # Find all files on /media/portable that can be safely deleted:
+   $ rmlint -km /media/portable // ~
+   # check the shellscript looks ok:
+   $ less ./rmlint.sh
+   # run the shellscript to delete the redundant backups
+   $ ./rmlint.sh
+   # run again (to delete empty dirs)
+   $ rmlint -km /media/portable // ~
+   $ ./rmlint.sh   
+   # see what files are left:
+   $ tree /media/portable
+   # recover any files that you want to save, then you can safely reformat the drive
 
 
 Misc options
