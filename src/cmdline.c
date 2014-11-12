@@ -543,7 +543,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"paranoid"                   , no_argument       , 0 , 'p'} ,
             {"less-paranoid"              , no_argument       , 0 , 'P'} ,
             {"keep-all-tagged"            , no_argument       , 0 , 'k'} ,
-            {"keep-all-untagged"          , no_argument       , 0 , 'M'} ,
+            {"keep-all-untagged"          , no_argument       , 0 , 'K'} ,
             {"must-match-tagged"          , no_argument       , 0 , 'm'} ,
             {"must-match-untagged"        , no_argument       , 0 , 'M'} ,
             {"hardlinked"                 , no_argument       , 0 , 'l'} ,
