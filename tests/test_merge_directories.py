@@ -70,6 +70,18 @@ def test_hardlinks():
     assert data[1]['type'] == 'duplicate_file'
     assert data[1]['path'].endswith('a')
 
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_deep_simple():
+    create_file('xxx', 'deep/a/b/c/d/1')
+    create_file('xxx', 'deep/e/f/g/h/1')
+    head, *data, footer = run_rmlint('-D -S a')
+
+    assert data[0]['path'].endswith('deep/a')
+    assert data[1]['path'].endswith('deep/e')
+    assert len(data) == 2
+
+
 '''
 Test idea for mountpoints:
 
