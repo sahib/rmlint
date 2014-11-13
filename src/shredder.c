@@ -1191,6 +1191,7 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
         }
     }
     return result;
+    /*TODO: add rm_pp_cmp_orig_criteria ranking test */
 }
 
 static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *original_file) {
