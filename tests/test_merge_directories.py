@@ -87,7 +87,6 @@ def create_nested(root, letters):
     for letter in letters:
         summed.append(letter)
         path = os.path.join(*([root] + summed + ['1']))
-        print(path)
         create_file('xxx', path)
 
 

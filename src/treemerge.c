@@ -39,10 +39,10 @@ typedef struct RmDirectory {
     gint64 prefd_files;        /* Files in this directory that are tagged as original        */
     gint64 dupe_count;         /* Count of RmFiles actually in this directory                */
     gint64 file_count;         /* Count of files actually in this directory (or -1 on error) */
+    gint64 mergeups;           /* number of times this directory was merged up               */
     bool finished;             /* Was this dir or one of his parents already printed?        */
     bool was_merged;           /* true if this directory was merged up already (only once)   */
     bool was_inserted;         /* true if this directory was added to results (only once)    */
-    int mergeups;              /* number of times this directory was merged up               */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure)       */
     RmDigest *digest;          /* Common digest of all RmFiles in this directory             */
 
