@@ -82,6 +82,46 @@ def test_deep_simple():
     assert len(data) == 2
 
 
+def create_nested(root, letters):
+    summed = []
+    for letter in letters:
+        summed.append(letter)
+        path = os.path.join(*([root] + summed + ['1']))
+        print(path)
+        create_file('xxx', path)
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_deep_full():
+    create_nested('deep', 'abcd')
+    create_nested('deep', 'efgh')
+
+    head, *data, footer = run_rmlint('-D -S a')
+
+    assert data[0]['path'].endswith('deep/a')
+    assert data[1]['path'].endswith('deep/e')
+    assert len(data) == 2
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_deep_full_twice():
+    create_nested('deep_a', 'abcd')
+    create_nested('deep_a', 'efgh')
+    create_nested('deep_b', 'abcd')
+    create_nested('deep_b', 'efgh')
+
+    head, *data, footer = run_rmlint(
+        '-D -S a {t}/deep_a {t}/deep_b'.format(
+            t=TESTDIR_NAME
+        ),
+        use_default_dir=False
+    )
+
+    assert data[0]['path'].endswith('deep_a')
+    assert data[1]['path'].endswith('deep_b')
+    assert len(data) == 2
+
+
 '''
 Test idea for mountpoints:
 
