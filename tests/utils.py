@@ -37,8 +37,9 @@ def create_dirs(path):
     os.makedirs(os.path.join(TESTDIR_NAME, path))
 
 
-def create_link(path, target):
-    os.link(
+def create_link(path, target, symlink=False):
+    f = os.symlink if symlink else os.link
+    f(
         os.path.join(TESTDIR_NAME, path),
         os.path.join(TESTDIR_NAME, target)
     )

@@ -121,6 +121,23 @@ def test_deep_full_twice():
     assert len(data) == 2
 
 
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_symlinks():
+    create_file('xxx', 'a/z')
+    create_link('a/z', 'a/x', symlink=True)
+    create_file('xxx', 'b/z')
+    create_link('b/z', 'b/x', symlink=True)
+
+    head, *data, footer = run_rmlint('-D -S a')
+    assert data[0]['path'].endswith('a/z')
+    assert data[1]['path'].endswith('b/z')
+    assert len(data) == 2
+
+    head, *data, footer = run_rmlint('-D -S A -f')
+    assert data[0]['path'].endswith('a/x')
+    assert data[1]['path'].endswith('b/x')
+    assert len(data) == 2
+
 '''
 Test idea for mountpoints:
 
