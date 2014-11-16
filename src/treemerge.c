@@ -43,6 +43,7 @@ typedef struct RmDirectory {
     bool finished;             /* Was this dir or one of his parents already printed?        */
     bool was_merged;           /* true if this directory was merged up already (only once)   */
     bool was_inserted;         /* true if this directory was added to results (only once)    */
+    unsigned short depth;      /* path depth (i.e. count of / in path, no trailing /)        */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure)       */
     RmDigest *digest;          /* Common digest of all RmFiles in this directory             */
 
@@ -229,6 +230,11 @@ static RmDirectory * rm_directory_new(char *dirname) {
 
     self->dirname = dirname;
     self->finished = false;
+
+    self->depth = 0;
+    for(char *s = dirname; *s; s++) {
+        self->depth += (*s == G_DIR_SEPARATOR);
+    }
 
     RmStat dir_stat;
     if(rm_sys_stat(self->dirname, &dir_stat) == -1) {
@@ -543,25 +549,7 @@ static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory
 }
 
 static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U RmTreeMerger *self) {
-    int depth_balance = 0;
-    char *a = da->dirname, *b = db->dirname;
-
-    int i = 0;
-    for(; a[i] && b[i]; ++i) {
-        depth_balance += (a[i] == '/');
-        depth_balance -= (b[i] == '/');
-    }
-
-    if(depth_balance == 0) {
-        for(int n = i; a[n]; ++n) {
-            depth_balance += (a[n] == '/');
-        }
-        for(int n = i; b[n]; ++n) {
-            depth_balance -= (b[n] == '/');
-        }
-    }
-
-    return depth_balance;
+    return da->depth - db->depth;
 }
 static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db, _U RmTreeMerger *self) {
     return -rm_tm_sort_paths(da, db, self);
