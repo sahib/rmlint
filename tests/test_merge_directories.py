@@ -170,7 +170,36 @@ Warning: filesystem loop detected at /home/sahib/rmlint/mounty/a/b (skipping)
 Problem: mount needs sudo.
 '''
 
+def mount_bind_teardown_func():
+    if runs_as_root():
+        subprocess.call(
+            'umount {dst}'.format(
+                dst=os.path.join(TESTDIR_NAME, 'a/b')
+            ),
+            shell=True
+        )
 
-@with_setup(usual_setup_func, usual_teardown_func)
+    usual_teardown_func()
+
+
+@with_setup(usual_setup_func, mount_bind_teardown_func)
 def test_mount_binds():
-    pass
+    if not runs_as_root():
+        return
+
+    create_file('xxx', 'a/b/1')
+    create_file('xxx', 'c/2')
+
+    subprocess.call(
+        'mount --rbind {src} {dst}'.format(
+            src=TESTDIR_NAME,
+            dst=os.path.join(TESTDIR_NAME, 'a/b')
+        ),
+        shell=True
+    )
+    create_file('xxx', 'a/3')
+
+    head, *data, footer = run_rmlint('-S a')
+    assert data[0]['path'].endswith('a/3')
+    assert data[1]['path'].endswith('c/2')
+    assert len(data) == 2

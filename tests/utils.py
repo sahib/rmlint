@@ -10,6 +10,9 @@ import os
 
 TESTDIR_NAME = '/tmp/rmlint-unit-testdir'
 
+def runs_as_root():
+    return os.geteuid() is 0
+
 
 def create_testdir():
     try:
