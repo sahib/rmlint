@@ -155,9 +155,9 @@ Here's an example for incrementally scanning your home folder:
    # Second run, new file copied:
    $ cp /home/foobar/a.file /home/foobar/c.file
    $ rmlint /home/foobar -n /home/foobar/.rmlint.stamp
-   ls some_dir/a.file
-   rm some_dir/b.file
-   rm some_dir/c.file
+   ls /home/foobar/a.file
+   rm /home/foobar/b.file
+   rm /home/foobar/c.file
    
 Note that ``-n`` updates the timestamp file each time it is run.
 
