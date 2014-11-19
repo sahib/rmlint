@@ -36,10 +36,14 @@ typedef struct RmDirectory {
     char *dirname;             /* Path to this directory without trailing slash              */
     GQueue known_files;        /* RmFiles in this directory                                  */
     GQueue children;           /* Children for directories with subdirectories               */
-    guint32 prefd_files;       /* Files in this directory that are tagged as original        */
-    guint32 dupe_count;        /* Count of RmFiles actually in this directory                */
+    gint64 prefd_files;        /* Files in this directory that are tagged as original        */
+    gint64 dupe_count;         /* Count of RmFiles actually in this directory                */
     gint64 file_count;         /* Count of files actually in this directory (or -1 on error) */
+    gint64 mergeups;           /* number of times this directory was merged up               */
     bool finished;             /* Was this dir or one of his parents already printed?        */
+    bool was_merged;           /* true if this directory was merged up already (only once)   */
+    bool was_inserted;         /* true if this directory was added to results (only once)    */
+    unsigned short depth;      /* path depth (i.e. count of / in path, no trailing /)        */
     art_tree hash_trie;        /* Trie of hashes, used for equality check (to be sure)       */
     RmDigest *digest;          /* Common digest of all RmFiles in this directory             */
 
@@ -74,7 +78,7 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
        solutions. (Good way of saying "Im just too stupid", eh?)
     */
     art_tree *count_tree = data;
-    bool error_state = value;
+    bool error_flag = GPOINTER_TO_INT(value);
 
     unsigned char path[PATH_MAX];
     memcpy(path, key, key_len);
@@ -102,13 +106,13 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
             int new_key_len = MAX(0, i - 1) + 2;
             int new_count = -1;
 
-            if(error_state == false) {
+            if(error_flag == false) {
                 /* Lookup the count on this level */
                 int old_count = GPOINTER_TO_INT(art_search(count_tree, path, new_key_len));
                 
                 /* Propagate old error up or just increment the count */
                 new_count = (old_count == -1) ? -1 : old_count + 1;
-            }
+            } 
 
             /* Accumulate the count ('n' above is the height of the trie)  */
             art_insert(
@@ -120,9 +124,10 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
 
     return 0;
 }
-static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *session) {
-    if (*files == NULL) {
-        rm_log_error("No files passed to rm_tm_count_files\n");
+
+static bool rm_tm_count_files(art_tree *count_tree, char **paths, RmSession *session) {
+    if (*paths == NULL) {
+        rm_log_error("No paths passed to rm_tm_count_files\n");
         return false;
     }
 
@@ -139,7 +144,7 @@ static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *ses
     art_tree file_tree;
     init_art_tree(&file_tree);
 
-    FTS *fts = fts_open(files, fts_flags, NULL);
+    FTS *fts = fts_open(paths, fts_flags, NULL);
     if(fts == NULL) {
         rm_log_perror("fts_open failed");
         return false;
@@ -164,7 +169,7 @@ static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *ses
         case FTS_DC:
             /* Save this path as an error */
             art_insert(
-                &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, GINT_TO_POINTER(1) 
+                &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, GINT_TO_POINTER(true) 
             );
             break;
         case FTS_F:
@@ -174,7 +179,7 @@ static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *ses
         case FTS_DEFAULT:
             /* Save this path as countable file */
             art_insert(
-                &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, NULL
+                &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, GINT_TO_POINTER(false)
             );
         case FTS_D:
         case FTS_DNR:
@@ -193,6 +198,18 @@ static bool rm_tm_count_files(art_tree *count_tree, char **files, RmSession *ses
     }
 
     art_iter(&file_tree, rm_tm_count_art_callback, count_tree);
+
+    /* Now flag everything as a no-go over the given paths, 
+     * otherwise we would continue merging till / with fatal consequences,
+     * since / does not have more files as paths[0] 
+     */
+    for(int i = 0; paths[i]; ++i) {
+        /* Just call the callback directly */
+        rm_tm_count_art_callback(
+            count_tree, (unsigned char *)paths[i], strlen(paths[i]) + 1, GINT_TO_POINTER(true)
+        );
+    }
+
     destroy_art_tree(&file_tree);
     return true;
 }
@@ -207,9 +224,17 @@ static RmDirectory * rm_directory_new(char *dirname) {
     self->file_count = 0;
     self->dupe_count = 0;
     self->prefd_files = 0;
+    self->was_merged = false;
+    self->was_inserted = false;
+    self->mergeups = 0;
 
     self->dirname = dirname;
     self->finished = false;
+
+    self->depth = 0;
+    for(char *s = dirname; *s; s++) {
+        self->depth += (*s == G_DIR_SEPARATOR);
+    }
 
     RmStat dir_stat;
     if(rm_sys_stat(self->dirname, &dir_stat) == -1) {
@@ -290,6 +315,10 @@ static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
      * Also it might not be very secure when the last block of the file is
      * compared...
      * */
+    if(d1->mergeups != d2->mergeups) {
+        return false;
+    }
+
     if(rm_digest_equal(d1->digest, d2->digest) == false) {
         return false;
     }
@@ -310,14 +339,16 @@ static guint rm_directory_hash(const RmDirectory *d) {
      * To prevent this case, rm_directory_equal really compares
      * all the file's hashes with each other.
      */
-    return rm_digest_hash(d->digest) ^ d->dupe_count;
+    return rm_digest_hash(d->digest) ^ d->mergeups;
 }
 
-static void rm_directory_add(RmDirectory *directory, RmFile *file) {
+static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     /* Update the directorie's hash with the file's hash
        Since we cannot be sure in which order the files come in
        we have to add the hash cummulatively.
      */
+    int new_dupes = 0;
+
     g_assert(file);
     g_assert(file->digest);
     g_assert(directory);
@@ -334,21 +365,40 @@ static void rm_directory_add(RmDirectory *directory, RmFile *file) {
     g_slice_free1(file->digest->bytes, file_digest);
 
     if(file->hardlinks.files) {
-        directory->dupe_count += 1 + g_queue_get_length(file->hardlinks.files);
+        new_dupes = 1 + g_queue_get_length(file->hardlinks.files);
     } else {
-        directory->dupe_count += 1;
+        new_dupes = 1;
     }
+
+    directory->dupe_count += new_dupes;
     directory->prefd_files += file->is_prefd;
+
+    return new_dupes;
 }
 
 static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
-    parent->file_count += subdir->file_count;
-    parent->prefd_files += subdir->prefd_files;
-    g_queue_push_head(&parent->children, subdir);
-
-    for(GList *iter = subdir->known_files.head; iter; iter = iter->next) {
-        rm_directory_add(parent, (RmFile *)iter->data);
+    if(subdir->was_merged) {
+        return;
     }
+
+    parent->mergeups = subdir->mergeups + 1;
+    parent->dupe_count += subdir->dupe_count;
+    g_queue_push_head(&parent->children, subdir);
+    parent->prefd_files += subdir->prefd_files;
+
+    /** 
+     * Here's something weird:
+     * - a counter is used and substraced at once from parent->dupe_count.
+     * - it would ofc. be nicer to substract it step by step.
+     * - but for some weird reasons this only works on clang, not gcc.
+     * - yes, what. But I tested this, I promise! 
+     */
+    for(GList *iter = subdir->known_files.head; iter; iter = iter->next) {
+         int c = rm_directory_add(parent, (RmFile *)iter->data);
+         parent->dupe_count -= c;
+    }
+
+    subdir->was_merged = true;
 }
 
 ///////////////////////////
@@ -420,10 +470,15 @@ void rm_tm_destroy(RmTreeMerger *self) {
 }
 
 static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
+    if(directory->was_inserted) {
+        return;
+    }
+
     GQueue *dir_queue = rm_hash_table_setdefault(
         self->result_table, directory, (RmNewFunc)g_queue_new
     );
     g_queue_push_head(dir_queue, directory);
+    directory->was_inserted = true;
 }
 
 void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
@@ -465,7 +520,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     /* Check if the directory reached the number of actual files in it */
     if(directory->dupe_count == directory->file_count && directory->file_count > 0) {
         rm_tm_insert_dir(self, directory);
-    }
+    } 
 }
 
 static void rm_tm_mark_finished(RmDirectory *directory) {
@@ -494,15 +549,10 @@ static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory
 }
 
 static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U RmTreeMerger *self) {
-    int depth_balance = 0;
-    char *a = da->dirname, *b = db->dirname;
-
-    for(int i = 0; a[i] && b[i]; ++i) {
-        depth_balance += (a[i] == '/');
-        depth_balance -= (b[i] == '/');
-    }
-
-    return depth_balance;
+    return da->depth - db->depth;
+}
+static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db, _U RmTreeMerger *self) {
+    return -rm_tm_sort_paths(da, db, self);
 }
 
 static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db, RmTreeMerger *self) {
@@ -547,15 +597,25 @@ static int rm_tm_iter_unfinished_files(
     return 0;
 }
 
-static void rm_tm_extract(RmTreeMerger *self) {
-    GQueue *dir_list = NULL;
+static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {
+    if(a->length == 0 || b->length == 0) {
+        return a->length - b->length;
+    }
 
-    GHashTableIter iter;
-    g_hash_table_iter_init(&iter, self->result_table);
+    RmDirectory *first_a = a->head->data;
+    RmDirectory *first_b = b->head->data;
+    return first_b->mergeups - first_a->mergeups;
+}
+
+static void rm_tm_extract(RmTreeMerger *self) {
 
     /* Iterate over all directories per hash (which are same therefore) */
-    while(g_hash_table_iter_next(&iter, NULL, (void **)&dir_list)) {
+    GList * result_table_values = g_hash_table_get_values(self->result_table);
+    result_table_values = g_list_sort(result_table_values, (GCompareFunc)rm_tm_cmp_directory_groups);
+
+    for(GList *iter = result_table_values; iter; iter = iter->next) {
         /* Needs at least two directories to be duplicate... */
+        GQueue *dir_list = iter->data;
         if(dir_list->length < 2) {
             continue;
         }
@@ -608,6 +668,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
         g_queue_clear(&result_dirs);
     }
 
+    g_list_free(result_table_values);
+
     /* Iterate over all non-finished dirs in the tree,
      * and grab unfinished files that must be dupes elsewhise.
      */
@@ -631,6 +693,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
      *  We always choose which directories are originals first, so we flag all
      *  files in it as originals.
      */
+    GHashTableIter iter;
     g_hash_table_iter_init(&iter, self->file_groups);
 
     GQueue *file_list = NULL;
@@ -657,6 +720,7 @@ void rm_tm_finish(RmTreeMerger *self) {
     }
 
     GQueue new_dirs = G_QUEUE_INIT;
+    g_queue_sort(&self->valid_dirs, (GCompareDataFunc)rm_tm_sort_paths_reverse, self);
 
     /* Iterate over all valid directories and try to level them one
        layer up. If there's already one one layer up, we'll merge with it.
@@ -679,16 +743,18 @@ void rm_tm_finish(RmTreeMerger *self) {
             );
 
             /* Get the actual file count */
-            directory->file_count = GPOINTER_TO_UINT(
+            parent->file_count = GPOINTER_TO_UINT(
                                         art_search(&self->count_tree, (unsigned char *)parent_dir, parent_len
                                                   ));
 
-            g_queue_push_head(&new_dirs, directory);
         } else {
             g_free(parent_dir);
         }
 
-        rm_directory_add_subdir(parent, directory);
+        if(parent->was_merged == false) {
+            g_queue_push_head(&new_dirs, parent);
+            rm_directory_add_subdir(parent, directory);
+        }
     }
 
     /* Keep those level'd up dirs that are full now.
@@ -697,10 +763,10 @@ void rm_tm_finish(RmTreeMerger *self) {
     g_queue_clear(&self->valid_dirs);
     for(GList *iter = new_dirs.head; iter; iter = iter->next) {
         RmDirectory *directory = iter->data;
-        if(directory->dupe_count == directory->file_count) {
+        if(directory->dupe_count == directory->file_count && directory->file_count > 0) {
             g_queue_push_head(&self->valid_dirs, directory);
             rm_tm_insert_dir(self, directory);
-        }
+        }  
     }
     g_queue_clear(&new_dirs);
 

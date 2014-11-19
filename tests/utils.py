@@ -10,6 +10,9 @@ import os
 
 TESTDIR_NAME = '/tmp/rmlint-unit-testdir'
 
+def runs_as_root():
+    return os.geteuid() is 0
+
 
 def create_testdir():
     try:
@@ -18,11 +21,14 @@ def create_testdir():
         pass
 
 
-def run_rmlint(*args, dir_suffix=None):
-    if dir_suffix:
-        target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
+def run_rmlint(*args, dir_suffix=None, use_default_dir=True):
+    if use_default_dir:
+        if dir_suffix:
+            target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
+        else:
+            target_dir = TESTDIR_NAME
     else:
-        target_dir = TESTDIR_NAME
+        target_dir = ""
 
     cmd = ' '.join(['./rmlint', target_dir, '-o json:stdout'] + list(args))
     output = subprocess.check_output(cmd, shell=True)
@@ -34,8 +40,9 @@ def create_dirs(path):
     os.makedirs(os.path.join(TESTDIR_NAME, path))
 
 
-def create_link(path, target):
-    os.link(
+def create_link(path, target, symlink=False):
+    f = os.symlink if symlink else os.link
+    f(
         os.path.join(TESTDIR_NAME, path),
         os.path.join(TESTDIR_NAME, target)
     )
