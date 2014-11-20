@@ -511,7 +511,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
-    getcwd(cwd_buf, PATH_MAX);
+    if(getcwd(cwd_buf, PATH_MAX) == NULL) {
+        rm_log_perror("");
+        return false;
+    }
+
     settings->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
 
     /* set to true if -o or -O is specified */
