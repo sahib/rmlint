@@ -107,17 +107,31 @@ typedef struct RmFile {
      * contains information about the preferred path status of the other
      * files in the cluster
      */
-    bool is_prefd;
+    bool is_prefd : 1;
 
     /* In the late processing, one file of a group may be set as original file.
      * With this flag we indicate this.
      */
-    bool is_original;
+    bool is_original : 1;
 
     /* True if this file, or at least one of its embedded hardlinks, are newer
      * than settings->min_mtime
      */
-    bool is_new_or_has_new;
+    bool is_new_or_has_new : 1;
+
+    /* If false rm_file_destroy will not destroy the digest. This is useful
+     * for sharing the digest of duplicates in a group.
+     */
+    bool free_digest : 1;
+
+    /* If this file is the head of a hardlink cluster, the following structure
+     * contains the other hardlinked RmFile's.  This is used to avoid
+     * hashing every file within a hardlink set */
+    struct {
+        bool has_prefd : 1; 
+        bool has_non_prefd : 1;
+        GQueue *files;
+    } hardlinks;
 
     /* The index of the path this file belongs to. */
     RmOff path_index;
@@ -143,11 +157,6 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
-    /* If false rm_file_destroy will not destroy the digest. This is useful
-     * for sharing the digest of duplicates in a group.
-     */
-    bool free_digest;
-
     /* Table of this file's extents.
      */
     RmOffsetTable disk_offsets;
@@ -155,15 +164,6 @@ typedef struct RmFile {
     /* What kind of lint this file is.
      */
     RmLintType lint_type;
-
-    /* If this file is the head of a hardlink cluster, the following structure
-     * contains the other hardlinked RmFile's.  This is used to avoid
-     * hashing every file within a hardlink set */
-    struct {
-        GQueue *files;
-        bool has_prefd; /* use bool, gboolean is actually a gint */
-        bool has_non_prefd;
-    } hardlinks;
 
     /* Link to the RmShredGroup that the file currently belongs to */
     struct RmShredGroup *shred_group;
