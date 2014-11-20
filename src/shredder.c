@@ -825,6 +825,7 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 //    AND SIFTING ALGORITHM     //
 //////////////////////////////////
 
+
 /* Free RmShredGroup and any dormant files still in its queue
  */
 void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
@@ -1169,29 +1170,41 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 //       POST PROCESSING       //
 /////////////////////////////////
 
+/* iterate over group to find highest ranked; return it and tag it as original    */
+/* also in special cases (eg keep_all_tagged) there may be more than one original,
+ * in which case tag them as well
+ */
 static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
-    RmFile *result = NULL;
+    RmFile *result = NULL;  /* highest ranked file - initially nothing */
+    /* iterate over group */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if (file->hardlinks.files) {
+            /* if group member has a hardlink cluster attached to it then
+             * iterate over that cluster recursively
+             */
             RmFile *hardlink_original = rm_group_find_original(session, file->hardlinks.files);
-            if (!result) {
+            if (!result
+                    || rm_pp_cmp_orig_criteria(result, hardlink_original, session) > 0) {
+                /* boss hardlink outranks current result */
                 result = hardlink_original;
             }
         }
+
         if (0
                 || ((file->is_prefd) && (session->settings->keep_all_tagged))
                 || ((!file->is_prefd) && (session->settings->keep_all_untagged))
-                || ((file->is_prefd) && (!result))
            ) {
             file->is_original = true;
-            if(!result) {
-                result = file;
-            }
+        }
+
+        if(!result
+                || rm_pp_cmp_orig_criteria(result, file, session) > 0) {
+            result = file;
         }
     }
+    g_assert(result);
     return result;
-    /*TODO: add rm_pp_cmp_orig_criteria ranking test */
 }
 
 static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *original_file) {
@@ -1216,11 +1229,11 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_orig
     if(!has_origs) {
         /* Group has no determined original yet, guess one. */
         RmFile *original_file = rm_group_find_original(session, group);
-        if(!original_file) {
-            /* tag first file as the original */
-            original_file = group->head->data;
-            original_file->is_original = true;
-        }
+        g_assert(original_file);
+        /* tag first file as the original */
+        /* original_file = group->head->data; */
+
+        original_file->is_original = true;
 
         /* Hand it over to the printing module */
         rm_fmt_write(session->formats, original_file);

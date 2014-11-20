@@ -205,7 +205,6 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
     RmSettings *settings = session->settings;
-
     if(access(path, R_OK) != 0) {
         rm_log_error(YELLOW"WARNING: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
@@ -798,7 +797,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     while(optind < argc) {
         int read_paths = 0;
         const char *dir_path = argv[optind];
-        rm_log_debug("path %s\n", dir_path);
 
         if(strncmp(dir_path, "-", 1) == 0) {
             read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);

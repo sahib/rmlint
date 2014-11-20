@@ -73,4 +73,12 @@ int rm_pp_cmp_orig_criteria_impl(
     int path_index_a, int path_index_b
 );
 
+/**
+ * @brief Compare two files in order to find out which file is the
+ * higher ranked (ie original).
+ *
+ * Returns:
+ */
+int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session);
+
 #endif
