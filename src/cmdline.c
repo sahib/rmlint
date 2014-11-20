@@ -529,10 +529,12 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"sortcriteria"               , required_argument , 0 , 'S'} ,
             {"algorithm"                  , required_argument , 0 , 'a'} ,
             {"output"                     , required_argument , 0 , 'o'} ,
+            {"config"                     , required_argument , 0 , 'c'} ,
             {"add-output"                 , required_argument , 0 , 'O'} ,
             {"max-paranoid-mem"           , required_argument , 0 , 'u'} ,
             {"newer-than-stamp"           , required_argument , 0 , 'n'} ,
             {"newer-than"                 , required_argument , 0 , 'N'} ,
+            {"clamp"                      , required_argument , 0 , 'c'} ,
             {"loud"                       , no_argument       , 0 , 'v'} ,
             {"quiet"                      , no_argument       , 0 , 'V'} ,
             {"with-color"                 , no_argument       , 0 , 'w'} ,
@@ -566,7 +568,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:c:u:n:N:vVwWrRfFXxpPkKmMlLhHbBeEiID",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:vVwWrRfFXxpPkKmMlLhHbBeEiID",
                      long_options, &option_index
                  );
 
