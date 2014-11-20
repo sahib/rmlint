@@ -138,37 +138,6 @@ def test_symlinks():
     assert data[1]['path'].endswith('b/x')
     assert len(data) == 2
 
-'''
-Test idea for mountpoints:
-
-$ mkdir mounty/a/b -p
-$ cd mounty/a
-$ echo 'x' > 1
-$ sudo mount --rbind .. b
-$ cd .. && $ mkdir c && $ echo 'x' > c/2
-
-mounty
-├── a
-│   ├── 1
-│   └── b
-│       ├── a
-│       │   ├── 1
-│       │   └── b
-│       └── c
-│           └── 1
-└── c
-    └── 2
-
-Expected result:
-
-Warning: filesystem loop detected at /home/sahib/rmlint/mounty/a/b (skipping)
-
-# Duplikate:
-    ls /home/sahib/rmlint/mounty/a/1
-    rm /home/sahib/rmlint/mounty/c/2
-
-Problem: mount needs sudo.
-'''
 
 def mount_bind_teardown_func():
     if runs_as_root():

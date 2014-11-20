@@ -1203,10 +1203,6 @@ static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *origin
 
         if(iter->data != original_file) {
             RmFile *lint = iter->data;
-            rm_fmt_lock_state(session->formats);
-            {
-            }
-            rm_fmt_unlock_state(session->formats);
             rm_fmt_write(session->formats, lint);
         }
     }
