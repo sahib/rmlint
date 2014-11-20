@@ -155,9 +155,9 @@ Here's an example for incrementally scanning your home folder:
    # Second run, new file copied:
    $ cp /home/foobar/a.file /home/foobar/c.file
    $ rmlint /home/foobar -n /home/foobar/.rmlint.stamp
-   ls some_dir/a.file
-   rm some_dir/b.file
-   rm some_dir/c.file
+   ls /home/foobar/a.file
+   rm /home/foobar/b.file
+   rm /home/foobar/c.file
    
 Note that ``-n`` updates the timestamp file each time it is run.
 
@@ -447,23 +447,22 @@ Flagging original directories
 
 But what if you know better than ``rmlint``? What if your originals are in some
 specific path, while you know that the files in it are copied over and over?
-In this case you can flag directories on the commandline to be original:
+In this case you can flag directories on the commandline to be original, by using
+a special separator (//) between the duplicate and original paths.  Every path
+after the // separator is considered to be "tagged" and will be treated as an
+original where possible.  Tagging always takes precedence over the ``-S`` options above.
 
 .. code-block:: bash
 
-   # Every path behind the // is considered to be an original
    $ rmlint a // b
    ls b/file
    rm a/file
 
-There are two slightly esoteric related options to this:
-``-k`` (``--keep-all-tagged``) and ``-m`` (``--must-match-tagged``).
-``-k`` tells ``rmlint`` to never delete any duplicates that are in original
-paths. Even if this means to ignore them. ``-m`` only accepts duplicates if they
-have at least one related original in an original path.
-
-In the case of nested mountpoints, it sometimes makes sense to use the 
-opposite variations, ``-K`` (``--keep-all-untagged``) and ``-M`` (``--must-match-untagged``).
+If there are more than one tagged files in a duplicate group then the highest
+ranked (per ``-S`` options) will be kept.  In order to never delete any tagged files,
+there is the ``-k`` (``--keep-all-tagged``) option.  A slightly more esoteric option
+is ``-m`` (``--must-match-tagged``), which only looks for duplicates where there is
+an original in a tagged path.
 
 Here's a real world example using these features:  I have an portable backup drive with some
 old backups on it.  I have just backed up my home folder to a new backup drive.  I want
@@ -484,6 +483,9 @@ check that there are no "originals" on the drive.  The drive is mounted at /medi
    # see what files are left:
    $ tree /media/portable
    # recover any files that you want to save, then you can safely reformat the drive
+
+In the case of nested mountpoints, it may sometimes makes sense to use the 
+opposite variations, ``-K`` (``--keep-all-untagged``) and ``-M`` (``--must-match-untagged``).
 
 
 Misc options

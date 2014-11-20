@@ -182,7 +182,7 @@ int rm_pp_cmp_orig_criteria_impl(
 }
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
-static int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
@@ -196,6 +196,7 @@ static int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
                );
     }
 }
+
 
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
 bool rm_file_tables_insert(RmSession *session, RmFile *file) {
