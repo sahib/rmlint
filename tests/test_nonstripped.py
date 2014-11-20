@@ -1,5 +1,5 @@
 from nose import with_setup
-from utils import *
+from .utils import *
 import os
 
 

@@ -1,5 +1,5 @@
 from nose import with_setup
-from utils import *
+from .utils import *
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
@@ -169,6 +169,8 @@ def test_mount_binds():
     create_file('xxx', 'a/3')
 
     head, *data, footer = run_rmlint('-S a')
-    assert data[0]['path'].endswith('a/3')
-    assert data[1]['path'].endswith('c/2')
+    import pprint
+    pprint.pprint(data)
+    assert data[0]['path'].endswith('c/2')
+    assert data[1]['path'].endswith('a/3')
     assert len(data) == 2
