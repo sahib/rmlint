@@ -47,10 +47,6 @@
 /* exit and return to calling method */
 static void rm_cmd_die(RmSession *session, int status) {
     rm_session_clear(session);
-    if(status) {
-        rm_log_info("Abnormal exit\n");
-    }
-
     exit(status);
 }
 
@@ -69,16 +65,20 @@ static void rm_cmd_show_help(bool use_pager) {
         NULL
     };
 
-    for(int i = 0; commands[i]; ++i) {
+    bool found_manpage = false;
+
+    for(int i = 0; commands[i] && !found_manpage; ++i) {
         char *command = g_strdup_printf(commands[i], (use_pager) ? "" : "-P cat");
         if(system(command) == 0) {
-            break;
+            found_manpage = true;
         }
 
         g_free(command);
     }
 
-    rm_log_error("You seem to have no manpage for rmlint.\n");
+    if(!found_manpage) {
+        rm_log_error("You seem to have no manpage for rmlint.\n");
+    }
 }
 
 static const struct FormatSpec {
@@ -624,7 +624,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case '?':
             rm_cmd_show_help(false);
             rm_cmd_show_version();
-            return false;
+            rm_cmd_die(session, EXIT_FAILURE);
+            break;
         case 'c':
             rm_cmd_parse_config_pair(session, optarg);
             break;
