@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
 #include <time.h>
 
@@ -329,6 +330,19 @@ int rm_cmd_find_line_type_func(const void *v_input, const void *v_option) {
 #define OPTS  (bool *[])
 #define NAMES (const char *[])
 
+static char rm_cmd_find_lint_types_sep(const char *lint_string) {
+    if(*lint_string == '+' || *lint_string == '-') {
+        lint_string++;
+    }
+
+    while(isalpha(*lint_string)) { 
+        lint_string++;
+    }
+
+    g_printerr("Found lint type separator: %c\n", *lint_string);
+    return *lint_string;
+}
+
 static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_string) {
     RmLintTypeOption option_table[] = {{
             .names = NAMES{"all", 0},
@@ -378,7 +392,13 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
     RmLintTypeOption *all_opts = &option_table[0];
 
     /* split the comma-separates list of options */
-    char **lint_types = g_strsplit(lint_string, " ", -1);
+    char lint_sep[2] = {0, 0};
+    lint_sep[0] = rm_cmd_find_lint_types_sep(lint_string);
+    if(lint_sep[0] == 0) {
+        return;
+    }
+
+    char **lint_types = g_strsplit(lint_string, lint_sep, -1);
 
     /* iterate over the separated option strings */
     for(int index = 0; lint_types[index]; index++) {
@@ -409,7 +429,7 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
 
         /* apply the found option */
         if(option == NULL) {
-            rm_log_warning(YELLOW"Warning: lint type %s not recognised\n"RESET, lint_type);
+            rm_log_warning(YELLOW"Warning: lint type '%s' not recognised\n"RESET, lint_type);
             continue;
         }
 
