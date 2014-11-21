@@ -59,4 +59,9 @@ void rm_set_default_settings(RmSettings *settings) {
 
     settings->skip_start_factor = 0.0;
     settings->skip_end_factor   = 1.0;
+
+    settings->use_absolute_start_offset = false;
+    settings->use_absolute_end_offset = false;
+    settings->skip_start_offset    = 0;
+    settings->skip_end_offset      = 0;
 }

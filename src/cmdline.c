@@ -119,7 +119,7 @@ static int rm_cmd_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
     return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
 }
 
-RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
+static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
     if (size_spec == NULL) {
         return rm_cmd_size_format_error(error, "Input size is NULL");
     }
@@ -285,13 +285,13 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     return true;
 }
 
-static double rm_cmd_parse_factor(RmSession *session, const char *string) {
+static double rm_cmd_parse_clamp_factor(RmSession *session, const char *string) {
     char *error_loc = NULL;
     gdouble factor = g_strtod(string, &error_loc);
 
-    if(error_loc != NULL && *error_loc != '\0') {
+    if(error_loc != NULL && *error_loc != '\0' && *error_loc != '%') {
         rm_log_error(
-            RED"Unable to parse factor \"%s\" error begins at %s\n"RESET,
+            RED"Unable to parse factor \"%s\": error begins at %s\n"RESET,
             string, error_loc
         );
         rm_cmd_die(session, EXIT_FAILURE);
@@ -306,6 +306,43 @@ static double rm_cmd_parse_factor(RmSession *session, const char *string) {
     }
 
     return factor;
+}
+
+static RmOff rm_cmd_parse_clamp_offset(RmSession *session, const char *string) {
+    const char *error_msg = NULL;
+    RmOff offset = rm_cmd_size_string_to_bytes(string, &error_msg);
+
+    if(error_msg != NULL) {
+        rm_log_error(
+            RED"Unable to parse offset \"%s\": %s\n"RESET,
+            string, error_msg
+        );
+        rm_cmd_die(session, EXIT_FAILURE);
+    }
+
+    return offset;
+}
+
+static void rm_cmd_parse_clamp_option(RmSession *session, const char *string, bool start_or_end) {
+    if(g_str_has_suffix(string, "%")) {
+        gdouble factor = rm_cmd_parse_clamp_factor(session, string);
+        if(start_or_end) {
+            session->settings->use_absolute_start_offset = false;
+            session->settings->skip_start_factor = factor;
+        } else {
+            session->settings->use_absolute_end_offset = false;
+            session->settings->skip_end_factor = factor;
+        }
+    } else {
+        guint64 offset = rm_cmd_parse_clamp_offset(session, string);
+        if(start_or_end) {
+            session->settings->use_absolute_start_offset = true;
+            session->settings->skip_start_offset = offset;
+        } else {
+            session->settings->use_absolute_end_offset = true;
+            session->settings->skip_end_offset = offset;
+        }
+    }
 }
 
 /* parse comma-separated strong of lint types and set settings accordingly */
@@ -641,10 +678,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         }
         break;
         case 'q':
-            settings->skip_start_factor = rm_cmd_parse_factor(session, optarg);
+            rm_cmd_parse_clamp_option(session, optarg, true);
             break;
         case 'Q':
-            settings->skip_end_factor = rm_cmd_parse_factor(session, optarg);
+            rm_cmd_parse_clamp_option(session, optarg, false);
             break;
         case 'a':
             settings->checksum_type = rm_string_to_digest_type(optarg);
