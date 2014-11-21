@@ -54,8 +54,9 @@ General Options
 **-T --types="description"** (*default:* -T defaults)
 
     Configure the types of lint rmlint is supposed to find. The `description`
-    string enumerates the types that shall be investigated, separted by a space.
-    At the beginning of the string certain groups may be specified. 
+    string enumerates the types that shall be investigated, separted by
+    a space, comma or semicolon. At the beginning of the string certain groups
+    may be specified. 
 
     * ``all``: Enables all lint types.
     * ``defaults``: Enables all lint types, but ``namecluster`` and ``nonstripped``.
@@ -158,8 +159,18 @@ General Options
     *Notes:*
 
         * This does not work with **--algorithm=paranoid** (or **-ppp**).
-        * This feature might not deliver perfect result 
+        * This feature might not deliver perfect result in corner cases.
         * This feature might add some runtime.
+
+**-q --clamp-low=factor** (*default: 0*) **/ -Q --clamp-top=factor** (*default: 1.0*)**
+
+    Only look at the content of files in the range of ``[clamp_low * file_size, clamp_top * file_size]``.
+    After letting this sink, you might realise this is a very dangerous option, so be warned.
+    Any values apart from ``-q0`` and ``-Q1`` makes ``rmlint`` only search for partial duplicates.
+    If the actual file size would be 0, the file is ignored during traversing.
+
+    This might be useful for some cases like comparing emails, where the header of the file might differ,
+    but the rest of the file is essentially the same.
 
 **-u --max-paranoid-ram=size**
 
