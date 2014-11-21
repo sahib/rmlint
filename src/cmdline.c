@@ -339,7 +339,6 @@ static char rm_cmd_find_lint_types_sep(const char *lint_string) {
         lint_string++;
     }
 
-    g_printerr("Found lint type separator: %c\n", *lint_string);
     return *lint_string;
 }
 
