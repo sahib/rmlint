@@ -10,10 +10,11 @@ def test_simple():
     head, *data, footer = run_rmlint('-D')
     assert len(data) == 0
 
-    head, *data, footer = run_rmlint('-D --sortcriteria a -Q.9% -q.1%')
-    assert data[0]['path'].endswith('a10')
-    assert data[1]['path'].endswith('b10')
-    assert len(data) == 2
+    for suffix in ['-Q.9% -q.1%', '-Q 9 -q.1%', '-Q.9% -q 1']:
+        head, *data, footer = run_rmlint('-D --sortcriteria a ' + suffix)
+        assert data[0]['path'].endswith('a10')
+        assert data[1]['path'].endswith('b10')
+        assert len(data) == 2
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
