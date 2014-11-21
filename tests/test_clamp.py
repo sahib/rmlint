@@ -1,0 +1,26 @@
+from nose import with_setup
+from .utils import *
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_simple():
+    create_file('1234567890', 'a10')
+    create_file('x23456789x', 'b10')
+
+    head, *data, footer = run_rmlint('-D')
+    assert len(data) == 0
+
+    head, *data, footer = run_rmlint('-D --sortcriteria a -Q.9 -q.1')
+    assert data[0]['path'].endswith('a10')
+    assert data[1]['path'].endswith('b10')
+    assert len(data) == 2
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_almost_empty():
+    create_file('x', 'a1')
+    create_file('x', 'b1')
+
+    head, *data, footer = run_rmlint('-D -Q.5')
+    assert len(data) == 0
+    assert footer['total_files'] == 0
