@@ -720,7 +720,6 @@ RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMa
 void rm_shred_device_free(RmShredDevice *self) {
     if(!rm_session_was_aborted(self->main->session)) {
         g_assert(self->remaining_files == 0);
-        g_assert(self->remaining_bytes == 0);
         g_assert(g_queue_is_empty(self->file_queue));
         g_assert(g_async_queue_length(self->hashed_file_return) == 0);
     }
@@ -1466,7 +1465,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                     file->digest = rm_digest_copy(file->shred_group->digest);
                 } else {
                     /* this is first generation of RMGroups, so there is no progressive hash yet */
-                    g_assert(file->hash_offset == 0);
                     file->digest = rm_digest_new(
                                        main->session->settings->checksum_type,
                                        main->session->hash_seed1,

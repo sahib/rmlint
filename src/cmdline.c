@@ -284,6 +284,29 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     return true;
 }
 
+static double rm_cmd_parse_factor(RmSession *session, const char *string) {
+    char *error_loc = NULL;
+    gdouble factor = g_strtod(string, &error_loc);
+
+    if(error_loc != NULL && *error_loc != '\0') {
+        rm_log_error(
+                RED"Unable to parse factor \"%s\" error begins at %s\n"RESET,
+                string, error_loc
+        );
+        rm_cmd_die(session, EXIT_FAILURE);
+    }
+
+    if(0 > factor || factor > 1) {
+        rm_log_error(
+                RED"factor value is not in range [0-1]: %f\n"RESET,
+                factor
+        );
+        rm_cmd_die(session, EXIT_FAILURE);
+    }
+
+    return factor;
+}
+
 /* parse comma-separated strong of lint types and set settings accordingly */
 typedef struct RmLintTypeOption {
     const char **names;
@@ -534,7 +557,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"max-paranoid-mem"           , required_argument , 0 , 'u'} ,
             {"newer-than-stamp"           , required_argument , 0 , 'n'} ,
             {"newer-than"                 , required_argument , 0 , 'N'} ,
-            {"clamp"                      , required_argument , 0 , 'c'} ,
+            {"clamp-low"                  , required_argument , 0 , 'q'} ,
+            {"clamp-top"                  , required_argument , 0 , 'Q'} ,
             {"loud"                       , no_argument       , 0 , 'v'} ,
             {"quiet"                      , no_argument       , 0 , 'V'} ,
             {"with-color"                 , no_argument       , 0 , 'w'} ,
@@ -568,7 +592,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:u:n:N:c:vVwWrRfFXxpPkKmMlLhHbBeEiID",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:vVwWrRfFXxpPkKmMlLhHbBeEiID",
                      long_options, &option_index
                  );
 
@@ -596,6 +620,12 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             }
         }
         break;
+        case 'q':
+            settings->skip_start_factor = rm_cmd_parse_factor(session, optarg);
+            break;
+        case 'Q':
+            settings->skip_end_factor = rm_cmd_parse_factor(session, optarg);
+            break;
         case 'a':
             settings->checksum_type = rm_string_to_digest_type(optarg);
             if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
@@ -780,6 +810,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
         rm_log_error("No valid -o flag encountered.\n");
+        rm_cmd_die(session, EXIT_FAILURE);
+    } 
+
+    if(settings->skip_start_factor >= settings->skip_end_factor) {
+        rm_log_error(RED"-q (--clamp-low) should be lower than -Q (--clamp-top)!\n"RESET);
         rm_cmd_die(session, EXIT_FAILURE);
     }
 

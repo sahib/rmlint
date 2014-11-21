@@ -33,6 +33,17 @@ RmFile *rm_file_new(
     RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 ) {
+    RmOff actual_file_size = statp->st_size;
+    RmOff start_seek = settings->skip_start_factor * actual_file_size;
+
+    /* Allow an actual file size of 0 for empty files */
+    if(0 
+        || ((int)(actual_file_size * settings->skip_end_factor) == 0 && actual_file_size != 0)
+        || (start_seek >= actual_file_size && actual_file_size != 0)
+    ) {
+        return NULL;
+    }
+
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
     self->basename = rm_util_basename(self->path);
@@ -43,8 +54,10 @@ RmFile *rm_file_new(
     self->mtime = statp->st_mtim.tv_sec;
 
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        self->file_size = statp->st_size;
+        self->file_size = statp->st_size * settings->skip_end_factor;
     }
+
+    self->seek_offset = self->hash_offset = start_seek;
 
     self->lint_type = type;
     self->is_prefd = is_ppath;

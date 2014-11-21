@@ -63,6 +63,9 @@ typedef struct RmSettings {
     int depth;
     int verbosity;
     int paranoid;
+    
+    double skip_start_factor;
+    double skip_end_factor;
 
     char **paths;
     char *is_prefd;              /* flag for each path; 1 if preferred/orig, 0 otherwise*/
