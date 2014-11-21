@@ -55,8 +55,8 @@ General Options
 
     Configure the types of lint rmlint is supposed to find. The `description`
     string enumerates the types that shall be investigated, separted by
-    a space, comma or semicolon. At the beginning of the string certain groups
-    may be specified. 
+    a space, comma or semicolon (actually more separators work). At the
+    beginning of the string certain groups may be specified. 
 
     * ``all``: Enables all lint types.
     * ``defaults``: Enables all lint types, but ``namecluster`` and ``nonstripped``.
@@ -141,7 +141,7 @@ General Options
 
     This is really not recommended. 
 
-**-D --merge-directories** (*experimental, disabled by default*)
+**-D --merge-directories** (**experimental**, *default: disabled*)
 
     Makes rmlint use a special mode where all found duplicates are collected and
     checked wether whole directory trees are duplicates. This is an HIGHLY
@@ -162,15 +162,19 @@ General Options
         * This feature might not deliver perfect result in corner cases.
         * This feature might add some runtime.
 
-**-q --clamp-low=factor** (*default: 0*) **/ -Q --clamp-top=factor** (*default: 1.0*)**
+**-q --clamp-low=[fac.tor|percent%|offset]** (*default: 0*) **/ -Q --clamp-top=[fac.tor|percent%|offset]** (*default: 1.0*)
 
-    Only look at the content of files in the range of ``[clamp_low * file_size, clamp_top * file_size]``.
-    After letting this sink, you might realise this is a very dangerous option, so be warned.
-    Any values apart from ``-q0`` and ``-Q1`` makes ``rmlint`` only search for partial duplicates.
+    The argument can be either passed as factor (a number with a ``.`` in it),
+    a percent value (suffixed by ``%``) or as absolute number or size spec, like in ``--size``.
+
+    Only look at the content of files in the range of from ``low`` to (including) ``high``.
+    This means, if the range is less than ``-q0%`` to ``-Q100%``, than only partial duplicates are searched.
     If the actual file size would be 0, the file is ignored during traversing.
+    Be careful when using this function, you can easily get dangerous results for small files.
 
-    This might be useful for some cases like comparing emails, where the header of the file might differ,
-    but the rest of the file is essentially the same.
+    This is useful in a few cases where a file consists of a constant sized header or footer.
+    With this option you can just compare the data in between. Also it might be useful for approximate 
+    comparison where it suffices when the file is the same in the middle part.
 
 **-u --max-paranoid-ram=size**
 

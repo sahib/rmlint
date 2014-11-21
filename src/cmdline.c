@@ -297,6 +297,10 @@ static double rm_cmd_parse_clamp_factor(RmSession *session, const char *string) 
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
+    if(*error_loc == '%') {
+        factor /= 100;
+    }
+
     if(0 > factor || factor > 1) {
         rm_log_error(
             RED"factor value is not in range [0-1]: %f\n"RESET,
@@ -324,7 +328,7 @@ static RmOff rm_cmd_parse_clamp_offset(RmSession *session, const char *string) {
 }
 
 static void rm_cmd_parse_clamp_option(RmSession *session, const char *string, bool start_or_end) {
-    if(g_str_has_suffix(string, "%")) {
+    if(strchr(string, '.') || g_str_has_suffix(string, "%")) {
         gdouble factor = rm_cmd_parse_clamp_factor(session, string);
         if(start_or_end) {
             session->settings->use_absolute_start_offset = false;

@@ -10,7 +10,7 @@ def test_simple():
     head, *data, footer = run_rmlint('-D')
     assert len(data) == 0
 
-    for suffix in ['-Q.9% -q.1%', '-Q 9 -q.1%', '-Q.9% -q 1']:
+    for suffix in ['-Q.9 -q.1', '-Q 9 -q.1', '-Q.9 -q 1', '-Q90% -q10%']:
         head, *data, footer = run_rmlint('-D --sortcriteria a ' + suffix)
         assert data[0]['path'].endswith('a10')
         assert data[1]['path'].endswith('b10')
@@ -22,7 +22,7 @@ def test_almost_empty():
     create_file('x', 'a1')
     create_file('x', 'b1')
 
-    head, *data, footer = run_rmlint('-D -Q.5%')
+    head, *data, footer = run_rmlint('-D -Q.5')
     assert len(data) == 0
     assert footer['total_files'] == 0
 
