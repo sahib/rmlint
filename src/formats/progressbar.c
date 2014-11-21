@@ -132,7 +132,7 @@ static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FI
 static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *self, int width, FILE *out) {
     int cells = width * self->percent;
 
-    /* true when we do not know when 100% is reached. 
+    /* true when we do not know when 100% is reached.
      * Show a moving something in this case.
      * */
     bool is_unknown = self->percent > 1.1;

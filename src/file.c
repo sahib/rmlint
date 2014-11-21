@@ -37,10 +37,10 @@ RmFile *rm_file_new(
     RmOff start_seek = settings->skip_start_factor * actual_file_size;
 
     /* Allow an actual file size of 0 for empty files */
-    if(0 
-        || ((int)(actual_file_size * settings->skip_end_factor) == 0 && actual_file_size != 0)
-        || (start_seek >= actual_file_size && actual_file_size != 0)
-    ) {
+    if(0
+            || ((int)(actual_file_size * settings->skip_end_factor) == 0 && actual_file_size != 0)
+            || (start_seek >= actual_file_size && actual_file_size != 0)
+      ) {
         return NULL;
     }
 

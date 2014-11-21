@@ -97,7 +97,7 @@ char *rm_util_path_extension(const char *basename) {
 }
 
 GQueue *rm_hash_table_setdefault(
-        GHashTable *table, gpointer key, RmNewFunc default_func
+    GHashTable *table, gpointer key, RmNewFunc default_func
 ) {
     gpointer value = g_hash_table_lookup(table, key);
     if(value == NULL) {

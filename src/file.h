@@ -128,7 +128,7 @@ typedef struct RmFile {
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
     struct {
-        bool has_prefd : 1; 
+        bool has_prefd : 1;
         bool has_non_prefd : 1;
         GQueue *files;
     } hardlinks;

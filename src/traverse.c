@@ -340,8 +340,8 @@ void rm_traverse_tree(RmSession *session) {
             buffer->is_first_path = (g_hash_table_size(paths_per_disk) == 0);
 
             GQueue *path_queue = rm_hash_table_setdefault(
-                    paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new
-            );
+                                     paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new
+                                 );
             g_queue_push_tail(path_queue, buffer);
         } else {
             /* Probably a block device, fifo or something weird. */

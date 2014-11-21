@@ -290,16 +290,16 @@ static double rm_cmd_parse_factor(RmSession *session, const char *string) {
 
     if(error_loc != NULL && *error_loc != '\0') {
         rm_log_error(
-                RED"Unable to parse factor \"%s\" error begins at %s\n"RESET,
-                string, error_loc
+            RED"Unable to parse factor \"%s\" error begins at %s\n"RESET,
+            string, error_loc
         );
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
     if(0 > factor || factor > 1) {
         rm_log_error(
-                RED"factor value is not in range [0-1]: %f\n"RESET,
-                factor
+            RED"factor value is not in range [0-1]: %f\n"RESET,
+            factor
         );
         rm_cmd_die(session, EXIT_FAILURE);
     }
@@ -811,7 +811,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* There was no valid output flag given, but the user tried */
         rm_log_error("No valid -o flag encountered.\n");
         rm_cmd_die(session, EXIT_FAILURE);
-    } 
+    }
 
     if(settings->skip_start_factor >= settings->skip_end_factor) {
         rm_log_error(RED"-q (--clamp-low) should be lower than -Q (--clamp-top)!\n"RESET);
