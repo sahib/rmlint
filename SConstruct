@@ -209,7 +209,7 @@ if 'LDFLAGS' in os.environ:
 
 # Needed/Adviceable flags:
 conf.env.Append(CCFLAGS=[
-    '-std=c99', '-pipe', '-fPIC', '-g', '-D_GNU_SOURCE'
+    '-std=c99', '-pipe', '-fPIC', '-D_GNU_SOURCE'
 ])
 
 if ARGUMENTS.get('DEBUG') == "1":
@@ -218,10 +218,10 @@ else:
     if conf.env['CC'] == 'gcc':
         # GCC-Specific Options.
         conf.env.Append(CCFLAGS=['-lto'])
-        conf.env.Append(CCFLAGS=['-march=native', '-O3'])
+        conf.env.Append(CCFLAGS=['-march=native', '-Os'])
     else:
         # Generic compiler:
-        conf.env.Append(CCFLAGS=['-O3'])
+        conf.env.Append(CCFLAGS=['-Os'])
     conf.env.Append(LINKFLAGS=['-s'])
 
 # Optional flags:
