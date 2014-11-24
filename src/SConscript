@@ -54,7 +54,7 @@ py_formatter = env.AlwaysBuild(
 )
 
 program = env.Program(
-    'rmlint',
+    '../rmlint',
     Glob('*.c') +
     Glob('checksums/*.c') +
     Glob('formats/*.c') +
