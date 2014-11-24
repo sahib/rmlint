@@ -12,7 +12,6 @@ import os
 import subprocess
 
 language_install_paths = []
-language_cmds = []
 
 for src in env.Glob('*.po'):
     lng = os.path.basename(str(src)[:-3])
@@ -20,7 +19,6 @@ for src in env.Glob('*.po'):
 
     cmd = env.Command(dst, src, 'msgfmt $SOURCE -o $TARGET')
     env.AlwaysBuild(cmd)
-    language_cmds.append(cmd)
 
     path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
     language_install_paths.append(path)

@@ -14,5 +14,5 @@ def run_tests(target = None, source = None, env = None) :
 
 if 'test' in COMMAND_LINE_TARGETS:
     test_cmd = env.Command('run_tests', None, Action(run_tests, "Running tests"))
-    env.AlwaysBuild(test_cmd)
-    env.Depends(env.Alias('test', test_cmd), [program])
+    target = env.Depends(test_cmd, [program])
+    env.Alias('test', [target])
