@@ -3,8 +3,6 @@
 
 import os
 import sys
-import time
-import codecs
 import subprocess
 
 VERSION_MAJOR = 2
@@ -29,14 +27,15 @@ def check_pkg(context, name, varname, required=True):
     rc, text = context.TryAction('pkg-config --exists \'%s\'' % name)
     context.Result(rc)
 
-    # Remember we have it:
-    conf.env[varname] = True
-
     # 0 is defined as error by TryAction
     if rc is 0:
         print('Error: ' + name + ' not found.')
         if required:
             Exit(1)
+
+    # Remember we have it:
+    conf.env[varname] = True
+
     return rc, text
 
 
@@ -48,41 +47,13 @@ def check_git_rev(context):
     return rev
 
 
-def build_config_template(target, source, env):
-    with codecs.open(str(source[0]), 'r') as handle:
-        text = handle.read()
-
-    with codecs.open(str(target[0]), 'w') as handle:
-        handle.write(text.format(
-            INSTALL_PREFIX=GetOption('prefix'),
-            HAVE_GLIB=int(conf.env['glib']),
-            HAVE_BLKID=int(conf.env['blkid']),
-            VERSION_MAJOR=VERSION_MAJOR,
-            VERSION_MINOR=VERSION_MINOR,
-            VERSION_PATCH=VERSION_PATCH,
-            VERSION_GIT_REVISION=env['gitrev']
-        ))
-
-def build_python_formatter(target, source, env):
-    with codecs.open(str(source[0]), 'r') as handle:
-        text = handle.read()
-
-    with codecs.open('src/formats/py.py', 'r') as handle:
-        py_source = handle.read()
-
-    # Prepare the Python source to be compatible with C-strings
-    py_source = py_source.replace('"', '\\"')
-    py_source = '\\n"\n"'.join(py_source.splitlines())
-
-    with codecs.open(str(target[0]), 'w') as handle:
-        handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
-
-
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
         Delete("$SOURCE"),
     ])
     env.Alias("uninstall", "uninstall-" + path)
+
+Export('create_uninstall_target')
 
 ###########################################################################
 #                                 Colors!                                 #
@@ -244,90 +215,7 @@ conf.env.Append(_LIBFLAGS=[
 # Your extra checks here
 env = conf.Finish()
 
-###########################################################################
-#                          Template Building                              #
-###########################################################################
-
-env.AlwaysBuild(
-    env.Command(
-        'src/config.h', 'src/config.h.in', build_config_template
-    )
-)
-
-env.AlwaysBuild(
-    env.Command(
-        'src/formats/py.c', 'src/formats/py.c.in', build_python_formatter
-    )
-)
-
-
-###########################################################################
-#                       Build of the actual Programs                      #
-###########################################################################
-
-program = env.Program(
-    'rmlint',
-    Glob('src/*.c') +
-    Glob('src/checksums/*.c') +
-    Glob('src/formats/*.c') +
-    Glob('src/libart/*.c')
-)
-
-def run_tests(target = None, source = None, env = None) :
-    Exit(subprocess.call('nosetests', env=env['ENV'], shell=True))
-
-
-if 'test' in COMMAND_LINE_TARGETS:
-    test_cmd = env.Command('run_tests', None, Action(run_tests, "Running tests"))
-    env.Depends(test_cmd, [program])
-    env.AlwaysBuild(test_cmd)
-    env.Alias('test', test_cmd)
-
-
-def xgettext(target=None, source=None, env=None):
-    Exit(subprocess.call(
-        'xgettext --package-name rmlint -k_ -kN_' \
-        '--package-version 2.0.0 --default-domain rmlint' \
-        '--output po/rmlint.pot' \
-        '$(find src -iname "*.[ch]")',
-        shell=True
-    ))
-
-if 'xgettext' in COMMAND_LINE_TARGETS:
-    cmd = env.Command('xgettext', None, Action(xgettext, "Running xgettext"))
-
-# gettext handling:
-languages = []
-language_install_paths = []
-language_cmds = []
-
-for src in env.Glob('po/*.po'):
-    lng = os.path.basename(str(src)[:-3])
-    dst = lng + '.mo'
-
-    cmd = env.Command(dst, src, 'msgfmt $SOURCE -o po/$TARGET')
-    env.AlwaysBuild(cmd)
-    language_cmds.append(cmd)
-
-    path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
-    language_install_paths.append(path)
-    env.InstallAs(path, os.path.join('po', dst))
-
-if 'install' in COMMAND_LINE_TARGETS:
-    env.Install('$PREFIX/bin', [program])
-    env.Install('$PREFIX/share/man/man1', [manpage])
-    install_alias = env.Alias('install', ['$PREFIX/bin', '$PREFIX/share/man/man1'] + language_install_paths)
-    env.Requires(install_alias, language_cmds)
-
-if 'uninstall' in COMMAND_LINE_TARGETS:
-    create_uninstall_target(env, "$PREFIX/bin/rmlint")
-    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
-
-    for lang_path in language_install_paths:
-        create_uninstall_target(env, lang_path)
-
-
-
-SConscript([
-    'docs/SConscript'
-])
+program = SConscript('src/SConscript')
+SConscript('tests/SConscript', exports='program')
+SConscript('po/SConscript')
+SConscript('docs/SConscript')

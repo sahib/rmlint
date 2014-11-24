@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+Import('env')
+Import('VERSION_MAJOR')
+Import('VERSION_MINOR')
+Import('VERSION_PATCH')
+Import('create_uninstall_target')
+
+import os
+import codecs
+
+
+def build_config_template(target, source, env):
+    with codecs.open(str(source[0]), 'r') as handle:
+        text = handle.read()
+
+    with codecs.open(str(target[0]), 'w') as handle:
+        handle.write(text.format(
+            INSTALL_PREFIX=GetOption('prefix'),
+            HAVE_GLIB=int(env['glib']),
+            HAVE_BLKID=int(env['blkid']),
+            VERSION_MAJOR=VERSION_MAJOR,
+            VERSION_MINOR=VERSION_MINOR,
+            VERSION_PATCH=VERSION_PATCH,
+            VERSION_GIT_REVISION=env['gitrev']
+        ))
+
+def build_python_formatter(target, source, env):
+    with codecs.open(str(source[0]), 'r') as handle:
+        text = handle.read()
+
+    with codecs.open('src/formats/py.py', 'r') as handle:
+        py_source = handle.read()
+
+    # Prepare the Python source to be compatible with C-strings
+    py_source = py_source.replace('"', '\\"')
+    py_source = '\\n"\n"'.join(py_source.splitlines())
+
+    with codecs.open(str(target[0]), 'w') as handle:
+        handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
+
+
+config = env.AlwaysBuild(
+    env.Command(
+        'config.h', 'config.h.in', build_config_template
+    )
+)
+
+py_formatter = env.AlwaysBuild(
+    env.Command(
+        'formats/py.c', 'formats/py.c.in', build_python_formatter
+    )
+)
+
+program = env.Program(
+    'rmlint',
+    Glob('*.c') +
+    Glob('checksums/*.c') +
+    Glob('formats/*.c') +
+    Glob('libart/*.c')
+)
+
+env.Depends(program, [config, py_formatter])
+
+if 'install' in COMMAND_LINE_TARGETS:
+    env.Alias('install', env.Install('$PREFIX/bin', [program]))
+
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+    create_uninstall_target(env, "$PREFIX/bin/rmlint")
+
+Return('program')

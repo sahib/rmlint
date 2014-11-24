@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+Import('env')
+Import('create_uninstall_target')
+
+
+import os
+
+language_install_paths = []
+language_cmds = []
+
+for src in env.Glob('*.po'):
+    lng = os.path.basename(str(src)[:-3])
+    dst = lng + '.mo'
+
+    cmd = env.Command(dst, src, 'msgfmt $SOURCE -o $TARGET')
+    env.AlwaysBuild(cmd)
+    language_cmds.append(cmd)
+
+    path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
+    language_install_paths.append(path)
+
+    if 'install' in COMMAND_LINE_TARGETS:
+        target = env.InstallAs(path, dst)
+        env.Alias('install', [target])
+
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+    for lang_path in language_install_paths:
+        create_uninstall_target(env, lang_path)
+
+
+def xgettext(target=None, source=None, env=None):
+    Exit(subprocess.call(
+        'xgettext --package-name rmlint -k_ -kN_' \
+        '--package-version 2.0.0 --default-domain rmlint' \
+        '--output po/rmlint.pot' \
+        '$(find src -iname "*.[ch]")',
+        shell=True
+    ))
+
+if 'xgettext' in COMMAND_LINE_TARGETS:
+    env.AlwaysBuild(
+        env.Command('xgettext', None, Action(xgettext, "Running xgettext"))
+    )

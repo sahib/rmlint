@@ -5,6 +5,7 @@ Import('env')
 Import('VERSION_MAJOR')
 Import('VERSION_MINOR')
 Import('VERSION_PATCH')
+Import('create_uninstall_target')
 
 
 import os
@@ -45,8 +46,16 @@ env.AlwaysBuild(
     )
 )
 
-env.AlwaysBuild(
+manpage = env.AlwaysBuild(
     env.Command(
         'rmlint.1.gz', 'rmlint.1', tar_file
     )
 )
+
+
+if 'install' in COMMAND_LINE_TARGETS:
+    man_install = env.Install('$PREFIX/share/man/man1', [manpage])
+    env.Alias('install', [man_install])
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
