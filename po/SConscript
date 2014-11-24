@@ -3,9 +3,13 @@
 
 Import('env')
 Import('create_uninstall_target')
+Import('VERSION_MAJOR')
+Import('VERSION_MINOR')
+Import('VERSION_PATCH')
 
 
 import os
+import subprocess
 
 language_install_paths = []
 language_cmds = []
@@ -33,14 +37,19 @@ if 'uninstall' in COMMAND_LINE_TARGETS:
 
 def xgettext(target=None, source=None, env=None):
     Exit(subprocess.call(
-        'xgettext --package-name rmlint -k_ -kN_' \
-        '--package-version 2.0.0 --default-domain rmlint' \
-        '--output po/rmlint.pot' \
-        '$(find src -iname "*.[ch]")',
+        'xgettext --package-name rmlint -k_ -kN_ ' \
+        '--package-version {}.{}.{} --default-domain rmlint ' \
+        '--output po/rmlint.pot ' \
+        '$(find src -iname "*.[ch]")'.format(
+            VERSION_MAJOR,
+            VERSION_MINOR,
+            VERSION_PATCH
+        ),
         shell=True
     ))
 
 if 'xgettext' in COMMAND_LINE_TARGETS:
-    env.AlwaysBuild(
+    env.Alias(
+        'xgettext',
         env.Command('xgettext', None, Action(xgettext, "Running xgettext"))
     )
