@@ -10,6 +10,7 @@ import subprocess
 VERSION_MAJOR = 2
 VERSION_MINOR = 0
 VERSION_PATCH = 0
+Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH')
 
 ###########################################################################
 #                                Utilities                                #
@@ -155,7 +156,7 @@ if ARGUMENTS.get('VERBOSE') == "1":
 
 # Actually instance the Environement with all collected information:
 env = Environment(**options)
-
+Export('env')
 
 ###########################################################################
 #                           Dependency Checks                             #
@@ -260,49 +261,6 @@ env.AlwaysBuild(
 )
 
 
-def tar_file(target, source, env):
-    import tarfile
-    tar = tarfile.open(str(target[0]), "w:gz")
-    for item in source:
-        tar.add(str(item))
-
-    tar.close()
-
-
-def build_man(target, source, env):
-    rst_in_path = str(source[0])
-    man_out_path = str(target[0])
-
-    with open(rst_in_path, 'r') as handle:
-        text = handle.read()
-        text = text.format(
-            VERSION='{}.{}.{} ({})'.format(
-                VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, env['gitrev']
-            ),
-            DATE=time.strftime("%d-%m-%Y")
-        )
-
-    rst_meta_path = rst_in_path[:-4]
-    with open(rst_meta_path, 'w') as handle:
-        handle.write(text)
-
-    os.system('rst2man "{s}" > "{t}"'.format(t=man_out_path, s=rst_meta_path))
-
-
-env.AlwaysBuild(
-    env.Alias('man',
-        env.Command(
-            'docs/rmlint.1', 'docs/rmlint.1.in.rst', build_man
-        )
-    )
-)
-
-manpage = env.Command(
-    'docs/rmlint.1.gz', 'docs/rmlint.1', tar_file
-)
-
-env.AlwaysBuild(manpage)
-
 ###########################################################################
 #                       Build of the actual Programs                      #
 ###########################################################################
@@ -367,3 +325,9 @@ if 'uninstall' in COMMAND_LINE_TARGETS:
 
     for lang_path in language_install_paths:
         create_uninstall_target(env, lang_path)
+
+
+
+SConscript([
+    'docs/SConscript'
+])
