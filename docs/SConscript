@@ -11,25 +11,25 @@ Import('create_uninstall_target')
 import os
 import time
 import tarfile
+import subprocess
 
 
 def tar_file(target, source, env):
-    with tarfile.open(str(target[0]), "w:gz") as handle:
+    with tarfile.open(target[0].get_abspath(), "w:gz") as handle:
         for item in source:
             handle.add(str(item))
 
 
 def build_man(target, source, env):
-    rst_in_path = str(source[0])
-    man_out_path = str(target[0])
+    rst_in_path = source[0].get_abspath()
+    man_out_path = target[0].get_abspath()
 
-    with open(rst_in_path, 'r') as handle:
-        text = handle.read().format(
-            VERSION='{}.{}.{} ({})'.format(
-                VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, env['gitrev']
-            ),
-            DATE=time.strftime("%d-%m-%Y")
-        )
+    text = source[0].get_text_contents().format(
+        VERSION='{}.{}.{} ({})'.format(
+            VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, env['gitrev']
+        ),
+        DATE=time.strftime("%d-%m-%Y")
+    )
 
     rst_meta_path = rst_in_path[:-4]
     with open(rst_meta_path, 'w') as handle:
@@ -59,3 +59,11 @@ if 'install' in COMMAND_LINE_TARGETS:
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
+
+if 'docs' in COMMAND_LINE_TARGETS:
+    def make_docs(target=None, source=None, env=None):
+        return subprocess.call('cd docs && make html', shell=True)
+
+    env.Alias('docs',
+        env.Command('make_docs', None, Action(make_docs, "Building online docs...")),
+    )

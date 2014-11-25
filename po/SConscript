@@ -11,26 +11,23 @@ Import('VERSION_PATCH')
 import os
 import subprocess
 
-language_install_paths = []
-
 for src in env.Glob('*.po'):
-    lng = os.path.basename(str(src)[:-3])
-    dst = lng + '.mo'
+    lang = os.path.basename(src.get_abspath()[:-3])
+    dest = lang + '.mo'
 
-    cmd = env.Command(dst, src, 'msgfmt $SOURCE -o $TARGET')
-    env.AlwaysBuild(cmd)
+    cmd = env.AlwaysBuild(
+        env.Command(dest, src, 'msgfmt $SOURCE -o $TARGET')
+    )
 
-    path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lng
-    language_install_paths.append(path)
+    path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lang
 
     if 'install' in COMMAND_LINE_TARGETS:
-        target = env.InstallAs(path, dst)
+        target = env.InstallAs(path, dest)
+        env.Depends(target, cmd)
         env.Alias('install', [target])
 
-
-if 'uninstall' in COMMAND_LINE_TARGETS:
-    for lang_path in language_install_paths:
-        create_uninstall_target(env, lang_path)
+    if 'uninstall' in COMMAND_LINE_TARGETS:
+        create_uninstall_target(env, path)
 
 
 def xgettext(target=None, source=None, env=None):

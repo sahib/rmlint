@@ -12,10 +12,9 @@ import codecs
 
 
 def build_config_template(target, source, env):
-    with codecs.open(str(source[0]), 'r') as handle:
-        text = handle.read()
+    text = source[0].get_text_contents()
 
-    with codecs.open(str(target[0]), 'w') as handle:
+    with codecs.open(target[0].get_abspath(), 'w') as handle:
         handle.write(text.format(
             INSTALL_PREFIX=GetOption('prefix'),
             HAVE_GLIB=int(env['glib']),
@@ -27,8 +26,7 @@ def build_config_template(target, source, env):
         ))
 
 def build_python_formatter(target, source, env):
-    with codecs.open(str(source[0]), 'r') as handle:
-        text = handle.read()
+    text = source[0].get_text_contents()
 
     with codecs.open('src/formats/py.py', 'r') as handle:
         py_source = handle.read()
@@ -37,7 +35,7 @@ def build_python_formatter(target, source, env):
     py_source = py_source.replace('"', '\\"')
     py_source = '\\n"\n"'.join(py_source.splitlines())
 
-    with codecs.open(str(target[0]), 'w') as handle:
+    with codecs.open(target[0].get_abspath(), 'w') as handle:
         handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
 
 
