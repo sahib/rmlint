@@ -60,7 +60,7 @@ static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_
     if(session->settings->followlinks) {
         stat_state = rm_sys_stat(path, &self->stat_buf);
     } else {
-        stat_state = rm_sys_stat(path, &self->stat_buf);
+        stat_state = rm_sys_lstat(path, &self->stat_buf);
     }
 
     if(stat_state == -1) {

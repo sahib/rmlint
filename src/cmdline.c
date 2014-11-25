@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -60,7 +61,7 @@ static void rm_cmd_show_version(void) {
 
 static void rm_cmd_show_help(bool use_pager) {
     static const char *commands[] = {
-        "man %s doc/rmlint.1.gz",
+        "man %s docs/rmlint.1.gz 2> /dev/null",
         "man %s rmlint",
         NULL
     };
@@ -206,7 +207,7 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
     RmSettings *settings = session->settings;
-    if(access(path, R_OK) != 0) {
+    if(faccessat(AT_FDCWD, path, R_OK, AT_EACCESS) != 0) {
         rm_log_error(YELLOW"WARNING: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
         return FALSE;
     } else {
@@ -214,7 +215,8 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const 
         settings->is_prefd[index] = is_prefd;
         settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
 
-        settings->paths[index + 0] = realpath(path, NULL);
+        char *abs_path = realpath(path, NULL);
+        settings->paths[index + 0] = abs_path ? abs_path : g_strdup(path);
         settings->paths[index + 1] = NULL;
         return TRUE;
     }
