@@ -8,11 +8,21 @@ Import('program')
 import subprocess
 
 
-def run_tests(target = None, source = None, env = None) :
-    Exit(subprocess.call('nosetests', env=env['ENV'], shell=True))
+def run_tests(target=None, source=None, env=None) :
+    names = ['nosetests-3.3', 'nosetests-3', 'python3-nosetests', 'nosetests']
+    for name in names:
+        print('Found nosetests as ,,{}"'.format(name))
+        if not subprocess.call(name, env=env['ENV'], shell=True):
+            Exit(0)
+
+    print('Unable to find nosetests, tried these: ' + str(names))
+    Exit(-1)
 
 
 if 'test' in COMMAND_LINE_TARGETS:
-    test_cmd = env.Command('run_tests', None, Action(run_tests, "Running tests"))
-    target = env.Depends(test_cmd, [program])
-    env.Alias('test', [target])
+    env.Alias('test',
+        env.Depends(
+            env.Command('run_tests', None, Action(run_tests, "Running tests")),
+            program
+        )
+    )
