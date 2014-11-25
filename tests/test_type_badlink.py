@@ -9,7 +9,6 @@ def create_bad_link(link_name):
     with open(fake_target, 'w') as h:
         h.write('xxx')
 
-    print(link_name, fake_target)
     try:
         os.symlink(fake_target, link_name)
     finally:
@@ -19,5 +18,7 @@ def create_bad_link(link_name):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_basic():
     create_bad_link('imbad')
-    head, *data, footer = run_rmlint('')
-    print(head, data, footer)
+    head, *data, footer = run_rmlint('-f')
+
+    assert data[0]['type'] == 'badlink'
+    assert data[0]['path'].endswith('imbad')
