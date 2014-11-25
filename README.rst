@@ -1,11 +1,11 @@
 RMLINT
 ======
 
-.. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
-   :align: center
-
 `rmlint` finds space waste and other broken things on your filesystem and offers
 to remove it. 
+
+.. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
+   :align: center
 
 **Features:**
 
@@ -26,6 +26,10 @@ to remove it.
 Due to some of it's performance optimizations, it currently only runs on Linux
 32 and 64 bit. Porting to BSD and Darwin (Mac OSX) architectures is possible
 though, but needs some volunteers to test. Patches welcome!
+
+
+.. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/screenshot.png
+   :align: center
 
 INSTALLATION
 ------------
