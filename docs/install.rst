@@ -24,7 +24,7 @@ Build dependencies:
 
 * **git** (version control)
 * **scons** (build system)
-* **rst2man** (manpage generation)
+* **sphinx>=3.0** (manpage/documentation generation)
 
 Here's a list of readily prepared commands for known distributions:
 
@@ -32,14 +32,14 @@ Here's a list of readily prepared commands for known distributions:
 
   .. code-block:: bash
   
-    $ yum -y install git scons python-docutils gettext
+    $ yum -y install git scons python3-sphinx gettext
     $ yum -y install glib-devel libblkid-devel libelf-devel
 
 * **ArchLinux:**
 
   .. code-block:: bash
 
-    $ pacman -S git scons python-docutils
+    $ pacman -S git scons python-sphinx
     $ pacman -S glib2 libutil-linux elfutils
 
 
@@ -47,7 +47,7 @@ Here's a list of readily prepared commands for known distributions:
 
   .. code-block:: bash
 
-    $ apt-get install git scons python-docutils python3-nose gettext
+    $ apt-get install git scons python3-sphinx python3-nose gettext
     $ apt-get install libelf-dev libglib2.0-dev libblkid-dev 
 
 Send us a note if you want to see your distribution here.

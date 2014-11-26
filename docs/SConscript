@@ -21,34 +21,20 @@ def tar_file(target, source, env):
 
 
 def build_man(target, source, env):
-    rst_in_path = source[0].get_abspath()
-    man_out_path = target[0].get_abspath()
-
-    text = source[0].get_text_contents().format(
-        VERSION='{}.{}.{} ({})'.format(
-            VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, env['gitrev']
-        ),
-        DATE=time.strftime("%d-%m-%Y")
-    )
-
-    rst_meta_path = rst_in_path[:-4]
-    with open(rst_meta_path, 'w') as handle:
-        handle.write(text)
-
-    os.system('rst2man "{s}" > "{t}"'.format(t=man_out_path, s=rst_meta_path))
+    subprocess.call('cd docs && make man', shell=True)
 
 
 env.AlwaysBuild(
     env.Alias('man',
         env.Command(
-            'rmlint.1', 'rmlint.1.in.rst', build_man
+            '_build/man/rmlint.1', 'rmlint.1.in.rst', build_man
         )
     )
 )
 
 manpage = env.AlwaysBuild(
     env.Command(
-        'rmlint.1.gz', 'rmlint.1', tar_file
+        'rmlint.1.gz', '_build/man/rmlint.1', tar_file
     )
 )
 

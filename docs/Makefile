@@ -2,8 +2,11 @@
 #
 
 # You can set these variables from the command line.
+SPLIT_BINPATHS=$(subst :, ,$1)
+BINPATHS=$(call SPLIT_BINPATHS,$(PATH))
+BINARY=$(shell find $(BINPATHS) -name 'sphinx-build*' 2>/dev/null | sort -k 2 -t - -r | head -1)
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build-3
+SPHINXBUILD   = $(BINARY) -Q
 PAPER         =
 BUILDDIR      = _build
 
@@ -17,6 +20,8 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext
 
 help:
+	@echo $(PATH)
+	@echo $(BINPATHS)
 	@echo "Please use \`make <target>' where <target> is one of"
 	@echo "  html       to make standalone HTML files"
 	@echo "  dirhtml    to make HTML files named index.html in directories"
@@ -43,8 +48,6 @@ clean:
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
-	@echo
-	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
 dirhtml:
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml
@@ -115,8 +118,6 @@ text:
 
 man:
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(BUILDDIR)/man
-	@echo
-	@echo "Build finished. The manual pages are in $(BUILDDIR)/man."
 
 texinfo:
 	$(SPHINXBUILD) -b texinfo $(ALLSPHINXOPTS) $(BUILDDIR)/texinfo

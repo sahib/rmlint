@@ -8,13 +8,6 @@ find duplicate files and other space waste efficiently
 
 .. Stuff in curly braces gets replaced by SCons
 
-:Author: sahib@online.de
-:Date: {DATE}
-:Copyright: public domain
-:Version: {VERSION}
-:Manual section: 1
-:Manual group: file system
-
 SYNOPSIS
 ========
 
@@ -23,7 +16,7 @@ rmlint [TARGET_DIR_OR_FILES ...] [//] [TARGET_DIR_OR_FILES ...] [-] [OPTIONS]
 DESCRIPTION
 ===========
 
-`rmlint` finds space waste and other broken things on your filesystem and offers
+``rmlint`` finds space waste and other broken things on your filesystem and offers
 to remove it. 
 
 * Duplicate files.
@@ -32,17 +25,17 @@ to remove it.
 * Empty files and directories.
 * Files with broken user or group id.
 
-In order to find the lint, `rmlint` is given one or more directories to traverse.
+In order to find the lint, ``rmlint`` is given one or more directories to traverse.
 If no directory or file was given, the current working directory is assumed.
 `rmlint` will take care of things like filesystem loops and symlinks during
 traversing. 
 
 Found duplicates are divided into the original and duplicates. Original
-are what `rmlint` thinks to be the file that was first there. You can drive
+are what ``rmlint`` thinks to be the file that was first there. You can drive
 the original detection with the `-S` option. If you know which path contains the
 originals you can prefix the path with **//**, 
 
-**Note:** `rmlint` will not delete any files. It only produces executable output
+**Note:** ``rmlint`` will not delete any files. It only produces executable output
 for you to remove it.
 
 OPTIONS
@@ -51,10 +44,10 @@ OPTIONS
 General Options
 ---------------
 
-**-T --types="description"** (*default:* -T defaults)
+:``-T --types="escription`` (**default\:** *defaults*):
 
     Configure the types of lint rmlint is supposed to find. The `description`
-    string enumerates the types that shall be investigated, separted by
+    string enumerates the types that shall be investigated, separated by
     a space, comma or semicolon (actually more separators work). At the
     beginning of the string certain groups may be specified. 
 
@@ -72,11 +65,10 @@ General Options
     * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
     * ``duplicates``, ``df``: Find duplicate files.
 
-**-o --output=formatter:file** (*default:* -o sh:rmlint.sh -o pretty:stdout -o summary:stdout)
-**-O --add-output=formatter[:file]** 
+:``-o --output=formatter\:file / -O --add-output=formatter[\:file]`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
-    Configure the way rmlint ouputs it's results. You link a formatter to a
-    file. A file might either be an arbitary path or ``stdout`` or ``stderr``.
+    Configure the way rmlint outputs it's results. You link a formatter to a
+    file. A file might either be an arbitrary path or ``stdout`` or ``stderr``.
     If file is omitted, ``stdout`` is assumed.
 
     If this options is specified, rmlint's defaults are overwritten. 
@@ -89,15 +81,15 @@ General Options
     For a list of formatters and their options, look at the **Formatters**
     section below.
 
-**-c --config=formatter:key[=value]** (*default:* none)
+:``-c --config=formatter\:key[=value]`` (**default\:** *none*):
 
-    Configure a formatter. This option can be used to finetune the behaviour of 
+    Configure a formatter. This option can be used to fine-tune the behaviour of 
     the existing formatters. See the **Formatters** section for details on the
     available keys.
 
     If the value is omitted it is set to a truthy value.
 
-**-a --algorithm=name** (*default:* spooky)
+:``-a --algorithm=name`` (**default\:** *spooky*):
 
     Choose the hash algorithm to use for finding duplicate files.
     The following well-known algorithms are available:
@@ -114,13 +106,13 @@ General Options
     * **city32, city64:** Faster version of **city** with less bits.
     * **paranoid:** No hash function, compares files byte-by-byte.
 
-**-v --loud / -V --quiet**
-
+:``-v --loud / -V --quiet``:
+    
     Increase or decrease the verbosity. You can pass these options several
     times. This only affects rmlint's logging on *stderr*, but not the outputs
     defined with **-o**.
 
-**-p --paranoid / -P --less-paranoid** (*default*)    
+:``-p --paranoid / -P --less-paranoid`` (**default**):
 
     Increase the paranoia of rmlints internals. Both options can be specified up
     to three times. They do not do any work themselves, but set some other
@@ -141,7 +133,7 @@ General Options
 
     This is really not recommended. 
 
-**-D --merge-directories** (**experimental**, *default: disabled*)
+:``-D --merge-directories`` (**[experimental] default\:** *disabled*):
 
     Makes rmlint use a special mode where all found duplicates are collected and
     checked wether whole directory trees are duplicates. This is an HIGHLY
@@ -158,11 +150,11 @@ General Options
 
     *Notes:*
 
-        * This does not work with **--algorithm=paranoid** (or **-ppp**).
-        * This feature might not deliver perfect result in corner cases.
-        * This feature might add some runtime.
+    * This does not work with **--algorithm=paranoid** (or **-ppp**).
+    * This feature might not deliver perfect result in corner cases.
+    * This feature might add some runtime.
 
-**-q --clamp-low=[fac.tor|percent%|offset]** (*default: 0*) **/ -Q --clamp-top=[fac.tor|percent%|offset]** (*default: 1.0*)
+:``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
 
     The argument can be either passed as factor (a number with a ``.`` in it),
     a percent value (suffixed by ``%``) or as absolute number or size spec, like in ``--size``.
@@ -176,29 +168,29 @@ General Options
     With this option you can just compare the data in between. Also it might be useful for approximate 
     comparison where it suffices when the file is the same in the middle part.
 
-**-u --max-paranoid-ram=size**
+:``-u --max-paranoid-ram=size``:
 
     Apply a maximum number of bytes to use for **--paranoid**. 
     The ``size``-description has the same format as for **--size**.
 
-**-w --with-color** (*default*) **/ -W --no-with-color**
+:``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them. 
     If you pipe `rmlints` output to a file -W is assumed automatically.
 
-**-h --help / -H --version**
+:``-h --help / -H --version``:
 
     Show this manual or print the version string.
 
 Traversal Options
 -----------------
 
-**-t --threads=N** (*default:* 16)
+:``-t --threads=N** (*default\:* 16)``:
 
     The number of threads to use during file tree traversal and hashing.
-    `rmlint` probably knows better than you how to set the value.
+    ``rmlint`` probably knows better than you how to set the value.
 
-**-s --size=range** (*default:* all)
+:``-s --size=range`` (**default\:** *all*):
 
     Only consider files in a certain size range.
     The format of `range` is `min-max`, where both ends can be specified
@@ -212,20 +204,20 @@ Traversal Options
     It's also possible to specify only one size. In this case the size is
     interpreted as "up to this size".
 
-**-d --max-depth=depth** (*default:* INF) 
+:``-d --max-depth=depth`` (**default\:** *INF*):
 
     Only recurse up to this depth. A depth of 1 would disable recursion and is
     equivalent to a directory listing.
 
-**-l --hardlinked / -L --no-hardlinked** (*default*)
+:``-l --hardlinked`` / ``-L --no-hardlinked`` (**default**):
 
-    By default `rmlint` will not allow several files with the same *inode* and
+    By default ``rmlint`` will not allow several files with the same *inode* and
     therefore keep only one of them in it's internal list.
     If `-l` is specified the whole group is reported instead.
 
-**-f --followlinks** (*default*) **/ -F --no-followlinks**
+:``-f --followlinks`` (**default**) / ``-F --no-followlinks``:
 
-    Follow symbolic links? If file system loops occur `rmlint` will detect this.
+    Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
     If `-F` is specified, symbolic links will be ignored completely.
 
     *This option is needed for finding bad symbolic links.*
@@ -233,34 +225,33 @@ Traversal Options
     **Note:** Hardlinks are always followed, but it depends on ``-L`` how those are
     handled. 
 
-**-x --crossdev** (*default*) **/ -X --no-crossdev**
-    
+:``-x --crossdev`` (**default**) / ``-X --no-crossdev``:
+
     Do cross over mount points (``-x``)? Or stay always on the same device
     (``-X``)?
 
-**-r --hidden / -R --no-hidden** (*default*)
+:``-r --hidden`` / ``-R --no-hidden`` (**default**):
 
     Also traverse hidden directories? This is often not a good idea, since
-    directories like `.git/` would be investigated.
+    directories like ``.git/`` would be investigated.
 
-**-b --match-basename / -B --no-match-basename** (*default*)
+:``-b --match-basename`` / ``-B --no-match-basename`` (**default**):
 
     Only consider those files as dupes that have the same basename.
     See also ``man 1 basename``.
 
-**-e --match-with-extension / -E --no-match-with-extension** (*default*)
+:``-e --match-with-extension`` / ``-E --no-match-with-extension`` (**default**):
 
     Only consider those files as dupes that have the same file extension.
     For example two photos would only match if they are a ``.png``.
 
-**-i --match-without-extension / -I --no-match-without-extension** (*default*)
+:``-i --match-without-extension`` / ``-I --no-match-without-extension`` (**default**):
 
     Only consider those files as dupes that have the same basename minus the file
     extension. For example: ``banana.png`` and ``banana.jpeg`` would be considered,
     while ``apple.png`` and ``peach.png`` won't.
 
-**-n --newer-than-stamp=<timestamp_filename>**
-**-N --newer-than=<iso8601_timestamp_or_unix_timestamp>**
+:``-n --newer-than-stamp=<timestamp_filename>`` / ``-N --newer-than=<iso8601_timestamp_or_unix_timestamp>``:
 
     Only consider files (and their size siblings for duplicates) newer than a
     certain modification time (*mtime*).  The age barrier may be given as
@@ -279,26 +270,25 @@ Traversal Options
 
     *Note:* you can make rmlint write out a compatible timestamp with:
 
-        ``-O stamp:stdout``
-
-        ``-O stamp:stdout -c stamp:iso8601``
+    * ``-O stamp:stdout``
+    * ``-O stamp:stdout -c stamp:iso8601``
 
 Original Detection Options
 --------------------------
 
-**-k --keep-all-tagged / -K --keep-all-untagged** (*default*)
+:``-k --keep-all-tagged`` / ``-K --keep-all-untagged`` (**default**):
 
     Don't delete any duplicates that are in original paths.
     (Paths that were named after **//**).
     
-    **Note:** for lint types other than duplicates, `--keep-all-tagged` option is ignored.
+    **Note:** for lint types other than duplicates, ``--keep-all-tagged`` option is ignored.
 
-**-m --must-match-tagged / -M --must-match-untagged** (*default*)
+:``-m --must-match-tagged`` / ``-M --must-match-untagged`` (**default**):
 
     Only look for duplicates of which one is in original paths.
     (Paths that were named after **//**).
 
-**-S --sortcriteria=criteria** (*default*: m)
+:``-S --sortcriteria=criteria`` (**default\:** *m*):
 
     - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)
     - **a**: keep first alphabetically   **A**: keep last alphabetically
@@ -390,15 +380,15 @@ PROBLEMS
    of false positives (files that are erroneously detected as duplicate).
    Internally a hashfunctions is used to compute a *fingerprint* of a file. These
    hashfunctions may, in theory, map two different files to the same
-   fingerprint. This happens about once in 2 ** 64 files. Since `rmlint` computes 
+   fingerprint. This happens about once in 2 ** 64 files. Since ``rmlint`` computes 
    at least 3 hashes per file and requires them to be the same size, it's very
    unlikely to happen. If you're really wary, try the *--paranoid* option.
 2. **File modification during or after rmlint run:** It is possible that a file
-   that rmlint recognized as duplicate is modified afterwards, resulting in a
-   different file.  This is a general problem and cannot be solved from rmlint's
-   side alone. You should **never modify the data until rmlint and the
+   that ``rmlint`` recognized as duplicate is modified afterwards, resulting in a
+   different file.  This is a general problem and cannot be solved from ``rmlint's``
+   side alone. You should **never modify the data until ``rmlint`` and the
    shellscript has been run through**. Careful persons might even consider to
-   mount the filesystem you are scanning readonly.
+   mount the filesystem you are scanning read-only.
 
 SEE ALSO
 ========
@@ -417,30 +407,30 @@ If you found a bug, have a feature requests or want to say something nice, pleas
 visit https://github.com/sahib/rmlint/issues. 
 
 Please make sure to describe your problem in detail. Always include the version
-of `rmlint` (``--version``). If you experienced a crash, please include 
-one of the following information with a debug build of `rmlint`:
+of ``rmlint`` (``--version``). If you experienced a crash, please include 
+one of the following information with a debug build of ``rmlint``:
 
-    * ``gdb --ex run -ex bt --args rmlint -vvv [your_options]``
-    * ``valgrind --leak-check=no rmlint -vvv [your_options]``
+* ``gdb --ex run -ex bt --args rmlint -vvv [your_options]``
+* ``valgrind --leak-check=no rmlint -vvv [your_options]``
 
 You can build a debug build of ``rmlint`` like this:
 
-    * ``git clone git@github.com:sahib/rmlint.git``
-    * ``cd rmlint``
-    * ``scons DEBUG=1``
-    * ``sudo scons install  # Optional`` 
+* ``git clone git@github.com:sahib/rmlint.git``
+* ``cd rmlint``
+* ``scons DEBUG=1``
+* ``sudo scons install  # Optional`` 
 
 LICENSE
 =======
 
-`rmlint` is licensed under the terms of the GPLv3.
+``rmlint`` is licensed under the terms of the GPLv3.
 
 See the COPYRIGHT file that came with the source for more information.
 
 PROGRAM AUTHORS
 ===============
 
-`rmlint` was written by:
+``rmlint`` was written by:
 
 * Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
 * Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)

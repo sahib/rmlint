@@ -1,11 +1,11 @@
       
 ======
 
-`rmlint` finds space waste and other broken things on your filesystem and offers
-to remove it. 
-
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center
+
+`rmlint` finds space waste and other broken things on your filesystem and offers
+to remove it. 
 
 **Features:**
 

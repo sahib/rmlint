@@ -347,13 +347,13 @@ latex_elements = {
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-# man_pages = [
-#     ('index', 'libmuninapidoc', 'libmunin api doc Documentation',
-#      ['Christopher Pahl'], 1)
-# ]
+man_pages = [
+    ('rmlint.1.in', 'rmlint', 'find duplicate files and other sapce waste efficiently',
+     ['Christopher Pahl', 'Daniel Thomas'], 1)
+]
 
 # If true, show URL addresses after external links.
-#man_show_urls = False
+man_show_urls = False
 
 
 # -- Options for Texinfo output ------------------------------------------------
