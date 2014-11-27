@@ -1,15 +1,21 @@
 {# Import the theme's layout. #}
 {% extends "!layout.html" %}
 
+{# Custom CSS overrides #}
+{% set bootswatch_css_custom = ['_static/rmlint.css'] %}
+
 {# Add some extra stuff before and use existing with 'super()' call. #}
 {% block footer %}
-  {{ super() }}
+  <br />
+  <br />
   <center> 
-      <b>Build Status:</b>
+      <small><b>Build Status: </b></small>
+      <br />
       <a href="https://travis-ci.org/sahib/rmlint">
         <img src="https://travis-ci.org/sahib/rmlint.svg?branch=develop">
       </a>
   </center>
   <br />
   <br />
+  {{ super() }}
 {% endblock %}

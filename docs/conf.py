@@ -132,17 +132,6 @@ pygments_style = 'flask_theme_support.FlaskyStyle'
 
 # -- Options for HTML output ---------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-# on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-# if on_rtd:
-#     # html_theme = 'sphinx_rtd_theme'
-#     html_theme = 'default'
-# else:
-#     # html_theme = 'armstrong'
-#     html_theme = 'default'
-#
-
 import sphinx_bootstrap_theme
 
 # Activate the theme.
@@ -219,7 +208,7 @@ html_theme_options = {
     # Options are nothing with "" (default) or the name of a valid theme
     # such as "amelia" or "cosmo".
     'bootswatch_theme': "simplex",
-    # 'bootswatch_theme': "lumen",
+    # 'bootswatch_theme': "journal",
     # 'bootswatch_theme': "readable",
     # 'bootswatch_theme': "sandstone",
 
@@ -227,11 +216,6 @@ html_theme_options = {
     # Values: "3" (default) or "2" (in quotes)
     'bootstrap_version': "3",
 }
-
-
-# html_theme_options = {
-#    'index_logo_height': '10px'
-# }
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = ['_themes']
@@ -263,10 +247,16 @@ html_last_updated_fmt = '%b %d, %Y'
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
-html_use_smartypants = True
+html_use_smartypants = False
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_default_sidebars = ['localtoc.html', 'sourcelink.html', 'searchbox.html']
+html_sidebars = {
+    'tutorial': html_default_sidebars,
+    'developers': html_default_sidebars,
+    'install': html_default_sidebars,
+    'translators': html_default_sidebars
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
