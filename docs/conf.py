@@ -87,8 +87,8 @@ master_doc = 'index'
 todo_include_todos = True
 
 # General information about the project.
-project = 'rmlint doc'
-copyright = '2014, Christopher Pahl'
+project = 'rmlint documentation'
+copyright = '2014, Christopher Pahl & Daniel Thomas'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

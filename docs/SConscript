@@ -14,17 +14,18 @@ import tarfile
 import subprocess
 
 
-def tar_file(target, source, env):
-    with tarfile.open(target[0].get_abspath(), "w:gz") as handle:
-        for item in source:
-            handle.add(str(item))
+def gzip_file(target, source, env):
+    subprocess.call('gzip -c {s} > {t}'.format(
+        s=source[0].get_abspath(),
+        t=target[0].get_abspath(),
+    ), shell=True)
 
 
 def build_man(target, source, env):
     subprocess.call('cd docs && make man', shell=True)
 
 
-env.AlwaysBuild(
+sphinx = env.AlwaysBuild(
     env.Alias('man',
         env.Command(
             '_build/man/rmlint.1', 'rmlint.1.in.rst', build_man
@@ -34,9 +35,11 @@ env.AlwaysBuild(
 
 manpage = env.AlwaysBuild(
     env.Command(
-        'rmlint.1.gz', '_build/man/rmlint.1', tar_file
+        'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
     )
 )
+
+env.Depends(manpage, sphinx)
 
 
 if 'install' in COMMAND_LINE_TARGETS:
