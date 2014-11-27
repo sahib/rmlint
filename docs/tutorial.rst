@@ -7,12 +7,16 @@ Welcome to the Tutorial of ``rmlint``.
 We use a few terms that might not be obvious to you at first,
 so we gonna explain them to you here. 
 
-- *Duplicate*: A file that has the same hash as another file.
-- *Original*: In a group of *duplicates*, one file is said to 
-              be the original file, from which the copies
-              where created. This might or might not be true,
-              but is an helpful assumption when deleting files.
+:*Duplicate*:
+             
+    A file that has the same hash as another file.
 
+:*Original*: 
+
+    In a group of *duplicates*, one file is said to 
+    be the original file, from which the copies
+    where created. This might or might not be true,
+    but is an helpful assumption when deleting files.
 
 
 Beginner Examples

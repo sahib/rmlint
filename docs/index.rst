@@ -31,7 +31,7 @@ to remove it. It is able to find:
    + Many options for originaldetection.
 
 
-.. WARNING::
+.. DANGER::
 
     **rmlint** is currently in the progress of being rewritten. 
     This means that it still may contain bugs that might burn your data.
