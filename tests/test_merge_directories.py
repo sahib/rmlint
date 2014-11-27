@@ -169,8 +169,6 @@ def test_mount_binds():
     create_file('xxx', 'a/3')
 
     head, *data, footer = run_rmlint('-S a')
-    import pprint
-    pprint.pprint(data)
     assert data[0]['path'].endswith('c/2')
     assert data[1]['path'].endswith('a/3')
     assert len(data) == 2

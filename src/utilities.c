@@ -126,8 +126,8 @@ ino_t rm_util_parent_node(const char *path) {
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
 int rm_util_uid_gid_check(RmStat *statp, RmUserGroupNode **userlist) {
-    bool has_gid, has_uid;
-    if (rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid, &has_gid)) {
+    bool has_gid = 1, has_uid = 1;
+    if (!rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid, &has_gid)) {
         if(has_gid == false && has_uid == false) {
             return RM_LINT_TYPE_BADUGID;
         } else if(has_gid == false && has_uid == true) {
@@ -287,6 +287,7 @@ bool rm_userlist_contains(RmUserGroupNode **list, unsigned long uid, unsigned gi
     if(valid_gid != NULL) {
         *valid_gid = gid_found;
     }
+
     return rc;
 }
 
