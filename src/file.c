@@ -114,5 +114,5 @@ const char *rm_file_lint_type_to_string(RmLintType type) {
         [RM_LINT_TYPE_DUPE_DIR_CANDIDATE]  = "duplicate_dir"
     };
 
-    return TABLE[CLAMP(type, RM_LINT_TYPE_UNKNOWN, sizeof(TABLE) / sizeof(const char *))];
+    return TABLE[MIN(type, sizeof(TABLE) / sizeof(const char *))];
 }

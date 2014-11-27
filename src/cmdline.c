@@ -299,7 +299,7 @@ static double rm_cmd_parse_clamp_factor(RmSession *session, const char *string) 
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
-    if(*error_loc == '%') {
+    if(error_loc != NULL && *error_loc == '%') {
         factor /= 100;
     }
 
