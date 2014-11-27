@@ -6,7 +6,6 @@
 rmlint
 rmlint.sh
 src/config.h
-docs/rmlint.1.rst
 docs/rmlint.1.gz
 docs/rmlint.1
 

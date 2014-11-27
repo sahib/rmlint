@@ -37,7 +37,7 @@ def build_man(target, source, env):
 sphinx = env.AlwaysBuild(
     env.Alias('man',
         env.Command(
-            '_build/man/rmlint.1', 'rmlint.1.in.rst', build_man
+            '_build/man/rmlint.1', 'rmlint.1.rst', build_man
         )
     )
 )
