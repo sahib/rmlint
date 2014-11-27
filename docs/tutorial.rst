@@ -513,9 +513,9 @@ Here's just a list of options that are nice to know, but not essential:
   anyways, ``rmlint`` will disable colors itself.
 - You can limit the traversal depth with ``-d`` (``--max-depth``):
 
-  .. code-block
+  .. code-block:: bash
 
-      $ rmlint d 0 
+      $ rmlint -d 0 
       <finds everything in the same working directory>
 
 - The still experimental ``-D`` (``--merge-directories``) option is able to
@@ -524,3 +524,22 @@ Here's just a list of options that are nice to know, but not essential:
 - If you want to prevent ``rmlint`` from crossing mountpoints (e.g. scan a home
   directory, but no the HD mounted in there), you can use the ``-X``
   (``--no-crossdev``) option.
+
+- It is possible to tell ``rmlint`` that it should not scan the whole file.
+  With ``-q`` (``--clamp-low``) / ``-Q`` (``--clamp-top``) it is possible to
+  limit the range to a starting point (``-q``) and end point (``-Q``). 
+  The point where to start might be either given as percent value, factor (percent / 100)
+  or as an absolute offset. 
+
+  If the file size is lower than the absolute offset, the file is simply ignored.
+
+  This feature might prove useful if you want to examine files with a constant header.
+  The constant header might be different, i.e. by a different ID, but the content might be still
+  the same. In any case it is advisable to use this option with care.
+
+  Example:
+
+  .. code-block:: bash
+
+    # Start hashing at byte 100, but not more than 90% of the filesize.
+    $ rmlint -q 100 -Q.9 

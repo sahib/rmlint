@@ -110,6 +110,10 @@ Notable targets
 
     Build the manpage.
 
+:docs:
+
+    Build the onlice html docs (which you are reading now).
+
 :test:
 
     Build the tests (requires ``python`` and ``nosetest`` installed).
@@ -126,3 +130,19 @@ Sourcecode layout
 - All translation stuff should go to ``po``.
 - All packaging should be done in ``pkg/<distribution>``.
 - Tests are written in Python and live in ``tests``.
+
+
+Hashfunctions
+-------------
+
+Here is a short comparasion of the existing hashfunctions_ in ``rmlint`` (linear_ scale).
+For reference: Those plots were rendered with these_ sources - which are very ugly, sorry.
+
+If you want to add new hashfunctions, you should have some arguments why it is valueable and possiblye
+even benchmark it with the above scripts to see if it's really that much faster.
+
+Also keep in mind that most of the time the hashfunction is not the bottleneck.
+
+.. _these: https://github.com/sahib/rmlint/tree/gh-pages/plots
+.. _linear: https://raw.githubusercontent.com/sahib/rmlint/gh-pages/plots/hash_comparasion_lin.png
+.. _hashfunctions: https://raw.githubusercontent.com/sahib/rmlint/gh-pages/plots/hash_comparasion_log.png
