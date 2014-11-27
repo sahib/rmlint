@@ -67,14 +67,15 @@ static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, 
 //   UID/GID VALIDITY CHECKING     //
 /////////////////////////////////////
 
-typedef struct RmUserGroupNode {
-    gulong gid, uid;
-} RmUserGroupNode;
+typedef struct RmUserList {
+    GSequence *users;
+    GSequence *groups;
+} RmUserList;
 
 /**
  * @brief Create a new list of users.
  */
-RmUserGroupNode **rm_userlist_new(void);
+RmUserList *rm_userlist_new(void);
 
 /**
  * @brief Check if a uid and gid is contained in the list.
@@ -84,12 +85,12 @@ RmUserGroupNode **rm_userlist_new(void);
  *
  * @return true if both are valid.
  */
-bool rm_userlist_contains(RmUserGroupNode **list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid);
+bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid);
 
 /**
  * @brief Deallocate the memory allocated by rm_userlist_new()
  */
-void rm_userlist_destroy(RmUserGroupNode **list);
+void rm_userlist_destroy(RmUserList *list);
 
 /**
  * @brief Get the name of the user running rmlint.
@@ -117,7 +118,7 @@ char *rm_util_strsub(const char *string, const char *subs, const char *with);
  *
  * @return the appropiate RmLintType for the file
  */
-int rm_util_uid_gid_check(RmStat *statp, RmUserGroupNode **userlist);
+int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist);
 
 /**
  * @brief Check if a file is a binary that is not stripped.

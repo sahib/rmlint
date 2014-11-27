@@ -78,7 +78,7 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 //////////////////////
 
 typedef struct RmTravSession {
-    RmUserGroupNode **userlist;
+    RmUserList *userlist;
     RmSession *session;
     GMutex lock;
 } RmTravSession;

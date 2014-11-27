@@ -125,7 +125,7 @@ ino_t rm_util_parent_node(const char *path) {
 
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
-int rm_util_uid_gid_check(RmStat *statp, RmUserGroupNode **userlist) {
+int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {
     bool has_gid = 1, has_uid = 1;
     if (!rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid, &has_gid)) {
         if(has_gid == false && has_uid == false) {
@@ -235,50 +235,39 @@ void rm_util_size_to_human_readable(RmOff num, char *in, gsize len) {
 //   UID/GID VALIDITY CHECKING     //
 /////////////////////////////////////
 
-RmUserGroupNode **rm_userlist_new(void) {
+static int rm_userlist_cmp_ids(gconstpointer a, gconstpointer b, _U gpointer ud) {
+    return ((guint64)a) - ((guint64)b);
+}
+
+RmUserList *rm_userlist_new(void) {
     struct passwd *node = NULL;
     struct group *grp = NULL;
 
-    GArray *array = g_array_new(TRUE, TRUE, sizeof(RmUserGroupNode *));
+    RmUserList *self = g_malloc0(sizeof(RmUserList));
+    self->users = g_sequence_new(NULL);
+    self->groups = g_sequence_new(NULL);
 
     setpwent();
     while((node = getpwent()) != NULL) {
-        RmUserGroupNode *item = g_malloc0(sizeof(RmUserGroupNode));
-        item->gid = node->pw_gid;
-        item->uid = node->pw_uid;
-        g_array_append_val(array, item);
+        g_sequence_insert_sorted(self->users, GUINT_TO_POINTER(node->pw_uid), rm_userlist_cmp_ids, NULL);
+        g_sequence_insert_sorted(self->groups, GUINT_TO_POINTER(node->pw_gid), rm_userlist_cmp_ids, NULL);
     }
+    endpwent();
 
     /* add all groups, not just those that are user primary gid's */
     while((grp = getgrent()) != NULL) {
-        RmUserGroupNode *item = g_malloc0(sizeof(RmUserGroupNode));
-        item->gid = grp->gr_gid;
-        item->uid = 0;
-        g_array_append_val(array, item);
+        g_sequence_insert_sorted(self->groups, GUINT_TO_POINTER(grp->gr_gid), rm_userlist_cmp_ids, NULL);
     }
 
-    endpwent();
     endgrent();
-    return (RmUserGroupNode **)g_array_free(array, false);
+    return self;
 }
 
-bool rm_userlist_contains(RmUserGroupNode **list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
+bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
     g_assert(list);
 
-    bool rc = false;
-    bool gid_found = false;
-    bool uid_found = false;
-
-    for(int i = 0; list[i] && rc == false; ++i) {
-        if(list[i]->uid == uid) {
-            uid_found = true;
-        }
-        if(list[i]->gid == gid) {
-            gid_found = true;
-        }
-
-        rc = (gid_found && uid_found);
-    }
+    bool gid_found = g_sequence_lookup(list->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
+    bool uid_found = g_sequence_lookup(list->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
 
     if(valid_uid != NULL) {
         *valid_uid = uid_found;
@@ -288,13 +277,12 @@ bool rm_userlist_contains(RmUserGroupNode **list, unsigned long uid, unsigned gi
         *valid_gid = gid_found;
     }
 
-    return rc;
+    return (gid_found && uid_found);
 }
 
-void rm_userlist_destroy(RmUserGroupNode **list) {
-    for(int i = 0; list[i]; ++i) {
-        g_free(list[i]);
-    }
+void rm_userlist_destroy(RmUserList *list) {
+    g_sequence_free(list->users);
+    g_sequence_free(list->groups);
     g_free(list);
 }
 
