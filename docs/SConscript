@@ -15,14 +15,23 @@ import subprocess
 
 
 def gzip_file(target, source, env):
-    subprocess.call('gzip -c {s} > {t}'.format(
+    subprocess.check_call('gzip -c {s} > {t}'.format(
         s=source[0].get_abspath(),
         t=target[0].get_abspath(),
     ), shell=True)
 
 
 def build_man(target, source, env):
-    subprocess.call('cd docs && make man', shell=True)
+    try:
+        subprocess.check_call('cd docs && make man', shell=True)
+    except Exception as err:
+        print('')
+        print('Warning: Unable to build manpage: {}'.format(err))
+        print('         There will be no (valid) manpage after build.')
+        print('         Did you install sphinx for python3?')
+        print('')
+        with open(target[0].get_abspath(), 'w') as handle:
+            handle.write('dummy')
 
 
 sphinx = env.AlwaysBuild(
