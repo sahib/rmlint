@@ -1,5 +1,5 @@
 from nose import with_setup
-from .utils import *
+from tests.utils import *
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
