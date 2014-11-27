@@ -27,7 +27,7 @@ to remove it.
 
 In order to find the lint, ``rmlint`` is given one or more directories to traverse.
 If no directory or file was given, the current working directory is assumed.
-`rmlint` will take care of things like filesystem loops and symlinks during
+``rmlint`` will take care of things like filesystem loops and symlinks during
 traversing. 
 
 Found duplicates are divided into the original and duplicates. Original
@@ -52,7 +52,7 @@ General Options
     beginning of the string certain groups may be specified. 
 
     * ``all``: Enables all lint types.
-    * ``defaults``: Enables all lint types, but ``namecluster`` and ``nonstripped``.
+    * ``defaults``: Enables all lint types, but ``nonstripped``.
     * ``none``: Disable all lint types.
 
     All following lint types must be one of the following, optionally prefixed
