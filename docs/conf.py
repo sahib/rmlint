@@ -348,7 +348,7 @@ latex_elements = {
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('rmlint.1.in', 'rmlint', 'find duplicate files and other sapce waste efficiently',
+    ('rmlint.1', 'rmlint', 'find duplicate files and other sapce waste efficiently',
      ['Christopher Pahl', 'Daniel Thomas'], 1)
 ]
 

@@ -51,14 +51,14 @@ Most feature you'll ever need is covered in the Tutorial:
 
 An online version of the manpage is available at:
 
-    http://rmlint.rtfd.org/en/latest/rmlint.1.in.html
+    http://rmlint.rtfd.org/en/latest/rmlint.1.html
 
 BUGS
 ----
 
 If you found bugs, having trouble running `rmlint` or want to suggest new
 features please `read this <http://rmlint.readthedocs.org/en/latest/developers.html>`_.
-Also read the **BUGS** section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.in.html>`_ 
+Also read the **BUGS** section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.html>`_ 
 to find out how to provide nice debug information.
 
 AUTHORS

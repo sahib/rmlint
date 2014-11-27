@@ -9,9 +9,48 @@ Import('create_uninstall_target')
 
 
 import os
+import glob
 import time
-import tarfile
 import subprocess
+
+from functools import partial
+
+
+def find_sphinx_binary():
+    PATH = os.getenv('PATH')
+    binaries = []
+    for path in PATH.split(':'):
+        binaries.extend(glob.glob(os.path.join(path, 'sphinx-build*')))
+
+    def version_key(binary):
+        splitted = binary.rsplit('-', 1)
+        if len(splitted) < 2:
+            return 0
+        return float(splitted[-1])
+
+    binaries = sorted(binaries, key=version_key, reverse=True)
+    if binaries:
+        print('Using sphinx-build binary: {}'.format(binaries[0]))
+        return binaries[0]
+    else:
+        print('Unable to find sphinx binary for python3')
+        print('Will be unable to build manpage or html docs')
+
+
+def run_sphinx_binary(builder, **kwargs):
+    sphinx_binary = find_sphinx_binary()
+    if sphinx_binary is None:
+        return
+
+    build_dir = os.path.join('docs/_build', builder)
+    try:
+        os.makedirs(build_dir)
+    except OSError:
+        pass
+
+    subprocess.check_call(
+        [sphinx_binary, '-q', '-b', builder, 'docs', build_dir]
+    )
 
 
 def gzip_file(target, source, env):
@@ -21,24 +60,10 @@ def gzip_file(target, source, env):
     ), shell=True)
 
 
-def build_man(target, source, env):
-    try:
-        subprocess.check_call('cd docs && make man', shell=True)
-    except Exception as err:
-        print('')
-        print('Warning: Unable to build manpage: {}'.format(err))
-        print('         There will be no (valid) manpage after build.')
-        print('         Did you install sphinx for python3?')
-        print('')
-        with open(target[0].get_abspath(), 'w') as handle:
-            handle.write('dummy')
-
-
 sphinx = env.AlwaysBuild(
-    env.Alias('man',
-        env.Command(
-            '_build/man/rmlint.1', 'rmlint.1.rst', build_man
-        )
+    env.Command(
+        '_build/man/rmlint.1', 'rmlint.1.rst',
+        Action(partial(run_sphinx_binary, 'man'), "Building manpage from rst...")
     )
 )
 
@@ -48,7 +73,7 @@ manpage = env.AlwaysBuild(
     )
 )
 
-env.Depends(manpage, sphinx)
+env.Alias('man', env.Depends(manpage, sphinx))
 
 
 if 'install' in COMMAND_LINE_TARGETS:
@@ -59,9 +84,9 @@ if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
 
 if 'docs' in COMMAND_LINE_TARGETS:
-    def make_docs(target=None, source=None, env=None):
-        return subprocess.call('cd docs && make html', shell=True)
-
     env.Alias('docs',
-        env.Command('make_docs', None, Action(make_docs, "Building online docs...")),
+        env.Command(
+            'make_docs', None,
+            Action(partial(run_sphinx_binary, 'html'), "Building online docs...")
+        ),
     )

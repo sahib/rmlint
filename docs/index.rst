@@ -61,7 +61,7 @@ user. People that want to extend **rmlint** might want to read this though:
        
    developers
    translators
-   Online-manpage of rmlint(1) <rmlint.1.in>
+   Online-manpage of rmlint(1) <rmlint.1>
 
 Authors
 -------
