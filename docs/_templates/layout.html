@@ -4,6 +4,13 @@
 {# Custom CSS overrides #}
 {% set bootswatch_css_custom = ['_static/rmlint.css'] %}
 
+{# Hack #}
+{% block linktags %}
+  {{ super() }}
+   <link rel="stylesheet" href="_static/rmlint.css" type="text/css" />
+{% endblock %}
+
+
 {# Add some extra stuff before and use existing with 'super()' call. #}
 {% block footer %}
   <br />
