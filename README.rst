@@ -45,7 +45,7 @@ favourite distribution. If not, you might consider
 DOCUMENTATION
 -------------
 
-.. image:: https://readthedocs.org/projects/rmlint/?badge=latest
+.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :alt: ReadTheDocs
    :target: https://rmlint.rtfd.org
 
