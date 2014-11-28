@@ -34,12 +34,20 @@ though, but needs some volunteers to test. Patches welcome!
 INSTALLATION
 ------------
 
+.. image:: https://travis-ci.org/sahib/rmlint.svg?branch=develop
+   :alt: TravisCI
+   :target: https://travis-ci.org/sahib/rmlint
+
 Chances are that you might have `rmlint` already as readily made package in your
 favourite distribution. If not, you might consider 
 `compiling it from source <http://rmlint.readthedocs.org/en/latest/install.html>`_.
 
 DOCUMENTATION
 -------------
+
+.. image:: https://readthedocs.org/projects/rmlint/?badge=latest
+   :alt: ReadTheDocs
+   :target: https://rmlint.rtfd.org
 
 Detailed documentation is available on: 
 
