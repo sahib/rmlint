@@ -43,7 +43,7 @@ def check_git_rev(context):
     context.Message('Checking for git revision... ')
     try:
         rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
-    except OSError:
+    except subprocess.CalledProcessError:
         rev = 'unknown'
         print('Unable to find git revision.')
 
