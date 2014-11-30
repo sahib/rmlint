@@ -41,7 +41,12 @@ def check_pkg(context, name, varname, required=True):
 
 def check_git_rev(context):
     context.Message('Checking for git revision... ')
-    rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
+    try:
+        rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
+    except OSError:
+        rev = 'unknown'
+        print('Unable to find git revision.')
+
     context.Result(rev)
     conf.env['gitrev'] = rev
     return rev
