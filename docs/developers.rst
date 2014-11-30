@@ -48,6 +48,7 @@ Here are some other things to check before submitting your contribution:
 - Do all tests run? (Simply run ``nosetests`` to find out)
   Also after opening the pull request, your code will be checked via `TravisCI`_.
 - Is your commit message descriptive?
+- Is ``rmlint`` running okay inside of ``valgrind`` (i.e. no leaks and no memory violations)?
 
 .. _`TravisCI`: https://travis-ci.org/sahib/rmlint
 
@@ -146,3 +147,38 @@ Also keep in mind that most of the time the hashfunction is not the bottleneck.
 .. _these: https://github.com/sahib/rmlint/tree/gh-pages/plots
 .. _linear: https://raw.githubusercontent.com/sahib/rmlint/gh-pages/plots/hash_comparasion_lin.png
 .. _hashfunctions: https://raw.githubusercontent.com/sahib/rmlint/gh-pages/plots/hash_comparasion_log.png
+
+Optimizations
+-------------
+
+For sake of overview, here is a short list of optimizations implemented in ``rmlint``:
+
+Obvious ones
+~~~~~~~~~~~~
+
+- Do not compare each file with each other by content, use a hashfunction to reduce
+  comparison overhead drastically (introduces possibility of collisions though).
+- Only compare files of same size with each other. 
+- Use incremental hashing, i.e. hash block-wise each size group and stop 
+  as soon a difference occurs or the file is read fully.
+
+Subtle ones
+~~~~~~~~~~~
+
+- Check only executable files to be non-stripped binaries.
+- Use ``preadv(2)`` based reading for small speeedups.
+- Every thread in rmlint is shared, so only few calls to ``pthread_create`` are made.
+
+Insane ones
+~~~~~~~~~~~
+
+- Check the device ID of each file to see if it on a rotational (normal hard
+  disks) or on a non-rotational device (like a SSD). On the latter the file
+  might be processed by several threads.
+- Use ``fiemap ioctl(2)`` to analyze the harddisk layout of each file, so each
+  block can read it in *perfect* order on a rotational device.
+- Use a common buffer pool for IO buffers.
+- Use only one hashsum per group of same-sized files.
+- Implement paranoia check as hash sum, so large chunks of the file are read 
+  and compared at one time. The total memory used for this can be configured
+  by ``--max-paranoid-ram``.

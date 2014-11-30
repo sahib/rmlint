@@ -44,7 +44,7 @@ OPTIONS
 General Options
 ---------------
 
-:``-T --types="escription`` (**default\:** *defaults*):
+:``-T --types="description"`` (**default\:** *defaults*):
 
     Configure the types of lint rmlint is supposed to find. The `description`
     string enumerates the types that shall be investigated, separated by
@@ -65,10 +65,10 @@ General Options
     * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
     * ``duplicates``, ``df``: Find duplicate files.
 
-:``-o --output=formatter\:file / -O --add-output=formatter[\:file]`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
+:``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
     Configure the way rmlint outputs it's results. You link a formatter to a
-    file. A file might either be an arbitrary path or ``stdout`` or ``stderr``.
+    file through ``spec``. A file might either be an arbitrary path or ``stdout`` or ``stderr``.
     If file is omitted, ``stdout`` is assumed.
 
     If this options is specified, rmlint's defaults are overwritten. 
@@ -81,7 +81,7 @@ General Options
     For a list of formatters and their options, look at the **Formatters**
     section below.
 
-:``-c --config=formatter\:key[=value]`` (**default\:** *none*):
+:``-c --config=spec[=value]`` (**default\:** *none*):
 
     Configure a formatter. This option can be used to fine-tune the behaviour of 
     the existing formatters. See the **Formatters** section for details on the
@@ -106,13 +106,13 @@ General Options
     * **city32, city64:** Faster version of **city** with less bits.
     * **paranoid:** No hash function, compares files byte-by-byte.
 
-:``-v --loud / -V --quiet``:
+:``-v --loud`` / ``-V --quiet``:
     
     Increase or decrease the verbosity. You can pass these options several
     times. This only affects rmlint's logging on *stderr*, but not the outputs
     defined with **-o**.
 
-:``-p --paranoid / -P --less-paranoid`` (**default**):
+:``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase the paranoia of rmlints internals. Both options can be specified up
     to three times. They do not do any work themselves, but set some other
@@ -185,7 +185,7 @@ General Options
 Traversal Options
 -----------------
 
-:``-t --threads=N** (*default\:* 16)``:
+:``-t --threads=N**`` (*default\:* 16):
 
     The number of threads to use during file tree traversal and hashing.
     ``rmlint`` probably knows better than you how to set the value.
