@@ -15,43 +15,12 @@
 import sys
 import os
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('./'))
-sys.path.insert(0, os.path.abspath('../'))
+import sphinx_bootstrap_theme
 
-###################################################
-#  Trick to mock the depedencies for readthedocs  #
-###################################################
-
-
-class Mock(object):
-    __all__ = []
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        return Mock
-
-    def __getattr__(self, name):
-        return Mock
-
-
-def mock_modules(pip_file):
-    with open(pip_file, 'r') as handle:
-        for line in handle:
-            if line.startswith('#: '):
-                mod_name = line[3:].strip()
-                print('|--- mocking:', mod_name)
-                sys.modules[mod_name] = Mock()
-
-
-import glob
-for pip_file in glob.glob('../*requirements.txt'):
-    print('+ Reading mocks from:', pip_file)
-    mock_modules(pip_file)
+# Activate the theme.
+templates_path = ['_templates']
+html_theme = 'bootstrap'
+html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 # -- General configuration -----------------------------------------------------
 
@@ -71,9 +40,6 @@ extensions = [
     'sphinx.ext.graphviz',
     'sphinx.ext.viewcode'
 ]
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -131,13 +97,6 @@ pygments_style = 'flask_theme_support.FlaskyStyle'
 
 
 # -- Options for HTML output ---------------------------------------------------
-
-import sphinx_bootstrap_theme
-
-# Activate the theme.
-templates_path = ['_templates']
-html_theme = 'bootstrap'
-html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
