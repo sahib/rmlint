@@ -33,7 +33,7 @@ Here's a list of readily prepared commands for known distributions:
   .. code-block:: bash
   
     $ yum -y install git scons python3-sphinx gettext
-    $ yum -y install glib-devel libblkid-devel libelf-devel
+    $ yum -y install glib2-devel libblkid-devel elfutils-libelf-devel
 
 * **ArchLinux:**
 
