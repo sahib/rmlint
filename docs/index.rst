@@ -87,7 +87,7 @@ Additional thanks to:
 
 
 .. _qitta: https://github.com/qitta
-.. _dieterbe: https://github.com/Diebterbe
+.. _dieterbe: https://github.com/Dieterbe
 .. _`My cats`: http://imgur.com/gallery/rims0yl
 
 License
