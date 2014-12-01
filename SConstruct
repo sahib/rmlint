@@ -108,6 +108,12 @@ AddOption(
     action='store', metavar='DIR', help='installation prefix'
 )
 
+AddOption(
+    '--actual-prefix', default=None,
+    dest='actual_prefix', type='string', nargs=1,
+    action='store', metavar='DIR', help='where files will eventually land'
+)
+
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,

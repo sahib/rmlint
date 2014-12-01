@@ -16,7 +16,7 @@ def build_config_template(target, source, env):
 
     with codecs.open(target[0].get_abspath(), 'w') as handle:
         handle.write(text.format(
-            INSTALL_PREFIX=GetOption('prefix'),
+            INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
             HAVE_GLIB=int(env['glib']),
             HAVE_BLKID=int(env['blkid']),
             VERSION_MAJOR=VERSION_MAJOR,
