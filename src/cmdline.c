@@ -378,7 +378,7 @@ static char rm_cmd_find_lint_types_sep(const char *lint_string) {
         lint_string++;
     }
 
-    while(isalpha(*lint_string)) { 
+    while(isalpha(*lint_string)) {
         lint_string++;
     }
 
@@ -437,7 +437,7 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
     char lint_sep[2] = {0, 0};
     lint_sep[0] = rm_cmd_find_lint_types_sep(lint_string);
     if(lint_sep[0] == 0) {
-        return;
+        lint_sep[0] = ',';
     }
 
     char **lint_types = g_strsplit(lint_string, lint_sep, -1);
