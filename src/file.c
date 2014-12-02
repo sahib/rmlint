@@ -34,7 +34,7 @@ RmFile *rm_file_new(
     bool is_ppath, unsigned pnum
 ) {
     RmOff actual_file_size = statp->st_size;
-    RmOff start_seek = 0; 
+    RmOff start_seek = 0;
 
     /* Allow an actual file size of 0 for empty files */
     if(actual_file_size != 0) {

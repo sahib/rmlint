@@ -1358,8 +1358,8 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
             if (buffer->is_last && total_bytes_read != bytes_to_read) {
                 rm_log_error_line(
-                        _("Something went wrong reading %s; expected %d bytes, got %d; ignoring"),
-                        file->path, bytes_to_read, total_bytes_read
+                    _("Something went wrong reading %s; expected %d bytes, got %d; ignoring"),
+                    file->path, bytes_to_read, total_bytes_read
                 );
                 file->status = RM_FILE_STATE_IGNORE;
                 g_async_queue_push(device->hashed_file_return, file);
