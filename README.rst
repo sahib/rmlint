@@ -19,6 +19,10 @@ to remove it.
 .. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/releases
 
+.. image:: http://img.shields.io/badge/license-GPLv3-ff69b4.svg?style=flat
+   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+
+
 **Features:**
 
 - Duplicate Files and duplicate directories.
