@@ -28,11 +28,6 @@ Here_ is a small introduction on Pull Requests.
 
 .. _Here: http://rmlint.readthedocs.org/en/latest/developers.html
 
-
-.. note::
-
-    Sometimes you might need to adjust the encoding of the 
-
 Updating existing languages
 ---------------------------
 
