@@ -5,6 +5,19 @@
 Introduction
 ------------
 
+.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
+   :target: https://rmlint.rtfd.org
+
+.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
+   :target: https://travis-ci.org/sahib/rmlint
+
+.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/issues
+
+.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/releases
+
+
 **rmlint** finds space waste and other broken things on your filesystem and offers
 to remove it. It is able to find:
 
