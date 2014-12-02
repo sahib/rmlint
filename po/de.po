@@ -19,7 +19,7 @@ msgstr "Wurde nochmal unterbrochen, mache sofort Schluss."
 #: src/main.c:84
 #, c-format
 msgid "Aborting due to a fatal error. (signal received: %s)"
-msgstr "Abbruch aufgrund eins fatalen Feherls (exaktes signal: %s)"
+msgstr "Abbruch aufgrund eins fatalen Fehlers (exaktes signal: %s)"
 
 #: src/main.c:85
 msgid "Please file a bug report (See rmlint -h)"
@@ -27,7 +27,7 @@ msgstr "Mache bitte einen bug report auf (Mehr info unter rmlint -h)"
 
 #: src/cmdline.c:81
 msgid "You seem to have no manpage for rmlint."
-msgstr "Scheinbar hast du kein manual für rmlint"
+msgstr "Scheinbar hast du keine manpage für rmlint."
 
 #: src/cmdline.c:125
 msgid "Input size is empty"
@@ -39,11 +39,11 @@ msgstr "Das schaut nicht wie eine Zahl aus"
 
 #: src/cmdline.c:134
 msgid "Negativ sizes are no good idea"
-msgstr "Negative Größen sind keien gute Idee"
+msgstr "Negative Größen sind keine gute Idee"
 
 #: src/cmdline.c:152
 msgid "Given format specifier not found"
-msgstr "Gegebener Format specifier ist unbekannt"
+msgstr "Gegebene Formatangabe ist unbekannt"
 
 #: src/cmdline.c:177
 msgid "Max is smaller than min"
@@ -57,7 +57,7 @@ msgstr "Kann --limit (%s) nicht parsen"
 #: src/cmdline.c:211
 #, c-format
 msgid "Can't open directory or file \"%s\": %s\n"
-msgstr "Kann Verzeichnis or Datei \"%s\" nicht öffnen: %s\n"
+msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s\n"
 
 #: src/cmdline.c:252
 #, c-format
@@ -77,12 +77,12 @@ msgstr "Fehlender key (format:key[=val]) in '%s'."
 #: src/cmdline.c:296
 #, c-format
 msgid "Unable to parse factor \"%s\": error begins at %s"
-msgstr "Konnte nicht den Faktor \"%s\" parsen: fehler beginnt bei %s"
+msgstr "Konnte nicht den Faktor \"%s\" parsen: Fehler beginnt bei %s"
 
 #: src/cmdline.c:308
 #, c-format
 msgid "factor value is not in range [0-1]: %f"
-msgstr "Faktorwert liegt nicht in [0-1]: %f"
+msgstr "Faktorwert liegt nicht im Bereich [0-1]: %f"
 
 #: src/cmdline.c:323
 #, c-format
@@ -91,12 +91,12 @@ msgstr "Kann Offset nicht parsen \"%s\": %s"
 
 #: src/cmdline.c:457
 msgid "lint types after first should be prefixed with '+' or '-'"
-msgstr "alle lint typen nach dem ersten sollten mit + oder - beginnen"
+msgstr "Alle Lint Typen nach dem Ersten sollten mit '+' oder '-' beginnen"
 
 #: src/cmdline.c:458
 #, c-format
 msgid "or they would over-ride previously set options: [%s]"
-msgstr "andernfalls würden sie vorher gesetzte optione überschreiben [%s]"
+msgstr "andernfalls würden sie vorher gesetzte optione überschreiben: [%s]"
 
 #: src/cmdline.c:474
 #, c-format
@@ -110,7 +110,7 @@ msgstr "Kann Zeitangabe nicht parsen: \"%s\""
 
 #: src/cmdline.c:529
 msgid "-n %lu is newer than current time (%lu)."
-msgstr "-n %lu ist neuer als jetzt (%lu)."
+msgstr "-n %lu ist neuer als jetzt (%lu) - ist das korrekt?"
 
 #: src/cmdline.c:682
 #, c-format
@@ -120,7 +120,7 @@ msgstr "Wirre Anzahl von Threads angegeben: %s"
 #: src/cmdline.c:695
 #, c-format
 msgid "Unknown hash algorithm: '%s'"
-msgstr "Unbekannter hash algorithmus: \"%s\""
+msgstr "Unbekannte Hashfunktion: \"%s\""
 
 #: src/cmdline.c:774
 #, c-format
@@ -145,11 +145,11 @@ msgstr "Maximal drei -p flags oder ein -P Flag erlaubt"
 
 #: src/cmdline.c:866
 msgid "Specifiyng both -o and -O is not allowed."
-msgstr "Gleichzeitig -o und -O angeben ist nicht möglich."
+msgstr "Gleichzeitige Angabe von -o und -O ist nicht möglich."
 
 #: src/cmdline.c:875
 msgid "No valid -o flag encountered."
-msgstr "Kein valides -o flag gefunden; das wars."
+msgstr "Kein valides -o flag gefunden."
 
 #: src/cmdline.c:880
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
@@ -257,7 +257,7 @@ msgstr "Dateien"
 
 #: src/formats/progressbar.c:103
 msgid "Merging files into directories (stand by...)"
-msgstr "Führe doppelte Datein in doppelte Verzeichnise zusammen..."
+msgstr "Führe doppelte Dateien in doppelte Verzeichnise zusammen..."
 
 #: src/formats/progressbar.c:222
 msgid "Cannot figure out terminal width."
@@ -296,17 +296,17 @@ msgstr "Eine %s%s%s Datei wurde nach %s%s%s geschrieben.\n"
 #: src/formats.c:129
 #, c-format
 msgid "No such new_handler with this name: %s"
-msgstr "Kein Format handler mit diesen Namen: %s"
+msgstr "Kein Formathandler mit diesen Namen: %s"
 
 #: src/formats.c:152
 #, c-format
 msgid "Unable to open file for writing: %s"
-msgstr "Kann datei nicht zum lesen öffnen: %s"
+msgstr "Kann Datei nicht zum lesen öffnen: %s"
 
 #: src/traverse.c:222
 #, c-format
 msgid "filesystem loop detected at %s (skipping)"
-msgstr "Dateisystemschleife entdeckt: %s (überspringe)"
+msgstr "Dateisystemschleife entdeckt: %s (wird übersprungen)"
 
 #: src/traverse.c:226
 #, c-format
@@ -326,7 +326,7 @@ msgstr "Füge sehr große Datei hinzu %s"
 #: src/traverse.c:263
 #, c-format
 msgid "cannot stat file %s (skipping)"
-msgstr "Kann Datei %s nicht stat(2)'en (überspringe)"
+msgstr "Kann stat(2) nicht auf Datei %s aufrufen (überspringe)"
 
 #: src/traverse.c:287
 #, c-format
