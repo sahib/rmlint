@@ -10,7 +10,7 @@ to remove it.
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: https://rmlint.rtfd.org
 
-.. image:: https://img.shields.io/travis/sahib/master/develop.svg?style=flat
+.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
    :target: https://travis-ci.org/sahib/rmlint
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
