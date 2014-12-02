@@ -27,7 +27,7 @@ Due to some of it's performance optimizations, it currently only runs on Linux
 32 and 64 bit. Porting to BSD and Darwin (Mac OSX) architectures is possible
 though, but needs some volunteers to test. Patches welcome!
 
-.. raw:: html
+.. raw::
 
     <a href="https://github.com/sahib/rmlint/issues">
         <img src="https://img.shields.io/github/issues/sahib/rmlint.svg" />
