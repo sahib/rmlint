@@ -1,16 +1,5 @@
+{# Import the theme's layout. #}
 {% extends "!layout.html" %}
 
-{% block footer %}
-  <br />
-  <br />
-  <center> 
-      <small><b>Build Status: </b></small>
-      <br />
-      <a href="https://travis-ci.org/sahib/rmlint">
-        <img src="https://travis-ci.org/sahib/rmlint.svg?branch=develop">
-      </a>
-  </center>
-  <br />
-  <br />
-  {{ super() }}
-{% endblock %}
+{# Custom CSS overrides #}
+{% set bootswatch_css_custom = ['_static/my-styles.css'] %}

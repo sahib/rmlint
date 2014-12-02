@@ -2,8 +2,16 @@
 ..    :align: center
 ..    :width: 66%
 
-Introduction
-------------
+    
+----
+
+.. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
+   :align: left 
+   :width: 150
+
+|
+|
+|
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: https://rmlint.rtfd.org

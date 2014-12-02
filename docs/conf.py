@@ -98,7 +98,9 @@ exclude_patterns = ['_build', '_themes/armstrong/README.rst']
 show_authors = True
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'flask_theme_support.FlaskyStyle'
+#pygments_style = 'flask_theme_support.FlaskyStyle'
+pygments_style = "monokai"
+#pygments_style = 'flask_theme_support.JellybeansStyle'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
