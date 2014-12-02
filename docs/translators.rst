@@ -28,6 +28,11 @@ Here_ is a small introduction on Pull Requests.
 
 .. _Here: http://rmlint.readthedocs.org/en/latest/developers.html
 
+
+.. note::
+
+    Sometimes you might need to adjust the encoding of the 
+
 Updating existing languages
 ---------------------------
 
@@ -61,7 +66,6 @@ translated during compile time. You have to mark them first and translate them a
 
 .. code-block:: c
 
-
    static const char * stuff = _N("Hello World");
 
    void print_world(void) {
@@ -79,6 +83,8 @@ You need to add the new strings to the existing translations now:
 
 .. code-block:: bash
 
-   $ msgmerge po/de.po po/rmlint.pot
+   $ msgmerge po/de.po po/rmlint.pot > po/de_new.po
+   $ EDITOR po/de_new.po   # check if everything was merged alright.
+   $ mv po/de_new.po po/de.po
 
 After that you can translate the new strings and proceed like in the upper steps.

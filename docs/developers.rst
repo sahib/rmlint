@@ -18,7 +18,7 @@ We try to adhere to some principles when adding features:
 * Try to stay compatible to standard unix' tools and ideas.
 * Try to stay out of the users way and never be interactive.
 * Try to make scripting as easy as possible.
-* Never make **rmlint** modify the filesystem itself, only produce output
+* **Never** make ``rmlint`` modify the filesystem itself, only produce output
   to let the user easily do it.
 
 Also keep this in mind, if you want to make a feature request.
@@ -29,6 +29,11 @@ Making contributions
 The code is hosted on GitHub, therefore our preferred way of receiving patches
 is using GitHub's pull requests (normal git pull requests are okay too of course). 
 
+.. note::
+
+    ``origin/master`` should always contain working software. Base your patches
+    and pull requests always on ``origin/develop``.
+
 Here's a short step-by-step:
 
 1. `Fork it`_.
@@ -37,10 +42,10 @@ Here's a short step-by-step:
 4. Check if your commit message is good. (If not: ``git commit --amend``)
 5. Push to the branch (``git push origin my_feature``)
 6. Open a `Pull Request`_.
-7. Enjoy a refreshing ClubMate and wait.
+7. Enjoy a refreshing Tea and wait until we get back to you.
 
 .. _`Fork it`: https://github.com/sahib/rmlint
-.. _`Pull Request`: http://github.com/studentkittens/moosecat/pulls
+.. _`Pull Request`: http://github.com/sahib/rmlint/pulls
 
 Here are some other things to check before submitting your contribution:
 
@@ -99,6 +104,16 @@ Arguments
 
     Change the installation prefix. By default this is ``/usr``, but some users
     might prefer ``/usr/local`` or ``/opt``. 
+
+:--actual-prefix:
+
+    This is mainly useful for packagers. The ``rmlint`` binary knows where it
+    is installed (which is needed to set e.g. the path to the gettext files).
+    When installing a package, most of the time the build is installed to
+    a local test environment first before being packed to ``/usr``. In this
+    case the ``--prefix`` would be set to the path of the temporary build env,
+    while ``--actual-prefix`` would be set to ``/usr``.
+
 
 Notable targets
 ~~~~~~~~~~~~~~~
