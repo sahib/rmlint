@@ -10,13 +10,13 @@ to remove it.
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: https://rmlint.rtfd.org
 
-.. image:: https://travis-ci.org/sahib/rmlint.svg?branch=develop
+.. image:: https://img.shields.io/travis/sahib/master/develop.svg?style=flat
    :target: https://travis-ci.org/sahib/rmlint
 
-.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg
+.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
-.. image:: https://img.shields.io/github/release/sahib/rmlint.svg
+.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/releases
 
 **Features:**
