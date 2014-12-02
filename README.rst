@@ -27,16 +27,27 @@ Due to some of it's performance optimizations, it currently only runs on Linux
 32 and 64 bit. Porting to BSD and Darwin (Mac OSX) architectures is possible
 though, but needs some volunteers to test. Patches welcome!
 
+.. raw:: html
+
+    <a href="https://github.com/sahib/rmlint/issues">
+        <img src="https://img.shields.io/github/issues/sahib/rmlint.svg" />
+    </a>
+    <a href="https://github.com/sahib/rmlint/releases">
+        <img src="https://img.shields.io/github/release/sahib/rmlint.svg" />
+    </a>
+    <a href="https://rmlint.rtfd.org">
+       <img src="https://readthedocs.org/projects/rmlint/badge/?version=latest" />
+    </a>
+    <a href="https://travis-ci.org/sahib/rmlint">
+        <img src="https://travis-ci.org/sahib/rmlint.svg?branch=develop" />
+    </a>
 
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/screenshot.png
    :align: center
 
+
 INSTALLATION
 ------------
-
-.. image:: https://travis-ci.org/sahib/rmlint.svg?branch=develop
-   :alt: TravisCI
-   :target: https://travis-ci.org/sahib/rmlint
 
 Chances are that you might have `rmlint` already as readily made package in your
 favourite distribution. If not, you might consider 
@@ -44,10 +55,6 @@ favourite distribution. If not, you might consider
 
 DOCUMENTATION
 -------------
-
-.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :alt: ReadTheDocs
-   :target: https://rmlint.rtfd.org
 
 Detailed documentation is available on: 
 
