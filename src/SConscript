@@ -39,16 +39,12 @@ def build_python_formatter(target, source, env):
         handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
 
 
-config = env.AlwaysBuild(
-    env.Command(
-        'config.h', 'config.h.in', build_config_template
-    )
+config = env.Command(
+    'config.h', 'config.h.in', build_config_template
 )
 
-py_formatter = env.AlwaysBuild(
-    env.Command(
-        'formats/py.c', 'formats/py.c.in', build_python_formatter
-    )
+py_formatter = env.Command(
+    'formats/py.c', 'formats/py.c.in', build_python_formatter
 )
 
 program = env.Program(

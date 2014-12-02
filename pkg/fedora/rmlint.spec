@@ -16,6 +16,8 @@ especially an extremely fast tool to remove duplicates from your filesystem.
 %prep
 %setup -q
 %build
+scons -j4 --prefix=%{buildroot}/usr --actual-prefix=/usr
+
 %install
 
 # Build rmlint, install it into BUILDROOT/<name>-<version>/,

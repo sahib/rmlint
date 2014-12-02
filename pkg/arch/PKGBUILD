@@ -17,12 +17,17 @@ source=("$pkgname"::"git+https://github.com/sahib/${_pkgname}.git")
 md5sums=('SKIP')
  
 pkgver() {
-        cd "$pkgname"
-        printf "%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+    cd "${srcdir}/${pkgname}"
+    printf "%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    cd "${srcdir}/${pkgname}"
+    git checkout develop  # TODO: Change this for after release
+    scons -j4 DEBUG=1 --prefix=${pkgdir}/usr --actual-prefix=/usr
 }
  
 package() {
-        cd "$pkgname"
-	git checkout develop  # Change this for after release
-        scons -j4 DEBUG=1 --prefix=/usr install
+    cd "${srcdir}/${pkgname}"
+    scons DEBUG=1 --prefix=${pkgdir}/usr install --actual-prefix=/usr
 }
