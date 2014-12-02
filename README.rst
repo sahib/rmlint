@@ -7,6 +7,18 @@
 `rmlint` finds space waste and other broken things on your filesystem and offers
 to remove it. 
 
+.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
+   :target: https://rmlint.rtfd.org
+
+.. image:: https://travis-ci.org/sahib/rmlint.svg?branch=develop
+   :target: https://travis-ci.org/sahib/rmlint
+
+.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg
+   :target: https://github.com/sahib/rmlint/issues
+
+.. image:: https://img.shields.io/github/release/sahib/rmlint.svg
+   :target: https://github.com/sahib/rmlint/releases
+
 **Features:**
 
 - Duplicate Files and duplicate directories.
@@ -27,18 +39,6 @@ Due to some of it's performance optimizations, it currently only runs on Linux
 32 and 64 bit. Porting to BSD and Darwin (Mac OSX) architectures is possible
 though, but needs some volunteers to test. Patches welcome!
 
-
-.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg
-   :target: https://github.com/sahib/rmlint/issues
-
-.. image:: https://img.shields.io/github/release/sahib/rmlint.svg
-   :target: https://github.com/sahib/rmlint/releases
-
-.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :target: https://rmlint.rtfd.org
-
-.. image:: https://travis-ci.org/sahib/rmlint.svg?branch=develop
-   :target: https://travis-ci.org/sahib/rmlint
 
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/screenshot.png
    :align: center
