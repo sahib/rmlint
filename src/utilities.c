@@ -170,7 +170,7 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp) {
 
     /* Protect program from using an older library */
     if(elf_version(EV_CURRENT) == EV_NONE) {
-        rm_log_error_line(_("ELF Library is out of date!\n"));
+        rm_log_error_line(_("ELF Library is out of date!"));
         return false;
     }
 

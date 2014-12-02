@@ -526,8 +526,8 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
          * */
         if(plain) {
             rm_log_warning_line(
-                _("-n %"LLU" is newer than current time (%"LLU")."),
-                result, time(NULL)
+                _("-n %lu is newer than current time (%lu)."),
+                (long)result, (long)time(NULL)
             );
         } else {
             char time_buf[256];
@@ -791,7 +791,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'K':
             settings->keep_all_untagged = true;
             if (settings->keep_all_tagged) {
-                rm_log_error_line(_("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged"));
+                rm_log_error_line(_("can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged"));
                 settings->keep_all_tagged = false;
             }
             break;
@@ -877,7 +877,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     }
 
     if(settings->skip_start_factor >= settings->skip_end_factor) {
-        rm_log_error_line(_("-q (--clamp-low) should be lower than -Q (--clamp-top)!\n"));
+        rm_log_error_line(_("-q (--clamp-low) should be lower than -Q (--clamp-top)!"));
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
