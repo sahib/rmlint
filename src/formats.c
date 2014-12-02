@@ -126,7 +126,7 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler = g_hash_table_lookup(self->name_to_handler, handler_name);
     if(new_handler == NULL) {
-        rm_log_error("No such new_handler with this name: %s\n", handler_name);
+        rm_log_warning_line(_("No such new_handler with this name: %s"), handler_name);
         return false;
     }
 
@@ -149,7 +149,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     }
 
     if(file_handle == NULL) {
-        rm_log_error("Unable to open file for writing: %s\n", path);
+        rm_log_warning_line(_("Unable to open file for writing: %s"), path);
         return false;
     }
 

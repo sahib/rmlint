@@ -1353,12 +1353,14 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
             buffer->len = MIN (buf_size, bytes_read - i * buf_size);
             buffer->is_last = (i + 1 >= blocks && bytes_left_to_read <= 0);
             if (bytes_left_to_read < 0) {
-                rm_log_error("Negative bytes_left_to_read for %s\n", file->path);
+                rm_log_error_line(_("Negative bytes_left_to_read for %s"), file->path);
             }
 
             if (buffer->is_last && total_bytes_read != bytes_to_read) {
-                rm_log_error(RED"Something went wrong reading %s; expected %d bytes, got %d; ignoring"RESET,
-                             file->path, bytes_to_read, total_bytes_read);
+                rm_log_error_line(
+                        _("Something went wrong reading %s; expected %d bytes, got %d; ignoring"),
+                        file->path, bytes_to_read, total_bytes_read
+                );
                 file->status = RM_FILE_STATE_IGNORE;
                 g_async_queue_push(device->hashed_file_return, file);
             } else {

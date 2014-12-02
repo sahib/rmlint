@@ -78,7 +78,7 @@ static void rm_cmd_show_help(bool use_pager) {
     }
 
     if(!found_manpage) {
-        rm_log_error("You seem to have no manpage for rmlint.\n");
+        rm_log_warning_line(_("You seem to have no manpage for rmlint."));
     }
 }
 
@@ -122,16 +122,16 @@ static int rm_cmd_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
 
 static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
     if (size_spec == NULL) {
-        return rm_cmd_size_format_error(error, "Input size is NULL");
+        return rm_cmd_size_format_error(error, _("Input size is empty"));
     }
 
     char *format = NULL;
     long double decimal = strtold(size_spec, &format);
 
     if (decimal == 0 && format == size_spec) {
-        return rm_cmd_size_format_error(error, "This does not look like a number");
+        return rm_cmd_size_format_error(error, _("This does not look like a number"));
     } else if (decimal < 0) {
-        return rm_cmd_size_format_error(error, "Negativ sizes are no good idea");
+        return rm_cmd_size_format_error(error, _("Negativ sizes are no good idea"));
     } else if (*format) {
         format = g_strstrip(format);
     } else {
@@ -149,7 +149,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **err
         /* No overflow check */
         return decimal * powl(found->base, found->exponent);
     } else {
-        return rm_cmd_size_format_error(error, "Given format specifier not found");
+        return rm_cmd_size_format_error(error, _("Given format specifier not found"));
     }
 }
 
@@ -174,7 +174,7 @@ static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff 
     g_strfreev(split);
 
     if(*max < *min) {
-        tmp_error = "Max is smaller than min";
+        tmp_error = _("Max is smaller than min");
     }
 
     if(error != NULL) {
@@ -192,7 +192,7 @@ static void rm_cmd_parse_limit_sizes(RmSession *session, char *range_spec) {
                 &session->settings->maxsize,
                 &error
             )) {
-        rm_log_error(RED"Error while parsing --limit: %s\n"RESET, error);
+        rm_log_error_line(_("cannot parse --limit: %s"), error);
         rm_cmd_die(session, EXIT_FAILURE);
     }
 }
@@ -208,7 +208,7 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
     RmSettings *settings = session->settings;
     if(faccessat(AT_FDCWD, path, R_OK, AT_EACCESS) != 0) {
-        rm_log_error(YELLOW"WARNING: "RESET"Can't open directory or file \"%s\": %s\n", path, strerror(errno));
+        rm_log_warning_line(_("Can't open directory or file \"%s\": %s\n"), path, strerror(errno));
         return FALSE;
     } else {
         settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
@@ -249,7 +249,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
     }
 
     if(!rm_fmt_add(session->formats, format_name, full_path)) {
-        rm_log_warning(YELLOW"Adding -o %s as output failed.\n"RESET, pair);
+        rm_log_warning_line(_("Adding -o %s as output failed."), pair);
         return false;
     }
 
@@ -259,7 +259,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
 static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     char *domain = strchr(pair, ':');
     if(domain == NULL) {
-        rm_log_warning(YELLOW"No format (format:key[=val]) specified in '%s'\n"RESET, pair);
+        rm_log_warning_line(_("No format (format:key[=val]) specified in '%s'."), pair);
         return false;
     }
 
@@ -268,7 +268,7 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     int len = g_strv_length(key_val);
 
     if(len < 1) {
-        rm_log_warning(YELLOW"Missing key (format:key[=val]) in '%s'\n"RESET, pair);
+        rm_log_warning_line(_("Missing key (format:key[=val]) in '%s'."), pair);
         g_strfreev(key_val);
         return false;
     }
@@ -292,8 +292,8 @@ static double rm_cmd_parse_clamp_factor(RmSession *session, const char *string) 
     gdouble factor = g_strtod(string, &error_loc);
 
     if(error_loc != NULL && *error_loc != '\0' && *error_loc != '%') {
-        rm_log_error(
-            RED"Unable to parse factor \"%s\": error begins at %s\n"RESET,
+        rm_log_error_line(
+            _("Unable to parse factor \"%s\": error begins at %s"),
             string, error_loc
         );
         rm_cmd_die(session, EXIT_FAILURE);
@@ -304,8 +304,8 @@ static double rm_cmd_parse_clamp_factor(RmSession *session, const char *string) 
     }
 
     if(0 > factor || factor > 1) {
-        rm_log_error(
-            RED"factor value is not in range [0-1]: %f\n"RESET,
+        rm_log_error_line(
+            _("factor value is not in range [0-1]: %f"),
             factor
         );
         rm_cmd_die(session, EXIT_FAILURE);
@@ -319,8 +319,8 @@ static RmOff rm_cmd_parse_clamp_offset(RmSession *session, const char *string) {
     RmOff offset = rm_cmd_size_string_to_bytes(string, &error_msg);
 
     if(error_msg != NULL) {
-        rm_log_error(
-            RED"Unable to parse offset \"%s\": %s\n"RESET,
+        rm_log_error_line(
+            _("Unable to parse offset \"%s\": %s"),
             string, error_msg
         );
         rm_cmd_die(session, EXIT_FAILURE);
@@ -454,8 +454,8 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
         }
 
         if(index > 0 && sign == 0) {
-            rm_log_warning(YELLOW"Warning: lint types after first should be prefixed with '+' or '-'\n"RESET);
-            rm_log_warning(YELLOW"         or they would over-ride previously set options: [%s]\n"RESET, lint_type);
+            rm_log_warning(_("lint types after first should be prefixed with '+' or '-'"));
+            rm_log_warning(_("or they would over-ride previously set options: [%s]"), lint_type);
             continue;
         } else {
             lint_type += ABS(sign);
@@ -471,7 +471,7 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
 
         /* apply the found option */
         if(option == NULL) {
-            rm_log_warning(YELLOW"Warning: lint type '%s' not recognised\n"RESET, lint_type);
+            rm_log_warning(_("lint type '%s' not recognised"), lint_type);
             continue;
         }
 
@@ -512,7 +512,7 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
     }
 
     if(result <= 0) {
-        rm_log_error("Unable to parse time spec \"%s\"\n", string);
+        rm_log_error_line(_("Unable to parse time spec \"%s\""), string);
         rm_cmd_die(session, EXIT_FAILURE);
         return 0;
     }
@@ -525,8 +525,8 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
          * but print at least a small warning as indication.
          * */
         if(plain) {
-            rm_log_warning(
-                YELLOW"Warning: "RESET"-n %"LLU" is newer than current time (%"LLU").\n",
+            rm_log_warning_line(
+                _("-n %"LLU" is newer than current time (%"LLU")."),
                 result, time(NULL)
             );
         } else {
@@ -534,8 +534,8 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
 
-            rm_log_warning(
-                YELLOW"Warning: "RESET"-N %s is newer than current time (%s).\n",
+            rm_log_warning_line(
+                "-N %s is newer than current time (%s).",
                 optarg, time_buf
             );
         }
@@ -679,7 +679,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             if(parsed_threads > 0) {
                 settings->threads = parsed_threads;
             } else {
-                rm_log_error(RED"Invalid thread count supplied: %s\n"RESET, optarg);
+                rm_log_warning_line(_("Invalid thread count supplied: %s"), optarg);
             }
         }
         break;
@@ -692,7 +692,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'a':
             settings->checksum_type = rm_string_to_digest_type(optarg);
             if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
-                rm_log_error(RED"Unknown hash algorithm: '%s'\n"RESET, optarg);
+                rm_log_error_line(_("Unknown hash algorithm: '%s'"), optarg);
                 rm_cmd_die(session, EXIT_FAILURE);
             } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
                 session->hash_seed1 = time(NULL) * ((RmOff)session);
@@ -771,7 +771,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'u':
             settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error);
             if(parse_error != NULL) {
-                rm_log_error("Invalid size description \"%s\": %s\n", optarg, parse_error);
+                rm_log_error_line(_("Invalid size description \"%s\": %s"), optarg, parse_error);
                 rm_cmd_die(session, EXIT_FAILURE);
             }
             break;
@@ -784,14 +784,14 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'k':
             settings->keep_all_tagged = true;
             if (settings->keep_all_untagged) {
-                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-untagged\n");
+                rm_log_error_line(_("can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-untagged"));
                 settings->keep_all_untagged = false;
             }
             break;
         case 'K':
             settings->keep_all_untagged = true;
             if (settings->keep_all_tagged) {
-                rm_log_error("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged\n");
+                rm_log_error_line(_("Error: can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged"));
                 settings->keep_all_tagged = false;
             }
             break;
@@ -856,14 +856,14 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         settings->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        rm_log_error(RED"Only up to -ppp or down to -P flags allowed.\n"RESET);
+        rm_log_error_line(_("Only up to -ppp or down to -P flags allowed."));
         rm_cmd_die(session, EXIT_FAILURE);
         break;
     }
 
     /* Handle output flags */
     if(oO_specified[0] && oO_specified[1]) {
-        rm_log_error(RED"Specifiyng both -o and -O is not allowed.\n"RESET);
+        rm_log_error_line(_("Specifiyng both -o and -O is not allowed."));
         rm_cmd_die(session, EXIT_FAILURE);
     } else if(output_flag_cnt == -1) {
         /* Set default outputs */
@@ -872,19 +872,19 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_fmt_add(session->formats, "sh", "rmlint.sh");
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
-        rm_log_error("No valid -o flag encountered.\n");
+        rm_log_error_line(_("No valid -o flag encountered."));
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
     if(settings->skip_start_factor >= settings->skip_end_factor) {
-        rm_log_error(RED"-q (--clamp-low) should be lower than -Q (--clamp-top)!\n"RESET);
+        rm_log_error_line(_("-q (--clamp-low) should be lower than -Q (--clamp-top)!\n"));
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
     /* Handle special cases for -D */
     if(settings->merge_directories) {
         if(settings->checksum_type == RM_DIGEST_PARANOID) {
-            rm_log_error("Full paranoia will not work well with directory merging.\n");
+            rm_log_error_line(_("Full paranoia will not work well with directory merging."));
             rm_cmd_die(session, EXIT_FAILURE);
         }
     }
@@ -922,7 +922,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* Still no path set? - use `pwd` */
         rm_cmd_add_path(session, is_prefd, path_index, settings->iwd);
     } else if(path_index == 0 && not_all_paths_read) {
-        rm_log_error(RED"FATAL:"RESET" No valid paths given.\n");
+        rm_log_error_line(_("No valid paths given."));
         rm_cmd_die(session, EXIT_FAILURE);
     }
 

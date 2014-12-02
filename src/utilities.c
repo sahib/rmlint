@@ -163,14 +163,14 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp) {
 
     /* Open ELF file to obtain file descriptor */
     if((fd = rm_sys_open(path, O_RDONLY)) == -1) {
-        rm_log_warning("Error opening file '%s' for nonstripped test: ", path);
+        rm_log_warning_line(_("cannot open file '%s' for nonstripped test: "), path);
         rm_log_perror("");
         return 0;
     }
 
     /* Protect program from using an older library */
     if(elf_version(EV_CURRENT) == EV_NONE) {
-        rm_log_error("ERROR - ELF Library is out of date!\n");
+        rm_log_error_line(_("ELF Library is out of date!\n"));
         return false;
     }
 
@@ -493,11 +493,11 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
         if (disk) {
             return !disk->is_rotational;
         } else {
-            rm_log_error(RED"Disk not found in rm_mounts_is_nonrotational\n"RESET);
+            rm_log_error_line("Disk not found in rm_mounts_is_nonrotational");
             return true;
         }
     } else {
-        rm_log_error(RED"Partition not found in rm_mounts_is_nonrotational\n"RESET);
+        rm_log_error_line("Partition not found in rm_mounts_is_nonrotational");
         return true;
     }
 }
@@ -689,7 +689,7 @@ bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data) {
     GError *error = NULL;
     g_thread_pool_push(pool, data, &error);
     if(error != NULL) {
-        rm_log_error("Unable to push thread to pool %p: %s\n", pool, error->message);
+        rm_log_error_line("Unable to push thread to pool %p: %s", pool, error->message);
         g_error_free(error);
         return false;
     } else {
@@ -703,7 +703,7 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
     GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &error);
 
     if(error != NULL) {
-        rm_log_error("Unable to create thread pool.\n");
+        rm_log_error_line("Unable to create thread pool.");
         g_error_free(error);
     }
     return pool;

@@ -58,12 +58,27 @@
 
 #include <libintl.h>
 #define GETTEXT_PACKAGE "rmlint"
-//#include <glib/gi18n-lib.h>
 
 #define _(String) gettext (String)
 #define gettext_noop(String) String
 #define N_(String) gettext_noop (String)
 
 typedef guint64 RmOff;
+
+/* Stupid macros to make printing error lines easier */
+#define rm_log_error_line(...) \
+    rm_log_error(RED);         \
+    rm_log_error(_("ERROR"));  \
+    rm_log_error(": "RESET);   \
+    rm_log_error(__VA_ARGS__); \
+    rm_log_error("\n");        \
+
+#define rm_log_warning_line(...)  \
+    rm_log_warning(YELLOW);       \
+    rm_log_warning(_("WARNING")); \
+    rm_log_warning(": "RESET);    \
+    rm_log_warning(__VA_ARGS__);  \
+    rm_log_warning("\n");         \
+
 
 #endif

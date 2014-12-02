@@ -58,19 +58,26 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         self->percent = 2.0;
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
-                             "Traversing (%s%"LLU"%s usable files / %s%"LLU"%s + %s%"LLU"%s ignored files / folders)",
+                             "%s (%s%"LLU"%s %s / %s%"LLU"%s + %s%"LLU"%s %s)",
+                             _("Traversing"),
                              MAYBE_GREEN(session), session->total_files, MAYBE_RESET(session),
+                             _("usable files"),
                              MAYBE_RED(session), session->ignored_files, MAYBE_RESET(session),
-                             MAYBE_RED(session), session->ignored_folders, MAYBE_RESET(session)
+                             MAYBE_RED(session), session->ignored_folders, MAYBE_RESET(session),
+                             _("ignored files / folders")
                          );
         break;
     case RM_PROGRESS_STATE_PREPROCESS:
         self->percent = 2.0;
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
-                             "Preprocessing (reduced files to %s%"LLU"%s / found %s%"LLU"%s other lint)",
+                             "%s (%s %s%"LLU"%s / %s %s%"LLU"%s %s)",
+                             _("Preprocessing"),
+                             _("reduces files to"),
                              MAYBE_GREEN(session), session->total_filtered_files, MAYBE_RESET(session),
-                             MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
+                             _("found"),
+                             MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session),
+                             _("other lint")
                          );
         break;
     case RM_PROGRESS_STATE_SHREDDER:
@@ -78,16 +85,22 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf, sizeof(num_buf));
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
-                             "Matching files (%s%"LLU"%s dupes of %s%"LLU"%s originals; %s%s%s to scan in %s%"LLU"%s files)",
+                             "%s (%s%"LLU"%s %s %s%"LLU"%s %s; %s%s%s %s %s%"LLU"%s %s)",
+                             _("Matching files"),
                              MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
+                             _("dupes of"),
                              MAYBE_YELLOW(session), session->dup_group_counter, MAYBE_RESET(session),
+                             _("originals"),
                              MAYBE_GREEN(session), num_buf, MAYBE_RESET(session),
-                             MAYBE_GREEN(session), session->shred_files_remaining, MAYBE_RESET(session)
+                             _("to scan in "),
+                             MAYBE_GREEN(session), session->shred_files_remaining, MAYBE_RESET(session),
+                             _("files")
                          );
         break;
     case RM_PROGRESS_STATE_MERGE:
         self->percent = 2.0;
-        self->text_len = g_snprintf(self->text_buf, sizeof(self->text_buf), "Merging files into directories (stand by...)");
+        self->text_len = g_snprintf(self->text_buf, sizeof(self->text_buf), 
+                _("Merging files into directories (stand by...)"));
         break;
     case RM_PROGRESS_STATE_INIT:
     case RM_PROGRESS_STATE_SUMMARY:
@@ -182,7 +195,7 @@ static void rm_fmt_prog(
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 15;
+            self->update_interval = 50;
         }
 
         self->last_unknown_pos = 0;
@@ -206,7 +219,7 @@ static void rm_fmt_prog(
     }
 
     if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
-        rm_log_warning(YELLOW"Warning:"RESET" Cannot figure out terminal width.\n");
+        rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
     self->last_state = state;

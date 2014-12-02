@@ -67,9 +67,13 @@ static void signal_handler(int signum) {
     case SIGINT:
         if(CTRLC_COUNTER++ == 0) {
             rm_session_abort((RmSession *)SESSION_POINTER);
-            rm_log_warning(GREEN"\nINFO: "RESET"Received Interrupt, stopping...\n");
+            rm_log_warning(GREEN"\nINFO: "RESET);
+            rm_log_warning(_("Received Interrupt, stopping..."));
+            rm_log_warning("\n");
         } else {
-            rm_log_warning(GREEN"\nINFO: "RESET"Received second Interrupt, stopping hard.\n");
+            rm_log_warning(GREEN"\nINFO: "RESET);
+            rm_log_warning(_("Received second Interrupt, stopping hard."));
+            rm_log_warning("\n");
             rm_session_clear((RmSession *)SESSION_POINTER);
             exit(EXIT_FAILURE);
         }
@@ -77,8 +81,8 @@ static void signal_handler(int signum) {
     case SIGFPE:
     case SIGABRT:
     case SIGSEGV:
-        rm_log_error(RED"FATAL: "RESET"Aborting due to a fatal error. (signal received: %s)\n", g_strsignal(signum));
-        rm_log_error(RED"FATAL: "RESET"Please file a bug report (See rmlint -h)\n");
+        rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"), g_strsignal(signum));
+        rm_log_error_line(_("Please file a bug report (See rmlint -h)"));
     default:
         exit(EXIT_FAILURE);
         break;

@@ -166,14 +166,14 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     }, fts_flags, NULL);
 
     if (ftsp == NULL) {
-        rm_log_error("fts_open failed");
+        rm_log_error_line("fts_open() == NULL");
         return;
     }
 
     FTSENT *p, *chp;
     chp = fts_children(ftsp, 0);
     if (chp == NULL) {
-        rm_log_warning("fts_children: can't initialise");
+        rm_log_warning_line("fts_children() == NULL");
         return;
     }
 
@@ -219,11 +219,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 }
                 break;
             case FTS_DC:        /* directory that causes cycles */
-                rm_log_warning(RED"Warning: filesystem loop detected at %s (skipping)\n"RESET, p->fts_path);
+                rm_log_warning_line(_("filesystem loop detected at %s (skipping)"), p->fts_path);
                 clear_emptydir_flags = true; /* current dir not empty */
                 break;
             case FTS_DNR:       /* unreadable directory */
-                rm_log_warning(YELLOW"Warning: cannot read directory"RESET" %s: %s\n", p->fts_path, g_strerror(p->fts_errno));
+                rm_log_warning_line(_("cannot read directory %s: %s"), p->fts_path, g_strerror(p->fts_errno));
                 clear_emptydir_flags = true; /* current dir not empty */
                 break;
             case FTS_DOT:       /* dot or dot-dot */
@@ -234,7 +234,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
-                rm_log_warning(RED"Warning: error %d in fts_read for %s (skipping)\n"RESET, errno, p->fts_path);
+                rm_log_warning_line(_("error %d in fts_read for %s (skipping)"), errno, p->fts_path);
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
             case FTS_INIT:      /* initialized only */
@@ -258,9 +258,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                      * -> must be a big file on 32 bit.
                      */
                     rm_traverse_file(trav_session, &stat_buf, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
-                    rm_log_warning(YELLOW"Warning:"RESET" Added big file %s\n", p->fts_path);
+                    rm_log_warning_line(_("Added big file %s"), p->fts_path);
                 } else {
-                    rm_log_warning(RED"Warning:"RESET" cannot stat file %s (skipping)\n", p->fts_path);
+                    rm_log_warning(_("cannot stat file %s (skipping)"), p->fts_path);
                 }
             }
             break;
@@ -284,7 +284,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
                 clear_emptydir_flags = true;
-                rm_log_error(RED"Unknown fts_info flag %d for file %s\n"RESET, p->fts_info, p->fts_path);
+                rm_log_error_line(_("Unknown fts_info flag %d for file %s"), p->fts_info, p->fts_path);
                 break;
             }
 
@@ -301,7 +301,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     }
 
     if (errno != 0) {
-        rm_log_error("Error '%s': fts_read failed on %s\n", g_strerror(errno), ftsp->fts_path);
+        rm_log_error_line(_("'%s': fts_read failed on %s"), g_strerror(errno), ftsp->fts_path);
     }
 
     fts_close(ftsp);
