@@ -49,7 +49,7 @@ def run_sphinx_binary(builder, **kwargs):
         pass
 
     subprocess.check_call(
-        [sphinx_binary, '-q', '-b', builder, 'docs', build_dir]
+        [sphinx_binary, '-Q', '-b', builder, 'docs', build_dir]
     )
 
 
