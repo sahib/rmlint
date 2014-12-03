@@ -2,15 +2,6 @@
 Tutorial
 ========
 
-.. raw:: html
-
-   <style type="text/css">
-       <!-- hack hack hack -->
-       div.highlight > pre {
-         background-color: #272822;
-       }
-   </style>
-
 Welcome to the Tutorial of ``rmlint``.
 
 We use a few terms that might not be obvious to you at first,
