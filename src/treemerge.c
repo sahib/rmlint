@@ -125,6 +125,18 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
     return 0;
 }
 
+static int rm_tm_count_art_print_callback(_U void * data, _U const unsigned char * key, _U uint32_t key_len, _U void * value) {
+    // const char * path = key;
+    // g_printerr("%4d", GPOINTER_TO_INT(value));
+    // for(int i = 0; path[i]; ++i) {
+    //     if(path[i] == '/') {
+    //         g_printerr("  ");
+    //     }
+    // }
+    // c_printerr("%s\n", path);
+    return 0;
+}
+
 static bool rm_tm_count_files(art_tree *count_tree, char **paths, RmSession *session) {
     if (*paths == NULL) {
         rm_log_error("No paths passed to rm_tm_count_files\n");
@@ -209,6 +221,8 @@ static bool rm_tm_count_files(art_tree *count_tree, char **paths, RmSession *ses
             count_tree, (unsigned char *)paths[i], strlen(paths[i]) + 1, GINT_TO_POINTER(true)
         );
     }
+
+    art_iter(count_tree, rm_tm_count_art_print_callback, NULL);
 
     destroy_art_tree(&file_tree);
     return true;
@@ -381,10 +395,11 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
         return;
     }
 
-    parent->mergeups = subdir->mergeups + 1;
     parent->dupe_count += subdir->dupe_count;
     g_queue_push_head(&parent->children, subdir);
     parent->prefd_files += subdir->prefd_files;
+    parent->mergeups = subdir->children.length + parent->mergeups + 1;
+    // g_printerr("%s %d %d <- %s %d %d\n", parent->dirname, parent->mergeups, parent->children.length, subdir->dirname, subdir->mergeups, subdir->children.length);
 
     /**
      * Here's something weird:
@@ -485,6 +500,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     char *dirname = g_path_get_dirname(file->path);
     guint dir_len = strlen(dirname) + 1;
 
+
     /* See if we know that directory already */
     RmDirectory *directory = art_search(
                                  &self->dir_tree, (unsigned char *)dirname, dir_len
@@ -520,7 +536,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     /* Check if the directory reached the number of actual files in it */
     if(directory->dupe_count == directory->file_count && directory->file_count > 0) {
         rm_tm_insert_dir(self, directory);
-    }
+    } 
 }
 
 static void rm_tm_mark_finished(RmDirectory *directory) {
@@ -599,8 +615,9 @@ static int rm_tm_iter_unfinished_files(
 
 static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {
     if(a->length == 0 || b->length == 0) {
-        return a->length - b->length;
+        return b->length - a->length;
     }
+
 
     RmDirectory *first_a = a->head->data;
     RmDirectory *first_b = b->head->data;
@@ -619,6 +636,12 @@ static void rm_tm_extract(RmTreeMerger *self) {
         if(dir_list->length < 2) {
             continue;
         }
+
+        // for(GList *i = dir_list->head; i; i = i->next) {
+        //     RmDirectory *d = i->data;
+        //     g_printerr("    %d %s\n", d->mergeups, d->dirname);
+        // }
+        // g_printerr("---\n");
 
         if(rm_session_was_aborted(self->session)) {
             break;
@@ -751,9 +774,11 @@ void rm_tm_finish(RmTreeMerger *self) {
             g_free(parent_dir);
         }
 
-        if(parent->was_merged == false) {
+        if(directory->was_merged == false) {
             g_queue_push_head(&new_dirs, parent);
             rm_directory_add_subdir(parent, directory);
+        } else {
+            // g_printerr("Not merging: %s\n", directory->dirname);
         }
     }
 
@@ -766,12 +791,18 @@ void rm_tm_finish(RmTreeMerger *self) {
         if(directory->dupe_count == directory->file_count && directory->file_count > 0) {
             g_queue_push_head(&self->valid_dirs, directory);
             rm_tm_insert_dir(self, directory);
+        } else {
+            // g_printerr("%d <-> %d => bye %s %d\n", directory->dupe_count, directory->file_count, directory->dirname, 
+            //     rm_tm_calc_dupes(directory)
+            // );
         }
     }
     g_queue_clear(&new_dirs);
+    //g_printerr("###########\n");
 
     if(!rm_session_was_aborted(self->session)) {
         /* Recursively call self to march on */
         rm_tm_finish(self);
     }
+
 }

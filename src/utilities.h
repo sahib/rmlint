@@ -70,6 +70,7 @@ static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, 
 typedef struct RmUserList {
     GSequence *users;
     GSequence *groups;
+    GMutex mutex;
 } RmUserList;
 
 /**

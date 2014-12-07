@@ -246,6 +246,7 @@ RmUserList *rm_userlist_new(void) {
     RmUserList *self = g_malloc0(sizeof(RmUserList));
     self->users = g_sequence_new(NULL);
     self->groups = g_sequence_new(NULL);
+    g_mutex_init(&self->mutex);
 
     setpwent();
     while((node = getpwent()) != NULL) {
@@ -263,11 +264,13 @@ RmUserList *rm_userlist_new(void) {
     return self;
 }
 
-bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
-    g_assert(list);
+bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
+    g_assert(self);
 
-    bool gid_found = g_sequence_lookup(list->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
-    bool uid_found = g_sequence_lookup(list->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
+    g_mutex_lock(&self->mutex);
+    bool gid_found = g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
+    bool uid_found = g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
+    g_mutex_unlock(&self->mutex);
 
     if(valid_uid != NULL) {
         *valid_uid = uid_found;
@@ -280,10 +283,13 @@ bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid, boo
     return (gid_found && uid_found);
 }
 
-void rm_userlist_destroy(RmUserList *list) {
-    g_sequence_free(list->users);
-    g_sequence_free(list->groups);
-    g_free(list);
+void rm_userlist_destroy(RmUserList *self) {
+    g_assert(self);
+
+    g_sequence_free(self->users);
+    g_sequence_free(self->groups);
+    g_mutex_clear(&self->mutex);
+    g_free(self);
 }
 
 /////////////////////////////////////
