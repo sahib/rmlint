@@ -153,7 +153,7 @@ General Options
     * This does not work with **--algorithm=paranoid** (or **-ppp**).
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
-    * Consider using ``-FF`` together with this option.
+    * Consider using ``-FF`` together with this option (this is the default).
 
 :``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
 
@@ -216,16 +216,15 @@ Traversal Options
     therefore keep only one of them in it's internal list.
     If `-l` is specified the whole group is reported instead.
 
-:``-f --followlinks`` (**default**) / ``-F --no-followlinks``:
+:``-f --followlinks`` / ``-F --no-followlinks`` / ``-FF --see-symlinks (**default**)``:
 
     Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
     If `-F` is specified, symbolic links will be ignored completely, if the
     ``-F`` is specified once more ``rmlint`` will see symlinks an treats them
-    like small files with the path to their target in them. The latter case is
-    useful for ``-D``, otherwise symlinks might prevent the matching of two
-    directories.
+    like small files with the path to their target in them. The latter is the
+    default behaviour, since it is a sensible default for ``--merge-directories``.
 
-    *This option is needed for finding bad symbolic links.*
+    ``-f`` *is needed for finding bad symbolic links.*
     
     **Note:** Hardlinks are always followed, but it depends on ``-L`` how those are
     handled. 
