@@ -226,6 +226,7 @@ Traversal Options
 
     ``-f`` *is needed for finding bad symbolic links.*
     
+    
     **Note:** Hardlinks are always followed, but it depends on ``-L`` how those are
     handled. 
 

@@ -24,10 +24,14 @@ def test_basic():
     assert footer['total_files'] == 8
     assert footer['duplicates'] == 3
 
-    subprocess.check_call([os.path.join(TESTDIR_NAME, 'rmlint.sh'), '-d'])
+    text = subprocess.check_output([os.path.join(TESTDIR_NAME, 'rmlint.sh'), '-d'])
     head, *data, footer = run_rmlint('-D -S a')
 
     assert footer['duplicate_sets'] == 0
     assert footer['total_lint_size'] == 0
     assert footer['total_files'] == 3
     assert footer['duplicates'] == 0
+
+    text = text.decode('utf-8')
+    assert '/dir_b' in text
+    assert '/a' in text
