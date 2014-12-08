@@ -586,6 +586,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     int output_flag_cnt = -1;
     int option_index = 0;
     int path_index = 0;
+    int follow_symlink_flags = 0;
 
     /* True when an error occured during reading paths */
     bool not_all_paths_read = false;
@@ -703,7 +704,12 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->followlinks = true;
             break;
         case 'F':
-            settings->followlinks = false;
+            if(++follow_symlink_flags == 1) {
+                settings->followlinks = false;
+            } else {
+                settings->followlinks = false;
+                settings->see_symlinks = true;
+            }
             break;
         case 'w':
             settings->color = isatty(fileno(stdout));

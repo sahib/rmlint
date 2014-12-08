@@ -1145,17 +1145,17 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     g_hash_table_foreach_remove(session->tables->node_table,
                                 (GHRFunc)rm_shred_file_preprocess,
                                 main
-    );
+                               );
 
     rm_log_debug("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     rm_log_debug("Discarding unique sizes and read fiemap data for others...");
     removed = g_hash_table_foreach_remove(session->tables->size_groups,
-                                (GHRFunc)rm_shred_group_preprocess,
-                                main);
+                                          (GHRFunc)rm_shred_group_preprocess,
+                                          main);
     rm_log_debug("done at time %.3f; removed %u of %"LLU"\n",
-            g_timer_elapsed(session->timer, NULL), removed, session->total_filtered_files
-    );
+                 g_timer_elapsed(session->timer, NULL), removed, session->total_filtered_files
+                );
 
     rm_log_debug("Looking up fiemap data for files on rotational devices...");
     g_hash_table_foreach(
@@ -1294,7 +1294,7 @@ static void rm_shred_readlink_factory(RmFile *file) {
         file->status = RM_FILE_STATE_IGNORE;
         return;
     }
-    
+
     file->status = RM_FILE_STATE_NORMAL;
     file->seek_offset = file->file_size;
     file->hash_offset = file->file_size;

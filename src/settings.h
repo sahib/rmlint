@@ -36,6 +36,7 @@ typedef struct RmSettings {
     bool samepart;
     bool ignore_hidden;
     bool followlinks;
+    bool see_symlinks;
     bool findbadids;
     bool findbadlinks;
     bool searchdup;

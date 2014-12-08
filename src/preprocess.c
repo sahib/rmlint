@@ -401,10 +401,10 @@ void rm_preprocess(RmSession *session) {
 
     /* process hardlink groups, and move other_lint into tables- */
     guint removed = g_hash_table_foreach_remove(
-        tables->node_table,
-        (GHRFunc)rm_pp_handle_hardlinks,
-        session
-    );
+                        tables->node_table,
+                        (GHRFunc)rm_pp_handle_hardlinks,
+                        session
+                    );
 
     rm_log_debug(
         "process hardlink groups finished at time %.3f; removed %u of %"LLU"\n",

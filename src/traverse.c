@@ -277,20 +277,12 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     if (p->fts_level != 0) {
                         rm_log_debug("Not following symlink %s because of settings\n", p->fts_path);
                     }
-                    // TODO: An option that just sees symlinks as small files would be nice,
-                    //       but somehow shredder gets stuck on it currently.
-                    //       Testcase:
-                    //       /
-                    //       ├── a
-                    //       │   ├── x -> /tmp/rmlint-unit-testdir/a/z
-                    //       │   └── z
-                    //       └── b
-                    //           ├── x -> /tmp/rmlint-unit-testdir/b/z
-                    //           └── z
-                    //       
-                    rm_traverse_file(
-                        trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, true
-                    );
+
+                    if(settings->see_symlinks) {
+                        rm_traverse_file(
+                            trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, true
+                        );
+                    }
                 } else {
                     rm_log_debug("Following symlink %s\n", p->fts_path);
                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */

@@ -27,7 +27,7 @@
  *
  * It tries to solve the following problem and sometimes even succeeds:
  * Take a list of duplicates (as RmFiles) and figure out which directories
- * consist fully out of duplicates and can be thus removed. 
+ * consist fully out of duplicates and can be thus removed.
  *
  * The basic algorithm is split in four phases:
  *
@@ -36,21 +36,21 @@
  *              an radix-tree (libart is used here). The key is the path, the
  *              value the count of files in it. Invalid directories and
  *              directories above the given are set to -1.
- * - Feeding:   Collect all duplicates and store them in RmDirectory structures. 
+ * - Feeding:   Collect all duplicates and store them in RmDirectory structures.
  *              If a directory appears to consist of dupes only (num_dupes == num_files)
  *              then it is remembered as valid directory.
  * - Upcluster: Take all valid directories and cluster them up, so subdirs get
  *              merged into the parent directory. Continue as long the parent
  *              directory is full too. Remember full directories in a hashtable
  *              with the hash of the directory (which is a hash of the file's
- *              hashes) as key and a list of matching directories as value. 
- * - Extract:   Extract the result information out of the hashtable top-down. 
+ *              hashes) as key and a list of matching directories as value.
+ * - Extract:   Extract the result information out of the hashtable top-down.
  *              If a directory is reported, mark all subdirs of it as finished
  *              so they do not get reported twice. Files that could not be
  *              grouped in directories are found and reported as usually.
  */
 
-/* 
+/*
  * Comment this out to see helpful extra debugging:
  */
 // #define _RM_TREEMERGE_DEBUG
@@ -585,7 +585,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     /* Check if the directory reached the number of actual files in it */
     if(directory->dupe_count == directory->file_count && directory->file_count > 0) {
         rm_tm_insert_dir(self, directory);
-    } 
+    }
 }
 
 static void rm_tm_mark_finished(RmDirectory *directory) {
@@ -796,8 +796,8 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
 
     /* Lookup if we already found this parent before (if yes, merge with it) */
     RmDirectory *parent = art_search(
-                                &self->dir_tree, (unsigned char *)parent_dir, parent_len
-                            );
+                              &self->dir_tree, (unsigned char *)parent_dir, parent_len
+                          );
 
     if(parent == NULL) {
         /* none yet, basically copy child */
@@ -808,8 +808,8 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
 
         /* Get the actual file count */
         parent->file_count = GPOINTER_TO_UINT(
-                                    art_search(&self->count_tree, (unsigned char *)parent_dir, parent_len
-                                            ));
+                                 art_search(&self->count_tree, (unsigned char *)parent_dir, parent_len
+                                           ));
 
     } else {
         g_free(parent_dir);
@@ -822,11 +822,11 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
         if(!is_root) {
             rm_tm_cluster_up(self, parent);
         }
-    } 
+    }
 }
 
 void rm_tm_finish(RmTreeMerger *self) {
-    /* Iterate over all valid directories and try to level them all layers up. 
+    /* Iterate over all valid directories and try to level them all layers up.
      */
     g_queue_sort(&self->valid_dirs, (GCompareDataFunc)rm_tm_sort_paths_reverse, self);
     for(GList *iter = self->valid_dirs.head; iter; iter = iter->next) {

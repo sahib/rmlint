@@ -153,6 +153,7 @@ General Options
     * This does not work with **--algorithm=paranoid** (or **-ppp**).
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
+    * Consider using ``-FF`` together with this option.
 
 :``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
 
@@ -218,7 +219,11 @@ Traversal Options
 :``-f --followlinks`` (**default**) / ``-F --no-followlinks``:
 
     Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
-    If `-F` is specified, symbolic links will be ignored completely.
+    If `-F` is specified, symbolic links will be ignored completely, if the
+    ``-F`` is specified once more ``rmlint`` will see symlinks an treats them
+    like small files with the path to their target in them. The latter case is
+    useful for ``-D``, otherwise symlinks might prevent the matching of two
+    directories.
 
     *This option is needed for finding bad symbolic links.*
     
