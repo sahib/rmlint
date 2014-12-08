@@ -87,7 +87,7 @@ typedef struct RmDirectory {
     } metadata;
 } RmDirectory;
 
-typedef struct RmTreeMerger {
+struct RmTreeMerger {
     RmSession *session;        /* Session state variables / Settings          */
     art_tree dir_tree;         /* Path-Trie with all RmFiles as value         */
     art_tree count_tree;       /* Path-Trie with all file's count as value    */
@@ -96,7 +96,7 @@ typedef struct RmTreeMerger {
     GHashTable *file_checks;   /* Set of files that were handled already.     */
     GHashTable *known_hashs;   /* Set of known hashes, only used for cleanup. */
     GQueue valid_dirs;         /* Directories consisting of RmFiles only      */
-} RmTreeMerger;
+};
 
 //////////////////////////
 // ACTUAL FILE COUNTING //

@@ -1017,9 +1017,10 @@ static gboolean rm_shred_sift(RmFile *file) {
              * matches snap... if yes then move this file into it; if not then
              * create a new group */
             guint8 *key = rm_digest_steal_buffer(file->digest);
+            g_assert(key);
             if (!current_group->children) {
                 /* create child queue */
-                current_group->children   = g_queue_new();
+                current_group->children = g_queue_new();
             }
 
             GList *child = g_queue_find_custom(
@@ -1280,6 +1281,28 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
+static void rm_shred_readlink_factory(RmFile *file) {
+    g_assert(file->is_symlink);
+
+    /* Fake an IO operation on the symlink.
+     */
+    char path_buf[PATH_MAX];
+    memset(path_buf, 0, sizeof(path_buf));
+
+    if(readlink(file->path, path_buf, sizeof(path_buf)) == -1) {
+        /* Oops, that did not work out, report as an error */
+        file->status = RM_FILE_STATE_IGNORE;
+        return;
+    }
+    
+    file->status = RM_FILE_STATE_NORMAL;
+    file->seek_offset = file->file_size;
+    file->hash_offset = file->file_size;
+
+    g_assert(file->digest);
+    rm_digest_update(file->digest, (unsigned char *)path_buf, strlen(path_buf) + 1);
+}
+
 /* Read from file and send to hasher
  * Note this was initially a separate thread but is currently just called
  * directly from rm_devlist_factory.
@@ -1295,6 +1318,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_left_to_read = bytes_to_read;
 
+    g_assert(!file->is_symlink);
     g_assert(bytes_to_read > 0);
     g_assert(buf_size >= (RmOff)SHRED_PAGE_SIZE);
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
@@ -1485,10 +1509,14 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
         if (can_process) {
             /* hash the next increment of the file */
-            rm_shred_read_factory(file, device);
+            if(file->is_symlink) {
+                rm_shred_readlink_factory(file);
+            } else {
+                rm_shred_read_factory(file, device);
 
-            /* wait until the increment has finished hashing */
-            file = g_async_queue_pop(device->hashed_file_return);
+                /* wait until the increment has finished hashing */
+                file = g_async_queue_pop(device->hashed_file_return);
+            }
 
             if (start_offset == file->hash_offset) {
                 rm_log_debug(RED"Offset stuck at %"LLU";", start_offset);

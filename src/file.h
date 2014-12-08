@@ -101,6 +101,13 @@ typedef struct RmFile {
     ino_t inode;
     dev_t dev;
 
+    /* True if the file is a symlink 
+     * shredder needs to know this, since the metadata might be about the
+     * symlink file itself, while open() returns the pointed file.
+     * Chaos would break out in this case.
+     */ 
+    bool is_symlink : 1;
+
     /* True if this file is in one of the preferred paths,
      * i.e. paths prefixed with // on the commandline.
      * In the case of hardlink clusters, the head of the cluster
