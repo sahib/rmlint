@@ -19,7 +19,7 @@ msgstr "Wurde nochmal unterbrochen, mache sofort Schluss."
 #: src/main.c:84
 #, c-format
 msgid "Aborting due to a fatal error. (signal received: %s)"
-msgstr "Abbruch aufgrund eins fatalen Fehlers (exaktes signal: %s)"
+msgstr "Abbruch aufgrund eines fatalen Fehlers (exaktes signal: %s)"
 
 #: src/main.c:85
 msgid "Please file a bug report (See rmlint -h)"

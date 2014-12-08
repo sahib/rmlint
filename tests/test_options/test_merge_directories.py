@@ -78,6 +78,8 @@ def test_deep_simple():
     head, *data, footer = run_rmlint('-D -S a')
 
     print(data)
+    import time
+    time.sleep(10000)
     assert data[0]['path'].endswith('deep/a')
     assert data[1]['path'].endswith('deep/e')
     assert len(data) == 2

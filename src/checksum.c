@@ -272,10 +272,10 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         break;
     case RM_DIGEST_CUMULATIVE:
         if(size >= sizeof(guint64) * 1) {
-            digest->checksum->first += ~((guint64 *)data)[0];
+            digest->checksum->first += ((guint64 *)data)[0];
         }
         if(size >= sizeof(guint64) * 2) {
-            digest->checksum->second += ~((guint64 *)data)[1];
+            digest->checksum->second += ((guint64 *)data)[1];
         }
         break;
     case RM_DIGEST_PARANOID:

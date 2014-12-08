@@ -270,6 +270,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     if (p->fts_level != 0) {
                         rm_log_debug("Not following symlink %s because of settings\n", p->fts_path);
                     }
+                    // rm_traverse_file(trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN);
                 } else {
                     rm_log_debug("Following symlink %s\n", p->fts_path);
                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */

@@ -1106,7 +1106,6 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                           );
 
     if (group == NULL) {
-
         group = rm_shred_group_new(file, NULL);
         group->digest_type = session->settings->checksum_type;
         g_hash_table_insert(
@@ -1136,6 +1135,7 @@ static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device, R
 
 static void rm_shred_preprocess_input(RmMainTag *main) {
     RmSession *session = main->session;
+    guint removed = 0;
 
     /* move remaining files to RmShredGroups */
     g_assert(session->tables->node_table);
@@ -1143,14 +1143,18 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     rm_log_debug("Moving files into size_groups...");
     g_hash_table_foreach_remove(session->tables->node_table,
                                 (GHRFunc)rm_shred_file_preprocess,
-                                main);
+                                main
+    );
+
     rm_log_debug("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     rm_log_debug("Discarding unique sizes and read fiemap data for others...");
-    g_hash_table_foreach_remove(session->tables->size_groups,
+    removed = g_hash_table_foreach_remove(session->tables->size_groups,
                                 (GHRFunc)rm_shred_group_preprocess,
                                 main);
-    rm_log_debug("done at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    rm_log_debug("done at time %.3f; removed %u of %"LLU"\n",
+            g_timer_elapsed(session->timer, NULL), removed, session->total_filtered_files
+    );
 
     rm_log_debug("Looking up fiemap data for files on rotational devices...");
     g_hash_table_foreach(
