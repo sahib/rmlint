@@ -77,11 +77,10 @@ def test_deep_simple():
     create_file('xxx', 'deep/e/f/g/h/1')
     head, *data, footer = run_rmlint('-D -S a')
 
-    print(data)
-    import time
-    time.sleep(10000)
     assert data[0]['path'].endswith('deep/a')
     assert data[1]['path'].endswith('deep/e')
+    assert int(data[0]['checksum'], 16) > 0
+    assert int(data[1]['checksum'], 16) > 0
     assert len(data) == 2
 
 

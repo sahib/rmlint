@@ -23,7 +23,37 @@
  *
  */
 
-#define _RM_TREEMERGE_DEBUG
+/* This is the treemerge algorithm.
+ *
+ * It tries to solve the following problem and sometimes even succeeds:
+ * Take a list of duplicates (as RmFiles) and figure out which directories
+ * consist fully out of duplicates and can be thus removed. 
+ *
+ * The basic algorithm is split in four phases:
+ *
+ * - Counting:  Walk through all directories given on the commandline and
+ *              traverse them. Count all files during traverse and safe it in
+ *              an radix-tree (libart is used here). The key is the path, the
+ *              value the count of files in it. Invalid directories and
+ *              directories above the given are set to -1.
+ * - Feeding:   Collect all duplicates and store them in RmDirectory structures. 
+ *              If a directory appears to consist of dupes only (num_dupes == num_files)
+ *              then it is remembered as valid directory.
+ * - Upcluster: Take all valid directories and cluster them up, so subdirs get
+ *              merged into the parent directory. Continue as long the parent
+ *              directory is full too. Remember full directories in a hashtable
+ *              with the hash of the directory (which is a hash of the file's
+ *              hashes) as key and a list of matching directories as value. 
+ * - Extract:   Extract the result information out of the hashtable top-down. 
+ *              If a directory is reported, mark all subdirs of it as finished
+ *              so they do not get reported twice. Files that could not be
+ *              grouped in directories are found and reported as usually.
+ */
+
+/* 
+ * Comment this out to see helpful extra debugging:
+ */
+// #define _RM_TREEMERGE_DEBUG
 
 #include <glib.h>
 #include <string.h>
@@ -336,17 +366,14 @@ static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
      * compared...
      * */
     if(d1->mergeups != d2->mergeups) {
-        g_printerr("Rejecting %s %s -> bad mergeups (%d %d)\n", d1->dirname, d2->dirname, d1->mergeups, d2->mergeups);
         return false;
     }
 
     if(rm_digest_equal(d1->digest, d2->digest) == false) {
-        g_printerr("Rejecting %s %s -> bad digest\n", d1->dirname, d2->dirname);
         return false;
     }
 
     if(art_size(&d1->hash_trie) != art_size(&d2->hash_trie)) {
-        g_printerr("Rejecting %s %s -> bad art size\n", d1->dirname, d2->dirname);
         return false;
     }
 
@@ -431,7 +458,7 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
     }
 
     /* Inherit the child's checksum */
-    char *subdir_cksum = rm_digest_steal_buffer(subdir->digest);
+    unsigned char *subdir_cksum = rm_digest_steal_buffer(subdir->digest);
     rm_digest_update(parent->digest, subdir_cksum, subdir->digest->bytes);
     g_slice_free1(subdir->digest->bytes, subdir_cksum);
 
