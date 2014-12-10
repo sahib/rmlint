@@ -185,6 +185,13 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     memset(&is_emptydir[0], 'N', sizeof(is_emptydir) - 1);
     is_emptydir[sizeof(is_emptydir) - 1] = '\0';
 
+    #define ADD_FILE(lint_type, is_symlink)       \
+        rm_traverse_file(                         \
+            trav_session, (RmStat *)p->fts_statp, \
+            p->fts_path, is_prefd, path_index,    \
+            lint_type, is_symlink                 \
+        );                                        \
+
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
@@ -231,9 +238,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_DP:        /* postorder directory */
                 if (is_emptydir[p->fts_level + 1] == 'E' && settings->findemptydirs) {
-                    rm_traverse_file(
-                        trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_EDIR, false
-                    );
+                    ADD_FILE(RM_LINT_TYPE_EDIR, false);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -244,9 +249,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 if (settings->findbadlinks) {
-                    rm_traverse_file(
-                        trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_BLNK, false
-                    );
+                    ADD_FILE(RM_LINT_TYPE_BLNK, false);
                 }
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
@@ -281,13 +284,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     RmStat dummy_buf;
                     if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
                         /* Oops, that's a badlink. */
-                    rm_traverse_file(
-                        trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_BLNK, false
-                    );
+                        ADD_FILE(RM_LINT_TYPE_BLNK, false);
                     } else if(settings->see_symlinks) {
-                        rm_traverse_file(
-                            trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, true
-                        );
+                        ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
                     rm_log_debug("Following symlink %s\n", p->fts_path);
@@ -298,9 +297,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_F:         /* regular file */
             case FTS_DEFAULT:   /* any file type not explicitly described by one of the above*/
                 clear_emptydir_flags = true; /* current dir not empty*/
-                rm_traverse_file(
-                    trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, false
-                );
+                ADD_FILE(RM_LINT_TYPE_UNKNOWN, false);
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
@@ -324,6 +321,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     if (errno != 0) {
         rm_log_error_line(_("'%s': fts_read failed on %s"), g_strerror(errno), ftsp->fts_path);
     }
+
+    #undef ADD_FILE
 
     fts_close(ftsp);
     rm_trav_buffer_free(buffer);
