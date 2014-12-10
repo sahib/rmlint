@@ -59,7 +59,7 @@ General Options
     with a **+** or **-** to select or deselect it:
 
     * ``badids``, ``bi``: Find bad UID, GID or files with both.
-    * ``badlinks``, ``bl``: Find bad symlinks pointing nowhere (Note: ``-f`` is required).
+    * ``badlinks``, ``bl``: Find bad symlinks pointing nowhere.
     * ``emptydirs``, ``ed``: Find empty directories.
     * ``emptyfiles``, ``ef``: Find empty files.
     * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
@@ -224,9 +224,6 @@ Traversal Options
     like small files with the path to their target in them. The latter is the
     default behaviour, since it is a sensible default for ``--merge-directories``.
 
-    ``-f`` *is needed for finding bad symbolic links.*
-    
-    
     **Note:** Hardlinks are always followed, but it depends on ``-L`` how those are
     handled. 
 

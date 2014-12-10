@@ -278,7 +278,13 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                         rm_log_debug("Not following symlink %s because of settings\n", p->fts_path);
                     }
 
-                    if(settings->see_symlinks) {
+                    RmStat dummy_buf;
+                    if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
+                        /* Oops, that's a badlink. */
+                    rm_traverse_file(
+                        trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_BLNK, false
+                    );
+                    } else if(settings->see_symlinks) {
                         rm_traverse_file(
                             trav_session, (RmStat *)p->fts_statp, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, true
                         );
