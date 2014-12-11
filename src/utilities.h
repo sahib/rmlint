@@ -42,15 +42,27 @@ typedef struct stat64 RmStat;
 ////////////////////////////////////
 
 static inline int rm_sys_stat(const char *path, RmStat *buf) {
+#ifdef __FreeBSD__ 
+    return stat(path, buf);
+#else
     return stat64(path, buf);
+#endif
 }
 
 static inline int rm_sys_lstat(const char *path, RmStat *buf) {
+#ifdef __FreeBSD__ 
+    return lstat(path, buf);
+#else
     return lstat64(path, buf);
+#endif
 }
 
 static inline int rm_sys_open(const char *path, int mode) {
-    return open(path, mode | O_LARGEFILE);
+#ifndef __FreeBSD__
+    mode |= O_LARGEFILE;
+#endif
+
+    return open(path, mode);
 }
 
 static inline void rm_sys_close(int fd) {
