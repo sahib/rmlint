@@ -36,13 +36,16 @@ to remove it.
 - Extremely fast (no exaggeration, we promise!).
 - Many output formats.
 - No interactivity.
-- Search for files only newer than a certain mtime. 
+- Search for files only newer than a certain ``mtime``. 
 - ...
 
 Due to some of it's performance optimizations, it currently only runs on Linux
 32 and 64 bit. Porting to BSD and Darwin (Mac OSX) architectures is possible
 though, but needs some volunteers to test. Patches welcome!
 
+It has been compiled and run successfully on FreeBSD, although 
+it cannot use ``fiemap`` and ``mounttables`` as performance optimizations there. 
+Patches to make this run better over there are welcome too.
 
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/screenshot.png
    :align: center
