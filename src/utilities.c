@@ -574,6 +574,9 @@ typedef struct RmOffsetEntry {
     RmOff physical;
 } RmOffsetEntry;
 
+
+#ifdef __linux__
+
 /* sort sequence into decreasing order of logical offsets */
 static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {
     const RmOffsetEntry *offset_a = a;
@@ -603,7 +606,6 @@ static void rm_offset_free_func(RmOffsetEntry *entry) {
 }
 
 RmOffsetTable rm_offset_create_table(const char *path) {
-#ifdef __linux__
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in setup_fiemap_extents\n", path);
@@ -660,13 +662,9 @@ RmOffsetTable rm_offset_create_table(const char *path) {
 
     g_sequence_sort(self, (GCompareDataFunc)rm_offset_sort_logical, NULL);
     return self;
-#else
-    return NULL;
-#endif
 }
 
 RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
-#ifdef __linux__
     if (offset_list != NULL) {
         RmOffsetEntry token;
         token.physical = 0;
@@ -682,13 +680,12 @@ RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
             return (gint64)(off->physical + file_offset) - (gint64)off->logical;
         }
     }
-#endif
+
     /* default to 0 always */
     return 0;
 }
 
 RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_offset) {
-#ifdef __linux__
     if (offset_list != NULL) {
         RmOffsetEntry token;
         token.physical = 0;
@@ -706,10 +703,25 @@ RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_off
             return off->logical - file_offset;
         }
     }
-#endif
     /* default to 0 always */
     return 0;
+} 
+
+#else /* Probably FreeBSD */
+
+RmOffsetTable rm_offset_create_table(_U const char *path) {
+    return NULL;
 }
+
+RmOff rm_offset_lookup(_U RmOffsetTable table, _U RmOff file_offset) {
+    return 0;
+}
+
+RmOff rm_offset_bytes_to_next_fragment(_U RmOffsetTable table, _U RmOff file_offset) {
+    return 0;
+}
+
+#endif
 
 /////////////////////////////////
 //  GTHREADPOOL WRAPPERS       //
