@@ -54,10 +54,17 @@ def run_sphinx_binary(builder, **kwargs):
 
 
 def gzip_file(target, source, env):
-    subprocess.check_call('gzip -c {s} > {t}'.format(
-        s=source[0].get_abspath(),
-        t=target[0].get_abspath(),
-    ), shell=True)
+    try:
+        subprocess.check_call('gzip -c {s} > {t}'.format(
+            s=source[0].get_abspath(),
+            t=target[0].get_abspath(),
+        ), shell=True)
+    except Exception as err:
+        print('Warning: could not gzip {s} to {t}: {e}'.format(
+            s=source[0].get_abspath(),
+            t=target[0].get_abspath(),
+            e=err
+        ))
 
 
 sphinx = env.AlwaysBuild(
