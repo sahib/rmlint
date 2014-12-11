@@ -18,7 +18,7 @@ def build_config_template(target, source, env):
         handle.write(text.format(
             INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
             HAVE_GLIB=int(env['glib']),
-            HAVE_LIBINTL=int(WhereIs('msgfmta') is not None),
+            HAVE_LIBINTL=int(WhereIs('msgfmt') is not None),
             HAVE_BLKID=int(env['blkid']),
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,

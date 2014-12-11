@@ -36,7 +36,7 @@
 #include <sys/uio.h>
 
 #if __FreeBSD__
-    typedef struct stat RmStat
+    typedef struct stat RmStat;
 #else
     typedef struct stat64 RmStat;
 #endif

@@ -39,10 +39,17 @@
 #include <fts.h>
 #include <libgen.h>
 
-#include <mntent.h>
+/* Not available there,
+ * but might be on other non-linux systems 
+ * */
+#ifndef __FreeBSD__
+#  include <mntent.h>
+#endif
 
-#include <linux/fs.h>
-#include <linux/fiemap.h>
+#ifdef __linux__
+#  include <linux/fs.h>
+#  include <linux/fiemap.h>
+#endif
 
 /* Internal headers */
 #include "config.h"
@@ -306,6 +313,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
+#ifndef __FreeBSD__
 RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
     self->name = g_strdup(name);
@@ -383,6 +391,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                             g_str_equal,
                                             g_free,
                                             NULL);
+
 
     /* 0:0 is reserved for the completely unknown */
     FILE *mnt_file = setmntent("/etc/mtab", "r");
@@ -474,6 +483,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
     }
     endmntent(mnt_file);
 }
+#endif
 
 /////////////////////////////////
 //         PUBLIC API          //
@@ -582,6 +592,7 @@ static void rm_offset_free_func(RmOffsetEntry *entry) {
 }
 
 RmOffsetTable rm_offset_create_table(const char *path) {
+#ifdef __linux__
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in setup_fiemap_extents\n", path);
@@ -638,6 +649,9 @@ RmOffsetTable rm_offset_create_table(const char *path) {
 
     g_sequence_sort(self, (GCompareDataFunc)rm_offset_sort_logical, NULL);
     return self;
+#else
+    return NULL;
+#endif
 }
 
 RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {

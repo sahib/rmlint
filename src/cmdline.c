@@ -147,7 +147,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **err
 
     if (found != NULL) {
         /* No overflow check */
-        return decimal * powl(found->base, found->exponent);
+        return decimal * pow(found->base, found->exponent);
     } else {
         return rm_cmd_size_format_error(error, _("Given format specifier not found"));
     }
