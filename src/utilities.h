@@ -35,7 +35,11 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 
-typedef struct stat64 RmStat;
+#if __FreeBSD__
+    typedef struct stat RmStat
+#else
+    typedef struct stat64 RmStat;
+#endif
 
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
