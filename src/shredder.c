@@ -913,7 +913,9 @@ void rm_shred_group_unref(RmShredGroup *self) {
     case RM_SHRED_GROUP_HASHING:
         if ( self->ref_count == 0) {
             /* group no longer required; tell the children we are about to die */
-            g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
+            if(self->children) {
+                g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
+            }
             rm_shred_group_free(self);
         }
         break;
