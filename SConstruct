@@ -198,14 +198,18 @@ conf.env.Append(CCFLAGS=[
 if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])
 else:
-    if conf.env['CC'] == 'gcc':
-        # GCC-Specific Options.
-        conf.env.Append(CCFLAGS=['-lto'])
-        conf.env.Append(CCFLAGS=['-march=native', '-Os'])
-    else:
-        # Generic compiler:
-        conf.env.Append(CCFLAGS=['-Os'])
+    # Generic compiler:
+    conf.env.Append(CCFLAGS=['-Os'])
     conf.env.Append(LINKFLAGS=['-s'])
+
+if 'gcc' in conf.env['CC']:
+    # GCC-Specific Options.
+    conf.env.Append(CCFLAGS=['-lto'])
+    conf.env.Append(CCFLAGS=['-march=native'])
+elif 'clang' in conf.env['CC']:
+        conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
+        conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
+
 
 # Optional flags:
 conf.env.Append(CFLAGS=[
