@@ -767,6 +767,14 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'D':
             settings->merge_directories = true;
+
+            /* Pull in some options for convinience, 
+             * duplicate dir detection works better with them.
+             *
+             * They may be disabled explicitly though.
+             */
+            settings->find_hardlinked_dupes = true;
+            settings->ignore_hidden = false;
             break;
         case 'S':
             settings->sort_criteria = optarg;
