@@ -224,9 +224,11 @@ static bool rm_tm_count_files(art_tree *count_tree, char **paths, RmSession *ses
         case FTS_SLNONE:
         case FTS_DEFAULT:
             /* Save this path as countable file */
-            art_insert(
-                &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, GINT_TO_POINTER(false)
-            );
+            if(ent->fts_statp->st_size > 0) {
+                art_insert(
+                    &file_tree, (unsigned char *)ent->fts_path, ent->fts_pathlen + 1, GINT_TO_POINTER(false)
+                );
+            }
         case FTS_D:
         case FTS_DNR:
         case FTS_DOT:
