@@ -161,7 +161,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         if(file->is_original) {
             fprintf(out, "rm -rf '%s' # original directory\n", dupe_path);
         } else {
-            fprintf(out, "echo   '%s' # original directory\n", dupe_path);
+            fprintf(out, "echo   '%s' # duplicate directory\n", dupe_path);
         }
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
