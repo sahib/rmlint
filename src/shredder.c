@@ -1088,7 +1088,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
     if(device == NULL) {
-        rm_log_debug(GREEN"Creating new RmShredDevice for disk %"LLU"\n"RESET, (unsigned)disk);
+        rm_log_debug(GREEN"Creating new RmShredDevice for disk %u\n"RESET, (unsigned)disk);
         device = rm_shred_device_new(
                      !rm_mounts_is_nonrotational(session->tables->mounts, disk),
                      rm_mounts_get_disk_name(session->tables->mounts, disk),

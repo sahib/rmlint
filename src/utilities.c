@@ -314,6 +314,7 @@ typedef struct RmPartitionInfo {
 } RmPartitionInfo;
 
 #ifndef __FreeBSD__
+
 RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
     self->name = g_strdup(name);
@@ -483,7 +484,6 @@ static void rm_mounts_create_tables(RmMountTable *self) {
     }
     endmntent(mnt_file);
 }
-#endif
 
 /////////////////////////////////
 //         PUBLIC API          //
@@ -501,6 +501,17 @@ void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->nfs_table);
     g_slice_free(RmMountTable, self);
 }
+#else /* probably FreeBSD */
+
+RmMountTable *rm_mounts_table_new(void) {
+    return NULL;
+}
+
+void rm_mounts_table_destroy(_U RmMountTable *self) {
+    /* NO-OP */
+}
+
+#endif
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
