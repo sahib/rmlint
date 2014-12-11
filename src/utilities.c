@@ -777,15 +777,15 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 time_t rm_iso8601_parse(const char *string) {
-    struct tm ctime;
-    memset(&ctime, 0, sizeof(struct tm));
+    struct tm time_key;
+    memset(&time_key, 0, sizeof(struct tm));
 
-    if(strptime(string, "%FT%T%z", &ctime) == NULL) {
+    if(strptime(string, "%FT%T%z", &time_key) == NULL) {
         rm_log_perror("strptime(3) failed");
         return 0;
     }
 
-    return mktime(&ctime) + timezone;
+    return mktime(&time_key) + timezone;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {

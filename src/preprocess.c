@@ -142,8 +142,9 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->size_groups);
         g_hash_table_unref(tables->size_groups);
 
-        g_assert(tables->mounts);
-        rm_mounts_table_destroy(tables->mounts);
+        if(tables->mounts) {
+            rm_mounts_table_destroy(tables->mounts);
+        }
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
