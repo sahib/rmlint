@@ -439,9 +439,9 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
 
 #ifdef _RM_TREEMERGE_DEBUG
     g_printerr(
-        "%55s (%3"LLU"/%3"LLU") <- %s (%3"LLU"/%3"LLU")\n",
-        parent->dirname, parent->file_count, parent->dupe_count,
-        subdir->dirname, subdir->file_count, subdir->dupe_count
+        "%55s (%3ld/%3ld) <- %s (%3ld/%3ld)\n",
+        parent->dirname, parent->dupe_count, parent->file_count,
+        subdir->dirname, subdir->dupe_count, subdir->file_count
     );
 #endif
 
