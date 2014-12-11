@@ -514,6 +514,10 @@ void rm_mounts_table_destroy(_U RmMountTable *self) {
 #endif
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
+    if(self == NULL) {
+        return true;
+    }
+
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
     if (part) {
         RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
@@ -530,6 +534,10 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
 }
 
 bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
+    if(self == NULL) {
+        return -1;
+    }
+
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) == -1) {
         return -1;
@@ -538,6 +546,10 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
 }
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
+    if(self == NULL) {
+        return 0;
+    }
+
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
     if (part) {
         return part->disk;
@@ -547,15 +559,23 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
 }
 
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
+    if(self == NULL) {
+        return 0;
+    }
+
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) == -1) {
         return 0;
     }
-
+ 
     return rm_mounts_get_disk_id(self, stat_buf.st_dev);
 }
 
 char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
+    if(self == NULL) {
+        return NULL;
+    }
+
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
     if(part) {
         RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
