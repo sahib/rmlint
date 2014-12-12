@@ -208,7 +208,7 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
     RmSettings *settings = session->settings;
     if(faccessat(AT_FDCWD, path, R_OK, AT_EACCESS) != 0) {
-        rm_log_warning_line(_("Can't open directory or file \"%s\": %s\n"), path, strerror(errno));
+        rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path, strerror(errno));
         return FALSE;
     } else {
         settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));

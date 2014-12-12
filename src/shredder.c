@@ -1214,13 +1214,15 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
 }
 
 static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *original_file) {
+    g_queue_sort(group, (GCompareDataFunc)rm_pp_cmp_orig_criteria, session);
+
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if (file->hardlinks.files) {
             rm_group_fmt_write(session, file->hardlinks.files, original_file);
         }
 
-        if(iter->data != original_file) {
+        if(file != original_file) {
             RmFile *lint = iter->data;
             rm_fmt_write(session->formats, lint);
         }

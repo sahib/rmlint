@@ -56,8 +56,8 @@ msgstr "Kann --limit (%s) nicht parsen"
 
 #: src/cmdline.c:211
 #, c-format
-msgid "Can't open directory or file \"%s\": %s\n"
-msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s\n"
+msgid "Can't open directory or file \"%s\": %s"
+msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
 
 #: src/cmdline.c:252
 #, c-format

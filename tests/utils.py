@@ -21,7 +21,7 @@ def create_testdir():
         pass
 
 
-def run_rmlint(*args, dir_suffix=None, use_default_dir=True):
+def run_rmlint(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -30,10 +30,24 @@ def run_rmlint(*args, dir_suffix=None, use_default_dir=True):
     else:
         target_dir = ""
 
-    cmd = ' '.join(['./rmlint', target_dir, '-o json:stdout'] + list(args))
+    cmd = ' '.join(
+        ['./rmlint', target_dir, '-o json:stdout']
+        + ['-o {f}:{p}'.format(f=output, p=os.path.join(TESTDIR_NAME, '.' + output)) for output in outputs or []]
+        + list(args)
+    )
+
     output = subprocess.check_output(cmd, shell=True)
-    json_data = output.decode('utf-8')
-    return json.loads(json_data)
+    json_data = json.loads(output.decode('utf-8'))
+
+    read_outputs = []
+    for output in outputs or []:
+        with open(os.path.join(TESTDIR_NAME, '.' + output), 'r') as handle:
+            read_outputs.append(handle.read())
+
+    if outputs is None:
+        return json_data
+    else:
+        return json_data + read_outputs
 
 
 def create_dirs(path):

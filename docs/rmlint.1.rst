@@ -136,7 +136,7 @@ General Options
 :``-D --merge-directories`` (**[experimental] default\:** *disabled*):
 
     Makes rmlint use a special mode where all found duplicates are collected and
-    checked wether whole directory trees are duplicates. This is an HIGHLY
+    checked if whole directory trees are duplicates. This is an HIGHLY
     EXPERIMENTAL FEATURE and was/is tricky to implement right. Use with caution.
     You always should make sure that the investigated directory is not modified 
     during rmlint or it's removal scripts run. 
