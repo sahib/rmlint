@@ -56,15 +56,15 @@ to remove it. It is able to find:
    + Many options for originaldetection.
 
 
-.. DANGER::
+.. .. DANGER::
+.. 
+..     **rmlint** is currently in the progress of being rewritten. 
+..     This means that it still may contain bugs that might burn your data.
+.. 
+..     Use at your own risk!
 
-    **rmlint** is currently in the progress of being rewritten. 
-    This means that it still may contain bugs that might burn your data.
-
-    Use at your own risk!
-
-Manual
-------
+User manual
+-----------
 
 Although **rmlint** is easy to use, you might want to read these chapters first.
 They show you the basic principles and most of the advanced options:
@@ -75,14 +75,14 @@ They show you the basic principles and most of the advanced options:
    install
    tutorial
 
-Reference
----------
+Informative reference
+---------------------
 
 These chapters are informative and are not essential for the average
 user. People that want to extend **rmlint** might want to read this though: 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth:2
        
    developers
    translators
