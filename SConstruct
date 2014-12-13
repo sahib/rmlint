@@ -202,13 +202,13 @@ else:
     conf.env.Append(CCFLAGS=['-Os'])
     conf.env.Append(LINKFLAGS=['-s'])
 
-if 'gcc' in conf.env['CC']:
+if 'gcc' in os.path.basename(conf.env['CC']):
     # GCC-Specific Options.
     conf.env.Append(CCFLAGS=['-lto'])
     conf.env.Append(CCFLAGS=['-march=native'])
-elif 'clang' in conf.env['CC']:
-        conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
-        conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
+elif 'clang' in os.path.basename(conf.env['CC']):
+    conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
+    conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
 
 
 # Optional flags:
