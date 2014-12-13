@@ -66,6 +66,13 @@ General Options
     * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
     * ``duplicates``, ``df``: Find duplicate files.
 
+    **Warning:** It is good practice to enclose the description in quotes. In
+    obscure cases argument parsing might fail in weird ways::
+
+        # -ed is recognized as -e and -d here, -d takes "-s 10M" as parameter.
+        # This will fail to do the supposed, finding also files smaller than 10M.
+        $ rmlint -T all -ef -ed -s10M /media/music/  
+
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
     Configure the way rmlint outputs it's results. You link a formatter to a
