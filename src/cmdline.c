@@ -509,6 +509,14 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
     } else {
         /* Parse ISO8601 timestamps like 2006-02-03T16:45:09.000Z */
         result = rm_iso8601_parse(string);
+
+        /* debug */
+        {
+            char time_buf[256];
+            memset(time_buf, 0, sizeof(time_buf));
+            rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
+            rm_log_debug("timestamp %ld understood as %s\n", result, time_buf);
+        }
     }
 
     if(result <= 0) {

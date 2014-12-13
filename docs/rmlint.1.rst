@@ -261,20 +261,22 @@ Traversal Options
     seconds since the epoch or as ISO8601-Timestamp like
     *2014-09-08T00:12:32+0200*. 
 
-    **-n** expects a file from where it can read the timestamp from. After
+    ``-n`` expects a file from where it can read the timestamp from. After
     rmlint run, the file will be updated with the current timestamp.
     If the file does not initially exist, no filtering is done but the stampfile
     is still written.
 
+    ``-N`` in contrast takes the timestamp directly and will not write anything.
+
     If you want to take **only** the files (and not their size siblings) you can
     use ``find(1)``:
 
-        ``find -mtime -1 | rmlint - # find all files younger than a day``
+    * ``find -mtime -1 | rmlint - # find all files younger than a day``
 
     *Note:* you can make rmlint write out a compatible timestamp with:
 
-    * ``-O stamp:stdout``
-    * ``-O stamp:stdout -c stamp:iso8601``
+    * ``-O stamp:stdout  # Write a seconds-since-epoch timestamp to stdout on finish.``
+    * ``-O stamp:stdout -c stamp:iso8601 # Same, but write as ISO8601.``
 
 Original Detection Options
 --------------------------

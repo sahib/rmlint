@@ -785,7 +785,7 @@ time_t rm_iso8601_parse(const char *string) {
         return 0;
     }
 
-    return mktime(&time_key) - time_key.tm_gmtoff;
+    return mktime(&time_key) + time_key.tm_gmtoff;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
