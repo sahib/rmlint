@@ -17,7 +17,7 @@ DESCRIPTION
 ===========
 
 ``rmlint`` finds space waste and other broken things on your filesystem and offers
-to remove it. 
+to remove it. Types of waste include:
 
 * Duplicate files.
 * Nonstripped Binaries (Binaries with debug symbols).
@@ -26,7 +26,7 @@ to remove it.
 * Files with broken user or group id.
 
 In order to find the lint, ``rmlint`` is given one or more directories to traverse.
-If no directory or file was given, the current working directory is assumed.
+If no directories or files were given, the current working directory is assumed.
 ``rmlint`` will take care of things like filesystem loops and symlinks during
 traversing. 
 
@@ -126,13 +126,13 @@ General Options
     The last one is not a hash function in the traditional meaning, but performs
     a byte-by-byte comparison of each file. See also **--max-paranoid-ram**.
 
-    For the adventurous, it is also possible to decrease the default paranoia.
+    For the adventurous, it is also possible to decrease the default paranoia:
 
     * **-P** is equivalent to **--algorithm spooky64**
     * **-PP** is equivalent to **--algorithm spooky32**
     * **-PPP** is equivalent to **--algorithm debian_random**
 
-    This is really not recommended. 
+    *This is really not recommended though.*
 
 :``-D --merge-directories`` (**[experimental] default\:** *disabled*):
 

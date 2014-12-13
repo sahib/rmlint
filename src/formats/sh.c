@@ -187,7 +187,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         }
         break;
     default:
-        rm_log_warning("Warning: unknown type in write_to_log %d\n", file->lint_type);
+        rm_log_warning("Warning: unknown type in encountered: %d\n", file->lint_type);
         break;
     }
 
