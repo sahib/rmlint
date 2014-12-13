@@ -401,7 +401,7 @@ SEE ALSO
 
 Extended documentation and an in-depth tutorial can be found at:
 
-    http://rmlint.rtfd.org
+    * http://rmlint.rtfd.org
 
 BUGS
 ====
@@ -411,7 +411,7 @@ visit https://github.com/sahib/rmlint/issues.
 
 Please make sure to describe your problem in detail. Always include the version
 of ``rmlint`` (``--version``). If you experienced a crash, please include 
-one of the following information with a debug build of ``rmlint``:
+at least one of the following information with a debug build of ``rmlint``:
 
 * ``gdb --ex run -ex bt --args rmlint -vvv [your_options]``
 * ``valgrind --leak-check=no rmlint -vvv [your_options]``
