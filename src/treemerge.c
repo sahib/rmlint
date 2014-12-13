@@ -749,6 +749,11 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     g_list_free(result_table_values);
 
+    /* If no separate duplicate files are requested, we can stop here */
+    if(self->session->settings->searchdup == false) {
+        return;
+    }
+
     /* Iterate over all non-finished dirs in the tree,
      * and grab unfinished files that must be dupes elsewhise.
      */

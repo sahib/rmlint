@@ -54,6 +54,8 @@ General Options
     * ``all``: Enables all lint types.
     * ``defaults``: Enables all lint types, but ``nonstripped``.
     * ``minimal``: ``defaults`` minus ``emptyfiles`` and ``emptydirs``.
+    * ``minimaldirs``: ``defaults`` minus ``emptyfiles``, ``emptydirs`` and
+      ``duplicates``, but with ``duplicatedirs``.
     * ``none``: Disable all lint types.
 
     All following lint types must be one of the following, optionally prefixed
@@ -65,6 +67,7 @@ General Options
     * ``emptyfiles``, ``ef``: Find empty files.
     * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
     * ``duplicates``, ``df``: Find duplicate files.
+    * ``duplicatedirs``, ``dd``: Find duplicate directories. 
 
     **Warning:** It is good practice to enclose the description in quotes. In
     obscure cases argument parsing might fail in weird ways::

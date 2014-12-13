@@ -397,6 +397,7 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
                 &settings->listemptyfiles,
                 &settings->nonstripped,
                 &settings->searchdup,
+                &settings->merge_directories,
                 0
             }
         }, {
@@ -405,6 +406,14 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
                 &settings->findbadids,
                 &settings->findbadlinks,
                 &settings->searchdup,
+                0
+            },
+        }, {
+            .names = NAMES{"minimaldirs", 0},
+            .enable = OPTS{
+                &settings->findbadids,
+                &settings->findbadlinks,
+                &settings->merge_directories,
                 0
             },
         }, {
@@ -438,7 +447,10 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
         }, {
             .names = NAMES{"duplicates", "df", "dupes", 0},
             .enable = OPTS{&settings->searchdup, 0}
-        },
+        }, {
+            .names = NAMES{"duplicatesdirs", "dd", "dupedirs", 0},
+            .enable = OPTS{&settings->merge_directories, 0}
+        }
     };
 
     RmLintTypeOption *all_opts = &option_table[0];
@@ -987,7 +999,7 @@ int rm_cmd_main(RmSession *session) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
-        if(session->settings->searchdup) {
+        if(session->settings->searchdup || session->settings->merge_directories) {
             rm_shred_run(session);
 
             rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
