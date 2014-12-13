@@ -132,8 +132,8 @@ static void rm_traverse_file(
         } else {
             RmOff file_size = statp->st_size;
             if(!settings->limits_specified || (
-                (settings->minsize == -1 || settings->minsize <= file_size) &&
-                (settings->maxsize == -1 || file_size <= settings->maxsize))) {
+                (settings->minsize == (RmOff)-1 || settings->minsize <= file_size) &&
+                (settings->maxsize == (RmOff)-1 || file_size <= settings->maxsize))) {
                 file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
             } else {
                 return;
