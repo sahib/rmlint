@@ -448,7 +448,7 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
             .names = NAMES{"duplicates", "df", "dupes", 0},
             .enable = OPTS{&settings->searchdup, 0}
         }, {
-            .names = NAMES{"duplicatesdirs", "dd", "dupedirs", 0},
+            .names = NAMES{"duplicatedirs", "dd", "dupedirs", 0},
             .enable = OPTS{&settings->merge_directories, 0}
         }
     };
