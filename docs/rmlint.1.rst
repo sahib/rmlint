@@ -53,6 +53,7 @@ General Options
 
     * ``all``: Enables all lint types.
     * ``defaults``: Enables all lint types, but ``nonstripped``.
+    * ``minimal``: ``defaults`` minus ``emptyfiles`` and ``emptydirs``.
     * ``none``: Disable all lint types.
 
     All following lint types must be one of the following, optionally prefixed

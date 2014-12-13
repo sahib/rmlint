@@ -398,6 +398,14 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
                 0
             }
         }, {
+            .names = NAMES{"minimal", 0},
+            .enable = OPTS{
+                &settings->findbadids,
+                &settings->findbadlinks,
+                &settings->searchdup,
+                0
+            },
+        }, {
             .names = NAMES{"defaults", 0},
             .enable = OPTS{
                 &settings->findbadids,

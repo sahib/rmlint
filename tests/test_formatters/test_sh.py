@@ -33,5 +33,5 @@ def test_basic():
     assert footer['duplicates'] == 0
 
     text = text.decode('utf-8')
-    assert '/dir_b' in text
+    assert '/dir_a' in text
     assert '/a' in text
