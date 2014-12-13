@@ -5,6 +5,7 @@ Import('env')
 Import('VERSION_MAJOR')
 Import('VERSION_MINOR')
 Import('VERSION_PATCH')
+Import('VERSION_NAME')
 Import('create_uninstall_target')
 
 import os
@@ -23,6 +24,7 @@ def build_config_template(target, source, env):
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
+            VERSION_NAME=VERSION_NAME,
             VERSION_GIT_REVISION=env['gitrev']
         ))
 

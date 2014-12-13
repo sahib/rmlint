@@ -54,8 +54,10 @@ static void rm_cmd_die(RmSession *session, int status) {
 static void rm_cmd_show_version(void) {
     fprintf(
         stderr,
-        "rmlint-version %s compiled: [%s]-[%s] (rev %s)\n",
-        RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION
+        "rmlint-version %s - compiled: %s at [%s] \"%s\" (rev %s)\n",
+        RMLINT_VERSION, __DATE__, __TIME__,
+        RMLINT_VERSION_NAME,
+        RMLINT_VERSION_GIT_REVISION
     );
 }
 
