@@ -25,11 +25,14 @@ to remove it.
 
 **Features:**
 
-- Duplicate Files and duplicate directories.
-- Nonstripped binaries (i.e. binaries with debug symbols)
-- Broken symbolic links.
-- Empty files and directories.
-- Files with broken user or/and group ID.
+Finds…
+
+- …Duplicate Files and duplicate directories.
+- …Nonstripped binaries (i.e. binaries with debug symbols)
+- …Paranoia mode for those who do not trust hashsums.
+- …Broken symbolic links.
+- …Empty files and directories.
+- …Files with broken user or/and group ID.
 
 **Differences to other duplicate finders:**
 
