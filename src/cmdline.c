@@ -607,6 +607,14 @@ static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) 
     return result;
 }
 
+static void rm_cmd_set_verbosity_from_cnt(RmSettings *settings, int verbosity_counter) {
+    settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
+                              verbosity_counter,
+                              0,
+                              (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1
+                          )];
+}
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     RmSettings *settings = session->settings;
@@ -781,10 +789,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->ignore_hidden = false;
             break;
         case 'V':
-            verbosity_counter--;
+            rm_cmd_set_verbosity_from_cnt(settings, --verbosity_counter);
             break;
         case 'v':
-            verbosity_counter++;
+            rm_cmd_set_verbosity_from_cnt(settings, ++verbosity_counter);
             break;
         case 'x':
             settings->samepart = false;

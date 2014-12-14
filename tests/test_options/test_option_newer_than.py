@@ -8,7 +8,7 @@ def test_simple():
     # Basic case, should work always:
     create_file('xxx', 'a')
     create_file('xxx', 'b')
-    head, *data, footer = run_rmlint('-VVV -S a')
+    head, *data, footer = run_rmlint('-S a')
     assert len(data) == 2
 
     # Wait a second, create a new dupe.
@@ -25,5 +25,5 @@ def test_simple():
         time.gmtime(time.time() + 2)
     )
 
-    head, *data, footer = run_rmlint('-S a -N ' + iso_time)
+    head, *data, footer = run_rmlint('-VVV -S a -N ' + iso_time)
     assert len(data) == 0
