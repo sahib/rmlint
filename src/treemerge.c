@@ -758,11 +758,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     g_list_free(result_table_values);
 
-    /* If no separate duplicate files are requested, we can stop here */
-    if(self->session->settings->searchdup == false) {
-        return;
-    }
-
     /* Iterate over all non-finished dirs in the tree,
      * and grab unfinished files that must be dupes elsewhise.
      */
@@ -792,15 +787,28 @@ static void rm_tm_extract(RmTreeMerger *self) {
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
         bool has_one_orig = false;
+        RmOff file_size_acc = 0;
         for(GList *iter = file_list->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            has_one_orig |= (g_hash_table_lookup(self->file_checks, file->digest) != NULL);
+            bool is_orig = (g_hash_table_lookup(self->file_checks, file->digest) != NULL);
+            has_one_orig |= is_orig;
+
+            if(iter != file_list->head && !is_orig) {
+                file_size_acc += file->file_size;
+            } 
         }
 
         if(file_list->length < 2 && !has_one_orig) {
             rm_log_debug("Sole file encountered in treemerge. What's wrong?");
         } else {
-            rm_shred_forward_to_output(self->session, file_list, has_one_orig);
+            /* If no separate duplicate files are requested, we can stop here */
+            if(self->session->settings->searchdup == false) {
+                self->session->total_lint_size -= file_size_acc;
+                self->session->dup_group_counter -= 1;
+                self->session->dup_counter -= file_list->length - 1;
+            } else {
+                rm_shred_forward_to_output(self->session, file_list, has_one_orig);
+            }
         }
     }
 }
