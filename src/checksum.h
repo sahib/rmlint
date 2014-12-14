@@ -62,8 +62,16 @@ typedef struct RmDigest {
     RmDigestType type;
     gsize bytes;
 
+    /* only one both configurations are valid */
     union {
-        gsize paranoid_offset;
+        struct{
+            gsize paranoid_offset;
+
+            /* A SPOOKY hash is built for every paranoid digest.
+             * So we can make rm_digest_hash() and rm_digest_hexstring() work.
+             */
+            struct RmDigest *shadow_hash;
+        };
         struct {
             RmOff initial_seed1;
             RmOff initial_seed2;
@@ -107,6 +115,9 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size);
  *
  * rm_digest_update is not allowed to be called after finalizing.
  *
+ * If the type is RM_DIGEST_PARANOID, this will return the hexstring
+ * of the shadow digest built in the background.
+ *
  * @param digest a pointer to a RmDigest
  * @param input The input buffer to convert
  * @param buflen Size of the buffer.
@@ -117,20 +128,12 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size);
 int rm_digest_hexstring(RmDigest *digest, char *buffer);
 
 /**
- * @brief Convert the checksum to a byte blob.
- *
- * @param digest a pointer to a RmDigest
- * @param buffer The buffer to write the blob to.
- * @param buflen how long the buffer is.
- *
- * @return how many bytes were written. (for md5sum: 16)
- */
-void rm_digest_finalize(RmDigest *digest);
-
-/**
  * @brief steal digest result into allocated memory slice.
  *
  * @param digest a pointer to a RmDigest
+ *
+ * Steal the internal buffer of the digest. For RM_DIGEST_PARANOID, 
+ * this will be the actual file data.
  *
  * @return pointer to result (note: result length will = digest->bytes)
  */
@@ -138,6 +141,9 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest);
 
 /**
  * @brief Hash a Digest, suitable for GHashTable.
+ *
+ * For RM_DIGEST_PARANOID this is basically the same
+ * as rm_digest_hash(digest->shadow_hash);
  */
 guint rm_digest_hash(RmDigest *digest);
 
@@ -146,6 +152,9 @@ guint rm_digest_hash(RmDigest *digest);
  *
  * @param a a pointer to a RmDigest
  * @param b a pointer to another RmDigest.
+ *
+ * The checksums are compared byte for byte, even
+ * for RM_DIGEST_PARANOID.
  *
  * @return true if digests match
  */
@@ -168,6 +177,9 @@ RmOff rm_digest_paranoia_bytes(void);
 
 /**
  * @return The number of bytes used for storing the checksum.
+ *
+ * For RM_DIGEST_PARANOID this is  the number of bytes in the 
+ * shadow hash.
  */
 int rm_digest_get_bytes(RmDigest *self);
 

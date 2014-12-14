@@ -162,7 +162,6 @@ General Options
     *Notes:*
 
     * This option pulls in ``-r`` (``--hidden``) and ``-l`` (``--hardlinked``) for convenience.
-    * This does not work with **--algorithm=paranoid** (or **-ppp**).
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
     * Consider using ``-FF`` together with this option (this is the default).

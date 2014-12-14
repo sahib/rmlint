@@ -405,16 +405,25 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     g_assert(file->digest);
     g_assert(directory);
 
-    guint8 *file_digest = rm_digest_steal_buffer(file->digest);
+    guint8 *file_digest = NULL;
+    RmOff digest_bytes = 0;
+    
+    if(file->digest->type == RM_DIGEST_PARANOID) {
+        file_digest = rm_digest_steal_buffer(file->digest->shadow_hash);
+        digest_bytes = file->digest->shadow_hash->bytes;
+    } else {
+        file_digest = rm_digest_steal_buffer(file->digest);
+        digest_bytes = file->digest->bytes;
+    }
 
     /* + and not XOR, since ^ would yield 0 for same hashes always. No matter
      * which hashes. Also this would be confusing. For me and for debuggers.
      */
-    rm_digest_update(directory->digest, file_digest, file->digest->bytes);
+    rm_digest_update(directory->digest, file_digest, digest_bytes);
 
     /* The file value is not really used, but we need some non-null value */
-    art_insert(&directory->hash_trie, file_digest, file->digest->bytes, file);
-    g_slice_free1(file->digest->bytes, file_digest);
+    art_insert(&directory->hash_trie, file_digest, digest_bytes, file);
+    g_slice_free1(digest_bytes, file_digest);
 
     if(file->hardlinks.files) {
         new_dupes = 1 + g_queue_get_length(file->hardlinks.files);

@@ -925,14 +925,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
-    /* Handle special cases for -D */
-    if(settings->merge_directories) {
-        if(settings->checksum_type == RM_DIGEST_PARANOID) {
-            rm_log_error_line(_("Full paranoia will not work well with directory merging."));
-            rm_cmd_die(session, EXIT_FAILURE);
-        }
-    }
-
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
                               verbosity_counter,
                               0,
