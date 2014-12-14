@@ -182,6 +182,20 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
     return digest;
 }
 
+void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
+    g_assert(new_size < digest->bytes);
+    g_assert(digest->type == RM_DIGEST_PARANOID);
+
+    uint128 *old_checksum = digest->checksum;
+    gsize old_bytes = digest->bytes;
+
+    digest->checksum = g_slice_alloc0(new_size);
+    digest->bytes = new_size;
+    memcpy(digest->checksum, old_checksum, new_size);
+
+    g_slice_free1(old_bytes, old_checksum);
+}
+
 void rm_digest_free(RmDigest *digest) {
     switch(digest->type) {
     case RM_DIGEST_MD5:

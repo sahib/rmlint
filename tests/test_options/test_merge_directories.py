@@ -7,7 +7,7 @@ def test_simple():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
-    head, *data, footer = run_rmlint('-D --sortcriteria A')
+    head, *data, footer = run_rmlint('-ppp -D --sortcriteria A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert 1 == sum(find['type'] == 'duplicate_file' for find in data)
@@ -26,7 +26,7 @@ def test_diff():
     create_file('xxx', '2/a')
     create_file('xxx', '3/a')
     create_file('yyy', '3/b')
-    head, *data, footer = run_rmlint('-D --sortcriteria A')
+    head, *data, footer = run_rmlint('-ppp -D --sortcriteria A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert data[0]['size'] == 3
@@ -43,7 +43,7 @@ def test_same_but_not_dupe():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '2/b')
-    head, *data, footer = run_rmlint('-D --sortcriteria A')
+    head, *data, footer = run_rmlint('-ppp -D --sortcriteria A')
 
     # No duplicate dirs, but 3 duplicate files should be found.
     assert 0 == sum(find['type'] == 'duplicate_dir' for find in data)
@@ -57,7 +57,7 @@ def test_hardlinks():
     create_file('xxx', '2/a')
     create_link('2/a', '2/link1')
     create_link('2/a', '2/link2')
-    head, *data, footer = run_rmlint('-D -l -S a')
+    head, *data, footer = run_rmlint('-ppp -D -l -S a')
 
     assert data[0]['type'] == 'duplicate_dir'
     assert data[0]['path'].endswith('1')
@@ -90,7 +90,7 @@ def test_deep_simple():
     create_file('xxx', 'd/b/empty')
     create_file('xxx', 'd/a/1')
     create_file('xxx', 'd/b/empty')
-    head, *data, footer = run_rmlint('-D -S a')
+    head, *data, footer = run_rmlint('-ppp -D -S a')
 
     assert data[0]['path'].endswith('d/a')
     assert data[1]['path'].endswith('d/b')
@@ -110,7 +110,7 @@ def test_deep_full():
     create_nested('deep', 'abcd')
     create_nested('deep', 'efgh')
 
-    head, *data, footer = run_rmlint('-D -S a')
+    head, *data, footer = run_rmlint('-ppp -D -S a')
 
     assert data[0]['path'].endswith('deep/a')
     assert data[1]['path'].endswith('deep/e')
@@ -143,12 +143,13 @@ def test_symlinks():
     create_file('xxx', 'b/z')
     create_link('b/z', 'b/x', symlink=True)
 
-    head, *data, footer = run_rmlint('-D -S a')
+    head, *data, footer = run_rmlint('-ppp -D -S am -FF')
+
     assert len(data) == 2
     assert data[0]['path'].endswith('a/z')
     assert data[1]['path'].endswith('b/z')
 
-    head, *data, footer = run_rmlint('-D -S a -f')
+    head, *data, footer = run_rmlint('-ppp -D -S a -f')
     assert len(data) == 2
     assert data[0]['path'].endswith('/a')
     assert data[1]['path'].endswith('/b')

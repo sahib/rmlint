@@ -948,6 +948,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     g_assert(file->hash_offset == shred_group->hash_offset);
 
     rm_shred_group_update_status(shred_group);
+
     switch (shred_group->status) {
     case RM_SHRED_GROUP_START_HASHING:
         /* clear the queue and push all its rmfiles to the appropriate device queue */
@@ -1018,6 +1019,7 @@ static gboolean rm_shred_sift(RmFile *file) {
              * matches snap... if yes then move this file into it; if not then
              * create a new group */
             guint8 *key = rm_digest_steal_buffer(file->digest);
+
             g_assert(key);
             if (!current_group->children) {
                 /* create child queue */
@@ -1303,7 +1305,16 @@ static void rm_shred_readlink_factory(RmFile *file) {
     file->hash_offset = file->file_size;
 
     g_assert(file->digest);
-    rm_digest_update(file->digest, (unsigned char *)path_buf, strlen(path_buf) + 1);
+
+    gsize data_size = strlen(path_buf) + 1;
+    rm_digest_update(file->digest, (unsigned char *)path_buf, data_size);
+
+    /* In case of paranoia: shrink the used data buffer, so comparasion works 
+     * as expected. Otherwise a full buffer is used with possibly different
+     * content */
+    if(file->digest->type == RM_DIGEST_PARANOID) {
+        rm_digest_paranoia_shrink(file->digest, data_size);
+    }
 }
 
 /* Read from file and send to hasher
@@ -1614,8 +1625,11 @@ void rm_shred_run(RmSession *session) {
 
     rm_shred_preprocess_input(&tag);
 
-    tag.hash_mem_alloc = session->settings->paranoid_mem;  /* NOTE: needs to be after preprocess */
-    tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
+    g_mutex_lock(&tag.hash_mem_mtx); {
+        tag.hash_mem_alloc = session->settings->paranoid_mem;  /* NOTE: needs to be after preprocess */
+        tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
+    }
+    g_mutex_unlock(&tag.hash_mem_mtx);
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
