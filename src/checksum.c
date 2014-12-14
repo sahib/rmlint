@@ -321,8 +321,8 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
         self = rm_digest_new(
-                digest->type, digest->initial_seed1, digest->initial_seed2, digest->bytes
-        );
+                   digest->type, digest->initial_seed1, digest->initial_seed2, digest->bytes
+               );
 
         if(self->type == RM_DIGEST_PARANOID) {
             self->paranoid_offset = digest->paranoid_offset;
@@ -383,7 +383,7 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
 guint rm_digest_hash(RmDigest *digest) {
     guint8 *buf = NULL;
     gsize bytes = 0;
-    
+
     if(digest->type == RM_DIGEST_PARANOID) {
         buf = rm_digest_steal_buffer(digest->shadow_hash);
         bytes = digest->shadow_hash->bytes;
@@ -416,7 +416,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     if(digest == NULL) {
         return 0;
     }
-    
+
     if(digest->type == RM_DIGEST_PARANOID) {
         input = rm_digest_steal_buffer(digest->shadow_hash);
         bytes = digest->shadow_hash->bytes;

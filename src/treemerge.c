@@ -407,7 +407,7 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
 
     guint8 *file_digest = NULL;
     RmOff digest_bytes = 0;
-    
+
     if(file->digest->type == RM_DIGEST_PARANOID) {
         file_digest = rm_digest_steal_buffer(file->digest->shadow_hash);
         digest_bytes = file->digest->shadow_hash->bytes;
@@ -795,7 +795,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
             if(iter != file_list->head && !is_orig) {
                 file_size_acc += file->file_size;
-            } 
+            }
         }
 
         if(file_list->length < 2 && !has_one_orig) {

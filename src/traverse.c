@@ -132,8 +132,8 @@ static void rm_traverse_file(
         } else {
             RmOff file_size = statp->st_size;
             if(!settings->limits_specified || (
-                (settings->minsize == (RmOff)-1 || settings->minsize <= file_size) &&
-                (settings->maxsize == (RmOff)-1 || file_size <= settings->maxsize))) {
+                        (settings->minsize == (RmOff)-1 || settings->minsize <= file_size) &&
+                        (settings->maxsize == (RmOff)-1 || file_size <= settings->maxsize))) {
                 file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
             } else {
                 return;
@@ -189,13 +189,13 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     memset(&is_emptydir[0], 'N', sizeof(is_emptydir) - 1);
     is_emptydir[sizeof(is_emptydir) - 1] = '\0';
 
-    #define ADD_FILE(lint_type, is_symlink)       \
+#define ADD_FILE(lint_type, is_symlink)       \
         rm_traverse_file(                         \
             trav_session, (RmStat *)p->fts_statp, \
             p->fts_path, is_prefd, path_index,    \
             lint_type, is_symlink                 \
         );                                        \
-
+ 
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
@@ -326,7 +326,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         rm_log_error_line(_("'%s': fts_read failed on %s"), g_strerror(errno), ftsp->fts_path);
     }
 
-    #undef ADD_FILE
+#undef ADD_FILE
 
     fts_close(ftsp);
     rm_trav_buffer_free(buffer);

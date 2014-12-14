@@ -40,7 +40,7 @@
 #include <libgen.h>
 
 /* Not available there,
- * but might be on other non-linux systems 
+ * but might be on other non-linux systems
  * */
 #ifndef __FreeBSD__
 #  include <mntent.h>
@@ -567,7 +567,7 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
     if(rm_sys_stat(path, &stat_buf) == -1) {
         return 0;
     }
- 
+
     return rm_mounts_get_disk_id(self, stat_buf.st_dev);
 }
 
@@ -725,7 +725,7 @@ RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_off
     }
     /* default to 0 always */
     return 0;
-} 
+}
 
 #else /* Probably FreeBSD */
 

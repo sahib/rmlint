@@ -806,7 +806,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'D':
             settings->merge_directories = true;
 
-            /* Pull in some options for convinience, 
+            /* Pull in some options for convinience,
              * duplicate dir detection works better with them.
              *
              * They may be disabled explicitly though.

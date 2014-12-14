@@ -1491,14 +1491,14 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
                         if(file->is_symlink) {
                             file->digest = rm_digest_new(
-                                            main->session->settings->checksum_type, 0, 0,
-                                            PATH_MAX + 1 /* max size of a symlink file */
-                            );
+                                               main->session->settings->checksum_type, 0, 0,
+                                               PATH_MAX + 1 /* max size of a symlink file */
+                                           );
                         } else {
                             file->digest = rm_digest_new(
-                                            main->session->settings->checksum_type, 0, 0,
-                                            file->shred_group->next_offset - file->hash_offset
-                                        );
+                                               main->session->settings->checksum_type, 0, 0,
+                                               file->shred_group->next_offset - file->hash_offset
+                                           );
                         }
                     }
                 } else if(file->shred_group->digest) {

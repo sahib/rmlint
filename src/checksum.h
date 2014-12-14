@@ -64,7 +64,7 @@ typedef struct RmDigest {
 
     /* only one both configurations are valid */
     union {
-        struct{
+        struct {
             gsize paranoid_offset;
 
             /* A SPOOKY hash is built for every paranoid digest.
@@ -132,7 +132,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
  *
  * @param digest a pointer to a RmDigest
  *
- * Steal the internal buffer of the digest. For RM_DIGEST_PARANOID, 
+ * Steal the internal buffer of the digest. For RM_DIGEST_PARANOID,
  * this will be the actual file data.
  *
  * @return pointer to result (note: result length will = digest->bytes)
@@ -178,7 +178,7 @@ RmOff rm_digest_paranoia_bytes(void);
 /**
  * @return The number of bytes used for storing the checksum.
  *
- * For RM_DIGEST_PARANOID this is  the number of bytes in the 
+ * For RM_DIGEST_PARANOID this is  the number of bytes in the
  * shadow hash.
  */
 int rm_digest_get_bytes(RmDigest *self);

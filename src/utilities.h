@@ -36,9 +36,9 @@
 #include <sys/uio.h>
 
 #if __FreeBSD__
-    typedef struct stat RmStat;
+typedef struct stat RmStat;
 #else
-    typedef struct stat64 RmStat;
+typedef struct stat64 RmStat;
 #endif
 
 ////////////////////////////////////
@@ -46,7 +46,7 @@
 ////////////////////////////////////
 
 static inline int rm_sys_stat(const char *path, RmStat *buf) {
-#ifdef __FreeBSD__ 
+#ifdef __FreeBSD__
     return stat(path, buf);
 #else
     return stat64(path, buf);
@@ -54,7 +54,7 @@ static inline int rm_sys_stat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#ifdef __FreeBSD__ 
+#ifdef __FreeBSD__
     return lstat(path, buf);
 #else
     return lstat64(path, buf);
