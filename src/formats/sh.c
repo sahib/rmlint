@@ -70,7 +70,7 @@ static const char *SH_SCRIPT_TEMPLATE_HEAD =
     "DO_REMOVE=                                          \n"
     "DO_ASK=                                             \n"
     "                                                    \n"
-    "while getopts “dhx” OPTION                          \n"
+    "while getopts \"dhx\" OPTION                        \n"
     "do                                                  \n"
     "  case $OPTION in                                   \n"
     "     h)                                             \n"
