@@ -82,7 +82,7 @@ These chapters are informative and are not essential for the average
 user. People that want to extend **rmlint** might want to read this though: 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
        
    developers
    translators

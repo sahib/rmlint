@@ -679,7 +679,6 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     g_assert(buffer);
 
     /* Hash buffer->len bytes_read of buffer->data into buffer->file */
-
     rm_digest_update(buffer->file->digest, buffer->data, buffer->len);
     buffer->file->hash_offset += buffer->len;
 
@@ -1011,7 +1010,7 @@ static gboolean rm_shred_sift(RmFile *file) {
         } else {
             g_assert(file->digest);
 
-            if (file->digest->type == RM_DIGEST_PARANOID) {
+            if (file->digest->type == RM_DIGEST_PARANOID && !file->is_symlink) {
                 g_assert(file->digest->bytes == current_group->next_offset - current_group->hash_offset);
             }
 
@@ -1489,10 +1488,18 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                             (void) rm_shred_get_read_size(file, main);
                         }
                         g_assert (file->shred_group->hash_offset == file->hash_offset);
-                        file->digest = rm_digest_new(
-                                           main->session->settings->checksum_type, 0, 0,
-                                           file->shred_group->next_offset - file->hash_offset
-                                       );
+
+                        if(file->is_symlink) {
+                            file->digest = rm_digest_new(
+                                            main->session->settings->checksum_type, 0, 0,
+                                            PATH_MAX + 1 /* max size of a symlink file */
+                            );
+                        } else {
+                            file->digest = rm_digest_new(
+                                            main->session->settings->checksum_type, 0, 0,
+                                            file->shred_group->next_offset - file->hash_offset
+                                        );
+                        }
                     }
                 } else if(file->shred_group->digest) {
                     /* pick up the digest-so-far from the RmShredGroup */
@@ -1587,6 +1594,8 @@ void rm_shred_run(RmSession *session) {
     g_assert(session->tables->node_table);
 
     RmMainTag tag;
+    tag.active_files = 0;
+    tag.hash_mem_alloc = 0;
     tag.session = session;
 
     /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
@@ -1605,8 +1614,8 @@ void rm_shred_run(RmSession *session) {
 
     rm_shred_preprocess_input(&tag);
 
-    tag.hash_mem_alloc = session->settings->paranoid_mem;  /*NOTE: needs to be after preprocess*/
-    tag.active_files = 0;				 	 /*NOTE: needs to be after preprocess*/
+    tag.hash_mem_alloc = session->settings->paranoid_mem;  /* NOTE: needs to be after preprocess */
+    tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
