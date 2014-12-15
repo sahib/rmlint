@@ -133,6 +133,12 @@ Notable targets
 :test:
 
     Build the tests (requires ``python`` and ``nosetest`` installed).
+    Optionally ``valgrind`` can be installed to run the tests through 
+    valgrind:
+
+    .. code-block:: bash
+
+        $ USE_VALGRIND=1 nosetests  # or nosetests-3.3, python3 needed.
 
 :xgettext:
 

@@ -110,8 +110,8 @@ def test_deep_full():
     create_nested('deep', 'abcd')
     create_nested('deep', 'efgh')
 
-    subprocess.call('tree ' + TESTDIR_NAME, shell=True)
-    subprocess.call('./rmlint -D ' + TESTDIR_NAME, shell=True)
+    # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
+    # subprocess.call('./rmlint -D ' + TESTDIR_NAME, shell=True)
     head, *data, footer = run_rmlint('-ppp -D -S a')
 
     assert data[0]['path'].endswith('deep/a')
@@ -126,8 +126,8 @@ def test_deep_full_twice():
     create_nested('deep_b', 'abcd')
     create_nested('deep_b', 'efgh')
 
-    subprocess.call('tree ' + TESTDIR_NAME, shell=True)
-    subprocess.call('./rmlint -D ' + TESTDIR_NAME + '/deep_b/a', shell=True)
+    # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
+    # subprocess.call('./rmlint -D ' + TESTDIR_NAME + '/deep_b/a', shell=True)
 
     head, *data, footer = run_rmlint(
         '-D -S a {t}/deep_a {t}/deep_b'.format(

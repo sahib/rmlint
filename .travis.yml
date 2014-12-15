@@ -1,6 +1,6 @@
 language: c
 install: 
-    - sudo apt-get install libelf-dev libglib2.0-dev python3-sphinx libblkid-dev python3-nose gettext python3-setuptools
+    - sudo apt-get install libelf-dev libglib2.0-dev python3-sphinx libblkid-dev python3-nose gettext python3-setuptools valgrind
     - sudo easy_install3 pip
     - sudo /usr/local/bin/pip install sphinx_bootstrap_theme
 compiler:
@@ -11,4 +11,4 @@ notifications:
     - sahib@online.de
     - thomas_d_j@yahoo.com.au
 
-script: scons && sudo nosetests3
+script: scons && export USE_VALGRIND=1 && sudo nosetests3

@@ -13,7 +13,13 @@ def create_data(len, flips=None):
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_small_diffs():
-    N = 128
+
+    if os.environ.get('USE_VALGRIND'):
+        N = 128
+    else:
+        # Takes horribly long elsewhise
+        N = 32
+
     create_file(create_data(len=N, flips=None), 'a')
     create_file(create_data(len=N, flips=[-1]), 'b')
     head, *data, footer = run_rmlint('-S a')

@@ -2,12 +2,13 @@
 # UTILITIES #
 #############
 
-import subprocess
-import shutil
-import json
 import os
+import json
+import shutil
+import shlex
+import subprocess
 
-
+USE_VALGRIND = True
 TESTDIR_NAME = '/tmp/rmlint-unit-testdir'
 
 def runs_as_root():
@@ -21,6 +22,24 @@ def create_testdir():
         pass
 
 
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath and is_exe(program):
+        return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            print(exe_file)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 def run_rmlint(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     if use_default_dir:
         if dir_suffix:
@@ -30,13 +49,27 @@ def run_rmlint(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     else:
         target_dir = ""
 
-    cmd = ' '.join(
-        ['./rmlint', target_dir, '-o json:stdout']
-        + ['-o {f}:{p}'.format(f=output, p=os.path.join(TESTDIR_NAME, '.' + output)) for output in outputs or []]
-        + list(args)
-    )
+    if os.environ.get('USE_VALGRIND'):
+        env = {
+            'G_DEBUG': 'gc-friendly',
+            'G_SLICE': 'always-malloc'
+        }
+        cmd = [which('valgrind'), '--show-possibly-lost=no', '-q']
+    else:
+        env, cmd = {}, []
 
-    output = subprocess.check_output(cmd, shell=True)
+    cmd += ['./rmlint', target_dir, '-o', 'json:stdout'] + shlex.split(' '.join(args))
+
+    for output in outputs or []:
+        cmd.append('-o')
+        cmd.append('{f}:{p}'.format(
+            f=output, p=os.path.join(TESTDIR_NAME, '.' + output))
+        )
+
+    # filter empty strings
+    cmd = list(filter(None, cmd))
+
+    output = subprocess.check_output(cmd, shell=False, env=env)
     json_data = json.loads(output.decode('utf-8'))
 
     read_outputs = []
