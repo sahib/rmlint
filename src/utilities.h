@@ -35,10 +35,10 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 
-#if __FreeBSD__
-typedef struct stat RmStat;
-#else
+#if HAVE_BIGFILES
 typedef struct stat64 RmStat;
+#else
+typedef struct stat RmStat;
 #endif
 
 ////////////////////////////////////
@@ -46,23 +46,23 @@ typedef struct stat64 RmStat;
 ////////////////////////////////////
 
 static inline int rm_sys_stat(const char *path, RmStat *buf) {
-#ifdef __FreeBSD__
-    return stat(path, buf);
-#else
+#if HAVE_BIGFILES
     return stat64(path, buf);
+#else
+    return stat(path, buf);
 #endif
 }
 
 static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#ifdef __FreeBSD__
-    return lstat(path, buf);
-#else
+#if HAVE_BIGFILES
     return lstat64(path, buf);
+#else
+    return lstat(path, buf);
 #endif
 }
 
 static inline int rm_sys_open(const char *path, int mode) {
-#ifndef __FreeBSD__
+#if HAVE_BIGFILES
     mode |= O_LARGEFILE;
 #endif
 

@@ -16,11 +16,16 @@ def build_config_template(target, source, env):
     text = source[0].get_text_contents()
 
     with codecs.open(target[0].get_abspath(), 'w') as handle:
+        # TODO
         handle.write(text.format(
             INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
-            HAVE_GLIB=int(env['glib']),
-            HAVE_LIBINTL=int(WhereIs('msgfmt') is not None),
-            HAVE_BLKID=int(env['blkid']),
+            HAVE_LIBINTL=env['HAVE_GETTEXT'],
+            HAVE_LIBELF=env['HAVE_LIBELF'],
+            HAVE_MNTENT=env['HAVE_MNTENT'],
+            HAVE_FIEMAP=env['HAVE_FIEMAP'],
+            HAVE_SHA512=env['HAVE_SHA512'],
+            HAVE_BIGFILES=env['HAVE_BIGFILES'],
+            HAVE_BLKID=int(env['HAVE_BLKID']),
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,

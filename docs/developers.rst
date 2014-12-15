@@ -122,6 +122,11 @@ Notable targets
 
     Install all program parts system-wide.
 
+:config:
+
+    Print a summary of all features that will be compiled and what the
+    environment looks like.
+
 :man:
 
     Build the manpage.

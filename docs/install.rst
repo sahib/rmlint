@@ -62,6 +62,7 @@ binary:
 
    $ git clone -b develop https://github.com/sahib/rmlint.git 
    $ cd rmlint/
+   $ scons config       # Look what features scons would compile
    $ scons DEBUG=1 -j4  # For releases you can omit DEBUG=1
    $ sudo scons DEBUG=1 --prefix=/usr install
 

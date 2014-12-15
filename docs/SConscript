@@ -6,35 +6,14 @@ Import('VERSION_MAJOR')
 Import('VERSION_MINOR')
 Import('VERSION_PATCH')
 Import('create_uninstall_target')
+Import('find_sphinx_binary')
 
 
 import os
-import glob
 import time
 import subprocess
 
 from functools import partial
-
-
-def find_sphinx_binary():
-    PATH = os.getenv('PATH')
-    binaries = []
-    for path in PATH.split(os.pathsep):
-        binaries.extend(glob.glob(os.path.join(path, 'sphinx-build*')))
-
-    def version_key(binary):
-        splitted = binary.rsplit('-', 1)
-        if len(splitted) < 3:
-            return 0
-        return float(splitted[-1])
-
-    binaries = sorted(binaries, key=version_key, reverse=True)
-    if binaries:
-        print('Using sphinx-build binary: {}'.format(binaries[0]))
-        return binaries[0]
-    else:
-        print('Unable to find sphinx binary for python3')
-        print('Will be unable to build manpage or html docs')
 
 
 def run_sphinx_binary(builder, **kwargs):

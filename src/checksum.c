@@ -39,7 +39,7 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_UNKNOWN;
     } else if(!strcasecmp(string, "md5")) {
         return RM_DIGEST_MD5;
-#ifdef G_CHECKSUM_SHA512
+#if HAVE_SHA512
     } else if(!strcasecmp(string, "sha512")) {
         return RM_DIGEST_SHA512;
 #endif
@@ -110,7 +110,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         ADD_SEED(digest, seed1);
         digest->bytes = 128 / 8;
         return digest;
-#ifdef G_CHECKSUM_SHA512
+#if HAVE_SHA512
     case RM_DIGEST_SHA512:
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA512);
         ADD_SEED(digest, seed1);

@@ -39,14 +39,16 @@
 #include <fts.h>
 #include <libgen.h>
 
+#include "config.h"
+
 /* Not available there,
  * but might be on other non-linux systems
  * */
-#ifndef __FreeBSD__
+#if HAVE_MNTENT
 #  include <mntent.h>
 #endif
 
-#ifdef __linux__
+#if HAVE_FIEMAP
 #  include <linux/fs.h>
 #  include <linux/fiemap.h>
 #endif
@@ -58,7 +60,11 @@
 
 /* External libraries */
 #include <glib.h>
-#include <libelf.h>
+
+#if HAVE_LIBELF
+#  include <libelf.h>
+#endif
+
 #include <gelf.h>
 
 #if HAVE_BLKID
@@ -148,8 +154,10 @@ int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {
 }
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
-bool rm_util_is_nonstripped(const char *path, RmStat *statp) {
+bool rm_util_is_nonstripped(_U const char *path, _U RmStat *statp) {
     bool is_ns = false;
+
+#if HAVE_LIBELF
     g_return_val_if_fail(path, false);
 
     if(statp && (statp->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
@@ -203,6 +211,7 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp) {
     }
     elf_end(elf);
     rm_sys_close(fd);
+#endif
 
     return is_ns;
 }
@@ -313,7 +322,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
-#ifndef __FreeBSD__
+#if HAVE_MNTENT && HAVE_BLKID
 
 RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
@@ -435,7 +444,6 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 whole_disk = 0;
             }
         } else {
-#if HAVE_BLKID
             if(blkid_devno_to_wholedisk(stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
                 /* folder and devname rm_sys_stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
@@ -447,11 +455,6 @@ static void rm_mounts_create_tables(RmMountTable *self) {
             } else {
                 is_rotational = rm_mounts_is_rotational_blockdev(diskname);
             }
-#else
-            is_rotational = true;
-            whole_disk = stat_buf_dev.st_dev;
-            strncpy(diskname, "blkid_missing", sizeof(diskname));
-#endif
         }
 
         g_hash_table_insert(
@@ -595,7 +598,7 @@ typedef struct RmOffsetEntry {
 } RmOffsetEntry;
 
 
-#ifdef __linux__
+#if HAVE_FIEMAP
 
 /* sort sequence into decreasing order of logical offsets */
 static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {

@@ -3,7 +3,10 @@
 
 import os
 import sys
+import glob
 import subprocess
+
+import SCons.Conftest as tests
 
 VERSION_MAJOR = 2
 VERSION_MINOR = 0
@@ -49,9 +52,93 @@ def check_git_rev(context):
     except subprocess.CalledProcessError:
         print('Unable to find git revision.')
 
-    context.Result(rev)
     conf.env['gitrev'] = rev
+    context.Result(rev)
     return rev
+
+
+def check_libelf(context):
+    rc = 1
+    if tests.CheckHeader(context, 'libelf.h'):
+        rc = 0
+
+    if tests.CheckLib(context, ['libelf']):
+        rc = 0
+
+    conf.env['HAVE_LIBELF'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_gettext(context):
+    rc = 1
+    if tests.CheckHeader(context, 'locale.h'):
+        rc = 0
+
+    conf.env['HAVE_LIBINTL'] = rc
+    conf.env['HAVE_MSGFMT'] = int(WhereIs('msgfmt') is not None)
+    conf.env['HAVE_GETTEXT'] = conf.env['HAVE_MSGFMT'] and conf.env['HAVE_LIBINTL']
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_fiemap(context):
+    rc = 1
+    if tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
+        rc = 0
+
+    conf.env['HAVE_FIEMAP'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_bigfiles(context):
+    rc = 1
+    if tests.CheckFunc(
+        context, 'stat64',
+        header='\n'.join([
+            '#include <sys/types.h>'
+            '#include <sys/stat.h>'
+            '#include <unistd.h>\n'
+        ])
+    ):
+        rc = 0
+
+    conf.env['HAVE_BIGFILES'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_getmntent(context):
+    rc = 1
+    if tests.CheckHeader(context, 'mntent.h'):
+        rc = 0
+
+    conf.env['HAVE_MNTENT'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_sha512(context):
+    rc = 1
+    if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>\n'):
+        rc = 0
+
+    conf.env['HAVE_SHA512'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
 
 
 def create_uninstall_target(env, path):
@@ -60,7 +147,32 @@ def create_uninstall_target(env, path):
     ])
     env.Alias("uninstall", "uninstall-" + path)
 
+
 Export('create_uninstall_target')
+
+
+def find_sphinx_binary():
+    PATH = os.getenv('PATH')
+    binaries = []
+    for path in PATH.split(os.pathsep):
+        binaries.extend(glob.glob(os.path.join(path, 'sphinx-build*')))
+
+    def version_key(binary):
+        splitted = binary.rsplit('-', 1)
+        if len(splitted) < 3:
+            return 0
+        return float(splitted[-1])
+
+    binaries = sorted(binaries, key=version_key, reverse=True)
+    if binaries:
+        print('Using sphinx-build binary: {}'.format(binaries[0]))
+        return binaries[0]
+    else:
+        print('Unable to find sphinx binary in PATH')
+        print('Will be unable to build manpage or html docs')
+
+
+Export('find_sphinx_binary')
 
 ###########################################################################
 #                                 Colors!                                 #
@@ -150,7 +262,13 @@ Export('env')
 conf = Configure(env, custom_tests={
     'check_pkgconfig': check_pkgconfig,
     'check_pkg': check_pkg,
-    'check_git_rev': check_git_rev
+    'check_git_rev': check_git_rev,
+    'check_libelf': check_libelf,
+    'check_fiemap': check_fiemap,
+    'check_sha512': check_sha512,
+    'check_getmntent': check_getmntent,
+    'check_bigfiles': check_bigfiles,
+    'check_gettext': check_gettext
 })
 
 if not conf.CheckCC():
@@ -162,9 +280,8 @@ conf.check_pkgconfig('0.15.0')
 
 # Pkg-config to internal name
 DEPS = {
-    'glib-2.0 >= 2.32': 'glib',
-    'blkid': 'blkid'
-    # libelf has no .pc file :/
+    'glib-2.0 >= 2.32': 'HAVE_GLIB',
+    'blkid': 'HAVE_BLKID'
 }
 
 for pkg, name in DEPS.items():
@@ -229,6 +346,13 @@ conf.env.Append(_LIBFLAGS=[
     '-lm', '-lelf'
 ])
 
+conf.check_libelf()
+conf.check_fiemap()
+conf.check_bigfiles()
+conf.check_sha512()
+conf.check_getmntent()
+conf.check_gettext()
+
 # Your extra checks here
 env = conf.Finish()
 
@@ -236,3 +360,61 @@ program = SConscript('src/SConscript')
 SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
+
+if 'config' in COMMAND_LINE_TARGETS:
+    def print_config(target=None, source=None, env=None):
+        yesno = lambda boolean: 'yes' if boolean else 'no'
+
+        sphinx_bin = find_sphinx_binary()
+
+        print('''
+rmlint will be compiled with the following features:
+
+    Find non-stripped binaries (needs libelf)         : {libelf}
+    Optimize using ioctl(FS_IOC_FIEMAP) (needs linux) : {fiemap}
+    Support for SHA512 (needs glib >= 2.31)           : {sha512}
+    Checking for proper support of big files (stat64) : {bigfiles}
+    Build manpage from docs/rmlint.1.rst              : {sphinx}
+
+    Optimize non-rotational disks                     : {nonrotational}
+        (needs libblkid for resolving dev_t to path)  : {blkid}
+        (needs <mntent.h> for listing all mounts)     : {mntent}
+
+    Enable gettext localization                       : {gettext}
+        (needs <locale.h> for compile side support)   : {locale}
+        (needs msgfmt to compile .po files)           : {msgfmt}
+
+The following constants will be used during the build:
+
+    Version information  : {version}
+    Compiler             : {compiler}
+    Install prefix       : {prefix}
+    Actual prefix        : {actual_prefix}
+    Verbose building     : {verbose}
+    Adding debug symbols : {debug}
+
+Type 'scons' to actually compile rmlint now. Good luck.
+    '''.format(
+            libelf=yesno(env['HAVE_LIBELF']),
+            gettext=yesno(env['HAVE_GETTEXT']),
+            locale=yesno(env['HAVE_LIBINTL']),
+            msgfmt=yesno(env['HAVE_MSGFMT']),
+            nonrotational=yesno(env['HAVE_BLKID'] and env['HAVE_MNTENT']),
+            blkid=yesno(env['HAVE_BLKID']),
+            mntent=yesno(env['HAVE_MNTENT']),
+            fiemap=yesno(env['HAVE_FIEMAP']),
+            sha512=yesno(env['HAVE_SHA512']),
+            bigfiles=yesno(env['HAVE_BIGFILES']),
+            sphinx='yes, using ' + sphinx_bin if sphinx_bin else 'no',
+            compiler=env['CC'],
+            prefix=GetOption('prefix'),
+            actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
+            verbose=yesno(ARGUMENTS.get('VERBOSE')),
+            debug=yesno(ARGUMENTS.get('DEBUG')),
+            version='{a}.{b}.{c} "{n}" (rev {r})'.format(
+                a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH,
+                n=VERSION_NAME, r=env.get('gitrev', 'unknown')
+            )
+        ))
+
+    env.Command('config', None, Action(print_config, "Printing configuration..."))
