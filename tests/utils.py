@@ -33,7 +33,6 @@ def which(program):
         for path in os.environ["PATH"].split(os.pathsep):
             path = path.strip('"')
             exe_file = os.path.join(path, program)
-            print(exe_file)
             if is_exe(exe_file):
                 return exe_file
 

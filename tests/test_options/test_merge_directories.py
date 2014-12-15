@@ -135,8 +135,6 @@ def test_deep_full_twice():
         ),
         use_default_dir=False
     )
-    for d in data:
-        print(d['path'])
 
     # TODO: check more.
     assert data[0]['path'].endswith('deep_a')
