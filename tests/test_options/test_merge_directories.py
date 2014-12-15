@@ -136,11 +136,14 @@ def test_deep_full_twice():
         use_default_dir=False
     )
 
-    # TODO: check more.
     assert data[0]['path'].endswith('deep_a')
+    assert data[0]['is_original']
     assert data[1]['path'].endswith('deep_b')
+    assert not data[1]['is_original']
     assert data[2]['path'].endswith('deep_a/a')
+    assert data[2]['is_original']
     assert data[3]['path'].endswith('deep_a/e')
+    assert not data[3]['is_original']
     assert len(data) == 4
 
 
@@ -155,12 +158,16 @@ def test_symlinks():
 
     assert len(data) == 2
     assert data[0]['path'].endswith('a/z')
+    assert data[0]['is_original']
     assert data[1]['path'].endswith('b/z')
+    assert not data[1]['is_original']
 
     head, *data, footer = run_rmlint('-ppp -D -S a -f')
     assert len(data) == 2
     assert data[0]['path'].endswith('/a')
+    assert data[0]['is_original']
     assert data[1]['path'].endswith('/b')
+    assert not data[1]['is_original']
 
 
 def mount_bind_teardown_func():

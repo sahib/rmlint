@@ -16,7 +16,6 @@ def build_config_template(target, source, env):
     text = source[0].get_text_contents()
 
     with codecs.open(target[0].get_abspath(), 'w') as handle:
-        # TODO
         handle.write(text.format(
             INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
             HAVE_LIBINTL=env['HAVE_GETTEXT'],
