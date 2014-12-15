@@ -19,7 +19,7 @@ from functools import partial
 def find_sphinx_binary():
     PATH = os.getenv('PATH')
     binaries = []
-    for path in PATH.split(':'):
+    for path in PATH.split(os.pathsep):
         binaries.extend(glob.glob(os.path.join(path, 'sphinx-build*')))
 
     def version_key(binary):
