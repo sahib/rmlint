@@ -90,6 +90,7 @@ def check_fiemap(context):
     rc = 1
     if tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
         rc = 0
+        print('I fired')
 
     conf.env['HAVE_FIEMAP'] = rc
 
@@ -178,15 +179,28 @@ Export('find_sphinx_binary')
 #                                 Colors!                                 #
 ###########################################################################
 
-COLORS = {
-    'cyan': '\033[96m',
-    'purple': '\033[95m',
-    'blue': '\033[94m',
-    'green': '\033[92m',
-    'yellow': '\033[93m',
-    'red': '\033[91m',
-    'end': '\033[0m'
-}
+if sys.stdout.isatty():
+    COLORS = {
+        'cyan': '\033[96m',
+        'purple': '\033[95m',
+        'blue': '\033[94m',
+        'green': '\033[92m',
+        'yellow': '\033[93m',
+        'red': '\033[91m',
+        'grey': '\x1b[30;1m',
+        'end': '\033[0m'
+    }
+else:
+    COLORS = {
+        'cyan': '',
+        'purple': '',
+        'blue': '',
+        'green': '',
+        'yellow': '',
+        'red': '',
+        'grey': '',
+        'end': ''
+    }
 
 # If the output is not a terminal, remove the COLORS
 if not sys.stdout.isatty():
@@ -363,12 +377,12 @@ SConscript('docs/SConscript')
 
 if 'config' in COMMAND_LINE_TARGETS:
     def print_config(target=None, source=None, env=None):
-        yesno = lambda boolean: 'yes' if boolean else 'no'
+        yesno = lambda boolean: COLORS['green'] + 'yes' + COLORS['end'] if boolean else COLORS['red'] + 'no' + COLORS['end']
 
         sphinx_bin = find_sphinx_binary()
 
         print('''
-rmlint will be compiled with the following features:
+{grey}rmlint will be compiled with the following features:{end}
 
     Find non-stripped binaries (needs libelf)         : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux) : {fiemap}
@@ -384,7 +398,7 @@ rmlint will be compiled with the following features:
         (needs <locale.h> for compile side support)   : {locale}
         (needs msgfmt to compile .po files)           : {msgfmt}
 
-The following constants will be used during the build:
+{grey}The following constants will be used during the build:{end}
 
     Version information  : {version}
     Compiler             : {compiler}
@@ -395,6 +409,7 @@ The following constants will be used during the build:
 
 Type 'scons' to actually compile rmlint now. Good luck.
     '''.format(
+            grey=COLORS['grey'], end=COLORS['end'],
             libelf=yesno(env['HAVE_LIBELF']),
             gettext=yesno(env['HAVE_GETTEXT']),
             locale=yesno(env['HAVE_LIBINTL']),
@@ -405,7 +420,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
-            sphinx='yes, using ' + sphinx_bin if sphinx_bin else 'no',
+            sphinx=COLORS['green'] + 'yes, using ' + COLORS['end'] + sphinx_bin if sphinx_bin else yesno(sphinx_bin),
             compiler=env['CC'],
             prefix=GetOption('prefix'),
             actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),

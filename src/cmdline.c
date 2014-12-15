@@ -54,11 +54,37 @@ static void rm_cmd_die(RmSession *session, int status) {
 static void rm_cmd_show_version(void) {
     fprintf(
         stderr,
-        "rmlint-version %s compiled: %s at [%s] \"%s\" (rev %s)\n",
+        "version %s compiled: %s at [%s] \"%s\" (rev %s)\n",
         RMLINT_VERSION, __DATE__, __TIME__,
         RMLINT_VERSION_NAME,
         RMLINT_VERSION_GIT_REVISION
     );
+
+    struct {
+        bool enabled : 1;
+        const char * name;
+    } features[] = {
+        {.name="mounts",      .enabled=HAVE_BLKID | HAVE_MNTENT},
+        {.name="nonstripped", .enabled=HAVE_LIBELF},
+        {.name="fiemap",      .enabled=HAVE_FIEMAP},
+        {.name="sha512",      .enabled=HAVE_SHA512},
+        {.name="bigfiles",    .enabled=HAVE_BIGFILES},
+        {.name="intl",        .enabled=HAVE_LIBINTL}
+    };
+
+    int n_features = sizeof(features) / sizeof(features[0]);
+
+    fprintf(stderr, "compiled with: ");
+
+    for(int i = 0; i < n_features; ++i) {
+        if(features[i].enabled) {
+            fprintf(stderr, "+%s ", features[i].name);
+        } else {
+            fprintf(stderr, "-%s ", features[i].name);
+        }
+    }
+
+    fprintf(stderr, RESET"\n");
 }
 
 static void rm_cmd_show_help(bool use_pager) {
