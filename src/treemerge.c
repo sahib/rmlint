@@ -620,7 +620,9 @@ static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory
 
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
-        rm_tm_mark_original_files(self, (RmDirectory *)iter->data);
+        RmDirectory *child = iter->data;
+        child->finished = false;
+        rm_tm_mark_original_files(self, child);
     }
 }
 
@@ -737,6 +739,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
         );
 
         GQueue file_adaptor_group = G_QUEUE_INIT;
+
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
             RmFile *mask = rm_directory_as_file(directory);
@@ -749,7 +752,9 @@ static void rm_tm_extract(RmTreeMerger *self) {
             }
         }
 
-        rm_shred_forward_to_output(self->session, &file_adaptor_group, true);
+        if(result_dirs.length >= 2)  {
+            rm_shred_forward_to_output(self->session, &file_adaptor_group, true);
+        } 
 
         g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
         g_queue_clear(&file_adaptor_group);
