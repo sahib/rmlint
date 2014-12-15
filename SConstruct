@@ -8,7 +8,8 @@ import subprocess
 VERSION_MAJOR = 2
 VERSION_MINOR = 0
 VERSION_PATCH = 0
-Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH')
+VERSION_NAME = 'Personable Pidgeon'
+Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 
 ###########################################################################
 #                                Utilities                                #
@@ -41,10 +42,11 @@ def check_pkg(context, name, varname, required=True):
 
 def check_git_rev(context):
     context.Message('Checking for git revision... ')
+    rev = VERSION_NAME
+
     try:
         rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
     except subprocess.CalledProcessError:
-        rev = 'unknown'
         print('Unable to find git revision.')
 
     context.Result(rev)
@@ -198,14 +200,18 @@ conf.env.Append(CCFLAGS=[
 if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])
 else:
-    if conf.env['CC'] == 'gcc':
-        # GCC-Specific Options.
-        conf.env.Append(CCFLAGS=['-lto'])
-        conf.env.Append(CCFLAGS=['-march=native', '-Os'])
-    else:
-        # Generic compiler:
-        conf.env.Append(CCFLAGS=['-Os'])
+    # Generic compiler:
+    conf.env.Append(CCFLAGS=['-Os'])
     conf.env.Append(LINKFLAGS=['-s'])
+
+if 'gcc' in os.path.basename(conf.env['CC']):
+    # GCC-Specific Options.
+    conf.env.Append(CCFLAGS=['-lto'])
+    conf.env.Append(CCFLAGS=['-march=native'])
+elif 'clang' in os.path.basename(conf.env['CC']):
+    conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
+    conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
+
 
 # Optional flags:
 conf.env.Append(CFLAGS=[

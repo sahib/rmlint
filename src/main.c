@@ -90,6 +90,7 @@ static void signal_handler(int signum) {
 }
 
 static void i18n_init(void) {
+#if HAVE_LIBINTL
     /* Tell gettext where to search for .mo files */
     bindtextdomain("rmlint", INSTALL_PREFIX"/share/locale");
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
@@ -102,6 +103,7 @@ static void i18n_init(void) {
      * /usr/share/locale/de/LC_MESSAGEs/rmlint.mo
      * */
     textdomain("rmlint");
+#endif
 }
 
 int main(int argc, const char **argv) {

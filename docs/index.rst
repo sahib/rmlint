@@ -2,8 +2,33 @@
 ..    :align: center
 ..    :width: 66%
 
-Introduction
-------------
+    
+----
+
+.. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
+   :align: left 
+   :width: 150
+
+|
+|
+|
+
+.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
+   :target: https://rmlint.rtfd.org
+
+.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
+   :target: https://travis-ci.org/sahib/rmlint
+
+.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/issues
+
+.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/releases
+
+.. image:: http://img.shields.io/badge/license-GPLv3-ff69b4.svg?style=flat
+   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+
+|
 
 **rmlint** finds space waste and other broken things on your filesystem and offers
 to remove it. It is able to find:
@@ -31,15 +56,15 @@ to remove it. It is able to find:
    + Many options for originaldetection.
 
 
-.. DANGER::
+.. .. DANGER::
+.. 
+..     **rmlint** is currently in the progress of being rewritten. 
+..     This means that it still may contain bugs that might burn your data.
+.. 
+..     Use at your own risk!
 
-    **rmlint** is currently in the progress of being rewritten. 
-    This means that it still may contain bugs that might burn your data.
-
-    Use at your own risk!
-
-Manual
-------
+User manual
+-----------
 
 Although **rmlint** is easy to use, you might want to read these chapters first.
 They show you the basic principles and most of the advanced options:
@@ -49,15 +74,16 @@ They show you the basic principles and most of the advanced options:
 
    install
    tutorial
+   faq
 
-Reference
----------
+Informative reference
+---------------------
 
 These chapters are informative and are not essential for the average
 user. People that want to extend **rmlint** might want to read this though: 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
        
    developers
    translators

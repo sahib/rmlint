@@ -5,11 +5,13 @@
 
 #define HAVE_GLIB {HAVE_GLIB}
 #define HAVE_BLKID {HAVE_BLKID}
+#define HAVE_LIBINTL {HAVE_LIBINTL}
 
 #define RMLINT_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
 #define RMLINT_VERSION_MAJOR {VERSION_MAJOR}
 #define RMLINT_VERSION_MINOR {VERSION_MINOR}
 #define RMLINT_VERSION_PATCH {VERSION_PATCH}
+#define RMLINT_VERSION_NAME  "{VERSION_NAME}"
 #define RMLINT_VERSION_GIT_REVISION "{VERSION_GIT_REVISION}"
 
 /* Might come in useful */
@@ -56,12 +58,19 @@
 
 #include <glib.h>
 
-#include <libintl.h>
 #define GETTEXT_PACKAGE "rmlint"
 
-#define _(String) gettext (String)
-#define gettext_noop(String) String
-#define N_(String) gettext_noop (String)
+#if HAVE_LIBINTL
+#  define _(String) gettext (String)
+#  define gettext_noop(String) String
+#  define N_(String) gettext_noop (String)
+#  include <libintl.h>
+#else
+#  define _(String) (String)
+#  define gettext_noop(String) String
+#  define N_(String) gettext_noop (String)
+#endif
+
 
 typedef guint64 RmOff;
 

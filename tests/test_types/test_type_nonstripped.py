@@ -19,7 +19,7 @@ def create_binary(path, stripped=False):
     path = path + '.stripped' if stripped else path + '.nonstripped'
     full_path = os.path.join(TESTDIR_NAME, path)
 
-    command = 'echo \'{src}\' | gcc -o {path} {option} -std=c99 -xc -'.format(
+    command = 'echo \'{src}\' | cc -o {path} {option} -std=c99 -xc -'.format(
         src=SOURCE, path=full_path, option=('-s' if stripped else '-ggdb3')
     )
     subprocess.call(command, shell=True)

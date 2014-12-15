@@ -56,6 +56,8 @@ void rm_set_default_settings(RmSettings *settings) {
     settings->threads       = 32;
     settings->verbosity     = G_LOG_LEVEL_INFO;
     settings->paranoid_mem  = 256 * 1024 * 1024;
+    settings->followlinks   = false;
+    settings->see_symlinks  = true;
 
     settings->skip_start_factor = 0.0;
     settings->skip_end_factor   = 1.0;

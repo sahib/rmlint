@@ -17,7 +17,7 @@ DESCRIPTION
 ===========
 
 ``rmlint`` finds space waste and other broken things on your filesystem and offers
-to remove it. 
+to remove it. Types of waste include:
 
 * Duplicate files.
 * Nonstripped Binaries (Binaries with debug symbols).
@@ -26,7 +26,7 @@ to remove it.
 * Files with broken user or group id.
 
 In order to find the lint, ``rmlint`` is given one or more directories to traverse.
-If no directory or file was given, the current working directory is assumed.
+If no directories or files were given, the current working directory is assumed.
 ``rmlint`` will take care of things like filesystem loops and symlinks during
 traversing. 
 
@@ -53,17 +53,28 @@ General Options
 
     * ``all``: Enables all lint types.
     * ``defaults``: Enables all lint types, but ``nonstripped``.
+    * ``minimal``: ``defaults`` minus ``emptyfiles`` and ``emptydirs``.
+    * ``minimaldirs``: ``defaults`` minus ``emptyfiles``, ``emptydirs`` and
+      ``duplicates``, but with ``duplicatedirs``.
     * ``none``: Disable all lint types.
 
     All following lint types must be one of the following, optionally prefixed
     with a **+** or **-** to select or deselect it:
 
     * ``badids``, ``bi``: Find bad UID, GID or files with both.
-    * ``badlinks``, ``bl``: Find bad symlinks pointing nowhere (Note: ``-f`` is required).
+    * ``badlinks``, ``bl``: Find bad symlinks pointing nowhere.
     * ``emptydirs``, ``ed``: Find empty directories.
     * ``emptyfiles``, ``ef``: Find empty files.
     * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
     * ``duplicates``, ``df``: Find duplicate files.
+    * ``duplicatedirs``, ``dd``: Find duplicate directories. 
+
+    **Warning:** It is good practice to enclose the description in quotes. In
+    obscure cases argument parsing might fail in weird ways::
+
+        # -ed is recognized as -e and -d here, -d takes "-s 10M" as parameter.
+        # This will fail to do the supposed, finding also files smaller than 10M.
+        $ rmlint -T all -ef -ed -s10M /media/music/  
 
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
@@ -125,18 +136,18 @@ General Options
     The last one is not a hash function in the traditional meaning, but performs
     a byte-by-byte comparison of each file. See also **--max-paranoid-ram**.
 
-    For the adventurous, it is also possible to decrease the default paranoia.
+    For the adventurous, it is also possible to decrease the default paranoia:
 
     * **-P** is equivalent to **--algorithm spooky64**
     * **-PP** is equivalent to **--algorithm spooky32**
     * **-PPP** is equivalent to **--algorithm debian_random**
 
-    This is really not recommended. 
+    *This is really not recommended though.*
 
 :``-D --merge-directories`` (**[experimental] default\:** *disabled*):
 
     Makes rmlint use a special mode where all found duplicates are collected and
-    checked wether whole directory trees are duplicates. This is an HIGHLY
+    checked if whole directory trees are duplicates. This is an HIGHLY
     EXPERIMENTAL FEATURE and was/is tricky to implement right. Use with caution.
     You always should make sure that the investigated directory is not modified 
     during rmlint or it's removal scripts run. 
@@ -150,9 +161,10 @@ General Options
 
     *Notes:*
 
-    * This does not work with **--algorithm=paranoid** (or **-ppp**).
+    * This option pulls in ``-r`` (``--hidden``) and ``-l`` (``--hardlinked``) for convenience.
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
+    * Consider using ``-FF`` together with this option (this is the default).
 
 :``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
 
@@ -215,13 +227,14 @@ Traversal Options
     therefore keep only one of them in it's internal list.
     If `-l` is specified the whole group is reported instead.
 
-:``-f --followlinks`` (**default**) / ``-F --no-followlinks``:
+:``-f --followlinks`` / ``-F --no-followlinks`` / ``-FF --see-symlinks (**default**)``:
 
     Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
-    If `-F` is specified, symbolic links will be ignored completely.
+    If `-F` is specified, symbolic links will be ignored completely, if the
+    ``-F`` is specified once more ``rmlint`` will see symlinks an treats them
+    like small files with the path to their target in them. The latter is the
+    default behaviour, since it is a sensible default for ``--merge-directories``.
 
-    *This option is needed for finding bad symbolic links.*
-    
     **Note:** Hardlinks are always followed, but it depends on ``-L`` how those are
     handled. 
 
@@ -258,20 +271,22 @@ Traversal Options
     seconds since the epoch or as ISO8601-Timestamp like
     *2014-09-08T00:12:32+0200*. 
 
-    **-n** expects a file from where it can read the timestamp from. After
+    ``-n`` expects a file from where it can read the timestamp from. After
     rmlint run, the file will be updated with the current timestamp.
     If the file does not initially exist, no filtering is done but the stampfile
     is still written.
 
+    ``-N`` in contrast takes the timestamp directly and will not write anything.
+
     If you want to take **only** the files (and not their size siblings) you can
     use ``find(1)``:
 
-        ``find -mtime -1 | rmlint - # find all files younger than a day``
+    * ``find -mtime -1 | rmlint - # find all files younger than a day``
 
     *Note:* you can make rmlint write out a compatible timestamp with:
 
-    * ``-O stamp:stdout``
-    * ``-O stamp:stdout -c stamp:iso8601``
+    * ``-O stamp:stdout  # Write a seconds-since-epoch timestamp to stdout on finish.``
+    * ``-O stamp:stdout -c stamp:iso8601 # Same, but write as ISO8601.``
 
 Original Detection Options
 --------------------------
@@ -398,7 +413,7 @@ SEE ALSO
 
 Extended documentation and an in-depth tutorial can be found at:
 
-    http://rmlint.rtfd.org
+    * http://rmlint.rtfd.org
 
 BUGS
 ====
@@ -408,7 +423,7 @@ visit https://github.com/sahib/rmlint/issues.
 
 Please make sure to describe your problem in detail. Always include the version
 of ``rmlint`` (``--version``). If you experienced a crash, please include 
-one of the following information with a debug build of ``rmlint``:
+at least one of the following information with a debug build of ``rmlint``:
 
 * ``gdb --ex run -ex bt --args rmlint -vvv [your_options]``
 * ``valgrind --leak-check=no rmlint -vvv [your_options]``

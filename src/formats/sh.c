@@ -70,7 +70,7 @@ static const char *SH_SCRIPT_TEMPLATE_HEAD =
     "DO_REMOVE=                                          \n"
     "DO_ASK=                                             \n"
     "                                                    \n"
-    "while getopts “dhx” OPTION                          \n"
+    "while getopts \"dhx\" OPTION                        \n"
     "do                                                  \n"
     "  case $OPTION in                                   \n"
     "     h)                                             \n"
@@ -159,9 +159,9 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         break;
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
         if(file->is_original) {
-            fprintf(out, "rm -rf '%s' # original directory\n", dupe_path);
-        } else {
             fprintf(out, "echo   '%s' # original directory\n", dupe_path);
+        } else {
+            fprintf(out, "rm -rf '%s' # duplicate directory\n", dupe_path);
         }
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
@@ -187,7 +187,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         }
         break;
     default:
-        rm_log_warning("Warning: unknown type in write_to_log %d\n", file->lint_type);
+        rm_log_warning("Warning: unknown type in encountered: %d\n", file->lint_type);
         break;
     }
 

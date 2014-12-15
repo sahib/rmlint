@@ -39,10 +39,17 @@
 #include <fts.h>
 #include <libgen.h>
 
-#include <mntent.h>
+/* Not available there,
+ * but might be on other non-linux systems
+ * */
+#ifndef __FreeBSD__
+#  include <mntent.h>
+#endif
 
-#include <linux/fs.h>
-#include <linux/fiemap.h>
+#ifdef __linux__
+#  include <linux/fs.h>
+#  include <linux/fiemap.h>
+#endif
 
 /* Internal headers */
 #include "config.h"
@@ -246,6 +253,7 @@ RmUserList *rm_userlist_new(void) {
     RmUserList *self = g_malloc0(sizeof(RmUserList));
     self->users = g_sequence_new(NULL);
     self->groups = g_sequence_new(NULL);
+    g_mutex_init(&self->mutex);
 
     setpwent();
     while((node = getpwent()) != NULL) {
@@ -263,11 +271,13 @@ RmUserList *rm_userlist_new(void) {
     return self;
 }
 
-bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
-    g_assert(list);
+bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
+    g_assert(self);
 
-    bool gid_found = g_sequence_lookup(list->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
-    bool uid_found = g_sequence_lookup(list->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
+    g_mutex_lock(&self->mutex);
+    bool gid_found = g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
+    bool uid_found = g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
+    g_mutex_unlock(&self->mutex);
 
     if(valid_uid != NULL) {
         *valid_uid = uid_found;
@@ -280,10 +290,13 @@ bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid, boo
     return (gid_found && uid_found);
 }
 
-void rm_userlist_destroy(RmUserList *list) {
-    g_sequence_free(list->users);
-    g_sequence_free(list->groups);
-    g_free(list);
+void rm_userlist_destroy(RmUserList *self) {
+    g_assert(self);
+
+    g_sequence_free(self->users);
+    g_sequence_free(self->groups);
+    g_mutex_clear(&self->mutex);
+    g_free(self);
 }
 
 /////////////////////////////////////
@@ -299,6 +312,8 @@ typedef struct RmPartitionInfo {
     char *name;
     dev_t disk;
 } RmPartitionInfo;
+
+#ifndef __FreeBSD__
 
 RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
@@ -377,6 +392,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                             g_str_equal,
                                             g_free,
                                             NULL);
+
 
     /* 0:0 is reserved for the completely unknown */
     FILE *mnt_file = setmntent("/etc/mtab", "r");
@@ -485,8 +501,23 @@ void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->nfs_table);
     g_slice_free(RmMountTable, self);
 }
+#else /* probably FreeBSD */
+
+RmMountTable *rm_mounts_table_new(void) {
+    return NULL;
+}
+
+void rm_mounts_table_destroy(_U RmMountTable *self) {
+    /* NO-OP */
+}
+
+#endif
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
+    if(self == NULL) {
+        return true;
+    }
+
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
     if (part) {
         RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
@@ -503,6 +534,10 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
 }
 
 bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
+    if(self == NULL) {
+        return -1;
+    }
+
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) == -1) {
         return -1;
@@ -511,6 +546,10 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
 }
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
+    if(self == NULL) {
+        return 0;
+    }
+
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
     if (part) {
         return part->disk;
@@ -520,6 +559,10 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
 }
 
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
+    if(self == NULL) {
+        return 0;
+    }
+
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) == -1) {
         return 0;
@@ -529,6 +572,10 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
 }
 
 char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
+    if(self == NULL) {
+        return NULL;
+    }
+
     RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
     if(part) {
         RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
@@ -546,6 +593,9 @@ typedef struct RmOffsetEntry {
     RmOff logical;
     RmOff physical;
 } RmOffsetEntry;
+
+
+#ifdef __linux__
 
 /* sort sequence into decreasing order of logical offsets */
 static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {
@@ -635,7 +685,6 @@ RmOffsetTable rm_offset_create_table(const char *path) {
 }
 
 RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
-#ifdef __linux__
     if (offset_list != NULL) {
         RmOffsetEntry token;
         token.physical = 0;
@@ -651,13 +700,12 @@ RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
             return (gint64)(off->physical + file_offset) - (gint64)off->logical;
         }
     }
-#endif
+
     /* default to 0 always */
     return 0;
 }
 
 RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_offset) {
-#ifdef __linux__
     if (offset_list != NULL) {
         RmOffsetEntry token;
         token.physical = 0;
@@ -675,10 +723,25 @@ RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_off
             return off->logical - file_offset;
         }
     }
-#endif
     /* default to 0 always */
     return 0;
 }
+
+#else /* Probably FreeBSD */
+
+RmOffsetTable rm_offset_create_table(_U const char *path) {
+    return NULL;
+}
+
+RmOff rm_offset_lookup(_U RmOffsetTable table, _U RmOff file_offset) {
+    return 0;
+}
+
+RmOff rm_offset_bytes_to_next_fragment(_U RmOffsetTable table, _U RmOff file_offset) {
+    return 0;
+}
+
+#endif
 
 /////////////////////////////////
 //  GTHREADPOOL WRAPPERS       //
@@ -714,15 +777,15 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 time_t rm_iso8601_parse(const char *string) {
-    struct tm ctime;
-    memset(&ctime, 0, sizeof(struct tm));
+    struct tm time_key;
+    memset(&time_key, 0, sizeof(struct tm));
 
-    if(strptime(string, "%FT%T%z", &ctime) == NULL) {
+    if(strptime(string, "%FT%T%z", &time_key) == NULL) {
         rm_log_perror("strptime(3) failed");
         return 0;
     }
 
-    return mktime(&ctime) + timezone;
+    return mktime(&time_key) + time_key.tm_gmtoff;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {

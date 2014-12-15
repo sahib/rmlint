@@ -36,6 +36,7 @@ typedef struct RmSettings {
     bool samepart;
     bool ignore_hidden;
     bool followlinks;
+    bool see_symlinks;
     bool findbadids;
     bool findbadlinks;
     bool searchdup;
@@ -55,7 +56,7 @@ typedef struct RmSettings {
     bool match_without_extension;   /*  if set, dupes must have the same basename minus the extension */
     bool merge_directories;         /*  if set, find identical directories full of duplicates (EXPERIMENTAL!) */
 
-    int depth;                      /*  max. depth to traverse, 0 means current dir */ 
+    int depth;                      /*  max. depth to traverse, 0 means current dir */
     int verbosity;                  /*  verbosity level (resembles G_LOG_LEVEL_* macros */
     int paranoid;                   /*  Paranoia level from -2 to 3 */
 

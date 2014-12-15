@@ -5,6 +5,7 @@ Import('env')
 Import('VERSION_MAJOR')
 Import('VERSION_MINOR')
 Import('VERSION_PATCH')
+Import('VERSION_NAME')
 Import('create_uninstall_target')
 
 import os
@@ -18,10 +19,12 @@ def build_config_template(target, source, env):
         handle.write(text.format(
             INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
             HAVE_GLIB=int(env['glib']),
+            HAVE_LIBINTL=int(WhereIs('msgfmt') is not None),
             HAVE_BLKID=int(env['blkid']),
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
+            VERSION_NAME=VERSION_NAME,
             VERSION_GIT_REVISION=env['gitrev']
         ))
 
@@ -39,16 +42,12 @@ def build_python_formatter(target, source, env):
         handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
 
 
-config = env.AlwaysBuild(
-    env.Command(
-        'config.h', 'config.h.in', build_config_template
-    )
+config = env.Command(
+    'config.h', 'config.h.in', build_config_template
 )
 
-py_formatter = env.AlwaysBuild(
-    env.Command(
-        'formats/py.c', 'formats/py.c.in', build_python_formatter
-    )
+py_formatter = env.Command(
+    'formats/py.c', 'formats/py.c.in', build_python_formatter
 )
 
 program = env.Program(

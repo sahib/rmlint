@@ -18,7 +18,8 @@ def create_bad_link(link_name):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_basic():
     create_bad_link('imbad')
-    head, *data, footer = run_rmlint('-f')
 
-    assert data[0]['type'] == 'badlink'
-    assert data[0]['path'].endswith('imbad')
+    for option in ('-f', '-F', '-FF'):
+        head, *data, footer = run_rmlint(option)
+        assert data[0]['type'] == 'badlink'
+        assert data[0]['path'].endswith('imbad')

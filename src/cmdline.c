@@ -54,8 +54,10 @@ static void rm_cmd_die(RmSession *session, int status) {
 static void rm_cmd_show_version(void) {
     fprintf(
         stderr,
-        "rmlint-version %s compiled: [%s]-[%s] (rev %s)\n",
-        RMLINT_VERSION, __DATE__, __TIME__, RMLINT_VERSION_GIT_REVISION
+        "rmlint-version %s compiled: %s at [%s] \"%s\" (rev %s)\n",
+        RMLINT_VERSION, __DATE__, __TIME__,
+        RMLINT_VERSION_NAME,
+        RMLINT_VERSION_GIT_REVISION
     );
 }
 
@@ -147,7 +149,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **err
 
     if (found != NULL) {
         /* No overflow check */
-        return decimal * powl(found->base, found->exponent);
+        return decimal * pow(found->base, found->exponent);
     } else {
         return rm_cmd_size_format_error(error, _("Given format specifier not found"));
     }
@@ -208,7 +210,7 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
     RmSettings *settings = session->settings;
     if(faccessat(AT_FDCWD, path, R_OK, AT_EACCESS) != 0) {
-        rm_log_warning_line(_("Can't open directory or file \"%s\": %s\n"), path, strerror(errno));
+        rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path, strerror(errno));
         return FALSE;
     } else {
         settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
@@ -395,8 +397,25 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
                 &settings->listemptyfiles,
                 &settings->nonstripped,
                 &settings->searchdup,
+                &settings->merge_directories,
                 0
             }
+        }, {
+            .names = NAMES{"minimal", 0},
+            .enable = OPTS{
+                &settings->findbadids,
+                &settings->findbadlinks,
+                &settings->searchdup,
+                0
+            },
+        }, {
+            .names = NAMES{"minimaldirs", 0},
+            .enable = OPTS{
+                &settings->findbadids,
+                &settings->findbadlinks,
+                &settings->merge_directories,
+                0
+            },
         }, {
             .names = NAMES{"defaults", 0},
             .enable = OPTS{
@@ -428,7 +447,10 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
         }, {
             .names = NAMES{"duplicates", "df", "dupes", 0},
             .enable = OPTS{&settings->searchdup, 0}
-        },
+        }, {
+            .names = NAMES{"duplicatedirs", "dd", "dupedirs", 0},
+            .enable = OPTS{&settings->merge_directories, 0}
+        }
     };
 
     RmLintTypeOption *all_opts = &option_table[0];
@@ -509,6 +531,14 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
     } else {
         /* Parse ISO8601 timestamps like 2006-02-03T16:45:09.000Z */
         result = rm_iso8601_parse(string);
+
+        /* debug */
+        {
+            char time_buf[256];
+            memset(time_buf, 0, sizeof(time_buf));
+            rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
+            rm_log_debug("timestamp %ld understood as %s\n", result, time_buf);
+        }
     }
 
     if(result <= 0) {
@@ -577,6 +607,14 @@ static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) 
     return result;
 }
 
+static void rm_cmd_set_verbosity_from_cnt(RmSettings *settings, int verbosity_counter) {
+    settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
+                              verbosity_counter,
+                              0,
+                              (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1
+                          )];
+}
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     RmSettings *settings = session->settings;
@@ -586,6 +624,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     int output_flag_cnt = -1;
     int option_index = 0;
     int path_index = 0;
+    int follow_symlink_flags = 0;
 
     /* True when an error occured during reading paths */
     bool not_all_paths_read = false;
@@ -703,7 +742,12 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->followlinks = true;
             break;
         case 'F':
-            settings->followlinks = false;
+            if(++follow_symlink_flags == 1) {
+                settings->followlinks = false;
+            } else {
+                settings->followlinks = false;
+                settings->see_symlinks = true;
+            }
             break;
         case 'w':
             settings->color = isatty(fileno(stdout));
@@ -745,10 +789,10 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->ignore_hidden = false;
             break;
         case 'V':
-            verbosity_counter--;
+            rm_cmd_set_verbosity_from_cnt(settings, --verbosity_counter);
             break;
         case 'v':
-            verbosity_counter++;
+            rm_cmd_set_verbosity_from_cnt(settings, ++verbosity_counter);
             break;
         case 'x':
             settings->samepart = false;
@@ -761,6 +805,14 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'D':
             settings->merge_directories = true;
+
+            /* Pull in some options for convinience,
+             * duplicate dir detection works better with them.
+             *
+             * They may be disabled explicitly though.
+             */
+            settings->find_hardlinked_dupes = true;
+            settings->ignore_hidden = false;
             break;
         case 'S':
             settings->sort_criteria = optarg;
@@ -881,14 +933,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_cmd_die(session, EXIT_FAILURE);
     }
 
-    /* Handle special cases for -D */
-    if(settings->merge_directories) {
-        if(settings->checksum_type == RM_DIGEST_PARANOID) {
-            rm_log_error_line(_("Full paranoia will not work well with directory merging."));
-            rm_cmd_die(session, EXIT_FAILURE);
-        }
-    }
-
     settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
                               verbosity_counter,
                               0,
@@ -955,7 +999,7 @@ int rm_cmd_main(RmSession *session) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
-        if(session->settings->searchdup) {
+        if(session->settings->searchdup || session->settings->merge_directories) {
             rm_shred_run(session);
 
             rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));

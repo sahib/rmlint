@@ -43,7 +43,7 @@ So for the above example, the full process would be:
 
 .. code-block:: bash
 
-   $ rmlint
+   `-FF`` together with this option. rmlint
    # (wait for rmlint to finish running)
    $ gedit rmlint.sh
    # (or any editor you prefer... review the content of rmlint.sh to

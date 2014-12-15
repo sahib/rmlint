@@ -679,7 +679,6 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     g_assert(buffer);
 
     /* Hash buffer->len bytes_read of buffer->data into buffer->file */
-
     rm_digest_update(buffer->file->digest, buffer->data, buffer->len);
     buffer->file->hash_offset += buffer->len;
 
@@ -913,7 +912,9 @@ void rm_shred_group_unref(RmShredGroup *self) {
     case RM_SHRED_GROUP_HASHING:
         if ( self->ref_count == 0) {
             /* group no longer required; tell the children we are about to die */
-            g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
+            if(self->children) {
+                g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
+            }
             rm_shred_group_free(self);
         }
         break;
@@ -947,6 +948,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     g_assert(file->hash_offset == shred_group->hash_offset);
 
     rm_shred_group_update_status(shred_group);
+
     switch (shred_group->status) {
     case RM_SHRED_GROUP_START_HASHING:
         /* clear the queue and push all its rmfiles to the appropriate device queue */
@@ -1009,7 +1011,7 @@ static gboolean rm_shred_sift(RmFile *file) {
         } else {
             g_assert(file->digest);
 
-            if (file->digest->type == RM_DIGEST_PARANOID) {
+            if (file->digest->type == RM_DIGEST_PARANOID && !file->is_symlink) {
                 g_assert(file->digest->bytes == current_group->next_offset - current_group->hash_offset);
             }
 
@@ -1017,9 +1019,11 @@ static gboolean rm_shred_sift(RmFile *file) {
              * matches snap... if yes then move this file into it; if not then
              * create a new group */
             guint8 *key = rm_digest_steal_buffer(file->digest);
+
+            g_assert(key);
             if (!current_group->children) {
                 /* create child queue */
-                current_group->children   = g_queue_new();
+                current_group->children = g_queue_new();
             }
 
             GList *child = g_queue_find_custom(
@@ -1087,7 +1091,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
     if(device == NULL) {
-        rm_log_debug(GREEN"Creating new RmShredDevice for disk %"LLU"\n"RESET, disk);
+        rm_log_debug(GREEN"Creating new RmShredDevice for disk %u\n"RESET, (unsigned)disk);
         device = rm_shred_device_new(
                      !rm_mounts_is_nonrotational(session->tables->mounts, disk),
                      rm_mounts_get_disk_name(session->tables->mounts, disk),
@@ -1106,7 +1110,6 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                           );
 
     if (group == NULL) {
-
         group = rm_shred_group_new(file, NULL);
         group->digest_type = session->settings->checksum_type;
         g_hash_table_insert(
@@ -1136,6 +1139,7 @@ static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device, R
 
 static void rm_shred_preprocess_input(RmMainTag *main) {
     RmSession *session = main->session;
+    guint removed = 0;
 
     /* move remaining files to RmShredGroups */
     g_assert(session->tables->node_table);
@@ -1143,14 +1147,18 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     rm_log_debug("Moving files into size_groups...");
     g_hash_table_foreach_remove(session->tables->node_table,
                                 (GHRFunc)rm_shred_file_preprocess,
-                                main);
+                                main
+                               );
+
     rm_log_debug("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     rm_log_debug("Discarding unique sizes and read fiemap data for others...");
-    g_hash_table_foreach_remove(session->tables->size_groups,
-                                (GHRFunc)rm_shred_group_preprocess,
-                                main);
-    rm_log_debug("done at time %.3f\n", g_timer_elapsed(session->timer, NULL));
+    removed = g_hash_table_foreach_remove(session->tables->size_groups,
+                                          (GHRFunc)rm_shred_group_preprocess,
+                                          main);
+    rm_log_debug("done at time %.3f; removed %u of %"LLU"\n",
+                 g_timer_elapsed(session->timer, NULL), removed, session->total_filtered_files
+                );
 
     rm_log_debug("Looking up fiemap data for files on rotational devices...");
     g_hash_table_foreach(
@@ -1207,13 +1215,15 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
 }
 
 static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *original_file) {
+    g_queue_sort(group, (GCompareDataFunc)rm_pp_cmp_orig_criteria, session);
+
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if (file->hardlinks.files) {
             rm_group_fmt_write(session, file->hardlinks.files, original_file);
         }
 
-        if(iter->data != original_file) {
+        if(file != original_file) {
             RmFile *lint = iter->data;
             rm_fmt_write(session->formats, lint);
         }
@@ -1276,6 +1286,37 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
+static void rm_shred_readlink_factory(RmFile *file) {
+    g_assert(file->is_symlink);
+
+    /* Fake an IO operation on the symlink.
+     */
+    char path_buf[PATH_MAX];
+    memset(path_buf, 0, sizeof(path_buf));
+
+    if(readlink(file->path, path_buf, sizeof(path_buf)) == -1) {
+        /* Oops, that did not work out, report as an error */
+        file->status = RM_FILE_STATE_IGNORE;
+        return;
+    }
+
+    file->status = RM_FILE_STATE_NORMAL;
+    file->seek_offset = file->file_size;
+    file->hash_offset = file->file_size;
+
+    g_assert(file->digest);
+
+    gsize data_size = strlen(path_buf) + 1;
+    rm_digest_update(file->digest, (unsigned char *)path_buf, data_size);
+
+    /* In case of paranoia: shrink the used data buffer, so comparasion works 
+     * as expected. Otherwise a full buffer is used with possibly different
+     * content */
+    if(file->digest->type == RM_DIGEST_PARANOID) {
+        rm_digest_paranoia_shrink(file->digest, data_size);
+    }
+}
+
 /* Read from file and send to hasher
  * Note this was initially a separate thread but is currently just called
  * directly from rm_devlist_factory.
@@ -1291,6 +1332,7 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_left_to_read = bytes_to_read;
 
+    g_assert(!file->is_symlink);
     g_assert(bytes_to_read > 0);
     g_assert(buf_size >= (RmOff)SHRED_PAGE_SIZE);
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
@@ -1358,8 +1400,8 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
 
             if (buffer->is_last && total_bytes_read != bytes_to_read) {
                 rm_log_error_line(
-                        _("Something went wrong reading %s; expected %d bytes, got %d; ignoring"),
-                        file->path, bytes_to_read, total_bytes_read
+                    _("Something went wrong reading %s; expected %d bytes, got %d; ignoring"),
+                    file->path, bytes_to_read, total_bytes_read
                 );
                 file->status = RM_FILE_STATE_IGNORE;
                 g_async_queue_push(device->hashed_file_return, file);
@@ -1457,10 +1499,18 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                             (void) rm_shred_get_read_size(file, main);
                         }
                         g_assert (file->shred_group->hash_offset == file->hash_offset);
-                        file->digest = rm_digest_new(
-                                           main->session->settings->checksum_type, 0, 0,
-                                           file->shred_group->next_offset - file->hash_offset
-                                       );
+
+                        if(file->is_symlink) {
+                            file->digest = rm_digest_new(
+                                               main->session->settings->checksum_type, 0, 0,
+                                               PATH_MAX + 1 /* max size of a symlink file */
+                                           );
+                        } else {
+                            file->digest = rm_digest_new(
+                                               main->session->settings->checksum_type, 0, 0,
+                                               file->shred_group->next_offset - file->hash_offset
+                                           );
+                        }
                     }
                 } else if(file->shred_group->digest) {
                     /* pick up the digest-so-far from the RmShredGroup */
@@ -1481,10 +1531,14 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
         if (can_process) {
             /* hash the next increment of the file */
-            rm_shred_read_factory(file, device);
+            if(file->is_symlink) {
+                rm_shred_readlink_factory(file);
+            } else {
+                rm_shred_read_factory(file, device);
 
-            /* wait until the increment has finished hashing */
-            file = g_async_queue_pop(device->hashed_file_return);
+                /* wait until the increment has finished hashing */
+                file = g_async_queue_pop(device->hashed_file_return);
+            }
 
             if (start_offset == file->hash_offset) {
                 rm_log_debug(RED"Offset stuck at %"LLU";", start_offset);
@@ -1551,6 +1605,8 @@ void rm_shred_run(RmSession *session) {
     g_assert(session->tables->node_table);
 
     RmMainTag tag;
+    tag.active_files = 0;
+    tag.hash_mem_alloc = 0;
     tag.session = session;
 
     /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
@@ -1569,8 +1625,11 @@ void rm_shred_run(RmSession *session) {
 
     rm_shred_preprocess_input(&tag);
 
-    tag.hash_mem_alloc = session->settings->paranoid_mem;  /*NOTE: needs to be after preprocess*/
-    tag.active_files = 0;				 	 /*NOTE: needs to be after preprocess*/
+    g_mutex_lock(&tag.hash_mem_mtx); {
+        tag.hash_mem_alloc = session->settings->paranoid_mem;  /* NOTE: needs to be after preprocess */
+        tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
+    }
+    g_mutex_unlock(&tag.hash_mem_mtx);
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);

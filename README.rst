@@ -7,36 +7,55 @@
 `rmlint` finds space waste and other broken things on your filesystem and offers
 to remove it. 
 
+.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
+   :target: https://rmlint.rtfd.org
+
+.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
+   :target: https://travis-ci.org/sahib/rmlint
+
+.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/issues
+
+.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/releases
+
+.. image:: http://img.shields.io/badge/license-GPLv3-ff69b4.svg?style=flat
+   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+
+
 **Features:**
 
-- Duplicate Files and duplicate directories.
-- Nonstripped binaries (i.e. binaries with debug symbols)
-- Broken symbolic links.
-- Empty files and directories.
-- Files with broken user or/and group ID.
+Finds…
+
+- …Duplicate Files and duplicate directories.
+- …Nonstripped binaries (i.e. binaries with debug symbols)
+- …Paranoia mode for those who do not trust hashsums.
+- …Broken symbolic links.
+- …Empty files and directories.
+- …Files with broken user or/and group ID.
 
 **Differences to other duplicate finders:**
 
 - Extremely fast (no exaggeration, we promise!).
 - Many output formats.
 - No interactivity.
-- Search for files only newer than a certain mtime. 
+- Search for files only newer than a certain ``mtime``. 
 - ...
 
 Due to some of it's performance optimizations, it currently only runs on Linux
 32 and 64 bit. Porting to BSD and Darwin (Mac OSX) architectures is possible
 though, but needs some volunteers to test. Patches welcome!
 
+It has been compiled and run successfully on FreeBSD, although 
+it cannot use ``fiemap`` and ``mounttables`` as performance optimizations there. 
+Patches to make this run better over there are welcome too.
 
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/screenshot.png
    :align: center
 
+
 INSTALLATION
 ------------
-
-.. image:: https://travis-ci.org/sahib/rmlint.svg?branch=develop
-   :alt: TravisCI
-   :target: https://travis-ci.org/sahib/rmlint
 
 Chances are that you might have `rmlint` already as readily made package in your
 favourite distribution. If not, you might consider 
@@ -44,10 +63,6 @@ favourite distribution. If not, you might consider
 
 DOCUMENTATION
 -------------
-
-.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :alt: ReadTheDocs
-   :target: https://rmlint.rtfd.org
 
 Detailed documentation is available on: 
 

@@ -7,7 +7,7 @@ def test_simple():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
-    head, *data, footer = run_rmlint('-D --sortcriteria A')
+    head, *data, footer = run_rmlint('-ppp -D --sortcriteria A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert 1 == sum(find['type'] == 'duplicate_file' for find in data)
@@ -26,7 +26,7 @@ def test_diff():
     create_file('xxx', '2/a')
     create_file('xxx', '3/a')
     create_file('yyy', '3/b')
-    head, *data, footer = run_rmlint('-D --sortcriteria A')
+    head, *data, footer = run_rmlint('-ppp -D --sortcriteria A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert data[0]['size'] == 3
@@ -43,7 +43,7 @@ def test_same_but_not_dupe():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '2/b')
-    head, *data, footer = run_rmlint('-D --sortcriteria A')
+    head, *data, footer = run_rmlint('-ppp -D --sortcriteria A')
 
     # No duplicate dirs, but 3 duplicate files should be found.
     assert 0 == sum(find['type'] == 'duplicate_dir' for find in data)
@@ -57,14 +57,14 @@ def test_hardlinks():
     create_file('xxx', '2/a')
     create_link('2/a', '2/link1')
     create_link('2/a', '2/link2')
-    head, *data, footer = run_rmlint('-D -l -S a')
+    head, *data, footer = run_rmlint('-ppp -D -l -S a')
 
     assert data[0]['type'] == 'duplicate_dir'
     assert data[0]['path'].endswith('1')
     assert data[1]['type'] == 'duplicate_dir'
     assert data[1]['path'].endswith('2')
 
-    head, *data, footer = run_rmlint('-D -S A')
+    head, *data, footer = run_rmlint('-D -S A -L')
     assert data[0]['type'] == 'duplicate_file'
     assert data[0]['path'].endswith('a')
     assert data[1]['type'] == 'duplicate_file'
@@ -79,6 +79,21 @@ def test_deep_simple():
 
     assert data[0]['path'].endswith('deep/a')
     assert data[1]['path'].endswith('deep/e')
+    assert int(data[0]['checksum'], 16) > 0
+    assert int(data[1]['checksum'], 16) > 0
+    assert len(data) == 2
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_deep_simple():
+    create_file('xxx', 'd/a/1')
+    create_file('xxx', 'd/b/empty')
+    create_file('xxx', 'd/a/1')
+    create_file('xxx', 'd/b/empty')
+    head, *data, footer = run_rmlint('-ppp -D -S a')
+
+    assert data[0]['path'].endswith('d/a')
+    assert data[1]['path'].endswith('d/b')
     assert len(data) == 2
 
 
@@ -95,7 +110,9 @@ def test_deep_full():
     create_nested('deep', 'abcd')
     create_nested('deep', 'efgh')
 
-    head, *data, footer = run_rmlint('-D -S a')
+    subprocess.call('tree ' + TESTDIR_NAME, shell=True)
+    subprocess.call('./rmlint -D ' + TESTDIR_NAME, shell=True)
+    head, *data, footer = run_rmlint('-ppp -D -S a')
 
     assert data[0]['path'].endswith('deep/a')
     assert data[1]['path'].endswith('deep/e')
@@ -109,16 +126,24 @@ def test_deep_full_twice():
     create_nested('deep_b', 'abcd')
     create_nested('deep_b', 'efgh')
 
+    subprocess.call('tree ' + TESTDIR_NAME, shell=True)
+    subprocess.call('./rmlint -D ' + TESTDIR_NAME + '/deep_b/a', shell=True)
+
     head, *data, footer = run_rmlint(
         '-D -S a {t}/deep_a {t}/deep_b'.format(
             t=TESTDIR_NAME
         ),
         use_default_dir=False
     )
+    for d in data:
+        print(d['path'])
 
+    # TODO: check more.
     assert data[0]['path'].endswith('deep_a')
     assert data[1]['path'].endswith('deep_b')
-    assert len(data) == 2
+    assert data[2]['path'].endswith('deep_a/a')
+    assert data[3]['path'].endswith('deep_a/e')
+    assert len(data) == 4
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
@@ -128,15 +153,16 @@ def test_symlinks():
     create_file('xxx', 'b/z')
     create_link('b/z', 'b/x', symlink=True)
 
-    head, *data, footer = run_rmlint('-D -S a')
+    head, *data, footer = run_rmlint('-ppp -D -S am -FF')
+
+    assert len(data) == 2
     assert data[0]['path'].endswith('a/z')
     assert data[1]['path'].endswith('b/z')
-    assert len(data) == 2
 
-    head, *data, footer = run_rmlint('-D -S A -f')
-    assert data[0]['path'].endswith('a/x')
-    assert data[1]['path'].endswith('b/x')
+    head, *data, footer = run_rmlint('-ppp -D -S a -f')
     assert len(data) == 2
+    assert data[0]['path'].endswith('/a')
+    assert data[1]['path'].endswith('/b')
 
 
 def mount_bind_teardown_func():
