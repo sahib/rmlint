@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-12-02 11:06+0100\n"
+"POT-Creation-Date: 2014-12-02 11:21+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -128,7 +128,8 @@ msgid "Unable to parse time spec \"%s\""
 msgstr ""
 
 #: src/cmdline.c:529
-msgid "-n %"
+#, c-format
+msgid "-n %lu is newer than current time (%lu)."
 msgstr ""
 
 #: src/cmdline.c:682
@@ -363,5 +364,5 @@ msgid "cannot open file '%s' for nonstripped test: "
 msgstr ""
 
 #: src/utilities.c:173
-msgid "ELF Library is out of date!\n"
+msgid "ELF Library is out of date!"
 msgstr ""
