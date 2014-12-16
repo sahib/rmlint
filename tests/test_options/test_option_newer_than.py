@@ -13,7 +13,7 @@ def test_simple():
 
     # Wait a second, create a new dupe.
     # Should report all three of them since at least one is newer.
-    time.sleep(1)
+    time.sleep(1.5)
     create_file('xxx', 'c')
     head, *data, footer = run_rmlint('-S a -N ' + str(time.time()))
     assert len(data) == 3
