@@ -63,7 +63,7 @@ static const char *SH_SCRIPT_TEMPLATE_HEAD =
     "OPTIONS:                                            \n"
     "-h      Show this message                           \n"
     "-d      Do not ask before running                   \n"
-    "-x      Keep rmlint.sh and rmlint.log               \n"
+    "-x      Keep rmlint.sh; do note autodelete it.      \n"
     "\nEOF\n                                             \n"
     "}                                                   \n"
     "                                                    \n"
