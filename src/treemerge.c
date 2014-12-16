@@ -599,7 +599,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     }
 }
 
-static void rm_tm_mark_finished(RmDirectory *directory) {
+static void rm_tm_mark_finished(RmTreeMerger *self, RmDirectory *directory) {
     if(directory->finished) {
         return;
     }
@@ -608,11 +608,21 @@ static void rm_tm_mark_finished(RmDirectory *directory) {
 
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
-        rm_tm_mark_finished((RmDirectory *)iter->data);
+        rm_tm_mark_finished(self, (RmDirectory *)iter->data);
     }
 }
 
 static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory) {
+    directory->finished = false;
+
+    /* Recursively propagate to children */
+    for(GList *iter = directory->children.head; iter; iter = iter->next) {
+        RmDirectory *child = iter->data;
+        rm_tm_mark_original_files(self, child);
+    }
+}
+
+static void rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory) {
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         g_hash_table_insert(self->file_checks, file->digest, file);
@@ -621,8 +631,7 @@ static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
         RmDirectory *child = iter->data;
-        child->finished = false;
-        rm_tm_mark_original_files(self, child);
+        rm_tm_mark_duplicate_files(self, child);
     }
 }
 
@@ -726,7 +735,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
         for(GList *iter = dir_list->head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
             if(directory->finished == false) {
-                rm_tm_mark_finished(directory);
+                rm_tm_mark_finished(self, directory);
                 g_queue_push_head(&result_dirs, directory);
             }
         }
@@ -747,13 +756,15 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
             if(iter == result_dirs.head) {
                 /* First one in the group -> It's the original */
-                rm_tm_mark_original_files(self, directory);
                 mask->is_original = true;
+                rm_tm_mark_original_files(self, directory);
+            } else {
+                rm_tm_mark_duplicate_files(self, directory);
             }
         }
 
         if(result_dirs.length >= 2)  {
-            rm_shred_forward_to_output(self->session, &file_adaptor_group, true);
+            rm_shred_forward_to_output(self->session, &file_adaptor_group);
         } 
 
         g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
@@ -791,20 +802,23 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
-        bool has_one_orig = false;
+        bool has_one_dupe = false;
         RmOff file_size_acc = 0;
         for(GList *iter = file_list->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            bool is_orig = (g_hash_table_lookup(self->file_checks, file->digest) != NULL);
-            has_one_orig |= is_orig;
+            bool is_duplicate = g_hash_table_contains(self->file_checks, file->digest);
+            has_one_dupe |= is_duplicate;
 
-            if(iter != file_list->head && !is_orig) {
+            if(iter != file_list->head && !is_duplicate) {
                 file_size_acc += file->file_size;
             }
         }
 
-        if(file_list->length < 2 && !has_one_orig) {
-            rm_log_debug("Sole file encountered in treemerge. What's wrong?");
+        if(file_list->length < 2) {
+            /* This should not happen, better ignore. */
+            if(!has_one_dupe) {
+                rm_log_warning("Sole file encountered in treemerge. What's wrong?");
+            }
         } else {
             /* If no separate duplicate files are requested, we can stop here */
             if(self->session->settings->searchdup == false) {
@@ -812,7 +826,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 self->session->dup_group_counter -= 1;
                 self->session->dup_counter -= file_list->length - 1;
             } else {
-                rm_shred_forward_to_output(self->session, file_list, has_one_orig);
+                rm_shred_forward_to_output(self->session, file_list);
             }
         }
     }

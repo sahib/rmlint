@@ -17,6 +17,7 @@ def test_basic():
 
     create_file('', 'empty')
 
+    # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
     head, *data, footer = run_rmlint('-D -S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
 
     assert footer['duplicate_sets'] == 3

@@ -36,6 +36,18 @@
  */
 void rm_shred_run(RmSession *session);
 
-void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_origs);
+/**
+ * @brief Forward a group of files to the outout module. 
+ *
+ * @param session the output module's session.
+ * @param group a group of dupes that should be reported.
+ *
+ * This function will determine the original of the group by using:
+ *
+ * - the is_original flag of the file,
+ * - the is_prefd flag of the file
+ * - otherwise sort by criteria
+ */
+void rm_shred_forward_to_output(RmSession *session, GQueue *group);
 
 #endif

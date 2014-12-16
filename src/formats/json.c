@@ -137,8 +137,11 @@ static void rm_fmt_elem(
     {
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(out);
-        rm_fmt_json_key(out, "checksum", checksum_str);
-        rm_fmt_json_sep(out);
+
+        if(file->digest) {
+            rm_fmt_json_key(out, "checksum", checksum_str);
+            rm_fmt_json_sep(out);
+        }
 
         rm_fmt_json_key_unsafe(out, "path", file->path);
         rm_fmt_json_sep(out);

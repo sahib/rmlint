@@ -10,7 +10,10 @@ def test_simple():
     head, *data, footer = run_rmlint('-ppp -D --sortcriteria A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
-    assert 1 == sum(find['type'] == 'duplicate_file' for find in data)
+
+    # One original, one dupe
+    assert 1 == sum(find['type'] == 'duplicate_file' for find in data if find['is_original'])
+    assert 1 == sum(find['type'] == 'duplicate_file' for find in data if not find['is_original'])
     assert data[0]['size'] == 3
 
     # -S A should sort in reverse lexigraphic order.
@@ -111,12 +114,22 @@ def test_deep_full():
     create_nested('deep', 'efgh')
 
     # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
-    # subprocess.call('./rmlint -D ' + TESTDIR_NAME, shell=True)
+    # subprocess.call('./rmlint -p -S a -D ' + TESTDIR_NAME, shell=True)
     head, *data, footer = run_rmlint('-ppp -D -S a')
 
+    assert len(data) == 6
+
     assert data[0]['path'].endswith('deep/a')
+    assert data[0]['type'] == 'duplicate_dir'
+    assert data[0]['is_original']
     assert data[1]['path'].endswith('deep/e')
-    assert len(data) == 2
+    assert not data[1]['is_original']
+    assert data[1]['type'] == 'duplicate_dir'
+
+    for idx, ending in enumerate(['a/b/c/d/1', 'a/b/c/1', 'a/b/1', 'a/1']):
+        assert data[idx + 2]['path'].endswith(ending)
+        assert data[idx + 2]['type'] == 'duplicate_file'
+        assert data[idx + 2]['is_original'] == (idx is 0)
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
@@ -127,7 +140,7 @@ def test_deep_full_twice():
     create_nested('deep_b', 'efgh')
 
     # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
-    # subprocess.call('./rmlint -D ' + TESTDIR_NAME + '/deep_b/a', shell=True)
+    # subprocess.call('./rmlint -S a -D ' + TESTDIR_NAME + '/deep_a ' + TESTDIR_NAME + '/deep_b', shell=True)
 
     head, *data, footer = run_rmlint(
         '-D -S a {t}/deep_a {t}/deep_b'.format(
@@ -135,6 +148,27 @@ def test_deep_full_twice():
         ),
         use_default_dir=False
     )
+
+    assert len(data) == 8
+
+    assert data[0]['path'].endswith('deep_a')
+    assert data[0]['type'] == 'duplicate_dir'
+    assert data[0]['is_original']
+    assert data[1]['path'].endswith('deep_b')
+    assert data[1]['is_original'] == False
+    assert data[1]['type'] == 'duplicate_dir'
+
+    assert data[2]['path'].endswith('deep_a/a')
+    assert data[2]['type'] == 'duplicate_dir'
+    assert data[2]['is_original']
+    assert data[3]['path'].endswith('deep_a/e')
+    assert data[3]['is_original'] == False
+    assert data[3]['type'] == 'duplicate_dir'
+
+    for idx, ending in enumerate(['a/b/c/d/1', 'a/b/c/1', 'a/b/1', 'a/1']):
+        assert data[idx + 4]['path'].endswith(ending)
+        assert data[idx + 4]['type'] == 'duplicate_file'
+        assert data[idx + 4]['is_original'] == (idx is 0)
 
     assert data[0]['path'].endswith('deep_a')
     assert data[0]['is_original']
@@ -144,7 +178,6 @@ def test_deep_full_twice():
     assert data[2]['is_original']
     assert data[3]['path'].endswith('deep_a/e')
     assert not data[3]['is_original']
-    assert len(data) == 4
 
 
 @with_setup(usual_setup_func, usual_teardown_func)

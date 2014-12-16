@@ -1230,23 +1230,28 @@ static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *origin
     }
 }
 
-void rm_shred_forward_to_output(RmSession *session, GQueue *group, bool has_origs) {
-    if(!has_origs) {
+void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+    RmFile *original_file = NULL;
+
+    for(GList * iter = group->head; iter; iter = iter->next) {
+        RmFile * file = iter->data;
+        if(file->is_original) {
+            original_file = file;
+            break;
+        }
+    }
+
+    if(original_file == NULL) {
         /* Group has no determined original yet, guess one. */
-        RmFile *original_file = rm_group_find_original(session, group);
+        original_file = rm_group_find_original(session, group);
         g_assert(original_file);
-        /* tag first file as the original */
-        /* original_file = group->head->data; */
 
         original_file->is_original = true;
-
-        /* Hand it over to the printing module */
-        rm_fmt_write(session->formats, original_file);
-
-        rm_group_fmt_write(session, group, original_file);
-    } else {
-        rm_group_fmt_write(session, group, NULL);
     }
+ 
+    /* Hand it over to the printing module */
+    rm_fmt_write(session->formats, original_file);
+    rm_group_fmt_write(session, group, original_file);
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
@@ -1274,7 +1279,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
 
         if(tag->session->settings->merge_directories == false) {
             /* Output them directly */
-            rm_shred_forward_to_output(tag->session, group->held_files, false);
+            rm_shred_forward_to_output(tag->session, group->held_files);
         }
     }
 
