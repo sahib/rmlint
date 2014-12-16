@@ -770,6 +770,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'F':
             if(++follow_symlink_flags == 1) {
                 settings->followlinks = false;
+                settings->see_symlinks = false;
             } else {
                 settings->followlinks = false;
                 settings->see_symlinks = true;
