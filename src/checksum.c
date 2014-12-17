@@ -100,7 +100,10 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
 
     switch(type) {
     case RM_DIGEST_SPOOKY32:
-        digest->bytes = 32 / 8;
+        /* cannot go lower than 64, since we read 8 byte in some places.
+         * simulate by leaving the part at the end empty
+         */
+        digest->bytes = 64 / 8;
         break;
     case RM_DIGEST_SPOOKY64:
         digest->bytes = 64 / 8;
@@ -289,11 +292,8 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
 #endif
         break;
     case RM_DIGEST_CUMULATIVE:
-        if(size >= sizeof(guint64) * 1) {
-            digest->checksum->first += ((guint64 *)data)[0];
-        }
-        if(size >= sizeof(guint64) * 2) {
-            digest->checksum->second += ((guint64 *)data)[1];
+        for(gsize i = 0; i < digest->bytes; ++i) {
+            ((guint8 *)digest->checksum)[i] = ((guint8 *)data)[i % size];
         }
         break;
     case RM_DIGEST_PARANOID:
