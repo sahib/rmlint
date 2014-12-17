@@ -105,7 +105,7 @@ Additional thanks to:
     :columns: 3
 
     - qitta_ (Ideas & Testing)
-    - dieterbe_ (Bugs & -D is his fault)
+    - dieterbe_ (Bugs & -D was his idea)
     - `My cats`_.
     - Attila Toth 
     - All sane bugreporters (there are not many)

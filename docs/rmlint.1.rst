@@ -113,8 +113,7 @@ General Options
 
     * **bastard:** 256bit, half seeded **city**, half **murmur**. 
     * **city256, city512, murmur256, murmur512:** Slower variations with more bits.
-    * **spook32, spook64:** Faster version of **spooky** with less bits.
-    * **city32, city64:** Faster version of **city** with less bits.
+    * **spooky32, spooky64:** Faster version of **spooky** with less bits.
     * **paranoid:** No hash function, compares files byte-by-byte.
 
 :``-v --loud`` / ``-V --quiet``:
