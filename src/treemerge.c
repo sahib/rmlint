@@ -765,7 +765,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         if(result_dirs.length >= 2)  {
             rm_shred_forward_to_output(self->session, &file_adaptor_group);
-        } 
+        }
 
         g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
         g_queue_clear(&file_adaptor_group);

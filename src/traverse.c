@@ -97,7 +97,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
                 trav_session->session->total_files,
                 trav_session->session->ignored_files,
                 trav_session->session->ignored_folders
-            );
+               );
 
     rm_userlist_destroy(trav_session->userlist);
 

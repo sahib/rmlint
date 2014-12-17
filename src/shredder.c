@@ -1248,7 +1248,7 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 
         original_file->is_original = true;
     }
- 
+
     /* Hand it over to the printing module */
     rm_fmt_write(session->formats, original_file);
     rm_group_fmt_write(session, group, original_file);
@@ -1314,7 +1314,7 @@ static void rm_shred_readlink_factory(RmFile *file) {
     gsize data_size = strlen(path_buf) + 1;
     rm_digest_update(file->digest, (unsigned char *)path_buf, data_size);
 
-    /* In case of paranoia: shrink the used data buffer, so comparasion works 
+    /* In case of paranoia: shrink the used data buffer, so comparasion works
      * as expected. Otherwise a full buffer is used with possibly different
      * content */
     if(file->digest->type == RM_DIGEST_PARANOID) {
@@ -1630,7 +1630,8 @@ void rm_shred_run(RmSession *session) {
 
     rm_shred_preprocess_input(&tag);
 
-    g_mutex_lock(&tag.hash_mem_mtx); {
+    g_mutex_lock(&tag.hash_mem_mtx);
+    {
         tag.hash_mem_alloc = session->settings->paranoid_mem;  /* NOTE: needs to be after preprocess */
         tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
     }

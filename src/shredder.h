@@ -37,7 +37,7 @@
 void rm_shred_run(RmSession *session);
 
 /**
- * @brief Forward a group of files to the outout module. 
+ * @brief Forward a group of files to the outout module.
  *
  * @param session the output module's session.
  * @param group a group of dupes that should be reported.

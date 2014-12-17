@@ -291,11 +291,21 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         digest->checksum[1] = CityHash128WithSeed((const char *) data, size, digest->checksum[1]);
 #endif
         break;
-    case RM_DIGEST_CUMULATIVE:
+    case RM_DIGEST_CUMULATIVE: {
+        /* This is basically FNV1a, it is just important that the order of
+         * adding data to the hash has no effect on the result, so it can
+         * be used as a lookup key:
+         *
+         * http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+         * */
+        guint64 hash = 0xcbf29ce484222325;
         for(gsize i = 0; i < digest->bytes; ++i) {
-            ((guint8 *)digest->checksum)[i] += ((guint8 *)data)[i % size] * i;
+            hash ^= ((guint8 *)data)[i % size];
+            hash *= 0x100000001b3;
+            ((guint8 *)digest->checksum)[i] += hash;
         }
-        break;
+    }
+    break;
     case RM_DIGEST_PARANOID:
         g_assert(size + digest->paranoid_offset <= digest->bytes);
         memcpy((char *)digest->checksum + digest->paranoid_offset, data, size);
