@@ -293,7 +293,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         break;
     case RM_DIGEST_CUMULATIVE:
         for(gsize i = 0; i < digest->bytes; ++i) {
-            ((guint8 *)digest->checksum)[i] = ((guint8 *)data)[i % size];
+            ((guint8 *)digest->checksum)[i] += ((guint8 *)data)[i % size] * i;
         }
         break;
     case RM_DIGEST_PARANOID:
