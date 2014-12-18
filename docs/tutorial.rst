@@ -578,10 +578,6 @@ Since duplicate directories are just a lint type as every other, you can just
 pass it to ``-T``: ``-T "none +dd"`` (or ``-T "none +duplicatedirs"``). 
 There's also a preset of it to save you some typing: ``-T minimaldirs``.
 
-.. note:: 
-
-    ``-T minimaldirs`` does not imply ``--hidden`` or ``--hardlinked`` as ``-D`` does!
-
 Misc options
 ------------
 
