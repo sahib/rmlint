@@ -536,6 +536,11 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
         }
     }
 
+    if(settings->merge_directories) {
+        settings->ignore_hidden = false;
+        settings->find_hardlinked_dupes = true;
+    }
+
     /* clean up */
     g_strfreev(lint_types);
 }

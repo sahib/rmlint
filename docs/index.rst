@@ -41,7 +41,7 @@ to remove it. It is able to find:
 .. hlist::
    :columns: 2
 
-   + Duplicate files.
+   + Duplicate files & directories.
    + Nonstripped Binaries 
    + Broken symlinks.
    + Empty files.

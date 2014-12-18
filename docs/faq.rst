@@ -1,8 +1,8 @@
 Frequently Asked Questions
 ==========================
 
-``rmlint`` finds more/less dupes than tool x!
----------------------------------------------
+``rmlint`` finds more/less dupes than tool **X**!
+-------------------------------------------------
 
 Make sure that *none* of the following applies to you:
 
@@ -13,10 +13,11 @@ by default. Suspicious options you should look into are:
 * ``--hidden``: Disabled by default, since it might screw up ``.git/`` and similar directories.
 * ``--hardlinked``: Might find larger amount files, but not more lint itself.
 * ``--followlinks``: Might lead ``rmlint`` to different places on the filesystem.
-* ``--merged-directories``: pulls in both ``--hidden`` and ``--hardlinked``.
+* ``--merge-directories``: pulls in both ``--hidden`` and ``--hardlinked``.
 
 If there's still a difference, check with another algorithm. In particular use
-``-ppp`` to enable paranoid mode. Also make sure to have ``-D / --merge-directories`` disabled to see the raw number of duplicate files.
+``-ppp`` to enable paranoid mode. Also make sure to have ``-D``
+(``--merge-directories``) disabled to see the raw number of duplicate files.
 
 Still here? Maybe talk to us on the `issue tracker`_.
 
