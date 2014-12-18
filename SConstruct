@@ -116,9 +116,9 @@ def check_bigfiles(context):
     ):
         have_stat64 = False
 
-    rc = off_t_is_big_enough or have_stat64
-    conf.env['HAVE_BIG_OFF_T'] = off_t_is_big_enough
-    conf.env['HAVE_BIG_STAT'] = have_stat64
+    rc = int(off_t_is_big_enough or have_stat64)
+    conf.env['HAVE_BIG_OFF_T'] = int(off_t_is_big_enough)
+    conf.env['HAVE_BIG_STAT'] = int(have_stat64)
     conf.env['HAVE_BIGFILES'] = rc
 
     context.did_show_result = True
