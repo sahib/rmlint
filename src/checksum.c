@@ -303,7 +303,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             hash ^= ((guint8 *)data)[i % size];
             hash *= 0x100000001b3;
             ((guint8 *)digest->checksum)[i] += hash;
-            
+        }
     }
     break;
     case RM_DIGEST_PARANOID:
