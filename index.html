@@ -4,10 +4,21 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <style type="text/css">
-body
-{
-background-image:url('https://github.com/sahib/rmlint/raw/f54811f237be3b39dd42befbe5910f31717fbcc8/rmlint_header.png');
-background-repeat:repeat-x;
+body {
+    background-image:url('https://github.com/sahib/rmlint/raw/f54811f237be3b39dd42befbe5910f31717fbcc8/rmlint_header.png');
+    background-repeat:repeat-x;
+}
+
+.info, .success, .warning, .error, .validation {
+    border: 5px solid;
+    margin: 10px 0px;
+    padding:15px 10px 15px 50px;
+    background-repeat: no-repeat;
+    background-position: 10px center;
+}
+.warning {
+    color: #FFEEDD;
+    background-color: rgba(255,30,10,0.1);;
 }
 </style>
 
@@ -63,6 +74,34 @@ background-repeat:repeat-x;
     <br></br>
     <br></br>
     <img src="https://github.com/sahib/rmlint/raw/f54811f237be3b39dd42befbe5910f31717fbcc8/rmlint_text.png" alt="rmlint"/>
+
+    <div class="warning">
+         <i class="fa fa-error"></i>
+         <center>
+             <big><big><b><i>WARNING</i></b></big></big>
+         <br />
+         <br />
+         <b>This is the old version of rmlint.</b>
+         <br />
+         It has been rewritten in 2014 for many reasons.
+         I keep this site only for nostalgic reasons.
+         <br />
+         <b>Do not use the old version, it has bugs that will eat your hamster!</b>
+         <br />
+         The old code can still be found here, if you like a good laugh:
+         <br />
+         <a href="https://github.com/sahib/rmlint/releases/tag/v1.0.6">Old releases</a>
+         <br />
+         <br />
+         The new code can and documentation can be found here:
+         <br />
+         <a href="https://github.com/sahib/rmlint">Source on GitHub</a>
+         <br />
+         <a href="https://rmlint.rtfd.org">Documentation</a>
+         <br />
+         </center>
+    </div>
+
     <div class="description">A commandline tool to find unnecessary files (duplicates, tmpfiles, unstripped binaries and more)</div>
 	 <h2>Features</h2>
 	     <UL>
