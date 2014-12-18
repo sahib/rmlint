@@ -4,13 +4,13 @@
 _pkgname=rmlint
 pkgname=${_pkgname}-git
 pkgver=156.9a0a7fe
-pkgrel=1
+pkgrel=2
 pkgdesc="Tool to remove duplicates and other lint, being much faster than fdupes"
 arch=('i686' 'x86_64')
 url="https://github.com/sahib/rmlint"
 license=('GPL3')
-depends=('glibc')
-makedepends=('git')
+depends=('glibc' 'glib2>=2.31' 'libutil-linux' 'elfutils')
+makedepends=('git' 'scons' 'python-sphinx')
 conflicts=("$_rmlint")
 provides=("$_pkgname")
 source=("$pkgname"::"git+https://github.com/sahib/${_pkgname}.git")
