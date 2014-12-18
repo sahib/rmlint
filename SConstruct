@@ -90,7 +90,6 @@ def check_fiemap(context):
     rc = 1
     if tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
         rc = 0
-        print('I fired')
 
     conf.env['HAVE_FIEMAP'] = rc
 
