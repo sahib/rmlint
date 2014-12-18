@@ -23,7 +23,6 @@ pkgver() {
 
 build() {
     cd "${srcdir}/${pkgname}"
-    git checkout develop  # TODO: Change this for after release
     scons -j4 DEBUG=1 --prefix=${pkgdir}/usr --actual-prefix=/usr
 }
  
