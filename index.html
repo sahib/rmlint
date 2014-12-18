@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style type="text/css">
+body
+{
+background-image:url('https://github.com/sahib/rmlint/raw/f54811f237be3b39dd42befbe5910f31717fbcc8/rmlint_header.png');
+background-repeat:repeat-x;
+}
+</style>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+	<title>sahib/rmlint @ GitHub</title>
+	
+	<style type="text/css">
+		body {
+  		margin-top: 1.0em;
+		font-size: 0.85em;
+		color: #43b1de;
+  		background-color: #333333;
+		  font-family: "Helvetica,Arial,FreeSans";
+  		color: #ffffff;
+    }
+    #container {
+      margin: 0 auto;
+      width: 1024px;
+    }
+		h1 { font-size: 2.8em; color: #000000; background-color: #333333; margin-bottom: 3px; }
+		h1 .small { font-size: 0.4em; }
+		h1 a { text-decoration: none; color: #32a0cd }
+		h2 { font-size: 1.0em; color: #43b1de; }
+    h3 { text-align: center; color: #43b1de; }
+    a { color: #b8a8cc; }
+    .description { font-size: 1.0em; margin-bottom: 30px; margin-top: 50px; font-style: italic;}
+    .download { float: right; }
+		pre { background: #222222; color: #fff; padding: 15px;}
+    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
+    td { border-color:#303030;border-width:2px;border-style:solid; }
+    .footer { text-align:center; padding-top:30px; font-style: italic; }
+	</style>
+</head>
+<body>
+  <a href="http://github.com/sahib/rmlint"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+  <div id="container">
+    <div class="download">
+      <a href="http://github.com/sahib/rmlint/zipball/master">
+        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
+      <a href="http://github.com/sahib/rmlint/tarball/master">
+        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
+    </div>
+    <!-- I'm a HTML noob - excuses -->
+    <br></br>
+    <br></br>
+    <br></br>
+    <br></br>
+    <br></br>
+    <br></br>
+    <br></br>
+    <img src="https://github.com/sahib/rmlint/raw/f54811f237be3b39dd42befbe5910f31717fbcc8/rmlint_screen.png" alt="a screen of rmlint working" />
+    <br></br>
+    <br></br>
+    <img src="https://github.com/sahib/rmlint/raw/f54811f237be3b39dd42befbe5910f31717fbcc8/rmlint_text.png" alt="rmlint"/>
+    <div class="description">A commandline tool to find unnecessary files (duplicates, tmpfiles, unstripped binaries and more)</div>
+	 <h2>Features</h2>
+	     <UL>
+	     <LI>Very fast (written in pure C, in many cases faster than rdfind, and always magnitudes faster than fdupes).
+        <LI>Output of both a ready to use script to handle finds and a easy-to-parse logfile.
+        <LI>Tries to minimize I/O as much as possible (focus on CPU-usage).
+	<LI>Finds duplictes, nonstripped binaries, files with same basenames (nameclusters),<br></br>empty files/directories, old tempdata, strange filenames
+        <LI>Displays finds in realtime.
+        <LI>Safely abortable at any time (will write log & script).
+        <LI>Colorful output (can be disabled via -B).
+        <LI>...and some more goodies to find for you :-)
+        </UL>
+     <br></br>
+    <h2>Dependencies</h2>
+<p>Only requirement is a POSIX-compilant Operating System, with a glibc version &gt; ancient<br>
+Till now it has been succesfully tested on Linux 32/64bit OS.</p>
+<br></br>
+<h2>Install</h2>
+<pre style=width:50%>
+## DOWNLOAD
+
+# Git way
+git clone https://github.com/sahib/rmlint.git 
+
+# OR
+
+# Zip way
+wget --no-check-certificate http://github.com/sahib/rmlint/zipball/master -O rmlint.zip
+unzip rmlint.zip
+
+# OR
+
+# Tar way
+wget --no-check-certificate http://github.com/sahib/rmlint/tarball/master -O rmlint.tar
+tar xfv rmlint.tar
+</pre><pre style=width:50%>
+# compile it
+
+cd &lt;name_of_the_dir&gt;
+./configure
+make -j 4 
+sudo make install 
+</pre>
+<br></br>
+<h2>Usage</h2>
+Please see 'man rmlint' or 'rmlint -h' for detailed information.<br>
+Note that rmlint will <strong>*never*</strong> delete anything without your confirmation.
+<br></br>
+<br></br>
+<h2>License</h2>
+<p>rmlint is licensed under the terms of the <a href="http://www.gnu.org/licenses/gpl.html">GPLv3</a></p>
+<br></br>
+<h2>Author</h2>
+<p>Christopher &lt;Sahib&gt; Pahl (sahib@online.de)<br>
+Send all suggestions / bugreports / patches to this address - Thanks!<br>
+See also my <a href="http://sahib.github.com">github-page</a> for more info on me.<p>
+<br/></br></p>
+<h2>Disclaimer</h2>
+<p>rmlint was written carefully in the hope to be useful, 
+but I don't give any warranty that it won't eat your data!<br>
+If this happens, and if it was due to a bug in rmlint, please<br>
+make a bugreport, so offers won't suffer from it!<br>
+<br>
+<br>
+<strong>A note about false positives:</strong><br><br>
+Short: False Positves are actuallly possible, but very, very, very unlikely.<br>
+They would need to have the same size, fingerprint and checksums to be marked as twins.<br>
+md5 is not perfect, but the probability of getting false positves on a normal set of data is the same as lim(1/x) : x -> +inf = 0 + h; where h ~ 0<br>
+<br>
+But isn't there a solution to be 100% sure? Yes, there is. It's the "--paranoid/-p" option. It does a <br>
+true byte-by-byte comparasion of each(!) file. Be warned, because it's incredibly slow.<br>
+<br>
+<p>
+
+<br></br>
+<h2>What it does internally (Algorithm):</h2>
+The algorithm tries to mimize IO as far as possible, thus focusing on CPU usage:<UL><br></br>
+<LI><strong>1)</strong> Go through all directories and catch all files conformig to regexpattern / dirpattern / hiddenstatus<br></br>
+<LI><strong>2)</strong> lint other than duplicates get detected here on the fly (like nonstripped binaries - every file is checked)<br></br>
+<LI><strong>3)</strong> the rest of the list (all files without files from 2)) gets sorted by their filesize<br></br>
+<LI><strong>4)</strong> elements with a unique filesize gets kicked out (because they can't have a twin)<br></br>
+<LI><strong>5)</strong> list gets divided isn sublist, each size one sublist<br></br>
+<LI><strong>6)</strong> each sublist gets sort by inode (to speed up reading from HD)<br></br>
+<LI><strong>1)</strong> Each group is processed seperately:<br></br><UL>
+<LI><strong>7.1)</strong> if the size of group exceeds a certain limit then it's processed on an own thread<br></br></LI>
+<LI><strong>7.2)</strong> else the group gets processed within the main thread<br></br></LI>
+</UL>
+<LI><p><strong>8)</strong> Processing: <strong>For each file of a group..</strong><br></br><UL>
+<LI><strong>8.1)</strong> A short fingerprint from the start/end + some bytes in the middle of the file is read and stored<br></br></LI>
+<LI><strong>8.2)</strong> Nonmatching files get kicked out, if the group consists of 1 elem or less, rmlint forgets about it<br></br></LI>
+<LI><strong>8.3)</strong> md5sums are calculated for the rest of the group<br></br>(only the part of the file that hasn't been read, is used fo md5sum calculation!)<br></br></LI>
+<lI><strong>8.4)</strong> if the groupssize exceeds a certain limit, the group gets splitted into several equalsized subgroups<br></br></LI><UL>
+<LI><strong>8.4.1)</strong> The whole file is read blockwise, while other threads have wait (so no useless jumping is done)<br></br></LI>
+<LI><strong>8.4.2)</strong> After a block is read (blocksize is about 2MB) md5 is updated,<br></br>while at the same time another thread is reading, back <strong>8.3.1)</strong><br></br></LI><br></br>
+</UL>
+<LI><strong>8.5)</strong> md5sums, filesize, fingerprint and bytes in the middle get checked each other (to double check and prevent false positives)<br></br></LI>
+<LI><strong>8.6)</strong> log/handle result to script / log / screen (let other threads wait for this short time, so no chaos is created)<br></br></LI>
+</UL>
+<LI><strong>9)</strong> Do <strong>8)</strong> for every group, and print statistics when finished.
+</p>
+<br></br>
+<br></br>
+</UL>
+<h2>(Pseudo-)Speed comparasion:</h2>
+<UL>
+<LI>Tests were made on a AMD Phenom(tm) 9950 Quad-Core Processor</LI>
+<LI>5 runs each were made, and the average of run #2,3,4,5 were taken</LI>
+<LI>This is not a real benchmark: rdfind is often faster on singlecoremachines!</LI>
+<br></br>
+<table >
+  <colgroup width="100" span="5"></colgroup>
+  <tr>
+    <td></td>
+    <td><h2>rdfind</h2></td>
+    <td><h2>fdupes</h2></td>
+    <td><h2>rmlint</h2></td>
+    <td><h2>notes:</h2></td>
+  </tr>
+  <tr>
+    <td><h2>88GB Documents:</h2></td>
+    <td>1,430s</td>
+    <td>8,137s</td>
+    <td>0.656s</td>
+    <td>rmlint CPU usage was 310%, rdfind's 99%</td>
+  </tr>
+  <tr>
+    <td><h2>2,2GB of Source:</h2></td>
+    <td>12.030s</td>
+    <td>30.552s</td>
+    <td>1.641s</td>
+    <td>rdfind was faster on the first run.</td>
+  </tr>
+  <tr>
+    <td><h2>50GB of Music:</h2></td>
+    <td>0.089s</td>
+    <td>1:54min</td>
+    <td>0.097s</td>
+    <td>Dir did not contain any twins.</td>
+  </tr>
+</table>
+
+    <div class="footer">
+      get the developement version on GitHub : <a href="http://github.com/sahib/rmlint">sahib/rmlint</a>
+    </div>
+  </div> 
+</body>
+</html>
+
