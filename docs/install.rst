@@ -60,6 +60,7 @@ binary:
 
 .. code-block:: bash
 
+   $ # Omit -b develop if you want to build from the stable master
    $ git clone -b develop https://github.com/sahib/rmlint.git 
    $ cd rmlint/
    $ scons config       # Look what features scons would compile
