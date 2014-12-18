@@ -35,7 +35,7 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 
-#if HAVE_BIGFILES
+#if HAVE_STAT64
 typedef struct stat64 RmStat;
 #else
 typedef struct stat RmStat;
@@ -46,7 +46,7 @@ typedef struct stat RmStat;
 ////////////////////////////////////
 
 static inline int rm_sys_stat(const char *path, RmStat *buf) {
-#if HAVE_BIGFILES
+#if HAVE_STAT64
     return stat64(path, buf);
 #else
     return stat(path, buf);
@@ -54,7 +54,7 @@ static inline int rm_sys_stat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#if HAVE_BIGFILES
+#if HAVE_STAT64
     return lstat64(path, buf);
 #else
     return lstat(path, buf);
@@ -62,7 +62,7 @@ static inline int rm_sys_lstat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_open(const char *path, int mode) {
-#if HAVE_BIGFILES
+#if HAVE_STAT64
     mode |= O_LARGEFILE;
 #endif
 

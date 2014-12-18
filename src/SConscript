@@ -24,6 +24,8 @@ def build_config_template(target, source, env):
             HAVE_FIEMAP=env['HAVE_FIEMAP'],
             HAVE_SHA512=env['HAVE_SHA512'],
             HAVE_BIGFILES=env['HAVE_BIGFILES'],
+            HAVE_STAT64=env['HAVE_BIG_STAT'],
+            HAVE_BIG_OFF_T=env['HAVE_BIG_OFF_T'],
             HAVE_BLKID=int(env['HAVE_BLKID']),
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
