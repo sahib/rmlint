@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+Import('env')
+Import('VERSION_MAJOR')
+Import('VERSION_MINOR')
+Import('VERSION_PATCH')
+Import('create_uninstall_target')
+Import('find_sphinx_binary')
+
+
+import os
+import time
+import subprocess
+
+from functools import partial
+
+
+def run_sphinx_binary(builder, **kwargs):
+    sphinx_binary = find_sphinx_binary()
+    if sphinx_binary is None:
+        return
+
+    build_dir = os.path.join('docs/_build', builder)
+    try:
+        os.makedirs(build_dir)
+    except OSError:
+        pass
+
+    subprocess.check_call(
+        [sphinx_binary, '-Q', '-b', builder, 'docs', build_dir]
+    )
+
+
+def gzip_file(target, source, env):
+    try:
+        subprocess.check_call('gzip -c {s} > {t}'.format(
+            s=source[0].get_abspath(),
+            t=target[0].get_abspath(),
+        ), shell=True)
+    except Exception as err:
+        print('Warning: could not gzip {s} to {t}: {e}'.format(
+            s=source[0].get_abspath(),
+            t=target[0].get_abspath(),
+            e=err
+        ))
+
+
+sphinx = env.AlwaysBuild(
+    env.Command(
+        '_build/man/rmlint.1', 'rmlint.1.rst',
+        Action(partial(run_sphinx_binary, 'man'), "Building manpage from rst...")
+    )
+)
+
+manpage = env.AlwaysBuild(
+    env.Command(
+        'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
+    )
+)
+
+env.Alias('man', env.Depends(manpage, sphinx))
+
+
+if 'install' in COMMAND_LINE_TARGETS:
+    man_install = env.Install('$PREFIX/share/man/man1', [manpage])
+    env.Alias('install', [man_install])
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
+
+if 'docs' in COMMAND_LINE_TARGETS:
+    env.Alias('docs',
+        env.Command(
+            'make_docs', None,
+            Action(partial(run_sphinx_binary, 'html'), "Building online docs...")
+        ),
+    )

@@ -1,0 +1,369 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: rmlint 2.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-12-02 13:37+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/shredder.c:1356
+#, c-format
+msgid "Negative bytes_left_to_read for %s"
+msgstr ""
+
+#: src/shredder.c:1361
+#, c-format
+msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
+msgstr ""
+
+#: src/utilities.c:166
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr ""
+
+#: src/utilities.c:173
+msgid "ELF Library is out of date!"
+msgstr ""
+
+#: src/cmdline.c:81
+msgid "You seem to have no manpage for rmlint."
+msgstr ""
+
+#: src/cmdline.c:125
+msgid "Input size is empty"
+msgstr ""
+
+#: src/cmdline.c:132
+msgid "This does not look like a number"
+msgstr ""
+
+#: src/cmdline.c:134
+msgid "Negativ sizes are no good idea"
+msgstr ""
+
+#: src/cmdline.c:152
+msgid "Given format specifier not found"
+msgstr ""
+
+#: src/cmdline.c:177
+msgid "Max is smaller than min"
+msgstr ""
+
+#: src/cmdline.c:195
+#, c-format
+msgid "cannot parse --limit: %s"
+msgstr ""
+
+#: src/cmdline.c:211
+#, c-format
+msgid "Can't open directory or file \"%s\": %s\n"
+msgstr ""
+
+#: src/cmdline.c:252
+#, c-format
+msgid "Adding -o %s as output failed."
+msgstr ""
+
+#: src/cmdline.c:262
+#, c-format
+msgid "No format (format:key[=val]) specified in '%s'."
+msgstr ""
+
+#: src/cmdline.c:271
+#, c-format
+msgid "Missing key (format:key[=val]) in '%s'."
+msgstr ""
+
+#: src/cmdline.c:296
+#, c-format
+msgid "Unable to parse factor \"%s\": error begins at %s"
+msgstr ""
+
+#: src/cmdline.c:308
+#, c-format
+msgid "factor value is not in range [0-1]: %f"
+msgstr ""
+
+#: src/cmdline.c:323
+#, c-format
+msgid "Unable to parse offset \"%s\": %s"
+msgstr ""
+
+#: src/cmdline.c:457
+msgid "lint types after first should be prefixed with '+' or '-'"
+msgstr ""
+
+#: src/cmdline.c:458
+#, c-format
+msgid "or they would over-ride previously set options: [%s]"
+msgstr ""
+
+#: src/cmdline.c:474
+#, c-format
+msgid "lint type '%s' not recognised"
+msgstr ""
+
+#: src/cmdline.c:515
+#, c-format
+msgid "Unable to parse time spec \"%s\""
+msgstr ""
+
+#: src/cmdline.c:529
+#, c-format
+msgid "-n %lu is newer than current time (%lu)."
+msgstr ""
+
+#: src/cmdline.c:682
+#, c-format
+msgid "Invalid thread count supplied: %s"
+msgstr ""
+
+#: src/cmdline.c:695
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr ""
+
+#: src/cmdline.c:774
+#, c-format
+msgid "Invalid size description \"%s\": %s"
+msgstr ""
+
+#: src/cmdline.c:787
+msgid ""
+"can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
+"keep-all-untagged"
+msgstr ""
+
+#: src/cmdline.c:794
+msgid ""
+"can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
+"keep-all-tagged"
+msgstr ""
+
+#: src/cmdline.c:859
+msgid "Only up to -ppp or down to -P flags allowed."
+msgstr ""
+
+#: src/cmdline.c:866
+msgid "Specifiyng both -o and -O is not allowed."
+msgstr ""
+
+#: src/cmdline.c:875
+msgid "No valid -o flag encountered."
+msgstr ""
+
+#: src/cmdline.c:880
+msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
+msgstr ""
+
+#: src/cmdline.c:887
+msgid "Full paranoia will not work well with directory merging."
+msgstr ""
+
+#: src/cmdline.c:925
+msgid "No valid paths given."
+msgstr ""
+
+#: src/formats.c:129
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr ""
+
+#: src/formats.c:152
+#, c-format
+msgid "Unable to open file for writing: %s"
+msgstr ""
+
+#: src/main.c:71
+msgid "Received Interrupt, stopping..."
+msgstr ""
+
+#: src/main.c:75
+msgid "Received second Interrupt, stopping hard."
+msgstr ""
+
+#: src/main.c:84
+#, c-format
+msgid "Aborting due to a fatal error. (signal received: %s)"
+msgstr ""
+
+#: src/main.c:85
+msgid "Please file a bug report (See rmlint -h)"
+msgstr ""
+
+#: src/formats/progressbar.c:62
+msgid "Traversing"
+msgstr ""
+
+#: src/formats/progressbar.c:64
+msgid "usable files"
+msgstr ""
+
+#: src/formats/progressbar.c:67
+msgid "ignored files / folders"
+msgstr ""
+
+#: src/formats/progressbar.c:75
+msgid "Preprocessing"
+msgstr ""
+
+#: src/formats/progressbar.c:76
+msgid "reduces files to"
+msgstr ""
+
+#: src/formats/progressbar.c:78
+msgid "found"
+msgstr ""
+
+#: src/formats/progressbar.c:80
+msgid "other lint"
+msgstr ""
+
+#: src/formats/progressbar.c:89
+msgid "Matching files"
+msgstr ""
+
+#: src/formats/progressbar.c:91
+msgid "dupes of"
+msgstr ""
+
+#: src/formats/progressbar.c:93
+msgid "originals"
+msgstr ""
+
+#: src/formats/progressbar.c:95
+msgid "to scan in "
+msgstr ""
+
+#: src/formats/progressbar.c:97
+msgid "files"
+msgstr ""
+
+#: src/formats/progressbar.c:103
+msgid "Merging files into directories (stand by...)"
+msgstr ""
+
+#: src/formats/progressbar.c:222
+msgid "Cannot figure out terminal width."
+msgstr ""
+
+#: src/formats/pretty.c:34
+msgid "Bad symlink(s)"
+msgstr ""
+
+#: src/formats/pretty.c:35
+msgid "Empty dir(s)"
+msgstr ""
+
+#: src/formats/pretty.c:36
+msgid "Non stripped binarie(s)"
+msgstr ""
+
+#: src/formats/pretty.c:37
+msgid "Bad UID(s)"
+msgstr ""
+
+#: src/formats/pretty.c:38
+msgid "Bad GID(s)"
+msgstr ""
+
+#: src/formats/pretty.c:39
+msgid "Bad UID and GID(s)"
+msgstr ""
+
+#: src/formats/pretty.c:40
+msgid "Empty file(s)"
+msgstr ""
+
+#: src/formats/pretty.c:41
+msgid "Duplicate(s)"
+msgstr ""
+
+#: src/formats/pretty.c:42
+msgid "Duplicate Directorie(s)"
+msgstr ""
+
+#: src/formats/summary.c:58
+#, c-format
+msgid "file(s) after investigation, nothing to search through.\n"
+msgstr ""
+
+#: src/formats/summary.c:66
+#, c-format
+msgid "Early shutdown, probably not all lint was found.\n"
+msgstr ""
+
+#: src/formats/summary.c:76
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr ""
+
+#: src/formats/summary.c:88
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr ""
+
+#: src/formats/summary.c:99
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
+msgstr ""
+
+#: src/formats/summary.c:123
+#, c-format
+msgid "Wrote a %s%s%s file to %s%s%s.\n"
+msgstr ""
+
+#: src/traverse.c:222
+#, c-format
+msgid "filesystem loop detected at %s (skipping)"
+msgstr ""
+
+#: src/traverse.c:226
+#, c-format
+msgid "cannot read directory %s: %s"
+msgstr ""
+
+#: src/traverse.c:237
+#, c-format
+msgid "error %d in fts_read for %s (skipping)"
+msgstr ""
+
+#: src/traverse.c:261
+#, c-format
+msgid "Added big file %s"
+msgstr ""
+
+#: src/traverse.c:263
+#, c-format
+msgid "cannot stat file %s (skipping)"
+msgstr ""
+
+#: src/traverse.c:287
+#, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr ""
+
+#: src/traverse.c:304
+#, c-format
+msgid "'%s': fts_read failed on %s"
+msgstr ""
+
+#: src/utilities.c:166
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr ""
+
+#: src/utilities.c:173
+msgid "ELF Library is out of date!"
+msgstr ""

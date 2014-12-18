@@ -1,0 +1,100 @@
+#ifndef RM_CONFIG_H
+#define RM_CONFIG_H
+
+#define INSTALL_PREFIX "{INSTALL_PREFIX}"
+
+#define HAVE_BLKID     {HAVE_BLKID}
+#define HAVE_LIBINTL   {HAVE_LIBINTL}
+#define HAVE_LIBELF    {HAVE_LIBELF}
+#define HAVE_MNTENT    {HAVE_MNTENT}
+#define HAVE_FIEMAP    {HAVE_FIEMAP}
+#define HAVE_SHA512    {HAVE_SHA512}
+#define HAVE_BIGFILES  {HAVE_BIGFILES}
+#define HAVE_STAT64    {HAVE_STAT64}
+#define HAVE_BIG_OFF_T {HAVE_BIG_OFF_T}
+
+
+#define RMLINT_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
+#define RMLINT_VERSION_MAJOR {VERSION_MAJOR}
+#define RMLINT_VERSION_MINOR {VERSION_MINOR}
+#define RMLINT_VERSION_PATCH {VERSION_PATCH}
+#define RMLINT_VERSION_NAME  "{VERSION_NAME}"
+#define RMLINT_VERSION_GIT_REVISION "{VERSION_GIT_REVISION}"
+
+/* Might come in useful */
+#define RMLINT_CHECK_VERSION(X,Y,Z) (0  \
+    || X <= RM_VERSION_MAJOR        \
+    || Y <= RM_VERSION_MINOR        \
+    || Z <= RM_VERSION_MICRO        \
+)
+
+/* These colors should only be used with the rm_log_* macros below */
+#define RED    "\x1b[31;01m"
+#define YELLOW "\x1b[33;01m"
+#define RESET  "\x1b[0m"
+#define GREEN  "\x1b[32;01m"
+#define BLUE   "\x1b[34;01m"
+
+#include <errno.h>
+
+#define rm_log_debug(...) \
+    g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define rm_log_info(...) \
+    g_log("rmlint", G_LOG_LEVEL_INFO, __VA_ARGS__)
+#define rm_log_warning(...) \
+    g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
+#define rm_log_error(...) \
+    g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+
+#define rm_log_perror(message)                                                           \
+    if(errno) {{                                                                         \
+        rm_log_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
+    }}                                                                                   \
+ 
+
+#define _U G_GNUC_UNUSED
+#define LLU G_GUINT64_FORMAT
+
+
+#define RM_PLATFORM_32 (UINTPTR_MAX == 0xffffffff)
+#define RM_PLATFORM_64 (UINTPTR_MAX == 0xffffffffffffffff)
+
+#ifdef __sse4_2__
+    #define RM_PLATFORM_HAVE_SSE42 1
+#endif
+
+#include <glib.h>
+
+#define GETTEXT_PACKAGE "rmlint"
+
+#if HAVE_LIBINTL
+#  define _(String) gettext (String)
+#  define gettext_noop(String) String
+#  define N_(String) gettext_noop (String)
+#  include <libintl.h>
+#else
+#  define _(String) (String)
+#  define gettext_noop(String) String
+#  define N_(String) gettext_noop (String)
+#endif
+
+
+typedef guint64 RmOff;
+
+/* Stupid macros to make printing error lines easier */
+#define rm_log_error_line(...) \
+    rm_log_error(RED);         \
+    rm_log_error(_("ERROR"));  \
+    rm_log_error(": "RESET);   \
+    rm_log_error(__VA_ARGS__); \
+    rm_log_error("\n");        \
+
+#define rm_log_warning_line(...)  \
+    rm_log_warning(YELLOW);       \
+    rm_log_warning(_("WARNING")); \
+    rm_log_warning(": "RESET);    \
+    rm_log_warning(__VA_ARGS__);  \
+    rm_log_warning("\n");         \
+
+
+#endif

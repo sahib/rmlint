@@ -1,0 +1,33 @@
+# Maintainer: SahibBommelig <sahib@online.de>
+# rmlint PKBUILD for ArchLinux
+ 
+_pkgname=rmlint
+pkgname=${_pkgname}-git
+pkgver=156.9a0a7fe
+pkgrel=1
+pkgdesc="Tool to remove duplicates and other lint, being much faster than fdupes"
+arch=('i686' 'x86_64')
+url="https://github.com/sahib/rmlint"
+license=('GPL3')
+depends=('glibc')
+makedepends=('git')
+conflicts=("$_rmlint")
+provides=("$_pkgname")
+source=("$pkgname"::"git+https://github.com/sahib/${_pkgname}.git")
+md5sums=('SKIP')
+ 
+pkgver() {
+    cd "${srcdir}/${pkgname}"
+    printf "%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    cd "${srcdir}/${pkgname}"
+    git checkout develop  # TODO: Change this for after release
+    scons -j4 DEBUG=1 --prefix=${pkgdir}/usr --actual-prefix=/usr
+}
+ 
+package() {
+    cd "${srcdir}/${pkgname}"
+    scons DEBUG=1 --prefix=${pkgdir}/usr install --actual-prefix=/usr
+}
