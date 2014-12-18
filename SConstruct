@@ -100,7 +100,12 @@ def check_fiemap(context):
 
 
 def check_bigfiles(context):
-    rc = 1
+    off_t_is_big_enough = True
+
+    if tests.CheckTypeSize(context, 'off_t', header='#include <sys/types.h>\n') < 8:
+        off_t_is_big_enough = False
+
+    have_stat64 = True
     if tests.CheckFunc(
         context, 'stat64',
         header='\n'.join([
@@ -109,8 +114,11 @@ def check_bigfiles(context):
             '#include <unistd.h>\n'
         ])
     ):
-        rc = 0
+        have_stat64 = False
 
+    rc = off_t_is_big_enough or have_stat64
+    conf.env['HAVE_BIG_OFF_T'] = off_t_is_big_enough
+    conf.env['HAVE_BIG_STAT'] = have_stat64
     conf.env['HAVE_BIGFILES'] = rc
 
     context.did_show_result = True
@@ -387,8 +395,10 @@ if 'config' in COMMAND_LINE_TARGETS:
     Find non-stripped binaries (needs libelf)         : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux) : {fiemap}
     Support for SHA512 (needs glib >= 2.31)           : {sha512}
-    Checking for proper support of big files (stat64) : {bigfiles}
     Build manpage from docs/rmlint.1.rst              : {sphinx}
+    Checking for proper support of big files >= 4GB   : {bigfiles}
+        (needs either sizeof(off_t) >= 8 ...)         : {bigofft}
+        (... or presence of stat64)                   : {bigstat}
 
     Optimize non-rotational disks                     : {nonrotational}
         (needs libblkid for resolving dev_t to path)  : {blkid}
@@ -420,6 +430,8 @@ Type 'scons' to actually compile rmlint now. Good luck.
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
+            bigofft=yesno(env['HAVE_BIG_OFF_T']),
+            bigstat=yesno(env['HAVE_BIG_STAT']),
             sphinx=COLORS['green'] + 'yes, using ' + COLORS['end'] + sphinx_bin if sphinx_bin else yesno(sphinx_bin),
             compiler=env['CC'],
             prefix=GetOption('prefix'),
