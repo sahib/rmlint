@@ -493,6 +493,95 @@ In the case of nested mountpoints, it may sometimes makes sense to use the
 opposite variations, ``-K`` (``--keep-all-untagged``) and ``-M`` (``--must-match-untagged``).
 
 
+Finding duplicate directories
+-----------------------------
+
+.. note:: 
+
+    ``--merge-directories`` is still an experimental option that is non-trivial
+    to implement. Please double check the output and report any possible bugs.
+
+As far as we know, ``rmlint`` is the only duplicate finder that can do this.
+Basically, all you have to do is to specify the ``-D`` (``--merge-directories``)
+option and ``rmlint`` will cache all duplicate until everything is found and
+then merge them into full duplicate directories (if any). All other files are
+printed normally. 
+
+This may sound simple after all, but there are some caveats you should know of.
+
+Let's create a tricky folder structure to demonstrate the feature:
+
+.. code-block:: bash
+
+   $ mkdir -p fake/one/two/ fake/one/two_copy fake/one_copy/two fake/one_copy/two_copy
+   $ echo xxx > fake/one/two/file 
+   $ echo xxx > fake/one/two_copy/file 
+   $ echo xxx > fake/one_copy/two/file 
+   $ echo xxx > fake/one_copy/two_copy/file 
+   $ echo xxx > fake/file
+   $ echo xxx > fake/another_file
+
+Now go run ``rmlint`` on it like that: 
+
+.. code-block:: bash
+
+   $ rmlint fake -D -S a
+   # Duplicate Directorie(s):
+       ls -la /home/sahib/rmlint/fake/one
+       rm -rf /home/sahib/rmlint/fake/one_copy
+       ls -la /home/sahib/rmlint/fake/one/two
+       rm -rf /home/sahib/rmlint/fake/one/two_copy
+
+   # Duplicate(s):
+       ls /home/sahib/rmlint/fake/another_file
+       rm /home/sahib/rmlint/fake/one/two/file
+       rm /home/sahib/rmlint/fake/file
+
+   ==> In total 6 files, whereof 5 are duplicates in 1 groups.
+   ==> This equals 20 B of duplicates which could be removed.
+
+As you can see it correctly recognized the copies as duplicate directories.
+Also, it did not stop at ``fake/one`` but also looked at what parts of this
+original directory could be possibly removed too.
+
+Files that could not be merged into directories are printed separately. Note
+here, that the original is taken from a directory that was preserved. So exactly
+one copy of the ``xxx``-content file stays on the filesystem in the end.
+
+``rmlint`` finds duplicate directories by counting all files in the directory
+tree and looking up if there's an equal amount of duplicate and empty files.
+If so, it tries the same with the parent directory. 
+
+Some file like hidden files will not be recognized as duplicates, but still
+added to the count. This will of course lead to unmerged directories. That's why
+the ``-D`` option implies the ``-r`` (``--hidden``) and ``-l``
+(``--hardlinked``) option in order to make this convenient.
+
+A note to symbolic links: The default behaviour is to not follow symbolic links,
+but to compare the link targets. If the target is the same, the link will be
+the same. This is a sane default for duplicate directories, since twin copies
+often are created by doing a backup of some files. In this case any symlinks in
+the backupped data will still point to the same target. If you have symlinks
+that reference a file in each respective directory tree, consider using ``-f``.
+
+.. warning::
+
+    Do *never ever* modify the filesystem (especially deleting files) while
+    running with the ``-D`` option. This can lead to mismatches in the file
+    count of a directory, possibly causing dataloss. You have been warned!
+
+Sometimes it might be nice to only search for duplicate directories, banning all
+the sole files from littering the screen. While this will not delete all files,
+it will give you a nice overview of what you copied where. 
+
+Since duplicate directories are just a lint type as every other, you can just
+pass it to ``-T``: ``-T "none +dd"`` (or ``-T "none +duplicatedirs"``). 
+There's also a preset of it to save you some typing: ``-T minimaldirs``.
+
+.. note:: 
+
+    ``-T minimaldirs`` does not imply ``--hidden`` or ``--hardlinked`` as ``-D`` does!
+
 Misc options
 ------------
 
@@ -522,9 +611,6 @@ Here's just a list of options that are nice to know, but not essential:
 
       $ rmlint -d 0 
       <finds everything in the same working directory>
-
-- The still experimental ``-D`` (``--merge-directories``) option is able to
-  merge found duplicates into duplicate directories. Use with care!
 
 - If you want to prevent ``rmlint`` from crossing mountpoints (e.g. scan a home
   directory, but no the HD mounted in there), you can use the ``-X``

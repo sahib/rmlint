@@ -271,7 +271,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     case RM_DIGEST_CITY:
     case RM_DIGEST_CITY256:
     case RM_DIGEST_CITY512:
-        for (guint8 block = 0; block < ( digest->bytes / 16 ); block++) {
+        for (guint8 block = 0; block < (digest->bytes / 16); block++) {
             /* Opt out for the more optimized version.
             * This needs the crc command of sse4.2
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
@@ -303,7 +303,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             hash ^= ((guint8 *)data)[i % size];
             hash *= 0x100000001b3;
             ((guint8 *)digest->checksum)[i] += hash;
-        }
+            
     }
     break;
     case RM_DIGEST_PARANOID:

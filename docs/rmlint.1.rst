@@ -100,7 +100,7 @@ General Options
 
     If the value is omitted it is set to a truthy value.
 
-:``-a --algorithm=name`` (**default\:** *spooky*):
+:``-a --algorithm=name`` (**default\:** *spooky*) :
 
     Choose the hash algorithm to use for finding duplicate files.
     The following well-known algorithms are available:
