@@ -1259,8 +1259,8 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
         /* Update statistics */
         rm_fmt_lock_state(tag->session->formats);
         {
-            guint64 dupe_count = group->held_files->length - 1;
-            guint64 file_sizes = ((RmFile *)group->held_files->head->data)->file_size;
+            RmOff dupe_count = group->held_files->length - 1;
+            RmOff file_sizes = ((RmFile *)group->held_files->head->data)->file_size;
             tag->session->dup_group_counter++;
             tag->session->dup_counter += dupe_count;
             tag->session->total_lint_size += dupe_count * file_sizes;

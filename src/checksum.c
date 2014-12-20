@@ -298,7 +298,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
          *
          * http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
          * */
-        guint64 hash = 0xcbf29ce484222325;
+        RmOff hash = 0xcbf29ce484222325;
         for(gsize i = 0; i < digest->bytes; ++i) {
             hash ^= ((guint8 *)data)[i % size];
             hash *= 0x100000001b3;
@@ -416,7 +416,7 @@ guint rm_digest_hash(RmDigest *digest) {
         bytes = digest->bytes;
     }
 
-    guint hash = *(guint64 *)buf;
+    guint hash = *(RmOff *)buf;
     g_slice_free1(bytes, buf);
     return hash;
 }

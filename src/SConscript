@@ -16,7 +16,7 @@ def build_config_template(target, source, env):
     text = source[0].get_text_contents()
 
     with codecs.open(target[0].get_abspath(), 'w') as handle:
-        handle.write(text.format(
+        config_h = text.format(
             INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
             HAVE_LIBINTL=env['HAVE_GETTEXT'],
             HAVE_LIBELF=env['HAVE_LIBELF'],
@@ -33,7 +33,9 @@ def build_config_template(target, source, env):
             VERSION_PATCH=VERSION_PATCH,
             VERSION_NAME=VERSION_NAME,
             VERSION_GIT_REVISION=env['gitrev']
-        ))
+        )
+
+        handle.write(config_h)
 
 def build_python_formatter(target, source, env):
     text = source[0].get_text_contents()

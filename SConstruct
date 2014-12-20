@@ -8,10 +8,17 @@ import subprocess
 
 import SCons.Conftest as tests
 
-VERSION_MAJOR = 2
-VERSION_MINOR = 0
-VERSION_PATCH = 0
-VERSION_NAME = 'Personable Pidgeon'
+
+def read_version():
+    with open('.version', 'r') as handle:
+        version_string = handle.read()
+
+    version_numbers, release_name = version_string.split(' ', 1)
+    major, minor, patch = [int(v) for v in version_numbers.split('.')]
+    return major, minor, patch, release_name.strip()
+
+
+VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME = read_version()
 Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 
 ###########################################################################
@@ -397,6 +404,23 @@ program = SConscript('src/SConscript')
 SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
+
+
+if 'dist' in COMMAND_LINE_TARGETS:
+    def build_tar_gz(target=None, source=None, env=None):
+        tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(
+            a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH
+        )
+
+        subprocess.call(
+            'git archive HEAD -9 --format tar.gz -o ' + tarball,
+            shell=True
+        )
+
+        print('Wrote tarball to ./' + tarball)
+
+    env.Command('dist', None, Action(build_tar_gz, "Building release tarball..."))
+
 
 if 'config' in COMMAND_LINE_TARGETS:
     def print_config(target=None, source=None, env=None):

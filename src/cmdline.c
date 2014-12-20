@@ -368,7 +368,7 @@ static void rm_cmd_parse_clamp_option(RmSession *session, const char *string, bo
             session->settings->skip_end_factor = factor;
         }
     } else {
-        guint64 offset = rm_cmd_parse_clamp_offset(session, string);
+        RmOff offset = rm_cmd_parse_clamp_offset(session, string);
         if(start_or_end) {
             session->settings->use_absolute_start_offset = true;
             session->settings->skip_start_offset = offset;
