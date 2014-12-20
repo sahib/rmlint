@@ -320,8 +320,8 @@ static void rm_directory_free(RmDirectory *self) {
     g_free(self);
 }
 
-static guint64 rm_tm_calc_file_size(RmDirectory *directory) {
-    guint64 acc = 0;
+static RmOff rm_tm_calc_file_size(RmDirectory *directory) {
+    RmOff acc = 0;
 
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
