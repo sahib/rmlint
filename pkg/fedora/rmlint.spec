@@ -5,18 +5,18 @@ Summary:        rmlint finds space waste and other broken things on your filesys
 Group:          Applications/System
 License:        GPLv3
 URL:            http://rmlint.rtfd.org
-Source0:        https://github.com/sahib/rmlint/archive/2.0.0.tar.gz
-Requires:       glib2-devel libblkid-devel elfutils-libelf-devel
-BuildRequires:  scons python3-sphinx gettext
+Source0:        https://github.com/sahib/rmlint/archive/rmlint-%{version}.tar.gz
+Requires:       glib2 libblkid elfutils-libelf
+BuildRequires:  scons python3-sphinx gettext libblkid-devel elfutils-libelf-devel glib2-devel
 
 %description
 rmlint finds space waste and other broken things and offers to remove it. It is
 especially an extremely fast tool to remove duplicates from your filesystem.
 
-%prep
-%setup -q
-%build
-scons -j4 --prefix=%{buildroot}/usr --actual-prefix=/usr
+%prep 
+%autosetup -c rmlint-%{version}
+
+%build scons config; scons -j4 --prefix=%{buildroot}/usr --actual-prefix=/usr
 
 %install
 
@@ -37,5 +37,9 @@ rm -rf %{buildroot}
 %{_mandir}/man1/*
 
 %changelog
+* Sat Dec 20 2014 Christopher Pahl <sahib@online.de> - 2.0.0
+- Use autosetup instead of setup -q
+* Fri Dec 19 2014 Christopher Pahl <sahib@online.de> - 2.0.0
+- Updated wrong dependency list
 * Mon Dec 01 2014 Christopher Pahl <sahib@online.de> - 2.0.0
 - Initial release of RPM package 
