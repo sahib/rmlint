@@ -399,7 +399,9 @@ uint128 CityHash128(const char *s, size_t len) {
     }
 }
 
-#ifdef __SSE4_2__
+#include "../config.h"
+
+#if RM_PLATFORM_64 && HAVE_SSE42
 #include "citycrc.h"
 #include <nmmintrin.h>
 

@@ -285,7 +285,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         break;
     case RM_DIGEST_BASTARD:
         MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[0].first, &digest->checksum[0]);
-#if HAVE_SSE42
+#if RM_PLATFORM_64 && HAVE_SSE42
         digest->checksum[1] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[1]);
 #else
         digest->checksum[1] = CityHash128WithSeed((const char *) data, size, digest->checksum[1]);
