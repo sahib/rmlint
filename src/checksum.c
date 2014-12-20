@@ -276,7 +276,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             * This needs the crc command of sse4.2
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
             */
-#ifdef RM_PLATFORM_HAVE_SSE42
+#if HAVE_SSE42
             digest->checksum[block] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[block]);
 #else
             digest->checksum[block] = CityHash128WithSeed((const char *) data, size, digest->checksum[block]);
@@ -285,7 +285,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         break;
     case RM_DIGEST_BASTARD:
         MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[0].first, &digest->checksum[0]);
-#ifdef RM_PLATFORM_HAVE_SSE42
+#if HAVE_SSE42
         digest->checksum[1] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[1]);
 #else
         digest->checksum[1] = CityHash128WithSeed((const char *) data, size, digest->checksum[1]);
