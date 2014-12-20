@@ -422,6 +422,26 @@ if 'dist' in COMMAND_LINE_TARGETS:
     env.Command('dist', None, Action(build_tar_gz, "Building release tarball..."))
 
 
+if 'release' in COMMAND_LINE_TARGETS:
+    def replace_version_strings(target=None, source=None, env=None):
+        new_version = '{a}.{b}.{c}'.format(
+            a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH
+        )
+
+        cmds = [
+            'sed -i "s/2\.0\.0/{s}/g" po/rmlint.pot'.format(s=new_version),
+            'sed -i "s/^Version:\s*2\.0\.0/Version: {s}/g"'.format(s=new_version)
+        ]
+
+        for cmd in cmds:
+            print('Running: ' + cmd)
+            subprocess.check_call(cmd, shell=True)
+
+        build_tar_gz()
+
+    env.Command('release', None, Action(build_tar_gz, "Bumping version..."))
+
+
 if 'config' in COMMAND_LINE_TARGETS:
     def print_config(target=None, source=None, env=None):
         yesno = lambda boolean: COLORS['green'] + 'yes' + COLORS['end'] if boolean else COLORS['red'] + 'no' + COLORS['end']
