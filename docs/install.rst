@@ -35,6 +35,17 @@ Here's a list of readily prepared commands for known distributions:
     $ yum -y install git scons python3-sphinx gettext
     $ yum -y install glib2-devel libblkid-devel elfutils-libelf-devel
 
+  There are also pre-built packages on `Fedora Copr`_:
+
+  .. code-block:: bash
+
+    $ dnf copr enable sahib/rmlint
+    $ dnf install rmlint
+
+  Those packages are built from master snapshots and might be slightly outdated.
+
+.. _`Fedora Copr`: https://copr.fedoraproject.org/coprs/sahib/rmlint/
+
 * **ArchLinux:**
 
   .. code-block:: bash
@@ -42,6 +53,18 @@ Here's a list of readily prepared commands for known distributions:
     $ pacman -S git scons python-sphinx
     $ pacman -S glib2 libutil-linux elfutils
 
+  There is also a `PKGBUILD`_ on the `ArchLinux AUR`_:
+
+  .. code-block:: bash
+
+    $ # Use your favourite AUR Helper.
+    $ yaourt -S rmlint-git
+
+
+  It is built from git master.
+
+.. _`PKGBUILD`: https://aur.archlinux.org/packages/rm/rmlint-git/PKGBUILD
+.. _`ArchLinux AUR`: https://aur.archlinux.org/packages/rmlint-git
 
 * **Ubuntu:**
 
