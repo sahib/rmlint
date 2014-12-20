@@ -429,17 +429,16 @@ if 'release' in COMMAND_LINE_TARGETS:
         )
 
         cmds = [
-            'sed -i "s/2\.0\.0/{s}/g" po/rmlint.pot'.format(s=new_version),
-            'sed -i "s/^Version:\s*2\.0\.0/Version: {s}/g"'.format(s=new_version)
+            'sed -i "s/2\.0\.0/{v}/g" po/rmlint.pot',
+            'sed -i "s/^Version:\(\s*\)2\.0\.0/Version:\\1{v}/g" pkg/fedora/rmlint.spec'
         ]
 
         for cmd in cmds:
             print('Running: ' + cmd)
-            subprocess.check_call(cmd, shell=True)
+            subprocess.check_call(cmd.format(v=new_version), shell=True)
 
-        build_tar_gz()
-
-    env.Command('release', None, Action(build_tar_gz, "Bumping version..."))
+    env.Command('release', None, Action(replace_version_strings, "Bumping version..."))
+    env.AlwaysBuild('dist')
 
 
 if 'config' in COMMAND_LINE_TARGETS:
