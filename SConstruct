@@ -8,10 +8,17 @@ import subprocess
 
 import SCons.Conftest as tests
 
-VERSION_MAJOR = 2
-VERSION_MINOR = 0
-VERSION_PATCH = 0
-VERSION_NAME = 'Personable Pidgeon'
+
+def read_version():
+    with open('.version', 'r') as handle:
+        version_string = handle.read()
+
+    version_numbers, release_name = version_string.split(' ', 1)
+    major, minor, patch = [int(v) for v in version_numbers.split('.')]
+    return major, minor, patch, release_name
+
+
+VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME = read_version()
 Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 
 ###########################################################################

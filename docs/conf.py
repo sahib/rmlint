@@ -188,7 +188,14 @@ if html_theme == 'bootstrap':
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = 'rmlint (2.x.x) apidoc'
+
+try:
+    with open('../.version', 'r') as handle:
+        version_string = handle.read()
+except OSError:
+    version_string = '2.x.x'
+
+html_title = 'rmlint ({v}) documentation'.format(v=version_string)
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
