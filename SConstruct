@@ -149,6 +149,20 @@ def check_sha512(context):
     return rc
 
 
+def check_sse42(context):
+    rc = 1
+    if tests.CheckDeclaration(context, '__SSE4_2__'):
+        rc = 0
+    else:
+        conf.env.Prepend(CFLAGS=['-msse4.2'])
+
+    conf.env['HAVE_SSE42'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
         Delete("$SOURCE"),
@@ -286,6 +300,7 @@ conf = Configure(env, custom_tests={
     'check_git_rev': check_git_rev,
     'check_libelf': check_libelf,
     'check_fiemap': check_fiemap,
+    'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_getmntent': check_getmntent,
     'check_bigfiles': check_bigfiles,
@@ -330,10 +345,11 @@ if 'LDFLAGS' in os.environ:
     conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
     print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
 
-# Needed/Adviceable flags:
+conf.check_sse42()
 conf.env.Append(CCFLAGS=[
     '-std=c99', '-pipe', '-fPIC', '-D_GNU_SOURCE'
 ])
+
 
 if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])
@@ -394,6 +410,7 @@ if 'config' in COMMAND_LINE_TARGETS:
     Find non-stripped binaries (needs libelf)         : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux) : {fiemap}
     Support for SHA512 (needs glib >= 2.31)           : {sha512}
+    Support for SSE4.2 instructions for fast CityHash : {sse42}
     Build manpage from docs/rmlint.1.rst              : {sphinx}
     Checking for proper support of big files >= 4GB   : {bigfiles}
         (needs either sizeof(off_t) >= 8 ...)         : {bigofft}
@@ -428,6 +445,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             mntent=yesno(env['HAVE_MNTENT']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
+            sse42=yesno(env['HAVE_SSE42']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),
             bigstat=yesno(env['HAVE_BIG_STAT']),
