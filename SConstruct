@@ -15,7 +15,7 @@ def read_version():
 
     version_numbers, release_name = version_string.split(' ', 1)
     major, minor, patch = [int(v) for v in version_numbers.split('.')]
-    return major, minor, patch, release_name
+    return major, minor, patch, release_name.strip()
 
 
 VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME = read_version()

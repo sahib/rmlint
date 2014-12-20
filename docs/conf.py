@@ -191,7 +191,7 @@ if html_theme == 'bootstrap':
 
 try:
     with open('../.version', 'r') as handle:
-        version_string = handle.read()
+        version_string = handle.read().strip()
 except OSError:
     version_string = '2.x.x'
 
