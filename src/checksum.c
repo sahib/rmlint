@@ -276,7 +276,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             * This needs the crc command of sse4.2
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
             */
-#if HAVE_SSE42
+#if RM_PLATFORM_64 && HAVE_SSE42
             digest->checksum[block] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[block]);
 #else
             digest->checksum[block] = CityHash128WithSeed((const char *) data, size, digest->checksum[block]);
