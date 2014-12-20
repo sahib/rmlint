@@ -450,12 +450,25 @@ if 'release' in COMMAND_LINE_TARGETS:
             if '@' not in text:
                 with open('.version', 'w') as handle:
                     handle.write(text + '@' + conf.env['gitrev'] + '\n')
-        else:
-            print('Warning: no git rev known; tarball will not know its revision')
 
-        subprocess.check_call('git add .version && git commit -m \".version bump; you should not see this.\"', shell=True)
+                # Commit the .version change, so git archive can see it.
+                subprocess.check_call(
+                    'git add .version && git commit -m \".version bump; you should not see this commit.\"',
+                    shell=True
+                )
+
+            # Build the .tgz on the current state
+            build_tar_gz()
+
+            # We do not want lots of temp commits, so revert the latest one.
+            if '@' not in text:
+                subprocess.check_call('git reset --hard HEAD^', shell=True)
+                with open('.version', 'w') as handle:
+                    handle.write(text + '\n')
+
+            return
+
         build_tar_gz()
-        subprocess.check_call('git reset --hard HEAD^', shell=True)
 
     env.Command('release', None, Action(replace_version_strings, "Bumping version..."))
 
