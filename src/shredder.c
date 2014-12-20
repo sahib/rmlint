@@ -1661,7 +1661,7 @@ void rm_shred_run(RmSession *session) {
             rm_log_debug(BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active files %d and avail mem %"LLU"\n"RESET,
                          device->disk_name,
                          g_queue_get_length(device->file_queue),
-                         (unsigned long long)device->remaining_bytes,
+                         device->remaining_bytes,
                          device->remaining_files,
                          tag.active_files,
                          tag.hash_mem_alloc
