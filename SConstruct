@@ -405,6 +405,23 @@ SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
 
+
+if 'dist' in COMMAND_LINE_TARGETS:
+    def build_tar_gz(target=None, source=None, env=None):
+        tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(
+            a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH
+        )
+
+        subprocess.call(
+            'git archive HEAD -9 --format tar.gz -o ' + tarball,
+            shell=True
+        )
+
+        print('Wrote tarball to ./' + tarball)
+
+    env.Command('dist', None, Action(build_tar_gz, "Building release tarball..."))
+
+
 if 'config' in COMMAND_LINE_TARGETS:
     def print_config(target=None, source=None, env=None):
         yesno = lambda boolean: COLORS['green'] + 'yes' + COLORS['end'] if boolean else COLORS['red'] + 'no' + COLORS['end']
