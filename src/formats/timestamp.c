@@ -52,7 +52,7 @@ static void rm_fmt_prog(
         fprintf(out, "%s", time_buf);
     } else {
         /* Just write out current time */
-        fprintf(out, "%"LLU"", time(NULL));
+        fprintf(out, "%"LLU"", (guint64)time(NULL));
     }
 }
 

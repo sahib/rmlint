@@ -252,7 +252,7 @@ void rm_util_size_to_human_readable(RmOff num, char *in, gsize len) {
 /////////////////////////////////////
 
 static int rm_userlist_cmp_ids(gconstpointer a, gconstpointer b, _U gpointer ud) {
-    return ((guint64)a) - ((guint64)b);
+    return GPOINTER_TO_UINT(a) - GPOINTER_TO_UINT(b);
 }
 
 RmUserList *rm_userlist_new(void) {

@@ -609,7 +609,7 @@ gboolean rm_shred_mem_take(RmMainTag *main, gint32 mem_amount, guint32 numfiles)
             result = false;
             rm_log_debug(RED"refused; ");
         }
-        rm_log_debug("mem avail %li, active files %d\n"RESET, main->hash_mem_alloc, main->active_files);
+        rm_log_debug("mem avail %"LLU", active files %d\n"RESET, main->hash_mem_alloc, main->active_files);
     }
     g_mutex_unlock(&main->hash_mem_mtx);
     return result;
@@ -747,7 +747,7 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
             RmMainTag *tag = file->shred_group->main;
             g_assert(tag);
             g_assert(file);
-            rm_log_debug("releasing mem %li bytes from %s; ", rm_shred_mem_allocation(file), file->path);
+            rm_log_debug("releasing mem %"LLU" bytes from %s; ", rm_shred_mem_allocation(file), file->path);
             (void)rm_shred_mem_take(tag, -rm_shred_mem_allocation(file), -1);
         }
     }
@@ -1658,7 +1658,7 @@ void rm_shred_run(RmSession *session) {
         g_mutex_lock(&device->lock);
         g_mutex_lock(&tag.hash_mem_mtx); /* probably unnecessary because we are only reading */
         {
-            rm_log_debug(BLUE"Got device %s back with %d in queue and %llu bytes remaining in %d remaining files; active files %d and avail mem %li\n"RESET,
+            rm_log_debug(BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active files %d and avail mem %"LLU"\n"RESET,
                          device->disk_name,
                          g_queue_get_length(device->file_queue),
                          (unsigned long long)device->remaining_bytes,

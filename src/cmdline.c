@@ -765,8 +765,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
                 rm_log_error_line(_("Unknown hash algorithm: '%s'"), optarg);
                 rm_cmd_die(session, EXIT_FAILURE);
             } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
-                session->hash_seed1 = time(NULL) * ((RmOff)session);
-                session->hash_seed2 = (RmOff)&session;
+                session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
+                session->hash_seed2 = GPOINTER_TO_UINT(&session);
             }
             break;
         case 'f':
