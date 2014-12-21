@@ -354,8 +354,6 @@ msgstr ""
 #, c-format
 msgid "'%s': fts_read failed on %s"
 msgstr ""
-<<<<<<< HEAD
-=======
 
 #: src/config.h:84
 msgid "ERROR"
@@ -364,4 +362,3 @@ msgstr ""
 #: src/config.h:91
 msgid "WARNING"
 msgstr ""
->>>>>>> master
