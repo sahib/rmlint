@@ -13,12 +13,17 @@ def read_version():
     with open('.version', 'r') as handle:
         version_string = handle.read()
 
+    static_git_rev = None
     version_numbers, release_name = version_string.split(' ', 1)
+    if '@' in release_name:
+        release_name, static_git_rev = release_name.split('@', 1)
+        static_git_rev.strip()
+
     major, minor, patch = [int(v) for v in version_numbers.split('.')]
-    return major, minor, patch, release_name.strip()
+    return major, minor, patch, release_name.strip(), static_git_rev
 
 
-VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME = read_version()
+VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME, STATIC_GIT_REV = read_version()
 Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 
 ###########################################################################
@@ -52,7 +57,7 @@ def check_pkg(context, name, varname, required=True):
 
 def check_git_rev(context):
     context.Message('Checking for git revision... ')
-    rev = VERSION_NAME
+    rev = STATIC_GIT_REV
 
     try:
         rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
@@ -405,20 +410,20 @@ SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
 
+def build_tar_gz(target=None, source=None, env=None):
+    tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(
+        a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH
+    )
+
+    subprocess.call(
+        'git archive HEAD -9 --format tar.gz -o ' + tarball,
+        shell=True
+    )
+
+    print('Wrote tarball to ./' + tarball)
+
 
 if 'dist' in COMMAND_LINE_TARGETS:
-    def build_tar_gz(target=None, source=None, env=None):
-        tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(
-            a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH
-        )
-
-        subprocess.call(
-            'git archive HEAD -9 --format tar.gz -o ' + tarball,
-            shell=True
-        )
-
-        print('Wrote tarball to ./' + tarball)
-
     env.Command('dist', None, Action(build_tar_gz, "Building release tarball..."))
 
 
@@ -437,8 +442,35 @@ if 'release' in COMMAND_LINE_TARGETS:
             print('Running: ' + cmd)
             subprocess.check_call(cmd.format(v=new_version), shell=True)
 
+        if conf.env['gitrev'] is not None:
+            print('Patching .version file...')
+            with open('.version', 'r') as handle:
+                text = handle.read().strip()
+
+            if '@' not in text:
+                with open('.version', 'w') as handle:
+                    handle.write(text + '@' + conf.env['gitrev'] + '\n')
+
+                # Commit the .version change, so git archive can see it.
+                subprocess.check_call(
+                    'git add .version && git commit -m \".version bump; you should not see this commit.\"',
+                    shell=True
+                )
+
+            # Build the .tgz on the current state
+            build_tar_gz()
+
+            # We do not want lots of temp commits, so revert the latest one.
+            if '@' not in text:
+                subprocess.check_call('git reset --hard HEAD^', shell=True)
+                with open('.version', 'w') as handle:
+                    handle.write(text + '\n')
+
+            return
+
+        build_tar_gz()
+
     env.Command('release', None, Action(replace_version_strings, "Bumping version..."))
-    env.AlwaysBuild('dist')
 
 
 if 'config' in COMMAND_LINE_TARGETS:
