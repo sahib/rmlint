@@ -358,12 +358,3 @@ msgstr ""
 #, c-format
 msgid "'%s': fts_read failed on %s"
 msgstr ""
-
-#: src/utilities.c:166
-#, c-format
-msgid "cannot open file '%s' for nonstripped test: "
-msgstr ""
-
-#: src/utilities.c:173
-msgid "ELF Library is out of date!"
-msgstr ""
