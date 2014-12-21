@@ -32,3 +32,16 @@ def test_deep():
 
     assert data[0]['path'].endswith('5')
     assert data[1]['path'].endswith('4')
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_hidden():
+    create_file('xxx', 'not_empty/.hidden')
+    head, *data, footer = run_rmlint('-T "none +ed"')
+
+    assert footer['total_files'] == 0
+    assert len(data) is 0
+
+    head, *data, footer = run_rmlint('-T "none +ed" --hidden')
+    assert footer['total_files'] == 1
+    assert len(data) is 0
