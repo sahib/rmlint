@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-12-02 13:37+0100\n"
+"POT-Creation-Date: 2014-12-21 12:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,161 +17,157 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/shredder.c:1356
+#: src/shredder.c:1403
 #, c-format
 msgid "Negative bytes_left_to_read for %s"
 msgstr ""
 
-#: src/shredder.c:1361
+#: src/shredder.c:1408
 #, c-format
 msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
 msgstr ""
 
-#: src/utilities.c:166
+#: src/utilities.c:181
 #, c-format
 msgid "cannot open file '%s' for nonstripped test: "
 msgstr ""
 
-#: src/utilities.c:173
+#: src/utilities.c:188
 msgid "ELF Library is out of date!"
 msgstr ""
 
-#: src/cmdline.c:81
+#: src/cmdline.c:109
 msgid "You seem to have no manpage for rmlint."
 msgstr ""
 
-#: src/cmdline.c:125
+#: src/cmdline.c:153
 msgid "Input size is empty"
 msgstr ""
 
-#: src/cmdline.c:132
+#: src/cmdline.c:160
 msgid "This does not look like a number"
 msgstr ""
 
-#: src/cmdline.c:134
+#: src/cmdline.c:162
 msgid "Negativ sizes are no good idea"
 msgstr ""
 
-#: src/cmdline.c:152
+#: src/cmdline.c:180
 msgid "Given format specifier not found"
 msgstr ""
 
-#: src/cmdline.c:177
+#: src/cmdline.c:205
 msgid "Max is smaller than min"
 msgstr ""
 
-#: src/cmdline.c:195
+#: src/cmdline.c:223
 #, c-format
 msgid "cannot parse --limit: %s"
 msgstr ""
 
-#: src/cmdline.c:211
+#: src/cmdline.c:239
 #, c-format
-msgid "Can't open directory or file \"%s\": %s\n"
+msgid "Can't open directory or file \"%s\": %s"
 msgstr ""
 
-#: src/cmdline.c:252
+#: src/cmdline.c:280
 #, c-format
 msgid "Adding -o %s as output failed."
 msgstr ""
 
-#: src/cmdline.c:262
+#: src/cmdline.c:290
 #, c-format
 msgid "No format (format:key[=val]) specified in '%s'."
 msgstr ""
 
-#: src/cmdline.c:271
+#: src/cmdline.c:299
 #, c-format
 msgid "Missing key (format:key[=val]) in '%s'."
 msgstr ""
 
-#: src/cmdline.c:296
+#: src/cmdline.c:324
 #, c-format
 msgid "Unable to parse factor \"%s\": error begins at %s"
 msgstr ""
 
-#: src/cmdline.c:308
+#: src/cmdline.c:336
 #, c-format
 msgid "factor value is not in range [0-1]: %f"
 msgstr ""
 
-#: src/cmdline.c:323
+#: src/cmdline.c:351
 #, c-format
 msgid "Unable to parse offset \"%s\": %s"
 msgstr ""
 
-#: src/cmdline.c:457
+#: src/cmdline.c:505
 msgid "lint types after first should be prefixed with '+' or '-'"
 msgstr ""
 
-#: src/cmdline.c:458
+#: src/cmdline.c:506
 #, c-format
 msgid "or they would over-ride previously set options: [%s]"
 msgstr ""
 
-#: src/cmdline.c:474
+#: src/cmdline.c:522
 #, c-format
 msgid "lint type '%s' not recognised"
 msgstr ""
 
-#: src/cmdline.c:515
+#: src/cmdline.c:576
 #, c-format
 msgid "Unable to parse time spec \"%s\""
 msgstr ""
 
-#: src/cmdline.c:529
+#: src/cmdline.c:590
 #, c-format
 msgid "-n %lu is newer than current time (%lu)."
 msgstr ""
 
-#: src/cmdline.c:682
+#: src/cmdline.c:752
 #, c-format
 msgid "Invalid thread count supplied: %s"
 msgstr ""
 
-#: src/cmdline.c:695
+#: src/cmdline.c:765
 #, c-format
 msgid "Unknown hash algorithm: '%s'"
 msgstr ""
 
-#: src/cmdline.c:774
+#: src/cmdline.c:858
 #, c-format
 msgid "Invalid size description \"%s\": %s"
 msgstr ""
 
-#: src/cmdline.c:787
+#: src/cmdline.c:871
 msgid ""
 "can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
 "keep-all-untagged"
 msgstr ""
 
-#: src/cmdline.c:794
+#: src/cmdline.c:878
 msgid ""
 "can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
 "keep-all-tagged"
 msgstr ""
 
-#: src/cmdline.c:859
+#: src/cmdline.c:943
 msgid "Only up to -ppp or down to -P flags allowed."
 msgstr ""
 
-#: src/cmdline.c:866
+#: src/cmdline.c:950
 msgid "Specifiyng both -o and -O is not allowed."
 msgstr ""
 
-#: src/cmdline.c:875
+#: src/cmdline.c:959
 msgid "No valid -o flag encountered."
 msgstr ""
 
-#: src/cmdline.c:880
+#: src/cmdline.c:964
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
 msgstr ""
 
-#: src/cmdline.c:887
-msgid "Full paranoia will not work well with directory merging."
-msgstr ""
-
-#: src/cmdline.c:925
+#: src/cmdline.c:1001
 msgid "No valid paths given."
 msgstr ""
 
@@ -324,46 +320,45 @@ msgstr ""
 msgid "Wrote a %s%s%s file to %s%s%s.\n"
 msgstr ""
 
-#: src/traverse.c:222
+#: src/traverse.c:235
 #, c-format
 msgid "filesystem loop detected at %s (skipping)"
 msgstr ""
 
-#: src/traverse.c:226
+#: src/traverse.c:239
 #, c-format
 msgid "cannot read directory %s: %s"
 msgstr ""
 
-#: src/traverse.c:237
+#: src/traverse.c:250
 #, c-format
 msgid "error %d in fts_read for %s (skipping)"
 msgstr ""
 
-#: src/traverse.c:261
+#: src/traverse.c:276
 #, c-format
 msgid "Added big file %s"
 msgstr ""
 
-#: src/traverse.c:263
+#: src/traverse.c:278
 #, c-format
 msgid "cannot stat file %s (skipping)"
 msgstr ""
 
-#: src/traverse.c:287
+#: src/traverse.c:310
 #, c-format
 msgid "Unknown fts_info flag %d for file %s"
 msgstr ""
 
-#: src/traverse.c:304
+#: src/traverse.c:327
 #, c-format
 msgid "'%s': fts_read failed on %s"
 msgstr ""
 
-#: src/utilities.c:166
-#, c-format
-msgid "cannot open file '%s' for nonstripped test: "
+#: src/config.h:84
+msgid "ERROR"
 msgstr ""
 
-#: src/utilities.c:173
-msgid "ELF Library is out of date!"
+#: src/config.h:91
+msgid "WARNING"
 msgstr ""
