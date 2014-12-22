@@ -68,6 +68,7 @@ program = env.Program(
 )
 
 env.Depends(program, [config, py_formatter])
+env.AlwaysBuild(config)
 
 if 'install' in COMMAND_LINE_TARGETS:
     env.Alias('install', env.Install('$PREFIX/bin', [program]))

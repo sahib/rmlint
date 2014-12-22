@@ -11,23 +11,24 @@ Import('VERSION_PATCH')
 import os
 import subprocess
 
-for src in env.Glob('*.po'):
-    lang = os.path.basename(src.get_abspath()[:-3])
-    dest = lang + '.mo'
+if env['HAVE_MSGFMT']:
+    for src in env.Glob('*.po'):
+        lang = os.path.basename(src.get_abspath()[:-3])
+        dest = lang + '.mo'
 
-    cmd = env.AlwaysBuild(
-        env.Command(dest, src, 'msgfmt $SOURCE -o $TARGET')
-    )
+        cmd = env.AlwaysBuild(
+            env.Command(dest, src, 'msgfmt $SOURCE -o $TARGET')
+        )
 
-    path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lang
+        path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lang
 
-    if 'install' in COMMAND_LINE_TARGETS:
-        target = env.InstallAs(path, dest)
-        env.Depends(target, cmd)
-        env.Alias('install', [target])
+        if 'install' in COMMAND_LINE_TARGETS:
+            target = env.InstallAs(path, dest)
+            env.Depends(target, cmd)
+            env.Alias('install', [target])
 
-    if 'uninstall' in COMMAND_LINE_TARGETS:
-        create_uninstall_target(env, path)
+        if 'uninstall' in COMMAND_LINE_TARGETS:
+            create_uninstall_target(env, path)
 
 
 def xgettext(target=None, source=None, env=None):

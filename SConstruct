@@ -39,19 +39,27 @@ def check_pkgconfig(context, version):
 
 
 def check_pkg(context, name, varname, required=True):
-    context.Message('Checking for %s... ' % name)
-    rc, text = context.TryAction('pkg-config --exists \'%s\'' % name)
-    context.Result(rc)
+    rc, text = 1, ''
+
+    try:
+        if GetOption('with_' + name.split()[0]) is False:
+            context.Message('Explicitly disabling %s...' % name)
+            rc = 0
+    except AttributeError:
+        pass
+
+    if rc is not 0:
+        context.Message('Checking for %s... ' % name)
+        rc, text = context.TryAction('pkg-config --exists \'%s\'' % name)
 
     # 0 is defined as error by TryAction
-    if rc is 0:
+    if rc is 0 and required:
         print('Error: ' + name + ' not found.')
-        if required:
-            Exit(1)
+        Exit(1)
 
     # Remember we have it:
-    conf.env[varname] = True
-
+    conf.env[varname] = rc
+    context.Result(rc)
     return rc, text
 
 
@@ -71,10 +79,14 @@ def check_git_rev(context):
 
 def check_libelf(context):
     rc = 1
-    if tests.CheckHeader(context, 'libelf.h'):
+
+    if GetOption('with_libelf') is False:
         rc = 0
 
-    if tests.CheckLib(context, ['libelf']):
+    if rc and tests.CheckHeader(context, 'libelf.h'):
+        rc = 0
+
+    if rc and tests.CheckLib(context, ['libelf']):
         rc = 0
 
     conf.env['HAVE_LIBELF'] = rc
@@ -86,7 +98,11 @@ def check_libelf(context):
 
 def check_gettext(context):
     rc = 1
-    if tests.CheckHeader(context, 'locale.h'):
+
+    if GetOption('with_gettext') is False:
+        rc = 0
+
+    if rc and tests.CheckHeader(context, 'locale.h'):
         rc = 0
 
     conf.env['HAVE_LIBINTL'] = rc
@@ -100,7 +116,11 @@ def check_gettext(context):
 
 def check_fiemap(context):
     rc = 1
-    if tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
+
+    if GetOption('with_gettext') is False:
+        rc = 0
+
+    if rc and tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
         rc = 0
 
     conf.env['HAVE_FIEMAP'] = rc
@@ -275,6 +295,16 @@ AddOption(
     action='store', metavar='DIR', help='where files will eventually land'
 )
 
+for suffix in ['libelf', 'gettext', 'fiemap', 'blkid']:
+    AddOption(
+        '--without-' + suffix, action='store_const', default=False, const=False,
+        dest='with_' + suffix
+    )
+    AddOption(
+        '--with-' + suffix, action='store_const', default=True, const=True,
+        dest='with_' + suffix
+    )
+
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,
@@ -327,17 +357,12 @@ conf.check_git_rev()
 conf.check_pkgconfig('0.15.0')
 
 # Pkg-config to internal name
-DEPS = {
-    'glib-2.0 >= 2.32': 'HAVE_GLIB',
-    'blkid': 'HAVE_BLKID'
-}
+conf.check_pkg('glib-2.0 >= 2.32', 'HAVE_GLIB', required=True)
+conf.check_pkg('blkid', 'HAVE_BLKID', required=False)
 
-for pkg, name in DEPS.items():
-    conf.check_pkg(pkg, name)
-
-packages = []
-for pkg in DEPS.keys():
-    packages.append(pkg.split()[0])
+packages = ['glib-2.0']
+if conf.env['HAVE_BLKID']:
+    packages.append('blkid')
 
 ###########################################################################
 #                           Compiler Flags                                #
@@ -391,9 +416,7 @@ conf.env.Append(CFLAGS=[
 
 env.ParseConfig('pkg-config --cflags --libs ' + ' '.join(packages))
 
-conf.env.Append(_LIBFLAGS=[
-    '-lm', '-lelf'
-])
+conf.env.Append(_LIBFLAGS=['-lm'])
 
 conf.check_libelf()
 conf.check_fiemap()
@@ -401,6 +424,9 @@ conf.check_bigfiles()
 conf.check_sha512()
 conf.check_getmntent()
 conf.check_gettext()
+
+if conf.env['HAVE_LIBELF']:
+    conf.env.Append(_LIBFLAGS=['-lelf'])
 
 # Your extra checks here
 env = conf.Finish()
