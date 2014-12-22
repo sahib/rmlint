@@ -307,7 +307,7 @@ msgstr "Arrêt prématuré, tous les doublons n'ont peut être pas été trouvé
 #: src/formats/summary.c:76
 #, c-format
 msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
-msgstr "%s fichiers au total, dont %s sont des doublons répartis en %s groupes.\n"
+msgstr "%s fichiers au total, dont %s doublons répartis en %s groupe(s).\n"
 
 #: src/formats/summary.c:88
 #, c-format
@@ -317,12 +317,12 @@ msgstr "Équivalent à %s%s%s de doublons qui peuvent être supprimés.\n"
 #: src/formats/summary.c:99
 #, c-format
 msgid "other suspicious item(s) found, which may vary in size.\n"
-msgstr "d'autres éléments douteux, dont la taille peut varier, ont été trouvés.\n"
+msgstr "autre(s) éléments, dont la taille peut varier, trouvé(s).\n"
 
 #: src/formats/summary.c:123
 #, c-format
 msgid "Wrote a %s%s%s file to %s%s%s.\n"
-msgstr "Écrit un fichier %s%s%s vers %s%s%s.\n"
+msgstr "Fichier %s%s%s écrit %s%s%s.\n"
 
 #: src/traverse.c:235
 #, c-format
