@@ -297,12 +297,12 @@ msgstr "Répertoire(s) dupliqué(s)"
 #: src/formats/summary.c:58
 #, c-format
 msgid "file(s) after investigation, nothing to search through.\n"
-msgstr "fichier(s) après analyse, plus rien à rechercher"
+msgstr "fichier(s) après analyse, plus rien à rechercher\n"
 
 #: src/formats/summary.c:66
 #, c-format
 msgid "Early shutdown, probably not all lint was found.\n"
-msgstr "Arrêt prématuré, tous les doublons n'ont peut être pas été trouvés"
+msgstr "Arrêt prématuré, tous les doublons n'ont peut être pas été trouvés\n"
 
 #: src/formats/summary.c:76
 #, c-format

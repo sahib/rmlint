@@ -210,8 +210,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     trav_session->session->ignored_files++;
                 }
             }
+
             g_mutex_unlock(&trav_session->lock);
             clear_emptydir_flags = true; /* flag current dir as not empty */
+            is_emptydir[p->fts_level] = 'N';
         } else {
             switch (p->fts_info) {
             case FTS_D:         /* preorder directory */
