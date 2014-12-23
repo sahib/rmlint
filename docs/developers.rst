@@ -114,6 +114,27 @@ Arguments
     case the ``--prefix`` would be set to the path of the temporary build env,
     while ``--actual-prefix`` would be set to ``/usr``.
 
+:--without-libelf:
+    
+    Do not link with ``libelf``, which is needed for nonstripped binary
+    detection.
+
+:--without-blkid:
+
+    Do not link with ``libblkid``, which is needed to differentiate between
+    normal rotational harddisks and non-rotational disks.
+
+:--without-fiemap:
+
+    Do not attempt to use the ``FIEMAP ioctl(2)``. 
+
+:--without-gettext:
+
+    Do not link with ``libintl`` and do not compile any message catalogs.
+    
+All ``--without-*`` options come with a ``--with-*`` option that inverses its
+effect.  By default ``rmlint`` is built with all features on the system, so you
+do not need to specify any ``--with-*`` option normally.
 
 Notable targets
 ~~~~~~~~~~~~~~~
