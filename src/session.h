@@ -32,10 +32,6 @@
 #include <glib.h>
 
 #include "treemerge.h"
-#include "utilities.h"
-#include "checksum.h"
-#include "file.h"
-
 
 typedef struct RmFileTables {
     struct RmMountTable *mounts;

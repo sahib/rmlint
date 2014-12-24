@@ -27,7 +27,6 @@
 #define RM_PREPROCESS_H
 
 #include "session.h"
-#include "traverse.h"
 #include "file.h"
 
 /**

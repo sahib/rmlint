@@ -40,6 +40,7 @@
 
 #include "cmdline.h"
 #include "treemerge.h"
+#include "traverse.h"
 #include "preprocess.h"
 #include "shredder.h"
 #include "utilities.h"
