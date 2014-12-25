@@ -51,6 +51,7 @@ def check_pkg(context, name, varname, required=True):
     if rc is not 0:
         context.Message('Checking for %s... ' % name)
         rc, text = context.TryAction('pkg-config --exists \'%s\'' % name)
+        print(rc, text)
 
     # 0 is defined as error by TryAction
     if rc is 0 and required:
@@ -182,6 +183,26 @@ def check_getmntinfo(context):
         rc = 0
 
     conf.env['HAVE_GETMNTINFO'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_blkid(context):
+    rc = 1
+
+    if GetOption('with_blkid') is False:
+        rc = 0
+
+    if rc is 1 and tests.CheckDeclaration(
+        context,
+        symbol='blkid_devno_to_wholedisk',
+        includes='#include <blkid.h>\n'
+    ):
+        rc = 0
+
+    conf.env['HAVE_BLKID'] = rc
 
     context.did_show_result = True
     context.Result(rc)
@@ -363,6 +384,7 @@ conf = Configure(env, custom_tests={
     'check_fiemap': check_fiemap,
     'check_sse42': check_sse42,
     'check_sha512': check_sha512,
+    'check_blkid': check_blkid,
     'check_getmntent': check_getmntent,
     'check_getmntinfo': check_getmntinfo,
     'check_bigfiles': check_bigfiles,
@@ -439,8 +461,10 @@ conf.env.Append(CFLAGS=[
 
 env.ParseConfig('pkg-config --cflags --libs ' + ' '.join(packages))
 
+
 conf.env.Append(_LIBFLAGS=['-lm'])
 
+conf.check_blkid()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_bigfiles()
