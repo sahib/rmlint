@@ -141,8 +141,8 @@ def check_bigfiles(context):
     if tests.CheckFunc(
         context, 'stat64',
         header='\n'.join([
-            '#include <sys/types.h>',
-            '#include <sys/stat.h>',
+            '#include <sys/types.h>'
+            '#include <sys/stat.h>'
             '#include <unistd.h>\n'
         ])
     ):
@@ -175,8 +175,8 @@ def check_getmntinfo(context):
     if tests.CheckFunc(
         context, 'getmntinfo',
         header='\n'.join([
-            '#include <sys/param.h>',
-            '#include <sys/ucred.h>',
+            '#include <sys/param.h>'
+            '#include <sys/ucred.h>'
             '#include <sys/mount.h>\n'
         ])
     ):
@@ -424,7 +424,6 @@ if 'gcc' in os.path.basename(conf.env['CC']):
 elif 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
-
 
 conf.env.Append(CCFLAGS=['-march=native'])
 conf.check_sse42()
