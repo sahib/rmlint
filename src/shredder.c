@@ -823,7 +823,6 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 //    AND SIFTING ALGORITHM     //
 //////////////////////////////////
 
-
 /* Free RmShredGroup and any dormant files still in its queue
  */
 void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
@@ -891,8 +890,6 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
 
 /* prototype for rm_shred_group_make_orphan since it and rm_shred_group_unref reference each other */
 void rm_shred_group_make_orphan(RmShredGroup *self);
-
-
 
 void rm_shred_group_unref(RmShredGroup *self) {
     self->ref_count--;

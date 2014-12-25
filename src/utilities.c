@@ -270,14 +270,20 @@ RmUserList *rm_userlist_new(void) {
 
     setpwent();
     while((node = getpwent()) != NULL) {
-        g_sequence_insert_sorted(self->users, GUINT_TO_POINTER(node->pw_uid), rm_userlist_cmp_ids, NULL);
-        g_sequence_insert_sorted(self->groups, GUINT_TO_POINTER(node->pw_gid), rm_userlist_cmp_ids, NULL);
+        g_sequence_insert_sorted(
+            self->users, GUINT_TO_POINTER(node->pw_uid), rm_userlist_cmp_ids, NULL
+        );
+        g_sequence_insert_sorted(
+            self->groups, GUINT_TO_POINTER(node->pw_gid), rm_userlist_cmp_ids, NULL
+        );
     }
     endpwent();
 
     /* add all groups, not just those that are user primary gid's */
     while((grp = getgrent()) != NULL) {
-        g_sequence_insert_sorted(self->groups, GUINT_TO_POINTER(grp->gr_gid), rm_userlist_cmp_ids, NULL);
+        g_sequence_insert_sorted(
+            self->groups, GUINT_TO_POINTER(grp->gr_gid), rm_userlist_cmp_ids, NULL
+        );
     }
 
     endgrent();
@@ -538,10 +544,10 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 whole_disk = 0;
             }
         } else {
-            
+
             if(rm_mounts_devno_to_wholedisk(
-                stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk
-            ) == -1) {
+                        stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk
+                    ) == -1) {
                 /* folder and devname rm_sys_stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
