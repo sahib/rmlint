@@ -421,12 +421,12 @@ else:
 if 'gcc' in os.path.basename(conf.env['CC']):
     # GCC-Specific Options.
     conf.env.Append(CCFLAGS=['-lto'])
-    conf.env.Append(CCFLAGS=['-march=native'])
 elif 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
-    conf.env.Append(CCFLAGS=['-march=native'])
 
+
+conf.env.Append(CCFLAGS=['-march=native'])
 conf.check_sse42()
 
 # Optional flags:
