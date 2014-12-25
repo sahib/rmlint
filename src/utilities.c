@@ -44,8 +44,12 @@
 /* Not available there,
  * but might be on other non-linux systems
  * */
-#if HAVE_MNTENT
+#if HAVE_GETMNTENT
 #  include <mntent.h>
+#elif HAVE_GETMNTINFO
+#  include <sys/param.h>
+#  include <sys/ucred.h>
+#  include <sys/mount.h>
 #endif
 
 #if HAVE_FIEMAP
@@ -322,7 +326,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
-#if HAVE_MNTENT && HAVE_BLKID
+#if HAVE_BLKID && (HAVE_GETMNTENT || HAVE_GETMNTINFO)
 
 RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
@@ -397,19 +401,43 @@ typedef struct RmMountEntries {
 
 RmMountEntries *rm_mount_list_open(void) {
     RmMountEntries *self = g_slice_new(RmMountEntries);
-    self->mnt_ent_file = setmntent("/etc/mtab", "r");
     self->entries = NULL;
     self->current = NULL;
 
+#if HAVE_GETMNTENT
     struct mntent *entry = NULL;
-    while((entry = getmntent(self->mnt_ent_file))) {
-        RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
-        wrap_entry->fsname = g_strdup(entry->mnt_fsname);
-        wrap_entry->dir = g_strdup(entry->mnt_dir);
-        self->entries = g_list_prepend(self->entries, wrap_entry);
-    }
+    self->mnt_ent_file = setmntent("/etc/mtab", "r");
 
-    endmntent(self->mnt_ent_file);
+    if(self->mnt_ent_file != NULL) {
+        while((entry = getmntent(self->mnt_ent_file))) {
+            RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
+            wrap_entry->fsname = g_strdup(entry->mnt_fsname);
+            wrap_entry->dir = g_strdup(entry->mnt_dir);
+            self->entries = g_list_prepend(self->entries, wrap_entry);
+        }
+
+        endmntent(self->mnt_ent_file);
+    } else {
+        rm_log_perror("getmntent");
+    }
+#elif HAVE_GETMNTINFO /* probably FreeBSD */
+    int mnt_list_n = 0;
+    struct statfs *mnt_list = NULL;
+
+    if((mnt_list_n = getmntinfo(&mnt_list, MNT_NOWAIT)) != 0) {
+        for(int i = 0; i < mnt_list_n; ++i) {
+            RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
+            struct statfs *entry = &mnt_list[i];
+
+            wrap_entry->fsname = g_strdup(entry.f_fstypename);
+            wrap_entry->dir = g_strdup(entry.f_mntoname);
+            self->entries = g_list_prepend(self->entries, wrap_entry);
+        }
+    } else {
+        rm_log_perror("getmntinfo");
+    }
+#endif
+
     return self;
 }
 

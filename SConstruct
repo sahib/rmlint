@@ -140,8 +140,8 @@ def check_bigfiles(context):
     if tests.CheckFunc(
         context, 'stat64',
         header='\n'.join([
-            '#include <sys/types.h>'
-            '#include <sys/stat.h>'
+            '#include <sys/types.h>',
+            '#include <sys/stat.h>',
             '#include <unistd.h>\n'
         ])
     ):
@@ -162,7 +162,26 @@ def check_getmntent(context):
     if tests.CheckHeader(context, 'mntent.h'):
         rc = 0
 
-    conf.env['HAVE_MNTENT'] = rc
+    conf.env['HAVE_GETMNTENT'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_getmntinfo(context):
+    rc = 1
+    if tests.CheckFunc(
+        context, 'getmntinfo',
+        header='\n'.join([
+            '#include <sys/param.h>',
+            '#include <sys/ucred.h>',
+            '#include <sys/mount.h>\n'
+        ])
+    ):
+        rc = 0
+
+    conf.env['HAVE_GETMNTINFO'] = rc
 
     context.did_show_result = True
     context.Result(rc)
@@ -345,6 +364,7 @@ conf = Configure(env, custom_tests={
     'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_getmntent': check_getmntent,
+    'check_getmntinfo': check_getmntinfo,
     'check_bigfiles': check_bigfiles,
     'check_gettext': check_gettext
 })
@@ -423,6 +443,7 @@ conf.check_fiemap()
 conf.check_bigfiles()
 conf.check_sha512()
 conf.check_getmntent()
+conf.check_getmntinfo()
 conf.check_gettext()
 
 if conf.env['HAVE_LIBELF']:
@@ -519,7 +540,8 @@ if 'config' in COMMAND_LINE_TARGETS:
 
     Optimize non-rotational disks                     : {nonrotational}
         (needs libblkid for resolving dev_t to path)  : {blkid}
-        (needs <mntent.h> for listing all mounts)     : {mntent}
+        (needs <mntent.h> for listing mounts [linux]) : {getmntent}
+        (...or getmntinfo() for other platforms)      : {getmntinfo}
 
     Enable gettext localization                       : {gettext}
         (needs <locale.h> for compile side support)   : {locale}
@@ -541,9 +563,10 @@ Type 'scons' to actually compile rmlint now. Good luck.
             gettext=yesno(env['HAVE_GETTEXT']),
             locale=yesno(env['HAVE_LIBINTL']),
             msgfmt=yesno(env['HAVE_MSGFMT']),
-            nonrotational=yesno(env['HAVE_BLKID'] and env['HAVE_MNTENT']),
+            nonrotational=yesno(env['HAVE_BLKID'] and (env['HAVE_GETMNTENT'] or env['HAVE_GETMNTINFO'])),
             blkid=yesno(env['HAVE_BLKID']),
-            mntent=yesno(env['HAVE_MNTENT']),
+            getmntent=yesno(env['HAVE_GETMNTENT']),
+            getmntinfo=yesno(env['HAVE_GETMNTINFO']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
             sse42=yesno(env['HAVE_SSE42']),

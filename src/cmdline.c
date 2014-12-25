@@ -64,7 +64,7 @@ static void rm_cmd_show_version(void) {
         bool enabled : 1;
         const char * name;
     } features[] = {
-        {.name="mounts",      .enabled=HAVE_BLKID & HAVE_MNTENT},
+        {.name="mounts",      .enabled=HAVE_BLKID & (HAVE_GETMNTENT | HAVE_GETMNTINFO)},
         {.name="nonstripped", .enabled=HAVE_LIBELF},
         {.name="fiemap",      .enabled=HAVE_FIEMAP},
         {.name="sha512",      .enabled=HAVE_SHA512},
