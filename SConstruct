@@ -140,11 +140,11 @@ def check_bigfiles(context):
     have_stat64 = True
     if tests.CheckFunc(
         context, 'stat64',
-        header='\n'.join([
+        header=
             '#include <sys/types.h>'
             '#include <sys/stat.h>'
-            '#include <unistd.h>\n'
-        ])
+            '#include <unistd.h>'
+
     ):
         have_stat64 = False
 
@@ -174,11 +174,10 @@ def check_getmntinfo(context):
     rc = 1
     if tests.CheckFunc(
         context, 'getmntinfo',
-        header='\n'.join([
+        header=
             '#include <sys/param.h>'
             '#include <sys/ucred.h>'
-            '#include <sys/mount.h>\n'
-        ])
+            '#include <sys/mount.h>'
     ):
         rc = 0
 
