@@ -434,8 +434,8 @@ RmMountEntries *rm_mount_list_open(void) {
             RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
             struct statfs *entry = &mnt_list[i];
 
-            wrap_entry->fsname = g_strdup(entry.f_fstypename);
-            wrap_entry->dir = g_strdup(entry.f_mntoname);
+            wrap_entry->fsname = g_strdup(entry->f_fstypename);
+            wrap_entry->dir = g_strdup(entry->f_mntonname);
             self->entries = g_list_prepend(self->entries, wrap_entry);
         }
     } else {
