@@ -326,7 +326,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
-#if HAVE_BLKID && (HAVE_GETMNTENT || HAVE_GETMNTINFO)
+#if (HAVE_GETMNTENT || HAVE_GETMNTINFO)
 
 RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
@@ -420,7 +420,7 @@ RmMountEntries *rm_mount_list_open(void) {
     } else {
         rm_log_perror("getmntent");
     }
-#elif HAVE_GETMNTINFO /* probably FreeBSD */
+#elif HAVE_GETMNTINFO /* probably FreeBSD or other */
     int mnt_list_n = 0;
     struct statfs *mnt_list = NULL;
 
@@ -471,6 +471,13 @@ void rm_mount_list_close(RmMountEntries *self) {
     g_slice_free(RmMountEntries, self);
 }
 
+int rm_mounts_devno_to_wholedisk(dev_t rdev, char *disk, size_t disk_size, dev_t *result) {
+#if HAVE_BLKID
+    return blkid_devno_to_wholedisk(rdev, disk, sizeof(disk_size), result);
+#else
+    return -1;
+#endif
+}
 
 static void rm_mounts_create_tables(RmMountTable *self) {
     /* partition dev_t to disk dev_t */
@@ -531,11 +538,14 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 whole_disk = 0;
             }
         } else {
-            if(blkid_devno_to_wholedisk(stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk) == -1) {
+            
+            if(rm_mounts_devno_to_wholedisk(
+                stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk
+            ) == -1) {
                 /* folder and devname rm_sys_stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
-                rm_log_debug(RED"blkid_devno_to_wholedisk failed for %s\n"RESET, entry->fsname);
+                rm_log_debug(RED"devno_to_wholedisk failed for %s\n"RESET, entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
                 strncpy(diskname, entry->fsname, sizeof(diskname));
                 is_rotational = false;
