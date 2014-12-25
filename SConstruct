@@ -72,6 +72,7 @@ def check_git_rev(context):
     except subprocess.CalledProcessError:
         print('Unable to find git revision.')
 
+    rev = rev or 'unknown'
     conf.env['gitrev'] = rev
     context.Result(rev)
     return rev
@@ -377,7 +378,10 @@ conf.check_git_rev()
 conf.check_pkgconfig('0.15.0')
 
 # Pkg-config to internal name
+conf.env['HAVE_GLIB'] = 0
 conf.check_pkg('glib-2.0 >= 2.32', 'HAVE_GLIB', required=True)
+
+conf.env['HAVE_BLKID'] = 0
 conf.check_pkg('blkid', 'HAVE_BLKID', required=False)
 
 packages = ['glib-2.0']

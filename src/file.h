@@ -31,7 +31,6 @@
 #include <glib.h>
 
 #include "settings.h"
-#include "checksum.h"
 #include "utilities.h"
 
 typedef enum RmFileState {
@@ -77,10 +76,6 @@ typedef enum RmLintType {
 /**
  * RmFile structure; used by pretty much all rmlint modules.
  */
-
-/* Sub-structures defined and used in shredder.c:*/
-struct RmShredGroup;
-struct RmShredDevice;
 
 typedef struct RmFile {
     /* Absolute path of the file

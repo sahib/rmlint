@@ -34,6 +34,10 @@
 
 #include "checksum.h"
 
+#include "checksums/citycrc.h"
+#include "checksums/murmur3.h"
+#include "checksums/spooky-c.h"
+
 RmDigestType rm_string_to_digest_type(const char *string) {
     if(string == NULL) {
         return RM_DIGEST_UNKNOWN;
