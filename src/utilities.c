@@ -384,6 +384,66 @@ static bool rm_mounts_is_ramdisk(const char *fs_type) {
     return false;
 }
 
+typedef struct RmMountEntry {
+    char *fsname; /* name of mounted file system */
+    char *dir;    /* file system path prefix     */
+} RmMountEntry;
+
+typedef struct RmMountEntries {
+    FILE *mnt_ent_file;
+    GList *entries;
+    GList *current;
+} RmMountEntries;
+
+RmMountEntries *rm_mount_list_open(void) {
+    RmMountEntries *self = g_slice_new(RmMountEntries);
+    self->mnt_ent_file = setmntent("/etc/mtab", "r");
+    self->entries = NULL;
+    self->current = NULL;
+
+    struct mntent *entry = NULL;
+    while((entry = getmntent(self->mnt_ent_file))) {
+        RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
+        wrap_entry->fsname = g_strdup(entry->mnt_fsname);
+        wrap_entry->dir = g_strdup(entry->mnt_dir);
+        self->entries = g_list_prepend(self->entries, wrap_entry);
+    }
+
+    endmntent(self->mnt_ent_file);
+    return self;
+}
+
+RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
+    g_assert(self);
+
+    if(self->current) {
+        self->current = self->current->next;
+    } else {
+        self->current = self->entries;
+    }
+
+    if(self->current) {
+        return self->current->data;
+    } else {
+        return NULL;
+    }
+}
+
+void rm_mount_list_close(RmMountEntries *self) {
+    g_assert(self);
+
+    for(GList *iter = self->entries; iter; iter = iter->next) {
+        RmMountEntry *entry = iter->data;
+        g_free(entry->fsname);
+        g_free(entry->dir);
+        g_slice_free(RmMountEntry, entry);
+    }
+
+    g_list_free(self->entries);
+    g_slice_free(RmMountEntries, self);
+}
+
+
 static void rm_mounts_create_tables(RmMountTable *self) {
     /* partition dev_t to disk dev_t */
     self->part_table = g_hash_table_new_full(g_direct_hash,
@@ -403,13 +463,12 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                             NULL);
 
 
-    /* 0:0 is reserved for the completely unknown */
-    FILE *mnt_file = setmntent("/etc/mtab", "r");
+    RmMountEntries *mnt_entries = rm_mount_list_open();
+    RmMountEntry *entry = NULL;
 
-    struct mntent *entry = NULL;
-    while((entry = getmntent(mnt_file))) {
+    while((entry = rm_mount_list_next(mnt_entries))) {
         RmStat stat_buf_folder;
-        if(rm_sys_stat(entry->mnt_dir, &stat_buf_folder) == -1) {
+        if(rm_sys_stat(entry->dir, &stat_buf_folder) == -1) {
             continue;
         }
 
@@ -419,18 +478,18 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         memset(diskname, 0, sizeof(diskname));
 
         RmStat stat_buf_dev;
-        if(rm_sys_stat(entry->mnt_fsname, &stat_buf_dev) == -1) {
+        if(rm_sys_stat(entry->fsname, &stat_buf_dev) == -1) {
             char *nfs_marker = NULL;
             /* folder rm_sys_stat() is ok but devname rm_sys_stat() is not; this happens for example
              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
              * */
-            if(rm_mounts_is_ramdisk(entry->mnt_fsname)) {
-                strncpy(diskname, entry->mnt_fsname, sizeof(diskname));
+            if(rm_mounts_is_ramdisk(entry->fsname)) {
+                strncpy(diskname, entry->fsname, sizeof(diskname));
                 is_rotational = false;
                 whole_disk = stat_buf_folder.st_dev;
-            } else if((nfs_marker = strstr(entry->mnt_fsname, ":/")) != NULL) {
-                size_t until_slash = MIN((int)sizeof(entry->mnt_fsname), nfs_marker - entry->mnt_fsname);
-                strncpy(diskname, entry->mnt_fsname, until_slash);
+            } else if((nfs_marker = strstr(entry->fsname, ":/")) != NULL) {
+                size_t until_slash = MIN((int)sizeof(entry->fsname), nfs_marker - entry->fsname);
+                strncpy(diskname, entry->fsname, until_slash);
                 is_rotational = true;
 
                 /* Assign different dev ids (with major id 0) to different nfs servers */
@@ -448,9 +507,9 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                 /* folder and devname rm_sys_stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
-                rm_log_debug(RED"blkid_devno_to_wholedisk failed for %s\n"RESET, entry->mnt_fsname);
+                rm_log_debug(RED"blkid_devno_to_wholedisk failed for %s\n"RESET, entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
-                strncpy(diskname, entry->mnt_fsname, sizeof(diskname));
+                strncpy(diskname, entry->fsname, sizeof(diskname));
                 is_rotational = false;
             } else {
                 is_rotational = rm_mounts_is_rotational_blockdev(diskname);
@@ -460,14 +519,14 @@ static void rm_mounts_create_tables(RmMountTable *self) {
         g_hash_table_insert(
             self->part_table,
             GUINT_TO_POINTER(stat_buf_folder.st_dev),
-            rm_part_info_new (entry->mnt_dir, whole_disk));
+            rm_part_info_new (entry->dir, whole_disk));
 
         /* small hack, so also the full disk id can be given to the api below */
         if (!g_hash_table_contains(self->part_table, GINT_TO_POINTER(whole_disk))) {
             g_hash_table_insert(
                 self->part_table,
                 GUINT_TO_POINTER(whole_disk),
-                rm_part_info_new (entry->mnt_dir, whole_disk));
+                rm_part_info_new (entry->dir, whole_disk));
         }
 
         if (!g_hash_table_contains(self->disk_table, GINT_TO_POINTER(whole_disk))) {
@@ -479,13 +538,14 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 
         rm_log_info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %15s; rotational: %3s)",
                     major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
-                    entry->mnt_dir,
+                    entry->dir,
                     major(whole_disk), minor(whole_disk),
-                    entry->mnt_fsname, diskname, is_rotational ? "yes" : "no"
+                    entry->fsname, diskname, is_rotational ? "yes" : "no"
                    );
 
     }
-    endmntent(mnt_file);
+
+    rm_mount_list_close(mnt_entries);
 }
 
 /////////////////////////////////
