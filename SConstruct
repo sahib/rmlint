@@ -406,7 +406,6 @@ if 'LDFLAGS' in os.environ:
     conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
     print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
 
-conf.check_sse42()
 conf.env.Append(CCFLAGS=[
     '-std=c99', '-pipe', '-fPIC', '-D_GNU_SOURCE'
 ])
@@ -426,7 +425,9 @@ if 'gcc' in os.path.basename(conf.env['CC']):
 elif 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
+    conf.env.Append(CCFLAGS=['-march=native'])
 
+conf.check_sse42()
 
 # Optional flags:
 conf.env.Append(CFLAGS=[

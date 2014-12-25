@@ -67,9 +67,8 @@
 
 #if HAVE_LIBELF
 #  include <libelf.h>
+#  include <gelf.h>
 #endif
-
-#include <gelf.h>
 
 #if HAVE_BLKID
 #  include <blkid.h>
