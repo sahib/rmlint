@@ -1626,6 +1626,7 @@ void rm_shred_run(RmSession *session) {
                                  );
 
     rm_shred_preprocess_input(&tag);
+    session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
     g_mutex_lock(&tag.hash_mem_mtx);
     {

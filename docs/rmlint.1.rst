@@ -122,6 +122,10 @@ General Options
     times. This only affects rmlint's logging on *stderr*, but not the outputs
     defined with **-o**.
 
+:``-g --progress`` / ``-G --no-progress`` (**default**):
+
+    Convinience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh``.
+
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase the paranoia of rmlints internals. Both options can be specified up
@@ -359,6 +363,8 @@ FORMATTERS
 * ``progressbar``: Shows a progressbar. This is meant for use with **stdout** or
   **stderr**.
   
+  See also: ``-g`` (``--progress``) for a convinience shortcut option.
+ 
   Available options:
 
   * *update_interval=number:* Number of files to wait between updates.

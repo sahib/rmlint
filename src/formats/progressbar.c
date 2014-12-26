@@ -39,6 +39,7 @@ typedef struct RmFmtHandlerProgress {
     /* user data */
     gdouble percent;
     gdouble last_unknown_pos;
+    RmOff total_lint_bytes;
 
     char text_buf[1024];
     guint32 text_len;
@@ -81,7 +82,10 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                          );
         break;
     case RM_PROGRESS_STATE_SHREDDER:
-        self->percent = 1.0 - ((gdouble)session->shred_files_remaining) / ((gdouble)session->total_filtered_files);
+        self->percent = 1.0 - (
+                (gdouble)session->shred_bytes_remaining / 
+                (gdouble)session->shred_bytes_after_preprocess
+        );
         rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf, sizeof(num_buf));
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
@@ -199,6 +203,7 @@ static void rm_fmt_prog(
         }
 
         self->last_unknown_pos = 0;
+        self->total_lint_bytes = 1;
 
         fprintf(out, "\e[?25l"); /* Hide the cursor */
         fflush(out);
@@ -208,12 +213,22 @@ static void rm_fmt_prog(
     if(state == RM_PROGRESS_STATE_SUMMARY || rm_session_was_aborted(session)) {
         fprintf(out, "\e[?25h"); /* show the cursor */
         fflush(out);
+
+        if(rm_session_was_aborted) {
+            return;
+        }
+    }
+
+    if(state == RM_PROGRESS_STATE_SHREDDER) {
+        self->total_lint_bytes = MAX(self->total_lint_bytes, session->shred_bytes_remaining);
     }
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
         self->percent = 1.0;
-        rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
-        fprintf(out, "\n");
+        if(state != RM_PROGRESS_STATE_SUMMARY) {
+            rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
+            fprintf(out, "\n");
+        }
     } else if((self->update_counter++ % self->update_interval) > 0) {
         return;
     }
@@ -226,6 +241,10 @@ static void rm_fmt_prog(
 
     int text_width = self->terminal.ws_col * 0.7 - 1;
     rm_fmt_progress_format_text(session, self, text_width);
+    if(state == RM_PROGRESS_STATE_SUMMARY) {
+        self->percent = 1.0;
+    }
+
     rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
     rm_fmt_progress_print_text(self, text_width, out);
     fprintf(out, "%s\r", MAYBE_RESET(session));

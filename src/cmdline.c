@@ -701,6 +701,8 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"newer-than"                 , required_argument , 0 , 'N'} ,
             {"clamp-low"                  , required_argument , 0 , 'q'} ,
             {"clamp-top"                  , required_argument , 0 , 'Q'} ,
+            {"progress"                   , no_argument       , 0 , 'g'} ,
+            {"no-progress"                , no_argument       , 0 , 'G'} ,
             {"loud"                       , no_argument       , 0 , 'v'} ,
             {"quiet"                      , no_argument       , 0 , 'V'} ,
             {"with-color"                 , no_argument       , 0 , 'w'} ,
@@ -735,7 +737,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:vVwWrRfFXxpPkKmMlLhHybBeEiID",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:gvVwWrRfFXxpPkKmMlLhHybBeEiID",
                      long_options, &option_index
                  );
 
@@ -847,6 +849,15 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'X':
             settings->samepart = true;
+            break;
+        case 'g':
+            rm_fmt_add(session->formats, "progressbar", "stdout");
+            rm_fmt_add(session->formats, "summary", "stdout");
+            rm_fmt_add(session->formats, "sh", "rmlint.sh");
+            output_flag_cnt = 1;
+            break;
+        case 'G':
+            output_flag_cnt = -1;
             break;
         case 'd':
             settings->depth = ABS(strtol(optarg, NULL, 10));

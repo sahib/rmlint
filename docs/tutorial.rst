@@ -177,6 +177,11 @@ Formatters can be added via the ``-O`` (``--add-output``) switch.
 The ``-o`` (``--output``) instead clears all defaults first and 
 does the same as ``-O`` afterwards. 
 
+.. note:: 
+
+    If you just came here to learn how to print a nice progressbar:
+    Just use the ``-g`` (``--progress``) option.
+
 Here's an example:
 
 .. code-block:: bash
