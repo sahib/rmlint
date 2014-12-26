@@ -1032,6 +1032,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 int rm_cmd_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
+    session->mounts = rm_mounts_table_new();
     rm_traverse_tree(session);
 
     rm_log_debug(

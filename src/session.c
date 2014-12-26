@@ -37,8 +37,6 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
     session->timer = g_timer_new();
 
     session->settings = settings;
-
-    session->mounts = rm_mounts_table_new();
     session->tables = rm_file_tables_new(session);
     session->formats = rm_fmt_open(session);
 
@@ -58,6 +56,7 @@ void rm_session_clear(RmSession *session) {
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
+    rm_mounts_table_destroy(session->mounts);
 
     if(session->dir_merger) {
         rm_tm_destroy(session->dir_merger);
