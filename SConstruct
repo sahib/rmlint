@@ -324,7 +324,7 @@ link_shared_library_message = '%sLinking Shared Library %s==> %s$TARGET%s' % \
 ###########################################################################
 
 AddOption(
-    '--prefix', default='/usr',
+    '--prefix', default='/usr/local',
     dest='prefix', type='string', nargs=1,
     action='store', metavar='DIR', help='installation prefix'
 )
