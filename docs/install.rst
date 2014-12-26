@@ -92,5 +92,5 @@ binary:
 
 Done!
 
-You should be now able to see the manpage with ``rmlint -h`` or ``man 1
+You should be now able to see the manpage with ``rmlint --help`` or ``man 1
 rmlint``.

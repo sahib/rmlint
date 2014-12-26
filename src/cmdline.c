@@ -52,6 +52,15 @@ static void rm_cmd_die(RmSession *session, int status) {
     exit(status);
 }
 
+static void rm_cmd_show_usage(void) {
+    fprintf(
+        stderr,
+        "Usage: rmlint [OPTIONS] [DIRS|FILES|-] [// [ORIGINAL_(DIRS|FILES)]]\n\n"
+        "       See the manpage (man 1 rmlint or rmlint --help) for more detailed usage information.\n"
+        "       or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage for an online version\n\n"
+    );
+}
+
 static void rm_cmd_show_version(void) {
     fprintf(
         stderr,
@@ -717,15 +726,16 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"match-without-extension"    , no_argument       , 0 , 'i'} ,
             {"no-match-without-extension" , no_argument       , 0 , 'I'} ,
             {"merge-directories"          , no_argument       , 0 , 'D'} ,
-            {"help"                       , no_argument       , 0 , 'h'} ,
-            {"version"                    , no_argument       , 0 , 'H'} ,
+            {"usage"                      , no_argument       , 0 , 'h'} ,
+            {"help"                       , no_argument       , 0 , 'H'} ,
+            {"version"                    , no_argument       , 0 , 'y'} ,
             {0, 0, 0, 0}
         };
 
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:vVwWrRfFXxpPkKmMlLhHbBeEiID",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:vVwWrRfFXxpPkKmMlLhHybBeEiID",
                      long_options, &option_index
                  );
 
@@ -788,12 +798,17 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'W':
             settings->color = false;
             break;
+        case 'y':
+            rm_cmd_show_version();
+            rm_cmd_die(session, EXIT_SUCCESS);
+            break;
         case 'H':
+            rm_cmd_show_help(true);
             rm_cmd_show_version();
             rm_cmd_die(session, EXIT_SUCCESS);
             break;
         case 'h':
-            rm_cmd_show_help(true);
+            rm_cmd_show_usage();
             rm_cmd_show_version();
             rm_cmd_die(session, EXIT_SUCCESS);
             break;

@@ -51,7 +51,6 @@ def check_pkg(context, name, varname, required=True):
     if rc is not 0:
         context.Message('Checking for %s... ' % name)
         rc, text = context.TryAction('pkg-config --exists \'%s\'' % name)
-        print(rc, text)
 
     # 0 is defined as error by TryAction
     if rc is 0 and required:
