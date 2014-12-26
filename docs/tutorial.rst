@@ -180,7 +180,11 @@ does the same as ``-O`` afterwards.
 .. note:: 
 
     If you just came here to learn how to print a nice progressbar:
-    Just use the ``-g`` (``--progress``) option.
+    Just use the ``-g`` (``--progress``) option. Example:
+
+    .. code-block:: bash
+
+       $ rmlint -g -VVV /usr  # -VVV is just to prevent pointless warnings
 
 Here's an example:
 

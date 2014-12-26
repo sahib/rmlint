@@ -125,6 +125,8 @@ General Options
 :``-g --progress`` / ``-G --no-progress`` (**default**):
 
     Convinience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh``.
+    It is recommended to run ``-g`` with ``-VVV`` to prevent the printing
+    of warnings in between.
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
