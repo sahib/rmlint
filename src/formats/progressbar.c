@@ -214,7 +214,7 @@ static void rm_fmt_prog(
         fprintf(out, "\e[?25h"); /* show the cursor */
         fflush(out);
 
-        if(rm_session_was_aborted) {
+        if(rm_session_was_aborted(session)) {
             return;
         }
     }
