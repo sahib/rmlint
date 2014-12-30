@@ -1041,9 +1041,16 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 }
 
 int rm_cmd_main(RmSession *session) {
+    int exit_state = EXIT_SUCCESS;
+
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
     session->mounts = rm_mounts_table_new();
+    if(session->mounts == NULL) {
+        exit_state = EXIT_FAILURE;
+        goto failure;
+    }
+
     rm_traverse_tree(session);
 
     rm_log_debug(
@@ -1072,6 +1079,8 @@ int rm_cmd_main(RmSession *session) {
     }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
+
+failure:
     rm_session_clear(session);
-    return EXIT_SUCCESS;
+    return exit_state;
 }

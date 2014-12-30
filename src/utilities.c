@@ -404,7 +404,21 @@ typedef struct RmMountEntries {
     GList *current;
 } RmMountEntries;
 
-RmMountEntries *rm_mount_list_open(void) {
+static void rm_mount_list_close(RmMountEntries *self) {
+    g_assert(self);
+
+    for(GList *iter = self->entries; iter; iter = iter->next) {
+        RmMountEntry *entry = iter->data;
+        g_free(entry->fsname);
+        g_free(entry->dir);
+        g_slice_free(RmMountEntry, entry);
+    }
+
+    g_list_free(self->entries);
+    g_slice_free(RmMountEntries, self);
+}
+
+static RmMountEntries *rm_mount_list_open(void) {
     RmMountEntries *self = g_slice_new(RmMountEntries);
     self->entries = NULL;
     self->current = NULL;
@@ -419,6 +433,25 @@ RmMountEntries *rm_mount_list_open(void) {
             wrap_entry->fsname = g_strdup(entry->mnt_fsname);
             wrap_entry->dir = g_strdup(entry->mnt_dir);
             self->entries = g_list_prepend(self->entries, wrap_entry);
+
+            /* bindfs mounts mirror directory trees.
+             * This cannot be detected properly by rmlint since
+             * files in it have the same inode as their unmirrored file, but
+             * a different dev_t.
+             *
+             * So better go and ignore it.
+             */
+            if(strcmp("bindfs", entry->mnt_fsname) == 0) {
+                rm_log_error(
+                    RED"CRITICAL:"RESET" `bindfs` mount detected at %s; rmlint cannot handle this. Aborting.\n",
+                    entry->mnt_dir
+                );
+
+
+                /* Abort, propagate error up. */
+                rm_mount_list_close(self);
+                return NULL;
+            }
         }
 
         endmntent(self->mnt_ent_file);
@@ -446,7 +479,7 @@ RmMountEntries *rm_mount_list_open(void) {
     return self;
 }
 
-RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
+static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
     g_assert(self);
 
     if(self->current) {
@@ -462,20 +495,6 @@ RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
     }
 }
 
-void rm_mount_list_close(RmMountEntries *self) {
-    g_assert(self);
-
-    for(GList *iter = self->entries; iter; iter = iter->next) {
-        RmMountEntry *entry = iter->data;
-        g_free(entry->fsname);
-        g_free(entry->dir);
-        g_slice_free(RmMountEntry, entry);
-    }
-
-    g_list_free(self->entries);
-    g_slice_free(RmMountEntries, self);
-}
-
 int rm_mounts_devno_to_wholedisk(_U dev_t rdev, _U char *disk, _U size_t disk_size, _U dev_t *result) {
 #if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, sizeof(disk_size), result);
@@ -484,7 +503,14 @@ int rm_mounts_devno_to_wholedisk(_U dev_t rdev, _U char *disk, _U size_t disk_si
 #endif
 }
 
-static void rm_mounts_create_tables(RmMountTable *self) {
+static bool rm_mounts_create_tables(RmMountTable *self) {
+    RmMountEntries *mnt_entries = rm_mount_list_open();
+    RmMountEntry *entry = NULL;
+
+    if(mnt_entries == NULL) {
+        return false;
+    }
+
     /* partition dev_t to disk dev_t */
     self->part_table = g_hash_table_new_full(g_direct_hash,
                        g_direct_equal,
@@ -502,9 +528,6 @@ static void rm_mounts_create_tables(RmMountTable *self) {
                                             g_free,
                                             NULL);
 
-
-    RmMountEntries *mnt_entries = rm_mount_list_open();
-    RmMountEntry *entry = NULL;
 
     while((entry = rm_mount_list_next(mnt_entries))) {
         RmStat stat_buf_folder;
@@ -589,6 +612,7 @@ static void rm_mounts_create_tables(RmMountTable *self) {
     }
 
     rm_mount_list_close(mnt_entries);
+    return true;
 }
 
 /////////////////////////////////
@@ -597,8 +621,12 @@ static void rm_mounts_create_tables(RmMountTable *self) {
 
 RmMountTable *rm_mounts_table_new(void) {
     RmMountTable *self = g_slice_new(RmMountTable);
-    rm_mounts_create_tables(self);
-    return self;
+    if(rm_mounts_create_tables(self) == false) {
+        g_slice_free(RmMountTable, self);
+        return NULL;
+    } else {
+        return self;
+    }
 }
 
 void rm_mounts_table_destroy(RmMountTable *self) {
