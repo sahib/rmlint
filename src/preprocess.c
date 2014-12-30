@@ -151,6 +151,11 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
+/*  compare two files -return:
+ *      a negative integer file 'a' outranks 'b',
+ *      0 if they are equal,
+ *      a positive integer if file 'b' outranks 'a'
+ */
 int rm_pp_cmp_orig_criteria_impl(
     RmSession *session,
     time_t mtime_a, time_t mtime_b,
@@ -183,11 +188,17 @@ int rm_pp_cmp_orig_criteria_impl(
 }
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
+/* Return:
+ *      a negative integer file 'a' outranks 'b',
+ *      0 if they are equal,
+ *      a positive integer if file 'b' outranks 'a'
+ */
 int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
+        /* "other" lint outranks duplicates and has lower ENUM */
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
-        return (a->is_prefd - b->is_prefd);
+        return (b->is_prefd - a->is_prefd);
     } else {
         return rm_pp_cmp_orig_criteria_impl(
                    session,
