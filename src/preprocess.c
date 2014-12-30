@@ -395,7 +395,7 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
             g_assert(type == file->lint_type);
 
             num_handled++;
-            rm_fmt_write(session->formats, file);
+            rm_fmt_write(file, session->formats);
         }
         g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
     }
