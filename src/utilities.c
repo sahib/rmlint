@@ -492,7 +492,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
             );
 
             rm_log_error(
-                RED"CRITICAL:"RESET" `bindfs` mount detected at %s (#%u); Ignoring all files in it.\n",
+                YELLOW"WARNING:"RESET" `bindfs` mount detected at %s (#%u); Ignoring all files in it.\n",
                 wrap_entry->dir, (unsigned)dir_stat.st_dev
             );
         }
