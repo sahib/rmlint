@@ -75,9 +75,9 @@ def test_sorting():
     opts='amp'
     all_opts = opts + opts.upper()
     combos=[]
-    f = lambda x: len(x) == len(set(''.join(x).lower()))
-    for i in range(1, len(opts) + 1):
-        combos += filter(f, itertools.permutations(all_opts, i))
+    is_legal_combo = lambda x: len(x) == len(set(''.join(x).lower()))
+    for n_terms in range(1, len(opts) + 1):
+        combos += filter(is_legal_combo, itertools.permutations(all_opts, n_terms))
 
     
     for combo in combos:
