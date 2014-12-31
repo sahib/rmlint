@@ -589,7 +589,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             gettext=yesno(env['HAVE_GETTEXT']),
             locale=yesno(env['HAVE_LIBINTL']),
             msgfmt=yesno(env['HAVE_MSGFMT']),
-            nonrotational=yesno(env['HAVE_BLKID'] and (env['HAVE_GETMNTENT'] or env['HAVE_GETMNTINFO'])),
+            nonrotational=yesno(env['HAVE_GETMNTENT'] or env['HAVE_GETMNTINFO']),
             blkid=yesno(env['HAVE_BLKID']),
             getmntent=yesno(env['HAVE_GETMNTENT']),
             getmntinfo=yesno(env['HAVE_GETMNTINFO']),
