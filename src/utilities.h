@@ -196,6 +196,7 @@ typedef struct RmMountTable {
     GHashTable *part_table;
     GHashTable *disk_table;
     GHashTable *nfs_table;
+    GHashTable *evilsfs_table;
 } RmMountTable;
 
 /**
@@ -255,6 +256,12 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition);
  * @brief Same as above, but calls rm_sys_stat(2) on path for you.
  */
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
+
+/**
+ * @brief Indicates true if dev_t points to a filesystem that might confuse
+ * rmlint.
+ */
+bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check);
 
 /////////////////////////////////
 //    FIEMAP IMPLEMENATION     //

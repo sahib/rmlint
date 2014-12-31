@@ -418,7 +418,23 @@ static void rm_mount_list_close(RmMountEntries *self) {
     g_slice_free(RmMountEntries, self);
 }
 
-static RmMountEntries *rm_mount_list_open(void) {
+static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
+    g_assert(self);
+
+    if(self->current) {
+        self->current = self->current->next;
+    } else {
+        self->current = self->entries;
+    }
+
+    if(self->current) {
+        return self->current->data;
+    } else {
+        return NULL;
+    }
+}
+
+static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     RmMountEntries *self = g_slice_new(RmMountEntries);
     self->entries = NULL;
     self->current = NULL;
@@ -433,25 +449,6 @@ static RmMountEntries *rm_mount_list_open(void) {
             wrap_entry->fsname = g_strdup(entry->mnt_fsname);
             wrap_entry->dir = g_strdup(entry->mnt_dir);
             self->entries = g_list_prepend(self->entries, wrap_entry);
-
-            /* bindfs mounts mirror directory trees.
-             * This cannot be detected properly by rmlint since
-             * files in it have the same inode as their unmirrored file, but
-             * a different dev_t.
-             *
-             * So better go and ignore it.
-             */
-            if(strcmp("bindfs", entry->mnt_fsname) == 0) {
-                rm_log_error(
-                    RED"CRITICAL:"RESET" `bindfs` mount detected at %s; rmlint cannot handle this. Aborting.\n",
-                    entry->mnt_dir
-                );
-
-
-                /* Abort, propagate error up. */
-                rm_mount_list_close(self);
-                return NULL;
-            }
         }
 
         endmntent(self->mnt_ent_file);
@@ -476,23 +473,32 @@ static RmMountEntries *rm_mount_list_open(void) {
     }
 #endif
 
+    RmMountEntry *wrap_entry = NULL;
+    while((wrap_entry = rm_mount_list_next(self))) {
+        /* bindfs mounts mirror directory trees.
+        * This cannot be detected properly by rmlint since
+        * files in it have the same inode as their unmirrored file, but
+        * a different dev_t.
+        *
+        * So better go and ignore it.
+        */
+        if(strcmp("bindfs", wrap_entry->fsname) == 0) {
+            RmStat dir_stat;
+            rm_sys_stat(wrap_entry->dir, &dir_stat);
+            g_hash_table_insert(
+                table->evilsfs_table,
+                GUINT_TO_POINTER(dir_stat.st_dev),
+                GUINT_TO_POINTER(1)
+            );
+
+            rm_log_error(
+                RED"CRITICAL:"RESET" `bindfs` mount detected at %s (#%u); Ignoring all files in it.\n",
+                wrap_entry->dir, (unsigned)dir_stat.st_dev
+            );
+        }
+    }
+
     return self;
-}
-
-static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
-    g_assert(self);
-
-    if(self->current) {
-        self->current = self->current->next;
-    } else {
-        self->current = self->entries;
-    }
-
-    if(self->current) {
-        return self->current->data;
-    } else {
-        return NULL;
-    }
 }
 
 int rm_mounts_devno_to_wholedisk(_U dev_t rdev, _U char *disk, _U size_t disk_size, _U dev_t *result) {
@@ -504,13 +510,6 @@ int rm_mounts_devno_to_wholedisk(_U dev_t rdev, _U char *disk, _U size_t disk_si
 }
 
 static bool rm_mounts_create_tables(RmMountTable *self) {
-    RmMountEntries *mnt_entries = rm_mount_list_open();
-    RmMountEntry *entry = NULL;
-
-    if(mnt_entries == NULL) {
-        return false;
-    }
-
     /* partition dev_t to disk dev_t */
     self->part_table = g_hash_table_new_full(g_direct_hash,
                        g_direct_equal,
@@ -528,6 +527,15 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                                             g_free,
                                             NULL);
 
+    /* Mapping dev_t => true (used as set) */
+    self->evilsfs_table = g_hash_table_new(NULL, NULL);
+
+    RmMountEntry *entry = NULL;
+    RmMountEntries *mnt_entries = rm_mount_list_open(self);
+
+    if(mnt_entries == NULL) {
+        return false;
+    }
 
     while((entry = rm_mount_list_next(mnt_entries))) {
         RmStat stat_buf_folder;
@@ -633,8 +641,10 @@ void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->part_table);
     g_hash_table_unref(self->disk_table);
     g_hash_table_unref(self->nfs_table);
+    g_hash_table_unref(self->evilsfs_table);
     g_slice_free(RmMountTable, self);
 }
+
 #else /* probably FreeBSD */
 
 RmMountTable *rm_mounts_table_new(void) {
@@ -717,6 +727,12 @@ char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
     } else {
         return NULL;
     }
+}
+
+bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
+    g_assert(self);
+
+    return g_hash_table_contains(self->evilsfs_table, GUINT_TO_POINTER(to_check));
 }
 
 /////////////////////////////////
