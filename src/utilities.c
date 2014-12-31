@@ -359,8 +359,10 @@ void rm_disk_info_free(RmDiskInfo *self) {
 
 
 static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
-    char sys_path[PATH_MAX];
     gchar is_rotational = -1;
+
+#if HAVE_SYSBLOCK  /* this works only on linux */
+    char sys_path[PATH_MAX];
 
     snprintf(sys_path, PATH_MAX, "/sys/block/%s/queue/rotational", dev);
 
@@ -374,6 +376,8 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
     fclose(sys_fdes);
+#endif
+
     return is_rotational;
 }
 

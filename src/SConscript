@@ -29,6 +29,7 @@ def build_config_template(target, source, env):
             HAVE_STAT64=env['HAVE_BIG_STAT'],
             HAVE_BIG_OFF_T=env['HAVE_BIG_OFF_T'],
             HAVE_BLKID=env['HAVE_BLKID'],
+            HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,

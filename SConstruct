@@ -208,6 +208,19 @@ def check_blkid(context):
     return rc
 
 
+def check_sys_block(context):
+    rc = 1
+
+    context.Message('Checking for existence of /sys/block... ')
+    if not os.access('/sys/block', os.R_OK):
+        rc = 0
+
+    conf.env['HAVE_SYSBLOCK'] = rc
+
+    context.Result(rc)
+    return rc
+
+
 def check_sha512(context):
     rc = 1
     if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>\n'):
@@ -384,6 +397,7 @@ conf = Configure(env, custom_tests={
     'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
+    'check_sys_block': check_sys_block,
     'check_getmntent': check_getmntent,
     'check_getmntinfo': check_getmntinfo,
     'check_bigfiles': check_bigfiles,
@@ -464,6 +478,7 @@ env.ParseConfig('pkg-config --cflags --libs ' + ' '.join(packages))
 conf.env.Append(_LIBFLAGS=['-lm'])
 
 conf.check_blkid()
+conf.check_sys_block()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_bigfiles()
