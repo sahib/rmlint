@@ -196,7 +196,7 @@ typedef struct RmMountTable {
     GHashTable *part_table;
     GHashTable *disk_table;
     GHashTable *nfs_table;
-    GHashTable *evilsfs_table;
+    GHashTable *evilfs_table;
 } RmMountTable;
 
 /**

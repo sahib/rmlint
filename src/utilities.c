@@ -482,18 +482,29 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         *
         * So better go and ignore it.
         */
-        if(strcmp("bindfs", wrap_entry->fsname) == 0) {
+        static const char *evilfs_types[] = {"bindfs", "nullfs", NULL};
+
+        const char *evilfs_found = NULL;
+        for(int i = 0; evilfs_types[i] && !evilfs_found; ++i) {
+            if(strcmp(evilfs_types[i], wrap_entry->fsname) == 0) {
+                evilfs_found = evilfs_types[i];
+            }
+        }
+
+        if(evilfs_found != NULL) {
             RmStat dir_stat;
             rm_sys_stat(wrap_entry->dir, &dir_stat);
             g_hash_table_insert(
-                table->evilsfs_table,
+                table->evilfs_table,
                 GUINT_TO_POINTER(dir_stat.st_dev),
                 GUINT_TO_POINTER(1)
             );
 
             rm_log_error(
-                YELLOW"WARNING:"RESET" `bindfs` mount detected at %s (#%u); Ignoring all files in it.\n",
-                wrap_entry->dir, (unsigned)dir_stat.st_dev
+                YELLOW"WARNING:"RESET" `%s` mount detected at %s (#%u); Ignoring all files in it.\n",
+                evilfs_found,
+                wrap_entry->dir,
+                (unsigned)dir_stat.st_dev
             );
         }
     }
@@ -528,7 +539,7 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                                             NULL);
 
     /* Mapping dev_t => true (used as set) */
-    self->evilsfs_table = g_hash_table_new(NULL, NULL);
+    self->evilfs_table = g_hash_table_new(NULL, NULL);
 
     RmMountEntry *entry = NULL;
     RmMountEntries *mnt_entries = rm_mount_list_open(self);
@@ -641,7 +652,7 @@ void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->part_table);
     g_hash_table_unref(self->disk_table);
     g_hash_table_unref(self->nfs_table);
-    g_hash_table_unref(self->evilsfs_table);
+    g_hash_table_unref(self->evilfs_table);
     g_slice_free(RmMountTable, self);
 }
 
@@ -732,7 +743,7 @@ char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
 bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
     g_assert(self);
 
-    return g_hash_table_contains(self->evilsfs_table, GUINT_TO_POINTER(to_check));
+    return g_hash_table_contains(self->evilfs_table, GUINT_TO_POINTER(to_check));
 }
 
 /////////////////////////////////
