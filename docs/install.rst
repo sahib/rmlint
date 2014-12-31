@@ -73,6 +73,20 @@ Here's a list of readily prepared commands for known distributions:
     $ apt-get install git scons python3-sphinx python3-nose gettext
     $ apt-get install libelf-dev libglib2.0-dev libblkid-dev 
 
+
+* **FreeBSD:**
+
+  .. code-block:: bash
+
+    $ pkg install git scons py27-sphinx
+    $ pkg install glib gettext libelf
+
+  Also ``rmlint`` is maintained as port:
+
+  .. code-block:: bash
+
+    $ cd /usr/ports/sysutils/rmlint && make install
+
 Send us a note if you want to see your distribution here.
 
 Compilation
