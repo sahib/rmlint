@@ -575,6 +575,7 @@ static void rm_mounts_freebsd_list_disks(void) {
             RmStat dev_stat;
 
             if(rm_sys_stat(disk, &dev_stat) != -1) {
+                g_printerr("New Disk: %s\n", disk);
                 g_hash_table_insert(DISK_TABLE, disk, GUINT_TO_POINTER(dev_stat.st_rdev));
             } else {
                 rm_log_perror("stat on /dev");
@@ -603,6 +604,7 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
     dev_t value = 0;
 
     while(g_hash_table_iter_next(&iter, (gpointer *)&key, (gpointer *)&value)) {
+        g_printerr("Checking: %s in %s\n", key, entry->fsname);
         if(g_str_has_prefix(key, entry->fsname)) {
             strncpy(disk, strrchr(key, '/'), disk_size);
             *result = value;
