@@ -238,7 +238,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
             }
 
             /* make sure the highest-ranked hardlink is "boss" */
-            if (rm_pp_cmp_orig_criteria(file, inode_match, session) > 0) {
+            if (rm_pp_cmp_orig_criteria(file, inode_match, session) < 0) {
                 /*this file outranks existing existing boss; swap */
                 /* NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE
                  * as head file, unless all the files are "other lint".  This is achieved via rm_pp_cmp_orig_criteria*/
@@ -260,7 +260,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                         /* double paths and loops will always have same dir inode number*/
                    ) {
                     /* file is path double or filesystem loop - kick one or the other */
-                    if (rm_pp_cmp_orig_criteria(file, iter->data, session) > 0) {
+                    if (rm_pp_cmp_orig_criteria(file, iter->data, session) < 0) {
                         /* file outranks iter */
                         rm_log_debug("Ignoring path double %s, keeping %s\n", iter_file->path, file->path);
                         iter->data = file;
