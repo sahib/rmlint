@@ -370,7 +370,6 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     char sys_path[PATH_MAX];
 
     snprintf(sys_path, PATH_MAX, "/sys/block/%s/queue/rotational", dev);
-    g_printerr("Checking %s\n", sys_path);
 
     FILE *sys_fdes = fopen(sys_path, "r");
     if(sys_fdes == NULL) {
@@ -575,7 +574,6 @@ static void rm_mounts_freebsd_list_disks(void) {
             RmStat dev_stat;
 
             if(rm_sys_stat(disk, &dev_stat) != -1) {
-                g_printerr("New Disk: %s\n", disk);
                 g_hash_table_insert(DISK_TABLE, disk, GUINT_TO_POINTER(dev_stat.st_rdev));
             } else {
                 rm_log_perror("stat on /dev");
@@ -694,7 +692,6 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                 strncpy(diskname, entry->fsname, sizeof(diskname));
                 is_rotational = false;
             } else {
-                g_printerr("Checking for %s\n", diskname);
                 is_rotational = rm_mounts_is_rotational_blockdev(diskname);
             }
         }
