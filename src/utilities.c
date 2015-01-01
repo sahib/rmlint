@@ -376,6 +376,8 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
     fclose(sys_fdes);
+#else
+    /* TODO: Insert FreeBSD SSD detection code here. */
 #endif
 
     return is_rotational;
@@ -520,6 +522,12 @@ int rm_mounts_devno_to_wholedisk(_U dev_t rdev, _U char *disk, _U size_t disk_si
 #if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, sizeof(disk_size), result);
 #else
+    /* TODO: Handle FreeBSD detection here. 
+     *       This needs libgeom's geom_getree() according to #bsddev
+     *       or sysctl kern.geom.conftxt/confxml
+     *       in order to resolve a rdev to a device name. The device name
+     *       is needed to check if it's a rotational disk.
+     */ 
     return -1;
 #endif
 }
@@ -589,7 +597,6 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                 whole_disk = 0;
             }
         } else {
-
             if(rm_mounts_devno_to_wholedisk(
                         stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk
                     ) == -1) {
