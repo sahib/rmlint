@@ -221,6 +221,19 @@ def check_sys_block(context):
     return rc
 
 
+def check_sysctl(context):
+    rc = 1
+
+    if tests.CheckFunc(context, 'sysctl', header='#include <sys/sysctl.h>'):
+        rc = 0
+
+    conf.env['HAVE_SYSCTL'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_sha512(context):
     rc = 1
     if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>\n'):
@@ -397,6 +410,7 @@ conf = Configure(env, custom_tests={
     'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
+    'check_sysctl': check_sysctl,
     'check_sys_block': check_sys_block,
     'check_getmntent': check_getmntent,
     'check_getmntinfo': check_getmntinfo,
@@ -479,6 +493,7 @@ conf.env.Append(_LIBFLAGS=['-lm'])
 
 conf.check_blkid()
 conf.check_sys_block()
+conf.check_sysctl()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_bigfiles()
