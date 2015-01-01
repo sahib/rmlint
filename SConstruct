@@ -224,7 +224,12 @@ def check_sys_block(context):
 def check_sysctl(context):
     rc = 1
 
-    if tests.CheckFunc(context, 'sysctl', header='#include <sys/sysctl.h>'):
+    if tests.CheckFunc(
+        context, 'sysctlbyname',
+        header=
+            '#include <sys/types.h>'
+            '#include <sys/sysctl.h>'
+    ):
         rc = 0
 
     conf.env['HAVE_SYSCTL'] = rc
