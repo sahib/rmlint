@@ -276,7 +276,7 @@
                                | POSIX_FADV_WILLNEED   /* Tell the kernel to readhead */ \
                                | POSIX_FADV_NOREUSE    /* We will not reuse old data  */ \
                               )                                                          \
- 
+
 
 ////////////////////////
 //  MATHS SHORTCUTS   //
@@ -1174,93 +1174,95 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 //       POST PROCESSING       //
 /////////////////////////////////
 
+/* post-processing sorting of files by criteria (-S and -[kmKM])
+ * this is slightly different to rm_shred_cmp_orig_criteria in the case of
+ * either -K or -M options
+ */
+int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+    RmSettings *settings = session->settings;
+    if (1
+            && (a->is_prefd != b->is_prefd)
+            && (settings->keep_all_untagged || settings->must_match_untagged)
+       ) {
+        return(a->is_prefd - b->is_prefd);
+    } else {
+        return rm_pp_cmp_orig_criteria(a, b, session);
+    }
+}
+
+
 /* iterate over group to find highest ranked; return it and tag it as original    */
 /* also in special cases (eg keep_all_tagged) there may be more than one original,
  * in which case tag them as well
  */
-static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
-    RmFile *result = NULL;  /* highest ranked file - initially nothing */
-    /* iterate over group */
+static void rm_group_find_original(RmSession *session, GQueue *group) {
+
+    /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
+        g_assert(!file->is_original);
         if (file->hardlinks.files) {
             /* if group member has a hardlink cluster attached to it then
-             * iterate over that cluster recursively
+             * unbundle the cluster and append it to the queue
              */
-            RmFile *hardlink_original = rm_group_find_original(session, file->hardlinks.files);
-            if (!result
-                    || rm_pp_cmp_orig_criteria(result, hardlink_original, session) > 0) {
-                /* boss hardlink outranks current result */
-                result = hardlink_original;
+            GQueue *hardlinks = file->hardlinks.files;
+            for(GList *link = hardlinks->head; link; link = link->next) {
+                g_queue_push_tail(group, link->data);
             }
+            g_queue_free(hardlinks);
+            file->hardlinks.files = NULL;
         }
-
+        /* identify "tagged" originals: */
         if (0
                 || ((file->is_prefd) && (session->settings->keep_all_tagged))
                 || ((!file->is_prefd) && (session->settings->keep_all_untagged))
            ) {
             file->is_original = true;
-        }
-
-        if(!result
-                || rm_pp_cmp_orig_criteria(result, file, session) > 0) {
-            result = file;
+            rm_log_debug("tagging %s as original because %s\n",
+                         file->path,
+                         ((file->is_prefd) && (session->settings->keep_all_tagged)) ? "tagged" : "untagged"
+                        );
         }
     }
-    g_assert(result);
-    return result;
-}
 
-static void rm_group_fmt_write(RmSession *session, GQueue *group, RmFile *original_file) {
-    g_queue_sort(group, (GCompareDataFunc)rm_pp_cmp_orig_criteria, session);
+    /* sort the unbundled group */
+    g_queue_sort (group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, session);
 
-    for(GList *iter = group->head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        if (file->hardlinks.files) {
-            rm_group_fmt_write(session, file->hardlinks.files, original_file);
-        }
-
-        if(file != original_file) {
-            RmFile *lint = iter->data;
-            rm_fmt_write(session->formats, lint);
-        }
+    RmFile *headfile = group->head->data;
+    if (!headfile->is_original) {
+        headfile->is_original = true;
+        rm_log_debug("tagging %s as original because it is highest ranked\n", headfile->path);
     }
 }
 
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
-    RmFile *original_file = NULL;
-
-    for(GList * iter = group->head; iter; iter = iter->next) {
-        RmFile * file = iter->data;
-        if(file->is_original) {
-            original_file = file;
-            break;
-        }
-    }
-
-    if(original_file == NULL) {
-        /* Group has no determined original yet, guess one. */
-        original_file = rm_group_find_original(session, group);
-        g_assert(original_file);
-
-        original_file->is_original = true;
-    }
+    RmFile *head = group->head->data;
+    rm_log_debug("Forwarding %s's group\n", head->path);
 
     /* Hand it over to the printing module */
-    rm_fmt_write(session->formats, original_file);
-    rm_group_fmt_write(session, group, original_file);
+    g_queue_foreach(group, (GFunc)rm_fmt_write, session->formats);
 }
+
+static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
+    if (!file->is_original) {
+        session->dup_counter++;
+        session->total_lint_size += file->file_size;
+    }
+}
+
 
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     if(g_queue_get_length(group->held_files) > 0) {
+        /* find the original(s)
+         * (note this also unbundles hardlinks and sorts the group from
+         *  highest ranked to lowest ranked
+         */
+        rm_group_find_original(tag->session, group->held_files);
         /* Update statistics */
         rm_fmt_lock_state(tag->session->formats);
         {
-            RmOff dupe_count = group->held_files->length - 1;
-            RmOff file_sizes = ((RmFile *)group->held_files->head->data)->file_size;
             tag->session->dup_group_counter++;
-            tag->session->dup_counter += dupe_count;
-            tag->session->total_lint_size += dupe_count * file_sizes;
+            g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals, tag->session);
         }
         rm_fmt_unlock_state(tag->session->formats);
 
@@ -1278,6 +1280,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
             /* Output them directly */
             rm_shred_forward_to_output(tag->session, group->held_files);
         }
+
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;

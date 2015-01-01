@@ -151,6 +151,11 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
+/*  compare two files -return:
+ *      a negative integer file 'a' outranks 'b',
+ *      0 if they are equal,
+ *      a positive integer if file 'b' outranks 'a'
+ */
 int rm_pp_cmp_orig_criteria_impl(
     RmSession *session,
     time_t mtime_a, time_t mtime_b,
@@ -183,11 +188,17 @@ int rm_pp_cmp_orig_criteria_impl(
 }
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
+/* Return:
+ *      a negative integer file 'a' outranks 'b',
+ *      0 if they are equal,
+ *      a positive integer if file 'b' outranks 'a'
+ */
 int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
+        /* "other" lint outranks duplicates and has lower ENUM */
         return a->lint_type - b->lint_type;
     } else if (a->is_prefd != b->is_prefd) {
-        return (a->is_prefd - b->is_prefd);
+        return (b->is_prefd - a->is_prefd);
     } else {
         return rm_pp_cmp_orig_criteria_impl(
                    session,
@@ -227,7 +238,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
             }
 
             /* make sure the highest-ranked hardlink is "boss" */
-            if (rm_pp_cmp_orig_criteria(file, inode_match, session) > 0) {
+            if (rm_pp_cmp_orig_criteria(file, inode_match, session) < 0) {
                 /*this file outranks existing existing boss; swap */
                 /* NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE
                  * as head file, unless all the files are "other lint".  This is achieved via rm_pp_cmp_orig_criteria*/
@@ -249,7 +260,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                         /* double paths and loops will always have same dir inode number*/
                    ) {
                     /* file is path double or filesystem loop - kick one or the other */
-                    if (rm_pp_cmp_orig_criteria(file, iter->data, session) > 0) {
+                    if (rm_pp_cmp_orig_criteria(file, iter->data, session) < 0) {
                         /* file outranks iter */
                         rm_log_debug("Ignoring path double %s, keeping %s\n", iter_file->path, file->path);
                         iter->data = file;
@@ -384,7 +395,7 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
             g_assert(type == file->lint_type);
 
             num_handled++;
-            rm_fmt_write(session->formats, file);
+            rm_fmt_write(file, session->formats);
         }
         g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
     }
