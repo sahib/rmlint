@@ -108,7 +108,7 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     GHashTableIter iter;                                                          \
     g_hash_table_iter_init(&iter, self->handler_to_file);                         \
     while(g_hash_table_iter_next(&iter, (gpointer *)&handler, (gpointer *)&file)) \
- 
+
 #define RM_FMT_CALLBACK(func, ...)                               \
     if(func) {                                                   \
         g_mutex_lock(&handler->print_mtx); {                     \
@@ -122,7 +122,7 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
         }                                                        \
         g_mutex_unlock(&handler->print_mtx);                     \
     }                                                            \
- 
+
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler = g_hash_table_lookup(self->name_to_handler, handler_name);
     if(new_handler == NULL) {
@@ -192,7 +192,7 @@ void rm_fmt_close(RmFmtTable *self) {
     g_slice_free(RmFmtTable, self);
 }
 
-void rm_fmt_write(RmFmtTable *self, RmFile *result) {
+void rm_fmt_write(RmFile *result, RmFmtTable *self) {
     RM_FMT_FOR_EACH_HANDLER(self) {
         RM_FMT_CALLBACK(handler->elem, result);
     }
