@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -391,13 +392,13 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     memset(delete_method, 0, sizeof(delete_method));
     strncpy(dev_copy, dev, sizeof(dev_copy));
 
-    for(int i = 0: dev_copy[i]; ++i) {
-        if(isnum(dev_copy[i])) {
+    for(int i = 0; dev_copy[i]; ++i) {
+        if(isdigit(dev_copy[i])) {
             if(i > 0) {
                 dev_copy[i - 1] = 0;
             }
 
-            device_num = g_ascii_strtoll(&dev_copy[i], 10, NULL);
+            device_num = g_ascii_strtoll(&dev_copy[i], NULL, 10);
             break;
         }
     }
@@ -409,10 +410,10 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     if(sysctlbyname(cmd, delete_method, &delete_method_len, NULL, 0) != 0) {
         rm_log_perror("sysctlbyname");
     } else {
-        if(memcmp("NONE", delete_method, MIN(delete_method_len, 4)) = 0) {
-            nonrotational = 0;
+        if(memcmp("NONE", delete_method, MIN(delete_method_len, 4)) == 0) {
+            is_rotational = 1;
         } else {
-            nonrotational = 1;
+            is_rotational = 0;
         }
     }
 #endif
@@ -568,12 +569,12 @@ static void rm_mounts_freebsd_list_disks(void) {
     DISK_TABLE = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
     if(sysctlbyname("kern.disks", disks, &disks_len, NULL, 0) == 0) {
-        char **disk_vec = g_strsplit(disks, -1);
+        char **disk_vec = g_strsplit(disks, " ", -1);
         for(int i = 0; disk_vec[i]; ++i) {
             char *disk = g_strdup_printf("/dev/%s", disk_vec[i]);
             RmStat dev_stat;
 
-            if(rm_sys_stat(&dev_stat, disk) != -1) {
+            if(rm_sys_stat(disk, &dev_stat) != -1) {
                 g_hash_table_insert(DISK_TABLE, disk, GUINT_TO_POINTER(dev_stat.st_rdev));
             } else {
                 rm_log_perror("stat on /dev");
@@ -601,7 +602,7 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
     char *key = NULL;
     dev_t value = 0;
 
-    while(g_hash_table_iter_next(&iter, (gpointer **)&key, (gpointer **)&value)) {
+    while(g_hash_table_iter_next(&iter, (gpointer *)&key, (gpointer *)&value)) {
         if(g_str_has_prefix(key, entry->fsname)) {
             strncpy(disk, strrchr(key, '/'), disk_size);
             *result = value;
