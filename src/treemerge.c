@@ -352,6 +352,7 @@ static RmFile *rm_directory_as_file(RmDirectory *self) {
 
     /* Recursively calculate the file size */
     file->file_size = rm_tm_calc_file_size(self);
+    file->is_prefd = (self->prefd_files >= self->dupe_count);
 
     return file;
 }
@@ -443,7 +444,6 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
     }
 
     parent->mergeups = subdir->mergeups + parent->mergeups + 1;
-
     parent->dupe_count += subdir->dupe_count;
     g_queue_push_head(&parent->children, subdir);
     parent->prefd_files += subdir->prefd_files;
@@ -643,8 +643,8 @@ static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db
 }
 
 static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db, RmTreeMerger *self) {
-    if(da->prefd_files - db->prefd_files) {
-        return da->prefd_files - db->prefd_files;
+    if(db->prefd_files - da->prefd_files) {
+        return db->prefd_files - da->prefd_files;
     }
 
     return rm_pp_cmp_orig_criteria_impl(

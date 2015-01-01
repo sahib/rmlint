@@ -49,6 +49,10 @@ void rm_shred_run(RmSession *session);
  * - otherwise sort by criteria
  */
 void rm_shred_forward_to_output(RmSession *session, GQueue *group);
+
+/**
+ * @brief Find the original file in a group and mark it.
+ */
 void rm_shred_group_find_original(RmSession *session, GQueue *group);
 
 #endif
