@@ -172,7 +172,7 @@ int rm_pp_cmp_orig_criteria_impl(
             cmp = (long)(mtime_a) - (long)(mtime_b);
             break;
         case 'a':
-            cmp = strcmp(basename_a, basename_b);
+            cmp = strcasecmp(basename_a, basename_b);
             break;
         case 'p':
             cmp = (long)path_index_a - (long)path_index_b;

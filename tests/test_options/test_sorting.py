@@ -2,90 +2,79 @@ from nose import with_setup
 from tests.utils import *
 
 import time
-import itertools
-import string
 
-paths = [ 'b_dir/', 'a_dir/', 'c_dir/' ]
+from itertools import permutations, combinations
 
 
-# comparison tests
-def cmp_scalar(a, b):
-    if a < b:
-        return -1
-    elif a > b:
-        return 1
-    else:
-        return 0
-        
-def path_index(a):
-    for i, path in enumerate(paths):
-        if a.find(path) > 0:
-            ##print('Path index {}'.format(i))
-            return i
-    assert(False)
-    
-def cmp_pathorder(a, b):
-    return cmp_scalar(path_index(a['path']), path_index(b['path']))
+PATHS = ['b_dir/', 'a_dir/', 'c_dir/']
 
-def cmp_basename(a, b):
-    return cmp_scalar(os.path.basename(a['path']), os.path.basename(b['path']))
-    
-def cmp_mtime(a, b):
-    return cmp_scalar(a['mtime'], b['mtime'])
+
+def path_index(file_path):
+    for idx, path in enumerate(PATHS):
+        if path in file_path:
+            return idx
+    assert False
 
 
 # dispatcher for comparison tests
-def cmp_pair(a, b, tests):
-    testfuncs = {'a':cmp_basename, 'm': cmp_mtime, 'p':cmp_pathorder}
-    for test in tests:
-        if test[0] == test[0].lower():
-            sign = -1
-        else:
-            sign = 1
-        testfunc = testfuncs[test[0].lower()]
-        cmp_i = testfunc(a, b)
-        if cmp_i == sign:
-            return True
-        elif cmp_i == -sign:
-            return False
-    return True
+def validate_order(data, tests):
+    testfuncs = {
+        'a': lambda p: os.path.basename(p['path']).lower(),
+        'm': lambda p: p['mtime'],
+        'p': lambda p: path_index(p['path'])
+    }
 
-# iterator for pairwise comparison of each dupe file's ranking with the original
-def cmp_all(data, *tests):
-    a=data[0]
-    for b in data[1:]:
-        assert cmp_pair(a, b, tests)
+    for a, b in combinations(data, 2):
+        for test in tests:
+            cmp_a, cmp_b = (testfuncs[test.lower()](e) for e in [a, b])
 
+            # Equal? Try again.
+            if cmp_a == cmp_b:
+                continue
+
+            a_comes_first = test.islower()
+
+            if (cmp_a < cmp_b) and a_comes_first:
+                break
+
+            if (cmp_b < cmp_a) and not a_comes_first:
+                break
+
+            # Something's wrong.
+            assert False
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sorting():
-    # create some dupes with different paths, names and mtimes:
-    create_file('xxx', paths[1] + 'a')
-    create_file('xxx', paths[0] + 'c')
-    create_file('xxx', paths[2] + 'B')
-    time.sleep(1.5)
-    create_file('xxx', paths[2] + 'b')
-    create_file('xxx', paths[1] + 'c')
-    create_file('xxx', paths[2] + 'c')
-    
-    joiner=' ' + TESTDIR_NAME + '/'
-    search_paths = joiner + joiner.join(paths)
+    # create some dupes with different PATHS, names and mtimes:
+    create_file('xxx', PATHS[1] + 'a')
+    create_file('xxx', PATHS[0] + 'c')
+    create_file('xxx', PATHS[2] + 'B')
+    time.sleep(1.2)
+    create_file('xxx', PATHS[2] + 'b')
+    create_file('xxx', PATHS[1] + 'c')
+    create_file('xxx', PATHS[2] + 'c')
 
-    opts='amp'
+    joiner = ' ' + TESTDIR_NAME + '/'
+    search_paths = joiner + joiner.join(PATHS)
+
+    opts = 'amp'
     all_opts = opts + opts.upper()
-    combos=[]
-    is_legal_combo = lambda x: len(x) == len(set(''.join(x).lower()))
-    for n_terms in range(1, len(opts) + 1):
-        combos += filter(is_legal_combo, itertools.permutations(all_opts, n_terms))
 
-    
+    combos = []
+    is_legal_combo = lambda x: len(x) == len(set(x.lower()))
+
+    for n_terms in range(1, len(opts) + 1):
+        combos += filter(
+            is_legal_combo,
+            (''.join(p) for p in permutations(all_opts, n_terms))
+        )
+
     for combo in combos:
-        combo_str = '-S ' + ''.join(combo)
+        combo_str = '-S ' + combo
         print('Testing {}...'.format(combo_str), end='')
         head, *data, footer = run_rmlint(combo_str + search_paths, use_default_dir=False)
         assert len(data) == 6
-        cmp_all(data, combo)
-        print('ok')
-   
 
+        validate_order(data, combo)
+        print('ok')
