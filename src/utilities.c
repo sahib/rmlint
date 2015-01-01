@@ -508,7 +508,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
             RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
             struct statfs *entry = &mnt_list[i];
 
-            wrap_entry->fsname = g_strdup(entry->f_fstypename);
+            wrap_entry->fsname = g_strdup(entry->f_mntfromname);
             wrap_entry->dir = g_strdup(entry->f_mntonname);
             self->entries = g_list_prepend(self->entries, wrap_entry);
         }
@@ -582,6 +582,8 @@ static void rm_mounts_freebsd_list_disks(void) {
                 g_free(disk);
             }
         }
+
+        g_strfreev(disk_vec);
     } else {
         rm_log_perror("sysctlbyname");
     }
@@ -600,14 +602,14 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
     GHashTableIter iter;
     g_hash_table_iter_init(&iter, DISK_TABLE);
 
-    char *key = NULL;
-    dev_t value = 0;
+    gpointer key = NULL;
+    gpointer value = NULL;
 
-    while(g_hash_table_iter_next(&iter, (gpointer *)&key, (gpointer *)&value)) {
-        g_printerr("Checking: %s in %s\n", key, entry->fsname);
-        if(g_str_has_prefix(key, entry->fsname)) {
-            strncpy(disk, strrchr(key, '/'), disk_size);
-            *result = value;
+    while(g_hash_table_iter_next(&iter, &key, &value)) {
+        char *str_key = key;
+        if(g_str_has_prefix(str_key, entry->fsname)) {
+            strncpy(disk, strrchr(str_key, '/'), disk_size);
+            *result = (dev_t)GPOINTER_TO_UINT(value);
             return 0;
         }
     }
@@ -725,6 +727,13 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                    );
 
     }
+
+
+#if HAVE_SYSCTL
+    if(DISK_TABLE) {
+        g_hash_table_unref(DISK_TABLE);
+    }
+#endif
 
     rm_mount_list_close(mnt_entries);
     return true;
