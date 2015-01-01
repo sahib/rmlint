@@ -1186,7 +1186,12 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
        ) {
         return(a->is_prefd - b->is_prefd);
     } else {
-        return rm_pp_cmp_orig_criteria(a, b, session);
+        int comparasion = rm_pp_cmp_orig_criteria(a, b, session);
+        if(comparasion == 0) {
+            return b->is_original - a->is_original;
+        }
+
+        return comparasion;
     }
 }
 
@@ -1195,12 +1200,10 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
 /* also in special cases (eg keep_all_tagged) there may be more than one original,
  * in which case tag them as well
  */
-static void rm_group_find_original(RmSession *session, GQueue *group) {
-
+void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        g_assert(!file->is_original);
         if (file->hardlinks.files) {
             /* if group member has a hardlink cluster attached to it then
              * unbundle the cluster and append it to the queue
@@ -1222,7 +1225,7 @@ static void rm_group_find_original(RmSession *session, GQueue *group) {
                          file->path,
                          ((file->is_prefd) && (session->settings->keep_all_tagged)) ? "tagged" : "untagged"
                         );
-        }
+        } 
     }
 
     /* sort the unbundled group */
@@ -1250,14 +1253,14 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     }
 }
 
-
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     if(g_queue_get_length(group->held_files) > 0) {
         /* find the original(s)
          * (note this also unbundles hardlinks and sorts the group from
          *  highest ranked to lowest ranked
          */
-        rm_group_find_original(tag->session, group->held_files);
+        rm_shred_group_find_original(tag->session, group->held_files);
+
         /* Update statistics */
         rm_fmt_lock_state(tag->session->formats);
         {

@@ -826,6 +826,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 self->session->dup_group_counter -= 1;
                 self->session->dup_counter -= file_list->length - 1;
             } else {
+                rm_shred_group_find_original(self->session, file_list);
                 rm_shred_forward_to_output(self->session, file_list);
             }
         }

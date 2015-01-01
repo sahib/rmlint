@@ -60,14 +60,27 @@ def test_hardlinks():
     create_file('xxx', '2/a')
     create_link('2/a', '2/link1')
     create_link('2/a', '2/link2')
-    head, *data, footer = run_rmlint('-ppp -D -l -S a')
 
+    head, *data, footer = run_rmlint('-ppp -D -l -S a')
+    assert len(data) is 5
     assert data[0]['type'] == 'duplicate_dir'
     assert data[0]['path'].endswith('1')
     assert data[1]['type'] == 'duplicate_dir'
     assert data[1]['path'].endswith('2')
 
-    head, *data, footer = run_rmlint('-D -S A -L')
+    # Hardlink duplicates:
+    assert data[2]['type'] == 'duplicate_file'
+    assert data[2]['path'].endswith('1/a')
+    assert data[2]['is_original']
+    assert data[3]['type'] == 'duplicate_file'
+    assert data[3]['path'].endswith('1/link1')
+    assert not data[3]['is_original']
+    assert data[4]['type'] == 'duplicate_file'
+    assert data[4]['path'].endswith('1/link2')
+    assert not data[4]['is_original']
+
+    head, *data, footer = run_rmlint('-D -S a -L')
+    assert len(data) is 2
     assert data[0]['type'] == 'duplicate_file'
     assert data[0]['path'].endswith('a')
     assert data[1]['type'] == 'duplicate_file'
@@ -187,20 +200,27 @@ def test_symlinks():
     create_file('xxx', 'b/z')
     create_link('b/z', 'b/x', symlink=True)
 
-    head, *data, footer = run_rmlint('-ppp -D -S am -FF')
+    head, *data, footer = run_rmlint('-ppp -D -S a -FF')
 
     assert len(data) == 2
-    assert data[0]['path'].endswith('a/z')
+    assert data[0]['path'].endswith('z')
     assert data[0]['is_original']
-    assert data[1]['path'].endswith('b/z')
+    assert data[1]['path'].endswith('z')
     assert not data[1]['is_original']
 
     head, *data, footer = run_rmlint('-ppp -D -S a -f')
-    assert len(data) == 2
+
+    assert len(data) == 4
     assert data[0]['path'].endswith('/a')
     assert data[0]['is_original']
     assert data[1]['path'].endswith('/b')
     assert not data[1]['is_original']
+
+    # x is a duplicate of z when following links
+    assert data[2]['path'].endswith('/a/x')
+    assert data[2]['is_original']
+    assert data[3]['path'].endswith('/a/z')
+    assert not data[3]['is_original']
 
 
 def mount_bind_teardown_func():
