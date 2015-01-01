@@ -1174,11 +1174,28 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 //       POST PROCESSING       //
 /////////////////////////////////
 
+/* post-processing sorting of files by criteria (-S and -[kmKM])
+ * this is slightly different to rm_shred_cmp_orig_criteria in the case of
+ * either -K or -M options
+ */
+int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+    RmSettings *settings = session->settings;
+    if (1
+            && (a->is_prefd != b->is_prefd)
+            && (settings->keep_all_untagged || settings->must_match_untagged)
+       ) {
+        return(a->is_prefd - b->is_prefd);
+    } else {
+        return rm_pp_cmp_orig_criteria(a, b, session);
+    }
+}
+
+
 /* iterate over group to find highest ranked; return it and tag it as original    */
 /* also in special cases (eg keep_all_tagged) there may be more than one original,
  * in which case tag them as well
  */
-static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
+static void rm_group_find_original(RmSession *session, GQueue *group) {
 
     /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
     for(GList *iter = group->head; iter; iter = iter->next) {
@@ -1201,40 +1218,51 @@ static RmFile *rm_group_find_original(RmSession *session, GQueue *group) {
                 || ((!file->is_prefd) && (session->settings->keep_all_untagged))
            ) {
             file->is_original = true;
+            rm_log_debug("tagging %s as original because %s\n",
+                         file->path,
+                         ((file->is_prefd) && (session->settings->keep_all_tagged)) ? "tagged" : "untagged"
+                        );
         }
     }
 
     /* sort the unbundled group */
-    g_queue_sort (group, (GCompareDataFunc)rm_pp_cmp_orig_criteria, session);
+    g_queue_sort (group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, session);
 
-    RmFile *result = group->head->data;
-    result->is_original = true;
-
-    return result;
+    RmFile *headfile = group->head->data;
+    if (!headfile->is_original) {
+        headfile->is_original = true;
+        rm_log_debug("tagging %s as original because it is highest ranked\n", headfile->path);
+    }
 }
 
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
-    /* find the original
-     * (note this also unbundles hardlinks and sorts the group from
-     *  highest ranked to lowest ranked
-     */
-    RmFile *original_file = rm_group_find_original(session, group);
-    g_assert(original_file);
+    RmFile *head = group->head->data;
+    rm_log_debug("Forwarding %s's group\n", head->path);
 
     /* Hand it over to the printing module */
     g_queue_foreach(group, (GFunc)rm_fmt_write, session->formats);
 }
 
+static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
+    if (!file->is_original) {
+        session->dup_counter++;
+        session->total_lint_size += file->file_size;
+    }
+}
+
+
 static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
     if(g_queue_get_length(group->held_files) > 0) {
+        /* find the original(s)
+         * (note this also unbundles hardlinks and sorts the group from
+         *  highest ranked to lowest ranked
+         */
+        rm_group_find_original(tag->session, group->held_files);
         /* Update statistics */
         rm_fmt_lock_state(tag->session->formats);
         {
-            RmOff dupe_count = group->held_files->length - 1;
-            RmOff file_sizes = ((RmFile *)group->held_files->head->data)->file_size;
             tag->session->dup_group_counter++;
-            tag->session->dup_counter += dupe_count;
-            tag->session->total_lint_size += dupe_count * file_sizes;
+            g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals, tag->session);
         }
         rm_fmt_unlock_state(tag->session->formats);
 
@@ -1252,6 +1280,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
             /* Output them directly */
             rm_shred_forward_to_output(tag->session, group->held_files);
         }
+
     }
 
     group->status = RM_SHRED_GROUP_FINISHED;
