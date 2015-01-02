@@ -69,20 +69,24 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
 static void rm_fmt_prog(
     RmSession *session,
     _U RmFmtHandler *parent,
-    FILE *out,
+    _U FILE *out,
     RmFmtProgressState state
 ) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
+
+    /* We do not respect `out` here; just use stderr and stdout directly.
+     * Reason: fdupes does this, let's imitate weird behaviour!
+     */ 
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     g_assert(PROGRESS_HANDLER->prog);
     PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, stderr, state);
 
     if(state == RM_PROGRESS_STATE_SUMMARY && self->text_lines) {
-        fprintf(out, "\n");
+        fprintf(stdout, "\n");
         for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
             char *line = iter->data;
-            fprintf(out, "%s", line);
+            fprintf(stdout, "%s", line);
         }
         g_queue_free_full(self->text_lines, g_free);
     }

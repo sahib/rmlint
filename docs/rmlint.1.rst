@@ -378,6 +378,14 @@ FORMATTERS
 * ``summary``: Shows counts of files and their respective size after the run.
   Also list all written files.
 
+* ``fdupes``: Prints an output similar to the popular duplicate finder
+  **fdupes(1)**. At first a progressbar is printed on **stderr.** Afterwards the
+  found files are printed on **stdout;** each set of duplicates gets printed as a
+  block separated by newlines. Originals are highlighted in green. At the bottom 
+  a summary is printed on **stderr**. This is mostly useful for scripts that are used to
+  parsing this format. We recommend the ``json`` formatter for every other
+  scripting purpose.
+
 EXAMPLES
 ========
 
