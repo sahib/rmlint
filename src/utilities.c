@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -72,6 +73,10 @@
 
 #if HAVE_BLKID
 #  include <blkid.h>
+#endif
+
+#if HAVE_SYSCTL
+#  include <sys/sysctl.h>
 #endif
 
 ////////////////////////////////////
@@ -379,8 +384,40 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
     fclose(sys_fdes);
-#else
-    /* TODO: Insert FreeBSD SSD detection code here. */
+#elif HAVE_SYSCTL
+    /* try with sysctl() */
+    int device_num = 0;
+    char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
+    size_t delete_method_len = sizeof(delete_method_len);
+
+    memset(cmd, 0, sizeof(cmd));
+    memset(delete_method, 0, sizeof(delete_method));
+    strncpy(dev_copy, dev, sizeof(dev_copy));
+
+    for(int i = 0; dev_copy[i]; ++i) {
+        if(isdigit(dev_copy[i])) {
+            if(i > 0) {
+                dev_copy[i - 1] = 0;
+            }
+
+            device_num = g_ascii_strtoll(&dev_copy[i], NULL, 10);
+            break;
+        }
+    }
+
+    if(snprintf(cmd, sizeof(cmd), "kern.cam.%s.%d.delete_method", dev_copy, device_num) == -1) {
+        return -1;
+    }
+
+    if(sysctlbyname(cmd, delete_method, &delete_method_len, NULL, 0) != 0) {
+        rm_log_perror("sysctlbyname");
+    } else {
+        if(memcmp("NONE", delete_method, MIN(delete_method_len, 4)) == 0) {
+            is_rotational = 1;
+        } else {
+            is_rotational = 0;
+        }
+    }
 #endif
 
     return is_rotational;
@@ -547,18 +584,65 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     return self;
 }
 
-int rm_mounts_devno_to_wholedisk(_U dev_t rdev, _U char *disk, _U size_t disk_size, _U dev_t *result) {
+
+#if HAVE_SYSCTL
+
+static GHashTable *DISK_TABLE = NULL;
+
+static void rm_mounts_freebsd_list_disks(void) {
+    char disks[1024];
+    size_t disks_len = sizeof(disks);
+    memset(disks, 0, sizeof(disks));
+
+    DISK_TABLE = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+
+    if(sysctlbyname("kern.disks", disks, &disks_len, NULL, 0) == 0) {
+        char **disk_vec = g_strsplit(disks, " ", -1);
+        for(int i = 0; disk_vec[i]; ++i) {
+            char *disk = g_strdup_printf("/dev/%s", disk_vec[i]);
+            RmStat dev_stat;
+
+            if(rm_sys_stat(disk, &dev_stat) != -1) {
+                g_hash_table_insert(DISK_TABLE, disk, GUINT_TO_POINTER(dev_stat.st_rdev));
+            } else {
+                rm_log_perror("stat on /dev");
+                g_free(disk);
+            }
+        }
+
+        g_strfreev(disk_vec);
+    } else {
+        rm_log_perror("sysctlbyname");
+    }
+}
+#endif
+
+
+int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char *disk, _U size_t disk_size, _U dev_t *result) {
 #if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, sizeof(disk_size), result);
-#else
-    /* TODO: Handle FreeBSD detection here.
-     *       This needs libgeom's geom_getree() according to #bsddev
-     *       or sysctl kern.geom.conftxt/confxml
-     *       in order to resolve a rdev to a device name. The device name
-     *       is needed to check if it's a rotational disk.
-     */
-    return -1;
+#elif HAVE_SYSCTL
+    if(DISK_TABLE == NULL) {
+        rm_mounts_freebsd_list_disks();
+    }
+
+    GHashTableIter iter;
+    g_hash_table_iter_init(&iter, DISK_TABLE);
+
+    gpointer key = NULL;
+    gpointer value = NULL;
+
+    while(g_hash_table_iter_next(&iter, &key, &value)) {
+        char *str_key = key;
+        if(g_str_has_prefix(str_key, entry->fsname)) {
+            strncpy(disk, strrchr(str_key, '/'), disk_size);
+            *result = (dev_t)GPOINTER_TO_UINT(value);
+            return 0;
+        }
+    }
 #endif
+
+    return -1;
 }
 
 static bool rm_mounts_create_tables(RmMountTable *self) {
@@ -628,7 +712,7 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
             }
         } else {
             if(rm_mounts_devno_to_wholedisk(
-                        stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk
+                        entry, stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk
                     ) == -1) {
                 /* folder and devname rm_sys_stat() are ok but blkid failed; this happens when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
@@ -662,7 +746,7 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                 rm_disk_info_new(diskname, is_rotational));
         }
 
-        rm_log_info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %15s; rotational: %3s\n)",
+        rm_log_info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s\n)",
                     major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
                     entry->dir,
                     major(whole_disk), minor(whole_disk),
@@ -670,6 +754,12 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                    );
 
     }
+
+#if HAVE_SYSCTL
+    if(DISK_TABLE) {
+        g_hash_table_unref(DISK_TABLE);
+    }
+#endif
 
     rm_mount_list_close(mnt_entries);
     return true;

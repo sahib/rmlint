@@ -371,12 +371,22 @@ FORMATTERS
 
   * *update_interval=number:* Number of files to wait between updates.
     Higher values use less resources. 
+  * *use_unicode:* Print a nicer bar via the use of unicode characters.
+    This may not be supported by your terminal/fonts.
 
 * ``pretty``: Shows all found items in realtimes nicely colored. This formatter
   is activated as default.
 
 * ``summary``: Shows counts of files and their respective size after the run.
   Also list all written files.
+
+* ``fdupes``: Prints an output similar to the popular duplicate finder
+  **fdupes(1)**. At first a progressbar is printed on **stderr.** Afterwards the
+  found files are printed on **stdout;** each set of duplicates gets printed as a
+  block separated by newlines. Originals are highlighted in green. At the bottom 
+  a summary is printed on **stderr**. This is mostly useful for scripts that are used to
+  parsing this format. We recommend the ``json`` formatter for every other
+  scripting purpose.
 
 EXAMPLES
 ========

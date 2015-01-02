@@ -30,6 +30,7 @@ def build_config_template(target, source, env):
             HAVE_BIG_OFF_T=env['HAVE_BIG_OFF_T'],
             HAVE_BLKID=env['HAVE_BLKID'],
             HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
+            HAVE_SYSCTL=env['HAVE_SYSCTL'],
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
@@ -71,6 +72,7 @@ program = env.Program(
 
 env.Depends(program, [config, py_formatter])
 env.AlwaysBuild(config)
+env.AlwaysBuild(py_formatter)
 
 if 'install' in COMMAND_LINE_TARGETS:
     env.Alias('install', env.Install('$PREFIX/bin', [program]))

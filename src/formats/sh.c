@@ -44,7 +44,7 @@ static const char *SH_SCRIPT_TEMPLATE_HEAD =
     "#!/bin/sh                                           \n"
     "# This file was autowritten by rmlint               \n"
     "# rmlint was executed from: %s                      \n"
-    "# You command line was: %s                          \n"
+    "# Your command line was: %s                         \n"
     "                                                    \n"
     "ask() {                                             \n"
     "cat << EOF\n                                        \n"

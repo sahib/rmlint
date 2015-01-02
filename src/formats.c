@@ -93,6 +93,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler *PY_HANDLER;
     rm_fmt_register(self, PY_HANDLER);
 
+    extern RmFmtHandler *FDUPES_HANDLER;
+    rm_fmt_register(self, FDUPES_HANDLER);
+
     return self;
 }
 

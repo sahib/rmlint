@@ -45,6 +45,7 @@ typedef struct RmFmtHandlerProgress {
     guint32 text_len;
     guint32 update_counter;
     guint32 update_interval;
+    guint8 use_unicode_glyphs;
 
     RmFmtProgressState last_state;
     struct winsize terminal;
@@ -83,9 +84,9 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         break;
     case RM_PROGRESS_STATE_SHREDDER:
         self->percent = 1.0 - (
-                (gdouble)session->shred_bytes_remaining / 
-                (gdouble)session->shred_bytes_after_preprocess
-        );
+                            (gdouble)session->shred_bytes_remaining /
+                            (gdouble)session->shred_bytes_after_preprocess
+                        );
         rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf, sizeof(num_buf));
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
@@ -102,7 +103,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                          );
         break;
     case RM_PROGRESS_STATE_MERGE:
-        self->percent = 2.0;
+        self->percent = 1.0;
         self->text_len = g_snprintf(self->text_buf, sizeof(self->text_buf),
                                     _("Merging files into directories (stand by...)"));
         break;
@@ -146,6 +147,55 @@ static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FI
     fprintf(out, "%s", self->text_buf);
 }
 
+typedef enum RmProgressBarGlyph {
+    PROGRESS_ARROW,
+    PROGRESS_TICK_LOW,
+    PROGRESS_TICK_HIGH,
+    PROGRESS_EMPTY,
+    PROGRESS_FULL,
+    PROGRESS_LEFT_BRACKET,
+    PROGRESS_RIGHT_BRACKET
+} RmProgressBarGlyph;
+
+static const char *PROGRESS_UNICODE_TABLE[] = {
+    [PROGRESS_ARROW] = "➤",
+    [PROGRESS_TICK_LOW] = "□",
+    [PROGRESS_TICK_HIGH] = "▢",
+    [PROGRESS_EMPTY] = "⌿",
+    [PROGRESS_FULL] = "—",
+    [PROGRESS_LEFT_BRACKET] = "⦃",
+    [PROGRESS_RIGHT_BRACKET] = "⦄"
+};
+
+static const char *PROGRESS_ASCII_TABLE[] = {
+    [PROGRESS_ARROW] = ">",
+    [PROGRESS_TICK_LOW] = "o",
+    [PROGRESS_TICK_HIGH] = "O",
+    [PROGRESS_EMPTY] = "/",
+    [PROGRESS_FULL] = "_",
+    [PROGRESS_LEFT_BRACKET] = "{",
+    [PROGRESS_RIGHT_BRACKET] = "}"
+};
+
+static const char *rm_fmt_progressbar_get_glyph(RmFmtHandlerProgress *self, RmProgressBarGlyph type) {
+    if(self->use_unicode_glyphs) {
+        return PROGRESS_UNICODE_TABLE[type];
+    } else {
+        return PROGRESS_ASCII_TABLE[type];
+    }
+}
+
+static void rm_fmt_progressbar_print_glyph(
+    FILE *out, RmSession *session, RmFmtHandlerProgress *self, RmProgressBarGlyph type, const char *color
+) {
+    fprintf(
+        out, "%s%s%s",
+        (session->settings->color) ? color : "",
+        rm_fmt_progressbar_get_glyph(self, type),
+        (session->settings->color) ? RESET : ""
+    );
+}
+
 static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *self, int width, FILE *out) {
     int cells = width * self->percent;
 
@@ -154,28 +204,29 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
      * */
     bool is_unknown = self->percent > 1.1;
 
+    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_LEFT_BRACKET, RED);
 
-    fprintf(out, "[");
     for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
             if(is_unknown) {
                 if((int)self->last_unknown_pos % 4 == i % 4) {
-                    fprintf(out, "%so%s", MAYBE_BLUE(session), MAYBE_RESET(session));
+                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_LOW, BLUE);
                 } else if((int)self->last_unknown_pos % 2 == i % 2) {
-                    fprintf(out, "%sO%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
+                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_HIGH, YELLOW);
                 } else {
                     fprintf(out, " ");
                 }
             } else {
-                fprintf(out, "#");
+                rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_FULL, GREEN);
             }
         } else if(i == cells) {
-            fprintf(out, "%s>%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
+            rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_ARROW, YELLOW);
         } else {
-            fprintf(out, "%s-%s", MAYBE_BLUE(session), MAYBE_RESET(session));
+            rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_EMPTY, BLUE);
         }
     }
-    fprintf(out, "]");
+
+    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_RIGHT_BRACKET, RED);
 
     self->last_unknown_pos = fmod(self->last_unknown_pos + 0.005, width - 2);
 }
@@ -193,6 +244,10 @@ static void rm_fmt_prog(
         const char *update_interval_str = rm_fmt_get_config_value(
                                               session->formats, "progressbar", "update_interval"
                                           );
+
+        self->use_unicode_glyphs = (rm_fmt_get_config_value(
+                                        session->formats, "progressbar", "use_unicode"
+                                    ) != NULL);
 
         if(update_interval_str) {
             self->update_interval = g_ascii_strtoull(update_interval_str, NULL, 10);
@@ -266,6 +321,7 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .text_len = 0,
     .text_buf = {0},
     .update_counter = 0,
+    .use_unicode_glyphs = 0,
     .last_state = RM_PROGRESS_STATE_INIT
 };
 

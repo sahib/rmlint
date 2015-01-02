@@ -133,13 +133,14 @@ static void rm_traverse_file(
         } else {
             RmOff file_size = statp->st_size;
             if(!settings->limits_specified || (
-                        (settings->minsize == (RmOff)-1 || settings->minsize <= file_size) &&
-                        (settings->maxsize == (RmOff)-1 || file_size <= settings->maxsize))
-            ) {
+                        (settings->minsize == (RmOff) - 1 || settings->minsize <= file_size) &&
+                        (settings->maxsize == (RmOff) - 1 || file_size <= settings->maxsize))
+              ) {
                 if(rm_mounts_is_evil(trav_session->session->mounts, statp->st_dev) == false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
                 } else {
                     /* A file in a evil fs. Ignore. */
+                    trav_session->session->ignored_files++;
                     return;
                 }
             } else {
@@ -202,7 +203,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             p->fts_path, is_prefd, path_index,    \
             lint_type, is_symlink                 \
         );                                        \
- 
+
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
@@ -297,7 +298,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     RmStat dummy_buf;
                     if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
                         /* Oops, that's a badlink. */
-                        ADD_FILE(RM_LINT_TYPE_BLNK, false);
+                        if (settings->findbadlinks) {
+                            ADD_FILE(RM_LINT_TYPE_BLNK, false);
+                        }
                     } else if(settings->see_symlinks) {
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }

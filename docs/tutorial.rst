@@ -369,6 +369,18 @@ formatters and their config options:
 
     - *update_interval=number:* Number of files to wait between updates.
       Higher values use less resources. 
+
+:fdupes: 
+
+    A formatter that behaves similar to **fdupes(1)** - another duplicate
+    finder. This is mostly indented for compatibility (e.g. scripts that relied
+    on that format). Duplicate set of files are printed as block, each separated
+    by a newline. Original files are highlighted in green (this is an addition). 
+    At the start and beginning a progressbar and summary is printed. The latter
+    two are printed to ``stderr``, while the parseable lines will be printed to
+    ``stdout``. 
+
+    Consider using the far more powerful ``json`` output for scripting purposes. 
   
 Paranoia
 --------
