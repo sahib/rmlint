@@ -298,7 +298,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     RmStat dummy_buf;
                     if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
                         /* Oops, that's a badlink. */
-                        ADD_FILE(RM_LINT_TYPE_BLNK, false);
+                        if (settings->findbadlinks) {
+                            ADD_FILE(RM_LINT_TYPE_BLNK, false);
+                        }
                     } else if(settings->see_symlinks) {
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }

@@ -725,7 +725,6 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
 
     }
 
-
 #if HAVE_SYSCTL
     if(DISK_TABLE) {
         g_hash_table_unref(DISK_TABLE);
