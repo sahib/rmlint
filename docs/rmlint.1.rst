@@ -371,6 +371,8 @@ FORMATTERS
 
   * *update_interval=number:* Number of files to wait between updates.
     Higher values use less resources. 
+  * *use_unicode:* Print a nicer bar via the use of unicode characters.
+    This may not be supported by your terminal/fonts.
 
 * ``pretty``: Shows all found items in realtimes nicely colored. This formatter
   is activated as default.
