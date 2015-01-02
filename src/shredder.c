@@ -1239,6 +1239,9 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
 }
 
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+    g_assert(group);
+    g_assert(group->head);
+
     RmFile *head = group->head->data;
     rm_log_debug("Forwarding %s's group\n", head->path);
 
