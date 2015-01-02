@@ -32,28 +32,64 @@
 typedef struct RmFmtHandlerFdupes {
     /* must be first */
     RmFmtHandler parent;
+
+    GQueue *text_lines;
 } RmFmtHandlerFdupes;
 
 
-static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
+static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out, RmFile *file) {
+    RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
+    char *line = NULL;
+
     switch(file->lint_type) {
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
     case RM_LINT_TYPE_DUPE_CANDIDATE:
-        if(file->is_original) {
-            fprintf(out, "\n");
-            fprintf(out, MAYBE_GREEN(session));
-        } 
-
-        fprintf(out, "%s\n", file->path);
-
-        if(file->is_original) {
-            fprintf(out, MAYBE_RESET(session));
-        } 
+        line = g_strdup_printf(
+            "%s%s%s%s\n",
+            (file->is_original) ? "\n" : "",
+            (file->is_original) ? MAYBE_GREEN(session) : "",
+            file->path,
+            (file->is_original) ? MAYBE_RESET(session) : ""
+        );
         break;
     default:
-        fprintf(out, "%s%s%s\n", MAYBE_BLUE(session), file->path, MAYBE_RESET(session));
+        line = g_strdup_printf(
+            "%s%s%s\n", MAYBE_BLUE(session), file->path, MAYBE_RESET(session)
+        );
         break;
     }
+
+    if(self->text_lines == NULL) {
+        self->text_lines = g_queue_new();
+    }
+
+    g_queue_push_tail(self->text_lines, line);
+}
+
+static void rm_fmt_prog(
+    RmSession *session,
+    _U RmFmtHandler *parent,
+    FILE *out,
+    RmFmtProgressState state
+) {
+    RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
+
+    extern RmFmtHandler *PROGRESS_HANDLER;
+    g_assert(PROGRESS_HANDLER->prog);
+    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, stderr, state);
+
+    if(state == RM_PROGRESS_STATE_SUMMARY && self->text_lines) {
+        fprintf(out, "\n");
+        for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
+            char *line = iter->data;
+            fprintf(out, "%s", line);
+        }
+        g_queue_free_full(self->text_lines, g_free);
+    }
+
+    extern RmFmtHandler *SUMMARY_HANDLER;
+    g_assert(SUMMARY_HANDLER->prog);
+    SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, stderr, state);
 }
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
@@ -63,9 +99,10 @@ static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
         .name = "fdupes",
         .head = NULL,
         .elem = rm_fmt_elem,
-        .prog = NULL,
+        .prog = rm_fmt_prog,
         .foot = NULL
     },
+    .text_lines = NULL
 };
 
 RmFmtHandler *FDUPES_HANDLER = (RmFmtHandler *) &FDUPES_HANDLER_IMPL;
