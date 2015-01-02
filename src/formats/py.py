@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-"""
-This file is part of rmlint.
+""" This file is part of rmlint.
 
 rmlint is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,9 +20,12 @@ uthors:
 
 - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
 - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
-
-Hosted on http://github.com/sahib/rmlint
 """
+
+# This is the python remover utility shipped inside the rmlint binary.
+# The 200 lines source presented below is meant to be clean and hackable.
+# It is intented to be used for corner cases where the built-in sh formatter
+# is not enough or as an alternative to it. By default it works the same.
 
 import os
 import sys
@@ -151,15 +153,15 @@ if __name__ == '__main__':
 
     parser.add_argument(
         'json_docs', metavar='json_doc', type=open, nargs='*',
-        help='A json output of rmlint to handle (can be specified more than once)'
+        help='A json output of rmlint to handle (can be given many times)'
     )
     parser.add_argument(
         '-n', '--dry-run', action='store_true',
         help='Only print what would be done.'
     )
     parser.add_argument(
-        '-a', '--ask', action='store_true',
-        help='ask for confirmation before running'
+        '-a', '--no-ask', action='store_true', default=False,
+        help='ask for confirmation before running (does nothing for -n)'
     )
 
     try:
@@ -179,17 +181,20 @@ if __name__ == '__main__':
     json_docus = [json.load(doc) for doc in args.json_docs]
     json_elems = [item for sublist in json_docus for item in sublist]
 
-    if args.ask:
-        print('\\nPlease hit any key before continuing.', file=sys.stderr)
-        sys.stdin.read(1)
+    try:
+        if not args.no_ask and not args.dry_run:
+            print('\\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
+            sys.stdin.read(1)
 
-    for json_doc in json_docus:
-        head, *data, footer = json_doc
-        main(args, head, data, footer)
+        for json_doc in json_docus:
+            head, *data, footer = json_doc
+            main(args, head, data, footer)
 
-    if args.dry_run:
-        print(
-            '\\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(
-                c=COLORS
+        if args.dry_run:
+            print(
+                '\\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(
+                    c=COLORS
+                )
             )
-        )
+    except KeyBoardInterrupt:
+        print('canceled.')
