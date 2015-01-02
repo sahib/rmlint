@@ -37,6 +37,7 @@ typedef struct RmFmtHandlerShScript {
 
     bool opt_use_ln;
     bool opt_symlinks_only;
+    int elems_written;
 } RmFmtHandlerShScript;
 
 static const char *SH_SCRIPT_TEMPLATE_HEAD =
@@ -134,6 +135,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
      * for more info on this
      * */
     char *dupe_path = rm_fmt_sh_escape_path(file->path);
+    self->elems_written++;
 
     switch(file->lint_type) {
     case RM_LINT_TYPE_BLNK:
@@ -195,6 +197,8 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
 }
 
 static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
+    RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
+
     if(0
             || strcmp(parent->path, "stdout") == 0
             || strcmp(parent->path, "stderr") == 0
@@ -208,6 +212,12 @@ static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) 
         out, SH_SCRIPT_TEMPLATE_FOOT,
         "rm -f", parent->path
     );
+
+    if(self->elems_written == 0 && parent->path) {
+        if(unlink(parent->path) == -1) {
+            rm_log_perror("unlink sh");
+        }
+    }
 }
 
 static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
@@ -219,7 +229,8 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .prog = NULL,
         .foot = rm_fmt_foot
     },
-    .last_original = NULL
+    .last_original = NULL,
+    .elems_written = 0
 };
 
 RmFmtHandler *SH_SCRIPT_HANDLER = (RmFmtHandler *) &SH_SCRIPT_HANDLER_IMPL;
