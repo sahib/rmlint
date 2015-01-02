@@ -34,27 +34,27 @@ import argparse
 import subprocess
 
 
-def handle_duplicate_dir(path):
+def handle_duplicate_dir(path, original, **kwargs):
     shutil.rmtree(path)
 
 
-def handle_duplicate_file(path):
+def handle_duplicate_file(path, original, **kwargs):
     os.remove(path)
 
 
-def handle_empty_dir(path):
+def handle_empty_dir(path, **kwargs):
     os.rmdir(path)
 
 
-def handle_empy_file(path):
+def handle_empy_file(path, **kwargs):
     os.remove(path)
 
 
-def handle_nonstripped(path):
+def handle_nonstripped(path, **kwargs):
     subprocess.call(["strip", "--strip-debug", path])
 
 
-def handle_badlink(path):
+def handle_badlink(path, **kwargs):
     os.remove(path)
 
 
@@ -62,15 +62,15 @@ CURRENT_UID = os.geteuid()
 CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
 
 
-def handle_baduid(path):
+def handle_baduid(path, **kwargs):
     os.chmod(path, CURRENT_UID, -1)
 
 
-def handle_badgid(path):
+def handle_badgid(path, **kwargs):
     os.chmod(path, -1, CURRENT_GID)
 
 
-def handle_badugid(path):
+def handle_badugid(path, **kwargs):
     os.chmod(path, CURRENT_UID, CURRENT_GID)
 
 
@@ -86,37 +86,80 @@ OPERATIONS = {
     "badugid": handle_badugid,
 }
 
+MESSAGES = {
+    "duplicate_dir": "removing tree",
+    "duplicate_file": "removing",
+    "emptydir": "removing",
+    "emptyfile": "removing",
+    "nonstripped": "stripping",
+    "badlink": "removing",
+    "baduid": "changing uid",
+    "badgid": "changing gid",
+    "badugid": "changing uid & gid",
+}
 
-def exec_operation(item):
+USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()
+COLORS = {
+    'red':    "\x1b[31;01m" if USE_COLOR else "",
+    'yellow': "\x1b[33;01m" if USE_COLOR else "",
+    'reset':  "\x1b[0m" if USE_COLOR else "",
+    'green':  "\x1b[32;01m" if USE_COLOR else "",
+    'blue':   "\x1b[34;01m" if USE_COLOR else ""
+}
+
+
+def exec_operation(item, original=None):
     try:
-        OPERATIONS[item['type']](item['path'])
+        OPERATIONS[item['type']](item['path'], original=original, item=item)
     except OSError as err:
-        print('That did not work: ', err)
+        print(
+            '{c[red]}#{c[reset]} Error on `{item[path]}`:\\n{c[red]}#{c[reset]}    {err}'.format(
+                item=item, err=err, c=COLORS
+            ),
+            file=sys.stderr
+        )
 
 
 def main(args, header, data, footer):
     seen_cksums = set()
+    last_original_item = None
+
     for item in data:
         if item['type'].startswith('duplicate_') and item['is_original']:
-            print()
-            print("Deleting twins of " + item['path'])
+            print(
+                "\\n{c[green]}#{c[reset]} Deleting twins of {item[path]} ".format(
+                    item=item, c=COLORS
+                )
+            )
+            last_original_item = item
+
+            # Do not handle originals.
             continue
 
         if not args.dry_run:
-            exec_operation(item)
+            exec_operation(item, original=last_original_item)
 
-        print('Handling ({t}): {p}'.format(t=item['type'], p=item['path']))
+        print('{c[blue]}#{c[reset]} Handling ({t} -> {v}): {p}'.format(
+            c=COLORS, t=item['type'], v=MESSAGES[item['type']], p=item['path'])
+        )
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Handle the files stored in rmlints json output')
+    parser = argparse.ArgumentParser(
+        description='Handle the files stored in rmlints json output'
+    )
+
     parser.add_argument(
         'json_docs', metavar='json_doc', type=open, nargs='*',
-        help='A json output of rmlint to handle'
+        help='A json output of rmlint to handle (can be specified more than once)'
     )
     parser.add_argument(
         '-n', '--dry-run', action='store_true',
         help='Only print what would be done.'
+    )
+    parser.add_argument(
+        '-a', '--ask', action='store_true',
+        help='ask for confirmation before running'
     )
 
     try:
@@ -130,13 +173,23 @@ if __name__ == '__main__':
         try:
             args.json_docs.append(open('.rmlint.json', 'r'))
         except FileNotFoundError as err:
-            print('Cannot load default json document: ', str(err))
+            print('Cannot load default json document: ', str(err), file=sys.stderr)
             sys.exit(-2)
-
 
     json_docus = [json.load(doc) for doc in args.json_docs]
     json_elems = [item for sublist in json_docus for item in sublist]
 
+    if args.ask:
+        print('\\nPlease hit any key before continuing.', file=sys.stderr)
+        sys.stdin.read(1)
+
     for json_doc in json_docus:
         head, *data, footer = json_doc
         main(args, head, data, footer)
+
+    if args.dry_run:
+        print(
+            '\\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(
+                c=COLORS
+            )
+        )
