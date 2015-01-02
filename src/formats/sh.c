@@ -186,12 +186,19 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
                 }
 
                 char *orig_path = rm_fmt_sh_escape_path(self->last_original->path);
-                fprintf(
-                    out, "rm -f '%s' && %s '%s' '%s' # duplicate\n",
-                    dupe_path,
-                    (use_reflink) ? "cp --reflink=always" : (use_hardlink) ? "ln" : "ln -s",
-                    orig_path, dupe_path
-                );
+                if (use_reflink) {
+                    fprintf(
+                        out, "cp --reflink=always '%s' '%s' # duplicate\n",
+                        orig_path, dupe_path
+                    );
+                } else {
+                    fprintf(
+                        out, "rm -f '%s' && ln %s '%s' '%s' # duplicate\n",
+                        dupe_path,
+                        (use_hardlink) ? "" : "-s",
+                        orig_path, dupe_path
+                    );
+                }
                 g_free(orig_path);
             } else {
                 fprintf(out, "rm -f '%s' # duplicate\n", dupe_path);
