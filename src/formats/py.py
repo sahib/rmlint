@@ -196,5 +196,5 @@ if __name__ == '__main__':
                     c=COLORS
                 )
             )
-    except KeyBoardInterrupt:
+    except KeyboardInterrupt:
         print('canceled.')
