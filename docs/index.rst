@@ -81,6 +81,9 @@ They show you the basic principles and most of the advanced options:
    tutorial
    faq
 
+If you have usage questions or find weird behaviour, you can also try to reach
+us via IRC in ``#rmlint`` on ``irc.freenode.net``.
+
 Informative reference
 ---------------------
 
