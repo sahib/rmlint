@@ -155,27 +155,27 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     bool is_unknown = self->percent > 1.1;
 
 
-    fprintf(out, "[");
+    fprintf(out, "%s⟦%s", MAYBE_RED(session), MAYBE_RESET(session));
     for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
             if(is_unknown) {
                 if((int)self->last_unknown_pos % 4 == i % 4) {
-                    fprintf(out, "%so%s", MAYBE_BLUE(session), MAYBE_RESET(session));
+                    fprintf(out, "%s□%s", MAYBE_BLUE(session), MAYBE_RESET(session));
                 } else if((int)self->last_unknown_pos % 2 == i % 2) {
-                    fprintf(out, "%sO%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
+                    fprintf(out, "%s▢%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
                 } else {
                     fprintf(out, " ");
                 }
             } else {
-                fprintf(out, "#");
+                fprintf(out, "%s⍁%s", MAYBE_GREEN(session), MAYBE_RESET(session));
             }
         } else if(i == cells) {
-            fprintf(out, "%s>%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
+            fprintf(out, "%s▶%s", MAYBE_YELLOW(session), MAYBE_RESET(session));
         } else {
-            fprintf(out, "%s-%s", MAYBE_BLUE(session), MAYBE_RESET(session));
+            fprintf(out, "%s◽%s", MAYBE_BLUE(session), MAYBE_RESET(session));
         }
     }
-    fprintf(out, "]");
+    fprintf(out, "%s⟧%s", MAYBE_RED(session), MAYBE_RESET(session));
 
     self->last_unknown_pos = fmod(self->last_unknown_pos + 0.005, width - 2);
 }
