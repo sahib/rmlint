@@ -103,7 +103,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                          );
         break;
     case RM_PROGRESS_STATE_MERGE:
-        self->percent = 2.0;
+        self->percent = 1.0;
         self->text_len = g_snprintf(self->text_buf, sizeof(self->text_buf),
                                     _("Merging files into directories (stand by...)"));
         break;
