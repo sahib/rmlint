@@ -35,7 +35,7 @@ def build_config_template(target, source, env):
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
             VERSION_NAME=VERSION_NAME,
-            VERSION_GIT_REVISION=env['gitrev']
+            VERSION_GIT_REVISION=env['gitrev'].strip()
         )
 
         handle.write(config_h)
