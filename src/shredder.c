@@ -214,7 +214,7 @@
  * This prevents a "starving" RmShredDevice from hogging cpu by continually
  * recycling back to the joiner.
  */
-#define SHRED_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 50ms */
+#define SHRED_EMPTYQUEUE_SLEEP_US (10 * 1000) /* 10ms */
 
 /* expected typical seek time in milliseconds - used to calculate optimum read*/
 #define SHRED_SEEK_MS (10)

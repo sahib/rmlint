@@ -43,10 +43,9 @@
 
 typedef struct RmTravBuffer {
     RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
-    const char *path;      /* The path of the directory, as passed on command line. */
-    bool is_prefd;         /* Was this file in a preferred path? */
-    RmOff path_index;    /* Index of path, as passed on the commadline */
-    bool is_first_path;    /* True if the first path and FTS_NOCHDIR might be disabled */
+    const char *path; /* The path of the directory, as passed on command line. */
+    bool is_prefd;    /* Was this file in a preferred path? */
+    RmOff path_index; /* Index of path, as passed on the commadline */
 } RmTravBuffer;
 
 static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd, unsigned long path_index) {
@@ -54,7 +53,6 @@ static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_
     self->path = path;
     self->is_prefd = is_prefd;
     self->path_index = path_index;
-    self->is_first_path = false;
 
     int stat_state;
     if(session->settings->followlinks) {
@@ -164,6 +162,12 @@ static void rm_traverse_file(
     }
 }
 
+static gpointer rm_traverse_allow_chdir(int *fts_flags) {
+    /* remove FTS_NOCHDIR flag for first path */
+    *fts_flags &= ~FTS_NOCHDIR;  
+    return NULL;
+}
+
 static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_session) {
     RmSession *session = trav_session->session;
     RmSettings *settings = session->settings;
@@ -173,7 +177,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     RmOff path_index = buffer->path_index;
 
     /* Initialize ftsp */
-    int fts_flags =  FTS_PHYSICAL | FTS_COMFOLLOW | (buffer->is_first_path * FTS_NOCHDIR);
+    int fts_flags =  FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
+
+    static GOnce once = G_ONCE_INIT;
+    g_once(&once, (GThreadFunc)rm_traverse_allow_chdir, &fts_flags);
+
     FTS *ftsp = fts_open((char *[2]) {
         path, NULL
     }, fts_flags, NULL);
@@ -373,7 +381,6 @@ void rm_traverse_tree(RmSession *session) {
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
             dev_t disk = rm_mounts_get_disk_id_by_path(session->mounts, path);
-            buffer->is_first_path = (g_hash_table_size(paths_per_disk) == 0);
 
             GQueue *path_queue = rm_hash_table_setdefault(
                                      paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new
