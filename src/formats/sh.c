@@ -111,8 +111,10 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     self->opt_symlinks_only = rm_fmt_get_config_value(session->formats, "sh", "symlinks_only");
     self->opt_use_ln = rm_fmt_get_config_value(session->formats, "sh", "use_ln");
 
-    if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
-        rm_log_perror("Could not chmod +x sh script");
+    if(rm_fmt_is_stream(session->formats, parent) == false) {
+        if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
+            rm_log_perror("Could not chmod +x sh script");
+        }
     }
 
     fprintf(
@@ -199,11 +201,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
 static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
 
-    if(0
-            || strcmp(parent->path, "stdout") == 0
-            || strcmp(parent->path, "stderr") == 0
-            || strcmp(parent->path, "stdin") == 0
-      ) {
+    if(rm_fmt_is_stream(session->formats, parent)) {
         /* You will have a hard time deleting standard streams. */
         return;
     }
@@ -215,7 +213,7 @@ static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) 
 
     if(self->elems_written == 0 && parent->path) {
         if(unlink(parent->path) == -1) {
-            rm_log_perror("unlink sh");
+            rm_log_perror("unlink sh script failed");
         }
     }
 }

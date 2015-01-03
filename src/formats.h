@@ -199,6 +199,11 @@ void rm_fmt_lock_state(RmFmtTable *self);
 void rm_fmt_unlock_state(RmFmtTable *self);
 
 /**
+ * @brief Check if a certain handler is writting to a stream.
+ */
+bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
+
+/**
  * You can use this template for implementing new RmFmtHandlers.
  * All callbacks are not required to be implemented, leave them to NULL if
  * you do not implement them:
