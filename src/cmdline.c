@@ -320,6 +320,7 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
 
     char *formatter = g_strndup(pair, domain - pair);
     rm_fmt_set_config_value(session->formats, formatter, key, value);
+    g_free(formatter);
 
     g_strfreev(key_val);
     return true;
@@ -641,7 +642,7 @@ static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) 
     if(!plain) {
         /* Enable iso8601 timestamp output */
         rm_fmt_set_config_value(
-            session->formats, g_strdup("stamp"), g_strdup("iso8601"), g_strdup("true")
+            session->formats, "stamp", g_strdup("iso8601"), g_strdup("true")
         );
     }
 

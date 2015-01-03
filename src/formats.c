@@ -226,9 +226,8 @@ void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char
         key_to_vals = g_hash_table_new_full(
                           g_str_hash, g_str_equal, g_free, g_free
                       );
-        g_hash_table_insert(self->config, (char *) formatter, key_to_vals);
+        g_hash_table_insert(self->config, (char *)g_strdup(formatter), key_to_vals);
     }
-
     g_hash_table_insert(key_to_vals, (char *) key, (char *) value);
 }
 

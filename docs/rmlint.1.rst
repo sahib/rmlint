@@ -388,6 +388,14 @@ FORMATTERS
   parsing this format. We recommend the ``json`` formatter for every other
   scripting purpose.
 
+  Available options:
+
+  * *omitfirst:* Same as the ``-f / --omitfirst`` option in ``fdupes(1)``. Omits the
+    first line of each set of duplicates (i.e. the original file.
+  * *sameline:* Same as the ``-1 / --sameline`` option in ``fdupes(1)``. Does not
+    print newlines between files, only a space. Newlines are printed only between
+    sets of duplicates.
+
 EXAMPLES
 ========
 

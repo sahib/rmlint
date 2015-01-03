@@ -34,6 +34,9 @@ typedef struct RmFmtHandlerFdupes {
     RmFmtHandler parent;
 
     GQueue *text_lines;
+    
+    bool omit_first_line;
+    bool use_same_line;
 } RmFmtHandlerFdupes;
 
 
@@ -44,17 +47,26 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
     switch(file->lint_type) {
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
     case RM_LINT_TYPE_DUPE_CANDIDATE:
-        line = g_strdup_printf(
-            "%s%s%s%s\n",
-            (file->is_original) ? "\n" : "",
-            (file->is_original) ? MAYBE_GREEN(session) : "",
-            file->path,
-            (file->is_original) ? MAYBE_RESET(session) : ""
-        );
+        if(self->omit_first_line && file->is_original) {
+            line = g_strdup("\n");
+        } else {
+            line = g_strdup_printf(
+                "%s%s%s%s%c",
+                (file->is_original) ? "\n" : "",
+                (file->is_original) ? MAYBE_GREEN(session) : "",
+                file->path,
+                (file->is_original) ? MAYBE_RESET(session) : "",
+                (self->use_same_line) ? ' ' : '\n'
+            );
+        } 
         break;
     default:
         line = g_strdup_printf(
-            "%s%s%s\n", MAYBE_BLUE(session), file->path, MAYBE_RESET(session)
+            "%s%s%s%c",
+            MAYBE_BLUE(session),
+            file->path,
+            MAYBE_RESET(session),
+            (self->use_same_line) ? ' ' : '\n'
         );
         break;
     }
@@ -74,6 +86,16 @@ static void rm_fmt_prog(
 ) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
+    if(state == RM_PROGRESS_STATE_INIT) {
+        self->omit_first_line = (
+            rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL
+        );
+        self->use_same_line = (
+            rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL
+        );
+    }
+
+
     /* We do not respect `out` here; just use stderr and stdout directly.
      * Reason: fdupes does this, let's imitate weird behaviour!
      */ 
@@ -86,7 +108,9 @@ static void rm_fmt_prog(
         fprintf(stdout, "\n");
         for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
             char *line = iter->data;
-            fprintf(stdout, "%s", line);
+            if(line != NULL) {
+                fprintf(stdout, "%s", line);
+            }
         }
         g_queue_free_full(self->text_lines, g_free);
     }
@@ -94,6 +118,10 @@ static void rm_fmt_prog(
     extern RmFmtHandler *SUMMARY_HANDLER;
     g_assert(SUMMARY_HANDLER->prog);
     SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, stderr, state);
+
+    if(state == RM_PROGRESS_STATE_SUMMARY) {
+        fprintf(stdout, "\n");
+    }
 }
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
@@ -106,7 +134,10 @@ static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
         .prog = rm_fmt_prog,
         .foot = NULL
     },
-    .text_lines = NULL
+    .text_lines = NULL,
+    .use_same_line = false,
+    .omit_first_line = false
+    
 };
 
 RmFmtHandler *FDUPES_HANDLER = (RmFmtHandler *) &FDUPES_HANDLER_IMPL;
