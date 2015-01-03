@@ -249,7 +249,7 @@ void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
     g_hash_table_iter_init(iter, self->path_to_handler);
 }
 
-bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler) {
+bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {
     if(0
             || handler->path == NULL 
             || strcmp(handler->path, "stdout") == 0
