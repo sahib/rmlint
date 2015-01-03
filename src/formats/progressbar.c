@@ -307,6 +307,10 @@ static void rm_fmt_prog(
     rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
     rm_fmt_progress_print_text(self, text_width, out);
     fprintf(out, "%s\r", MAYBE_RESET(session));
+
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
+        fprintf(out, "\n\n");
+    }
 }
 
 static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {

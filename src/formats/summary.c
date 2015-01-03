@@ -59,9 +59,6 @@ static void rm_fmt_prog(
         return;
     }
 
-    /* Separate from previous formatter (most likely "pretty") */
-    fprintf(out, "\n\n");
-
     if(rm_session_was_aborted(session)) {
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
