@@ -113,6 +113,11 @@ static void rm_fmt_prog(
             continue;
         }
 
+        /* Check if the file really exists, so we can print it for sure */
+        if(access(path, R_OK) == -1) {
+            continue;
+        }
+
         if(first_print_flag) {
             fprintf(out, "\n");
             first_print_flag = false;

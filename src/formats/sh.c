@@ -198,7 +198,11 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     g_free(dupe_path);
 }
 
-static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {
+    if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
+        return;
+    }
+
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
 
     if(rm_fmt_is_stream(session->formats, parent)) {
@@ -224,8 +228,8 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .name = "sh",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
-        .prog = NULL,
-        .foot = rm_fmt_foot
+        .prog = rm_fmt_prog,
+        .foot = NULL,
     },
     .last_original = NULL,
     .elems_written = 0
