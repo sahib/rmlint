@@ -127,7 +127,7 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
     g_assert(settings);
 
     /* table->other_lint needs no initialising*/
-    tables->mounts = session->mounts;
+    //tables->mounts = session->mounts;
 
     g_rec_mutex_init(&tables->lock);
     return tables;
@@ -142,9 +142,9 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->size_groups);
         g_hash_table_unref(tables->size_groups);
 
-        if(tables->mounts) {
-            rm_mounts_table_destroy(tables->mounts);
-        }
+//        if(tables->mounts) {
+//            rm_mounts_table_destroy(tables->mounts);
+//        }
     }
     g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);

@@ -34,7 +34,6 @@
 #include "treemerge.h"
 
 typedef struct RmFileTables {
-    struct RmMountTable *mounts;
     GHashTable *dev_table;
     GHashTable *size_groups;
     GHashTable *node_table;
