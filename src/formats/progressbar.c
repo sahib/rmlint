@@ -108,6 +108,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                                     _("Merging files into directories (stand by...)"));
         break;
     case RM_PROGRESS_STATE_INIT:
+    case RM_PROGRESS_STATE_PRE_SHUTDOWN:
     case RM_PROGRESS_STATE_SUMMARY:
     default:
         self->percent = 0;
@@ -238,6 +239,9 @@ static void rm_fmt_prog(
     RmFmtProgressState state
 ) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+    if(state == RM_PROGRESS_STATE_SUMMARY) {
+        return;
+    }
 
     if(state == RM_PROGRESS_STATE_INIT) {
         /* Do initializiation here */
@@ -265,7 +269,7 @@ static void rm_fmt_prog(
         return;
     }
 
-    if(state == RM_PROGRESS_STATE_SUMMARY || rm_session_was_aborted(session)) {
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN || rm_session_was_aborted(session)) {
         fprintf(out, "\e[?25h"); /* show the cursor */
         fflush(out);
 
@@ -280,7 +284,7 @@ static void rm_fmt_prog(
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
         self->percent = 1.0;
-        if(state != RM_PROGRESS_STATE_SUMMARY) {
+        if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
             fprintf(out, "\n");
         }
@@ -296,13 +300,17 @@ static void rm_fmt_prog(
 
     int text_width = self->terminal.ws_col * 0.7 - 1;
     rm_fmt_progress_format_text(session, self, text_width);
-    if(state == RM_PROGRESS_STATE_SUMMARY) {
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         self->percent = 1.0;
     }
 
     rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
     rm_fmt_progress_print_text(self, text_width, out);
     fprintf(out, "%s\r", MAYBE_RESET(session));
+
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
+        fprintf(out, "\n\n");
+    }
 }
 
 static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {

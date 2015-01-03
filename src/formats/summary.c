@@ -59,9 +59,6 @@ static void rm_fmt_prog(
         return;
     }
 
-    /* Separate from previous formatter (most likely "pretty") */
-    fprintf(out, "\n\n");
-
     if(rm_session_was_aborted(session)) {
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
@@ -110,6 +107,11 @@ static void rm_fmt_prog(
         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);
 
         if(lfind(path, forbidden, &forbidden_len, sizeof(const char *), rm_fmt_summary_cmp)) {
+            continue;
+        }
+
+        /* Check if the file really exists, so we can print it for sure */
+        if(access(path, R_OK) == -1) {
             continue;
         }
 
