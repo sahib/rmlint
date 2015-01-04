@@ -308,7 +308,7 @@ Original Detection Options
     Only look for duplicates of which one is in original paths.
     (Paths that were named after **//**).
 
-:``-S --sortcriteria=criteria`` (**default\:** *m*):
+:``-S --sortcriteria=criteria`` (**default\:** *pm*):
 
     - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)
     - **a**: keep first alphabetically   **A**: keep last alphabetically
