@@ -84,9 +84,9 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         break;
     case RM_PROGRESS_STATE_SHREDDER:
         self->percent = 1.0 - (
-                (gdouble)session->shred_bytes_remaining / 
-                (gdouble)session->shred_bytes_after_preprocess
-        );
+                            (gdouble)session->shred_bytes_remaining /
+                            (gdouble)session->shred_bytes_after_preprocess
+                        );
         rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf, sizeof(num_buf));
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
@@ -187,10 +187,10 @@ static const char *rm_fmt_progressbar_get_glyph(RmFmtHandlerProgress *self, RmPr
 }
 
 static void rm_fmt_progressbar_print_glyph(
-        FILE *out, RmSession *session, RmFmtHandlerProgress *self, RmProgressBarGlyph type, const char *color
+    FILE *out, RmSession *session, RmFmtHandlerProgress *self, RmProgressBarGlyph type, const char *color
 ) {
     fprintf(
-        out, "%s%s%s", 
+        out, "%s%s%s",
         (session->settings->color) ? color : "",
         rm_fmt_progressbar_get_glyph(self, type),
         (session->settings->color) ? RESET : ""
@@ -250,8 +250,8 @@ static void rm_fmt_prog(
                                           );
 
         self->use_unicode_glyphs = (rm_fmt_get_config_value(
-                session->formats, "progressbar", "use_unicode"
-        ) != NULL);
+                                        session->formats, "progressbar", "use_unicode"
+                                    ) != NULL);
 
         if(update_interval_str) {
             self->update_interval = g_ascii_strtoull(update_interval_str, NULL, 10);
@@ -288,7 +288,7 @@ static void rm_fmt_prog(
             rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
             fprintf(out, "\n");
         }
-    } else if((self->update_counter++ % self->update_interval) > 0) {
+    } else if((self->update_counter++ % self->update_interval) > 0 && session->shred_bytes_remaining != 0) {
         return;
     }
 
