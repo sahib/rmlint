@@ -50,7 +50,7 @@ void rm_set_default_settings(RmSettings *settings) {
     settings->findbadlinks   = true;
 
     /* Misc options */
-    settings->sort_criteria = "m";
+    settings->sort_criteria = "pm";
     settings->checksum_type = RM_DIGEST_SPOOKY;
     settings->color         = isatty(fileno(stdout));
     settings->threads       = 32;

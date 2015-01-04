@@ -219,6 +219,8 @@ Obvious ones
 - Only compare files of same size with each other. 
 - Use incremental hashing, i.e. hash block-wise each size group and stop 
   as soon a difference occurs or the file is read fully.
+- Create one hashing thread for each physical disk.  This gives a big speedup if
+  files are roughly evenly spread over multiple physical disks.
 
 Subtle ones
 ~~~~~~~~~~~
@@ -237,6 +239,28 @@ Insane ones
   block can read it in *perfect* order on a rotational device.
 - Use a common buffer pool for IO buffers.
 - Use only one hashsum per group of same-sized files.
-- Implement paranoia check as hash sum, so large chunks of the file are read 
-  and compared at one time. The total memory used for this can be configured
-  by ``--max-paranoid-ram``.
+- Implement paranoia check using the same algorithm as the incremental hash.  The
+  difference is that large chunks of the file are read and kept in memory instead
+  of just keeping the hash in memory.  This avoids the need for a two-pass algorithm
+  (find matches using hashes then confirm via bytewise comparison).  Each file is
+  read once only.  To our knowledge this is the first dupefinder which achieves
+  bytewise comparison in O(N) time, even if there are large clusters of same-size
+  files.  The downside is that it is somewhat memory-intensive (the total memory used
+  is set to 256 MB by default but can be configured by ``--max-paranoid-ram`` option.
+
+Future development ideas (and who is working on them)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+- GUI front-end (unclaimed)
+  A user-friendly front-end to select command-line options instead of having to read
+  the manpages.  Then launches rmlint in terminal with appropriate options.
+- GUI wrapper (unclaimed)
+  As above but add a GUI back-end to review results and decide actions for found lint.
+- Support reflinks (SeeSpotRun)
+  Implement a cp --reflink=always option for shell script outputs.
+- Hashes in xattr (sahib)
+  Store hashes in file xattr metadata to speed up subsequent dupe searches.
+- GOptionEntry (unclaimed)
+  Use GLib's GOptionEntry instead of getopts.  Requires a shift from repeated
+  args (eg -vvv for max verbosity) to something else (eg -v5).
+  

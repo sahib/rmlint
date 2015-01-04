@@ -430,6 +430,12 @@ As mentioned before, ``rmlint`` divides a group of dupes in one original and
 clones of that one. While the chosen original might not be the one that was
 there first, it is a good thing to keep one file of a group to prevent dataloss.
 
+By default, if you specify multiple paths in the rmlint command, the files in the
+first-named paths are treated as the originals.  If there are two files in the same
+path, then the older one will be treated as the original.  If they have the same
+modification time then it's just a matter of chance which one is selected as the
+original.
+
 The way ``rmlint`` chooses the original can be driven by the ``-S``
 (``--sortcriteria``) option. 
 
@@ -460,13 +466,12 @@ Here's a table of letters you can supply to the ``-S`` option:
 **p** keep first named path       **P** keep last named path
 ===== =========================== ===== ===========================
 
-The default setting is ``-S m`` -- which takes the
-oldest file, determined by it's modification time.
+The default setting is ``-S pm``.
 Multiple sort criteria can be specified, eg ``-S mpa`` will sort first by
 mtime, then (if tied), based on which path you specified first in the
 rmlint command, then finally based on alphabetical order of file name.
 Note that "original directory" criteria (see below) take precedence over
-the ``-S`` options.
+any ``-S`` options.
 
 Flagging original directories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
