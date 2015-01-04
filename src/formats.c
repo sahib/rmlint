@@ -30,13 +30,14 @@
 
 const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
     static const char *table[] = {
-        [RM_PROGRESS_STATE_INIT]       = "Initializing",
-        [RM_PROGRESS_STATE_TRAVERSE]   = "Traversing",
-        [RM_PROGRESS_STATE_PREPROCESS] = "Preprocessing",
-        [RM_PROGRESS_STATE_SHREDDER]   = "Shreddering",
-        [RM_PROGRESS_STATE_MERGE]      = "Merging",
-        [RM_PROGRESS_STATE_SUMMARY]    = "Finalizing",
-        [RM_PROGRESS_STATE_N]          = "Unknown state"
+        [RM_PROGRESS_STATE_INIT]         = "Initializing",
+        [RM_PROGRESS_STATE_TRAVERSE]     = "Traversing",
+        [RM_PROGRESS_STATE_PREPROCESS]   = "Preprocessing",
+        [RM_PROGRESS_STATE_SHREDDER]     = "Shreddering",
+        [RM_PROGRESS_STATE_MERGE]        = "Merging",
+        [RM_PROGRESS_STATE_PRE_SHUTDOWN] = "",
+        [RM_PROGRESS_STATE_SUMMARY]      = "Finalizing",
+        [RM_PROGRESS_STATE_N]            = "Unknown state"
     };
 
     return table[(state < RM_PROGRESS_STATE_N) ? state : RM_PROGRESS_STATE_N];
@@ -247,4 +248,17 @@ bool rm_fmt_is_a_output(RmFmtTable *self, const char *path) {
 
 void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
     g_hash_table_iter_init(iter, self->path_to_handler);
+}
+
+bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {
+    if(0
+            || handler->path == NULL 
+            || strcmp(handler->path, "stdout") == 0
+            || strcmp(handler->path, "stderr") == 0
+            || strcmp(handler->path, "stdin") == 0
+      ) {
+        return true;
+    }
+
+    return (access(handler->path, W_OK) == -1);
 }

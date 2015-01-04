@@ -44,6 +44,7 @@ typedef enum RmFmtProgressState {
     RM_PROGRESS_STATE_PREPROCESS,
     RM_PROGRESS_STATE_SHREDDER,
     RM_PROGRESS_STATE_MERGE,
+    RM_PROGRESS_STATE_PRE_SHUTDOWN,
     RM_PROGRESS_STATE_SUMMARY,
     RM_PROGRESS_STATE_N
 } RmFmtProgressState;
@@ -197,6 +198,11 @@ void rm_fmt_lock_state(RmFmtTable *self);
  * @brief Pendant to rm_fmt_lock_state()
  */
 void rm_fmt_unlock_state(RmFmtTable *self);
+
+/**
+ * @brief Check if a certain handler is writting to a stream.
+ */
+bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
 
 /**
  * You can use this template for implementing new RmFmtHandlers.

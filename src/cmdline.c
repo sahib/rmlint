@@ -1079,6 +1079,7 @@ int rm_cmd_main(RmSession *session) {
         rm_tm_finish(session->dir_merger);
     }
 
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 
 failure:

@@ -104,8 +104,7 @@ static void rm_fmt_prog(
     g_assert(PROGRESS_HANDLER->prog);
     PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, stderr, state);
 
-    if(state == RM_PROGRESS_STATE_SUMMARY && self->text_lines) {
-        fprintf(stdout, "\n");
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->text_lines) {
         for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
             char *line = iter->data;
             if(line != NULL) {
@@ -113,15 +112,12 @@ static void rm_fmt_prog(
             }
         }
         g_queue_free_full(self->text_lines, g_free);
+        fprintf(stdout, "\n");
     }
 
     extern RmFmtHandler *SUMMARY_HANDLER;
     g_assert(SUMMARY_HANDLER->prog);
     SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, stderr, state);
-
-    if(state == RM_PROGRESS_STATE_SUMMARY) {
-        fprintf(stdout, "\n");
-    }
 }
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {

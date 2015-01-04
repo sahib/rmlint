@@ -111,8 +111,10 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     self->opt_symlinks_only = rm_fmt_get_config_value(session->formats, "sh", "symlinks_only");
     self->opt_use_ln = rm_fmt_get_config_value(session->formats, "sh", "use_ln");
 
-    if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
-        rm_log_perror("Could not chmod +x sh script");
+    if(rm_fmt_is_stream(session->formats, parent) == false) {
+        if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
+            rm_log_perror("Could not chmod +x sh script");
+        }
     }
 
     fprintf(
@@ -196,14 +198,14 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     g_free(dupe_path);
 }
 
-static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {
+    if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
+        return;
+    }
+
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
 
-    if(0
-            || strcmp(parent->path, "stdout") == 0
-            || strcmp(parent->path, "stderr") == 0
-            || strcmp(parent->path, "stdin") == 0
-      ) {
+    if(rm_fmt_is_stream(session->formats, parent)) {
         /* You will have a hard time deleting standard streams. */
         return;
     }
@@ -215,7 +217,7 @@ static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) 
 
     if(self->elems_written == 0 && parent->path) {
         if(unlink(parent->path) == -1) {
-            rm_log_perror("unlink sh");
+            rm_log_perror("unlink sh script failed");
         }
     }
 }
@@ -226,8 +228,8 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .name = "sh",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
-        .prog = NULL,
-        .foot = rm_fmt_foot
+        .prog = rm_fmt_prog,
+        .foot = NULL,
     },
     .last_original = NULL,
     .elems_written = 0
