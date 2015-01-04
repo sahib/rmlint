@@ -1084,14 +1084,14 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     }
 
     /* create RmShredDevice for this file if one doesn't exist yet */
-    dev_t disk = rm_mounts_get_disk_id(session->tables->mounts, file->dev);
+    dev_t disk = rm_mounts_get_disk_id(session->mounts, file->dev);
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
     if(device == NULL) {
         rm_log_debug(GREEN"Creating new RmShredDevice for disk %u\n"RESET, (unsigned)disk);
         device = rm_shred_device_new(
-                     !rm_mounts_is_nonrotational(session->tables->mounts, disk),
-                     rm_mounts_get_disk_name(session->tables->mounts, disk),
+                     !rm_mounts_is_nonrotational(session->mounts, disk),
+                     rm_mounts_get_disk_name(session->mounts, disk),
                      main );
         device->disk = disk;
         g_hash_table_insert(session->tables->dev_table, GUINT_TO_POINTER(disk), device);
@@ -1225,7 +1225,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
                          file->path,
                          ((file->is_prefd) && (session->settings->keep_all_tagged)) ? "tagged" : "untagged"
                         );
-        } 
+        }
     }
 
     /* sort the unbundled group */
@@ -1613,6 +1613,7 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
 void rm_shred_run(RmSession *session) {
     g_assert(session);
     g_assert(session->tables);
+    g_assert(session->mounts);
     g_assert(session->tables->node_table);
 
     RmMainTag tag;
