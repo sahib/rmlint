@@ -384,6 +384,8 @@ typedef enum RmShredGroupStatus {
 #define NEEDS_NPREF(group) (group->main->session->settings->must_match_untagged || group->main->session->settings->keep_all_tagged)
 #define NEEDS_NEW(group)   (group->main->session->settings->min_mtime)
 
+#define HAS_CACHE(session) (session->settings->read_cksum_from_ext || session->cache_list.length)
+
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
      * criteria for further hashing (normally just 2 or more files, but sometimes
@@ -1135,9 +1137,15 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     if(main->session->settings->read_cksum_from_ext) {
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
-            g_hash_table_insert(session->tables->ext_cksums, file, ext_cksum);
-            group->num_ext_cksums += 1;
+            g_hash_table_insert(
+                session->tables->ext_cksums, g_strdup(file->path), ext_cksum
+            );
         }
+    }
+
+    if(g_hash_table_lookup(session->tables->ext_cksums, file->path)) {
+        group->num_ext_cksums += 1;
+        file->has_ext_cksum = 1;
     }
 }
 
@@ -1164,6 +1172,12 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     /* move remaining files to RmShredGroups */
     g_assert(session->tables->node_table);
 
+    /* Read any cache files */
+    for(GList *iter = main->session->cache_list.head; iter; iter = iter->next) {
+        char *cache_path = iter->data;
+        rm_json_cache_read(session->tables->ext_cksums, cache_path);
+    }
+
     rm_log_debug("Moving files into size_groups...");
     g_hash_table_foreach_remove(session->tables->node_table,
                                 (GHRFunc)rm_shred_file_preprocess,
@@ -1173,12 +1187,13 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     GHashTableIter iter;
     gpointer size, p_group;
 
-    // TODO
-    g_hash_table_iter_init(&iter, session->tables->size_groups);
-    while(g_hash_table_iter_next(&iter, &size, &p_group)) {
-        RmShredGroup *group = p_group;
-        if(group->num_files == group->num_ext_cksums) {
-            group->has_only_ext_cksums = true;
+    if(HAS_CACHE(main->session)) {
+        g_hash_table_iter_init(&iter, session->tables->size_groups);
+        while(g_hash_table_iter_next(&iter, &size, &p_group)) {
+            RmShredGroup *group = p_group;
+            if(group->num_files == group->num_ext_cksums) {
+                group->has_only_ext_cksums = true;
+            }
         }
     }
 
@@ -1522,8 +1537,15 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
         /* Cool, we were able to read the checksum from disk */
         file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0);
 
-        char *hexstring = g_hash_table_lookup(main->session->tables->ext_cksums, file);
-        rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
+        char *hexstring = g_hash_table_lookup(main->session->tables->ext_cksums, file->path);
+        if(hexstring != NULL) {
+            rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
+            rm_log_debug("%s=%s was read from cache.\n", hexstring, file->path);
+        } else {
+            rm_log_warning_line("Unable to read external checksum from interal cache for %s", file->path);
+            file->has_ext_cksum = 0;
+            file->shred_group->has_only_ext_cksums = 0;
+        }
     } else {
         /* this is first generation of RMGroups, so there is no progressive hash yet */
         file->digest = rm_digest_new(
@@ -1683,8 +1705,10 @@ void rm_shred_run(RmSession *session) {
     tag.hash_mem_alloc = 0;
     tag.session = session;
 
-    if(session->settings->read_cksum_from_ext) {
-        session->tables->ext_cksums = g_hash_table_new_full(NULL, NULL, NULL, g_free);
+    if(HAS_CACHE(session)) {
+        session->tables->ext_cksums = g_hash_table_new_full(
+                g_str_hash, g_str_equal, g_free, g_free
+        );
     } else {
         session->tables->ext_cksums = NULL;
     }
@@ -1734,14 +1758,15 @@ void rm_shred_run(RmSession *session) {
         g_mutex_lock(&device->lock);
         g_mutex_lock(&tag.hash_mem_mtx); /* probably unnecessary because we are only reading */
         {
-            rm_log_debug(BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active files %d and avail mem %"LLU"\n"RESET,
-                         device->disk_name,
-                         g_queue_get_length(device->file_queue),
-                         device->remaining_bytes,
-                         device->remaining_files,
-                         tag.active_files,
-                         tag.hash_mem_alloc
-                        );
+            rm_log_debug(
+                BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active files %d and avail mem %"LLU"\n"RESET,
+                device->disk_name,
+                g_queue_get_length(device->file_queue),
+                device->remaining_bytes,
+                device->remaining_files,
+                tag.active_files,
+                tag.hash_mem_alloc
+            );
 
             if (device->remaining_files > 0) {
                 /* recycle the device */
@@ -1768,6 +1793,7 @@ void rm_shred_run(RmSession *session) {
     if(session->tables->ext_cksums) {
         g_hash_table_unref(session->tables->ext_cksums);
     }
+
     g_hash_table_unref(session->tables->dev_table);
     g_mutex_clear(&tag.group_lock);
     g_mutex_clear(&tag.hash_mem_mtx);

@@ -89,6 +89,9 @@ typedef struct RmSession {
     /* Daniels paranoia */
     RmOff hash_seed1;
     RmOff hash_seed2;
+
+    /* list of pathes with caches */
+    GQueue cache_list;
 } RmSession;
 
 /**

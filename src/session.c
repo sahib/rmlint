@@ -65,6 +65,8 @@ void rm_session_clear(RmSession *session) {
         rm_tm_destroy(session->dir_merger);
     }
 
+    g_queue_clear(&session->cache_list);
+
     g_free(settings->joined_argv);
     g_free(settings->is_prefd);
     g_free(settings->iwd);

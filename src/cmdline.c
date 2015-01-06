@@ -707,6 +707,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"newer-than"                 , required_argument , 0 , 'N'} ,
             {"clamp-low"                  , required_argument , 0 , 'q'} ,
             {"clamp-top"                  , required_argument , 0 , 'Q'} ,
+            {"cache"                      , required_argument , 0,  'C'} ,
             {"progress"                   , no_argument       , 0 , 'g'} ,
             {"no-progress"                , no_argument       , 0 , 'G'} ,
             {"loud"                       , no_argument       , 0 , 'v'} ,
@@ -748,7 +749,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:gvVwWrRfFXxpPkKmMlLhHybBeEiIDwWzZjJzY",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:C:gvVwWrRfFXxpPkKmMlLhHybBeEiIDwWzZjJzY",
                      long_options, &option_index
                  );
 
@@ -769,14 +770,17 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             rm_cmd_parse_lint_types(settings, optarg);
             break;
         case 't': {
-            int parsed_threads = strtol(optarg, NULL, 10);
-            if(parsed_threads > 0) {
-                settings->threads = parsed_threads;
-            } else {
-                rm_log_warning_line(_("Invalid thread count supplied: %s"), optarg);
+                int parsed_threads = strtol(optarg, NULL, 10);
+                if(parsed_threads > 0) {
+                    settings->threads = parsed_threads;
+                } else {
+                    rm_log_warning_line(_("Invalid thread count supplied: %s"), optarg);
+                }
             }
-        }
-        break;
+            break;
+        case 'C':
+            g_queue_push_tail(&session->cache_list, optarg);
+            break;
         case 'q':
             rm_cmd_parse_clamp_option(session, optarg, true);
             break;

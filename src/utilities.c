@@ -326,12 +326,108 @@ void rm_userlist_destroy(RmUserList *self) {
 //    JSON CACHE IMPLEMENTATION    //
 /////////////////////////////////////
 
+/* This is poor man's json parsing.
+ * I did not want add a full json library dependency for extracting 3 values.
+ *
+ * jsmn is a nice embeddable library, but requires us specifying a pre-allocated 
+ * buffer of tokens. Since our json docs can get arbitarily big (very.) this 
+ * is pretty much nonsense here.
+ */
+
+static char * rm_json_cache_extract_marker(const char *node, char *end, const char *start_marker, const char *end_marker) {
+    /* Poor men use strstr() for parsing text */
+    char *start_node = strstr(node, start_marker);
+    if(start_node == NULL) {
+        return NULL;
+    }
+
+    char *end_node = strstr(start_node, end_marker);
+
+    if(end_node == NULL) {
+        return NULL;
+    }
+
+    if(end != NULL && (start_node > end || end_node > end || start_node > end_node)) {
+        /* We are too far. */
+        return NULL;
+    }
+    
+    /* Poor men also use pointer arithmethics */
+    start_node += strlen(start_marker);
+    return g_strndup(start_node, end_node - start_node);
+}
+
+static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
+    bool result = true;
+    char *iter = json_data;
+
+    /* This is slightly hacky. Im very sorry. */
+    while((iter = strchr(&iter[1], '{')) != NULL) {
+        char *end_brace = strchr(iter, '}');
+        char *type = rm_json_cache_extract_marker(iter, end_brace, "\"type\": \"", "\",\n");
+
+        if(type && strcmp(type, "duplicate_file") == 0) {
+            char *path = rm_json_cache_extract_marker(iter, end_brace, "\"path\": \"", "\",\n");
+            char *cksum = rm_json_cache_extract_marker(iter, end_brace, "\"checksum\": \"", "\",\n");
+            char *mtime = rm_json_cache_extract_marker(iter, end_brace, "\"mtime\": ", "\n");
+
+            if(mtime && path && cksum) {
+                RmStat stat_buf;
+                if(rm_sys_stat(path, &stat_buf) == -1) {
+                    rm_log_perror("cache_stat");
+                    continue;
+                }
+
+                if(g_ascii_strtoll(mtime, NULL, 10) >= stat_buf.st_mtim.tv_sec) {
+                    /* It's a valid entry. */
+                    g_hash_table_insert(cksum_table, path, cksum);
+
+                    rm_log_debug("Adding cache entry %s: %s\n", path, cksum);
+
+                    /* prevent freeing of those two */
+                    path = NULL, cksum = NULL;
+                }
+            }
+
+            g_free(mtime);
+            g_free(path);
+            g_free(cksum);
+        }
+
+        g_free(type);
+    }
+
+    return result;
+}
+
 int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     g_assert(cksum_table);
     g_assert(json_path);
 
+    int error_return = 0;
 
-    // TODO: parse path, mtime and cksum
+    gsize json_len = 0;
+    char *json_data = NULL;
+    GError *error = NULL;
+
+    if(g_file_get_contents(json_path, &json_data, &json_len, &error)) {
+        if(rm_json_cache_parse(cksum_table, json_data) == false) {
+            rm_log_error_line(_("Could not parse cache: %s"), json_path);
+        }
+
+        g_free(json_data);
+    } else {
+        rm_log_warning_line(
+            _("Cannot read json cache file ,,%s'': %s"),
+            json_path, error ? error->message : _("unknown reason")
+        );
+
+        error_return = error->code;
+        g_error_free(error);
+
+    }
+
+    return error_return;
 }
 
 /////////////////////////////////////
