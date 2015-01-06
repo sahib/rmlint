@@ -51,7 +51,7 @@ void rm_set_default_settings(RmSettings *settings) {
 
     /* Misc options */
     settings->sort_criteria = "pm";
-    settings->checksum_type = RM_DIGEST_SPOOKY;
+    settings->checksum_type = RMLINT_DEFAULT_DIGEST;
     settings->color         = isatty(fileno(stdout));
     settings->threads       = 32;
     settings->verbosity     = G_LOG_LEVEL_INFO;

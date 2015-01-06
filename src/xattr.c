@@ -44,21 +44,27 @@ static int rm_xattr_build_key(RmSession *session, const char *suffix, char *buf,
     /* Be safe, assume caller is not concentrated. */
     memset(buf, 0, sizeof(buf_size));
 
-    return snprintf(
-        buf, buf_size, "user.rmlint.%s.%s",
-        rm_digest_type_to_string(session->settings->checksum_type), 
-        suffix
-    ) < 0;
+    const char *digest_name = rm_digest_type_to_string(session->settings->checksum_type);
+    if(session->settings->checksum_type == RM_DIGEST_PARANOID) {
+        digest_name = rm_digest_type_to_string(RMLINT_DEFAULT_DIGEST);
+    }
+
+    return snprintf(buf, buf_size, "user.rmlint.%s.%s", digest_name, suffix) < 0;
 }
 
 static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
-
     g_assert(file);
     g_assert(file->digest);
 
     memset(buf, '0', buf_size);
     buf[buf_size - 1] = 0;
-    return rm_digest_hexstring(file->digest, buf);
+
+    if(file->digest->type == RM_DIGEST_PARANOID) {
+        g_assert(file->digest->shadow_hash);
+        return rm_digest_hexstring(file->digest->shadow_hash, buf);
+    } else {
+        return rm_digest_hexstring(file->digest, buf);
+    }
 }
 
 static int rm_xattr_is_fail(const char *name, int rc) {

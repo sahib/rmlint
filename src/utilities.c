@@ -323,6 +323,18 @@ void rm_userlist_destroy(RmUserList *self) {
 }
 
 /////////////////////////////////////
+//    JSON CACHE IMPLEMENTATION    //
+/////////////////////////////////////
+
+int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
+    g_assert(cksum_table);
+    g_assert(json_path);
+
+
+    // TODO: parse path, mtime and cksum
+}
+
+/////////////////////////////////////
 //    MOUNTTABLE IMPLEMENTATION    //
 /////////////////////////////////////
 
