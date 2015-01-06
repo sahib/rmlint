@@ -38,8 +38,7 @@
 #include "formats.h"
 
 #include "shredder.h"
-#include <inttypes.h>
-
+#include "xattr.h"
 
 /* This is the scheduler of rmlint.
  *
@@ -277,7 +276,6 @@
                                | POSIX_FADV_NOREUSE    /* We will not reuse old data  */ \
                               )                                                          \
 
-
 ////////////////////////
 //  MATHS SHORTCUTS   //
 ////////////////////////
@@ -333,6 +331,8 @@ typedef struct RmMainTag {
     GThreadPool *device_pool;
     GThreadPool *result_pool;
     gint32 page_size;
+
+    GHashTable *ext_cksums;
 } RmMainTag;
 
 /////////// RmShredDevice ////////////////
@@ -418,6 +418,11 @@ typedef struct RmShredGroup {
     /* set if group has 1 or more files newer than settings->min_mtime */
     bool has_new;
 
+    /* incremented for each file in the group that obtained it's checksum from ext.
+     * If all files came from there we do not even need to hash the group.
+     */
+    gulong num_ext_cksums;
+    bool has_only_ext_cksums;
 
     /* initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files
      * and meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
@@ -440,6 +445,7 @@ typedef struct RmShredGroup {
      * are required again for further hashing.*/
     RmDigestType digest_type;
     RmDigest *digest;
+
     /* checksum result (length is given by digest->bytes) */
     guint8 *checksum;
 
@@ -469,7 +475,6 @@ RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
     }
 
     self->held_files = g_queue_new();
-
     self->file_size = file->file_size;
     self->hash_offset = file->hash_offset;
 
@@ -686,6 +691,13 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
         /* Report the progress to rm_shred_devlist_factory */
         g_assert(buffer->file->hash_offset == buffer->file->shred_group->next_offset
                  || buffer->file->status == RM_FILE_STATE_FRAGMENT);
+
+        if(device->main->session->settings->write_cksum_to_ext) {
+            if(buffer->file->has_ext_cksum == false) {
+                rm_xattr_write_hash(device->main->session, buffer->file);
+            }
+        }
+
         g_async_queue_push(device->hashed_file_return, buffer->file);
     }
 
@@ -871,15 +883,16 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
     if (group->status == RM_SHRED_GROUP_DORMANT) {
         if  (1
                 && group->num_files >= 2  /* it takes 2 to tango */
-                && ( group->has_pref || !NEEDS_PREF(group) )
+                && (group->has_pref || !NEEDS_PREF(group))
                 /* we have at least one file from preferred path, or we don't care */
-                && ( group->has_npref || !NEEDS_NPREF(group) )
+                && (group->has_npref || !NEEDS_NPREF(group))
                 /* we have at least one file from non-pref path, or we don't care */
-                && ( group->has_new || !NEEDS_NEW(group) )
+                && (group->has_new || !NEEDS_NEW(group))
                 /* we have at least one file newer than settings->min_mtime, or we don't care */
             ) {
-            /* group can go active */
-            if (group->hash_offset < group->file_size) {
+
+            if (group->hash_offset < group->file_size && group->has_only_ext_cksums == false) {
+                /* group can go active */
                 group->status = RM_SHRED_GROUP_START_HASHING;
             } else {
                 group->status = RM_SHRED_GROUP_FINISHING;
@@ -1032,6 +1045,7 @@ static gboolean rm_shred_sift(RmFile *file) {
             if (!child) {
                 child_group = rm_shred_group_new(file, key);
                 g_queue_push_tail(current_group->children, child_group);
+                child_group->has_only_ext_cksums = current_group->has_only_ext_cksums;
             } else {
                 child_group = child->data;
                 g_slice_free1(file->digest->bytes, key);
@@ -1115,7 +1129,16 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
             group
         );
     }
+
     rm_shred_group_push_file(group, file, true);
+
+    if(main->session->settings->read_cksum_from_ext) {
+        char *ext_cksum = rm_xattr_read_hash(main->session, file);
+        if(ext_cksum != NULL) {
+            g_hash_table_insert(main->ext_cksums, file, ext_cksum);
+            group->num_ext_cksums += 1;
+        }
+    }
 }
 
 static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
@@ -1146,6 +1169,18 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
                                 (GHRFunc)rm_shred_file_preprocess,
                                 main
                                );
+
+    GHashTableIter iter;
+    gpointer size, p_group;
+
+    // TODO
+    g_hash_table_iter_init(&iter, session->tables->size_groups);
+    while(g_hash_table_iter_next(&iter, &size, &p_group)) {
+        RmShredGroup *group = p_group;
+        if(group->num_files == group->num_ext_cksums) {
+            group->has_only_ext_cksums = true;
+        }
+    }
 
     rm_log_debug("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
@@ -1297,7 +1332,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
-static void rm_shred_readlink_factory(RmFile *file) {
+static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
     g_assert(file->is_symlink);
 
     /* Fake an IO operation on the symlink.
@@ -1326,6 +1361,8 @@ static void rm_shred_readlink_factory(RmFile *file) {
     if(file->digest->type == RM_DIGEST_PARANOID) {
         rm_digest_paranoia_shrink(file->digest, data_size);
     }
+
+    rm_shred_adjust_counters(device, 0, -(gint64)data_size);
 }
 
 /* Read from file and send to hasher
@@ -1451,6 +1488,74 @@ finish:
     rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
 }
 
+static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
+    bool can_process = true;
+
+    if (file->shred_group->digest_type == RM_DIGEST_PARANOID) {
+        /* check if memory allocation is ok */
+        if (!rm_shred_check_hash_mem_alloc(file)) {
+            can_process = false;
+        } else {
+            /* get the required target offset into file->shred_group->next_offset, so
+                * that we can make the paranoid RmDigest the right size*/
+            if (file->shred_group->next_offset == 0) {
+                (void) rm_shred_get_read_size(file, main);
+            }
+            g_assert (file->shred_group->hash_offset == file->hash_offset);
+
+            if(file->is_symlink) {
+                file->digest = rm_digest_new(
+                                    main->session->settings->checksum_type, 0, 0,
+                                    PATH_MAX + 1 /* max size of a symlink file */
+                                );
+            } else {
+                file->digest = rm_digest_new(
+                                    main->session->settings->checksum_type, 0, 0,
+                                    file->shred_group->next_offset - file->hash_offset
+                                );
+            }
+        }
+    } else if(file->shred_group->digest) {
+        /* pick up the digest-so-far from the RmShredGroup */
+        file->digest = rm_digest_copy(file->shred_group->digest);
+    } else if(file->shred_group->has_only_ext_cksums) {
+        /* Cool, we were able to read the checksum from disk */
+        file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0);
+
+        char *hexstring = g_hash_table_lookup(main->ext_cksums, file);
+        rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
+    } else {
+        /* this is first generation of RMGroups, so there is no progressive hash yet */
+        file->digest = rm_digest_new(
+                            main->session->settings->checksum_type,
+                            main->session->hash_seed1,
+                            main->session->hash_seed2,
+                            0
+                        );
+    }
+
+    return can_process;
+}
+
+static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
+    if(file->shred_group->has_only_ext_cksums) {
+        rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
+        return file;
+    }
+
+    /* hash the next increment of the file */
+    if(file->is_symlink) {
+        rm_shred_readlink_factory(file, device);
+    } else {
+        rm_shred_read_factory(file, device);
+
+        /* wait until the increment has finished hashing */
+        file = g_async_queue_pop(device->hashed_file_return);
+    }
+
+    return file;
+}
+
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     GList *iter = NULL;
     gboolean emptyqueue = FALSE;
@@ -1479,6 +1584,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         iter = device->file_queue->head;
     }
     g_mutex_unlock(&device->lock);
+
     if(emptyqueue) {
         /* brief sleep to stop starving devices from hogging too much cpu time */
         g_usleep(SHRED_EMPTYQUEUE_SLEEP_US);
@@ -1495,64 +1601,19 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         g_assert(file->shred_group);
         g_mutex_lock(&main->group_lock);
         {
-            if (!file->digest) {
+            if (file->digest == NULL) {
                 g_assert(file->shred_group);
 
-                if (file->shred_group->digest_type == RM_DIGEST_PARANOID) {
-                    /* check if memory allocation is ok */
-                    if (!rm_shred_check_hash_mem_alloc(file)) {
-                        can_process = false;
-                    } else {
-
-                        /* get the required target offset into file->shred_group->next_offset, so
-                         * that we can make the paranoid RmDigest the right size*/
-                        if (file->shred_group->next_offset == 0) {
-                            (void) rm_shred_get_read_size(file, main);
-                        }
-                        g_assert (file->shred_group->hash_offset == file->hash_offset);
-
-                        if(file->is_symlink) {
-                            file->digest = rm_digest_new(
-                                               main->session->settings->checksum_type, 0, 0,
-                                               PATH_MAX + 1 /* max size of a symlink file */
-                                           );
-                        } else {
-                            file->digest = rm_digest_new(
-                                               main->session->settings->checksum_type, 0, 0,
-                                               file->shred_group->next_offset - file->hash_offset
-                                           );
-                        }
-                    }
-                } else if(file->shred_group->digest) {
-                    /* pick up the digest-so-far from the RmShredGroup */
-                    file->digest = rm_digest_copy(file->shred_group->digest);
-                } else {
-                    /* this is first generation of RMGroups, so there is no progressive hash yet */
-                    file->digest = rm_digest_new(
-                                       main->session->settings->checksum_type,
-                                       main->session->hash_seed1,
-                                       main->session->hash_seed2,
-                                       0
-                                   );
-                }
+                can_process = rm_shred_reassign_checksum(main, file);
             }
         }
         g_mutex_unlock(&main->group_lock);
 
-
         if (can_process) {
-            /* hash the next increment of the file */
-            if(file->is_symlink) {
-                rm_shred_readlink_factory(file);
-            } else {
-                rm_shred_read_factory(file, device);
+            file = rm_shred_process_file(device, file);
 
-                /* wait until the increment has finished hashing */
-                file = g_async_queue_pop(device->hashed_file_return);
-            }
-
-            if (start_offset == file->hash_offset) {
-                rm_log_debug(RED"Offset stuck at %"LLU";", start_offset);
+            if (start_offset == file->hash_offset && file->has_ext_cksum == false) {
+                rm_log_debug(RED"Offset stuck at %"LLU";"RESET, start_offset);
                 file->status = RM_FILE_STATE_IGNORE;
                 /* rm_shred_sift will dispose of the file */
             }
@@ -1572,6 +1633,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                  * copies in the queue); unlink and move to next file (below).*/
             }
         }
+
         /* remove file from queue and move to next*/
         g_mutex_lock(&device->lock);
         {
@@ -1620,6 +1682,12 @@ void rm_shred_run(RmSession *session) {
     tag.active_files = 0;
     tag.hash_mem_alloc = 0;
     tag.session = session;
+
+    if(session->settings->read_cksum_from_ext) {
+        tag.ext_cksums = g_hash_table_new_full(NULL, NULL, NULL, g_free);
+    } else {
+        tag.ext_cksums = NULL;
+    }
 
     /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
     tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE);
@@ -1677,7 +1745,7 @@ void rm_shred_run(RmSession *session) {
 
             if (device->remaining_files > 0) {
                 /* recycle the device */
-                rm_util_thread_pool_push(tag.device_pool , device);
+                rm_util_thread_pool_push(tag.device_pool, device);
             } else {
                 devices_left--;
             }
@@ -1697,6 +1765,9 @@ void rm_shred_run(RmSession *session) {
     g_async_queue_unref(tag.device_return);
     rm_buffer_pool_destroy(tag.mem_pool);
 
+    if(tag.ext_cksums) {
+        g_hash_table_unref(tag.ext_cksums);
+    }
     g_hash_table_unref(session->tables->dev_table);
     g_mutex_clear(&tag.group_lock);
     g_mutex_clear(&tag.hash_mem_mtx);

@@ -686,6 +686,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
     /* set to true if -o or -O is specified */
     bool oO_specified[2] = {false, false};
 
+    /* Free/Used Options:
+       Free:  B DEFGHIJKLMNOPQRST VWX Z abcdefghijklmnopqrstuvwxyz
+       Used: A C                 U   Y            
+    */
+
     while(1) {
         static struct option long_options[] = {
             {"types"                      , required_argument , 0 , 'T'} ,
@@ -729,6 +734,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"match-without-extension"    , no_argument       , 0 , 'i'} ,
             {"no-match-without-extension" , no_argument       , 0 , 'I'} ,
             {"merge-directories"          , no_argument       , 0 , 'D'} ,
+            {"write-xattr"                , no_argument       , 0 , 'z'} ,
+            {"no-write-xattr"             , no_argument       , 0 , 'Z'} ,
+            {"read-xattr"                 , no_argument       , 0 , 'j'} ,
+            {"no-read-xattr"              , no_argument       , 0 , 'J'} ,
+            {"clear-xattr"                , no_argument       , 0 , 'Y'} ,
             {"usage"                      , no_argument       , 0 , 'h'} ,
             {"help"                       , no_argument       , 0 , 'H'} ,
             {"version"                    , no_argument       , 0 , 'y'} ,
@@ -738,7 +748,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:gvVwWrRfFXxpPkKmMlLhHybBeEiID",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:gvVwWrRfFXxpPkKmMlLhHybBeEiIDwWzZjJz",
                      long_options, &option_index
                  );
 
@@ -873,6 +883,21 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
              */
             settings->find_hardlinked_dupes = true;
             settings->ignore_hidden = false;
+            break;
+        case 'z':
+            settings->write_cksum_to_ext = true;
+            break;
+        case 'Z':
+            settings->write_cksum_to_ext = false;
+            break;
+        case 'j':
+            settings->read_cksum_from_ext = true;
+            break;
+        case 'J':
+            settings->read_cksum_from_ext = false;
+            break;
+        case 'Y':
+            settings->clear_ext_fields = true;
             break;
         case 'S':
             settings->sort_criteria = optarg;

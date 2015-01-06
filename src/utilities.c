@@ -716,7 +716,7 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                 rm_disk_info_new(diskname, is_rotational));
         }
 
-        rm_log_info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s\n)",
+        rm_log_info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s)\n",
                     major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
                     entry->dir,
                     major(whole_disk), minor(whole_disk),
