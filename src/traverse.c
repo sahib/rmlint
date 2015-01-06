@@ -36,6 +36,7 @@
 #include "formats.h"
 #include "utilities.h"
 #include "file.h"
+#include "xattr.h"
 
 ///////////////////////////////////////////
 // BUFFER FOR STARTING TRAVERSAL THREADS //
@@ -136,6 +137,8 @@ static void rm_traverse_file(
             ) {
                 if(rm_mounts_is_evil(trav_session->session->mounts, statp->st_dev) == false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
+
+
                 } else {
                     /* A file in a evil fs. Ignore. */
                     trav_session->session->ignored_files++;
@@ -159,6 +162,11 @@ static void rm_traverse_file(
             rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
         }
         g_mutex_unlock(&trav_session->lock);
+
+        if(trav_session->session->settings->clear_ext_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+            rm_log_debug("Clearing xattr fields of %s\n", file->path);
+            rm_xattr_clear_hash(session, file);
+        }
     }
 }
 

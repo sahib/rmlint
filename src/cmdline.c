@@ -748,7 +748,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:gvVwWrRfFXxpPkKmMlLhHybBeEiIDwWzZjJz",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:gvVwWrRfFXxpPkKmMlLhHybBeEiIDwWzZjJzY",
                      long_options, &option_index
                  );
 
