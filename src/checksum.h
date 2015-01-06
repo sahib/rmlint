@@ -45,8 +45,11 @@ typedef enum RmDigestType {
     RM_DIGEST_BASTARD,
     RM_DIGEST_MURMUR512,
     RM_DIGEST_CITY512,
-    RM_DIGEST_CUMULATIVE,
-    RM_DIGEST_PARANOID
+
+    /* special kids in town */ 
+    RM_DIGEST_CUMULATIVE,  /* hash([a, b]) = hash([b, a]) */
+    RM_DIGEST_EXT,         /* external hash functions     */
+    RM_DIGEST_PARANOID     /* direct block comparisons    */
 } RmDigestType;
 
 #include "checksums/city.h"
@@ -84,6 +87,15 @@ typedef struct RmDigest {
  * @return RM_DIGEST_UNKNOWN on error, the type otherwise.
  */
 RmDigestType rm_string_to_digest_type(const char *string);
+
+/**
+ * @brief Convert a RmDigestType to a human readable string.
+ *
+ * @param type the type to convert.
+ *
+ * @return a statically allocated string.
+ */
+const char *rm_digest_type_to_string(RmDigestType type);
 
 /**
  * @brief Allocate and initialise a RmDigest.

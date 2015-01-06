@@ -126,6 +126,11 @@ typedef struct RmFile {
      */
     bool free_digest : 1;
 
+    /* If true, the checksum of this file was read from the xattrs of the file.
+     * It was cached previously by rmlint on the disk.
+     */
+    bool has_ext_cksum : 1;
+
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */

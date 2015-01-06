@@ -65,6 +65,9 @@
 
 #include <glib.h>
 
+/* Printf formatting for large integers */
+#include <inttypes.h>
+
 #define GETTEXT_PACKAGE "rmlint"
 
 #if HAVE_LIBINTL

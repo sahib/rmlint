@@ -71,6 +71,8 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_CITY;
     } else if(!strcasecmp(string, "bastard") || !strcasecmp(string, "bastard256")) {
         return RM_DIGEST_BASTARD;
+    } else if(!strcasecmp(string, "ext")) {
+        return RM_DIGEST_EXT;
     } else if(!strcasecmp(string, "cumulative")) {
         return RM_DIGEST_CUMULATIVE;
     } else if(!strcasecmp(string, "paranoid")) {
@@ -78,6 +80,31 @@ RmDigestType rm_string_to_digest_type(const char *string) {
     } else {
         return RM_DIGEST_UNKNOWN;
     }
+}
+
+const char *rm_digest_type_to_string(RmDigestType type) {
+    static const char *names[] = {
+        [RM_DIGEST_UNKNOWN]    = "unknown",
+        [RM_DIGEST_MURMUR]     = "murmur",
+        [RM_DIGEST_SPOOKY]     = "spooky",
+        [RM_DIGEST_SPOOKY32]   = "spooky32",
+        [RM_DIGEST_SPOOKY64]   = "spooky64",
+        [RM_DIGEST_CITY]       = "city",
+        [RM_DIGEST_MD5]        = "md5",
+        [RM_DIGEST_SHA1]       = "sha1",
+        [RM_DIGEST_SHA256]     = "sha256",
+        [RM_DIGEST_SHA512]     = "sha512",
+        [RM_DIGEST_MURMUR256]  = "murmur256",
+        [RM_DIGEST_CITY256]    = "city256",
+        [RM_DIGEST_BASTARD]    = "bastard",
+        [RM_DIGEST_MURMUR512]  = "murmur512",
+        [RM_DIGEST_CITY512]    = "city512",
+        [RM_DIGEST_EXT]        = "ext",
+        [RM_DIGEST_CUMULATIVE] = "cumulative",
+        [RM_DIGEST_PARANOID]   = "paranoid"
+    };
+
+    return names[CLAMP(type, 0, sizeof(names) / sizeof(names[0]))];
 }
 
 RmOff rm_digest_paranoia_bytes(void) {
@@ -136,6 +163,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         return digest;
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
+    case RM_DIGEST_EXT:
         digest->bytes = 512 / 8;
         break;
     case RM_DIGEST_MURMUR256:
@@ -216,6 +244,7 @@ void rm_digest_free(RmDigest *digest) {
         if(digest->shadow_hash) {
             rm_digest_free(digest->shadow_hash);
         }
+    case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
@@ -240,6 +269,18 @@ void rm_digest_free(RmDigest *digest) {
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     switch(digest->type) {
+    case RM_DIGEST_EXT:
+        /* Data is assumed to be a hex representation of a cchecksum.
+         * Needs to be compressed in pure memory first.
+         *
+         * Checksum is not updated but rather overwritten. 
+         * */
+        #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
+
+        for(unsigned i = 0; i < MIN(digest->bytes, size / 2); ++i) {
+            ((guint8 *)digest->checksum)[i] = (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
+        }
+        break;
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:
     case RM_DIGEST_SHA256:
@@ -348,6 +389,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
+    case RM_DIGEST_EXT:
         self = rm_digest_new(
                    digest->type, digest->initial_seed1, digest->initial_seed2, digest->bytes
                );
@@ -399,6 +441,7 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_PARANOID:
+    case RM_DIGEST_EXT:
         memcpy(result, digest->checksum, digest->bytes);
         break;
     default:

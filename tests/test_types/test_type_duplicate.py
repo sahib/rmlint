@@ -15,10 +15,10 @@ def create_data(len, flips=None):
 def test_small_diffs():
 
     if os.environ.get('USE_VALGRIND'):
-        N = 128
+        N = 32
     else:
         # Takes horribly long elsewhise
-        N = 32
+        N = 128
 
     create_file(create_data(len=N, flips=None), 'a')
     create_file(create_data(len=N, flips=[-1]), 'b')
