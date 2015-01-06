@@ -239,6 +239,26 @@ def check_sysctl(context):
     return rc
 
 
+def check_xattr(context):
+    rc = 1
+
+    for func in ['getxattr', 'setxattr', 'removexattr']:
+        if tests.CheckFunc(
+            context, func,
+            header=
+                '#include <sys/types.h>'
+                '#include <sys/xattr.h>'
+        ):
+            rc = 0
+            break
+
+    conf.env['HAVE_XATTR'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_sha512(context):
     rc = 1
     if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>\n'):
@@ -412,6 +432,7 @@ conf = Configure(env, custom_tests={
     'check_git_rev': check_git_rev,
     'check_libelf': check_libelf,
     'check_fiemap': check_fiemap,
+    'check_xattr': check_xattr,
     'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
@@ -501,6 +522,7 @@ conf.check_sys_block()
 conf.check_sysctl()
 conf.check_libelf()
 conf.check_fiemap()
+conf.check_xattr()
 conf.check_bigfiles()
 conf.check_sha512()
 conf.check_getmntent()
@@ -595,6 +617,7 @@ if 'config' in COMMAND_LINE_TARGETS:
     Support for SHA512 (needs glib >= 2.31)           : {sha512}
     Support for SSE4.2 instructions for fast CityHash : {sse42}
     Build manpage from docs/rmlint.1.rst              : {sphinx}
+    Support for caching checksums in file's xattr     : {xattr}
     Checking for proper support of big files >= 4GB   : {bigfiles}
         (needs either sizeof(off_t) >= 8 ...)         : {bigofft}
         (... or presence of stat64)                   : {bigstat}
@@ -624,6 +647,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             gettext=yesno(env['HAVE_GETTEXT']),
             locale=yesno(env['HAVE_LIBINTL']),
             msgfmt=yesno(env['HAVE_MSGFMT']),
+            xattr=yesno(env['HAVE_XATTR']),
             nonrotational=yesno(env['HAVE_GETMNTENT'] or env['HAVE_GETMNTINFO']),
             blkid=yesno(env['HAVE_BLKID']),
             getmntent=yesno(env['HAVE_GETMNTENT']),
