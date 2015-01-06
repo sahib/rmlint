@@ -380,7 +380,7 @@ static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
 
                 if(g_ascii_strtoll(mtime, NULL, 10) >= stat_buf.st_mtim.tv_sec) {
                     /* It's a valid entry. */
-                    g_hash_table_insert(cksum_table, path, cksum);
+                    g_hash_table_replace(cksum_table, path, cksum);
 
                     rm_log_debug("Adding cache entry %s: %s\n", path, cksum);
 
