@@ -9,6 +9,7 @@
 #define HAVE_GETMNTENT     ({HAVE_GETMNTENT})
 #define HAVE_GETMNTINFO    ({HAVE_GETMNTINFO})
 #define HAVE_FIEMAP        ({HAVE_FIEMAP})
+#define HAVE_XATTR         ({HAVE_XATTR})
 #define HAVE_SHA512        ({HAVE_SHA512})
 #define HAVE_BIGFILES      ({HAVE_BIGFILES})
 #define HAVE_STAT64        ({HAVE_STAT64})

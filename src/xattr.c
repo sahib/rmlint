@@ -23,15 +23,13 @@
 *
 **/
 
+#include "config.h"
 #include "xattr.h"
 
 #include <sys/types.h>
 #include <string.h>
 #include <errno.h>
-#include <error.h>
 
-// TODO: check in scons & ifdef
-#define HAVE_XATTR 1
 #if HAVE_XATTR
 #  include <sys/xattr.h>
 #endif
