@@ -331,8 +331,6 @@ typedef struct RmMainTag {
     GThreadPool *device_pool;
     GThreadPool *result_pool;
     gint32 page_size;
-
-    GHashTable *ext_cksums;
 } RmMainTag;
 
 /////////// RmShredDevice ////////////////
@@ -422,6 +420,8 @@ typedef struct RmShredGroup {
      * If all files came from there we do not even need to hash the group.
      */
     gulong num_ext_cksums;
+
+    /* true if all files in the group have an external checksum */
     bool has_only_ext_cksums;
 
     /* initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files
@@ -1135,7 +1135,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     if(main->session->settings->read_cksum_from_ext) {
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
-            g_hash_table_insert(main->ext_cksums, file, ext_cksum);
+            g_hash_table_insert(session->tables->ext_cksums, file, ext_cksum);
             group->num_ext_cksums += 1;
         }
     }
@@ -1522,7 +1522,7 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
         /* Cool, we were able to read the checksum from disk */
         file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0);
 
-        char *hexstring = g_hash_table_lookup(main->ext_cksums, file);
+        char *hexstring = g_hash_table_lookup(main->session->tables->ext_cksums, file);
         rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
     } else {
         /* this is first generation of RMGroups, so there is no progressive hash yet */
@@ -1684,9 +1684,9 @@ void rm_shred_run(RmSession *session) {
     tag.session = session;
 
     if(session->settings->read_cksum_from_ext) {
-        tag.ext_cksums = g_hash_table_new_full(NULL, NULL, NULL, g_free);
+        session->tables->ext_cksums = g_hash_table_new_full(NULL, NULL, NULL, g_free);
     } else {
-        tag.ext_cksums = NULL;
+        session->tables->ext_cksums = NULL;
     }
 
     /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
@@ -1765,8 +1765,8 @@ void rm_shred_run(RmSession *session) {
     g_async_queue_unref(tag.device_return);
     rm_buffer_pool_destroy(tag.mem_pool);
 
-    if(tag.ext_cksums) {
-        g_hash_table_unref(tag.ext_cksums);
+    if(session->tables->ext_cksums) {
+        g_hash_table_unref(session->tables->ext_cksums);
     }
     g_hash_table_unref(session->tables->dev_table);
     g_mutex_clear(&tag.group_lock);
