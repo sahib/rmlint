@@ -163,8 +163,11 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         return digest;
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
-    case RM_DIGEST_EXT:
         digest->bytes = 512 / 8;
+        break;
+    case RM_DIGEST_EXT:
+        /* gets allocated on rm_digest_update() */
+        digest->bytes = paranoid_size;
         break;
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
@@ -277,7 +280,10 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
          * */
         #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
-        for(unsigned i = 0; i < MIN(digest->bytes, size / 2); ++i) {
+        digest->bytes = size / 2;
+        digest->checksum = g_slice_alloc0(digest->bytes);
+
+        for(unsigned i = 0; i < digest->bytes; ++i) {
             ((guint8 *)digest->checksum)[i] = (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
         }
         break;
