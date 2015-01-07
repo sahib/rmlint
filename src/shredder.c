@@ -591,16 +591,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  * filesystems are contemplated)
  */
 
-/* defines mem allocation per file */
-RmOff rm_shred_mem_allocation(RmFile *file) {
-    return MIN(file->file_size, rm_digest_paranoia_bytes()) * 2;
-    /* NOTE: the * 2 is because generally we have two active
-     * digests at each generation, one stored in the RmShredGroup and
-     * one in the file increment being hashed.  With multiple devices
-     * we could in theory have a bit more, but 2* is ok as an quick
-     * and dirty memory manager budget */
-}
-
 /* take or return mem allocation from main */
 gboolean rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfiles) {
     gboolean result = true;
