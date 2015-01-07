@@ -68,6 +68,7 @@ program = env.Program(
     Glob('*.c') +
     Glob('checksums/*.c') +
     Glob('formats/*.c') +
+    Glob('jsmn/*.c') +
     Glob('libart/*.c')
 )
 
