@@ -42,6 +42,9 @@
 
 #include "config.h"
 
+/* JSON parsing library */
+#include "jsmn/jsmn.h"
+
 /* Not available there,
  * but might be on other non-linux systems
  * */
@@ -326,104 +329,103 @@ void rm_userlist_destroy(RmUserList *self) {
 //    JSON CACHE IMPLEMENTATION    //
 /////////////////////////////////////
 
-/* This is poor man's json parsing.
- * I did not want add a full json library dependency for extracting 3 values.
- *
- * jsmn is a nice embeddable library, but requires us specifying a pre-allocated 
- * buffer of tokens. Since our json docs can get arbitarily big (very.) this 
- * is pretty much nonsense here.
- */
-
-static char * rm_json_cache_extract_marker(const char *node, char *end, const char *start_marker, const char *end_marker) {
-    /* Poor men use strstr() for parsing text */
-    char *start_node = strstr(node, start_marker);
-    if(start_node == NULL) {
-        return NULL;
+static bool rm_json_cache_parse_entry(GHashTable *cksum_table, char *json_data, jsmntok_t *tokens, int n_entries) {
+    /* Key and value are alternating */
+    if(n_entries % 2 == 1) {
+        rm_log_warning_line("json cache looks not like valid json.");
+        return false;
     }
 
-    char *end_node = strstr(start_node, end_marker);
+    RmStat stat_buf;
+    char *mtime = NULL, *path = NULL, *cksum = NULL;
 
-    if(end_node == NULL) {
-        return NULL;
-    }
+    for(int i = 0; i < n_entries; i += 2) {
+        int elem_len = tokens[i].end - tokens[i].start;
+        char *elem_p = &json_data[tokens[i].start];
+        char **extract = NULL;
 
-    if(end != NULL && (start_node > end || end_node > end || start_node > end_node)) {
-        /* We are too far. */
-        return NULL;
-    }
-    
-    /* Poor men also use pointer arithmethics */
-    start_node += strlen(start_marker);
-    return g_strndup(start_node, end_node - start_node);
-}
-
-#include "jsmn/jsmn.h"
-
-static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
-    bool result = true;
-    char *iter = json_data;
-
-    /* Allocate 32 tokens by default (16 * 2) */
-    // size_t n_tokens = 16;
-    // jsmntok_t *tokens = NULL;
-    // jsmnerr_t parse_err = 0;
-
-    // jsmn_parser parser;
-    // jsmn_init(&parser);
-
-    // do {
-    //     n_tokens *= 2;
-    //     tokens = g_realloc(tokens, sizeof(jsmntok_t) * n_tokens);
-    // } while((parse_err = jsmn_parse(&parser, json_data, tokens, n_tokens)) == JSMN_ERROR_NOMEM);
-
-    // if(parse_err != JSMN_SUCCESS) {
-    //     return false;
-    // }
-
-    // for(int i = 0; tokens[i]; ++i) {
-    //     jsmntok_t *token = &tokens[i];
-    //     for(int j = token->start; j < token->end; ++j) {
-    //         g_printerr("%c", json_data[j]);
-    //     }
-    //     g_printerr("\n");
-    // }
-
-    /* This is slightly hacky. Im very sorry. */
-    while((iter = strchr(&iter[1], '{')) != NULL) {
-        char *end_brace = strchr(iter, '}');
-        char *type = rm_json_cache_extract_marker(iter, end_brace, "\"type\": \"", "\",\n");
-
-        if(type && strcmp(type, "duplicate_file") == 0) {
-            char *path = rm_json_cache_extract_marker(iter, end_brace, "\"path\": \"", "\",\n");
-            char *cksum = rm_json_cache_extract_marker(iter, end_brace, "\"checksum\": \"", "\",\n");
-            char *mtime = rm_json_cache_extract_marker(iter, end_brace, "\"mtime\": ", "\n");
-
-            if(mtime && path && cksum) {
-                RmStat stat_buf;
-                if(rm_sys_stat(path, &stat_buf) == -1) {
-                    rm_log_perror("cache_stat");
-                    continue;
-                }
-
-                if(g_ascii_strtoll(mtime, NULL, 10) >= stat_buf.st_mtim.tv_sec) {
-                    /* It's a valid entry. */
-                    g_hash_table_replace(cksum_table, path, cksum);
-
-                    rm_log_debug("Adding cache entry %s: %s\n", path, cksum);
-
-                    /* prevent freeing of those two */
-                    path = NULL, cksum = NULL;
-                }
-            }
-
-            g_free(mtime);
-            g_free(path);
-            g_free(cksum);
+        if(strncmp("path", elem_p, elem_len) == 0) {
+            extract = &path;
+        } else if(strncmp("checksum", elem_p, elem_len) == 0) {
+            extract = &cksum;
+        } else if(strncmp("mtime", elem_p, elem_len) == 0) {
+            extract = &mtime;
         }
 
-        g_free(type);
+        if(extract) {
+            *extract = &json_data[tokens[i + 1].start];
+            json_data[tokens[i + 1].end] = 0;
+        }
     }
 
+    /* Post checking */
+    if(0 
+        || (mtime == NULL || path == NULL) 
+        || rm_sys_stat(path, &stat_buf) == -1
+        || g_ascii_strtoll(mtime, NULL, 10) < stat_buf.st_mtim.tv_sec
+    ) {
+        if(errno) {
+            rm_log_perror("cache_stat");
+        }
+        return false;
+    }
+
+    /* It was worth all the hassle, add the entry */
+    g_hash_table_replace(cksum_table, g_strdup(path), g_strdup(cksum));
+    rm_log_debug("Adding cache entry %s (%s)\n", path, cksum);
+    return true;
+}
+
+static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
+    bool result = false;
+
+    /* Allocate 32 tokens by default (16 * 2) */
+    size_t n_tokens = 16;
+    jsmntok_t *tokens = NULL;
+    jsmnerr_t parse_err = 0;
+
+    jsmn_parser parser;
+    jsmn_init(&parser);
+
+    /* try to find suitable size for the tokens buf */
+    do {
+        n_tokens *= 2;
+        tokens = g_realloc(tokens, sizeof(jsmntok_t) * n_tokens);
+    } while((parse_err = jsmn_parse(&parser, json_data, tokens, n_tokens)) == JSMN_ERROR_NOMEM);
+
+    if(parse_err != JSMN_SUCCESS) {
+        goto failure;
+    }
+
+    for(int i = 0, dict_entries = 0; n_tokens; ++i) {
+        jsmntok_t *token = &tokens[i];
+
+        /* end of stream? */
+        if(token->start == 0 && token->end == 0) {
+            break;
+        }
+
+        /* is it a dictionary? */
+        if(token->type == JSMN_OBJECT) {
+            dict_entries = token->size;
+            continue;
+        }
+
+        /* yes, it *was*. Parse it's children. */
+        if(dict_entries != 0) {
+            result += rm_json_cache_parse_entry(
+                cksum_table, json_data, &tokens[i], dict_entries
+            );
+        }
+
+        /* reset */
+        dict_entries = 0;
+    }
+
+    result = true;
+
+failure:
+    g_free(tokens);
     return result;
 }
 
