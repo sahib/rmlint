@@ -57,16 +57,19 @@ static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
         return -1;
     }
 
-    char *iter = fixed;
+    /* More information here:
+     * 
+     * http://stackoverflow.com/questions/4901133/json-and-escaping-characters/4908960#4908960
+     */ 
 
-        
-    do {
-        if((iter - fixed) > (int)(fixed_len - 4)) {
-            break;
-        }
+    int n = g_utf8_strlen(string, -1); 
+    int max = fixed_len;
 
+    for(int i = 0; i < n && max; ++i) {
+        char *off = g_utf8_offset_to_pointer(string, i);
         char *text = NULL;
-        switch(g_utf8_get_char(string)) {
+
+        switch(g_utf8_get_char(off)) {
             case '\\': text = "\\\\"; break;
             case '\"': text = "\\\""; break;
             case '\b': text = "\\b";  break;
@@ -75,19 +78,21 @@ static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
             case '\r': text = "\\r";  break;
             case '\t': text = "\\t";  break;
             default:
-                g_utf8_strncpy(iter, string, 1);
-                iter = g_utf8_find_next_char(iter + 1, NULL);
+                g_utf8_strncpy(fixed, off, 1);
+
+                char *new_fixed = g_utf8_find_next_char(fixed, NULL);
+                max -= (new_fixed - fixed);
+                fixed = new_fixed;
                 break;
         }
 
         while(text && *text) {
-            *iter++ = *text++;
+            *fixed++ = *text++;
+            max--;
         }
-    } while((string = g_utf8_find_next_char(string + 1, NULL)));
+    }
 
-    g_printerr("Fixing %s\nFixed %s\n", string, fixed);
-
-    return iter - fixed;
+    return fixed_len - max;
 }
 
 static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {

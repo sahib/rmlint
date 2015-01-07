@@ -282,7 +282,6 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
 
         g_assert(data);
 
-        unsigned i;
         digest->bytes = size / 2;
         digest->checksum = g_slice_alloc0(digest->bytes);
 
