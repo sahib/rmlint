@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-12-21 12:53+0100\n"
+"POT-Creation-Date: 2015-01-07 01:05+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,15 +15,190 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-#: src/shredder.c:1356
+
+#: src/shredder.c:1461
 #, c-format
 msgid "Negative bytes_left_to_read for %s"
 msgstr "Negative anzahl von lesbaren bytes in %s"
 
-#: src/shredder.c:1361
+#: src/shredder.c:1466
 #, c-format
 msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
-msgstr "Irgendwas lief falsch beim lesen von %s; habe %d bytes erwartet, bekam %d. Datei wird ignoriert."
+msgstr ""
+"Irgendwas lief falsch beim lesen von %s; habe %d bytes erwartet, bekam %d. "
+"Datei wird ignoriert."
+
+#: src/utilities.c:189
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr "Kann Datei %s nicht öffnen um zu sehen ob sie gestripped ist."
+
+#: src/utilities.c:196
+msgid "ELF Library is out of date!"
+msgstr "ELF Bibliothek ist extrem veraltet!"
+
+#: src/utilities.c:415
+#, c-format
+msgid "Could not parse cache: %s"
+msgstr ""
+
+#: src/utilities.c:421
+#, fuzzy, c-format
+msgid "Cannot read json cache file ,,%s'': %s"
+msgstr "Kann json cache (%s) nicht lesen: %s"
+
+#: src/utilities.c:422
+msgid "unknown reason"
+msgstr "unbekannter Grund"
+
+#: src/cmdline.c:119
+msgid "You seem to have no manpage for rmlint."
+msgstr "Scheinbar hast du keine manpage für rmlint."
+
+#: src/cmdline.c:163
+msgid "Input size is empty"
+msgstr "Eingabegröße ist leer. Nicht gut."
+
+#: src/cmdline.c:170
+msgid "This does not look like a number"
+msgstr "Das schaut nicht wie eine Zahl aus"
+
+#: src/cmdline.c:172
+msgid "Negativ sizes are no good idea"
+msgstr "Negative Größen sind keine gute Idee"
+
+#: src/cmdline.c:190
+msgid "Given format specifier not found"
+msgstr "Gegebene Formatangabe ist unbekannt"
+
+#: src/cmdline.c:215
+msgid "Max is smaller than min"
+msgstr "Maximum ist kleiner als das Minimum. Macht das Sinn?"
+
+#: src/cmdline.c:233
+#, c-format
+msgid "cannot parse --limit: %s"
+msgstr "Kann --limit (%s) nicht parsen"
+
+#: src/cmdline.c:249
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
+
+#: src/cmdline.c:290
+#, c-format
+msgid "Adding -o %s as output failed."
+msgstr "Konnte -o %s nicht als Ausgabe hinzufügen."
+
+#: src/cmdline.c:300
+#, c-format
+msgid "No format (format:key[=val]) specified in '%s'."
+msgstr "Kein Format (format:key[=val]) gegeben in '%s'."
+
+#: src/cmdline.c:309
+#, c-format
+msgid "Missing key (format:key[=val]) in '%s'."
+msgstr "Fehlender key (format:key[=val]) in '%s'."
+
+#: src/cmdline.c:335
+#, c-format
+msgid "Unable to parse factor \"%s\": error begins at %s"
+msgstr "Konnte nicht den Faktor \"%s\" parsen: Fehler beginnt bei %s"
+
+#: src/cmdline.c:347
+#, c-format
+msgid "factor value is not in range [0-1]: %f"
+msgstr "Faktorwert liegt nicht im Bereich [0-1]: %f"
+
+#: src/cmdline.c:362
+#, c-format
+msgid "Unable to parse offset \"%s\": %s"
+msgstr "Kann Offset nicht parsen \"%s\": %s"
+
+#: src/cmdline.c:516
+msgid "lint types after first should be prefixed with '+' or '-'"
+msgstr "Alle Lint Typen nach dem Ersten sollten mit '+' oder '-' beginnen"
+
+#: src/cmdline.c:517
+#, c-format
+msgid "or they would over-ride previously set options: [%s]"
+msgstr "andernfalls würden sie vorher gesetzte optione überschreiben: [%s]"
+
+#: src/cmdline.c:533
+#, c-format
+msgid "lint type '%s' not recognised"
+msgstr "lint type \"%s\" nicht erkannt"
+
+#: src/cmdline.c:587
+#, c-format
+msgid "Unable to parse time spec \"%s\""
+msgstr "Kann Zeitangabe nicht parsen: \"%s\""
+
+#: src/cmdline.c:601
+#, c-format
+msgid "-n %lu is newer than current time (%lu)."
+msgstr "-n %lu ist neuer als jetzt (%lu) - ist das korrekt?"
+
+#: src/cmdline.c:777
+#, c-format
+msgid "Invalid thread count supplied: %s"
+msgstr "Wirre Anzahl von Threads angegeben: %s"
+
+#: src/cmdline.c:793
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr "Unbekannte Hashfunktion: \"%s\""
+
+#: src/cmdline.c:915
+#, c-format
+msgid "Invalid size description \"%s\": %s"
+msgstr "Fehlerhafte Größenangabe \"%s\": %s"
+
+#: src/cmdline.c:928
+msgid ""
+"can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
+"keep-all-untagged"
+msgstr ""
+"Kann nicht gleichzeitig --keep-all-tagged und --keep-all-untagged nehmen: "
+"ignoriere letzeres"
+
+#: src/cmdline.c:935
+msgid ""
+"can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
+"keep-all-tagged"
+msgstr ""
+"Kann nicht gleichzeitig --keep-all-tagged und --keep-all-untagged nehmen: "
+"ignoriere ersteres"
+
+#: src/cmdline.c:1000
+msgid "Only up to -ppp or down to -P flags allowed."
+msgstr "Maximal drei -p flags oder ein -P Flag erlaubt"
+
+#: src/cmdline.c:1007
+msgid "Specifiyng both -o and -O is not allowed."
+msgstr "Gleichzeitige Angabe von -o und -O ist nicht möglich."
+
+#: src/cmdline.c:1016
+msgid "No valid -o flag encountered."
+msgstr "Kein valides -o flag gefunden."
+
+#: src/cmdline.c:1021
+msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
+msgstr "-q (--clamp-low) sollte kleiner sein als -Q (--clamp-top)!"
+
+#: src/cmdline.c:1058
+msgid "No valid paths given."
+msgstr "Keine validen Pfade gegeben."
+
+#: src/formats.c:133
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr "Kein Formathandler mit diesen Namen: %s"
+
+#: src/formats.c:156
+#, c-format
+msgid "Unable to open file for writing: %s"
+msgstr "Kann Datei nicht zum lesen öffnen: %s"
 
 #: src/main.c:71
 msgid "Received Interrupt, stopping..."
@@ -42,151 +217,61 @@ msgstr "Abbruch aufgrund eines fatalen Fehlers (exaktes signal: %s)"
 msgid "Please file a bug report (See rmlint -h)"
 msgstr "Mache bitte einen bug report auf (Mehr info unter rmlint -h)"
 
-#: src/cmdline.c:81
-msgid "You seem to have no manpage for rmlint."
-msgstr "Scheinbar hast du keine manpage für rmlint."
+#: src/formats/progressbar.c:64
+msgid "Traversing"
+msgstr "Traversiere"
 
-#: src/cmdline.c:125
-msgid "Input size is empty"
-msgstr "Eingabegröße ist leer. Nicht gut."
+#: src/formats/progressbar.c:66
+msgid "usable files"
+msgstr "nutzbare Dateien"
 
-#: src/cmdline.c:132
-msgid "This does not look like a number"
-msgstr "Das schaut nicht wie eine Zahl aus"
+#: src/formats/progressbar.c:69
+msgid "ignored files / folders"
+msgstr "ignorierte Dateien / Verzeichnise"
 
-#: src/cmdline.c:134
-msgid "Negativ sizes are no good idea"
-msgstr "Negative Größen sind keine gute Idee"
+#: src/formats/progressbar.c:77
+msgid "Preprocessing"
+msgstr "Bereite vor"
 
-#: src/cmdline.c:152
-msgid "Given format specifier not found"
-msgstr "Gegebene Formatangabe ist unbekannt"
+#: src/formats/progressbar.c:78
+msgid "reduces files to"
+msgstr "reduziere Dateien zu"
 
-#: src/cmdline.c:177
-msgid "Max is smaller than min"
-msgstr "Maximum ist kleiner als das Minimum. Macht das Sinn?"
+#: src/formats/progressbar.c:80
+msgid "found"
+msgstr "gefunden"
 
-#: src/cmdline.c:195
-#, c-format
-msgid "cannot parse --limit: %s"
-msgstr "Kann --limit (%s) nicht parsen"
+#: src/formats/progressbar.c:82
+msgid "other lint"
+msgstr "anderer Müll"
 
-#: src/cmdline.c:211
-#, c-format
-msgid "Can't open directory or file \"%s\": %s"
-msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
+#: src/formats/progressbar.c:94
+msgid "Matching files"
+msgstr "Rechne"
 
-#: src/cmdline.c:252
-#, c-format
-msgid "Adding -o %s as output failed."
-msgstr "Konnte -o %s nicht als Ausgabe hinzufügen."
+#: src/formats/progressbar.c:96
+msgid "dupes of"
+msgstr "Duplikate von"
 
-#: src/cmdline.c:262
-#, c-format
-msgid "No format (format:key[=val]) specified in '%s'."
-msgstr "Kein Format (format:key[=val]) gegeben in '%s'."
+#: src/formats/progressbar.c:98
+msgid "originals"
+msgstr "Originalen"
 
-#: src/cmdline.c:271
-#, c-format
-msgid "Missing key (format:key[=val]) in '%s'."
-msgstr "Fehlender key (format:key[=val]) in '%s'."
+#: src/formats/progressbar.c:100
+msgid "to scan in "
+msgstr "zum scannen in "
 
-#: src/cmdline.c:296
-#, c-format
-msgid "Unable to parse factor \"%s\": error begins at %s"
-msgstr "Konnte nicht den Faktor \"%s\" parsen: Fehler beginnt bei %s"
+#: src/formats/progressbar.c:102
+msgid "files"
+msgstr "Dateien"
 
-#: src/cmdline.c:308
-#, c-format
-msgid "factor value is not in range [0-1]: %f"
-msgstr "Faktorwert liegt nicht im Bereich [0-1]: %f"
+#: src/formats/progressbar.c:108
+msgid "Merging files into directories (stand by...)"
+msgstr "Führe doppelte Dateien in doppelte Verzeichnise zusammen..."
 
-#: src/cmdline.c:323
-#, c-format
-msgid "Unable to parse offset \"%s\": %s"
-msgstr "Kann Offset nicht parsen \"%s\": %s"
-
-#: src/cmdline.c:457
-msgid "lint types after first should be prefixed with '+' or '-'"
-msgstr "Alle Lint Typen nach dem Ersten sollten mit '+' oder '-' beginnen"
-
-#: src/cmdline.c:458
-#, c-format
-msgid "or they would over-ride previously set options: [%s]"
-msgstr "andernfalls würden sie vorher gesetzte optione überschreiben: [%s]"
-
-#: src/cmdline.c:474
-#, c-format
-msgid "lint type '%s' not recognised"
-msgstr "lint type \"%s\" nicht erkannt"
-
-#: src/cmdline.c:515
-#, c-format
-msgid "Unable to parse time spec \"%s\""
-msgstr "Kann Zeitangabe nicht parsen: \"%s\""
-
-#: src/cmdline.c:529
-msgid "-n %lu is newer than current time (%lu)."
-msgstr "-n %lu ist neuer als jetzt (%lu) - ist das korrekt?"
-
-#: src/cmdline.c:682
-#, c-format
-msgid "Invalid thread count supplied: %s"
-msgstr "Wirre Anzahl von Threads angegeben: %s"
-
-#: src/cmdline.c:695
-#, c-format
-msgid "Unknown hash algorithm: '%s'"
-msgstr "Unbekannte Hashfunktion: \"%s\""
-
-#: src/cmdline.c:774
-#, c-format
-msgid "Invalid size description \"%s\": %s"
-msgstr "Fehlerhafte Größenangabe \"%s\": %s"
-
-#: src/cmdline.c:787
-msgid ""
-"can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
-"keep-all-untagged"
-msgstr "Kann nicht gleichzeitig --keep-all-tagged und --keep-all-untagged nehmen: ignoriere letzeres"
-
-#: src/cmdline.c:794
-msgid ""
-"can't specify both --keep-all-tagged and --keep-all-untagged; "
-"ignoring --keep-all-tagged"
-msgstr "Kann nicht gleichzeitig --keep-all-tagged und --keep-all-untagged nehmen: ignoriere ersteres"
-
-#: src/cmdline.c:859
-msgid "Only up to -ppp or down to -P flags allowed."
-msgstr "Maximal drei -p flags oder ein -P Flag erlaubt"
-
-#: src/cmdline.c:866
-msgid "Specifiyng both -o and -O is not allowed."
-msgstr "Gleichzeitige Angabe von -o und -O ist nicht möglich."
-
-#: src/cmdline.c:875
-msgid "No valid -o flag encountered."
-msgstr "Kein valides -o flag gefunden."
-
-#: src/cmdline.c:880
-msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
-msgstr "-q (--clamp-low) sollte kleiner sein als -Q (--clamp-top)!"
-
-#: src/cmdline.c:887
-msgid "Full paranoia will not work well with directory merging."
-msgstr "Paranoia-modus funktioniert leider nicht mit -D (--merge-directories)"
-
-#: src/cmdline.c:925
-msgid "No valid paths given."
-msgstr "Keine validen Pfade gegeben."
-
-#: src/config.h:71
-msgid "ERROR"
-msgstr "FEHLER"
-
-#: src/config.h:78
-msgid "WARNING"
-msgstr "WARNUNG"
+#: src/formats/progressbar.c:296
+msgid "Cannot figure out terminal width."
+msgstr "Kann Terminalgröße nicht rausfinden."
 
 #: src/formats/pretty.c:34
 msgid "Bad symlink(s)"
@@ -224,142 +309,79 @@ msgstr "Duplikate"
 msgid "Duplicate Directorie(s)"
 msgstr "Doppelte Verzeichnisse"
 
-#: src/formats/progressbar.c:62
-msgid "Traversing"
-msgstr "Traversiere"
-
-#: src/formats/progressbar.c:64
-msgid "usable files"
-msgstr "nutzbare Dateien"
-
-#: src/formats/progressbar.c:67
-msgid "ignored files / folders"
-msgstr "ignorierte Dateien / Verzeichnise"
-
-#: src/formats/progressbar.c:75
-msgid "Preprocessing"
-msgstr "Bereite vor"
-
-#: src/formats/progressbar.c:76
-msgid "reduces files to"
-msgstr "reduziere Dateien zu"
-
-#: src/formats/progressbar.c:78
-msgid "found"
-msgstr "gefunden"
-
-#: src/formats/progressbar.c:80
-msgid "other lint"
-msgstr "anderer Müll"
-
-#: src/formats/progressbar.c:89
-msgid "Matching files"
-msgstr "Rechne"
-
-#: src/formats/progressbar.c:91
-msgid "dupes of"
-msgstr "Duplikate von"
-
-#: src/formats/progressbar.c:93
-msgid "originals"
-msgstr "Originalen"
-
-#: src/formats/progressbar.c:95
-msgid "to scan in "
-msgstr "zum scannen in "
-
-#: src/formats/progressbar.c:97
-msgid "files"
-msgstr "Dateien"
-
-#: src/formats/progressbar.c:103
-msgid "Merging files into directories (stand by...)"
-msgstr "Führe doppelte Dateien in doppelte Verzeichnise zusammen..."
-
-#: src/formats/progressbar.c:222
-msgid "Cannot figure out terminal width."
-msgstr "Kann Terminalgröße nicht rausfinden."
-
 #: src/formats/summary.c:58
-#, c-format
-msgid "file(s) after investigation, nothing to search through.\n"
+#, fuzzy, c-format
+msgid " file(s) after investigation, nothing to search through.\n"
 msgstr " Dateien nach dem Traversieren, nichts zum durchsuchen.\n"
 
-#: src/formats/summary.c:66
+#: src/formats/summary.c:63
 #, c-format
 msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Früher Abbruch, vermutlich wurde nicht alles gefunden.\n"
 
-#: src/formats/summary.c:76
+#: src/formats/summary.c:73
 #, c-format
 msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
 msgstr "Insgesamt %s dateien, von denen %s Duplikate in %s Gruppen sind.\n"
 
-#: src/formats/summary.c:88
+#: src/formats/summary.c:85
 #, c-format
 msgid "This equals %s%s%s of duplicates which could be removed.\n"
 msgstr "Dies entspricht %s%s%s an Duplikaten die entfernt werden können.\n"
 
-#: src/formats/summary.c:99
+#: src/formats/summary.c:96
 #, c-format
 msgid "other suspicious item(s) found, which may vary in size.\n"
 msgstr "andere merkwürdige Datei(en) gefunden, die in ihrer Größe variieren.\n"
 
-#: src/formats/summary.c:123
+#: src/formats/summary.c:125
 #, c-format
 msgid "Wrote a %s%s%s file to %s%s%s.\n"
 msgstr "Eine %s%s%s Datei wurde nach %s%s%s geschrieben.\n"
 
-#: src/formats.c:129
-#, c-format
-msgid "No such new_handler with this name: %s"
-msgstr "Kein Formathandler mit diesen Namen: %s"
-
-#: src/formats.c:152
-#, c-format
-msgid "Unable to open file for writing: %s"
-msgstr "Kann Datei nicht zum lesen öffnen: %s"
-
-#: src/traverse.c:222
+#: src/traverse.c:260
 #, c-format
 msgid "filesystem loop detected at %s (skipping)"
 msgstr "Dateisystemschleife entdeckt: %s (wird übersprungen)"
 
-#: src/traverse.c:226
+#: src/traverse.c:264
 #, c-format
 msgid "cannot read directory %s: %s"
 msgstr "Kann Verzeichnis %s nicht lesen: %s"
 
-#: src/traverse.c:237
+#: src/traverse.c:275
 #, c-format
 msgid "error %d in fts_read for %s (skipping)"
 msgstr "Fehler #%d in fts_read für %s (überspringe)"
 
-#: src/traverse.c:261
+#: src/traverse.c:301
 #, c-format
 msgid "Added big file %s"
 msgstr "Füge sehr große Datei hinzu %s"
 
-#: src/traverse.c:263
+#: src/traverse.c:303
 #, c-format
 msgid "cannot stat file %s (skipping)"
 msgstr "Kann stat(2) nicht auf Datei %s aufrufen (überspringe)"
 
-#: src/traverse.c:287
+#: src/traverse.c:337
 #, c-format
 msgid "Unknown fts_info flag %d for file %s"
 msgstr "Unbekanntes fts_info flag %d für Datei %s"
 
-#: src/traverse.c:304
+#: src/traverse.c:354
 #, c-format
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': fts_read schlug fehl bei Pfad %s"
 
-#: src/utilities.c:166
-#, c-format
-msgid "cannot open file '%s' for nonstripped test: "
-msgstr "Kann Datei %s nicht öffnen um zu sehen ob sie gestripped ist."
+#: src/config.h:92
+msgid "ERROR"
+msgstr "FEHLER"
 
-#: src/utilities.c:173
-msgid "ELF Library is out of date!"
-msgstr "ELF Bibliothek ist extrem veraltet!"
+#: src/config.h:99
+msgid "WARNING"
+msgstr "WARNUNG"
+
+#~ msgid "Full paranoia will not work well with directory merging."
+#~ msgstr ""
+#~ "Paranoia-modus funktioniert leider nicht mit -D (--merge-directories)"

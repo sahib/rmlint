@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-12-21 12:53+0100\n"
+"POT-Creation-Date: 2015-01-07 01:05+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,166 +17,180 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/shredder.c:1403
+#: src/shredder.c:1461
 #, c-format
 msgid "Negative bytes_left_to_read for %s"
 msgstr ""
 
-#: src/shredder.c:1408
+#: src/shredder.c:1466
 #, c-format
 msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
 msgstr ""
 
-#: src/utilities.c:181
+#: src/utilities.c:189
 #, c-format
 msgid "cannot open file '%s' for nonstripped test: "
 msgstr ""
 
-#: src/utilities.c:188
+#: src/utilities.c:196
 msgid "ELF Library is out of date!"
 msgstr ""
 
-#: src/cmdline.c:109
+#: src/utilities.c:415
+#, c-format
+msgid "Could not parse cache: %s"
+msgstr ""
+
+#: src/utilities.c:421
+#, c-format
+msgid "Cannot read json cache file ,,%s'': %s"
+msgstr ""
+
+#: src/utilities.c:422
+msgid "unknown reason"
+msgstr ""
+
+#: src/cmdline.c:119
 msgid "You seem to have no manpage for rmlint."
 msgstr ""
 
-#: src/cmdline.c:153
+#: src/cmdline.c:163
 msgid "Input size is empty"
 msgstr ""
 
-#: src/cmdline.c:160
+#: src/cmdline.c:170
 msgid "This does not look like a number"
 msgstr ""
 
-#: src/cmdline.c:162
+#: src/cmdline.c:172
 msgid "Negativ sizes are no good idea"
 msgstr ""
 
-#: src/cmdline.c:180
+#: src/cmdline.c:190
 msgid "Given format specifier not found"
 msgstr ""
 
-#: src/cmdline.c:205
+#: src/cmdline.c:215
 msgid "Max is smaller than min"
 msgstr ""
 
-#: src/cmdline.c:223
+#: src/cmdline.c:233
 #, c-format
 msgid "cannot parse --limit: %s"
 msgstr ""
 
-#: src/cmdline.c:239
+#: src/cmdline.c:249
 #, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr ""
 
-#: src/cmdline.c:280
+#: src/cmdline.c:290
 #, c-format
 msgid "Adding -o %s as output failed."
 msgstr ""
 
-#: src/cmdline.c:290
+#: src/cmdline.c:300
 #, c-format
 msgid "No format (format:key[=val]) specified in '%s'."
 msgstr ""
 
-#: src/cmdline.c:299
+#: src/cmdline.c:309
 #, c-format
 msgid "Missing key (format:key[=val]) in '%s'."
 msgstr ""
 
-#: src/cmdline.c:324
+#: src/cmdline.c:335
 #, c-format
 msgid "Unable to parse factor \"%s\": error begins at %s"
 msgstr ""
 
-#: src/cmdline.c:336
+#: src/cmdline.c:347
 #, c-format
 msgid "factor value is not in range [0-1]: %f"
 msgstr ""
 
-#: src/cmdline.c:351
+#: src/cmdline.c:362
 #, c-format
 msgid "Unable to parse offset \"%s\": %s"
 msgstr ""
 
-#: src/cmdline.c:505
+#: src/cmdline.c:516
 msgid "lint types after first should be prefixed with '+' or '-'"
 msgstr ""
 
-#: src/cmdline.c:506
+#: src/cmdline.c:517
 #, c-format
 msgid "or they would over-ride previously set options: [%s]"
 msgstr ""
 
-#: src/cmdline.c:522
+#: src/cmdline.c:533
 #, c-format
 msgid "lint type '%s' not recognised"
 msgstr ""
 
-#: src/cmdline.c:576
+#: src/cmdline.c:587
 #, c-format
 msgid "Unable to parse time spec \"%s\""
 msgstr ""
 
-#: src/cmdline.c:590
+#: src/cmdline.c:601
 #, c-format
 msgid "-n %lu is newer than current time (%lu)."
 msgstr ""
 
-#: src/cmdline.c:752
+#: src/cmdline.c:777
 #, c-format
 msgid "Invalid thread count supplied: %s"
 msgstr ""
 
-#: src/cmdline.c:765
+#: src/cmdline.c:793
 #, c-format
 msgid "Unknown hash algorithm: '%s'"
 msgstr ""
 
-#: src/cmdline.c:858
+#: src/cmdline.c:915
 #, c-format
 msgid "Invalid size description \"%s\": %s"
 msgstr ""
 
-#: src/cmdline.c:871
+#: src/cmdline.c:928
 msgid ""
 "can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
 "keep-all-untagged"
 msgstr ""
 
-#: src/cmdline.c:878
+#: src/cmdline.c:935
 msgid ""
 "can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
 "keep-all-tagged"
 msgstr ""
 
-#: src/cmdline.c:943
+#: src/cmdline.c:1000
 msgid "Only up to -ppp or down to -P flags allowed."
 msgstr ""
 
-#: src/cmdline.c:950
+#: src/cmdline.c:1007
 msgid "Specifiyng both -o and -O is not allowed."
 msgstr ""
 
-#: src/cmdline.c:959
+#: src/cmdline.c:1016
 msgid "No valid -o flag encountered."
 msgstr ""
 
-#: src/cmdline.c:964
+#: src/cmdline.c:1021
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
 msgstr ""
 
-#: src/cmdline.c:1001
+#: src/cmdline.c:1058
 msgid "No valid paths given."
 msgstr ""
 
-#: src/formats.c:129
+#: src/formats.c:133
 #, c-format
 msgid "No such new_handler with this name: %s"
 msgstr ""
 
-#: src/formats.c:152
+#: src/formats.c:156
 #, c-format
 msgid "Unable to open file for writing: %s"
 msgstr ""
@@ -198,59 +212,59 @@ msgstr ""
 msgid "Please file a bug report (See rmlint -h)"
 msgstr ""
 
-#: src/formats/progressbar.c:62
+#: src/formats/progressbar.c:64
 msgid "Traversing"
 msgstr ""
 
-#: src/formats/progressbar.c:64
+#: src/formats/progressbar.c:66
 msgid "usable files"
 msgstr ""
 
-#: src/formats/progressbar.c:67
+#: src/formats/progressbar.c:69
 msgid "ignored files / folders"
 msgstr ""
 
-#: src/formats/progressbar.c:75
+#: src/formats/progressbar.c:77
 msgid "Preprocessing"
 msgstr ""
 
-#: src/formats/progressbar.c:76
+#: src/formats/progressbar.c:78
 msgid "reduces files to"
 msgstr ""
 
-#: src/formats/progressbar.c:78
+#: src/formats/progressbar.c:80
 msgid "found"
 msgstr ""
 
-#: src/formats/progressbar.c:80
+#: src/formats/progressbar.c:82
 msgid "other lint"
 msgstr ""
 
-#: src/formats/progressbar.c:89
+#: src/formats/progressbar.c:94
 msgid "Matching files"
 msgstr ""
 
-#: src/formats/progressbar.c:91
+#: src/formats/progressbar.c:96
 msgid "dupes of"
 msgstr ""
 
-#: src/formats/progressbar.c:93
+#: src/formats/progressbar.c:98
 msgid "originals"
 msgstr ""
 
-#: src/formats/progressbar.c:95
+#: src/formats/progressbar.c:100
 msgid "to scan in "
 msgstr ""
 
-#: src/formats/progressbar.c:97
+#: src/formats/progressbar.c:102
 msgid "files"
 msgstr ""
 
-#: src/formats/progressbar.c:103
+#: src/formats/progressbar.c:108
 msgid "Merging files into directories (stand by...)"
 msgstr ""
 
-#: src/formats/progressbar.c:222
+#: src/formats/progressbar.c:296
 msgid "Cannot figure out terminal width."
 msgstr ""
 
@@ -292,73 +306,73 @@ msgstr ""
 
 #: src/formats/summary.c:58
 #, c-format
-msgid "file(s) after investigation, nothing to search through.\n"
+msgid " file(s) after investigation, nothing to search through.\n"
 msgstr ""
 
-#: src/formats/summary.c:66
+#: src/formats/summary.c:63
 #, c-format
 msgid "Early shutdown, probably not all lint was found.\n"
 msgstr ""
 
-#: src/formats/summary.c:76
+#: src/formats/summary.c:73
 #, c-format
 msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
 msgstr ""
 
-#: src/formats/summary.c:88
+#: src/formats/summary.c:85
 #, c-format
 msgid "This equals %s%s%s of duplicates which could be removed.\n"
 msgstr ""
 
-#: src/formats/summary.c:99
+#: src/formats/summary.c:96
 #, c-format
 msgid "other suspicious item(s) found, which may vary in size.\n"
 msgstr ""
 
-#: src/formats/summary.c:123
+#: src/formats/summary.c:125
 #, c-format
 msgid "Wrote a %s%s%s file to %s%s%s.\n"
 msgstr ""
 
-#: src/traverse.c:235
+#: src/traverse.c:260
 #, c-format
 msgid "filesystem loop detected at %s (skipping)"
 msgstr ""
 
-#: src/traverse.c:239
+#: src/traverse.c:264
 #, c-format
 msgid "cannot read directory %s: %s"
 msgstr ""
 
-#: src/traverse.c:250
+#: src/traverse.c:275
 #, c-format
 msgid "error %d in fts_read for %s (skipping)"
 msgstr ""
 
-#: src/traverse.c:276
+#: src/traverse.c:301
 #, c-format
 msgid "Added big file %s"
 msgstr ""
 
-#: src/traverse.c:278
+#: src/traverse.c:303
 #, c-format
 msgid "cannot stat file %s (skipping)"
 msgstr ""
 
-#: src/traverse.c:310
+#: src/traverse.c:337
 #, c-format
 msgid "Unknown fts_info flag %d for file %s"
 msgstr ""
 
-#: src/traverse.c:327
+#: src/traverse.c:354
 #, c-format
 msgid "'%s': fts_read failed on %s"
 msgstr ""
 
-#: src/config.h:84
+#: src/config.h:92
 msgid "ERROR"
 msgstr ""
 
-#: src/config.h:91
+#: src/config.h:99
 msgid "WARNING"
 msgstr ""
