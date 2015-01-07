@@ -1143,7 +1143,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
         }
     }
 
-    if(g_hash_table_lookup(session->tables->ext_cksums, file->path)) {
+    if(HAS_CACHE(session) && g_hash_table_lookup(session->tables->ext_cksums, file->path)) {
         group->num_ext_cksums += 1;
         file->has_ext_cksum = 1;
     }
