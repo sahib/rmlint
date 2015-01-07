@@ -52,46 +52,51 @@ static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
     fprintf(out, "  \"%s\": %"LLU"", key, value);
 }
 
-static char *rm_fmt_json_fix(const char *string) {
+static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
     if(!g_utf8_validate(string, -1, NULL)) {
-        return NULL;
+        return -1;
     }
 
-    char path[PATH_MAX + 1];
-    memset(path, 0, sizeof(path));
+    char *iter = fixed;
 
-    char *iter = path;
-
+        
     do {
+        if((iter - fixed) > (int)(fixed_len - 4)) {
+            break;
+        }
+
         char *text = NULL;
-        gunichar codepoint = g_utf8_get_char(string);
-        switch(codepoint)
-        {
+        switch(g_utf8_get_char(string)) {
             case '\\': text = "\\\\"; break;
             case '\"': text = "\\\""; break;
-            case '\b': text = "\\b"; break;
-            case '\f': text = "\\f"; break;
-            case '\n': text = "\\n"; break;
-            case '\r': text = "\\r"; break;
-            case '\t': text = "\\t"; break;
+            case '\b': text = "\\b";  break;
+            case '\f': text = "\\f";  break;
+            case '\n': text = "\\n";  break;
+            case '\r': text = "\\r";  break;
+            case '\t': text = "\\t";  break;
             default:
                 g_utf8_strncpy(iter, string, 1);
-                iter = g_utf8_next_char(iter);
+                iter = g_utf8_find_next_char(iter + 1, NULL);
                 break;
         }
 
-        if(text != NULL) {
-            strncpy(iter, text, strlen(text));
-            iter += strlen(text);
+        while(text && *text) {
+            *iter++ = *text++;
         }
-    }
-    while((string = g_utf8_next_char(string)));
+    } while((string = g_utf8_find_next_char(string + 1, NULL)));
+
+    g_printerr("Fixing %s\nFixed %s\n", string, fixed);
+
+    return iter - fixed;
 }
 
 static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {
-    char *escaped_value = rm_util_strsub(value, "\"", "\\\"");
-    fprintf(out, "  \"%s\": \"%s\"", key, escaped_value);
-    g_free(escaped_value);
+    char safe_value[PATH_MAX + 4 + 1];
+    memset(safe_value, 0, sizeof(safe_value));
+
+    if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value)) >= 0) {
+        fprintf(out, "  \"%s\": \"%s\"", key, safe_value);
+    }
 }
 
 static void rm_fmt_json_open(FILE *out) {
