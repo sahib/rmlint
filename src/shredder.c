@@ -594,10 +594,15 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
 /* defines mem allocation per file */
 RmOff rm_shred_mem_allocation(RmFile *file) {
     return MIN(file->file_size, rm_digest_paranoia_bytes()) * 2;
+    /* NOTE: the * 2 is because generally we have two active
+     * digests at each generation, one stored in the RmShredGroup and
+     * one in the file increment being hashed.  With multiple devices
+     * we could in theory have a bit more, but 2* is ok as an quick
+     * and dirty memory manager budget */
 }
 
 /* take or return mem allocation from main */
-gboolean rm_shred_mem_take(RmMainTag *main, gint32 mem_amount, guint32 numfiles) {
+gboolean rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfiles) {
     gboolean result = true;
     g_mutex_lock(&main->hash_mem_mtx);
     {
@@ -617,25 +622,20 @@ gboolean rm_shred_mem_take(RmMainTag *main, gint32 mem_amount, guint32 numfiles)
 
 /* Governer to limit memory usage by limiting how many RmShredGroups can be
  * active at any one time
- * NOTE: file->shred_group must be held before calling rm_shred_check_hash_mem_alloc
+ * NOTE: group_lock must be held before calling rm_shred_check_hash_mem_alloc
  */
 static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
     RmShredGroup *group = file->shred_group;
     if (0
             || group->hash_offset > 0
             /* don't interrupt family tree once started */
-            || group->status == RM_SHRED_GROUP_HASHING) {
+            || group->status >= RM_SHRED_GROUP_HASHING) {
         /* group already committed */
         return true;
     }
 
     gboolean result;
-    gint64 mem_required = group->num_files * rm_shred_mem_allocation(file);
-    /* NOTE: the * 2 is because generally we have two active
-     * digests at each generation, one stored in the RmShredGroup and
-     * one in the file increment being hashed.  With multiple devices
-     * we could in theory have a bit more, but 2* is ok as an quick
-     * and dirty memory manager budget */
+    gint64 mem_required = group->num_files * file->file_size;
 
     rm_log_debug("Asking mem allocation for %s...", file->path);
     result = rm_shred_mem_take(group->main, mem_required, group->num_files);
@@ -747,8 +747,8 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
             RmMainTag *tag = file->shred_group->main;
             g_assert(tag);
             g_assert(file);
-            rm_log_debug("releasing mem %"LLU" bytes from %s; ", rm_shred_mem_allocation(file), file->path);
-            (void)rm_shred_mem_take(tag, -rm_shred_mem_allocation(file), -1);
+            rm_log_debug("releasing mem %"LLU" bytes from %s; ", file->file_size - file->hash_offset, file->path);
+            (void)rm_shred_mem_take(tag, -(gint64)(file->file_size - file->hash_offset), -1);
         }
     }
 
@@ -838,6 +838,9 @@ void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
     }
 
     if (self->digest) {
+        if (self->digest->type == RM_DIGEST_PARANOID) {
+            rm_shred_mem_take(self->main, -(gint64)self->digest->bytes, 0);
+        }
         g_slice_free1(self->digest->bytes, self->checksum);
         if(needs_free) {
             rm_digest_free(self->digest);
@@ -1035,6 +1038,9 @@ static gboolean rm_shred_sift(RmFile *file) {
             } else {
                 child_group = child->data;
                 g_slice_free1(file->digest->bytes, key);
+                if (file->digest->type == RM_DIGEST_PARANOID) {
+                    rm_shred_mem_take(tag, -(gint64)file->digest->bytes, 0);
+                }
             }
 
             result = rm_shred_group_push_file(child_group, file, false);
