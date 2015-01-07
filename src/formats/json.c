@@ -52,6 +52,42 @@ static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
     fprintf(out, "  \"%s\": %"LLU"", key, value);
 }
 
+static char *rm_fmt_json_fix(const char *string) {
+    if(!g_utf8_validate(string, -1, NULL)) {
+        return NULL;
+    }
+
+    char path[PATH_MAX + 1];
+    memset(path, 0, sizeof(path));
+
+    char *iter = path;
+
+    do {
+        char *text = NULL;
+        gunichar codepoint = g_utf8_get_char(string);
+        switch(codepoint)
+        {
+            case '\\': text = "\\\\"; break;
+            case '\"': text = "\\\""; break;
+            case '\b': text = "\\b"; break;
+            case '\f': text = "\\f"; break;
+            case '\n': text = "\\n"; break;
+            case '\r': text = "\\r"; break;
+            case '\t': text = "\\t"; break;
+            default:
+                g_utf8_strncpy(iter, string, 1);
+                iter = g_utf8_next_char(iter);
+                break;
+        }
+
+        if(text != NULL) {
+            strncpy(iter, text, strlen(text));
+            iter += strlen(text);
+        }
+    }
+    while((string = g_utf8_next_char(string)));
+}
+
 static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {
     char *escaped_value = rm_util_strsub(value, "\"", "\\\"");
     fprintf(out, "  \"%s\": \"%s\"", key, escaped_value);

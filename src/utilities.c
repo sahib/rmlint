@@ -357,9 +357,36 @@ static char * rm_json_cache_extract_marker(const char *node, char *end, const ch
     return g_strndup(start_node, end_node - start_node);
 }
 
+#include "jsmn/jsmn.h"
+
 static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
     bool result = true;
     char *iter = json_data;
+
+    /* Allocate 32 tokens by default (16 * 2) */
+    size_t n_tokens = 16;
+    jsmntok_t *tokens = NULL;
+    jsmnerr_t parse_err = 0;
+
+    jsmn_parser parser;
+    jsmn_init(&parser);
+
+    do {
+        n_tokens *= 2;
+        tokens = g_realloc(tokens, sizeof(jsmntok_t) * n_tokens);
+    } while((parse_err = jsmn_parse(&parser, json_data, tokens, n_tokens)) == JSMN_ERROR_NOMEM);
+
+    if(parse_err != JSMN_SUCCESS) {
+        return false;
+    }
+
+    for(int i = 0; tokens[i]; ++i) {
+        jsmntok_t *token = &tokens[i];
+        for(int j = token->start; j < token->end; ++j) {
+            g_printerr("%c", json_data[j]);
+        }
+        g_printerr("\n");
+    }
 
     /* This is slightly hacky. Im very sorry. */
     while((iter = strchr(&iter[1], '{')) != NULL) {
