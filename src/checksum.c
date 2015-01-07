@@ -269,7 +269,7 @@ void rm_digest_free(RmDigest *digest) {
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     switch(digest->type) {
-    case RM_DIGEST_EXT:
+    case RM_DIGEST_EXT: 
         /* Data is assumed to be a hex representation of a cchecksum.
          * Needs to be compressed in pure memory first.
          *
@@ -277,9 +277,19 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
          * */
         #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
-        for(unsigned i = 0; i < MIN(digest->bytes, size / 2); ++i) {
+        g_assert(data);
+
+        unsigned i;
+        for(i = 0; i < MIN(digest->bytes, size / 2); ++i) {
             ((guint8 *)digest->checksum)[i] = (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
         }
+
+        /* Shrink to needed length, no need to carry more memory around */
+        if(i < digest->bytes) {
+            g_slice_free1(digest->bytes - i, &digest->checksum[i]);
+            digest->bytes = i;
+        }
+        
         break;
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:
