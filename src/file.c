@@ -58,7 +58,6 @@ RmFile *rm_file_new(
     RmFile *self = g_slice_new0(RmFile);
     self->path = g_strdup(path);
     self->basename = rm_util_basename(self->path);
-    self->free_digest = true;
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
@@ -85,10 +84,6 @@ RmFile *rm_file_new(
 }
 
 void rm_file_destroy(RmFile *file) {
-    if (file->digest && file->free_digest) {
-        rm_digest_free(file->digest);
-        file->digest = NULL;
-    }
 
     if (file->disk_offsets) {
         g_sequence_free(file->disk_offsets);
