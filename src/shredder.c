@@ -754,7 +754,19 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
 
     /* update device counters */
     if (device) {
+        RmSession *session = device->main->session;
         rm_shred_adjust_counters(device, -1, -(gint64)(file->file_size - file->hash_offset));
+
+        /* ShredGroup that was going nowhere TODO */
+        if(file->shred_group->num_files <= 1 && (session->settings->write_unfinished || 1)) {
+            // g_printerr("Discarding: %s\n", file->path);
+            file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
+            file->digest = file->shred_group->digest;
+            if(file->digest) {
+                rm_fmt_write(file, session->formats);
+                file->digest = NULL;
+            }
+        }
 
         /* update paranoid memory allocator */
         if (file->shred_group->digest_type == RM_DIGEST_PARANOID) {
@@ -922,7 +934,7 @@ void rm_shred_group_unref(RmShredGroup *self) {
         break;
     case RM_SHRED_GROUP_START_HASHING:
     case RM_SHRED_GROUP_HASHING:
-        if ( self->ref_count == 0) {
+        if(self->ref_count == 0) {
             /* group no longer required; tell the children we are about to die */
             if(self->children) {
                 g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
@@ -979,7 +991,6 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
             /* add file to device queue */
             g_assert(file->device);
             rm_shred_push_queue(file);
-
         } else {
             /* calling routine will handle the file */
             result = true;
@@ -1741,10 +1752,6 @@ void rm_shred_run(RmSession *session) {
     int devices_left = g_hash_table_size(session->tables->dev_table);
     rm_log_debug(BLUE"Devices = %d\n", devices_left);
 
-    /* For results that need to be check with --paranoid.
-     * This would clog up the main thread, which is supposed
-     * to flag bad files as soon as possible.
-     */
     tag.result_pool = rm_util_thread_pool_new(
                           (GFunc)rm_shred_result_factory, &tag, 1
                       );

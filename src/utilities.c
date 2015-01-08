@@ -337,14 +337,16 @@ static bool rm_json_cache_parse_entry(GHashTable *cksum_table, char *json_data, 
     }
 
     RmStat stat_buf;
-    char *mtime = NULL, *path = NULL, *cksum = NULL;
+    char *mtime = NULL, *path = NULL, *cksum = NULL, *type = NULL;
 
     for(int i = 0; i < n_entries; i += 2) {
         int elem_len = tokens[i].end - tokens[i].start;
         char *elem_p = &json_data[tokens[i].start];
         char **extract = NULL;
 
-        if(strncmp("path", elem_p, elem_len) == 0) {
+        if(strncmp("type", elem_p, elem_len) == 0) {
+            extract = &type;
+        } else if(strncmp("path", elem_p, elem_len) == 0) {
             extract = &path;
         } else if(strncmp("checksum", elem_p, elem_len) == 0) {
             extract = &cksum;
@@ -361,6 +363,7 @@ static bool rm_json_cache_parse_entry(GHashTable *cksum_table, char *json_data, 
     /* Post checking */
     if(0 
         || (mtime == NULL || path == NULL) 
+        || (strcmp(type, "duplicate_file") && strcmp(type, "unfinished_cksum"))
         || rm_sys_stat(path, &stat_buf) == -1
         || g_ascii_strtoll(mtime, NULL, 10) < stat_buf.st_mtim.tv_sec
     ) {
@@ -373,11 +376,14 @@ static bool rm_json_cache_parse_entry(GHashTable *cksum_table, char *json_data, 
     return true;
 }
 
-static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
+static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data, size_t json_len) {
     bool result = false;
 
-    /* Allocate 32 tokens by default (16 * 2) */
-    size_t n_tokens = 16;
+    /* Guess number of tokens to allocate from file size. 
+     * A json dict entry is about 250 - 350 bytes long.
+     * Each dict has 14 tokens, there * 7. (we multiply with 2 later)
+     * */
+    size_t n_tokens = MAX(512, (json_len / 250) * 7);
     jsmntok_t *tokens = NULL;
     jsmnerr_t parse_err = 0;
 
@@ -388,9 +394,10 @@ static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
     do {
         n_tokens *= 2;
         tokens = g_realloc(tokens, sizeof(jsmntok_t) * n_tokens);
-    } while((parse_err = jsmn_parse(&parser, json_data, tokens, n_tokens)) == JSMN_ERROR_NOMEM);
+    } while((parse_err = jsmn_parse(&parser, json_data, json_len, tokens, n_tokens)) == JSMN_ERROR_NOMEM);
 
-    if(parse_err != JSMN_SUCCESS) {
+    if(parse_err) {
+        rm_log_debug("jsmn error code was #%d\n", parse_err);
         goto failure;
     }
 
@@ -435,7 +442,7 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     GError *error = NULL;
 
     if(g_file_get_contents(json_path, &json_data, &json_len, &error)) {
-        if(rm_json_cache_parse(cksum_table, json_data) == false) {
+        if(rm_json_cache_parse(cksum_table, json_data, json_len) == false) {
             rm_log_error_line(_("Could not parse cache: %s"), json_path);
         }
 

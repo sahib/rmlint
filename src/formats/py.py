@@ -43,6 +43,8 @@ def handle_duplicate_dir(path, original, **kwargs):
 def handle_duplicate_file(path, original, **kwargs):
     os.remove(path)
 
+def handle_unfinished_cksum(path, **kwargs):
+    pass  # doesn't need any handling.
 
 def handle_empty_dir(path, **kwargs):
     os.rmdir(path)
@@ -79,6 +81,7 @@ def handle_badugid(path, **kwargs):
 OPERATIONS = {
     "duplicate_dir": handle_duplicate_dir,
     "duplicate_file": handle_duplicate_file,
+    "unfinished_cksum": handle_unfinished_cksum,
     "emptydir": handle_empty_dir,
     "emptyfile": handle_empy_file,
     "nonstripped": handle_nonstripped,
@@ -91,6 +94,7 @@ OPERATIONS = {
 MESSAGES = {
     "duplicate_dir": "removing tree",
     "duplicate_file": "removing",
+    "unfinished_cksum": "checking",
     "emptydir": "removing",
     "emptyfile": "removing",
     "nonstripped": "stripping",

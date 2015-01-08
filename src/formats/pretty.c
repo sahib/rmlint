@@ -95,6 +95,12 @@ static void rm_fmt_head(_U RmSession *session, RmFmtHandler *parent, _U FILE *ou
 
 static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+
+    if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
+        /* pretty output should not contain this */
+        return;
+    }
+
     self->elems_written++;
 
     if(file->lint_type != self->last_lint_type) {

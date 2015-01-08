@@ -191,14 +191,16 @@ static void rm_fmt_elem(
 
         rm_fmt_json_key_unsafe(out, "path", file->path);
         rm_fmt_json_sep(out);
-        rm_fmt_json_key_int(out, "size", file->file_size);
-        rm_fmt_json_sep(out);
-        rm_fmt_json_key_int(out, "inode", file->inode);
-        rm_fmt_json_sep(out);
-        rm_fmt_json_key_int(out, "disk_id", file->dev);
-        rm_fmt_json_sep(out);
-        rm_fmt_json_key_bool(out, "is_original", file->is_original);
-        rm_fmt_json_sep(out);
+        if(file->lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {
+            rm_fmt_json_key_int(out, "size", file->file_size);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "inode", file->inode);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_int(out, "disk_id", file->dev);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key_bool(out, "is_original", file->is_original);
+            rm_fmt_json_sep(out);
+        }
         rm_fmt_json_key_int(out, "mtime", file->mtime);
     }
     rm_fmt_json_close(out);

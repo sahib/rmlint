@@ -69,7 +69,15 @@ typedef enum RmLintType {
      * Also they only appear at the very end of processing temporarily.
      * So it does not matter if this type is behind RM_LINT_TYPE_DUPE_CANDIDATE.
      */
-    RM_LINT_TYPE_DUPE_DIR_CANDIDATE
+    RM_LINT_TYPE_DUPE_DIR_CANDIDATE,
+
+    /* Special type for files that got sieved out during shreddering.
+     * if settings->write_unfinished is true, those may be included in the
+     * json/xattr/csv output.
+     *
+     * This is mainly useful for caching.
+     */
+    RM_LINT_TYPE_UNFINISHED_CKSUM, 
 } RmLintType;
 
 

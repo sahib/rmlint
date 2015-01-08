@@ -44,6 +44,11 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
     char *line = NULL;
 
+    if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
+        /* we do not want to list unfinished files. */
+        return;
+    }
+
     switch(file->lint_type) {
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
     case RM_LINT_TYPE_DUPE_CANDIDATE:

@@ -57,7 +57,10 @@ static void rm_fmt_elem(
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
-    rm_digest_hexstring(file->digest, checksum_str);
+
+    if(file->digest) {
+        rm_digest_hexstring(file->digest, checksum_str);
+    }
 
     /* Escape quotes in the path (refer http://tools.ietf.org/html/rfc4180, item 6)*/
     char *clean_path = rm_util_strsub(file->path, CSV_QUOTE, CSV_QUOTE""CSV_QUOTE);

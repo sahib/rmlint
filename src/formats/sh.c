@@ -133,6 +133,11 @@ static char *rm_fmt_sh_escape_path(char *path) {
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
 
+    if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
+        /* we do not want to handle this one */
+        return;
+    }
+
     /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
      * for more info on this
      * */
