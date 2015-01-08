@@ -114,7 +114,7 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
     g_assert(session);
 
 #if HAVE_XATTR
-    if(file->has_ext_cksum || session->settings->write_cksum_to_ext == false) {
+    if(file->has_ext_cksum || session->settings->write_cksum_to_xattr == false) {
         return EINVAL;
     }
 
@@ -145,7 +145,7 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
     g_assert(session);
 
 #if HAVE_XATTR
-    if(session->settings->read_cksum_from_ext == false) {
+    if(session->settings->read_cksum_from_xattr == false) {
         return NULL;
     }
 

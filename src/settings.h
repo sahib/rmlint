@@ -55,9 +55,9 @@ typedef struct RmSettings {
     bool match_with_extension;      /*  if set, dupes must have the same file extension (if any) */
     bool match_without_extension;   /*  if set, dupes must have the same basename minus the extension */
     bool merge_directories;         /*  if set, find identical directories full of duplicates */
-    bool write_cksum_to_ext;        /*  if set, checksums are written to the ext of hashed files */
-    bool read_cksum_from_ext;       /*  if set, checksums are tried to be read from the file exts */
-    bool clear_ext_fields;          /*  if set, all encountered ext fields are cleared */
+    bool write_cksum_to_xattr;      /*  if set, checksums are written to the ext of hashed files */
+    bool read_cksum_from_xattr;     /*  if set, checksums are tried to be read from the file exts */
+    bool clear_xattr_fields;        /*  if set, all encountered ext fields are cleared */
     bool write_unfinished;          /*  if set, all unfinished checksum are written to json/xattr too */
 
     int depth;                      /*  max. depth to traverse, 0 means current dir */

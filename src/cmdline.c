@@ -892,19 +892,19 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             settings->ignore_hidden = false;
             break;
         case 'z':
-            settings->write_cksum_to_ext = true;
+            settings->write_cksum_to_xattr = true;
             break;
         case 'Z':
-            settings->write_cksum_to_ext = false;
+            settings->write_cksum_to_xattr = false;
             break;
         case 'j':
-            settings->read_cksum_from_ext = true;
+            settings->read_cksum_from_xattr = true;
             break;
         case 'J':
-            settings->read_cksum_from_ext = false;
+            settings->read_cksum_from_xattr = false;
             break;
         case 'Y':
-            settings->clear_ext_fields = true;
+            settings->clear_xattr_fields = true;
             break;
         case 'U':
             settings->write_unfinished = true;

@@ -163,7 +163,7 @@ static void rm_traverse_file(
         }
         g_mutex_unlock(&trav_session->lock);
 
-        if(trav_session->session->settings->clear_ext_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+        if(trav_session->session->settings->clear_xattr_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
             rm_log_debug("Clearing xattr fields of %s\n", file->path);
             rm_xattr_clear_hash(session, file);
         }

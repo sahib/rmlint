@@ -384,7 +384,7 @@ typedef enum RmShredGroupStatus {
 #define NEEDS_NPREF(group) (group->main->session->settings->must_match_untagged || group->main->session->settings->keep_all_tagged)
 #define NEEDS_NEW(group)   (group->main->session->settings->min_mtime)
 
-#define HAS_CACHE(session) (session->settings->read_cksum_from_ext || session->cache_list.length)
+#define HAS_CACHE(session) (session->settings->read_cksum_from_xattr || session->cache_list.length)
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
@@ -669,6 +669,14 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     rm_fmt_unlock_state(session->formats);
 }
 
+static void rm_shred_write_cksum_to_xattr(RmSession *session, RmFile *file) {
+    if(session->settings->write_cksum_to_xattr) {
+        if(file->has_ext_cksum == false) {
+            rm_xattr_write_hash(session, file);
+        }
+    }
+}
+
 /* Hash file. Runs as threadpool in parallel / tandem with rm_shred_read_factory above
  * */
 static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
@@ -684,11 +692,8 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
         g_assert(buffer->file->hash_offset == buffer->file->shred_group->next_offset
                  || buffer->file->status == RM_FILE_STATE_FRAGMENT);
 
-        if(device->main->session->settings->write_cksum_to_ext) {
-            if(buffer->file->has_ext_cksum == false) {
-                rm_xattr_write_hash(device->main->session, buffer->file);
-            }
-        }
+        /* remember that checksum */
+        rm_shred_write_cksum_to_xattr(device->main->session, buffer->file);
 
         g_async_queue_push(device->hashed_file_return, buffer->file);
     }
@@ -756,6 +761,7 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
 
             if(file->digest) {
                 rm_fmt_write(file, session->formats);
+                rm_shred_write_cksum_to_xattr(session, file);
                 file->digest = NULL;
             }
         }
@@ -1144,7 +1150,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 
     rm_shred_group_push_file(group, file, true);
 
-    if(main->session->settings->read_cksum_from_ext) {
+    if(main->session->settings->read_cksum_from_xattr) {
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
             g_hash_table_insert(
