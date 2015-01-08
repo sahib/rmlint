@@ -42,9 +42,6 @@
 
 #include "config.h"
 
-/* JSON parsing library */
-#include "jsmn/jsmn.h"
-
 /* Not available there,
  * but might be on other non-linux systems
  * */

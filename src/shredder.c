@@ -757,11 +757,11 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
         RmSession *session = device->main->session;
         rm_shred_adjust_counters(device, -1, -(gint64)(file->file_size - file->hash_offset));
 
-        /* ShredGroup that was going nowhere TODO */
-        if(file->shred_group->num_files <= 1 && (session->settings->write_unfinished || 1)) {
-            // g_printerr("Discarding: %s\n", file->path);
+        /* ShredGroup that was going nowhere */
+        if(file->shred_group->num_files <= 1 && session->settings->write_unfinished) {
             file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
-            file->digest = file->shred_group->digest;
+            file->digest = (file->digest) ? file->digest : file->shred_group->digest;
+
             if(file->digest) {
                 rm_fmt_write(file, session->formats);
                 file->digest = NULL;
