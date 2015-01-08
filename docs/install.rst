@@ -16,15 +16,21 @@ Hard dependencies:
 ~~~~~~~~~~~~~~~~~~
 
 * **glib** :math:`\geq 2.32` (general C Utility Library)
+
+Soft dependencies:
+~~~~~~~~~~~~~~~~~~
+
 * **libblkid** (detecting mountpoints)
 * **libelf** (nonstripped binary detection)
+* **libjson-glib** (parsing rmlint's own json as caching layer)
 
 Build dependencies:
 ~~~~~~~~~~~~~~~~~~~
 
 * **git** (version control)
 * **scons** (build system)
-* **sphinx>=3.0** (manpage/documentation generation)
+* **sphinx** (manpage/documentation generation)
+* **gettext** (support for localization)
 
 Here's a list of readily prepared commands for known distributions:
 
@@ -32,7 +38,7 @@ Here's a list of readily prepared commands for known distributions:
 
   .. code-block:: bash
   
-    $ yum -y install git scons python3-sphinx gettext
+    $ yum -y install git scons python3-sphinx gettext json-glib-devel
     $ yum -y install glib2-devel libblkid-devel elfutils-libelf-devel
 
   There are also pre-built packages on `Fedora Copr`_:
@@ -51,7 +57,7 @@ Here's a list of readily prepared commands for known distributions:
   .. code-block:: bash
 
     $ pacman -S git scons python-sphinx
-    $ pacman -S glib2 libutil-linux elfutils
+    $ pacman -S glib2 libutil-linux elfutils json-glib
 
   There is also a `PKGBUILD`_ on the `ArchLinux AUR`_:
 
@@ -70,8 +76,8 @@ Here's a list of readily prepared commands for known distributions:
 
   .. code-block:: bash
 
-    $ apt-get install git scons python3-sphinx python3-nose gettext
-    $ apt-get install libelf-dev libglib2.0-dev libblkid-dev 
+    $ apt-get install git scons python3-sphinx python3-nose gettext 
+    $ apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0-0 libjson-glib-1.0-0-dev
 
 
 * **FreeBSD:**
@@ -88,6 +94,9 @@ Here's a list of readily prepared commands for known distributions:
     $ cd /usr/ports/sysutils/rmlint && make install
 
 Send us a note if you want to see your distribution here.
+The commands above install the full dependencies, therefore
+some packages might be stripped if you do not need the feature
+they enable. Only hard requirement is ``glib``.
 
 Compilation
 -----------

@@ -9,7 +9,7 @@ pkgdesc="Tool to remove duplicates and other lint, being much faster than fdupes
 arch=('i686' 'x86_64')
 url="https://github.com/sahib/rmlint"
 license=('GPL3')
-depends=('glibc' 'glib2>=2.31' 'libutil-linux' 'elfutils')
+depends=('glibc' 'glib2>=2.31' 'libutil-linux' 'elfutils', 'gettext', 'json-glib')
 makedepends=('git' 'scons' 'python-sphinx')
 conflicts=("$_rmlint")
 provides=("$_pkgname")

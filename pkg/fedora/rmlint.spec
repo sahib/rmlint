@@ -6,8 +6,8 @@ Group:          Applications/System
 License:        GPLv3
 URL:            http://rmlint.rtfd.org
 Source0:        https://github.com/sahib/rmlint/archive/rmlint-%{version}.tar.gz
-Requires:       glib2 libblkid elfutils-libelf
-BuildRequires:  scons python3-sphinx gettext libblkid-devel elfutils-libelf-devel glib2-devel
+Requires:       glib2 libblkid elfutils-libelf json-glib
+BuildRequires:  scons python3-sphinx gettext libblkid-devel elfutils-libelf-devel glib2-devel json-glib-devel
 
 %description
 rmlint finds space waste and other broken things and offers to remove it. It is

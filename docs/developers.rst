@@ -124,6 +124,11 @@ Arguments
     Do not link with ``libblkid``, which is needed to differentiate between
     normal rotational harddisks and non-rotational disks.
 
+:--without-json-glib:
+
+    Do not link with ``libjson-glib``, which is needed to load json-cache files.
+    Without this library a warning is printed when using ``-C / --cache``.
+
 :--without-fiemap:
 
     Do not attempt to use the ``FIEMAP ioctl(2)``. 
