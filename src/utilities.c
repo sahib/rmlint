@@ -82,6 +82,10 @@
 #  include <sys/sysctl.h>
 #endif
 
+#if  HAVE_JSON_GLIB
+#  include <json-glib/json-glib.h>
+#endif
+
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
@@ -329,136 +333,82 @@ void rm_userlist_destroy(RmUserList *self) {
 //    JSON CACHE IMPLEMENTATION    //
 /////////////////////////////////////
 
-static bool rm_json_cache_parse_entry(GHashTable *cksum_table, char *json_data, jsmntok_t *tokens, int n_entries) {
-    /* Key and value are alternating */
-    if(n_entries % 2 == 1) {
-        rm_log_warning_line("json cache looks not like valid json.");
-        return false;
+#if HAVE_JSON_GLIB
+
+void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index, JsonNode *element_node, GHashTable *cksum_table) {
+    if(JSON_NODE_TYPE(element_node) != JSON_NODE_OBJECT) {
+        return;
     }
 
-    RmStat stat_buf;
-    char *mtime = NULL, *path = NULL, *cksum = NULL, *type = NULL;
+    JsonObject *object = json_node_get_object(element_node);
+    JsonNode *mtime_node = json_object_get_member(object, "mtime");
+    JsonNode *path_node = json_object_get_member(object, "path");
+    JsonNode *cksum_node = json_object_get_member(object, "checksum");
 
-    for(int i = 0; i < n_entries; i += 2) {
-        int elem_len = tokens[i].end - tokens[i].start;
-        char *elem_p = &json_data[tokens[i].start];
-        char **extract = NULL;
+    if(mtime_node && path_node && cksum_node) {
+        RmStat stat_buf;
+        const char * path = json_node_get_string(path_node);
+        const char * cksum = json_node_get_string(cksum_node);
 
-        if(strncmp("type", elem_p, elem_len) == 0) {
-            extract = &type;
-        } else if(strncmp("path", elem_p, elem_len) == 0) {
-            extract = &path;
-        } else if(strncmp("checksum", elem_p, elem_len) == 0) {
-            extract = &cksum;
-        } else if(strncmp("mtime", elem_p, elem_len) == 0) {
-            extract = &mtime;
+        if(rm_sys_stat(path, &stat_buf) == -1) {
+            /* file does not appear to exist */
+            return;
         }
 
-        if(extract) {
-            *extract = &json_data[tokens[i + 1].start];
-            json_data[tokens[i + 1].end] = 0;
+        if(json_node_get_int(mtime_node) < stat_buf.st_mtim.tv_sec) {
+            /* file is newer than stored checksum */
+            return;
         }
-    }
 
-    /* Post checking */
-    if(0 
-        || (mtime == NULL || path == NULL) 
-        || (strcmp(type, "duplicate_file") && strcmp(type, "unfinished_cksum"))
-        || rm_sys_stat(path, &stat_buf) == -1
-        || g_ascii_strtoll(mtime, NULL, 10) < stat_buf.st_mtim.tv_sec
-    ) {
-        return false;
-    }
-
-    /* It was worth all the hassle, add the entry */
-    g_hash_table_replace(cksum_table, g_strdup(path), g_strdup(cksum));
-    rm_log_debug("Adding cache entry %s (%s)\n", path, cksum);
-    return true;
+        g_hash_table_replace(cksum_table, g_strdup(path), g_strdup(cksum));
+        rm_log_debug("Adding cache entry %s (%s)\n", path, cksum);
+    } 
 }
 
-static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data, size_t json_len) {
-    bool result = false;
-
-    /* Guess number of tokens to allocate from file size. 
-     * A json dict entry is about 250 - 350 bytes long.
-     * Each dict has 14 tokens, there * 7. (we multiply with 2 later)
-     * */
-    size_t n_tokens = MAX(512, (json_len / 250) * 7);
-    jsmntok_t *tokens = NULL;
-    jsmnerr_t parse_err = 0;
-
-    jsmn_parser parser;
-    jsmn_init(&parser);
-
-    /* try to find suitable size for the tokens buf */
-    do {
-        n_tokens *= 2;
-        tokens = g_realloc(tokens, sizeof(jsmntok_t) * n_tokens);
-    } while((parse_err = jsmn_parse(&parser, json_data, json_len, tokens, n_tokens)) == JSMN_ERROR_NOMEM);
-
-    if(parse_err) {
-        rm_log_debug("jsmn error code was #%d\n", parse_err);
-        goto failure;
-    }
-
-    for(int i = 0, dict_entries = 0; n_tokens; ++i) {
-        jsmntok_t *token = &tokens[i];
-
-        /* end of stream? */
-        if(token->start == 0 && token->end == 0) {
-            break;
-        }
-
-        /* is it a dictionary? */
-        if(token->type == JSMN_OBJECT) {
-            dict_entries = token->size;
-            continue;
-        }
-
-        /* yes, it *was*. Parse it's children. */
-        if(dict_entries != 0) {
-            result += rm_json_cache_parse_entry(
-                cksum_table, json_data, &tokens[i], dict_entries
-            );
-        }
-
-        /* reset */
-        dict_entries = 0;
-    }
-
-failure:
-    g_free(tokens);
-    return result;
-}
+#else 
 
 int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
+#if HAVE_JSON_GLIB
+    rm_log_info_line("caching is not supported due to missing json-glib library.");
+    return EXIT_FAILURE;
+#else
     g_assert(cksum_table);
     g_assert(json_path);
 
-    int error_return = 0;
-
-    gsize json_len = 0;
-    char *json_data = NULL;
+    int result = EXIT_FAILURE;
     GError *error = NULL;
+    size_t keys_in_table = g_hash_table_size(cksum_table);
+    JsonParser *parser = json_parser_new ();
 
-    if(g_file_get_contents(json_path, &json_data, &json_len, &error)) {
-        if(rm_json_cache_parse(cksum_table, json_data, json_len) == false) {
-            rm_log_error_line(_("Could not parse cache: %s"), json_path);
-        }
+    rm_log_info_line("Loading json-cache %s", json_path);
 
-        g_free(json_data);
-    } else {
-        rm_log_warning_line(
-            _("Cannot read json cache file ,,%s'': %s"),
-            json_path, error ? error->message : _("unknown reason")
-        );
-
-        error_return = error->code;
+    if(!json_parser_load_from_file(parser, json_path, &error)) {
+        g_print("Unable to parse `%s': %s\n", json_path, error->message);
         g_error_free(error);
-
+        g_object_unref(parser);
+        goto failure;
     }
 
-    return error_return;
+    JsonNode *root = json_parser_get_root (parser);
+    if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {
+        rm_log_warning_line("No valid json cache (no array as root)");
+        goto failure;
+    }
+
+    /* Iterate over all objects in it */
+    json_array_foreach_element(
+        json_node_get_array(root),
+        (JsonArrayForeach)rm_json_cache_parse_entry,
+        cksum_table
+    );
+    
+    /* check if some entries were added */
+    result = (keys_in_table >= g_hash_table_size(cksum_table));
+
+failure:
+    g_object_unref(parser);
+    return result;
+#endif
 }
 
 /////////////////////////////////////

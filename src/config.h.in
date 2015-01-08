@@ -6,6 +6,7 @@
 #define HAVE_BLKID         ({HAVE_BLKID})
 #define HAVE_LIBINTL       ({HAVE_LIBINTL})
 #define HAVE_LIBELF        ({HAVE_LIBELF})
+#define HAVE_JSON_GLIB     ({HAVE_JSON_GLIB})
 #define HAVE_GETMNTENT     ({HAVE_GETMNTENT})
 #define HAVE_GETMNTINFO    ({HAVE_GETMNTINFO})
 #define HAVE_FIEMAP        ({HAVE_FIEMAP})
@@ -101,5 +102,11 @@ typedef guint64 RmOff;
     rm_log_warning(__VA_ARGS__);  \
     rm_log_warning("\n");         \
 
+#define rm_log_info_line(...)     \
+    rm_log_warning(GREEN);        \
+    rm_log_warning(_("INFO"));    \
+    rm_log_warning(": "RESET);    \
+    rm_log_warning(__VA_ARGS__);  \
+    rm_log_warning("\n");         \
 
 #endif

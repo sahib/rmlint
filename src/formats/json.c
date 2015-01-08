@@ -31,6 +31,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#if  HAVE_JSON_GLIB
+#  include <json-glib/json-glib.h>
+#endif
+
 typedef struct RmFmtHandlerJSON {
     /* must be first */
     RmFmtHandler parent;

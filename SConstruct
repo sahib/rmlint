@@ -458,9 +458,15 @@ conf.check_pkg('glib-2.0 >= 2.32', 'HAVE_GLIB', required=True)
 conf.env['HAVE_BLKID'] = 0
 conf.check_pkg('blkid', 'HAVE_BLKID', required=False)
 
+conf.env['HAVE_JSON_GLIB'] = 0
+conf.check_pkg('json-glib-1.0', 'HAVE_JSON_GLIB', required=False)
+
 packages = ['glib-2.0']
 if conf.env['HAVE_BLKID']:
     packages.append('blkid')
+
+if conf.env['HAVE_JSON_GLIB']:
+    packages.append('json-glib-1.0')
 
 ###########################################################################
 #                           Compiler Flags                                #
