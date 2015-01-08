@@ -610,6 +610,16 @@ Misc options
 If you read so far, you know ``rmlint`` pretty well by now. 
 Here's just a list of options that are nice to know, but not essential:
 
+- Consecutive runs of ``rmlint`` can be speed up by using ``--cache``.
+
+  .. code-block:: python
+
+    $ rmlint large_dataset/ -O json:cache.json --write-unfinished
+    $ rmlint large_dataset/ -C cache.json
+
+  Here, the second run should (or *might*) run a lot faster.
+  But be sure to read the caveats stated in the `manpage`_!
+
 - ``-r`` (``--hidden``): Include hidden files and directories - this is to save
   you from destroying git repositories (or similar programs) that save their
   information in a ``.git`` directory where ``rmlint`` often finds duplicates. 
@@ -657,3 +667,5 @@ Here's just a list of options that are nice to know, but not essential:
 
     # Start hashing at byte 100, but not more than 90% of the filesize.
     $ rmlint -q 100 -Q.9 
+
+.. _manpage: http://rmlint.readthedocs.org/en/latest/rmlint.1.html
