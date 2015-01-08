@@ -618,9 +618,10 @@ Here's just a list of options that are nice to know, but not essential:
 
   .. code-block:: bash
   
-      $ find . | grep -v '\(.git\|.svn\)' | rmlint -
+      $ # find all files except everything under .git or .svn folders
+      $ find . -type d | grep -v '\(.git\|.svn\)' | rmlint - --hidden
 
-  But you would have checked the output anyways?
+  But you would have checked the output anyways, wouldn't you?
 
 - If something ever goes wrong, it might help to increase the verbosity with
   ``-v`` (up to ``-vvv``).

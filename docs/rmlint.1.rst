@@ -316,6 +316,55 @@ Original Detection Options
 
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+
+Caching
+-------
+
+:``--xattr-read`` / ``--xattr-write`` / ``--xattr-clear``:
+
+    Read or write cached checksums from the extended file attributes.
+    This feature can be used to speed up consecutive runs.
+
+    The same notes as in ``--cache`` apply.
+
+    **NOTE:** Many tools do not support extended file attributes properly,
+    resulting in a loss of the information when copying the file or editing it.
+    Also, this is a linux specific feature that works not on all filesystems and 
+    only if you write permissions to the file.
+
+:``-C --cache file.json``:
+
+    Read checksums from a *json* file. This *json* file is the same that is
+    outputted via ``-o json``, but you can also enrich the *json* with 
+    the checksums of sieved out files via ``--write-unfinished``.
+
+    Usage example: ::
+
+        $ rmlint large_cluster/ -O json:cache.json -U   # first run.
+        $ rmlint large_cluster/ -C cache.json           # second run.
+
+    **CAUTION:** This is a potentially unsafe feature. The cache file might be
+    changed accidentally, potentially causing ``rmlint`` to report false
+    positives. As a security feature the `mtime` of each cached file is checked 
+    against the `mtime` of the time the checksum was created.
+
+    **NOTE:** The speedup you may experience may vary wildly. In some cases the
+    parsing of the json file might take longer than the actual hashing. Also,
+    the cached json file will not be of use when doing many modifications
+    between the runs, i.e. causing an update of `mtime` on most files. This
+    feature is mostly intended for large datasets in order to prevent the
+    re-hashing of large files. If you want to ensure this, you can use
+    ``--size``.
+
+:``-U --write-unfinished``: 
+
+    Include files in output that have not been hashed fully (i.e. files that
+    do not appear to have a duplicate). This is mainly useful in conjunction
+    with ``--cache``. When re-running rmlint on a large dataset this can greatly
+    speed up a re-run.
+
+    This option also applies for ``--xattr-write``. 
+
     
 FORMATTERS
 ==========

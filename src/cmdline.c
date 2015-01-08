@@ -742,7 +742,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"read-xattr"                 , no_argument       , 0 , 'j'} ,
             {"no-read-xattr"              , no_argument       , 0 , 'J'} ,
             {"clear-xattr"                , no_argument       , 0 , 'Y'} ,
-            {"write-unfinished-cksums"    , no_argument       , 0 , 'U'} ,
+            {"write-unfinished"           , no_argument       , 0 , 'U'} ,
             {"usage"                      , no_argument       , 0 , 'h'} ,
             {"help"                       , no_argument       , 0 , 'H'} ,
             {"version"                    , no_argument       , 0 , 'y'} ,
