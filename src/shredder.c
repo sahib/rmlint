@@ -997,6 +997,7 @@ static gboolean rm_shred_sift(RmFile *file) {
     g_mutex_lock(&tag->group_lock);
     {
         if (file->status == RM_FILE_STATE_IGNORE) {
+            rm_digest_free(file->digest);
             rm_shred_discard_file(file, true);
         } else {
             g_assert(file->digest);
