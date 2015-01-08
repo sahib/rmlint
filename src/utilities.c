@@ -341,11 +341,21 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index, JsonNode *el
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
     JsonNode *path_node = json_object_get_member(object, "path");
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
+    JsonNode *type_node = json_object_get_member(object, "checksum");
 
-    if(mtime_node && path_node && cksum_node) {
+    if(mtime_node && path_node && cksum_node && type_node) {
         RmStat stat_buf;
-        const char * path = json_node_get_string(path_node);
-        const char * cksum = json_node_get_string(cksum_node);
+        const char *path = json_node_get_string(path_node);
+        const char *cksum = json_node_get_string(cksum_node);
+        const char *type = json_node_get_string(type_node);
+
+        if(g_strcmp0(type, "duplicate_file") && g_strcmp0(type, "unfinished_cksum")) {
+            /* some other file that has a checksum for weird reasons. 
+             * This is here to prevent errors like reporting files with 
+             * empty checksums as duplicates.
+             * */
+            return;
+        }
 
         if(rm_sys_stat(path, &stat_buf) == -1) {
             /* file does not appear to exist */
