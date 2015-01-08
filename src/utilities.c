@@ -365,10 +365,13 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index, JsonNode *el
     } 
 }
 
-#else 
+#endif
 
 int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
-#if HAVE_JSON_GLIB
+#if !HAVE_JSON_GLIB
+    (void)cksum_table;
+    (void)json_path;
+
     rm_log_info_line("caching is not supported due to missing json-glib library.");
     return EXIT_FAILURE;
 #else

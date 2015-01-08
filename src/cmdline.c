@@ -79,7 +79,9 @@ static void rm_cmd_show_version(void) {
         {.name="fiemap",      .enabled=HAVE_FIEMAP},
         {.name="sha512",      .enabled=HAVE_SHA512},
         {.name="bigfiles",    .enabled=HAVE_BIGFILES},
-        {.name="intl",        .enabled=HAVE_LIBINTL}
+        {.name="intl",        .enabled=HAVE_LIBINTL},
+        {.name="json-cache",  .enabled=HAVE_JSON_GLIB},
+        {.name="xattr",       .enabled=HAVE_XATTR}
     };
 
     int n_features = sizeof(features) / sizeof(features[0]);

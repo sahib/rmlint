@@ -624,6 +624,7 @@ if 'config' in COMMAND_LINE_TARGETS:
     Support for SSE4.2 instructions for fast CityHash : {sse42}
     Build manpage from docs/rmlint.1.rst              : {sphinx}
     Support for caching checksums in file's xattr     : {xattr}
+    Support for reading json caches (needs json-glib) : {json_glib}
     Checking for proper support of big files >= 4GB   : {bigfiles}
         (needs either sizeof(off_t) >= 8 ...)         : {bigofft}
         (... or presence of stat64)                   : {bigstat}
@@ -654,6 +655,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             locale=yesno(env['HAVE_LIBINTL']),
             msgfmt=yesno(env['HAVE_MSGFMT']),
             xattr=yesno(env['HAVE_XATTR']),
+            json_glib=yesno(env['HAVE_JSON_GLIB']),
             nonrotational=yesno(env['HAVE_GETMNTENT'] or env['HAVE_GETMNTINFO']),
             blkid=yesno(env['HAVE_BLKID']),
             getmntent=yesno(env['HAVE_GETMNTENT']),
