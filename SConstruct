@@ -385,7 +385,7 @@ AddOption(
     action='store', metavar='DIR', help='where files will eventually land'
 )
 
-for suffix in ['libelf', 'gettext', 'fiemap', 'blkid']:
+for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib']:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
         dest='with_' + suffix
@@ -460,6 +460,9 @@ conf.check_pkg('blkid', 'HAVE_BLKID', required=False)
 
 conf.env['HAVE_JSON_GLIB'] = 0
 conf.check_pkg('json-glib-1.0', 'HAVE_JSON_GLIB', required=False)
+
+if GetOption('with_json-glib') is False:
+    conf.env['HAVE_JSON_GLIB'] = 0
 
 packages = ['glib-2.0']
 if conf.env['HAVE_BLKID']:
