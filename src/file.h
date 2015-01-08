@@ -199,7 +199,8 @@ RmFile *rm_file_new(
 );
 
 /**
- * @brief Deallocate the memory allocated by rm_file_new
+ * @brief Deallocate the memory allocated by rm_file_new.
+ * @note does not deallocate file->digest since this is handled by shredder.c
  */
 void rm_file_destroy(RmFile *file);
 
