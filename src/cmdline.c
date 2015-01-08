@@ -1017,7 +1017,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         rm_fmt_add(session->formats, "pretty", "stdout");
         rm_fmt_add(session->formats, "summary", "stdout");
         rm_fmt_add(session->formats, "sh", "rmlint.sh");
-        rm_fmt_add(session->formats, "json", "rmlint.json");
     } else if(output_flag_cnt == 0) {
         /* There was no valid output flag given, but the user tried */
         rm_log_error_line(_("No valid -o flag encountered."));
