@@ -1,7 +1,7 @@
 language: c
 install: 
-    - sudo apt-get install libelf-dev libglib2.0-dev python3-sphinx libblkid-dev python3-nose gettext python3-setuptools valgrind
-    - sudo apt-get install libjson-glib-dev libjson-glib
+    - sudo apt-get install python3-sphinx python3-nose gettext python3-setuptools valgrind
+    - sudo apt-get install libblkid-dev libelf-dev libglib2.0-dev  libjson-glib-dev
     - sudo easy_install3 pip
     - sudo /usr/local/bin/pip install sphinx_bootstrap_theme
 compiler:
