@@ -690,7 +690,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
 
     /* Free/Used Options:
        Free:  B DEFGHIJKLMNOPQRST VWX Z abcdefghijklmnopqrstuvwxyz
-       Used: A C                 U   Y            
+       Used: A C                                  
     */
 
     while(1) {
@@ -742,6 +742,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"read-xattr"                 , no_argument       , 0 , 'j'} ,
             {"no-read-xattr"              , no_argument       , 0 , 'J'} ,
             {"clear-xattr"                , no_argument       , 0 , 'Y'} ,
+            {"write-unfinished-cksums"    , no_argument       , 0 , 'U'} ,
             {"usage"                      , no_argument       , 0 , 'h'} ,
             {"help"                       , no_argument       , 0 , 'H'} ,
             {"version"                    , no_argument       , 0 , 'y'} ,
@@ -751,7 +752,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         /* getopt_long stores the option index here. */
         choice = getopt_long(
                      argc, (char **)argv,
-                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:C:gvVwWrRfFXxpPkKmMlLhHybBeEiIDwWzZjJzY",
+                     "T:t:d:s:o:O:S:a:u:n:N:c:q:Q:C:gvVwWrRfFXxpPkKmMlLhHybBeEiIDwWzZjJzYU",
                      long_options, &option_index
                  );
 
@@ -904,6 +905,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         case 'Y':
             settings->clear_ext_fields = true;
+            break;
+        case 'U':
+            settings->write_unfinished = true;
             break;
         case 'S':
             settings->sort_criteria = optarg;
