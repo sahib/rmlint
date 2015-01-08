@@ -364,9 +364,6 @@ static bool rm_json_cache_parse_entry(GHashTable *cksum_table, char *json_data, 
         || rm_sys_stat(path, &stat_buf) == -1
         || g_ascii_strtoll(mtime, NULL, 10) < stat_buf.st_mtim.tv_sec
     ) {
-        if(errno) {
-            rm_log_perror("cache_stat");
-        }
         return false;
     }
 
@@ -421,8 +418,6 @@ static bool rm_json_cache_parse(GHashTable *cksum_table, char *json_data) {
         /* reset */
         dict_entries = 0;
     }
-
-    result = true;
 
 failure:
     g_free(tokens);
