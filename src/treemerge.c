@@ -61,8 +61,11 @@
 
 #include "treemerge.h"
 #include "shredder.h"
-#include "libart/art.h"
 #include "preprocess.h"
+#include "formats.h"
+
+/* patricia trie implementation */
+#include "libart/art.h"
 
 typedef struct RmDirectory {
     char *dirname;             /* Path to this directory without trailing slash              */
@@ -635,6 +638,23 @@ static void rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *director
     }
 }
 
+static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
+    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        RmLintType actual_type = file->lint_type;
+
+        file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
+        rm_fmt_write(file, self->session->formats);
+        file->lint_type = actual_type;
+    }
+
+    /* Recursively propagate to children */
+    for(GList *iter = directory->children.head; iter; iter = iter->next) {
+        RmDirectory *child = iter->data;
+        rm_tm_write_unfinished_cksums(self, child);
+    }
+}
+
 static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db, _U RmTreeMerger *self) {
     return da->depth - db->depth;
 }
@@ -760,6 +780,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 rm_tm_mark_original_files(self, directory);
             } else {
                 rm_tm_mark_duplicate_files(self, directory);
+            }
+
+            if(self->session->settings->write_unfinished) {
+                rm_tm_write_unfinished_cksums(self, directory);
             }
         }
 

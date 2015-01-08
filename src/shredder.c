@@ -759,8 +759,10 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
 
         /* ShredGroup that was going nowhere */
         if(file->shred_group->num_files <= 1 && session->settings->write_unfinished) {
+            RmLintType actual_type = file->lint_type;
             file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
             file->digest = (file->digest) ? file->digest : file->shred_group->digest;
+            file->lint_type = actual_type;
 
             if(file->digest) {
                 rm_fmt_write(file, session->formats);
