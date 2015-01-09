@@ -385,6 +385,11 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     g_assert(cksum_table);
     g_assert(json_path);
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+    /* Very old glib. Debian, Im looking at you. */
+    g_type_init();
+#endif
+
     int result = EXIT_FAILURE;
     GError *error = NULL;
     size_t keys_in_table = g_hash_table_size(cksum_table);
