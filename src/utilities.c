@@ -388,14 +388,13 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     int result = EXIT_FAILURE;
     GError *error = NULL;
     size_t keys_in_table = g_hash_table_size(cksum_table);
-    JsonParser *parser = json_parser_new ();
+    JsonParser *parser = json_parser_new();
 
     rm_log_info_line("Loading json-cache %s", json_path);
 
     if(!json_parser_load_from_file(parser, json_path, &error)) {
         g_print("Unable to parse `%s': %s\n", json_path, error->message);
         g_error_free(error);
-        g_object_unref(parser);
         goto failure;
     }
 
@@ -416,7 +415,9 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     result = (keys_in_table >= g_hash_table_size(cksum_table));
 
 failure:
-    g_object_unref(parser);
+    if(parser) {
+        g_object_unref(parser);
+    }
     return result;
 #endif
 }
