@@ -57,7 +57,7 @@ def run_rmlint(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     else:
         env, cmd = {}, []
 
-    cmd += ['./rmlint', target_dir, '-o', 'json:stdout'] + shlex.split(' '.join(args))
+    cmd += ['./rmlint', '-V', target_dir, '-o', 'json:stdout'] + shlex.split(' '.join(args))
 
     for output in outputs or []:
         cmd.append('-o')
