@@ -62,7 +62,6 @@ typedef struct RmSettings {
 
     int depth;                      /*  max. depth to traverse, 0 means current dir */
     int verbosity;                  /*  verbosity level (resembles G_LOG_LEVEL_* macros */
-    int paranoid;                   /*  Paranoia level from -2 to 3 */
 
     double skip_start_factor;       /*  Factor from 0.0 - 1.0, from where to start reading */
     double skip_end_factor;         /*  Factor from 0.0 - 1.0, where to stop reading       */

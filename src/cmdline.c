@@ -46,6 +46,10 @@
 #include "utilities.h"
 #include "formats.h"
 
+
+#define RM_ERROR_DOMAIN (g_quark_from_static_string("rmlint"))
+
+
 /* exit and return to calling method */
 static void rm_cmd_die(RmSession *session, int status) {
     rm_session_clear(session);
@@ -99,7 +103,7 @@ static void rm_cmd_show_version(void) {
     fprintf(stderr, RESET"\n");
 }
 
-static void rm_cmd_show_help(bool use_pager) {
+static void rm_cmd_show_help(void) {
     static const char *commands[] = {
         "man %s docs/rmlint.1.gz 2> /dev/null",
         "man %s rmlint",
@@ -109,7 +113,7 @@ static void rm_cmd_show_help(bool use_pager) {
     bool found_manpage = false;
 
     for(int i = 0; commands[i] && !found_manpage; ++i) {
-        char *command = g_strdup_printf(commands[i], (use_pager) ? "" : "-P cat");
+        char *command = g_strdup_printf(commands[i], "-P cat");
         if(system(command) == 0) {
             found_manpage = true;
         }
@@ -224,16 +228,27 @@ static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff 
     return (tmp_error == NULL);
 }
 
-static void rm_cmd_parse_limit_sizes(RmSession *session, char *range_spec) {
-    const char *error = NULL;
+static gboolean rm_cmd_parse_limit_sizes(
+    const char *option_name,
+    const gchar *range_spec,
+    RmSession *session,
+    GError **error
+) {
+    const char *error_msg = NULL;
     if(!rm_cmd_size_range_string_to_bytes(
                 range_spec,
                 &session->settings->minsize,
                 &session->settings->maxsize,
-                &error
+                &error_msg
             )) {
-        rm_log_error_line(_("cannot parse --limit: %s"), error);
-        rm_cmd_die(session, EXIT_FAILURE);
+        
+        g_set_error(
+            error, RM_ERROR_DOMAIN, 0,  _("cannot parse --limit: %s"), error
+        );
+        return false;
+    } else {
+        session->settings->limits_specified = true;
+        return true;
     }
 }
 
@@ -426,7 +441,13 @@ static char rm_cmd_find_lint_types_sep(const char *lint_string) {
     return *lint_string;
 }
 
-static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_string) {
+static gboolean rm_cmd_parse_lint_types(
+        const char *option_name,
+        const char *lint_string,
+        RmSession *session,
+        GError **error
+) {
+    RmSettings *settings = session->settings;
     RmLintTypeOption option_table[] = {{
             .names = NAMES{"all", 0},
             .enable = OPTS{
@@ -556,17 +577,21 @@ static void rm_cmd_parse_lint_types(RmSettings *settings, const char *lint_strin
 
     /* clean up */
     g_strfreev(lint_types);
+    return true;
 }
 
 static bool rm_cmd_timestamp_is_plain(const char *stamp) {
     return strchr(stamp, 'T') ? false : true;
 }
 
-static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
+static gboolean rm_cmd_parse_timestamp(
+    const char *option_name, const gchar *string, RmSession *session, GError **error
+) {
     time_t result = 0;
     bool plain = rm_cmd_timestamp_is_plain(string);
     session->settings->filter_mtime = false;
 
+    // TODO: GOnce this.
     tzset();
 
     if(plain) {
@@ -586,9 +611,11 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
     }
 
     if(result <= 0) {
-        rm_log_error_line(_("Unable to parse time spec \"%s\""), string);
-        rm_cmd_die(session, EXIT_FAILURE);
-        return 0;
+        g_set_error(
+            error, RM_ERROR_DOMAIN, 0,
+            _("Unable to parse time spec \"%s\""), string
+        );
+        return false;
     }
 
     /* Some sort of success. */
@@ -615,13 +642,17 @@ static time_t rm_cmd_parse_timestamp(RmSession *session, const char *string) {
         }
     }
 
-    return result;
+    /* Remember our result */
+    session->settings->min_mtime = result;
+    return true;
 }
 
-static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) {
+static gboolean rm_cmd_parse_timestamp_file(
+    const char *option_name, const gchar *timestamp_path, RmSession *session, GError **error
+) {
     time_t result = 0;
-    bool plain = true;
-    FILE *stamp_file = fopen(path, "r");
+    bool plain = true, success = false;
+    FILE *stamp_file = fopen(timestamp_path, "r");
 
     /* Assume failure */
     session->settings->filter_mtime = false;
@@ -629,8 +660,11 @@ static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) 
     if(stamp_file) {
         char stamp_buf[1024];
         memset(stamp_buf, 0, sizeof(stamp_buf));
+
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
-            result = rm_cmd_parse_timestamp(session, g_strstrip(stamp_buf));
+            success = rm_cmd_parse_timestamp(
+                option_name, g_strstrip(stamp_buf), session, error
+            );
             plain = rm_cmd_timestamp_is_plain(stamp_buf);
         }
 
@@ -640,7 +674,11 @@ static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) 
         plain = false;
     }
 
-    rm_fmt_add(session->formats, "stamp", path);
+    if(!success) {
+        return false;
+    }
+
+    rm_fmt_add(session->formats, "stamp", timestamp_path);
     if(!plain) {
         /* Enable iso8601 timestamp output */
         rm_fmt_set_config_value(
@@ -648,7 +686,7 @@ static time_t rm_cmd_parse_timestamp_file(RmSession *session, const char *path) 
         );
     }
 
-    return result;
+    return success;
 }
 
 static void rm_cmd_set_verbosity_from_cnt(RmSettings *settings, int verbosity_counter) {
@@ -659,9 +697,285 @@ static void rm_cmd_set_verbosity_from_cnt(RmSettings *settings, int verbosity_co
                           )];
 }
 
-/* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
+static void rm_cmd_set_paranoia_from_cnt(RmSettings *settings, int paranoia_counter) {
+    // TODO: Use GError
+    /* Handle the paranoia option */
+    switch(paranoia_counter) {
+    case -2:
+        settings->checksum_type = RM_DIGEST_SPOOKY32;
+        break;
+    case -1:
+        settings->checksum_type = RM_DIGEST_SPOOKY64;
+        break;
+    case 0:
+        /* leave users choice of -a (default) */
+        break;
+    case 1:
+        settings->checksum_type = RM_DIGEST_BASTARD;
+        break;
+    case 2:
+#if HAVE_SHA512
+        settings->checksum_type = RM_DIGEST_SHA512;
+#else
+        settings->checksum_type = RM_DIGEST_SHA256;
+#endif
+        break;
+    case 3:
+        settings->checksum_type = RM_DIGEST_PARANOID;
+        break;
+    default:
+        rm_log_error_line(_("Only up to -ppp or down to -P flags allowed."));
+        // rm_cmd_die(session, EXIT_FAILURE);
+        break;
+    }
+}
+
+static void rm_cmd_on_error(GOptionContext *context, GOptionGroup *group, RmSession *session, GError **error) {
+    if(error != NULL) {
+        rm_log_error_line("wrong commandline: %s", (*error)->message);
+        rm_cmd_die(session, EXIT_FAILURE);
+    }
+}
+
+static gboolean rm_cmd_parse_max_depth(
+    const char *option_name,
+    const gchar *value,
+    RmSession *session,
+    GError **error
+) {
+}
+
+static gboolean rm_cmd_parse_algorithm(
+    const char *option_name,
+    const gchar *value,
+    RmSession *session,
+    GError **error
+) {
     RmSettings *settings = session->settings;
+    settings->checksum_type = rm_string_to_digest_type(value);
+
+    if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
+        g_set_error(error, RM_ERROR_DOMAIN, 0, _("Unknown hash algorithm: '%s'"), value);
+    } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
+        session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
+        session->hash_seed2 = GPOINTER_TO_UINT(&session);
+    }
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_small_output(
+    const char *option_name, const gchar *output_pair, RmSession *session, GError **error
+) {
+    // TODO: -oO?
+    rm_cmd_parse_output_pair(session, optarg);
+    return true;
+}
+
+static gboolean rm_cmd_parse_large_output(
+    const char *option_name, const gchar *output_pair, RmSession *session, GError **error
+) {
+    // TODO: -oO?
+    rm_cmd_parse_output_pair(session, optarg);
+    return true;
+}
+
+static gboolean rm_cmd_parse_paranoid_mem(
+    const char *option_name, const gchar *size_spec, RmSession *session, GError **error
+) {
+    const char *parse_error = NULL;
+    RmOff size = rm_cmd_size_string_to_bytes(size_spec, &parse_error);
+
+    if(parse_error != NULL) {
+        g_set_error(
+            error, RM_ERROR_DOMAIN, 0, 
+            _("Invalid size description \"%s\": %s"), size_spec, parse_error
+        );
+        return false;
+    } else {
+        session->settings->paranoid_mem = size;
+        return true;
+    }
+}
+
+
+static gboolean rm_cmd_parse_clamp_low(
+    const char *option_name, const gchar *spec, RmSession *session, GError **error
+) {
+    // TODO: error passing.
+    rm_cmd_parse_clamp_option(session, spec, true);
+    return true;
+}
+
+static gboolean rm_cmd_parse_clamp_top(
+    const char *option_name, const gchar *spec, RmSession *session, GError **error
+) {
+    // TODO: error passing.
+    rm_cmd_parse_clamp_option(session, spec, false);
+    return true;
+}
+
+static gboolean rm_cmd_parse_cache(
+    const char *option_name, const gchar *cache_path, RmSession *session, GError **error
+) {
+    if(!g_file_test(cache_path, G_FILE_TEST_IS_REGULAR)) {
+        g_set_error(error, RM_ERROR_DOMAIN, 0, "There is no cache at `%s'", cache_path);
+        return false;
+    }
+    
+    g_queue_push_tail(&session->cache_list, (char *)cache_path);
+    return true;
+}
+
+static gboolean rm_cmd_parse_progress(
+    const char *option_name, const gchar *cache_path, RmSession *session, GError **error
+) {
+    // TODO: clear others.
+    rm_fmt_add(session->formats, "progressbar", "stdout");
+    rm_fmt_add(session->formats, "summary", "stdout");
+    rm_fmt_add(session->formats, "sh", "rmlint.sh");
+    return true;
+}
+
+static gboolean rm_cmd_parse_no_progress(
+    const char *option_name, const gchar *cache_path, RmSession *session, GError **error
+) {
+    // TODO: clear others, enable defaults.
+    return true;
+}
+
+static int rm_cmd_parse_multi_option(const char *count, char check) {
+    if(count == 0 || *count == 0) {
+        return 0;
+    } else {
+        return (*count == check) + rm_cmd_parse_multi_option(&count[1], check);
+    }
+}
+
+static gboolean rm_cmd_parse_loud(
+    const char *option_name, const gchar *count, RmSession *session, GError **error
+) {
+    rm_cmd_set_verbosity_from_cnt(session->settings, ++session->verbosity_count);
+    return true;
+}
+
+static gboolean rm_cmd_parse_quiet(
+    const char *option_name, const gchar *count, RmSession *session, GError **error
+) {
+    rm_cmd_set_verbosity_from_cnt(session->settings, --session->verbosity_count);
+    return true;
+}
+
+static gboolean rm_cmd_parse_paranoid(
+    const char *option_name, const gchar *count, RmSession *session, GError **error
+) {
+    rm_cmd_set_paranoia_from_cnt(session->settings, ++session->paranoia_count, error);
+    return true;
+}
+
+static gboolean rm_cmd_parse_less_paranoid(
+    const char *option_name, const gchar *count, RmSession *session, GError **error
+) {
+    rm_cmd_set_paranoia_from_cnt(session->settings, --session->paranoia_count, error);
+    return true;
+}
+
+/* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
+bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
+    RmSettings *settings = session->settings;
+
+    /* Option variables */
+    const char **paths = NULL;
+
+    // TODO: is -t still revelant?
+    #define FUNC(name) ((GOptionArgFunc)rm_cmd_parse_##name)
+
+    const GOptionEntry option_entries[] = {
+        /* Option with required arguments */
+        {"threads"          , 't' , 0 , G_OPTION_ARG_INT      , &settings->threads       , "Specify max number of threads" , "N"          },
+        {"max-depth"        , 'd' , 0 , G_OPTION_ARG_INT      , &settings->depth         , "Specify max traversal depth"   , "N"          },
+        {"sortcriteria"     , 'S' , 0 , G_OPTION_ARG_STRING   , &settings->sort_criteria , "Original criteria"             , "[amp]"      },
+        {"types"            , 'T' , 0 , G_OPTION_ARG_CALLBACK , FUNC(lint_types)         , "Specify lint types"            , "T"          },
+        {"size"             , 's' , 0 , G_OPTION_ARG_CALLBACK , FUNC(limit_sizes)        , "Specify size limits"           , "m-M"        },
+        {"algorithm"        , 'a' , 0 , G_OPTION_ARG_CALLBACK , FUNC(algorithm)          , "Choose hash algorithm"         , "A"          },
+        {"output"           , 'o' , 0 , G_OPTION_ARG_CALLBACK , FUNC(small_output)       , "Add output (override default)" , "FMT[:PATH]" },
+        {"add-output"       , 'O' , 0 , G_OPTION_ARG_CALLBACK , FUNC(large_output)       , "Add output (add to defaults)"  , "FMT[:PATH]" },
+        {"max-paranoid-mem" , 'u' , 0 , G_OPTION_ARG_CALLBACK , FUNC(paranoid_mem)       , "TODO"                          , "S"          },
+        {"newer-than-stamp" , 'n' , 0 , G_OPTION_ARG_CALLBACK , FUNC(timestamp_file)     , "Newer than stamp file"         , "PATH"       },
+        {"newer-than"       , 'N' , 0 , G_OPTION_ARG_CALLBACK , FUNC(timestamp)          , "Newer than timestamp"          , "STAMP"      },
+        {"clamp-low"        , 'q' , 0 , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)          , "Limit lower reading barrier"   , "P"          },
+        {"clamp-top"        , 'Q' , 0 , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)          , "Limit upper reading barrier"   , "P"          },
+        {"cache"            , 'C' , 0 , G_OPTION_ARG_CALLBACK , FUNC(cache)              , "Add json cache file"           , "PATH"       },
+
+        /* Non-trvial switches */
+        {"progress"    , 'g' , 0 , G_OPTION_ARG_CALLBACK , FUNC(progress)       , "Enable progressbar"              , NULL} ,
+        {"no-progress" , 'G' , 0 , G_OPTION_ARG_CALLBACK , FUNC(no_progress)    , "Disable progressbar"             , NULL} , // TODO: hidden?
+        {"loud"        , 'v' , 0 , G_OPTION_ARG_CALLBACK , FUNC(loud)      , "Be more verbose (-vvv for more)" , NULL} ,
+        {"quiet"       , 'V' , 0 , G_OPTION_ARG_CALLBACK , FUNC(quiet) , "Be less verbose (-VVV for less)" , NULL} ,
+
+        /* Trivial boolean options */
+        {"with-color"          , 'w' , 0                     , G_OPTION_ARG_NONE     , &settings->color               , "[x] Be colorful like a unicorn"     , NULL} ,
+        {"no-with-color"       , 'W' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &settings->color               , "Be not that colorful"               , NULL} ,
+        {"no-hidden"           , 'R' , 0                     , G_OPTION_ARG_NONE     , &settings->ignore_hidden       , "[x] Ignore hidden files"            , NULL} ,
+        {"hidden"              , 'r' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &settings->ignore_hidden       , "Find hidden files"                  , NULL} ,
+        {"no-followlinks"      , 'F' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &settings->followlinks         , "Ignore symlinks"                    , NULL} , // TODO -FF
+        {"followlinks"         , 'f' , 0                     , G_OPTION_ARG_NONE     , &settings->followlinks         , "Follow symlinks"                    , NULL} ,
+        {"see-symlinks"        , '@' , 0                     , G_OPTION_ARG_NONE     , &settings->see_symlinks        , "[x] Treat symlinks a regular files" , NULL} , // TODO: Doc change here
+        {"crossdev"            , 'x' , 0                     , G_OPTION_ARG_NONE     , &settings->samepart            , "Do not cross mounpoints"            , NULL} ,
+        {"nocrossdev"          , 'X' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &settings->samepart            , "Cross mounpoints"                   , NULL} ,
+        {"paranoid"            , 'p' , 0                     , G_OPTION_ARG_CALLBACK , FUNC(paranoid)                 , "Use more paranoid hashing"          , NULL} ,
+        {"less-paranoid"       , 'P' , 0                     , G_OPTION_ARG_CALLBACK , FUNC(less_paranoid)            , "Use less paranoid hashing"          , NULL} ,
+        {"keep-all-tagged"     , 'k' , 0                     , G_OPTION_ARG_NONE     , &settings->keep_all_tagged     , "Keep all tagged files"              , NULL} ,
+        {"keep-all-untagged"   , 'K' , 0                     , G_OPTION_ARG_NONE     , &settings->keep_all_untagged   , "Keep all untagged files"            , NULL} ,
+        {"must-match-tagged"   , 'm' , 0                     , G_OPTION_ARG_NONE     , &settings->must_match_tagged   , "Must have twin in tagged dir"       , NULL} ,
+        {"must-match-untagged" , 'M' , 0                     , G_OPTION_ARG_NONE     , &settings->must_match_untagged , "Must have twin in untagged dir"     , NULL} ,
+
+        /* Callback */
+        {"show-man" , 'H' , G_OPTION_FLAG_NO_ARG , G_OPTION_ARG_CALLBACK , rm_cmd_show_help    , "Show the manpage" , NULL} ,
+        {"version"  , 'V' , G_OPTION_FLAG_NO_ARG , G_OPTION_ARG_CALLBACK , rm_cmd_show_version , "Show the manpage" , NULL} ,
+
+        /* Special case: accumulate leftover args (paths) in &paths */
+        {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &paths, "", NULL}
+    };
+
+    GError *error = NULL;
+    GOptionContext *option_parser = g_option_context_new(
+        "rmlint [TARGET_DIR_OR_FILES ...] [//] [TARGET_DIR_OR_FILES ...] [-] [OPTIONS]"
+    );
+    GOptionGroup *main_group = g_option_group_new(
+        "rmlint", "some options?", "uh name help", session, NULL
+    );
+
+    g_option_context_set_main_group(option_parser, main_group);
+    g_option_context_set_summary(option_parser, "The summary");
+    g_option_context_set_description(option_parser, "The bugreporting");
+
+    g_option_group_add_entries(main_group, option_entries);
+    g_option_group_set_error_hook(main_group, (GOptionErrorFunc)rm_cmd_on_error);
+
+    if(!g_option_context_parse(option_parser, &argc, &argv, &error)) {
+        rm_cmd_on_error(option_parser, main_group, session, &error);
+    }
+
+    /* Silent fixes of invalid numberic input */
+    settings->threads = ABS(settings->threads);
+    settings->depth = ABS(settings->threads);
+
+    /* Overwrite color if we do not print to a terminal directly */
+    settings->color = isatty(fileno(stdout)) && isatty(fileno(stderr));
+    
+    if(settings->keep_all_tagged && settings->keep_all_untagged) {
+        error = g_error_new(
+            RM_ERROR_DOMAIN, 0,
+            _("can't specify both --keep-all-tagged and --keep-all-untagged")
+        );
+
+        rm_cmd_on_error(option_parser, main_group, session, &error);
+    }
+
+
+
+
 
     int choice = -1;
     int verbosity_counter = 2;
@@ -692,6 +1006,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
        Free:  B DEFGHIJKLMNOPQRST VWX Z abcdefghijklmnopqrstuvwxyz
        Used: A C                                  
     */
+    
 
     while(1) {
         static struct option long_options[] = {
@@ -710,6 +1025,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"clamp-low"                  , required_argument , 0 , 'q'} ,
             {"clamp-top"                  , required_argument , 0 , 'Q'} ,
             {"cache"                      , required_argument , 0,  'C'} ,
+            
             {"progress"                   , no_argument       , 0 , 'g'} ,
             {"no-progress"                , no_argument       , 0 , 'G'} ,
             {"loud"                       , no_argument       , 0 , 'v'} ,
@@ -722,6 +1038,7 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-followlinks"             , no_argument       , 0 , 'F'} ,
             {"crossdev"                   , no_argument       , 0 , 'x'} ,
             {"no-crossdev"                , no_argument       , 0 , 'X'} ,
+
             {"paranoid"                   , no_argument       , 0 , 'p'} ,
             {"less-paranoid"              , no_argument       , 0 , 'P'} ,
             {"keep-all-tagged"            , no_argument       , 0 , 'k'} ,
@@ -736,13 +1053,14 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             {"no-match-extension"         , no_argument       , 0 , 'E'} ,
             {"match-without-extension"    , no_argument       , 0 , 'i'} ,
             {"no-match-without-extension" , no_argument       , 0 , 'I'} ,
-            {"merge-directories"          , no_argument       , 0 , 'D'} ,
+            {"merge-directories"          , no_argument       , 0 , 'D'} , // x
             {"xattr-write"                , no_argument       , 0 , 'z'} ,
             {"no-xattr-write"             , no_argument       , 0 , 'Z'} ,
             {"xattr-read"                 , no_argument       , 0 , 'j'} ,
             {"no-xattr-read"              , no_argument       , 0 , 'J'} ,
             {"xattr-clear"                , no_argument       , 0 , 'Y'} ,
             {"write-unfinished"           , no_argument       , 0 , 'U'} ,
+            
             {"usage"                      , no_argument       , 0 , 'h'} ,
             {"help"                       , no_argument       , 0 , 'H'} ,
             {"version"                    , no_argument       , 0 , 'y'} ,
@@ -761,26 +1079,26 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             break;
         }
         switch(choice) {
-        case '?':
-            rm_cmd_show_help(false);
-            rm_cmd_show_version();
-            rm_cmd_die(session, EXIT_FAILURE);
-            break;
+        // case '?':
+        //     rm_cmd_show_help(false);
+        //     rm_cmd_show_version();
+        //     rm_cmd_die(session, EXIT_FAILURE);
+        //     break;
         case 'c':
             rm_cmd_parse_config_pair(session, optarg);
             break;
-        case 'T':
-            rm_cmd_parse_lint_types(settings, optarg);
-            break;
-        case 't': {
-                int parsed_threads = strtol(optarg, NULL, 10);
-                if(parsed_threads > 0) {
-                    settings->threads = parsed_threads;
-                } else {
-                    rm_log_warning_line(_("Invalid thread count supplied: %s"), optarg);
-                }
-            }
-            break;
+        // case 'T':
+        //     rm_cmd_parse_lint_types(settings, optarg);
+        //     break;
+        // case 't': {
+        //         int parsed_threads = strtol(optarg, NULL, 10);
+        //         if(parsed_threads > 0) {
+        //             settings->threads = parsed_threads;
+        //         } else {
+        //             rm_log_warning_line(_("Invalid thread count supplied: %s"), optarg);
+        //         }
+        //     }
+        //     break;
         case 'C':
             g_queue_push_tail(&session->cache_list, optarg);
             break;
@@ -790,16 +1108,16 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'Q':
             rm_cmd_parse_clamp_option(session, optarg, false);
             break;
-        case 'a':
-            settings->checksum_type = rm_string_to_digest_type(optarg);
-            if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
-                rm_log_error_line(_("Unknown hash algorithm: '%s'"), optarg);
-                rm_cmd_die(session, EXIT_FAILURE);
-            } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
-                session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
-                session->hash_seed2 = GPOINTER_TO_UINT(&session);
-            }
-            break;
+        // case 'a':
+        //     settings->checksum_type = rm_string_to_digest_type(optarg);
+        //     if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
+        //         rm_log_error_line(_("Unknown hash algorithm: '%s'"), optarg);
+        //         rm_cmd_die(session, EXIT_FAILURE);
+        //     } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
+        //         session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
+        //         session->hash_seed2 = GPOINTER_TO_UINT(&session);
+        //     }
+        //     break;
         case 'f':
             settings->followlinks = true;
             break;
@@ -822,11 +1140,11 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
             rm_cmd_show_version();
             rm_cmd_die(session, EXIT_SUCCESS);
             break;
-        case 'H':
-            rm_cmd_show_help(true);
-            rm_cmd_show_version();
-            rm_cmd_die(session, EXIT_SUCCESS);
-            break;
+        // case 'H':
+        //     rm_cmd_show_help(true);
+        //     rm_cmd_show_version();
+        //     rm_cmd_die(session, EXIT_SUCCESS);
+        //     break;
         case 'h':
             rm_cmd_show_usage();
             rm_cmd_show_version();
@@ -877,9 +1195,9 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'G':
             output_flag_cnt = -1;
             break;
-        case 'd':
-            settings->depth = ABS(strtol(optarg, NULL, 10));
-            break;
+        // case 'd':
+        //     settings->depth = ABS(strtol(optarg, NULL, 10));
+        //     break;
         case 'D':
             settings->merge_directories = true;
 
@@ -909,52 +1227,46 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         case 'U':
             settings->write_unfinished = true;
             break;
-        case 'S':
-            settings->sort_criteria = optarg;
-            break;
-        case 'p':
-            settings->paranoid += 1;
-            break;
-        case 'u':
-            settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error);
-            if(parse_error != NULL) {
-                rm_log_error_line(_("Invalid size description \"%s\": %s"), optarg, parse_error);
-                rm_cmd_die(session, EXIT_FAILURE);
-            }
-            break;
-        case 'N':
-            settings->min_mtime = rm_cmd_parse_timestamp(session, optarg);
-            break;
-        case 'n':
-            settings->min_mtime = rm_cmd_parse_timestamp_file(session, optarg);
-            break;
-        case 'k':
-            settings->keep_all_tagged = true;
-            if (settings->keep_all_untagged) {
-                rm_log_error_line(_("can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-untagged"));
-                settings->keep_all_untagged = false;
-            }
-            break;
-        case 'K':
-            settings->keep_all_untagged = true;
-            if (settings->keep_all_tagged) {
-                rm_log_error_line(_("can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged"));
-                settings->keep_all_tagged = false;
-            }
-            break;
+        // case 'S':
+        //     settings->sort_criteria = optarg;
+        //     break;
+        // case 'p':
+        //     settings->paranoid += 1;
+        //     break;
+        // case 'u':
+        //     settings->paranoid_mem = rm_cmd_size_string_to_bytes(optarg, &parse_error);
+        //     break;
+        // case 'N':
+        //     settings->min_mtime = rm_cmd_parse_timestamp(session, optarg);
+        //     break;
+        // case 'n':
+        //     settings->min_mtime = rm_cmd_parse_timestamp_file(session, optarg);
+        //     break;
+        // case 'k':
+        //     settings->keep_all_tagged = true;
+        //     if (settings->keep_all_untagged) {
+        //         settings->keep_all_untagged = false;
+        //     }
+        //     break;
+        // case 'K':
+        //     settings->keep_all_untagged = true;
+        //     if (settings->keep_all_tagged) {
+        //         rm_log_error_line(_("can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --keep-all-tagged"));
+        //         settings->keep_all_tagged = false;
+        //     }
+        //     break;
         case 'm':
             settings->must_match_tagged = true;
             break;
         case 'M':
             settings->must_match_untagged = true;
             break;
-        case 's':
-            settings->limits_specified = true;
-            rm_cmd_parse_limit_sizes(session, optarg);
-            break;
-        case 'P':
-            settings->paranoid -= 1;
-            break;
+        // case 's':
+        //     rm_cmd_parse_limit_sizes(session, optarg);
+        //     break;
+        // case 'P':
+        //     settings->paranoid -= 1;
+        //     break;
         case 'b':
             settings->match_basename = true;
             break;
@@ -976,36 +1288,6 @@ bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session) {
         default:
             return false;
         }
-    }
-
-    /* Handle the paranoia option */
-    switch(settings->paranoid) {
-    case -2:
-        settings->checksum_type = RM_DIGEST_SPOOKY32;
-        break;
-    case -1:
-        settings->checksum_type = RM_DIGEST_SPOOKY64;
-        break;
-    case 0:
-        /* leave users choice of -a (default) */
-        break;
-    case 1:
-        settings->checksum_type = RM_DIGEST_BASTARD;
-        break;
-    case 2:
-#if HAVE_SHA512
-        settings->checksum_type = RM_DIGEST_SHA512;
-#else
-        settings->checksum_type = RM_DIGEST_SHA256;
-#endif
-        break;
-    case 3:
-        settings->checksum_type = RM_DIGEST_PARANOID;
-        break;
-    default:
-        rm_log_error_line(_("Only up to -ppp or down to -P flags allowed."));
-        rm_cmd_die(session, EXIT_FAILURE);
-        break;
     }
 
     /* Handle output flags */

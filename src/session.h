@@ -92,6 +92,12 @@ typedef struct RmSession {
 
     /* list of pathes with caches */
     GQueue cache_list;
+
+    /* count used for determining the verbosity level */
+    int verbosity_count;
+    
+    /* count used for determining the paranoia level */
+    int paranoia_count;
 } RmSession;
 
 /**

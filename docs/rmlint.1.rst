@@ -185,6 +185,9 @@ General Options
     With this option you can just compare the data in between. Also it might be useful for approximate 
     comparison where it suffices when the file is the same in the middle part.
 
+    The shortcut ``-q / -Q`` can be easily remembered if you memorize the word
+    ``quantile`` for it.
+
 :``-u --max-paranoid-ram=size``:
 
     Apply a maximum number of bytes to use for **--paranoid**. 

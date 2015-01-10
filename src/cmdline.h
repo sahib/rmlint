@@ -34,7 +34,7 @@
  *
  * @return false on parse error (running makes no sense then)
  */
-bool rm_cmd_parse_args(int argc, const char **argv, RmSession *session);
+bool rm_cmd_parse_args(int argc, char **argv, RmSession *session);
 
 /**
  * @brief Trigger the main method of rmlint.
