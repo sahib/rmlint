@@ -34,9 +34,15 @@
 #  include <sys/xattr.h>
 #endif
 
+#ifndef ENODATA
+#  define ENODATA ENOMSG
+#endif
+
 ////////////////////////////
 //    UTILITY FUNCTIONS   //
 ////////////////////////////
+
+#if HAVE_XATTR
 
 static int rm_xattr_build_key(RmSession *session, const char *suffix, char *buf, size_t buf_size) {
     g_assert(session);
@@ -81,28 +87,18 @@ static int rm_xattr_is_fail(const char *name, int rc) {
 }
 
 static int rm_xattr_set(RmFile *file, const char *key, const char *value, size_t value_size) {
-#if HAVE_XATTR
     return rm_xattr_is_fail("setxattr", setxattr(file->path, key, value, value_size, 0));
-#else 
-    return 0;
-#endif
 }
 
 static int rm_xattr_get(RmFile *file, const char *key, char *out_value, size_t value_size) {
-#if HAVE_XATTR
     return rm_xattr_is_fail("getxattr", getxattr(file->path, key, out_value, value_size));
-#else 
-    return 0;
-#endif
 }
 
 static int rm_xattr_del(RmFile *file, const char *key) {
-#if HAVE_XATTR
     return rm_xattr_is_fail("rmovexattr", removexattr(file->path, key));
-#else 
-    return 0;
-#endif
 }
+
+#endif
 
 ////////////////////////////
 //  ACTUAL API FUNCTIONS  //
@@ -184,6 +180,7 @@ int rm_xattr_clear_hash(RmSession *session, RmFile *file) {
     g_assert(file);
     g_assert(session);
 
+#if HAVE_XATTR
     int error = 0;
     const char *keys[] = {"cksum", "mtime", NULL};
 
@@ -201,4 +198,7 @@ int rm_xattr_clear_hash(RmSession *session, RmFile *file) {
     }
 
     return error;
+#else
+    return EXIT_FAILURE;
+#endif
 }
