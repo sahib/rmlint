@@ -134,7 +134,7 @@ int main(int argc, const char **argv) {
     sigaction(SIGABRT, &sa, NULL);
 
     /* Parse commandline */
-    if(rm_cmd_parse_args(argc, argv, &session) != 0) {
+    if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
         exit_state = rm_cmd_main(&session);
     }
