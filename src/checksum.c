@@ -104,7 +104,7 @@ const char *rm_digest_type_to_string(RmDigestType type) {
         [RM_DIGEST_PARANOID]   = "paranoid"
     };
 
-    return names[CLAMP(type, 0, sizeof(names) / sizeof(names[0]))];
+    return names[MIN(type, sizeof(names) / sizeof(names[0]))];
 }
 
 RmOff rm_digest_paranoia_bytes(void) {

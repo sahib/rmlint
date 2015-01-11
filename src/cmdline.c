@@ -1147,7 +1147,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
 failure:
     if(error != NULL) {
-        rm_cmd_on_error(option_parser, main_group, session, &error);
+        rm_cmd_on_error(NULL, NULL, session, &error);
     }
 
     g_option_context_free(option_parser);

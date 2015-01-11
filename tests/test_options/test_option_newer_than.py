@@ -11,9 +11,9 @@ def test_simple():
     head, *data, footer = run_rmlint('-S a')
     assert len(data) == 2
 
-    # Wait a second, create a new dupe.
+    # Wait a second or two, create a new dupe.
     # Should report all three of them since at least one is newer.
-    time.sleep(1.5)
+    time.sleep(2.0)
     create_file('xxx', 'c')
     head, *data, footer = run_rmlint('-S a -N ' + str(time.time()))
     assert len(data) == 3
