@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-07 01:05+0100\n"
+"POT-Creation-Date: 2015-01-11 22:19+0100\n"
 "PO-Revision-Date: 2014-12-02 13:37+0100\n"
 "Last-Translator: F. <contact@f.0x2501.org>\n"
 "Language-Team: none\n"
@@ -17,185 +17,151 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: src/shredder.c:1461
+#: src/shredder.c:1478
 #, c-format
 msgid "Negative bytes_left_to_read for %s"
 msgstr "Bytes restants négatifs pour %s"
 
-#: src/shredder.c:1466
+#: src/shredder.c:1483
 #, c-format
 msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
 msgstr "Problème lors de la lecture de %s; %d bytes attendus, %d reçus; ignoré"
 
-#: src/utilities.c:189
+#: src/utilities.c:193
 #, c-format
 msgid "cannot open file '%s' for nonstripped test: "
 msgstr "impossible d'ouvrir '%s' pour le test non-stripped: "
 
-#: src/utilities.c:196
+#: src/utilities.c:200
 msgid "ELF Library is out of date!"
 msgstr "La librairie ELF n'est plus à jour!"
 
-#: src/utilities.c:415
-#, c-format
-msgid "Could not parse cache: %s"
-msgstr ""
-
-#: src/utilities.c:421
-#, fuzzy, c-format
-msgid "Cannot read json cache file ,,%s'': %s"
-msgstr "impossible de lire le répertoire %s: %s"
-
-#: src/utilities.c:422
-msgid "unknown reason"
-msgstr ""
-
-#: src/cmdline.c:119
+#: src/cmdline.c:110
 msgid "You seem to have no manpage for rmlint."
 msgstr "Aucune page de manuel disponible pour rmlint"
 
-#: src/cmdline.c:163
+#: src/cmdline.c:156
 msgid "Input size is empty"
 msgstr "Taille entrée vide"
 
-#: src/cmdline.c:170
+#: src/cmdline.c:163
 msgid "This does not look like a number"
 msgstr "Cela ne semble pas correspondre à un chiffre"
 
-#: src/cmdline.c:172
+#: src/cmdline.c:165
 msgid "Negativ sizes are no good idea"
 msgstr "Une taille négative n'est pas une bonne idée"
 
-#: src/cmdline.c:190
+#: src/cmdline.c:183
 msgid "Given format specifier not found"
 msgstr "Format spécifié inconnu"
 
-#: src/cmdline.c:215
+#: src/cmdline.c:208
 msgid "Max is smaller than min"
 msgstr "Le maxi est plus petit que le mini"
 
-#: src/cmdline.c:233
+#: src/cmdline.c:232
 #, c-format
 msgid "cannot parse --limit: %s"
 msgstr "impossible d'analyser --limit: %s"
 
-#: src/cmdline.c:249
+#: src/cmdline.c:251
 #, fuzzy, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr "Impossible d'ouvrir le répertoire ou le fichier \"%s\": %s\n"
 
-#: src/cmdline.c:290
+#: src/cmdline.c:295
 #, c-format
 msgid "Adding -o %s as output failed."
 msgstr "Ajouter -o %s a fait échoué la sortie"
 
-#: src/cmdline.c:300
+#: src/cmdline.c:305
 #, c-format
 msgid "No format (format:key[=val]) specified in '%s'."
 msgstr "Aucun format (format:key[=val]) spécifié dans '%s'."
 
-#: src/cmdline.c:309
+#: src/cmdline.c:314
 #, c-format
 msgid "Missing key (format:key[=val]) in '%s'."
 msgstr "Clef (format:key[=val]) absente dans '%s'."
 
-#: src/cmdline.c:335
+#: src/cmdline.c:352
 #, c-format
 msgid "Unable to parse factor \"%s\": error begins at %s"
 msgstr "Incapable d'analyser le facteur \"%s\": l'erreur débute à %s"
 
-#: src/cmdline.c:347
+#: src/cmdline.c:365
 #, c-format
 msgid "factor value is not in range [0-1]: %f"
 msgstr "La valeur du facteur n'est pas dans une plage de [0-1]: %f"
 
-#: src/cmdline.c:362
+#: src/cmdline.c:381
 #, c-format
 msgid "Unable to parse offset \"%s\": %s"
 msgstr "Incapable d'analyser l'offset  \"%s\": %s"
 
-#: src/cmdline.c:516
+#: src/cmdline.c:542
 msgid "lint types after first should be prefixed with '+' or '-'"
 msgstr ""
 "Les types de doublons après le premier doivent être préfixés par '+' ou '-'"
 
-#: src/cmdline.c:517
+#: src/cmdline.c:543
 #, c-format
 msgid "or they would over-ride previously set options: [%s]"
 msgstr "ou ils écraserons les options précédemment renseignées: [%s]"
 
-#: src/cmdline.c:533
+#: src/cmdline.c:559
 #, c-format
 msgid "lint type '%s' not recognised"
 msgstr "doublon de type '%s' non reconnu"
 
-#: src/cmdline.c:587
+#: src/cmdline.c:618
 #, c-format
 msgid "Unable to parse time spec \"%s\""
 msgstr "Incapable d'interpréter le temps spécifié \"%s\""
 
-#: src/cmdline.c:601
+#: src/cmdline.c:632
 #, c-format
 msgid "-n %lu is newer than current time (%lu)."
 msgstr "-n %lu est plus récent que le temps actuel (%lu)."
 
-#: src/cmdline.c:777
-#, c-format
-msgid "Invalid thread count supplied: %s"
-msgstr "Nombre de processus fournis invalides: %s"
+#: src/cmdline.c:727
+msgid "Only up to -ppp or down to -P flags allowed."
+msgstr "Seules les options de -ppp à -P sont autorisées"
 
-#: src/cmdline.c:793
+#: src/cmdline.c:750
 #, c-format
 msgid "Unknown hash algorithm: '%s'"
 msgstr "Fonction de hachage inconnue: '%s'"
 
-#: src/cmdline.c:915
+#: src/cmdline.c:784
 #, c-format
 msgid "Invalid size description \"%s\": %s"
 msgstr "Définition de taille invalide \"%s\": %s"
 
-#: src/cmdline.c:928
-msgid ""
-"can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
-"keep-all-untagged"
-msgstr ""
-"impossible d'utiliser simultanément --keep-all-tagged and --keep-all-"
-"untagged; ignoré --keep-all-untagged"
-
-#: src/cmdline.c:935
-msgid ""
-"can't specify both --keep-all-tagged and --keep-all-untagged; ignoring --"
-"keep-all-tagged"
-msgstr ""
-"impossible d'utiliser simultanément --keep-all-tagged and --keep-all-"
-"untagged; ignoré --keep-all-untagged"
-
-#: src/cmdline.c:1000
-msgid "Only up to -ppp or down to -P flags allowed."
-msgstr "Seules les options de -ppp à -P sont autorisées"
-
-#: src/cmdline.c:1007
+#: src/cmdline.c:958
 msgid "Specifiyng both -o and -O is not allowed."
 msgstr "Utiliser simultanément -o et -O n'est pas autorisé"
 
-#: src/cmdline.c:1016
-msgid "No valid -o flag encountered."
-msgstr "Aucun format valide trouvé pour -o"
+#: src/cmdline.c:1131
+#, fuzzy
+msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
+msgstr "impossible d'utiliser simultanément --keep-all-tagged et --keep-all-untagged"
 
-#: src/cmdline.c:1021
+#: src/cmdline.c:1137
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
 msgstr "-q (--clamp-low) doit être plus petit que -Q (--clamp-top)!"
 
-#: src/cmdline.c:1058
+#: src/cmdline.c:1142
 msgid "No valid paths given."
 msgstr "Aucun chemin valide renseigné."
 
-#: src/formats.c:133
+#: src/formats.c:152
 #, c-format
 msgid "No such new_handler with this name: %s"
 msgstr "Aucun new_handler ne correspond à ce nom: %s"
 
-#: src/formats.c:156
+#: src/formats.c:175
 #, c-format
 msgid "Unable to open file for writing: %s"
 msgstr "Impossible d'ouvrir le fichier en écriture: %s"
@@ -374,10 +340,14 @@ msgstr "Drapeau fts_info %d inconnu pour le fichier %s"
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': échec de fts_read pour %s"
 
-#: src/config.h:92
+#: src/config.h:93
 msgid "ERROR"
 msgstr "ERREUR"
 
-#: src/config.h:99
+#: src/config.h:100
 msgid "WARNING"
 msgstr "AVERTISSEMENT"
+
+#: src/config.h:107
+msgid "INFO"
+msgstr "INFO"
