@@ -403,6 +403,12 @@ AddOption(
     action='store', metavar='DIR', help='where files will eventually land'
 )
 
+AddOption(
+    '--libdir', default='lib',
+    dest='libdir', type='string', nargs=1,
+    action='store', metavar='DIR', help='libdir name (lib or lib64)'
+)
+
 for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib']:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,

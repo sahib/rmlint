@@ -114,6 +114,12 @@ Arguments
     case the ``--prefix`` would be set to the path of the temporary build env,
     while ``--actual-prefix`` would be set to ``/usr``.
 
+:--libdir:
+
+    Some distributions like Fedora use separate libdirectories for 64/32 bit. 
+    If this happens, you should set the correct one for 64 bit with
+    ``--libdir=lib64``.
+
 :--without-libelf:
     
     Do not link with ``libelf``, which is needed for nonstripped binary

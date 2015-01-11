@@ -79,12 +79,16 @@ env.AlwaysBuild(config)
 env.AlwaysBuild(py_formatter)
 
 if 'install' in COMMAND_LINE_TARGETS:
-    env.Alias('install', env.Install('$PREFIX/lib', [library]))
+    env.Alias('install', env.Install('$PREFIX/' + GetOption('libdir'), [library]))
     for header in headers:
         env.Alias('install', env.Install('$PREFIX/include/rmlint', [header]))
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
-    create_uninstall_target(env, "$PREFIX/lib/" + os.path.basename(str(library[0])))
+    create_uninstall_target(env, "$PREFIX/{}/{}".format(
+        GetOption('libdir'),
+        os.path.basename(str(library[0]))
+    ))
+
     for header in headers:
         create_uninstall_target(env, "$PREFIX/include/rmlint/" + str(header))
 
