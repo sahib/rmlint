@@ -479,14 +479,14 @@ if 'LDFLAGS' in os.environ:
 
 # Support museums or other debian flavours:
 conf.check_c11()
-if conf.env['HAVE_C11']:
+if conf.env['HAVE_C11'] and 0:
     c_standard = ['-std=c11']
 else:
     c_standard = ['-std=c99', '-fms-extensions']
 
-
+conf.env.Append(CCFLAGS=c_standard)
 conf.env.Append(CCFLAGS=[
-    c_standard, '-pipe', '-fPIC', '-D_GNU_SOURCE'
+    '-pipe', '-fPIC', '-D_GNU_SOURCE'
 ])
 
 if ARGUMENTS.get('DEBUG') == "1":
