@@ -30,7 +30,7 @@
 #include "settings.h"
 
 /* Options not specified by commandline get a default option - this called before rm_cmd_parse_args */
-void rm_set_default_settings(RmSettings *settings) {
+void rm_settings_set_default(RmSettings *settings) {
     /* Set everything to 0 at first,
      * only non-null options are listed below.
      */

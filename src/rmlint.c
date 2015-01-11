@@ -27,7 +27,7 @@
 #include <string.h>
 #include <locale.h>
 
-#include "cmdline.h"
+#include "../lib/api.h"
 
 static char *remove_color_escapes(char *message) {
     char *dst = message;
@@ -110,7 +110,7 @@ int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
 
     RmSettings settings;
-    rm_set_default_settings(&settings);
+    rm_settings_set_default(&settings);
 
     RmSession session;
     rm_session_init(&session, &settings);

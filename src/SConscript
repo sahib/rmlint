@@ -1,85 +1,24 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import os
+
 Import('env')
 Import('VERSION_MAJOR')
 Import('VERSION_MINOR')
 Import('VERSION_PATCH')
 Import('VERSION_NAME')
 Import('create_uninstall_target')
-
-import os
-import codecs
-
-
-def build_config_template(target, source, env):
-    text = source[0].get_text_contents()
-
-    with codecs.open(target[0].get_abspath(), 'w') as handle:
-        config_h = text.format(
-            INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
-            HAVE_LIBINTL=env['HAVE_GETTEXT'],
-            HAVE_LIBELF=env['HAVE_LIBELF'],
-            HAVE_JSON_GLIB=env['HAVE_JSON_GLIB'],
-            HAVE_GETMNTENT=env['HAVE_GETMNTENT'],
-            HAVE_GETMNTINFO=env['HAVE_GETMNTINFO'],
-            HAVE_FIEMAP=env['HAVE_FIEMAP'],
-            HAVE_XATTR=env['HAVE_XATTR'],
-            HAVE_SHA512=env['HAVE_SHA512'],
-            HAVE_SSE42=env['HAVE_SSE42'],
-            HAVE_BIGFILES=env['HAVE_BIGFILES'],
-            HAVE_STAT64=env['HAVE_BIG_STAT'],
-            HAVE_BIG_OFF_T=env['HAVE_BIG_OFF_T'],
-            HAVE_BLKID=env['HAVE_BLKID'],
-            HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
-            HAVE_SYSCTL=env['HAVE_SYSCTL'],
-            VERSION_MAJOR=VERSION_MAJOR,
-            VERSION_MINOR=VERSION_MINOR,
-            VERSION_PATCH=VERSION_PATCH,
-            VERSION_NAME=VERSION_NAME,
-            VERSION_GIT_REVISION=env['gitrev'].strip()
-        )
-
-        handle.write(config_h)
-
-def build_python_formatter(target, source, env):
-    text = source[0].get_text_contents()
-
-    with codecs.open('src/formats/py.py', 'r') as handle:
-        py_source = handle.read()
-
-    # Prepare the Python source to be compatible with C-strings
-    py_source = py_source.replace('"', '\\"')
-    py_source = '\\n"\n"'.join(py_source.splitlines())
-
-    with codecs.open(target[0].get_abspath(), 'w') as handle:
-        handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
-
-
-config = env.Command(
-    'config.h', 'config.h.in', build_config_template
-)
-
-py_formatter = env.Command(
-    'formats/py.c', 'formats/py.c.in', build_python_formatter
-)
+Import('library')
 
 program = env.Program(
-    '../rmlint',
-    Glob('*.c') +
-    Glob('checksums/*.c') +
-    Glob('formats/*.c') +
-    Glob('jsmn/*.c') +
-    Glob('libart/*.c')
+    '../rmlint', ['rmlint.c', library]
 )
 
-env.Depends(program, [config, py_formatter])
-env.AlwaysBuild(config)
-env.AlwaysBuild(py_formatter)
+env.Depends(program, [library])
 
 if 'install' in COMMAND_LINE_TARGETS:
     env.Alias('install', env.Install('$PREFIX/bin', [program]))
-
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, "$PREFIX/bin/rmlint")

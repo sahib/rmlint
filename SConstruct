@@ -509,7 +509,7 @@ if 'LDFLAGS' in os.environ:
 
 # Support museums or other debian flavours:
 conf.check_c11()
-if conf.env['HAVE_C11'] and 0:
+if conf.env['HAVE_C11']:
     c_standard = ['-std=c11']
 else:
     c_standard = ['-std=c99', '-fms-extensions']
@@ -526,12 +526,7 @@ else:
     conf.env.Append(CCFLAGS=['-Os'])
     conf.env.Append(LINKFLAGS=['-s'])
 
-if 'gcc' in os.path.basename(conf.env['CC']):
-    if not ARGUMENTS.get('DEBUG'):
-        # GCC-Specific Options.
-        conf.env.Append(CCFLAGS=['-flto'])
-        conf.env.Append(LINKFLAGS=['-flto'])
-elif 'clang' in os.path.basename(conf.env['CC']):
+if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
 
@@ -571,7 +566,8 @@ if conf.env['HAVE_LIBELF']:
 # Your extra checks here
 env = conf.Finish()
 
-program = SConscript('src/SConscript')
+library = SConscript('lib/SConscript')
+program = SConscript('src/SConscript', exports='library')
 SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')

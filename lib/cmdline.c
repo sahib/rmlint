@@ -979,6 +979,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* General error variable */
     GError *error = NULL;
+    GOptionContext *option_parser = NULL;
 
     #define FUNC(name) ((GOptionArgFunc)rm_cmd_parse_##name)
     const int DISABLE = G_OPTION_FLAG_REVERSE,
@@ -1079,7 +1080,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     // OPTION PARSING //
     ////////////////////
 
-    GOptionContext *option_parser = g_option_context_new(
+    option_parser = g_option_context_new(
         "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
     );
     GOptionGroup *main_group = g_option_group_new(

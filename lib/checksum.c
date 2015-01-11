@@ -34,6 +34,7 @@
 
 #include "checksum.h"
 
+#include "checksums/city.h"
 #include "checksums/citycrc.h"
 #include "checksums/murmur3.h"
 #include "checksums/spooky-c.h"
@@ -224,7 +225,7 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
     g_assert(new_size < digest->bytes);
     g_assert(digest->type == RM_DIGEST_PARANOID);
 
-    uint128 *old_checksum = digest->checksum;
+    RmUint128 *old_checksum = digest->checksum;
     gsize old_bytes = digest->bytes;
 
     digest->checksum = g_slice_alloc0(new_size);
@@ -330,20 +331,25 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             * This needs the crc command of sse4.2
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
             */
+            uint128 old = {digest->checksum[block].first, digest->checksum[block].second};
 #if RM_PLATFORM_64 && HAVE_SSE42
-            digest->checksum[block] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[block]);
+            old = CityHashCrc128WithSeed((const char *)data, size, old);
 #else
-            digest->checksum[block] = CityHash128WithSeed((const char *) data, size, digest->checksum[block]);
+            old = CityHash128WithSeed((const char *)data, size, old);
 #endif
+            memcpy(&digest->checksum[block], &old, sizeof(uint128));
         }
         break;
     case RM_DIGEST_BASTARD:
         MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[0].first, &digest->checksum[0]);
+
+        uint128 old = {digest->checksum[1].first, digest->checksum[1].second};
 #if RM_PLATFORM_64 && HAVE_SSE42
-        digest->checksum[1] = CityHashCrc128WithSeed((const char *)data, size, digest->checksum[1]);
+        old = CityHashCrc128WithSeed((const char *)data, size, old);
 #else
-        digest->checksum[1] = CityHash128WithSeed((const char *) data, size, digest->checksum[1]);
+        old = CityHash128WithSeed((const char *) data, size, old);
 #endif
+        memcpy(&digest->checksum[1], &old, sizeof(uint128));
         break;
     case RM_DIGEST_CUMULATIVE: {
         /* This is basically FNV1a, it is just important that the order of

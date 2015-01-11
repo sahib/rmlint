@@ -52,12 +52,17 @@ typedef enum RmDigestType {
     RM_DIGEST_PARANOID     /* direct block comparisons    */
 } RmDigestType;
 
-#include "checksums/city.h"
+
+typedef struct RmUint128 {
+    guint64 first;
+    guint64 second;
+} RmUint128;
+
 
 typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
-        uint128 *checksum;
+        RmUint128 *checksum;
     };
     RmDigestType type;
     gsize bytes;

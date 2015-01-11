@@ -86,7 +86,7 @@ typedef struct RmSettings {
 /**
  * @brief Reset RmSettings to default settings and all other vars to 0.
  */
-void rm_set_default_settings(RmSettings *settings);
+void rm_settings_set_default(RmSettings *settings);
 
 #endif /* end of include guard */
 
