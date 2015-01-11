@@ -463,7 +463,6 @@ conf.env.Append(CCFLAGS=[
     '-std=c99', '-pipe', '-fPIC', '-D_GNU_SOURCE'
 ])
 
-
 if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])
 else:
@@ -472,8 +471,14 @@ else:
     conf.env.Append(LINKFLAGS=['-s'])
 
 if 'gcc' in os.path.basename(conf.env['CC']):
-    # GCC-Specific Options.
-    conf.env.Append(CCFLAGS=['-lto'])
+    if not ARGUMENTS.get('DEBUG'):
+        # GCC-Specific Options.
+        conf.env.Append(CCFLAGS=['-flto'])
+        conf.env.Append(LINKFLAGS=['-flto'])
+
+    # Needed for anon union/structs with -std=c99
+    # -std=c11 includes this, but old compiler are still in use.
+    conf.env.Append(CCFLAGS=['-fms-extensions'])
 elif 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
