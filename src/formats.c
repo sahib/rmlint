@@ -108,6 +108,17 @@ int rm_fmt_len(RmFmtTable *self) {
     }
 }
 
+void rm_fmt_clear(RmFmtTable *self) {
+    if(rm_fmt_len(self) <= 0) {
+        return;
+    }
+
+    // g_hash_table_remove_all(self->name_to_handler);
+    g_hash_table_remove_all(self->handler_to_file);
+    g_hash_table_remove_all(self->path_to_handler);
+    g_hash_table_remove_all(self->config);
+}
+
 void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_hash_table_insert(self->name_to_handler, (char *) handler->name, handler);
     g_mutex_init(&handler->print_mtx);

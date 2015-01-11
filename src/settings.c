@@ -52,7 +52,7 @@ void rm_set_default_settings(RmSettings *settings) {
     /* Misc options */
     settings->sort_criteria = "pm";
     settings->checksum_type = RMLINT_DEFAULT_DIGEST;
-    settings->color         = isatty(fileno(stdout));
+    settings->color         = 1;
     settings->threads       = 32;
     settings->verbosity     = G_LOG_LEVEL_INFO;
     settings->paranoid_mem  = 256 * 1024 * 1024;

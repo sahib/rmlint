@@ -127,6 +127,13 @@ void rm_fmt_close(RmFmtTable *self);
 int rm_fmt_len(RmFmtTable *self);
 
 /**
+ * @brief Clear all previously added formatters.
+ *
+ * @param self table to clear.
+ */
+void rm_fmt_clear(RmFmtTable *self);
+
+/**
  * @brief Register a new handle to the table.
  *
  * This is only interesting to add new Handlers for new formats.

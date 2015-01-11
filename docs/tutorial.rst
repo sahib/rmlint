@@ -666,6 +666,6 @@ Here's just a list of options that are nice to know, but not essential:
   .. code-block:: bash
 
     # Start hashing at byte 100, but not more than 90% of the filesize.
-    $ rmlint -q 100 -Q.9 
+    $ rmlint -q 100 -Q .9 
 
 .. _manpage: http://rmlint.readthedocs.org/en/latest/rmlint.1.html

@@ -35,6 +35,7 @@
 void rm_session_init(RmSession *session, RmSettings *settings) {
     memset(session, 0, sizeof(RmSession));
     session->timer = g_timer_new();
+    g_queue_init(&session->cache_list);
 
     session->settings = settings;
     session->tables = rm_file_tables_new(session);
@@ -68,6 +69,10 @@ void rm_session_clear(RmSession *session) {
 
     if(session->dir_merger) {
         rm_tm_destroy(session->dir_merger);
+    }
+
+    for(GList *iter = session->cache_list.head; iter; iter = iter->next) {
+        g_free((char *)iter->data);
     }
 
     g_queue_clear(&session->cache_list);

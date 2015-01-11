@@ -219,7 +219,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             p->fts_path, is_prefd, path_index,    \
             lint_type, is_symlink                 \
         );                                        \
- 
+
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {

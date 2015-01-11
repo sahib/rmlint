@@ -169,21 +169,23 @@ General Options
     * This option pulls in ``-r`` (``--hidden``) and ``-l`` (``--hardlinked``) for convenience.
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
-    * Consider using ``-FF`` together with this option (this is the default).
+    * Consider using ``-@`` together with this option (this is the default).
 
 :``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
 
     The argument can be either passed as factor (a number with a ``.`` in it),
     a percent value (suffixed by ``%``) or as absolute number or size spec, like in ``--size``.
 
-    Only look at the content of files in the range of from ``low`` to (including) ``high``.
-    This means, if the range is less than ``-q0%`` to ``-Q100%``, than only partial duplicates are searched.
-    If the actual file size would be 0, the file is ignored during traversing.
-    Be careful when using this function, you can easily get dangerous results for small files.
+    Only look at the content of files in the range of from ``low`` to
+    (including) ``high``. This means, if the range is less than ``-q 0%`` to
+    ``-Q 100%``, than only partial duplicates are searched. If the actual file
+    size would be 0, the file is ignored during traversing. Be careful when
+    using this function, you can easily get dangerous results for small files.
 
-    This is useful in a few cases where a file consists of a constant sized header or footer.
-    With this option you can just compare the data in between. Also it might be useful for approximate 
-    comparison where it suffices when the file is the same in the middle part.
+    This is useful in a few cases where a file consists of a constant sized
+    header or footer. With this option you can just compare the data in between.
+    Also it might be useful for approximate comparison where it suffices when
+    the file is the same in the middle part.
 
     The shortcut ``-q / -Q`` can be easily remembered if you memorize the word
     ``quantile`` for it.
@@ -198,9 +200,14 @@ General Options
     Use color escapes for pretty output or disable them. 
     If you pipe `rmlints` output to a file -W is assumed automatically.
 
-:``-h --help / -H --version``:
+:``-h --help`` / ``-H --show-man``:
 
-    Show this manual or print the version string.
+    Show a shorter reference help text (``-h``) or this full man page (``-H``).
+
+:``--version``:
+
+    Print the version of rmlint. Includes git revision and compile time
+    features.
 
 Traversal Options
 -----------------
@@ -235,7 +242,7 @@ Traversal Options
     therefore keep only one of them in it's internal list.
     If `-l` is specified the whole group is reported instead.
 
-:``-f --followlinks`` / ``-F --no-followlinks`` / ``-FF --see-symlinks (**default**)``:
+:``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks (**default**)``:
 
     Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
     If `-F` is specified, symbolic links will be ignored completely, if the

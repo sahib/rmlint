@@ -32,42 +32,42 @@
 
 /* all available settings - see rmlint -h */
 typedef struct RmSettings {
-    bool color;
-    bool samepart;
-    bool ignore_hidden;
-    bool followlinks;
-    bool see_symlinks;
-    bool findbadids;
-    bool findbadlinks;
-    bool searchdup;
-    bool findemptydirs;
-    bool nonstripped;
-    bool listemptyfiles;
-    bool keep_all_tagged;           /*  if set, will NOT delete dupes that are in paths tagged with                             //  */
-    bool keep_all_untagged;         /*  if set, will NOT delete dupes that are in paths NOT tagged with                         //  */
-    bool must_match_tagged;         /*  if set, will ONLY find dupe sets that have at least once file in a path tagged with     //  */
-    bool must_match_untagged;       /*  if set, will ONLY find dupe sets that have at least once file in a path NOT tagged with //  */
-    bool find_hardlinked_dupes;     /*  if set, will also search for hardlinked duplicates*/
-    bool limits_specified;
-    bool filter_mtime;
-    time_t min_mtime;
-    bool match_basename;            /*  if set, dupes must have the same basename */
-    bool match_with_extension;      /*  if set, dupes must have the same file extension (if any) */
-    bool match_without_extension;   /*  if set, dupes must have the same basename minus the extension */
-    bool merge_directories;         /*  if set, find identical directories full of duplicates */
-    bool write_cksum_to_xattr;      /*  if set, checksums are written to the ext of hashed files */
-    bool read_cksum_from_xattr;     /*  if set, checksums are tried to be read from the file exts */
-    bool clear_xattr_fields;        /*  if set, all encountered ext fields are cleared */
-    bool write_unfinished;          /*  if set, all unfinished checksum are written to json/xattr too */
+    gboolean color;
+    gboolean samepart;
+    gboolean ignore_hidden;
+    gboolean followlinks;
+    gboolean see_symlinks;
+    gboolean findbadids;
+    gboolean findbadlinks;
+    gboolean searchdup;
+    gboolean findemptydirs;
+    gboolean nonstripped;
+    gboolean listemptyfiles;
+    gboolean keep_all_tagged;           /*  if set, will NOT delete dupes that are in paths tagged with                             //  */
+    gboolean keep_all_untagged;         /*  if set, will NOT delete dupes that are in paths NOT tagged with                         //  */
+    gboolean must_match_tagged;         /*  if set, will ONLY find dupe sets that have at least once file in a path tagged with     //  */
+    gboolean must_match_untagged;       /*  if set, will ONLY find dupe sets that have at least once file in a path NOT tagged with //  */
+    gboolean find_hardlinked_dupes;     /*  if set, will also search for hardlinked duplicates*/
+    gboolean limits_specified;
+    gboolean filter_mtime;
+    gboolean match_basename;            /*  if set, dupes must have the same basename */
+    gboolean match_with_extension;      /*  if set, dupes must have the same file extension (if any) */
+    gboolean match_without_extension;   /*  if set, dupes must have the same basename minus the extension */
+    gboolean merge_directories;         /*  if set, find identical directories full of duplicates */
+    gboolean write_cksum_to_xattr;      /*  if set, checksums are written to the ext of hashed files */
+    gboolean read_cksum_from_xattr;     /*  if set, checksums are tried to be read from the file exts */
+    gboolean clear_xattr_fields;        /*  if set, all encountered ext fields are cleared */
+    gboolean write_unfinished;          /*  if set, all unfinished checksum are written to json/xattr too */
 
-    int depth;                      /*  max. depth to traverse, 0 means current dir */
-    int verbosity;                  /*  verbosity level (resembles G_LOG_LEVEL_* macros */
+    time_t min_mtime;
+    gint depth;                      /*  max. depth to traverse, 0 means current dir */
+    gint verbosity;                  /*  verbosity level (resembles G_LOG_LEVEL_* macros) */
 
     double skip_start_factor;       /*  Factor from 0.0 - 1.0, from where to start reading */
     double skip_end_factor;         /*  Factor from 0.0 - 1.0, where to stop reading       */
 
-    bool use_absolute_start_offset; /*  Use factor for start offset or absolute offset     */
-    bool use_absolute_end_offset;   /*  Use factor for end offset or absolute offset       */
+    gboolean use_absolute_start_offset; /*  Use factor for start offset or absolute offset     */
+    gboolean use_absolute_end_offset;   /*  Use factor for end offset or absolute offset       */
     RmOff skip_start_offset;        /*  Offset from where to start reading a file          */
     RmOff skip_end_offset;          /*  Offset where to stop reading a file                */
 

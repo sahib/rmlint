@@ -491,6 +491,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     int device_num = 0;
     char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0}; 
     size_t delete_method_len = sizeof(delete_method_len);
+    (void) dev;
 
     memset(cmd, 0, sizeof(cmd));
     memset(delete_method, 0, sizeof(delete_method));
@@ -520,6 +521,9 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
             is_rotational = 0;
         }
     }
+
+#else
+    (void) dev;
 #endif
 
     return is_rotational;

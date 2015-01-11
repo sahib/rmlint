@@ -218,10 +218,13 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
         if (!inode_match) {
             g_hash_table_insert(node_table, file, file);
         } else {
-            /* file(s) with matching dev, inode(, basename) already in table... */
-            g_assert(inode_match->file_size == file->file_size || 1); /* TODO: this assert
+            /* file(s) with matching dev, inode(, basename) already in table... 
              * fails if the hardlinked file has been written to during traversal; so
-             * instead we should probably just print a warning */
+             * instead we just print a warning 
+             * */
+            if(inode_match->file_size != file->file_size) {
+                rm_log_warning_line("Hardlink file size changed during traversal: %s\n", file->path);
+            }
 
             /* if this is the first time, set up the hardlinks.files queue */
             if (!inode_match->hardlinks.files) {
