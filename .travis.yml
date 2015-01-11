@@ -12,4 +12,4 @@ notifications:
     - sahib@online.de
     - thomas_d_j@yahoo.com.au
 
-script: scons && export USE_VALGRIND=1 && sudo nosetests3
+script: scons VERBOSE=1 && scons config && export USE_VALGRIND=1 && sudo nosetests3

@@ -271,6 +271,24 @@ def check_sha512(context):
     return rc
 
 
+def check_c11(context):
+    rc = 1
+
+    context.Message('Checking for -std=c11 support...')
+    try:
+        cmd = 'echo "#if __STDC_VERSION__ < 201112L\n#error \"No C11 support!\"\n#endif" | {cc} -xc - -std=c11 -c'
+        subprocess.check_call(
+            cmd.format(cc=conf.env['CC']),
+            shell=True
+        )
+    except subprocess.CalledProcessError:
+        rc = 0  # Oops.
+
+    conf.env['HAVE_C11'] = rc
+    context.Result(rc)
+    return rc
+
+
 def check_sse42(context):
     rc = 1
     if tests.CheckDeclaration(context, '__SSE4_2__'):
@@ -441,6 +459,7 @@ conf = Configure(env, custom_tests={
     'check_getmntent': check_getmntent,
     'check_getmntinfo': check_getmntinfo,
     'check_bigfiles': check_bigfiles,
+    'check_c11': check_c11,
     'check_gettext': check_gettext
 })
 
@@ -479,20 +498,26 @@ if 'CC' in os.environ:
     conf.env.Replace(CC=os.environ['CC'])
     print(">> Using compiler: " + os.environ['CC'])
 
-
 if 'CFLAGS' in os.environ:
     conf.env.Append(CCFLAGS=os.environ['CFLAGS'])
     print(">> Appending custom build flags : " + os.environ['CFLAGS'])
-
 
 if 'LDFLAGS' in os.environ:
     conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
     print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
 
-conf.env.Append(CCFLAGS=[
-    '-std=c99', '-pipe', '-fPIC', '-D_GNU_SOURCE'
-])
 
+# Support museums or other debian flavours:
+conf.check_c11()
+if conf.env['HAVE_C11'] and 0:
+    c_standard = ['-std=c11']
+else:
+    c_standard = ['-std=c99', '-fms-extensions']
+
+conf.env.Append(CCFLAGS=c_standard)
+conf.env.Append(CCFLAGS=[
+    '-pipe', '-fPIC', '-D_GNU_SOURCE'
+])
 
 if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])
@@ -502,8 +527,10 @@ else:
     conf.env.Append(LINKFLAGS=['-s'])
 
 if 'gcc' in os.path.basename(conf.env['CC']):
-    # GCC-Specific Options.
-    conf.env.Append(CCFLAGS=['-lto'])
+    if not ARGUMENTS.get('DEBUG'):
+        # GCC-Specific Options.
+        conf.env.Append(CCFLAGS=['-flto'])
+        conf.env.Append(LINKFLAGS=['-flto'])
 elif 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
