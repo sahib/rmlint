@@ -16,13 +16,13 @@ especially an extremely fast tool to remove duplicates from your filesystem.
 %prep 
 %autosetup -c rmlint-%{version}
 
-%build scons config; scons -j4 --prefix=%{buildroot}/usr --actual-prefix=/usr
+%build scons config; scons -j4 --prefix=%{buildroot}/usr --actual-prefix=/usr --libdir=lib64
 
 %install
 
 # Build rmlint, install it into BUILDROOT/<name>-<version>/,
 # but take care rmlint thinks it's installed to /usr (--actual_prefix)
-scons install -j4 --prefix=%{buildroot}/usr --actual-prefix=/usr
+scons install -j4 --prefix=%{buildroot}/usr --actual-prefix=/usr --libdir=lib64
 
 # Find all rmlint.mo files and put them in rmlint.lang
 %find_lang %{name}
@@ -34,9 +34,13 @@ rm -rf %{buildroot}
 %files -f %{name}.lang
 %doc README.rst COPYING
 %{_bindir}/*
+%{_libdir}/*
+%{_includedir}/*
 %{_mandir}/man1/*
 
 %changelog
+* Sun Jan 12 2014 Christopher Pahl <sahib@online.de> - 2.0.0
+- Fix rpm for lib separation.
 * Sat Dec 20 2014 Christopher Pahl <sahib@online.de> - 2.0.0
 - Use autosetup instead of setup -q
 * Fri Dec 19 2014 Christopher Pahl <sahib@online.de> - 2.0.0
