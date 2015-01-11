@@ -100,6 +100,14 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     return self;
 }
 
+int rm_fmt_len(RmFmtTable *self) {
+    if(self == NULL) {
+        return -1;
+    } else {
+        return g_hash_table_size(self->handler_to_file);
+    }
+}
+
 void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_hash_table_insert(self->name_to_handler, (char *) handler->name, handler);
     g_mutex_init(&handler->print_mtx);

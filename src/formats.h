@@ -118,6 +118,15 @@ RmFmtTable *rm_fmt_open(RmSession *session);
 void rm_fmt_close(RmFmtTable *self);
 
 /**
+ * @brief Get the number of added formatters.
+ *
+ * @param self The table.
+ *
+ * @return -1 or error, number on success
+ */
+int rm_fmt_len(RmFmtTable *self);
+
+/**
  * @brief Register a new handle to the table.
  *
  * This is only interesting to add new Handlers for new formats.

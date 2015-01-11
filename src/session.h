@@ -98,6 +98,9 @@ typedef struct RmSession {
     
     /* count used for determining the paranoia level */
     int paranoia_count;
+
+    /* count for -o and -O; initialized to -1 */
+    char output_cnt[2];
 } RmSession;
 
 /**

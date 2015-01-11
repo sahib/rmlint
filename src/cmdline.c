@@ -32,8 +32,8 @@
 #include <math.h>
 #include <time.h>
 
+// TODO check what headers are needed
 #include <errno.h>
-#include <getopt.h>
 #include <search.h>
 #include <sys/time.h>
 #include <glib.h>
@@ -278,6 +278,9 @@ static int rm_cmd_read_paths_from_stdin(RmSession *session,  bool is_prefd, int 
 }
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair) {
+    g_assert(session);
+    g_assert(pair);
+
     char *separator = strchr(pair, ':');
     char *full_path = NULL;
     char format_name[100];
@@ -638,7 +641,7 @@ static gboolean rm_cmd_parse_timestamp(
 
             rm_log_warning_line(
                 "-N %s is newer than current time (%s).",
-                optarg, time_buf
+                string, time_buf
             );
         }
     }
@@ -757,16 +760,16 @@ static gboolean rm_cmd_parse_algorithm(
 static gboolean rm_cmd_parse_small_output(
     const char *option_name, const gchar *output_pair, RmSession *session, GError **error
 ) {
-    // TODO: -oO?
-    rm_cmd_parse_output_pair(session, optarg);
+    session->output_cnt[0] = MAX(session->output_cnt[0], 0);
+    session->output_cnt[0] += rm_cmd_parse_output_pair(session, output_pair);
     return true;
 }
 
 static gboolean rm_cmd_parse_large_output(
     const char *option_name, const gchar *output_pair, RmSession *session, GError **error
 ) {
-    // TODO: -oO?
-    rm_cmd_parse_output_pair(session, optarg);
+    session->output_cnt[1] = MAX(session->output_cnt[1], 0);
+    session->output_cnt[1] += rm_cmd_parse_output_pair(session, output_pair);
     return true;
 }
 
@@ -793,6 +796,7 @@ static gboolean rm_cmd_parse_clamp_low(
     const char *option_name, const gchar *spec, RmSession *session, GError **error
 ) {
     // TODO: error passing.
+    g_printerr("%s=%s\n", option_name, spec);
     rm_cmd_parse_clamp_option(session, spec, true);
     return true;
 }
@@ -801,6 +805,8 @@ static gboolean rm_cmd_parse_clamp_top(
     const char *option_name, const gchar *spec, RmSession *session, GError **error
 ) {
     // TODO: error passing.
+    //
+    g_printerr("%s=%s\n", option_name, spec);
     rm_cmd_parse_clamp_option(session, spec, false);
     return true;
 }
@@ -948,6 +954,23 @@ static bool rm_cmd_set_paths(RmSession *session, int argc, char **paths) {
     return true;
 }
 
+static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
+    if(session->output_cnt[0] < 0 && session->output_cnt[1] < 0) {
+        /* Set default outputs */
+        rm_fmt_add(session->formats, "pretty", "stdout");
+        rm_fmt_add(session->formats, "summary", "stdout");
+        rm_fmt_add(session->formats, "sh", "rmlint.sh");
+    } else if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
+        g_set_error(error, RM_ERROR_DOMAIN, 0, _("Specifiyng both -o and -O is not allowed."));
+        return false;
+    } else if(MAX(0, session->output_cnt[0]) + MAX(0, session->output_cnt[1]) == 0) { 
+        g_set_error(error, RM_ERROR_DOMAIN, 0, _("No valid -o flag encountered."));
+        return false;
+    }   
+
+    return true;
+}
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     /* Normally we call this variable `settings`. 
@@ -958,6 +981,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     /* List of paths we got passed (or NULL) */
     char **paths = NULL;
 
+    /* Result of option parsing */
+    bool result = true;
+
     #define DISABLE G_OPTION_FLAG_REVERSE
     #define FUNC(name) ((GOptionArgFunc)rm_cmd_parse_##name)
     #define EMPTY G_OPTION_FLAG_NO_ARG
@@ -966,7 +992,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
        Free:  B DEFGHIJKLMNOPQRST VWX Z abcdefghijklmnopqrstuvwx z
        Used: A C                                                y
     */
-
     const GOptionEntry option_entries[] = {
         /* Option with required arguments */
         // TODO: is -t still revelant?
@@ -1016,7 +1041,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-match-extension"                       ,  'E' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  "Only find twins with same extension"                ,  NULL},
         {"match-without-extension"                  ,  'i' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  "Only find twins with same basename minus extension" ,  NULL},
         {"no-match-without-extension"               ,  'I' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  "Only find twins with same extension"                ,  NULL},
-        {"merge-directories"                        ,  'D' ,  0       ,  G_OPTION_ARG_CALLBACK ,  FUNC(merge_directories)       ,  "Find duplicate directories"                         ,  NULL},
+        {"merge-directories"                        ,  'D' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(merge_directories)       ,  "Find duplicate directories"                         ,  NULL},
         // TODO: Remove short options for --xattr-*
         {"xattr-write"                              ,  'z' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr    ,  "Cache checksum in file attributes"                  ,  NULL},
         {"no-xattr-write"                           ,  'Z' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr    ,  ""                                                   ,  NULL},
@@ -1032,6 +1057,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {G_OPTION_REMAINING ,  0   ,  0                    ,  G_OPTION_ARG_FILENAME_ARRAY ,  &paths              ,  ""                            ,  NULL},
         {NULL               ,  0   ,  0                    ,  0                           ,  NULL                ,  NULL                          ,  NULL}
     };
+
+    /* Initialize default verbosity */
+    rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
 
     if(!rm_cmd_set_cwd(cfg)) {
         return false;
@@ -1080,39 +1108,26 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(
             RM_ERROR_DOMAIN, 0,
-            _("can't specify both --keep-all-tagged and --keep-all-untagged")
+            _("-q (--clamp-low) should be lower than -Q (--clamp-top)!")
         );
     } else if(!rm_cmd_set_paths(session, argc, paths)) {
         error = g_error_new(
             RM_ERROR_DOMAIN, 0,
             _("No valid paths given.")
         );
+    } else if(!rm_cmd_set_outputs(session, &error)) {
+        /* Something wrong with the outputs */
     }
 
-    if(error) {
+    if(error != NULL) {
         rm_cmd_on_error(option_parser, main_group, session, &error);
-        return false;
+        result = false;
+        goto failure;
     }
 
-
-    /* Handle output flags */
-    // TODO:
-    // if(oO_specified[0] && oO_specified[1]) {
-    //     rm_log_error_line(_("Specifiyng both -o and -O is not allowed."));
-    //     rm_cmd_die(session, EXIT_FAILURE);
-    // } else if(output_flag_cnt == -1) {
-    //     /* Set default outputs */
-    //     rm_fmt_add(session->formats, "pretty", "stdout");
-    //     rm_fmt_add(session->formats, "summary", "stdout");
-    //     rm_fmt_add(session->formats, "sh", "rmlint.sh");
-    // } else if(output_flag_cnt == 0) {
-    //     /* There was no valid output flag given, but the user tried */
-    //     rm_log_error_line(_("No valid -o flag encountered."));
-    //     rm_cmd_die(session, EXIT_FAILURE);
-    // }
-
+failure:
     g_option_context_free(option_parser);
-    return true;
+    return result;
 }
 
 int rm_cmd_main(RmSession *session) {
