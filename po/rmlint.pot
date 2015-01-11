@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-11 22:19+0100\n"
+"POT-Creation-Date: 2015-01-11 22:33+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,6 +34,15 @@ msgstr ""
 
 #: src/utilities.c:200
 msgid "ELF Library is out of date!"
+msgstr ""
+
+#: src/utilities.c:395
+#, c-format
+msgid "Loading json-cache `%s'"
+msgstr ""
+
+#: src/utilities.c:405
+msgid "No valid json cache (no array in /)"
 msgstr ""
 
 #: src/cmdline.c:110
@@ -142,15 +151,15 @@ msgstr ""
 msgid "Specifiyng both -o and -O is not allowed."
 msgstr ""
 
-#: src/cmdline.c:1131
+#: src/cmdline.c:1133
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
 msgstr ""
 
-#: src/cmdline.c:1137
+#: src/cmdline.c:1139
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
 msgstr ""
 
-#: src/cmdline.c:1142
+#: src/cmdline.c:1144
 msgid "No valid paths given."
 msgstr ""
 

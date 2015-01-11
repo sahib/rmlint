@@ -341,7 +341,7 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index, JsonNode *el
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
     JsonNode *path_node = json_object_get_member(object, "path");
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
-    JsonNode *type_node = json_object_get_member(object, "checksum");
+    JsonNode *type_node = json_object_get_member(object, "type");
 
     if(mtime_node && path_node && cksum_node && type_node) {
         RmStat stat_buf;
@@ -368,8 +368,8 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index, JsonNode *el
         }
 
         g_hash_table_replace(cksum_table, g_strdup(path), g_strdup(cksum));
-        rm_log_debug("Adding cache entry %s (%s)\n", path, cksum);
-    } 
+        rm_log_debug("* Adding cache entry %s (%s)\n", path, cksum);
+    }
 }
 
 #endif
@@ -395,17 +395,16 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     size_t keys_in_table = g_hash_table_size(cksum_table);
     JsonParser *parser = json_parser_new();
 
-    rm_log_info_line("Loading json-cache %s", json_path);
+    rm_log_info_line(_("Loading json-cache `%s'"), json_path);
 
     if(!json_parser_load_from_file(parser, json_path, &error)) {
-        g_print("Unable to parse `%s': %s\n", json_path, error->message);
         g_error_free(error);
         goto failure;
     }
 
     JsonNode *root = json_parser_get_root (parser);
     if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {
-        rm_log_warning_line("No valid json cache (no array as root)");
+        rm_log_warning_line(_("No valid json cache (no array in /)"));
         goto failure;
     }
 

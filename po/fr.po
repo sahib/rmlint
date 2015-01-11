@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-11 22:19+0100\n"
+"POT-Creation-Date: 2015-01-11 22:30+0100\n"
 "PO-Revision-Date: 2014-12-02 13:37+0100\n"
 "Last-Translator: F. <contact@f.0x2501.org>\n"
 "Language-Team: none\n"
@@ -35,6 +35,15 @@ msgstr "impossible d'ouvrir '%s' pour le test non-stripped: "
 #: src/utilities.c:200
 msgid "ELF Library is out of date!"
 msgstr "La librairie ELF n'est plus à jour!"
+
+#: src/utilities.c:395
+#, c-format
+msgid "Loading json-cache `%s'"
+msgstr "Chargement de JSON Cache `%s'"
+
+#: src/utilities.c:405
+msgid "No valid json cache (no array in /)"
+msgstr "JSON cache est ne pas valide"
 
 #: src/cmdline.c:110
 msgid "You seem to have no manpage for rmlint."
@@ -143,16 +152,17 @@ msgstr "Définition de taille invalide \"%s\": %s"
 msgid "Specifiyng both -o and -O is not allowed."
 msgstr "Utiliser simultanément -o et -O n'est pas autorisé"
 
-#: src/cmdline.c:1131
+#: src/cmdline.c:1133
 #, fuzzy
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
-msgstr "impossible d'utiliser simultanément --keep-all-tagged et --keep-all-untagged"
+msgstr ""
+"impossible d'utiliser simultanément --keep-all-tagged et --keep-all-untagged"
 
-#: src/cmdline.c:1137
+#: src/cmdline.c:1139
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
 msgstr "-q (--clamp-low) doit être plus petit que -Q (--clamp-top)!"
 
-#: src/cmdline.c:1142
+#: src/cmdline.c:1144
 msgid "No valid paths given."
 msgstr "Aucun chemin valide renseigné."
 
