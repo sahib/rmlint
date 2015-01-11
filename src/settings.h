@@ -43,45 +43,45 @@ typedef struct RmSettings {
     gboolean findemptydirs;
     gboolean nonstripped;
     gboolean listemptyfiles;
-    gboolean keep_all_tagged;           /*  if set, will NOT delete dupes that are in paths tagged with                             //  */
-    gboolean keep_all_untagged;         /*  if set, will NOT delete dupes that are in paths NOT tagged with                         //  */
-    gboolean must_match_tagged;         /*  if set, will ONLY find dupe sets that have at least once file in a path tagged with     //  */
-    gboolean must_match_untagged;       /*  if set, will ONLY find dupe sets that have at least once file in a path NOT tagged with //  */
-    gboolean find_hardlinked_dupes;     /*  if set, will also search for hardlinked duplicates*/
+    gboolean keep_all_tagged;           
+    gboolean keep_all_untagged;         
+    gboolean must_match_tagged;         
+    gboolean must_match_untagged;       
+    gboolean find_hardlinked_dupes;     
     gboolean limits_specified;
     gboolean filter_mtime;
-    gboolean match_basename;            /*  if set, dupes must have the same basename */
-    gboolean match_with_extension;      /*  if set, dupes must have the same file extension (if any) */
-    gboolean match_without_extension;   /*  if set, dupes must have the same basename minus the extension */
-    gboolean merge_directories;         /*  if set, find identical directories full of duplicates */
-    gboolean write_cksum_to_xattr;      /*  if set, checksums are written to the ext of hashed files */
-    gboolean read_cksum_from_xattr;     /*  if set, checksums are tried to be read from the file exts */
-    gboolean clear_xattr_fields;        /*  if set, all encountered ext fields are cleared */
-    gboolean write_unfinished;          /*  if set, all unfinished checksum are written to json/xattr too */
+    gboolean match_basename;            
+    gboolean match_with_extension;      
+    gboolean match_without_extension;   
+    gboolean merge_directories;         
+    gboolean write_cksum_to_xattr;      
+    gboolean read_cksum_from_xattr;     
+    gboolean clear_xattr_fields;        
+    gboolean write_unfinished;          
 
     time_t min_mtime;
-    gint depth;                      /*  max. depth to traverse, 0 means current dir */
-    gint verbosity;                  /*  verbosity level (resembles G_LOG_LEVEL_* macros) */
+    gint depth;                   
+    gint verbosity;               
 
-    double skip_start_factor;       /*  Factor from 0.0 - 1.0, from where to start reading */
-    double skip_end_factor;         /*  Factor from 0.0 - 1.0, where to stop reading       */
+    gdouble skip_start_factor;    
+    gdouble skip_end_factor;      
 
-    gboolean use_absolute_start_offset; /*  Use factor for start offset or absolute offset     */
-    gboolean use_absolute_end_offset;   /*  Use factor for end offset or absolute offset       */
-    RmOff skip_start_offset;        /*  Offset from where to start reading a file          */
-    RmOff skip_end_offset;          /*  Offset where to stop reading a file                */
+    gboolean use_absolute_start_offset; 
+    gboolean use_absolute_end_offset;   
+    RmOff skip_start_offset;     
+    RmOff skip_end_offset;       
 
     char **paths;
-    char *is_prefd;                 /*  flag for each path; 1 if preferred/orig, 0 otherwise*/
-    char *sort_criteria;            /*  sets criteria for ranking and selecting "original"*/
-    char *iwd;                      /*  cwd when rmlint called */
-    char *joined_argv;              /*  arguments rmlint was called with or NULL when not available */
+    char *is_prefd;              
+    char *sort_criteria;         
+    char *iwd;                   
+    char *joined_argv;           
 
     RmOff minsize;
     RmOff maxsize;
     RmOff threads;
-    RmDigestType checksum_type;  /* determines the checksum algorithm used */
-    RmOff paranoid_mem;          /* memory allocation for paranoid buffers */
+    RmDigestType checksum_type;  
+    RmOff paranoid_mem;          
 } RmSettings;
 /**
  * @brief Reset RmSettings to default settings and all other vars to 0.

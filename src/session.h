@@ -101,6 +101,9 @@ typedef struct RmSession {
 
     /* count for -o and -O; initialized to -1 */
     char output_cnt[2];
+
+    /* true if a cmdline parse error happened */
+    bool cmdline_parse_error;
 } RmSession;
 
 /**

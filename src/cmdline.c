@@ -44,15 +44,8 @@
 #include "utilities.h"
 #include "formats.h"
 
-
+/* Domain for reporting errors. Needed by GOptions */
 #define RM_ERROR_DOMAIN (g_quark_from_static_string("rmlint"))
-
-
-/* exit and return to calling method */
-static void rm_cmd_die(RmSession *session, int status) {
-    rm_session_clear(session);
-    exit(status);
-}
 
 static void rm_cmd_show_version(void) {
     fprintf(
@@ -89,11 +82,13 @@ static void rm_cmd_show_version(void) {
         }
     }
 
-    fprintf(stderr, RESET"\n");
+    fprintf(stderr, RESET"\n\n");
+    fprintf(stderr, "rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n");
+    fprintf(stderr, "The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3.\n");
     exit(0);
 }
 
-static void rm_cmd_show_help(void) {
+static void rm_cmd_show_manpage(void) {
     static const char *commands[] = {
         "man %s docs/rmlint.1.gz 2> /dev/null",
         "man %s rmlint",
@@ -347,16 +342,17 @@ static gboolean rm_cmd_parse_config(
     return true;
 }
 
-static double rm_cmd_parse_clamp_factor(RmSession *session, const char *string) {
+static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
     char *error_loc = NULL;
     gdouble factor = g_strtod(string, &error_loc);
 
     if(error_loc != NULL && *error_loc != '\0' && *error_loc != '%') {
-        rm_log_error_line(
+        g_set_error(
+            error, RM_ERROR_DOMAIN, 0,
             _("Unable to parse factor \"%s\": error begins at %s"),
             string, error_loc
         );
-        rm_cmd_die(session, EXIT_FAILURE);
+        return 0;
     }
 
     if(error_loc != NULL && *error_loc == '%') {
@@ -364,34 +360,36 @@ static double rm_cmd_parse_clamp_factor(RmSession *session, const char *string) 
     }
 
     if(0 > factor || factor > 1) {
-        rm_log_error_line(
+        g_set_error(
+            error, RM_ERROR_DOMAIN, 0,
             _("factor value is not in range [0-1]: %f"),
             factor
         );
-        rm_cmd_die(session, EXIT_FAILURE);
+        return 0;
     }
 
     return factor;
 }
 
-static RmOff rm_cmd_parse_clamp_offset(RmSession *session, const char *string) {
+static RmOff rm_cmd_parse_clamp_offset(const char *string, GError **error) {
     const char *error_msg = NULL;
     RmOff offset = rm_cmd_size_string_to_bytes(string, &error_msg);
 
     if(error_msg != NULL) {
-        rm_log_error_line(
+        g_set_error(
+            error, RM_ERROR_DOMAIN, 0,
             _("Unable to parse offset \"%s\": %s"),
             string, error_msg
         );
-        rm_cmd_die(session, EXIT_FAILURE);
+        return 0;
     }
 
     return offset;
 }
 
-static void rm_cmd_parse_clamp_option(RmSession *session, const char *string, bool start_or_end) {
+static void rm_cmd_parse_clamp_option(RmSession *session, const char *string, bool start_or_end, GError **error) {
     if(strchr(string, '.') || g_str_has_suffix(string, "%")) {
-        gdouble factor = rm_cmd_parse_clamp_factor(session, string);
+        gdouble factor = rm_cmd_parse_clamp_factor(string, error);
         if(start_or_end) {
             session->settings->use_absolute_start_offset = false;
             session->settings->skip_start_factor = factor;
@@ -400,7 +398,7 @@ static void rm_cmd_parse_clamp_option(RmSession *session, const char *string, bo
             session->settings->skip_end_factor = factor;
         }
     } else {
-        RmOff offset = rm_cmd_parse_clamp_offset(session, string);
+        RmOff offset = rm_cmd_parse_clamp_offset(string, error);
         if(start_or_end) {
             session->settings->use_absolute_start_offset = true;
             session->settings->skip_start_offset = offset;
@@ -734,7 +732,8 @@ static void rm_cmd_set_paranoia_from_cnt(RmSettings *settings, int paranoia_coun
 static void rm_cmd_on_error(_U GOptionContext *context, _U GOptionGroup *group, RmSession *session, GError **error) {
     if(error != NULL) {
         rm_log_error_line("%s.", (*error)->message);
-        rm_cmd_die(session, EXIT_FAILURE);
+        g_clear_error(error);
+        session->cmdline_parse_error = true;
     }
 }
 
@@ -794,15 +793,15 @@ static gboolean rm_cmd_parse_paranoid_mem(
 static gboolean rm_cmd_parse_clamp_low(
     _U const char *option_name, const gchar *spec, RmSession *session, _U GError **error
 ) {
-    rm_cmd_parse_clamp_option(session, spec, true);
-    return true;
+    rm_cmd_parse_clamp_option(session, spec, true, error);
+    return (error && *error == NULL);
 }
 
 static gboolean rm_cmd_parse_clamp_top(
     _U const char *option_name, const gchar *spec, RmSession *session, _U GError **error
 ) {
-    rm_cmd_parse_clamp_option(session, spec, false);
-    return true;
+    rm_cmd_parse_clamp_option(session, spec, false, error);
+    return (error && *error == NULL);
 }
 
 static gboolean rm_cmd_parse_cache(
@@ -824,6 +823,9 @@ static gboolean rm_cmd_parse_progress(
     rm_fmt_add(session->formats, "progressbar", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
     rm_fmt_add(session->formats, "sh", "rmlint.sh");
+
+    /* Set verbosity to minimal */
+    rm_cmd_set_verbosity_from_cnt(session->settings, 1);
     return true;
 }
 
@@ -834,6 +836,8 @@ static gboolean rm_cmd_parse_no_progress(
     rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
     rm_fmt_add(session->formats, "sh", "rmlint.sh");
+
+    rm_cmd_set_verbosity_from_cnt(session->settings, session->verbosity_count);
     return true;
 }
 
@@ -973,75 +977,56 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     /* List of paths we got passed (or NULL) */
     char **paths = NULL;
 
-    /* Result of option parsing */
-    bool result = true;
+    /* General error variable */
+    GError *error = NULL;
 
-    #define DISABLE G_OPTION_FLAG_REVERSE
     #define FUNC(name) ((GOptionArgFunc)rm_cmd_parse_##name)
-    #define EMPTY G_OPTION_FLAG_NO_ARG
+    const int DISABLE = G_OPTION_FLAG_REVERSE,
+              EMPTY   = G_OPTION_FLAG_NO_ARG,
+              HIDDEN  = G_OPTION_FLAG_HIDDEN;
 
     /* Free/Used Options:
        Free:  B DEFGHI KLMNOPQRST VWX   abcdefghi klmnopqrstuvwx 
        Used: A C      J               Z          j              yz
     */
-    const GOptionEntry option_entries[] = {
+    const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
-        // TODO: More helpful help text
-        {"threads"          ,  't' ,  0 ,  G_OPTION_ARG_INT      ,  &cfg->threads        ,  "Specify max number of threads" ,  "N"          },
         {"max-depth"        ,  'd' ,  0 ,  G_OPTION_ARG_INT      ,  &cfg->depth          ,  "Specify max traversal depth"   ,  "N"          },
-        {"sortcriteria"     ,  'S' ,  0 ,  G_OPTION_ARG_STRING   ,  &cfg->sort_criteria  ,  "Original criteria"             ,  "[amp]"      },
+        {"sortcriteria"     ,  'S' ,  0 ,  G_OPTION_ARG_STRING   ,  &cfg->sort_criteria  ,  "Original criteria"             ,  "[ampAMP]"   },
         {"types"            ,  'T' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(lint_types)     ,  "Specify lint types"            ,  "T"          },
         {"size"             ,  's' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(limit_sizes)    ,  "Specify size limits"           ,  "m-M"        },
         {"algorithm"        ,  'a' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(algorithm)      ,  "Choose hash algorithm"         ,  "A"          },
         {"output"           ,  'o' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(small_output)   ,  "Add output (override default)" ,  "FMT[:PATH]" },
         {"add-output"       ,  'O' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(large_output)   ,  "Add output (add to defaults)"  ,  "FMT[:PATH]" },
-        {"max-paranoid-mem" ,  'u' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid_mem)   ,  "TODO"                          ,  "S"          },
         {"newer-than-stamp" ,  'n' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(timestamp_file) ,  "Newer than stamp file"         ,  "PATH"       },
         {"newer-than"       ,  'N' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(timestamp)      ,  "Newer than timestamp"          ,  "STAMP"      },
-        {"clamp-low"        ,  'q' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_low)      ,  "Limit lower reading barrier"   ,  "P"          },
-        {"clamp-top"        ,  'Q' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_top)      ,  "Limit upper reading barrier"   ,  "P"          },
         {"config"           ,  'c' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(config)         ,  "Configure a formatter"         ,  "FMT:K[=V]"  },
         {"cache"            ,  'C' ,  0 ,  G_OPTION_ARG_CALLBACK ,  FUNC(cache)          ,  "Add json cache file"           ,  "PATH"       },
 
         /* Non-trvial switches */
-        {"progress"    , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress)    , "Enable progressbar"              , NULL},
-        {"no-progress" , 'G' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(no_progress) , "Disable progressbar"             , NULL}, // TODO: hidden?
-        {"loud"        , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)        , "Be more verbose (-vvv for more)" , NULL},
-        {"quiet"       , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)       , "Be less verbose (-VVV for less)" , NULL},
+        {"progress" ,  'g' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  FUNC(progress) ,  "Enable progressbar"                   ,  NULL},
+        {"loud"     ,  'v' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  FUNC(loud)     ,  "Be more verbose (-vvv for much more)" ,  NULL},
+        {"quiet"    ,  'V' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  FUNC(quiet)    ,  "Be less verbose (-VVV for much less)" ,  NULL},
 
         /* Trivial boolean options */
-        {"with-color"                 ,  'w' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->color                   ,  "[x] Be colorful like a unicorn"                     ,  NULL},
-        {"no-with-color"              ,  'W' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->color                   ,  "Be not that colorful"                               ,  NULL},
-        {"hidden"                     ,  'r' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  "Find hidden files"                                  ,  NULL},
-        {"no-hidden"                  ,  'R' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  "[x] Ignore hidden files"                            ,  NULL},
-        {"followlinks"                ,  'f' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->followlinks             ,  "Follow symlinks"                                    ,  NULL},
-        {"no-followlinks"             ,  'F' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->followlinks             ,  "Ignore symlinks"                                    ,  NULL},
-        {"see-symlinks"               ,  '@' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->see_symlinks            ,  "[x] Treat symlinks a regular files"                 ,  NULL},
-        {"crossdev"                   ,  'x' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->samepart                ,  "[x] Do not cross mounpoints"                        ,  NULL},
-        {"no-crossdev"                ,  'X' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->samepart                ,  "Cross mounpoints"                                   ,  NULL},
-        {"paranoid"                   ,  'p' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid)                ,  "Use more paranoid hashing"                          ,  NULL},
-        {"less-paranoid"              ,  'P' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(less_paranoid)           ,  "Use less paranoid hashing"                          ,  NULL},
-        {"keep-all-tagged"            ,  'k' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_tagged         ,  "Keep all tagged files"                              ,  NULL},
-        {"keep-all-untagged"          ,  'K' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_untagged       ,  "Keep all untagged files"                            ,  NULL},
-        {"must-match-tagged"          ,  'm' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_tagged       ,  "Must have twin in tagged dir"                       ,  NULL},
-        {"must-match-untagged"        ,  'M' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_untagged     ,  "Must have twin in untagged dir"                     ,  NULL},
-        {"hardlinked"                 ,  'l' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  "Report hardlinks as duplicates"                     ,  NULL},
-        {"no-hardlinked"              ,  'L' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  "[x] Ignore hardlinks"                               ,  NULL},
-        {"match-basename"             ,  'b' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_basename          ,  "Only find twins with same basename"                 ,  NULL},
-        {"no-match-basename"          ,  'B' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->match_basename          ,  "Only find twins with same basename"                 ,  NULL},
-        {"match-extension"            ,  'e' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  "Only find twins with same extension"                ,  NULL},
-        {"no-match-extension"         ,  'E' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  "Only find twins with same extension"                ,  NULL},
-        {"match-without-extension"    ,  'i' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  "Only find twins with same basename minus extension" ,  NULL},
-        {"no-match-without-extension" ,  'I' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  "Only find twins with same extension"                ,  NULL},
-        {"merge-directories"          ,  'D' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(merge_directories)       ,  "Find duplicate directories"                         ,  NULL},
-        {"xattr-write"                ,  0   ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr    ,  "Cache checksum in file attributes"                  ,  NULL},
-        {"no-xattr-write"             ,  0   ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr    ,  ""                                                   ,  NULL},
-        {"xattr-read"                 ,  0   ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->read_cksum_from_xattr   ,  "Read cached checksums from file attributes"         ,  NULL},
-        {"no-xattr-read"              ,  0   ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->read_cksum_from_xattr   ,  ""                                                   ,  NULL},
-        {"write-unfinished"           ,  'U' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->write_unfinished        ,  "Output unfinished checksums"                        ,  NULL},
+        {"no-with-color"           ,  'W' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->color                   ,  "Be not that colorful"                               ,  NULL},
+        {"hidden"                  ,  'r' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  "Find hidden files"                                  ,  NULL},
+        {"followlinks"             ,  'f' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->followlinks             ,  "Follow symlinks"                                    ,  NULL},
+        {"no-followlinks"          ,  'F' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->followlinks             ,  "Ignore symlinks"                                    ,  NULL},
+        {"crossdev"                ,  'x' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->samepart                ,  "Do not cross mounpoints"                            ,  NULL},
+        {"paranoid"                ,  'p' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid)                ,  "Use more paranoid hashing"                          ,  NULL},
+        {"keep-all-tagged"         ,  'k' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_tagged         ,  "Keep all tagged files"                              ,  NULL},
+        {"keep-all-untagged"       ,  'K' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_untagged       ,  "Keep all untagged files"                            ,  NULL},
+        {"must-match-tagged"       ,  'm' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_tagged       ,  "Must have twin in tagged dir"                       ,  NULL},
+        {"must-match-untagged"     ,  'M' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_untagged     ,  "Must have twin in untagged dir"                     ,  NULL},
+        {"hardlinked"              ,  'l' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  "Report hardlinks as duplicates"                     ,  NULL},
+        {"match-basename"          ,  'b' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_basename          ,  "Only find twins with same basename"                 ,  NULL},
+        {"match-extension"         ,  'e' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  "Only find twins with same extension"                ,  NULL},
+        {"match-without-extension" ,  'i' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  "Only find twins with same basename minus extension" ,  NULL},
+        {"merge-directories"       ,  'D' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(merge_directories)       ,  "Find duplicate directories"                         ,  NULL},
 
         /* Callback */
-        {"show-man" ,  'H' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  rm_cmd_show_help    ,  "Show the manpage"            ,  NULL} ,
+        {"show-man" ,  'H' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  rm_cmd_show_manpage ,  "Show the manpage"            ,  NULL} ,
         {"version"  ,  0   ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  rm_cmd_show_version ,  "Show the version & features" ,  NULL} ,
 
         /* Special case: accumulate leftover args (paths) in &paths */
@@ -1049,38 +1034,88 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {NULL               ,  0 ,  0 ,  0                           ,  NULL   ,  NULL ,  NULL}
     };
 
+    const GOptionEntry inversed_option_entries[] = {
+        {"no-hidden"                  ,  'R' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  "Ignore hidden files"                 ,  NULL},
+        {"with-color"                 ,  'w' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->color                   ,  "Be colorful like a unicorn"          ,  NULL},
+        {"no-crossdev"                ,  'X' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->samepart                ,  "Cross mountpoints"                   ,  NULL},
+        {"less-paranoid"              ,  'P' ,  EMPTY   | HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(less_paranoid)           ,  "Use less paranoid hashing algorithm" ,  NULL},
+        {"no-hardlinked"              ,  'L' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  "Ignore hardlinks"                    ,  NULL},
+        {"see-symlinks"               ,  '@' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->see_symlinks            ,  "Treat symlinks a regular files"      ,  NULL},
+        {"no-match-basename"          ,  'B' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->match_basename          ,  "Disable --match-basename filter"     ,  NULL},
+        {"no-match-extension"         ,  'E' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  "Disable --match-extension"           ,  NULL},
+        {"no-match-without-extension" ,  'I' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  "Disable --match-without-extension"   ,  NULL},
+        {"no-progress"                ,  'G' ,  EMPTY   | HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(no_progress)             ,  "Disable progressbar"                 ,  NULL},
+        {"no-xattr-read"              ,   0  ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->read_cksum_from_xattr   ,  "Disable --xattr-read"                ,  NULL},
+        {"no-xattr-write"             ,   0  ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr    ,  "Disable --xattr-write"               ,  NULL},
+        {NULL                         ,   0  ,  0                ,  0                     ,  NULL                          ,  NULL                                  ,  NULL}
+    };
+
+    const GOptionEntry unusual_option_entries[] = {
+        {"clamp-low"        ,  'q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_low)             ,  "Limit lower reading barrier"                ,  "P" },
+        {"clamp-top"        ,  'Q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_top)             ,  "Limit upper reading barrier"                ,  "P" },
+        {"max-paranoid-mem" ,  'u' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid_mem)          ,  "Specify max. memory to use for -ppp"        ,  "S" },
+        {"threads"          ,  't' ,  HIDDEN ,  G_OPTION_ARG_INT64    ,  &cfg->threads               ,  "Specify max. number of threads"             ,  "N" },
+        {"write-unfinished" ,  'U' ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_unfinished      ,  "Output unfinished checksums"                ,  NULL},
+        {"xattr-write"      ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr  ,  "Cache checksum in file attributes"          ,  NULL},
+        {"xattr-read"       ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->read_cksum_from_xattr ,  "Read cached checksums from file attributes" ,  NULL},
+        {"xattr-clear"      ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->clear_xattr_fields    ,  "Clear xattrs from all seen files"           ,  NULL},
+        {NULL               ,   0  ,  HIDDEN ,  0                     ,  NULL                        ,  NULL                                         ,  NULL}
+    };
+
     /* Initialize default verbosity */
     rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
 
     if(!rm_cmd_set_cwd(cfg)) {
-        return false;
+        g_set_error(&error, RM_ERROR_DOMAIN, 0, "Cannot set current working directory");
+        goto failure;
     }
 
     if(!rm_cmd_set_cmdline(cfg, argc, argv)) {
-        return false;
+        g_set_error(&error, RM_ERROR_DOMAIN, 0, "Cannot join commandline");
+        goto failure;
     }
 
-    GError *error = NULL;
+    ////////////////////
+    // OPTION PARSING //
+    ////////////////////
+
     GOptionContext *option_parser = g_option_context_new(
-        "rmlint [TARGET_DIR_OR_FILES ...] [//] [TARGET_DIR_OR_FILES ...] [-] [OPTIONS]"
+        "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
     );
     GOptionGroup *main_group = g_option_group_new(
-        "rmlint", "some options?", "uh name help", session, NULL
+        "rmlint", "main", "Most useful main options", session, NULL
+    );
+    GOptionGroup *inversion_group = g_option_group_new(
+        "inversed", "inverted", "Options that enable defaults", session, NULL
+    );
+    GOptionGroup *unusual_group = g_option_group_new(
+        "unusual", "unusual", "Unusual options", session, NULL
     );
 
+    g_option_group_add_entries(main_group, main_option_entries);
+    g_option_group_add_entries(main_group, inversed_option_entries);
+    g_option_group_add_entries(main_group, unusual_option_entries);
+
+    g_option_context_add_group(option_parser, inversion_group);
+    g_option_context_add_group(option_parser, unusual_group);
     g_option_context_set_main_group(option_parser, main_group);
-    g_option_context_set_summary(option_parser, "The summary");
+    g_option_context_set_summary(
+        option_parser,
+        "rmlint finds space waste and other broken things on your filesystem and offers to remove it.\n"
+        "It is especially good at finding duplicates and offers a big varierty of options to handle them."
+    );
     g_option_context_set_description(
         option_parser,
-        "       See the manpage (man 1 rmlint or rmlint --help) for more detailed usage information.\n"
-        "       or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage for an online version\n\n"
+        "Only the most important options and options that alter the default are shown above.\n"
+        "See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed usage information,\n"
+        "or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
+        "Complementary tutorials can be found at: http://rmlint.rtfd.org"
     );
 
-    g_option_group_add_entries(main_group, option_entries);
     g_option_group_set_error_hook(main_group, (GOptionErrorFunc)rm_cmd_on_error);
 
     if(!g_option_context_parse(option_parser, &argc, &argv, &error)) {
-        rm_cmd_on_error(option_parser, main_group, session, &error);
+        goto failure;
     }
 
     /* Silent fixes of invalid numberic input */
@@ -1110,16 +1145,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         /* Something wrong with the outputs */
     }
 
+failure:
     if(error != NULL) {
         rm_cmd_on_error(option_parser, main_group, session, &error);
-        result = false;
-        goto failure;
     }
 
-
-failure:
     g_option_context_free(option_parser);
-    return result;
+    return !(session->cmdline_parse_error);
 }
 
 int rm_cmd_main(RmSession *session) {
@@ -1164,6 +1196,5 @@ int rm_cmd_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 
 failure:
-    rm_session_clear(session);
     return exit_state;
 }

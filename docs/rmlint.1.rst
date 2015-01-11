@@ -11,7 +11,7 @@ find duplicate files and other space waste efficiently
 SYNOPSIS
 ========
 
-rmlint [TARGET_DIR_OR_FILES ...] [//] [TARGET_DIR_OR_FILES ...] [-] [OPTIONS]
+rmlint [TARGET_DIR_OR_FILES ...] [//] [TAGGED_TARGET_DIR_OR_FILES ...] [-] [OPTIONS]
 
 DESCRIPTION
 ===========

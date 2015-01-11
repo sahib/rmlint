@@ -139,5 +139,6 @@ int main(int argc, const char **argv) {
         exit_state = rm_cmd_main(&session);
     }
 
+    rm_session_clear(&session);
     return exit_state;
 }
