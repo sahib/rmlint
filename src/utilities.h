@@ -66,7 +66,7 @@ static inline int rm_sys_open(const char *path, int mode) {
     mode |= O_LARGEFILE;
 #endif
 
-    return open(path, mode);
+    return open(path, mode, (S_IRUSR|S_IWUSR));
 }
 
 static inline void rm_sys_close(int fd) {

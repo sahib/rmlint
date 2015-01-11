@@ -254,7 +254,7 @@ def check_sha512(context):
 def check_c11(context):
     rc = 1
 
-    context.Message('Checkinf for -std=c11 support...')
+    context.Message('Checking for -std=c11 support...')
     try:
         cmd = 'echo "#if __STDC_VERSION__ < 201112L\n#error \"No C11 support!\"\n#endif" | {cc} -xc - -std=c11 -c'
         subprocess.check_call(
