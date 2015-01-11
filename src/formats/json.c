@@ -45,15 +45,15 @@ typedef struct RmFmtHandlerJSON {
 //////////////////////////////////////////
 
 static void rm_fmt_json_key(FILE *out, const char *key, const char *value) {
-    fprintf(out, "  \"%s\": \"%s\"", key, value);
+    fprintf(out, " \"%s\": \"%s\"", key, value);
 }
 
 static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {
-    fprintf(out, "  \"%s\": %s", key, value ? "true" : "false");
+    fprintf(out, " \"%s\": %s", key, value ? "true" : "false");
 }
 
 static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
-    fprintf(out, "  \"%s\": %"LLU"", key, value);
+    fprintf(out, " \"%s\": %"LLU"", key, value);
 }
 
 static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
@@ -104,7 +104,7 @@ static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value
     memset(safe_value, 0, sizeof(safe_value));
 
     if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value)) >= 0) {
-        fprintf(out, "  \"%s\": \"%s\"", key, safe_value);
+        fprintf(out, " \"%s\": \"%s\"", key, safe_value);
     }
 }
 
@@ -113,7 +113,7 @@ static void rm_fmt_json_open(FILE *out) {
 }
 
 static void rm_fmt_json_close(FILE *out) {
-    fprintf(out, "\n},\n");
+    fprintf(out, "\n}, ");
 }
 
 static void rm_fmt_json_sep(FILE *out) {
@@ -169,7 +169,7 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         fprintf(out, "\n}");
     }
 
-    fprintf(out, "\n]\n");
+    fprintf(out, "]\n");
 }
 
 static void rm_fmt_elem(
