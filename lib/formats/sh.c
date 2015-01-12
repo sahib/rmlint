@@ -35,73 +35,73 @@ typedef struct RmFmtHandlerShScript {
     RmFmtHandler parent;
     RmFile *last_original;
 
+    bool opt_use_reflink;
     bool opt_use_ln;
     bool opt_symlinks_only;
-    int elems_written;
 } RmFmtHandlerShScript;
 
 static const char *SH_SCRIPT_TEMPLATE_HEAD =
-    "#!/bin/sh                                                             \n"
-    "# This file was autowritten by rmlint                                 \n"
-    "# rmlint was executed from: %s                                        \n"
-    "# Your command line was: %s                                           \n"
-    "                                                                      \n"
-    "ask() {                                                               \n"
-    "cat << EOF\n                                                          \n"
-    "This script will delete certain files rmlint found.                   \n"
-    "It is highly advisable to view the script first!                      \n"
-    "                                                                      \n"
-    "Execute this script with -d to disable this message                   \n"
-    "Hit enter to continue; CTRL-C to abort immediately                    \n"
-    "\nEOF\n                                                               \n"
-    "read dummy_var                                                        \n"
-    "}                                                                     \n"
-    "                                                                      \n"
-    "usage() {                                                             \n"
-    "cat << EOF\n                                                          \n"
-    "usage: $0 options                                                     \n"
-    "                                                                      \n"
-    "OPTIONS:                                                              \n"
-    "-h      Show this message                                             \n"
-    "-d      Do not ask before running                                     \n"
-    "-x      Keep rmlint.sh; do note autodelete it.                        \n"
-    "\nEOF\n                                                               \n"
-    "}                                                                     \n"
-    "                                                                      \n"
+    "#!/bin/sh                                           \n"
+    "# This file was autowritten by rmlint               \n"
+    "# rmlint was executed from: %s                      \n"
+    "# Your command line was: %s                         \n"
+    "                                                    \n"
+    "ask() {                                             \n"
+    "cat << EOF\n                                        \n"
+    "This script will delete certain files rmlint found. \n"
+    "It is highly advisable to view the script first!    \n"
+    "                                                    \n"
+    "Execute this script with -d to disable this message \n"
+    "Hit enter to continue; CTRL-C to abort immediately  \n"
+    "\nEOF\n                                             \n"
+    "read dummy_var                                      \n"
+    "}                                                   \n"
+    "                                                    \n"
+    "usage() {                                           \n"
+    "cat << EOF\n                                        \n"
+    "usage: $0 options                                   \n"
+    "                                                    \n"
+    "OPTIONS:                                            \n"
+    "-h      Show this message                           \n"
+    "-d      Do not ask before running                   \n"
+    "-x      Keep rmlint.sh; do note autodelete it.      \n"
+    "\nEOF\n                                             \n"
+    "}                                                   \n"
+    "                                                    \n"
     "# Duplicate removal functions:                                        \n"
     "cp_hardlink() { cp -a --link \"$1\" \"$2\"}                           \n"
     "cp_symlink() { cp -a --symbolic-link \"$1\" \"$2\"}                   \n"
     "cp_reflink() {                                                        \n"
     "  cp -a --reflink=always \"$1\" \"$2\" || cp_symlink \"$1\" \"$2\"    \n"
     "}                                                                     \n"
-    "                                                                      \n"
-    "DO_REMOVE=                                                            \n"
-    "DO_ASK=                                                               \n"
-    "                                                                      \n"
-    "while getopts \"dhx\" OPTION                                          \n"
-    "do                                                                    \n"
-    "  case $OPTION in                                                     \n"
-    "     h)                                                               \n"
-    "       usage                                                          \n"
-    "       exit 1                                                         \n"
-    "       ;;                                                             \n"
-    "     d)                                                               \n"
-    "       DO_ASK=false                                                   \n"
-    "       ;;                                                             \n"
-    "     x)                                                               \n"
-    "       DO_REMOVE=false                                                \n"
-    "       ;;                                                             \n"
-    "  esac                                                                \n"
-    "done                                                                  \n"
-    "                                                                      \n"
-    "if [ -z $DO_ASK ]                                                     \n"
-    "then                                                                  \n"
-    "  usage                                                               \n"
-    "  ask                                                                 \n"
-    "fi                                                                    \n"
-    "                                                                      \n"
-    "user='%s'                                                             \n"
-    "group='%s'                                                            \n"
+    "                                                    \n"
+    "DO_REMOVE=                                          \n"
+    "DO_ASK=                                             \n"
+    "                                                    \n"
+    "while getopts \"dhx\" OPTION                        \n"
+    "do                                                  \n"
+    "  case $OPTION in                                   \n"
+    "     h)                                             \n"
+    "       usage                                        \n"
+    "       exit 1                                       \n"
+    "       ;;                                           \n"
+    "     d)                                             \n"
+    "       DO_ASK=false                                 \n"
+    "       ;;                                           \n"
+    "     x)                                             \n"
+    "       DO_REMOVE=false                              \n"
+    "       ;;                                           \n"
+    "  esac                                              \n"
+    "done                                                \n"
+    "                                                    \n"
+    "if [ -z $DO_ASK ]                                   \n"
+    "then                                                \n"
+    "  usage                                             \n"
+    "  ask                                               \n"
+    "fi                                                  \n"
+    "                                                    \n"
+    "user='%s'                                           \n"
+    "group='%s'                                          \n"
     ;
 
 static const char *SH_SCRIPT_TEMPLATE_FOOT =
@@ -117,11 +117,10 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 
     self->opt_symlinks_only = rm_fmt_get_config_value(session->formats, "sh", "symlinks_only");
     self->opt_use_ln = rm_fmt_get_config_value(session->formats, "sh", "use_ln");
+    self->opt_use_reflink = rm_fmt_get_config_value(session->formats, "sh", "use_reflink");
 
-    if(rm_fmt_is_stream(session->formats, parent) == false) {
-        if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
-            rm_log_perror("Could not chmod +x sh script");
-        }
+    if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
+        rm_log_perror("Could not chmod +x sh script");
     }
 
     fprintf(
@@ -137,19 +136,15 @@ static char *rm_fmt_sh_escape_path(char *path) {
     return rm_util_strsub(path, "'", "'\"'\"'");
 }
 
+
+
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
-
-    if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
-        /* we do not want to handle this one */
-        return;
-    }
 
     /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
      * for more info on this
      * */
     char *dupe_path = rm_fmt_sh_escape_path(file->path);
-    self->elems_written++;
 
     switch(file->lint_type) {
     case RM_LINT_TYPE_BLNK:
@@ -174,6 +169,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         fprintf(out, "rm -f '%s' # empty file\n", dupe_path);
         break;
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+        // TODO: reflink etc. for dirs?
         if(file->is_original) {
             fprintf(out, "echo   '%s' # original directory\n", dupe_path);
         } else {
@@ -186,17 +182,29 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
             self->last_original = file;
         } else {
             if(self->opt_use_ln) {
+                bool use_reflink = false;
                 bool use_hardlink = false;
-                if(self->last_original->dev == file->dev) {
+
+                if (1
+                        && self->opt_use_reflink
+                        && rm_mounts_can_reflink(session->mounts, self->last_original->dev, file->dev) ) {
+                    use_reflink = true;
+                } else if (self->last_original->dev == file->dev) {
                     use_hardlink = !self->opt_symlinks_only;
                 }
 
                 char *orig_path = rm_fmt_sh_escape_path(self->last_original->path);
-                if(use_hardlink) {
-                    fprintf(out, "cp_hardlink '%s' '%s' # duplicate\n", orig_path, dupe_path);
+                if (use_reflink) {
+                    fprintf(out, "cp_reflink '%s' '%s'", orig_path, dupe_path);
                 } else {
-                    fprintf(out, "cp_symlink '%s' '%s' # duplicate\n", orig_path, dupe_path);
+                    if(use_hardlink) {
+                        fprintf(out, "cp_hardlink '%s' '%s'", orig_path, dupe_path);
+                    } else {
+                        fprintf(out, "cp_symlink '%s' '%s'", orig_path, dupe_path);
+                    }
                 }
+
+                fprintf(out, " # duplicate\n");
                 g_free(orig_path);
             } else {
                 fprintf(out, "rm -f '%s' # duplicate\n", dupe_path);
@@ -211,14 +219,12 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     g_free(dupe_path);
 }
 
-static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {
-    if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
-        return;
-    }
-
-    RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
-
-    if(rm_fmt_is_stream(session->formats, parent)) {
+static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
+    if(0
+            || strcmp(parent->path, "stdout") == 0
+            || strcmp(parent->path, "stderr") == 0
+            || strcmp(parent->path, "stdin") == 0
+      ) {
         /* You will have a hard time deleting standard streams. */
         return;
     }
@@ -227,12 +233,6 @@ static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
         out, SH_SCRIPT_TEMPLATE_FOOT,
         "rm -f", parent->path
     );
-
-    if(self->elems_written == 0 && parent->path) {
-        if(unlink(parent->path) == -1) {
-            rm_log_perror("unlink sh script failed");
-        }
-    }
 }
 
 static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
@@ -241,11 +241,10 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .name = "sh",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
+        .prog = NULL,
+        .foot = rm_fmt_foot
     },
-    .last_original = NULL,
-    .elems_written = 0
+    .last_original = NULL
 };
 
 RmFmtHandler *SH_SCRIPT_HANDLER = (RmFmtHandler *) &SH_SCRIPT_HANDLER_IMPL;
