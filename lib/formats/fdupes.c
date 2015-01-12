@@ -103,7 +103,7 @@ static void rm_fmt_prog(
 
     /* We do not respect `out` here; just use stderr and stdout directly.
      * Reason: fdupes does this, let's imitate weird behaviour!
-     */ 
+     */
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     g_assert(PROGRESS_HANDLER->prog);

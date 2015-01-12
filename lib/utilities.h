@@ -197,6 +197,7 @@ typedef struct RmMountTable {
     GHashTable *disk_table;
     GHashTable *nfs_table;
     GHashTable *evilfs_table;
+    GHashTable *reflinkfs_table;
 } RmMountTable;
 
 /**
@@ -262,6 +263,12 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
  * rmlint.
  */
 bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check);
+
+/**
+ * @brief Indicates true if source and dest are on same partition, and the
+ * partition supports reflink copies (cp --reflink).
+ */
+bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
 
 /////////////////////////////////
 //    FIEMAP IMPLEMENATION     //

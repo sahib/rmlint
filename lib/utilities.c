@@ -113,7 +113,7 @@ char *rm_util_basename(const char *filename) {
 }
 
 char *rm_util_path_extension(const char *basename) {
-    char * point = strrchr(basename, '.');
+    char *point = strrchr(basename, '.');
     if(point) {
         return point + 1;
     } else {
@@ -437,20 +437,23 @@ typedef struct RmDiskInfo {
 
 typedef struct RmPartitionInfo {
     char *name;
+    char *fsname;
     dev_t disk;
 } RmPartitionInfo;
 
 #if (HAVE_GETMNTENT || HAVE_GETMNTINFO)
 
-RmPartitionInfo *rm_part_info_new(char *name, dev_t disk) {
+RmPartitionInfo *rm_part_info_new(char *name, char *fsname, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
     self->name = g_strdup(name);
+    self->fsname = g_strdup(fsname);
     self->disk = disk;
     return self;
 }
 
 void rm_part_info_free(RmPartitionInfo *self) {
     g_free(self->name);
+    g_free(self->fsname);
     g_free(self);
 }
 
@@ -488,7 +491,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
 #elif HAVE_SYSCTL
     /* try with sysctl() */
     int device_num = 0;
-    char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0}; 
+    char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
     size_t delete_method_len = sizeof(delete_method_len);
     (void) dev;
 
@@ -547,6 +550,7 @@ static bool rm_mounts_is_ramdisk(const char *fs_type) {
 typedef struct RmMountEntry {
     char *fsname; /* name of mounted file system */
     char *dir;    /* file system path prefix     */
+    char *type;   /* Type of fs: ufs, nfs, etc   */
 } RmMountEntry;
 
 typedef struct RmMountEntries {
@@ -599,6 +603,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
             RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
             wrap_entry->fsname = g_strdup(entry->mnt_fsname);
             wrap_entry->dir = g_strdup(entry->mnt_dir);
+            wrap_entry->type = g_strdup(entry->mnt_type);
             self->entries = g_list_prepend(self->entries, wrap_entry);
         }
 
@@ -617,6 +622,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
 
             wrap_entry->fsname = g_strdup(entry->f_mntfromname);
             wrap_entry->dir = g_strdup(entry->f_mntonname);
+            wrap_entry->type = g_strdup(entry->f_fstypename);
             self->entries = g_list_prepend(self->entries, wrap_entry);
         }
     } else {
@@ -635,10 +641,20 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         */
         static const char *evilfs_types[] = {"bindfs", "nullfs", NULL};
 
+        /* btrfs and ocfs2 filesystems support reflinks for deduplication */
+        static const char *reflinkfs_types[] = {"btrfs", "ocfs2", NULL};
+
         const char *evilfs_found = NULL;
         for(int i = 0; evilfs_types[i] && !evilfs_found; ++i) {
-            if(strcmp(evilfs_types[i], wrap_entry->fsname) == 0) {
+            if(strcmp(evilfs_types[i], wrap_entry->type) == 0) {
                 evilfs_found = evilfs_types[i];
+            }
+        }
+
+        const char *reflinkfs_found = NULL;
+        for(int i = 0; reflinkfs_types[i] && !reflinkfs_found; ++i) {
+            if(strcmp(reflinkfs_types[i], wrap_entry->type) == 0) {
+                reflinkfs_found = reflinkfs_types[i];
             }
         }
 
@@ -658,6 +674,19 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                 (unsigned)dir_stat.st_dev
             );
         }
+
+        rm_log_warning("Filesystem %s: %s\n", wrap_entry->dir, (reflinkfs_found) ? "reflink" : "normal");
+
+        if(reflinkfs_found != NULL) {
+            RmStat dir_stat;
+            rm_sys_stat(wrap_entry->dir, &dir_stat);
+            g_hash_table_insert(
+                table->reflinkfs_table,
+                GUINT_TO_POINTER(dir_stat.st_dev),
+                GUINT_TO_POINTER(1)
+            );
+        }
+
     }
 
     return self;
@@ -744,6 +773,7 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
 
     /* Mapping dev_t => true (used as set) */
     self->evilfs_table = g_hash_table_new(NULL, NULL);
+    self->reflinkfs_table = g_hash_table_new(NULL, NULL);
 
     RmMountEntry *entry = NULL;
     RmMountEntries *mnt_entries = rm_mount_list_open(self);
@@ -807,14 +837,14 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
         g_hash_table_insert(
             self->part_table,
             GUINT_TO_POINTER(stat_buf_folder.st_dev),
-            rm_part_info_new (entry->dir, whole_disk));
+            rm_part_info_new (entry->dir, entry->fsname, whole_disk));
 
         /* small hack, so also the full disk id can be given to the api below */
         if (!g_hash_table_contains(self->part_table, GINT_TO_POINTER(whole_disk))) {
             g_hash_table_insert(
                 self->part_table,
                 GUINT_TO_POINTER(whole_disk),
-                rm_part_info_new (entry->dir, whole_disk));
+                rm_part_info_new (entry->dir, entry->fsname, whole_disk));
         }
 
         if (!g_hash_table_contains(self->disk_table, GINT_TO_POINTER(whole_disk))) {
@@ -862,6 +892,7 @@ void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->disk_table);
     g_hash_table_unref(self->nfs_table);
     g_hash_table_unref(self->evilfs_table);
+    g_hash_table_unref(self->reflinkfs_table);
     g_slice_free(RmMountTable, self);
 }
 
@@ -954,6 +985,24 @@ bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
 
     return g_hash_table_contains(self->evilfs_table, GUINT_TO_POINTER(to_check));
 }
+
+bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
+    g_assert(self);
+    if (g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(source))) {
+        if (source == dest) {
+            return true;
+        } else {
+            RmPartitionInfo *source_part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(source));
+            RmPartitionInfo *dest_part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dest));
+            g_assert(source_part);
+            g_assert(dest_part);
+            return ( strcmp(source_part->fsname, dest_part->fsname) == 0 );
+        }
+    } else {
+        return false;
+    }
+}
+
 
 /////////////////////////////////
 //    FIEMAP IMPLEMENATION     //
