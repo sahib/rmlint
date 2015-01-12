@@ -73,17 +73,20 @@ library = env.Library(
 )
 
 headers = Glob('*.h')
-
 env.Depends(library, [config, py_formatter])
 env.AlwaysBuild(config)
 env.AlwaysBuild(py_formatter)
 
-if 'install' in COMMAND_LINE_TARGETS:
+# Disable this for now until someone
+# announces interest in this.
+INSTALL_LIBRARY = False
+
+if 'install' in COMMAND_LINE_TARGETS and INSTALL_LIBRARY:
     env.Alias('install', env.Install('$PREFIX/' + GetOption('libdir'), [library]))
     for header in headers:
         env.Alias('install', env.Install('$PREFIX/include/rmlint', [header]))
 
-if 'uninstall' in COMMAND_LINE_TARGETS:
+if 'uninstall' in COMMAND_LINE_TARGETS and INSTALL_LIBRARY:
     create_uninstall_target(env, "$PREFIX/{}/{}".format(
         GetOption('libdir'),
         os.path.basename(str(library[0]))

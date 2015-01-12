@@ -34,9 +34,11 @@ rm -rf %{buildroot}
 %files -f %{name}.lang
 %doc README.rst COPYING
 %{_bindir}/*
-%{_libdir}/*
-%{_includedir}/*
 %{_mandir}/man1/*
+
+# Not used yet:
+# %{_libdir}/*
+# %{_includedir}/*
 
 %changelog
 * Sun Jan 12 2014 Christopher Pahl <sahib@online.de> - 2.0.0
