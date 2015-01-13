@@ -35,6 +35,7 @@ typedef struct RmFmtHandlerShScript {
     RmFmtHandler parent;
     RmFile *last_original;
 
+    bool opt_use_reflink;
     bool opt_use_ln;
     bool opt_symlinks_only;
     int elems_written;
@@ -110,6 +111,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 
     self->opt_symlinks_only = rm_fmt_get_config_value(session->formats, "sh", "symlinks_only");
     self->opt_use_ln = rm_fmt_get_config_value(session->formats, "sh", "use_ln");
+    self->opt_use_reflink = rm_fmt_get_config_value(session->formats, "sh", "use_reflink");
 
     if(rm_fmt_is_stream(session->formats, parent) == false) {
         if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
@@ -129,6 +131,8 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 static char *rm_fmt_sh_escape_path(char *path) {
     return rm_util_strsub(path, "'", "'\"'\"'");
 }
+
+
 
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
@@ -179,15 +183,23 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
             self->last_original = file;
         } else {
             if(self->opt_use_ln) {
+                bool use_reflink = false;
                 bool use_hardlink = false;
-                if(self->last_original->dev == file->dev) {
+
+                if (1
+                        && self->opt_use_reflink
+                        && rm_mounts_can_reflink(session->mounts, self->last_original->dev, file->dev) ) {
+                    use_reflink = true;
+                } else if (self->last_original->dev == file->dev) {
                     use_hardlink = !self->opt_symlinks_only;
                 }
 
                 char *orig_path = rm_fmt_sh_escape_path(self->last_original->path);
                 fprintf(
-                    out, "rm -f '%s' && ln %s '%s' '%s' # duplicate\n",
-                    dupe_path, (use_hardlink) ? "" : "-s" , orig_path, dupe_path
+                    out, "rm -f '%s' && %s '%s' '%s' # duplicate\n",
+                    dupe_path,
+                    (use_reflink) ? "cp --reflink=always" : (use_hardlink) ? "ln" : "ln -s",
+                    orig_path, dupe_path
                 );
                 g_free(orig_path);
             } else {
