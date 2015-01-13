@@ -34,7 +34,7 @@ typedef struct RmFmtHandlerFdupes {
     RmFmtHandler parent;
 
     GQueue *text_lines;
-    
+
     bool omit_first_line;
     bool use_same_line;
 } RmFmtHandlerFdupes;
@@ -56,23 +56,23 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
             line = g_strdup("\n");
         } else {
             line = g_strdup_printf(
-                "%s%s%s%s%c",
-                (file->is_original) ? "\n" : "",
-                (file->is_original) ? MAYBE_GREEN(session) : "",
-                file->path,
-                (file->is_original) ? MAYBE_RESET(session) : "",
-                (self->use_same_line) ? ' ' : '\n'
-            );
-        } 
+                       "%s%s%s%s%c",
+                       (file->is_original) ? "\n" : "",
+                       (file->is_original) ? MAYBE_GREEN(session) : "",
+                       file->path,
+                       (file->is_original) ? MAYBE_RESET(session) : "",
+                       (self->use_same_line) ? ' ' : '\n'
+                   );
+        }
         break;
     default:
         line = g_strdup_printf(
-            "%s%s%s%c",
-            MAYBE_BLUE(session),
-            file->path,
-            MAYBE_RESET(session),
-            (self->use_same_line) ? ' ' : '\n'
-        );
+                   "%s%s%s%c",
+                   MAYBE_BLUE(session),
+                   file->path,
+                   MAYBE_RESET(session),
+                   (self->use_same_line) ? ' ' : '\n'
+               );
         break;
     }
 
@@ -93,17 +93,17 @@ static void rm_fmt_prog(
 
     if(state == RM_PROGRESS_STATE_INIT) {
         self->omit_first_line = (
-            rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL
-        );
+                                    rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL
+                                );
         self->use_same_line = (
-            rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL
-        );
+                                  rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL
+                              );
     }
 
 
     /* We do not respect `out` here; just use stderr and stdout directly.
      * Reason: fdupes does this, let's imitate weird behaviour!
-     */ 
+     */
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     g_assert(PROGRESS_HANDLER->prog);
@@ -138,7 +138,7 @@ static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
     .text_lines = NULL,
     .use_same_line = false,
     .omit_first_line = false
-    
+
 };
 
 RmFmtHandler *FDUPES_HANDLER = (RmFmtHandler *) &FDUPES_HANDLER_IMPL;

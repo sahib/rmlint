@@ -62,11 +62,11 @@ static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
     }
 
     /* More information here:
-     * 
+     *
      * http://stackoverflow.com/questions/4901133/json-and-escaping-characters/4908960#4908960
-     */ 
+     */
 
-    int n = g_utf8_strlen(string, -1); 
+    int n = g_utf8_strlen(string, -1);
     int max = fixed_len;
 
     for(int i = 0; i < n && max; ++i) {
@@ -74,20 +74,34 @@ static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
         char *text = NULL;
 
         switch(g_utf8_get_char(off)) {
-            case '\\': text = "\\\\"; break;
-            case '\"': text = "\\\""; break;
-            case '\b': text = "\\b";  break;
-            case '\f': text = "\\f";  break;
-            case '\n': text = "\\n";  break;
-            case '\r': text = "\\r";  break;
-            case '\t': text = "\\t";  break;
-            default:
-                g_utf8_strncpy(fixed, off, 1);
+        case '\\':
+            text = "\\\\";
+            break;
+        case '\"':
+            text = "\\\"";
+            break;
+        case '\b':
+            text = "\\b";
+            break;
+        case '\f':
+            text = "\\f";
+            break;
+        case '\n':
+            text = "\\n";
+            break;
+        case '\r':
+            text = "\\r";
+            break;
+        case '\t':
+            text = "\\t";
+            break;
+        default:
+            g_utf8_strncpy(fixed, off, 1);
 
-                char *new_fixed = g_utf8_find_next_char(fixed, NULL);
-                max -= (new_fixed - fixed);
-                fixed = new_fixed;
-                break;
+            char *new_fixed = g_utf8_find_next_char(fixed, NULL);
+            max -= (new_fixed - fixed);
+            fixed = new_fixed;
+            break;
         }
 
         while(text && *text) {
@@ -132,9 +146,9 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
         {
             rm_fmt_json_key(out, "description", "rmlint json-dump of lint files");
             rm_fmt_json_sep(out);
-            rm_fmt_json_key(out, "cwd", session->settings->iwd);
+            rm_fmt_json_key(out, "cwd", session->cfg->iwd);
             rm_fmt_json_sep(out);
-            rm_fmt_json_key(out, "args", session->settings->joined_argv);
+            rm_fmt_json_key(out, "args", session->cfg->joined_argv);
             if(session->hash_seed1 && session->hash_seed2) {
                 rm_fmt_json_sep(out);
                 rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);

@@ -49,7 +49,7 @@ struct RmFmtTable;
 struct RmTreeMerger;
 
 typedef struct RmSession {
-    RmSettings *settings;
+    RmCfg *cfg;
 
     /* Stores for RmFile during traversal, preproces and shredder */
     struct RmFileTables *tables;
@@ -95,7 +95,7 @@ typedef struct RmSession {
 
     /* count used for determining the verbosity level */
     int verbosity_count;
-    
+
     /* count used for determining the paranoia level */
     int paranoia_count;
 
@@ -107,9 +107,9 @@ typedef struct RmSession {
 } RmSession;
 
 /**
- * @brief Initialize session according to settings.
+ * @brief Initialize session according to cfg.
  */
-void rm_session_init(RmSession *session, RmSettings *settings);
+void rm_session_init(RmSession *session, RmCfg *cfg);
 
 /**
  * @brief Clear all memory allocated by rm_session_init.
@@ -136,11 +136,11 @@ bool rm_session_was_aborted(RmSession *session);
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
  * */
-#define MAYBE_RED(s)    ((s->settings->color) ? RED : "")
-#define MAYBE_YELLOW(s) ((s->settings->color) ? YELLOW : "")
-#define MAYBE_RESET(s)  ((s->settings->color) ? RESET : "")
-#define MAYBE_GREEN(s)  ((s->settings->color) ? GREEN : "")
-#define MAYBE_BLUE(s)   ((s->settings->color) ? BLUE : "")
+#define MAYBE_RED(s)    ((s->cfg->color) ? RED : "")
+#define MAYBE_YELLOW(s) ((s->cfg->color) ? YELLOW : "")
+#define MAYBE_RESET(s)  ((s->cfg->color) ? RESET : "")
+#define MAYBE_GREEN(s)  ((s->cfg->color) ? GREEN : "")
+#define MAYBE_BLUE(s)   ((s->cfg->color) ? BLUE : "")
 
 #endif /* end of include guard */
 

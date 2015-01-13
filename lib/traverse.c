@@ -56,7 +56,7 @@ static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_
     self->path_index = path_index;
 
     int stat_state;
-    if(session->settings->followlinks) {
+    if(session->cfg->followlinks) {
         stat_state = rm_sys_stat(path, &self->stat_buf);
     } else {
         stat_state = rm_sys_lstat(path, &self->stat_buf);
@@ -113,28 +113,28 @@ static void rm_traverse_file(
     char *path, bool is_prefd, unsigned long path_index, RmLintType file_type, bool is_symlink
 ) {
     RmSession *session = trav_session->session;
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
 
     /* Try to autodetect the type of the lint */
     if (file_type == RM_LINT_TYPE_UNKNOWN) {
         RmLintType gid_check;
         /*see if we can find a lint type*/
-        if (settings->findbadids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
+        if (cfg->findbadids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
             file_type = gid_check;
-        } else if(settings->nonstripped && rm_util_is_nonstripped(path, statp)) {
+        } else if(cfg->nonstripped && rm_util_is_nonstripped(path, statp)) {
             file_type = RM_LINT_TYPE_NBIN;
         } else if(statp->st_size == 0) {
-            if (!settings->listemptyfiles) {
+            if (!cfg->listemptyfiles) {
                 return;
             } else {
                 file_type = RM_LINT_TYPE_EFILE;
             }
         } else {
             RmOff file_size = statp->st_size;
-            if(!settings->limits_specified || (
-                        (settings->minsize == (RmOff)-1 || settings->minsize <= file_size) &&
-                        (settings->maxsize == (RmOff)-1 || file_size <= settings->maxsize))
-            ) {
+            if(!cfg->limits_specified || (
+                        (cfg->minsize == (RmOff)-1 || cfg->minsize <= file_size) &&
+                        (cfg->maxsize == (RmOff)-1 || file_size <= cfg->maxsize))
+              ) {
                 if(rm_mounts_is_evil(trav_session->session->mounts, statp->st_dev) == false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
 
@@ -151,7 +151,7 @@ static void rm_traverse_file(
     }
 
     RmFile *file = rm_file_new(
-                       settings, path, statp, file_type, is_prefd, path_index
+                       cfg, path, statp, file_type, is_prefd, path_index
                    );
 
     if(file != NULL) {
@@ -163,7 +163,7 @@ static void rm_traverse_file(
         }
         g_mutex_unlock(&trav_session->lock);
 
-        if(trav_session->session->settings->clear_xattr_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+        if(trav_session->session->cfg->clear_xattr_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
             rm_log_debug("Clearing xattr fields of %s\n", file->path);
             rm_xattr_clear_hash(session, file);
         }
@@ -172,13 +172,13 @@ static void rm_traverse_file(
 
 static gpointer rm_traverse_allow_chdir(int *fts_flags) {
     /* remove FTS_NOCHDIR flag for first path */
-    *fts_flags &= ~FTS_NOCHDIR;  
+    *fts_flags &= ~FTS_NOCHDIR;
     return NULL;
 }
 
 static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_session) {
     RmSession *session = trav_session->session;
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
 
     char *path = (char *)buffer->path;
     char is_prefd = buffer->is_prefd;
@@ -219,10 +219,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             p->fts_path, is_prefd, path_index,    \
             lint_type, is_symlink                 \
         );                                        \
-
+ 
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
-        if (settings->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
+        if (cfg->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
             /* ignoring hidden folders*/
             g_mutex_lock(&trav_session->lock);
             {
@@ -240,12 +240,12 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         } else {
             switch (p->fts_info) {
             case FTS_D:         /* preorder directory */
-                if (settings->depth != 0 && p->fts_level >= settings->depth) {
+                if (cfg->depth != 0 && p->fts_level >= cfg->depth) {
                     /* continuing into folder would exceed maxdepth*/
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags = true; /* flag current dir as not empty */
                     rm_log_debug("Not descending into %s because max depth reached\n", p->fts_path);
-                } else if (settings->samepart && p->fts_dev != chp->fts_dev) {
+                } else if (cfg->samepart && p->fts_dev != chp->fts_dev) {
                     /* continuing into folder would cross file systems*/
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags = true; /*flag current dir as not empty*/
@@ -267,7 +267,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_DOT:       /* dot or dot-dot */
                 break;
             case FTS_DP:        /* postorder directory */
-                if (is_emptydir[p->fts_level + 1] == 'E' && settings->findemptydirs) {
+                if (is_emptydir[p->fts_level + 1] == 'E' && cfg->findemptydirs) {
                     ADD_FILE(RM_LINT_TYPE_EDIR, false);
                 }
                 break;
@@ -278,7 +278,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_INIT:      /* initialized only */
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
-                if (settings->findbadlinks) {
+                if (cfg->findbadlinks) {
                     ADD_FILE(RM_LINT_TYPE_BLNK, false);
                 }
                 clear_emptydir_flags = true; /*current dir not empty*/
@@ -306,18 +306,18 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             break;
             case FTS_SL:        /* symbolic link */
                 clear_emptydir_flags = true; /* current dir not empty */
-                if (!settings->followlinks) {
+                if (!cfg->followlinks) {
                     if (p->fts_level != 0) {
-                        rm_log_debug("Not following symlink %s because of settings\n", p->fts_path);
+                        rm_log_debug("Not following symlink %s because of cfg\n", p->fts_path);
                     }
 
                     RmStat dummy_buf;
                     if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
                         /* Oops, that's a badlink. */
-                        if (settings->findbadlinks) {
+                        if (cfg->findbadlinks) {
                             ADD_FILE(RM_LINT_TYPE_BLNK, false);
                         }
-                    } else if(settings->see_symlinks) {
+                    } else if(cfg->see_symlinks) {
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
@@ -369,16 +369,16 @@ static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_sess
 ////////////////
 
 void rm_traverse_tree(RmSession *session) {
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
     RmTravSession *trav_session = rm_traverse_session_new(session);
 
     GHashTable *paths_per_disk = g_hash_table_new_full(
                                      NULL, NULL, NULL, (GDestroyNotify)g_queue_free
                                  );
 
-    for(RmOff idx = 0; settings->paths[idx] != NULL; ++idx) {
-        char *path = settings->paths[idx];
-        bool is_prefd = settings->is_prefd[idx];
+    for(RmOff idx = 0; cfg->paths[idx] != NULL; ++idx) {
+        char *path = cfg->paths[idx];
+        bool is_prefd = cfg->is_prefd[idx];
 
         RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);
 
@@ -403,7 +403,7 @@ void rm_traverse_tree(RmSession *session) {
     GThreadPool *traverse_pool = rm_util_thread_pool_new(
                                      (GFunc) rm_traverse_directories,
                                      trav_session,
-                                     CLAMP(settings->threads, 1, g_hash_table_size(paths_per_disk))
+                                     CLAMP(cfg->threads, 1, g_hash_table_size(paths_per_disk))
                                  );
 
     GHashTableIter iter;

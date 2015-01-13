@@ -350,8 +350,8 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index, JsonNode *el
         const char *type = json_node_get_string(type_node);
 
         if(g_strcmp0(type, "duplicate_file") && g_strcmp0(type, "unfinished_cksum")) {
-            /* some other file that has a checksum for weird reasons. 
-             * This is here to prevent errors like reporting files with 
+            /* some other file that has a checksum for weird reasons.
+             * This is here to prevent errors like reporting files with
              * empty checksums as duplicates.
              * */
             return;
@@ -414,7 +414,7 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
         (JsonArrayForeach)rm_json_cache_parse_entry,
         cksum_table
     );
-    
+
     /* check if some entries were added */
     result = (keys_in_table >= g_hash_table_size(cksum_table));
 
@@ -488,7 +488,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
 #elif HAVE_SYSCTL
     /* try with sysctl() */
     int device_num = 0;
-    char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0}; 
+    char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
     size_t delete_method_len = sizeof(delete_method_len);
     (void) dev;
 

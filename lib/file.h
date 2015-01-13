@@ -30,7 +30,7 @@
 #include <stdbool.h>
 #include <glib.h>
 
-#include "settings.h"
+#include "cfg.h"
 #include "utilities.h"
 
 typedef enum RmFileState {
@@ -72,12 +72,12 @@ typedef enum RmLintType {
     RM_LINT_TYPE_DUPE_DIR_CANDIDATE,
 
     /* Special type for files that got sieved out during shreddering.
-     * if settings->write_unfinished is true, those may be included in the
+     * if cfg->write_unfinished is true, those may be included in the
      * json/xattr/csv output.
      *
      * This is mainly useful for caching.
      */
-    RM_LINT_TYPE_UNFINISHED_CKSUM, 
+    RM_LINT_TYPE_UNFINISHED_CKSUM,
 } RmLintType;
 
 
@@ -125,7 +125,7 @@ typedef struct RmFile {
     bool is_original : 1;
 
     /* True if this file, or at least one of its embedded hardlinks, are newer
-     * than settings->min_mtime
+     * than cfg->min_mtime
      */
     bool is_new_or_has_new : 1;
 
@@ -187,14 +187,14 @@ typedef struct RmFile {
     struct RmShredDevice *device;
 
     /* Required for rm_file_equal for building initial match_table */
-    struct RmSettings *settings;
+    struct RmCfg *cfg;
 } RmFile;
 
 /**
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(
-    RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
+    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 );
 

@@ -275,7 +275,7 @@
                                | POSIX_FADV_WILLNEED   /* Tell the kernel to readhead */ \
                                | POSIX_FADV_NOREUSE    /* We will not reuse old data  */ \
                               )                                                          \
-
+ 
 ////////////////////////
 //  MATHS SHORTCUTS   //
 ////////////////////////
@@ -380,11 +380,11 @@ typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_FINISHED
 } RmShredGroupStatus;
 
-#define NEEDS_PREF(group)  (group->main->session->settings->must_match_tagged   || group->main->session->settings->keep_all_untagged )
-#define NEEDS_NPREF(group) (group->main->session->settings->must_match_untagged || group->main->session->settings->keep_all_tagged)
-#define NEEDS_NEW(group)   (group->main->session->settings->min_mtime)
+#define NEEDS_PREF(group)  (group->main->session->cfg->must_match_tagged   || group->main->session->cfg->keep_all_untagged )
+#define NEEDS_NPREF(group) (group->main->session->cfg->must_match_untagged || group->main->session->cfg->keep_all_tagged)
+#define NEEDS_NEW(group)   (group->main->session->cfg->min_mtime)
 
-#define HAS_CACHE(session) (session->settings->read_cksum_from_xattr || session->cache_list.length)
+#define HAS_CACHE(session) (session->cfg->read_cksum_from_xattr || session->cache_list.length)
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
@@ -415,7 +415,7 @@ typedef struct RmShredGroup {
     /* set if group has 1 or more files from "non-preferred" paths */
     bool has_npref;
 
-    /* set if group has 1 or more files newer than settings->min_mtime */
+    /* set if group has 1 or more files newer than cfg->min_mtime */
     bool has_new;
 
     /* incremented for each file in the group that obtained it's checksum from ext.
@@ -670,7 +670,7 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
 }
 
 static void rm_shred_write_cksum_to_xattr(RmSession *session, RmFile *file) {
-    if(session->settings->write_cksum_to_xattr) {
+    if(session->cfg->write_cksum_to_xattr) {
         if(file->has_ext_cksum == false) {
             rm_xattr_write_hash(session, file);
         }
@@ -753,7 +753,7 @@ void rm_shred_discard_file(RmFile *file, bool free_file) {
         rm_shred_adjust_counters(device, -1, -(gint64)(file->file_size - file->hash_offset));
 
         /* ShredGroup that was going nowhere */
-        if(file->shred_group->num_files <= 1 && session->settings->write_unfinished) {
+        if(file->shred_group->num_files <= 1 && session->cfg->write_unfinished) {
             RmLintType actual_type = file->lint_type;
             file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
             file->digest = (file->digest) ? file->digest : file->shred_group->digest;
@@ -854,7 +854,7 @@ void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
     g_assert(self->parent == NULL);  /* children should outlive their parents! */
 
     /* For -D we need to hold back the memory a bit longer */
-    bool needs_free = !(self->main->session->settings->merge_directories) || force_free;
+    bool needs_free = !(self->main->session->cfg->merge_directories) || force_free;
 
     if (self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file, GUINT_TO_POINTER(needs_free));
@@ -904,7 +904,7 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
                 && (group->has_npref || !NEEDS_NPREF(group))
                 /* we have at least one file from non-pref path, or we don't care */
                 && (group->has_new || !NEEDS_NEW(group))
-                /* we have at least one file newer than settings->min_mtime, or we don't care */
+                /* we have at least one file newer than cfg->min_mtime, or we don't care */
             ) {
 
             if (group->hash_offset < group->file_size && group->has_only_ext_cksums == false) {
@@ -1104,7 +1104,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     g_assert(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
     g_assert(file->file_size > 0);
 
-    file->is_new_or_has_new = (file->mtime >= session->settings->min_mtime);
+    file->is_new_or_has_new = (file->mtime >= session->cfg->min_mtime);
 
     /* if file has hardlinks then set file->hardlinks.has_[non_]prefd*/
     if (file->hardlinks.files) {
@@ -1112,7 +1112,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
             RmFile *link = iter->data;
             file->hardlinks.has_non_prefd |= !link->is_prefd;
             file->hardlinks.has_prefd |= link->is_prefd;
-            file->is_new_or_has_new |= (link->mtime >= session->settings->min_mtime);
+            file->is_new_or_has_new |= (link->mtime >= session->cfg->min_mtime);
         }
     }
 
@@ -1141,7 +1141,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 
     if (group == NULL) {
         group = rm_shred_group_new(file, NULL);
-        group->digest_type = session->settings->checksum_type;
+        group->digest_type = session->cfg->checksum_type;
         g_hash_table_insert(
             session->tables->size_groups,
             file,
@@ -1151,7 +1151,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 
     rm_shred_group_push_file(group, file, true);
 
-    if(main->session->settings->read_cksum_from_xattr) {
+    if(main->session->cfg->read_cksum_from_xattr) {
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
             g_hash_table_insert(
@@ -1246,10 +1246,10 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
  * either -K or -M options
  */
 int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
     if (1
             && (a->is_prefd != b->is_prefd)
-            && (settings->keep_all_untagged || settings->must_match_untagged)
+            && (cfg->keep_all_untagged || cfg->must_match_untagged)
        ) {
         return(a->is_prefd - b->is_prefd);
     } else {
@@ -1284,13 +1284,13 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
         }
         /* identify "tagged" originals: */
         if (0
-                || ((file->is_prefd) && (session->settings->keep_all_tagged))
-                || ((!file->is_prefd) && (session->settings->keep_all_untagged))
+                || ((file->is_prefd) && (session->cfg->keep_all_tagged))
+                || ((!file->is_prefd) && (session->cfg->keep_all_untagged))
            ) {
             file->is_original = true;
             rm_log_debug("tagging %s as original because %s\n",
                          file->path,
-                         ((file->is_prefd) && (session->settings->keep_all_tagged)) ? "tagged" : "untagged"
+                         ((file->is_prefd) && (session->cfg->keep_all_tagged)) ? "tagged" : "untagged"
                         );
         }
     }
@@ -1344,12 +1344,12 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
             RmFile *file = iter->data;
             file->digest = group->digest;
             file->free_digest = false;
-            if(tag->session->settings->merge_directories) {
+            if(tag->session->cfg->merge_directories) {
                 rm_tm_feed(tag->session->dir_merger, file);
             }
         }
 
-        if(tag->session->settings->merge_directories == false) {
+        if(tag->session->cfg->merge_directories == false) {
             /* Output them directly */
             rm_shred_forward_to_output(tag->session, group->held_files);
         }
@@ -1537,14 +1537,14 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
 
             if(file->is_symlink) {
                 file->digest = rm_digest_new(
-                                    main->session->settings->checksum_type, 0, 0,
-                                    PATH_MAX + 1 /* max size of a symlink file */
-                                );
+                                   main->session->cfg->checksum_type, 0, 0,
+                                   PATH_MAX + 1 /* max size of a symlink file */
+                               );
             } else {
                 file->digest = rm_digest_new(
-                                    main->session->settings->checksum_type, 0, 0,
-                                    file->shred_group->next_offset - file->hash_offset
-                                );
+                                   main->session->cfg->checksum_type, 0, 0,
+                                   file->shred_group->next_offset - file->hash_offset
+                               );
             }
         }
     } else if(file->shred_group->digest) {
@@ -1566,11 +1566,11 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
     } else {
         /* this is first generation of RMGroups, so there is no progressive hash yet */
         file->digest = rm_digest_new(
-                            main->session->settings->checksum_type,
-                            main->session->hash_seed1,
-                            main->session->hash_seed2,
-                            0
-                        );
+                           main->session->cfg->checksum_type,
+                           main->session->hash_seed1,
+                           main->session->hash_seed2,
+                           0
+                       );
     }
 
     return can_process;
@@ -1696,7 +1696,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
 static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     tag->device_pool = rm_util_thread_pool_new(
-                           (GFunc)rm_shred_devlist_factory, tag, tag->session->settings->threads / 2 + 1
+                           (GFunc)rm_shred_devlist_factory, tag, tag->session->cfg->threads / 2 + 1
                        );
 
     GHashTableIter iter;
@@ -1724,8 +1724,8 @@ void rm_shred_run(RmSession *session) {
 
     if(HAS_CACHE(session)) {
         session->tables->ext_cksums = g_hash_table_new_full(
-                g_str_hash, g_str_equal, g_free, g_free
-        );
+                                          g_str_hash, g_str_equal, g_free, g_free
+                                      );
     } else {
         session->tables->ext_cksums = NULL;
     }
@@ -1749,7 +1749,7 @@ void rm_shred_run(RmSession *session) {
 
     g_mutex_lock(&tag.hash_mem_mtx);
     {
-        tag.hash_mem_alloc = session->settings->paranoid_mem;  /* NOTE: needs to be after preprocess */
+        tag.hash_mem_alloc = session->cfg->paranoid_mem;  /* NOTE: needs to be after preprocess */
         tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
     }
     g_mutex_unlock(&tag.hash_mem_mtx);

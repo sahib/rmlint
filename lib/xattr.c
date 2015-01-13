@@ -50,8 +50,8 @@ static int rm_xattr_build_key(RmSession *session, const char *suffix, char *buf,
     /* Be safe, assume caller is not concentrated. */
     memset(buf, 0, sizeof(buf_size));
 
-    const char *digest_name = rm_digest_type_to_string(session->settings->checksum_type);
-    if(session->settings->checksum_type == RM_DIGEST_PARANOID) {
+    const char *digest_name = rm_digest_type_to_string(session->cfg->checksum_type);
+    if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
         digest_name = rm_digest_type_to_string(RMLINT_DEFAULT_DIGEST);
     }
 
@@ -110,7 +110,7 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
     g_assert(session);
 
 #if HAVE_XATTR
-    if(file->has_ext_cksum || session->settings->write_cksum_to_xattr == false) {
+    if(file->has_ext_cksum || session->cfg->write_cksum_to_xattr == false) {
         return EINVAL;
     }
 
@@ -123,13 +123,13 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
     double actual_time_sec = difftime(file->mtime, 0);
 
     if(0
-        || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key))
-        || rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key))
-        || rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0
-        || rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str))
-        || (timestamp_bytes = snprintf(timestamp, sizeof(timestamp), "%lld", (long long)actual_time_sec)) == -1
-        || rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes)
-    ) {
+            || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key))
+            || rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key))
+            || rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0
+            || rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str))
+            || (timestamp_bytes = snprintf(timestamp, sizeof(timestamp), "%lld", (long long)actual_time_sec)) == -1
+            || rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes)
+      ) {
         return errno;
     }
 #endif
@@ -141,23 +141,23 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
     g_assert(session);
 
 #if HAVE_XATTR
-    if(session->settings->read_cksum_from_xattr == false) {
+    if(session->cfg->read_cksum_from_xattr == false) {
         return NULL;
     }
 
     char cksum_key[64] = {0},
-         mtime_key[64] = {0},
-         mtime_buf[64] = {0},
-         cksum_hex_str[512] = {0};
+                         mtime_key[64] = {0},
+                                         mtime_buf[64] = {0},
+                                                 cksum_hex_str[512] = {0};
 
     memset(cksum_hex_str, '0', sizeof(cksum_hex_str));
     cksum_hex_str[sizeof(cksum_hex_str) - 1] = 0;
 
     if(0
-        || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key))
-        || rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1)
-        || rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key))
-        || rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1)) {
+            || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key))
+            || rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1)
+            || rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key))
+            || rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1)) {
         return NULL;
     }
 

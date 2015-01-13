@@ -30,7 +30,7 @@
 #include <sys/file.h>
 
 RmFile *rm_file_new(
-    RmSettings *settings, const char *path, RmStat *statp, RmLintType type,
+    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 ) {
     RmOff actual_file_size = statp->st_size;
@@ -38,14 +38,14 @@ RmFile *rm_file_new(
 
     /* Allow an actual file size of 0 for empty files */
     if(actual_file_size != 0) {
-        if(settings->use_absolute_start_offset) {
-            start_seek = settings->skip_start_offset;
-            if(settings->skip_start_offset >= actual_file_size) {
+        if(cfg->use_absolute_start_offset) {
+            start_seek = cfg->skip_start_offset;
+            if(cfg->skip_start_offset >= actual_file_size) {
                 return NULL;
             }
         } else {
-            start_seek = settings->skip_start_factor * actual_file_size;
-            if((int)(actual_file_size * settings->skip_end_factor) == 0) {
+            start_seek = cfg->skip_start_factor * actual_file_size;
+            if((int)(actual_file_size * cfg->skip_end_factor) == 0) {
                 return NULL;
             }
 
@@ -64,10 +64,10 @@ RmFile *rm_file_new(
     self->mtime = statp->st_mtim.tv_sec;
 
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        if(settings->use_absolute_end_offset) {
-            self->file_size = CLAMP(actual_file_size, 1, settings->skip_end_offset);
+        if(cfg->use_absolute_end_offset) {
+            self->file_size = CLAMP(actual_file_size, 1, cfg->skip_end_offset);
         } else {
-            self->file_size = actual_file_size * settings->skip_end_factor;
+            self->file_size = actual_file_size * cfg->skip_end_factor;
         }
     }
 
@@ -78,7 +78,7 @@ RmFile *rm_file_new(
     self->is_original = false;
     self->is_symlink = false;
     self->path_index = pnum;
-    self->settings = settings;
+    self->cfg = cfg;
 
     return self;
 }

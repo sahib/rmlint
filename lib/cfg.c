@@ -27,43 +27,43 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#include "settings.h"
+#include "cfg.h"
 
 /* Options not specified by commandline get a default option - this called before rm_cmd_parse_args */
-void rm_settings_set_default(RmSettings *settings) {
+void rm_cfg_set_default(RmCfg *cfg) {
     /* Set everything to 0 at first,
      * only non-null options are listed below.
      */
-    memset(settings, 0, sizeof(RmSettings));
+    memset(cfg, 0, sizeof(RmCfg));
 
     /* Traversal options */
-    settings->depth   = PATH_MAX / 2;
-    settings->minsize = 0;
-    settings->maxsize = G_MAXUINT64;
+    cfg->depth   = PATH_MAX / 2;
+    cfg->minsize = 0;
+    cfg->maxsize = G_MAXUINT64;
 
     /* Lint Types */
-    settings->ignore_hidden  = true;
-    settings->findemptydirs  = true;
-    settings->listemptyfiles = true;
-    settings->searchdup      = true;
-    settings->findbadids     = true;
-    settings->findbadlinks   = true;
+    cfg->ignore_hidden  = true;
+    cfg->findemptydirs  = true;
+    cfg->listemptyfiles = true;
+    cfg->searchdup      = true;
+    cfg->findbadids     = true;
+    cfg->findbadlinks   = true;
 
     /* Misc options */
-    settings->sort_criteria = "pm";
-    settings->checksum_type = RMLINT_DEFAULT_DIGEST;
-    settings->color         = 1;
-    settings->threads       = 32;
-    settings->verbosity     = G_LOG_LEVEL_INFO;
-    settings->paranoid_mem  = 256 * 1024 * 1024;
-    settings->followlinks   = false;
-    settings->see_symlinks  = true;
+    cfg->sort_criteria = "pm";
+    cfg->checksum_type = RMLINT_DEFAULT_DIGEST;
+    cfg->color         = 1;
+    cfg->threads       = 32;
+    cfg->verbosity     = G_LOG_LEVEL_INFO;
+    cfg->paranoid_mem  = 256 * 1024 * 1024;
+    cfg->followlinks   = false;
+    cfg->see_symlinks  = true;
 
-    settings->skip_start_factor = 0.0;
-    settings->skip_end_factor   = 1.0;
+    cfg->skip_start_factor = 0.0;
+    cfg->skip_end_factor   = 1.0;
 
-    settings->use_absolute_start_offset = false;
-    settings->use_absolute_end_offset = false;
-    settings->skip_start_offset    = 0;
-    settings->skip_end_offset      = 0;
+    cfg->use_absolute_start_offset = false;
+    cfg->use_absolute_end_offset = false;
+    cfg->skip_start_offset    = 0;
+    cfg->skip_end_offset      = 0;
 }

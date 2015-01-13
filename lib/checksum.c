@@ -273,13 +273,13 @@ void rm_digest_free(RmDigest *digest) {
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     switch(digest->type) {
-    case RM_DIGEST_EXT: 
+    case RM_DIGEST_EXT:
         /* Data is assumed to be a hex representation of a cchecksum.
          * Needs to be compressed in pure memory first.
          *
-         * Checksum is not updated but rather overwritten. 
+         * Checksum is not updated but rather overwritten.
          * */
-        #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
+#define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
         g_assert(data);
 

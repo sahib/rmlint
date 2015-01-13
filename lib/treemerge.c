@@ -181,7 +181,7 @@ static bool rm_tm_count_files(art_tree *count_tree, char **paths, RmSession *ses
     }
 
     int fts_flags = FTS_COMFOLLOW;
-    if(session->settings->followlinks) {
+    if(session->cfg->followlinks) {
         fts_flags |= FTS_LOGICAL;
     } else {
         fts_flags |= FTS_PHYSICAL;
@@ -367,7 +367,7 @@ static int rm_directory_equal_iter(
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
-    /* Will this work with paranoid settings? Probably, but in a weird way.
+    /* Will this work with paranoid cfg? Probably, but in a weird way.
      * Also it might not be very secure when the last block of the file is
      * compared...
      * */
@@ -511,7 +511,7 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
     init_art_tree(&self->dir_tree);
     init_art_tree(&self->count_tree);
 
-    rm_tm_count_files(&self->count_tree, session->settings->paths, session);
+    rm_tm_count_files(&self->count_tree, session->cfg->paths, session);
 
     return self;
 }
@@ -782,7 +782,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 rm_tm_mark_duplicate_files(self, directory);
             }
 
-            if(self->session->settings->write_unfinished) {
+            if(self->session->cfg->write_unfinished) {
                 rm_tm_write_unfinished_cksums(self, directory);
             }
         }
@@ -845,7 +845,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
             }
         } else {
             /* If no separate duplicate files are requested, we can stop here */
-            if(self->session->settings->searchdup == false) {
+            if(self->session->cfg->searchdup == false) {
                 self->session->total_lint_size -= file_size_acc;
                 self->session->dup_group_counter -= 1;
                 self->session->dup_counter -= file_list->length - 1;

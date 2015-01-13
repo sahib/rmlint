@@ -67,19 +67,19 @@ static bool rm_file_check_without_extension(RmFile *file_a, RmFile *file_b) {
 }
 
 gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
-    RmSettings *settings = file1->settings;
+    RmCfg *cfg = file1->cfg;
     return (1
             && (file1->file_size == file2->file_size)
             && (0
-                || (!settings->match_basename)
+                || (!cfg->match_basename)
                 || (g_strcmp0(file1->basename, file2->basename) == 0)
                )
             && (0
-                || (!settings->match_with_extension)
+                || (!cfg->match_with_extension)
                 || (rm_file_check_with_extension(file1, file2))
                )
             && (0
-                || (!settings->match_without_extension)
+                || (!cfg->match_without_extension)
                 || (rm_file_check_without_extension(file1, file2))
                )
            );
@@ -122,9 +122,9 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
                          );
 
 
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
 
-    g_assert(settings);
+    g_assert(cfg);
 
     g_rec_mutex_init(&tables->lock);
     return tables;
@@ -156,7 +156,7 @@ int rm_pp_cmp_orig_criteria_impl(
     const char *basename_a, const char *basename_b,
     int path_index_a, int path_index_b
 ) {
-    RmSettings *sets = session->settings;
+    RmCfg *sets = session->cfg;
 
     int sort_criteria_len = strlen(sets->sort_criteria);
     for (int i = 0; i < sort_criteria_len; i++) {
@@ -218,9 +218,9 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
         if (!inode_match) {
             g_hash_table_insert(node_table, file, file);
         } else {
-            /* file(s) with matching dev, inode(, basename) already in table... 
+            /* file(s) with matching dev, inode(, basename) already in table...
              * fails if the hardlinked file has been written to during traversal; so
-             * instead we just print a warning 
+             * instead we just print a warning
              * */
             if(inode_match->file_size != file->file_size) {
                 rm_log_warning_line("Hardlink file size changed during traversal: %s\n", file->path);
@@ -294,7 +294,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
  * and return true; else return false */
 static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
     if (file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
-        if(session->settings->filter_mtime && file->mtime < session->settings->min_mtime) {
+        if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
             rm_file_destroy(file);
             return true;
         }
@@ -323,7 +323,7 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
 
 static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *session) {
     g_assert(file);
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
 
     if (file->hardlinks.files) {
         /* it has a hardlink cluster - process each file (except self) */
@@ -338,7 +338,7 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
             g_assert (!embedded->hardlinks.files);
             if (rm_pp_handle_hardlinks(NULL, embedded, session) ) {
                 g_queue_delete_link(file->hardlinks.files, iter);
-            } else if (!settings->find_hardlinked_dupes) {
+            } else if (!cfg->find_hardlinked_dupes) {
                 rm_file_destroy(embedded);
                 g_queue_delete_link(file->hardlinks.files, iter);
             }

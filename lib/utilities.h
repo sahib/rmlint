@@ -321,7 +321,7 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size);
 ///////////////////////////////
 
 /**
- * @brief Create a new GThreadPool with default settings.
+ * @brief Create a new GThreadPool with default cfg.
  *
  * @param func func to execute
  * @param data user_data to pass
@@ -345,7 +345,7 @@ bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
 /**
  * @brief Read json_path and write (path:cksum) into cksum_table.
  *
- * @param cksum_table table to fill. 
+ * @param cksum_table table to fill.
  * @param json_path path with .json file.
  *
  * @return 0 on success.

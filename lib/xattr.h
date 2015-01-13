@@ -30,11 +30,11 @@
 #include "session.h"
 
 /**
- * @brief Write hash and timestamp to the xattr of a file. 
+ * @brief Write hash and timestamp to the xattr of a file.
  *
  * The checksum is read from the file->digest structure.
  *
- * @param session Session to validate settings against.
+ * @param session Session to validate cfg against.
  * @param file file to get data and write to.
  *
  * @return 0 on sucess, some errno on failure.
@@ -42,11 +42,11 @@
 int rm_xattr_write_hash(RmSession *session, RmFile *file);
 
 /**
- * @brief Read hash as hexstring from xattrs. 
- * 
+ * @brief Read hash as hexstring from xattrs.
+ *
  * If the mtime of the file does not match, the checksum is discarded.
  *
- * @param session Session to validate settings against.
+ * @param session Session to validate cfg against.
  * @param file file to read the path from and to check the mtime.
  *
  * @return an allocated hexstring or NULL on failure or if they're is no data.
@@ -56,7 +56,7 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file);
 /**
  * @brief Clear all data that may have been writen to file.
  *
- * @param session Session to validate settings against.
+ * @param session Session to validate cfg against.
  * @param file to read the path to clear from.
  *
  * @return 0 on success, some errno on failure.

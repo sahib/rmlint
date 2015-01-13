@@ -191,9 +191,9 @@ static void rm_fmt_progressbar_print_glyph(
 ) {
     fprintf(
         out, "%s%s%s",
-        (session->settings->color) ? color : "",
+        (session->cfg->color) ? color : "",
         rm_fmt_progressbar_get_glyph(self, type),
-        (session->settings->color) ? RESET : ""
+        (session->cfg->color) ? RESET : ""
     );
 }
 

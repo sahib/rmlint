@@ -50,8 +50,8 @@ static void logging_callback(
     gpointer user_data) {
 
     RmSession *session = user_data;
-    if(session->settings->verbosity >= log_level) {
-        if(!session->settings->color) {
+    if(session->cfg->verbosity >= log_level) {
+        if(!session->cfg->color) {
             message = remove_color_escapes((char *)message);
         }
         g_printerr("%s", message);
@@ -109,11 +109,11 @@ static void i18n_init(void) {
 int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
 
-    RmSettings settings;
-    rm_settings_set_default(&settings);
+    RmCfg cfg;
+    rm_cfg_set_default(&cfg);
 
     RmSession session;
-    rm_session_init(&session, &settings);
+    rm_session_init(&session, &cfg);
 
     /* call logging_callback on every message */
     g_log_set_default_handler(logging_callback, &session);

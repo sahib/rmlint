@@ -30,8 +30,8 @@
 #include "checksum.h"
 #include "utilities.h"
 
-/* all available settings - see rmlint -h */
-typedef struct RmSettings {
+/* all available cfg - see rmlint -h */
+typedef struct RmCfg {
     gboolean color;
     gboolean samepart;
     gboolean ignore_hidden;
@@ -43,50 +43,50 @@ typedef struct RmSettings {
     gboolean findemptydirs;
     gboolean nonstripped;
     gboolean listemptyfiles;
-    gboolean keep_all_tagged;           
-    gboolean keep_all_untagged;         
-    gboolean must_match_tagged;         
-    gboolean must_match_untagged;       
-    gboolean find_hardlinked_dupes;     
+    gboolean keep_all_tagged;
+    gboolean keep_all_untagged;
+    gboolean must_match_tagged;
+    gboolean must_match_untagged;
+    gboolean find_hardlinked_dupes;
     gboolean limits_specified;
     gboolean filter_mtime;
-    gboolean match_basename;            
-    gboolean match_with_extension;      
-    gboolean match_without_extension;   
-    gboolean merge_directories;         
-    gboolean write_cksum_to_xattr;      
-    gboolean read_cksum_from_xattr;     
-    gboolean clear_xattr_fields;        
-    gboolean write_unfinished;          
+    gboolean match_basename;
+    gboolean match_with_extension;
+    gboolean match_without_extension;
+    gboolean merge_directories;
+    gboolean write_cksum_to_xattr;
+    gboolean read_cksum_from_xattr;
+    gboolean clear_xattr_fields;
+    gboolean write_unfinished;
 
     time_t min_mtime;
-    gint depth;                   
-    gint verbosity;               
+    gint depth;
+    gint verbosity;
 
-    gdouble skip_start_factor;    
-    gdouble skip_end_factor;      
+    gdouble skip_start_factor;
+    gdouble skip_end_factor;
 
-    gboolean use_absolute_start_offset; 
-    gboolean use_absolute_end_offset;   
-    RmOff skip_start_offset;     
-    RmOff skip_end_offset;       
+    gboolean use_absolute_start_offset;
+    gboolean use_absolute_end_offset;
+    RmOff skip_start_offset;
+    RmOff skip_end_offset;
 
     char **paths;
-    char *is_prefd;              
-    char *sort_criteria;         
-    char *iwd;                   
-    char *joined_argv;           
+    char *is_prefd;
+    char *sort_criteria;
+    char *iwd;
+    char *joined_argv;
 
     RmOff minsize;
     RmOff maxsize;
     RmOff threads;
-    RmDigestType checksum_type;  
-    RmOff paranoid_mem;          
-} RmSettings;
+    RmDigestType checksum_type;
+    RmOff paranoid_mem;
+} RmCfg;
 /**
- * @brief Reset RmSettings to default settings and all other vars to 0.
+ * @brief Reset RmCfg to default cfg and all other vars to 0.
  */
-void rm_settings_set_default(RmSettings *settings);
+void rm_cfg_set_default(RmCfg *cfg);
 
 #endif /* end of include guard */
 

@@ -119,8 +119,8 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 
     fprintf(
         out, SH_SCRIPT_TEMPLATE_HEAD,
-        session->settings->iwd,
-        (session->settings->joined_argv) ? (session->settings->joined_argv) : "[unknown]",
+        session->cfg->iwd,
+        (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "[unknown]",
         rm_util_get_username(),
         rm_util_get_groupname()
     );

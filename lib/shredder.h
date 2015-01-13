@@ -32,7 +32,7 @@
 /**
  * @brief Find duplicate RmFile and pass them to postprocess; free/destroy all other RmFiles.
  *
- * @param session: rmlint session containing all settings and pseudo-globals
+ * @param session: rmlint session containing all cfg and pseudo-globals
  */
 void rm_shred_run(RmSession *session);
 

@@ -26,7 +26,7 @@
 /* GLib types are part of the API */
 #include <glib.h>
 
-#include "settings.h"
+#include "cfg.h"
 #include "session.h"
 #include "cmdline.h"
 #include "config.h"

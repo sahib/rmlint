@@ -224,15 +224,15 @@ static gboolean rm_cmd_parse_limit_sizes(
     const char *error_msg = NULL;
     if(!rm_cmd_size_range_string_to_bytes(
                 range_spec,
-                &session->settings->minsize,
-                &session->settings->maxsize,
+                &session->cfg->minsize,
+                &session->cfg->maxsize,
                 &error_msg
             )) {
-        
+
         g_set_error(error, RM_ERROR_DOMAIN, 0,  _("cannot parse --limit: %s"), error_msg);
         return false;
     } else {
-        session->settings->limits_specified = true;
+        session->cfg->limits_specified = true;
         return true;
     }
 }
@@ -246,18 +246,18 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
 };
 
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
     if(faccessat(AT_FDCWD, path, R_OK, AT_EACCESS) != 0) {
         rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path, strerror(errno));
         return FALSE;
     } else {
-        settings->is_prefd = g_realloc(settings->is_prefd, sizeof(char) * (index + 1));
-        settings->is_prefd[index] = is_prefd;
-        settings->paths = g_realloc(settings->paths, sizeof(char *) * (index + 2));
+        cfg->is_prefd = g_realloc(cfg->is_prefd, sizeof(char) * (index + 1));
+        cfg->is_prefd[index] = is_prefd;
+        cfg->paths = g_realloc(cfg->paths, sizeof(char *) * (index + 2));
 
         char *abs_path = realpath(path, NULL);
-        settings->paths[index + 0] = abs_path ? abs_path : g_strdup(path);
-        settings->paths[index + 1] = NULL;
+        cfg->paths[index + 0] = abs_path ? abs_path : g_strdup(path);
+        cfg->paths[index + 1] = NULL;
         return TRUE;
     }
 }
@@ -332,10 +332,10 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
 }
 
 static gboolean rm_cmd_parse_config(
-        _U const char *option_name,
-        const char *pair,
-        RmSession *session,
-        _U GError **error
+    _U const char *option_name,
+    const char *pair,
+    RmSession *session,
+    _U GError **error
 ) {
     /* rm_cmd_parse_config_pair() may warn but never fail */
     rm_cmd_parse_config_pair(session, pair);
@@ -391,25 +391,25 @@ static void rm_cmd_parse_clamp_option(RmSession *session, const char *string, bo
     if(strchr(string, '.') || g_str_has_suffix(string, "%")) {
         gdouble factor = rm_cmd_parse_clamp_factor(string, error);
         if(start_or_end) {
-            session->settings->use_absolute_start_offset = false;
-            session->settings->skip_start_factor = factor;
+            session->cfg->use_absolute_start_offset = false;
+            session->cfg->skip_start_factor = factor;
         } else {
-            session->settings->use_absolute_end_offset = false;
-            session->settings->skip_end_factor = factor;
+            session->cfg->use_absolute_end_offset = false;
+            session->cfg->skip_end_factor = factor;
         }
     } else {
         RmOff offset = rm_cmd_parse_clamp_offset(string, error);
         if(start_or_end) {
-            session->settings->use_absolute_start_offset = true;
-            session->settings->skip_start_offset = offset;
+            session->cfg->use_absolute_start_offset = true;
+            session->cfg->skip_start_offset = offset;
         } else {
-            session->settings->use_absolute_end_offset = true;
-            session->settings->skip_end_offset = offset;
+            session->cfg->use_absolute_end_offset = true;
+            session->cfg->skip_end_offset = offset;
         }
     }
 }
 
-/* parse comma-separated strong of lint types and set settings accordingly */
+/* parse comma-separated strong of lint types and set cfg accordingly */
 typedef struct RmLintTypeOption {
     const char **names;
     gboolean **enable;
@@ -444,49 +444,49 @@ static char rm_cmd_find_lint_types_sep(const char *lint_string) {
 }
 
 static gboolean rm_cmd_parse_lint_types(
-        _U const char *option_name,
-        const char *lint_string,
-        RmSession *session,
-        _U GError **error
+    _U const char *option_name,
+    const char *lint_string,
+    RmSession *session,
+    _U GError **error
 ) {
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
 
     RmLintTypeOption option_table[] = {{
             .names = NAMES{"all", 0},
             .enable = OPTS{
-                &settings->findbadids,
-                &settings->findbadlinks,
-                &settings->findemptydirs,
-                &settings->listemptyfiles,
-                &settings->nonstripped,
-                &settings->searchdup,
-                &settings->merge_directories,
+                &cfg->findbadids,
+                &cfg->findbadlinks,
+                &cfg->findemptydirs,
+                &cfg->listemptyfiles,
+                &cfg->nonstripped,
+                &cfg->searchdup,
+                &cfg->merge_directories,
                 0
             }
         }, {
             .names = NAMES{"minimal", 0},
             .enable = OPTS{
-                &settings->findbadids,
-                &settings->findbadlinks,
-                &settings->searchdup,
+                &cfg->findbadids,
+                &cfg->findbadlinks,
+                &cfg->searchdup,
                 0
             },
         }, {
             .names = NAMES{"minimaldirs", 0},
             .enable = OPTS{
-                &settings->findbadids,
-                &settings->findbadlinks,
-                &settings->merge_directories,
+                &cfg->findbadids,
+                &cfg->findbadlinks,
+                &cfg->merge_directories,
                 0
             },
         }, {
             .names = NAMES{"defaults", 0},
             .enable = OPTS{
-                &settings->findbadids,
-                &settings->findbadlinks,
-                &settings->findemptydirs,
-                &settings->listemptyfiles,
-                &settings->searchdup,
+                &cfg->findbadids,
+                &cfg->findbadlinks,
+                &cfg->findemptydirs,
+                &cfg->listemptyfiles,
+                &cfg->searchdup,
                 0
             },
         }, {
@@ -494,25 +494,25 @@ static gboolean rm_cmd_parse_lint_types(
             .enable = OPTS{0},
         }, {
             .names = NAMES{"badids", "bi", 0},
-            .enable = OPTS{&settings->findbadids, 0}
+            .enable = OPTS{&cfg->findbadids, 0}
         }, {
             .names = NAMES{"badlinks", "bl", 0},
-            .enable = OPTS{&settings->findbadlinks, 0}
+            .enable = OPTS{&cfg->findbadlinks, 0}
         }, {
             .names = NAMES{"emptydirs", "ed", 0},
-            .enable = OPTS{&settings->findemptydirs, 0}
+            .enable = OPTS{&cfg->findemptydirs, 0}
         }, {
             .names = NAMES{"emptyfiles", "ef", 0},
-            .enable = OPTS{&settings->listemptyfiles, 0}
+            .enable = OPTS{&cfg->listemptyfiles, 0}
         }, {
             .names = NAMES{"nonstripped", "ns", 0},
-            .enable = OPTS{&settings->nonstripped, 0}
+            .enable = OPTS{&cfg->nonstripped, 0}
         }, {
             .names = NAMES{"duplicates", "df", "dupes", 0},
-            .enable = OPTS{&settings->searchdup, 0}
+            .enable = OPTS{&cfg->searchdup, 0}
         }, {
             .names = NAMES{"duplicatedirs", "dd", "dupedirs", 0},
-            .enable = OPTS{&settings->merge_directories, 0}
+            .enable = OPTS{&cfg->merge_directories, 0}
         }
     };
 
@@ -573,9 +573,9 @@ static gboolean rm_cmd_parse_lint_types(
         }
     }
 
-    if(settings->merge_directories) {
-        settings->ignore_hidden = false;
-        settings->find_hardlinked_dupes = true;
+    if(cfg->merge_directories) {
+        cfg->ignore_hidden = false;
+        cfg->find_hardlinked_dupes = true;
     }
 
     /* clean up */
@@ -592,7 +592,7 @@ static gboolean rm_cmd_parse_timestamp(
 ) {
     time_t result = 0;
     bool plain = rm_cmd_timestamp_is_plain(string);
-    session->settings->filter_mtime = false;
+    session->cfg->filter_mtime = false;
 
     tzset();
 
@@ -621,7 +621,7 @@ static gboolean rm_cmd_parse_timestamp(
     }
 
     /* Some sort of success. */
-    session->settings->filter_mtime = true;
+    session->cfg->filter_mtime = true;
 
     if(result > time(NULL)) {
         /* Not critical, maybe there are some uses for this,
@@ -645,7 +645,7 @@ static gboolean rm_cmd_parse_timestamp(
     }
 
     /* Remember our result */
-    session->settings->min_mtime = result;
+    session->cfg->min_mtime = result;
     return true;
 }
 
@@ -656,7 +656,7 @@ static gboolean rm_cmd_parse_timestamp_file(
     FILE *stamp_file = fopen(timestamp_path, "r");
 
     /* Assume failure */
-    session->settings->filter_mtime = false;
+    session->cfg->filter_mtime = false;
 
     if(stamp_file) {
         char stamp_buf[1024];
@@ -664,8 +664,8 @@ static gboolean rm_cmd_parse_timestamp_file(
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
             success = rm_cmd_parse_timestamp(
-                option_name, g_strstrip(stamp_buf), session, error
-            );
+                          option_name, g_strstrip(stamp_buf), session, error
+                      );
             plain = rm_cmd_timestamp_is_plain(stamp_buf);
         }
 
@@ -690,38 +690,38 @@ static gboolean rm_cmd_parse_timestamp_file(
     return success;
 }
 
-static void rm_cmd_set_verbosity_from_cnt(RmSettings *settings, int verbosity_counter) {
-    settings->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
-                              verbosity_counter,
-                              0,
-                              (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1
-                          )];
+static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
+    cfg->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
+            verbosity_counter,
+            0,
+            (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1
+                                            )];
 }
 
-static void rm_cmd_set_paranoia_from_cnt(RmSettings *settings, int paranoia_counter, GError **error) {
+static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter, GError **error) {
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
-        settings->checksum_type = RM_DIGEST_SPOOKY32;
+        cfg->checksum_type = RM_DIGEST_SPOOKY32;
         break;
     case -1:
-        settings->checksum_type = RM_DIGEST_SPOOKY64;
+        cfg->checksum_type = RM_DIGEST_SPOOKY64;
         break;
     case 0:
         /* leave users choice of -a (default) */
         break;
     case 1:
-        settings->checksum_type = RM_DIGEST_BASTARD;
+        cfg->checksum_type = RM_DIGEST_BASTARD;
         break;
     case 2:
 #if HAVE_SHA512
-        settings->checksum_type = RM_DIGEST_SHA512;
+        cfg->checksum_type = RM_DIGEST_SHA512;
 #else
-        settings->checksum_type = RM_DIGEST_SHA256;
+        cfg->checksum_type = RM_DIGEST_SHA256;
 #endif
         break;
     case 3:
-        settings->checksum_type = RM_DIGEST_PARANOID;
+        cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
         g_set_error(error, RM_ERROR_DOMAIN, 0, _("Only up to -ppp or down to -P flags allowed."));
@@ -743,12 +743,12 @@ static gboolean rm_cmd_parse_algorithm(
     RmSession *session,
     GError **error
 ) {
-    RmSettings *settings = session->settings;
-    settings->checksum_type = rm_string_to_digest_type(value);
+    RmCfg *cfg = session->cfg;
+    cfg->checksum_type = rm_string_to_digest_type(value);
 
-    if(settings->checksum_type == RM_DIGEST_UNKNOWN) {
+    if(cfg->checksum_type == RM_DIGEST_UNKNOWN) {
         g_set_error(error, RM_ERROR_DOMAIN, 0, _("Unknown hash algorithm: '%s'"), value);
-    } else if(settings->checksum_type == RM_DIGEST_BASTARD) {
+    } else if(cfg->checksum_type == RM_DIGEST_BASTARD) {
         session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
         session->hash_seed2 = GPOINTER_TO_UINT(&session);
     }
@@ -780,12 +780,12 @@ static gboolean rm_cmd_parse_paranoid_mem(
 
     if(parse_error != NULL) {
         g_set_error(
-            error, RM_ERROR_DOMAIN, 0, 
+            error, RM_ERROR_DOMAIN, 0,
             _("Invalid size description \"%s\": %s"), size_spec, parse_error
         );
         return false;
     } else {
-        session->settings->paranoid_mem = size;
+        session->cfg->paranoid_mem = size;
         return true;
     }
 }
@@ -811,7 +811,7 @@ static gboolean rm_cmd_parse_cache(
         g_set_error(error, RM_ERROR_DOMAIN, 0, "There is no cache at `%s'", cache_path);
         return false;
     }
-    
+
     g_queue_push_tail(&session->cache_list, g_strdup(cache_path));
     return true;
 }
@@ -825,7 +825,7 @@ static gboolean rm_cmd_parse_progress(
     rm_fmt_add(session->formats, "sh", "rmlint.sh");
 
     /* Set verbosity to minimal */
-    rm_cmd_set_verbosity_from_cnt(session->settings, 1);
+    rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
     return true;
 }
 
@@ -837,56 +837,56 @@ static gboolean rm_cmd_parse_no_progress(
     rm_fmt_add(session->formats, "summary", "stdout");
     rm_fmt_add(session->formats, "sh", "rmlint.sh");
 
-    rm_cmd_set_verbosity_from_cnt(session->settings, session->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(session->cfg, session->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_loud(
     _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
 ) {
-    rm_cmd_set_verbosity_from_cnt(session->settings, ++session->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(session->cfg, ++session->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_quiet(
     _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
 ) {
-    rm_cmd_set_verbosity_from_cnt(session->settings, --session->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(session->cfg, --session->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_paranoid(
     _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
 ) {
-    rm_cmd_set_paranoia_from_cnt(session->settings, ++session->paranoia_count, error);
+    rm_cmd_set_paranoia_from_cnt(session->cfg, ++session->paranoia_count, error);
     return true;
 }
 
 static gboolean rm_cmd_parse_less_paranoid(
     _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
 ) {
-    rm_cmd_set_paranoia_from_cnt(session->settings, --session->paranoia_count, error);
+    rm_cmd_set_paranoia_from_cnt(session->cfg, --session->paranoia_count, error);
     return true;
 }
 
 static gboolean rm_cmd_parse_merge_directories(
     _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
 ) {
-    RmSettings *settings = session->settings;
-    settings->merge_directories = true;
+    RmCfg *cfg = session->cfg;
+    cfg->merge_directories = true;
 
     /* Pull in some options for convinience,
      * duplicate dir detection works better with them.
      *
      * They may be disabled explicitly though.
      */
-    settings->find_hardlinked_dupes = true;
-    settings->ignore_hidden = false;
+    cfg->find_hardlinked_dupes = true;
+    cfg->ignore_hidden = false;
 
     return true;
 }
 
-static bool rm_cmd_set_cwd(RmSettings *settings) {
+static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
     memset(cwd_buf, 0, sizeof(cwd_buf));
@@ -896,19 +896,19 @@ static bool rm_cmd_set_cwd(RmSettings *settings) {
         return false;
     }
 
-    settings->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
+    cfg->iwd = g_strdup_printf("%s%s", cwd_buf, G_DIR_SEPARATOR_S);
     return true;
 }
 
 
-static bool rm_cmd_set_cmdline(RmSettings *settings, int argc, char **argv) {
+static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
     /* Copy commandline rmlint was invoked with by copying argv into a
      * NULL padded array and join that with g_strjoinv. GLib made me lazy.
      */
     const char *argv_nul[argc + 1];
     memset(argv_nul, 0, sizeof(argv_nul));
     memcpy(argv_nul, argv, argc * sizeof(const char *));
-    settings->joined_argv = g_strjoinv(" ", (gchar **)argv_nul);
+    cfg->joined_argv = g_strjoinv(" ", (gchar **)argv_nul);
 
     /* This cannot fail currently */
     return true;
@@ -919,7 +919,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     bool is_prefd = false;
     bool not_all_paths_read = false;
 
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
@@ -945,7 +945,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     if(path_index == 0 && not_all_paths_read == false) {
         /* Still no path set? - use `pwd` */
-        rm_cmd_add_path(session, is_prefd, path_index, settings->iwd);
+        rm_cmd_add_path(session, is_prefd, path_index, cfg->iwd);
     } else if(path_index == 0 && not_all_paths_read) {
         return false;
     }
@@ -962,17 +962,14 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
         rm_fmt_add(session->formats, "pretty", "stdout");
         rm_fmt_add(session->formats, "summary", "stdout");
         rm_fmt_add(session->formats, "sh", "rmlint.sh");
-    }   
+    }
 
     return true;
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
-    /* Normally we call this variable `settings`. 
-     * But cfg is shorter for that table below. 
-     */
-    RmSettings *cfg = session->settings;
+    RmCfg *cfg = session->cfg;
 
     /* List of paths we got passed (or NULL) */
     char **paths = NULL;
@@ -981,13 +978,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     GError *error = NULL;
     GOptionContext *option_parser = NULL;
 
-    #define FUNC(name) ((GOptionArgFunc)rm_cmd_parse_##name)
+#define FUNC(name) ((GOptionArgFunc)rm_cmd_parse_##name)
     const int DISABLE = G_OPTION_FLAG_REVERSE,
               EMPTY   = G_OPTION_FLAG_NO_ARG,
               HIDDEN  = G_OPTION_FLAG_HIDDEN;
 
     /* Free/Used Options:
-       Free:  B DEFGHI KLMNOPQRST VWX   abcdefghi klmnopqrstuvwx 
+       Free:  B DEFGHI KLMNOPQRST VWX   abcdefghi klmnopqrstuvwx
        Used: A C      J               Z          j              yz
     */
     const GOptionEntry main_option_entries[] = {
@@ -1081,17 +1078,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     ////////////////////
 
     option_parser = g_option_context_new(
-        "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
-    );
+                        "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
+                    );
     GOptionGroup *main_group = g_option_group_new(
-        "rmlint", "main", "Most useful main options", session, NULL
-    );
+                                   "rmlint", "main", "Most useful main options", session, NULL
+                               );
     GOptionGroup *inversion_group = g_option_group_new(
-        "inversed", "inverted", "Options that enable defaults", session, NULL
-    );
+                                        "inversed", "inverted", "Options that enable defaults", session, NULL
+                                    );
     GOptionGroup *unusual_group = g_option_group_new(
-        "unusual", "unusual", "Unusual options", session, NULL
-    );
+                                      "unusual", "unusual", "Unusual options", session, NULL
+                                  );
 
     g_option_group_add_entries(main_group, main_option_entries);
     g_option_group_add_entries(main_group, inversed_option_entries);
@@ -1125,23 +1122,23 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* Overwrite color if we do not print to a terminal directly */
     cfg->color = isatty(fileno(stdout)) && isatty(fileno(stderr));
-    
+
     if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(
-            RM_ERROR_DOMAIN, 0,
-            _("can't specify both --keep-all-tagged and --keep-all-untagged")
-        );
+                    RM_ERROR_DOMAIN, 0,
+                    _("can't specify both --keep-all-tagged and --keep-all-untagged")
+                );
 
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(
-            RM_ERROR_DOMAIN, 0,
-            _("-q (--clamp-low) should be lower than -Q (--clamp-top)!")
-        );
+                    RM_ERROR_DOMAIN, 0,
+                    _("-q (--clamp-low) should be lower than -Q (--clamp-top)!")
+                );
     } else if(!rm_cmd_set_paths(session, paths)) {
         error = g_error_new(
-            RM_ERROR_DOMAIN, 0,
-            _("No valid paths given.")
-        );
+                    RM_ERROR_DOMAIN, 0,
+                    _("No valid paths given.")
+                );
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
     }
@@ -1173,7 +1170,7 @@ int rm_cmd_main(RmSession *session) {
         g_timer_elapsed(session->timer, NULL), session->total_files
     );
 
-    if(session->settings->merge_directories) {
+    if(session->cfg->merge_directories) {
         session->dir_merger = rm_tm_new(session);
     }
 
@@ -1181,14 +1178,14 @@ int rm_cmd_main(RmSession *session) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
-        if(session->settings->searchdup || session->settings->merge_directories) {
+        if(session->cfg->searchdup || session->cfg->merge_directories) {
             rm_shred_run(session);
 
             rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
         }
     }
 
-    if(session->settings->merge_directories) {
+    if(session->cfg->merge_directories) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
         rm_tm_finish(session->dir_merger);
     }

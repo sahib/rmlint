@@ -29,8 +29,8 @@
 #include "session.h"
 
 /**
- * @brief Parse all arguments specified in argc/argv and set the aprop. settings
- * in session->settings.
+ * @brief Parse all arguments specified in argc/argv and set the aprop. cfg
+ * in session->cfg.
  *
  * @return false on parse error (running makes no sense then)
  */

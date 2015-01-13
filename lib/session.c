@@ -32,12 +32,12 @@
 #include "traverse.h"
 #include "preprocess.h"
 
-void rm_session_init(RmSession *session, RmSettings *settings) {
+void rm_session_init(RmSession *session, RmCfg *cfg) {
     memset(session, 0, sizeof(RmSession));
     session->timer = g_timer_new();
     g_queue_init(&session->cache_list);
 
-    session->settings = settings;
+    session->cfg = cfg;
     session->tables = rm_file_tables_new(session);
     session->formats = rm_fmt_open(session);
 
@@ -52,11 +52,11 @@ void rm_session_init(RmSession *session, RmSettings *settings) {
 }
 
 void rm_session_clear(RmSession *session) {
-    RmSettings *settings = session->settings;
+    RmCfg *cfg = session->cfg;
 
     /* Free mem */
-    if(settings->paths) {
-        g_strfreev(settings->paths);
+    if(cfg->paths) {
+        g_strfreev(cfg->paths);
     }
 
     g_timer_destroy(session->timer);
@@ -77,9 +77,9 @@ void rm_session_clear(RmSession *session) {
 
     g_queue_clear(&session->cache_list);
 
-    g_free(settings->joined_argv);
-    g_free(settings->is_prefd);
-    g_free(settings->iwd);
+    g_free(cfg->joined_argv);
+    g_free(cfg->is_prefd);
+    g_free(cfg->iwd);
 }
 
 static GMutex ABORT_MTX;

@@ -131,7 +131,7 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     GHashTableIter iter;                                                          \
     g_hash_table_iter_init(&iter, self->handler_to_file);                         \
     while(g_hash_table_iter_next(&iter, (gpointer *)&handler, (gpointer *)&file)) \
-
+ 
 #define RM_FMT_CALLBACK(func, ...)                               \
     if(func) {                                                   \
         g_mutex_lock(&handler->print_mtx); {                     \
@@ -145,7 +145,7 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
         }                                                        \
         g_mutex_unlock(&handler->print_mtx);                     \
     }                                                            \
-
+ 
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler = g_hash_table_lookup(self->name_to_handler, handler_name);
     if(new_handler == NULL) {
@@ -271,7 +271,7 @@ void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
 
 bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {
     if(0
-            || handler->path == NULL 
+            || handler->path == NULL
             || strcmp(handler->path, "stdout") == 0
             || strcmp(handler->path, "stderr") == 0
             || strcmp(handler->path, "stdin") == 0
