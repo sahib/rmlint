@@ -119,7 +119,7 @@ def exec_operation(item, original=None):
         OPERATIONS[item['type']](item['path'], original=original, item=item)
     except OSError as err:
         print(
-            '{c[red]}#{c[reset]} Error on `{item[path]}`:\\n{c[red]}#{c[reset]}    {err}'.format(
+            '{c[red]}#{c[reset]} Error on `{item[path]}`:\n{c[red]}#{c[reset]}    {err}'.format(
                 item=item, err=err, c=COLORS
             ),
             file=sys.stderr
@@ -133,7 +133,7 @@ def main(args, header, data, footer):
     for item in data:
         if item['type'].startswith('duplicate_') and item['is_original']:
             print(
-                "\\n{c[green]}#{c[reset]} Deleting twins of {item[path]} ".format(
+                "\n{c[green]}#{c[reset]} Deleting twins of {item[path]} ".format(
                     item=item, c=COLORS
                 )
             )
@@ -187,7 +187,7 @@ if __name__ == '__main__':
 
     try:
         if not args.no_ask and not args.dry_run:
-            print('\\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
+            print('\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
             sys.stdin.read(1)
 
         for json_doc in json_docus:
@@ -196,7 +196,7 @@ if __name__ == '__main__':
 
         if args.dry_run:
             print(
-                '\\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(
+                '\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(
                     c=COLORS
                 )
             )

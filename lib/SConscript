@@ -42,18 +42,33 @@ def build_config_template(target, source, env):
 
         handle.write(config_h)
 
+
+def prepare_c_source(text):
+    # Prepare the Python source to be compatible with C-strings
+    text = text.replace('"', '\\"')
+    text = text.replace('\\n', '\\\\n')
+    text = '\\n"\n"'.join(text.splitlines())
+    return text
+
+
 def build_python_formatter(target, source, env):
     text = source[0].get_text_contents()
 
     with codecs.open('lib/formats/py.py', 'r') as handle:
-        py_source = handle.read()
-
-    # Prepare the Python source to be compatible with C-strings
-    py_source = py_source.replace('"', '\\"')
-    py_source = '\\n"\n"'.join(py_source.splitlines())
+        py_source = prepare_c_source(handle.read())
 
     with codecs.open(target[0].get_abspath(), 'w') as handle:
         handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
+
+
+def build_sh_formatter(target, source, env):
+    text = source[0].get_text_contents()
+
+    with codecs.open('lib/formats/sh.sh', 'r') as handle:
+        sh_source = prepare_c_source(handle.read())
+
+    with codecs.open(target[0].get_abspath(), 'w') as handle:
+        handle.write(text.replace('<<SH_SOURCE>>', sh_source))
 
 
 config = env.Command(
@@ -62,6 +77,10 @@ config = env.Command(
 
 py_formatter = env.Command(
     'formats/py.c', 'formats/py.c.in', build_python_formatter
+)
+
+sh_formatter = env.Command(
+    'formats/sh.c', 'formats/sh.c.in', build_sh_formatter
 )
 
 library = env.Library(
@@ -76,6 +95,7 @@ headers = Glob('*.h')
 env.Depends(library, [config, py_formatter])
 env.AlwaysBuild(config)
 env.AlwaysBuild(py_formatter)
+env.AlwaysBuild(sh_formatter)
 
 # Disable this for now until someone
 # announces interest in this.
