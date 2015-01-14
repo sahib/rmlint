@@ -92,7 +92,7 @@ library = env.Library(
 )
 
 headers = Glob('*.h')
-env.Depends(library, [config, py_formatter])
+env.Depends(library, [config, py_formatter, sh_formatter])
 env.AlwaysBuild(config)
 env.AlwaysBuild(py_formatter)
 env.AlwaysBuild(sh_formatter)
