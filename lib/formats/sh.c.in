@@ -35,9 +35,9 @@ typedef struct RmFmtHandlerShScript {
     RmFmtHandler parent;
     RmFile *last_original;
 
-    bool opt_use_reflink;
-    bool opt_use_ln;
-    bool opt_symlinks_only;
+    bool opt_use_reflink : 1;
+    bool opt_use_ln : 1;
+    bool opt_symlinks_only : 1;
 } RmFmtHandlerShScript;
 
 static const char *SH_SCRIPT_TEMPLATE_HEAD = "<<SH_SOURCE>>";
@@ -53,6 +53,11 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
+
+    // -c sh:link    = [true|false]
+    // -c sh:replace = [true|false]
+    // -c sh:cmd     = "some string with $duplicate $orig"
+    // -c sh:order   = "cmd,reflink,symlink,hardlink"
 
     self->opt_symlinks_only = rm_fmt_get_config_value(session->formats, "sh", "symlinks_only");
     self->opt_use_ln = rm_fmt_get_config_value(session->formats, "sh", "use_ln");
@@ -75,7 +80,28 @@ static char *rm_fmt_sh_escape_path(char *path) {
     return rm_util_strsub(path, "'", "'\"'\"'");
 }
 
+static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile *file) {
+    bool is_dir = (file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
 
+    const char *prefix = NULL;
+    const char *comment = NULL;
+
+    if(file->is_original) {
+        if(is_dir) {
+            comment = " # original directory";
+        } else {
+            comment = " # original";
+        }
+
+        prefix = "echo";
+    } else {
+        if(is_dir) {
+            comment = " # duplicate directory";
+        } else {
+            comment = " # duplicate";
+        }
+    }
+}
 
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
@@ -83,41 +109,41 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
      * for more info on this
      * */
-    char *dupe_path = rm_fmt_sh_escape_path(file->path);
+    char *path = rm_fmt_sh_escape_path(file->path);
 
     switch(file->lint_type) {
     case RM_LINT_TYPE_BLNK:
-        fprintf(out, "rm -f '%s' # bad symlink pointing nowhere\n", dupe_path);
+        fprintf(out, "rm -f '%s' # bad symlink pointing nowhere\n", path);
         break;
     case RM_LINT_TYPE_EDIR:
-        fprintf(out, "rmdir '%s' # empty folder\n", dupe_path);
+        fprintf(out, "rmdir '%s' # empty folder\n", path);
         break;
     case RM_LINT_TYPE_NBIN:
-        fprintf(out, "strip --strip-debug '%s' # binary with debugsymbols\n", dupe_path);
+        fprintf(out, "strip --strip-debug '%s' # binary with debugsymbols\n", path);
         break;
     case RM_LINT_TYPE_BADUID:
-        fprintf(out, "%s '%s' # bad uid\n", "chown \"$user\"", dupe_path);
+        fprintf(out, "%s '%s' # bad uid\n", "chown \"$user\"", path);
         break;
     case RM_LINT_TYPE_BADGID:
-        fprintf(out, "%s '%s' # bad gid\n", "chgrp \"$group\"", dupe_path);
+        fprintf(out, "%s '%s' # bad gid\n", "chgrp \"$group\"", path);
         break;
     case RM_LINT_TYPE_BADUGID:
-        fprintf(out, "%s '%s' # bad gid and uid\n", "chown \"$user\":\"$group\"", dupe_path);
+        fprintf(out, "%s '%s' # bad gid and uid\n", "chown \"$user\":\"$group\"", path);
         break;
     case RM_LINT_TYPE_EFILE:
-        fprintf(out, "rm -f '%s' # empty file\n", dupe_path);
+        fprintf(out, "rm -f '%s' # empty file\n", path);
         break;
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
         // TODO: reflink etc. for dirs?
         if(file->is_original) {
-            fprintf(out, "echo   '%s' # original directory\n", dupe_path);
+            fprintf(out, "echo   '%s' # original directory\n", path);
         } else {
-            fprintf(out, "rm -rf '%s' # duplicate directory\n", dupe_path);
+            fprintf(out, "rm -rf '%s' # duplicate directory\n", path);
         }
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         if(file->is_original) {
-            fprintf(out, "echo  '%s' # original\n", dupe_path);
+            fprintf(out, "echo  '%s' # original\n", path);
             self->last_original = file;
         } else {
             if(self->opt_use_ln) {
@@ -134,19 +160,19 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
 
                 char *orig_path = rm_fmt_sh_escape_path(self->last_original->path);
                 if (use_reflink) {
-                    fprintf(out, "cp_reflink '%s' '%s'", orig_path, dupe_path);
+                    fprintf(out, "cp_reflink '%s' '%s'", orig_path, path);
                 } else {
                     if(use_hardlink) {
-                        fprintf(out, "cp_hardlink '%s' '%s'", orig_path, dupe_path);
+                        fprintf(out, "cp_hardlink '%s' '%s'", orig_path, path);
                     } else {
-                        fprintf(out, "cp_symlink '%s' '%s'", orig_path, dupe_path);
+                        fprintf(out, "cp_symlink '%s' '%s'", orig_path, path);
                     }
                 }
 
                 fprintf(out, " # duplicate\n");
                 g_free(orig_path);
             } else {
-                fprintf(out, "rm -f '%s' # duplicate\n", dupe_path);
+                fprintf(out, "rm -f '%s' # duplicate\n", path);
             }
         }
         break;
@@ -155,23 +181,16 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         break;
     }
 
-    g_free(dupe_path);
+    g_free(path);
 }
 
 static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
-    if(0
-            || strcmp(parent->path, "stdout") == 0
-            || strcmp(parent->path, "stderr") == 0
-            || strcmp(parent->path, "stdin") == 0
-      ) {
+    if(rm_fmt_is_stream(session->formats, parent)) {
         /* You will have a hard time deleting standard streams. */
         return;
     }
 
-    fprintf(
-        out, SH_SCRIPT_TEMPLATE_FOOT,
-        "rm -f", parent->path
-    );
+    fprintf(out, SH_SCRIPT_TEMPLATE_FOOT, "rm -f", parent->path);
 }
 
 static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
