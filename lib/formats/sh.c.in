@@ -188,13 +188,14 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         rm_log_perror("Could not chmod +x sh script");
     }
 
+    /* Fill in all placeholders in the script template */
     fprintf(
         out, SH_SCRIPT_TEMPLATE_HEAD,
         session->cfg->iwd,
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "[unknown]",
-        (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",
         rm_util_get_username(),
-        rm_util_get_groupname()
+        rm_util_get_groupname(),
+        (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'"
     );
 
     g_free(script_header);
@@ -221,7 +222,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
             comment = "# original";
         }
 
-        prefix = g_strdup_printf("echo 'Keeping: ' '%s'", path);
+        prefix = g_strdup_printf("echo 'Keeping:' '%s'", path);
         self->last_original = file;
     } else {
         g_assert(self->last_original);
@@ -258,29 +259,33 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
 
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
+    if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
+        return;
+    }
+
     char *path = rm_fmt_sh_escape_path(file->path);
 
     switch(file->lint_type) {
-    case RM_LINT_TYPE_BLNK:
-        fprintf(out, "rm -f '%s' # bad symlink pointing nowhere\n", path);
-        break;
     case RM_LINT_TYPE_EDIR:
-        fprintf(out, "rmdir '%s' # empty folder\n", path);
-        break;
-    case RM_LINT_TYPE_NBIN:
-        fprintf(out, "strip --strip-debug '%s' # binary with debugsymbols\n", path);
-        break;
-    case RM_LINT_TYPE_BADUID:
-        fprintf(out, "%s '%s' # bad uid\n", "chown \"$user\"", path);
-        break;
-    case RM_LINT_TYPE_BADGID:
-        fprintf(out, "%s '%s' # bad gid\n", "chgrp \"$group\"", path);
-        break;
-    case RM_LINT_TYPE_BADUGID:
-        fprintf(out, "%s '%s' # bad gid and uid\n", "chown \"$user\":\"$group\"", path);
+        fprintf(out, "handle_emptydir '%s' # empty folder\n", path);
         break;
     case RM_LINT_TYPE_EFILE:
-        fprintf(out, "rm -f '%s' # empty file\n", path);
+        fprintf(out, "handle_emptyfile '%s' # empty file\n", path);
+        break;
+    case RM_LINT_TYPE_BLNK:
+        fprintf(out, "handle_bad_symlink '%s' # bad symlink pointing nowhere\n", path);
+        break;
+    case RM_LINT_TYPE_NBIN:
+        fprintf(out, "handle_unstripped_binary '%s' # binary with debugsymbols\n", path);
+        break;
+    case RM_LINT_TYPE_BADUID:
+        fprintf(out, "handle_bad_user_id '%s' # bad uid\n", path);
+        break;
+    case RM_LINT_TYPE_BADGID:
+        fprintf(out, "handle_bad_group_id '%s' # bad gid\n", path);
+        break;
+    case RM_LINT_TYPE_BADUGID:
+        fprintf(out, "handle_bad_user_and_group_id '%s' # bad gid\n", path);
         break;
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
     case RM_LINT_TYPE_DUPE_CANDIDATE:
