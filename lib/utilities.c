@@ -676,7 +676,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
             );
         }
 
-        rm_log_warning("Filesystem %s: %s\n", wrap_entry->dir, (reflinkfs_found) ? "reflink" : "normal");
+        rm_log_debug("Filesystem %s: %s\n", wrap_entry->dir, (reflinkfs_found) ? "reflink" : "normal");
 
         if(reflinkfs_found != NULL) {
             RmStat dir_stat;
