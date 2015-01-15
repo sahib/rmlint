@@ -566,6 +566,7 @@ static void rm_mount_list_close(RmMountEntries *self) {
         RmMountEntry *entry = iter->data;
         g_free(entry->fsname);
         g_free(entry->dir);
+        g_free(entry->type);
         g_slice_free(RmMountEntry, entry);
     }
 
