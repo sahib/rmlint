@@ -17,12 +17,16 @@ def test_basic():
 
     create_file('', 'empty')
 
-    # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
+    create_file('aaa', 'aaa')
+    create_link('aaa', 'link_aaa', symlink=True)
+    os.remove(os.path.join(TESTDIR_NAME, 'aaa'))
+
     head, *data, footer = run_rmlint('-D -S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    # subprocess.call('cat ' + os.path.join(TESTDIR_NAME, 'rmlint.sh'), shell=True)
 
     assert footer['duplicate_sets'] == 3
     assert footer['total_lint_size'] == 9
-    assert footer['total_files'] == 8
+    assert footer['total_files'] == 9
     assert footer['duplicates'] == 3
 
     text = subprocess.check_output([os.path.join(TESTDIR_NAME, 'rmlint.sh'), '-d'])
