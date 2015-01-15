@@ -17,4 +17,5 @@ docs/rmlint.1
 docs/_build
 __pycache__
 
-src/formats/py.c
+lib/formats/py.c
+lib/formats/py.c
