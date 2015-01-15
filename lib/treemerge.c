@@ -625,17 +625,20 @@ static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory
     }
 }
 
-static void rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory) {
+static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory, gint64 acc) {
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
+        acc += file->is_prefd;
         g_hash_table_insert(self->file_checks, file->digest, file);
     }
 
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
         RmDirectory *child = iter->data;
-        rm_tm_mark_duplicate_files(self, child);
+        rm_tm_mark_duplicate_files(self, child, acc);
     }
+
+    return acc;
 }
 
 static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
@@ -779,7 +782,11 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 mask->is_original = true;
                 rm_tm_mark_original_files(self, directory);
             } else {
-                rm_tm_mark_duplicate_files(self, directory);
+                if(rm_tm_mark_duplicate_files(self, directory, 0) == directory->dupe_count) {
+                    /* Mark the file as original when all files in it are preferred. */
+                    mask->is_original = true;
+                    rm_tm_mark_original_files(self, directory);
+                }
             }
 
             if(self->session->cfg->write_unfinished) {
