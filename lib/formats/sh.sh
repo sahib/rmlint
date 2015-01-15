@@ -51,17 +51,17 @@ handle_bad_user_and_group_id() {
 
 cp_hardlink() {
     echo 'Hardlinking to original: ' "$1"
-    cp -a --link "$1" "$2"
+    cp --remove-destination --archive --link "$2" "$1"
 }
 
 cp_symlink() {
     echo 'Symlinking to original: ' "$1"
-    cp -a --symbolic-link "$1" "$2"
+    cp --remove-destination --archive --symbolic-link "$2" "$1"
 }
 
 cp_reflink() {
     echo 'Reflinking to original: ' "$1"
-    cp -a --reflink=always "$1" "$2"
+    cp --remove-destination --archive --reflink=always "$2" "$1"
 }
 
 user_command() {
