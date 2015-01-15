@@ -3,8 +3,8 @@
 # rmlint was executed from: %s
 # Your command line was: %s
 
-USER='%S'
-GROUP='%S'
+USER='%s'
+GROUP='%s'
 
 ##################################
 # GENERAL LINT HANDLER FUNCTIONS #
@@ -65,7 +65,7 @@ cp_reflink() {
 }
 
 user_command() {
-    # You can define this function to do what you want.
+    # You can define this function to do what you want:
     %s
 }
 
