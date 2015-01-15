@@ -14,8 +14,6 @@ EOF
     read dummy_var
 }
 
-echo "\n"
-
 usage() {
     cat << EOF
 usage: $0 options
@@ -36,7 +34,16 @@ cp_symlink() {
 }
 
 cp_reflink() {
-  cp -a --reflink=always "$1" "$2"
+    cp -a --reflink=always "$1" "$2"
+}
+
+user_cmd() {
+    # You can define this function to do what you want.
+    %s
+}
+
+remove_cmd() {
+    rm -rf "$1"
 }
 
 DO_REMOVE=

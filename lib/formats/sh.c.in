@@ -34,10 +34,16 @@
 typedef struct RmFmtHandlerShScript {
     RmFmtHandler parent;
     RmFile *last_original;
+    RmSession *session;
 
-    bool opt_use_reflink : 1;
-    bool opt_use_ln : 1;
-    bool opt_symlinks_only : 1;
+    bool allow_reflink : 1;
+    bool allow_symlink : 1;
+    bool allow_hardlink : 1;
+    bool allow_remove : 1;
+
+    const char *user_cmd;
+
+    GByteArray *order;
 } RmFmtHandlerShScript;
 
 static const char *SH_SCRIPT_TEMPLATE_HEAD = "<<SH_SOURCE>>";
@@ -51,17 +57,132 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "fi                                             \n"
 ;
 
+typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path);
+
+
+static bool rm_sh_emit_order_user(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+    if(self->user_cmd == NULL) {
+        return false;
+    }
+
+    *out = g_strdup_printf("user_command '%s' '%s'", path, orig_path);
+    return true;
+}
+
+static bool rm_sh_emit_order_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+    if(!self->allow_reflink || !rm_mounts_can_reflink(self->session->mounts, self->last_original->dev, file->dev)) {
+        return false;
+    }
+
+    *out = g_strdup_printf("cp_reflink '%s' '%s'", path, orig_path);
+    return true;
+}
+
+static bool rm_sh_emit_order_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+    if(!self->allow_symlink || self->last_original->dev != file->dev) {
+        return false;
+    }
+
+    *out = g_strdup_printf("cp_symlink '%s' '%s'", path, orig_path);
+    return true;
+}
+
+static bool rm_sh_emit_order_hardlink(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+    if(!self->allow_hardlink) {
+        return false;
+    }
+
+    *out = g_strdup_printf("cp_hardlink '%s' '%s'", path, orig_path);
+    return true;
+}
+
+static bool rm_sh_emit_order_remove(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+    if(!self->allow_remove) {
+        return false;
+    }
+
+    *out = g_strdup_printf("remove_cmd '%s' # == %s", path, orig_path);
+    return true;
+}
+
+typedef enum RmShOrder {
+    RM_SH_ORDER_UNKNOWN = 0,
+    RM_SH_ORDER_USER_COMMAND,
+    RM_SH_ORDER_REFLINK,
+    RM_SH_ORDER_SYMLINK,
+    RM_SH_ORDER_HARDLINK,
+    RM_SH_ORDER_REMOVE,
+    RM_SH_ORDER_N
+} RmShOrder;
+
+static const char *ORDER_TO_STRING[] = {
+    [RM_SH_ORDER_UNKNOWN] = NULL,
+    [RM_SH_ORDER_USER_COMMAND] = "usercmd",
+    [RM_SH_ORDER_REFLINK] = "reflink",
+    [RM_SH_ORDER_SYMLINK] = "symlink",
+    [RM_SH_ORDER_HARDLINK] = "hardlink",
+    [RM_SH_ORDER_REMOVE] = "remove"
+};
+
+static const RmShOrderEmitFunc ORDER_TO_FUNC[] = {
+    [RM_SH_ORDER_UNKNOWN] = NULL,
+    [RM_SH_ORDER_USER_COMMAND] = rm_sh_emit_order_user,
+    [RM_SH_ORDER_REFLINK] = rm_sh_emit_order_reflink,
+    [RM_SH_ORDER_SYMLINK] = rm_sh_emit_order_symlink,
+    [RM_SH_ORDER_HARDLINK] = rm_sh_emit_order_hardlink,
+    [RM_SH_ORDER_REMOVE] = rm_sh_emit_order_remove
+};
+
+static void rm_sh_parse_order(RmSession *session, RmFmtHandlerShScript *self) {
+    const char *order_cfg = rm_fmt_get_config_value(session->formats, "sh", "order");
+    self->order = g_byte_array_new();
+
+    if(order_cfg == NULL) {
+        /*  assume default. */
+        guint8 defaults[] = {
+            RM_SH_ORDER_USER_COMMAND,
+            RM_SH_ORDER_REMOVE,
+            RM_SH_ORDER_REFLINK,
+            RM_SH_ORDER_SYMLINK,
+            RM_SH_ORDER_HARDLINK
+        };
+
+        g_byte_array_append(self->order, defaults, sizeof(defaults));
+        return;
+    }
+
+    char **order_vec = g_strsplit(order_cfg, " ", -1);
+    for(int i = 0; order_vec && order_vec[i]; ++i) {
+        for(RmShOrder n = 0; i < RM_SH_ORDER_N; ++n) {
+            if(strcasecmp(order_vec[i], ORDER_TO_STRING[n]) == 0) {
+                /* we found the id */
+                g_byte_array_append(self->order, (guint8 *)&n, 1);
+                break;
+            }
+        }
+    }
+
+    g_strfreev(order_vec);
+}
+
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
+    char *script_header = NULL;
 
-    // -c sh:link    = [true|false]
-    // -c sh:replace = [true|false]
-    // -c sh:cmd     = "some string with $duplicate $orig"
-    // -c sh:order   = "cmd,reflink,symlink,hardlink"
+    self->session = session;
+    self->allow_reflink = (rm_fmt_get_config_value(session->formats, "sh", "allow_reflink") != NULL);
+    self->allow_symlink = (rm_fmt_get_config_value(session->formats, "sh", "allow_symlink") != NULL);
+    self->allow_hardlink = (rm_fmt_get_config_value(session->formats, "sh", "allow_hardlink") != NULL);
+    self->allow_remove = (rm_fmt_get_config_value(session->formats, "sh", "allow_remove") != NULL);
+    self->user_cmd = rm_fmt_get_config_value(session->formats, "sh", "cmd");
 
-    self->opt_symlinks_only = rm_fmt_get_config_value(session->formats, "sh", "symlinks_only");
-    self->opt_use_ln = rm_fmt_get_config_value(session->formats, "sh", "use_ln");
-    self->opt_use_reflink = rm_fmt_get_config_value(session->formats, "sh", "use_reflink");
+    if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
+        self->allow_reflink = self->allow_symlink = self->allow_hardlink = true;
+    } else {
+        self->allow_remove = true;
+    }
+
+    rm_sh_parse_order(session, self);
 
     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
         rm_log_perror("Could not chmod +x sh script");
@@ -71,44 +192,72 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         out, SH_SCRIPT_TEMPLATE_HEAD,
         session->cfg->iwd,
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "[unknown]",
+        (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",
         rm_util_get_username(),
         rm_util_get_groupname()
     );
+
+    g_free(script_header);
 }
 
 static char *rm_fmt_sh_escape_path(char *path) {
+    /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
+     * for more info on this
+     * */
     return rm_util_strsub(path, "'", "'\"'\"'");
 }
 
 static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile *file) {
-    bool is_dir = (file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
+    bool is_dir = (file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE);
 
-    const char *prefix = NULL;
+    char *path = rm_fmt_sh_escape_path(file->path);
+    char *prefix = NULL;
     const char *comment = NULL;
 
     if(file->is_original) {
         if(is_dir) {
-            comment = " # original directory";
+            comment = "# original directory";
         } else {
-            comment = " # original";
+            comment = "# original";
         }
 
-        prefix = "echo";
+        prefix = g_strdup_printf("echo 'Keeping: ' '%s'", path);
+        self->last_original = file;
     } else {
+        g_assert(self->last_original);
+
+        char *orig_path = rm_fmt_sh_escape_path(self->last_original->path);
         if(is_dir) {
-            comment = " # duplicate directory";
+            comment = "# duplicate directory";
         } else {
-            comment = " # duplicate";
+            comment = "# duplicate";
         }
+
+        for(gsize n = 0; n < self->order->len; ++n) {
+            RmShOrderEmitFunc func = ORDER_TO_FUNC[self->order->data[n]];
+            if(func == NULL) {
+                rm_log_error_line("null-func in sh formatter. Should not happen.");
+                continue;
+            }
+
+            if(func(self, &prefix, file, path, orig_path) && prefix) {
+                break;
+            }
+        }
+
+        g_free(orig_path);
     }
+
+    if(prefix != NULL) {
+        fprintf(out, "%s %s\n", prefix, comment);
+        g_free(prefix);
+    }
+
+    g_free(path);
 }
 
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
-
-    /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
-     * for more info on this
-     * */
     char *path = rm_fmt_sh_escape_path(file->path);
 
     switch(file->lint_type) {
@@ -134,47 +283,8 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         fprintf(out, "rm -f '%s' # empty file\n", path);
         break;
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
-        // TODO: reflink etc. for dirs?
-        if(file->is_original) {
-            fprintf(out, "echo   '%s' # original directory\n", path);
-        } else {
-            fprintf(out, "rm -rf '%s' # duplicate directory\n", path);
-        }
-        break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
-        if(file->is_original) {
-            fprintf(out, "echo  '%s' # original\n", path);
-            self->last_original = file;
-        } else {
-            if(self->opt_use_ln) {
-                bool use_reflink = false;
-                bool use_hardlink = false;
-
-                if (1
-                        && self->opt_use_reflink
-                        && rm_mounts_can_reflink(session->mounts, self->last_original->dev, file->dev) ) {
-                    use_reflink = true;
-                } else if (self->last_original->dev == file->dev) {
-                    use_hardlink = !self->opt_symlinks_only;
-                }
-
-                char *orig_path = rm_fmt_sh_escape_path(self->last_original->path);
-                if (use_reflink) {
-                    fprintf(out, "cp_reflink '%s' '%s'", orig_path, path);
-                } else {
-                    if(use_hardlink) {
-                        fprintf(out, "cp_hardlink '%s' '%s'", orig_path, path);
-                    } else {
-                        fprintf(out, "cp_symlink '%s' '%s'", orig_path, path);
-                    }
-                }
-
-                fprintf(out, " # duplicate\n");
-                g_free(orig_path);
-            } else {
-                fprintf(out, "rm -f '%s' # duplicate\n", path);
-            }
-        }
+        rm_fmt_write_duplicate(self, out, file);
         break;
     default:
         rm_log_warning("Warning: unknown type in encountered: %d\n", file->lint_type);
@@ -185,6 +295,9 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
 }
 
 static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
+    RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
+    g_byte_array_free(self->order, true);
+
     if(rm_fmt_is_stream(session->formats, parent)) {
         /* You will have a hard time deleting standard streams. */
         return;
