@@ -60,8 +60,16 @@ cp_symlink() {
 }
 
 cp_reflink() {
+    # reflink $1 to $2's data, preserving $1's  mtime
     echo 'Reflinking to original:' "$1"
-    cp --remove-destination --archive --reflink=always "$2" "$1"
+    desttime=$(stat -c %y "$1")
+    #want YYYYMMDDhhmm.ss, have YYYY-MM-DD hh:mm:ss....
+    desttime=${desttime:0:19}
+    desttime=${desttime/:/}
+    desttime=${desttime/:/.}
+    desttime=${desttime//[- ]/}
+    cp --reflink=always "$2" "$1"
+    touch -mt $desttime "$1"
 }
 
 user_command() {
