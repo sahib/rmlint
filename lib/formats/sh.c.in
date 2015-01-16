@@ -56,7 +56,7 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "then                                           \n"
     "  %s '%s';                                     \n"
     "fi                                             \n"
-;
+    ;
 
 typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path);
 
@@ -163,7 +163,7 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
                 }
 
                 /* we found the id */
-                g_byte_array_append(self->order, (guint8 *)&n, 1);
+                g_byte_array_append(self->order, (guint8 *)n, 1);
                 found = true;
                 break;
             }
