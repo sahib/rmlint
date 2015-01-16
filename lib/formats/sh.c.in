@@ -36,6 +36,7 @@ typedef struct RmFmtHandlerShScript {
     RmFile *last_original;
     RmSession *session;
 
+    bool allow_user_cmd : 1;
     bool allow_reflink : 1;
     bool allow_symlink : 1;
     bool allow_hardlink : 1;
@@ -60,8 +61,8 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
 typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path);
 
 
-static bool rm_sh_emit_order_user(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
-    if(self->user_cmd == NULL) {
+static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+    if(self->user_cmd == NULL || !self->allow_user_cmd) {
         return false;
     }
 
@@ -69,7 +70,7 @@ static bool rm_sh_emit_order_user(RmFmtHandlerShScript *self, char **out, _U RmF
     return true;
 }
 
-static bool rm_sh_emit_order_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
     if(!self->allow_reflink || !rm_mounts_can_reflink(self->session->mounts, self->last_original->dev, file->dev)) {
         return false;
     }
@@ -78,7 +79,7 @@ static bool rm_sh_emit_order_reflink(RmFmtHandlerShScript *self, char **out, RmF
     return true;
 }
 
-static bool rm_sh_emit_order_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
     if(!self->allow_symlink || self->last_original->dev != file->dev) {
         return false;
     }
@@ -87,7 +88,7 @@ static bool rm_sh_emit_order_symlink(RmFmtHandlerShScript *self, char **out, RmF
     return true;
 }
 
-static bool rm_sh_emit_order_hardlink(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
     if(!self->allow_hardlink) {
         return false;
     }
@@ -96,7 +97,7 @@ static bool rm_sh_emit_order_hardlink(RmFmtHandlerShScript *self, char **out, _U
     return true;
 }
 
-static bool rm_sh_emit_order_remove(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
     if(!self->allow_remove) {
         return false;
     }
@@ -105,60 +106,71 @@ static bool rm_sh_emit_order_remove(RmFmtHandlerShScript *self, char **out, _U R
     return true;
 }
 
-typedef enum RmShOrder {
-    RM_SH_ORDER_UNKNOWN = 0,
-    RM_SH_ORDER_USER_COMMAND,
-    RM_SH_ORDER_REFLINK,
-    RM_SH_ORDER_SYMLINK,
-    RM_SH_ORDER_HARDLINK,
-    RM_SH_ORDER_REMOVE,
-    RM_SH_ORDER_N
-} RmShOrder;
+typedef enum RmShHandler {
+    RM_SH_HANDLER_UNKNOWN = 0,
+    RM_SH_HANDLER_USER_COMMAND,
+    RM_SH_HANDLER_REFLINK,
+    RM_SH_HANDLER_SYMLINK,
+    RM_SH_HANDLER_HARDLINK,
+    RM_SH_HANDLER_REMOVE,
+    RM_SH_HANDLER_N
+} RmShHandler;
 
 static const char *ORDER_TO_STRING[] = {
-    [RM_SH_ORDER_UNKNOWN] = NULL,
-    [RM_SH_ORDER_USER_COMMAND] = "usercmd",
-    [RM_SH_ORDER_REFLINK] = "reflink",
-    [RM_SH_ORDER_SYMLINK] = "symlink",
-    [RM_SH_ORDER_HARDLINK] = "hardlink",
-    [RM_SH_ORDER_REMOVE] = "remove"
+    [RM_SH_HANDLER_UNKNOWN] = "",
+    [RM_SH_HANDLER_USER_COMMAND] = "usercmd",
+    [RM_SH_HANDLER_REFLINK] = "reflink",
+    [RM_SH_HANDLER_SYMLINK] = "symlink",
+    [RM_SH_HANDLER_HARDLINK] = "hardlink",
+    [RM_SH_HANDLER_REMOVE] = "remove"
 };
 
 static const RmShOrderEmitFunc ORDER_TO_FUNC[] = {
-    [RM_SH_ORDER_UNKNOWN] = NULL,
-    [RM_SH_ORDER_USER_COMMAND] = rm_sh_emit_order_user,
-    [RM_SH_ORDER_REFLINK] = rm_sh_emit_order_reflink,
-    [RM_SH_ORDER_SYMLINK] = rm_sh_emit_order_symlink,
-    [RM_SH_ORDER_HARDLINK] = rm_sh_emit_order_hardlink,
-    [RM_SH_ORDER_REMOVE] = rm_sh_emit_order_remove
+    [RM_SH_HANDLER_UNKNOWN] = NULL,
+    [RM_SH_HANDLER_USER_COMMAND] = rm_sh_emit_handler_user,
+    [RM_SH_HANDLER_REFLINK] = rm_sh_emit_handler_reflink,
+    [RM_SH_HANDLER_SYMLINK] = rm_sh_emit_handler_symlink,
+    [RM_SH_HANDLER_HARDLINK] = rm_sh_emit_handler_hardlink,
+    [RM_SH_HANDLER_REMOVE] = rm_sh_emit_handler_remove
 };
 
-static void rm_sh_parse_order(RmSession *session, RmFmtHandlerShScript *self) {
-    const char *order_cfg = rm_fmt_get_config_value(session->formats, "sh", "order");
+static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler_cfg) {
     self->order = g_byte_array_new();
 
-    if(order_cfg == NULL) {
-        /*  assume default. */
-        guint8 defaults[] = {
-            RM_SH_ORDER_USER_COMMAND,
-            RM_SH_ORDER_REMOVE,
-            RM_SH_ORDER_REFLINK,
-            RM_SH_ORDER_SYMLINK,
-            RM_SH_ORDER_HARDLINK
-        };
-
-        g_byte_array_append(self->order, defaults, sizeof(defaults));
-        return;
-    }
-
-    char **order_vec = g_strsplit(order_cfg, " ", -1);
+    char **order_vec = g_strsplit(handler_cfg, ",", -1);
     for(int i = 0; order_vec && order_vec[i]; ++i) {
-        for(RmShOrder n = 0; i < RM_SH_ORDER_N; ++n) {
+        bool found = false;
+        for(RmShHandler n = 0; i < RM_SH_HANDLER_N; ++n) {
             if(strcasecmp(order_vec[i], ORDER_TO_STRING[n]) == 0) {
+                switch(n) {
+                    case RM_SH_HANDLER_USER_COMMAND:
+                        g_printerr("allow user\n");
+                        self->allow_user_cmd = true; break;
+                    case RM_SH_HANDLER_REFLINK:
+                        g_printerr("allow reflink\n");
+                        self->allow_reflink = true; break;
+                    case RM_SH_HANDLER_SYMLINK:
+                        g_printerr("allow sym\n");
+                        self->allow_symlink = true; break;
+                    case RM_SH_HANDLER_HARDLINK:
+                        g_printerr("allow hardlink\n");
+                        self->allow_hardlink = true; break;
+                    case RM_SH_HANDLER_REMOVE:
+                        g_printerr("allow remove\n");
+                        self->allow_remove = true; break;
+                    default:
+                        g_assert_not_reached();
+                }
+
                 /* we found the id */
                 g_byte_array_append(self->order, (guint8 *)&n, 1);
+                found = true;
                 break;
             }
+        }
+
+        if(!found) {
+            rm_log_error_line("%s is a invalid handler.", order_vec[i]);
         }
     }
 
@@ -170,19 +182,25 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     char *script_header = NULL;
 
     self->session = session;
-    self->allow_reflink = (rm_fmt_get_config_value(session->formats, "sh", "allow_reflink") != NULL);
-    self->allow_symlink = (rm_fmt_get_config_value(session->formats, "sh", "allow_symlink") != NULL);
-    self->allow_hardlink = (rm_fmt_get_config_value(session->formats, "sh", "allow_hardlink") != NULL);
-    self->allow_remove = (rm_fmt_get_config_value(session->formats, "sh", "allow_remove") != NULL);
     self->user_cmd = rm_fmt_get_config_value(session->formats, "sh", "cmd");
 
-    if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
-        self->allow_reflink = self->allow_symlink = self->allow_hardlink = true;
+    const char *handler_cfg = rm_fmt_get_config_value(session->formats, "sh", "handler");
+    if(handler_cfg != NULL) {
+        /* user specified handlers */
+        rm_sh_parse_handlers(self, handler_cfg);
+    } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
+        /* Preset: try reflinks, then symlinks then hardlinks */
+        rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
+    } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
+        /* Preset: try symlinks before using hardlinks */
+        rm_sh_parse_handlers(self, "hardlink,symlink");
+    } else if(rm_fmt_get_config_value(session->formats, "sh", "symlink") != NULL) {
+        /* Preset: only do hardlinks */
+        rm_sh_parse_handlers(self, "symlink");
     } else {
-        self->allow_remove = true;
+        /* Default: remove the file */
+        rm_sh_parse_handlers(self, "usercmd,remove");
     }
-
-    rm_sh_parse_order(session, self);
 
     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
         rm_log_perror("Could not chmod +x sh script");
@@ -222,7 +240,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
             comment = "# original";
         }
 
-        prefix = g_strdup_printf("echo 'Keeping:' '%s'", path);
+        prefix = g_strdup_printf("echo 'Keeping: ' '%s'", path);
         self->last_original = file;
     } else {
         g_assert(self->last_original);

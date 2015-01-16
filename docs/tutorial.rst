@@ -271,9 +271,9 @@ formatters and their config options:
       # ... snip ...
 
       echo  '/home/user/test/b/one' # original
-      rm -f '/home/user/test/b/file' # duplicate
-      rm -f '/home/user/test/a/two' # duplicate
-      rm -f '/home/user/test/a/file' # duplicate
+      remove_cmd '/home/user/test/b/file' # duplicate
+      remove_cmd '/home/user/test/a/two' # duplicate
+      remove_cmd '/home/user/test/a/file' # duplicate
                        
       if [ -z $DO_REMOVE ]  
       then                  
@@ -282,21 +282,33 @@ formatters and their config options:
 
     **Config values:**
 
-    - *use_ln=[true|false]:* Replace duplicate files with symbolic links (if on different
-      device as original) or with hardlinks (if on same device as original).
-    - *symlinks_only=[true|false]:* Always use symbolic links with *use_ln*, never
-      hardlinks.
+    - *link*: Replace duplicate files with reflinks (if possible), hardlinks (if
+      on same device as original) or with symbolic links (if not on same device
+      as original).
+    - *cmd*: Provider a user specified command to execute on duplicates.
+    - *handler*: This option allows for more finegrained control. Please refer
+      to the manpage here.
 
     **Example:**
 
     .. code-block:: bash
 
-      $ rmlint -o sh:stdout -o sh:rmlint.sh -c sh:use_ln=true -c sh:symlinks_only=true
+      $ rmlint -o sh:stdout -o sh:rmlint.sh -c sh:link
       ...
       echo  '/home/user/test/b/one' # original
-      ln -s '/home/user/test/b/file' # duplicate
+      cp_symlink '/home/user/test/b/file' '/home/user/test/b/one' # duplicate
       $ ./rmlint.sh -d
-      /home/user/test/b/one
+      Keeping: /home/user/test/b/one
+      Symlinking to original: /home/user/test/b/file
+
+
+    A safe user command example that just composes some string out of the
+    original and duplicate path:
+
+    .. code-block:: bash
+
+      $ rmlint -o sh -c sh:cmd='echo "Stuff with" "$1" "->" "$2"'
+
 
 :py: 
 

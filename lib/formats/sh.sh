@@ -11,22 +11,22 @@ GROUP='%s'
 ##################################
 
 handle_emptyfile() {
-    echo 'Deleting empty file: ' "$1"
+    echo 'Deleting empty file:' "$1"
     rm -f "$1"
 }
 
 handle_emptydir() {
-    echo 'Deleting empty directory: ' "$1"
+    echo 'Deleting empty directory:' "$1"
     rmdir "$1"
 }
 
 handle_bad_symlink() {
-    echo 'Deleting symlink pointing nowhere: ' "$1"
+    echo 'Deleting symlink pointing nowhere:' "$1"
     rm -f "$1"
 }
 
 handle_unstripped_binary() {
-    echo 'Stripping debug symbols of: ' "$1"
+    echo 'Stripping debug symbols of:' "$1"
     strip -s "$1"
 }
 
@@ -50,17 +50,17 @@ handle_bad_user_and_group_id() {
 ###############################
 
 cp_hardlink() {
-    echo 'Hardlinking to original: ' "$1"
+    echo 'Hardlinking to original:' "$1"
     cp --remove-destination --archive --link "$2" "$1"
 }
 
 cp_symlink() {
-    echo 'Symlinking to original: ' "$1"
+    echo 'Symlinking to original:' "$1"
     cp --remove-destination --archive --symbolic-link "$2" "$1"
 }
 
 cp_reflink() {
-    echo 'Reflinking to original: ' "$1"
+    echo 'Reflinking to original:' "$1"
     cp --remove-destination --archive --reflink=always "$2" "$1"
 }
 
@@ -70,7 +70,7 @@ user_command() {
 }
 
 remove_cmd() {
-    echo 'Deleting: ' "$1"
+    echo 'Deleting:' "$1"
     rm -rf "$1"
 }
 

@@ -390,11 +390,33 @@ FORMATTERS
   
   Available options:
 
-  * *use_ln*: Instead of just deleting duplicates remove them and replace them
-    with hardlinks (if they are on the same partition) or with symlinks if
-    they're on different devices.
-  * *symlinks_only*: Only relevant with *use_ln*, always use symbolic links,
-    never use hardlinks.
+  * *cmd*: Specify a user defined command to run on duplicates. 
+    The command can be any valid ``/bin/sh``-expression. The duplicate 
+    path and original path can be accessed via ``"$1"`` and ``"$2"``. 
+    Not the actual command will be written to the script, but the content 
+    of the ``user_command`` function will be replaced with it.
+
+  * *handler* Define a comma separated list of handlers to try on duplicate
+    files in that given order. Handlers are just the name of a way of getting
+    rid of the file and can be any of the following:
+
+    * ``reflink``: Try to reflink the duplicate file to the original. See also
+      ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
+      it.
+    * ``hardlink``: Replace the duplicate file with a hardlink to the original
+      file. Fails if both files are not on the same partition.
+    * ``symlink``: Tries to replace the duplicate file with a symbolic link to
+      the original. Never fails.
+    * ``remove``: Remove the file using ``rm -rf``. (``-r`` for duplicate dirs).
+      Never fails.
+    * ``usercmd``: Use the provided user defined command (``-c
+      sh:cmd=something``). Never fails.
+
+    Default is ``remove``.
+  
+  * *link*: Shortcut for ``-c sh:reflink,hardlink,symlink``.
+  * *hardlink*: Shortcut for ``-c sh:hardlink,symlink``.
+  * *symlink*: Shortcut for ``-c sh:symlink``.
 
 * ``json``: Print a JSON-formatted dump of all found reports.
   Outputs all finds as a json document. The document is a list of dictionaries, 
