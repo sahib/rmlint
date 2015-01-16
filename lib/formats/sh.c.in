@@ -56,7 +56,7 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "then                                           \n"
     "  %s '%s';                                     \n"
     "fi                                             \n"
-;
+    ;
 
 typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path);
 
@@ -138,39 +138,45 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
     self->order = g_byte_array_new();
 
     char **order_vec = g_strsplit(handler_cfg, ",", -1);
-    for(int i = 0; order_vec && order_vec[i]; ++i) {
+    for(int arg = 0; order_vec && order_vec[arg]; ++arg) {
         bool found = false;
-        for(RmShHandler n = 0; i < RM_SH_HANDLER_N; ++n) {
-            if(strcasecmp(order_vec[i], ORDER_TO_STRING[n]) == 0) {
-                switch(n) {
-                    case RM_SH_HANDLER_USER_COMMAND:
-                        g_printerr("allow user\n");
-                        self->allow_user_cmd = true; break;
-                    case RM_SH_HANDLER_REFLINK:
-                        g_printerr("allow reflink\n");
-                        self->allow_reflink = true; break;
-                    case RM_SH_HANDLER_SYMLINK:
-                        g_printerr("allow sym\n");
-                        self->allow_symlink = true; break;
-                    case RM_SH_HANDLER_HARDLINK:
-                        g_printerr("allow hardlink\n");
-                        self->allow_hardlink = true; break;
-                    case RM_SH_HANDLER_REMOVE:
-                        g_printerr("allow remove\n");
-                        self->allow_remove = true; break;
-                    default:
-                        g_assert_not_reached();
+        g_printerr("arg: %s\n", order_vec[arg]);
+        for(RmShHandler handler = 0; handler < RM_SH_HANDLER_N; ++handler) {
+            if(strcasecmp(order_vec[arg], ORDER_TO_STRING[handler]) == 0) {
+                switch(handler) {
+                case RM_SH_HANDLER_USER_COMMAND:
+                    g_printerr("allow user\n");
+                    self->allow_user_cmd = true;
+                    break;
+                case RM_SH_HANDLER_REFLINK:
+                    g_printerr("allow reflink\n");
+                    self->allow_reflink = true;
+                    break;
+                case RM_SH_HANDLER_SYMLINK:
+                    g_printerr("allow sym\n");
+                    self->allow_symlink = true;
+                    break;
+                case RM_SH_HANDLER_HARDLINK:
+                    g_printerr("allow hardlink\n");
+                    self->allow_hardlink = true;
+                    break;
+                case RM_SH_HANDLER_REMOVE:
+                    g_printerr("allow remove\n");
+                    self->allow_remove = true;
+                    break;
+                default:
+                    g_assert_not_reached();
                 }
 
                 /* we found the id */
-                g_byte_array_append(self->order, (guint8 *)&n, 1);
+                g_byte_array_append(self->order, (guint8 *)&handler, 1);
                 found = true;
                 break;
             }
         }
 
         if(!found) {
-            rm_log_error_line("%s is a invalid handler.", order_vec[i]);
+            rm_log_error_line("%s is a invalid handler.", order_vec[arg]);
         }
     }
 
