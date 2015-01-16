@@ -169,7 +169,8 @@ static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
         .prog = rm_fmt_prog,
-        .foot = NULL
+        .foot = NULL,
+        .valid_keys = {NULL},
     },
 
     /* Initialize own stuff */

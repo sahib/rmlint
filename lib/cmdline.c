@@ -321,9 +321,15 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
     }
 
     char *formatter = g_strndup(pair, domain - pair);
-    rm_fmt_set_config_value(session->formats, formatter, key, value);
-    g_free(formatter);
+    if(!rm_fmt_is_valid_key(session->formats, formatter, key)) {
+        rm_log_error_line(_("Invalid key `%s' for formatter `%s'."), key, formatter);
+        g_free(key);
+        g_free(value);
+    } else {
+        rm_fmt_set_config_value(session->formats, formatter, key, value);
+    }
 
+    g_free(formatter);
     g_strfreev(key_val);
     return true;
 }

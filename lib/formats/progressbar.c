@@ -321,7 +321,8 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
         .head = NULL,
         .elem = NULL,
         .prog = rm_fmt_prog,
-        .foot = NULL
+        .foot = NULL,
+        .valid_keys = {"update_interval", "use_unicode", NULL},
     },
 
     /* Initialize own stuff */

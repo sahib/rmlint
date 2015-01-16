@@ -108,12 +108,26 @@ int rm_fmt_len(RmFmtTable *self) {
     }
 }
 
+bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *key) {
+    RmFmtHandler *handler = g_hash_table_lookup(self->name_to_handler, formatter);
+    if(handler == NULL || handler->valid_keys == NULL) {
+        return false;
+    }
+
+    for(int i = 0; handler->valid_keys[i]; ++i) {
+        if(strcmp(handler->valid_keys[i], key) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void rm_fmt_clear(RmFmtTable *self) {
     if(rm_fmt_len(self) <= 0) {
         return;
     }
 
-    // g_hash_table_remove_all(self->name_to_handler);
     g_hash_table_remove_all(self->handler_to_file);
     g_hash_table_remove_all(self->path_to_handler);
     g_hash_table_remove_all(self->config);

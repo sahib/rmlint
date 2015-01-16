@@ -96,6 +96,11 @@ typedef struct RmFmtHandler {
      * Handlers do not need to care about it.
      */
     GMutex print_mtx;
+
+    /* A list of valid keys that may be passed to 
+     * --config fmt:key.
+     */
+    const char *valid_keys[32];
 } RmFmtHandler;
 
 ////////////////////
@@ -185,6 +190,13 @@ void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char
  * @return NULL if not foumd, the value for this key. Memory owned by RmFmtTable.
  */
 const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, const char *key);
+
+/**
+ * @brief Check if the formatter "formatter" has a config value called key.
+ *
+ * @return true if yes, false otherwise.
+ */
+bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *key);
 
 /**
  * @brief Check if path is a set output of RmFmtTable.

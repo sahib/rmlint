@@ -80,7 +80,8 @@ static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
         .prog = NULL,
-        .foot = NULL
+        .foot = NULL,
+        .valid_keys = {"no_header", NULL},
     }
 };
 

@@ -137,7 +137,8 @@ static RmFmtHandlerSummary SUMMARY_HANDLER_IMPL = {
         .head = NULL,
         .elem = NULL,
         .prog = rm_fmt_prog,
-        .foot = NULL
+        .foot = NULL,
+        .valid_keys = {NULL},
     },
 };
 

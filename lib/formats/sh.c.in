@@ -117,12 +117,13 @@ typedef enum RmShHandler {
 } RmShHandler;
 
 static const char *ORDER_TO_STRING[] = {
-    [RM_SH_HANDLER_UNKNOWN] = "",
+    [RM_SH_HANDLER_UNKNOWN] = NULL,
     [RM_SH_HANDLER_USER_COMMAND] = "usercmd",
     [RM_SH_HANDLER_REFLINK] = "reflink",
     [RM_SH_HANDLER_SYMLINK] = "symlink",
     [RM_SH_HANDLER_HARDLINK] = "hardlink",
-    [RM_SH_HANDLER_REMOVE] = "remove"
+    [RM_SH_HANDLER_REMOVE] = "remove",
+    [RM_SH_HANDLER_N] = NULL
 };
 
 static const RmShOrderEmitFunc ORDER_TO_FUNC[] = {
@@ -140,7 +141,11 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
     char **order_vec = g_strsplit(handler_cfg, ",", -1);
     for(int i = 0; order_vec && order_vec[i]; ++i) {
         bool found = false;
-        for(RmShHandler n = 0; i < RM_SH_HANDLER_N; ++n) {
+        for(RmShHandler n = 0; n < RM_SH_HANDLER_N; ++n) {
+            if(ORDER_TO_STRING[n] == NULL) {
+                continue;
+            }
+
             if(strcasecmp(order_vec[i], ORDER_TO_STRING[n]) == 0) {
                 switch(n) {
                     case RM_SH_HANDLER_USER_COMMAND:
@@ -165,7 +170,7 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
         }
 
         if(!found) {
-            rm_log_error_line("%s is a invalid handler.", order_vec[i]);
+            rm_log_error_line(_("%s is an invalid handler."), order_vec[i]);
         }
     }
 
@@ -331,7 +336,8 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
         .prog = NULL,
-        .foot = rm_fmt_foot
+        .foot = rm_fmt_foot,
+        .valid_keys = {"handler", "cmd", "link", "hardlink", "symlink", NULL},
     },
     .last_original = NULL
 };
