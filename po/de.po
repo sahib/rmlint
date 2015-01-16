@@ -68,12 +68,12 @@ msgstr "Gegebene Formatangabe ist unbekannt"
 
 #: src/cmdline.c:208
 msgid "Max is smaller than min"
-msgstr "Maximum ist kleiner als das Minimum. Macht das Sinn?"
+msgstr "Maximum ist kleiner als das Minimum. Macht leider keinen Sinn"
 
 #: src/cmdline.c:232
 #, c-format
-msgid "cannot parse --limit: %s"
-msgstr "Kann --limit (%s) nicht parsen"
+msgid "cannot parse --limit: "
+msgstr "Kann --limit nicht parsen: "
 
 #: src/cmdline.c:251
 #, c-format

@@ -72,9 +72,9 @@ static void rm_cmd_show_version(void) {
         {.name=NULL,          .enabled=0}
     };
 
-    fprintf(stderr, "compiled with: ");
+    fprintf(stderr, _("compiled with:"));
     for(int i = 0; features[i].name; ++i) {
-        fprintf(stderr, "%c%s ", (features[i].enabled) ? '+' : '-', features[i].name);
+        fprintf(stderr, " %c%s", (features[i].enabled) ? '+' : '-', features[i].name);
     }
 
     fprintf(stderr, RESET"\n\n");
@@ -95,12 +95,14 @@ static void rm_cmd_show_manpage(void) {
     bool found_manpage = false;
 
     for(int i = 0; commands[i] && !found_manpage; ++i) {
-        char *command = g_strdup_printf(commands[i], (RM_MANPAGE_USE_PAGER) ? "" : "-P cat");
-        if(system(command) == 0) {
-            found_manpage = true;
+        char cmd_buf[512] = {0};
+        if(snprintf(cmd_buf, sizeof(cmd_buf), commands[i], (RM_MANPAGE_USE_PAGER) ? "" : "-P cat") == -1) {
+            continue;
         }
 
-        g_free(command);
+        if(system(cmd_buf) == 0) {
+            found_manpage = true;
+        }
     }
 
     if(!found_manpage) {
@@ -137,29 +139,25 @@ typedef struct FormatSpec FormatSpec;
 
 static const int SIZE_FORMAT_TABLE_N = sizeof(SIZE_FORMAT_TABLE) / sizeof(FormatSpec);
 
-static int rm_cmd_size_format_error(const char **error, const char *msg) {
-    if(error) {
-        *error = msg;
-    }
-    return 0;
-}
-
 static int rm_cmd_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
     return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
 }
 
-static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **error) {
+static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) {
     if (size_spec == NULL) {
-        return rm_cmd_size_format_error(error, _("Input size is empty"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Input size is empty"));
+        return 0;
     }
 
     char *format = NULL;
     long double decimal = strtold(size_spec, &format);
 
     if (decimal == 0 && format == size_spec) {
-        return rm_cmd_size_format_error(error, _("This does not look like a number"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("This does not look like a number"));
+        return 0;
     } else if (decimal < 0) {
-        return rm_cmd_size_format_error(error, _("Negativ sizes are no good idea"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Negativ sizes are no good idea"));
+        return 0;
     } else if (*format) {
         format = g_strstrip(format);
     } else {
@@ -177,39 +175,35 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, const char **err
         /* No overflow check */
         return decimal * pow(found->base, found->exponent);
     } else {
-        return rm_cmd_size_format_error(error, _("Given format specifier not found"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Given format specifier not found"));
+        return 0;
     }
 }
 
 /* Size spec parsing implemented by qitta (http://github.com/qitta)
  * Thanks and go blame him if this breaks!
  */
-static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff *min, RmOff *max, const char **error) {
+static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff *min, RmOff *max, GError **error) {
     *min = 0;
     *max = G_MAXULONG;
 
-    const char *tmp_error = NULL;
     gchar **split = g_strsplit(range_spec, "-", 2);
 
     if(split[0] != NULL) {
-        *min = rm_cmd_size_string_to_bytes(split[0], &tmp_error);
+        *min = rm_cmd_size_string_to_bytes(split[0], error);
     }
 
-    if(split[1] != NULL && tmp_error == NULL) {
-        *max = rm_cmd_size_string_to_bytes(split[1], &tmp_error);
+    if(split[1] != NULL && *error == NULL) {
+        *max = rm_cmd_size_string_to_bytes(split[1], error);
     }
 
     g_strfreev(split);
 
-    if(*max < *min) {
-        tmp_error = _("Max is smaller than min");
+    if(*error == NULL && *max < *min) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Max is smaller than min"));
     }
 
-    if(error != NULL) {
-        *error = tmp_error;
-    }
-
-    return (tmp_error == NULL);
+    return (*error == NULL);
 }
 
 static gboolean rm_cmd_parse_limit_sizes(
@@ -218,15 +212,14 @@ static gboolean rm_cmd_parse_limit_sizes(
     RmSession *session,
     GError **error
 ) {
-    const char *error_msg = NULL;
     if(!rm_cmd_size_range_string_to_bytes(
                 range_spec,
                 &session->cfg->minsize,
                 &session->cfg->maxsize,
-                &error_msg
+                error
             )) {
 
-        g_set_error(error, RM_ERROR_QUARK, 0,  _("cannot parse --limit: %s"), error_msg);
+        g_prefix_error(error, _("cannot parse --limit: "));
         return false;
     } else {
         session->cfg->limits_specified = true;
@@ -375,14 +368,11 @@ static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
 }
 
 static RmOff rm_cmd_parse_clamp_offset(const char *string, GError **error) {
-    const char *error_msg = NULL;
-    RmOff offset = rm_cmd_size_string_to_bytes(string, &error_msg);
+    RmOff offset = rm_cmd_size_string_to_bytes(string, error);
 
-    if(error_msg != NULL) {
-        g_set_error(
-            error, RM_ERROR_QUARK, 0,
-            _("Unable to parse offset \"%s\": %s"),
-            string, error_msg
+    if(*error != NULL) {
+        g_prefix_error(
+            error, _("Unable to parse offset \"%s\": "), string
         );
         return 0;
     }
@@ -778,13 +768,11 @@ static gboolean rm_cmd_parse_large_output(
 static gboolean rm_cmd_parse_paranoid_mem(
     _U const char *option_name, const gchar *size_spec, RmSession *session, GError **error
 ) {
-    const char *parse_error = NULL;
-    RmOff size = rm_cmd_size_string_to_bytes(size_spec, &parse_error);
+    RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
 
-    if(parse_error != NULL) {
-        g_set_error(
-            error, RM_ERROR_QUARK, 0,
-            _("Invalid size description \"%s\": %s"), size_spec, parse_error
+    if(error != NULL) {
+        g_prefix_error(
+            error, _("Invalid size description \"%s\": "), size_spec
         );
         return false;
     } else {
