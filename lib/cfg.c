@@ -51,7 +51,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
 
     /* Misc options */
     cfg->sort_criteria = "pm";
-    cfg->checksum_type = RMLINT_DEFAULT_DIGEST;
+    cfg->checksum_type = RM_DEFAULT_DIGEST;
     cfg->color         = 1;
     cfg->threads       = 32;
     cfg->verbosity     = G_LOG_LEVEL_INFO;

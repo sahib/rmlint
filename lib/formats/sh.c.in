@@ -144,19 +144,14 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
             if(strcasecmp(order_vec[i], ORDER_TO_STRING[n]) == 0) {
                 switch(n) {
                     case RM_SH_HANDLER_USER_COMMAND:
-                        g_printerr("allow user\n");
                         self->allow_user_cmd = true; break;
                     case RM_SH_HANDLER_REFLINK:
-                        g_printerr("allow reflink\n");
                         self->allow_reflink = true; break;
                     case RM_SH_HANDLER_SYMLINK:
-                        g_printerr("allow sym\n");
                         self->allow_symlink = true; break;
                     case RM_SH_HANDLER_HARDLINK:
-                        g_printerr("allow hardlink\n");
                         self->allow_hardlink = true; break;
                     case RM_SH_HANDLER_REMOVE:
-                        g_printerr("allow remove\n");
                         self->allow_remove = true; break;
                     default:
                         g_assert_not_reached();

@@ -397,8 +397,8 @@ FORMATTERS
     of the ``user_command`` function will be replaced with it.
 
   * *handler* Define a comma separated list of handlers to try on duplicate
-    files in that given order. Handlers are just the name of a way of getting
-    rid of the file and can be any of the following:
+    files in that given order until one handler succeeds. Handlers are just the
+    name of a way of getting rid of the file and can be any of the following:
 
     * ``reflink``: Try to reflink the duplicate file to the original. See also
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support

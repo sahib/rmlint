@@ -45,17 +45,18 @@
 #include "formats.h"
 
 /* Domain for reporting errors. Needed by GOptions */
-#define RM_ERROR_DOMAIN (g_quark_from_static_string("rmlint"))
+G_DEFINE_QUARK(rmlint, rm_error)
+#define RM_ERROR_QUARK (rm_error_quark())
 
 static void rm_cmd_show_version(void) {
     fprintf(
         stderr,
         "version %s compiled: %s at [%s] \"%s\" (rev %s)\n",
-        RMLINT_VERSION, __DATE__, __TIME__,
-        RMLINT_VERSION_NAME,
-        RMLINT_VERSION_GIT_REVISION
+        RM_VERSION, __DATE__, __TIME__,
+        RM_VERSION_NAME, RM_VERSION_GIT_REVISION
     );
 
+    /* Make a list of all supported features from the macros in config.h */
     struct {
         bool enabled : 1;
         const char * name;
@@ -67,24 +68,20 @@ static void rm_cmd_show_version(void) {
         {.name="bigfiles",    .enabled=HAVE_BIGFILES},
         {.name="intl",        .enabled=HAVE_LIBINTL},
         {.name="json-cache",  .enabled=HAVE_JSON_GLIB},
-        {.name="xattr",       .enabled=HAVE_XATTR}
+        {.name="xattr",       .enabled=HAVE_XATTR},
+        {.name=NULL,          .enabled=0}
     };
 
-    int n_features = sizeof(features) / sizeof(features[0]);
-
     fprintf(stderr, "compiled with: ");
-
-    for(int i = 0; i < n_features; ++i) {
-        if(features[i].enabled) {
-            fprintf(stderr, "+%s ", features[i].name);
-        } else {
-            fprintf(stderr, "-%s ", features[i].name);
-        }
+    for(int i = 0; features[i].name; ++i) {
+        fprintf(stderr, "%c%s ", (features[i].enabled) ? '+' : '-', features[i].name);
     }
 
     fprintf(stderr, RESET"\n\n");
-    fprintf(stderr, "rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n");
-    fprintf(stderr, "The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3.\n");
+    fprintf(stderr, _("rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas."));
+    fprintf(stderr, "\n");
+    fprintf(stderr, _("The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3."));
+    fprintf(stderr, "\n");
     exit(0);
 }
 
@@ -98,7 +95,7 @@ static void rm_cmd_show_manpage(void) {
     bool found_manpage = false;
 
     for(int i = 0; commands[i] && !found_manpage; ++i) {
-        char *command = g_strdup_printf(commands[i], "-P cat");
+        char *command = g_strdup_printf(commands[i], (RM_MANPAGE_USE_PAGER) ? "" : "-P cat");
         if(system(command) == 0) {
             found_manpage = true;
         }
@@ -229,7 +226,7 @@ static gboolean rm_cmd_parse_limit_sizes(
                 &error_msg
             )) {
 
-        g_set_error(error, RM_ERROR_DOMAIN, 0,  _("cannot parse --limit: %s"), error_msg);
+        g_set_error(error, RM_ERROR_QUARK, 0,  _("cannot parse --limit: %s"), error_msg);
         return false;
     } else {
         session->cfg->limits_specified = true;
@@ -292,7 +289,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair, GErro
     }
 
     if(!rm_fmt_add(session->formats, format_name, full_path)) {
-        g_set_error(error, RM_ERROR_DOMAIN, 0, _("Adding -o %s as output failed."), pair);
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Adding -o %s as output failed."), pair);
         return false;
     }
 
@@ -348,7 +345,7 @@ static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
 
     if(error_loc != NULL && *error_loc != '\0' && *error_loc != '%') {
         g_set_error(
-            error, RM_ERROR_DOMAIN, 0,
+            error, RM_ERROR_QUARK, 0,
             _("Unable to parse factor \"%s\": error begins at %s"),
             string, error_loc
         );
@@ -361,7 +358,7 @@ static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
 
     if(0 > factor || factor > 1) {
         g_set_error(
-            error, RM_ERROR_DOMAIN, 0,
+            error, RM_ERROR_QUARK, 0,
             _("factor value is not in range [0-1]: %f"),
             factor
         );
@@ -377,7 +374,7 @@ static RmOff rm_cmd_parse_clamp_offset(const char *string, GError **error) {
 
     if(error_msg != NULL) {
         g_set_error(
-            error, RM_ERROR_DOMAIN, 0,
+            error, RM_ERROR_QUARK, 0,
             _("Unable to parse offset \"%s\": %s"),
             string, error_msg
         );
@@ -614,7 +611,7 @@ static gboolean rm_cmd_parse_timestamp(
 
     if(result <= 0) {
         g_set_error(
-            error, RM_ERROR_DOMAIN, 0,
+            error, RM_ERROR_QUARK, 0,
             _("Unable to parse time spec \"%s\""), string
         );
         return false;
@@ -724,7 +721,7 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter, GErro
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        g_set_error(error, RM_ERROR_DOMAIN, 0, _("Only up to -ppp or down to -P flags allowed."));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Only up to -ppp or down to -P flags allowed."));
         break;
     }
 }
@@ -747,7 +744,7 @@ static gboolean rm_cmd_parse_algorithm(
     cfg->checksum_type = rm_string_to_digest_type(value);
 
     if(cfg->checksum_type == RM_DIGEST_UNKNOWN) {
-        g_set_error(error, RM_ERROR_DOMAIN, 0, _("Unknown hash algorithm: '%s'"), value);
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Unknown hash algorithm: '%s'"), value);
     } else if(cfg->checksum_type == RM_DIGEST_BASTARD) {
         session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
         session->hash_seed2 = GPOINTER_TO_UINT(&session);
@@ -780,7 +777,7 @@ static gboolean rm_cmd_parse_paranoid_mem(
 
     if(parse_error != NULL) {
         g_set_error(
-            error, RM_ERROR_DOMAIN, 0,
+            error, RM_ERROR_QUARK, 0,
             _("Invalid size description \"%s\": %s"), size_spec, parse_error
         );
         return false;
@@ -808,7 +805,7 @@ static gboolean rm_cmd_parse_cache(
     _U const char *option_name, const gchar *cache_path, RmSession *session, GError **error
 ) {
     if(!g_file_test(cache_path, G_FILE_TEST_IS_REGULAR)) {
-        g_set_error(error, RM_ERROR_DOMAIN, 0, "There is no cache at `%s'", cache_path);
+        g_set_error(error, RM_ERROR_QUARK, 0, "There is no cache at `%s'", cache_path);
         return false;
     }
 
@@ -955,7 +952,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
-        g_set_error(error, RM_ERROR_DOMAIN, 0, _("Specifiyng both -o and -O is not allowed."));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Specifiyng both -o and -O is not allowed."));
         return false;
     } else if(session->output_cnt[0] < 0 && session->output_cnt[1] < 0 && !rm_fmt_len(session->formats)) {
         /* Set default outputs */
@@ -1064,12 +1061,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
 
     if(!rm_cmd_set_cwd(cfg)) {
-        g_set_error(&error, RM_ERROR_DOMAIN, 0, "Cannot set current working directory");
+        g_set_error(&error, RM_ERROR_QUARK, 0, "Cannot set current working directory");
         goto failure;
     }
 
     if(!rm_cmd_set_cmdline(cfg, argc, argv)) {
-        g_set_error(&error, RM_ERROR_DOMAIN, 0, "Cannot join commandline");
+        g_set_error(&error, RM_ERROR_QUARK, 0, "Cannot join commandline");
         goto failure;
     }
 
@@ -1125,18 +1122,18 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(
-                    RM_ERROR_DOMAIN, 0,
+                    RM_ERROR_QUARK, 0,
                     _("can't specify both --keep-all-tagged and --keep-all-untagged")
                 );
 
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(
-                    RM_ERROR_DOMAIN, 0,
+                    RM_ERROR_QUARK, 0,
                     _("-q (--clamp-low) should be lower than -Q (--clamp-top)!")
                 );
     } else if(!rm_cmd_set_paths(session, paths)) {
         error = g_error_new(
-                    RM_ERROR_DOMAIN, 0,
+                    RM_ERROR_QUARK, 0,
                     _("No valid paths given.")
                 );
     } else if(!rm_cmd_set_outputs(session, &error)) {
