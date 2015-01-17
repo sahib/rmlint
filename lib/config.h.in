@@ -72,7 +72,7 @@
 /* Printf formatting for large integers */
 #include <inttypes.h>
 
-#define GETTEXT_PACKAGE "rmlint"
+#define RM_GETTEXT_PACKAGE "rmlint"
 
 #if HAVE_LIBINTL
 #  define _(String) gettext (String)
