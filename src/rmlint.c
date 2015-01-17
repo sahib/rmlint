@@ -92,8 +92,8 @@ static void signal_handler(int signum) {
 static void i18n_init(void) {
 #if HAVE_LIBINTL
     /* Tell gettext where to search for .mo files */
-    bindtextdomain("rmlint", INSTALL_PREFIX"/share/locale");
-    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX"/share/locale");
+    bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
 
     /* Make printing umlauts work */
     setlocale(LC_ALL, "");
@@ -102,7 +102,7 @@ static void i18n_init(void) {
      * so gettext can find us in
      * /usr/share/locale/de/LC_MESSAGEs/rmlint.mo
      * */
-    textdomain("rmlint");
+    textdomain(RM_GETTEXT_PACKAGE);
 #endif
 }
 

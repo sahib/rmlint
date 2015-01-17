@@ -36,7 +36,8 @@ def xgettext(target=None, source=None, env=None):
         'xgettext --package-name rmlint -k_ -kN_ ' \
         '--package-version {}.{}.{} --default-domain rmlint ' \
         '--output po/rmlint.pot ' \
-        '$(find src -iname "*.[ch]") &&' \
+        '--from-code UTF-8 ' \
+        '$(find src lib -iname "*.[ch]") &&' \
         'sed -i "s/CHARSET/UTF-8/g" po/rmlint.pot'.format(
             VERSION_MAJOR,
             VERSION_MINOR,
