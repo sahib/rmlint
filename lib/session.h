@@ -136,11 +136,11 @@ bool rm_session_was_aborted(RmSession *session);
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
  * */
-#define MAYBE_RED(s)    ((s->cfg->color) ? RED : "")
-#define MAYBE_YELLOW(s) ((s->cfg->color) ? YELLOW : "")
-#define MAYBE_RESET(s)  ((s->cfg->color) ? RESET : "")
-#define MAYBE_GREEN(s)  ((s->cfg->color) ? GREEN : "")
-#define MAYBE_BLUE(s)   ((s->cfg->color) ? BLUE : "")
+#define MAYBE_RED(s)    ((s->cfg->with_color) ? RED : "")
+#define MAYBE_YELLOW(s) ((s->cfg->with_color) ? YELLOW : "")
+#define MAYBE_RESET(s)  ((s->cfg->with_color) ? RESET : "")
+#define MAYBE_GREEN(s)  ((s->cfg->with_color) ? GREEN : "")
+#define MAYBE_BLUE(s)   ((s->cfg->with_color) ? BLUE : "")
 
 #endif /* end of include guard */
 

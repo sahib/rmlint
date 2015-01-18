@@ -1,5 +1,5 @@
 /**
-*  This file is part of rmlint.
+* This file is part of rmlint.
 *
 *  rmlint is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -14,12 +14,12 @@
 *  You should have received a copy of the GNU General Public License
 *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
-** Authors:
- *
- *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
- *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
- *
-** Hosted on http://github.com/sahib/rmlint
+* Authors:
+*
+*  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+*  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+*
+* Hosted on http://github.com/sahib/rmlint
 *
 **/
 
@@ -95,7 +95,7 @@ static int rm_xattr_get(RmFile *file, const char *key, char *out_value, size_t v
 }
 
 static int rm_xattr_del(RmFile *file, const char *key) {
-    return rm_xattr_is_fail("rmovexattr", removexattr(file->path, key));
+    return rm_xattr_is_fail("removexattr", removexattr(file->path, key));
 }
 
 #endif
@@ -146,9 +146,9 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
     }
 
     char cksum_key[64] = {0},
-                         mtime_key[64] = {0},
-                                         mtime_buf[64] = {0},
-                                                 cksum_hex_str[512] = {0};
+         mtime_key[64] = {0},
+         mtime_buf[64] = {0},
+         cksum_hex_str[512] = {0};
 
     memset(cksum_hex_str, '0', sizeof(cksum_hex_str));
     cksum_hex_str[sizeof(cksum_hex_str) - 1] = 0;

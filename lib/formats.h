@@ -97,7 +97,7 @@ typedef struct RmFmtHandler {
      */
     GMutex print_mtx;
 
-    /* A list of valid keys that may be passed to 
+    /* A list of valid keys that may be passed to
      * --config fmt:key.
      */
     const char *valid_keys[32];

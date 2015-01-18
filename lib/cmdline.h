@@ -1,5 +1,5 @@
 /**
-*  This file is part of rmlint.
+* This file is part of rmlint.
 *
 *  rmlint is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -14,12 +14,12 @@
 *  You should have received a copy of the GNU General Public License
 *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
-** Authors:
- *
- *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
- *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
- *
-** Hosted on http://github.com/sahib/rmlint
+* Authors:
+*
+*  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+*  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+*
+* Hosted on http://github.com/sahib/rmlint
 *
 **/
 

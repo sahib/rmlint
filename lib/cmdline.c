@@ -61,7 +61,7 @@ static void rm_cmd_show_version(void) {
         const char * name;
     } features[] = {
         {.name="mounts",      .enabled=HAVE_BLKID & (HAVE_GETMNTENT | HAVE_GETMNTINFO)},
-        {.name="nonstripped", .enabled=HAVE_LIBELF},
+        {.name="find_nonstripped", .enabled=HAVE_LIBELF},
         {.name="fiemap",      .enabled=HAVE_FIEMAP},
         {.name="sha512",      .enabled=HAVE_SHA512},
         {.name="bigfiles",    .enabled=HAVE_BIGFILES},
@@ -446,39 +446,39 @@ static gboolean rm_cmd_parse_lint_types(
     RmLintTypeOption option_table[] = {{
             .names = NAMES{"all", 0},
             .enable = OPTS{
-                &cfg->findbadids,
-                &cfg->findbadlinks,
-                &cfg->findemptydirs,
-                &cfg->listemptyfiles,
-                &cfg->nonstripped,
-                &cfg->searchdup,
+                &cfg->find_badids,
+                &cfg->find_badlinks,
+                &cfg->find_emptydirs,
+                &cfg->find_emptyfiles,
+                &cfg->find_nonstripped,
+                &cfg->find_duplicates,
                 &cfg->merge_directories,
                 0
             }
         }, {
             .names = NAMES{"minimal", 0},
             .enable = OPTS{
-                &cfg->findbadids,
-                &cfg->findbadlinks,
-                &cfg->searchdup,
+                &cfg->find_badids,
+                &cfg->find_badlinks,
+                &cfg->find_duplicates,
                 0
             },
         }, {
             .names = NAMES{"minimaldirs", 0},
             .enable = OPTS{
-                &cfg->findbadids,
-                &cfg->findbadlinks,
+                &cfg->find_badids,
+                &cfg->find_badlinks,
                 &cfg->merge_directories,
                 0
             },
         }, {
             .names = NAMES{"defaults", 0},
             .enable = OPTS{
-                &cfg->findbadids,
-                &cfg->findbadlinks,
-                &cfg->findemptydirs,
-                &cfg->listemptyfiles,
-                &cfg->searchdup,
+                &cfg->find_badids,
+                &cfg->find_badlinks,
+                &cfg->find_emptydirs,
+                &cfg->find_emptyfiles,
+                &cfg->find_duplicates,
                 0
             },
         }, {
@@ -486,22 +486,22 @@ static gboolean rm_cmd_parse_lint_types(
             .enable = OPTS{0},
         }, {
             .names = NAMES{"badids", "bi", 0},
-            .enable = OPTS{&cfg->findbadids, 0}
+            .enable = OPTS{&cfg->find_badids, 0}
         }, {
             .names = NAMES{"badlinks", "bl", 0},
-            .enable = OPTS{&cfg->findbadlinks, 0}
+            .enable = OPTS{&cfg->find_badlinks, 0}
         }, {
             .names = NAMES{"emptydirs", "ed", 0},
-            .enable = OPTS{&cfg->findemptydirs, 0}
+            .enable = OPTS{&cfg->find_emptydirs, 0}
         }, {
             .names = NAMES{"emptyfiles", "ef", 0},
-            .enable = OPTS{&cfg->listemptyfiles, 0}
+            .enable = OPTS{&cfg->find_emptyfiles, 0}
         }, {
-            .names = NAMES{"nonstripped", "ns", 0},
-            .enable = OPTS{&cfg->nonstripped, 0}
+            .names = NAMES{"find_nonstripped", "ns", 0},
+            .enable = OPTS{&cfg->find_nonstripped, 0}
         }, {
             .names = NAMES{"duplicates", "df", "dupes", 0},
-            .enable = OPTS{&cfg->searchdup, 0}
+            .enable = OPTS{&cfg->find_duplicates, 0}
         }, {
             .names = NAMES{"duplicatedirs", "dd", "dupedirs", 0},
             .enable = OPTS{&cfg->merge_directories, 0}
@@ -997,21 +997,21 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"quiet"    ,  'V' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  FUNC(quiet)    ,  _("Be less verbose (-VVV for much less)") ,  NULL},
 
         /* Trivial boolean options */
-        {"no-with-color"           ,  'W' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->color                   ,  _("Be not that colorful")                              ,  NULL},
-        {"hidden"                  ,  'r' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  _("Find hidden files")                                 ,  NULL},
-        {"followlinks"             ,  'f' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->followlinks             ,  _("Follow symlinks")                                   ,  NULL},
-        {"no-followlinks"          ,  'F' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->followlinks             ,  _("Ignore symlinks")                                   ,  NULL},
-        {"crossdev"                ,  'x' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->samepart                ,  _("Do not cross mounpoints")                           ,  NULL},
-        {"paranoid"                ,  'p' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid)                ,  _("Use more paranoid hashing")                         ,  NULL},
-        {"keep-all-tagged"         ,  'k' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_tagged         ,  _("Keep all tagged files")                             ,  NULL},
-        {"keep-all-untagged"       ,  'K' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_untagged       ,  _("Keep all untagged files")                           ,  NULL},
-        {"must-match-tagged"       ,  'm' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_tagged       ,  _("Must have twin in tagged dir")                      ,  NULL},
-        {"must-match-untagged"     ,  'M' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_untagged     ,  _("Must have twin in untagged dir")                    ,  NULL},
-        {"hardlinked"              ,  'l' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  _("Report hardlinks as duplicates")                    ,  NULL},
-        {"match-basename"          ,  'b' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_basename          ,  _("Only find twins with same basename")                ,  NULL},
-        {"match-extension"         ,  'e' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  _("Only find twins with same extension")               ,  NULL},
-        {"match-without-extension" ,  'i' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  _("Only find twins with same basename minus extension"),  NULL},
-        {"merge-directories"       ,  'D' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(merge_directories)       ,  _("Find duplicate directories")                        ,  NULL},
+        {"no-with-color"           ,  'W' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->with_color              ,  _("Be not that colorful")                               ,  NULL},
+        {"hidden"                  ,  'r' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  _("Find hidden files")                                  ,  NULL},
+        {"followlinks"             ,  'f' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->follow_symlinks         ,  _("Follow symlinks")                                    ,  NULL},
+        {"no-followlinks"          ,  'F' ,  DISABLE ,  G_OPTION_ARG_NONE     ,  &cfg->follow_symlinks         ,  _("Ignore symlinks")                                    ,  NULL},
+        {"crossdev"                ,  'x' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->crossdev                ,  _("Do not cross mounpoints")                            ,  NULL},
+        {"paranoid"                ,  'p' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid)                ,  _("Use more paranoid hashing")                          ,  NULL},
+        {"keep-all-tagged"         ,  'k' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_tagged         ,  _("Keep all tagged files")                              ,  NULL},
+        {"keep-all-untagged"       ,  'K' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->keep_all_untagged       ,  _("Keep all untagged files")                            ,  NULL},
+        {"must-match-tagged"       ,  'm' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_tagged       ,  _("Must have twin in tagged dir")                       ,  NULL},
+        {"must-match-untagged"     ,  'M' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->must_match_untagged     ,  _("Must have twin in untagged dir")                     ,  NULL},
+        {"hardlinked"              ,  'l' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  _("Report hardlinks as duplicates")                     ,  NULL},
+        {"match-basename"          ,  'b' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_basename          ,  _("Only find twins with same basename")                 ,  NULL},
+        {"match-extension"         ,  'e' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  _("Only find twins with same extension")                ,  NULL},
+        {"match-without-extension" ,  'i' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  _("Only find twins with same basename minus extension") ,  NULL},
+        {"merge-directories"       ,  'D' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(merge_directories)       ,  _("Find duplicate directories")                         ,  NULL},
 
         /* Callback */
         {"show-man" ,  'H' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  rm_cmd_show_manpage ,  _("Show the manpage")            ,  NULL},
@@ -1024,8 +1024,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     const GOptionEntry inversed_option_entries[] = {
         {"no-hidden"                  ,  'R' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  "Ignore hidden files"                 ,  NULL},
-        {"with-color"                 ,  'w' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->color                   ,  "Be colorful like a unicorn"          ,  NULL},
-        {"no-crossdev"                ,  'X' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->samepart                ,  "Cross mountpoints"                   ,  NULL},
+        {"with-color"                 ,  'w' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->with_color              ,  "Be colorful like a unicorn"          ,  NULL},
+        {"no-crossdev"                ,  'X' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->crossdev                ,  "Cross mountpoints"                   ,  NULL},
         {"less-paranoid"              ,  'P' ,  EMPTY   | HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(less_paranoid)           ,  "Use less paranoid hashing algorithm" ,  NULL},
         {"no-hardlinked"              ,  'L' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  "Ignore hardlinks"                    ,  NULL},
         {"see-symlinks"               ,  '@' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->see_symlinks            ,  "Treat symlinks a regular files"      ,  NULL},
@@ -1093,7 +1093,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         option_parser,
         _("rmlint finds space waste and other broken things on your filesystem and offers to remove it.\n"
           "It is especially good at finding duplicates and offers a big varierty of options to handle them."
-        )
+         )
     );
     g_option_context_set_description(
         option_parser,
@@ -1101,7 +1101,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
           "See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed usage information,\n"
           "or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
           "Complementary tutorials can be found at: http://rmlint.rtfd.org"
-        )
+         )
     );
 
     g_option_group_set_error_hook(main_group, (GOptionErrorFunc)rm_cmd_on_error);
@@ -1115,7 +1115,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     cfg->depth = CLAMP(cfg->depth, 1, PATH_MAX / 2 + 1);
 
     /* Overwrite color if we do not print to a terminal directly */
-    cfg->color = isatty(fileno(stdout)) && isatty(fileno(stderr));
+    cfg->with_color = isatty(fileno(stdout)) && isatty(fileno(stderr));
 
     if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(
@@ -1172,7 +1172,7 @@ int rm_cmd_main(RmSession *session) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
-        if(session->cfg->searchdup || session->cfg->merge_directories) {
+        if(session->cfg->find_duplicates || session->cfg->merge_directories) {
             rm_shred_run(session);
 
             rm_log_debug("Dupe search finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));

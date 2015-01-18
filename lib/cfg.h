@@ -1,5 +1,5 @@
 /**
-*  This file is part of rmlint.
+* This file is part of rmlint.
 *
 *  rmlint is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -14,13 +14,12 @@
 *  You should have received a copy of the GNU General Public License
 *  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 *
-** Authors:
- *
- *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
- *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
- *
-** Hosted on http://github.com/sahib/rmlint
+* Authors:
 *
+*  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+*  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+*
+* Hosted on http://github.com/sahib/rmlint
 **/
 
 #ifndef RM_SETTINGS_H
@@ -30,19 +29,19 @@
 #include "checksum.h"
 #include "utilities.h"
 
-/* all available cfg - see rmlint -h */
+/* Storage struct for all options settable in cmdline. */
 typedef struct RmCfg {
-    gboolean color;
-    gboolean samepart;
+    gboolean with_color;
+    gboolean crossdev;
     gboolean ignore_hidden;
-    gboolean followlinks;
+    gboolean follow_symlinks;
     gboolean see_symlinks;
-    gboolean findbadids;
-    gboolean findbadlinks;
-    gboolean searchdup;
-    gboolean findemptydirs;
-    gboolean nonstripped;
-    gboolean listemptyfiles;
+    gboolean find_badids;
+    gboolean find_badlinks;
+    gboolean find_duplicates;
+    gboolean find_emptydirs;
+    gboolean find_nonstripped;
+    gboolean find_emptyfiles;
     gboolean keep_all_tagged;
     gboolean keep_all_untagged;
     gboolean must_match_tagged;
@@ -83,6 +82,7 @@ typedef struct RmCfg {
     RmDigestType checksum_type;
     RmOff paranoid_mem;
 } RmCfg;
+
 /**
  * @brief Reset RmCfg to default cfg and all other vars to 0.
  */

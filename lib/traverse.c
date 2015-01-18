@@ -56,7 +56,7 @@ static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_
     self->path_index = path_index;
 
     int stat_state;
-    if(session->cfg->followlinks) {
+    if(session->cfg->follow_symlinks) {
         stat_state = rm_sys_stat(path, &self->stat_buf);
     } else {
         stat_state = rm_sys_lstat(path, &self->stat_buf);
@@ -119,12 +119,12 @@ static void rm_traverse_file(
     if (file_type == RM_LINT_TYPE_UNKNOWN) {
         RmLintType gid_check;
         /*see if we can find a lint type*/
-        if (cfg->findbadids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
+        if (cfg->find_badids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
             file_type = gid_check;
-        } else if(cfg->nonstripped && rm_util_is_nonstripped(path, statp)) {
+        } else if(cfg->find_nonstripped && rm_util_is_nonstripped(path, statp)) {
             file_type = RM_LINT_TYPE_NBIN;
         } else if(statp->st_size == 0) {
-            if (!cfg->listemptyfiles) {
+            if (!cfg->find_emptyfiles) {
                 return;
             } else {
                 file_type = RM_LINT_TYPE_EFILE;
@@ -245,7 +245,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags = true; /* flag current dir as not empty */
                     rm_log_debug("Not descending into %s because max depth reached\n", p->fts_path);
-                } else if (cfg->samepart && p->fts_dev != chp->fts_dev) {
+                } else if (cfg->crossdev && p->fts_dev != chp->fts_dev) {
                     /* continuing into folder would cross file systems*/
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     clear_emptydir_flags = true; /*flag current dir as not empty*/
@@ -267,7 +267,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_DOT:       /* dot or dot-dot */
                 break;
             case FTS_DP:        /* postorder directory */
-                if (is_emptydir[p->fts_level + 1] == 'E' && cfg->findemptydirs) {
+                if (is_emptydir[p->fts_level + 1] == 'E' && cfg->find_emptydirs) {
                     ADD_FILE(RM_LINT_TYPE_EDIR, false);
                 }
                 break;
@@ -278,7 +278,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_INIT:      /* initialized only */
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
-                if (cfg->findbadlinks) {
+                if (cfg->find_badlinks) {
                     ADD_FILE(RM_LINT_TYPE_BLNK, false);
                 }
                 clear_emptydir_flags = true; /*current dir not empty*/
@@ -306,7 +306,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             break;
             case FTS_SL:        /* symbolic link */
                 clear_emptydir_flags = true; /* current dir not empty */
-                if (!cfg->followlinks) {
+                if (!cfg->follow_symlinks) {
                     if (p->fts_level != 0) {
                         rm_log_debug("Not following symlink %s because of cfg\n", p->fts_path);
                     }
@@ -314,7 +314,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     RmStat dummy_buf;
                     if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
                         /* Oops, that's a badlink. */
-                        if (cfg->findbadlinks) {
+                        if (cfg->find_badlinks) {
                             ADD_FILE(RM_LINT_TYPE_BLNK, false);
                         }
                     } else if(cfg->see_symlinks) {

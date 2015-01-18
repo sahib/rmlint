@@ -181,7 +181,7 @@ static bool rm_tm_count_files(art_tree *count_tree, char **paths, RmSession *ses
     }
 
     int fts_flags = FTS_COMFOLLOW;
-    if(session->cfg->followlinks) {
+    if(session->cfg->follow_symlinks) {
         fts_flags |= FTS_LOGICAL;
     } else {
         fts_flags |= FTS_PHYSICAL;
@@ -852,7 +852,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
             }
         } else {
             /* If no separate duplicate files are requested, we can stop here */
-            if(self->session->cfg->searchdup == false) {
+            if(self->session->cfg->find_duplicates == false) {
                 self->session->total_lint_size -= file_size_acc;
                 self->session->dup_group_counter -= 1;
                 self->session->dup_counter -= file_list->length - 1;
