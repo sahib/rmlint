@@ -27,22 +27,31 @@
 
 #include <glib.h>
 #include <stdio.h>
+#include <string.h>
 
 
 typedef struct RmFmtHandlerFdupes {
     /* must be first */
     RmFmtHandler parent;
 
+    /* Storage for all strings */
+    GStringChunk *text_chunks;
+
+    /* Pointers into text_chunks */
     GQueue *text_lines;
 
+    /* Do not print original (fdupes emulation) */
     bool omit_first_line;
+
+    /* Do not print newlines between files */
     bool use_same_line;
 } RmFmtHandlerFdupes;
 
-
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out, RmFile *file) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
-    char *line = NULL;
+
+    char line[512 + 32]; 
+    memset(line, 0, sizeof(line));
 
     if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
         /* we do not want to list unfinished files. */
@@ -53,34 +62,41 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         if(self->omit_first_line && file->is_original) {
-            line = g_strdup("\n");
+            strcpy(line, "\n");
         } else {
-            line = g_strdup_printf(
-                       "%s%s%s%s%c",
-                       (file->is_original) ? "\n" : "",
-                       (file->is_original) ? MAYBE_GREEN(session) : "",
-                       file->path,
-                       (file->is_original) ? MAYBE_RESET(session) : "",
-                       (self->use_same_line) ? ' ' : '\n'
-                   );
+            g_snprintf(
+                line, sizeof(line),
+               "%s%s%s%s%c",
+               (file->is_original) ? "\n" : "",
+               (file->is_original) ? MAYBE_GREEN(session) : "",
+               file->path,
+               (file->is_original) ? MAYBE_RESET(session) : "",
+               (self->use_same_line) ? ' ' : '\n'
+            );
         }
         break;
     default:
-        line = g_strdup_printf(
-                   "%s%s%s%c",
-                   MAYBE_BLUE(session),
-                   file->path,
-                   MAYBE_RESET(session),
-                   (self->use_same_line) ? ' ' : '\n'
-               );
+        g_snprintf(
+           line, sizeof(line),
+           "%s%s%s%c",
+           MAYBE_BLUE(session),
+           file->path,
+           MAYBE_RESET(session),
+           (self->use_same_line) ? ' ' : '\n'
+       );
         break;
     }
 
-    if(self->text_lines == NULL) {
+    if(self->text_chunks == NULL) {
+        self->text_chunks = g_string_chunk_new(PATH_MAX / 2);
         self->text_lines = g_queue_new();
     }
 
-    g_queue_push_tail(self->text_lines, line);
+    /* remember the line (use GStringChunk for effiecient storage) */
+    g_queue_push_tail(
+        self->text_lines,
+        g_string_chunk_insert(self->text_chunks, line)
+    );
 }
 
 static void rm_fmt_prog(
@@ -92,23 +108,18 @@ static void rm_fmt_prog(
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
     if(state == RM_PROGRESS_STATE_INIT) {
-        self->omit_first_line = (
-                                    rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL
-                                );
-        self->use_same_line = (
-                                  rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL
-                              );
+        self->omit_first_line = (rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL);
+        self->use_same_line = (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
     }
-
 
     /* We do not respect `out` here; just use stderr and stdout directly.
      * Reason: fdupes does this, let's imitate weird behaviour!
      */
-
     extern RmFmtHandler *PROGRESS_HANDLER;
     g_assert(PROGRESS_HANDLER->prog);
     PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, stderr, state);
 
+    /* Print all cached lines on shutdown. */
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->text_lines) {
         for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
             char *line = iter->data;
@@ -116,7 +127,8 @@ static void rm_fmt_prog(
                 fprintf(stdout, "%s", line);
             }
         }
-        g_queue_free_full(self->text_lines, g_free);
+        g_queue_free(self->text_lines);
+        g_string_chunk_free(self->text_chunks);
         fprintf(stdout, "\n");
     }
 
