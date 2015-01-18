@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-18 00:39+0100\n"
+"POT-Creation-Date: 2015-01-18 14:08+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -54,6 +54,10 @@ msgstr "Kann Datei %s nicht öffnen um zu sehen ob sie gestripped ist."
 msgid "ELF Library is out of date!"
 msgstr "ELF Bibliothek ist extrem veraltet!"
 
+#: lib/utilities.c:382
+msgid "caching is not supported due to missing json-glib library."
+msgstr "Caching ist nicht mögliche, da rmlint ohne json-glib kompiliert wurde."
+
 #: lib/utilities.c:398
 #, c-format
 msgid "Loading json-cache `%s'"
@@ -74,8 +78,8 @@ msgid ""
 "rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> "
 "Thomas."
 msgstr ""
-"rmlint wurde von Christopher <sahib> Pahl und Daniel <SeeSpotRun> "
-"Thomas geschrieben."
+"rmlint wurde von Christopher <sahib> Pahl und Daniel <SeeSpotRun> Thomas "
+"geschrieben."
 
 #: lib/cmdline.c:82
 #, c-format
@@ -387,6 +391,11 @@ msgstr "Kein Formathandler mit diesen Namen: %s"
 #, c-format
 msgid "Unable to open file for writing: %s"
 msgstr "Kann Datei nicht zum lesen öffnen: %s"
+
+#: lib/preprocess.c:227
+#, c-format
+msgid "Hardlink file size changed during traversal: %s"
+msgstr "Hardlink Dateigrößen haben sich während der Traversierung geändert (%s). Nicht gut."
 
 #: lib/formats/progressbar.c:64
 msgid "Traversing"

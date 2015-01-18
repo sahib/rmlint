@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-18 00:39+0100\n"
+"POT-Creation-Date: 2015-01-18 14:08+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,6 +51,10 @@ msgstr ""
 
 #: lib/utilities.c:200
 msgid "ELF Library is out of date!"
+msgstr ""
+
+#: lib/utilities.c:382
+msgid "caching is not supported due to missing json-glib library."
 msgstr ""
 
 #: lib/utilities.c:398
@@ -365,6 +369,11 @@ msgstr ""
 #: lib/formats.c:189
 #, c-format
 msgid "Unable to open file for writing: %s"
+msgstr ""
+
+#: lib/preprocess.c:227
+#, c-format
+msgid "Hardlink file size changed during traversal: %s"
 msgstr ""
 
 #: lib/formats/progressbar.c:64

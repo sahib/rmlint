@@ -379,7 +379,7 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     (void)cksum_table;
     (void)json_path;
 
-    rm_log_info_line("caching is not supported due to missing json-glib library.");
+    rm_log_info_line(_("caching is not supported due to missing json-glib library."));
     return EXIT_FAILURE;
 #else
     g_assert(cksum_table);
