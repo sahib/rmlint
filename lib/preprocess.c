@@ -380,7 +380,7 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
     RmFileTables *tables = session->tables;
 
     for(RmOff type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
-        if (type == RM_LINT_TYPE_EDIR) {
+        if (type == RM_LINT_TYPE_EMPTY_DIR) {
             tables->other_lint[type] = g_list_sort(
                                            tables->other_lint[type],
                                            (GCompareFunc)rm_pp_cmp_reverse_alphabetical

@@ -140,13 +140,13 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     char *dupe_path = rm_fmt_sh_escape_path(file->path);
 
     switch(file->lint_type) {
-    case RM_LINT_TYPE_BLNK:
+    case RM_LINT_TYPE_BADLINK:
         fprintf(out, "rm -f '%s' # bad symlink pointing nowhere\n", dupe_path);
         break;
-    case RM_LINT_TYPE_EDIR:
+    case RM_LINT_TYPE_EMPTY_DIR:
         fprintf(out, "rmdir '%s' # empty folder\n", dupe_path);
         break;
-    case RM_LINT_TYPE_NBIN:
+    case RM_LINT_TYPE_NONSTRIPPED:
         fprintf(out, "strip --strip-debug '%s' # binary with debugsymbols\n", dupe_path);
         break;
     case RM_LINT_TYPE_BADUID:
@@ -158,7 +158,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     case RM_LINT_TYPE_BADUGID:
         fprintf(out, "%s '%s' # bad gid and uid\n", "chown \"$user\":\"$group\"", dupe_path);
         break;
-    case RM_LINT_TYPE_EFILE:
+    case RM_LINT_TYPE_EMPTY_FILE:
         fprintf(out, "rm -f '%s' # empty file\n", dupe_path);
         break;
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:

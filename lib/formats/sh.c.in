@@ -284,16 +284,16 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     char *path = rm_fmt_sh_escape_path(file->path);
 
     switch(file->lint_type) {
-    case RM_LINT_TYPE_EDIR:
+    case RM_LINT_TYPE_EMPTY_DIR:
         fprintf(out, "handle_emptydir '%s' # empty folder\n", path);
         break;
-    case RM_LINT_TYPE_EFILE:
+    case RM_LINT_TYPE_EMPTY_FILE:
         fprintf(out, "handle_emptyfile '%s' # empty file\n", path);
         break;
-    case RM_LINT_TYPE_BLNK:
+    case RM_LINT_TYPE_BADLINK:
         fprintf(out, "handle_bad_symlink '%s' # bad symlink pointing nowhere\n", path);
         break;
-    case RM_LINT_TYPE_NBIN:
+    case RM_LINT_TYPE_NONSTRIPPED:
         fprintf(out, "handle_unstripped_binary '%s' # binary with debugsymbols\n", path);
         break;
     case RM_LINT_TYPE_BADUID:

@@ -122,12 +122,12 @@ static void rm_traverse_file(
         if (cfg->find_badids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
             file_type = gid_check;
         } else if(cfg->find_nonstripped && rm_util_is_nonstripped(path, statp)) {
-            file_type = RM_LINT_TYPE_NBIN;
+            file_type = RM_LINT_TYPE_NONSTRIPPED;
         } else if(statp->st_size == 0) {
             if (!cfg->find_emptyfiles) {
                 return;
             } else {
-                file_type = RM_LINT_TYPE_EFILE;
+                file_type = RM_LINT_TYPE_EMPTY_FILE;
             }
         } else {
             RmOff file_size = statp->st_size;
@@ -268,7 +268,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_DP:        /* postorder directory */
                 if (is_emptydir[p->fts_level + 1] == 'E' && cfg->find_emptydirs) {
-                    ADD_FILE(RM_LINT_TYPE_EDIR, false);
+                    ADD_FILE(RM_LINT_TYPE_EMPTY_DIR, false);
                 }
                 break;
             case FTS_ERR:       /* error; errno is set */
@@ -279,7 +279,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 break;
             case FTS_SLNONE:    /* symbolic link without target */
                 if (cfg->find_badlinks) {
-                    ADD_FILE(RM_LINT_TYPE_BLNK, false);
+                    ADD_FILE(RM_LINT_TYPE_BADLINK, false);
                 }
                 clear_emptydir_flags = true; /*current dir not empty*/
                 break;
@@ -315,7 +315,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
                         /* Oops, that's a badlink. */
                         if (cfg->find_badlinks) {
-                            ADD_FILE(RM_LINT_TYPE_BLNK, false);
+                            ADD_FILE(RM_LINT_TYPE_BADLINK, false);
                         }
                     } else if(cfg->see_symlinks) {
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
