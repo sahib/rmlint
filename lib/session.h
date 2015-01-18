@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include <glib.h>
 
+/* Needed for RmTreeMerger */
 #include "treemerge.h"
 
 typedef struct RmFileTables {
@@ -79,6 +80,7 @@ typedef struct RmSession {
     /* flag indicating if rmlint was aborted early */
     volatile bool aborted;
 
+    /* timer used for debugging and profiling messages */
     GTimer *timer;
 
     /* Debugging counters */

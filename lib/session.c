@@ -42,9 +42,9 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->formats = rm_fmt_open(session);
 
     session->verbosity_count = 2;
-    session->paranoia_count = 0;
-    session->output_cnt[0] = -1;
-    session->output_cnt[1] = -1;
+    session->paranoia_count  = 0;
+    session->output_cnt[0]   = -1;
+    session->output_cnt[1]   = -1;
 
     session->offsets_read = 0;
     session->offset_fragments = 0;
@@ -85,8 +85,7 @@ void rm_session_clear(RmSession *session) {
 static GMutex ABORT_MTX;
 
 void rm_session_abort(RmSession *session) {
-    g_mutex_lock(&ABORT_MTX);
-    {
+    g_mutex_lock(&ABORT_MTX); {
         session->aborted = true;
     }
     g_mutex_unlock(&ABORT_MTX);
@@ -94,8 +93,7 @@ void rm_session_abort(RmSession *session) {
 
 bool rm_session_was_aborted(RmSession *session) {
     bool was_aborted = false;
-    g_mutex_lock(&ABORT_MTX);
-    {
+    g_mutex_lock(&ABORT_MTX); {
         was_aborted = session->aborted;
     }
     g_mutex_unlock(&ABORT_MTX);
