@@ -190,7 +190,7 @@ bool rm_util_is_nonstripped(_U const char *path, _U RmStat *statp) {
 
     /* Open ELF file to obtain file descriptor */
     if((fd = rm_sys_open(path, O_RDONLY)) == -1) {
-        rm_log_warning_line(_("cannot open file '%s' for find_nonstripped test: "), path);
+        rm_log_warning_line(_("cannot open file '%s' for nonstripped test: "), path);
         rm_log_perror("");
         return 0;
     }

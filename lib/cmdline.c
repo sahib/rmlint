@@ -61,7 +61,7 @@ static void rm_cmd_show_version(void) {
         const char * name;
     } features[] = {
         {.name="mounts",      .enabled=HAVE_BLKID & (HAVE_GETMNTENT | HAVE_GETMNTINFO)},
-        {.name="find_nonstripped", .enabled=HAVE_LIBELF},
+        {.name="nonstripped", .enabled=HAVE_LIBELF},
         {.name="fiemap",      .enabled=HAVE_FIEMAP},
         {.name="sha512",      .enabled=HAVE_SHA512},
         {.name="bigfiles",    .enabled=HAVE_BIGFILES},
@@ -497,7 +497,7 @@ static gboolean rm_cmd_parse_lint_types(
             .names = NAMES{"emptyfiles", "ef", 0},
             .enable = OPTS{&cfg->find_emptyfiles, 0}
         }, {
-            .names = NAMES{"find_nonstripped", "ns", 0},
+            .names = NAMES{"nonstripped", "ns", 0},
             .enable = OPTS{&cfg->find_nonstripped, 0}
         }, {
             .names = NAMES{"duplicates", "df", "dupes", 0},
