@@ -90,11 +90,11 @@
 char *rm_util_strsub(const char *string, const char *subs, const char *with) {
     gchar *result = NULL;
     if (string != NULL && string[0] != '\0') {
-        gchar **split = g_strsplit (string, subs, 0);
+        gchar **split = g_strsplit(string, subs, 0);
         if (split != NULL) {
-            result = g_strjoinv (with, split);
+            result = g_strjoinv(with, split);
         }
-        g_strfreev (split);
+        g_strfreev(split);
     }
     return result;
 }
@@ -134,7 +134,7 @@ GQueue *rm_hash_table_setdefault(
 }
 
 ino_t rm_util_parent_node(const char *path) {
-    char *dummy  = g_strdup(path);
+    char *dummy = g_strdup(path);
     char *parent_path = g_strdup(dirname(dummy));
     g_free(dummy);
 
@@ -1212,70 +1212,3 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
     const struct tm *now_ctime = localtime(&stamp);
     return (strftime(buf, buf_size, "%FT%T%z", now_ctime) != 0);
 }
-
-/////////////////////////////////
-//     IFDEFD TEST MAINS       //
-/////////////////////////////////
-
-#ifdef _RM_COMPILE_MAIN_FIEMAP
-int main(int argc, char const *argv[]) {
-    if(argc < 3) {
-        return EXIT_FAILURE;
-    }
-
-    GSequence *db = rm_offset_create_table(argv[1]);
-    RmOff off = rm_offset_lookup(db, g_ascii_strtoll(argv[2], NULL, 10));
-
-    rm_log_warning("Offset: %"LLU"\n", off);
-    g_sequence_free(db);
-
-    return EXIT_SUCCESS;
-}
-#endif
-#ifdef _RM_COMPILE_MAIN_MOUNTS
-
-int main(int argc, char **argv) {
-    RmMountTable *table = rm_mounts_table_new();
-    g_printerr("\n");
-    for(int i = 1; i < argc; ++i) {
-        dev_t dev = rm_mounts_get_disk_id_by_path(table, argv[i]);
-        g_printerr(
-            "%30s is on %4srotational device \"%s\" and on disk %02u:%02u\n",
-            argv[i],
-            rm_mounts_is_nonrotational_by_path(table, argv[i]) ? "non-" : "",
-            rm_mounts_get_name(table, dev),
-            major(dev), minor(dev)
-        );
-    }
-
-    rm_mounts_table_destroy(table);
-    return EXIT_SUCCESS;
-}
-
-#endif
-#ifdef _RM_COMPILE_MAIN_USERLIST
-
-#define yes(v) (v) ? "True" : "False"
-
-int main(int argc, char *argv[]) {
-    RmStat stat_buf;
-    bool has_gid, has_uid;
-    RmUserGroupNode **list = rm_userlist_new();
-    if(argc < 2) {
-        puts("Usage: prog <path>");
-        return EXIT_FAILURE;
-    }
-    if(rm_sys_stat(argv[1], &stat_buf) != 0) {
-        return EXIT_FAILURE;
-    }
-    printf("File has UID %"LLU" and GID %"LLU"\n",
-           (unsigned long)stat_buf.st_uid,
-           (unsigned long)stat_buf.st_gid
-          );
-    rm_userlist_contains(list, stat_buf.st_uid, stat_buf.st_gid, &has_uid, &has_gid);
-    printf("=> Valid UID = %s\n", yes(has_uid));
-    printf("=> Valid GID = %s\n", yes(has_gid));
-    rm_userlist_destroy(list);
-    return EXIT_SUCCESS;
-}
-#endif
