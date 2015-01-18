@@ -44,6 +44,8 @@ const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
 }
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
+    g_assert(handler);
+
     g_free(handler->path);
     g_free(handler);
 }
@@ -115,7 +117,7 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
     }
 
     for(int i = 0; handler->valid_keys[i]; ++i) {
-        if(strcmp(handler->valid_keys[i], key) == 0) {
+        if(g_strcmp0(handler->valid_keys[i], key) == 0) {
             return true;
         }
     }
@@ -169,15 +171,14 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
 
     g_return_val_if_fail(path, false);
 
-    size_t path_len = (path) ? strlen(path) : 0;
     FILE *file_handle = NULL;
     bool needs_full_path = false;
 
-    if(strncmp(path, "stdout", path_len) == 0) {
+    if(g_strcmp0(path, "stdout") == 0) {
         file_handle = stdout;
-    } else if(strncmp(path, "stderr", path_len) == 0) {
+    } else if(g_strcmp0(path, "stderr") == 0) {
         file_handle = stderr;
-    } else if(strncmp(path, "stdin", path_len) == 0) {
+    } else if(g_strcmp0(path, "stdin") == 0) {
         /* I bet someone finds a use for this :-) */
         file_handle = stdin;
     } else {

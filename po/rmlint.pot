@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-18 14:08+0100\n"
+"POT-Creation-Date: 2015-01-18 14:18+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -361,12 +361,12 @@ msgstr ""
 msgid "No valid paths given."
 msgstr ""
 
-#: lib/formats.c:166
+#: lib/formats.c:168
 #, c-format
 msgid "No such new_handler with this name: %s"
 msgstr ""
 
-#: lib/formats.c:189
+#: lib/formats.c:190
 #, c-format
 msgid "Unable to open file for writing: %s"
 msgstr ""

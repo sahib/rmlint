@@ -55,8 +55,8 @@ typedef struct RmFmtTable {
     GHashTable *path_to_handler;
     GHashTable *handler_to_file;
     GHashTable *config;
-    RmSession *session;
     GRecMutex state_mtx;
+    RmSession *session;
 } RmFmtTable;
 
 /* Callback definitions */
