@@ -33,25 +33,26 @@
 #include "cmdline.h"
 #include "shredder.h"
 
-guint rm_file_hash(RmFile *file) {
+static guint rm_file_hash(RmFile *file) {
     return (guint)(file->file_size);
 }
 
-static bool rm_file_check_with_extension(RmFile *file_a, RmFile *file_b) {
+static bool rm_file_check_with_extension(const RmFile *file_a, const RmFile *file_b) {
     char *ext_a = rm_util_path_extension(file_a->basename);
     char *ext_b = rm_util_path_extension(file_b->basename);
 
-    if(ext_a && ext_b && g_strcmp0(ext_a, ext_b) == 0) {
+    if(ext_a && ext_b && g_ascii_strcasecmp(ext_a, ext_b) == 0) {
         return true;
+    } else {
+        return false;
     }
-
-    return false;
 }
 
-static bool rm_file_check_without_extension(RmFile *file_a, RmFile *file_b) {
+static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *file_b) {
     char *ext_a = rm_util_path_extension(file_a->basename);
     char *ext_b = rm_util_path_extension(file_b->basename);
 
+    /* Check length till extension, or full length if none present */
     size_t a_len = (ext_a) ? (ext_a - file_a->basename) : (int)strlen(file_a->basename);
     size_t b_len = (ext_b) ? (ext_b - file_b->basename) : (int)strlen(file_b->basename);
 
@@ -59,33 +60,34 @@ static bool rm_file_check_without_extension(RmFile *file_a, RmFile *file_b) {
         return false;
     }
 
-    if(strncmp(file_a->basename, file_b->basename, a_len) == 0) {
+    if(g_ascii_strncasecmp(file_a->basename, file_b->basename, a_len) == 0) {
         return true;
     }
 
     return false;
 }
 
-gboolean rm_file_equal(RmFile *file1, RmFile *file2) {
-    RmCfg *cfg = file1->cfg;
+static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
+    const RmCfg *cfg = file_a->cfg;
+
     return (1
-            && (file1->file_size == file2->file_size)
+            && (file_a->file_size == file_b->file_size)
             && (0
                 || (!cfg->match_basename)
-                || (g_strcmp0(file1->basename, file2->basename) == 0)
+                || (g_strcmp0(file_a->basename, file_b->basename) == 0)
                )
             && (0
                 || (!cfg->match_with_extension)
-                || (rm_file_check_with_extension(file1, file2))
+                || (rm_file_check_with_extension(file_a, file_b))
                )
             && (0
                 || (!cfg->match_without_extension)
-                || (rm_file_check_without_extension(file1, file2))
+                || (rm_file_check_without_extension(file_a, file_b))
                )
            );
 }
 
-guint rm_node_hash(RmFile *file) {
+static guint rm_node_hash(const RmFile *file) {
     /* typically inode number will be less than 2^21 or so;
      * dev_t is devined via #define makedev(maj, min)  (((maj) << 8) | (min))
      * (see coreutils/src/system.h)
@@ -103,10 +105,10 @@ guint rm_node_hash(RmFile *file) {
            );
 }
 
-gboolean rm_node_equal(RmFile *file1, RmFile *file2) {
+static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
     return (1
-            && (file1->inode == file2->inode)
-            && (file1->dev   == file2->dev)
+            && (file_a->inode == file_b->inode)
+            && (file_a->dev   == file_b->dev)
            );
 }
 
@@ -145,10 +147,10 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
-/*  compare two files -return:
- *      a negative integer file 'a' outranks 'b',
- *      0 if they are equal,
- *      a positive integer if file 'b' outranks 'a'
+/*  compare two files. return:
+ *    - a negative integer file 'a' outranks 'b',
+ *    - 0 if they are equal,
+ *    - a positive integer if file 'b' outranks 'a'
  */
 int rm_pp_cmp_orig_criteria_impl(
     RmSession *session,
@@ -166,7 +168,7 @@ int rm_pp_cmp_orig_criteria_impl(
             cmp = (long)(mtime_a) - (long)(mtime_b);
             break;
         case 'a':
-            cmp = strcasecmp(basename_a, basename_b);
+            cmp = g_ascii_strcasecmp(basename_a, basename_b);
             break;
         case 'p':
             cmp = (long)path_index_a - (long)path_index_b;
@@ -191,7 +193,7 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if (a->lint_type != b->lint_type) {
         /* "other" lint outranks duplicates and has lower ENUM */
         return a->lint_type - b->lint_type;
-    } else if (a->is_prefd != b->is_prefd) {
+    } else if(a->is_prefd != b->is_prefd) {
         return (b->is_prefd - a->is_prefd);
     } else {
         return rm_pp_cmp_orig_criteria_impl(
@@ -202,7 +204,6 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
                );
     }
 }
-
 
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
 bool rm_file_tables_insert(RmSession *session, RmFile *file) {
@@ -223,12 +224,13 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
              * instead we just print a warning
              * */
             if(inode_match->file_size != file->file_size) {
-                rm_log_warning_line("Hardlink file size changed during traversal: %s\n", file->path);
+                rm_log_warning_line(_("Hardlink file size changed during traversal: %s"), file->path);
             }
 
             /* if this is the first time, set up the hardlinks.files queue */
             if (!inode_match->hardlinks.files) {
                 inode_match->hardlinks.files = g_queue_new();
+
                 /*NOTE: during list build, the hardlinks.files queue includes the file
                  * itself, as well as its hardlinks.  This makes operations
                  * in rm_file_tables_insert much simpler but complicates things later on,
@@ -253,7 +255,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
             for (GList *iter = inode_match->hardlinks.files->head; iter; iter = iter->next) {
                 RmFile *iter_file = iter->data;
                 if (1
-                        && (strcmp(file->basename, iter_file->basename) == 0)
+                        && (g_strcmp0(file->basename, iter_file->basename) == 0)
                         /* double paths and loops will always have same basename
                          * (cheap call to potentially avoid the next call which requires a rm_sys_stat()) */
                         && (rm_util_parent_node(file->path) == rm_util_parent_node(iter_file->path))
@@ -320,23 +322,30 @@ static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
  * cluster can be deleted from the node_table hash table.
  * NOTE: we rely on rm_file_list_insert to select a RM_LINT_TYPE_DUPE_CANDIDATE as head
  * file (unless ALL the files are "other lint"). */
-
 static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession *session) {
     g_assert(file);
     RmCfg *cfg = session->cfg;
 
-    if (file->hardlinks.files) {
+    if(file->hardlinks.files) {
         /* it has a hardlink cluster - process each file (except self) */
         /* remove self */
-        g_assert(g_queue_remove(file->hardlinks.files, file));
+        {
+            bool was_removed = g_queue_remove(file->hardlinks.files, file);
+            
+            /* Do not call that directly in g_assert, might be disabled at
+             * compile time. */
+            g_assert(was_removed);
+        }
 
-        GList *next = NULL;
-        for (GList *iter = file->hardlinks.files->head; iter; iter = next) {
+        for (GList *iter = file->hardlinks.files->head, *next = NULL; iter; iter = next) {
+            /* Remember next element early */
             next = iter->next;
+
             /* call self to handle each embedded hardlink */
             RmFile *embedded = iter->data;
-            g_assert (!embedded->hardlinks.files);
-            if (rm_pp_handle_hardlinks(NULL, embedded, session) ) {
+            g_assert(!embedded->hardlinks.files);
+
+            if (rm_pp_handle_hardlinks(NULL, embedded, session)) {
                 g_queue_delete_link(file->hardlinks.files, iter);
             } else if (!cfg->find_hardlinked_dupes) {
                 rm_file_destroy(embedded);
@@ -349,6 +358,7 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
             file->hardlinks.files = NULL;
         }
     }
+
     /* handle the head file; if it's "other lint" then process it via rm_pp_handle_other_lint
      * and return TRUE, else keep it
      */
@@ -356,7 +366,7 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
 
     if(remove == false && rm_pp_handle_other_lint(session, file)) {
         remove = true;
-    } else if(remove) {
+    } else if(remove == true) {
         /*
         * Also check if the file is a output of rmlint itself. Which we definitely
         * not want to handle. Creating a script that deletes itself is fun but useless.
@@ -371,12 +381,11 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
 }
 
 static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {
-    return strcmp(b->path, a->path);
+    return g_strcmp0(b->path, a->path);
 }
 
 static RmOff rm_pp_handler_other_lint(RmSession *session) {
     RmOff num_handled = 0;
-
     RmFileTables *tables = session->tables;
 
     for(RmOff type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
@@ -402,7 +411,6 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
 
     return num_handled;
 }
-
 
 /* This does preprocessing including handling of "other lint" (non-dupes) */
 void rm_preprocess(RmSession *session) {

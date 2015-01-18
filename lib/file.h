@@ -187,7 +187,7 @@ typedef struct RmFile {
     struct RmShredDevice *device;
 
     /* Required for rm_file_equal for building initial match_table */
-    struct RmCfg *cfg;
+    const struct RmCfg *cfg;
 } RmFile;
 
 /**

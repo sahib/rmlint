@@ -123,6 +123,8 @@ char *rm_util_get_groupname(void);
 //       GENERAL UTILITES         //
 ////////////////////////////////////
 
+#define RM_LIST_NEXT(node) ((node) ? node->next : NULL)
+
 /**
  * @brief Replace {subs} with {with} in {string}
  *
