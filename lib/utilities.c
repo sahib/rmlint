@@ -941,7 +941,7 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
     return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
 }
 
-dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
+dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {
     if(self == NULL) {
         return 0;
     }
@@ -950,7 +950,32 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition) {
     if (part) {
         return part->disk;
     } else {
-        return partition;
+        /* probably a btrfs subvolume which is not a mountpoint; walk up tree until we get to *
+         * a recognisable partition */
+        char *prev = g_strdup(path);
+        while TRUE {
+        char *temp = g_strdup(prev);
+            char *parent_path = g_strdup(dirname(temp));
+            g_free(temp);
+
+            RmStat stat_buf;
+            if(!rm_sys_stat(parent_path, &stat_buf)) {
+                RmPartitionInfo *parent_part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
+                if (parent_part) {
+                    /* create new partition table entry */
+                    rm_log_debug("Adding partition info for "GREEN"%s"RESET" - looks like subvolume %s on disk "GREEN"%s"RESET"\n", path, prev, parent_part->name);
+                    part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
+                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition), part);
+                    g_free(prev);
+                    g_free(parent_path);
+                    return parent_part->disk;
+                }
+            }
+            g_free(prev);
+            prev = parent_path;
+            g_assert (strcmp(prev, "/") != 0);
+            g_assert (strcmp(prev, ".") != 0);
+        }
     }
 }
 
@@ -964,7 +989,7 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
         return 0;
     }
 
-    return rm_mounts_get_disk_id(self, stat_buf.st_dev);
+    return rm_mounts_get_disk_id(self, stat_buf.st_dev, path);
 }
 
 char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {

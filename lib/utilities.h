@@ -66,7 +66,7 @@ static inline int rm_sys_open(const char *path, int mode) {
     mode |= O_LARGEFILE;
 #endif
 
-    return open(path, mode, (S_IRUSR|S_IWUSR));
+    return open(path, mode, (S_IRUSR | S_IWUSR));
 }
 
 static inline void rm_sys_close(int fd) {
@@ -253,7 +253,7 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path);
  *
  * @return the dev_t of the whole disk. (sda 8:0)
  */
-dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition);
+dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path);
 
 /**
  * @brief Same as above, but calls rm_sys_stat(2) on path for you.

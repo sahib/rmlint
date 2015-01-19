@@ -275,7 +275,7 @@
                                | POSIX_FADV_WILLNEED   /* Tell the kernel to readhead */ \
                                | POSIX_FADV_NOREUSE    /* We will not reuse old data  */ \
                               )                                                          \
- 
+
 ////////////////////////
 //  MATHS SHORTCUTS   //
 ////////////////////////
@@ -1117,7 +1117,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     }
 
     /* create RmShredDevice for this file if one doesn't exist yet */
-    dev_t disk = rm_mounts_get_disk_id(session->mounts, file->dev);
+    dev_t disk = rm_mounts_get_disk_id(session->mounts, file->dev, file->path);
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
     if(device == NULL) {
