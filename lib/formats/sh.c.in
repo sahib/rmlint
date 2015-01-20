@@ -75,7 +75,11 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
         return false;
     }
 
-    *out = g_strdup_printf("cp_reflink '%s' '%s'", path, orig_path);
+    if ( rm_offsets_match(file->disk_offsets, self->last_original->disk_offsets) ) {
+        *out = g_strdup_printf("skip_reflink '%s' '%s'", path, orig_path);
+    } else {
+        *out = g_strdup_printf("cp_reflink '%s' '%s'", path, orig_path);
+    }
     return true;
 }
 
@@ -148,18 +152,23 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
 
             if(strcasecmp(order_vec[i], ORDER_TO_STRING[n]) == 0) {
                 switch(n) {
-                    case RM_SH_HANDLER_USER_COMMAND:
-                        self->allow_user_cmd = true; break;
-                    case RM_SH_HANDLER_REFLINK:
-                        self->allow_reflink = true; break;
-                    case RM_SH_HANDLER_SYMLINK:
-                        self->allow_symlink = true; break;
-                    case RM_SH_HANDLER_HARDLINK:
-                        self->allow_hardlink = true; break;
-                    case RM_SH_HANDLER_REMOVE:
-                        self->allow_remove = true; break;
-                    default:
-                        g_assert_not_reached();
+                case RM_SH_HANDLER_USER_COMMAND:
+                    self->allow_user_cmd = true;
+                    break;
+                case RM_SH_HANDLER_REFLINK:
+                    self->allow_reflink = true;
+                    break;
+                case RM_SH_HANDLER_SYMLINK:
+                    self->allow_symlink = true;
+                    break;
+                case RM_SH_HANDLER_HARDLINK:
+                    self->allow_hardlink = true;
+                    break;
+                case RM_SH_HANDLER_REMOVE:
+                    self->allow_remove = true;
+                    break;
+                default:
+                    g_assert_not_reached();
                 }
 
                 /* we found the id */

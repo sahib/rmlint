@@ -1162,6 +1162,32 @@ RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
     return 0;
 }
 
+bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
+    if (!table1 || !table2) {
+        return false;
+    }
+    if ( 0
+            || g_sequence_get_length(table1) == 0
+            || g_sequence_get_length(table1) != g_sequence_get_length(table2)
+       ) {
+        return false;
+    }
+    GSequenceIter *iter1 = g_sequence_get_begin_iter(table1);
+    GSequenceIter *iter2 = g_sequence_get_begin_iter(table2);
+
+    while (!g_sequence_iter_is_end(iter1)) {
+        RmOffsetEntry *ent1 = g_sequence_get (iter1);
+        RmOffsetEntry *ent2 = g_sequence_get (iter2);
+        if (ent1->logical != ent2->logical || ent1->physical != ent2->physical) {
+            return false;
+        }
+        iter1 = g_sequence_iter_next (iter1);
+        iter2 = g_sequence_iter_next (iter2);
+    }
+    return true;
+}
+
+
 RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_offset) {
     if (offset_list != NULL) {
         RmOffsetEntry token;
@@ -1196,6 +1222,10 @@ RmOff rm_offset_lookup(_U RmOffsetTable table, _U RmOff file_offset) {
 
 RmOff rm_offset_bytes_to_next_fragment(_U RmOffsetTable table, _U RmOff file_offset) {
     return 0;
+}
+
+bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
+    return false;
 }
 
 #endif

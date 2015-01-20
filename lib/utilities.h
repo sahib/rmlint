@@ -299,6 +299,11 @@ RmOff rm_offset_lookup(RmOffsetTable table, RmOff file_offset);
 RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable table, RmOff file_offset);
 
 /**
+ * @brief Test if two files already share same offsets.
+ */
+bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2);
+
+/**
  * @brief Free the allocated table.
  */
 static inline void rm_offset_free(RmOffsetTable table) {

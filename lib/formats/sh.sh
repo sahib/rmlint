@@ -69,6 +69,10 @@ cp_reflink() {
     touch -mr "$0" "$1"
 }
 
+skip_reflink() {
+    echo 'Leaving as-is (already reflinked to original):' "$1"
+}
+
 user_command() {
     # You can define this function to do what you want:
     %s
