@@ -116,7 +116,6 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
     fprintf(out, "    %s", rm_fmt_command_color(session, file));
 
     const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
-
     switch(file->lint_type) {
     case RM_LINT_TYPE_BADUID:
         fprintf(out, format, self->user);
@@ -148,12 +147,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
     fprintf(out, "%s %s\n", MAYBE_RESET(session), file->path);
 }
 
-static void rm_fmt_prog(
-    _U RmSession *session,
-    RmFmtHandler *parent,
-    FILE *out,
-    RmFmtProgressState state
-) {
+static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->elems_written) {
