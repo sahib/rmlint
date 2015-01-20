@@ -50,7 +50,7 @@ typedef struct RmFmtHandlerFdupes {
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out, RmFile *file) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
-    char line[512 + 32]; 
+    char line[512 + 32];
     memset(line, 0, sizeof(line));
 
     if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
@@ -66,24 +66,24 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
         } else {
             g_snprintf(
                 line, sizeof(line),
-               "%s%s%s%s%c",
-               (file->is_original) ? "\n" : "",
-               (file->is_original) ? MAYBE_GREEN(session) : "",
-               file->path,
-               (file->is_original) ? MAYBE_RESET(session) : "",
-               (self->use_same_line) ? ' ' : '\n'
+                "%s%s%s%s%c",
+                (file->is_original) ? "\n" : "",
+                (file->is_original) ? MAYBE_GREEN(session) : "",
+                file->path,
+                (file->is_original) ? MAYBE_RESET(session) : "",
+                (self->use_same_line) ? ' ' : '\n'
             );
         }
         break;
     default:
         g_snprintf(
-           line, sizeof(line),
-           "%s%s%s%c",
-           MAYBE_BLUE(session),
-           file->path,
-           MAYBE_RESET(session),
-           (self->use_same_line) ? ' ' : '\n'
-       );
+            line, sizeof(line),
+            "%s%s%s%c",
+            MAYBE_BLUE(session),
+            file->path,
+            MAYBE_RESET(session),
+            (self->use_same_line) ? ' ' : '\n'
+        );
         break;
     }
 

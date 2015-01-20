@@ -85,7 +85,8 @@ void rm_session_clear(RmSession *session) {
 static GMutex ABORT_MTX;
 
 void rm_session_abort(RmSession *session) {
-    g_mutex_lock(&ABORT_MTX); {
+    g_mutex_lock(&ABORT_MTX);
+    {
         session->aborted = true;
     }
     g_mutex_unlock(&ABORT_MTX);
@@ -93,7 +94,8 @@ void rm_session_abort(RmSession *session) {
 
 bool rm_session_was_aborted(RmSession *session) {
     bool was_aborted = false;
-    g_mutex_lock(&ABORT_MTX); {
+    g_mutex_lock(&ABORT_MTX);
+    {
         was_aborted = session->aborted;
     }
     g_mutex_unlock(&ABORT_MTX);

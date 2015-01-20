@@ -1040,9 +1040,9 @@ static gboolean rm_shred_sift(RmFile *file) {
             }
 
             child_group = g_hash_table_lookup(
-                               current_group->children,
-                               file->digest
-                           );
+                              current_group->children,
+                              file->digest
+                          );
 
             if (!child_group) {
                 child_group = rm_shred_group_new(file);

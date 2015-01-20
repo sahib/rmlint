@@ -331,7 +331,7 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         /* remove self */
         {
             bool was_removed = g_queue_remove(file->hardlinks.files, file);
-            
+
             /* Do not call that directly in g_assert, might be disabled at
              * compile time. */
             g_assert(was_removed);
