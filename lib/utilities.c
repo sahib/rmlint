@@ -835,10 +835,18 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
             }
         }
 
-        g_hash_table_insert(
-            self->part_table,
-            GUINT_TO_POINTER(stat_buf_folder.st_dev),
-            rm_part_info_new (entry->dir, entry->fsname, whole_disk));
+        RmPartitionInfo *existing = g_hash_table_lookup(
+                                        self->part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));
+        if ( !existing || (existing->disk == 0 && whole_disk != 0) ) {
+            if (existing) {
+                rm_log_debug("Replacing part_table entry %s for path %s with %s\n", existing->fsname, entry->dir, entry->fsname);
+            }
+            g_hash_table_insert(
+                self->part_table,
+                GUINT_TO_POINTER(stat_buf_folder.st_dev),
+                rm_part_info_new (entry->dir, entry->fsname, whole_disk));
+        }
+
 
         /* small hack, so also the full disk id can be given to the api below */
         if (!g_hash_table_contains(self->part_table, GINT_TO_POINTER(whole_disk))) {
