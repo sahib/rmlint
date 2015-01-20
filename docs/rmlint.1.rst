@@ -166,7 +166,7 @@ General Options
 
     *Notes:*
 
-    * This option pulls in ``-r`` (``--hidden``) and ``-l`` (``--hardlinked``) for convenience.
+    * This option pulls in ``--partial-hidden`` and ``-l`` (``--hardlinked``) for convenience.
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
     * Consider using ``-@`` together with this option (this is the default).
@@ -258,10 +258,13 @@ Traversal Options
     Do cross over mount points (``-x``)? Or stay always on the same device
     (``-X``)?
 
-:``-r --hidden`` / ``-R --no-hidden`` (**default**):
+:``-r --hidden`` / ``-R --no-hidden`` (**default**) / ``--partial-hidden``:
 
     Also traverse hidden directories? This is often not a good idea, since
-    directories like ``.git/`` would be investigated.
+    directories like ``.git/`` would be investigated. 
+    With ``--partial-hidden`` hidden are only shown if they're inside duplicate
+    directories. Normal regular duplicates are not shown. 
+
 
 :``-b --match-basename`` / ``-B --no-match-basename`` (**default**):
 
