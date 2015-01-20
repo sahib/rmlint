@@ -845,7 +845,11 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                 self->part_table,
                 GUINT_TO_POINTER(stat_buf_folder.st_dev),
                 rm_part_info_new (entry->dir, entry->fsname, whole_disk));
+        } else {
+            rm_log_debug("Skipping duplicate mount entry for dir %s dev %02u:%02u\n", entry->dir, major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev));
+            continue;
         }
+
 
 
         /* small hack, so also the full disk id can be given to the api below */
