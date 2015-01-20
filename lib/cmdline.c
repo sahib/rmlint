@@ -288,19 +288,20 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair, GErro
     return true;
 }
 
-static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
+static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair, GError **error) {
     char *domain = strchr(pair, ':');
     if(domain == NULL) {
-        rm_log_warning_line(_("No format (format:key[=val]) specified in '%s'."), pair);
+        g_set_error(error, RM_ERROR_QUARK, 0, _("No format (format:key[=val]) specified in '%s'"), pair);
         return false;
     }
 
     char *key = NULL, *value = NULL;
     char **key_val = g_strsplit(&domain[1], "=", 2);
     int len = g_strv_length(key_val);
+    bool result = true;
 
     if(len < 1) {
-        rm_log_warning_line(_("Missing key (format:key[=val]) in '%s'."), pair);
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Missing key (format:key[=val]) in '%s'"), pair);
         g_strfreev(key_val);
         return false;
     }
@@ -314,16 +315,17 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair) {
 
     char *formatter = g_strndup(pair, domain - pair);
     if(!rm_fmt_is_valid_key(session->formats, formatter, key)) {
-        rm_log_error_line(_("Invalid key `%s' for formatter `%s'."), key, formatter);
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid key `%s' for formatter `%s'"), key, formatter);
         g_free(key);
         g_free(value);
+        result = false;
     } else {
         rm_fmt_set_config_value(session->formats, formatter, key, value);
     }
 
     g_free(formatter);
     g_strfreev(key_val);
-    return true;
+    return result;
 }
 
 static gboolean rm_cmd_parse_config(
@@ -332,9 +334,7 @@ static gboolean rm_cmd_parse_config(
     RmSession *session,
     _U GError **error
 ) {
-    /* rm_cmd_parse_config_pair() may warn but never fail */
-    rm_cmd_parse_config_pair(session, pair);
-    return true;
+    return rm_cmd_parse_config_pair(session, pair, error);
 }
 
 static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
