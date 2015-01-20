@@ -394,7 +394,7 @@ typedef struct RmShredGroup {
     GQueue *held_files;
 
     /* link(s) to next generation of RmShredGroups(s) which have this RmShredGroup as parent*/
-    GQueue *children;
+    GHashTable *children;
 
     /* RmShredGroup of the same size files but with lower RmFile->hash_offset;
      * getsset to null when parent dies
@@ -448,9 +448,6 @@ typedef struct RmShredGroup {
     RmDigestType digest_type;
     RmDigest *digest;
 
-    /* checksum result (length is given by digest->bytes) */
-    guint8 *checksum;
-
     /* Reference to main */
     RmMainTag *main;
 } RmShredGroup;
@@ -459,12 +456,11 @@ typedef struct RmShredGroup {
 
 /* allocate and initialise new RmShredGroup
  */
-RmShredGroup *rm_shred_group_new(RmFile *file, guint8 *key) {
+static RmShredGroup *rm_shred_group_new(RmFile *file) {
     RmShredGroup *self = g_slice_new0(RmShredGroup);
 
     if (file->digest) {
         self->digest = rm_digest_copy(file->digest);
-        self->checksum = key;
         self->digest_type = file->digest->type;
     } else {
         /* initial groups have no checksum */
@@ -599,7 +595,7 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  */
 
 /* take or return mem allocation from main */
-gboolean rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfiles) {
+static gboolean rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfiles) {
     gboolean result = true;
     g_mutex_lock(&main->hash_mem_mtx);
     {
@@ -702,7 +698,7 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     rm_buffer_pool_release(device->main->mem_pool, buffer);
 }
 
-RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMainTag *main) {
+static RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMainTag *main) {
     RmShredDevice *self = g_slice_new0(RmShredDevice);
     self->main = main;
 
@@ -725,7 +721,7 @@ RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name, RmMa
     return self;
 }
 
-void rm_shred_device_free(RmShredDevice *self) {
+static void rm_shred_device_free(RmShredDevice *self) {
     if(!rm_session_was_aborted(self->main->session)) {
         g_assert(self->remaining_files == 0);
         g_assert(g_queue_is_empty(self->file_queue));
@@ -744,7 +740,7 @@ void rm_shred_device_free(RmShredDevice *self) {
 
 /* Unlink RmFile from device queue
  */
-void rm_shred_discard_file(RmFile *file, bool free_file) {
+static void rm_shred_discard_file(RmFile *file, bool free_file) {
     RmShredDevice *device = file->device;
 
     /* update device counters */
@@ -850,7 +846,7 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 
 /* Free RmShredGroup and any dormant files still in its queue
  */
-void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
+static void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
     g_assert(self->parent == NULL);  /* children should outlive their parents! */
 
     /* For -D we need to hold back the memory a bit longer */
@@ -866,29 +862,21 @@ void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
         if (self->digest->type == RM_DIGEST_PARANOID) {
             rm_shred_mem_take(self->main, -(gint64)self->digest->bytes, 0);
         }
-        g_slice_free1(self->digest->bytes, self->checksum);
+        // g_slice_free1(self->digest->bytes, self->checksum);
         if(needs_free) {
             rm_digest_free(self->digest);
         }
     }
 
     if (self->children) {
-        g_queue_free(self->children);
+        g_hash_table_destroy(self->children);
     }
 
     g_slice_free(RmShredGroup, self);
 }
 
-void rm_shred_group_free(RmShredGroup *self) {
+static void rm_shred_group_free(RmShredGroup *self) {
     rm_shred_group_free_full(self, true);
-}
-
-/* compares checksum with that of a RmShredGroup with a  */
-gint rm_cksum_matches_group(RmShredGroup *group, guint8 *checksum) {
-    g_assert(group);
-    g_assert(checksum);
-
-    return memcmp(group->checksum, checksum, group->digest->bytes);
 }
 
 /* Checks whether group qualifies as duplicate candidate (ie more than
@@ -918,9 +906,9 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
 }
 
 /* prototype for rm_shred_group_make_orphan since it and rm_shred_group_unref reference each other */
-void rm_shred_group_make_orphan(RmShredGroup *self);
+static void rm_shred_group_make_orphan(RmShredGroup *self);
 
-void rm_shred_group_unref(RmShredGroup *self) {
+static void rm_shred_group_unref(RmShredGroup *self) {
     self->ref_count--;
 
     switch (self->status) {
@@ -939,7 +927,9 @@ void rm_shred_group_unref(RmShredGroup *self) {
         if(self->ref_count == 0) {
             /* group no longer required; tell the children we are about to die */
             if(self->children) {
-                g_queue_foreach(self->children, (GFunc)rm_shred_group_make_orphan, NULL);
+                GList *values = g_hash_table_get_values(self->children);
+                g_list_foreach(values, (GFunc)rm_shred_group_make_orphan, NULL);
+                g_list_free(values);
             }
             rm_shred_group_free(self);
         }
@@ -950,7 +940,7 @@ void rm_shred_group_unref(RmShredGroup *self) {
     }
 }
 
-void rm_shred_group_make_orphan(RmShredGroup *self) {
+static void rm_shred_group_make_orphan(RmShredGroup *self) {
     self->parent = NULL;
     rm_shred_group_unref(self);
 }
@@ -1044,27 +1034,21 @@ static gboolean rm_shred_sift(RmFile *file) {
             /* check if there is already a descendent of current_group which
              * matches snap... if yes then move this file into it; if not then
              * create a new group */
-            guint8 *key = rm_digest_steal_buffer(file->digest);
-
-            g_assert(key);
             if (!current_group->children) {
                 /* create child queue */
-                current_group->children = g_queue_new();
+                current_group->children = g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);
             }
 
-            GList *child = g_queue_find_custom(
+            child_group = g_hash_table_lookup(
                                current_group->children,
-                               key,
-                               (GCompareFunc)rm_cksum_matches_group
+                               file->digest
                            );
 
-            if (!child) {
-                child_group = rm_shred_group_new(file, key);
-                g_queue_push_tail(current_group->children, child_group);
+            if (!child_group) {
+                child_group = rm_shred_group_new(file);
+                g_hash_table_insert(current_group->children, child_group->digest, child_group);
                 child_group->has_only_ext_cksums = current_group->has_only_ext_cksums;
             } else {
-                child_group = child->data;
-                g_slice_free1(file->digest->bytes, key);
                 if (file->digest->type == RM_DIGEST_PARANOID) {
                     rm_shred_mem_take(tag, -(gint64)file->digest->bytes, 0);
                 }
@@ -1140,7 +1124,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
                           );
 
     if (group == NULL) {
-        group = rm_shred_group_new(file, NULL);
+        group = rm_shred_group_new(file);
         group->digest_type = session->cfg->checksum_type;
         g_hash_table_insert(
             session->tables->size_groups,
@@ -1245,7 +1229,7 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
  * this is slightly different to rm_shred_cmp_orig_criteria in the case of
  * either -K or -M options
  */
-int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+static int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     RmCfg *cfg = session->cfg;
     if (1
             && (a->is_prefd != b->is_prefd)
