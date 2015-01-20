@@ -110,7 +110,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 
 static void rm_traverse_file(
     RmTravSession *trav_session, RmStat *statp,
-    char *path, bool is_prefd, unsigned long path_index, RmLintType file_type, bool is_symlink
+    char *path, bool is_prefd, unsigned long path_index, RmLintType file_type, bool is_symlink, bool is_hidden
 ) {
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
@@ -137,8 +137,6 @@ static void rm_traverse_file(
               ) {
                 if(rm_mounts_is_evil(trav_session->session->mounts, statp->st_dev) == false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
-
-
                 } else {
                     /* A file in a evil fs. Ignore. */
                     trav_session->session->ignored_files++;
@@ -156,6 +154,8 @@ static void rm_traverse_file(
 
     if(file != NULL) {
         file->is_symlink = is_symlink;
+        file->is_hidden = is_hidden;
+
         g_mutex_lock(&trav_session->lock);
         {
             trav_session->session->total_files += rm_file_tables_insert(session, file);
@@ -174,6 +174,16 @@ static gpointer rm_traverse_allow_chdir(int *fts_flags) {
     /* remove FTS_NOCHDIR flag for first path */
     *fts_flags &= ~FTS_NOCHDIR;
     return NULL;
+}
+
+static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierarchy, size_t hierarchy_len) {
+    if(cfg->partial_hidden == false) {
+        return false;
+    } else if(*basename == '.') {
+        return true;
+    } else {
+        return !!memchr(hierarchy, 1, hierarchy_len);
+    }
 }
 
 static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_session) {
@@ -208,16 +218,19 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     /* start main processing */
     char is_emptydir[PATH_MAX / 2 + 1];
+    char is_hidden[PATH_MAX / 2 + 1];
     bool have_open_emptydirs = false;
     bool clear_emptydir_flags = false;
-    memset(&is_emptydir[0], 'N', sizeof(is_emptydir) - 1);
-    is_emptydir[sizeof(is_emptydir) - 1] = '\0';
+
+    memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
+    memset(is_hidden, 0, sizeof(is_hidden) - 1);
 
 #define ADD_FILE(lint_type, is_symlink)       \
         rm_traverse_file(                         \
             trav_session, (RmStat *)p->fts_statp, \
             p->fts_path, is_prefd, path_index,    \
-            lint_type, is_symlink                 \
+            lint_type, is_symlink,                \
+            rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1)  \
         );                                        \
  
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
@@ -236,7 +249,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
             g_mutex_unlock(&trav_session->lock);
             clear_emptydir_flags = true; /* flag current dir as not empty */
-            is_emptydir[p->fts_level] = 'N';
+            is_emptydir[p->fts_level] = 0;
         } else {
             switch (p->fts_info) {
             case FTS_D:         /* preorder directory */
@@ -252,7 +265,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     rm_log_info("Not descending into %s because it is a different filesystem\n", p->fts_path);
                 } else {
                     /* recurse dir; assume empty until proven otherwise */
-                    is_emptydir[p->fts_level + 1] = 'E';
+                    is_emptydir[p->fts_level + 1] = 1;
+                    is_hidden[p->fts_level + 1] = is_hidden[p->fts_level] | (p->fts_name[0] == '.');
                     have_open_emptydirs = true;
                 }
                 break;
@@ -267,9 +281,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_DOT:       /* dot or dot-dot */
                 break;
             case FTS_DP:        /* postorder directory */
-                if (is_emptydir[p->fts_level + 1] == 'E' && cfg->find_emptydirs) {
+                if (is_emptydir[p->fts_level + 1] && cfg->find_emptydirs) {
                     ADD_FILE(RM_LINT_TYPE_EMPTY_DIR, false);
                 }
+                is_hidden[p->fts_level + 1] = 0;
                 break;
             case FTS_ERR:       /* error; errno is set */
                 rm_log_warning_line(_("error %d in fts_read for %s (skipping)"), errno, p->fts_path);
@@ -296,7 +311,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                      * -> must be a big file on 32 bit.
                      */
                     rm_traverse_file(
-                        trav_session, &stat_buf, p->fts_path, is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, false
+                        trav_session, &stat_buf, p->fts_path,
+                        is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, false,
+                        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1)
                     );
                     rm_log_warning_line(_("Added big file %s"), p->fts_path);
                 } else {
@@ -341,7 +358,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             if(clear_emptydir_flags) {
                 /* non-empty dir found above; need to clear emptydir flags for all open levels */
                 if (have_open_emptydirs) {
-                    memset(&is_emptydir[0], 'N', sizeof(is_emptydir) - 1);
+                    memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
                     have_open_emptydirs = false;
                 }
                 clear_emptydir_flags = false;
@@ -381,10 +398,20 @@ void rm_traverse_tree(RmSession *session) {
         bool is_prefd = cfg->is_prefd[idx];
 
         RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);
-
         if(S_ISREG(buffer->stat_buf.st_mode)) {
             /* Append normal paths directly */
-            rm_traverse_file(trav_session, &buffer->stat_buf, path, is_prefd, idx, RM_LINT_TYPE_UNKNOWN, false);
+            bool is_hidden = false;
+
+            /* The is_hidden information is only needed for --partial-hidden */
+            if(cfg->partial_hidden) {
+                is_hidden = rm_util_path_is_hidden(path);
+            }
+
+            rm_traverse_file(
+                trav_session, &buffer->stat_buf, path, is_prefd, idx,
+                RM_LINT_TYPE_UNKNOWN, false, is_hidden
+            );
+
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */

@@ -281,7 +281,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair, GErro
     }
 
     if(!rm_fmt_add(session->formats, format_name, full_path)) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Adding -o %s as output failed."), pair);
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Adding -o %s as output failed"), pair);
         return false;
     }
 
@@ -716,7 +716,7 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter, GErro
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Only up to -ppp or down to -P flags allowed."));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Only up to -ppp or down to -P flags allowed"));
         break;
     }
 }
@@ -859,6 +859,26 @@ static gboolean rm_cmd_parse_less_paranoid(
     return true;
 }
 
+static gboolean rm_cmd_parse_partial_hidden(
+    _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
+) {
+    RmCfg *cfg = session->cfg;
+    cfg->ignore_hidden = false;
+    cfg->partial_hidden = true;
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_no_partial_hidden(
+    _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
+) {
+    RmCfg *cfg = session->cfg;
+    cfg->ignore_hidden = true;
+    cfg->partial_hidden = false;
+
+    return true;
+}
+
 static gboolean rm_cmd_parse_merge_directories(
     _U const char *option_name, _U const gchar *count, RmSession *session, _U GError **error
 ) {
@@ -871,8 +891,7 @@ static gboolean rm_cmd_parse_merge_directories(
      * They may be disabled explicitly though.
      */
     cfg->find_hardlinked_dupes = true;
-    cfg->ignore_hidden = false;
-
+    rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
     return true;
 }
 
@@ -945,7 +964,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Specifiyng both -o and -O is not allowed."));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Specifiyng both -o and -O is not allowed"));
         return false;
     } else if(session->output_cnt[0] < 0 && session->output_cnt[1] < 0 && !rm_fmt_len(session->formats)) {
         /* Set default outputs */
@@ -974,8 +993,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
               HIDDEN  = G_OPTION_FLAG_HIDDEN;
 
     /* Free/Used Options:
-       Free:  B DEFGHI KLMNOPQRST VWX   abcdefghi klmnopqrstuvwx
-       Used: A C      J               Z          j              yz
+       Free: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxX
+       Used                   jJ                            yYzZ
     */
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
@@ -1012,6 +1031,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"match-extension"         ,  'e' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  _("Only find twins with same extension")                ,  NULL},
         {"match-without-extension" ,  'i' ,  0       ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  _("Only find twins with same basename minus extension") ,  NULL},
         {"merge-directories"       ,  'D' ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(merge_directories)       ,  _("Find duplicate directories")                         ,  NULL},
+        {"partial-hidden"          ,   0  ,  EMPTY   ,  G_OPTION_ARG_CALLBACK ,  FUNC(partial_hidden)          ,  _("Find hidden files in duplicate folders only")        ,  NULL},
 
         /* Callback */
         {"show-man" ,  'H' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  rm_cmd_show_manpage ,  _("Show the manpage")            ,  NULL},
@@ -1023,19 +1043,20 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     };
 
     const GOptionEntry inversed_option_entries[] = {
-        {"no-hidden"                  ,  'R' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->ignore_hidden           ,  "Ignore hidden files"                 ,  NULL},
-        {"with-color"                 ,  'w' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->with_color              ,  "Be colorful like a unicorn"          ,  NULL},
-        {"no-crossdev"                ,  'X' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->crossdev                ,  "Cross mountpoints"                   ,  NULL},
-        {"less-paranoid"              ,  'P' ,  EMPTY   | HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(less_paranoid)           ,  "Use less paranoid hashing algorithm" ,  NULL},
-        {"no-hardlinked"              ,  'L' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->find_hardlinked_dupes   ,  "Ignore hardlinks"                    ,  NULL},
-        {"see-symlinks"               ,  '@' ,  0       | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->see_symlinks            ,  "Treat symlinks a regular files"      ,  NULL},
-        {"no-match-basename"          ,  'B' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->match_basename          ,  "Disable --match-basename filter"     ,  NULL},
-        {"no-match-extension"         ,  'E' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->match_with_extension    ,  "Disable --match-extension"           ,  NULL},
-        {"no-match-without-extension" ,  'I' ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->match_without_extension ,  "Disable --match-without-extension"   ,  NULL},
-        {"no-progress"                ,  'G' ,  EMPTY   | HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(no_progress)             ,  "Disable progressbar"                 ,  NULL},
-        {"no-xattr-read"              ,   0  ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->read_cksum_from_xattr   ,  "Disable --xattr-read"                ,  NULL},
-        {"no-xattr-write"             ,   0  ,  DISABLE | HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr    ,  "Disable --xattr-write"               ,  NULL},
-        {NULL                         ,   0  ,  0                ,  0                     ,  NULL                          ,  NULL                                  ,  NULL}
+        {"no-hidden"                  , 'R' , 0       | HIDDEN , G_OPTION_ARG_NONE     , &cfg->ignore_hidden           , "Ignore hidden files"                 , NULL},
+        {"with-color"                 , 'w' , 0       | HIDDEN , G_OPTION_ARG_NONE     , &cfg->with_color              , "Be colorful like a unicorn"          , NULL},
+        {"no-crossdev"                , 'X' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL},
+        {"less-paranoid"              , 'P' , EMPTY   | HIDDEN , G_OPTION_ARG_CALLBACK , FUNC(less_paranoid)           , "Use less paranoid hashing algorithm" , NULL},
+        {"no-hardlinked"              , 'L' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , "Ignore hardlinks"                    , NULL},
+        {"see-symlinks"               ,  0  , 0       | HIDDEN , G_OPTION_ARG_NONE     , &cfg->see_symlinks            , "Treat symlinks a regular files"      , NULL},
+        {"no-match-basename"          , 'B' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_basename          , "Disable --match-basename filter"     , NULL},
+        {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL},
+        {"no-match-without-extension" , 'I' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_without_extension , "Disable --match-without-extension"   , NULL},
+        {"no-progress"                , 'G' , EMPTY   | HIDDEN , G_OPTION_ARG_CALLBACK , FUNC(no_progress)             , "Disable progressbar"                 , NULL},
+        {"no-xattr-read"              ,  0  , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr   , "Disable --xattr-read"                , NULL},
+        {"no-xattr-write"             ,  0  , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr    , "Disable --xattr-write"               , NULL},
+        {"no-partial-hidden"          ,  0  , EMPTY   | HIDDEN , G_OPTION_ARG_CALLBACK , FUNC(no_partial_hidden)       , "Invert --partial-hidden"             , NULL},
+        {NULL                         ,  0  , 0                , 0                     , NULL                          , NULL                                  , NULL}
     };
 
     const GOptionEntry unusual_option_entries[] = {

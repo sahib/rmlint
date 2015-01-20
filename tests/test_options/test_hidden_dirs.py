@@ -38,3 +38,26 @@ def test_explicit():
     assert footer['ignored_folders'] == 0
     assert footer['ignored_files'] == 0
     assert footer['duplicate_sets'] == 1
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_partial_hidden():
+    create_file('1', 'a/.hidden')
+    create_file('1', 'b/.hidden')
+    create_file('1', '.hidden')
+
+    head, *data, footer = run_rmlint('')
+    assert len(data) == 0
+
+    head, *data, footer = run_rmlint('--partial-hidden')
+    assert len(data) == 3
+    assert all(p['path'].endswith('.hidden') for p in data)
+
+    head, *data, footer = run_rmlint('--partial-hidden -D -S a')
+    assert len(data) == 2
+    assert data[0]['path'].endswith('a')
+    assert data[0]['type'] == 'duplicate_dir'
+    assert data[1]['path'].endswith('b')
+
+    head, *data, footer = run_rmlint('-D --no-partial-hidden -S a')
+    assert len(data) == 0

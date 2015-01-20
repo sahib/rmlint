@@ -121,6 +121,25 @@ char *rm_util_path_extension(const char *basename) {
     }
 }
 
+bool rm_util_path_is_hidden(const char *path) {
+    if(path == NULL) {
+        return false;
+    }
+
+    if(*path == '.') {
+        return true;
+    }
+
+    while(*path++) {
+        /* Search for '/.' */
+        if(*path == G_DIR_SEPARATOR && *(path + 1) == '.') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 GQueue *rm_hash_table_setdefault(
     GHashTable *table, gpointer key, RmNewFunc default_func
 ) {

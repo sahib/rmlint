@@ -19,7 +19,7 @@ def create_bad_link(link_name):
 def test_basic():
     create_bad_link('imbad')
 
-    for option in ('-f', '-F', '-@'):
+    for option in ('-f', '-F', '--see-symlinks'):
         head, *data, footer = run_rmlint(option)
 
         assert len(data) == 1
