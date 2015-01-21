@@ -46,10 +46,13 @@ def test_partial_hidden():
     create_file('1', 'b/.hidden')
     create_file('1', '.hidden')
 
-    head, *data, footer = run_rmlint('')
+    head, *data, footer = run_rmlint('--no-hidden')
     assert len(data) == 0
 
     head, *data, footer = run_rmlint('--partial-hidden')
+    assert len(data) == 0
+
+    head, *data, footer = run_rmlint('--hidden')
     assert len(data) == 3
     assert all(p['path'].endswith('.hidden') for p in data)
 

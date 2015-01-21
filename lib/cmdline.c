@@ -1137,6 +1137,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     cfg->threads = CLAMP(cfg->threads, 1, 128);
     cfg->depth = CLAMP(cfg->depth, 1, PATH_MAX / 2 + 1);
 
+    if(cfg->partial_hidden && !cfg->merge_directories) {
+        /* --partial-hidden only makes sense with --merge-directories.
+         * If the latter is not specfified, ignore it all together */
+        cfg->ignore_hidden = true;
+        cfg->partial_hidden = false;
+    }
+
     /* Overwrite color if we do not print to a terminal directly */
     cfg->with_color = isatty(fileno(stdout)) && isatty(fileno(stderr));
 
@@ -1149,7 +1156,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(
                     RM_ERROR_QUARK, 0,
-                    _("-q (--clamp-low) should be lower than -Q (--clamp-top)!")
+                    _("-q (--clamp-low) should be lower than -Q (--clamp-top)")
                 );
     } else if(!rm_cmd_set_paths(session, paths)) {
         error = g_error_new(
