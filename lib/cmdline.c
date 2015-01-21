@@ -740,11 +740,11 @@ static gboolean rm_cmd_parse_algorithm(
 
     if(cfg->checksum_type == RM_DIGEST_UNKNOWN) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Unknown hash algorithm: '%s'"), value);
+        return false;
     } else if(cfg->checksum_type == RM_DIGEST_BASTARD) {
         session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
         session->hash_seed2 = GPOINTER_TO_UINT(&session);
     }
-
     return true;
 }
 
