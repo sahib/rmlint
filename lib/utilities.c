@@ -997,6 +997,9 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
                     rm_log_debug("Adding partition info for "GREEN"%s"RESET" - looks like subvolume %s on disk "GREEN"%s"RESET"\n", path, prev, parent_part->name);
                     part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
                     g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition), part);
+                    if(g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(stat_buf.st_dev))) {
+                        g_hash_table_insert(self->reflinkfs_table, GUINT_TO_POINTER(partition), GUINT_TO_POINTER(1));
+                    }
                     g_free(prev);
                     g_free(parent_path);
                     return parent_part->disk;
