@@ -891,6 +891,8 @@ static gboolean rm_cmd_parse_merge_directories(
      * They may be disabled explicitly though.
      */
     cfg->find_hardlinked_dupes = true;
+    cfg->follow_symlinks = false;
+    cfg->see_symlinks = true;
     rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
     return true;
 }
@@ -1048,7 +1050,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-crossdev"                , 'X' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL},
         {"less-paranoid"              , 'P' , EMPTY   | HIDDEN , G_OPTION_ARG_CALLBACK , FUNC(less_paranoid)           , "Use less paranoid hashing algorithm" , NULL},
         {"no-hardlinked"              , 'L' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , "Ignore hardlinks"                    , NULL},
-        {"see-symlinks"               ,  0  , 0       | HIDDEN , G_OPTION_ARG_NONE     , &cfg->see_symlinks            , "Treat symlinks a regular files"      , NULL},
+        {"see-symlinks"               , '@' , 0       | HIDDEN , G_OPTION_ARG_NONE     , &cfg->see_symlinks            , "Treat symlinks a regular files"      , NULL},
         {"no-match-basename"          , 'B' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_basename          , "Disable --match-basename filter"     , NULL},
         {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL},
         {"no-match-without-extension" , 'I' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_without_extension , "Disable --match-without-extension"   , NULL},

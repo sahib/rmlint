@@ -57,7 +57,6 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->verbosity       = G_LOG_LEVEL_INFO;
     cfg->paranoid_mem    = 256 * 1024 * 1024;
     cfg->follow_symlinks = false;
-    cfg->see_symlinks    = true;
 
     cfg->skip_start_factor = 0.0;
     cfg->skip_end_factor   = 1.0;
