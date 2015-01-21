@@ -34,6 +34,7 @@ typedef struct RmCfg {
     gboolean with_color;
     gboolean crossdev;
     gboolean ignore_hidden;
+    gboolean partial_hidden;
     gboolean follow_symlinks;
     gboolean see_symlinks;
     gboolean find_badids;

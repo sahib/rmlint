@@ -42,9 +42,9 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->formats = rm_fmt_open(session);
 
     session->verbosity_count = 2;
-    session->paranoia_count = 0;
-    session->output_cnt[0] = -1;
-    session->output_cnt[1] = -1;
+    session->paranoia_count  = 0;
+    session->output_cnt[0]   = -1;
+    session->output_cnt[1]   = -1;
 
     session->offsets_read = 0;
     session->offset_fragments = 0;

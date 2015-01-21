@@ -36,6 +36,8 @@ static const char *PY_SOURCE = "<<PYTHON_SOURCE>>";
 typedef struct RmFmtHandlerPy {
     /* must be first */
     RmFmtHandler parent;
+
+    /* Filehandle to pass to the JSON Formatter. */
     FILE *json_out;
 } RmFmtHandlerPy;
 

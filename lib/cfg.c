@@ -28,7 +28,7 @@
 
 #include "cfg.h"
 
-/* Options not specified by commandline get a default option - 
+/* Options not specified by commandline get a default option -
  * this is usually called before rm_cmd_parse_args */
 void rm_cfg_set_default(RmCfg *cfg) {
     /* Set everything to 0 at first,

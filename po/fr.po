@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-18 00:28+0100\n"
+"POT-Creation-Date: 2015-01-21 00:47+0100\n"
 "PO-Revision-Date: 2014-12-02 13:37+0100\n"
 "Last-Translator: F. <contact@f.0x2501.org>\n"
 "Language-Team: none\n"
@@ -34,31 +34,43 @@ msgstr "Arrêt causé par une erreur fatale. (signal reçu: %s)"
 msgid "Please file a bug report (See rmlint -h)"
 msgstr "Merci de remplir un rapport de bug (Voir rmlint -h)"
 
-#: lib/shredder.c:1478
+#: src/config.h:87 lib/config.h:94
+msgid "ERROR"
+msgstr "ERREUR"
+
+#: src/config.h:94 lib/config.h:101
+msgid "WARNING"
+msgstr "AVERTISSEMENT"
+
+#: lib/shredder.c:1462
 #, c-format
 msgid "Negative bytes_left_to_read for %s"
 msgstr "Bytes restants négatifs pour %s"
 
-#: lib/shredder.c:1483
+#: lib/shredder.c:1467
 #, c-format
 msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
 msgstr "Problème lors de la lecture de %s; %d bytes attendus, %d reçus; ignoré"
 
-#: lib/utilities.c:193
+#: lib/utilities.c:212
 #, c-format
 msgid "cannot open file '%s' for nonstripped test: "
 msgstr "impossible d'ouvrir '%s' pour le test non-stripped: "
 
-#: lib/utilities.c:200
+#: lib/utilities.c:219
 msgid "ELF Library is out of date!"
 msgstr "La librairie ELF n'est plus à jour!"
 
-#: lib/utilities.c:398
+#: lib/utilities.c:401
+msgid "caching is not supported due to missing json-glib library."
+msgstr ""
+
+#: lib/utilities.c:417
 #, c-format
 msgid "Loading json-cache `%s'"
 msgstr "Chargement de JSON Cache `%s'"
 
-#: lib/utilities.c:407
+#: lib/utilities.c:426
 msgid "No valid json cache (no array in /)"
 msgstr "JSON cache est ne pas valide"
 
@@ -116,23 +128,23 @@ msgid "Can't open directory or file \"%s\": %s"
 msgstr "Impossible d'ouvrir le répertoire ou le fichier \"%s\": %s\n"
 
 #: lib/cmdline.c:284
-#, c-format
-msgid "Adding -o %s as output failed."
+#, fuzzy, c-format
+msgid "Adding -o %s as output failed"
 msgstr "Ajouter -o %s a fait échoué la sortie"
 
 #: lib/cmdline.c:294
-#, c-format
-msgid "No format (format:key[=val]) specified in '%s'."
+#, fuzzy, c-format
+msgid "No format (format:key[=val]) specified in '%s'"
 msgstr "Aucun format (format:key[=val]) spécifié dans '%s'."
 
-#: lib/cmdline.c:303
-#, c-format
-msgid "Missing key (format:key[=val]) in '%s'."
+#: lib/cmdline.c:304
+#, fuzzy, c-format
+msgid "Missing key (format:key[=val]) in '%s'"
 msgstr "Clef (format:key[=val]) absente dans '%s'."
 
-#: lib/cmdline.c:317
+#: lib/cmdline.c:318
 #, c-format
-msgid "Invalid key `%s' for formatter `%s'."
+msgid "Invalid key `%s' for formatter `%s'"
 msgstr ""
 
 #: lib/cmdline.c:347
@@ -176,7 +188,8 @@ msgid "-n %lu is newer than current time (%lu)."
 msgstr "-n %lu est plus récent que le temps actuel (%lu)."
 
 #: lib/cmdline.c:719
-msgid "Only up to -ppp or down to -P flags allowed."
+#, fuzzy
+msgid "Only up to -ppp or down to -P flags allowed"
 msgstr "Seules les options de -ppp à -P sont autorisées"
 
 #: lib/cmdline.c:742
@@ -189,143 +202,156 @@ msgstr "Fonction de hachage inconnue: '%s'"
 msgid "Invalid size description \"%s\": "
 msgstr "Définition de taille invalide \"%s\": %s"
 
-#: lib/cmdline.c:948
-msgid "Specifiyng both -o and -O is not allowed."
+#: lib/cmdline.c:967
+#, fuzzy
+msgid "Specifiyng both -o and -O is not allowed"
 msgstr "Utiliser simultanément -o et -O n'est pas autorisé"
 
-#: lib/cmdline.c:982
+#: lib/cmdline.c:1001
 msgid "Specify max traversal depth"
 msgstr ""
 
-#: lib/cmdline.c:983
+#: lib/cmdline.c:1002
 msgid "Original criteria"
 msgstr ""
 
-#: lib/cmdline.c:984
+#: lib/cmdline.c:1003
 msgid "Specify lint types"
 msgstr ""
 
-#: lib/cmdline.c:985
+#: lib/cmdline.c:1004
 msgid "Specify size limits"
 msgstr ""
 
-#: lib/cmdline.c:986
+#: lib/cmdline.c:1005
 #, fuzzy
 msgid "Choose hash algorithm"
 msgstr "Fonction de hachage inconnue: '%s'"
 
-#: lib/cmdline.c:987
+#: lib/cmdline.c:1006
 msgid "Add output (override default)"
 msgstr ""
 
-#: lib/cmdline.c:988
+#: lib/cmdline.c:1007
 msgid "Add output (add to defaults)"
 msgstr ""
 
-#: lib/cmdline.c:989
+#: lib/cmdline.c:1008
 msgid "Newer than stamp file"
 msgstr ""
 
-#: lib/cmdline.c:990
+#: lib/cmdline.c:1009
 msgid "Newer than timestamp"
 msgstr ""
 
-#: lib/cmdline.c:991
+#: lib/cmdline.c:1010
 msgid "Configure a formatter"
 msgstr ""
 
-#: lib/cmdline.c:992
+#: lib/cmdline.c:1011
 msgid "Add json cache file"
 msgstr ""
 
-#: lib/cmdline.c:995
+#: lib/cmdline.c:1014
 msgid "Enable progressbar"
 msgstr ""
 
-#: lib/cmdline.c:996
+#: lib/cmdline.c:1015
 msgid "Be more verbose (-vvv for much more)"
 msgstr ""
 
-#: lib/cmdline.c:997
+#: lib/cmdline.c:1016
 msgid "Be less verbose (-VVV for much less)"
 msgstr ""
 
-#: lib/cmdline.c:1000
+#: lib/cmdline.c:1019
 msgid "Be not that colorful"
 msgstr ""
 
-#: lib/cmdline.c:1001
+#: lib/cmdline.c:1020
 msgid "Find hidden files"
 msgstr ""
 
-#: lib/cmdline.c:1002
+#: lib/cmdline.c:1021
 #, fuzzy
 msgid "Follow symlinks"
 msgstr "Mauvais lien(s) symbolique(s)"
 
-#: lib/cmdline.c:1003
+#: lib/cmdline.c:1022
 #, fuzzy
 msgid "Ignore symlinks"
 msgstr "Mauvais lien(s) symbolique(s)"
 
-#: lib/cmdline.c:1004
+#: lib/cmdline.c:1023
 msgid "Do not cross mounpoints"
 msgstr ""
 
-#: lib/cmdline.c:1005
+#: lib/cmdline.c:1024
 msgid "Use more paranoid hashing"
 msgstr ""
 
-#: lib/cmdline.c:1006
+#: lib/cmdline.c:1025
 msgid "Keep all tagged files"
 msgstr ""
 
-#: lib/cmdline.c:1007
+#: lib/cmdline.c:1026
 msgid "Keep all untagged files"
 msgstr ""
 
-#: lib/cmdline.c:1008
+#: lib/cmdline.c:1027
 msgid "Must have twin in tagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1009
+#: lib/cmdline.c:1028
 msgid "Must have twin in untagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1010
+#: lib/cmdline.c:1029
 msgid "Report hardlinks as duplicates"
 msgstr ""
 
-#: lib/cmdline.c:1011
+#: lib/cmdline.c:1030
 msgid "Only find twins with same basename"
 msgstr ""
 
-#: lib/cmdline.c:1012
+#: lib/cmdline.c:1031
 msgid "Only find twins with same extension"
 msgstr ""
 
-#: lib/cmdline.c:1013
+#: lib/cmdline.c:1032
 msgid "Only find twins with same basename minus extension"
 msgstr ""
 
-#: lib/cmdline.c:1014
+#: lib/cmdline.c:1033
 #, fuzzy
 msgid "Find duplicate directories"
 msgstr "Répertoire(s) dupliqué(s)"
 
-#: lib/cmdline.c:1057
+#: lib/cmdline.c:1034
+msgid "Find hidden files in duplicate folders only"
+msgstr ""
+
+#: lib/cmdline.c:1037
+msgid "Show the manpage"
+msgstr ""
+
+#: lib/cmdline.c:1038
+msgid "Show the version & features"
+msgstr ""
+
+#: lib/cmdline.c:1078
 msgid "Cannot set current working directory"
 msgstr ""
 
-#: lib/cmdline.c:1062
+#: lib/cmdline.c:1083
 msgid "Cannot join commandline"
 msgstr ""
 
-#: lib/cmdline.c:1071
+#: lib/cmdline.c:1092
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
 msgstr ""
 
-#: lib/cmdline.c:1094
+#: lib/cmdline.c:1115
 msgid ""
 "rmlint finds space waste and other broken things on your filesystem and "
 "offers to remove it.\n"
@@ -333,7 +359,7 @@ msgid ""
 "options to handle them."
 msgstr ""
 
-#: lib/cmdline.c:1100
+#: lib/cmdline.c:1121
 msgid ""
 "Only the most important options and options that alter the default are shown "
 "above.\n"
@@ -343,83 +369,88 @@ msgid ""
 "Complementary tutorials can be found at: http://rmlint.rtfd.org"
 msgstr ""
 
-#: lib/cmdline.c:1123
+#: lib/cmdline.c:1144
 #, fuzzy
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
 msgstr ""
 "impossible d'utiliser simultanément --keep-all-tagged et --keep-all-untagged"
 
-#: lib/cmdline.c:1129
+#: lib/cmdline.c:1150
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)!"
 msgstr "-q (--clamp-low) doit être plus petit que -Q (--clamp-top)!"
 
-#: lib/cmdline.c:1134
+#: lib/cmdline.c:1155
 msgid "No valid paths given."
 msgstr "Aucun chemin valide renseigné."
 
-#: lib/formats.c:166
+#: lib/formats.c:168
 #, c-format
 msgid "No such new_handler with this name: %s"
 msgstr "Aucun new_handler ne correspond à ce nom: %s"
 
-#: lib/formats.c:189
+#: lib/formats.c:190
 #, c-format
 msgid "Unable to open file for writing: %s"
 msgstr "Impossible d'ouvrir le fichier en écriture: %s"
 
-#: lib/formats/progressbar.c:64
+#: lib/preprocess.c:227
+#, c-format
+msgid "Hardlink file size changed during traversal: %s"
+msgstr ""
+
+#: lib/formats/progressbar.c:66
 msgid "Traversing"
 msgstr "Parcoure"
 
-#: lib/formats/progressbar.c:66
+#: lib/formats/progressbar.c:68
 msgid "usable files"
 msgstr "fichiers utilisés"
 
-#: lib/formats/progressbar.c:69
+#: lib/formats/progressbar.c:71
 msgid "ignored files / folders"
 msgstr "fichiers / répertoires ignorés"
 
-#: lib/formats/progressbar.c:77
+#: lib/formats/progressbar.c:79
 msgid "Preprocessing"
 msgstr "Prétraitement"
 
-#: lib/formats/progressbar.c:78
+#: lib/formats/progressbar.c:80
 msgid "reduces files to"
 msgstr "réduction des fichiers à"
 
-#: lib/formats/progressbar.c:80
+#: lib/formats/progressbar.c:82
 msgid "found"
 msgstr "trouvé"
 
-#: lib/formats/progressbar.c:82
+#: lib/formats/progressbar.c:84
 msgid "other lint"
 msgstr "autre double"
 
-#: lib/formats/progressbar.c:94
+#: lib/formats/progressbar.c:96
 msgid "Matching files"
 msgstr "Fichiers correspondants"
 
-#: lib/formats/progressbar.c:96
+#: lib/formats/progressbar.c:98
 msgid "dupes of"
 msgstr "doubles de"
 
-#: lib/formats/progressbar.c:98
+#: lib/formats/progressbar.c:100
 msgid "originals"
 msgstr "originaux"
 
-#: lib/formats/progressbar.c:100
+#: lib/formats/progressbar.c:102
 msgid "to scan in "
 msgstr "à examiner dans"
 
-#: lib/formats/progressbar.c:102
+#: lib/formats/progressbar.c:104
 msgid "files"
 msgstr "fichiers"
 
-#: lib/formats/progressbar.c:108
+#: lib/formats/progressbar.c:110
 msgid "Merging files into directories (stand by...)"
 msgstr "Fusion des fichiers dans les répertoires (attente...)"
 
-#: lib/formats/progressbar.c:296
+#: lib/formats/progressbar.c:338
 msgid "Cannot figure out terminal width."
 msgstr "Impossible de déterminer la largeur du terminal"
 
@@ -494,48 +525,40 @@ msgstr "autre(s) éléments, dont la taille peut varier, trouvé(s).\n"
 msgid "Wrote a %s%s%s file to %s%s%s.\n"
 msgstr "Fichier %s%s%s écrit %s%s%s.\n"
 
-#: lib/traverse.c:260
+#: lib/traverse.c:274
 #, c-format
 msgid "filesystem loop detected at %s (skipping)"
 msgstr "boucle dans le système de fichiers détectée à %s (ignoré)"
 
-#: lib/traverse.c:264
+#: lib/traverse.c:278
 #, c-format
 msgid "cannot read directory %s: %s"
 msgstr "impossible de lire le répertoire %s: %s"
 
-#: lib/traverse.c:275
+#: lib/traverse.c:290
 #, c-format
 msgid "error %d in fts_read for %s (skipping)"
 msgstr "erreur %d dans fts_read pour %s (ignoré) "
 
-#: lib/traverse.c:301
+#: lib/traverse.c:318
 #, c-format
 msgid "Added big file %s"
 msgstr "Fichier important %s ajouté"
 
-#: lib/traverse.c:303
+#: lib/traverse.c:320
 #, c-format
 msgid "cannot stat file %s (skipping)"
 msgstr "impossible de définir le fichier %s (ignoré)"
 
-#: lib/traverse.c:337
+#: lib/traverse.c:354
 #, c-format
 msgid "Unknown fts_info flag %d for file %s"
 msgstr "Drapeau fts_info %d inconnu pour le fichier %s"
 
-#: lib/traverse.c:354
+#: lib/traverse.c:371
 #, c-format
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': échec de fts_read pour %s"
-
-#: lib/config.h:94
-msgid "ERROR"
-msgstr "ERREUR"
-
-#: lib/config.h:101
-msgid "WARNING"
-msgstr "AVERTISSEMENT"
 
 #: lib/config.h:108
 msgid "INFO"

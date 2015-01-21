@@ -129,6 +129,12 @@ typedef struct RmFile {
      */
     bool is_new_or_has_new : 1;
 
+    /* True if this file, or at least one its path's componennts, is a hidden
+     * file. This excludes files above the directory rmlint was started on.
+     * This is relevant to --partial-hidden.
+     */
+    bool is_hidden : 1;
+
     /* If false rm_file_destroy will not destroy the digest. This is useful
      * for sharing the digest of duplicates in a group.
      */

@@ -121,6 +121,25 @@ char *rm_util_path_extension(const char *basename) {
     }
 }
 
+bool rm_util_path_is_hidden(const char *path) {
+    if(path == NULL) {
+        return false;
+    }
+
+    if(*path == '.') {
+        return true;
+    }
+
+    while(*path++) {
+        /* Search for '/.' */
+        if(*path == G_DIR_SEPARATOR && *(path + 1) == '.') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 GQueue *rm_hash_table_setdefault(
     GHashTable *table, gpointer key, RmNewFunc default_func
 ) {
@@ -729,7 +748,7 @@ static void rm_mounts_freebsd_list_disks(void) {
 
 int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char *disk, _U size_t disk_size, _U dev_t *result) {
 #if HAVE_BLKID
-    return blkid_devno_to_wholedisk(rdev, disk, sizeof(disk_size), result);
+    return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
 #elif HAVE_SYSCTL
     if(DISK_TABLE == NULL) {
         rm_mounts_freebsd_list_disks();

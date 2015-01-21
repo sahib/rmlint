@@ -47,6 +47,8 @@ typedef struct RmFmtHandlerProgress {
     guint32 update_interval;
     guint8 use_unicode_glyphs;
 
+    bool plain;
+
     RmFmtProgressState last_state;
     struct winsize terminal;
 } RmFmtHandlerProgress;
@@ -116,6 +118,9 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         break;
     }
 
+    /* Support unicode messages - tranlsated text might contain some. */
+    self->text_len = g_utf8_strlen(self->text_buf, self->text_len);
+
     /* Get rid of colors */
     int text_iter = 0;
     for(char *iter = &self->text_buf[0]; *iter; iter++) {
@@ -152,37 +157,66 @@ typedef enum RmProgressBarGlyph {
     PROGRESS_ARROW,
     PROGRESS_TICK_LOW,
     PROGRESS_TICK_HIGH,
+    PROGRESS_TICK_SPACE,
     PROGRESS_EMPTY,
     PROGRESS_FULL,
     PROGRESS_LEFT_BRACKET,
     PROGRESS_RIGHT_BRACKET
 } RmProgressBarGlyph;
 
-static const char *PROGRESS_UNICODE_TABLE[] = {
+static const char *PROGRESS_FANCY_UNICODE_TABLE[] = {
     [PROGRESS_ARROW] = "➤",
     [PROGRESS_TICK_LOW] = "□",
     [PROGRESS_TICK_HIGH] = "▢",
+    [PROGRESS_TICK_SPACE] = " ",
     [PROGRESS_EMPTY] = "⌿",
     [PROGRESS_FULL] = "—",
     [PROGRESS_LEFT_BRACKET] = "⦃",
     [PROGRESS_RIGHT_BRACKET] = "⦄"
 };
 
-static const char *PROGRESS_ASCII_TABLE[] = {
+static const char *PROGRESS_FANCY_ASCII_TABLE[] = {
     [PROGRESS_ARROW] = ">",
     [PROGRESS_TICK_LOW] = "o",
     [PROGRESS_TICK_HIGH] = "O",
+    [PROGRESS_TICK_SPACE] = " ",
     [PROGRESS_EMPTY] = "/",
     [PROGRESS_FULL] = "_",
     [PROGRESS_LEFT_BRACKET] = "{",
     [PROGRESS_RIGHT_BRACKET] = "}"
 };
 
+static const char *PROGRESS_PLAIN_UNICODE_TABLE[] = {
+    [PROGRESS_ARROW] = "▒",
+    [PROGRESS_TICK_LOW] = "░",
+    [PROGRESS_TICK_HIGH] = "▒",
+    [PROGRESS_TICK_SPACE] = "░",
+    [PROGRESS_EMPTY] = "░",
+    [PROGRESS_FULL] = "▓",
+    [PROGRESS_LEFT_BRACKET] = "▕",
+    [PROGRESS_RIGHT_BRACKET] = "▏"
+};
+
+static const char *PROGRESS_PLAIN_ASCII_TABLE[] = {
+    [PROGRESS_ARROW] = "_",
+    [PROGRESS_TICK_LOW] = " ",
+    [PROGRESS_TICK_HIGH] = "_",
+    [PROGRESS_TICK_SPACE] = " ",
+    [PROGRESS_EMPTY] = "\\",
+    [PROGRESS_FULL] = "/",
+    [PROGRESS_LEFT_BRACKET] = "|",
+    [PROGRESS_RIGHT_BRACKET] = "|"
+};
+
 static const char *rm_fmt_progressbar_get_glyph(RmFmtHandlerProgress *self, RmProgressBarGlyph type) {
-    if(self->use_unicode_glyphs) {
-        return PROGRESS_UNICODE_TABLE[type];
+    if(self->plain && self->use_unicode_glyphs) {
+        return PROGRESS_PLAIN_UNICODE_TABLE[type];
+    } else if(self->plain) {
+        return PROGRESS_PLAIN_ASCII_TABLE[type];
+    } else if(self->use_unicode_glyphs) {
+        return PROGRESS_FANCY_UNICODE_TABLE[type];
     } else {
-        return PROGRESS_ASCII_TABLE[type];
+        return PROGRESS_FANCY_ASCII_TABLE[type];
     }
 }
 
@@ -215,10 +249,12 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
                 } else if((int)self->last_unknown_pos % 2 == i % 2) {
                     rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_HIGH, YELLOW);
                 } else {
-                    fprintf(out, " ");
+                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_SPACE, GREEN);
                 }
             } else {
-                rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_FULL, GREEN);
+                const char *color = (self->percent > 1.01) ? BLUE : GREEN;
+                RmProgressBarGlyph glyph = (self->percent > 1.01) ? PROGRESS_EMPTY : PROGRESS_FULL;
+                rm_fmt_progressbar_print_glyph(out, session, self, glyph, color);
             }
         } else if(i == cells) {
             rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_ARROW, YELLOW);
@@ -249,16 +285,22 @@ static void rm_fmt_prog(
                                               session->formats, "progressbar", "update_interval"
                                           );
 
-        self->use_unicode_glyphs = (rm_fmt_get_config_value(
-                                        session->formats, "progressbar", "use_unicode"
-                                    ) != NULL);
+        self->plain = true;
+        if(rm_fmt_get_config_value(session->formats, "progressbar", "fancy") != NULL) {
+            self->plain = false;
+        }
+
+        self->use_unicode_glyphs = true;
+        if(rm_fmt_get_config_value(session->formats, "progressbar", "ascii") != NULL) {
+            self->use_unicode_glyphs = false;
+        }
 
         if(update_interval_str) {
             self->update_interval = g_ascii_strtoull(update_interval_str, NULL, 10);
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 50;
+            self->update_interval = 20;
         }
 
         self->last_unknown_pos = 0;
@@ -283,30 +325,33 @@ static void rm_fmt_prog(
     }
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
-        self->percent = 1.0;
+        self->percent = 1.05;
         if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
             fprintf(out, "\n");
         }
-    } else if((self->update_counter++ % self->update_interval) > 0 && session->shred_bytes_remaining != 0) {
-        return;
+        self->update_counter = 0;
     }
-
+    
     if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
         rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
     self->last_state = state;
 
-    int text_width = self->terminal.ws_col * 0.7 - 1;
-    rm_fmt_progress_format_text(session, self, text_width);
-    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
-        self->percent = 1.0;
-    }
+    if(self->update_counter++ % self->update_interval == 0) {
+        int text_width = self->terminal.ws_col * 0.7 - 1;
+        rm_fmt_progress_format_text(session, self, text_width);
+        if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
+            /* do not overwrite last messages */
+            self->percent = 1.05;
+            text_width = 0;
+        }
 
-    rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
-    rm_fmt_progress_print_text(self, text_width, out);
-    fprintf(out, "%s\r", MAYBE_RESET(session));
+        rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
+        rm_fmt_progress_print_text(self, text_width, out);
+        fprintf(out, "%s\r", MAYBE_RESET(session));
+    }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n\n");
@@ -322,7 +367,7 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
         .elem = NULL,
         .prog = rm_fmt_prog,
         .foot = NULL,
-        .valid_keys = {"update_interval", "use_unicode", NULL},
+        .valid_keys = {"update_interval", "ascii", "fancy", NULL},
     },
 
     /* Initialize own stuff */
@@ -330,7 +375,8 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .text_len = 0,
     .text_buf = {0},
     .update_counter = 0,
-    .use_unicode_glyphs = 0,
+    .use_unicode_glyphs = true,
+    .plain = true,
     .last_state = RM_PROGRESS_STATE_INIT
 };
 

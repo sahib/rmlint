@@ -29,7 +29,7 @@
 #include <sys/file.h>
 
 RmFile *rm_file_new(
-    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index 
+    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index
 ) {
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;

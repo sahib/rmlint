@@ -835,22 +835,27 @@ static void rm_tm_extract(RmTreeMerger *self) {
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
         bool has_one_dupe = false;
         RmOff file_size_acc = 0;
-        for(GList *iter = file_list->head; iter; iter = iter->next) {
+
+        GList *next = NULL;
+        for(GList *iter = file_list->head; iter; iter = next) {
             RmFile *file = iter->data;
+            next = iter->next;
+
             bool is_duplicate = g_hash_table_contains(self->file_checks, file->digest);
             has_one_dupe |= is_duplicate;
+
+            /* with --partial-hidden we do not want to output */
+            if(self->session->cfg->partial_hidden && file->is_hidden) {
+                g_queue_delete_link(file_list, iter);
+                continue;
+            }
 
             if(iter != file_list->head && !is_duplicate) {
                 file_size_acc += file->file_size;
             }
         }
 
-        if(file_list->length < 2) {
-            /* This should not happen, better ignore. */
-            if(!has_one_dupe) {
-                rm_log_warning("Sole file encountered in treemerge. What's wrong?");
-            }
-        } else {
+        if(file_list->length >= 2) {
             /* If no separate duplicate files are requested, we can stop here */
             if(self->session->cfg->find_duplicates == false) {
                 self->session->total_lint_size -= file_size_acc;

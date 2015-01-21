@@ -156,6 +156,13 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp);
  */
 char *rm_util_basename(const char *filename);
 
+/**
+ * @brief Check if the file or any components of it are hidden.
+ *
+ * @return true if it is.
+ */
+bool rm_util_path_is_hidden(const char *path);
+
 
 typedef gpointer (*RmNewFunc)(void);
 
