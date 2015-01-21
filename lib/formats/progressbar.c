@@ -300,7 +300,7 @@ static void rm_fmt_prog(
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 30;
+            self->update_interval = 20;
         }
 
         self->last_unknown_pos = 0;
