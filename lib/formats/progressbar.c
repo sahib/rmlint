@@ -300,7 +300,7 @@ static void rm_fmt_prog(
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 50;
+            self->update_interval = 30;
         }
 
         self->last_unknown_pos = 0;
@@ -330,25 +330,28 @@ static void rm_fmt_prog(
             rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
             fprintf(out, "\n");
         }
-    } else if((self->update_counter++ % self->update_interval) > 0 && session->shred_bytes_remaining != 0) {
-        return;
+        self->update_counter = 0;
     }
-
+    
     if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
         rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
     self->last_state = state;
 
-    int text_width = self->terminal.ws_col * 0.7 - 1;
-    rm_fmt_progress_format_text(session, self, text_width);
-    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
-        self->percent = 1.05;
-    }
+    if(self->update_counter++ % self->update_interval == 0) {
+        int text_width = self->terminal.ws_col * 0.7 - 1;
+        rm_fmt_progress_format_text(session, self, text_width);
+        if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
+            /* do not overwrite last messages */
+            self->percent = 1.05;
+            text_width = 0;
+        }
 
-    rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
-    rm_fmt_progress_print_text(self, text_width, out);
-    fprintf(out, "%s\r", MAYBE_RESET(session));
+        rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
+        rm_fmt_progress_print_text(self, text_width, out);
+        fprintf(out, "%s\r", MAYBE_RESET(session));
+    }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n\n");
@@ -372,7 +375,8 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .text_len = 0,
     .text_buf = {0},
     .update_counter = 0,
-    .use_unicode_glyphs = 0,
+    .use_unicode_glyphs = true,
+    .plain = true,
     .last_state = RM_PROGRESS_STATE_INIT
 };
 
