@@ -1731,8 +1731,7 @@ void rm_shred_run(RmSession *session) {
     rm_shred_preprocess_input(&tag);
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
-    g_mutex_lock(&tag.hash_mem_mtx);
-    {
+    g_mutex_lock(&tag.hash_mem_mtx); {
         tag.hash_mem_alloc = session->cfg->paranoid_mem;  /* NOTE: needs to be after preprocess */
         tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
     }

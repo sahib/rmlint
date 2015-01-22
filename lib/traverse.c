@@ -357,7 +357,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         }
     }
 
-    if (errno != 0) {
+    if (errno != 0 && !rm_session_was_aborted(session)) {
         rm_log_error_line(_("'%s': fts_read failed on %s"), g_strerror(errno), ftsp->fts_path);
     }
 
