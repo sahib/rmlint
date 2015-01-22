@@ -819,14 +819,17 @@ static gboolean rm_cmd_parse_progress(
     return true;
 }
 
+static void rm_cmd_set_default_outputs(RmSession *session) {
+    rm_fmt_add(session->formats, "pretty", "stdout");
+    rm_fmt_add(session->formats, "summary", "stdout");
+    rm_fmt_add(session->formats, "sh", "rmlint.sh");
+}
+
 static gboolean rm_cmd_parse_no_progress(
     _U const char *option_name, _U const gchar *value, RmSession *session, _U GError **error
 ) {
     rm_fmt_clear(session->formats);
-    rm_fmt_add(session->formats, "pretty", "stdout");
-    rm_fmt_add(session->formats, "summary", "stdout");
-    rm_fmt_add(session->formats, "sh", "rmlint.sh");
-
+    rm_cmd_set_default_outputs(session);
     rm_cmd_set_verbosity_from_cnt(session->cfg, session->verbosity_count);
     return true;
 }
@@ -969,10 +972,7 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Specifiyng both -o and -O is not allowed"));
         return false;
     } else if(session->output_cnt[0] < 0 && session->output_cnt[1] < 0 && !rm_fmt_len(session->formats)) {
-        /* Set default outputs */
-        rm_fmt_add(session->formats, "pretty", "stdout");
-        rm_fmt_add(session->formats, "summary", "stdout");
-        rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        rm_cmd_set_default_outputs(session);
     }
 
     return true;
