@@ -31,7 +31,7 @@ msgstr "Abbruch aufgrund eines fatalen Fehlers (exaktes signal: %s)"
 
 #: src/rmlint.c:85
 msgid "Please file a bug report (See rmlint -h)"
-msgstr "Mache bitte einen bug report auf (Mehr info unter rmlint -h)"
+msgstr "Mache bitte einen Bugreport auf (Mehr Infos unter man rmlint)"
 
 #: src/config.h:87 lib/config.h:94
 msgid "ERROR"
@@ -56,7 +56,7 @@ msgstr ""
 #: lib/utilities.c:212
 #, c-format
 msgid "cannot open file '%s' for nonstripped test: "
-msgstr "Kann Datei %s nicht öffnen um zu sehen ob sie gestripped ist."
+msgstr "Kann Datei %s nicht öffnen um zu sehen ob sie Debugsymbole hat."
 
 #: lib/utilities.c:219
 msgid "ELF Library is out of date!"
@@ -95,12 +95,12 @@ msgid ""
 "The code at https://github.com/sahib/rmlint is licensed under the terms of "
 "the GPLv3."
 msgstr ""
-"Der Quelltext unter https://github.com/sahib/rmlint ist unter denBedingungen "
-"der GPLv3 lizensiert"
+"Der Quelltext unter https://github.com/sahib/rmlint ist unter den Bedingungen "
+"der GPLv3 lizenziert"
 
 #: lib/cmdline.c:108
 msgid "You seem to have no manpage for rmlint."
-msgstr "Scheinbar hast du keine manpage für rmlint."
+msgstr "Scheinbar hast du keine Manpage für rmlint."
 
 #: lib/cmdline.c:147
 msgid "Input size is empty"
@@ -168,15 +168,15 @@ msgstr "Kann Offset nicht parsen \"%s\": "
 
 #: lib/cmdline.c:534
 msgid "lint types after first should be prefixed with '+' or '-'"
-msgstr "Alle Lint Typen nach dem Ersten sollten mit '+' oder '-' beginnen"
+msgstr "Alle Typen nach dem Ersten sollten mit '+' oder '-' beginnen"
 
 #: lib/cmdline.c:535
 #, c-format
 msgid "or they would over-ride previously set options: [%s]"
-msgstr "andernfalls würden sie vorher gesetzte optione überschreiben: [%s]"
+msgstr "andernfalls würden sie vorher gesetzte Optionen überschreiben: [%s]"
 
-#: lib/cmdline.c:551
-#, c-format
+# #: lib/cmdline.c:551
+# #, c-format
 msgid "lint type '%s' not recognised"
 msgstr "lint type \"%s\" nicht erkannt"
 
@@ -241,7 +241,7 @@ msgstr "Output hinzufügen (fügt zu den Standardoutputs hinzu)"
 
 #: lib/cmdline.c:1008
 msgid "Newer than stamp file"
-msgstr "Suche nur Dateien die neuer sind als Datum im stamp file"
+msgstr "Suche nur Dateien die neuer sind als Datum in der .stamp Datei"
 
 #: lib/cmdline.c:1009
 msgid "Newer than timestamp"
@@ -332,7 +332,7 @@ msgstr "Finde Doppelte Verzeichnisse"
 
 #: lib/cmdline.c:1034
 msgid "Find hidden files in duplicate folders only"
-msgstr "Finde versteckte Datein nur in doppelten Verzeichnisen"
+msgstr "Finde versteckte Dateien nur in doppelten Verzeichnissen"
 
 #: lib/cmdline.c:1037
 msgid "Show the manpage"
@@ -348,7 +348,7 @@ msgstr "Kann aktuelles Arbeitsverzeichnis nicht setzen"
 
 #: lib/cmdline.c:1083
 msgid "Cannot join commandline"
-msgstr "Kann commandline nicht auslesen"
+msgstr "Kann Kommandozeile nicht auslesen. (huh?)"
 
 #: lib/cmdline.c:1092
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
@@ -375,7 +375,7 @@ msgid ""
 "or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
 "Complementary tutorials can be found at: http://rmlint.rtfd.org"
 msgstr ""
-"Nur die wichtigsten Optionen und Optionen, die die Standawerte ändern werden "
+"Nur die wichtigsten Optionen und Optionen, die die Standardwerte ändern werden "
 "gezeigt.\n"
 "Siehe `man 1 rmlint` oder rmlint --show-man für weitaus mehr Details.\n"
 "Alternativ auch http://rmlint.rtfd.org/en/latest/rmlint.1.html für die "
@@ -423,7 +423,7 @@ msgstr "nutzbare Dateien"
 
 #: lib/formats/progressbar.c:71
 msgid "ignored files / folders"
-msgstr "ignorierte Dateien / Verzeichnise"
+msgstr "ignorierte Dateien / Verzeichnisse"
 
 #: lib/formats/progressbar.c:79
 msgid "Preprocessing"
@@ -435,15 +435,15 @@ msgstr "reduziere Dateien zu"
 
 #: lib/formats/progressbar.c:82
 msgid "found"
-msgstr "gefunden"
+msgstr " "
 
 #: lib/formats/progressbar.c:84
 msgid "other lint"
-msgstr "anderer Müll"
+msgstr "mal anderer Müll gefunden"
 
 #: lib/formats/progressbar.c:96
 msgid "Matching files"
-msgstr "Rechne"
+msgstr "Gleiche ab"
 
 #: lib/formats/progressbar.c:98
 msgid "dupes of"
@@ -463,11 +463,11 @@ msgstr "Dateien"
 
 #: lib/formats/progressbar.c:110
 msgid "Merging files into directories (stand by...)"
-msgstr "Führe doppelte Dateien in doppelte Verzeichnise zusammen..."
+msgstr "Führe doppelte Dateien in doppelte Verzeichnisse zusammen..."
 
 #: lib/formats/progressbar.c:338
 msgid "Cannot figure out terminal width."
-msgstr "Kann Terminalgröße nicht rausfinden."
+msgstr "Kann Terminalgröße nicht herausfinden."
 
 #: lib/formats/sh.c:307
 #, c-format
@@ -523,7 +523,7 @@ msgstr "Früher Abbruch, vermutlich wurde nicht alles gefunden.\n"
 #: lib/formats/summary.c:73
 #, c-format
 msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
-msgstr "Insgesamt %s dateien, von denen %s Duplikate in %s Gruppen sind.\n"
+msgstr "Insgesamt %s Dateien, von denen %s Duplikate in %s Gruppen sind.\n"
 
 #: lib/formats/summary.c:85
 #, c-format
