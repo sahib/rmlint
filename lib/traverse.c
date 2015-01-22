@@ -79,20 +79,17 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 typedef struct RmTravSession {
     RmUserList *userlist;
     RmSession *session;
-    GMutex lock;
 } RmTravSession;
 
 static RmTravSession *rm_traverse_session_new(RmSession *session) {
     RmTravSession *self = g_new0(RmTravSession, 1);
     self->session = session;
     self->userlist = rm_userlist_new();
-    g_mutex_init(&self->lock);
     return self;
 }
 
 static void rm_traverse_session_free(RmTravSession *trav_session) {
-    rm_log_info("Found %" G_GUINT64_FORMAT " files, ignored %" G_GUINT64_FORMAT
-                " hidden files and %" G_GUINT64_FORMAT " hidden folders\n",
+    rm_log_info("Found %d files, ignored %d hidden files and %d hidden folders\n",
                 trav_session->session->total_files,
                 trav_session->session->ignored_files,
                 trav_session->session->ignored_folders
@@ -100,7 +97,6 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 
     rm_userlist_destroy(trav_session->userlist);
 
-    g_mutex_clear(&trav_session->lock);
     g_free(trav_session);
 }
 
@@ -156,12 +152,9 @@ static void rm_traverse_file(
         file->is_symlink = is_symlink;
         file->is_hidden = is_hidden;
 
-        g_mutex_lock(&trav_session->lock);
-        {
-            trav_session->session->total_files += rm_file_tables_insert(session, file);
-            rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
-        }
-        g_mutex_unlock(&trav_session->lock);
+        g_atomic_int_add(&trav_session->session->total_files, rm_file_tables_insert(session, file));
+
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
         if(trav_session->session->cfg->clear_xattr_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
             rm_log_debug("Clearing xattr fields of %s\n", file->path);
@@ -237,17 +230,14 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         /* check for hidden file or folder */
         if (cfg->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
             /* ignoring hidden folders*/
-            g_mutex_lock(&trav_session->lock);
-            {
-                if (p->fts_info == FTS_D) {
-                    fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
-                    trav_session->session->ignored_folders++;
-                } else {
-                    trav_session->session->ignored_files++;
-                }
+
+            if (p->fts_info == FTS_D) {
+                fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
+                g_atomic_int_inc(&trav_session->session->ignored_folders);
+            } else {
+                g_atomic_int_inc(&trav_session->session->ignored_files);
             }
 
-            g_mutex_unlock(&trav_session->lock);
             clear_emptydir_flags = true; /* flag current dir as not empty */
             is_emptydir[p->fts_level] = 0;
         } else {

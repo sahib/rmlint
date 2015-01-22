@@ -245,8 +245,7 @@ void rm_fmt_unlock_state(RmFmtTable *self) {
 }
 
 void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {
-    rm_fmt_lock_state(self);
-    {
+    rm_fmt_lock_state(self); {
         RM_FMT_FOR_EACH_HANDLER(self) {
             RM_FMT_CALLBACK(handler->prog, state);
         }

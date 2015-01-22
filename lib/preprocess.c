@@ -427,7 +427,7 @@ void rm_preprocess(RmSession *session) {
                     );
 
     rm_log_debug(
-        "process hardlink groups finished at time %.3f; removed %u of %"LLU"\n",
+        "process hardlink groups finished at time %.3f; removed %u of %d\n",
         g_timer_elapsed(session->timer, NULL), removed, session->total_files
     );
 

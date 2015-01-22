@@ -62,7 +62,7 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         self->percent = 2.0;
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
-                             "%s (%s%"LLU"%s %s / %s%"LLU"%s + %s%"LLU"%s %s)",
+                             "%s (%s%d%s %s / %s%d%s + %s%d%s %s)",
                              _("Traversing"),
                              MAYBE_GREEN(session), session->total_files, MAYBE_RESET(session),
                              _("usable files"),
