@@ -1378,7 +1378,7 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
         rm_digest_paranoia_shrink(file->digest, data_size);
     }
 
-    rm_shred_adjust_counters(device, 0, -(gint64)data_size);
+    rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
 }
 
 /* Read from file and send to hasher
