@@ -691,29 +691,26 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter, GErro
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
-        cfg->checksum_type = RM_DIGEST_SPOOKY32;
+        cfg->checksum_type = RM_DIGEST_SPOOKY;
         break;
     case -1:
-        cfg->checksum_type = RM_DIGEST_SPOOKY64;
+        cfg->checksum_type = RM_DIGEST_BASTARD;
         break;
     case 0:
         /* leave users choice of -a (default) */
         break;
     case 1:
-        cfg->checksum_type = RM_DIGEST_BASTARD;
-        break;
-    case 2:
 #if HAVE_SHA512
         cfg->checksum_type = RM_DIGEST_SHA512;
 #else
         cfg->checksum_type = RM_DIGEST_SHA256;
 #endif
         break;
-    case 3:
+    case 2:
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Only up to -ppp or down to -P flags allowed"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Only up to -pp or down to -PP flags allowed"));
         break;
     }
 }
