@@ -45,12 +45,8 @@
 /* Not available there,
  * but might be on other non-linux systems
  * */
-#if HAVE_GETMNTENT
-#  include <mntent.h>
-#elif HAVE_GETMNTINFO
-#  include <sys/param.h>
-#  include <sys/ucred.h>
-#  include <sys/mount.h>
+#if HAVE_GIO_UNIX
+#  include <gio/gunixmounts.h>
 #endif
 
 #if HAVE_FIEMAP
@@ -460,7 +456,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
-#if (HAVE_GETMNTENT || HAVE_GETMNTINFO)
+#if (HAVE_GIO_UNIX)
 
 RmPartitionInfo *rm_part_info_new(char *name, char *fsname, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
@@ -573,7 +569,7 @@ typedef struct RmMountEntry {
 } RmMountEntry;
 
 typedef struct RmMountEntries {
-    FILE *mnt_ent_file;
+    GList *mnt_entries;
     GList *entries;
     GList *current;
 } RmMountEntries;
@@ -589,6 +585,7 @@ static void rm_mount_list_close(RmMountEntries *self) {
         g_slice_free(RmMountEntry, entry);
     }
 
+    g_list_free_full(self->mnt_entries, (GDestroyNotify)g_unix_mount_free);
     g_list_free(self->entries);
     g_slice_free(RmMountEntries, self);
 }
@@ -611,44 +608,21 @@ static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
 
 static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     RmMountEntries *self = g_slice_new(RmMountEntries);
+
+    self->mnt_entries = g_unix_mounts_get(NULL);
     self->entries = NULL;
     self->current = NULL;
 
-#if HAVE_GETMNTENT
-    struct mntent *entry = NULL;
-    self->mnt_ent_file = setmntent("/etc/mtab", "r");
+    for(GList *iter = self->mnt_entries; iter; iter = iter->next) {
+        RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
+        GUnixMountEntry *entry = iter->data;
+        
+        wrap_entry->fsname = g_strdup(g_unix_mount_get_device_path(entry));
+        wrap_entry->dir = g_strdup(g_unix_mount_get_mount_path(entry));
+        wrap_entry->type = g_strdup(g_unix_mount_get_fs_type(entry));
 
-    if(self->mnt_ent_file != NULL) {
-        while((entry = getmntent(self->mnt_ent_file))) {
-            RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
-            wrap_entry->fsname = g_strdup(entry->mnt_fsname);
-            wrap_entry->dir = g_strdup(entry->mnt_dir);
-            wrap_entry->type = g_strdup(entry->mnt_type);
-            self->entries = g_list_prepend(self->entries, wrap_entry);
-        }
-
-        endmntent(self->mnt_ent_file);
-    } else {
-        rm_log_perror("getmntent");
+        self->entries = g_list_prepend(self->entries, wrap_entry);
     }
-#elif HAVE_GETMNTINFO /* probably FreeBSD or other */
-    int mnt_list_n = 0;
-    struct statfs *mnt_list = NULL;
-
-    if((mnt_list_n = getmntinfo(&mnt_list, MNT_NOWAIT)) != 0) {
-        for(int i = 0; i < mnt_list_n; ++i) {
-            RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
-            struct statfs *entry = &mnt_list[i];
-
-            wrap_entry->fsname = g_strdup(entry->f_mntfromname);
-            wrap_entry->dir = g_strdup(entry->f_mntonname);
-            wrap_entry->type = g_strdup(entry->f_fstypename);
-            self->entries = g_list_prepend(self->entries, wrap_entry);
-        }
-    } else {
-        rm_log_perror("getmntinfo");
-    }
-#endif
 
     RmMountEntry *wrap_entry = NULL;
     while((wrap_entry = rm_mount_list_next(self))) {
@@ -687,8 +661,8 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                 GUINT_TO_POINTER(1)
             );
 
-            rm_log_error(
-                YELLOW"WARNING:"RESET" `%s` mount detected at %s (#%u); Ignoring all files in it.\n",
+            rm_log_warning_line(
+                _("`%s` mount detected at %s (#%u); Ignoring all files in it."),
                 evilfs_found,
                 wrap_entry->dir,
                 (unsigned)dir_stat.st_dev
@@ -706,7 +680,6 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                 GUINT_TO_POINTER(1)
             );
         }
-
     }
 
     return self;
