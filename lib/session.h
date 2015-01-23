@@ -65,7 +65,10 @@ typedef struct RmSession {
     struct RmTreeMerger *dir_merger;
 
     /* Counters for printing useful statistics */
-    RmOff total_files;
+    volatile gint total_files;
+    volatile gint ignored_files;
+    volatile gint ignored_folders;
+
     RmOff total_filtered_files;
     RmOff total_lint_size;
     RmOff shred_bytes_remaining;
@@ -73,12 +76,10 @@ typedef struct RmSession {
     RmOff shred_bytes_after_preprocess;
     RmOff dup_counter;
     RmOff dup_group_counter;
-    RmOff ignored_files;
-    RmOff ignored_folders;
     RmOff other_lint_cnt;
 
     /* flag indicating if rmlint was aborted early */
-    volatile bool aborted;
+    volatile gint aborted;
 
     /* timer used for debugging and profiling messages */
     GTimer *timer;

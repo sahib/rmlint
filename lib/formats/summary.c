@@ -52,7 +52,7 @@ static void rm_fmt_prog(
     }
 
     if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%"LLU"%s",
+        ARROW fprintf(out, "%s%d%s",
                       MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
                      );
         fprintf(out, _(" file(s) after investigation, nothing to search through.\n"));
@@ -64,7 +64,7 @@ static void rm_fmt_prog(
     }
 
     char numbers[3][512];
-    snprintf(numbers[0], sizeof(numbers[0]), "%s%"LLU"%s", MAYBE_RED(session), session->total_files, MAYBE_RESET(session));
+    snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(session), session->total_files, MAYBE_RESET(session));
     snprintf(numbers[1], sizeof(numbers[1]), "%s%"LLU"%s", MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session));
     snprintf(numbers[2], sizeof(numbers[2]), "%s%"LLU"%s", MAYBE_RED(session), session->dup_group_counter, MAYBE_RESET(session));
 
