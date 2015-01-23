@@ -510,6 +510,11 @@ static gboolean rm_cmd_parse_lint_types(
 
     RmLintTypeOption *all_opts = &option_table[0];
 
+    /* initialize all options to disabled by default */
+    for (int i = 0; all_opts->enable[i]; i++) {
+        *all_opts->enable[i] = false;
+    }
+
     /* split the comma-separates list of options */
     char lint_sep[2] = {0, 0};
     lint_sep[0] = rm_cmd_find_lint_types_sep(lint_string);
@@ -530,11 +535,10 @@ static gboolean rm_cmd_parse_lint_types(
             sign = -1;
         }
 
-        if(index > 0 && sign == 0) {
-            rm_log_warning(_("lint types after first should be prefixed with '+' or '-'"));
-            rm_log_warning(_("or they would over-ride previously set options: [%s]"), lint_type);
-            continue;
+        if(sign == 0) {
+            sign = +1;
         } else {
+            /* get rid of prefix. */
             lint_type += ABS(sign);
         }
 
@@ -550,13 +554,6 @@ static gboolean rm_cmd_parse_lint_types(
         if(option == NULL) {
             rm_log_warning(_("lint type '%s' not recognised"), lint_type);
             continue;
-        }
-
-        if (sign == 0) {
-            /* not a + or - option - reset all options to off */
-            for (int i = 0; all_opts->enable[i]; i++) {
-                *all_opts->enable[i] = false;
-            }
         }
 
         /* enable options as appropriate */
