@@ -105,7 +105,7 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint32_t key_len, void * value) {
+static int rm_tm_count_art_callback(void *data, const unsigned char *key, uint32_t key_len, void *value) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
@@ -161,8 +161,8 @@ static int rm_tm_count_art_callback(void * data, const unsigned char * key, uint
 }
 
 #ifdef _RM_TREEMERGE_DEBUG
-static int rm_tm_count_art_print_callback(_U void * data, _U const unsigned char * key, _U uint32_t key_len, _U void * value) {
-    const char * path = (const char *)key;
+static int rm_tm_count_art_print_callback(_U void *data, _U const unsigned char *key, _U uint32_t key_len, _U void *value) {
+    const char *path = (const char *)key;
     g_printerr("%4d", GPOINTER_TO_INT(value));
     for(int i = 0; path[i]; ++i) {
         if(path[i] == '/') {
@@ -273,8 +273,8 @@ static bool rm_tm_count_files(art_tree *count_tree, char **paths, RmSession *ses
 // DIRECTORY STRUCT HANDLING //
 ///////////////////////////////
 
-static RmDirectory * rm_directory_new(char *dirname) {
-    RmDirectory * self = g_new0(RmDirectory, 1);
+static RmDirectory *rm_directory_new(char *dirname) {
+    RmDirectory *self = g_new0(RmDirectory, 1);
 
     self->file_count = 0;
     self->dupe_count = 0;
@@ -361,7 +361,7 @@ static RmFile *rm_directory_as_file(RmDirectory *self) {
 }
 
 static int rm_directory_equal_iter(
-    art_tree *other_hash_trie, const unsigned char * key, uint32_t key_len, _U void * value
+    art_tree *other_hash_trie, const unsigned char *key, uint32_t key_len, _U void *value
 ) {
     return !GPOINTER_TO_UINT(art_search(other_hash_trie, (unsigned char *)key, key_len));
 }
@@ -429,8 +429,9 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     art_insert(&directory->hash_trie, file_digest, digest_bytes, file);
     g_slice_free1(digest_bytes, file_digest);
 
-    if(file->hardlinks.files) {
-        new_dupes = 1 + g_queue_get_length(file->hardlinks.files);
+    if(file->twins.hardlinks) {
+        new_dupes = 1 + g_queue_get_length(file->twins.hardlinks);
+        //TODO: revise this after shredder changes
     } else {
         new_dupes = 1;
     }
@@ -483,8 +484,8 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
 // TREE MERGER ALGORITHM //
 ///////////////////////////
 
-RmTreeMerger * rm_tm_new(RmSession *session) {
-    RmTreeMerger * self = g_slice_new(RmTreeMerger);
+RmTreeMerger *rm_tm_new(RmSession *session) {
+    RmTreeMerger *self = g_slice_new(RmTreeMerger);
     self->session = session;
     g_queue_init(&self->valid_dirs);
 
@@ -517,7 +518,7 @@ RmTreeMerger * rm_tm_new(RmSession *session) {
 }
 
 static int rm_tm_destroy_iter(
-    _U void * data, _U const unsigned char * key, _U uint32_t key_len,  void * value
+    _U void *data, _U const unsigned char *key, _U uint32_t key_len,  void *value
 ) {
     RmDirectory *directory = value;
 
@@ -686,7 +687,7 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     }
 
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
-        RmFile * file = iter->data;
+        RmFile *file = iter->data;
 
         GQueue *file_list = rm_hash_table_setdefault(
                                 self->file_groups, file->digest, (RmNewFunc)g_queue_new
@@ -701,7 +702,7 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
 }
 
 static int rm_tm_iter_unfinished_files(
-    _U RmTreeMerger * self, _U const unsigned char * key, _U uint32_t key_len, RmDirectory *directory
+    _U RmTreeMerger *self, _U const unsigned char *key, _U uint32_t key_len, RmDirectory *directory
 ) {
     rm_tm_forward_unresolved(self, directory);
     return 0;
@@ -721,7 +722,7 @@ static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {
 static void rm_tm_extract(RmTreeMerger *self) {
 
     /* Iterate over all directories per hash (which are same therefore) */
-    GList * result_table_values = g_hash_table_get_values(self->result_table);
+    GList *result_table_values = g_hash_table_get_values(self->result_table);
     result_table_values = g_list_sort(result_table_values, (GCompareFunc)rm_tm_cmp_directory_groups);
 
     for(GList *iter = result_table_values; iter; iter = iter->next) {

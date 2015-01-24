@@ -145,14 +145,20 @@ typedef struct RmFile {
      */
     bool has_ext_cksum : 1;
 
-    /* If this file is the head of a hardlink cluster, the following structure
+    /* If this file is the boss of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
     struct {
         bool has_prefd : 1;
         bool has_non_prefd : 1;
-        GQueue *files;
-    } hardlinks;
+        RmOff count;
+        GQueue *hardlinks;
+        GQueue *ext_cksum_twins;
+        GQueue *reflinks;
+    } twins;
+
+    /* pointer to boss twin (eg boss of hardlink cluster or ext_cksum cluster) */
+    struct RmFile *boss_twin;
 
     /* The index of the path this file belongs to. */
     RmOff path_index;

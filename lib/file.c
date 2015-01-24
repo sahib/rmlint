@@ -85,8 +85,16 @@ void rm_file_destroy(RmFile *file) {
     if (file->disk_offsets) {
         g_sequence_free(file->disk_offsets);
     }
-    if (file->hardlinks.files) {
-        g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
+    if (file->twins.hardlinks) {
+        g_queue_free_full(file->twins.hardlinks, (GDestroyNotify)rm_file_destroy);
+    }
+
+    if (file->twins.ext_cksum_twins) {
+        g_queue_free_full(file->twins.ext_cksum_twins, (GDestroyNotify)rm_file_destroy);
+    }
+
+    if (file->twins.reflinks) {
+        g_queue_free_full(file->twins.reflinks, (GDestroyNotify)rm_file_destroy);
     }
 
     g_free(file->path);
