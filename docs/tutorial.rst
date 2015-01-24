@@ -407,8 +407,8 @@ possible values), the probablilty of having a hash-collision is
 functions are not totally random, so the collision probability is slightly higher.
 
 If you're wary you might want to make a bit more paranoid than it's default. 
-By default the ``spooky`` hash algorithm is used, which we consider a good
-tradeoff of speed and accuracy. ``rmlint``'s paranoia level can be easily 
+By default the ``sha1`` hash algorithm is used, which we consider a good
+trade-off of speed and accuracy. ``rmlint``'s paranoia level can be easily 
 inc/decreased using the ``-p`` (``--paranoid``)/ ``-P`` (``--less-paranoid``)
 option (which might be given up to three times each).
 
