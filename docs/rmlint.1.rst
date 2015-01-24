@@ -98,7 +98,7 @@ General Options
     the existing formatters. See the **Formatters** section for details on the
     available keys.
 
-    If the value is omitted it is set to a truthy value.
+    If the value is omitted it is set to a true value.
 
 :``-a --algorithm=name`` (**default\:** *spooky*) :
 
@@ -108,7 +108,7 @@ General Options
     **spooky**, **city**, **murmur**, **md5**.  **sha1**, **sha256**,
     **sha512**.
 
-    If not explicitly stated in the name the hashfunctions use 128 bit.
+    If not explicitly stated in the name the hash functions use 128 bit.
     There are variations of the above functions:
 
     * **bastard:** 256bit, half seeded **city**, half **murmur**. 
@@ -124,13 +124,13 @@ General Options
 
 :``-g --progress`` / ``-G --no-progress`` (**default**):
 
-    Convinience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh``.
+    Convenience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh``.
     It is recommended to run ``-g`` with ``-VVV`` to prevent the printing
     of warnings in between.
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
-    Increase the paranoia of rmlints internals. Both options can be specified up
+    Increase the paranoia of rmlint's internals. Both options can be specified up
     to two times. They do not do any work themselves, but set some other
     options implicitly as a shortcut. 
 
@@ -384,7 +384,7 @@ FORMATTERS
 
   * *no_header*: Do not write a first line describing the column headers.
 
-* ``sh``: Format all found lint as shellscript. Sane defaults for most
+* ``sh``: Format all found lint as shell script. Sane defaults for most
   lint-types are set. This formatter is activated as default.
   
   Available options:
@@ -429,7 +429,7 @@ FORMATTERS
 
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will
-  make it read from there. This formatter is mostly intented for complex usecases
+  make it read from there. This formatter is mostly intented for complex use-cases
   where the lint needs special handling. Therefore the python script can be modified 
   to do things standard ``rmlint`` is not able to do easily.
 
@@ -445,7 +445,7 @@ FORMATTERS
 * ``progressbar``: Shows a progressbar. This is meant for use with **stdout** or
   **stderr**.
   
-  See also: ``-g`` (``--progress``) for a convinience shortcut option.
+  See also: ``-g`` (``--progress``) for a convenience shortcut option.
  
   Available options:
 
@@ -455,7 +455,7 @@ FORMATTERS
     supported by some terminals. 
   * *fancy:* Use a more fancy style for the progressbar.
 
-* ``pretty``: Shows all found items in realtimes nicely colored. This formatter
+* ``pretty``: Shows all found items in realtime nicely colored. This formatter
   is activated as default.
 
 * ``summary``: Shows counts of files and their respective size after the run.
