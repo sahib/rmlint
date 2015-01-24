@@ -35,7 +35,7 @@ typedef struct RmFmtHandlerSummary {
     RmFmtHandler parent;
 } RmFmtHandlerSummary;
 
-#define ARROW fprintf(out, "%s==>%s ", MAYBE_YELLOW(session), MAYBE_RESET(session));
+#define ARROW fprintf(out, "%s==>%s ", MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));
 
 static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {
     return strcmp((char *)key, *(char **)value);
@@ -53,7 +53,7 @@ static void rm_fmt_prog(
 
     if(session->total_files <= 1) {
         ARROW fprintf(out, "%s%d%s",
-                      MAYBE_RED(session), session->total_files, MAYBE_RESET(session)
+                      MAYBE_RED(out, session), session->total_files, MAYBE_RESET(out, session)
                      );
         fprintf(out, _(" file(s) after investigation, nothing to search through.\n"));
         return;
@@ -64,9 +64,9 @@ static void rm_fmt_prog(
     }
 
     char numbers[3][512];
-    snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(session), session->total_files, MAYBE_RESET(session));
-    snprintf(numbers[1], sizeof(numbers[1]), "%s%"LLU"%s", MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session));
-    snprintf(numbers[2], sizeof(numbers[2]), "%s%"LLU"%s", MAYBE_RED(session), session->dup_group_counter, MAYBE_RESET(session));
+    snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(out, session), session->total_files, MAYBE_RESET(out, session));
+    snprintf(numbers[1], sizeof(numbers[1]), "%s%"LLU"%s", MAYBE_RED(out, session), session->dup_counter, MAYBE_RESET(out, session));
+    snprintf(numbers[2], sizeof(numbers[2]), "%s%"LLU"%s", MAYBE_RED(out, session), session->dup_group_counter, MAYBE_RESET(out, session));
 
     ARROW fprintf(
         out,
@@ -83,14 +83,14 @@ static void rm_fmt_prog(
     ARROW fprintf(
         out,
         _("This equals %s%s%s of duplicates which could be removed.\n"),
-        MAYBE_RED(session), size_string_buf, MAYBE_RESET(session)
+        MAYBE_RED(out, session), size_string_buf, MAYBE_RESET(out, session)
     );
 
     if(session->other_lint_cnt > 0) {
         ARROW fprintf(
             out,
             "%s%"LLU"%s ",
-            MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session)
+            MAYBE_RED(out, session), session->other_lint_cnt, MAYBE_RESET(out, session)
         );
 
         fprintf(out, _("other suspicious item(s) found, which may vary in size.\n"));
@@ -123,8 +123,8 @@ static void rm_fmt_prog(
         fprintf(
             out,
             _("Wrote a %s%s%s file to %s%s%s.\n"),
-            MAYBE_BLUE(session), handler->name, MAYBE_RESET(session),
-            MAYBE_GREEN(session), path, MAYBE_RESET(session)
+            MAYBE_BLUE(out, session), handler->name, MAYBE_RESET(out, session),
+            MAYBE_GREEN(out, session), path, MAYBE_RESET(out, session)
         );
     }
 }

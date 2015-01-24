@@ -53,7 +53,7 @@ typedef struct RmFmtHandlerProgress {
     struct winsize terminal;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self, int max_len) {
+static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self, int max_len, FILE *out) {
     char num_buf[32] = {0};
     memset(num_buf, 0, sizeof(num_buf));
 
@@ -64,10 +64,10 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                              self->text_buf, sizeof(self->text_buf),
                              "%s (%s%d%s %s / %s%d%s + %s%d%s %s)",
                              _("Traversing"),
-                             MAYBE_GREEN(session), session->total_files, MAYBE_RESET(session),
+                             MAYBE_GREEN(out, session), session->total_files, MAYBE_RESET(out, session),
                              _("usable files"),
-                             MAYBE_RED(session), session->ignored_files, MAYBE_RESET(session),
-                             MAYBE_RED(session), session->ignored_folders, MAYBE_RESET(session),
+                             MAYBE_RED(out, session), session->ignored_files, MAYBE_RESET(out, session),
+                             MAYBE_RED(out, session), session->ignored_folders, MAYBE_RESET(out, session),
                              _("ignored files / folders")
                          );
         break;
@@ -78,9 +78,9 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                              "%s (%s %s%"LLU"%s / %s %s%"LLU"%s %s)",
                              _("Preprocessing"),
                              _("reduces files to"),
-                             MAYBE_GREEN(session), session->total_filtered_files, MAYBE_RESET(session),
+                             MAYBE_GREEN(out, session), session->total_filtered_files, MAYBE_RESET(out, session),
                              _("found"),
-                             MAYBE_RED(session), session->other_lint_cnt, MAYBE_RESET(session),
+                             MAYBE_RED(out, session), session->other_lint_cnt, MAYBE_RESET(out, session),
                              _("other lint")
                          );
         break;
@@ -94,13 +94,13 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
                              self->text_buf, sizeof(self->text_buf),
                              "%s (%s%"LLU"%s %s %s%"LLU"%s %s; %s%s%s %s %s%"LLU"%s %s)",
                              _("Matching files"),
-                             MAYBE_RED(session), session->dup_counter, MAYBE_RESET(session),
+                             MAYBE_RED(out, session), session->dup_counter, MAYBE_RESET(out, session),
                              _("dupes of"),
-                             MAYBE_YELLOW(session), session->dup_group_counter, MAYBE_RESET(session),
+                             MAYBE_YELLOW(out, session), session->dup_group_counter, MAYBE_RESET(out, session),
                              _("originals"),
-                             MAYBE_GREEN(session), num_buf, MAYBE_RESET(session),
+                             MAYBE_GREEN(out, session), num_buf, MAYBE_RESET(out, session),
                              _("to scan in "),
-                             MAYBE_GREEN(session), session->shred_files_remaining, MAYBE_RESET(session),
+                             MAYBE_GREEN(out, session), session->shred_files_remaining, MAYBE_RESET(out, session),
                              _("files")
                          );
         break;
@@ -224,10 +224,10 @@ static void rm_fmt_progressbar_print_glyph(
     FILE *out, RmSession *session, RmFmtHandlerProgress *self, RmProgressBarGlyph type, const char *color
 ) {
     fprintf(
-        out, "%s%s%s",
-        (session->cfg->with_color) ? color : "",
+        out, "%s%s%s", 
+        MAYBE_COLOR(out, session, color),
         rm_fmt_progressbar_get_glyph(self, type),
-        (session->cfg->with_color) ? RESET : ""
+        MAYBE_COLOR(out, session, RESET)
     );
 }
 
@@ -341,7 +341,7 @@ static void rm_fmt_prog(
 
     if(self->update_counter++ % self->update_interval == 0) {
         int text_width = self->terminal.ws_col * 0.7 - 1;
-        rm_fmt_progress_format_text(session, self, text_width);
+        rm_fmt_progress_format_text(session, self, text_width, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
             self->percent = 1.05;
@@ -350,7 +350,7 @@ static void rm_fmt_prog(
 
         rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
         rm_fmt_progress_print_text(self, text_width, out);
-        fprintf(out, "%s\r", MAYBE_RESET(session));
+        fprintf(out, "%s\r", MAYBE_RESET(out, session));
     }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {

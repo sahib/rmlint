@@ -1139,7 +1139,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     }
 
     /* Overwrite color if we do not print to a terminal directly */
-    cfg->with_color = isatty(fileno(stdout)) && isatty(fileno(stderr));
+    if(cfg->with_color) {
+        cfg->with_stdout_color = isatty(fileno(stdout));
+        cfg->with_stderr_color = isatty(fileno(stdout));
+        cfg->with_color = (cfg->with_stderr_color | cfg->with_stderr_color);
+    } else {
+        cfg->with_stdout_color = cfg->with_stderr_color = 0;
+    }
 
     if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(

@@ -55,22 +55,22 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] = {
     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "rm -rf"
 };
 
-static const char *rm_fmt_command_color(RmSession *session, RmFile *file) {
+static const char *rm_fmt_command_color(RmSession *session, RmFile *file, FILE *out) {
     switch(file->lint_type) {
     case RM_LINT_TYPE_NONSTRIPPED:
     case RM_LINT_TYPE_BADUID:
     case RM_LINT_TYPE_BADGID:
     case RM_LINT_TYPE_BADUGID:
-        return MAYBE_BLUE(session);
+        return MAYBE_BLUE(out, session);
     case RM_LINT_TYPE_DUPE_CANDIDATE:
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
         if(file->is_original) {
-            return MAYBE_GREEN(session);
+            return MAYBE_GREEN(out, session);
         } else {
-            return MAYBE_RED(session);
+            return MAYBE_RED(out, session);
         }
     default:
-        return MAYBE_RED(session);
+        return MAYBE_RED(out, session);
     }
 }
 
@@ -106,14 +106,14 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
     if(file->lint_type != self->last_lint_type) {
         fprintf(
             out, "\n%s#%s %s:\n",
-            MAYBE_YELLOW(session),
-            MAYBE_RESET(session),
+            MAYBE_YELLOW(out, session),
+            MAYBE_RESET(out, session),
             _(RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type])
         );
         self->last_lint_type = file->lint_type;
     }
 
-    fprintf(out, "    %s", rm_fmt_command_color(session, file));
+    fprintf(out, "    %s", rm_fmt_command_color(session, file, out));
 
     const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
     switch(file->lint_type) {
@@ -144,7 +144,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
         fprintf(out, "%s", format);
     }
 
-    fprintf(out, "%s %s\n", MAYBE_RESET(session), file->path);
+    fprintf(out, "%s %s\n", MAYBE_RESET(out, session), file->path);
 }
 
 static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {

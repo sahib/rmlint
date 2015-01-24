@@ -51,10 +51,10 @@ static void logging_callback(
 
     RmSession *session = user_data;
     if(session->cfg->verbosity >= log_level) {
-        if(!session->cfg->with_color) {
+        if(!session->cfg->with_stderr_color) {
             message = remove_color_escapes((char *)message);
         }
-        g_printerr("%s", message);
+        fputs(message, stderr);
     }
 }
 

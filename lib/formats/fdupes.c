@@ -68,9 +68,9 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
                 line, sizeof(line),
                 "%s%s%s%s%c",
                 (file->is_original) ? "\n" : "",
-                (file->is_original) ? MAYBE_GREEN(session) : "",
+                (file->is_original) ? MAYBE_GREEN(out, session) : "",
                 file->path,
-                (file->is_original) ? MAYBE_RESET(session) : "",
+                (file->is_original) ? MAYBE_RESET(out, session) : "",
                 (self->use_same_line) ? ' ' : '\n'
             );
         }
@@ -79,9 +79,9 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
         g_snprintf(
             line, sizeof(line),
             "%s%s%s%c",
-            MAYBE_BLUE(session),
+            MAYBE_BLUE(out, session),
             file->path,
-            MAYBE_RESET(session),
+            MAYBE_RESET(out, session),
             (self->use_same_line) ? ' ' : '\n'
         );
         break;

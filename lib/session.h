@@ -138,12 +138,20 @@ bool rm_session_was_aborted(RmSession *session);
 
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
+ *
+ * MAYBE_COLOR checks the file we output too.
+ * If it is stderr or stdout it consults the respective setting automatically.
  * */
-#define MAYBE_RED(s)    ((s->cfg->with_color) ? RED : "")
-#define MAYBE_YELLOW(s) ((s->cfg->with_color) ? YELLOW : "")
-#define MAYBE_RESET(s)  ((s->cfg->with_color) ? RESET : "")
-#define MAYBE_GREEN(s)  ((s->cfg->with_color) ? GREEN : "")
-#define MAYBE_BLUE(s)   ((s->cfg->with_color) ? BLUE : "")
+#define MAYBE_COLOR(o, s, col) \
+        (!s->cfg->with_color ? "" : \
+        (fileno(o) == 1 ? (s->cfg->with_stdout_color ? col : "") : \
+        (fileno(o) == 2 ? (s->cfg->with_stderr_color ? col : "") : "")))
+        
+#define MAYBE_RED(o, s)    MAYBE_COLOR(o, s, RED)
+#define MAYBE_YELLOW(o, s) MAYBE_COLOR(o, s, YELLOW)
+#define MAYBE_RESET(o, s)  MAYBE_COLOR(o, s, RESET)
+#define MAYBE_GREEN(o, s)  MAYBE_COLOR(o, s, GREEN)
+#define MAYBE_BLUE(o, s)   MAYBE_COLOR(o, s, BLUE)
 
 #endif /* end of include guard */
 

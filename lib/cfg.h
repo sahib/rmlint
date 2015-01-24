@@ -32,6 +32,9 @@
 /* Storage struct for all options settable in cmdline. */
 typedef struct RmCfg {
     gboolean with_color;
+    gboolean with_stdout_color;
+    gboolean with_stderr_color;
+
     gboolean crossdev;
     gboolean ignore_hidden;
     gboolean partial_hidden;
