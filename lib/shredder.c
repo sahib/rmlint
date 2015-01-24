@@ -1387,6 +1387,8 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
 
 
     rm_log_debug("Setting file counters for each device");
+    main->session->shred_files_remaining = 0;
+    main->session->shred_bytes_remaining = 0;
     g_thread_pool_free(
         rm_shred_create_devpool((GFunc)rm_shred_set_counters, main, main->session->cfg->threads),
         false,
