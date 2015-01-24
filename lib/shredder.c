@@ -644,7 +644,6 @@ static bool rm_shred_check_hash_mem_alloc(RmFile *file) {
 //    RmShredDevice UTILITIES    //
 ///////////////////////////////////
 
-
 static GThreadPool *rm_shred_create_devpool(GFunc func, RmMainTag *tag, int num_threads) {
 
     GThreadPool *self = rm_util_thread_pool_new(func, tag, num_threads);
@@ -655,7 +654,7 @@ static GThreadPool *rm_shred_create_devpool(GFunc func, RmMainTag *tag, int num_
     g_hash_table_iter_init(&iter, tag->session->tables->dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
-        rm_log_debug(GREEN"Pushing device %s to threadpool\n", device->disk_name);
+        rm_log_debug(GREEN"Pushing device %s to threadpool\n"RESET, device->disk_name);
         rm_util_thread_pool_push(self, device);
     }
 
@@ -664,8 +663,9 @@ static GThreadPool *rm_shred_create_devpool(GFunc func, RmMainTag *tag, int num_
 
 static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 bytes) {
 
-    g_mutex_lock(&(device->lock));
-    {
+    rm_log_debug(RED"Adding files %d\n"RESET, files);
+
+    g_mutex_lock(&(device->lock)); {
         device->remaining_files += files;
         device->remaining_bytes += bytes;
     }
@@ -1339,14 +1339,14 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
         rm_json_cache_read(session->tables->ext_cksums, cache_path);
     }
 
-    rm_log_debug("Moving files into size groups...");
+    rm_log_debug("Moving files into size groups...\n");
     /* move files from node tables into initial RmShredGroups */
     g_hash_table_foreach_remove(session->tables->node_table,
                                 (GHRFunc)rm_shred_file_preprocess,
                                 main
                                );
 
-    rm_log_debug("Discarding unique sizes (and groups which fail -k or -m criteria)");
+    rm_log_debug("Discarding unique sizes (and groups which fail -k or -m criteria)\n");
     removed = g_hash_table_foreach_remove(session->tables->initial_shred_groups,
                                           (GHRFunc)rm_shred_group_kick_dormant,
                                           main);
@@ -1430,7 +1430,6 @@ static int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) 
         return comparasion;
     }
 }
-
 
 void rm_shred_group_unbundle(RmSession *session, GQueue *group, GQueue *subgroup, gboolean ignore) {
     if(subgroup) {
@@ -1883,8 +1882,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     g_async_queue_push(main->device_return, device);
 }
 
-
-
 void rm_shred_run(RmSession *session) {
     g_assert(session);
     g_assert(session->tables);
@@ -1921,8 +1918,7 @@ void rm_shred_run(RmSession *session) {
     rm_shred_preprocess_input(&tag);
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
-    g_mutex_lock(&tag.hash_mem_mtx);
-    {
+    g_mutex_lock(&tag.hash_mem_mtx); {
         tag.hash_mem_alloc = session->cfg->paranoid_mem;  /* NOTE: needs to be after preprocess */
         tag.active_files = 0;				 	          /* NOTE: needs to be after preprocess */
     }
@@ -1943,8 +1939,7 @@ void rm_shred_run(RmSession *session) {
     while(devices_left > 0 || g_async_queue_length(tag.device_return) > 0) {
         RmShredDevice *device = g_async_queue_pop(tag.device_return);
         g_mutex_lock(&device->lock);
-        g_mutex_lock(&tag.hash_mem_mtx);
-        {
+        g_mutex_lock(&tag.hash_mem_mtx); {
             /* probably unnecessary because we are only reading */
             rm_log_debug(
                 BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active files %d and avail mem %"LLU"\n"RESET,
