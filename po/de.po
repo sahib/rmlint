@@ -78,7 +78,7 @@ msgstr "Kein valider JSON Cache. (u.a. weil kein [] vorhanden)"
 #: lib/utilities.c:665
 #, c-format
 msgid "`%s` mount detected at %s (#%u); Ignoring all files in it."
-msgstr ""
+msgstr "`%s` Einhängepunkt gefunden (zeigt auf %s, #%u). Ignoriere alle Dateien darin."
 
 #: lib/cmdline.c:74
 #, c-format
@@ -191,7 +191,7 @@ msgstr "-n %lu ist neuer als jetzt (%lu) - ist das korrekt?"
 #: lib/cmdline.c:713
 #, fuzzy
 msgid "Only up to -pp or down to -PP flags allowed"
-msgstr "Maximal drei -p flags oder ein -P Flag erlaubt"
+msgstr "Maximal zwei -p flags oder zwei -P Flag erlaubt"
 
 #: lib/cmdline.c:736
 #, c-format
@@ -577,9 +577,3 @@ msgstr "'%s': fts_read schlug fehl bei Pfad %s"
 #: lib/config.h:107
 msgid "INFO"
 msgstr "INFO"
-
-#~ msgid "lint types after first should be prefixed with '+' or '-'"
-#~ msgstr "Alle Typen nach dem Ersten sollten mit '+' oder '-' beginnen"
-
-#~ msgid "or they would over-ride previously set options: [%s]"
-#~ msgstr "andernfalls würden sie vorher gesetzte Optionen überschreiben: [%s]"
