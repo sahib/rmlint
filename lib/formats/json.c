@@ -31,13 +31,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#if  HAVE_JSON_GLIB
-#  include <json-glib/json-glib.h>
-#endif
-
 typedef struct RmFmtHandlerJSON {
     /* must be first */
     RmFmtHandler parent;
+    gint64 elems_written;
 } RmFmtHandlerJSON;
 
 //////////////////////////////////////////
@@ -149,6 +146,8 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_key(out, "cwd", session->cfg->iwd);
             rm_fmt_json_sep(out);
             rm_fmt_json_key(out, "args", session->cfg->joined_argv);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key(out, "checksum_type", rm_digest_type_to_string(session->cfg->checksum_type));
             if(session->hash_seed1 && session->hash_seed2) {
                 rm_fmt_json_sep(out);
                 rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
@@ -191,6 +190,8 @@ static void rm_fmt_elem(
     _U RmFmtHandler *parent,
     FILE *out, RmFile *file
 ) {
+    RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
+
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
@@ -199,6 +200,8 @@ static void rm_fmt_elem(
     /* Make it look like a json element */
     rm_fmt_json_open(out);
     {
+        rm_fmt_json_key_int(out, "id", self->elems_written++);
+        rm_fmt_json_sep(out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(out);
 
@@ -234,7 +237,8 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .prog = NULL,
         .foot = rm_fmt_foot,
         .valid_keys = {"no_header", "no_footer", NULL},
-    }
+    },
+    .elems_written = 0
 };
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *) &JSON_HANDLER_IMPL;
