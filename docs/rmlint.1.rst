@@ -264,19 +264,21 @@ Traversal Options
 
 :``-b --match-basename`` / ``-B --no-match-basename`` (**default**):
 
-    Only consider those files as dupes that have the same basename.
-    See also ``man 1 basename``.
+    Only consider those files as dupes that have the same basename. See also
+    ``man 1 basename``. The comparison of the basenames is case-insensitive.
 
 :``-e --match-with-extension`` / ``-E --no-match-with-extension`` (**default**):
 
-    Only consider those files as dupes that have the same file extension.
-    For example two photos would only match if they are a ``.png``.
+    Only consider those files as dupes that have the same file extension. For
+    example two photos would only match if they are a ``.png``. The extension is
+    compared case insensitive, so ``.PNG`` is the same as ``.png``.
 
 :``-i --match-without-extension`` / ``-I --no-match-without-extension`` (**default**):
 
     Only consider those files as dupes that have the same basename minus the file
     extension. For example: ``banana.png`` and ``banana.jpeg`` would be considered,
-    while ``apple.png`` and ``peach.png`` won't.
+    while ``apple.png`` and ``peach.png`` won't. The comparison is also
+    case-insensitive.
 
 :``-n --newer-than-stamp=<timestamp_filename>`` / ``-N --newer-than=<iso8601_timestamp_or_unix_timestamp>``:
 
@@ -323,6 +325,7 @@ Original Detection Options
     - **a**: keep first alphabetically   **A**: keep last alphabetically
     - **p**: keep first named path       **P**: keep last named path
 
+    Alphabetical sort will only use the basename of the file and ignore it's case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
 

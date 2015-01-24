@@ -74,7 +74,7 @@ static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
             && (file_a->file_size == file_b->file_size)
             && (0
                 || (!cfg->match_basename)
-                || (g_strcmp0(file_a->basename, file_b->basename) == 0)
+                || (g_ascii_strcasecmp(file_a->basename, file_b->basename) == 0)
                )
             && (0
                 || (!cfg->match_with_extension)
