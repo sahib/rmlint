@@ -65,4 +65,6 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->use_absolute_end_offset   = false;
     cfg->skip_start_offset         = 0;
     cfg->skip_end_offset           = 0;
+
+    cfg->check_for_reflink_dupes   = true; //TODO: add setting for this
 }
