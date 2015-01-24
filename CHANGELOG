@@ -25,6 +25,7 @@ Features:
 
 Misc:
 
+    - Defaut digest is now sha1 instead of spooky.
     - updated .pot template with help strings.
     - updated german translation accordingly.
     - -T supports arguments like df,dd properly now.
@@ -35,6 +36,7 @@ Misc:
 Here are the gory details from `git log --oneline --decorate`.
 Only the most important commits are show to keep the list small:
 
+f567e26 cmdline: use sha1 as default digest by default; -P uses bastard, -PP spooky.
 ac05df9 cmdline: Allow the omission of +/- for -T of 2nd arg
 3fd2e92 gettext: updated german translation
 4401f6d traverse: do not print fts_read warning when interrupted.

@@ -414,9 +414,8 @@ option (which might be given up to three times each).
 
 Here's what they do in detail:
 
-* ``-p`` is equivalent to ``--algorithm=bastard``
-* ``-pp`` is equivalent to ``--algorithm=sha512``
-* ``-ppp`` is equivalent to ``--algorithm=paranoid``
+* ``-p`` is equivalent to ``--algorithm=sha512``
+* ``-pp`` is equivalent to ``--algorithm=paranoid``
 
 As you see, it just enables a certain hash algorithm. ``--algorithm`` changes
 the hash algorithm to someting more secure. ``bastard`` is a 256bit hash that

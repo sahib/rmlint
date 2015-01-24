@@ -1058,7 +1058,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     const GOptionEntry unusual_option_entries[] = {
         {"clamp-low"        ,  'q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_low)             ,  "Limit lower reading barrier"                ,  "P" },
         {"clamp-top"        ,  'Q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_top)             ,  "Limit upper reading barrier"                ,  "P" },
-        {"max-paranoid-mem" ,  'u' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid_mem)          ,  "Specify max. memory to use for -ppp"        ,  "S" },
+        {"max-paranoid-mem" ,  'u' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid_mem)          ,  "Specify max. memory to use for -pp"         ,  "S" },
         {"threads"          ,  't' ,  HIDDEN ,  G_OPTION_ARG_INT64    ,  &cfg->threads               ,  "Specify max. number of threads"             ,  "N" },
         {"write-unfinished" ,  'U' ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_unfinished      ,  "Output unfinished checksums"                ,  NULL},
         {"xattr-write"      ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr  ,  "Cache checksum in file attributes"          ,  NULL},

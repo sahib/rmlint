@@ -131,23 +131,19 @@ General Options
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase the paranoia of rmlints internals. Both options can be specified up
-    to three times. They do not do any work themselves, but set some other
+    to two times. They do not do any work themselves, but set some other
     options implicitly as a shortcut. 
 
-    * **-p** is equivalent to **--algorithm=bastard**
-    * **-pp** is equivalent to **--algorithm=sha512**
-    * **-ppp** is equivalent to **--algorithm=paranoid**
+    * **-p** is equivalent to **--algorithm=sha512**
+    * **-pp** is equivalent to **--algorithm=paranoid**
 
     The last one is not a hash function in the traditional meaning, but performs
     a byte-by-byte comparison of each file. See also **--max-paranoid-ram**.
 
     For the adventurous, it is also possible to decrease the default paranoia:
 
-    * **-P** is equivalent to **--algorithm spooky64**
-    * **-PP** is equivalent to **--algorithm spooky32**
-    * **-PPP** is equivalent to **--algorithm debian_random**
-
-    *This is really not recommended though.*
+    * **-P** is equivalent to **--algorithm bastard**
+    * **-PP** is equivalent to **--algorithm spooky**
 
 :``-D --merge-directories`` (**[experimental] default\:** *disabled*):
 
