@@ -30,6 +30,18 @@ Here is a list of features where you probably have no chance:
 
 - Port it to Windows.
 - Find similar files like ``ssdeep`` does.
-- Make a graphical user interface (totally okay as separate project, though).
 
 .. _`issue tracker`: https://github.com/sahib/rmlint/issues
+
+I forgot to add some options before running on a large dataset. Do I need to re-run it?
+---------------------------------------------------------------------------------------
+
+Probably. It's not as bad as it sounds though. Your filesystem is probably very
+good at caching. 
+
+Still there are some cases where re-running might take a long time, like running
+on network mounts. By default, ``rmlint`` writes a ``rmlint.json`` file along
+the ``rmlint.sh``. This can be used to speed up the next run by passing it to
+``--cache``. It should be noted that using the cache file for later runs is
+discouraged since false positives will get likely if the data is changed in
+between. Therefore there will never be an "auto-pickup" of the cache file.
