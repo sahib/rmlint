@@ -17,10 +17,10 @@ Bugfixes:
 
 Features:
 
-    - --partial-hidden does 
+    - --partial-hidden does only see hidden files in duplicate directories.
     - --cache/--write-unfinished can be used to speedup re-runs drastically.
     - Checksums can be stored in the xattr of files with --xattr-read/write/clear.
-    - New progressbar output inspired by journalctl --verfiy
+    - New progressbar output inspired by journalctl --verfiy.
     - Support replacing files by a reflink if the filesystem supports it.
 
 Misc:
