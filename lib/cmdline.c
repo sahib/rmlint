@@ -60,7 +60,7 @@ static void rm_cmd_show_version(void) {
         bool enabled : 1;
         const char * name;
     } features[] = {
-        {.name="mounts",      .enabled=HAVE_BLKID & (HAVE_GETMNTENT | HAVE_GETMNTINFO)},
+        {.name="mounts",      .enabled=HAVE_BLKID & HAVE_GIO_UNIX},
         {.name="nonstripped", .enabled=HAVE_LIBELF},
         {.name="fiemap",      .enabled=HAVE_FIEMAP},
         {.name="sha512",      .enabled=HAVE_SHA512},
@@ -510,6 +510,11 @@ static gboolean rm_cmd_parse_lint_types(
 
     RmLintTypeOption *all_opts = &option_table[0];
 
+    /* initialize all options to disabled by default */
+    for (int i = 0; all_opts->enable[i]; i++) {
+        *all_opts->enable[i] = false;
+    }
+
     /* split the comma-separates list of options */
     char lint_sep[2] = {0, 0};
     lint_sep[0] = rm_cmd_find_lint_types_sep(lint_string);
@@ -530,11 +535,10 @@ static gboolean rm_cmd_parse_lint_types(
             sign = -1;
         }
 
-        if(index > 0 && sign == 0) {
-            rm_log_warning(_("lint types after first should be prefixed with '+' or '-'"));
-            rm_log_warning(_("or they would over-ride previously set options: [%s]"), lint_type);
-            continue;
+        if(sign == 0) {
+            sign = +1;
         } else {
+            /* get rid of prefix. */
             lint_type += ABS(sign);
         }
 
@@ -550,13 +554,6 @@ static gboolean rm_cmd_parse_lint_types(
         if(option == NULL) {
             rm_log_warning(_("lint type '%s' not recognised"), lint_type);
             continue;
-        }
-
-        if (sign == 0) {
-            /* not a + or - option - reset all options to off */
-            for (int i = 0; all_opts->enable[i]; i++) {
-                *all_opts->enable[i] = false;
-            }
         }
 
         /* enable options as appropriate */
@@ -694,29 +691,26 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter, GErro
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
-        cfg->checksum_type = RM_DIGEST_SPOOKY32;
+        cfg->checksum_type = RM_DIGEST_SPOOKY;
         break;
     case -1:
-        cfg->checksum_type = RM_DIGEST_SPOOKY64;
+        cfg->checksum_type = RM_DIGEST_BASTARD;
         break;
     case 0:
         /* leave users choice of -a (default) */
         break;
     case 1:
-        cfg->checksum_type = RM_DIGEST_BASTARD;
-        break;
-    case 2:
 #if HAVE_SHA512
         cfg->checksum_type = RM_DIGEST_SHA512;
 #else
         cfg->checksum_type = RM_DIGEST_SHA256;
 #endif
         break;
-    case 3:
+    case 2:
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Only up to -ppp or down to -P flags allowed"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Only up to -pp or down to -PP flags allowed"));
         break;
     }
 }
@@ -819,14 +813,17 @@ static gboolean rm_cmd_parse_progress(
     return true;
 }
 
+static void rm_cmd_set_default_outputs(RmSession *session) {
+    rm_fmt_add(session->formats, "pretty", "stdout");
+    rm_fmt_add(session->formats, "summary", "stdout");
+    rm_fmt_add(session->formats, "sh", "rmlint.sh");
+}
+
 static gboolean rm_cmd_parse_no_progress(
     _U const char *option_name, _U const gchar *value, RmSession *session, _U GError **error
 ) {
     rm_fmt_clear(session->formats);
-    rm_fmt_add(session->formats, "pretty", "stdout");
-    rm_fmt_add(session->formats, "summary", "stdout");
-    rm_fmt_add(session->formats, "sh", "rmlint.sh");
-
+    rm_cmd_set_default_outputs(session);
     rm_cmd_set_verbosity_from_cnt(session->cfg, session->verbosity_count);
     return true;
 }
@@ -969,10 +966,7 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Specifiyng both -o and -O is not allowed"));
         return false;
     } else if(session->output_cnt[0] < 0 && session->output_cnt[1] < 0 && !rm_fmt_len(session->formats)) {
-        /* Set default outputs */
-        rm_fmt_add(session->formats, "pretty", "stdout");
-        rm_fmt_add(session->formats, "summary", "stdout");
-        rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        rm_cmd_set_default_outputs(session);
     }
 
     return true;
@@ -1064,7 +1058,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     const GOptionEntry unusual_option_entries[] = {
         {"clamp-low"        ,  'q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_low)             ,  "Limit lower reading barrier"                ,  "P" },
         {"clamp-top"        ,  'Q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_top)             ,  "Limit upper reading barrier"                ,  "P" },
-        {"max-paranoid-mem" ,  'u' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid_mem)          ,  "Specify max. memory to use for -ppp"        ,  "S" },
+        {"max-paranoid-mem" ,  'u' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid_mem)          ,  "Specify max. memory to use for -pp"         ,  "S" },
         {"threads"          ,  't' ,  HIDDEN ,  G_OPTION_ARG_INT64    ,  &cfg->threads               ,  "Specify max. number of threads"             ,  "N" },
         {"write-unfinished" ,  'U' ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_unfinished      ,  "Output unfinished checksums"                ,  NULL},
         {"xattr-write"      ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr  ,  "Cache checksum in file attributes"          ,  NULL},

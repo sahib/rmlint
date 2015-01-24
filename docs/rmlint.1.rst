@@ -98,9 +98,9 @@ General Options
     the existing formatters. See the **Formatters** section for details on the
     available keys.
 
-    If the value is omitted it is set to a truthy value.
+    If the value is omitted it is set to a true value.
 
-:``-a --algorithm=name`` (**default\:** *spooky*) :
+:``-a --algorithm=name`` (**default\:** *sha1*) :
 
     Choose the hash algorithm to use for finding duplicate files.
     The following well-known algorithms are available:
@@ -108,7 +108,7 @@ General Options
     **spooky**, **city**, **murmur**, **md5**.  **sha1**, **sha256**,
     **sha512**.
 
-    If not explicitly stated in the name the hashfunctions use 128 bit.
+    If not explicitly stated in the name the hash functions use 128 bit.
     There are variations of the above functions:
 
     * **bastard:** 256bit, half seeded **city**, half **murmur**. 
@@ -124,30 +124,26 @@ General Options
 
 :``-g --progress`` / ``-G --no-progress`` (**default**):
 
-    Convinience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh``.
+    Convenience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh``.
     It is recommended to run ``-g`` with ``-VVV`` to prevent the printing
     of warnings in between.
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
-    Increase the paranoia of rmlints internals. Both options can be specified up
-    to three times. They do not do any work themselves, but set some other
+    Increase the paranoia of rmlint's internals. Both options can be specified up
+    to two times. They do not do any work themselves, but set some other
     options implicitly as a shortcut. 
 
-    * **-p** is equivalent to **--algorithm=bastard**
-    * **-pp** is equivalent to **--algorithm=sha512**
-    * **-ppp** is equivalent to **--algorithm=paranoid**
+    * **-p** is equivalent to **--algorithm=sha512**
+    * **-pp** is equivalent to **--algorithm=paranoid**
 
     The last one is not a hash function in the traditional meaning, but performs
     a byte-by-byte comparison of each file. See also **--max-paranoid-ram**.
 
     For the adventurous, it is also possible to decrease the default paranoia:
 
-    * **-P** is equivalent to **--algorithm spooky64**
-    * **-PP** is equivalent to **--algorithm spooky32**
-    * **-PPP** is equivalent to **--algorithm debian_random**
-
-    *This is really not recommended though.*
+    * **-P** is equivalent to **--algorithm bastard**
+    * **-PP** is equivalent to **--algorithm spooky**
 
 :``-D --merge-directories`` (**[experimental] default\:** *disabled*):
 
@@ -268,19 +264,21 @@ Traversal Options
 
 :``-b --match-basename`` / ``-B --no-match-basename`` (**default**):
 
-    Only consider those files as dupes that have the same basename.
-    See also ``man 1 basename``.
+    Only consider those files as dupes that have the same basename. See also
+    ``man 1 basename``. The comparison of the basenames is case-insensitive.
 
 :``-e --match-with-extension`` / ``-E --no-match-with-extension`` (**default**):
 
-    Only consider those files as dupes that have the same file extension.
-    For example two photos would only match if they are a ``.png``.
+    Only consider those files as dupes that have the same file extension. For
+    example two photos would only match if they are a ``.png``. The extension is
+    compared case insensitive, so ``.PNG`` is the same as ``.png``.
 
 :``-i --match-without-extension`` / ``-I --no-match-without-extension`` (**default**):
 
     Only consider those files as dupes that have the same basename minus the file
     extension. For example: ``banana.png`` and ``banana.jpeg`` would be considered,
-    while ``apple.png`` and ``peach.png`` won't.
+    while ``apple.png`` and ``peach.png`` won't. The comparison is also
+    case-insensitive.
 
 :``-n --newer-than-stamp=<timestamp_filename>`` / ``-N --newer-than=<iso8601_timestamp_or_unix_timestamp>``:
 
@@ -327,6 +325,7 @@ Original Detection Options
     - **a**: keep first alphabetically   **A**: keep last alphabetically
     - **p**: keep first named path       **P**: keep last named path
 
+    Alphabetical sort will only use the basename of the file and ignore it's case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
 
@@ -388,7 +387,7 @@ FORMATTERS
 
   * *no_header*: Do not write a first line describing the column headers.
 
-* ``sh``: Format all found lint as shellscript. Sane defaults for most
+* ``sh``: Format all found lint as shell script. Sane defaults for most
   lint-types are set. This formatter is activated as default.
   
   Available options:
@@ -433,7 +432,7 @@ FORMATTERS
 
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will
-  make it read from there. This formatter is mostly intented for complex usecases
+  make it read from there. This formatter is mostly intented for complex use-cases
   where the lint needs special handling. Therefore the python script can be modified 
   to do things standard ``rmlint`` is not able to do easily.
 
@@ -449,7 +448,7 @@ FORMATTERS
 * ``progressbar``: Shows a progressbar. This is meant for use with **stdout** or
   **stderr**.
   
-  See also: ``-g`` (``--progress``) for a convinience shortcut option.
+  See also: ``-g`` (``--progress``) for a convenience shortcut option.
  
   Available options:
 
@@ -459,7 +458,7 @@ FORMATTERS
     supported by some terminals. 
   * *fancy:* Use a more fancy style for the progressbar.
 
-* ``pretty``: Shows all found items in realtimes nicely colored. This formatter
+* ``pretty``: Shows all found items in realtime nicely colored. This formatter
   is activated as default.
 
 * ``summary``: Shows counts of files and their respective size after the run.

@@ -31,10 +31,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#if  HAVE_JSON_GLIB
-#  include <json-glib/json-glib.h>
-#endif
-
 typedef struct RmFmtHandlerJSON {
     /* must be first */
     RmFmtHandler parent;
@@ -149,6 +145,8 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_key(out, "cwd", session->cfg->iwd);
             rm_fmt_json_sep(out);
             rm_fmt_json_key(out, "args", session->cfg->joined_argv);
+            rm_fmt_json_sep(out);
+            rm_fmt_json_key(out, "checksum_type", rm_digest_type_to_string(session->cfg->checksum_type));
             if(session->hash_seed1 && session->hash_seed2) {
                 rm_fmt_json_sep(out);
                 rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
@@ -199,6 +197,8 @@ static void rm_fmt_elem(
     /* Make it look like a json element */
     rm_fmt_json_open(out);
     {
+        rm_fmt_json_key_int(out, "id", GPOINTER_TO_UINT(file));
+        rm_fmt_json_sep(out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(out);
 
@@ -218,6 +218,17 @@ static void rm_fmt_elem(
             rm_fmt_json_sep(out);
             rm_fmt_json_key_bool(out, "is_original", file->is_original);
             rm_fmt_json_sep(out);
+
+            if(session->cfg->find_hardlinked_dupes) {
+                RmFile *hardlink_head = g_hash_table_lookup(
+                        session->tables->node_table, file
+                );
+
+                if(hardlink_head != file) {
+                    rm_fmt_json_key_int(out, "hardlink_of", GPOINTER_TO_UINT(hardlink_head));
+                    rm_fmt_json_sep(out);
+                }
+            }
         }
         rm_fmt_json_key_int(out, "mtime", file->mtime);
     }

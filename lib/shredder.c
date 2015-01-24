@@ -499,8 +499,7 @@ static RmBufferPool *rm_buffer_pool_init(gsize size) {
 }
 
 static void rm_buffer_pool_destroy(RmBufferPool *pool) {
-    g_mutex_lock(&pool->lock);
-    {
+    g_mutex_lock(&pool->lock); {
         while(pool->stack != NULL) {
             g_slice_free1(pool->size, g_trash_stack_pop(&pool->stack));
         }
@@ -512,8 +511,7 @@ static void rm_buffer_pool_destroy(RmBufferPool *pool) {
 
 static void *rm_buffer_pool_get(RmBufferPool *pool) {
     void *buffer = NULL;
-    g_mutex_lock(&pool->lock);
-    {
+    g_mutex_lock(&pool->lock); {
         if (!pool->stack) {
             buffer = g_slice_alloc(pool->size);
         } else {
@@ -526,8 +524,7 @@ static void *rm_buffer_pool_get(RmBufferPool *pool) {
 }
 
 static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
-    g_mutex_lock(&pool->lock);
-    {
+    g_mutex_lock(&pool->lock); {
         g_trash_stack_push(&pool->stack, buf);
     }
     g_mutex_unlock(&pool->lock);
@@ -567,18 +564,18 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
             group->next_offset = MIN(group->next_offset, group->hash_offset + rm_digest_paranoia_bytes() );
         }
     }
-    //------//
+
     /* read to end of current file fragment, or to group->next_offset, whichever comes first */
     RmOff bytes_to_next_fragment = 0;
+
     /* NOTE: need lock because queue sorting also accesses file->disk_offsets, which is not threadsafe */
     g_assert(file->device);
-    g_mutex_lock(&file->device->lock);
-    {
+    g_mutex_lock(&file->device->lock); {
         bytes_to_next_fragment = rm_offset_bytes_to_next_fragment(file->disk_offsets, file->seek_offset);
     }
     g_mutex_unlock(&file->device->lock);
 
-    if (bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
+    if(bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
         file->status = RM_FILE_STATE_FRAGMENT;
         result = bytes_to_next_fragment;
     } else {
@@ -595,10 +592,9 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  */
 
 /* take or return mem allocation from main */
-static gboolean rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfiles) {
-    gboolean result = true;
-    g_mutex_lock(&main->hash_mem_mtx);
-    {
+static bool rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfiles) {
+    bool result = true;
+    g_mutex_lock(&main->hash_mem_mtx); {
         if (mem_amount <= 0 || mem_amount <= main->hash_mem_alloc || main->active_files <= 0) {
             main->hash_mem_alloc -= mem_amount;
             main->active_files += numfiles;
@@ -610,6 +606,7 @@ static gboolean rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 nu
         rm_log_debug("mem avail %"LLU", active files %d\n"RESET, main->hash_mem_alloc, main->active_files);
     }
     g_mutex_unlock(&main->hash_mem_mtx);
+
     return result;
 }
 
@@ -617,7 +614,7 @@ static gboolean rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 nu
  * active at any one time
  * NOTE: group_lock must be held before calling rm_shred_check_hash_mem_alloc
  */
-static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
+static bool rm_shred_check_hash_mem_alloc(RmFile *file) {
     RmShredGroup *group = file->shred_group;
     if (0
             || group->hash_offset > 0
@@ -627,7 +624,7 @@ static gboolean rm_shred_check_hash_mem_alloc(RmFile *file) {
         return true;
     }
 
-    gboolean result;
+    bool result;
     gint64 mem_required = group->num_files * file->file_size;
 
     rm_log_debug("Asking mem allocation for %s...", file->path);
@@ -765,11 +762,13 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
 
         /* update paranoid memory allocator */
         if (file->shred_group->digest_type == RM_DIGEST_PARANOID) {
+            g_assert(file);
+
             RmMainTag *tag = file->shred_group->main;
             g_assert(tag);
-            g_assert(file);
+
             rm_log_debug("releasing mem %"LLU" bytes from %s; ", file->file_size - file->hash_offset, file->path);
-            (void)rm_shred_mem_take(tag, -(gint64)(file->file_size - file->hash_offset), -1);
+            rm_shred_mem_take(tag, -(gint64)(file->file_size - file->hash_offset), -1);
         }
     }
 
@@ -862,7 +861,7 @@ static void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
         if (self->digest->type == RM_DIGEST_PARANOID) {
             rm_shred_mem_take(self->main, -(gint64)self->digest->bytes, 0);
         }
-        // g_slice_free1(self->digest->bytes, self->checksum);
+
         if(needs_free) {
             rm_digest_free(self->digest);
         }
@@ -1078,7 +1077,6 @@ static gboolean rm_shred_sift(RmFile *file) {
  * 3. Use g_hash_table_foreach to do the FIEMAP lookup for all remaining
  * 	  files via rm_shred_device_preprocess.
  * */
-
 static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *main) {
     /* initial population of RmShredDevice's and first level RmShredGroup's */
     RmSession *session = main->session;
@@ -1150,7 +1148,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     }
 }
 
-static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
+static bool rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
     g_assert(group);
     if (group->status == RM_SHRED_GROUP_DORMANT) {
         rm_shred_group_free(group);
@@ -1586,8 +1584,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     g_assert(device);
     g_assert(device->hash_pool); /* created when device created */
 
-    g_mutex_lock(&device->lock);
-    {
+    g_mutex_lock(&device->lock); {
         rm_log_debug(BLUE"Started rm_shred_devlist_factory for disk %s (%u:%u) with %"LLU" files in queue\n"RESET,
                      device->disk_name,
                      major(device->disk),
@@ -1622,8 +1619,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
 
         /* initialise hash (or recover progressive hash so far) */
         g_assert(file->shred_group);
-        g_mutex_lock(&main->group_lock);
-        {
+        g_mutex_lock(&main->group_lock); {
             if (file->digest == NULL) {
                 g_assert(file->shred_group);
 
@@ -1658,13 +1654,12 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
         }
 
         /* remove file from queue and move to next*/
-        g_mutex_lock(&device->lock);
-        {
+        g_mutex_lock(&device->lock); {
             GList *tmp = iter;
             iter = iter->next;
             g_assert(tmp->data == file);
             if (can_process) {
-                /*file has been processed */
+                /* file has been processed */
                 g_queue_delete_link(device->file_queue, tmp);
             }
         }
@@ -1731,10 +1726,9 @@ void rm_shred_run(RmSession *session) {
     rm_shred_preprocess_input(&tag);
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
-    g_mutex_lock(&tag.hash_mem_mtx);
-    {
+    g_mutex_lock(&tag.hash_mem_mtx); {
         tag.hash_mem_alloc = session->cfg->paranoid_mem;  /* NOTE: needs to be after preprocess */
-        tag.active_files = 0;				 	               /* NOTE: needs to be after preprocess */
+        tag.active_files = 0;				 	          /* NOTE: needs to be after preprocess */
     }
     g_mutex_unlock(&tag.hash_mem_mtx);
 
@@ -1753,8 +1747,7 @@ void rm_shred_run(RmSession *session) {
     while(devices_left > 0 || g_async_queue_length(tag.device_return) > 0) {
         RmShredDevice *device = g_async_queue_pop(tag.device_return);
         g_mutex_lock(&device->lock);
-        g_mutex_lock(&tag.hash_mem_mtx); /* probably unnecessary because we are only reading */
-        {
+        g_mutex_lock(&tag.hash_mem_mtx); { /* probably unnecessary because we are only reading */
             rm_log_debug(
                 BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active files %d and avail mem %"LLU"\n"RESET,
                 device->disk_name,

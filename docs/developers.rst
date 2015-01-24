@@ -258,20 +258,3 @@ Insane ones
   bytewise comparison in O(N) time, even if there are large clusters of same-size
   files.  The downside is that it is somewhat memory-intensive (the total memory used
   is set to 256 MB by default but can be configured by ``--max-paranoid-ram`` option.
-
-Future development ideas (and who is working on them)
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-- GUI front-end (unclaimed)
-  A user-friendly front-end to select command-line options instead of having to read
-  the manpages.  Then launches rmlint in terminal with appropriate options.
-- GUI wrapper (unclaimed)
-  As above but add a GUI back-end to review results and decide actions for found lint.
-- Support reflinks (SeeSpotRun)
-  Implement a cp --reflink=always option for shell script outputs.
-- Hashes in xattr (sahib)
-  Store hashes in file xattr metadata to speed up subsequent dupe searches.
-- GOptionEntry (unclaimed)
-  Use GLib's GOptionEntry instead of getopts.  Requires a shift from repeated
-  args (eg -vvv for max verbosity) to something else (eg -v5).
-  

@@ -158,36 +158,6 @@ def check_bigfiles(context):
     return rc
 
 
-def check_getmntent(context):
-    rc = 1
-    if tests.CheckHeader(context, 'mntent.h'):
-        rc = 0
-
-    conf.env['HAVE_GETMNTENT'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_getmntinfo(context):
-    rc = 1
-    if tests.CheckFunc(
-        context, 'getmntinfo',
-        header=
-            '#include <sys/param.h>'
-            '#include <sys/ucred.h>'
-            '#include <sys/mount.h>'
-    ):
-        rc = 0
-
-    conf.env['HAVE_GETMNTINFO'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
 def check_blkid(context):
     rc = 1
 
@@ -462,8 +432,6 @@ conf = Configure(env, custom_tests={
     'check_blkid': check_blkid,
     'check_sysctl': check_sysctl,
     'check_sys_block': check_sys_block,
-    'check_getmntent': check_getmntent,
-    'check_getmntinfo': check_getmntinfo,
     'check_bigfiles': check_bigfiles,
     'check_c11': check_c11,
     'check_gettext': check_gettext
@@ -480,6 +448,9 @@ conf.check_pkgconfig('0.15.0')
 conf.env['HAVE_GLIB'] = 0
 conf.check_pkg('glib-2.0 >= 2.32', 'HAVE_GLIB', required=True)
 
+conf.env['HAVE_GIO_UNIX'] = 0
+conf.check_pkg('gio-unix-2.0', 'HAVE_GIO_UNIX', required=False)
+
 conf.env['HAVE_BLKID'] = 0
 conf.check_pkg('blkid', 'HAVE_BLKID', required=False)
 
@@ -495,6 +466,9 @@ if conf.env['HAVE_BLKID']:
 
 if conf.env['HAVE_JSON_GLIB']:
     packages.append('json-glib-1.0')
+
+if conf.env['HAVE_GIO_UNIX']:
+    packages.append('gio-unix-2.0')
 
 ###########################################################################
 #                           Compiler Flags                                #
@@ -562,8 +536,6 @@ conf.check_fiemap()
 conf.check_xattr()
 conf.check_bigfiles()
 conf.check_sha512()
-conf.check_getmntent()
-conf.check_getmntinfo()
 conf.check_gettext()
 
 if conf.env['HAVE_LIBELF']:
@@ -663,8 +635,7 @@ if 'config' in COMMAND_LINE_TARGETS:
 
     Optimize non-rotational disks                     : {nonrotational}
         (needs libblkid for resolving dev_t to path)  : {blkid}
-        (needs <mntent.h> for listing mounts [linux]) : {getmntent}
-        (...or getmntinfo() for other platforms)      : {getmntinfo}
+        (needs gio-unix-2.0)                          : {gio_unix}
 
     Enable gettext localization                       : {gettext}
         (needs <locale.h> for compile side support)   : {locale}
@@ -688,10 +659,9 @@ Type 'scons' to actually compile rmlint now. Good luck.
             msgfmt=yesno(env['HAVE_MSGFMT']),
             xattr=yesno(env['HAVE_XATTR']),
             json_glib=yesno(env['HAVE_JSON_GLIB']),
-            nonrotational=yesno(env['HAVE_GETMNTENT'] or env['HAVE_GETMNTINFO']),
+            nonrotational=yesno(env['HAVE_GIO_UNIX'] & env['HAVE_BLKID']),
+            gio_unix=yesno(env['HAVE_GIO_UNIX']),
             blkid=yesno(env['HAVE_BLKID']),
-            getmntent=yesno(env['HAVE_GETMNTENT']),
-            getmntinfo=yesno(env['HAVE_GETMNTINFO']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
             sse42=yesno(env['HAVE_SSE42']),
