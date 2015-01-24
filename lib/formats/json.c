@@ -34,7 +34,6 @@
 typedef struct RmFmtHandlerJSON {
     /* must be first */
     RmFmtHandler parent;
-    gint64 elems_written;
 } RmFmtHandlerJSON;
 
 //////////////////////////////////////////
@@ -190,8 +189,6 @@ static void rm_fmt_elem(
     _U RmFmtHandler *parent,
     FILE *out, RmFile *file
 ) {
-    RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
-
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
@@ -200,7 +197,7 @@ static void rm_fmt_elem(
     /* Make it look like a json element */
     rm_fmt_json_open(out);
     {
-        rm_fmt_json_key_int(out, "id", self->elems_written++);
+        rm_fmt_json_key_int(out, "id", GPOINTER_TO_UINT(file));
         rm_fmt_json_sep(out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(out);
@@ -221,6 +218,17 @@ static void rm_fmt_elem(
             rm_fmt_json_sep(out);
             rm_fmt_json_key_bool(out, "is_original", file->is_original);
             rm_fmt_json_sep(out);
+
+            if(session->cfg->find_hardlinked_dupes) {
+                RmFile *hardlink_head = g_hash_table_lookup(
+                        session->tables->node_table, file
+                );
+
+                if(hardlink_head != file) {
+                    rm_fmt_json_key_int(out, "hardlink_of", GPOINTER_TO_UINT(hardlink_head));
+                    rm_fmt_json_sep(out);
+                }
+            }
         }
         rm_fmt_json_key_int(out, "mtime", file->mtime);
     }
@@ -237,8 +245,7 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .prog = NULL,
         .foot = rm_fmt_foot,
         .valid_keys = {"no_header", "no_footer", NULL},
-    },
-    .elems_written = 0
+    }
 };
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *) &JSON_HANDLER_IMPL;
