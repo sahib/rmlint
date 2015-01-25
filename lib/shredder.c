@@ -40,6 +40,8 @@
 #include "shredder.h"
 #include "xattr.h"
 
+#define _RM_SHRED_DEBUG 1
+
 /* This is the scheduler of rmlint.
  *
  * Files are compared in progressive "generations" to identify matching
@@ -662,9 +664,6 @@ static GThreadPool *rm_shred_create_devpool(GFunc func, RmMainTag *tag, int num_
 }
 
 static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 bytes) {
-
-    rm_log_debug(RED"Adding files %d\n"RESET, files);
-
     g_mutex_lock(&(device->lock)); {
         device->remaining_files += files;
         device->remaining_bytes += bytes;
@@ -1453,10 +1452,12 @@ void rm_shred_group_unbundle(RmSession *session, GQueue *group, GQueue *subgroup
                         || ((!file->is_prefd) && (session->cfg->keep_all_untagged))
                    ) {
                     file->is_original = true;
+#if _RM_SHRED_DEBUG
                     rm_log_debug("tagging %s as original because %s\n",
                                  file->path,
                                  ((file->is_prefd) && (session->cfg->keep_all_tagged)) ? "tagged" : "untagged"
                                 );
+#endif
                 }
 
                 /* add to main group if this is a subgroup */
@@ -1496,7 +1497,9 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     RmFile *headfile = group->head->data;
     if (!headfile->is_original) {
         headfile->is_original = true;
+#if _RM_SHRED_DEBUG
         rm_log_debug("tagging %s as original because it is highest ranked\n", headfile->path);
+#endif
     }
 }
 
@@ -1504,8 +1507,10 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     g_assert(group);
     g_assert(group->head);
 
+#if _RM_SHRED_DEBUG
     RmFile *head = group->head->data;
     rm_log_debug("Forwarding %s's group\n", head->path);
+#endif
 
     /* Hand it over to the printing module */
     g_queue_foreach(group, (GFunc)rm_fmt_write, session->formats);
@@ -1840,19 +1845,23 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             file = rm_shred_process_file(device, file);
 
             if (start_offset == file->hash_offset && file->has_ext_cksum == false) {
-                rm_log_debug(RED"Offset stuck at %"LLU";"RESET, start_offset);
+                rm_log_debug(RED"Offset stuck at %"LLU"\n"RESET, start_offset);
                 file->status = RM_FILE_STATE_IGNORE;
                 /* rm_shred_sift will dispose of the file */
             }
 
             if (file->status == RM_FILE_STATE_FRAGMENT) {
                 /* file is not ready for checking yet; push it back into the queue */
+#if _RM_SHRED_DEBUG
                 rm_log_debug("Recycling fragment %s\n", file->path);
+#endif
                 rm_shred_push_queue_sorted(file); /* call with device unlocked */
                 /* NOTE: this temporarily means there are two copies of file in the queue */
             } else if(rm_shred_sift(file)) {
                 /* continue hashing same file, ie no change to iter */
+#if _RM_SHRED_DEBUG
                 rm_log_debug("Continuing to next generation %s\n", file->path);
+#endif
                 continue;
             } else {
                 /* rm_shred_sift has taken responsibility for the file and either disposed
