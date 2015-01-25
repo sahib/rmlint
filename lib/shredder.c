@@ -40,6 +40,7 @@
 #include "shredder.h"
 #include "xattr.h"
 
+/* Enable extra debug messages? */
 #define _RM_SHRED_DEBUG 1
 
 /* This is the scheduler of rmlint.

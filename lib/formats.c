@@ -99,6 +99,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler *FDUPES_HANDLER;
     rm_fmt_register(self, FDUPES_HANDLER);
 
+    extern RmFmtHandler *NULL_HANDLER;
+    rm_fmt_register(self, NULL_HANDLER);
+
     return self;
 }
 
