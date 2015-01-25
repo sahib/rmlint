@@ -400,11 +400,10 @@ options = dict(
     SHLINKCOMSTR=link_shared_library_message,
     LINKCOMSTR=link_program_message,
     PREFIX=GetOption('prefix'),
-    ENV={
-        'PATH': os.environ['PATH'],
-        'TERM': os.environ['TERM'],
-        'HOME': os.environ['HOME']
-    }
+    ENV = dict([ (key, os.environ[key])
+                 for key in os.environ
+                 if key in ['PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH']
+              ])
 )
 
 if ARGUMENTS.get('VERBOSE') == "1":
