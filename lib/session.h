@@ -36,7 +36,7 @@
 
 typedef struct RmFileTables {
     GHashTable *dev_table;
-    GHashTable *initial_shred_groups;
+    GHashTable *size_groups;
     GHashTable *node_table;
     GHashTable *mtime_filter;
     GHashTable *basename_filter;

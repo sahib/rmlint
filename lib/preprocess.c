@@ -115,9 +115,9 @@ static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
 RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
-    tables->initial_shred_groups = g_hash_table_new_full(
-                                       (GHashFunc)rm_file_hash, (GEqualFunc)rm_file_equal, NULL, NULL
-                                   );
+    tables->size_groups = g_hash_table_new_full(
+                              (GHashFunc)rm_file_hash, (GEqualFunc)rm_file_equal, NULL, NULL
+                          );
 
     tables->node_table = g_hash_table_new_full(
                              (GHashFunc)rm_node_hash, (GEqualFunc)rm_node_equal, NULL, NULL
@@ -138,8 +138,8 @@ void rm_file_tables_destroy(RmFileTables *tables) {
         g_assert(tables->node_table);
         g_hash_table_unref(tables->node_table);
 
-        g_assert(tables->initial_shred_groups);
-        g_hash_table_unref(tables->initial_shred_groups);
+        g_assert(tables->size_groups);
+        g_hash_table_unref(tables->size_groups);
 
     }
     g_rec_mutex_unlock(&tables->lock);
@@ -227,16 +227,16 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                 rm_log_warning_line(_("Hardlink file size changed during traversal: %s"), file->path);
             }
 
-            /* if this is the first time, set up the twins.hardlinks queue */
-            if (!inode_match->twins.hardlinks) {
-                inode_match->twins.hardlinks = g_queue_new();
+            /* if this is the first time, set up the hardlinks.files queue */
+            if (!inode_match->hardlinks.files) {
+                inode_match->hardlinks.files = g_queue_new();
 
-                /*NOTE: during list build, the twins.hardlinks queue includes the file
+                /*NOTE: during list build, the hardlinks.files queue includes the file
                  * itself, as well as its hardlinks.  This makes operations
                  * in rm_file_tables_insert much simpler but complicates things later on,
-                 * so the head file gets removed from the twins.hardlinks queue
+                 * so the head file gets removed from the hardlinks.files queue
                  * in rm_pp_handle_hardlinks() during preprocessing */
-                g_queue_push_head(inode_match->twins.hardlinks, inode_match);
+                g_queue_push_head(inode_match->hardlinks.files, inode_match);
             }
 
             /* make sure the highest-ranked hardlink is "boss" */
@@ -244,15 +244,15 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                 /*this file outranks existing existing boss; swap */
                 /* NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE
                  * as head file, unless all the files are "other lint".  This is achieved via rm_pp_cmp_orig_criteria*/
-                file->twins.hardlinks = inode_match->twins.hardlinks;
-                inode_match->twins.hardlinks = NULL;
+                file->hardlinks.files = inode_match->hardlinks.files;
+                inode_match->hardlinks.files = NULL;
                 g_hash_table_insert(node_table, file, file); /* replaces key and data*/
                 inode_match = file;
             }
 
             /* compare this file to all of the existing ones in the cluster
              * to check if it's a path double; if yes then swap or discard */
-            for (GList *iter = inode_match->twins.hardlinks->head; iter; iter = iter->next) {
+            for (GList *iter = inode_match->hardlinks.files->head; iter; iter = iter->next) {
                 RmFile *iter_file = iter->data;
                 if (1
                         && (g_strcmp0(file->basename, iter_file->basename) == 0)
@@ -280,7 +280,7 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
             if(result == true) {
                 /* no path double found; must be hardlink */
                 g_queue_insert_sorted (
-                    inode_match->twins.hardlinks,
+                    inode_match->hardlinks.files,
                     file,
                     (GCompareDataFunc)rm_pp_cmp_orig_criteria,
                     session
@@ -326,36 +326,36 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
     g_assert(file);
     RmCfg *cfg = session->cfg;
 
-    if(file->twins.hardlinks) {
+    if(file->hardlinks.files) {
         /* it has a hardlink cluster - process each file (except self) */
         /* remove self */
         {
-            bool was_removed = g_queue_remove(file->twins.hardlinks, file);
+            bool was_removed = g_queue_remove(file->hardlinks.files, file);
 
             /* Do not call that directly in g_assert, might be disabled at
              * compile time. */
             g_assert(was_removed);
         }
 
-        for (GList *iter = file->twins.hardlinks->head, *next = NULL; iter; iter = next) {
+        for (GList *iter = file->hardlinks.files->head, *next = NULL; iter; iter = next) {
             /* Remember next element early */
             next = iter->next;
 
             /* call self to handle each embedded hardlink */
             RmFile *embedded = iter->data;
-            g_assert(!embedded->twins.hardlinks);
+            g_assert(!embedded->hardlinks.files);
 
             if (rm_pp_handle_hardlinks(NULL, embedded, session)) {
-                g_queue_delete_link(file->twins.hardlinks, iter);
-            } else if (!cfg->find_hardlinked_dupes) { //TODO: defer this intil shred post-processing
+                g_queue_delete_link(file->hardlinks.files, iter);
+            } else if (!cfg->find_hardlinked_dupes) {
                 rm_file_destroy(embedded);
-                g_queue_delete_link(file->twins.hardlinks, iter);
+                g_queue_delete_link(file->hardlinks.files, iter);
             }
         }
 
-        if (g_queue_is_empty(file->twins.hardlinks)) {
-            g_queue_free(file->twins.hardlinks);
-            file->twins.hardlinks = NULL;
+        if (g_queue_is_empty(file->hardlinks.files)) {
+            g_queue_free(file->hardlinks.files);
+            file->hardlinks.files = NULL;
         }
     }
 
