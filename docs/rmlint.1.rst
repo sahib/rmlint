@@ -167,30 +167,6 @@ General Options
     * This feature might add some runtime.
     * Consider using ``-@`` together with this option (this is the default).
 
-:``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
-
-    The argument can be either passed as factor (a number with a ``.`` in it),
-    a percent value (suffixed by ``%``) or as absolute number or size spec, like in ``--size``.
-
-    Only look at the content of files in the range of from ``low`` to
-    (including) ``high``. This means, if the range is less than ``-q 0%`` to
-    ``-Q 100%``, than only partial duplicates are searched. If the actual file
-    size would be 0, the file is ignored during traversing. Be careful when
-    using this function, you can easily get dangerous results for small files.
-
-    This is useful in a few cases where a file consists of a constant sized
-    header or footer. With this option you can just compare the data in between.
-    Also it might be useful for approximate comparison where it suffices when
-    the file is the same in the middle part.
-
-    The shortcut ``-q / -Q`` can be easily remembered if you memorize the word
-    ``quantile`` for it.
-
-:``-u --max-paranoid-ram=size``:
-
-    Apply a maximum number of bytes to use for **--paranoid**. 
-    The ``size``-description has the same format as for **--size**.
-
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them. 
@@ -207,11 +183,6 @@ General Options
 
 Traversal Options
 -----------------
-
-:``-t --threads=N**`` (*default\:* 16):
-
-    The number of threads to use during file tree traversal and hashing.
-    ``rmlint`` probably knows better than you how to set the value.
 
 :``-s --size=range`` (**default\:** *all*):
 
@@ -372,9 +343,41 @@ Caching
     Include files in output that have not been hashed fully (i.e. files that
     do not appear to have a duplicate). This is mainly useful in conjunction
     with ``--cache``. When re-running rmlint on a large dataset this can greatly
-    speed up a re-run.
+    speed up a re-run in some cases.
 
     This option also applies for ``--xattr-write``. 
+
+Rarely used, miscellaneous Options
+----------------------------------
+
+:``-t --threads=N**`` (*default\:* 16):
+
+    The number of threads to use during file tree traversal and hashing.
+    ``rmlint`` probably knows better than you how to set the value.
+
+:``-u --max-paranoid-ram=size``:
+
+    Apply a maximum number of bytes to use for **--paranoid**. 
+    The ``size``-description has the same format as for **--size**.
+
+:``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
+
+    The argument can be either passed as factor (a number with a ``.`` in it),
+    a percent value (suffixed by ``%``) or as absolute number or size spec, like in ``--size``.
+
+    Only look at the content of files in the range of from ``low`` to
+    (including) ``high``. This means, if the range is less than ``-q 0%`` to
+    ``-Q 100%``, than only partial duplicates are searched. If the actual file
+    size would be 0, the file is ignored during traversing. Be careful when
+    using this function, you can easily get dangerous results for small files.
+
+    This is useful in a few cases where a file consists of a constant sized
+    header or footer. With this option you can just compare the data in between.
+    Also it might be useful for approximate comparison where it suffices when
+    the file is the same in the middle part.
+
+    The shortcut ``-q / -Q`` can be easily remembered if you memorize the word
+    ``quantile`` for it.
 
     
 FORMATTERS
@@ -558,7 +561,7 @@ PROGRAM AUTHORS
 * Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
 * Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
 
-Also see the THANKS file for other people that helped us.
+Also see the  http://rmlint.rtfd.org for other people that helped us.
 
 If you consider a donation you can use *Flattr* or buy us a beer if we meet:
 
