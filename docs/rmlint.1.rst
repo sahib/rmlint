@@ -65,16 +65,18 @@ General Options
     * ``badlinks``, ``bl``: Find bad symlinks pointing nowhere.
     * ``emptydirs``, ``ed``: Find empty directories.
     * ``emptyfiles``, ``ef``: Find empty files.
-    * ``nonstripped``, ``ns``: Find nonstripped binaries. (**Warning:** slow)
+    * ``nonstripped``, ``ns``: Find nonstripped binaries.
     * ``duplicates``, ``df``: Find duplicate files.
     * ``duplicatedirs``, ``dd``: Find duplicate directories. 
 
-    **Warning:** It is good practice to enclose the description in quotes. In
+    **WARNING:** It is good practice to enclose the description in quotes. In
     obscure cases argument parsing might fail in weird ways::
 
         # -ed is recognized as -e and -d here, -d takes "-s 10M" as parameter.
         # This will fail to do the supposed, finding also files smaller than 10M.
         $ rmlint -T all -ef -ed -s10M /media/music/  
+        # Actual user wanted to do this:
+        $ rmlint -T "all -ef -ed" -s10M /media/music
 
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
@@ -485,19 +487,59 @@ FORMATTERS
 EXAMPLES
 ========
 
-- ``rmlint``
+This is a collection of common usecases and other tricks:
 
-  Check the current working directory for duplicates.
+* Check the current working directory for duplicates.
 
-- ``find ~/pics -iname '*.png' | ./rmlint -``
+  ``$ rmlint``
 
-  Read paths from *stdin* and check all png files for duplicates.
+* Reflink on btrfs, else try to hardlink duplicates to original. If that does
+  not work, replace duplicate with a symbolic link:
 
-- ``rmlint files_backup // files --keep-all-tagged --must-match-tagged``
+  ``$ rmlint -c sh:link`` 
 
-  Check for duplicate files between the current files and the backup of it. 
-  Only files in *files_backup* would be reported as duplicate. 
-  Additionally, all reported duplicates must occur in both paths.
+* Inject user-defined command into shell script output:
+
+  ``$ ./rmlint -o sh -c sh:cmd='echo "original:" "$2" "is the same as" "$1"'``  
+
+* Quick re-run on large datasets:
+
+  ``$ rmlint large_dir/ # First run; writes rmlint.json``
+
+  ``$ rmlint -C rmlint.json large_dir # Reads checksums from rmlint.json``
+
+* Search only for duplicates and duplicate directories
+
+  ``$ rmlint -T df,dd .``
+
+* Compare files byte-by-byte in current directory:
+
+  ``$ rmlint -pp .``
+
+* Find duplicates with same basename (but without extension):
+
+  ``$ rmlint -e``
+
+* Do more complex traversal using ``find(1)``.
+
+  ``$ find /usr/lib -iname '*.so' -type f | rmlint - # find all duplicate .so files``
+
+  ``$ find ~/pics -iname '*.png' | ./rmlint - # compare png files only``
+
+* Limit file size range to investigate:
+
+  ``$ rmlint -s 2GB    # Find everything >= 2GB``
+
+  ``$ rmlint -s 0-2GB  # Find everything <  2GB``
+
+* Show a progressbar:
+
+  ``$ rmlint -g``
+
+* Use *data* as master directory with all originals. Find only duplicates that are
+  in *data* and *backup*. Do not delete any files in *data*:
+
+  ``$ rmlint backup/ // data/ --keep-all-tagged --must-match-tagged``
 
 PROBLEMS
 ========
