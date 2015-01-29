@@ -162,7 +162,7 @@ General Options
 
     *Notes:*
 
-    * This option pulls in ``--partial-hidden`` and ``-l`` (``--hardlinked``) for convenience.
+    * This option pulls in ``--partial-hidden`` and ``-@`` (``--see-symlinks``) for convenience.
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
     * Consider using ``-@`` together with this option (this is the default).
@@ -232,11 +232,10 @@ Traversal Options
     Only recurse up to this depth. A depth of 1 would disable recursion and is
     equivalent to a directory listing.
 
-:``-l --hardlinked`` / ``-L --no-hardlinked`` (**default**):
+:``-l --hardlinked`` (**default**) / ``-L --no-hardlinked``:
 
-    By default ``rmlint`` will not allow several files with the same *inode* and
-    therefore keep only one of them in it's internal list.
-    If `-l` is specified the whole group is reported instead.
+    Wether to filter hardlinks after traversal (same *inode* and same *device*).
+    If not filtered, there will be only one checksum built per hardlink cluster.
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks (**default**)``:
 
