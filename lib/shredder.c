@@ -1312,6 +1312,11 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     if (!file->is_original) {
         session->dup_counter++;
+
+        /* TODO: Add check for file->is_hardlink here.
+         *       If so, we should add nothing to the
+         *       size counter (only the boss twin should count)
+         * */
         session->total_lint_size += file->file_size;
     }
 }
