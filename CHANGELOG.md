@@ -20,6 +20,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Added
 
+- Json output is enabled by default and is written to ``rmlint.json``.
 - ``--partial-hidden`` does only see hidden files in duplicate directories.
 - ``--cache/--write-unfinished`` can be used to speedup re-runs drastically.
 - Checksums can be stored in the xattr of files with ``--xattr-read/write/clear``.
@@ -30,6 +31,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Changed
 
+- ``--hardlinked`` is enabled by default.
 - Support -n (dry-run) for rmlint.sh; require user input on ask.
 - Default digest is now *sha1* instead of *spooky*.
 - updated ``.pot`` template with help strings.

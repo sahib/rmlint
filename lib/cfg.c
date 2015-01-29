@@ -42,12 +42,13 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->maxsize = G_MAXUINT64;
 
     /* Lint Types */
-    cfg->ignore_hidden   = true;
-    cfg->find_emptydirs  = true;
-    cfg->find_emptyfiles = true;
-    cfg->find_duplicates = true;
-    cfg->find_badids     = true;
-    cfg->find_badlinks   = true;
+    cfg->ignore_hidden         = true;
+    cfg->find_emptydirs        = true;
+    cfg->find_emptyfiles       = true;
+    cfg->find_duplicates       = true;
+    cfg->find_badids           = true;
+    cfg->find_badlinks         = true;
+    cfg->find_hardlinked_dupes = true;
 
     /* Misc options */
     cfg->sort_criteria     = "pm";

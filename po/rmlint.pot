@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-24 01:03+0100\n"
+"POT-Creation-Date: 2015-01-29 01:29+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -42,12 +42,12 @@ msgstr ""
 msgid "WARNING"
 msgstr ""
 
-#: lib/shredder.c:1460
+#: lib/shredder.c:1471
 #, c-format
 msgid "Negative bytes_left_to_read for %s"
 msgstr ""
 
-#: lib/shredder.c:1465
+#: lib/shredder.c:1476
 #, c-format
 msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
 msgstr ""
@@ -195,151 +195,155 @@ msgstr ""
 msgid "Invalid size description \"%s\": "
 msgstr ""
 
-#: lib/cmdline.c:966
+#: lib/cmdline.c:968
 msgid "Specifiyng both -o and -O is not allowed"
 msgstr ""
 
-#: lib/cmdline.c:997
+#: lib/cmdline.c:999
 msgid "Specify max traversal depth"
 msgstr ""
 
-#: lib/cmdline.c:998
+#: lib/cmdline.c:1000
 msgid "Original criteria"
 msgstr ""
 
-#: lib/cmdline.c:999
+#: lib/cmdline.c:1001
 msgid "Specify lint types"
 msgstr ""
 
-#: lib/cmdline.c:1000
+#: lib/cmdline.c:1002
 msgid "Specify size limits"
 msgstr ""
 
-#: lib/cmdline.c:1001
+#: lib/cmdline.c:1003
 msgid "Choose hash algorithm"
 msgstr ""
 
-#: lib/cmdline.c:1002
+#: lib/cmdline.c:1004
 msgid "Add output (override default)"
 msgstr ""
 
-#: lib/cmdline.c:1003
+#: lib/cmdline.c:1005
 msgid "Add output (add to defaults)"
 msgstr ""
 
-#: lib/cmdline.c:1004
+#: lib/cmdline.c:1006
 msgid "Newer than stamp file"
 msgstr ""
 
-#: lib/cmdline.c:1005
+#: lib/cmdline.c:1007
 msgid "Newer than timestamp"
 msgstr ""
 
-#: lib/cmdline.c:1006
+#: lib/cmdline.c:1008
 msgid "Configure a formatter"
 msgstr ""
 
-#: lib/cmdline.c:1007
+#: lib/cmdline.c:1009
 msgid "Add json cache file"
 msgstr ""
 
-#: lib/cmdline.c:1010
+#: lib/cmdline.c:1012
 msgid "Enable progressbar"
 msgstr ""
 
-#: lib/cmdline.c:1011
+#: lib/cmdline.c:1013
 msgid "Be more verbose (-vvv for much more)"
 msgstr ""
 
-#: lib/cmdline.c:1012
+#: lib/cmdline.c:1014
 msgid "Be less verbose (-VVV for much less)"
 msgstr ""
 
-#: lib/cmdline.c:1015
+#: lib/cmdline.c:1017
 msgid "Be not that colorful"
 msgstr ""
 
-#: lib/cmdline.c:1016
+#: lib/cmdline.c:1018
 msgid "Find hidden files"
 msgstr ""
 
-#: lib/cmdline.c:1017
+#: lib/cmdline.c:1019
 msgid "Follow symlinks"
 msgstr ""
 
-#: lib/cmdline.c:1018
+#: lib/cmdline.c:1020
 msgid "Ignore symlinks"
 msgstr ""
 
-#: lib/cmdline.c:1019
+#: lib/cmdline.c:1021
 msgid "Do not cross mounpoints"
 msgstr ""
 
-#: lib/cmdline.c:1020
+#: lib/cmdline.c:1022
 msgid "Use more paranoid hashing"
 msgstr ""
 
-#: lib/cmdline.c:1021
+#: lib/cmdline.c:1023
 msgid "Keep all tagged files"
 msgstr ""
 
-#: lib/cmdline.c:1022
+#: lib/cmdline.c:1024
 msgid "Keep all untagged files"
 msgstr ""
 
-#: lib/cmdline.c:1023
+#: lib/cmdline.c:1025
 msgid "Must have twin in tagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1024
+#: lib/cmdline.c:1026
 msgid "Must have twin in untagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1025
-msgid "Report hardlinks as duplicates"
-msgstr ""
-
-#: lib/cmdline.c:1026
+#: lib/cmdline.c:1027
 msgid "Only find twins with same basename"
 msgstr ""
 
-#: lib/cmdline.c:1027
+#: lib/cmdline.c:1028
 msgid "Only find twins with same extension"
 msgstr ""
 
-#: lib/cmdline.c:1028
+#: lib/cmdline.c:1029
 msgid "Only find twins with same basename minus extension"
 msgstr ""
 
-#: lib/cmdline.c:1029
+#: lib/cmdline.c:1030
 msgid "Find duplicate directories"
 msgstr ""
 
-#: lib/cmdline.c:1030
+#: lib/cmdline.c:1031
 msgid "Find hidden files in duplicate folders only"
 msgstr ""
 
-#: lib/cmdline.c:1033
+#: lib/cmdline.c:1032
+msgid "Ignore hardlink twins"
+msgstr ""
+
+#: lib/cmdline.c:1035
 msgid "Show the manpage"
 msgstr ""
 
-#: lib/cmdline.c:1034
+#: lib/cmdline.c:1036
 msgid "Show the version & features"
 msgstr ""
 
-#: lib/cmdline.c:1074
+#: lib/cmdline.c:1046
+msgid "Report hardlinks as duplicates"
+msgstr ""
+
+#: lib/cmdline.c:1076
 msgid "Cannot set current working directory"
 msgstr ""
 
-#: lib/cmdline.c:1079
+#: lib/cmdline.c:1081
 msgid "Cannot join commandline"
 msgstr ""
 
-#: lib/cmdline.c:1088
+#: lib/cmdline.c:1090
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
 msgstr ""
 
-#: lib/cmdline.c:1111
+#: lib/cmdline.c:1113
 msgid ""
 "rmlint finds space waste and other broken things on your filesystem and "
 "offers to remove it.\n"
@@ -347,7 +351,7 @@ msgid ""
 "options to handle them."
 msgstr ""
 
-#: lib/cmdline.c:1117
+#: lib/cmdline.c:1119
 msgid ""
 "Only the most important options and options that alter the default are shown "
 "above.\n"
@@ -357,24 +361,24 @@ msgid ""
 "Complementary tutorials can be found at: http://rmlint.rtfd.org"
 msgstr ""
 
-#: lib/cmdline.c:1147
+#: lib/cmdline.c:1155
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
 msgstr ""
 
-#: lib/cmdline.c:1153
+#: lib/cmdline.c:1161
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr ""
 
-#: lib/cmdline.c:1158
+#: lib/cmdline.c:1166
 msgid "No valid paths given."
 msgstr ""
 
-#: lib/formats.c:168
+#: lib/formats.c:171
 #, c-format
 msgid "No such new_handler with this name: %s"
 msgstr ""
 
-#: lib/formats.c:190
+#: lib/formats.c:193
 #, c-format
 msgid "Unable to open file for writing: %s"
 msgstr ""
@@ -440,7 +444,7 @@ msgstr ""
 msgid "Cannot figure out terminal width."
 msgstr ""
 
-#: lib/formats/sh.c:307
+#: lib/formats/sh.c:361
 #, c-format
 msgid "%s is an invalid handler."
 msgstr ""
