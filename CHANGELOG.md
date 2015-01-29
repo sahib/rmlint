@@ -25,12 +25,13 @@ The format follows [keepachangelog.com]. Please stick to it.
 - Checksums can be stored in the xattr of files with ``--xattr-read/write/clear``.
 - New progressbar output inspired by ``journalctl --verfiy``.
 - Better support for reflink-capable filesystems (e.g. *btrfs*):
-  - detect existing reflinks using fiemap data (significant speedup)
+  - detect existing reflinks using ``fiemap`` data (significant speedup)
   - support replacing files by a reflink if the filesystem supports it.
 
 ### Changed
 
-- Defaut digest is now *sha1* instead of *spooky*.
+- Support -n (dry-run) for rmlint.sh; require user input on ask.
+- Default digest is now *sha1* instead of *spooky*.
 - updated ``.pot`` template with help strings.
 - updated german translation accordingly.
 - -T supports arguments like df,dd properly now.

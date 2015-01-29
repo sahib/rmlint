@@ -29,6 +29,14 @@ def test_basic():
     assert footer['total_files'] == 9
     assert footer['duplicates'] == 3
 
+    # Dry run first; check if it did not accidentally delete something.
+    text = subprocess.check_output([os.path.join(TESTDIR_NAME, 'rmlint.sh'), '-dn'])
+    head, *data, footer = run_rmlint('-D -S a')
+    assert footer['duplicate_sets'] == 3
+    assert footer['total_lint_size'] == 9
+    assert footer['total_files'] == 9
+    assert footer['duplicates'] == 3
+
     text = subprocess.check_output([os.path.join(TESTDIR_NAME, 'rmlint.sh'), '-d'])
     head, *data, footer = run_rmlint('-D -S a')
 
