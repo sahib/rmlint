@@ -123,7 +123,7 @@ typedef enum RmShHandler {
 
 static const char *ORDER_TO_STRING[] = {
     [RM_SH_HANDLER_UNKNOWN] = NULL,
-    [RM_SH_HANDLER_USER_COMMAND] = "usercmd",
+    [RM_SH_HANDLER_USER_COMMAND] = "cmd",
     [RM_SH_HANDLER_REFLINK] = "reflink",
     [RM_SH_HANDLER_SYMLINK] = "symlink",
     [RM_SH_HANDLER_HARDLINK] = "hardlink",
@@ -209,7 +209,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         rm_sh_parse_handlers(self, "symlink");
     } else {
         /* Default: remove the file */
-        rm_sh_parse_handlers(self, "usercmd,remove");
+        rm_sh_parse_handlers(self, "cmd,remove");
     }
 
     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
