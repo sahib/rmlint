@@ -807,6 +807,7 @@ static gboolean rm_cmd_parse_progress(
     rm_fmt_add(session->formats, "progressbar", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
     rm_fmt_add(session->formats, "sh", "rmlint.sh");
+    rm_fmt_add(session->formats, "json", "rmlint.json");
 
     /* Set verbosity to minimal */
     rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
@@ -817,6 +818,7 @@ static void rm_cmd_set_default_outputs(RmSession *session) {
     rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
     rm_fmt_add(session->formats, "sh", "rmlint.sh");
+    rm_fmt_add(session->formats, "json", "rmlint.json");
 }
 
 static gboolean rm_cmd_parse_no_progress(
