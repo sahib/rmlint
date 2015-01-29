@@ -889,7 +889,6 @@ static gboolean rm_cmd_parse_merge_directories(
      *
      * They may be disabled explicitly though.
      */
-    cfg->find_hardlinked_dupes = true;
     cfg->follow_symlinks = false;
     cfg->see_symlinks = true;
     rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
