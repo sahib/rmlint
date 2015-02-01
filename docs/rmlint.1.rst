@@ -107,7 +107,9 @@ General Options
     Only look into file if it is readable, writable or executable by the current user.
     Which one of the can be given as argument as one of *rwx*. 
 
-    If no argument is given, *"rw"* is assumed.
+    If no argument is given, *"rw"* is assumed. Note that *r* does basically
+    nothing user-visible since ``rmlint`` will ignore unreadable files anyways.
+    It's just there for the sake of completeness.
 
     By default this check is not done. 
 
