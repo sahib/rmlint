@@ -264,11 +264,11 @@
 /* How large a single page is (typically 4096 bytes but not always)*/
 #define SHRED_PAGE_SIZE       (sysconf(_SC_PAGESIZE))
 
-/* How many pages to read in each generation?
- * This value is important since it decides how much data will be read for small files,
- * so it should not be too large nor too small, since reading small files twice is very slow.
- */
-
+/* Wether to use buffered fread() or direct preadv() 
+ * The latter is preferred, since it's slightly faster on linux.
+ * Other platforms may have different results though or not even have preadv.
+ * */
+#define SHRED_USE_BUFFERED_READ (0)
 
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
@@ -1395,12 +1395,82 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
     rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
 }
 
+static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) {
+    FILE *fd = NULL; 
+    bool error_happended = false;
+    gint32 total_bytes_read = 0;
+
+    gint32 buf_size = rm_buffer_pool_size(device->main->mem_pool);
+    buf_size -= offsetof(RmBuffer, data);
+
+    if(file->seek_offset >= file->file_size) {
+        goto finish;
+    }
+
+    if((fd = fopen(file->path, "rb")) == NULL) {
+        error_happended = true;
+        rm_log_info("fopen(3) failed for %s: %s", file->path, g_strerror(errno));
+        goto finish;
+    }
+
+    gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
+    gint32 bytes_read = 0;
+
+    if(bytes_to_read >= 1024 * 1024 * 4) {
+        setvbuf(fd, NULL, _IOFBF, 1024 * 1024 * 4); 
+    }
+
+    if(fseek(fd, file->seek_offset, SEEK_SET) == -1) {
+        error_happended = true;
+        rm_log_perror("fseek(3) failed");
+        goto finish;
+    }
+
+    posix_fadvise(
+        fileno(fd), file->seek_offset,
+        bytes_to_read, SHRED_FADVISE_FLAGS
+    );
+
+    RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
+    while((bytes_read = fread(buffer->data, 1, MIN(bytes_to_read, buf_size), fd)) > 0) {
+        file->seek_offset += bytes_read;
+        bytes_to_read -= bytes_read;
+
+        buffer->file = file;
+        buffer->len = bytes_read;
+        buffer->is_last = (bytes_to_read <= 0);
+
+        rm_util_thread_pool_push(device->hash_pool, buffer);
+
+        total_bytes_read += bytes_read;
+        buffer = rm_buffer_pool_get(device->main->mem_pool);
+    }
+
+    if(ferror(fd) != 0) {
+        error_happended = true;
+        rm_log_perror("fread(3) failed");
+        goto finish;
+    }
+
+finish:
+    if(error_happended) {
+        file->status = RM_FILE_STATE_IGNORE;
+        g_async_queue_push(device->hashed_file_return, file);
+    }
+
+    if(fd != NULL) {
+        fclose(fd);
+    }
+
+    /* Update totals for device and session*/
+    rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
+}
+
 /* Read from file and send to hasher
  * Note this was initially a separate thread but is currently just called
  * directly from rm_devlist_factory.
  * */
-static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
-    int fd = 0;
+static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device) {
     gint32 bytes_read = 0;
     gint32 total_bytes_read = 0;
 
@@ -1417,6 +1487,8 @@ static void rm_shred_read_factory(RmFile *file, RmShredDevice *device) {
     g_assert(file->seek_offset == file->hash_offset);
 
     struct iovec readvec[SHRED_MAX_PAGES + 1];
+
+    int fd = 0;
 
     if(file->seek_offset >= file->file_size) {
         goto finish;
@@ -1584,7 +1656,11 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     if(file->is_symlink) {
         rm_shred_readlink_factory(file, device);
     } else {
-        rm_shred_read_factory(file, device);
+        if(SHRED_USE_BUFFERED_READ) {
+            rm_shred_buffered_read_factory(file, device);
+        } else {
+            rm_shred_unbuffered_read_factory(file, device);
+        }
 
         /* wait until the increment has finished hashing */
         file = g_async_queue_pop(device->hashed_file_return);
