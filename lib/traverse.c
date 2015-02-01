@@ -114,17 +114,17 @@ static void rm_traverse_file(
     /* Try to autodetect the type of the lint */
     if (file_type == RM_LINT_TYPE_UNKNOWN) {
         RmLintType gid_check;
-        /*see if we can find a lint type*/
-        if (cfg->find_badids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
-            file_type = gid_check;
-        } else if(cfg->find_nonstripped && rm_util_is_nonstripped(path, statp)) {
-            file_type = RM_LINT_TYPE_NONSTRIPPED;
-        } else if(statp->st_size == 0) {
+        /* see if we can find a lint type */
+        if(statp->st_size == 0) {
             if (!cfg->find_emptyfiles) {
                 return;
             } else {
                 file_type = RM_LINT_TYPE_EMPTY_FILE;
             }
+        } else if (cfg->find_badids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
+            file_type = gid_check;
+        } else if(cfg->find_nonstripped && rm_util_is_nonstripped(path, statp)) {
+            file_type = RM_LINT_TYPE_NONSTRIPPED;
         } else {
             RmOff file_size = statp->st_size;
             if(!cfg->limits_specified || (
