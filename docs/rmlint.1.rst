@@ -102,6 +102,15 @@ General Options
 
     If the value is omitted it is set to a true value.
 
+:``-z --perms[=[rwx]] (**default\:** *no check*)``:
+
+    Only look into file if it is readable, writable or executable by the current user.
+    Which one of the can be given as argument as one of *rwx*. 
+
+    If no argument is given, *"rw"* is assumed.
+
+    By default this check is not done. 
+
 :``-a --algorithm=name`` (**default\:** *sha1*):
 
     Choose the hash algorithm to use for finding duplicate files.
@@ -532,6 +541,10 @@ This is a collection of common usecases and other tricks:
 
   ``$ rmlint -s 0-2GB  # Find everything <  2GB``
 
+* Only find writable and executable files:
+
+  ``$ rmlint --perms wx``
+
 * Show a progressbar:
 
   ``$ rmlint -g``
@@ -554,7 +567,7 @@ PROBLEMS
 2. **File modification during or after rmlint run:** It is possible that a file
    that ``rmlint`` recognized as duplicate is modified afterwards, resulting in a
    different file.  This is a general problem and cannot be solved from ``rmlint's``
-   side alone. You should **never modify the data until ``rmlint`` and the
+   side alone. You should **never modify the data until rmlint and the
    shellscript has been run through**. Careful persons might even consider to
    mount the filesystem you are scanning read-only.
 
