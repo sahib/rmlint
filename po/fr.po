@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-29 01:29+0100\n"
+"POT-Creation-Date: 2015-02-01 23:07+0100\n"
 "PO-Revision-Date: 2014-12-02 13:37+0100\n"
 "Last-Translator: F. <contact@f.0x2501.org>\n"
 "Language-Team: none\n"
@@ -42,12 +42,12 @@ msgstr "ERREUR"
 msgid "WARNING"
 msgstr "AVERTISSEMENT"
 
-#: lib/shredder.c:1471
+#: lib/shredder.c:1544
 #, c-format
 msgid "Negative bytes_left_to_read for %s"
 msgstr "Bytes restants négatifs pour %s"
 
-#: lib/shredder.c:1476
+#: lib/shredder.c:1549
 #, c-format
 msgid "Something went wrong reading %s; expected %d bytes, got %d; ignoring"
 msgstr "Problème lors de la lecture de %s; %d bytes attendus, %d reçus; ignoré"
@@ -197,161 +197,169 @@ msgstr "Fonction de hachage inconnue: '%s'"
 msgid "Invalid size description \"%s\": "
 msgstr "Définition de taille invalide \"%s\": %s"
 
-#: lib/cmdline.c:968
+#: lib/cmdline.c:914
+msgid "Permissions string needs to be one or many of [rwx]"
+msgstr ""
+
+#: lib/cmdline.c:993
 #, fuzzy
 msgid "Specifiyng both -o and -O is not allowed"
 msgstr "Utiliser simultanément -o et -O n'est pas autorisé"
 
-#: lib/cmdline.c:999
+#: lib/cmdline.c:1024
 msgid "Specify max traversal depth"
 msgstr ""
 
-#: lib/cmdline.c:1000
+#: lib/cmdline.c:1025
 msgid "Original criteria"
 msgstr ""
 
-#: lib/cmdline.c:1001
+#: lib/cmdline.c:1026
 msgid "Specify lint types"
 msgstr ""
 
-#: lib/cmdline.c:1002
+#: lib/cmdline.c:1027
 msgid "Specify size limits"
 msgstr ""
 
-#: lib/cmdline.c:1003
+#: lib/cmdline.c:1028
 #, fuzzy
 msgid "Choose hash algorithm"
 msgstr "Fonction de hachage inconnue: '%s'"
 
-#: lib/cmdline.c:1004
+#: lib/cmdline.c:1029
 msgid "Add output (override default)"
 msgstr ""
 
-#: lib/cmdline.c:1005
+#: lib/cmdline.c:1030
 msgid "Add output (add to defaults)"
 msgstr ""
 
-#: lib/cmdline.c:1006
+#: lib/cmdline.c:1031
 msgid "Newer than stamp file"
 msgstr ""
 
-#: lib/cmdline.c:1007
+#: lib/cmdline.c:1032
 msgid "Newer than timestamp"
 msgstr ""
 
-#: lib/cmdline.c:1008
+#: lib/cmdline.c:1033
 msgid "Configure a formatter"
 msgstr ""
 
-#: lib/cmdline.c:1009
+#: lib/cmdline.c:1034
 msgid "Add json cache file"
 msgstr ""
 
-#: lib/cmdline.c:1012
+#: lib/cmdline.c:1037
 msgid "Enable progressbar"
 msgstr ""
 
-#: lib/cmdline.c:1013
+#: lib/cmdline.c:1038
 msgid "Be more verbose (-vvv for much more)"
 msgstr ""
 
-#: lib/cmdline.c:1014
+#: lib/cmdline.c:1039
 msgid "Be less verbose (-VVV for much less)"
 msgstr ""
 
-#: lib/cmdline.c:1017
+#: lib/cmdline.c:1042
 msgid "Be not that colorful"
 msgstr ""
 
-#: lib/cmdline.c:1018
+#: lib/cmdline.c:1043
 msgid "Find hidden files"
 msgstr ""
 
-#: lib/cmdline.c:1019
+#: lib/cmdline.c:1044
 #, fuzzy
 msgid "Follow symlinks"
 msgstr "Mauvais lien(s) symbolique(s)"
 
-#: lib/cmdline.c:1020
+#: lib/cmdline.c:1045
 #, fuzzy
 msgid "Ignore symlinks"
 msgstr "Mauvais lien(s) symbolique(s)"
 
-#: lib/cmdline.c:1021
+#: lib/cmdline.c:1046
 msgid "Do not cross mounpoints"
 msgstr ""
 
-#: lib/cmdline.c:1022
+#: lib/cmdline.c:1047
 msgid "Use more paranoid hashing"
 msgstr ""
 
-#: lib/cmdline.c:1023
+#: lib/cmdline.c:1048
 msgid "Keep all tagged files"
 msgstr ""
 
-#: lib/cmdline.c:1024
+#: lib/cmdline.c:1049
 msgid "Keep all untagged files"
 msgstr ""
 
-#: lib/cmdline.c:1025
+#: lib/cmdline.c:1050
 msgid "Must have twin in tagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1026
+#: lib/cmdline.c:1051
 msgid "Must have twin in untagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1027
+#: lib/cmdline.c:1052
 msgid "Only find twins with same basename"
 msgstr ""
 
-#: lib/cmdline.c:1028
+#: lib/cmdline.c:1053
 msgid "Only find twins with same extension"
 msgstr ""
 
-#: lib/cmdline.c:1029
+#: lib/cmdline.c:1054
 msgid "Only find twins with same basename minus extension"
 msgstr ""
 
-#: lib/cmdline.c:1030
+#: lib/cmdline.c:1055
 #, fuzzy
 msgid "Find duplicate directories"
 msgstr "Répertoire(s) dupliqué(s)"
 
-#: lib/cmdline.c:1031
-msgid "Find hidden files in duplicate folders only"
+#: lib/cmdline.c:1056
+msgid "Only use files with certain permissions"
 msgstr ""
 
-#: lib/cmdline.c:1032
+#: lib/cmdline.c:1057
 #, fuzzy
 msgid "Ignore hardlink twins"
 msgstr "Mauvais lien(s) symbolique(s)"
 
-#: lib/cmdline.c:1035
+#: lib/cmdline.c:1058
+msgid "Find hidden files in duplicate folders only"
+msgstr ""
+
+#: lib/cmdline.c:1061
 msgid "Show the manpage"
 msgstr ""
 
-#: lib/cmdline.c:1036
+#: lib/cmdline.c:1062
 msgid "Show the version & features"
 msgstr ""
 
-#: lib/cmdline.c:1046
+#: lib/cmdline.c:1072
 msgid "Report hardlinks as duplicates"
 msgstr ""
 
-#: lib/cmdline.c:1076
+#: lib/cmdline.c:1102
 msgid "Cannot set current working directory"
 msgstr ""
 
-#: lib/cmdline.c:1081
+#: lib/cmdline.c:1107
 msgid "Cannot join commandline"
 msgstr ""
 
-#: lib/cmdline.c:1090
+#: lib/cmdline.c:1116
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
 msgstr ""
 
-#: lib/cmdline.c:1113
+#: lib/cmdline.c:1139
 msgid ""
 "rmlint finds space waste and other broken things on your filesystem and "
 "offers to remove it.\n"
@@ -359,28 +367,28 @@ msgid ""
 "options to handle them."
 msgstr ""
 
-#: lib/cmdline.c:1119
+#: lib/cmdline.c:1145
 msgid ""
-"Only the most important options and options that alter the defaults are shown "
-"above.\n"
+"Only the most important options and options that alter the defaults are "
+"shown above.\n"
 "See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed "
 "usage information,\n"
 "or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
 "Complementary tutorials can be found at: http://rmlint.rtfd.org"
 msgstr ""
 
-#: lib/cmdline.c:1155
+#: lib/cmdline.c:1181
 #, fuzzy
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
 msgstr ""
 "impossible d'utiliser simultanément --keep-all-tagged et --keep-all-untagged"
 
-#: lib/cmdline.c:1161
+#: lib/cmdline.c:1187
 #, fuzzy
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr "-q (--clamp-low) doit être plus petit que -Q (--clamp-top)!"
 
-#: lib/cmdline.c:1166
+#: lib/cmdline.c:1192
 msgid "No valid paths given."
 msgstr "Aucun chemin valide renseigné."
 
@@ -526,37 +534,37 @@ msgstr "autre(s) éléments, dont la taille peut varier, trouvé(s).\n"
 msgid "Wrote a %s%s%s file to %s%s%s.\n"
 msgstr "Fichier %s%s%s écrit %s%s%s.\n"
 
-#: lib/traverse.c:264
+#: lib/traverse.c:268
 #, c-format
 msgid "filesystem loop detected at %s (skipping)"
 msgstr "boucle dans le système de fichiers détectée à %s (ignoré)"
 
-#: lib/traverse.c:268
+#: lib/traverse.c:272
 #, c-format
 msgid "cannot read directory %s: %s"
 msgstr "impossible de lire le répertoire %s: %s"
 
-#: lib/traverse.c:280
+#: lib/traverse.c:284
 #, c-format
 msgid "error %d in fts_read for %s (skipping)"
 msgstr "erreur %d dans fts_read pour %s (ignoré) "
 
-#: lib/traverse.c:308
+#: lib/traverse.c:312
 #, c-format
 msgid "Added big file %s"
 msgstr "Fichier important %s ajouté"
 
-#: lib/traverse.c:310
+#: lib/traverse.c:314
 #, c-format
 msgid "cannot stat file %s (skipping)"
 msgstr "impossible de définir le fichier %s (ignoré)"
 
-#: lib/traverse.c:344
+#: lib/traverse.c:348
 #, c-format
 msgid "Unknown fts_info flag %d for file %s"
 msgstr "Drapeau fts_info %d inconnu pour le fichier %s"
 
-#: lib/traverse.c:361
+#: lib/traverse.c:365
 #, c-format
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': échec de fts_read pour %s"

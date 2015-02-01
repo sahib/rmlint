@@ -20,6 +20,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Added
 
+- ``--perms`` can check if a file should be readable/writable or executable.
 - Json output is enabled by default and is written to ``rmlint.json``.
 - ``--partial-hidden`` does only see hidden files in duplicate directories.
 - ``--cache/--write-unfinished`` can be used to speedup re-runs drastically.
