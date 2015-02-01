@@ -895,6 +895,32 @@ static gboolean rm_cmd_parse_merge_directories(
     return true;
 }
 
+static gboolean rm_cmd_parse_permissions(
+    _U const char *option_name, const gchar *perms, RmSession *session, GError **error
+) {
+    RmCfg *cfg = session->cfg;
+    
+    if(perms == NULL) {
+        cfg->permissions = R_OK | W_OK;
+    } else {
+        while(*perms) {
+            switch(*perms++) {
+                case 'r': cfg->permissions |= R_OK; break;
+                case 'w': cfg->permissions |= W_OK; break;
+                case 'x': cfg->permissions |= X_OK; break;
+                default:
+                    g_set_error(
+                        error, RM_ERROR_QUARK, 0,
+                        _("Permissions string needs to be one or many of [rwx]")
+                    );
+                    return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -991,7 +1017,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* Free/Used Options:
        Free: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxX
-       Used                   jJ                            yYzZ
+       Used                   jJ                            yY Z
     */
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
@@ -1013,22 +1039,23 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"quiet"    ,  'V' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  FUNC(quiet)    ,  _("Be less verbose (-VVV for much less)") ,  NULL},
 
         /* Trivial boolean options */
-        {"no-with-color"              , 'W' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->with_color              , _("Be not that colorful")                               , NULL},
-        {"hidden"                     , 'r' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->ignore_hidden           , _("Find hidden files")                                  , NULL},
-        {"followlinks"                , 'f' , 0        , G_OPTION_ARG_NONE     , &cfg->follow_symlinks         , _("Follow symlinks")                                    , NULL},
-        {"no-followlinks"             , 'F' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->follow_symlinks         , _("Ignore symlinks")                                    , NULL},
-        {"crossdev"                   , 'x' , 0        , G_OPTION_ARG_NONE     , &cfg->crossdev                , _("Do not cross mounpoints")                            , NULL},
-        {"paranoid"                   , 'p' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(paranoid)                , _("Use more paranoid hashing")                          , NULL},
-        {"keep-all-tagged"            , 'k' , 0        , G_OPTION_ARG_NONE     , &cfg->keep_all_tagged         , _("Keep all tagged files")                              , NULL},
-        {"keep-all-untagged"          , 'K' , 0        , G_OPTION_ARG_NONE     , &cfg->keep_all_untagged       , _("Keep all untagged files")                            , NULL},
-        {"must-match-tagged"          , 'm' , 0        , G_OPTION_ARG_NONE     , &cfg->must_match_tagged       , _("Must have twin in tagged dir")                       , NULL},
-        {"must-match-untagged"        , 'M' , 0        , G_OPTION_ARG_NONE     , &cfg->must_match_untagged     , _("Must have twin in untagged dir")                     , NULL},
-        {"match-basename"             , 'b' , 0        , G_OPTION_ARG_NONE     , &cfg->match_basename          , _("Only find twins with same basename")                 , NULL},
-        {"match-extension"            , 'e' , 0        , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , _("Only find twins with same extension")                , NULL},
-        {"match-without-extension"    , 'i' , 0        , G_OPTION_ARG_NONE     , &cfg->match_without_extension , _("Only find twins with same basename minus extension") , NULL},
-        {"merge-directories"          , 'D' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(merge_directories)       , _("Find duplicate directories")                         , NULL},
-        {"no-hardlinked"              , 'L' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , _("Ignore hardlink twins")                              , NULL},
-        {"partial-hidden"             , 0   , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(partial_hidden)          , _("Find hidden files in duplicate folders only")        , NULL},
+        {"no-with-color"           , 'W' , DISABLE                    , G_OPTION_ARG_NONE     , &cfg->with_color              , _("Be not that colorful")                               , NULL},
+        {"hidden"                  , 'r' , DISABLE                    , G_OPTION_ARG_NONE     , &cfg->ignore_hidden           , _("Find hidden files")                                  , NULL},
+        {"followlinks"             , 'f' , 0                          , G_OPTION_ARG_NONE     , &cfg->follow_symlinks         , _("Follow symlinks")                                    , NULL},
+        {"no-followlinks"          , 'F' , DISABLE                    , G_OPTION_ARG_NONE     , &cfg->follow_symlinks         , _("Ignore symlinks")                                    , NULL},
+        {"crossdev"                , 'x' , 0                          , G_OPTION_ARG_NONE     , &cfg->crossdev                , _("Do not cross mounpoints")                            , NULL},
+        {"paranoid"                , 'p' , EMPTY                      , G_OPTION_ARG_CALLBACK , FUNC(paranoid)                , _("Use more paranoid hashing")                          , NULL},
+        {"keep-all-tagged"         , 'k' , 0                          , G_OPTION_ARG_NONE     , &cfg->keep_all_tagged         , _("Keep all tagged files")                              , NULL},
+        {"keep-all-untagged"       , 'K' , 0                          , G_OPTION_ARG_NONE     , &cfg->keep_all_untagged       , _("Keep all untagged files")                            , NULL},
+        {"must-match-tagged"       , 'm' , 0                          , G_OPTION_ARG_NONE     , &cfg->must_match_tagged       , _("Must have twin in tagged dir")                       , NULL},
+        {"must-match-untagged"     , 'M' , 0                          , G_OPTION_ARG_NONE     , &cfg->must_match_untagged     , _("Must have twin in untagged dir")                     , NULL},
+        {"match-basename"          , 'b' , 0                          , G_OPTION_ARG_NONE     , &cfg->match_basename          , _("Only find twins with same basename")                 , NULL},
+        {"match-extension"         , 'e' , 0                          , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , _("Only find twins with same extension")                , NULL},
+        {"match-without-extension" , 'i' , 0                          , G_OPTION_ARG_NONE     , &cfg->match_without_extension , _("Only find twins with same basename minus extension") , NULL},
+        {"merge-directories"       , 'D' , EMPTY                      , G_OPTION_ARG_CALLBACK , FUNC(merge_directories)       , _("Find duplicate directories")                         , NULL},
+        {"perms"                   , 'z' , G_OPTION_FLAG_OPTIONAL_ARG , G_OPTION_ARG_CALLBACK , FUNC(permissions)             , _("Only use files with certain permissions")            , NULL},
+        {"no-hardlinked"           , 'L' , DISABLE                    , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , _("Ignore hardlink twins")                              , NULL},
+        {"partial-hidden"          , 0   , EMPTY                      , G_OPTION_ARG_CALLBACK , FUNC(partial_hidden)          , _("Find hidden files in duplicate folders only")        , NULL},
 
         /* Callback */
         {"show-man" ,  'H' ,  EMPTY ,  G_OPTION_ARG_CALLBACK ,  rm_cmd_show_manpage ,  _("Show the manpage")            ,  NULL},

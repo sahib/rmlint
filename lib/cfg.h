@@ -62,6 +62,8 @@ typedef struct RmCfg {
     gboolean clear_xattr_fields;
     gboolean write_unfinished;
 
+    int permissions;
+        
     time_t min_mtime;
     gint depth;
     gint verbosity;

@@ -121,6 +121,10 @@ static void rm_traverse_file(
             } else {
                 file_type = RM_LINT_TYPE_EMPTY_FILE;
             }
+        } else if(cfg->permissions && access(path, cfg->permissions) == -1) {
+            /* bad permissions; ignore file */
+            trav_session->session->ignored_files++;
+            return;
         } else if (cfg->find_badids && (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
             file_type = gid_check;
         } else if(cfg->find_nonstripped && rm_util_is_nonstripped(path, statp)) {
