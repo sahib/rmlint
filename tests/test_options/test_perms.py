@@ -23,6 +23,11 @@ def create_file_with_perms(content, path, permissions):
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_combinations():
+    # This test does not work when run as root.
+    # root can read the files anyways.
+    if runs_as_root():
+        return
+
     # Generate all combinations of 'rwx' in a fun way:
     rwx = set(
         chain(
@@ -37,10 +42,8 @@ def test_combinations():
         create_file_with_perms('xxx', perm, perm)
 
     files_created = len(rwx) + 1
-    subprocess.call('ls -la ' + TESTDIR_NAME, shell=True)
 
     head, *data, footer = run_rmlint('')
-    print(data, footer)
     assert footer['duplicate_sets'] == 1
     assert footer['ignored_files'] == 0
     assert footer['total_files'] == files_created
