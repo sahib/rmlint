@@ -1416,10 +1416,6 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_read = 0;
 
-    if(bytes_to_read >= 1024 * 1024 * 4) {
-        setvbuf(fd, NULL, _IOFBF, 1024 * 1024 * 4); 
-    }
-
     if(fseek(fd, file->seek_offset, SEEK_SET) == -1) {
         error_happended = true;
         rm_log_perror("fseek(3) failed");
