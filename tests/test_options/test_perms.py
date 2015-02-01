@@ -37,8 +37,10 @@ def test_combinations():
         create_file_with_perms('xxx', perm, perm)
 
     files_created = len(rwx) + 1
+    subprocess.call('ls -la ' + TESTDIR_NAME, shell=True)
 
     head, *data, footer = run_rmlint('')
+    print(data, footer)
     assert footer['duplicate_sets'] == 1
     assert footer['ignored_files'] == 0
     assert footer['total_files'] == files_created
