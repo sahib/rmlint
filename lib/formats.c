@@ -186,7 +186,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         file_handle = stdin;
     } else {
         needs_full_path = true;
-        file_handle = fopen(path, "w");
+        file_handle = fopen(path, "r+");
     }
 
     if(file_handle == NULL) {
