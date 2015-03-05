@@ -19,3 +19,5 @@ __pycache__
 
 lib/formats/py.c
 lib/formats/py.c
+test_*
+uninstall-
