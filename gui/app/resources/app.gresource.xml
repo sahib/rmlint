@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="/org/gnome/rmlint">
+        <file compressed="true">app.css</file>
+        <file compressed="true">logo.svg</file>
+    </gresource>
+</gresources>

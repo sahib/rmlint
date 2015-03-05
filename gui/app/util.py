@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+# External:
+from gi.repository import Gtk, Gdk, Gio, GObject
+
+
+def load_css_from_data(css_data):
+    """Load css customizations from a bytestring.
+    """
+    style_provider = Gtk.CssProvider()
+    style_provider.load_from_data(css_data)
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(),
+        style_provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
+
+
+def get_theme_color(widget, background=True, state=Gtk.StateFlags.SELECTED):
+    color = None
+    sctx = widget.get_style_context()
+    if background:
+        color = sctx.get_background_color(state)
+    else:
+        color = sctx.get_color(state)
+        return '#{r:0^2x}{g:0^2x}{b:0^2x}'.format(
+            r=int(255 * color.red),
+            g=int(255 * color.green),
+            b=int(255 * color.blue)
+        )
+
+
+class IconButton(Gtk.Button):
+    def __init__(self, icon_name, label=None):
+        Gtk.Button.__init__(self)
+
+        box = Gtk.Box()
+        box.add(
+            Gtk.Image.new_from_gicon(
+                Gio.ThemedIcon(name=icon_name),
+                Gtk.IconSize.BUTTON
+            ),
+        )
+
+        self.label = None
+        if label is not None:
+            self.label = Gtk.Label(label)
+            self.label.set_margin_left(5)
+            box.add(self.label)
+
+        box.show_all()
+        self.add(box)
+
+    def set_markup(self, text):
+        if self.label is not None:
+            self.label.set_markup(text)
+
+
+class IndicatorLabel(Gtk.Label):
+    """A label that has a rounded, colored background.
+
+    It is mainly useful for showing new entries or indicate errors.
+    There are 3 colors available, plus a color derived from the
+    theme's main color. In case of Adwaita blue.
+    """
+    NONE, SUCCESS, WARNING, ERROR, THEME = range(5)
+
+    def __init__(self, *args):
+        Gtk.Label.__init__(self, *args)
+        self.set_use_markup(True)
+
+        # Do not expand space.
+        self.set_valign(Gtk.Align.CENTER)
+        self.set_halign(Gtk.Align.CENTER)
+        self.set_vexpand(False)
+        self.set_hexpand(False)
+
+        # Use the theme's color by default.
+        self.set_state(IndicatorLabel.THEME)
+
+    def set_state(self, state):
+        classes = {
+            IndicatorLabel.ERROR: 'AppIndicatorLabelError',
+            IndicatorLabel.SUCCESS: 'AppIndicatorLabelSuccess',
+            IndicatorLabel.WARNING: 'AppIndicatorLabelWarning',
+            IndicatorLabel.THEME: 'AppIndicatorLabelTheme',
+            IndicatorLabel.NONE: 'AppIndicatorLabelEmpty'
+        }
+
+        # Will act as normal label for invalid states.
+        # Useful for highlighting problematic input.
+        self.set_name(classes.get(state, 'AppIndicatorLabelEmpty'))
+
+
+class View(Gtk.ScrolledWindow):
+    """Default View class that has some utility extras.
+    """
+
+    __gsignals__ = {
+        'view-enter': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'view-leave': (GObject.SIGNAL_RUN_FIRST, None, ())
+    }
+
+    def __init__(self, app):
+        Gtk.ScrolledWindow.__init__(self)
+        self._app = app
+        self.connect('view-enter', self._on_view_enter)
+        self.connect('view-leave', self._on_view_leave)
+
+    def _on_view_enter(self, _):
+        if hasattr(self, 'on_view_enter'):
+            self.on_view_enter()
+
+    def _on_view_leave(self, _):
+        if hasattr(self, 'on_view_leave'):
+            self.on_view_leave()
+
+    @property
+    def app_window(self):
+        return self._app.win
+
+    @property
+    def app(self):
+        return self._app

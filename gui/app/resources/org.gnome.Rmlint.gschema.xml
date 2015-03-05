@@ -1,0 +1,95 @@
+<schemalist>
+    <enum id="org.gnome.Rmlint.AlgorithmType">
+        <value nick="spooky" value="1"/>
+        <value nick="city" value="2"/>
+        <value nick="sha1" value="3"/>
+        <value nick="sha256" value="4"/>
+        <value nick="sha512" value="5"/>
+        <value nick="MD5" value="6"/>
+        <value nick="byte-by-byte" value="7"/>
+    </enum>
+    <enum id="org.gnome.Rmlint.MatchType">
+        <value nick="No limitation" value="1"/>
+        <value nick="Same basename" value="2"/>
+        <value nick="Same file extension" value="3"/>
+        <value nick="Same basename minus extension" value="4"/>
+    </enum>
+    <enum id="org.gnome.Rmlint.SymlinkType">
+        <value nick="Ignore symbolic links" value="1"/>
+        <value nick="See symbolic links" value="2"/>
+        <value nick="Follow symbolic links" value="3"/>
+    </enum>
+    <enum id="org.gnome.Rmlint.HiddenType">
+        <value nick="Ignore hidden files" value="1"/>
+        <value nick="Use for duplicate directories only" value="2"/>
+        <value nick="Find all hidden files" value="3"/>
+    </enum>
+    <enum id="org.gnome.Rmlint.KeepAllType">
+        <value nick="No restriction" value="0"/>
+        <value nick="Keep all tagged" value="1"/>
+        <value nick="Keep all untagged" value="2"/>
+    </enum>
+    <enum id="org.gnome.Rmlint.MustMatchType">
+        <value nick="No restriction" value="0"/>
+        <value nick="Must match tagged" value="1"/>
+        <value nick="Must match untagged" value="2"/>
+    </enum>
+    <schema id="org.gnome.Rmlint" path="/org/gnome/Rmlint/" gettext-domain="shredder">
+        <key name="general-find-hardlinks" type="b">
+            <default>true</default>
+            <summary>Report duplicate hardlinks</summary>
+            <description>Duplicate files might have hardlinked twins</description>
+        </key>
+        <key name="general-find-symlinks" enum="org.gnome.Rmlint.SymlinkType">
+            <default>'See symbolic links'</default>
+            <summary>Symbolic link handling</summary>
+            <description>What to do with symbolic links?</description>
+        </key>
+        <key name="traverse-hidden" enum="org.gnome.Rmlint.HiddenType">
+            <default>'Use for duplicate directories only'</default>
+            <summary>Find hidden files and directories</summary>
+            <description>Hidden files and directories begin with a ».«</description>
+        </key>
+        <!-- TODO: Use levelbar? -->
+        <!-- TODO: sortcriteria and newer-than-stamp max-paranoid-size clamp-low -->
+        <!-- TODO: low,high range widget -->
+        <!-- TODO: flags widget -->
+        <!-- TODO: mb widget -->
+        <key name="traverse-size-limits" type="(ii)">
+            <default>(0, 0)</default>
+            <summary>[2] Size limits</summary>
+            <description>What size the duplicate files may have</description>
+        </key>
+        <key name="traverse-max-depth" type="i">
+            <range min="0" max="512"/>
+            <default>512</default>
+            <summary>Traversal depth</summary>
+            <description>»0« is only the current directory's files</description>
+        </key>
+        <key name="traverse-cross-mounts" type="b">
+            <default>true</default>
+            <summary>Cross mountpoints</summary>
+            <description></description>
+        </key>
+        <key name='traverse-match' enum='org.gnome.Rmlint.MatchType'>
+            <default>'No limitation'</default>
+            <summary>Path limitations</summary>
+            <description>Only find twins a certain limitation</description>
+        </key>
+        <key name='computation-algorithm' enum='org.gnome.Rmlint.AlgorithmType'>
+            <default>'sha1'</default>
+            <summary>Hash algorithm</summary>
+            <description>Which hash algorithm to use</description>
+        </key>
+        <key name='computation-keep-all-tagged' enum="org.gnome.Rmlint.KeepAllType">
+            <default>'No restriction'</default>
+            <summary>Keep all tagged</summary>
+            <description>Keep all files that lie in tagged directories</description>
+        </key>
+        <key name='computation-must-match-tagged' enum="org.gnome.Rmlint.MustMatchType">
+            <default>'No restriction'</default>
+            <summary>Must match tagged</summary>
+            <description>Duplicates must have twins in tagged directories</description>
+        </key>
+    </schema>
+</schemalist>

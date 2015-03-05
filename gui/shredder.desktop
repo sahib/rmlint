@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=2.1.0
+Type=Application
+Name=Duplicate Finder
+Comment=Find and delete duplicates
+TryExec=shredder
+Exec=shredder %F
+Icon=shredder

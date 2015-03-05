@@ -1,0 +1,85 @@
+#AppWindow {
+    /* background-color: #ffffff; */
+    
+}
+
+#AppProgress {
+    border-width: 0px;
+    border-radius: 0px;
+}
+
+/* Support for colored labels.
+ * These are sometimes handy in order to highlight errors
+ * or mark some entries with "xx new items".
+ */ 
+
+#AppIndicatorLabelError,
+#AppIndicatorLabelSuccess,
+#AppIndicatorLabelWarning,
+#AppIndicatorLabelTheme {
+    /* Animate changes so the label color gets faded in */
+    transition-property: color, border-color, background-color;
+    transition: 250ms ease-in-out;
+
+    /* More readable on colored background */
+    text-shadow: None;
+    color: @theme_selected_fg_color;
+
+    /* Make the shape round and give it enough space */
+    border-radius: 4px;
+    padding: 1px 2px; 
+
+    /* Add a small border around the label */
+    border-style: outset;
+    border-width: 2px;
+}
+
+/* This will look pretty much like a normal label.
+ * Just include a fix for doing the blending right.
+ */
+#AppIndicatiorLabelEmpty {
+    border-color: alpha(white, 0);
+
+    /* Keep the padding of the colored version.
+     * That way the size won't change, possibly leading to jumpy layout.
+     */
+    padding: 1px 6px;
+    border-width: 2px;
+}
+
+/* That's probably a dumb way to find the colors.
+ * We inherit the theme colors and try to modify them
+ * so they fit our needs. A hue-changing functions would be nice.
+ *
+ * See here for reference on the used theme colors:
+ * https://gitorious.org/gtk-theme/adwaita-clean-dark/source/master:gtk-3.0/gtk.css
+ */
+
+@define-color indicator_label_error   
+    alpha(mix(@error_color, @theme_selected_fg_color, 0.3), 0.9);
+@define-color indicator_label_success 
+    alpha(mix(shade(@success_color, 0.85), @theme_selected_fg_color, 0.3), 0.9);
+@define-color indicator_label_warning  
+    alpha(mix(@warning_color, @theme_selected_fg_color, 0.3), 0.9);
+@define-color indicator_label_theme 
+    mix(@theme_selected_bg_color, @theme_selected_fg_color, 0.3);
+
+#AppIndicatorLabelError {
+    background-color: @indicator_label_error;
+    border-color: alpha(mix(@indicator_label_error, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+#AppIndicatorLabelSuccess {
+    background-color: @indicator_label_success;
+    border-color: alpha(mix(@indicator_label_success, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+#AppIndicatorLabelWarning {
+    background-color: @indicator_label_warning;
+    border-color: alpha(mix(@indicator_label_warning, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+#AppIndicatorLabelTheme {
+    background-color: @indicator_label_theme;
+    border-color: alpha(mix(@indicator_label_theme, @theme_selected_fg_color, 0.66), 0.5);
+}
