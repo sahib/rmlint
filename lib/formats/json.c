@@ -111,11 +111,16 @@ static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value
     char safe_value[PATH_MAX + 4 + 1];
     memset(safe_value, 0, sizeof(safe_value));
 
+<<<<<<< HEAD
     if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value))) {
         fprintf(out, "\"%s\": \"%s\"", key, safe_value);
     } else {
         /* This should never happen but give at least means of debugging */
         fprintf(out, "\"%s\": \"<BROKEN PATH>\"", key);
+=======
+    if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value)) >= 0) {
+        fprintf(out, "\"%s\": \"%s\"", key, safe_value);
+>>>>>>> json: add progress value from 0-100 to each element.
     }
 }
 
