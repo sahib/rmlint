@@ -228,8 +228,14 @@ def _create_toggle_cellrenderer(model):
 class RmlintTreeView(Gtk.TreeView):
     def __init__(self):
         Gtk.TreeView.__init__(self)
+        self.set_enable_tree_lines(True)
 
-        self.md = Gtk.TreeStore(bool, str, int, int, int, int, str)
+
+        self.md = Gtk.TreeStore(bool, str, int, int, int, int)
+
+        self.set_has_tooltip(True)
+        self.connect('query-tooltip', RmlintTreeView._on_query_tooltip)
+
         self._filter_query = None
         self.filter_model = self.md.filter_new()
         self.filter_model.set_visible_func(self._filter_func)
@@ -250,9 +256,30 @@ class RmlintTreeView(Gtk.TreeView):
         self.append_column(_create_column(
             'Changed', [(CellRendererModifiedTime(), True, False, dict(mtime=4))],
         ))
-        self.set_tooltip_column(6)
 
         self.iter_map = {}
+
+    def _on_query_tooltip(self, x, y, kb_mode, tooltip):
+        # x and y is undefined if keyboard mode is used
+        result, x, y, md, path, iter_ = self.get_tooltip_context(x, y, kb_mode)
+        if not result:
+            return False
+
+        # Find the full path belonging to this row item.
+        # We do this by iterating up. This way we trade memory usage
+        # (storing the path a tooltip string) with cpu-time.
+        tooltip_path = [md[iter_][Column.PATH]]
+        while True:
+            iter_ = md.iter_parent(iter_)
+            if iter_ is None:
+                break
+
+            tooltip_path.insert(0, md[iter_][Column.PATH])
+
+        # Set the tooltip text and where it should appear.
+        self.set_tooltip_row(tooltip, path)
+        tooltip.set_text('/'.join(tooltip_path))
+        return True
 
     def refilter(self, filter_query):
         self._filter_query = filter_query
@@ -276,7 +303,7 @@ class RmlintTreeView(Gtk.TreeView):
     def set_root(self, root_path):
         self.root_path = root_path
         self.iter_map[root_path] = self.root = self.md.append(
-            None, (False, os.path.basename(root_path), 0, 0, 0, IndicatorLabel.THEME, '/')
+            None, (False, os.path.basename(root_path), 0, 0, 0, IndicatorLabel.THEME)
         )
 
     def _add_path_deferred(self, elem, twin_count):
@@ -298,8 +325,7 @@ class RmlintTreeView(Gtk.TreeView):
                         part or '',
                         _get_dir_size(full_path),
                         0, 0,
-                        IndicatorLabel.NONE,
-                        elem.path
+                        IndicatorLabel.NONE
                     )
                 )
 
@@ -313,8 +339,7 @@ class RmlintTreeView(Gtk.TreeView):
                 elem.size,
                 -twin_count,
                 elem.mtime,
-                tag,
-                elem.path
+                tag
             )
         )
 
@@ -370,12 +395,14 @@ class MainView(View):
         self.create_runner()
 
     def create_runner(self):
-        root_path = '/usr'
+        root_path = '/usr/bin'
         self.tv.set_root(root_path)
 
         def _add_elem(runner, elem):
             self.tv.add_path(elem)
-            self.app_window.show_progress(elem.progress / 100.0)
+
+            tick = None if elem.progress is None else elem.progress / 100.0
+            self.app_window.show_progress(tick)
 
         runner = Runner(self.app.settings, [root_path])
         runner.connect('lint-added', _add_elem)
