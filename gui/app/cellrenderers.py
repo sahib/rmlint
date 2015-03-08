@@ -138,12 +138,11 @@ def _render_pixbuf(widget, width, height):
     return widget_pix
 
 
-
-
 def _render_tag_label(tag):
     state_to_symbol = {
         IndicatorLabel.NONE: '',
         IndicatorLabel.SUCCESS: '✔',
+        IndicatorLabel.WARNING: '⚠',
         IndicatorLabel.ERROR: '✗',
         IndicatorLabel.THEME: '♔'
     }
