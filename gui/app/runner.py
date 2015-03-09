@@ -182,7 +182,10 @@ def _parse_json_chunk(chunk):
 
         try:
             json_doc, _ = decoder.raw_decode(line)
-            results.append(json_doc)
+            if isinstance(json_doc, dict):
+                results.append(json_doc)
+            else:
+                raise ValueError('')
         except ValueError as err:
             incomplete_chunk = line
             break
@@ -280,6 +283,8 @@ class Runner(GObject.Object):
 
         # Try to find sense in the individual chunks:
         results, self._incomplete_chunk = _parse_json_chunk(data)
+        # print(results)
+
         for json_doc in results:
             if 'path' in json_doc:
                 lint = Lint(json_doc)

@@ -139,7 +139,8 @@ def _create_column(title, renderers):
     column = Gtk.TreeViewColumn()
     column.set_title(title)
     column.set_resizable(True)
-    # column.set_min_width(100)
+    column.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
+    column.set_fixed_width(70)
 
     for renderer, pack_end, expand, kwargs in renderers:
         renderer.set_alignment(1.0 if pack_end else 0.0, 0.5)
@@ -233,6 +234,9 @@ class RmlintTreeView(Gtk.TreeView):
 
         self.md = Gtk.TreeStore(bool, str, int, int, int, int)
 
+        self.set_fixed_height_mode(True)
+
+        # We handle tooltips ourselves
         self.set_has_tooltip(True)
         self.connect('query-tooltip', RmlintTreeView._on_query_tooltip)
 
@@ -395,7 +399,7 @@ class MainView(View):
         self.create_runner()
 
     def create_runner(self):
-        root_path = '/usr/bin'
+        root_path = '/usr/lib'
         self.tv.set_root(root_path)
 
         def _add_elem(runner, elem):
