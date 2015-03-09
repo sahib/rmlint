@@ -24,7 +24,7 @@ class CellRendererSize(Gtk.CellRendererText):
         human_readable = ''
 
         if size > 0:
-            for unit in ['', 'k', 'm', 'g', 't', 'p', 'e', 'z']:
+            for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
                 if abs(size) >= 1024.0:
                     size /= 1024.0
                     continue

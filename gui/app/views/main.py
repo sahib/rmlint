@@ -130,17 +130,20 @@ def build_stats_pane():
     #     StatsRow(), False, True, 5
     # )
     box.pack_start(
+        Gtk.Label('Diagrams and Stuff!'), True, True, 5
+    )
+    box.pack_start(
         ResultActionBar(), False, True, 0
     )
     return box
 
 
-def _create_column(title, renderers):
+def _create_column(title, renderers, fixed_width=100):
     column = Gtk.TreeViewColumn()
     column.set_title(title)
     column.set_resizable(True)
     column.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
-    column.set_fixed_width(70)
+    column.set_fixed_width(fixed_width)
 
     for renderer, pack_end, expand, kwargs in renderers:
         renderer.set_alignment(1.0 if pack_end else 0.0, 0.5)
@@ -150,13 +153,6 @@ def _create_column(title, renderers):
         column.set_expand(expand)
     return column
 
-
-def _get_dir_size(path):
-    # TODO: This is wrong, use du like walk or level up.
-    try:
-        return os.stat(path).st_size
-    except OSError:
-        return -1
 
 class Column:
     """Column Enumeration to avoid using direct incides.
@@ -180,10 +176,26 @@ def _dfs(model, iter_):
     #     iter_ = model.iter_next(iter_)
 
 
+def _ray(model, iter_):
+    """Go down in hierarchy starting from iter_.
+    Think of this as "shooting a ray down".
+    """
+    while iter_ is not None:
+        yield iter_
+        iter_ = model.iter_children(iter_)
+
+
 def _is_lint_node(model, iter_):
     """
     """
     return model[iter_][Column.TAG] != IndicatorLabel.NONE
+
+
+def _get_mtime_for_path(path):
+    try:
+        return os.stat(path).st_mtime
+    except OSError:
+        return 0
 
 
 def _count_lint_nodes(model, iter_):
@@ -229,11 +241,10 @@ def _create_toggle_cellrenderer(model):
 class RmlintTreeView(Gtk.TreeView):
     def __init__(self):
         Gtk.TreeView.__init__(self)
-        self.set_enable_tree_lines(True)
-
 
         self.md = Gtk.TreeStore(bool, str, int, int, int, int)
 
+        self.set_grid_lines(Gtk.TreeViewGridLines.VERTICAL)
         self.set_fixed_height_mode(True)
 
         # We handle tooltips ourselves
@@ -249,16 +260,17 @@ class RmlintTreeView(Gtk.TreeView):
             'Path', [
                 (_create_toggle_cellrenderer(self.filter_model), False, False, dict(active=0)),
                 (CellRendererLint(), False, True, dict(text=1, tag=5))
-            ]
+            ],
+            250
         ))
         self.append_column(_create_column(
-            'Size', [(CellRendererSize(), True, False, dict(size=2))]
+            'Size', [(CellRendererSize(), True, False, dict(size=2))], 60
         ))
         self.append_column(_create_column(
-            'Count', [(CellRendererCount(), True, False, dict(count=3))]
+            'Count', [(CellRendererCount(), True, False, dict(count=3))], 80
         ))
         self.append_column(_create_column(
-            'Changed', [(CellRendererModifiedTime(), True, False, dict(mtime=4))],
+            'Changed', [(CellRendererModifiedTime(), True, False, dict(mtime=4))], 100
         ))
 
         self.iter_map = {}
@@ -287,16 +299,27 @@ class RmlintTreeView(Gtk.TreeView):
 
     def refilter(self, filter_query):
         self._filter_query = filter_query
-        print(self._filter_query)
         self.filter_model.refilter()
         self.expand_all()
 
-    def _filter_func(self, model, iter, data):
-        if self.md.iter_n_children(iter) > 0:
+    def _filter_func(self, model, iter_, data):
+        # TODO:
+        # This is incorrect. We want to filter intermediate directories too,
+        # if they have no (currently) visible children due to filtering.
+        if model.iter_n_children(iter_) > 0:
             return True
+        # for child in _ray(model, iter_):
+        #     if _is_lint_node(model, child):
+        #        break
+        # else:
+        #     print('ray', model[iter_][Column.PATH])
+        #     # The for-loop ran without a break.
+        #     return False
 
         if self._filter_query is not None:
-            return self._filter_query in model[iter][1]
+            return self._filter_query in model[iter_][Column.PATH]
+
+        # Show everything by default.
         return True
 
     def add_path(self, elem):
@@ -304,10 +327,16 @@ class RmlintTreeView(Gtk.TreeView):
         for twin in elem.silbings:
             GLib.idle_add(self._add_path_deferred, twin, len(elem.silbings))
 
+    def _append_row(self, parent, checked, path, size, count, mtime, tag):
+        return self.md.append(
+            parent, (checked, path or '', size, count, mtime, tag)
+        )
+
     def set_root(self, root_path):
         self.root_path = root_path
-        self.iter_map[root_path] = self.root = self.md.append(
-            None, (False, os.path.basename(root_path), 0, 0, 0, IndicatorLabel.THEME)
+        self.iter_map[root_path] = self.root = self._append_row(
+            None, False, os.path.basename(root_path),
+            0, 0, _get_mtime_for_path(root_path), IndicatorLabel.THEME
         )
 
     def _add_path_deferred(self, elem, twin_count):
@@ -323,29 +352,27 @@ class RmlintTreeView(Gtk.TreeView):
             part_iter = self.iter_map.get(part_path)
             if part_iter is None:
                 full_path = os.path.join(self.root_path, part_path)
-                part_iter = self.iter_map[part_path] = self.md.append(
-                    parent, (
-                        idx % 2,
-                        part or '',
-                        _get_dir_size(full_path),
-                        0, 0,
-                        IndicatorLabel.NONE
-                    )
+                part_iter = self.iter_map[part_path] = self._append_row(
+                    parent,
+                    False, part, elem.size, 1,
+                    _get_mtime_for_path(full_path), IndicatorLabel.NONE
                 )
+            else:
+                # Update the intermediate directory:
+                # TODO: Check if it is not a lint node?
+                for row in self.md[part_iter], self.md[self.root]:
+                    row[Column.COUNT] += 1
+                    row[Column.SIZE] += elem.size
 
             parent = part_iter
 
         tag = IndicatorLabel.SUCCESS if elem.is_original else IndicatorLabel.ERROR
-        self.md.append(
-            parent, (
-                not elem.is_original,
-                os.path.basename(elem.path),
-                elem.size,
-                -twin_count,
-                elem.mtime,
-                tag
-            )
+        node_iter = self._append_row(
+            parent,
+            not elem.is_original, os.path.basename(elem.path),
+            elem.size, -twin_count, elem.mtime, tag
         )
+        self.expand_to_path(self.md.get_path(node_iter))
 
         # Do not repeat this idle action.
         return False
@@ -353,6 +380,7 @@ class RmlintTreeView(Gtk.TreeView):
     def finish_add(self):
         self.expand_all()
         self.columns_autosize()
+        GLib.timeout_add(100, self.columns_autosize)
 
 
 class MainView(View):
@@ -399,7 +427,7 @@ class MainView(View):
         self.create_runner()
 
     def create_runner(self):
-        root_path = '/usr/lib'
+        root_path = '/usr'
         self.tv.set_root(root_path)
 
         def _add_elem(runner, elem):
