@@ -414,7 +414,8 @@ class MainView(View):
         self.app_window.show_progress(0)
 
         def on_process_finish(runner, msg):
-            self.app_window.hide_progress()
+            self.app_window.show_progress(100)
+            GLib.timeout_add(500, self.app_window.hide_progress)
 
             if msg is not None:
                 self.app_window.show_infobar(
