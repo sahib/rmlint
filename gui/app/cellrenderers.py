@@ -5,7 +5,7 @@
 from datetime import datetime
 
 # Internal:
-from app.util import IndicatorLabel
+from app.util import IndicatorLabel, render_pixbuf
 
 # External:
 from gi.repository import Gtk
@@ -121,23 +121,6 @@ class CellRendererCount(Gtk.CellRendererText):
         self.set_property('text', text)
 
 
-# TODO: This is a util func
-def _render_pixbuf(widget, width, height):
-    # Use an OffscreenWindow to render the widget
-    off_win = Gtk.OffscreenWindow()
-    off_win.add(widget)
-    off_win.set_size_request(width, height)
-    off_win.show_all()
-
-    # this is needed, otherwise the screenshot is black
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-
-    # Render the widget to a GdkPixbuf
-    widget_pix = off_win.get_pixbuf()
-    return widget_pix
-
-
 def _render_tag_label(tag):
     state_to_symbol = {
         IndicatorLabel.NONE: '',
@@ -153,7 +136,7 @@ def _render_tag_label(tag):
     tag_label.set_state(tag)
 
     # Render the label tag
-    return _render_pixbuf(tag_label, -1, -1)
+    return render_pixbuf(tag_label, -1, -1)
 
 
 class CellRendererLint(Gtk.CellRendererText):

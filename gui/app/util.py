@@ -5,6 +5,30 @@
 from gi.repository import Gtk, Gdk, Gio, GObject
 
 
+def render_pixbuf(widget, width=-1, height=-1):
+    """Renders any widget that is not realized yet
+    into a pixbuf with the supplied width and height.
+
+    Note: this function may trigger mainloop events,
+          since it needs to spin the loop to trigger
+          the rendering.
+    """
+    # Use an OffscreenWindow to render the widget
+    off_win = Gtk.OffscreenWindow()
+    off_win.add(widget)
+    off_win.set_size_request(width, height)
+    off_win.show_all()
+
+    # this is needed, otherwise the screenshot is black
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
+    # Render the widget to a GdkPixbuf
+    widget_pix = off_win.get_pixbuf()
+    widget.unparent()
+    return widget_pix
+
+
 def load_css_from_data(css_data):
     """Load css customizations from a bytestring.
     """

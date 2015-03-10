@@ -427,7 +427,7 @@ class MainView(View):
         self.create_runner()
 
     def create_runner(self):
-        root_path = '/usr'
+        root_path = '/usr/bin'
         self.tv.set_root(root_path)
 
         def _add_elem(runner, elem):

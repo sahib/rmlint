@@ -1,6 +1,5 @@
 #AppWindow {
     /* background-color: #ffffff; */
-    
 }
 
 #AppProgress {
@@ -82,4 +81,19 @@
 #AppIndicatorLabelTheme {
     background-color: @indicator_label_theme;
     border-color: alpha(mix(@indicator_label_theme, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+/* Color of the background grid (should be a slight gray) */
+@define-color script_editor rgb(220, 220, 220);
+
+#ScriptEditor {
+    font: monospaced 12;
+    
+    /* Draw a grid, like on mm paper */
+    background-size: 40px 40px, 40px 40px, 10px 10px, 10px 10px;
+    background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
+    background-image: linear-gradient(alpha(@script_editor, 0.35) 1px, transparent 1px),
+                      linear-gradient(90deg, alpha(@script_editor, 0.35) 1px, transparent 1px),
+                      linear-gradient(alpha(@script_editor, 0.3) 1px, transparent 1px),
+                      linear-gradient(90deg, alpha(@script_editor,.3) 1px, transparent 1px);
 }

@@ -9,9 +9,9 @@ from app import APP_TITLE, APP_DESCRIPTION
 from app.window import MainWindow
 from app.views.settings import SettingsView
 from app.views.locations import LocationView
-from app.views.progress import ProgressView
 from app.views.main import MainView
-from app.util import load_css_from_data, IndicatorLabel
+from app.views.editor import EditorView
+from app.util import load_css_from_data
 
 # External:
 from gi.repository import Gtk, GLib, Gio, Rsvg, GdkPixbuf
@@ -81,7 +81,7 @@ class MainApplication(Gtk.Application):
 
         # Load the application icon
         logo_svg = Gio.resources_lookup_data('/org/gnome/rmlint/logo.svg', 0)
-        logo_handle = Rsvg.Handle.new_from_file('app/resources/logo.svg')
+        logo_handle = Rsvg.Handle.new_from_data(logo_svg.get_data())
         logo_handle.set_dpi_x_y(75, 75)
         logo_pix = logo_handle.get_pixbuf()
         logo_pix = logo_pix.scale_simple(200, 200, GdkPixbuf.InterpType.HYPER)
@@ -111,31 +111,10 @@ class MainApplication(Gtk.Application):
 
         self.add_action(create_action("work", _fake_work))
         self.win.views.add_view(easy_view, 'settings')
-        # self.win.views.add_view(ChartView(), 'chart') # TODO
         self.win.views.add_view(location_view, 'locations')
-        self.win.views.add_view(ProgressView(self), 'overview')
-
-        l = IndicatorLabel()
-        l.set_markup('<small>120 Entries</small> ✔')
-
-        self.win.views.add_view(l, 'detail')
-
         self.win.views.add_view(MainView(self), 'main')
+        self.win.views.add_view(EditorView(self), 'editor')
         self.win.views.switch('main')
-        l.set_valign(Gtk.Align.CENTER)
-        l.set_halign(Gtk.Align.CENTER)
-        l.set_hexpand(False)
-        l.set_vexpand(False)
-
-        def _x():
-            GLib.timeout_add(0000, lambda: l.set_state(IndicatorLabel.SUCCESS))
-            GLib.timeout_add(1000, lambda: l.set_state(IndicatorLabel.WARNING))
-            GLib.timeout_add(2000, lambda: l.set_state(IndicatorLabel.ERROR))
-            GLib.timeout_add(3000, lambda: l.set_state(IndicatorLabel.THEME))
-            GLib.timeout_add(4000, lambda: l.set_state(None))
-            return True
-        GLib.timeout_add(5000, _x)
-        _x()
 
         self.win.show_all()
 
