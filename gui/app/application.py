@@ -109,12 +109,12 @@ class MainApplication(Gtk.Application):
             GLib.timeout_add(3000, _h)
 
 
-        self.add_action(create_action("work", _fake_work))
+        self.add_action(create_action('work', _fake_work))
         self.win.views.add_view(easy_view, 'settings')
         self.win.views.add_view(location_view, 'locations')
         self.win.views.add_view(MainView(self), 'main')
         self.win.views.add_view(EditorView(self), 'editor')
-        self.win.views.switch('main')
+        self.win.views.switch('editor')
 
         self.win.show_all()
 

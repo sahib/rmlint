@@ -13,7 +13,7 @@ try:
 
     def _create_source_view():
         language = GtkSource.LanguageManager.get_default().get_language('sh')
-        style= GtkSource.StyleSchemeManager.get_default().get_scheme(
+        style = GtkSource.StyleSchemeManager.get_default().get_scheme(
             'solarized-light'
         )
 
@@ -29,6 +29,7 @@ try:
         view.set_auto_indent(True)
 
         return view, buffer_
+
 except ImportError:
     def _create_source_view():
         buffer_ = Gtk.Buffer()
@@ -61,44 +62,59 @@ class EditorView(View):
 When done, click the `Run Script` button below.
 </big>\n\n''')
 
-        text_view, buffer_ = _create_source_view()
-        text_view.set_name('ScriptEditor')
-        text_view.set_vexpand(True)
-        text_view.set_valign(Gtk.Align.FILL)
+        self.text_view, buffer_ = _create_source_view()
+        self.text_view.set_name('ScriptEditor')
+        self.text_view.set_vexpand(True)
+        self.text_view.set_valign(Gtk.Align.FILL)
+        self.text_view.set_hexpand(True)
+        self.text_view.set_halign(Gtk.Align.FILL)
 
-        with open('/tmp/rmlint.sh', 'r') as handle:
-            buffer_.set_text(handle.read())
+        try:
+            with open('/tmp/rmlint.sh', 'r') as handle:
+                buffer_.set_text(handle.read())
+        except OSError:
+            buffer_.set_text('echo "Place a rmlint.sh in /tmp/rmlint.sh"')
 
         scw = Gtk.ScrolledWindow()
-        scw.add(text_view)
+        scw.add(self.text_view)
 
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         right_pane = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         right_pane.pack_start(separator, False, False, 0)
         right_pane.pack_start(scw, True , True, 0)
 
-        run_script_btn = IconButton(
+        self.run_script_btn = IconButton(
             'user-trash-symbolic', 'Run Script'
         )
-        run_script_btn.set_halign(Gtk.Align.CENTER)
-        run_script_btn.get_style_context().add_class(
+        self.run_script_btn.set_halign(Gtk.Align.CENTER)
+        self.run_script_btn.get_style_context().add_class(
             Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION
         )
+        self.run_script_btn.connect('clicked', self.on_run_script_clicked)
+
         control_grid.attach(label, 0, 0, 1, 1)
         control_grid.attach_next_to(
-            run_script_btn, label, Gtk.PositionType.BOTTOM, 1, 1
+            self.run_script_btn, label, Gtk.PositionType.BOTTOM, 1, 1
         )
+        control_grid.set_border_width(20)
+
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_UP)
+
+        self.stack.add_named(control_grid, 'danger')
+        self.stack.set_visible_child(control_grid)
+
+        spinner = Gtk.Spinner()
+        spinner.start()
+        self.stack.add_named(spinner, 'progressing')
 
         grid = Gtk.Grid()
-        grid.set_column_homogeneous(True)
-        grid.attach(control_grid, 0, 0, 1, 1)
-        grid.attach_next_to(right_pane, control_grid, Gtk.PositionType.RIGHT, 1, 1)
+        grid.attach(self.stack, 0, 0, 1, 1)
+        grid.attach_next_to(right_pane, self.stack, Gtk.PositionType.RIGHT, 1, 1)
         self.add(grid)
 
-    # def on_view_enter(self):
-    #     self.app_window.show_action_buttons(
-    #         None, 'Run script'
-    #     )
-
-    # def on_view_leave(self):
-    #     self.app_window.hide_action_buttons()
+    def on_run_script_clicked(self, button):
+        button.set_sensitive(False)
+        self.text_view.set_sensitive(False)
+        self.stack.set_visible_child_name('progressing')
+        self.text_view.get_buffer().set_text('Deleting xyz (output of rmlint.sh)')

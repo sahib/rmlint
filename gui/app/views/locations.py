@@ -18,7 +18,7 @@ class LocationEntry(Gtk.Grid):
         name_label.set_halign(Gtk.Align.START)
 
         path_label = Gtk.Label(
-            '<small><i>{}</i></small>'.format(GLib.markup_escape_text(path))
+            '<small>{}</small>'.format(GLib.markup_escape_text(path))
         )
         path_label.set_use_markup(True)
         path_label.set_halign(Gtk.Align.START)
@@ -39,7 +39,7 @@ class LocationView(Gtk.ScrolledWindow):
         Gtk.ScrolledWindow.__init__(self)
 
         box = Gtk.ListBox()
-        box.set_selection_mode(Gtk.SelectionMode.NONE)
+        box.set_selection_mode(Gtk.SelectionMode.BROWSE)
         box.set_size_request(350, -1)
         box.set_hexpand(True)
         self.add(box)
@@ -49,9 +49,15 @@ class LocationView(Gtk.ScrolledWindow):
             entry = LocationEntry(
                 mount.get_name(),
                 mount.get_root().get_path(),
-                mount.get_icon()
+                mount.get_symbolic_icon()
             )
 
             if len(box) is not 0:
                 box.insert(Gtk.Separator(), -1)
-            box.insert(entry, -1)
+
+            # Prepend to the front
+            row = Gtk.ListBoxRow()
+            row.set_can_focus(False)
+            row.add(entry)
+
+            box.insert(row, -1)
