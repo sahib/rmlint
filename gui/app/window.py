@@ -318,6 +318,9 @@ class MainWindow(Gtk.ApplicationWindow):
             self.destructive_action.set_markup(cancel_label)
             self.destructive_action.show()
 
+        self.destructive_action.set_sensitive(True)
+        self.suggested_action.set_sensitive(True)
+
     def hide_action_buttons(self):
         self.suggested_action.hide()
         self.destructive_action.hide()

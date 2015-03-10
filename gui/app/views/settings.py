@@ -65,16 +65,6 @@ def numeric_widget(
     return range_wdgt
 
 
-def numeric_range_widget(settings, key_name, summary, description, floating_point=False):
-    low = numeric_widget(settings, key_name, summary, description, floating_point, draw_size=True)
-    top = numeric_widget(settings, key_name, summary, description, floating_point, draw_size=True)
-    box = Gtk.Box()
-    box.pack_start(low, True, True, 2)
-    box.pack_start(Gtk.Label(' to '), False, False, 0)
-    box.pack_start(top, True, True, 2)
-    return box
-
-
 class _ChoiceRow(Gtk.ListBoxRow):
     def __init__(self, value):
         Gtk.ListBoxRow.__init__(self)
@@ -176,7 +166,6 @@ VARIANT_TO_WIDGET = {
     'i': partial(numeric_widget, floating_point=False),
     'd': partial(numeric_widget, floating_point=True),
     's': choice_widget,
-    #'(ii)': numeric_range_widget
 }
 
 
@@ -319,6 +308,9 @@ class SettingsView(View):
             'clicked', self.on_reset_to_defaults
         )
 
+        self.on_key_changed(self.app.settings, None)
+        self.app.settings.connect('changed', self.on_key_changed)
+
     def on_view_leave(self):
         self.app_window.hide_action_buttons()
 
@@ -339,3 +331,8 @@ class SettingsView(View):
         GLib.timeout_add(100, lambda: self.reset_to_defaults() or self.app.settings.delay())
         # self.app.settings.delay()
         self.save_settings = False
+
+    def on_key_changed(self, settings, _):
+        is_sensitive = settings.get_has_unapplied()
+        self.app_window.destructive_action.set_sensitive(is_sensitive)
+        self.app_window.suggested_action.set_sensitive(is_sensitive)
