@@ -69,7 +69,6 @@ class MainApplication(Gtk.Application):
         self.set_accels_for_action('app.work', ['<Ctrl>W'])
         self.set_accels_for_action('app.search', ['<Ctrl>F'])
 
-        location_view = LocationView()
         easy_view = SettingsView(self)
         easy_view.fill_from_settings()
 
@@ -111,10 +110,12 @@ class MainApplication(Gtk.Application):
 
         self.add_action(create_action('work', _fake_work))
         self.win.views.add_view(easy_view, 'settings')
-        self.win.views.add_view(location_view, 'locations')
+        self.win.views.add_view(LocationView(self), 'locations')
         self.win.views.add_view(MainView(self), 'main')
         self.win.views.add_view(EditorView(self), 'editor')
-        self.win.views.switch('editor')
+
+        # Set the default view visible at startup
+        self.win.views.switch('locations')
 
         self.win.show_all()
 

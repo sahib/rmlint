@@ -109,6 +109,12 @@ class HeaderBar(Gtk.HeaderBar):
         self.set_title(app.APP_TITLE)
         self.set_subtitle(app.APP_DESCRIPTION)
 
+        # This is a hack to get a small annoying bug under control:
+        # If adding buttons to the headerbar, it's size will increase
+        # This sometimes lead to small drawing errors and jumpy interface.
+        # This fix is not very clever but works at least.
+        self.set_size_request(-1, 44)
+
 
 class InfoBar(Gtk.InfoBar):
     def __init__(self):
@@ -364,3 +370,16 @@ class MainWindow(Gtk.ApplicationWindow):
             self.search_bar.show()
         else:
             self.search_bar.hide()
+
+    def add_header_widget(self, widget, align=Gtk.Align.END):
+        """
+        """
+        if align is Gtk.Align.END:
+            self.headerbar.pack_end(widget)
+        elif align is Gtk.Align.START:
+            self.headerbar.pack_start(widget)
+        else:
+            raise ValueError('{align} not supported here.'.format(align=align))
+
+    def remove_header_widget(self, widget):
+        self.headerbar.remove(widget)
