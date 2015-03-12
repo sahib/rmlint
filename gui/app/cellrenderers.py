@@ -5,7 +5,7 @@
 from datetime import datetime
 
 # Internal:
-from app.util import IndicatorLabel, render_pixbuf
+from app.util import IndicatorLabel, render_pixbuf, size_to_human_readable
 
 # External:
 from gi.repository import Gtk
@@ -20,21 +20,9 @@ class CellRendererSize(Gtk.CellRendererText):
         self.connect('notify::size', CellRendererSize._transform_size)
 
     def _transform_size(self, _):
-        size = self.get_property('size')
-        human_readable = ''
-
-        if size > 0:
-            for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
-                if abs(size) >= 1024.0:
-                    size /= 1024.0
-                    continue
-
-                # Hack to split off the unneeded .0
-                size = round(size, 1) if size % 1 else int(size)
-                human_readable = "{s} {f}B".format(s=size, f=unit)
-                break
-
-        self.set_property('text', human_readable)
+        self.set_property(
+            'text', size_to_human_readable(self.get_property('size'))
+        )
 
 
 def pretty_date(time=False):

@@ -171,7 +171,7 @@ VARIANT_TO_WIDGET = {
 
 class SettingsView(View):
     def __init__(self, app):
-        View.__init__(self, app)
+        View.__init__(self, app, sub_title='Configure how duplicates are searched')
 
         self._grid = Gtk.Grid()
         self._grid.set_margin_left(30)

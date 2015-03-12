@@ -39,7 +39,7 @@ except ImportError:
 
 class EditorView(View):
     def __init__(self, win):
-        View.__init__(self, win)
+        View.__init__(self, win, sub_title='Step 3: Check the results')
 
         self.set_policy(
             Gtk.PolicyType.NEVER,
@@ -114,6 +114,7 @@ When done, click the `Run Script` button below.
         self.add(grid)
 
     def on_run_script_clicked(self, button):
+        self.sub_title = 'Step 4: Cross fingers'
         button.set_sensitive(False)
         self.text_view.set_sensitive(False)
         self.stack.set_visible_child_name('progressing')

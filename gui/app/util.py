@@ -5,6 +5,23 @@
 from gi.repository import Gtk, Gdk, Gio, GObject
 
 
+def size_to_human_readable(size):
+    human_readable = ''
+
+    if size > 0:
+        for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
+            if abs(size) >= 1024.0:
+                size /= 1024.0
+                continue
+
+            # Hack to split off the unneeded .0
+            size = round(size, 1) if size % 1 else int(size)
+            human_readable = "{s} {f}B".format(s=size, f=unit)
+            break
+
+    return human_readable
+
+
 def render_pixbuf(widget, width=-1, height=-1):
     """Renders any widget that is not realized yet
     into a pixbuf with the supplied width and height.

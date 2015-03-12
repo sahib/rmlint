@@ -2,17 +2,49 @@
 # encoding: utf-8
 
 # Stdlib:
-import os
+import os, itertools
 
 # Internal:
-from app.util import View, IconButton
+from app.util import View, IconButton, size_to_human_readable
 
 # External:
 from gi.repository import Gtk, GLib, Gio
 
 
+class DeferredSizeLabel(Gtk.Bin):
+    """Recursively calculates the size of a directory in a non-blocking way.
+
+    While calculating the widget will look like a spinner, when done the size
+    is displayed as normal text label.
+    """
+    def __init__(self, path):
+        Gtk.Frame.__init__(self)
+
+        self._size_count = 0
+
+        spinner = Gtk.Spinner()
+        spinner.start()
+        self.add(spinner)
+
+        # `du` still seems to be the fastest way to do the job.
+        # All self-implemented ways in python were way slower.
+        du = Gio.Subprocess.new(
+            ['du', '-s', path],
+            Gio.SubprocessFlags.STDERR_SILENCE | Gio.SubprocessFlags.STDOUT_PIPE
+        )
+        du.communicate_utf8_async(None, None, self._du_finished)
+
+    def _du_finished(self, du, result):
+        result, du_data, _ = du.communicate_utf8_finish(result)
+        kbytes = int(''.join(filter(str.isdigit, du_data)))
+
+        self.remove(self.get_child())
+        self.add(Gtk.Label(size_to_human_readable(kbytes * 1024)))
+        self.show_all()
+
+
 class ShredderLocationEntry(Gtk.ListBoxRow):
-    def __init__(self, name, path, themed_icon):
+    def __init__(self, name, path, themed_icon, fill_level=None):
         Gtk.ListBoxRow.__init__(self)
 
         self.set_name('ShredderLocationEntry')
@@ -48,6 +80,8 @@ class ShredderLocationEntry(Gtk.ListBoxRow):
             themed_icon,
             Gtk.IconSize.DIALOG
         )
+        icon_img.props.pixel_size = 64
+
         icon_img.set_halign(Gtk.Align.START)
         icon_img.set_margin_start(3)
         icon_img.set_margin_end(10)
@@ -61,29 +95,50 @@ class ShredderLocationEntry(Gtk.ListBoxRow):
         self.check_box.set_margin_top(13)
         self.check_box.set_can_focus(False)
 
-        level_bar = Gtk.LevelBar()
-        level_bar.set_valign(Gtk.Align.START)
-        level_bar.set_halign(Gtk.Align.END)
-        level_bar.set_vexpand(False)
-        level_bar.set_value(0.5)
-        level_bar.set_size_request(150, 10)
-        level_bar.set_margin_end(20)
-        level_bar.set_margin_top(20)
-
-        level_label = Gtk.Label()
-        level_label.set_markup('<small>10 / 200 - 5%</small>')
-        level_label.set_valign(Gtk.Align.START)
-        level_label.set_halign(Gtk.Align.END)
-        level_label.set_margin_end(20)
-        level_label.set_vexpand(False)
-
         grid.attach(icon_img, 0, 0, 5, 5)
         grid.attach(name_label, 5, 2, 1, 1)
         grid.attach(path_label, 5, 3, 1, 1)
-        grid.attach(level_bar, 6, 2, 1, 1)
-        grid.attach(level_label, 6, 3, 1, 1)
         grid.attach(self.check_box, 7, 2, 1, 1)
         grid.attach(self.separator, 0, 8, 8, 1)
+
+        if fill_level is not None:
+            level_bar = Gtk.LevelBar()
+            level_bar.set_valign(Gtk.Align.START)
+            level_bar.set_halign(Gtk.Align.END)
+            level_bar.set_vexpand(False)
+            level_bar.set_size_request(150, 10)
+            level_bar.set_margin_end(20)
+            level_bar.set_margin_top(20)
+
+            level_bar.remove_offset_value(Gtk.LEVEL_BAR_OFFSET_HIGH)
+            level_bar.remove_offset_value(Gtk.LEVEL_BAR_OFFSET_LOW)
+            level_bar.add_offset_value(Gtk.LEVEL_BAR_OFFSET_LOW, 0.75)
+            level_bar.add_offset_value(Gtk.LEVEL_BAR_OFFSET_HIGH, 0.25)
+
+            level_label = Gtk.Label()
+            level_label.set_valign(Gtk.Align.START)
+            level_label.set_halign(Gtk.Align.END)
+            level_label.set_margin_end(20)
+            level_label.set_vexpand(False)
+
+            used, total = fill_level
+            percent = int(used / total * 100)
+            level_label.set_markup(
+                '<small>{f} / {t} - {p}%</small>'.format(
+                    f=size_to_human_readable(used),
+                    t=size_to_human_readable(total),
+                    p=percent
+                )
+            )
+            level_bar.set_value(percent / 100)
+
+            grid.attach(level_label, 6, 3, 1, 1)
+            grid.attach(level_bar, 6, 2, 1, 1)
+        else:
+            size_widget = DeferredSizeLabel(path)
+            size_widget.set_margin_top(15)
+            size_widget.set_margin_end(20)
+            grid.attach(size_widget, 6, 2, 1, 1)
 
     def _on_check_box_toggled(self, btn):
         ctx = self.get_style_context()
@@ -97,9 +152,10 @@ class ShredderLocationEntry(Gtk.ListBoxRow):
 
 class LocationView(View):
     def __init__(self, app):
-        View.__init__(self, app, sub_title='Choose locations to check')
+        View.__init__(self, app)
         self.selected_locations = []
         self.known_paths = set()
+        self._set_title()
 
         self.box = Gtk.ListBox()
         self.box.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -168,6 +224,9 @@ class LocationView(View):
 
         self.add(grid)
 
+    def _set_title(self):
+        self.sub_title='Step 1: Choose locations to check'
+
     def refill_entries(self, *_):
         for child in list(self.box):
             self.box.remove(child)
@@ -184,10 +243,21 @@ class LocationView(View):
         )
 
         for mount in self.volume_monitor.get_mounts():
+            info = mount.get_root().query_filesystem_info(
+                ','.join([
+                    Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE,
+                    Gio.FILE_ATTRIBUTE_FILESYSTEM_USED
+                ])
+            )
+
             self.add_entry(
                 mount.get_name(),
                 mount.get_root().get_path(),
-                mount.get_icon()
+                mount.get_icon(),
+                fill_level=(
+                    info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_USED),
+                    info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE)
+                )
             )
 
         for item in self.recent_mgr.get_items():
@@ -204,7 +274,7 @@ class LocationView(View):
 
         self.show_all()
 
-    def add_entry(self, name, path, icon):
+    def add_entry(self, name, path, icon, fill_level=None):
         path = path.strip()
         if path == '/':
             return
@@ -213,7 +283,10 @@ class LocationView(View):
             return
 
         self.known_paths.add(path)
-        self.box.insert(ShredderLocationEntry(name, path, icon), -1)
+        self.box.insert(
+            ShredderLocationEntry(name, path, icon, fill_level),
+            -1
+        )
 
     def _on_row_clicked(self, box, row):
         style_ctx = row.get_style_context()
@@ -262,21 +335,34 @@ class LocationView(View):
         open_button.get_style_context().add_class(
             Gtk.STYLE_CLASS_SUGGESTED_ACTION
         )
-        self.app_window.add_header_widget(open_button)
 
-        def _open_clicked(_):
+        close_button = IconButton('window-close-symbolic', 'Cancel')
+
+        self.app_window.add_header_widget(open_button)
+        self.app_window.add_header_widget(close_button, align=Gtk.Align.START)
+
+        def _go_back():
             self.app_window.remove_header_widget(open_button)
+            self.app_window.remove_header_widget(close_button)
             self.app_window.add_header_widget(self.chooser_button)
             self.stack.set_visible_child_name('list')
-            print(self.file_chooser.get_filenames())
             self.app_window.views.go_right.set_sensitive(True)
             self.app_window.views.go_left.set_sensitive(True)
-            self.sub_title = 'Choose a new location'
+            self._set_title()
+
+        def _open_clicked(_):
+            _go_back()
+            print(self.file_chooser.get_filenames())
+
+        def _close_clicked(_):
+            _go_back()
 
         def _selection_changed(chooser):
             is_sensitive = bool(self.file_chooser.get_filenames())
             open_button.set_sensitive(is_sensitive)
 
         open_button.connect('clicked', _open_clicked)
+        close_button.connect('clicked', _close_clicked)
         self.file_chooser.connect('selection-changed', _selection_changed)
         open_button.show_all()
+        close_button.show_all()

@@ -385,7 +385,7 @@ class RmlintTreeView(Gtk.TreeView):
 
 class MainView(View):
     def __init__(self, app):
-        View.__init__(self, app)
+        View.__init__(self, app, 'Step 2: Running...')
 
         # Disable scrolling for the main view:
         self.set_policy(
