@@ -19,12 +19,12 @@ class ViewSwitcher(Gtk.Box):
         self._prev = None
 
         # Make the buttons appear connected:
-        self.get_style_context().add_class("linked")
+        self.get_style_context().add_class('linked')
 
-        self.button_left, self.button_right = Gtk.Button(), Gtk.Button()
+        self.go_left, self.go_right = Gtk.Button(), Gtk.Button()
         for btn, arrow, direction in (
-            (self.button_left, Gtk.ArrowType.LEFT, -1),
-            (self.button_right, Gtk.ArrowType.RIGHT, +1)
+            (self.go_left, Gtk.ArrowType.LEFT, -1),
+            (self.go_right, Gtk.ArrowType.RIGHT, +1)
         ):
             btn.add(Gtk.Arrow(arrow, Gtk.ShadowType.NONE))
             btn.connect('clicked', partial(self._set_widget_at, step=direction))
@@ -71,23 +71,17 @@ class ViewSwitcher(Gtk.Box):
 
     def _update_sensitivness(self):
         idx = self._find_curr_index()
-        if idx == 0:
-            self.button_left.set_sensitive(False)
-        else:
-            self.button_left.set_sensitive(True)
+        self.go_left.set_sensitive(idx != 0)
+        self.go_right.set_sensitive(idx != len(self._stack) - 1)
 
-        if idx == len(self._stack) - 1:
-            self.button_right.set_sensitive(False)
-        else:
-            self.button_right.set_sensitive(True)
+    def add_view(self, view, name):
+        view.set_hexpand(True)
+        view.set_vexpand(True)
+        view.set_halign(Gtk.Align.FILL)
+        view.set_valign(Gtk.Align.FILL)
+        view.show_all()
 
-    def add_view(self, widget, name):
-        widget.set_hexpand(True)
-        widget.set_vexpand(True)
-        widget.set_halign(Gtk.Align.FILL)
-        widget.set_valign(Gtk.Align.FILL)
-        widget.show_all()
-        self._stack.add_named(widget, name)
+        self._stack.add_named(view, name)
 
     def switch(self, name):
         widget = self._stack.get_child_by_name(name)
@@ -102,6 +96,7 @@ class ViewSwitcher(Gtk.Box):
         self._update_sensitivness()
 
 
+
 class HeaderBar(Gtk.HeaderBar):
     def __init__(self):
         Gtk.HeaderBar.__init__(self)
@@ -113,7 +108,7 @@ class HeaderBar(Gtk.HeaderBar):
         # If adding buttons to the headerbar, it's size will increase
         # This sometimes lead to small drawing errors and jumpy interface.
         # This fix is not very clever but works at least.
-        self.set_size_request(-1, 44)
+        self.set_size_request(-1, 46)
 
 
 class InfoBar(Gtk.InfoBar):
@@ -197,7 +192,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # Set the css name:
         self.set_name('AppWindow')
         self.set_title(app.APP_TITLE)
-        self.set_default_size(1260, 660)
+        self.set_default_size(1280, 660)
 
         self.infobar = InfoBar()
 
@@ -293,7 +288,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         application = Gio.Application.get_default()
         search_button.connect(
-            'clicked', lambda btn: application.activate_action('app.search')
+            'clicked', lambda _: self.set_search_mode(True)
         )
 
         if app.APP_USE_TRADITIONAL_MENU:
@@ -365,11 +360,12 @@ class MainWindow(Gtk.ApplicationWindow):
     def set_search_mode(self, active):
         """Show the
         """
+        # Trigger a fake keypress event on the search bar.
         self.search_bar.set_search_mode(active)
         if active:
-            self.search_bar.show()
+             self.search_bar.show()
         else:
-            self.search_bar.hide()
+             self.search_bar.hide()
 
     def add_header_widget(self, widget, align=Gtk.Align.END):
         """

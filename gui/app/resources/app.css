@@ -97,3 +97,24 @@
                       linear-gradient(alpha(@script_editor, 0.3) 1px, transparent 1px),
                       linear-gradient(90deg, alpha(@script_editor,.3) 1px, transparent 1px);
 }
+
+
+#ShredderLocationEntry {
+    padding: 0px;
+    transition-property: background-color, background-image;
+    transition: 200ms ease-in-out;
+}
+
+#ShredderLocationEntry.original {
+    /* Draw a grid, like on mm paper */
+    background-size: 20px 20px, 20px 20px, 5px 5px, 5px 5px;
+    background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
+    background-image: linear-gradient(alpha(@theme_fg_color, 0.066) 1px, transparent 1px),
+                      linear-gradient(90deg, alpha(@theme_fg_color, 0.066) 1px, transparent 1px),
+                      linear-gradient(alpha(@theme_fg_color, 0.02) 1px, transparent 1px),
+                      linear-gradient(90deg, alpha(@theme_fg_color, 0.02) 1px, transparent 1px);
+}
+
+#ShredderLocationEntry.selected {
+    background-color: alpha(@theme_selected_bg_color, 0.4);
+}

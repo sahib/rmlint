@@ -53,12 +53,12 @@ class EditorView(View):
         control_grid.set_valign(Gtk.Align.CENTER)
 
         label = Gtk.Label()
+        label.get_style_context().add_class('dim-label')
         label.set_justify(Gtk.Justification.CENTER)
         label.set_markup('''
 <span font="65">☠</span>
 
-<big>
-<big><span color="darkgrey"><b>Review the script on the right!</b></span></big>
+<big><big><b>Review the script on the right!</b></big>
 When done, click the `Run Script` button below.
 </big>\n\n''')
 
