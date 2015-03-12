@@ -20,77 +20,12 @@ from app.cellrenderers import CellRendererCount
 from app.cellrenderers import CellRendererLint
 
 
-class StatsRow(Gtk.Grid):
-    def __init__(self):
-        Gtk.Grid.__init__(self)
-        self.set_margin_start(10)
-        self.set_margin_end(10)
-
-        self.label = IndicatorLabel()
-        self.label.set_state(None)
-        self.label.set_halign(Gtk.Align.START)
-
-        self.bar = Gtk.LevelBar()
-        self.bar.set_hexpand(True)
-        self.bar.set_vexpand(False)
-        self.bar.set_margin_left(5)
-        self.bar.set_mode(Gtk.LevelBarMode.DISCRETE)
-        self.bar.set_size_request(150, -1)
-        self.bar.set_halign(Gtk.Align.END)
-
-        self.attach(self.label, 0, 0, 1, 1)
-        self.attach_next_to(self.bar, self.label, Gtk.PositionType.RIGHT, 1, 1)
-
-        # TODO:
-        self.label.set_markup(
-            "<b>10 Duplicates</b> in <b>5 Groups</b> / <b>100</b> Total files"
-        )
-        self.bar.set_value(0.5)
-
-        self.set_halign(Gtk.Align.FILL)
-
-
-class Chart(Gtk.DrawingArea):
+class Chart(Gtk.Spinner):
     def __init__(self):
         Gtk.DrawingArea.__init__(self)
         self.set_size_request(300, 300)
-        self.connect('draw', self._on_draw)
-
-    def _on_draw(self, _, ctx):
-        alloc = self.get_allocation()
-
-        ctx.move_to(alloc.width / 2, alloc.height / 2)
-        ctx.set_source_rgba(1.0, 0.5, 0.1, 0.5)
-        ctx.arc(
-            alloc.width / 2,
-            alloc.height / 2,
-            min(alloc.width, alloc.height) / 3 ,
-            0,
-            math.pi * (2 / 3)
-        )
-        ctx.fill()
-
-        ctx.move_to(alloc.width / 2, alloc.height / 2)
-        ctx.set_source_rgba(0.5, 0.1, 1.0, 0.5)
-        ctx.arc(
-            alloc.width / 2,
-            alloc.height / 2,
-            min(alloc.width, alloc.height) / 3 ,
-            math.pi * (2 / 3),
-            1.5 * math.pi
-        )
-        ctx.fill()
-
-        ctx.move_to(alloc.width / 2, alloc.height / 2)
-        ctx.set_source_rgba(0.1, 1.0, 0.5, 0.5)
-        ctx.arc(
-            alloc.width / 2,
-            alloc.height / 2,
-            min(alloc.width, alloc.height) / 3 ,
-            1.5 * math.pi,
-            2 * math.pi
-        )
-        ctx.fill()
+        self.start()
+        # self.connect('draw', self._on_draw)
 
 
 class ResultActionBar(Gtk.ActionBar):
@@ -120,17 +55,8 @@ class ResultActionBar(Gtk.ActionBar):
 
 def build_stats_pane():
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    # box.pack_start(
-    #     Chart(), True, True, 0
-    # )
-    # box.pack_start(
-    #     StatsRow(), False, True, 5
-    # )
-    # box.pack_start(
-    #     StatsRow(), False, True, 5
-    # )
     box.pack_start(
-        Gtk.Label('Diagrams and Stuff!'), True, True, 5
+        Chart(), True, True, 0
     )
     box.pack_start(
         ResultActionBar(), False, True, 0

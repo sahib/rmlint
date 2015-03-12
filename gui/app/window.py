@@ -288,7 +288,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         application = Gio.Application.get_default()
         search_button.connect(
-            'clicked', lambda _: self.set_search_mode(True)
+            'clicked', lambda btn: self.set_search_mode(btn.get_active())
         )
 
         if app.APP_USE_TRADITIONAL_MENU:

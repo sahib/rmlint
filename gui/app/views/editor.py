@@ -6,6 +6,7 @@ from app.util import View, IconButton
 
 # External:
 from gi.repository import Gtk
+from gi.repository import GLib
 
 # Fallback to the normal Gtk.TextView if no GtkSource.View could be imported
 try:
@@ -35,6 +36,36 @@ except ImportError:
         buffer_ = Gtk.Buffer()
         view = Gtk.TextView()
         return view, buffer_
+
+
+def _create_running_screen():
+    grid = Gtk.Grid()
+    spinner = Gtk.Spinner()
+    spinner.start()
+    spinner.set_halign(Gtk.Align.CENTER)
+    spinner.set_valign(Gtk.Align.CENTER)
+    spinner.set_vexpand(True)
+
+    grid.attach(spinner, 0, 0, 1, 1)
+
+    label = Gtk.Label()
+    label.get_style_context().add_class('dim-label')
+    label.set_justify(Gtk.Justification.CENTER)
+    label.set_markup('<span font="65">☕</span>')
+    label.set_halign(Gtk.Align.CENTER)
+    label.set_valign(Gtk.Align.CENTER)
+    label.set_vexpand(True)
+
+    grid.attach(label, 0, 1, 1, 1)
+    return grid
+
+
+def _create_finished_screen():
+    label = Gtk.Label()
+    label.get_style_context().add_class('dim-label')
+    label.set_justify(Gtk.Justification.CENTER)
+    label.set_markup('<span font="65">✔</span>\n<big>All went well!</big>')
+    return label
 
 
 class EditorView(View):
@@ -104,9 +135,8 @@ When done, click the `Run Script` button below.
         self.stack.add_named(control_grid, 'danger')
         self.stack.set_visible_child(control_grid)
 
-        spinner = Gtk.Spinner()
-        spinner.start()
-        self.stack.add_named(spinner, 'progressing')
+        self.stack.add_named(_create_running_screen(), 'progressing')
+        self.stack.add_named(_create_finished_screen(), 'finished')
 
         grid = Gtk.Grid()
         grid.attach(self.stack, 0, 0, 1, 1)
@@ -119,3 +149,5 @@ When done, click the `Run Script` button below.
         self.text_view.set_sensitive(False)
         self.stack.set_visible_child_name('progressing')
         self.text_view.get_buffer().set_text('Deleting xyz (output of rmlint.sh)')
+
+        GLib.timeout_add(2000, lambda: self.stack.set_visible_child_name('finished'))
