@@ -42,7 +42,7 @@ def render_pixbuf(widget, width=-1, height=-1):
 
     # Render the widget to a GdkPixbuf
     widget_pix = off_win.get_pixbuf()
-    widget.unparent()
+    off_win.remove(widget)
     return widget_pix
 
 

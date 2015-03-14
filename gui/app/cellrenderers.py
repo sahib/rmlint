@@ -118,7 +118,8 @@ def _render_tag_label(tag):
         IndicatorLabel.THEME: '♔'
     }
 
-    tag_label = IndicatorLabel('<small>{symbol}</small>'.format(
+    tag_label = IndicatorLabel('')
+    tag_label.set_markup('<small>{symbol}</small>'.format(
         symbol=state_to_symbol[tag]
     ))
     tag_label.set_state(tag)
@@ -145,6 +146,7 @@ class CellRendererLint(Gtk.CellRendererText):
             pixbuf = CellRendererLint.STATE_TO_PIXBUF.get(tag)
             if pixbuf is None:
                 pixbuf = CellRendererLint.STATE_TO_PIXBUF[tag] = _render_tag_label(tag)
+                # pixbuf = GdkPixbuf.Pixbuf.new_from_file('/tmp/icon.png')
 
             self._pixbuf_renderer.set_property('pixbuf', pixbuf)
             self._pixbuf_renderer.render(
