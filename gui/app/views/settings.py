@@ -11,12 +11,11 @@ from app.util import View
 
 # External:
 from gi.repository import Gtk
-from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
 
-# TODO: GtkRange, GtkPopdown(or likewise), Gtk
 
+# TODO: GtkRange, GtkPopdown(or likewise), Gtk
 def boolean_widget(settings, key_name, summary, description):
     switch = Gtk.Switch()
     settings.bind(key_name, switch, 'active', 0)
@@ -68,8 +67,27 @@ def numeric_widget(
 class _ChoiceRow(Gtk.ListBoxRow):
     def __init__(self, value):
         Gtk.ListBoxRow.__init__(self)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+
+        label = Gtk.Label(value.capitalize())
+        label.props.xalign = 0
+
         self.value = value
         self.set_can_focus(False)
+
+        self.set_margin_left(3)
+        self.set_margin_right(3)
+
+        self.symbol = Gtk.Label('✔')
+        self.symbol.set_no_show_all(True)
+
+        box.pack_start(label, True, True, 0)
+        box.pack_start(self.symbol, False, False, 0)
+        self.add(box)
+
+    def set_show_checkmark(self, state):
+        self.symbol.set_visible(state)
 
 
 class _CurrentChoiceLabel(Gtk.Label):
@@ -115,16 +133,24 @@ def choice_widget(settings, key_name, summary, description):
 
     listbox = Gtk.ListBox()
     listbox.set_border_width(10)
+    listbox.set_activate_on_single_click(True)
 
-    def _update_value(_, row):
+    def _update_value(listbox, row):
+        for other_row in listbox:
+            row.set_show_checkmark(False)
+
+        listbox.get_selected_row().set_show_checkmark(
+            listbox.get_selected_row().is_selected()
+        )
         settings.set_string(key_name, row.value)
         popover.hide()
 
     listbox.connect('row-activated', _update_value)
     listbox_header = Gtk.Label(
-        '<small><b><span fgcolor="grey">{txt}</span></b></small>'.format(
-            txt=summary
-        )
+        '<small><b>{txt}</b></small>'.format(txt=summary)
+    )
+    listbox_header.get_style_context().add_class(
+        Gtk.STYLE_CLASS_DIM_LABEL
     )
     listbox_header.set_use_markup(True)
     listbox_header.set_size_request(75, -1)
@@ -143,17 +169,12 @@ def choice_widget(settings, key_name, summary, description):
 
     if range_type == 'enum':
         for choice in range_variant:
-            label = Gtk.Label(choice.capitalize())
-            label.set_property('xalign', 0)
-
             row = _ChoiceRow(choice)
-            row.add(label)
-            row.set_margin_left(3)
-            row.set_margin_right(3)
             listbox.add(row)
 
             if choice == value:
                 listbox.select_row(row)
+                row.set_show_checkmark(True)
 
     button.connect('clicked', lambda *_: popover.show_all())
     settings.bind(key_name, value_label, 'choice', 0)
@@ -171,7 +192,9 @@ VARIANT_TO_WIDGET = {
 
 class SettingsView(View):
     def __init__(self, app):
-        View.__init__(self, app, sub_title='Configure how duplicates are searched')
+        View.__init__(
+            self, app, sub_title='Configure how duplicates are searched'
+        )
 
         self._grid = Gtk.Grid()
         self._grid.set_margin_left(30)
@@ -186,6 +209,8 @@ class SettingsView(View):
 
         self.save_settings = False
         self.sections = {}
+
+        self.fill_from_settings()
 
     def append_section(self, heading):
         box = Gtk.ListBox()
@@ -212,6 +237,10 @@ class SettingsView(View):
     def append_entry(self, section, key_name, val_widget, summary, desc=None):
         desc_label = Gtk.Label(desc or '')
         summ_label = Gtk.Label(summary or '')
+
+        desc_label.get_style_context().add_class(
+            Gtk.STYLE_CLASS_DIM_LABEL
+        )
 
         for label in desc_label, summ_label:
             label.set_use_markup(True)
@@ -272,8 +301,8 @@ class SettingsView(View):
 
             description = key.get_description()
             if description:
-                description = '<small><span font_weight=\'ultralight\' color=\'grey\'>{}</span></small>'.format(
-                    key.get_description()
+                description = '<small>{desc}</small>'.format(
+                    desc=key.get_description()
                 )
 
             # Get a fitting, readily prepared configure widget
@@ -297,7 +326,9 @@ class SettingsView(View):
 
     def on_view_enter(self):
         self.save_settings = False
-        self.app_window.show_action_buttons('Apply settings', 'Reset to defaults')
+        self.app_window.show_action_buttons(
+            'Apply settings', 'Reset to defaults'
+        )
         self.app.settings.delay()
 
         # Give the buttons a specific context meaning:
@@ -313,8 +344,6 @@ class SettingsView(View):
 
     def on_view_leave(self):
         self.app_window.hide_action_buttons()
-
-        print(self.save_settings)
         if self.save_settings:
             self.app.settings.apply()
         else:
@@ -325,11 +354,12 @@ class SettingsView(View):
         self.app_window.views.switch_to_previous()
 
     def on_reset_to_defaults(self, *_):
-        print('reset')
         self.app.settings.revert()
 
-        GLib.timeout_add(100, lambda: self.reset_to_defaults() or self.app.settings.delay())
-        # self.app.settings.delay()
+        GLib.timeout_add(
+            100, lambda: self.reset_to_defaults() or self.app.settings.delay()
+        )
+
         self.save_settings = False
 
     def on_key_changed(self, settings, _):

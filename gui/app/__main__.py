@@ -5,8 +5,8 @@
 import sys
 
 # Internal:
-from app.application import MainApplication
+from app.application import ShredderApplication
 
 # Gtk will take over now.
-app = MainApplication()
+app = ShredderApplication()
 sys.exit(app.run(sys.argv))
