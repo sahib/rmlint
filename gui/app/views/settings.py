@@ -11,11 +11,12 @@ from app.util import View
 
 # External:
 from gi.repository import Gtk
+from gi.repository import Gdk
 from gi.repository import GLib
+from gi.repository import Gio
 from gi.repository import GObject
 
 
-# TODO: GtkRange, GtkPopdown(or likewise), Gtk
 def boolean_widget(settings, key_name, summary, description):
     switch = Gtk.Switch()
     settings.bind(key_name, switch, 'active', 0)
@@ -64,8 +65,58 @@ def numeric_widget(
     return range_wdgt
 
 
+class InteractiveLevelBar(Gtk.ProgressBar):
+    def __init__(self):
+        Gtk.ProgressBar.__init__(self)
+        self.set_can_focus(True)
+        self.grab_focus()
+
+        # Enable the receival of the appropiate signals:
+        self.add_events(self.get_events() |
+            Gdk.EventMask.BUTTON_PRESS_MASK |
+            Gdk.EventMask.BUTTON_RELEASE_MASK |
+            Gdk.EventMask.POINTER_MOTION_MASK |
+            Gdk.EventMask.SCROLL_MASK
+        )
+
+        self.set_size_request(100, 15)
+        self.connect(
+            'button-press-event',
+            InteractiveLevelBar._on_button_press
+        )
+
+    def set_value(self, value):
+        # Gtk.LevelBar.set_value(self, value)
+        self.set_fraction(value)
+
+    def _on_button_press(self, event):
+        print(event, event.x, event.type)
+        if event.type == Gdk.EventType.BUTTON_RELEASE:
+            alloc = self.get_allocation()
+            percent = event.x / alloc.width
+            print(percent)
+            self.set_value(percent)
+            return True
+        return False
+
+
+def range_widget(settings, key_name, summary, description):
+    grid = Gtk.Grid()
+
+    upper, lower = InteractiveLevelBar(), InteractiveLevelBar()
+
+    for idx, bar in enumerate([upper, lower]):
+        grid.attach(bar, 0, idx, 1, 1)
+        bar.props.vexpand = False
+        bar.props.valign = Gtk.Align.CENTER
+        bar.props.halign = Gtk.Align.FILL
+        bar.props.margin_top = 5
+
+    return grid
+
+
 class _ChoiceRow(Gtk.ListBoxRow):
-    def __init__(self, value):
+    def __init__(self, value, is_default):
         Gtk.ListBoxRow.__init__(self)
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -73,13 +124,16 @@ class _ChoiceRow(Gtk.ListBoxRow):
         label = Gtk.Label(value.capitalize())
         label.props.xalign = 0
 
-        self.value = value
+        self.value, self.is_default = value, is_default
         self.set_can_focus(False)
 
         self.set_margin_left(3)
         self.set_margin_right(3)
 
-        self.symbol = Gtk.Label('✔')
+        self.symbol = Gtk.Image.new_from_gicon(
+            Gio.ThemedIcon(name='emblem-ok-symbolic'),
+            Gtk.IconSize.BUTTON
+        )
         self.symbol.set_no_show_all(True)
 
         box.pack_start(label, True, True, 0)
@@ -87,7 +141,29 @@ class _ChoiceRow(Gtk.ListBoxRow):
         self.add(box)
 
     def set_show_checkmark(self, state):
-        self.symbol.set_visible(state)
+        self.symbol.set_visible(state or self.is_default)
+
+        if self.is_default and not state:
+            icon_name, dim_down = 'starred-symbolic', True
+        elif self.is_default and state:
+            icon_name, dim_down = 'star-new-symbolic', False
+        elif not self.is_default and state:
+            icon_name, dim_down = 'emblem-ok-symbolic', False
+        else:
+            icon_name, dim_down = None, False
+
+        if icon_name is not None:
+            self.symbol.set_from_gicon(
+                Gio.ThemedIcon(name=icon_name), Gtk.IconSize.BUTTON
+            )
+
+        ctx = self.symbol.get_style_context()
+        if dim_down:
+            ctx.add_class(Gtk.STYLE_CLASS_DIM_LABEL)
+            self.symbol.set_opacity(0.5)
+        else:
+            ctx.remove_class(Gtk.STYLE_CLASS_DIM_LABEL)
+            self.symbol.set_opacity(1.0)
 
 
 class _CurrentChoiceLabel(Gtk.Label):
@@ -115,9 +191,8 @@ class _CurrentChoiceLabel(Gtk.Label):
 
 
 def choice_widget(settings, key_name, summary, description):
-    schema = settings.get_property('settings-schema')
+    schema = settings.props.settings_schema
     key = schema.get_key(key_name)
-    range_type, range_variant = key.get_range()
 
     value = settings.get_string(key_name)
     value_label = _CurrentChoiceLabel(value)
@@ -133,27 +208,27 @@ def choice_widget(settings, key_name, summary, description):
 
     listbox = Gtk.ListBox()
     listbox.set_border_width(10)
+    listbox.set_selection_mode(Gtk.SelectionMode.NONE)
     listbox.set_activate_on_single_click(True)
 
     def _update_value(listbox, row):
         for other_row in listbox:
-            row.set_show_checkmark(False)
+            # Might be a different
+            if isinstance(other_row, _ChoiceRow):
+                other_row.set_show_checkmark(row is other_row)
 
-        listbox.get_selected_row().set_show_checkmark(
-            listbox.get_selected_row().is_selected()
-        )
         settings.set_string(key_name, row.value)
         popover.hide()
 
     listbox.connect('row-activated', _update_value)
     listbox_header = Gtk.Label(
-        '<small><b>{txt}</b></small>'.format(txt=summary)
+        '<small><b>{txt}?</b></small>'.format(txt=summary)
     )
     listbox_header.get_style_context().add_class(
         Gtk.STYLE_CLASS_DIM_LABEL
     )
     listbox_header.set_use_markup(True)
-    listbox_header.set_size_request(75, -1)
+    listbox_header.set_size_request(90, -1)
 
     for widget in Gtk.Separator(), listbox_header:
         row = Gtk.ListBoxRow()
@@ -167,9 +242,11 @@ def choice_widget(settings, key_name, summary, description):
     frame.set_border_width(5)
     popover.add(frame)
 
+    range_type, range_variant = key.get_range()
     if range_type == 'enum':
         for choice in range_variant:
-            row = _ChoiceRow(choice)
+            default = key.get_default_value().get_string()
+            row = _ChoiceRow(choice, default == choice)
             listbox.add(row)
 
             if choice == value:
@@ -187,6 +264,7 @@ VARIANT_TO_WIDGET = {
     'i': partial(numeric_widget, floating_point=False),
     'd': partial(numeric_widget, floating_point=True),
     's': choice_widget,
+    '(ii)': range_widget
 }
 
 
