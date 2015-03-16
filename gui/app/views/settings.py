@@ -144,9 +144,9 @@ class _ChoiceRow(Gtk.ListBoxRow):
         self.symbol.set_visible(state or self.is_default)
 
         if self.is_default and not state:
-            icon_name, dim_down = 'starred-symbolic', True
+            icon_name, dim_down = 'non-starred-symbolic', True
         elif self.is_default and state:
-            icon_name, dim_down = 'star-new-symbolic', False
+            icon_name, dim_down = 'starred-symbolic', False
         elif not self.is_default and state:
             icon_name, dim_down = 'emblem-ok-symbolic', False
         else:

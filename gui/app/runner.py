@@ -44,7 +44,7 @@ class MatchType:
     NONE, BASENAME, EXTENSION, WITHOUT_EXTENSION = range(1, 5)
     MAPPING = {
         NONE: '',
-        BASENAME: '---match-basename',
+        BASENAME: '--match-basename',
         EXTENSION: '--match-with-extension',
         WITHOUT_EXTENSION: '--match-without-extension'
     }
@@ -154,6 +154,7 @@ def _create_rmlint_process(settings, paths):
 
         process = launcher.spawnv([
             'rmlint',
+            '--no-with-color',
             '-o', 'sh:rmlint.sh',
             '-o', 'json',
             '-c', 'json:oneline',
