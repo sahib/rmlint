@@ -2,21 +2,26 @@
 # encoding: utf-8
 
 # Stdlib:
-import os, itertools
+import os
 
 # Internal:
 from app.util import View, IconButton, size_to_human_readable
 
 # External:
-from gi.repository import Gtk, GLib, Gio
+from gi.repository import Gtk
+from gi.repository import Gio
+from gi.repository import GLib
+from gi.repository import GObject
 
 
 class DeferredSizeLabel(Gtk.Bin):
+
     """Recursively calculates the size of a directory in a non-blocking way.
 
     While calculating the widget will look like a spinner, when done the size
     is displayed as normal text label.
     """
+
     def __init__(self, path):
         Gtk.Frame.__init__(self)
 
@@ -29,9 +34,8 @@ class DeferredSizeLabel(Gtk.Bin):
         # `du` still seems to be the fastest way to do the job.
         # All self-implemented ways in python were way slower.
         du = Gio.Subprocess.new(
-            ['du', '-s', path],
-            Gio.SubprocessFlags.STDERR_SILENCE | Gio.SubprocessFlags.STDOUT_PIPE
-        )
+            ['du', '-s', path], Gio.SubprocessFlags.STDERR_SILENCE |
+            Gio.SubprocessFlags.STDOUT_PIPE)
         du.communicate_utf8_async(None, None, self._du_finished)
 
     def _du_finished(self, du, result):
@@ -44,6 +48,8 @@ class DeferredSizeLabel(Gtk.Bin):
 
 
 class ShredderLocationEntry(Gtk.ListBoxRow):
+    preferred = GObject.Property(type=bool, default=False)
+
     def __init__(self, name, path, themed_icon, fill_level=None):
         Gtk.ListBoxRow.__init__(self)
 
@@ -56,7 +62,6 @@ class ShredderLocationEntry(Gtk.ListBoxRow):
 
         self.path = path
         self.name = name
-        self.is_preferred = False
 
         self.separator = Gtk.Separator()
         self.separator.set_hexpand(True)
@@ -147,10 +152,11 @@ class ShredderLocationEntry(Gtk.ListBoxRow):
         else:
             ctx.remove_class('original')
 
-        self.is_preferred = btn.get_active()
+        self.props.preferred = btn.get_active()
 
 
 class LocationView(View):
+
     def __init__(self, app):
         View.__init__(self, app)
         self.selected_locations = []
@@ -200,9 +206,13 @@ class LocationView(View):
         self.refill_entries()
 
         run_button = IconButton('emblem-system', 'Scan folders')
+        run_button.connect('clicked', self._run_clicked)
         run_button.get_style_context().add_class(
             Gtk.STYLE_CLASS_SUGGESTED_ACTION
         )
+
+        del_button = IconButton('user-trash-symbolic', 'Remove from list')
+        del_button.connect('clicked', self._del_clicked)
 
         self.selected_label = Gtk.Label()
         self.selected_label.get_style_context().add_class(
@@ -210,7 +220,8 @@ class LocationView(View):
         )
 
         action_bar = Gtk.ActionBar()
-        action_bar.pack_start(self.selected_label)
+        action_bar.pack_start(del_button)
+        action_bar.set_center_widget(self.selected_label)
         action_bar.pack_end(run_button)
 
         self.revealer = Gtk.Revealer()
@@ -225,7 +236,7 @@ class LocationView(View):
         self.add(grid)
 
     def _set_title(self):
-        self.sub_title='Step 1: Choose locations to check'
+        self.sub_title = 'Step 1: Choose locations to check'
 
     def refill_entries(self, *_):
         for child in list(self.box):
@@ -255,10 +266,10 @@ class LocationView(View):
                 mount.get_root().get_path(),
                 mount.get_icon(),
                 fill_level=(
-                    info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_USED),
-                    info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE)
-                )
-            )
+                    info.get_attribute_uint64(
+                        Gio.FILE_ATTRIBUTE_FILESYSTEM_USED),
+                    info.get_attribute_uint64(
+                        Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE)))
 
         for item in self.recent_mgr.get_items():
             if item.get_mime_type() == 'inode/directory' and item.exists():
@@ -282,10 +293,13 @@ class LocationView(View):
         if path in self.known_paths:
             return
 
+        entry = ShredderLocationEntry(name, path, icon, fill_level)
         self.known_paths.add(path)
-        self.box.insert(
-            ShredderLocationEntry(name, path, icon, fill_level),
-            -1
+        self.box.insert(entry, -1)
+
+        entry.connect(
+            'notify::preferred',
+            lambda *_: self._update_selected_label()
         )
 
     def _on_row_clicked(self, box, row):
@@ -298,8 +312,10 @@ class LocationView(View):
             self.selected_locations.append(row)
 
         self.revealer.set_reveal_child(bool(self.selected_locations))
+        self._update_selected_label()
 
-        prefd_paths = sum(row.is_preferred for row in self.selected_locations)
+    def _update_selected_label(self):
+        prefd_paths = sum(row.props.preferred for row in self.selected_locations)
         self.selected_label.set_markup(
             '{sel} directories - {pref} of them preferred'.format(
                 sel=len(self.selected_locations),
@@ -351,8 +367,13 @@ class LocationView(View):
             self._set_title()
 
         def _open_clicked(_):
+            for path in self.file_chooser.get_filenames():
+                name = os.path.basename(path)
+                self.add_entry(name, path, Gio.ThemedIcon(name='folder-new'))
+                self.box.select_row(entry)
+            self.box.show_all()
+
             _go_back()
-            print(self.file_chooser.get_filenames())
 
         def _close_clicked(_):
             _go_back()
@@ -366,3 +387,13 @@ class LocationView(View):
         self.file_chooser.connect('selection-changed', _selection_changed)
         open_button.show_all()
         close_button.show_all()
+
+    def _run_clicked(self, _):
+        print(self.selected_locations)
+
+    def _del_clicked(self, _):
+        for row in self.selected_locations:
+            print(row)
+            self.box.remove(row)
+
+        self.selected_locations = []

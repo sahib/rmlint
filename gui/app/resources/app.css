@@ -25,12 +25,15 @@
     color: @theme_selected_fg_color;
 
     /* Make the shape round and give it enough space */
-    border-radius: 4px;
+    border-radius: 2px;
     padding: 1px 2px; 
 
     /* Add a small border around the label */
+    /* NOTE: Removed, doesn't look good in TreeView */
+    /*
     border-style: outset;
     border-width: 2px;
+    */
 }
 
 /* This will look pretty much like a normal label.

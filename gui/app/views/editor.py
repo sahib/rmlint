@@ -111,8 +111,8 @@ When done, click the `Run Script` button below.
 
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         right_pane = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        right_pane.pack_start(separator, False, False, 0)
         right_pane.pack_start(scw, True , True, 0)
+        right_pane.pack_start(separator, False, False, 0)
 
         self.run_script_btn = IconButton(
             'user-trash-symbolic', 'Run Script'
@@ -139,8 +139,8 @@ When done, click the `Run Script` button below.
         self.stack.add_named(_create_finished_screen(), 'finished')
 
         grid = Gtk.Grid()
-        grid.attach(self.stack, 0, 0, 1, 1)
-        grid.attach_next_to(right_pane, self.stack, Gtk.PositionType.RIGHT, 1, 1)
+        grid.attach(right_pane, 0, 0, 1, 1)
+        grid.attach_next_to(self.stack, right_pane, Gtk.PositionType.RIGHT, 1, 1)
         self.add(grid)
 
     def on_run_script_clicked(self, button):
