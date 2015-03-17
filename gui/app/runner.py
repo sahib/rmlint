@@ -318,6 +318,53 @@ class Runner(GObject.Object):
         self._queue_read()
 
 
+class Script(GObject.Object):
+    __gsignals__ = {
+        'line-read': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
+        'script-finished': (GObject.SIGNAL_RUN_FIRST, None, ())
+    }
+
+    def __init__(self, script_path, dry_run=True):
+        GObject.Object.__init__(self)
+
+        self._incomplete_chunk = None
+        self._process = Gio.Subprocess.new(
+            [script_path, '-d', '-x', '-n' if dry_run else ''],
+            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE
+        )
+
+    def run(self):
+        self._queue_read()
+
+    def _queue_read(self):
+        stream = self._process.get_stdout_pipe()
+        stream.read_bytes_async(16 * 1024, 0, callback=self._read_chunk)
+
+    def _read_chunk(self, stdout, result):
+        bytes_ = stdout.read_bytes_finish(result)
+        data = bytes_.get_data()
+
+        if not data:
+            self.emit('script-finished')
+            return
+
+        try:
+            chunk = data.decode('utf-8')
+        except UnicodeDecodeError:
+            pass
+
+        if self._incomplete_chunk:
+            chunk = self._incomplete_chunk + chunk
+            self._incomplete_chunk = None
+
+        *lines, self.incomplete_chunk = chunk.splitlines()
+        for line in lines:
+            prefix, path = line.split(':', maxsplit=1)
+            self.emit('line-read', prefix, path)
+
+        self._queue_read()
+
+
 if __name__ == '__main__':
     settings = Gio.Settings.new('org.gnome.Rmlint')
 

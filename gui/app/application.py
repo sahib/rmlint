@@ -90,5 +90,5 @@ class ShredderApplication(Gtk.Application):
         self.win.views.add_view(EditorView(self), 'editor')
 
         # Set the default view visible at startup
-        self.win.views.switch('locations')
+        self.win.views.switch('editor')
         self.win.show_all()
