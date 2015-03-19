@@ -11,21 +11,14 @@ from gi.repository import Gtk
 from gi.repository import GLib
 
 # Internal:
-from app.util import View, IndicatorLabel
+from app.util import View, IndicatorLabel, ShredderPopupMenu
+from app.chart import ShredderChartStack
 from app.runner import Runner
 
 from app.cellrenderers import CellRendererSize
 from app.cellrenderers import CellRendererModifiedTime
 from app.cellrenderers import CellRendererCount
 from app.cellrenderers import CellRendererLint
-
-
-class Chart(Gtk.Spinner):
-    def __init__(self):
-        Gtk.DrawingArea.__init__(self)
-        self.set_size_request(300, 300)
-        self.start()
-        # self.connect('draw', self._on_draw)
 
 
 class ResultActionBar(Gtk.ActionBar):
@@ -56,7 +49,7 @@ class ResultActionBar(Gtk.ActionBar):
 def build_stats_pane():
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     box.pack_start(
-        Chart(), True, True, 0
+        ShredderChartStack(), True, True, 0
     )
     box.pack_start(
         ResultActionBar(), False, True, 0
@@ -164,7 +157,7 @@ def _create_toggle_cellrenderer(model):
     return renderer
 
 
-class RmlintTreeView(Gtk.TreeView):
+class ShredderTreeView(Gtk.TreeView):
     def __init__(self):
         Gtk.TreeView.__init__(self)
 
@@ -173,9 +166,14 @@ class RmlintTreeView(Gtk.TreeView):
         self.set_grid_lines(Gtk.TreeViewGridLines.VERTICAL)
         self.set_fixed_height_mode(True)
 
+        self.connect(
+            'button-press-event',
+            ShredderTreeView._on_button_press_event
+        )
+
         # We handle tooltips ourselves
         self.set_has_tooltip(True)
-        self.connect('query-tooltip', RmlintTreeView._on_query_tooltip)
+        self.connect('query-tooltip', ShredderTreeView._on_query_tooltip)
 
         self._filter_query = None
         self.filter_model = self.md.filter_new()
@@ -200,6 +198,21 @@ class RmlintTreeView(Gtk.TreeView):
         ))
 
         self.iter_map = {}
+
+    def clear(self):
+        self.filter_model.clear_cache()
+        self.md.clear()
+
+    def _on_button_press_event(self, event):
+        # TODO: Actually implement all those.
+        if event.button == 3:
+            self.menu = ShredderPopupMenu()
+            self.menu.simple_add('Toggle all', None)
+            self.menu.simple_add('Toggle selected', None)
+            self.menu.simple_add_separator()
+            self.menu.simple_add('Open folder', None)
+            self.menu.simple_add('Copy path to buffer', None)
+            self.menu.simple_popup(event)
 
     def _on_query_tooltip(self, x, y, kb_mode, tooltip):
         # x and y is undefined if keyboard mode is used
@@ -319,7 +332,9 @@ class MainView(View):
             Gtk.PolicyType.NEVER
         )
 
-        self.tv = RmlintTreeView()
+        self._is_running = False
+
+        self.tv = ShredderTreeView()
         self.tv.set_halign(Gtk.Align.FILL)
 
         scw = Gtk.ScrolledWindow()
@@ -349,10 +364,13 @@ class MainView(View):
 
         self.app_window.search_entry.connect('search-changed', _search_changed)
 
-        # TODO: call later
-        self.create_runner()
+    @property
+    def is_running(self):
+        return self._is_running
 
-    def create_runner(self):
+    def trigger_run(self, paths):
+        self.tv.clear()
+
         root_path = '/usr/bin'
         self.tv.set_root(root_path)
 
@@ -367,13 +385,13 @@ class MainView(View):
 
         self.app_window.show_progress(0)
 
-        def on_process_finish(runner, msg):
+        def on_process_finish(runner, error_msg):
             self.app_window.show_progress(100)
             GLib.timeout_add(500, self.app_window.hide_progress)
 
-            if msg is not None:
+            if error_msg is not None:
                 self.app_window.show_infobar(
-                    msg, message_type=Gtk.MessageType.WARNING
+                    error_msg, message_type=Gtk.MessageType.WARNING
                 )
 
             # Work on all idle sources first that were added.

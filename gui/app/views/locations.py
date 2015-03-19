@@ -14,14 +14,12 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 
-class DeferredSizeLabel(Gtk.Bin):
-
+class ShredderDeferredSizeLabel(Gtk.Bin):
     """Recursively calculates the size of a directory in a non-blocking way.
 
     While calculating the widget will look like a spinner, when done the size
     is displayed as normal text label.
     """
-
     def __init__(self, path):
         Gtk.Frame.__init__(self)
 
@@ -140,7 +138,7 @@ class ShredderLocationEntry(Gtk.ListBoxRow):
             grid.attach(level_label, 6, 3, 1, 1)
             grid.attach(level_bar, 6, 2, 1, 1)
         else:
-            size_widget = DeferredSizeLabel(path)
+            size_widget = ShredderDeferredSizeLabel(path)
             size_widget.set_margin_top(15)
             size_widget.set_margin_end(20)
             grid.attach(size_widget, 6, 2, 1, 1)
@@ -285,7 +283,7 @@ class LocationView(View):
 
         self.show_all()
 
-    def add_entry(self, name, path, icon, fill_level=None):
+    def add_entry(self, name, path, icon, fill_level=None, idx=-1):
         path = path.strip()
         if path == '/':
             return
@@ -295,12 +293,13 @@ class LocationView(View):
 
         entry = ShredderLocationEntry(name, path, icon, fill_level)
         self.known_paths.add(path)
-        self.box.insert(entry, -1)
+        self.box.insert(entry, idx)
 
         entry.connect(
             'notify::preferred',
             lambda *_: self._update_selected_label()
         )
+        return entry
 
     def _on_row_clicked(self, box, row):
         style_ctx = row.get_style_context()
@@ -337,6 +336,14 @@ class LocationView(View):
     def on_view_enter(self):
         self.app_window.add_header_widget(self.chooser_button)
 
+        # If no process is currently running it should not be
+        # possible to go right from locations view.
+        main_view = self.app_window.views['main']
+        if not main_view.is_running:
+            GLib.idle_add(
+                lambda: self.app_window.views.go_right.set_sensitive(False)
+            )
+
     def on_view_leave(self):
         self.app_window.remove_header_widget(self.chooser_button)
 
@@ -345,6 +352,7 @@ class LocationView(View):
         self.app_window.remove_header_widget(self.chooser_button)
         self.app_window.views.go_right.set_sensitive(False)
         self.app_window.views.go_left.set_sensitive(False)
+        self.revealer.set_reveal_child(False)
         self.sub_title = 'Choose a new location'
 
         open_button = IconButton('emblem-ok-symbolic', 'Add selected')
@@ -364,12 +372,18 @@ class LocationView(View):
             self.stack.set_visible_child_name('list')
             self.app_window.views.go_right.set_sensitive(True)
             self.app_window.views.go_left.set_sensitive(True)
+            self.revealer.set_reveal_child(True)
             self._set_title()
 
         def _open_clicked(_):
             for path in self.file_chooser.get_filenames():
                 name = os.path.basename(path)
-                self.add_entry(name, path, Gio.ThemedIcon(name='folder-new'))
+                entry = self.add_entry(
+                    name, path, Gio.ThemedIcon(
+                        name='folder-new'
+                    ),
+                    idx=0
+                )
                 self.box.select_row(entry)
             self.box.show_all()
 
@@ -390,6 +404,10 @@ class LocationView(View):
 
     def _run_clicked(self, _):
         print(self.selected_locations)
+        self.app_window.views.switch('main')
+
+        main_view = self.app_window.views['main']
+        main_view.trigger_run(self.selected_locations)
 
     def _del_clicked(self, _):
         for row in self.selected_locations:

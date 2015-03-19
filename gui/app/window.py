@@ -33,6 +33,9 @@ class ViewSwitcher(Gtk.Box):
 
         self.show_all()
 
+    def __getitem__(self, name):
+        return self._stack.get_child_by_name(name)
+
     def _find_curr_index(self):
         visible = self._stack.get_visible_child()
         widgets = list(self._stack)

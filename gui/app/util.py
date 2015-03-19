@@ -58,6 +58,11 @@ def load_css_from_data(css_data):
     )
 
 
+def scrolled(widget):
+    scw = Gtk.ScrolledWindow()
+    scw.add(widget)
+    return scw
+
 def get_theme_color(widget, background=True, state=Gtk.StateFlags.SELECTED):
     color = None
     sctx = widget.get_style_context()
@@ -185,3 +190,48 @@ class View(Gtk.ScrolledWindow):
     @property
     def is_visible(self):
         return self._is_visible
+
+
+
+class ShredderPopupMenu(Gtk.Menu):
+    '''Just a simpler version of Gtk.Menu with quicker to type methods.
+
+    Otherwise it is a normal Gtk.Menu and can be used as such.
+    '''
+    def __init__(self):
+        Gtk.Menu.__init__(self)
+
+    def _add_item(self, item):
+        self.append(item)
+        self.show_all()
+
+    def simple_add(self, name, callback=None):
+        '''Add a Gtk.MenuItem() with a certain name.
+
+        :param callback: Callback that is called when the item is activated
+        '''
+        item = Gtk.MenuItem()
+        item.set_label(name)
+
+        if callable(callback):
+            item.connect('activate', callback)
+        self._add_item(item)
+
+    def simple_add_checkbox(self, name, state=False, toggled=None):
+        '''Add a Gtk.CheckMenuItem to the Menu with the initial *state* and
+        the callable *toggled* that is called when the state changes.
+        '''
+        item = Gtk.CheckMenuItem()
+        item.set_label(name)
+        if callable(toggled):
+            item.connect('toggled', toggled)
+        self._add_item(item)
+
+    def simple_add_separator(self):
+        '''Add a Gtk.SeparatorMenuItem to the Menu.
+        '''
+        self._add_item(Gtk.SeparatorMenuItem())
+
+    def simple_popup(self, button_event):
+        'A simpler version of Gtk.Menu.popup(), only requiring a GdkEventButton.'
+        self.popup(None, None, None, None, button_event.button, button_event.time)

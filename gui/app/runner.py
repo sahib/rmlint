@@ -340,11 +340,19 @@ class Script(GObject.Object):
         stream = self._process.get_stdout_pipe()
         stream.read_bytes_async(16 * 1024, 0, callback=self._read_chunk)
 
+    def _report_line(self, line):
+        if not line:
+            return
+
+        prefix, path = line.split(':', maxsplit=1)
+        self.emit('line-read', prefix, path)
+
     def _read_chunk(self, stdout, result):
         bytes_ = stdout.read_bytes_finish(result)
         data = bytes_.get_data()
 
         if not data:
+            self._report_line(self._incomplete_chunk)
             self.emit('script-finished')
             return
 
@@ -357,10 +365,9 @@ class Script(GObject.Object):
             chunk = self._incomplete_chunk + chunk
             self._incomplete_chunk = None
 
-        *lines, self.incomplete_chunk = chunk.splitlines()
+        *lines, self._incomplete_chunk = chunk.splitlines()
         for line in lines:
-            prefix, path = line.split(':', maxsplit=1)
-            self.emit('line-read', prefix, path)
+            self._report_line(line)
 
         self._queue_read()
 
