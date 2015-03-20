@@ -46,10 +46,10 @@ class ResultActionBar(Gtk.ActionBar):
             box.pack_start(btn, False, False, 0)
 
 
-def build_stats_pane():
+def build_stats_pane(chart):
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     box.pack_start(
-        ShredderChartStack(), True, True, 0
+        chart, True, True, 0
     )
     box.pack_start(
         ResultActionBar(), False, True, 0
@@ -342,7 +342,9 @@ class MainView(View):
         scw.set_valign(Gtk.Align.FILL)
         scw.add(self.tv)
 
-        stats = build_stats_pane()
+        self.chart_stack = ShredderChartStack()
+
+        stats = build_stats_pane(self.chart_stack)
         stats.set_halign(Gtk.Align.FILL)
         stats.set_vexpand(True)
         stats.set_valign(Gtk.Align.FILL)
@@ -400,6 +402,9 @@ class MainView(View):
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
+            self.chart_stack.set_visible_child_name(
+                ShredderChartStack.DIRECTORY
+            )
             self.tv.finish_add()
 
         runner.connect('process-finished', on_process_finish)

@@ -169,7 +169,7 @@ class ShredderRunButton(Gtk.Box):
 def _create_icon_stack():
     icon_stack = Gtk.Stack()
     icon_stack.set_transition_type(
-        Gtk.StackTransitionType.CROSSFADE
+        Gtk.StackTransitionType.SLIDE_LEFT_RIGHT
     )
 
     for name, symbol in (('warning', '⚠'), ('danger', '☠')):
