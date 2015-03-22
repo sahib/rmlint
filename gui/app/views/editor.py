@@ -232,7 +232,7 @@ When done, click the `Run Script` button below.
 
         self.left_stack = Gtk.Stack()
         self.left_stack.set_transition_type(
-            Gtk.StackTransitionType.SLIDE_LEFT_RIGHT
+            Gtk.StackTransitionType.OVER_RIGHT_LEFT
         )
 
         self.left_stack.add_named(scrolled(self.text_view), 'script')

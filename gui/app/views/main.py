@@ -11,7 +11,7 @@ from gi.repository import Gtk
 from gi.repository import GLib
 
 # Internal:
-from app.util import View, IndicatorLabel, ShredderPopupMenu
+from app.util import View, IndicatorLabel, ShredderPopupMenu, IconButton
 from app.chart import ShredderChartStack
 from app.runner import Runner
 
@@ -27,11 +27,10 @@ class ResultActionBar(Gtk.ActionBar):
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         box.get_style_context().add_class("linked")
-        self.set_center_widget(box)
+        self.pack_start(box)
 
         icon_names = [
             'view-refresh-symbolic',
-            'printer-printing-symbolic',
             'system-run-symbolic'
         ]
 
@@ -45,16 +44,20 @@ class ResultActionBar(Gtk.ActionBar):
             )
             box.pack_start(btn, False, False, 0)
 
+        self.script_btn = IconButton('printer-printing-symbolic', 'Render script')
+        self.script_btn.get_style_context().add_class(
+            Gtk.STYLE_CLASS_SUGGESTED_ACTION
+        )
+        self.pack_end(self.script_btn)
 
-def build_stats_pane(chart):
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    box.pack_start(
-        chart, True, True, 0
-    )
-    box.pack_start(
-        ResultActionBar(), False, True, 0
-    )
-    return box
+    def begin(self):
+        pass
+
+    def finish(self):
+        self.script_btn.set_sensitive(True)
+        self.script_btn.set_sensitive(True)
+        self.script_btn.set_sensitive(True)
+
 
 
 def _create_column(title, renderers, fixed_width=100):
@@ -343,16 +346,24 @@ class MainView(View):
         scw.add(self.tv)
 
         self.chart_stack = ShredderChartStack()
+        self.actionbar = ResultActionBar()
 
-        stats = build_stats_pane(self.chart_stack)
-        stats.set_halign(Gtk.Align.FILL)
-        stats.set_vexpand(True)
-        stats.set_valign(Gtk.Align.FILL)
+        stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        stats_box.pack_start(
+            chart, True, True, 0
+        )
+        stats_box.pack_start(
+            ResultActionBar(), False, True, 0
+        )
+
+        stats_box.set_halign(Gtk.Align.FILL)
+        stats_box.set_vexpand(True)
+        stats_box.set_valign(Gtk.Align.FILL)
 
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         right_pane = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         right_pane.pack_start(separator, False, False, 0)
-        right_pane.pack_start(stats, True , True, 0)
+        right_pane.pack_start(stats_box, True , True, 0)
 
         grid = Gtk.Grid()
         grid.set_column_homogeneous(True)
@@ -389,7 +400,7 @@ class MainView(View):
 
         def on_process_finish(runner, error_msg):
             self.app_window.show_progress(100)
-            GLib.timeout_add(500, self.app_window.hide_progress)
+            GLib.timeout_add(300, self.app_window.hide_progress)
 
             if error_msg is not None:
                 self.app_window.show_infobar(

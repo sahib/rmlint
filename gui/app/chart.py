@@ -78,21 +78,19 @@ def _draw_segment(ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_c
     ctx.stroke()
 
 
-def _draw_tooltip(ctx, alloc, x, y, layer, text):
+def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
     ctx.set_source_rgba(0, 0, 0, 0.9 - (layer / 4))
     ctx.arc(x, y, 5, 0, 2 * math.pi)
     ctx.fill()
 
-    # TODO
-    m = alloc.width / 2
-    if x == m:
-        return
+    w2, h2 = alloc.width / 2 - dist, alloc.height / 2 - dist
+    angle_norm = math.fmod()
 
-    s = (y - m) / (x - m)
-    o = y = s * x
+    ctx.arc(new_x, new_y, 5, 0, 2 * math.pi)
+    ctx.fill()
 
-    # ctx.move_to(x, y)
-    ctx.line_to(x + 10, y + 10)
+    ctx.move_to(x, y)
+    ctx.line_to(new_x, height)
     ctx.stroke()
 
 
@@ -148,6 +146,9 @@ class Segment:
         d = self.degree + self.size / 2
         return mid_x + r * math.cos(d), mid_y + r * math.sin(d)
 
+    def middle_angle(self):
+        return self.degree + self.size / 2
+
 
 class ShredderRingChart(ShredderChart):
     def __init__(self):
@@ -183,8 +184,14 @@ class ShredderRingChart(ShredderChart):
         for segment in self.segments:
             segment.draw(ctx, alloc, self.max_layers, bg_col)
 
+            if segment.layer > 1:
+                continue
+
             x, y = segment.middle_point(alloc, self.max_layers)
-            _draw_tooltip(ctx, alloc, x, y, segment.layer, 'Bärbel')
+            _draw_tooltip(
+                ctx, alloc, x, y, 50, segment.layer,
+                segment.middle_angle(), 'Bärbel'
+            )
             print(x, y)
 
     def _on_tooltip_timeout(self, segment):
