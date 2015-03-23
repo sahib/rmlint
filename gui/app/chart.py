@@ -11,13 +11,12 @@ import cairo
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GLib
-from gi.repository import GObject
 
 from gi.repository import Pango
 from gi.repository import PangoCairo
 
 
-def _draw_center_text(ctx, alloc, text, font_size=10):
+def _draw_center_text(ctx, x, y, text, font_size=10, do_draw=True):
     '''Draw a text at the center of ctx/alloc.
 
     ctx: a cairo Context to draw to
@@ -33,12 +32,29 @@ def _draw_center_text(ctx, alloc, text, font_size=10):
     layout.set_alignment(Pango.Alignment.CENTER)
 
     fw, fh = (num / Pango.SCALE / 2 for num in layout.get_size())
-    ctx.move_to(alloc.width / 2 - fw, alloc.height / 2 - fh)
-    PangoCairo.show_layout(ctx, layout)
-    ctx.stroke()
+    if do_draw:
+        ctx.move_to(x - fw, y - fh)
+        PangoCairo.show_layout(ctx, layout)
+        ctx.stroke()
+
+    return fw, fh
 
 
-def _draw_segment(ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_col):
+def _draw_rounded(ctx, area, radius):
+    """draws rectangles with rounded (circular arc) corners"""
+    a, b, c, d = area
+    mpi2 = math.pi / 2
+    ctx.arc(a + radius, c + radius, radius, 2 * mpi2, 3 * mpi2)
+    ctx.arc(b - radius, c + radius, radius, 3 * mpi2, 4 * mpi2)
+    ctx.arc(b - radius, d - radius, radius, 0 * mpi2, 1 * mpi2)
+    ctx.arc(a + radius, d - radius, radius, 1 * mpi2, 2 * mpi2)
+    ctx.close_path()
+    ctx.fill()
+
+
+def _draw_segment(
+    ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_col
+):
     """Draw a radial segment on the context ctx with the following params:
 
     layer: The segment layer to draw (or "how far from the midpoint we are")
@@ -68,13 +84,16 @@ def _draw_segment(ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_c
     s = 0.9 if is_selected else 0.66
     v = 1 - (layer / (max_plus_one + 1)) * (0.1 if is_selected else 0.6)
 
-    # Fill it with the color
-    # ctx.set_source_rgb(*colorsys.hsv_to_rgb(h, s, v))
-    pattern = cairo.RadialGradient(mid_x, mid_y, radius_a_px, mid_x, mid_y, radius_b_px)
-    pattern.add_color_stop_rgb(0, *colorsys.hsv_to_rgb(h, s + 0.05, v + 0.05))
-    pattern.add_color_stop_rgb(0.1, *colorsys.hsv_to_rgb(h, s, v))
-    pattern.add_color_stop_rgb(0.9, *colorsys.hsv_to_rgb(h, s, v))
-    pattern.add_color_stop_rgb(1, *colorsys.hsv_to_rgb(h, s + 0.05, v + 0.05))
+    # Fill it with the color: Add a bit of highlight on start & end.
+    pattern = cairo.RadialGradient(
+        mid_x, mid_y, radius_a_px, mid_x, mid_y, radius_b_px
+    )
+
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    pattern.add_color_stop_rgb(0.0, r, g + 0.05, b + 0.05)
+    pattern.add_color_stop_rgb(0.1, r, g, b)
+    pattern.add_color_stop_rgb(0.9, r, g, b)
+    pattern.add_color_stop_rgb(1.0, r, g + 0.05, b + 0.05)
     ctx.set_source(pattern)
     ctx.fill_preserve()
 
@@ -90,29 +109,31 @@ def _draw_segment(ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_c
 
 
 def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
-    ctx.set_source_rgba(0, 0, 0, 0.9 - (layer / 4))
+    ctx.set_source_rgba(0, 0, 0, 1.0)
     ctx.arc(x, y, 5, 0, 2 * math.pi)
     ctx.fill()
 
-    length = min(alloc.width, alloc.height)
-    w2, h2 = alloc.width / 2, alloc.height / 2
+    fw, fh = _draw_center_text(ctx, 0, 0, text, do_draw=False)
+
+    w2, h2 = alloc.width / 2 - dist - fw, alloc.height / 2 - dist - fh
     angle_norm = math.fmod(math.fabs(angle), math.pi / 2)
     uneven = math.floor(angle / (math.pi / 2)) % 2 == 0
-    print(uneven)
+
+    # Do not ask. That was evolutionary.
+    if not uneven:
+        w2, h2 = h2, w2
 
     # Check where to paint the new point
     if angle_norm < math.atan2(h2, w2):
-        new_x = w2 if uneven else h2
+        new_x = w2
         new_y = math.tan(angle_norm) * new_x
     else:
-        new_y = h2 if uneven else w2
+        new_y = h2
         new_x = new_y / math.tan(angle_norm)
-
 
     # Flip the x/y into the right quadrant
     if angle < math.pi / 2:
-        # new_x, new_y = new_x + w2, new_y + h2
-        pass
+        pass  # already in the right angle.
     elif angle < math.pi:
         new_x, new_y = -new_y, new_x
     elif angle < (math.pi + math.pi / 2):
@@ -123,17 +144,21 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
     # Finally, move from first quadrant to the whole.
     new_x = new_x + alloc.width / 2
     new_y = new_y + alloc.height / 2
-    print('new xy', new_x, new_y)
-    print('w2 h2', w2, h2)
-    print('angle', angle, angle_norm)
 
     ctx.set_source_rgba(0, 0, 0, 0.3)
-    ctx.arc(new_x, new_y, 100, 0, 2 * math.pi)
-    ctx.fill()
-
     ctx.move_to(x, y)
     ctx.line_to(new_x, new_y)
     ctx.stroke()
+
+    ctx.set_source_rgba(0, 0, 0, 1.0)
+    tip_w, tip_h = fw + 5, fh + 3
+    _draw_rounded(
+        ctx, (new_x - tip_w, new_x + tip_w, new_y - tip_h, new_y + tip_h), 3
+    )
+    ctx.fill()
+
+    ctx.set_source_rgba(0.8, 0.8, 0.8, 1.0)
+    _draw_center_text(ctx, new_x, new_y, text, do_draw=True)
 
 
 class ShredderChart(Gtk.DrawingArea):
@@ -141,10 +166,7 @@ class ShredderChart(Gtk.DrawingArea):
         Gtk.DrawingArea.__init__(self)
         self.connect('draw', self._on_draw)
 
-        self.add_events(self.get_events() |
-            Gdk.EventMask.POINTER_MOTION_MASK
-        )
-
+        self.add_events(self.get_events() | Gdk.EventMask.POINTER_MOTION_MASK)
         self.connect('motion-notify-event', self._on_motion)
 
     def _on_draw(self, area, ctx):
@@ -152,6 +174,7 @@ class ShredderChart(Gtk.DrawingArea):
 
     def _on_motion(self, area, event):
         pass
+
 
 class Segment:
     def __init__(self, layer, degree, size):
@@ -184,10 +207,15 @@ class Segment:
         This is used to determine the place where to stick the
         tooltip.
         """
+        # Middle point of the whole diagram
         mid_x, mid_y = alloc.width / 2, alloc.height / 2
-        r = ((self.layer + 0.5) / (max_layers + 1)) * min(mid_x, mid_y)
-        d = math.fmod(self.degree + self.size / 2, 2 * math.pi)
-        return mid_x + r * math.cos(d), mid_y + r * math.sin(d)
+
+        # Distance from (mid_x, mid_y) to middle point
+        rad = ((self.layer + 0.5) / (max_layers + 1)) * min(mid_x, mid_y)
+
+        # Half of the degree range + start
+        deg = self.degree + self.size / 2
+        return mid_x + rad * math.cos(deg), mid_y + rad * math.sin(deg)
 
     def middle_angle(self):
         return self.degree + self.size / 2
@@ -197,6 +225,7 @@ class ShredderRingChart(ShredderChart):
     def __init__(self):
         ShredderChart.__init__(self)
 
+        # Id of the
         self._timeout_id = None
 
         self.add = 0
@@ -204,10 +233,11 @@ class ShredderRingChart(ShredderChart):
         GLib.timeout_add(50, self._set_segments)
 
     def _set_segments(self):
-        # TODO
-        self.add += math.pi / 256
+        # TODO: remove test.
+        self._segment_list = []
+        self.add += math.pi / 512
         self.max_layers = 4
-        self.segments = [
+        s = [
             Segment(1, self.add + 0, math.pi / 2),
             Segment(2, self.add + 0, math.pi / 4),
             Segment(3, self.add + 0, math.pi / 8),
@@ -222,8 +252,14 @@ class ShredderRingChart(ShredderChart):
             Segment(3, self.add + math.pi * 0.9 + math.pi, math.pi * 0.1)
         ]
 
+        for seg in s:
+            self.add_segment(seg)
+
         self.queue_draw()
         return True
+
+    def add_segment(self, segment):
+        self._segment_list.append(segment)
 
     def _on_draw(self, area, ctx):
         # Figure out the background color of the drawing area
@@ -232,25 +268,29 @@ class ShredderRingChart(ShredderChart):
 
         # Draw the center text:
         _draw_center_text(
-            ctx, alloc, '<span color="grey"><big>190 GB</big></span>'
+            ctx, alloc.width / 2, alloc.height / 2,
+            '<span color="grey"><small>190 GB</small></span>'
         )
 
-        print('---')
-        for segment in self.segments:
+        # Extract the segments sorted by layer
+        segs = sorted(self._segment_list, key=lambda e: e.layer, reverse=True)
+
+        for segment in segs:
             segment.draw(ctx, alloc, self.max_layers, bg_col)
 
-        for segment in self.segments:
+        for segment in segs:
             if segment.layer > 1:
                 continue
 
             x, y = segment.middle_point(alloc, self.max_layers)
             _draw_tooltip(
-                ctx, alloc, x, y, 50, segment.layer,
+                ctx, alloc, x, y, 10, segment.layer,
                 segment.middle_angle(), 'Bärbel'
             )
-            print(x, y)
 
     def _on_tooltip_timeout(self, segment):
+        """Called once the mouse stayed over a segment for a longer time.
+        """
         print(segment)
         self._timeout_id = None
 
@@ -276,18 +316,24 @@ class ShredderRingChart(ShredderChart):
         selected_layer = math.floor(xy_abs * (self.max_layers + 1) / mid)
 
         hit_segment = None
-        for segment in self.segments:
+        for segment in self._segment_list:
             if segment.hit(selected_layer, selected_deg):
                 hit_segment = segment
 
         if self._timeout_id is not None:
-            GLib.source_remove(self._timeout_id)
-            self._timeout_id = None
+            id_, old_segment = self._timeout_id
+            if segment is old_segment:
+                # There's already a timer running.
+                hit_segment = None
+            else:
+                GLib.source_remove(id_)
+                self._timeout_id = None
 
         if hit_segment:
-            self._timeout_id = GLib.timeout_add(
+            id_ = GLib.timeout_add(
                 250, self._on_tooltip_timeout, segment
             )
+            self._timeout_id = (id_, segment)
 
         self.queue_draw()
 
@@ -309,12 +355,10 @@ class ShredderChartStack(Gtk.Stack):
 
 
 if __name__ == '__main__':
-    from gi.repository import GLib
-
     area = ShredderRingChart()
 
     win = Gtk.Window()
-    win.set_size_request(500, 700)
+    win.set_size_request(300, 500)
     win.connect('destroy', Gtk.main_quit)
     win.add(area)
     win.show_all()
