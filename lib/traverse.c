@@ -183,6 +183,55 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
     }
 }
 
+#if RM_PLATFORM_32 && HAVE_STAT64
+
+static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *buf) {
+    /* Break a leg for supporting large files on 32 bit,
+     * and convert the needed fields to the large version. 
+     *
+     * We can't use memcpy here, sinc the layout might be (fatally) different.
+     * Yes, this is stupid. *Sigh*
+     * */
+    memset(buf, 0, sizeof(RmStat));
+    buf->st_dev = fts_statp->st_dev;
+    buf->st_ino  = fts_statp->st_ino;
+    buf->st_mode = fts_statp->st_mode;
+    buf->st_nlink = fts_statp->st_nlink;
+    buf->st_uid = fts_statp->st_uid;
+    buf->st_gid = fts_statp->st_gid;
+    buf->st_rdev = fts_statp->st_rdev;
+    buf->st_size = fts_statp->st_size;
+    buf->st_blksize = fts_statp->st_blksize;
+    buf->st_blocks = fts_statp->st_blocks;
+    buf->st_atim = fts_statp->st_atim;
+    buf->st_mtim = fts_statp->st_mtim;
+    buf->st_ctim = fts_statp->st_ctim;
+}
+
+#define ADD_FILE(lint_type, is_symlink) {                                        \
+        RmStat buf;                                                              \
+        rm_traverse_convert_small_stat_buf(p->fts_statp, &buf);                  \
+        rm_traverse_file(                                                        \
+            trav_session, &buf,                                                  \
+            p->fts_path, is_prefd, path_index,                                   \
+            lint_type, is_symlink,                                               \
+            rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \
+        );                                                                       \
+    }                                                                            \
+
+#else
+
+#define ADD_FILE(lint_type, is_symlink)                                          \
+        rm_traverse_file(                                                        \
+            trav_session, (RmStat *)p->fts_statp,                                \
+            p->fts_path, is_prefd, path_index,                                   \
+            lint_type, is_symlink,                                               \
+            rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \
+        );                                                                       \
+
+#endif
+
+
 static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_session) {
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
@@ -221,14 +270,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
-
-#define ADD_FILE(lint_type, is_symlink)       \
-        rm_traverse_file(                         \
-            trav_session, (RmStat *)p->fts_statp, \
-            p->fts_path, is_prefd, path_index,    \
-            lint_type, is_symlink,                \
-            rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1)  \
-        );                                        \
  
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
