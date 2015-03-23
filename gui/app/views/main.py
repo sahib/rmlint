@@ -350,7 +350,7 @@ class MainView(View):
 
         stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         stats_box.pack_start(
-            chart, True, True, 0
+            self.chart_stack, True, True, 0
         )
         stats_box.pack_start(
             ResultActionBar(), False, True, 0

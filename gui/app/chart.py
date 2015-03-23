@@ -69,12 +69,23 @@ def _draw_segment(ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_c
     v = 1 - (layer / (max_plus_one + 1)) * (0.1 if is_selected else 0.6)
 
     # Fill it with the color
-    ctx.set_source_rgb(*colorsys.hsv_to_rgb(h, s, v))
+    # ctx.set_source_rgb(*colorsys.hsv_to_rgb(h, s, v))
+    pattern = cairo.RadialGradient(mid_x, mid_y, radius_a_px, mid_x, mid_y, radius_b_px)
+    pattern.add_color_stop_rgb(0, *colorsys.hsv_to_rgb(h, s + 0.05, v + 0.05))
+    pattern.add_color_stop_rgb(0.1, *colorsys.hsv_to_rgb(h, s, v))
+    pattern.add_color_stop_rgb(0.9, *colorsys.hsv_to_rgb(h, s, v))
+    pattern.add_color_stop_rgb(1, *colorsys.hsv_to_rgb(h, s + 0.05, v + 0.05))
+    ctx.set_source(pattern)
     ctx.fill_preserve()
 
     # Draw a white border around
+    r, g, b = colorsys.hsv_to_rgb(h, s, v - 0.5)
+    ctx.set_source_rgba(r, g, b, 0.5)
+    ctx.set_line_width(3)
+    ctx.stroke_preserve()
+
     ctx.set_source_rgb(bg_col.red, bg_col.green, bg_col.blue)
-    ctx.set_line_width(0.75)
+    ctx.set_line_width(1.5)
     ctx.stroke()
 
 
@@ -83,14 +94,45 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
     ctx.arc(x, y, 5, 0, 2 * math.pi)
     ctx.fill()
 
-    w2, h2 = alloc.width / 2 - dist, alloc.height / 2 - dist
-    angle_norm = math.fmod()
+    length = min(alloc.width, alloc.height)
+    w2, h2 = alloc.width / 2, alloc.height / 2
+    angle_norm = math.fmod(math.fabs(angle), math.pi / 2)
+    uneven = math.floor(angle / (math.pi / 2)) % 2 == 0
+    print(uneven)
 
-    ctx.arc(new_x, new_y, 5, 0, 2 * math.pi)
+    # Check where to paint the new point
+    if angle_norm < math.atan2(h2, w2):
+        new_x = w2 if uneven else h2
+        new_y = math.tan(angle_norm) * new_x
+    else:
+        new_y = h2 if uneven else w2
+        new_x = new_y / math.tan(angle_norm)
+
+
+    # Flip the x/y into the right quadrant
+    if angle < math.pi / 2:
+        # new_x, new_y = new_x + w2, new_y + h2
+        pass
+    elif angle < math.pi:
+        new_x, new_y = -new_y, new_x
+    elif angle < (math.pi + math.pi / 2):
+        new_x, new_y = -new_x, -new_y
+    elif angle < 2 * math.pi:
+        new_x, new_y = new_y, -new_x
+
+    # Finally, move from first quadrant to the whole.
+    new_x = new_x + alloc.width / 2
+    new_y = new_y + alloc.height / 2
+    print('new xy', new_x, new_y)
+    print('w2 h2', w2, h2)
+    print('angle', angle, angle_norm)
+
+    ctx.set_source_rgba(0, 0, 0, 0.3)
+    ctx.arc(new_x, new_y, 100, 0, 2 * math.pi)
     ctx.fill()
 
     ctx.move_to(x, y)
-    ctx.line_to(new_x, height)
+    ctx.line_to(new_x, new_y)
     ctx.stroke()
 
 
@@ -114,6 +156,7 @@ class ShredderChart(Gtk.DrawingArea):
 class Segment:
     def __init__(self, layer, degree, size):
         self.layer, self.degree, self.size = layer, degree, size
+        self.degree = math.fmod(self.degree, math.pi * 2)
         self.is_selected = False
 
     def draw(self, ctx, alloc, max_layers, bg_col):
@@ -143,7 +186,7 @@ class Segment:
         """
         mid_x, mid_y = alloc.width / 2, alloc.height / 2
         r = ((self.layer + 0.5) / (max_layers + 1)) * min(mid_x, mid_y)
-        d = self.degree + self.size / 2
+        d = math.fmod(self.degree + self.size / 2, 2 * math.pi)
         return mid_x + r * math.cos(d), mid_y + r * math.sin(d)
 
     def middle_angle(self):
@@ -156,19 +199,31 @@ class ShredderRingChart(ShredderChart):
 
         self._timeout_id = None
 
+        self.add = 0
+        self._set_segments()
+        GLib.timeout_add(50, self._set_segments)
+
+    def _set_segments(self):
         # TODO
+        self.add += math.pi / 256
         self.max_layers = 4
         self.segments = [
-            Segment(1, 0, math.pi / 2),
-            Segment(2, 0, math.pi / 4),
-            Segment(3, 0, math.pi / 8),
-            Segment(1, math.pi / 2, math.pi / 2),
-            Segment(2, math.pi / 2, math.pi / 2 * 0.9),
-            Segment(3, math.pi / 2, math.pi / 2 * 0.8),
-            Segment(1, math.pi, math.pi),
-            Segment(2, math.pi, math.pi * 0.9),
-            Segment(3, math.pi, math.pi * 0.8)
+            Segment(1, self.add + 0, math.pi / 2),
+            Segment(2, self.add + 0, math.pi / 4),
+            Segment(3, self.add + 0, math.pi / 8),
+            Segment(1, self.add + math.pi / 2, math.pi / 2),
+            Segment(2, self.add + math.pi / 2, math.pi / 2 * 0.9),
+            Segment(3, self.add + math.pi / 2, math.pi / 2 * 0.8),
+            Segment(1, self.add + math.pi, math.pi * 0.9),
+            Segment(2, self.add + math.pi, math.pi * 0.8),
+            Segment(3, self.add + math.pi, math.pi * 0.7),
+            Segment(1, self.add + math.pi * 0.9 + math.pi, math.pi * 0.1),
+            Segment(2, self.add + math.pi * 0.9 + math.pi, math.pi * 0.1),
+            Segment(3, self.add + math.pi * 0.9 + math.pi, math.pi * 0.1)
         ]
+
+        self.queue_draw()
+        return True
 
     def _on_draw(self, area, ctx):
         # Figure out the background color of the drawing area
@@ -184,6 +239,7 @@ class ShredderRingChart(ShredderChart):
         for segment in self.segments:
             segment.draw(ctx, alloc, self.max_layers, bg_col)
 
+        for segment in self.segments:
             if segment.layer > 1:
                 continue
 
