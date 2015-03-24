@@ -5,6 +5,9 @@
 import math
 import colorsys
 
+from operator import itemgetter
+from itertools import groupby
+
 # External:
 import cairo
 
@@ -81,28 +84,34 @@ def _draw_segment(
 
     # Calculate the color as HSV
     h = deg_a / (math.pi * 2)
-    s = 0.9 if is_selected else 0.66
+    s = 0.8 if is_selected else 0.6
     v = 1 - (layer / (max_plus_one + 1)) * (0.1 if is_selected else 0.6)
 
-    # Fill it with the color: Add a bit of highlight on start & end.
+    # Fill it with the color: Add a bit of highlight on start & end
+    # to round it up. This should stay rather subtle of course.
     pattern = cairo.RadialGradient(
         mid_x, mid_y, radius_a_px, mid_x, mid_y, radius_b_px
     )
 
-    r, g, b = colorsys.hsv_to_rgb(h, s, v)
-    pattern.add_color_stop_rgb(0.0, r, g + 0.05, b + 0.05)
-    pattern.add_color_stop_rgb(0.1, r, g, b)
-    pattern.add_color_stop_rgb(0.9, r, g, b)
-    pattern.add_color_stop_rgb(1.0, r, g + 0.05, b + 0.05)
+    rn, gn, bn = colorsys.hsv_to_rgb(h, s, v)
+    rh, gh, bh = colorsys.hsv_to_rgb(h, s + 0.05, v + 0.07)
+    rl, gl, bl = colorsys.hsv_to_rgb(h, s - 0.05, v - 0.07)
+    off = (1 / mid) * 42
+
+    pattern.add_color_stop_rgb(0.0, rl, gl, bl)
+    pattern.add_color_stop_rgb(off * 2, rn, gn, bn)
+    pattern.add_color_stop_rgb(1 - off, rn, gn, bn)
+    pattern.add_color_stop_rgb(1.0, rh, gh, bh)
     ctx.set_source(pattern)
     ctx.fill_preserve()
 
-    # Draw a white border around
+    # Draw a little same colored border around.
     r, g, b = colorsys.hsv_to_rgb(h, s, v - 0.5)
     ctx.set_source_rgba(r, g, b, 0.5)
     ctx.set_line_width(3)
     ctx.stroke_preserve()
 
+    # Draw a (probably) white border around
     ctx.set_source_rgb(bg_col.red, bg_col.green, bg_col.blue)
     ctx.set_line_width(1.5)
     ctx.stroke()
@@ -117,10 +126,11 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
 
     w2, h2 = alloc.width / 2 - dist - fw, alloc.height / 2 - dist - fh
     angle_norm = math.fmod(math.fabs(angle), math.pi / 2)
-    uneven = math.floor(angle / (math.pi / 2)) % 2 == 0
 
-    # Do not ask. That was evolutionary.
-    if not uneven:
+    # Check if we are in the second or last quadrant.
+    # In that case we flip the dimensions in order
+    # to make the flipping logic below work.
+    if math.floor(angle / (math.pi / 2)) % 2:
         w2, h2 = h2, w2
 
     # Check where to paint the new point
@@ -142,8 +152,8 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
         new_x, new_y = new_y, -new_x
 
     # Finally, move from first quadrant to the whole.
-    new_x = new_x + alloc.width / 2
-    new_y = new_y + alloc.height / 2
+    new_x += alloc.width / 2
+    new_y += alloc.height / 2
 
     ctx.set_source_rgba(0, 0, 0, 0.3)
     ctx.move_to(x, y)
@@ -161,10 +171,25 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
     _draw_center_text(ctx, new_x, new_y, text, do_draw=True)
 
 
+def _dfs(model, iter_, layer=1):
+    """Generator for a depth first traversal in a TreeModel.
+    Yields a GtkTreeIter for all iters below and after iter_.
+    """
+    while iter_ is not None:
+        yield iter_, layer
+        child = model.iter_children(iter_)
+        if child is not None:
+            yield from _dfs(model, child, layer + 1)
+
+        iter_ = model.iter_next(iter_)
+
+
 class ShredderChart(Gtk.DrawingArea):
-    def __init__(self):
+    def __init__(self, model):
         Gtk.DrawingArea.__init__(self)
         self.connect('draw', self._on_draw)
+
+        self._model = model
 
         self.add_events(self.get_events() | Gdk.EventMask.POINTER_MOTION_MASK)
         self.connect('motion-notify-event', self._on_motion)
@@ -177,9 +202,11 @@ class ShredderChart(Gtk.DrawingArea):
 
 
 class Segment:
-    def __init__(self, layer, degree, size):
+    def __init__(self, layer, degree, size, tooltip=None):
+        self.children = []
         self.layer, self.degree, self.size = layer, degree, size
         self.degree = math.fmod(self.degree, math.pi * 2)
+        self.tooltip = tooltip
         self.is_selected = False
 
     def draw(self, ctx, alloc, max_layers, bg_col):
@@ -222,44 +249,70 @@ class Segment:
 
 
 class ShredderRingChart(ShredderChart):
-    def __init__(self):
-        ShredderChart.__init__(self)
+    def __init__(self, model):
+        ShredderChart.__init__(self, model)
 
-        # Id of the
+        # Id of the tooltip timeout
         self._timeout_id = None
-
-        self.add = 0
-        self._set_segments()
-        GLib.timeout_add(50, self._set_segments)
-
-    def _set_segments(self):
-        # TODO: remove test.
         self._segment_list = []
-        self.add += math.pi / 512
-        self.max_layers = 4
-        s = [
-            Segment(1, self.add + 0, math.pi / 2),
-            Segment(2, self.add + 0, math.pi / 4),
-            Segment(3, self.add + 0, math.pi / 8),
-            Segment(1, self.add + math.pi / 2, math.pi / 2),
-            Segment(2, self.add + math.pi / 2, math.pi / 2 * 0.9),
-            Segment(3, self.add + math.pi / 2, math.pi / 2 * 0.8),
-            Segment(1, self.add + math.pi, math.pi * 0.9),
-            Segment(2, self.add + math.pi, math.pi * 0.8),
-            Segment(3, self.add + math.pi, math.pi * 0.7),
-            Segment(1, self.add + math.pi * 0.9 + math.pi, math.pi * 0.1),
-            Segment(2, self.add + math.pi * 0.9 + math.pi, math.pi * 0.1),
-            Segment(3, self.add + math.pi * 0.9 + math.pi, math.pi * 0.1)
-        ]
-
-        for seg in s:
-            self.add_segment(seg)
-
-        self.queue_draw()
-        return True
+        self.max_layers = 0
 
     def add_segment(self, segment):
         self._segment_list.append(segment)
+
+    def _group_nodes(self, model, root):
+        nodes = sorted(_dfs(model, root), key=itemgetter(1))
+        grouped, layer_off = {}, 0
+
+        for layer, group in groupby(nodes, key=itemgetter(1)):
+            grouped[layer] = list(group)
+
+        return grouped
+
+    def _calculate_angles(self, nodes, model, root, pseudo_segment):
+        angles = {}
+        total_size = model[root][1]
+
+        for layer, group in nodes.items():
+            for iter_, _ in group:
+                up_path = model.get_path(iter_)
+                up_path.up()
+
+                parent = angles.get(str(up_path)) if up_path else None
+                if parent is None:
+                    parent, prev_size = pseudo_segment, total_size
+                else:
+                    prev_size = model[model.get_iter(str(up_path))][1]
+
+                angle_len = parent.size * (model[iter_][1] / prev_size) * 1.0
+                angle = parent.degree + sum(child.size for child in parent.children)
+
+                segment = Segment(layer, angle, angle_len, model[iter_][0])
+                parent.children.append(segment)
+                self.add_segment(segment)
+                angles[str(model.get_path(iter_))] = segment
+
+    def add_segments_from_model(self):
+        root = self._model.get_iter_from_string('0')
+        nodes = self._group_nodes(self._model, root)
+        self.max_layers = max(nodes.keys()) + 1
+
+        pseudo_segment = Segment(0, 0, 2 * math.pi)
+        self._calculate_angles(nodes, self._model, root, pseudo_segment)
+
+        # TODO: Debug:
+        def _start():
+            def _spin():
+                for seg in self._segment_list:
+                    seg.degree = math.fmod(seg.degree + math.pi / 256, 2 * math.pi)
+
+                self.queue_draw()
+                return True
+
+            GLib.timeout_add(30, _spin)
+
+        #GLib.timeout_add(2000, _start)
+
 
     def _on_draw(self, area, ctx):
         # Figure out the background color of the drawing area
@@ -269,7 +322,8 @@ class ShredderRingChart(ShredderChart):
         # Draw the center text:
         _draw_center_text(
             ctx, alloc.width / 2, alloc.height / 2,
-            '<span color="grey"><small>190 GB</small></span>'
+            '<span color="grey"><small>190 GB</small></span>',
+            font_size=min(alloc.width, alloc.height) / 42
         )
 
         # Extract the segments sorted by layer
@@ -279,19 +333,20 @@ class ShredderRingChart(ShredderChart):
             segment.draw(ctx, alloc, self.max_layers, bg_col)
 
         for segment in segs:
-            if segment.layer > 1:
-                continue
+            # if segment.layer > 1:
+            #     continue
 
             x, y = segment.middle_point(alloc, self.max_layers)
             _draw_tooltip(
                 ctx, alloc, x, y, 10, segment.layer,
-                segment.middle_angle(), 'Bärbel'
+                segment.middle_angle(), segment.tooltip
             )
 
     def _on_tooltip_timeout(self, segment):
         """Called once the mouse stayed over a segment for a longer time.
         """
-        print(segment)
+        if self._timeout_id:
+            print(segment)
         self._timeout_id = None
 
     def _on_motion(self, area, event):
@@ -321,19 +376,14 @@ class ShredderRingChart(ShredderChart):
                 hit_segment = segment
 
         if self._timeout_id is not None:
-            id_, old_segment = self._timeout_id
-            if segment is old_segment:
-                # There's already a timer running.
-                hit_segment = None
-            else:
-                GLib.source_remove(id_)
-                self._timeout_id = None
+            GLib.source_remove(self._timeout_id)
+            self._timeout_id = None
 
         if hit_segment:
             id_ = GLib.timeout_add(
                 250, self._on_tooltip_timeout, segment
             )
-            self._timeout_id = (id_, segment)
+            self._timeout_id = id_
 
         self.queue_draw()
 
@@ -355,7 +405,30 @@ class ShredderChartStack(Gtk.Stack):
 
 
 if __name__ == '__main__':
-    area = ShredderRingChart()
+    model = Gtk.TreeStore(str, int)
+
+    # root = model.append(None, ('', 6000))
+    # home = model.append(root, ('home', 6000))
+    sahib = model.append(None, ('sahib', 6000))
+
+    docs = model.append(sahib, ('docs', 2000))
+    model.append(docs, ('stuff.pdf', 500))
+
+    more = model.append(docs, ('more', 1500))
+    model.append(more, ('stuff.pdf.1', 700))
+    model.append(more, ('stuff.pdf.2', 600))
+    model.append(more, ('stuff.pdf.3', 200))
+
+    music = model.append(sahib, ('music', 4000))
+    model.append(music, ('1.mp3', 1000))
+
+    sub = model.append(music, ('sub', 3000))
+    model.append(sub, ('2.mp3', 1200))
+    model.append(sub, ('3.mp3', 1200))
+    model.append(sub, ('4.mp3', 600))
+
+    area = ShredderRingChart(model)
+    area.add_segments_from_model()
 
     win = Gtk.Window()
     win.set_size_request(300, 500)
