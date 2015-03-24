@@ -311,8 +311,7 @@ class ShredderRingChart(ShredderChart):
 
             GLib.timeout_add(30, _spin)
 
-        #GLib.timeout_add(2000, _start)
-
+        GLib.timeout_add(2000, _start)
 
     def _on_draw(self, area, ctx):
         # Figure out the background color of the drawing area
