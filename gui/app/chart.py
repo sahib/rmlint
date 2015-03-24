@@ -8,6 +8,9 @@ import colorsys
 from operator import itemgetter
 from itertools import groupby
 
+# Internal:
+from app.util import size_to_human_readable
+
 # External:
 import cairo
 
@@ -17,6 +20,12 @@ from gi.repository import GLib
 
 from gi.repository import Pango
 from gi.repository import PangoCairo
+
+###########################################################
+# NOTE: This code is inspired by the baobab code,         #
+#       since it's very clean and a good read.            #
+#       However this code is not ported, but rewritten.   #
+###########################################################
 
 
 def _draw_center_text(ctx, x, y, text, font_size=10, do_draw=True):
@@ -55,6 +64,23 @@ def _draw_rounded(ctx, area, radius):
     ctx.fill()
 
 
+TANGO_TABLE = [
+    (0.000, 0.829, 0.94),
+    (0.096, 0.747, 0.99),
+    (0.104, 0.527, 0.91),
+    (0.251, 0.775, 0.89),
+    (0.590, 0.451, 0.82),
+    (0.850, 0.279, 0.68)
+]
+
+
+def _hsv_by_degree(degree):
+    percent = degree / (2 * math.pi)
+    idx = percent * len(TANGO_TABLE)
+    h, s, v = TANGO_TABLE[int(idx) - 1]
+    return h, s, v
+
+
 def _draw_segment(
     ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_col
 ):
@@ -83,9 +109,14 @@ def _draw_segment(
     ctx.close_path()
 
     # Calculate the color as HSV
-    h = deg_a / (math.pi * 2)
-    s = 0.8 if is_selected else 0.6
-    v = 1 - (layer / (max_plus_one + 1)) * (0.1 if is_selected else 0.6)
+    h, s, v = _hsv_by_degree(deg_a / 2 + deg_b / 2)
+
+    # "Fix" the color for some special cases
+    s += 0.2 if is_selected else -0.05
+    v -= (layer / (max_plus_one + 1)) / 4
+
+    if is_selected:
+        v += 0.2
 
     # Fill it with the color: Add a bit of highlight on start & end
     # to round it up. This should stay rather subtle of course.
@@ -94,9 +125,9 @@ def _draw_segment(
     )
 
     rn, gn, bn = colorsys.hsv_to_rgb(h, s, v)
-    rh, gh, bh = colorsys.hsv_to_rgb(h, s + 0.05, v + 0.07)
-    rl, gl, bl = colorsys.hsv_to_rgb(h, s - 0.05, v - 0.07)
-    off = (1 / mid) * 42
+    rh, gh, bh = colorsys.hsv_to_rgb(h, s + 0.05, v + 0.15)
+    rl, gl, bl = colorsys.hsv_to_rgb(h, s - 0.05, v - 0.25)
+    off = 42 / min(alloc.width, alloc.height)
 
     pattern.add_color_stop_rgb(0.0, rl, gl, bl)
     pattern.add_color_stop_rgb(off * 2, rn, gn, bn)
@@ -106,24 +137,31 @@ def _draw_segment(
     ctx.fill_preserve()
 
     # Draw a little same colored border around.
+    thickness = min(alloc.width, alloc.height) / 130
+
     r, g, b = colorsys.hsv_to_rgb(h, s, v - 0.5)
     ctx.set_source_rgba(r, g, b, 0.5)
-    ctx.set_line_width(3)
+    ctx.set_line_width(thickness * 1.5)
     ctx.stroke_preserve()
 
     # Draw a (probably) white border around
     ctx.set_source_rgb(bg_col.red, bg_col.green, bg_col.blue)
-    ctx.set_line_width(1.5)
+    ctx.set_line_width(thickness)
     ctx.stroke()
+
+    ctx.set_line_width(1)
 
 
 def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
+    # Draw the anchor circle on the segment
     ctx.set_source_rgba(0, 0, 0, 1.0)
-    ctx.arc(x, y, 5, 0, 2 * math.pi)
+    ctx.arc(x, y, 3, 0, 2 * math.pi)
     ctx.fill()
 
+    # Guess the font width used for the tooltip text.
     fw, fh = _draw_center_text(ctx, 0, 0, text, do_draw=False)
 
+    # Bounding box onto which the tooltips will be projected
     w2, h2 = alloc.width / 2 - dist - fw, alloc.height / 2 - dist - fh
     angle_norm = math.fmod(math.fabs(angle), math.pi / 2)
 
@@ -319,9 +357,13 @@ class ShredderRingChart(ShredderChart):
         alloc = area.get_allocation()
 
         # Draw the center text:
+        total_size = self._model[self._model.get_iter_from_string('0')][1]
+
         _draw_center_text(
             ctx, alloc.width / 2, alloc.height / 2,
-            '<span color="grey"><small>190 GB</small></span>',
+            '<span color="#333"><small>{size}</small></span>'.format(
+                size=size_to_human_readable(total_size)
+            ),
             font_size=min(alloc.width, alloc.height) / 42
         )
 
