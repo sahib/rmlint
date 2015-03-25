@@ -186,7 +186,7 @@ class ShredderTreeView(Gtk.TreeView):
         self.append_column(_create_column(
             'Path', [
                 (_create_toggle_cellrenderer(self.filter_model), False, False, dict(active=0)),
-                (CellRendererLint(), False, True, dict(text=1, tag=5))
+                (Gtk.CellRendererText(), False, True, dict(text=1))
             ],
             250
         ))
@@ -281,6 +281,11 @@ class ShredderTreeView(Gtk.TreeView):
             0, 0, _get_mtime_for_path(root_path), IndicatorLabel.THEME
         )
 
+    def _update_row(self, model, iter_, elem):
+        row = model[iter_]
+        row[Column.COUNT] += 1
+        row[Column.SIZE] += elem.size
+
     def _add_path_deferred(self, elem, twin_count):
         folder = os.path.dirname(elem.path)
         if folder.startswith(self.root_path):
@@ -293,6 +298,7 @@ class ShredderTreeView(Gtk.TreeView):
             part_path = os.path.join(*parts[:idx + 1])
             part_iter = self.iter_map.get(part_path)
             if part_iter is None:
+                # Create a new intermediate directory
                 full_path = os.path.join(self.root_path, part_path)
                 part_iter = self.iter_map[part_path] = self._append_row(
                     parent,
@@ -301,11 +307,9 @@ class ShredderTreeView(Gtk.TreeView):
                 )
             else:
                 # Update the intermediate directory:
-                # TODO: Check if it is not a lint node?
-                for row in self.md[part_iter], self.md[self.root]:
-                    row[Column.COUNT] += 1
-                    row[Column.SIZE] += elem.size
+                self._update_row(self.md, part_iter, elem)
 
+            # TODO: Check if it is not a lint node?
             parent = part_iter
 
         tag = IndicatorLabel.SUCCESS if elem.is_original else IndicatorLabel.ERROR
@@ -314,6 +318,8 @@ class ShredderTreeView(Gtk.TreeView):
             not elem.is_original, os.path.basename(elem.path),
             elem.size, -twin_count, elem.mtime, tag
         )
+
+        self._update_row(self.md, self.root, elem)
         self.expand_to_path(self.md.get_path(node_iter))
 
         # Do not repeat this idle action.
@@ -321,6 +327,8 @@ class ShredderTreeView(Gtk.TreeView):
 
     def finish_add(self):
         self.expand_all()
+        print('ROOT', self.root)
+        print('!!!', self.md[self.root][Column.SIZE])
         self.columns_autosize()
         GLib.timeout_add(100, self.columns_autosize)
 
@@ -345,7 +353,7 @@ class MainView(View):
         scw.set_valign(Gtk.Align.FILL)
         scw.add(self.tv)
 
-        self.chart_stack = ShredderChartStack()
+        self.chart_stack = ShredderChartStack(self.tv.md)
         self.actionbar = ResultActionBar()
 
         stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -417,6 +425,7 @@ class MainView(View):
                 ShredderChartStack.DIRECTORY
             )
             self.tv.finish_add()
+            self.chart_stack.render(self.tv.md, self.tv.root)
 
         runner.connect('process-finished', on_process_finish)
 

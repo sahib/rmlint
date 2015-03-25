@@ -27,6 +27,11 @@ from gi.repository import PangoCairo
 #       However this code is not ported, but rewritten.   #
 ###########################################################
 
+# TODO
+class Column:
+    """Column Enumeration to avoid using direct incides.
+    """
+    SELECTED, PATH, SIZE, COUNT, MTIME, TAG, TOOLTIP = range(7)
 
 def _draw_center_text(ctx, x, y, text, font_size=10, do_draw=True):
     '''Draw a text at the center of ctx/alloc.
@@ -92,7 +97,6 @@ def _draw_segment(
     deg_b: Ending angle of the segment in degree.
 
     The dimensions of ctx are given by size in pixels.
-    Assumption: alloc.width == alloc.height, so the area is rectangular.
     """
     # Convenience addition
     max_plus_one = max_layers + 1
@@ -137,7 +141,7 @@ def _draw_segment(
     ctx.fill_preserve()
 
     # Draw a little same colored border around.
-    thickness = min(alloc.width, alloc.height) / 130
+    thickness = min(alloc.width, alloc.height) / 160
 
     r, g, b = colorsys.hsv_to_rgb(h, s, v - 0.5)
     ctx.set_source_rgba(r, g, b, 0.5)
@@ -208,7 +212,7 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
     ctx.set_source_rgba(0.8, 0.8, 0.8, 1.0)
     _draw_center_text(ctx, new_x, new_y, text, do_draw=True)
 
-
+# TODO: Move to (and create) model.py
 def _dfs(model, iter_, layer=1):
     """Generator for a depth first traversal in a TreeModel.
     Yields a GtkTreeIter for all iters below and after iter_.
@@ -294,6 +298,7 @@ class ShredderRingChart(ShredderChart):
         self._timeout_id = None
         self._segment_list = []
         self.max_layers = 0
+        self.total_size = 1
 
     def add_segment(self, segment):
         self._segment_list.append(segment)
@@ -309,7 +314,7 @@ class ShredderRingChart(ShredderChart):
 
     def _calculate_angles(self, nodes, model, root, pseudo_segment):
         angles = {}
-        total_size = model[root][1]
+        total_size = model[root][Column.SIZE]
 
         for layer, group in nodes.items():
             for iter_, _ in group:
@@ -318,38 +323,30 @@ class ShredderRingChart(ShredderChart):
 
                 parent = angles.get(str(up_path)) if up_path else None
                 if parent is None:
+                    # Assume an invisible segment on layer 0
                     parent, prev_size = pseudo_segment, total_size
                 else:
-                    prev_size = model[model.get_iter(str(up_path))][1]
+                    prev_size = model[model.get_iter(str(up_path))][Column.SIZE]
 
-                angle_len = parent.size * (model[iter_][1] / prev_size) * 1.0
+                if prev_size:
+                    angle_len = parent.size * model[iter_][Column.SIZE] / prev_size
+                else:
+                    angle_len = 0
+
                 angle = parent.degree + sum(child.size for child in parent.children)
+                segment = Segment(layer, angle, angle_len, model[iter_][Column.PATH])
 
-                segment = Segment(layer, angle, angle_len, model[iter_][0])
                 parent.children.append(segment)
                 self.add_segment(segment)
                 angles[str(model.get_path(iter_))] = segment
 
-    def add_segments_from_model(self):
-        root = self._model.get_iter_from_string('0')
-        nodes = self._group_nodes(self._model, root)
+    def render(self, model, root):
+        nodes = self._group_nodes(model, root)
         self.max_layers = max(nodes.keys()) + 1
 
         pseudo_segment = Segment(0, 0, 2 * math.pi)
-        self._calculate_angles(nodes, self._model, root, pseudo_segment)
-
-        # TODO: Debug:
-        def _start():
-            def _spin():
-                for seg in self._segment_list:
-                    seg.degree = math.fmod(seg.degree + math.pi / 256, 2 * math.pi)
-
-                self.queue_draw()
-                return True
-
-            GLib.timeout_add(30, _spin)
-
-        GLib.timeout_add(2000, _start)
+        self._calculate_angles(nodes, model, root, pseudo_segment)
+        self.total_size = model[model.get_iter_from_string('0')][Column.SIZE]
 
     def _on_draw(self, area, ctx):
         # Figure out the background color of the drawing area
@@ -357,18 +354,18 @@ class ShredderRingChart(ShredderChart):
         alloc = area.get_allocation()
 
         # Draw the center text:
-        total_size = self._model[self._model.get_iter_from_string('0')][1]
-
         _draw_center_text(
             ctx, alloc.width / 2, alloc.height / 2,
             '<span color="#333"><small>{size}</small></span>'.format(
-                size=size_to_human_readable(total_size)
+                size=size_to_human_readable(self.total_size)
             ),
             font_size=min(alloc.width, alloc.height) / 42
         )
 
         # Extract the segments sorted by layer
-        segs = sorted(self._segment_list, key=lambda e: e.layer, reverse=True)
+        # Also filter very small segments for performance reasons
+        segs = filter(lambda seg: seg.size > math.pi / 256, self._segment_list)
+        segs = sorted(segs, key=lambda e: e.layer, reverse=True)
 
         for segment in segs:
             segment.draw(ctx, alloc, self.max_layers, bg_col)
@@ -376,6 +373,8 @@ class ShredderRingChart(ShredderChart):
         for segment in segs:
             # if segment.layer > 1:
             #     continue
+            if segment.size < math.pi / 16:
+                continue
 
             x, y = segment.middle_point(alloc, self.max_layers)
             _draw_tooltip(
@@ -434,19 +433,26 @@ class ShredderChartStack(Gtk.Stack):
     DIRECTORY = 'directory'
     GROUP = 'group'
 
-    def __init__(self):
+    def __init__(self, model):
         Gtk.Stack.__init__(self)
 
         self.spinner = Gtk.Spinner()
         self.spinner.start()
         self.add_named(self.spinner, 'loading')
 
-        self.chart = ShredderRingChart()
+        self.chart = ShredderRingChart(model)
         self.add_named(self.chart, 'directory')
+
+    def render(self, model, root):
+        self.chart.render(model, root)
 
 
 if __name__ == '__main__':
     model = Gtk.TreeStore(str, int)
+
+    # (!) HACK FOR MAIN (!)
+    Column.PATH = 0
+    Column.SIZE = 1
 
     # root = model.append(None, ('', 6000))
     # home = model.append(root, ('home', 6000))
@@ -469,7 +475,7 @@ if __name__ == '__main__':
     model.append(sub, ('4.mp3', 600))
 
     area = ShredderRingChart(model)
-    area.add_segments_from_model()
+    area.render(model, model.get_iter_from_string('0'))
 
     win = Gtk.Window()
     win.set_size_request(300, 500)
