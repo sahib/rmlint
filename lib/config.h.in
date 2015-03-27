@@ -109,4 +109,7 @@ typedef guint64 RmOff;
     rm_log_warning(__VA_ARGS__);  \
     rm_log_warning("\n");         \
 
+/* Domain for reporting errors. Needed by GOptions */
+#define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))
+
 #endif
