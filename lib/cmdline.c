@@ -44,9 +44,6 @@
 #include "utilities.h"
 #include "formats.h"
 
-/* Domain for reporting errors. Needed by GOptions */
-#define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))
-
 static void rm_cmd_show_version(void) {
     fprintf(
         stderr,
