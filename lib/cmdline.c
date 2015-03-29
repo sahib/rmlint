@@ -232,6 +232,47 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
     [4] = G_LOG_LEVEL_DEBUG
 };
 
+
+static int rm_cmd_create_metadata_cache(RmSession *session) {
+    if(session->cfg->use_meta_cache) {
+        GError *error = NULL;
+        session->meta_cache = rm_swap_table_open(FALSE, &error);
+        session->cfg->use_meta_cache = !!(session->meta_cache);
+
+        if(error != NULL) {
+            rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
+            g_error_free(error);
+            error = NULL;
+            return EXIT_FAILURE;
+        }
+
+        char *names[] = {"path", "dir", NULL};
+        int *attrs_ptrs[] = {
+            &session->meta_cache_path_id,
+            &session->meta_cache_dir_id,
+            NULL
+        };
+
+        for(int i = 0; attrs_ptrs[i] && names[i]; ++i) {
+            *attrs_ptrs[i] = rm_swap_table_create_attr(
+                session->meta_cache, names[i], &error
+            );
+
+            if(error != NULL) {
+                rm_log_warning_line(
+                    _("Unable to create cache attr `%s`: %s"),
+                    names[i], error->message
+                );
+                g_error_free(error);
+                error = NULL;
+                return EXIT_FAILURE;
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const char *path) {
     RmCfg *cfg = session->cfg;
     if(faccessat(AT_FDCWD, path, R_OK, AT_EACCESS) != 0) {
@@ -243,7 +284,15 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index, const 
         cfg->paths = g_realloc(cfg->paths, sizeof(char *) * (index + 2));
 
         char *abs_path = realpath(path, NULL);
-        cfg->paths[index + 0] = abs_path ? abs_path : g_strdup(path);
+
+        if(cfg->use_meta_cache) {
+            cfg->paths[index] = GUINT_TO_POINTER(rm_swap_table_insert(
+                    session->meta_cache, session->meta_cache_dir_id, abs_path, strlen(abs_path) + 1
+            ));
+            g_free(abs_path);
+        } else {
+            cfg->paths[index] = abs_path ? abs_path : g_strdup(path);
+        }
         cfg->paths[index + 1] = NULL;
         return TRUE;
     }
@@ -1178,12 +1227,16 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }
 
-    if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
+    if(rm_cmd_create_metadata_cache(session) == EXIT_FAILURE) {
+        error = g_error_new(
+                    RM_ERROR_QUARK, 0,
+                    _("cannot create metadata cache (see above)")
+                );
+    } else if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(
                     RM_ERROR_QUARK, 0,
                     _("can't specify both --keep-all-tagged and --keep-all-untagged")
                 );
-
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(
                     RM_ERROR_QUARK, 0,
@@ -1218,33 +1271,6 @@ int rm_cmd_main(RmSession *session) {
         goto failure;
     }
     
-    /* Initialize the temporary cache if desired (memory optimization) */
-    if(session->cfg->use_meta_cache) {
-        GError *error = NULL;
-        session->meta_cache = rm_swap_table_open(FALSE, &error);
-        session->cfg->use_meta_cache = !!(session->meta_cache);
-
-        if(error != NULL) {
-            rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
-            g_error_free(error);
-            error = NULL;
-            exit_state = EXIT_FAILURE;
-            goto failure;
-        }
-    
-        session->meta_cache_path_id = rm_swap_table_create_attr(
-                session->meta_cache, "path", &error
-        );
-
-        if(error != NULL) {
-            rm_log_warning_line(_("Unable to create cache attr: %s"), error->message);
-            g_error_free(error);
-            error = NULL;
-            exit_state = EXIT_FAILURE;
-            goto failure;
-        }
-    }
-
     rm_traverse_tree(session);
 
     rm_log_debug(

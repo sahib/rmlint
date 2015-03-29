@@ -56,7 +56,11 @@ void rm_session_clear(RmSession *session) {
 
     /* Free mem */
     if(cfg->paths) {
-        g_strfreev(cfg->paths);
+        if(cfg->use_meta_cache) {
+            g_free(cfg->paths);
+        } else {
+            g_strfreev(cfg->paths);
+        }
     }
 
     g_timer_destroy(session->timer);

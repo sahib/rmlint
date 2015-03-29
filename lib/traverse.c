@@ -42,9 +42,23 @@
 // BUFFER FOR STARTING TRAVERSAL THREADS //
 ///////////////////////////////////////////
 
+/* Defines a path variable containing the file's path */
+#define RM_BUFFER_DEFINE_PATH(session, buff)                         \
+    char * buff ## _path = NULL;                                     \
+    char buff ## _buf[PATH_MAX];                                     \
+    if(session->cfg->use_meta_cache) {                               \
+        rm_swap_table_lookup(                                        \
+                session->meta_cache, session->meta_cache_dir_id,     \
+                GPOINTER_TO_UINT(buff->path), buff ## _buf, PATH_MAX \
+        );                                                           \
+        buff ## _path = buff ## _buf;                                \
+    } else {                                                         \
+        buff ## _path = buff->path;                                  \
+    }                                                                \
+
 typedef struct RmTravBuffer {
     RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
-    const char *path; /* The path of the directory, as passed on command line. */
+    char *path;       /* The path of the directory, as passed on command line. */
     bool is_prefd;    /* Was this file in a preferred path? */
     RmOff path_index; /* Index of path, as passed on the commadline */
 } RmTravBuffer;
@@ -55,11 +69,13 @@ static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_
     self->is_prefd = is_prefd;
     self->path_index = path_index;
 
+    RM_BUFFER_DEFINE_PATH(session, self);
+
     int stat_state;
     if(session->cfg->follow_symlinks) {
-        stat_state = rm_sys_stat(path, &self->stat_buf);
+        stat_state = rm_sys_stat(self_path, &self->stat_buf);
     } else {
-        stat_state = rm_sys_lstat(path, &self->stat_buf);
+        stat_state = rm_sys_lstat(self_path, &self->stat_buf);
     }
 
     if(stat_state == -1) {
@@ -235,7 +251,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
 
-    char *path = (char *)buffer->path;
     char is_prefd = buffer->is_prefd;
     RmOff path_index = buffer->path_index;
 
@@ -245,8 +260,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     static GOnce once = G_ONCE_INIT;
     g_once(&once, (GThreadFunc)rm_traverse_allow_chdir, &fts_flags);
 
+    RM_BUFFER_DEFINE_PATH(trav_session->session, buffer);
+
     FTS *ftsp = fts_open((char *[2]) {
-        path, NULL
+        buffer_path, NULL
     }, fts_flags, NULL);
 
     if (ftsp == NULL) {
@@ -432,24 +449,27 @@ void rm_traverse_tree(RmSession *session) {
         bool is_prefd = cfg->is_prefd[idx];
 
         RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);
+
+        RM_BUFFER_DEFINE_PATH(session, buffer);
+
         if(S_ISREG(buffer->stat_buf.st_mode)) {
             /* Append normal paths directly */
             bool is_hidden = false;
 
             /* The is_hidden information is only needed for --partial-hidden */
             if(cfg->partial_hidden) {
-                is_hidden = rm_util_path_is_hidden(path);
+                is_hidden = rm_util_path_is_hidden(buffer_path);
             }
 
             rm_traverse_file(
-                trav_session, &buffer->stat_buf, path, strlen(path), is_prefd, idx,
+                trav_session, &buffer->stat_buf, buffer_path, strlen(buffer_path), is_prefd, idx,
                 RM_LINT_TYPE_UNKNOWN, false, is_hidden
             );
 
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
-            dev_t disk = rm_mounts_get_disk_id_by_path(session->mounts, path);
+            dev_t disk = rm_mounts_get_disk_id_by_path(session->mounts, buffer_path);
 
             GQueue *path_queue = rm_hash_table_setdefault(
                                      paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new
