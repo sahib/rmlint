@@ -70,6 +70,7 @@ typedef struct RmSession {
     /* Support for swapping path memory to disk */
     RmSwapTable *meta_cache;
     int meta_cache_path_id;
+    int meta_cache_dir_id;
 
     /* Counters for printing useful statistics */
     volatile gint total_files;
