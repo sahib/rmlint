@@ -26,7 +26,7 @@ static const char *STATEMENTS[] =
      [N_STMTS] = NULL};
 
 typedef struct RmSwapAttr {
-    int id, count;
+    int id;
     const char *name;
     sqlite3_stmt *stmts[N_STMTS];
 } RmSwapAttr;
@@ -271,7 +271,7 @@ RmOff rm_swap_table_insert(RmSwapTable *self, int attr, char *data,
         }
 
         if(sqlite3_step(stmt) == SQLITE_DONE) {
-            id = attribute->count = attribute->count + 1;
+            id = sqlite3_last_insert_rowid(self->cache);
         }
 
         rm_swap_table_clean_stmt(self, stmt, NULL);
