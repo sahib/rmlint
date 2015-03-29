@@ -11,7 +11,6 @@
 
 #define SET_ERROR(...) \
     g_set_error(error, RM_ERROR_QUARK, 0, __VA_ARGS__); \
-    g_printerr(__VA_ARGS__);
 
 
 /////////////////////
@@ -171,12 +170,12 @@ cleanup:
 void rm_swap_table_close(RmSwapTable *self, GError **error) {
     g_assert(self);
 
-    if(sqlite3_close_v2(self->cache) != SQLITE_OK) {
-        SET_ERROR("Unable to close swap table db");
-    }
-
     g_ptr_array_foreach(self->attrs, (GFunc)rm_swap_attr_destroy, self);
     g_ptr_array_free(self->attrs, TRUE);
+
+    if(sqlite3_close(self->cache) != SQLITE_OK) {
+        SET_ERROR("Unable to close swap table db");
+    }
 
     if(unlink(self->path) == -1) {
         SET_ERROR("cannot delete temp cache %s: %s", self->path, g_strerror(errno));
@@ -192,15 +191,15 @@ int rm_swap_table_create_attr(RmSwapTable *self, const char *name,
                               GError **error) {
     g_assert(self);
 
-    g_mutex_lock(&self->mtx);
-    RmSwapAttr *attribute =
-        rm_swap_attr_create(self->cache, self->attrs->len, name, error);
-
-    g_ptr_array_add(self->attrs, attribute);
+    RmSwapAttr *attribute = NULL;
+    g_mutex_lock(&self->mtx); {
+        attribute  = rm_swap_attr_create(self->cache, self->attrs->len, name, error);
+        g_ptr_array_add(self->attrs, attribute);
+    }
     g_mutex_unlock(&self->mtx);
 
     /* Create RmSwapAttr, return id, add it to table, create table. */
-    return attribute->id;
+    return (attribute) ? attribute->id : 0;
 }
 
 static void rm_swap_table_begin(RmSwapTable *self) {
