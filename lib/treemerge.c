@@ -339,11 +339,13 @@ static RmOff rm_tm_calc_file_size(RmDirectory *directory) {
     return acc;
 }
 
-static RmFile *rm_directory_as_file(RmDirectory *self) {
+static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
     /* Masquerades a RmDirectory as RmFile for purpose of output */
     RmFile *file = g_malloc0(sizeof(RmFile));
-    file->path = self->dirname;
-    file->basename = rm_util_basename(self->dirname);
+
+    /* Need to set session first, since set_path expects that */
+    file->session = merger->session;
+    rm_file_set_path(file, self->dirname, strlen(self->dirname), FALSE);
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
     file->digest = self->digest;
@@ -560,7 +562,8 @@ static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
 }
 
 void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
-    char *dirname = g_path_get_dirname(file->path);
+    RM_DEFINE_PATH(file);
+    char *dirname = g_path_get_dirname(file_path);
     guint dir_len = strlen(dirname) + 1;
 
 
@@ -774,7 +777,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
-            RmFile *mask = rm_directory_as_file(directory);
+            RmFile *mask = rm_directory_as_file(self, directory);
             g_queue_push_tail(&file_adaptor_group, mask);
 
             if(iter == result_dirs.head) {

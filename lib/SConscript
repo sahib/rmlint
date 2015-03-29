@@ -32,6 +32,7 @@ def build_config_template(target, source, env):
             HAVE_BLKID=env['HAVE_BLKID'],
             HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
             HAVE_SYSCTL=env['HAVE_SYSCTL'],
+            HAVE_SQLITE3=env['HAVE_SQLITE3'],
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,

@@ -58,6 +58,8 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
         return;
     }
 
+    RM_DEFINE_PATH(file);
+
     switch(file->lint_type) {
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
     case RM_LINT_TYPE_DUPE_CANDIDATE:
@@ -69,7 +71,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
                 "%s%s%s%s%c",
                 (file->is_original) ? "\n" : "",
                 (file->is_original) ? MAYBE_GREEN(out, session) : "",
-                file->path,
+                file_path,
                 (file->is_original) ? MAYBE_RESET(out, session) : "",
                 (self->use_same_line) ? ' ' : '\n'
             );
@@ -80,7 +82,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
             line, sizeof(line),
             "%s%s%s%c",
             MAYBE_BLUE(out, session),
-            file->path,
+            file_path,
             MAYBE_RESET(out, session),
             (self->use_same_line) ? ' ' : '\n'
         );

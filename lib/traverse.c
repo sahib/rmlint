@@ -106,7 +106,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 
 static void rm_traverse_file(
     RmTravSession *trav_session, RmStat *statp,
-    char *path, bool is_prefd, unsigned long path_index, RmLintType file_type, bool is_symlink, bool is_hidden
+    char *path, size_t path_len, bool is_prefd, unsigned long path_index, RmLintType file_type, bool is_symlink, bool is_hidden
 ) {
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
@@ -149,7 +149,7 @@ static void rm_traverse_file(
     }
 
     RmFile *file = rm_file_new(
-                       cfg, path, statp, file_type, is_prefd, path_index
+                       session, path, path_len, statp, file_type, is_prefd, path_index
                    );
 
     if(file != NULL) {
@@ -161,7 +161,6 @@ static void rm_traverse_file(
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
         if(trav_session->session->cfg->clear_xattr_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-            rm_log_debug("Clearing xattr fields of %s\n", file->path);
             rm_xattr_clear_hash(session, file);
         }
     }
@@ -213,7 +212,7 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
         rm_traverse_convert_small_stat_buf(p->fts_statp, &buf);                  \
         rm_traverse_file(                                                        \
             trav_session, &buf,                                                  \
-            p->fts_path, is_prefd, path_index,                                   \
+            p->fts_path, p->fts_pathlen, is_prefd, path_index,                   \
             lint_type, is_symlink,                                               \
             rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \
         );                                                                       \
@@ -224,7 +223,7 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
 #define ADD_FILE(lint_type, is_symlink)                                          \
         rm_traverse_file(                                                        \
             trav_session, (RmStat *)p->fts_statp,                                \
-            p->fts_path, is_prefd, path_index,                                   \
+            p->fts_path, p->fts_pathlen, is_prefd, path_index,                   \
             lint_type, is_symlink,                                               \
             rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \
         );                                                                       \
@@ -346,7 +345,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                      * -> must be a big file on 32 bit.
                      */
                     rm_traverse_file(
-                        trav_session, &stat_buf, p->fts_path,
+                        trav_session, &stat_buf, p->fts_path, p->fts_pathlen,
                         is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, false,
                         rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1)
                     );
@@ -443,7 +442,7 @@ void rm_traverse_tree(RmSession *session) {
             }
 
             rm_traverse_file(
-                trav_session, &buffer->stat_buf, path, is_prefd, idx,
+                trav_session, &buffer->stat_buf, path, strlen(path), is_prefd, idx,
                 RM_LINT_TYPE_UNKNOWN, false, is_hidden
             );
 

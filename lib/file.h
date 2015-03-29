@@ -80,6 +80,7 @@ typedef enum RmLintType {
     RM_LINT_TYPE_UNFINISHED_CKSUM,
 } RmLintType;
 
+struct RmSession;
 
 /**
  * RmFile structure; used by pretty much all rmlint modules.
@@ -192,15 +193,36 @@ typedef struct RmFile {
     /* Link to the RmShredDevice that the file is associated with */
     struct RmShredDevice *device;
 
-    /* Required for rm_file_equal for building initial match_table */
-    const struct RmCfg *cfg;
+    /* Required for rm_file_equal for building initial match_table
+     * and for RM_DEFINE_PATH and RM_DEFINE_BASENAME */
+    const struct RmSession *session;
 } RmFile;
 
+/* Defines a path variable containing the file's path */
+#define RM_DEFINE_PATH(file)                                              \
+    char * file ## _path = NULL;                                          \
+    char file ## _buf[PATH_MAX];                                          \
+    if(file->session->cfg->use_meta_cache) {                               \
+        rm_file_lookup_path(file->session, (RmFile *)file, file ## _buf); \
+        file ## _path = file ## _buf;                                     \
+    } else {                                                              \
+        file ## _path = file->path;                                       \
+    }                                                                     \
+
+#define RM_DEFINE_BASENAME(file)                             \
+    RM_DEFINE_PATH(file);                                    \
+    char * file ## _basename = NULL;                         \
+    if(file->session->cfg->use_meta_cache) {                  \
+        file ## _basename = rm_util_basename(file ## _path); \
+    } else {                                                 \
+        file ## _basename = file->basename;                  \
+    }                                                        \
 /**
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(
-    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type,
+    struct RmSession *session, const char *path, size_t path_len,
+    RmStat *statp, RmLintType type,
     bool is_ppath, unsigned pnum
 );
 
@@ -214,5 +236,17 @@ void rm_file_destroy(RmFile *file);
  * @brief Convert RmLintType to a human readable short string.
  */
 const char *rm_file_lint_type_to_string(RmLintType type);
+
+/**
+ * @brief Set a path to the file. Normally, you should never do this since the
+ * path is immutable. 
+ */
+void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy);
+
+/**
+ * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME.
+ */
+void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf);
+
 
 #endif /* end of include guard */

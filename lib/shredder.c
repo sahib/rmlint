@@ -41,7 +41,7 @@
 #include "xattr.h"
 
 /* Enable extra debug messages? */
-#define _RM_SHRED_DEBUG 1
+#define _RM_SHRED_DEBUG 0
 
 /* This is the scheduler of rmlint.
  *
@@ -635,7 +635,7 @@ static bool rm_shred_check_hash_mem_alloc(RmFile *file) {
     bool result;
     gint64 mem_required = group->num_files * file->file_size;
 
-    rm_log_debug("Asking mem allocation for %s...", file->path);
+    rm_log_debug("Asking mem allocation for %p...", file);
     result = rm_shred_mem_take(group->main, mem_required, group->num_files);
     if(result) {
         group->status = RM_SHRED_GROUP_HASHING;
@@ -773,7 +773,7 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
             RmMainTag *tag = file->shred_group->main;
             g_assert(tag);
 
-            rm_log_debug("releasing mem %"LLU" bytes from %s; ", file->file_size - file->hash_offset, file->path);
+            rm_log_debug("releasing mem %"LLU" bytes from %p; ", file->file_size - file->hash_offset, file);
             rm_shred_mem_take(tag, -(gint64)(file->file_size - file->hash_offset), -1);
         }
     }
@@ -804,9 +804,11 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b, _U gpoi
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
-    if (file->device->is_rotational) {
+    if (file->device->is_rotational && session->cfg->build_fiemap) {
         g_assert(!file->disk_offsets);
-        file->disk_offsets = rm_offset_create_table(file->path);
+
+        RM_DEFINE_PATH(file);
+        file->disk_offsets = rm_offset_create_table(file_path);
 
         session->offsets_read++;
         if(file->disk_offsets) {
@@ -1105,7 +1107,8 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     }
 
     /* create RmShredDevice for this file if one doesn't exist yet */
-    dev_t disk = rm_mounts_get_disk_id(session->mounts, file->dev, file->path);
+    RM_DEFINE_PATH(file);
+    dev_t disk = rm_mounts_get_disk_id(session->mounts, file->dev, file_path);
     RmShredDevice *device = g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
     if(device == NULL) {
@@ -1143,12 +1146,12 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
             g_hash_table_insert(
-                session->tables->ext_cksums, g_strdup(file->path), ext_cksum
+                session->tables->ext_cksums, g_strdup(file_path), ext_cksum
             );
         }
     }
 
-    if(HAS_CACHE(session) && g_hash_table_lookup(session->tables->ext_cksums, file->path)) {
+    if(HAS_CACHE(session) && g_hash_table_lookup(session->tables->ext_cksums, file_path)) {
         group->num_ext_cksums += 1;
         file->has_ext_cksum = 1;
     }
@@ -1277,10 +1280,14 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
                 || ((!file->is_prefd) && (session->cfg->keep_all_untagged))
            ) {
             file->is_original = true;
+
+#if _RM_SHRED_DEBUG
+            RM_DEFINE_PATH(file);
             rm_log_debug("tagging %s as original because %s\n",
-                         file->path,
+                         file_path,
                          ((file->is_prefd) && (session->cfg->keep_all_tagged)) ? "tagged" : "untagged"
                         );
+#endif
         }
     }
 
@@ -1291,7 +1298,8 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     if (!headfile->is_original) {
         headfile->is_original = true;
 #if _RM_SHRED_DEBUG
-        rm_log_debug("tagging %s as original because it is highest ranked\n", headfile->path);
+        RM_DEFINE_PATH(headfile);
+        rm_log_debug("tagging %s as original because it is highest ranked\n", headfile_path);
 #endif
     }
 }
@@ -1302,7 +1310,8 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 
 #if _RM_SHRED_DEBUG
     RmFile *head = group->head->data;
-    rm_log_debug("Forwarding %s's group\n", head->path);
+    RM_DEFINE_PATH(head);
+    rm_log_debug("Forwarding %s's group\n", head_path);
 #endif
 
     /* Hand it over to the printing module */
@@ -1370,7 +1379,9 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
     char path_buf[PATH_MAX];
     memset(path_buf, 0, sizeof(path_buf));
 
-    if(readlink(file->path, path_buf, sizeof(path_buf)) == -1) {
+    RM_DEFINE_PATH(file);
+
+    if(readlink(file_path, path_buf, sizeof(path_buf)) == -1) {
         /* Oops, that did not work out, report as an error */
         file->status = RM_FILE_STATE_IGNORE;
         return;
@@ -1407,9 +1418,11 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         goto finish;
     }
 
-    if((fd = fopen(file->path, "rb")) == NULL) {
+    RM_DEFINE_PATH(file);
+
+    if((fd = fopen(file_path, "rb")) == NULL) {
         error_happended = true;
-        rm_log_info("fopen(3) failed for %s: %s", file->path, g_strerror(errno));
+        rm_log_info("fopen(3) failed for %s: %s", file_path, g_strerror(errno));
         goto finish;
     }
 
@@ -1490,9 +1503,11 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         goto finish;
     }
 
-    fd = rm_sys_open(file->path, O_RDONLY);
+    RM_DEFINE_PATH(file);
+
+    fd = rm_sys_open(file_path, O_RDONLY);
     if(fd == -1) {
-        rm_log_info("open(2) failed for %s: %s", file->path, g_strerror(errno));
+        rm_log_info("open(2) failed for %s: %s", file_path, g_strerror(errno));
         file->status = RM_FILE_STATE_IGNORE;
         g_async_queue_push(device->hashed_file_return, file);
         goto finish;
@@ -1541,13 +1556,13 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
             buffer->len = MIN (buf_size, bytes_read - i * buf_size);
             buffer->is_last = (i + 1 >= blocks && bytes_left_to_read <= 0);
             if (bytes_left_to_read < 0) {
-                rm_log_error_line(_("Negative bytes_left_to_read for %s"), file->path);
+                rm_log_error_line(_("Negative bytes_left_to_read for %s"), file_path);
             }
 
             if (buffer->is_last && total_bytes_read != bytes_to_read) {
                 rm_log_error_line(
                     _("Something went wrong reading %s; expected %d bytes, got %d; ignoring"),
-                    file->path, bytes_to_read, total_bytes_read
+                    file_path, bytes_to_read, total_bytes_read
                 );
                 file->status = RM_FILE_STATE_IGNORE;
                 g_async_queue_push(device->hashed_file_return, file);
@@ -1620,12 +1635,14 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
         /* Cool, we were able to read the checksum from disk */
         file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0);
 
-        char *hexstring = g_hash_table_lookup(main->session->tables->ext_cksums, file->path);
+        RM_DEFINE_PATH(file);
+
+        char *hexstring = g_hash_table_lookup(main->session->tables->ext_cksums, file_path);
         if(hexstring != NULL) {
             rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
-            rm_log_debug("%s=%s was read from cache.\n", hexstring, file->path);
+            rm_log_debug("%s=%s was read from cache.\n", hexstring, file_path);
         } else {
-            rm_log_warning_line("Unable to read external checksum from interal cache for %s", file->path);
+            rm_log_warning_line("Unable to read external checksum from interal cache for %s", file_path);
             file->has_ext_cksum = 0;
             file->shred_group->has_only_ext_cksums = 0;
         }
@@ -1730,14 +1747,16 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
             if (file->status == RM_FILE_STATE_FRAGMENT) {
                 /* file is not ready for checking yet; push it back into the queue */
 #if _RM_SHRED_DEBUG
-                rm_log_debug("Recycling fragment %s\n", file->path);
+                RM_DEFINE_PATH(file);
+                rm_log_debug("Recycling fragment %s\n", file_path);
 #endif
                 rm_shred_push_queue_sorted(file); /* call with device unlocked */
                 /* NOTE: this temporarily means there are two copies of file in the queue */
             } else if(rm_shred_sift(file)) {
                 /* continue hashing same file, ie no change to iter */
 #if _RM_SHRED_DEBUG
-                rm_log_debug("Continuing to next generation %s\n", file->path);
+                RM_DEFINE_PATH(file);
+                rm_log_debug("Continuing to next generation %s\n", file_path);
 #endif
                 continue;
             } else {
