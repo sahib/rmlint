@@ -24,13 +24,17 @@
 
 #include "file.h"
 #include "utilities.h"
+#include "session.h"
+#include "swap-table.h"
 
+#include <string.h>
 #include <unistd.h>
 #include <sys/file.h>
 
 RmFile *rm_file_new(
-    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index
+    struct RmSession *session, const char *path, size_t path_len, RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index
 ) {
+    RmCfg *cfg = session->cfg;
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;
 
@@ -54,8 +58,9 @@ RmFile *rm_file_new(
     }
 
     RmFile *self = g_slice_new0(RmFile);
-    self->path = g_strdup(path);
-    self->basename = rm_util_basename(self->path);
+    self->session = session;
+
+    rm_file_set_path(self, (char *)path, path_len, true);
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
@@ -76,10 +81,37 @@ RmFile *rm_file_new(
     self->is_original = false;
     self->is_symlink = false;
     self->path_index = path_index;
-    self->cfg = cfg;
 
     return self;
 }
+
+void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
+    if(file->session->cfg->use_meta_cache == false) {
+        file->path = (copy) ? g_strdup(path) : path;
+        file->basename = rm_util_basename(file->path);
+    } else {
+        file->path = GUINT_TO_POINTER(
+                rm_swap_table_insert(
+                    file->session->meta_cache, file->session->meta_cache_path_id,
+                    (char *)path, path_len + 1
+                )
+        );
+        file->basename = NULL;
+    }
+}
+
+void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf) {
+    g_assert(file);
+
+    RmOff id = GPOINTER_TO_UINT(file->path);
+
+    memset(buf, 0, PATH_MAX);
+    rm_swap_table_lookup(
+        session->meta_cache, 
+        session->meta_cache_path_id,
+        id, buf, PATH_MAX
+    );
+}   
 
 void rm_file_destroy(RmFile *file) {
     if (file->disk_offsets) {
@@ -89,7 +121,10 @@ void rm_file_destroy(RmFile *file) {
         g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
     }
 
-    g_free(file->path);
+    /* Only delete the path when it really was in memory */
+    if(file->session->cfg->use_meta_cache == false) {
+        g_free(file->path);
+    }
     g_slice_free(RmFile, file);
 }
 

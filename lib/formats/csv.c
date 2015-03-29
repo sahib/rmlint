@@ -63,7 +63,8 @@ static void rm_fmt_elem(
     }
 
     /* Escape quotes in the path (refer http://tools.ietf.org/html/rfc4180, item 6)*/
-    char *clean_path = rm_util_strsub(file->path, CSV_QUOTE, CSV_QUOTE""CSV_QUOTE);
+    RM_DEFINE_PATH(file);
+    char *clean_path = rm_util_strsub(file_path, CSV_QUOTE, CSV_QUOTE""CSV_QUOTE);
 
     fprintf(out, CSV_FORMAT,
             rm_file_lint_type_to_string(file->lint_type), clean_path, file->file_size, checksum_str

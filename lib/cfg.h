@@ -61,6 +61,8 @@ typedef struct RmCfg {
     gboolean read_cksum_from_xattr;
     gboolean clear_xattr_fields;
     gboolean write_unfinished;
+    gboolean use_meta_cache;
+    gboolean build_fiemap;
 
     int permissions;
         

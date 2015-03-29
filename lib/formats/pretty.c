@@ -144,7 +144,8 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
         fprintf(out, "%s", format);
     }
 
-    fprintf(out, "%s %s\n", MAYBE_RESET(out, session), file->path);
+    RM_DEFINE_PATH(file);
+    fprintf(out, "%s %s\n", MAYBE_RESET(out, session), file_path);
 }
 
 static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {

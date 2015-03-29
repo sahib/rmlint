@@ -49,6 +49,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->find_badids           = true;
     cfg->find_badlinks         = true;
     cfg->find_hardlinked_dupes = true;
+    cfg->build_fiemap          = true;
 
     /* Misc options */
     cfg->sort_criteria     = "pm";

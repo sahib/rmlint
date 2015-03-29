@@ -57,15 +57,16 @@ static void rm_cmd_show_version(void) {
         bool enabled : 1;
         const char * name;
     } features[] = {
-        {.name="mounts",      .enabled=HAVE_BLKID & HAVE_GIO_UNIX},
-        {.name="nonstripped", .enabled=HAVE_LIBELF},
-        {.name="fiemap",      .enabled=HAVE_FIEMAP},
-        {.name="sha512",      .enabled=HAVE_SHA512},
-        {.name="bigfiles",    .enabled=HAVE_BIGFILES},
-        {.name="intl",        .enabled=HAVE_LIBINTL},
-        {.name="json-cache",  .enabled=HAVE_JSON_GLIB},
-        {.name="xattr",       .enabled=HAVE_XATTR},
-        {.name=NULL,          .enabled=0}
+        {.name="mounts",         .enabled=HAVE_BLKID & HAVE_GIO_UNIX},
+        {.name="nonstripped",    .enabled=HAVE_LIBELF},
+        {.name="fiemap",         .enabled=HAVE_FIEMAP},
+        {.name="sha512",         .enabled=HAVE_SHA512},
+        {.name="bigfiles",       .enabled=HAVE_BIGFILES},
+        {.name="intl",           .enabled=HAVE_LIBINTL},
+        {.name="json-cache",     .enabled=HAVE_JSON_GLIB},
+        {.name="xattr",          .enabled=HAVE_XATTR},
+        {.name="metadata-cache", .enabled=HAVE_SQLITE3},
+        {.name=NULL,             .enabled=0}
     };
 
     fprintf(stderr, _("compiled with:"));
@@ -1082,15 +1083,19 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     };
 
     const GOptionEntry unusual_option_entries[] = {
-        {"clamp-low"        ,  'q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_low)             ,  "Limit lower reading barrier"                ,  "P" },
-        {"clamp-top"        ,  'Q' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(clamp_top)             ,  "Limit upper reading barrier"                ,  "P" },
-        {"max-paranoid-mem" ,  'u' ,  HIDDEN ,  G_OPTION_ARG_CALLBACK ,  FUNC(paranoid_mem)          ,  "Specify max. memory to use for -pp"         ,  "S" },
-        {"threads"          ,  't' ,  HIDDEN ,  G_OPTION_ARG_INT64    ,  &cfg->threads               ,  "Specify max. number of threads"             ,  "N" },
-        {"write-unfinished" ,  'U' ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_unfinished      ,  "Output unfinished checksums"                ,  NULL},
-        {"xattr-write"      ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->write_cksum_to_xattr  ,  "Cache checksum in file attributes"          ,  NULL},
-        {"xattr-read"       ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->read_cksum_from_xattr ,  "Read cached checksums from file attributes" ,  NULL},
-        {"xattr-clear"      ,   0  ,  HIDDEN ,  G_OPTION_ARG_NONE     ,  &cfg->clear_xattr_fields    ,  "Clear xattrs from all seen files"           ,  NULL},
-        {NULL               ,   0  ,  HIDDEN ,  0                     ,  NULL                        ,  NULL                                         ,  NULL}
+        {"clamp-low"                                , 'q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)             , "Limit lower reading barrier"                    , "P" },
+        {"clamp-top"                                , 'Q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)             , "Limit upper reading barrier"                    , "P" },
+        {"max-paranoid-mem"                         , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(paranoid_mem)          , "Specify max. memory to use for -pp"             , "S" },
+        {"threads"                                  , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads               , "Specify max. number of threads"                 , "N" },
+        {"write-unfinished"                         , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished      , "Output unfinished checksums"                    , NULL},
+        {"xattr-write"                              , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr  , "Cache checksum in file attributes"              , NULL},
+        {"xattr-read"                               , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr , "Read cached checksums from file attributes"     , NULL},
+        {"xattr-clear"                              , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->clear_xattr_fields    , "Clear xattrs from all seen files"               , NULL},
+        {"with-metadata-cache"                      , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_meta_cache        , "Swap certain metadata to disk to save RAM"      , NULL},
+        {"without-metadata-cache"                   , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->use_meta_cache        , "Store all metadata in RAM"                      , NULL},
+        {"with-fiemap"                              , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->build_fiemap          , "Use fiemap(2) to optimize disk access patterns" , NULL},
+        {"without-fiemap"                           , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->build_fiemap          , "Do not use fiemap(2) in order to save memory"   , NULL},
+        {NULL                                       , 0   , HIDDEN           , 0                     , NULL                        , NULL                                             , NULL}
     };
 
     /* Initialize default verbosity */
@@ -1211,6 +1216,33 @@ int rm_cmd_main(RmSession *session) {
     if(session->mounts == NULL) {
         exit_state = EXIT_FAILURE;
         goto failure;
+    }
+    
+    /* Initialize the temporary cache if desired (memory optimization) */
+    if(session->cfg->use_meta_cache) {
+        GError *error = NULL;
+        session->meta_cache = rm_swap_table_open(FALSE, &error);
+        session->cfg->use_meta_cache = !!(session->meta_cache);
+
+        if(error != NULL) {
+            rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
+            g_error_free(error);
+            error = NULL;
+            exit_state = EXIT_FAILURE;
+            goto failure;
+        }
+    
+        session->meta_cache_path_id = rm_swap_table_create_attr(
+                session->meta_cache, "path", &error
+        );
+
+        if(error != NULL) {
+            rm_log_warning_line(_("Unable to create cache attr: %s"), error->message);
+            g_error_free(error);
+            error = NULL;
+            exit_state = EXIT_FAILURE;
+            goto failure;
+        }
     }
 
     rm_traverse_tree(session);

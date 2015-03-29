@@ -87,15 +87,18 @@ static int rm_xattr_is_fail(const char *name, int rc) {
 }
 
 static int rm_xattr_set(RmFile *file, const char *key, const char *value, size_t value_size) {
-    return rm_xattr_is_fail("setxattr", setxattr(file->path, key, value, value_size, 0));
+    RM_DEFINE_PATH(file);
+    return rm_xattr_is_fail("setxattr", setxattr(file_path, key, value, value_size, 0));
 }
 
 static int rm_xattr_get(RmFile *file, const char *key, char *out_value, size_t value_size) {
-    return rm_xattr_is_fail("getxattr", getxattr(file->path, key, out_value, value_size));
+    RM_DEFINE_PATH(file);
+    return rm_xattr_is_fail("getxattr", getxattr(file_path, key, out_value, value_size));
 }
 
 static int rm_xattr_del(RmFile *file, const char *key) {
-    return rm_xattr_is_fail("removexattr", removexattr(file->path, key));
+    RM_DEFINE_PATH(file);
+    return rm_xattr_is_fail("removexattr", removexattr(file_path, key));
 }
 
 #endif

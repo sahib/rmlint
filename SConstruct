@@ -6,6 +6,12 @@ import sys
 import glob
 import subprocess
 
+import urllib
+import traceback
+import zipfile
+import shutil
+import glob
+
 import SCons.Conftest as tests
 
 
@@ -273,6 +279,20 @@ def check_sse42(context):
     return rc
 
 
+def check_sqlite3(context):
+    rc = 1
+    if tests.CheckHeader(context, 'sqlite3.h'):
+        rc = 0
+
+    if tests.CheckLib(context, ['sqlite3']):
+        rc = 0
+
+    conf.env['HAVE_SQLITE3'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
         Delete("$SOURCE"),
@@ -433,7 +453,8 @@ conf = Configure(env, custom_tests={
     'check_sys_block': check_sys_block,
     'check_bigfiles': check_bigfiles,
     'check_c11': check_c11,
-    'check_gettext': check_gettext
+    'check_gettext': check_gettext,
+    'check_sqlite3': check_sqlite3
 })
 
 if not conf.CheckCC():
@@ -536,9 +557,13 @@ conf.check_xattr()
 conf.check_bigfiles()
 conf.check_sha512()
 conf.check_gettext()
+conf.check_sqlite3()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
+
+if conf.env['HAVE_SQLITE3']:
+    conf.env.Append(_LIBFLAGS=['-lsqlite3'])
 
 # Your extra checks here
 env = conf.Finish()
@@ -621,24 +646,25 @@ if 'config' in COMMAND_LINE_TARGETS:
         print('''
 {grey}rmlint will be compiled with the following features:{end}
 
-    Find non-stripped binaries (needs libelf)         : {libelf}
-    Optimize using ioctl(FS_IOC_FIEMAP) (needs linux) : {fiemap}
-    Support for SHA512 (needs glib >= 2.31)           : {sha512}
-    Support for SSE4.2 instructions for fast CityHash : {sse42}
-    Build manpage from docs/rmlint.1.rst              : {sphinx}
-    Support for caching checksums in file's xattr     : {xattr}
-    Support for reading json caches (needs json-glib) : {json_glib}
-    Checking for proper support of big files >= 4GB   : {bigfiles}
-        (needs either sizeof(off_t) >= 8 ...)         : {bigofft}
-        (... or presence of stat64)                   : {bigstat}
+    Find non-stripped binaries (needs libelf)             : {libelf}
+    Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
+    Support for SHA512 (needs glib >= 2.31)               : {sha512}
+    Support for SSE4.2 instructions for fast CityHash     : {sse42}
+    Support for swapping metadata to disk (needs SQLite3) : {sqlite3}
+    Build manpage from docs/rmlint.1.rst                  : {sphinx}
+    Support for caching checksums in file's xattr         : {xattr}
+    Support for reading json caches (needs json-glib)     : {json_glib}
+    Checking for proper support of big files >= 4GB       : {bigfiles}
+        (needs either sizeof(off_t) >= 8 ...)             : {bigofft}
+        (... or presence of stat64)                       : {bigstat}
 
-    Optimize non-rotational disks                     : {nonrotational}
-        (needs libblkid for resolving dev_t to path)  : {blkid}
-        (needs gio-unix-2.0)                          : {gio_unix}
+    Optimize non-rotational disks                         : {nonrotational}
+        (needs libblkid for resolving dev_t to path)      : {blkid}
+        (needs gio-unix-2.0)                              : {gio_unix}
 
-    Enable gettext localization                       : {gettext}
-        (needs <locale.h> for compile side support)   : {locale}
-        (needs msgfmt to compile .po files)           : {msgfmt}
+    Enable gettext localization                           : {gettext}
+        (needs <locale.h> for compile side support)       : {locale}
+        (needs msgfmt to compile .po files)               : {msgfmt}
 
 {grey}The following constants will be used during the build:{end}
 
@@ -664,6 +690,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
             sse42=yesno(env['HAVE_SSE42']),
+            sqlite3=yesno(env['HAVE_SQLITE3']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),
             bigstat=yesno(env['HAVE_BIG_STAT']),

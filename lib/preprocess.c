@@ -37,9 +37,19 @@ static guint rm_file_hash(RmFile *file) {
     return (guint)(file->file_size);
 }
 
+static bool rm_file_check_basename(const RmFile *file_a, const RmFile *file_b) {
+    RM_DEFINE_BASENAME(file_a);
+    RM_DEFINE_BASENAME(file_b);
+    
+    return g_ascii_strcasecmp(file_a_basename, file_b_basename) == 0;
+}
+
 static bool rm_file_check_with_extension(const RmFile *file_a, const RmFile *file_b) {
-    char *ext_a = rm_util_path_extension(file_a->basename);
-    char *ext_b = rm_util_path_extension(file_b->basename);
+    RM_DEFINE_BASENAME(file_a);
+    RM_DEFINE_BASENAME(file_b);
+
+    char *ext_a = rm_util_path_extension(file_a_basename);
+    char *ext_b = rm_util_path_extension(file_b_basename);
 
     if(ext_a && ext_b && g_ascii_strcasecmp(ext_a, ext_b) == 0) {
         return true;
@@ -49,18 +59,21 @@ static bool rm_file_check_with_extension(const RmFile *file_a, const RmFile *fil
 }
 
 static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *file_b) {
-    char *ext_a = rm_util_path_extension(file_a->basename);
-    char *ext_b = rm_util_path_extension(file_b->basename);
+    RM_DEFINE_BASENAME(file_a);
+    RM_DEFINE_BASENAME(file_b);
+
+    char *ext_a = rm_util_path_extension(file_a_basename);
+    char *ext_b = rm_util_path_extension(file_b_basename);
 
     /* Check length till extension, or full length if none present */
-    size_t a_len = (ext_a) ? (ext_a - file_a->basename) : (int)strlen(file_a->basename);
-    size_t b_len = (ext_b) ? (ext_b - file_b->basename) : (int)strlen(file_b->basename);
+    size_t a_len = (ext_a) ? (ext_a - file_a_basename) : (int)strlen(file_a_basename);
+    size_t b_len = (ext_b) ? (ext_b - file_b_basename) : (int)strlen(file_b_basename);
 
     if(a_len != b_len) {
         return false;
     }
 
-    if(g_ascii_strncasecmp(file_a->basename, file_b->basename, a_len) == 0) {
+    if(g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len) == 0) {
         return true;
     }
 
@@ -68,13 +81,13 @@ static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *
 }
 
 static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
-    const RmCfg *cfg = file_a->cfg;
+    const RmCfg *cfg = file_a->session->cfg;
 
     return (1
             && (file_a->file_size == file_b->file_size)
             && (0
                 || (!cfg->match_basename)
-                || (g_ascii_strcasecmp(file_a->basename, file_b->basename) == 0)
+                || (rm_file_check_basename(file_a, file_b))
                )
             && (0
                 || (!cfg->match_with_extension)
@@ -182,10 +195,12 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     } else if(a->is_prefd != b->is_prefd) {
         return (b->is_prefd - a->is_prefd);
     } else {
+        RM_DEFINE_BASENAME(a);
+        RM_DEFINE_BASENAME(b);
         return rm_pp_cmp_orig_criteria_impl(
                    session,
                    a->mtime, b->mtime,
-                   a->basename, b->basename,
+                   a_basename, b_basename,
                    a->path_index, b->path_index
                );
     }
@@ -210,7 +225,8 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
              * instead we just print a warning
              * */
             if(inode_match->file_size != file->file_size) {
-                rm_log_warning_line(_("Hardlink file size changed during traversal: %s"), file->path);
+                RM_DEFINE_PATH(file);
+                rm_log_warning_line(_("Hardlink file size changed during traversal: %s"), file_path);
             }
 
             /* if this is the first time, set up the hardlinks.files queue */
@@ -240,22 +256,25 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
              * to check if it's a path double; if yes then swap or discard */
             for (GList *iter = inode_match->hardlinks.files->head; iter; iter = iter->next) {
                 RmFile *iter_file = iter->data;
+                RM_DEFINE_BASENAME(file);
+                RM_DEFINE_BASENAME(iter_file);
+
                 if (1
-                        && (g_strcmp0(file->basename, iter_file->basename) == 0)
+                        && (g_strcmp0(file_basename, iter_file_basename) == 0)
                         /* double paths and loops will always have same basename
                          * (cheap call to potentially avoid the next call which requires a rm_sys_stat()) */
-                        && (rm_util_parent_node(file->path) == rm_util_parent_node(iter_file->path))
+                        && (rm_util_parent_node(file_path) == rm_util_parent_node(iter_file_path))
                         /* double paths and loops will always have same dir inode number*/
                    ) {
                     /* file is path double or filesystem loop - kick one or the other */
                     if (rm_pp_cmp_orig_criteria(file, iter->data, session) < 0) {
                         /* file outranks iter */
-                        rm_log_debug("Ignoring path double %s, keeping %s\n", iter_file->path, file->path);
+                        rm_log_debug("Ignoring path double %s, keeping %s\n", iter_file_path, file_path);
                         iter->data = file;
                         g_assert (iter_file != inode_match); /* it would be a bad thing to destroy the hashtable key */
                         rm_file_destroy(iter_file);
                     } else {
-                        rm_log_debug("Ignoring path double %s, keeping %s\n", file->path, iter_file->path);
+                        rm_log_debug("Ignoring path double %s, keeping %s\n", file_path, iter_file_path);
                         rm_file_destroy(file);
                     }
                     result = false;
@@ -298,7 +317,8 @@ static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
 }
 
 static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {
-    return rm_fmt_is_a_output(session->formats, file->path);
+    RM_DEFINE_PATH(file);
+    return rm_fmt_is_a_output(session->formats, file_path);
 }
 
 /* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
@@ -367,7 +387,9 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
 }
 
 static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {
-    return g_strcmp0(b->path, a->path);
+    RM_DEFINE_PATH(a);
+    RM_DEFINE_PATH(b);
+    return g_strcmp0(b_path, a_path);
 }
 
 static RmOff rm_pp_handler_other_lint(RmSession *session) {

@@ -31,6 +31,9 @@
 #include <stdbool.h>
 #include <glib.h>
 
+/* Needed for RmSwapTable */
+#include "swap-table.h"
+
 /* Needed for RmTreeMerger */
 #include "treemerge.h"
 
@@ -63,6 +66,10 @@ typedef struct RmSession {
 
     /* Treemerging for -D */
     struct RmTreeMerger *dir_merger;
+
+    /* Support for swapping path memory to disk */
+    RmSwapTable *meta_cache;
+    int meta_cache_path_id;
 
     /* Counters for printing useful statistics */
     volatile gint total_files;
