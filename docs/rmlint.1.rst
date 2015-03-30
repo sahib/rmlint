@@ -102,7 +102,7 @@ General Options
 
     If the value is omitted it is set to a true value.
 
-:``-z --perms[=[rwx]] (**default\:** *no check*)``:
+:``-z --perms[=[rwx]]`` (**default\:** *no check*):
 
     Only look into file if it is readable, writable or executable by the current user.
     Which one of the can be given as argument as one of *rwx*. 
@@ -221,7 +221,7 @@ Traversal Options
     Wether to filter hardlinks after traversal (same *inode* and same *device*).
     If not filtered, there will be only one checksum built per hardlink cluster.
 
-:``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks (**default**)``:
+:``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
     Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
     If `-F` is specified, symbolic links will be ignored completely, if the
@@ -363,7 +363,7 @@ Caching
 Rarely used, miscellaneous Options
 ----------------------------------
 
-:``-t --threads=N**`` (*default\:* 16):
+:``-t --threads=N`` (*default\:* 16):
 
     The number of threads to use during file tree traversal and hashing.
     ``rmlint`` probably knows better than you how to set the value.
@@ -442,8 +442,9 @@ FORMATTERS
 
   Available options:
 
-  - *use_header=[true|false]:* Print the header with metadata.
-  - *use_footer=[true|false]:* Print the footer with statistics.
+  - *no_header=[true|false]:* Print the header with metadata.
+  - *no_footer=[true|false]:* Print the footer with statistics.
+  - *oneline=[true|false]:* Print one json document per line.
 
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will

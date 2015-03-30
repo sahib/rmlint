@@ -88,21 +88,7 @@ static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
 }
 
 static guint rm_node_hash(const RmFile *file) {
-    /* typically inode number will be less than 2^21 or so;
-     * dev_t is devined via #define makedev(maj, min)  (((maj) << 8) | (min))
-     * (see coreutils/src/system.h)
-     * we want a simple hash to distribute these bits to give a reaonable
-     * chance of being unique.
-     * inode: 0000 0000 000X XXXX XXXX XXXX XXXX XXXX
-     * dev:   0000 0000 0000 0000 YYYY YYYY ZZZZ ZZZZ
-     * so if we rotate dev 16 bits left we should get a reasonable hash:
-     *        YYYY YYYY ZZZ? ???? XXXX XXXX XXXX XXXX
-     */
-    return (guint)((guint32)file->inode) ^
-           (
-               (((guint32)file->dev) << 16) |
-               (((guint32)file->dev) >> 16)
-           );
+    return file->inode ^ file->dev;
 }
 
 static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
