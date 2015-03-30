@@ -333,7 +333,7 @@ static void rm_fmt_prog(
         self->update_counter = 0;
     }
     
-    if(ioctl(fileno(stdout), TIOCGWINSZ, &self->terminal) != 0) {
+    if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
         rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
