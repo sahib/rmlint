@@ -333,14 +333,14 @@ static void rm_fmt_prog(
         self->update_counter = 0;
     }
     
-    if(ioctl(0, TIOCGWINSZ, &self->terminal) != 0) {
+    if(ioctl(fileno(stdout), TIOCGWINSZ, &self->terminal) != 0) {
         rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
     self->last_state = state;
 
     if(self->update_counter++ % self->update_interval == 0) {
-        int text_width = self->terminal.ws_col * 0.7 - 1;
+        int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
         rm_fmt_progress_format_text(session, self, text_width, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
