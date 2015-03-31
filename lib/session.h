@@ -116,6 +116,9 @@ typedef struct RmSession {
 
     /* true if a cmdline parse error happened */
     bool cmdline_parse_error;
+
+    /* true once shredder finished running */
+    bool shredder_finished;
 } RmSession;
 
 /**

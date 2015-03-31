@@ -332,7 +332,11 @@ static void rm_fmt_prog(
         }
         self->update_counter = 0;
     }
-    
+
+    if(state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished) {
+        self->update_counter = 0;
+    }
+
     if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
         rm_log_warning_line(_("Cannot figure out terminal width."));
     }
