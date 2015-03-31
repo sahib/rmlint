@@ -630,18 +630,32 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         * This cannot be detected properly by rmlint since
         * files in it have the same inode as their unmirrored file, but
         * a different dev_t.
+        * 
+        * Also ignore kernel filesystems.
         *
         * So better go and ignore it.
         */
-        static const char *evilfs_types[] = {"bindfs", "nullfs", NULL};
+        static struct RmEvilFs {
+            /* fsname as show by `mount` */
+            const char *name;
+            
+            /* Wether to warn about the exclusion on this */
+            bool unusual;
+        } evilfs_types[] = {
+            {"bindfs", 1}, {"nullfs", 1},
+            /* Ignore the usual linux file system spam */
+            {"proc", 0}, {"cgroup", 0}, {"configfs", 0},
+            {"sys", 0}, {"devtmpfs", 0}, {"debugfs", 0},
+            {NULL, 0}
+        };
 
         /* btrfs and ocfs2 filesystems support reflinks for deduplication */
         static const char *reflinkfs_types[] = {"btrfs", "ocfs2", NULL};
 
-        const char *evilfs_found = NULL;
-        for(int i = 0; evilfs_types[i] && !evilfs_found; ++i) {
-            if(strcmp(evilfs_types[i], wrap_entry->type) == 0) {
-                evilfs_found = evilfs_types[i];
+        const struct RmEvilFs *evilfs_found = NULL;
+        for(int i = 0; evilfs_types[i].name && !evilfs_found; ++i) {
+            if(strcmp(evilfs_types[i].name, wrap_entry->type) == 0) {
+                evilfs_found = &evilfs_types[i];
             }
         }
 
@@ -661,9 +675,16 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                 GUINT_TO_POINTER(1)
             );
 
-            rm_log_warning_line(
+            GLogLevelFlags log_level = G_LOG_LEVEL_DEBUG;
+            if(evilfs_found->unusual) {
+                log_level = G_LOG_LEVEL_WARNING;
+                rm_log_warning_prefix();
+            }
+
+            g_log(
+                "rmlint", log_level, 
                 _("`%s` mount detected at %s (#%u); Ignoring all files in it."),
-                evilfs_found,
+                evilfs_found->name,
                 wrap_entry->dir,
                 (unsigned)dir_stat.st_dev
             );
