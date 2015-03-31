@@ -1376,13 +1376,15 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
 
     /* Fake an IO operation on the symlink.
      */
-    char path_buf[PATH_MAX];
-    memset(path_buf, 0, sizeof(path_buf));
+    char id_buf[256];
+    memset(id_buf, 0, sizeof(id_buf));
 
     RM_DEFINE_PATH(file);
 
-    if(readlink(file_path, path_buf, sizeof(path_buf)) == -1) {
+    RmStat stat_buf;
+    if(rm_sys_stat(file_path, &stat_buf) == -1) {
         /* Oops, that did not work out, report as an error */
+        rm_log_perror("Cannot stat symbolic link");
         file->status = RM_FILE_STATE_IGNORE;
         return;
     }
@@ -1393,8 +1395,12 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
 
     g_assert(file->digest);
 
-    gsize data_size = strlen(path_buf) + 1;
-    rm_digest_update(file->digest, (unsigned char *)path_buf, data_size);
+    gint data_size = snprintf(
+        id_buf, sizeof(id_buf),
+        "%ld:%ld", (long)stat_buf.st_dev, (long)stat_buf.st_ino
+    );
+
+    rm_digest_update(file->digest, (unsigned char *)id_buf, data_size);
 
     /* In case of paranoia: shrink the used data buffer, so comparasion works
      * as expected. Otherwise a full buffer is used with possibly different
