@@ -45,3 +45,36 @@ the ``rmlint.sh``. This can be used to speed up the next run by passing it to
 ``--cache``. It should be noted that using the cache file for later runs is
 discouraged since false positives will get likely if the data is changed in
 between. Therefore there will never be an "auto-pickup" of the cache file.
+
+I have a very large number of files and I run out of memory and patience.
+-------------------------------------------------------------------------
+
+As a rule of thumb, ``rmlint`` will allocate 350 bytes for every file it will
+investigate. The memory peak is usually short after it finished traversing all
+files. For example, 5 million files will result in a memory footprint of roughly
+1.6GB of memory.
+
+*Some things to consider:*
+
+- Use ``--with-metadata-cache`` to swap paths to disk. When needed the path is
+  selected from disk instead of keeping them all in memory. This lowers the 
+  memory footprint per file by around 100 bytes.
+- Use ``--without-fiemap`` on rotational disk to disable this optimization. With
+  it enabled a table of the file's extents is stored to optimize disk access
+  patterns. This lowers the memory footprint per file by around 50 bytes.
+- Enable the progress bar with ``-g`` to keep track of how much data is left to
+  scan.
+
+*Caveats:*
+
+- Some options like ``-D`` will not work well with ``--with-metadata-cache`` and
+  use a fair bit of memory themselves. This is by the way they're working. Avoid
+  them in this case. Also ``--cache`` might be not very memory efficient.
+- The CPU usage might go up quite a bit, resulting longer runs.
+
+*Also:*
+
+``rmlint`` have been successfully used on datasets of 5 million files. See this
+bug report for more information: `#109`_.
+
+.. _`#109`: https://github.com/sahib/rmlint/issues/109
