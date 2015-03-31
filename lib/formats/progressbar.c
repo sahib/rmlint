@@ -333,6 +333,10 @@ static void rm_fmt_prog(
         self->update_counter = 0;
     }
 
+    if(state == RM_PROGRESS_STATE_TRAVERSE && session->traverse_finished) {
+        self->update_counter = 0;
+    }
+
     if(state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished) {
         self->update_counter = 0;
     }

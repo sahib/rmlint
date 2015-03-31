@@ -172,16 +172,16 @@ static void rm_traverse_file(
     if(file != NULL) {
         file->is_symlink = is_symlink;
         file->is_hidden = is_hidden;
-
+        
+        int added = 0;
         if(file_queue != NULL) {
             g_queue_push_tail(file_queue, file);
+            added = 1;
         } else {
-            g_atomic_int_add(
-                &trav_session->session->total_files,
-                rm_file_tables_insert(session, file)
-            );
+            added = rm_file_tables_insert(session, file);
         }
 
+        g_atomic_int_add(&trav_session->session->total_files, added);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
         if(trav_session->session->cfg->clear_xattr_fields && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
@@ -448,10 +448,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         RmFile *file = iter->data;
         g_atomic_int_add(
             &trav_session->session->total_files,
-            rm_file_tables_insert(session, file)
+            -(rm_file_tables_insert(session, file) == 0)
         );
     }
     g_queue_clear(&file_queue);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 }
 
 static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_session) {
@@ -525,4 +526,6 @@ void rm_traverse_tree(RmSession *session) {
     g_thread_pool_free(traverse_pool, false, true);
     g_hash_table_unref(paths_per_disk);
     rm_traverse_session_free(trav_session);
+
+    session->traverse_finished = TRUE;
 }

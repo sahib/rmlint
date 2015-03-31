@@ -119,6 +119,9 @@ typedef struct RmSession {
 
     /* true once shredder finished running */
     bool shredder_finished;
+
+    /* true once traverse finished running */
+    bool traverse_finished;
 } RmSession;
 
 /**
