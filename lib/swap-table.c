@@ -90,7 +90,6 @@ static void rm_swap_table_clean_stmt(RmSwapTable *self, sqlite3_stmt *stmt,
 
     int r = 0;
     if((r = sqlite3_errcode(self->cache)) != SQLITE_DONE) {
-        g_printerr(">>> %d\n", r);
         SET_ERROR("stmt failed: %s", sqlite3_errmsg(self->cache));
     }
 
@@ -126,6 +125,8 @@ RmSwapTable *rm_swap_table_open(gboolean in_memory, GError **error) {
         path = g_strdup(":memory:");
     } else {
         char pid[20] = {0};
+        memset(pid, 0, sizeof(pid));
+
         g_snprintf(pid, sizeof(pid), "%d", getpid());
         path = g_build_filename(g_get_user_cache_dir(), "rmlint", pid, NULL);
 
@@ -170,17 +171,19 @@ cleanup:
 void rm_swap_table_close(RmSwapTable *self, GError **error) {
     g_assert(self);
 
-    g_ptr_array_foreach(self->attrs, (GFunc)rm_swap_attr_destroy, self);
-    g_ptr_array_free(self->attrs, TRUE);
+    g_mutex_lock(&self->mtx); {
+        g_ptr_array_foreach(self->attrs, (GFunc)rm_swap_attr_destroy, self);
+        g_ptr_array_free(self->attrs, TRUE);
 
-    if(sqlite3_close(self->cache) != SQLITE_OK) {
-        SET_ERROR("Unable to close swap table db");
+        if(sqlite3_close(self->cache) != SQLITE_OK) {
+            SET_ERROR("Unable to close swap table db");
+        }
+
+        if(unlink(self->path) == -1) {
+            SET_ERROR("cannot delete temp cache %s: %s", self->path, g_strerror(errno));
+        }
     }
-
-    if(unlink(self->path) == -1) {
-        SET_ERROR("cannot delete temp cache %s: %s", self->path, g_strerror(errno));
-    }
-
+    g_mutex_unlock(&self->mtx);
     g_mutex_clear(&self->mtx);
     self->cache = NULL;
     self->attrs = NULL;
@@ -321,8 +324,6 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    g_printerr("%s\n", table->path);
-
     int PATH_ATTR = rm_swap_table_create_attr(table, "path", &error);
 
     const int N = 1000000;
@@ -337,12 +338,10 @@ int main(void) {
         rm_swap_table_insert(table, PATH_ATTR, buf, sizeof(buf));
     }
 
-    g_printerr("COMMIT DONE;\n");
 
     for(int i = 0; i < (N); i++) {
         char buf[PATH_MAX];
         rm_swap_table_lookup(table, PATH_ATTR, i + 1, buf, sizeof(buf));
-        // g_printerr("%d -> %d -> %s\n", PATH_ATTR, i, buf);
     }
 
     rm_swap_table_close(table, &error);

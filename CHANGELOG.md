@@ -20,6 +20,10 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Added
 
+- ``--with-metadata-cache`` makes ``rmlint`` less memory hungry by storing
+  it's paths in a sqlite3 database and selecting them when needed.
+- ``--without-fiemap`` disables the ``fiemap`` optimization when focus is on
+  memory footprint.
 - ``--perms`` can check if a file should be readable/writable or executable.
 - Json output is enabled by default and is written to ``rmlint.json``.
 - ``--partial-hidden`` does only see hidden files in duplicate directories.
@@ -32,6 +36,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Changed
 
+- Optional dependency for *sqlite3* for ``--with-metadata-cache``.
 - ``--hardlinked`` is enabled by default.
 - Support -n (dry-run) for rmlint.sh; require user input on ask.
 - Default digest is now *sha1* instead of *spooky*.

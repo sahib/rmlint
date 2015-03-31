@@ -42,7 +42,7 @@
 // BUFFER FOR STARTING TRAVERSAL THREADS //
 ///////////////////////////////////////////
 
-/* Defines a path variable containing the file's path */
+/* Defines a path variable containing the buffer's path */
 #define RM_BUFFER_DEFINE_PATH(session, buff)                         \
     char * buff ## _path = NULL;                                     \
     char buff ## _buf[PATH_MAX];                                     \
@@ -121,8 +121,9 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 //////////////////////
 
 static void rm_traverse_file(
-    RmTravSession *trav_session, RmStat *statp,
-    char *path, size_t path_len, bool is_prefd, unsigned long path_index, RmLintType file_type, bool is_symlink, bool is_hidden
+    RmTravSession *trav_session, RmStat *statp, GQueue *file_queue,
+    char *path, size_t path_len, bool is_prefd, unsigned long path_index, 
+    RmLintType file_type, bool is_symlink, bool is_hidden
 ) {
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
@@ -172,7 +173,14 @@ static void rm_traverse_file(
         file->is_symlink = is_symlink;
         file->is_hidden = is_hidden;
 
-        g_atomic_int_add(&trav_session->session->total_files, rm_file_tables_insert(session, file));
+        if(file_queue != NULL) {
+            g_queue_push_tail(file_queue, file);
+        } else {
+            g_atomic_int_add(
+                &trav_session->session->total_files,
+                rm_file_tables_insert(session, file)
+            );
+        }
 
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
@@ -198,13 +206,22 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
     }
 }
 
+/* Macro for rm_traverse_directory() for easy file adding */
+#define _ADD_FILE(lint_type, is_symlink, stat_buf)                               \
+        rm_traverse_file(                                                        \
+            trav_session, (RmStat *)p->fts_statp, &file_queue,                   \
+            p->fts_path, p->fts_pathlen, is_prefd, path_index,                   \
+            lint_type, is_symlink,                                               \
+            rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \
+        );                                                                       \
+
 #if RM_PLATFORM_32 && HAVE_STAT64
 
 static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *buf) {
     /* Break a leg for supporting large files on 32 bit,
      * and convert the needed fields to the large version. 
      *
-     * We can't use memcpy here, sinc the layout might be (fatally) different.
+     * We can't use memcpy here, since the layout might be (fatally) different.
      * Yes, this is stupid. *Sigh*
      * */
     memset(buf, 0, sizeof(RmStat));
@@ -223,26 +240,16 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
     buf->st_ctim = fts_statp->st_ctim;
 }
 
-#define ADD_FILE(lint_type, is_symlink) {                                        \
-        RmStat buf;                                                              \
-        rm_traverse_convert_small_stat_buf(p->fts_statp, &buf);                  \
-        rm_traverse_file(                                                        \
-            trav_session, &buf,                                                  \
-            p->fts_path, p->fts_pathlen, is_prefd, path_index,                   \
-            lint_type, is_symlink,                                               \
-            rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \
-        );                                                                       \
-    }                                                                            \
+#define ADD_FILE(lint_type, is_symlink) {                       \
+        RmStat buf;                                             \
+        rm_traverse_convert_small_stat_buf(p->fts_statp, &buf); \
+        _ADD_FILE(lint_type, is_symlink, &buf)                  \
+    }                                                           \
 
 #else
 
-#define ADD_FILE(lint_type, is_symlink)                                          \
-        rm_traverse_file(                                                        \
-            trav_session, (RmStat *)p->fts_statp,                                \
-            p->fts_path, p->fts_pathlen, is_prefd, path_index,                   \
-            lint_type, is_symlink,                                               \
-            rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \
-        );                                                                       \
+#define ADD_FILE(lint_type, is_symlink)                         \
+    _ADD_FILE(lint_type, is_symlink, (RmStat *)p->fts_statp)    \
 
 #endif
 
@@ -287,6 +294,12 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
  
+    /* rm_traverse_file add the finished file (if any) to this queue.  They are
+     * added to the preprocessing module in batch so there isn't many jumping
+     * between BEGIN; INSERT[...]; COMMIT and SELECT with --with-metadata-cache.
+     */
+    GQueue file_queue = G_QUEUE_INIT;
+
     while(!rm_session_was_aborted(trav_session->session) && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if (cfg->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
@@ -362,7 +375,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                      * -> must be a big file on 32 bit.
                      */
                     rm_traverse_file(
-                        trav_session, &stat_buf, p->fts_path, p->fts_pathlen,
+                        trav_session, &stat_buf, &file_queue, p->fts_path, p->fts_pathlen,
                         is_prefd, path_index, RM_LINT_TYPE_UNKNOWN, false,
                         rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1)
                     );
@@ -426,6 +439,19 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     fts_close(ftsp);
     rm_trav_buffer_free(buffer);
+
+    /* Pass the files to the preprocessing machinery. We collect the files first
+     * in order to make -with-metadata-cache work: Without, too many
+     * insert/selects would crossfire.
+     */
+    for(GList *iter = file_queue.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        g_atomic_int_add(
+            &trav_session->session->total_files,
+            rm_file_tables_insert(session, file)
+        );
+    }
+    g_queue_clear(&file_queue);
 }
 
 static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_session) {
@@ -462,7 +488,8 @@ void rm_traverse_tree(RmSession *session) {
             }
 
             rm_traverse_file(
-                trav_session, &buffer->stat_buf, buffer_path, strlen(buffer_path), is_prefd, idx,
+                trav_session, &buffer->stat_buf, NULL,
+                buffer_path, strlen(buffer_path), is_prefd, idx,
                 RM_LINT_TYPE_UNKNOWN, false, is_hidden
             );
 

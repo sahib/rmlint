@@ -111,8 +111,90 @@ static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
            );
 }
 
+typedef struct RmPathDoubleKey {
+    bool inode_set : 1;
+    bool basename_set : 1;
+
+    ino_t parent_inode;
+    char *basename;
+
+    RmFile *file;
+    GList *iter;
+} RmPathDoubleKey;
+
+static guint rm_path_double_hash(const RmPathDoubleKey *key) {
+    return key->file->inode ^ key->file->dev;
+}
+
+static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
+    if(key_a->file->inode != key_b->file->inode) {
+        return FALSE;
+    }
+
+    if(key_a->file->dev != key_b->file->dev) {
+        return FALSE;
+    }
+
+    RmFile *file_a = key_a->file;
+    RmFile *file_b = key_b->file;
+
+    if(key_a->inode_set == false)  { 
+        RM_DEFINE_PATH(file_a);
+
+        key_a->parent_inode = rm_util_parent_node(file_a_path);
+        key_a->inode_set = TRUE;
+    }
+
+    if(key_b->inode_set == false)  { 
+        RM_DEFINE_PATH(file_b);
+        
+        key_b->parent_inode = rm_util_parent_node(file_b_path);
+        key_b->inode_set = TRUE;
+    }
+
+    if(key_a->parent_inode != key_b->parent_inode) {
+        return FALSE;
+    }
+
+    /* Save the basename for later use.  This is mainly for
+     * --with-metadata-cache, so it doesn't trigger SELECTs very often.
+     *  Basenames are generally much shorter than the path, so that should be
+     *  okay.
+     */
+    if(key_a->basename == NULL) {
+        RM_DEFINE_BASENAME(file_a);
+        key_a->basename = g_strdup(file_a_basename);
+    }
+
+    if(key_b->basename == NULL) {
+        RM_DEFINE_BASENAME(file_b);
+        key_b->basename = g_strdup(file_b_basename);
+    }
+
+    return g_strcmp0(key_a->basename, key_b->basename) == 0;
+}
+
+static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
+    RmPathDoubleKey *key = g_malloc0(sizeof(RmPathDoubleKey));
+    key->file = file;
+    return key;
+}
+
+static void rm_path_double_free(RmPathDoubleKey *key) {
+    g_free(key->basename);
+    g_free(key);
+}
+
+
 RmFileTables *rm_file_tables_new(RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
+
+    tables->path_double_table = g_hash_table_new_full(
+        (GHashFunc)rm_path_double_hash,
+        (GEqualFunc)rm_path_double_equal,
+        (GDestroyNotify)rm_path_double_free,
+        NULL
+    );
 
     tables->size_groups = g_hash_table_new_full(
                               (GHashFunc)rm_file_hash, (GEqualFunc)rm_file_equal, NULL, NULL
@@ -136,9 +218,17 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     {
         g_assert(tables->node_table);
         g_hash_table_unref(tables->node_table);
+        tables->node_table = NULL;
 
         g_assert(tables->size_groups);
         g_hash_table_unref(tables->size_groups);
+        tables->size_groups = NULL;
+
+        /* Might have been destroyed earlier */
+        if(tables->path_double_table) {
+            g_hash_table_unref(tables->path_double_table);
+            tables->path_double_table = NULL;
+        }
 
     }
     g_rec_mutex_unlock(&tables->lock);
@@ -212,13 +302,16 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
     GHashTable *node_table = tables->node_table;
 
-    bool result = true;
+    bool is_hardlink = true;
 
     g_rec_mutex_lock(&tables->lock);
     {
         RmFile *inode_match = g_hash_table_lookup(node_table, file);
-        if (!inode_match) {
+        if (inode_match == NULL) {
+            RmPathDoubleKey *key = rm_path_double_new(file);
+
             g_hash_table_insert(node_table, file, file);
+            g_hash_table_insert(tables->path_double_table, key, key);
         } else {
             /* file(s) with matching dev, inode(, basename) already in table...
              * fails if the hardlinked file has been written to during traversal; so
@@ -229,72 +322,94 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                 rm_log_warning_line(_("Hardlink file size changed during traversal: %s"), file_path);
             }
 
+            /* compare this file to all of the existing ones in the cluster
+             * to check if it's a path double; if yes then swap or discard */
+            RmPathDoubleKey *key = rm_path_double_new(file);
+
             /* if this is the first time, set up the hardlinks.files queue */
             if (!inode_match->hardlinks.files) {
                 inode_match->hardlinks.files = g_queue_new();
 
-                /*NOTE: during list build, the hardlinks.files queue includes the file
+                /* NOTE: during list build, the hardlinks.files queue includes the file
                  * itself, as well as its hardlinks.  This makes operations
                  * in rm_file_tables_insert much simpler but complicates things later on,
                  * so the head file gets removed from the hardlinks.files queue
                  * in rm_pp_handle_hardlinks() during preprocessing */
                 g_queue_push_head(inode_match->hardlinks.files, inode_match);
+                key->iter = inode_match->hardlinks.files->head;
             }
 
             /* make sure the highest-ranked hardlink is "boss" */
             if (rm_pp_cmp_orig_criteria(file, inode_match, session) < 0) {
-                /*this file outranks existing existing boss; swap */
-                /* NOTE: it's important that rm_file_list_insert selects a RM_LINT_TYPE_DUPE_CANDIDATE
-                 * as head file, unless all the files are "other lint".  This is achieved via rm_pp_cmp_orig_criteria*/
+                /* this file outranks existing existing boss; swap. 
+                 * NOTE: it's important that rm_file_list_insert selects a
+                 * RM_LINT_TYPE_DUPE_CANDIDATE as head file, unless all the
+                 * files are "other lint".  This is achieved via
+                 * rm_pp_cmp_orig_criteria */
                 file->hardlinks.files = inode_match->hardlinks.files;
                 inode_match->hardlinks.files = NULL;
-                g_hash_table_insert(node_table, file, file); /* replaces key and data*/
+                g_hash_table_replace(node_table, file, file); /* replaces key and data*/
                 inode_match = file;
             }
 
-            /* compare this file to all of the existing ones in the cluster
-             * to check if it's a path double; if yes then swap or discard */
-            for (GList *iter = inode_match->hardlinks.files->head; iter; iter = iter->next) {
-                RmFile *iter_file = iter->data;
-                RM_DEFINE_BASENAME(file);
-                RM_DEFINE_BASENAME(iter_file);
+            RmPathDoubleKey *match_double_key = g_hash_table_lookup(tables->path_double_table, key);
+            if(match_double_key == NULL) {
+                g_hash_table_insert(tables->path_double_table, key, key);
+            } else if(match_double_key->file != file) {
+                RmFile *match_double = match_double_key->file;
+                RmFile *path_double = NULL;
 
-                if (1
-                        && (g_strcmp0(file_basename, iter_file_basename) == 0)
-                        /* double paths and loops will always have same basename
-                         * (cheap call to potentially avoid the next call which requires a rm_sys_stat()) */
-                        && (rm_util_parent_node(file_path) == rm_util_parent_node(iter_file_path))
-                        /* double paths and loops will always have same dir inode number*/
-                   ) {
-                    /* file is path double or filesystem loop - kick one or the other */
-                    if (rm_pp_cmp_orig_criteria(file, iter->data, session) < 0) {
-                        /* file outranks iter */
-                        rm_log_debug("Ignoring path double %s, keeping %s\n", iter_file_path, file_path);
-                        iter->data = file;
-                        g_assert (iter_file != inode_match); /* it would be a bad thing to destroy the hashtable key */
-                        rm_file_destroy(iter_file);
-                    } else {
-                        rm_log_debug("Ignoring path double %s, keeping %s\n", file_path, iter_file_path);
-                        rm_file_destroy(file);
+                if(rm_pp_cmp_orig_criteria(file, match_double, session) < 0) {
+                    rm_log_debug("Ignoring path double %p, keeping %p\n", match_double, file);
+
+                    g_hash_table_replace(tables->path_double_table, key, key);
+                    if(file != inode_match && g_hash_table_lookup(node_table, match_double)) {
+                        g_hash_table_replace(node_table, file, file);
                     }
-                    result = false;
-                    break;
+
+                    path_double = match_double;
+
+                    /* Swap the file the inode cluster node refers to */
+                    key->iter->data = file;
+                } else {
+                    rm_log_debug("Ignoring path double %p, keeping %p\n", file, match_double);
+                    if(g_hash_table_lookup(node_table, file)) {
+                        g_hash_table_replace(node_table, match_double, match_double);
+                    }
+                
+                    path_double = file;
+
+                    rm_path_double_free(key);
                 }
+
+                /* Not a hardlink */
+                is_hardlink = false;
+
+                /* This file was a double, so free it. */
+                rm_file_destroy(path_double);
             }
 
-            if(result == true) {
-                /* no path double found; must be hardlink */
-                g_queue_insert_sorted (
-                    inode_match->hardlinks.files,
-                    file,
-                    (GCompareDataFunc)rm_pp_cmp_orig_criteria,
-                    session
-                );
+            if(is_hardlink == true) {
+                /* Find the right place to insert */
+                GList *iter = inode_match->hardlinks.files->head;
+                while(iter && rm_pp_cmp_orig_criteria(iter->data, file, session) < 0) {
+                    iter = iter->next;
+                }
+
+                if(iter) {
+                    g_queue_insert_before(inode_match->hardlinks.files, iter, file);
+                    iter = iter->prev;
+                } else {
+                    g_queue_push_tail(inode_match->hardlinks.files, file);
+                    iter = inode_match->hardlinks.files->tail;
+                }
+
+                key->iter = iter->prev;
             }
         }
     }
     g_rec_mutex_unlock(&tables->lock);
-    return result;
+    return is_hardlink;
 }
 
 /* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint
@@ -337,9 +452,6 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         /* remove self */
         {
             bool was_removed = g_queue_remove(file->hardlinks.files, file);
-
-            /* Do not call that directly in g_assert, might be disabled at
-             * compile time. */
             g_assert(was_removed);
         }
 
@@ -424,6 +536,12 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
 void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     g_assert(tables->node_table);
+
+    /* Save some memory by removing the unneeded path_double table */
+    if(tables->path_double_table) {
+        g_hash_table_unref(tables->path_double_table);
+        tables->path_double_table = NULL;
+    }
 
     session->total_filtered_files = session->total_files;
 
