@@ -528,4 +528,5 @@ void rm_traverse_tree(RmSession *session) {
     rm_traverse_session_free(trav_session);
 
     session->traverse_finished = TRUE;
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 }
