@@ -203,9 +203,6 @@
 * Controls are sorted by subjectve importanceness.
 */
 
-/* Minimum number of pages to read */
-#define SHRED_MIN_READ_PAGES (1)
-
 ////////////////////////////////////////////
 // OPTIMISATION PARAMETERS FOR DECIDING   //
 // HOW MANY BYTES TO READ BEFORE STOPPING //
@@ -218,51 +215,14 @@
  */
 #define SHRED_EMPTYQUEUE_SLEEP_US (10 * 1000) /* 10ms */
 
-/* expected typical seek time in milliseconds - used to calculate optimum read*/
-#define SHRED_SEEK_MS (10)
-/** Note that 15 ms this would be appropriate value for random reads
- * but for short seeks in the 1MB to 1GB range , 5ms is more appropriate; refer:
- * https://www.usenix.org/legacy/event/usenix09/tech/full_papers/vandebogart/vandebogart_html/index.html
- * But it's better to have this value a bit too high rather than a bit too low...
- */
-
-/* expected typical sequential read speed in MB per second */
-#define SHRED_READRATE (100)
-
-/* define what we consider cheap as a fraction of total cost, for example a cheap read has
- * a read time less than 1/50th the seek time, or a cheap seek has a seek time less then 1/50th
- * the total read time */
-#define SHRED_CHEAP (50)
-
-/* how many pages can we read in (seek_time)? (eg 5ms seeking folled by 5ms reading) */
-#define SHRED_BALANCED_READ_BYTES (SHRED_SEEK_MS * SHRED_READRATE * 1024) /* ( * 1024 / 1000 to be exact) */
-
-/* how many bytes do we have to read before seek_time becomes CHEAP relative to read time? */
-#define SHRED_CHEAP_SEEK_BYTES (SHRED_BALANCED_READ_BYTES * SHRED_CHEAP)
-
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
-#define SHRED_CHEAP_READ_BYTES (SHRED_BALANCED_READ_BYTES / SHRED_CHEAP)
-
-/** for reference, if SEEK_MS=5, READRATE=100 and CHEAP=50 then BALANCED_READ_BYTES=0.5MB,
- * CHEAP_SEEK_BYTES=25MB and CHEAP_READ_BYTES=10kB. */
-
-/* Maximum number of bytes to read in one pass.
- * Never goes beyond SHRED_MAX_READ_SIZE unless the extra bytes to finish the file are "cheap".
- * Never goes beyond SHRED_HARD_MAX_READ_SIZE.
- */
-#define SHRED_MAX_READ_SIZE   (512 * 1024 * 1024)
-#define SHRED_HARD_MAX_READ_SIZE   (1024 * 1024 * 1024)
-
-/* How many pages to use during paranoid byte-by-byte comparison?
- * More pages use more memory but result in less syscalls.
- */
-#define SHRED_PARANOIA_PAGES  (64)
-
-/* How much buffers to keep allocated at max. */
-#define SHRED_MAX_PAGES       (64)
+#define SHRED_BALANCED_PAGES (4)
 
 /* How large a single page is (typically 4096 bytes but not always)*/
 #define SHRED_PAGE_SIZE       (sysconf(_SC_PAGESIZE))
+
+#define SHRED_MAX_READ_FACTOR \
+    ((256 * 1024 * 1024) / SHRED_BALANCED_PAGES / SHRED_PAGE_SIZE)
 
 /* Wether to use buffered fread() or direct preadv() 
  * The latter is preferred, since it's slightly faster on linux.
@@ -445,6 +405,9 @@ typedef struct RmShredGroup {
     /* file hash_offset for next increment */
     RmOff next_offset;
 
+    /* Factor of SHRED_BALANCED_PAGES to read next time */
+    unsigned offset_factor;
+
     /* checksum structure taken from first file to enter the group.  This allows
      * digests to be released from RmFiles and memory freed up until they
      * are required again for further hashing.*/
@@ -470,9 +433,17 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
     }
 
     self->parent = file->shred_group;
+    self->main = file->device->main;
 
     if(self->parent) {
         self->ref_count++;
+        if(self->parent->offset_factor <= SHRED_MAX_READ_FACTOR) {
+             self->offset_factor = self->parent->offset_factor * 2;
+         } else {
+             self->offset_factor = self->parent->offset_factor;
+         }
+    } else {
+         self->offset_factor = 1;
     }
 
     self->held_files = g_queue_new();
@@ -550,39 +521,48 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
 
     gint32 result = 0;
 
-    /* calculate next_offset property of the RmShredGroup, if not already done */
-    if (group->next_offset == 0) {
-        RmOff target_bytes = (group->hash_offset == 0) ? SHRED_CHEAP_READ_BYTES : SHRED_CHEAP_SEEK_BYTES;
-
-        /* round to even number of pages, round up to MIN_READ_PAGES */
-        RmOff target_pages = MAX(target_bytes / tag->page_size, SHRED_MIN_READ_PAGES);
-        target_bytes = target_pages * tag->page_size;
-
-        /* test if cost-effective to read the whole file */
-        if (group->hash_offset + target_bytes + SHRED_BALANCED_READ_BYTES >= group->file_size) {
-            target_bytes = group->file_size - group->hash_offset;
-        }
-
-        group->next_offset = group->hash_offset + target_bytes;
-
-        /* for paranoid digests, make sure next read is not > max size of paranoid buffer */
-        if(group->digest_type == RM_DIGEST_PARANOID) {
-            group->next_offset = MIN(group->next_offset, group->hash_offset + rm_digest_paranoia_bytes() );
-        }
+    /* calculate next_offset property of the RmShredGroup */
+    RmOff balanced_bytes = tag->page_size * SHRED_BALANCED_PAGES;
+    RmOff target_bytes = balanced_bytes * group->offset_factor;
+    if (group->next_offset == 2) {
+        file->fadvise_requested = 1;
     }
 
-    /* read to end of current file fragment, or to group->next_offset, whichever comes first */
+    /* round to even number of pages, round up to MIN_READ_PAGES */
+    RmOff target_pages = MAX(target_bytes / tag->page_size, 1);
+    target_bytes = target_pages * tag->page_size;
+
+    /* test if cost-effective to read the whole file */
+    if(group->hash_offset + target_bytes + balanced_bytes >= group->file_size) {
+        target_bytes = group->file_size - group->hash_offset;
+    }
+
+    group->next_offset = group->hash_offset + target_bytes;
+
+    /* for paranoid digests, make sure next read is not > max size of paranoid
+     * buffer */
+    if(group->digest_type == RM_DIGEST_PARANOID) {
+        group->next_offset =
+            MIN(group->next_offset,
+                group->hash_offset + rm_digest_paranoia_bytes());
+    }
+
+    /* read to end of current file fragment, or to group->next_offset, whichever
+     * comes first */
     RmOff bytes_to_next_fragment = 0;
 
-    /* NOTE: need lock because queue sorting also accesses file->disk_offsets, which is not threadsafe */
+    /* NOTE: need lock because queue sorting also accesses file->disk_offsets,
+     * which is not threadsafe */
     g_assert(file->device);
     g_mutex_lock(&file->device->lock);
     {
-        bytes_to_next_fragment = rm_offset_bytes_to_next_fragment(file->disk_offsets, file->seek_offset);
+        bytes_to_next_fragment = rm_offset_bytes_to_next_fragment(
+            file->disk_offsets, file->seek_offset);
     }
     g_mutex_unlock(&file->device->lock);
 
-    if(bytes_to_next_fragment != 0 && bytes_to_next_fragment + file->seek_offset < group->next_offset) {
+    if(bytes_to_next_fragment != 0 &&
+       bytes_to_next_fragment + file->seek_offset < group->next_offset) {
         file->status = RM_FILE_STATE_FRAGMENT;
         result = bytes_to_next_fragment;
     } else {
@@ -718,7 +698,7 @@ static RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_nam
                       );
 
     self->hashed_file_return = g_async_queue_new();
-    self->page_size = SHRED_PAGE_SIZE;
+    self->page_size = main->page_size;
 
     g_mutex_init(&(self->lock));
     return self;
@@ -1371,6 +1351,17 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
+static void rm_shred_request_readahead(int fd, RmFile *file,
+                                       RmOff bytes_to_read) {
+    /* Give the kernel scheduler some hints */
+    if(file->fadvise_requested) {
+        RmOff readahead =
+            MIN(file->file_size - file->seek_offset, bytes_to_read * 8);
+        posix_fadvise(fd, file->seek_offset, readahead, SHRED_FADVISE_FLAGS);
+        file->fadvise_requested = 1;
+    }
+}
+
 static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
     g_assert(file->is_symlink);
 
@@ -1435,6 +1426,8 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_read = 0;
 
+    rm_shred_request_readahead(fileno(fd), file, bytes_to_read);
+
     if(fseek(fd, file->seek_offset, SEEK_SET) == -1) {
         error_happended = true;
         rm_log_perror("fseek(3) failed");
@@ -1497,11 +1490,12 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
 
     g_assert(!file->is_symlink);
     g_assert(bytes_to_read > 0);
-    g_assert(buf_size >= (RmOff)SHRED_PAGE_SIZE);
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
     g_assert(file->seek_offset == file->hash_offset);
 
-    struct iovec readvec[SHRED_MAX_PAGES + 1];
+    /* how many buffers to read? */
+    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, buf_size));
+    struct iovec readvec[N_BUFFERS + 1];
 
     int fd = 0;
 
@@ -1530,11 +1524,8 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
      * With  1 buffers: 45% cpu 34,491 total
      */
 
-    /* how many buffers to read? */
-    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, buf_size));
-
     /* Give the kernel scheduler some hints */
-    posix_fadvise(fd, file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
+    rm_shred_request_readahead(fd, file, bytes_to_read);
 
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
@@ -1680,6 +1671,11 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         } else {
             rm_shred_unbuffered_read_factory(file, device);
         }
+
+        /* TODO: time is spend here waiting for the file to return
+                 while we could already trigger a new file to read.
+                 Maybe bring back the threadpool'd reader from shredder v1?
+        */
 
         /* wait until the increment has finished hashing */
         file = g_async_queue_pop(device->hashed_file_return);

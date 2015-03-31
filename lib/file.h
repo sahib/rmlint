@@ -146,6 +146,9 @@ typedef struct RmFile {
      */
     bool has_ext_cksum : 1;
 
+    /* If true, the file will be request to be pre-cached on the next read */
+    bool fadvise_requested : 1;
+
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
