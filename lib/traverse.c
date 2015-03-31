@@ -209,7 +209,7 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
 /* Macro for rm_traverse_directory() for easy file adding */
 #define _ADD_FILE(lint_type, is_symlink, stat_buf)                               \
         rm_traverse_file(                                                        \
-            trav_session, (RmStat *)p->fts_statp, &file_queue,                   \
+            trav_session, (RmStat *)stat_buf, &file_queue,                       \
             p->fts_path, p->fts_pathlen, is_prefd, path_index,                   \
             lint_type, is_symlink,                                               \
             rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1) \

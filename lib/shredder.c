@@ -1891,6 +1891,9 @@ void rm_shred_run(RmSession *session) {
         }
     }
 
+    session->shredder_finished = TRUE;
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
+
     /* This should not block, or at least only very short. */
     g_thread_pool_free(tag.device_pool, FALSE, TRUE);
     g_thread_pool_free(tag.result_pool, FALSE, TRUE);
