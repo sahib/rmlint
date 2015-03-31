@@ -111,19 +111,31 @@ static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
            );
 }
 
+/* GHashTable key tuned to recognize duplicate paths.
+ * i.e. RmFiles that are not only hardlinks but 
+ * also point to the real path
+ */
 typedef struct RmPathDoubleKey {
-    bool inode_set : 1;
+    /* parent_inode and basename are initialized lazily,
+     * since often, they are not needed.
+     */
+    bool parent_inode_set : 1;
     bool basename_set : 1;
 
+    /* stat(dirname(file->path)).st_ino */
     ino_t parent_inode;
     char *basename;
 
+    /* File the key points to */
     RmFile *file;
+
+    /* GQueue iter the key tracks */
     GList *iter;
 } RmPathDoubleKey;
 
 static guint rm_path_double_hash(const RmPathDoubleKey *key) {
-    return key->file->inode ^ key->file->dev;
+    /* depend only on the always set components, never change the hash duringthe run */
+    return rm_node_hash(key->file);
 }
 
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
@@ -138,18 +150,18 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
     RmFile *file_a = key_a->file;
     RmFile *file_b = key_b->file;
 
-    if(key_a->inode_set == false)  { 
+    if(key_a->parent_inode_set == false)  { 
         RM_DEFINE_PATH(file_a);
 
         key_a->parent_inode = rm_util_parent_node(file_a_path);
-        key_a->inode_set = TRUE;
+        key_a->parent_inode_set = TRUE;
     }
 
-    if(key_b->inode_set == false)  { 
+    if(key_b->parent_inode_set == false)  { 
         RM_DEFINE_PATH(file_b);
         
         key_b->parent_inode = rm_util_parent_node(file_b_path);
-        key_b->inode_set = TRUE;
+        key_b->parent_inode_set = TRUE;
     }
 
     if(key_a->parent_inode != key_b->parent_inode) {
@@ -299,10 +311,12 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
 /* initial list build, including kicking out path doubles and grouping of hardlinks */
 bool rm_file_tables_insert(RmSession *session, RmFile *file) {
     RmFileTables *tables = session->tables;
-
     GHashTable *node_table = tables->node_table;
-
     bool is_hardlink = true;
+
+    if(rm_session_was_aborted(session)) {
+        return false;
+    }
 
     g_rec_mutex_lock(&tables->lock);
     {
@@ -352,7 +366,11 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                 inode_match = file;
             }
 
-            RmPathDoubleKey *match_double_key = g_hash_table_lookup(tables->path_double_table, key);
+            /* Lookup if there is a file with the same path */
+            RmPathDoubleKey *match_double_key = g_hash_table_lookup(
+                    tables->path_double_table, key
+            );
+
             if(match_double_key == NULL) {
                 g_hash_table_insert(tables->path_double_table, key, key);
             } else if(match_double_key->file != file) {
@@ -379,7 +397,9 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                 
                     path_double = file;
 
+                    /* Free the unused key */
                     rm_path_double_free(key);
+                    key = NULL;
                 }
 
                 /* Not a hardlink */
@@ -390,12 +410,13 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
             }
 
             if(is_hardlink == true) {
-                /* Find the right place to insert */
+                /* Find the right place to insert sorted */
                 GList *iter = inode_match->hardlinks.files->head;
                 while(iter && rm_pp_cmp_orig_criteria(iter->data, file, session) < 0) {
                     iter = iter->next;
                 }
 
+                /* Store the iter to this file, so we can swap it if needed */
                 if(iter) {
                     g_queue_insert_before(inode_match->hardlinks.files, iter, file);
                     iter = iter->prev;
@@ -404,10 +425,11 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                     iter = inode_match->hardlinks.files->tail;
                 }
 
-                key->iter = iter->prev;
+                key->iter = iter;
             }
         }
     }
+
     g_rec_mutex_unlock(&tables->lock);
     return is_hardlink;
 }
@@ -461,7 +483,16 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
 
             /* call self to handle each embedded hardlink */
             RmFile *embedded = iter->data;
-            g_assert(!embedded->hardlinks.files);
+            if(embedded->hardlinks.files != NULL) {
+                GQueue *hardlinks = embedded->hardlinks.files;
+                g_assert(hardlinks->length < 2);
+                if(hardlinks->head) {
+                    g_assert(hardlinks->head->data == embedded);
+                }
+
+                g_queue_free(hardlinks);
+                embedded->hardlinks.files = NULL;
+            }
 
             if (rm_pp_handle_hardlinks(NULL, embedded, session)) {
                 g_queue_delete_link(file->hardlinks.files, iter);
