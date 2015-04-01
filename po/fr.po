@@ -448,7 +448,7 @@ msgid "other lint"
 msgstr "autre double"
 
 #: lib/formats/progressbar.c:96
-msgid "Matching files"
+msgid "Matching"
 msgstr "Fichiers correspondants"
 
 #: lib/formats/progressbar.c:98

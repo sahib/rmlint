@@ -93,13 +93,13 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         self->text_len = g_snprintf(
                              self->text_buf, sizeof(self->text_buf),
                              "%s (%s%"LLU"%s %s %s%"LLU"%s %s; %s%s%s %s %s%"LLU"%s %s)",
-                             _("Matching files"),
+                             _("Matching"),
                              MAYBE_RED(out, session), session->dup_counter, MAYBE_RESET(out, session),
                              _("dupes of"),
                              MAYBE_YELLOW(out, session), session->dup_group_counter, MAYBE_RESET(out, session),
                              _("originals"),
                              MAYBE_GREEN(out, session), num_buf, MAYBE_RESET(out, session),
-                             _("to scan in "),
+                             _("to scan in"),
                              MAYBE_GREEN(out, session), session->shred_files_remaining, MAYBE_RESET(out, session),
                              _("files")
                          );

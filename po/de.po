@@ -456,7 +456,7 @@ msgid "other lint"
 msgstr "mal anderer Müll gefunden"
 
 #: lib/formats/progressbar.c:96
-msgid "Matching files"
+msgid "Matching"
 msgstr "Gleiche ab"
 
 #: lib/formats/progressbar.c:98
@@ -468,8 +468,8 @@ msgid "originals"
 msgstr "Originalen"
 
 #: lib/formats/progressbar.c:102
-msgid "to scan in "
-msgstr "zum scannen in "
+msgid "to scan in"
+msgstr "zum scannen in"
 
 #: lib/formats/progressbar.c:104
 msgid "files"
