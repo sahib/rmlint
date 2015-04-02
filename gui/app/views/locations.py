@@ -335,6 +335,7 @@ class LocationView(View):
 
     def on_view_enter(self):
         self.app_window.add_header_widget(self.chooser_button)
+        self.chooser_button.show_all()
 
         # If no process is currently running it should not be
         # possible to go right from locations view.
