@@ -84,6 +84,8 @@ typedef struct RmCfg {
     char *iwd;
     char *joined_argv;
 
+    GNode *folder_tree_root;
+
     RmOff minsize;
     RmOff maxsize;
     RmOff threads;

@@ -87,13 +87,19 @@ struct RmSession;
  */
 
 typedef struct RmFile {
-    /* Absolute path of the file
-     * */
-    char *path;
 
-    /* Pointer to last part of the path
+    union {
+		/* file basename (if not using swap table)
+		 * */
+        char *basename;
+		/* file path lookup ID (if using swap table)
+		 * */
+        char *path_id;
+    };
+
+    /* file folder as node of folder n-ary tree
      * */
-    char *basename;
+    GNode *folder;
 
     /* File modification date/time
      * */
@@ -202,21 +208,19 @@ typedef struct RmFile {
 } RmFile;
 
 /* Defines a path variable containing the file's path */
-#define RM_DEFINE_PATH(file)                                              \
-    char * file ## _path = NULL;                                          \
-    char file ## _buf[PATH_MAX];                                          \
+#define RM_DEFINE_PATH(file)                                               \
+    char file ## _path[PATH_MAX];                                          \
     if(file->session->cfg->use_meta_cache) {                               \
-        rm_file_lookup_path(file->session, (RmFile *)file, file ## _buf); \
-        file ## _path = file ## _buf;                                     \
-    } else {                                                              \
-        file ## _path = file->path;                                       \
-    }                                                                     \
+        rm_file_lookup_path(file->session, (RmFile *)file, file ## _path); \
+    } else {                                                               \
+        rm_file_build_path(file->session, (RmFile *)file, file ## _path);  \
+    }                                                                      \
 
 #define RM_DEFINE_BASENAME(file)                             \
     RM_DEFINE_PATH(file);                                    \
     char * file ## _basename = NULL;                         \
-    if(file->session->cfg->use_meta_cache) {                  \
-        file ## _basename = rm_util_basename(file ## _path); \
+    if(file->session->cfg->use_meta_cache) {                 \
+        file ## _basename = rm_util_basename(&file ## _path); \
     } else {                                                 \
         file ## _basename = file->basename;                  \
     }                                                        \
@@ -247,9 +251,13 @@ const char *rm_file_lint_type_to_string(RmLintType type);
 void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy);
 
 /**
- * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME.
+ * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using rm_swap_table_lookup.
  */
 void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf);
+
+/**
+ * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder tree and basename.
+ */
 
 
 #endif /* end of include guard */

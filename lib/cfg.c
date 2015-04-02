@@ -69,4 +69,6 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->use_absolute_end_offset   = false;
     cfg->skip_start_offset         = 0;
     cfg->skip_end_offset           = 0;
+
+    cfg->folder_tree_root = g_node_new(NULL);
 }
