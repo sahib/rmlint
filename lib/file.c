@@ -38,7 +38,7 @@
  * @param *path absolute path of a file in the folder
  */
 
-GNode *rm_folders_add(GNode *root, const char *path) {
+static GNode *rm_folders_add(GNode *root, const char *path) {
 
 	g_assert(path[0]=='/');
 	g_assert(strlen(path)>1);
@@ -56,12 +56,14 @@ GNode *rm_folders_add(GNode *root, const char *path) {
 		}
 
 		if (next_folder==NULL) {
-			next_folder=g_node_insert_data(current_folder, -1, g_strdup(split_path[i]));
+			next_folder=g_node_insert_data(current_folder, -1, split_path[i]);
+		} else {
+			g_free(split_path[i]);
 		}
 
 		current_folder = next_folder;
 	}
-	g_strfreev(split_path);
+	g_free(split_path);
 	return current_folder;
 }
 
@@ -149,20 +151,25 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
     );
 }
 
-void rm_file_build_path(const struct RmSession *session, RmFile *file, char *buf) {
+void rm_file_build_path(_U const struct RmSession *session, RmFile *file, char *buf) {
 	g_assert(file);
 
-	char *path=g_strconcat("/", file->basename, NULL);
+    /* walk up the folder tree, collecting path elements into a GList*/
+	GList *path_elements=NULL;
+	path_elements = g_list_prepend(path_elements, file->basename);
 
-	/* walk up the folder tree, building the path string as we go*/
 	for (GNode *folder = file->folder; folder->parent; folder=folder->parent) {
-		char *temp = path;
-		path = g_strconcat ("/", (char*)folder->data, temp, NULL);
-		g_free(temp);
+        path_elements = g_list_prepend(path_elements, folder->data);
 	}
 
-	g_strlcpy(buf, path, PATH_MAX);
-	g_free(path);
+    /* copy collected elements into *buf */
+	char *buf_ptr=buf;
+	while (path_elements) {
+        g_assert(buf + PATH_MAX > buf_ptr + 1 + strlen((char*)path_elements->data));
+        buf_ptr = g_stpcpy (buf_ptr, "/");
+        buf_ptr = g_stpcpy (buf_ptr, (char*)path_elements->data);
+        path_elements = g_list_delete_link(path_elements, path_elements);
+    }
 }
 
 

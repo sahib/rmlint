@@ -51,8 +51,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->offset_fails = 0;
 }
 
-gboolean free_node(GNode *node, gpointer data) {
-    (void) data;
+static gboolean free_node(GNode *node, _U gpointer data) {
     g_free (node->data);
     return FALSE;
 }
