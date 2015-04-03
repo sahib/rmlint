@@ -213,17 +213,17 @@ typedef struct RmFile {
     if(file->session->cfg->use_meta_cache) {                               \
         rm_file_lookup_path(file->session, (RmFile *)file, file ## _path); \
     } else {                                                               \
-        rm_file_build_path(file->session, (RmFile *)file, file ## _path);  \
+        rm_file_build_path((RmFile *)file, file ## _path);                 \
     }                                                                      \
 
-#define RM_DEFINE_BASENAME(file)                             \
-    RM_DEFINE_PATH(file);                                    \
-    char * file ## _basename = NULL;                         \
-    if(file->session->cfg->use_meta_cache) {                 \
-        file ## _basename = rm_util_basename(&file ## _path); \
-    } else {                                                 \
-        file ## _basename = file->basename;                  \
-    }                                                        \
+#define RM_DEFINE_BASENAME(file)                                      \
+    char * file ## _basename = NULL;                                  \
+    if(file->session->cfg->use_meta_cache) {                          \
+		RM_DEFINE_PATH(file);                                         \
+        file ## _basename = rm_util_basename((char*)&file ## _path);  \
+    } else {                                                          \
+        file ## _basename = file->basename;                           \
+    }                                                                 \
 /**
  * @brief Create a new RmFile handle.
  */
@@ -258,6 +258,7 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
 /**
  * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder tree and basename.
  */
+void rm_file_build_path(RmFile *file, char *buf);
 
 
 #endif /* end of include guard */

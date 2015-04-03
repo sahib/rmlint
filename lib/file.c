@@ -151,7 +151,7 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
     );
 }
 
-void rm_file_build_path(_U const struct RmSession *session, RmFile *file, char *buf) {
+void rm_file_build_path(RmFile *file, char *buf) {
 	g_assert(file);
 
     /* walk up the folder tree, collecting path elements into a GList*/
