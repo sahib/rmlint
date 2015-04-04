@@ -109,7 +109,7 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 }
 
 RmOff rm_digest_paranoia_bytes(void) {
-    return 16 * 1024 * 1024;
+    return 2 * 1024 * 1024;
     /* this is big enough buffer size to make seek time fairly insignificant relative to sequential read time,
      * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
 }
