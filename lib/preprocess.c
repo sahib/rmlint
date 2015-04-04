@@ -168,10 +168,14 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
         return FALSE;
     }
 
-    /* Save the basename for later use.  This is mainly for
-     * --with-metadata-cache, so it doesn't trigger SELECTs very often.
-     *  Basenames are generally much shorter than the path, so that should be
-     *  okay.
+    if(!file_a->session->cfg->use_meta_cache) {
+        return g_strcmp0(file_a->basename, file_b->basename) == 0;
+    }
+
+    /* If using --with-metadata-cache, save the basename for later use
+     * so it doesn't trigger SELECTs very often.  Basenames are
+     * generally much shorter than the path, so that should be
+     * okay.
      */
     if(key_a->basename == NULL) {
         RM_DEFINE_BASENAME(file_a);
@@ -193,12 +197,14 @@ static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
 }
 
 static void rm_path_double_free(RmPathDoubleKey *key) {
-    g_free(key->basename);
+    if (key->basename == NULL) {
+        g_free(key->basename);
+    }
     g_free(key);
 }
 
 
-RmFileTables *rm_file_tables_new(RmSession *session) {
+RmFileTables *rm_file_tables_new(_U RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
     tables->path_double_table = g_hash_table_new_full(
@@ -215,11 +221,6 @@ RmFileTables *rm_file_tables_new(RmSession *session) {
     tables->node_table = g_hash_table_new_full(
                              (GHashFunc)rm_node_hash, (GEqualFunc)rm_node_equal, NULL, NULL
                          );
-
-
-    RmCfg *cfg = session->cfg;
-
-    g_assert(cfg);
 
     g_rec_mutex_init(&tables->lock);
     return tables;
@@ -508,18 +509,18 @@ static gboolean rm_pp_handle_hardlinks(_U gpointer key, RmFile *file, RmSession 
         }
     }
 
+	/*
+	* Check if the file is a output of rmlint itself. Which we definitely
+	* not want to handle. Creating a script that deletes itself is fun but useless.
+	* */
+    bool remove = rm_pp_handle_own_files(session, file);
+
     /* handle the head file; if it's "other lint" then process it via rm_pp_handle_other_lint
      * and return TRUE, else keep it
      */
-    bool remove = rm_pp_handle_own_files(session, file);
-
     if(remove == false && rm_pp_handle_other_lint(session, file)) {
         remove = true;
     } else if(remove == true) {
-        /*
-        * Also check if the file is a output of rmlint itself. Which we definitely
-        * not want to handle. Creating a script that deletes itself is fun but useless.
-        * */
         rm_file_destroy(file);
     }
 
