@@ -1143,7 +1143,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"with-metadata-cache"                      , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_meta_cache        , "Swap certain metadata to disk to save RAM"      , NULL},
         {"without-metadata-cache"                   , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->use_meta_cache        , "Store all metadata in RAM"                      , NULL},
         {"with-fiemap"                              , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->build_fiemap          , "Use fiemap(2) to optimize disk access patterns" , NULL},
-        {"without-fiemap"                           , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->build_fiemap          , "Do not use fiemap(2) in order to save memory"   , NULL},
+        {"without-fiemap"                           , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->build_fiemap          , "Do not use fiemap(2) in order to save memory"   , NULL},
         {NULL                                       , 0   , HIDDEN           , 0                     , NULL                        , NULL                                             , NULL}
     };
 
