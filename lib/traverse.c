@@ -450,9 +450,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             &trav_session->session->total_files,
             -(rm_file_tables_insert(session, file) == 0)
         );
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
     }
     g_queue_clear(&file_queue);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 }
 
 static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_session) {
