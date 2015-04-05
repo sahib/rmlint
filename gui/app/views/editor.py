@@ -6,6 +6,8 @@ import os
 import stat
 import tempfile
 
+from functools import partial
+
 # Internal:
 from app.util import View, IconButton, scrolled
 from app.runner import Script
@@ -93,38 +95,35 @@ def _create_finished_screen(callback):
     return control_grid
 
 
-class ShredderDeletionEntry(Gtk.ListBoxRow):
-    icon_plus = Gtk.IconTheme.get_default().load_icon('emblem-ok-symbolic', 24, 0)
-    icon_minus = Gtk.IconTheme.get_default().load_icon('user-trash-full-symbolic', 24, 0)
+class ShredderDeletedTree(Gtk.TreeView):
+    def __init__(self):
+        Gtk.TreeView.__init__(self)
+        model = Gtk.TreeStore(str, int)
+        self.set_model(model)
 
-    def __init__(self, path, is_original):
-        Gtk.ListBoxRow.__init__(self)
+        renderer = Gtk.CellRendererText()
 
-        if is_original:
-            icon = ShredderDeletionEntry.icon_plus
-        else:
-            icon = ShredderDeletionEntry.icon_minus
-
-
-        image = Gtk.Image.new_from_pixbuf(icon)
-        image.props.halign = Gtk.Align.END
-
-        label = Gtk.Label(
-            use_markup=True, justify=Gtk.Justification.LEFT
+        text_column = Gtk.TreeViewColumn()
+        text_column.pack_start(renderer, True)
+        text_column.set_title("Files")
+        text_column.set_attributes(
+            cell_renderer=renderer,
+            text=0, weight=1,
         )
-        label.props.hexpand = True
-        label.props.halign = Gtk.Align.START
+        self.append_column(text_column)
 
-        path = GLib.markup_escape_text(path)
-        if is_original:
-            label.set_markup('<b>{}</b>'.format(path))
+        self._dupe_row = model.append(
+            None, ('Duplicate files & directories', Pango.Weight.SEMIBOLD)
+        )
+
+    def add_line(self, prefix, line):
+        if prefix.lower() == 'keeping':
+            weight = Pango.Weight.BOLD
         else:
-            label.set_markup(path)
+            weight = Pango.Weight.ULTRALIGHT
 
-        grid = Gtk.Grid()
-        grid.attach(label, 0, 0, 1, 1)
-        grid.attach(image, 1, 0, 1, 1)
-        self.add(grid)
+        self.get_model().append(self._dupe_row, (line, weight))
+        self.expand_all()
 
 
 class ShredderRunButton(Gtk.Box):
@@ -142,17 +141,7 @@ class ShredderRunButton(Gtk.Box):
             Gtk.Label(use_markup=True, label='<small>Dry run?</small>')
         )
 
-        def _toggle_dry_run(btn):
-            for widget in [self.button, self.state]:
-                ctx = widget.get_style_context()
-                if not btn.get_active():
-                    ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-                    ctx.add_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
-                else:
-                    ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
-                    ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-
-        self.state.connect('toggled', _toggle_dry_run)
+        self.state.connect('toggled', self._toggle_dry_run)
 
         self.pack_start(self.button, True, True, 0)
         self.pack_start(self.state, False, False, 0)
@@ -163,7 +152,27 @@ class ShredderRunButton(Gtk.Box):
         )
 
         self.state.set_active(True)
-        _toggle_dry_run(self.state)
+        self._toggle_dry_run(self.state)
+
+    def _toggle_dry_run(self, btn):
+        for widget in [self.button, self.state]:
+            ctx = widget.get_style_context()
+            if not btn.get_active():
+                ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+                ctx.add_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
+            else:
+                ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
+                ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+
+    def set_sensitive(self, is_sensitive):
+        Gtk.Box.set_sensitive(self, is_sensitive)
+
+        if not is_sensitive:
+            ctx = self.state.get_style_context()
+            ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
+        else:
+            self._toggle_dry_run(self.state)
 
 
 def _create_icon_stack():
@@ -192,6 +201,8 @@ class EditorView(View):
     def __init__(self, win):
         View.__init__(self, win)
         self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+
+        self._runner = None
 
         control_grid = Gtk.Grid()
         control_grid.set_hexpand(False)
@@ -227,8 +238,7 @@ When done, click the `Run Script` button below.
 
         icon_theme = Gtk.IconTheme.get_default()
 
-        self.left_listbox = Gtk.ListBox()
-        self.left_listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.left_listbox = ShredderDeletedTree()
 
         self.left_stack = Gtk.Stack()
         self.left_stack.set_transition_type(
@@ -243,12 +253,12 @@ When done, click the `Run Script` button below.
         left_pane.pack_start(self.left_stack, True , True, 0)
         left_pane.pack_start(separator, False, False, 0)
 
-        run_button = ShredderRunButton(
+        self.run_button = ShredderRunButton(
             'user-trash-symbolic', 'Run Script'
         )
-        run_button.button.connect('clicked', self.on_run_script_clicked)
-        run_button.set_halign(Gtk.Align.CENTER)
-        run_button.connect(
+        self.run_button.button.connect('clicked', self.on_run_script_clicked)
+        self.run_button.set_halign(Gtk.Align.CENTER)
+        self.run_button.connect(
             'notify::dry-run',
             lambda btn, _: icon_stack.set_visible_child_name(
                 'warning' if btn.dry_run else 'danger'
@@ -257,7 +267,7 @@ When done, click the `Run Script` button below.
 
         control_grid.attach(label, 0, 0, 1, 1)
         control_grid.attach_next_to(
-            run_button, label, Gtk.PositionType.BOTTOM, 1, 1
+            self.run_button, label, Gtk.PositionType.BOTTOM, 1, 1
         )
         control_grid.attach_next_to(
             icon_stack, label, Gtk.PositionType.TOP, 1, 1
@@ -269,8 +279,10 @@ When done, click the `Run Script` button below.
 
         self.stack.add_named(control_grid, 'danger')
         self.stack.add_named(_create_running_screen(), 'progressing')
+
+
         self.stack.add_named(
-            _create_finished_screen(self.switch_to_script), 'finished'
+            _create_finished_screen(self._switch_back), 'finished'
         )
 
         self.switch_to_script()
@@ -279,6 +291,18 @@ When done, click the `Run Script` button below.
         grid.attach(left_pane, 0, 0, 1, 1)
         grid.attach_next_to(self.stack, left_pane, Gtk.PositionType.RIGHT, 1, 1)
         self.add(grid)
+
+    @property
+    def has_script(self):
+        return bool(self._runner)
+
+    def give_runner(self, runner):
+        self._runner = runner
+        self.run_button.set_sensitive(True)
+
+    def _switch_back(self):
+        self.run_button.set_sensitive(False)
+        self.switch_to_script()
 
     def switch_to_script(self):
         self.sub_title = 'Step 3: Check the results'
@@ -300,16 +324,10 @@ When done, click the `Run Script` button below.
         self.stack.set_visible_child_name('progressing')
         self.left_stack.set_visible_child_name('list')
 
-        for row in self.left_listbox:
-            self.left_listbox.remove(row)
-
         def _line_read(script, prefix, line):
-            entry = ShredderDeletionEntry(
-                prefix + ': ' + line, (prefix.lower() == 'keeping')
+            GLib.idle_add(
+                partial(self.left_listbox.add_line, prefix, line)
             )
-
-            self.left_listbox.insert(entry, -1)
-            self.left_listbox.show_all()
 
         def _script_finished(script):
             self.stack.set_visible_child_name('finished')

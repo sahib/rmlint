@@ -299,6 +299,7 @@ class ShredderRingChart(ShredderChart):
         self._segment_list = []
         self.max_layers = 0
         self.total_size = 1
+        self._selected_segment = None
 
     def add_segment(self, segment):
         self._segment_list.append(segment)
@@ -353,32 +354,41 @@ class ShredderRingChart(ShredderChart):
         bg_col = self.get_toplevel().get_style_context().get_background_color(0)
         alloc = area.get_allocation()
 
+        # Caluclate the font size of the inner label.
+        # Make it smaller if not enough place but cut off at a size of 12
+        inner_circle = (1 / self.max_layers) * min(alloc.width, alloc.height) / 2
+        font_size = min(12, inner_circle / 3)
+
         # Draw the center text:
         _draw_center_text(
             ctx, alloc.width / 2, alloc.height / 2,
             '<span color="#333"><small>{size}</small></span>'.format(
                 size=size_to_human_readable(self.total_size)
             ),
-            font_size=min(alloc.width, alloc.height) / 42
+            font_size=font_size
         )
 
         # Extract the segments sorted by layer
         # Also filter very small segments for performance reasons
-        segs = filter(lambda seg: seg.size > math.pi / 256, self._segment_list)
+        segs = filter(lambda seg: seg.size > math.pi / 128, self._segment_list)
         segs = sorted(segs, key=lambda e: e.layer, reverse=True)
 
         for segment in segs:
             segment.draw(ctx, alloc, self.max_layers, bg_col)
 
+        if self._selected_segment is None:
+            return
+
         for segment in segs:
-            # if segment.layer > 1:
-            #     continue
-            if segment.size < math.pi / 16:
+            if segment.layer != self._selected_segment.layer:
+                continue
+
+            if segment.size < math.pi / 32:
                 continue
 
             x, y = segment.middle_point(alloc, self.max_layers)
             _draw_tooltip(
-                ctx, alloc, x, y, 10, segment.layer,
+                ctx, alloc, x, y, 8, segment.layer,
                 segment.middle_angle(), segment.tooltip
             )
 
@@ -386,7 +396,11 @@ class ShredderRingChart(ShredderChart):
         """Called once the mouse stayed over a segment for a longer time.
         """
         if self._timeout_id:
-            print(segment)
+            self._selected_segment = segment
+        else:
+            self._selected_segment = None
+
+        self.queue_draw()
         self._timeout_id = None
 
     def _on_motion(self, area, event):
@@ -418,10 +432,11 @@ class ShredderRingChart(ShredderChart):
         if self._timeout_id is not None:
             GLib.source_remove(self._timeout_id)
             self._timeout_id = None
+            self._selected_segment = None
 
         if hit_segment:
             id_ = GLib.timeout_add(
-                250, self._on_tooltip_timeout, segment
+                250, self._on_tooltip_timeout, hit_segment
             )
             self._timeout_id = id_
 

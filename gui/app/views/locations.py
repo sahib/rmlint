@@ -404,11 +404,10 @@ class LocationView(View):
         close_button.show_all()
 
     def _run_clicked(self, _):
-        print(self.selected_locations)
         self.app_window.views.switch('main')
-
         main_view = self.app_window.views['main']
-        main_view.trigger_run(self.selected_locations)
+        paths = [entry.path for entry in self.selected_locations]
+        main_view.trigger_run(paths)
 
     def _del_clicked(self, _):
         for row in self.selected_locations:

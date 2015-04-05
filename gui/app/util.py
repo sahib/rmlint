@@ -103,6 +103,21 @@ class IconButton(Gtk.Button):
             self.label.set_markup(text)
 
 
+class SuggestedButton(IconButton):
+    def __init__(self, text=None):
+        IconButton.__init__(self, 'object-select-symbolic', text or _('Apply'))
+        self.get_style_context().add_class(
+            Gtk.STYLE_CLASS_SUGGESTED_ACTION
+        )
+
+
+class DestructiveButton(IconButton):
+    def __init__(self, text=None):
+        IconButton.__init__(self, 'user-trash-symbolic', text or _('Cancel'))
+        self.get_style_context().add_class(
+            Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION
+        )
+
 class IndicatorLabel(Gtk.Label):
     """A label that has a rounded, colored background.
 

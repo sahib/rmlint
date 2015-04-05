@@ -7,7 +7,7 @@ from operator import itemgetter
 from functools import partial
 
 # Internal:
-from app.util import View
+from app.util import View, SuggestedButton, DestructiveButton
 
 # External:
 from gi.repository import Gtk
@@ -24,6 +24,21 @@ def boolean_widget(settings, key_name, summary, description):
     return switch
 
 
+def _format_range_value(spin, draw_size, draw_percent):
+    adj = spin.get_adjustment()
+    value = adj.get_value()
+    print(value, draw_size, draw_percent)
+
+    if draw_size:
+        print('{}'.format(value))
+        spin.set_text('{}'.format(value))
+        return True
+    elif draw_percent:
+        spin.set_text('{}'.format(value * 100))
+        return True
+    return False
+
+
 def numeric_widget(
     settings, key_name, summary, description,
     floating_point=False, draw_percent=False, draw_size=True
@@ -35,20 +50,7 @@ def numeric_widget(
     step = 0.1 if floating_point else 1
     range_wdgt = Gtk.SpinButton.new_with_range(0, 10 ** 10, step)
 
-    def _format_range_value(spin):
-        adj = spin.get_adjustment()
-        value = adj.get_value()
-        print(value, draw_size, draw_percent)
 
-        if draw_size:
-            spin.set_text('{}'.format(value))
-            return True
-        elif draw_percent:
-            spin.set_text('{}'.format(value * 100))
-            return True
-        return False
-
-    range_wdgt.connect('value-changed', _format_range_value)
 
     if range_type == 'range':
         min_val, max_val = range_variant
@@ -62,6 +64,8 @@ def numeric_widget(
         value = settings.get_int(key_name)
 
     range_wdgt.set_value(value)
+    # TODO: FOr weird reasons this is not working.
+    range_wdgt.connect('output', _format_range_value, draw_size, draw_percent)
     return range_wdgt
 
 
@@ -288,6 +292,12 @@ class SettingsView(View):
         self.save_settings = False
         self.sections = {}
 
+        self.appy_btn = SuggestedButton()
+        self.deny_btn = DestructiveButton('Reset to defaults')
+
+        self.appy_btn.connect('clicked', self.on_apply_settings)
+        self.deny_btn.connect('clicked', self.on_reset_to_defaults)
+
         self.fill_from_settings()
 
     def append_section(self, heading):
@@ -404,24 +414,18 @@ class SettingsView(View):
 
     def on_view_enter(self):
         self.save_settings = False
-        self.app_window.show_action_buttons(
-            'Apply settings', 'Reset to defaults'
-        )
         self.app.settings.delay()
 
         # Give the buttons a specific context meaning:
-        self.app_window.suggested_action.connect(
-            'clicked', self.on_apply_settings
-        )
-        self.app_window.destructive_action.connect(
-            'clicked', self.on_reset_to_defaults
-        )
-
         self.on_key_changed(self.app.settings, None)
         self.app.settings.connect('changed', self.on_key_changed)
 
+        self.app_window.add_header_widget(self.appy_btn)
+        self.app_window.add_header_widget(self.deny_btn, Gtk.Align.START)
+
     def on_view_leave(self):
-        self.app_window.hide_action_buttons()
+        self.app_window.remove_header_widget(self.appy_btn)
+        self.app_window.remove_header_widget(self.deny_btn)
         if self.save_settings:
             self.app.settings.apply()
         else:
@@ -442,5 +446,5 @@ class SettingsView(View):
 
     def on_key_changed(self, settings, _):
         is_sensitive = settings.get_has_unapplied()
-        self.app_window.destructive_action.set_sensitive(is_sensitive)
-        self.app_window.suggested_action.set_sensitive(is_sensitive)
+        self.appy_btn.set_sensitive(is_sensitive)
+        self.deny_btn.set_sensitive(is_sensitive)

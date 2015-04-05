@@ -182,11 +182,6 @@ def create_searchbar(win):
 
 
 class MainWindow(Gtk.ApplicationWindow):
-    __gsignals__ = {
-        'suggested-action-clicked': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'destructive-action-clicked': (GObject.SIGNAL_RUN_FIRST, None, ())
-    }
-
     def __init__(self, application):
         Gtk.Window.__init__(
             self, title='Welcome to the Demo', application=application
@@ -229,32 +224,6 @@ class MainWindow(Gtk.ApplicationWindow):
         self.progressbar_revealer.set_transition_duration(
             500
         )
-
-        def _on_action_clicked(button, signal):
-            self.emit(signal)
-
-        self.suggested_action = IconButton(
-            'object-select-symbolic', _('Apply')
-        )
-        self.suggested_action.connect(
-            'clicked', _on_action_clicked, 'suggested-action-clicked'
-        )
-
-        self.destructive_action = IconButton(
-            'user-trash-symbolic', _('Cancel')
-        )
-        self.destructive_action.connect(
-            'clicked', _on_action_clicked, 'destructive-action-clicked'
-        )
-
-        for btn, bad in ((self.suggested_action, False), (self.destructive_action, True)):
-            btn.set_no_show_all(True)
-            btn.set_hexpand(True)
-            btn.set_vexpand(True)
-
-            btn.get_style_context().add_class(
-                Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION if bad else Gtk.STYLE_CLASS_SUGGESTED_ACTION
-            )
 
         main_menu = Gio.Menu()
         main_menu.append_item(
@@ -304,30 +273,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.main_grid.attach(self.progressbar_revealer, 0, 3, 1, 1)
         self.headerbar.pack_end(menu_button)
         self.headerbar.pack_end(search_button)
-        self.headerbar.pack_end(self.suggested_action)
-        self.headerbar.pack_start(self.destructive_action)
         self.add(self.main_grid)
-
-    def show_action_buttons(self, apply_label, cancel_label):
-        """Show the suggested/destructive action buttons.
-
-        If either apply_label or cancel_label is None,
-        the respective button will not be shown.
-        """
-        if apply_label:
-            self.suggested_action.set_markup(apply_label)
-            self.suggested_action.show()
-
-        if cancel_label:
-            self.destructive_action.set_markup(cancel_label)
-            self.destructive_action.show()
-
-        self.destructive_action.set_sensitive(True)
-        self.suggested_action.set_sensitive(True)
-
-    def hide_action_buttons(self):
-        self.suggested_action.hide()
-        self.destructive_action.hide()
 
     def show_infobar(self, message, message_type=Gtk.MessageType.INFO):
         """Show an inforbar with a text message in it.
@@ -380,5 +326,8 @@ class MainWindow(Gtk.ApplicationWindow):
         else:
             raise ValueError('{align} not supported here.'.format(align=align))
 
+        widget.show_all()
+
     def remove_header_widget(self, widget):
-        self.headerbar.remove(widget)
+        if widget in self.headerbar:
+            self.headerbar.remove(widget)

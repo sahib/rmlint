@@ -22,31 +22,32 @@ from app.cellrenderers import CellRendererLint
 
 
 class ResultActionBar(Gtk.ActionBar):
-    def __init__(self):
+    def __init__(self, view):
         Gtk.ActionBar.__init__(self)
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         box.get_style_context().add_class("linked")
         self.pack_start(box)
 
-        icon_names = [
-            'view-refresh-symbolic',
-            'system-run-symbolic'
-        ]
+        self.refresh_button = IconButton('view-refresh-symbolic')
+        self.settings_button = IconButton('system-run-symbolic')
 
-        for icon_name in icon_names:
-            btn = Gtk.Button()
-            btn.add(
-                Gtk.Image.new_from_gicon(
-                    Gio.ThemedIcon(name=icon_name),
-                    Gtk.IconSize.BUTTON
-                )
-            )
-            box.pack_start(btn, False, False, 0)
+        self.refresh_button.connect(
+            'clicked', lambda _: view.app_window.views.switch('editor')
+        )
+        self.settings_button.connect(
+            'clicked', lambda _: view.app_window.views.switch('settings')
+        )
+
+        box.pack_start(self.refresh_button, False, False, 0)
+        box.pack_start(self.settings_button, False, False, 0)
 
         self.script_btn = IconButton('printer-printing-symbolic', 'Render script')
         self.script_btn.get_style_context().add_class(
             Gtk.STYLE_CLASS_SUGGESTED_ACTION
+        )
+        self.script_btn.connect(
+            'clicked', lambda _: view.app_window.views.switch('editor')
         )
         self.pack_end(self.script_btn)
 
@@ -82,6 +83,7 @@ class Column:
     SELECTED, PATH, SIZE, COUNT, MTIME, TAG, TOOLTIP = range(7)
 
 
+# TODO Move to model.py
 def _dfs(model, iter_):
     """Generator for a depth first traversal in a TreeModel.
     Yields a GtkTreeIter for all iters below and after iter_.
@@ -93,9 +95,6 @@ def _dfs(model, iter_):
 
         yield iter_
         iter_ = model.iter_next(iter_)
-
-    #     yield iter_
-    #     iter_ = model.iter_next(iter_)
 
 
 def _ray(model, iter_):
@@ -354,14 +353,14 @@ class MainView(View):
         scw.add(self.tv)
 
         self.chart_stack = ShredderChartStack(self.tv.md)
-        self.actionbar = ResultActionBar()
+        self.actionbar = ResultActionBar(self)
 
         stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         stats_box.pack_start(
             self.chart_stack, True, True, 0
         )
         stats_box.pack_start(
-            ResultActionBar(), False, True, 0
+            self.actionbar, False, True, 0
         )
 
         stats_box.set_halign(Gtk.Align.FILL)
@@ -391,8 +390,9 @@ class MainView(View):
 
     def trigger_run(self, paths):
         self.tv.clear()
+        self._is_running = True
 
-        root_path = '/usr/bin'
+        root_path = paths[0]
         self.tv.set_root(root_path)
 
         def _add_elem(runner, elem):
@@ -427,7 +427,21 @@ class MainView(View):
             self.tv.finish_add()
             self.chart_stack.render(self.tv.md, self.tv.root)
 
+            self.app_window.views['editor'].give_runner(
+                runner
+            )
+            self.app_window.views.go_right.set_sensitive(True)
+
         runner.connect('process-finished', on_process_finish)
 
         # Start the process asynchronously
         runner.run()
+
+    def on_view_enter(self):
+        editor = self.app_window.views['editor']
+        GLib.idle_add(
+            lambda: self.app_window.views.go_right.set_sensitive(editor.has_script)
+        )
+
+    def on_view_leave(self):
+        self.app_window.views.go_right.set_sensitive(True)
