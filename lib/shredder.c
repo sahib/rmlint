@@ -613,7 +613,9 @@ static bool rm_shred_check_hash_mem_alloc(RmFile *file) {
     }
 
     bool result;
-    group->mem_allocation = rm_digest_paranoia_bytes() * ( 1 + g_hash_table_size(file-> session->tables->dev_table) );
+    group->mem_allocation = MIN(rm_digest_paranoia_bytes(),
+                                group->file_size - group->hash_offset
+                            ) * ( 1 + g_hash_table_size(file-> session->tables->dev_table) );
 
     rm_log_debug("Asking mem allocation %"LLU" for %p...", group->mem_allocation, file);
     result = rm_shred_mem_take(group->main, group->mem_allocation);
