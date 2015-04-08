@@ -1251,12 +1251,11 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if (file->hardlinks.is_head) {
+        if (file->hardlinks.is_head  && file->hardlinks.files) {
             /* if group member has a hardlink cluster attached to it then
              * unbundle the cluster and append it to the queue
              */
             GQueue *hardlinks = file->hardlinks.files;
-            g_assert(hardlinks);
             for(GList *link = hardlinks->head; link; link = link->next) {
                 g_queue_push_tail(group, link->data);
             }
