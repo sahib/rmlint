@@ -46,22 +46,29 @@ static GNode *rm_folders_add(GNode *root, const char *path) {
 	gchar **split_path = g_strsplit(path+1, "/", 0);
 	GNode *current_folder=root;
 
-	/* walk and/or build down the folder tree from / until we reach the final path */
-	for(int i=0; split_path[i] && split_path[i+1]; i++) {
-		GNode *next_folder;
-		for (next_folder=current_folder->children; next_folder; next_folder=next_folder->next) {
-			if(strcmp(next_folder->data,split_path[i])==0) {
-				break;
-			}
-		}
+	/* walk and/or build down the folder tree from / until we reach the final path (exclude
+     * last element which is the basename) */
+	for(int i=0; split_path[i]; i++) {
+        if (split_path[i+1]) {
+            /* still in the folder tree */
+            GNode *next_folder;
+            for (next_folder=current_folder->children; next_folder; next_folder=next_folder->next) {
+                if(strcmp(next_folder->data,split_path[i])==0) {
+                    break;
+                }
+            }
 
-		if (next_folder==NULL) {
-			next_folder=g_node_insert_data(current_folder, -1, split_path[i]);
-		} else {
-			g_free(split_path[i]);
-		}
+            if (next_folder==NULL) {
+                next_folder=g_node_insert_data(current_folder, -1, split_path[i]);
+            } else {
+                g_free(split_path[i]);
+            }
 
-		current_folder = next_folder;
+            current_folder = next_folder;
+        } else {
+            /* free the basename part */
+            g_free(split_path[i]);
+        }
 	}
 	g_free(split_path);
 	return current_folder;
