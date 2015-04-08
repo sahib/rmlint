@@ -161,7 +161,11 @@ typedef struct RmFile {
     struct {
         bool has_prefd : 1;
         bool has_non_prefd : 1;
-        GQueue *files;
+        bool is_head : 1;
+        union {
+            GQueue *files;
+            struct RmFile *hardlink_head;
+        };
     } hardlinks;
 
     /* The index of the path this file belongs to. */

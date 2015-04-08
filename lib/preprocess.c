@@ -451,9 +451,10 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file, RmSes
 
             /* call self to handle each embedded hardlink */
             RmFile *embedded = iter->data;
+            g_assert (embedded != file);
             if(embedded->hardlinks.files != NULL) {
                 /* TODO: can this actually happen? */
-                rm_log_warning("Warning: embedded file %p has hardlinks", embedded);
+                rm_log_error("Warning: embedded file %p has hardlinks", embedded);
                 GQueue *hardlinks = embedded->hardlinks.files;
                 g_assert(hardlinks->length < 2);
                 if(hardlinks->head) {
@@ -469,13 +470,19 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file, RmSes
             } else if (!cfg->find_hardlinked_dupes) {
                 rm_file_destroy(embedded);
                 g_queue_delete_link(file->hardlinks.files, iter);
+            } else {
+                embedded->hardlinks.hardlink_head = file;
+                g_assert (!embedded->hardlinks.is_head);
             }
         }
 
         if (g_queue_is_empty(file->hardlinks.files)) {
             g_queue_free(file->hardlinks.files);
             file->hardlinks.files = NULL;
+        } else {
+            file->hardlinks.is_head = TRUE;
         }
+        
     }
 
 	/*
@@ -496,7 +503,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file, RmSes
     session->total_filtered_files -= remove;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
-    if (file->hardlinks.files) {
+    if (file->hardlinks.is_head) {
         /* TODO: update counters to reflect fewer files to traverse due to hardlink grouping? */
     }
 

@@ -948,6 +948,10 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
 
     shred_group->ref_count++;
     shred_group->num_files++;
+    if (file->hardlinks.is_head) {
+        g_assert(file->hardlinks.files);
+        shred_group->num_files += file->hardlinks.files->length;
+    }
 
     g_assert(file->hash_offset == shred_group->hash_offset);
 
@@ -1026,7 +1030,7 @@ static gboolean rm_shred_sift(RmFile *file) {
                 /* create child queue */
                 current_group->children = g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);
             }
-
+            g_assert(current_group->children != NULL);
             child_group = g_hash_table_lookup(
                               current_group->children,
                               file->digest
@@ -1074,7 +1078,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     file->is_new_or_has_new = (file->mtime >= session->cfg->min_mtime);
 
     /* if file has hardlinks then set file->hardlinks.has_[non_]prefd*/
-    if (file->hardlinks.files) {
+    if (file->hardlinks.is_head) {
         for (GList *iter = file->hardlinks.files->head; iter; iter = iter->next ) {
             RmFile *link = iter->data;
             file->hardlinks.has_non_prefd |= !link->is_prefd;
@@ -1177,6 +1181,7 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     gpointer size, p_group;
 
     if(HAS_CACHE(main->session)) {
+        g_assert(session->tables->size_groups);
         g_hash_table_iter_init(&iter, session->tables->size_groups);
         while(g_hash_table_iter_next(&iter, &size, &p_group)) {
             RmShredGroup *group = p_group;
@@ -1189,6 +1194,7 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     rm_log_debug("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     rm_log_debug("Discarding unique sizes and read fiemap data for others...");
+    g_assert(session->tables->size_groups);
     removed = g_hash_table_foreach_remove(session->tables->size_groups,
                                           (GHRFunc)rm_shred_group_preprocess,
                                           main);
@@ -1245,11 +1251,12 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if (file->hardlinks.files) {
+        if (file->hardlinks.is_head) {
             /* if group member has a hardlink cluster attached to it then
              * unbundle the cluster and append it to the queue
              */
             GQueue *hardlinks = file->hardlinks.files;
+            g_assert(hardlinks);
             for(GList *link = hardlinks->head; link; link = link->next) {
                 g_queue_push_tail(group, link->data);
             }

@@ -241,11 +241,9 @@ static void rm_fmt_elem(
             rm_fmt_json_sep(self, out);
 
             if(session->cfg->find_hardlinked_dupes) {
-                RmFile *hardlink_head = g_hash_table_lookup(
-                        session->tables->node_table, file
-                );
+                RmFile *hardlink_head = file->hardlinks.hardlink_head;
 
-                if(hardlink_head != file) {
+                if(hardlink_head && hardlink_head != file) {
                     rm_fmt_json_key_int(out, "hardlink_of", GPOINTER_TO_UINT(hardlink_head));
                     rm_fmt_json_sep(self, out);
                 }
