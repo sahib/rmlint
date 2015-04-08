@@ -220,18 +220,6 @@ RmFileTables *rm_file_tables_new(_U RmSession *session) {
 }
 
 void rm_file_tables_destroy(RmFileTables *tables) {
-    g_rec_mutex_lock(&tables->lock);
-    {
-        g_assert(tables->node_table);
-        g_hash_table_unref(tables->node_table);
-        tables->node_table = NULL;
-
-        g_assert(tables->size_groups);
-        g_hash_table_unref(tables->size_groups);
-        tables->size_groups = NULL;
-
-    }
-    g_rec_mutex_unlock(&tables->lock);
     g_rec_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }
@@ -452,7 +440,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file, RmSes
             }
         }
         
-        g_hash_table_destroy(unique_paths_table);
+        g_hash_table_unref(unique_paths_table);
         
         /* remove self from hardlink queue */
         g_queue_remove(file->hardlinks.files, file);
@@ -464,6 +452,8 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file, RmSes
             /* call self to handle each embedded hardlink */
             RmFile *embedded = iter->data;
             if(embedded->hardlinks.files != NULL) {
+                /* TODO: can this actually happen? */
+                rm_log_warning("Warning: embedded file %p has hardlinks", embedded);
                 GQueue *hardlinks = embedded->hardlinks.files;
                 g_assert(hardlinks->length < 2);
                 if(hardlinks->head) {
@@ -506,6 +496,10 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file, RmSes
     session->total_filtered_files -= remove;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
+    if (file->hardlinks.files) {
+        /* TODO: update counters to reflect fewer files to traverse due to hardlink grouping? */
+    }
+
     return remove;
 }
 
@@ -547,12 +541,6 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
 void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     g_assert(tables->node_table);
-
-    /* Save some memory by removing the unneeded path_double table */
-    if(tables->path_double_table) {
-        g_hash_table_unref(tables->path_double_table);
-        tables->path_double_table = NULL;
-    }
 
     session->total_filtered_files = session->total_files;
 

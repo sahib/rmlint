@@ -857,7 +857,7 @@ static void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
     }
 
     if (self->children) {
-        g_hash_table_destroy(self->children);
+        g_hash_table_unref(self->children);
     }
 
     g_slice_free(RmShredGroup, self);
@@ -1170,6 +1170,8 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
                                 (GHRFunc)rm_shred_file_preprocess,
                                 main
                                );
+    g_hash_table_unref(session->tables->node_table);
+    session->tables->node_table = NULL;
 
     GHashTableIter iter;
     gpointer size, p_group;
@@ -1190,6 +1192,9 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     removed = g_hash_table_foreach_remove(session->tables->size_groups,
                                           (GHRFunc)rm_shred_group_preprocess,
                                           main);
+    g_hash_table_unref(session->tables->size_groups);
+    session->tables->size_groups = NULL;
+
     rm_log_debug("done at time %.3f; removed %u of %"LLU"\n",
                  g_timer_elapsed(session->timer, NULL), removed, session->total_filtered_files
                 );
@@ -1366,7 +1371,6 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
      */
     char id_buf[256];
     memset(id_buf, 0, sizeof(id_buf));
-
     RM_DEFINE_PATH(file);
 
     RmStat stat_buf;
@@ -1804,7 +1808,6 @@ void rm_shred_run(RmSession *session) {
     g_assert(session);
     g_assert(session->tables);
     g_assert(session->mounts);
-    g_assert(session->tables->node_table);
 
     RmMainTag tag;
     tag.active_groups = 0;
