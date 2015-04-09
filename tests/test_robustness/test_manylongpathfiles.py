@@ -1,6 +1,8 @@
+from nose.plugins.attrib import attr
 from nose import with_setup
 from tests.utils import *
 
+@attr('slow')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_manylongpathfiles():
 
