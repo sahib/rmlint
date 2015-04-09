@@ -1067,6 +1067,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
        Free: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxX
        Used                   jJ                            yY Z
     */
+// clang-format off
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
         {"max-depth"        ,  'd' ,  0 ,  G_OPTION_ARG_INT      ,  &cfg->depth          ,  _("Specify max traversal depth")   ,  "N"          },
@@ -1146,6 +1147,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"without-fiemap"                           , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->build_fiemap          , "Do not use fiemap(2) in order to save memory"   , NULL},
         {NULL                                       , 0   , HIDDEN           , 0                     , NULL                        , NULL                                             , NULL}
     };
+// clang-format on
 
     /* Initialize default verbosity */
     rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
