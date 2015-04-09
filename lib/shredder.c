@@ -290,7 +290,7 @@ typedef struct RmMainTag {
     GMutex hash_mem_mtx;
     GMutex group_lock;     /* single lock for all access to any RmShredGroups */
     gint64 hash_mem_alloc; /* how much memory to allocate for paranoid checks */
-    gint32 active_files;   /* how many files active (only used with paranoid a.t.m.) */
+    gint32 active_groups;   /* how many shred groups active (only used with paranoid a.t.m.) */
     GThreadPool *device_pool;
     GThreadPool *result_pool;
     gint32 page_size;
@@ -407,6 +407,9 @@ typedef struct RmShredGroup {
 
     /* Factor of SHRED_BALANCED_PAGES to read next time */
     unsigned offset_factor;
+
+    /* allocated memory for paranoid hashing */
+    RmOff mem_allocation;
 
     /* checksum structure taken from first file to enter the group.  This allows
      * digests to be released from RmFiles and memory freed up until they
@@ -579,19 +582,19 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  */
 
 /* take or return mem allocation from main */
-static bool rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfiles) {
+static bool rm_shred_mem_take(RmMainTag *main, gint64 mem_amount) {
     bool result = true;
     g_mutex_lock(&main->hash_mem_mtx);
     {
-        if (mem_amount <= 0 || mem_amount <= main->hash_mem_alloc || main->active_files <= 0) {
+        if (mem_amount <= 0 || mem_amount <= main->hash_mem_alloc || main->active_groups <= 0) {
             main->hash_mem_alloc -= mem_amount;
-            main->active_files += numfiles;
+            main->active_groups += (mem_amount > 0) - (mem_amount < 0);
             rm_log_debug("%s"RESET, mem_amount > 0 ? GREEN"approved! " : "");
         } else {
             result = false;
             rm_log_debug(RED"refused; ");
         }
-        rm_log_debug("mem avail %"LLU", active files %d\n"RESET, main->hash_mem_alloc, main->active_files);
+        rm_log_debug("mem avail %"LLU", active groups %d\n"RESET, main->hash_mem_alloc, main->active_groups);
     }
     g_mutex_unlock(&main->hash_mem_mtx);
 
@@ -604,19 +607,18 @@ static bool rm_shred_mem_take(RmMainTag *main, gint64 mem_amount, guint32 numfil
  */
 static bool rm_shred_check_hash_mem_alloc(RmFile *file) {
     RmShredGroup *group = file->shred_group;
-    if (0
-            || group->hash_offset > 0
-            /* don't interrupt family tree once started */
-            || group->status >= RM_SHRED_GROUP_HASHING) {
+    if (group->status >= RM_SHRED_GROUP_HASHING) {
         /* group already committed */
         return true;
     }
 
     bool result;
-    gint64 mem_required = group->num_files * file->file_size;
+    group->mem_allocation = MIN(rm_digest_paranoia_bytes(),
+                                group->file_size - group->hash_offset
+                            ) * ( 1 + g_hash_table_size(file-> session->tables->dev_table) );
 
-    rm_log_debug("Asking mem allocation for %p...", file);
-    result = rm_shred_mem_take(group->main, mem_required, group->num_files);
+    rm_log_debug("Asking mem allocation %"LLU" for %p...", group->mem_allocation, file);
+    result = rm_shred_mem_take(group->main, group->mem_allocation);
     if(result) {
         group->status = RM_SHRED_GROUP_HASHING;
     }
@@ -753,8 +755,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
             RmMainTag *tag = file->shred_group->main;
             g_assert(tag);
 
-            rm_log_debug("releasing mem %"LLU" bytes from %p; ", file->file_size - file->hash_offset, file);
-            rm_shred_mem_take(tag, -(gint64)(file->file_size - file->hash_offset), -1);
         }
     }
 
@@ -847,7 +847,8 @@ static void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
 
     if (self->digest) {
         if (self->digest->type == RM_DIGEST_PARANOID) {
-            rm_shred_mem_take(self->main, -(gint64)self->digest->bytes, 0);
+            rm_shred_mem_take(self->main, -(gint64)self->mem_allocation);
+            self->mem_allocation = 0;
         }
 
         if(needs_free) {
@@ -856,7 +857,7 @@ static void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
     }
 
     if (self->children) {
-        g_hash_table_destroy(self->children);
+        g_hash_table_unref(self->children);
     }
 
     g_slice_free(RmShredGroup, self);
@@ -947,6 +948,10 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
 
     shred_group->ref_count++;
     shred_group->num_files++;
+    if (file->hardlinks.is_head) {
+        g_assert(file->hardlinks.files);
+        shred_group->num_files += file->hardlinks.files->length;
+    }
 
     g_assert(file->hash_offset == shred_group->hash_offset);
 
@@ -1025,7 +1030,7 @@ static gboolean rm_shred_sift(RmFile *file) {
                 /* create child queue */
                 current_group->children = g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);
             }
-
+            g_assert(current_group->children != NULL);
             child_group = g_hash_table_lookup(
                               current_group->children,
                               file->digest
@@ -1035,10 +1040,6 @@ static gboolean rm_shred_sift(RmFile *file) {
                 child_group = rm_shred_group_new(file);
                 g_hash_table_insert(current_group->children, child_group->digest, child_group);
                 child_group->has_only_ext_cksums = current_group->has_only_ext_cksums;
-            } else {
-                if (file->digest->type == RM_DIGEST_PARANOID) {
-                    rm_shred_mem_take(tag, -(gint64)file->digest->bytes, 0);
-                }
             }
 
             result = rm_shred_group_push_file(child_group, file, false);
@@ -1077,7 +1078,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     file->is_new_or_has_new = (file->mtime >= session->cfg->min_mtime);
 
     /* if file has hardlinks then set file->hardlinks.has_[non_]prefd*/
-    if (file->hardlinks.files) {
+    if (file->hardlinks.is_head) {
         for (GList *iter = file->hardlinks.files->head; iter; iter = iter->next ) {
             RmFile *link = iter->data;
             file->hardlinks.has_non_prefd |= !link->is_prefd;
@@ -1173,11 +1174,14 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
                                 (GHRFunc)rm_shred_file_preprocess,
                                 main
                                );
+    g_hash_table_unref(session->tables->node_table);
+    session->tables->node_table = NULL;
 
     GHashTableIter iter;
     gpointer size, p_group;
 
     if(HAS_CACHE(main->session)) {
+        g_assert(session->tables->size_groups);
         g_hash_table_iter_init(&iter, session->tables->size_groups);
         while(g_hash_table_iter_next(&iter, &size, &p_group)) {
             RmShredGroup *group = p_group;
@@ -1190,9 +1194,13 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     rm_log_debug("move remaining files to size_groups finished at time %.3f\n", g_timer_elapsed(session->timer, NULL));
 
     rm_log_debug("Discarding unique sizes and read fiemap data for others...");
+    g_assert(session->tables->size_groups);
     removed = g_hash_table_foreach_remove(session->tables->size_groups,
                                           (GHRFunc)rm_shred_group_preprocess,
                                           main);
+    g_hash_table_unref(session->tables->size_groups);
+    session->tables->size_groups = NULL;
+
     rm_log_debug("done at time %.3f; removed %u of %"LLU"\n",
                  g_timer_elapsed(session->timer, NULL), removed, session->total_filtered_files
                 );
@@ -1243,7 +1251,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if (file->hardlinks.files) {
+        if (file->hardlinks.is_head  && file->hardlinks.files) {
             /* if group member has a hardlink cluster attached to it then
              * unbundle the cluster and append it to the queue
              */
@@ -1369,7 +1377,6 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
      */
     char id_buf[256];
     memset(id_buf, 0, sizeof(id_buf));
-
     RM_DEFINE_PATH(file);
 
     RmStat stat_buf;
@@ -1807,11 +1814,10 @@ void rm_shred_run(RmSession *session) {
     g_assert(session);
     g_assert(session->tables);
     g_assert(session->mounts);
-    g_assert(session->tables->node_table);
 
     RmMainTag tag;
-    tag.active_files = 0;
-    tag.hash_mem_alloc = 0;
+    tag.active_groups = 0;
+    tag.hash_mem_alloc = session->cfg->paranoid_mem; //0;
     tag.session = session;
 
     if(HAS_CACHE(session)) {
@@ -1839,12 +1845,6 @@ void rm_shred_run(RmSession *session) {
     rm_shred_preprocess_input(&tag);
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
-    g_mutex_lock(&tag.hash_mem_mtx); {
-        tag.hash_mem_alloc = session->cfg->paranoid_mem;  /* NOTE: needs to be after preprocess */
-        tag.active_files = 0;				 	          /* NOTE: needs to be after preprocess */
-    }
-    g_mutex_unlock(&tag.hash_mem_mtx);
-
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
     rm_log_debug(BLUE"Devices = %d\n", devices_left);
@@ -1863,12 +1863,12 @@ void rm_shred_run(RmSession *session) {
         g_mutex_lock(&tag.hash_mem_mtx); {
             /* probably unnecessary because we are only reading */
             rm_log_debug(
-                BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active files %d and avail mem %"LLU"\n"RESET,
+                BLUE"Got device %s back with %d in queue and %"LLU" bytes remaining in %d remaining files; active groups %d and avail mem %"LLU"\n"RESET,
                 device->disk_name,
                 g_queue_get_length(device->file_queue),
                 device->remaining_bytes,
                 device->remaining_files,
-                tag.active_files,
+                tag.active_groups,
                 tag.hash_mem_alloc
             );
 

@@ -431,7 +431,7 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     art_insert(&directory->hash_trie, file_digest, digest_bytes, file);
     g_slice_free1(digest_bytes, file_digest);
 
-    if(file->hardlinks.files) {
+    if(file->hardlinks.is_head && file->hardlinks.files) {
         new_dupes = 1 + g_queue_get_length(file->hardlinks.files);
     } else {
         new_dupes = 1;
