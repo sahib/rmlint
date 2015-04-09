@@ -37,38 +37,38 @@ void rm_cfg_set_default(RmCfg *cfg) {
     memset(cfg, 0, sizeof(RmCfg));
 
     /* Traversal options */
-    cfg->depth   = PATH_MAX / 2;
+    cfg->depth = PATH_MAX / 2;
     cfg->minsize = 0;
     cfg->maxsize = G_MAXUINT64;
 
     /* Lint Types */
-    cfg->ignore_hidden         = true;
-    cfg->find_emptydirs        = true;
-    cfg->find_emptyfiles       = true;
-    cfg->find_duplicates       = true;
-    cfg->find_badids           = true;
-    cfg->find_badlinks         = true;
+    cfg->ignore_hidden = true;
+    cfg->find_emptydirs = true;
+    cfg->find_emptyfiles = true;
+    cfg->find_duplicates = true;
+    cfg->find_badids = true;
+    cfg->find_badlinks = true;
     cfg->find_hardlinked_dupes = true;
-    cfg->build_fiemap          = true;
+    cfg->build_fiemap = true;
 
     /* Misc options */
-    cfg->sort_criteria     = "pm";
-    cfg->checksum_type     = RM_DEFAULT_DIGEST;
-    cfg->with_color        = true;
+    cfg->sort_criteria = "pm";
+    cfg->checksum_type = RM_DEFAULT_DIGEST;
+    cfg->with_color = true;
     cfg->with_stdout_color = true;
     cfg->with_stderr_color = true;
-    cfg->threads           = 32;
-    cfg->verbosity         = G_LOG_LEVEL_INFO;
-    cfg->paranoid_mem      = 256 * 1024 * 1024;
-    cfg->follow_symlinks   = false;
+    cfg->threads = 32;
+    cfg->verbosity = G_LOG_LEVEL_INFO;
+    cfg->paranoid_mem = 256 * 1024 * 1024;
+    cfg->follow_symlinks = false;
 
     cfg->skip_start_factor = 0.0;
-    cfg->skip_end_factor   = 1.0;
+    cfg->skip_end_factor = 1.0;
 
     cfg->use_absolute_start_offset = false;
-    cfg->use_absolute_end_offset   = false;
-    cfg->skip_start_offset         = 0;
-    cfg->skip_end_offset           = 0;
+    cfg->use_absolute_end_offset = false;
+    cfg->skip_start_offset = 0;
+    cfg->skip_end_offset = 0;
 
     cfg->folder_tree_root = g_node_new(NULL);
 }

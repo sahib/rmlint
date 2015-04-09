@@ -30,13 +30,13 @@
 #include <glib.h>
 
 #if HAVE_SQLITE3
-# include <sqlite3.h>
+#include <sqlite3.h>
 #endif
 
 /**
- * @brief A simple key-value store based on sqlite. 
+ * @brief A simple key-value store based on sqlite.
  *
- * Currently, only storing arbitary data blobs is possible. 
+ * Currently, only storing arbitary data blobs is possible.
  * There's no support for storing ints or structs since this
  * was not needed (but could be added via GVariant)
  *
@@ -113,7 +113,7 @@ RmOff rm_swap_table_insert(RmSwapTable *self, int attr, char *data, size_t data_
  *
  * @return the number of bytes written to buf.
  */
-size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf, size_t buf_size);
+size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf,
+                            size_t buf_size);
 
 #endif /* end of include guard */
-

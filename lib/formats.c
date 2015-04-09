@@ -29,16 +29,14 @@
 #include "formats.h"
 
 const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
-    static const char *table[] = {
-        [RM_PROGRESS_STATE_INIT]         = "Initializing",
-        [RM_PROGRESS_STATE_TRAVERSE]     = "Traversing",
-        [RM_PROGRESS_STATE_PREPROCESS]   = "Preprocessing",
-        [RM_PROGRESS_STATE_SHREDDER]     = "Shreddering",
-        [RM_PROGRESS_STATE_MERGE]        = "Merging",
-        [RM_PROGRESS_STATE_PRE_SHUTDOWN] = "",
-        [RM_PROGRESS_STATE_SUMMARY]      = "Finalizing",
-        [RM_PROGRESS_STATE_N]            = "Unknown state"
-    };
+    static const char *table[] = {[RM_PROGRESS_STATE_INIT] = "Initializing",
+                                  [RM_PROGRESS_STATE_TRAVERSE] = "Traversing",
+                                  [RM_PROGRESS_STATE_PREPROCESS] = "Preprocessing",
+                                  [RM_PROGRESS_STATE_SHREDDER] = "Shreddering",
+                                  [RM_PROGRESS_STATE_MERGE] = "Merging",
+                                  [RM_PROGRESS_STATE_PRE_SHUTDOWN] = "",
+                                  [RM_PROGRESS_STATE_SUMMARY] = "Finalizing",
+                                  [RM_PROGRESS_STATE_N] = "Unknown state"};
 
     return table[(state < RM_PROGRESS_STATE_N) ? state : RM_PROGRESS_STATE_N];
 }
@@ -53,21 +51,15 @@ static void rm_fmt_handler_free(RmFmtHandler *handler) {
 RmFmtTable *rm_fmt_open(RmSession *session) {
     RmFmtTable *self = g_slice_new0(RmFmtTable);
 
-    self->name_to_handler = g_hash_table_new_full(
-                                g_str_hash, g_str_equal, NULL, NULL
-                            );
+    self->name_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 
-    self->path_to_handler = g_hash_table_new_full(
-                                g_str_hash, g_str_equal, NULL, NULL
-                            );
+    self->path_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 
-    self->handler_to_file = g_hash_table_new_full(
-                                NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL
-                            );
+    self->handler_to_file =
+        g_hash_table_new_full(NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL);
 
-    self->config = g_hash_table_new_full(
-                       g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_hash_table_unref
-                   );
+    self->config = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+                                         (GDestroyNotify)g_hash_table_unref);
 
     self->session = session;
     g_rec_mutex_init(&self->state_mtx);
@@ -139,21 +131,22 @@ void rm_fmt_clear(RmFmtTable *self) {
 }
 
 void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
-    g_hash_table_insert(self->name_to_handler, (char *) handler->name, handler);
+    g_hash_table_insert(self->name_to_handler, (char *)handler->name, handler);
     g_mutex_init(&handler->print_mtx);
 }
 
-#define RM_FMT_FOR_EACH_HANDLER(self)                                             \
-    FILE * file = NULL;                                                           \
-    RmFmtHandler * handler = NULL;                                                \
-                                                                                  \
-    GHashTableIter iter;                                                          \
-    g_hash_table_iter_init(&iter, self->handler_to_file);                         \
-    while(g_hash_table_iter_next(&iter, (gpointer *)&handler, (gpointer *)&file)) \
- 
+#define RM_FMT_FOR_EACH_HANDLER(self)                     \
+    FILE *file = NULL;                                    \
+    RmFmtHandler *handler = NULL;                         \
+                                                          \
+    GHashTableIter iter;                                  \
+    g_hash_table_iter_init(&iter, self->handler_to_file); \
+    while(g_hash_table_iter_next(&iter, (gpointer *)&handler, (gpointer *)&file))
+
 #define RM_FMT_CALLBACK(func, ...)                               \
     if(func) {                                                   \
-        g_mutex_lock(&handler->print_mtx); {                     \
+        g_mutex_lock(&handler->print_mtx);                       \
+        {                                                        \
             if(!handler->was_initialized && handler->head) {     \
                 if(handler->head) {                              \
                     handler->head(self->session, handler, file); \
@@ -163,8 +156,8 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
             func(self->session, handler, file, ##__VA_ARGS__);   \
         }                                                        \
         g_mutex_unlock(&handler->print_mtx);                     \
-    }                                                            \
- 
+    }
+
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler = g_hash_table_lookup(self->name_to_handler, handler_name);
     if(new_handler == NULL) {
@@ -207,13 +200,9 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         new_handler_copy->path = realpath(path, NULL);
     }
 
-    g_hash_table_insert(
-        self->handler_to_file, new_handler_copy, file_handle
-    );
+    g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
 
-    g_hash_table_insert(
-        self->path_to_handler, new_handler_copy->path, new_handler
-    );
+    g_hash_table_insert(self->path_to_handler, new_handler_copy->path, new_handler);
 
     return true;
 }
@@ -248,7 +237,8 @@ void rm_fmt_unlock_state(RmFmtTable *self) {
 }
 
 void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {
-    rm_fmt_lock_state(self); {
+    rm_fmt_lock_state(self);
+    {
         RM_FMT_FOR_EACH_HANDLER(self) {
             RM_FMT_CALLBACK(handler->prog, state);
         }
@@ -256,19 +246,19 @@ void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {
     rm_fmt_unlock_state(self);
 }
 
-void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key, const char *value) {
+void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key,
+                             const char *value) {
     GHashTable *key_to_vals = g_hash_table_lookup(self->config, formatter);
 
     if(key_to_vals == NULL) {
-        key_to_vals = g_hash_table_new_full(
-                          g_str_hash, g_str_equal, g_free, g_free
-                      );
+        key_to_vals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
         g_hash_table_insert(self->config, (char *)g_strdup(formatter), key_to_vals);
     }
-    g_hash_table_insert(key_to_vals, (char *) key, (char *) value);
+    g_hash_table_insert(key_to_vals, (char *)key, (char *)value);
 }
 
-const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, const char *key) {
+const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter,
+                                    const char *key) {
     GHashTable *key_to_vals = g_hash_table_lookup(self->config, formatter);
 
     if(key_to_vals == NULL) {
@@ -287,12 +277,8 @@ void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
 }
 
 bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {
-    if(0
-            || handler->path == NULL
-            || strcmp(handler->path, "stdout") == 0
-            || strcmp(handler->path, "stderr") == 0
-            || strcmp(handler->path, "stdin") == 0
-      ) {
+    if(0 || handler->path == NULL || strcmp(handler->path, "stdout") == 0 ||
+       strcmp(handler->path, "stderr") == 0 || strcmp(handler->path, "stdin") == 0) {
         return true;
     }
 

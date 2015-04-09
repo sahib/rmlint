@@ -29,31 +29,29 @@
 #include <glib.h>
 #include <stdio.h>
 
-static const char *RM_LINT_TYPE_TO_DESCRIPTION[] = {
-    [RM_LINT_TYPE_UNKNOWN]            = "",
-    [RM_LINT_TYPE_BADLINK]            = N_("Bad symlink(s)"),
-    [RM_LINT_TYPE_EMPTY_DIR]          = N_("Empty dir(s)"),
-    [RM_LINT_TYPE_NONSTRIPPED]        = N_("Non stripped binarie(s)"),
-    [RM_LINT_TYPE_BADUID]             = N_("Bad UID(s)"),
-    [RM_LINT_TYPE_BADGID]             = N_("Bad GID(s)"),
-    [RM_LINT_TYPE_BADUGID]            = N_("Bad UID and GID(s)"),
-    [RM_LINT_TYPE_EMPTY_FILE]         = N_("Empty file(s)"),
-    [RM_LINT_TYPE_DUPE_CANDIDATE]     = N_("Duplicate(s)"),
-    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = N_("Duplicate Directorie(s)")
-};
+static const char *RM_LINT_TYPE_TO_DESCRIPTION[] =
+    {[RM_LINT_TYPE_UNKNOWN] = "",
+     [RM_LINT_TYPE_BADLINK] = N_("Bad symlink(s)"),
+     [RM_LINT_TYPE_EMPTY_DIR] = N_("Empty dir(s)"),
+     [RM_LINT_TYPE_NONSTRIPPED] = N_("Non stripped binarie(s)"),
+     [RM_LINT_TYPE_BADUID] = N_("Bad UID(s)"),
+     [RM_LINT_TYPE_BADGID] = N_("Bad GID(s)"),
+     [RM_LINT_TYPE_BADUGID] = N_("Bad UID and GID(s)"),
+     [RM_LINT_TYPE_EMPTY_FILE] = N_("Empty file(s)"),
+     [RM_LINT_TYPE_DUPE_CANDIDATE] = N_("Duplicate(s)"),
+     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = N_("Duplicate Directorie(s)")};
 
-static const char *RM_LINT_TYPE_TO_COMMAND[] = {
-    [RM_LINT_TYPE_UNKNOWN]            = "",
-    [RM_LINT_TYPE_BADLINK]            = "rm",
-    [RM_LINT_TYPE_EMPTY_DIR]          = "rmdir",
-    [RM_LINT_TYPE_NONSTRIPPED]        = "strip --strip-debug",
-    [RM_LINT_TYPE_BADUID]             = "chown %s",
-    [RM_LINT_TYPE_BADGID]             = "chgrp %s",
-    [RM_LINT_TYPE_BADUGID]            = "chown %s:%s",
-    [RM_LINT_TYPE_EMPTY_FILE]         = "rm",
-    [RM_LINT_TYPE_DUPE_CANDIDATE]     = "rm",
-    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "rm -rf"
-};
+static const char *RM_LINT_TYPE_TO_COMMAND[] =
+    {[RM_LINT_TYPE_UNKNOWN] = "",
+     [RM_LINT_TYPE_BADLINK] = "rm",
+     [RM_LINT_TYPE_EMPTY_DIR] = "rmdir",
+     [RM_LINT_TYPE_NONSTRIPPED] = "strip --strip-debug",
+     [RM_LINT_TYPE_BADUID] = "chown %s",
+     [RM_LINT_TYPE_BADGID] = "chgrp %s",
+     [RM_LINT_TYPE_BADUGID] = "chown %s:%s",
+     [RM_LINT_TYPE_EMPTY_FILE] = "rm",
+     [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
+     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "rm -rf"};
 
 static const char *rm_fmt_command_color(RmSession *session, RmFile *file, FILE *out) {
     switch(file->lint_type) {
@@ -87,14 +85,15 @@ typedef struct RmFmtHandlerPretty {
 } RmFmtHandlerProgress;
 
 static void rm_fmt_head(_U RmSession *session, RmFmtHandler *parent, _U FILE *out) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
     self->user = rm_util_get_username();
     self->group = rm_util_get_groupname();
 }
 
-static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out,
+                        RmFile *file) {
+    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
     if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
         /* pretty output should not contain this */
@@ -104,12 +103,9 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
     self->elems_written++;
 
     if(file->lint_type != self->last_lint_type) {
-        fprintf(
-            out, "\n%s#%s %s:\n",
-            MAYBE_YELLOW(out, session),
-            MAYBE_RESET(out, session),
-            _(RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type])
-        );
+        fprintf(out, "\n%s#%s %s:\n", MAYBE_YELLOW(out, session),
+                MAYBE_RESET(out, session),
+                _(RM_LINT_TYPE_TO_DESCRIPTION[file->lint_type]));
         self->last_lint_type = file->lint_type;
     }
 
@@ -148,8 +144,9 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out, 
     fprintf(out, "%s %s\n", MAYBE_RESET(out, session), file_path);
 }
 
-static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out,
+                        RmFmtProgressState state) {
+    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->elems_written) {
         fprintf(out, "\n");
@@ -170,7 +167,6 @@ static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {
 
     /* Initialize own stuff */
     .last_lint_type = RM_LINT_TYPE_UNKNOWN,
-    .elems_written = 0
-};
+    .elems_written = 0};
 
-RmFmtHandler *PRETTY_HANDLER = (RmFmtHandler *) &PRETTY_HANDLER_IMPL;
+RmFmtHandler *PRETTY_HANDLER = (RmFmtHandler *)&PRETTY_HANDLER_IMPL;

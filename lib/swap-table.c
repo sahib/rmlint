@@ -7,11 +7,9 @@
 
 #include "swap-table.h"
 
-#if HAVE_SQLITE3 
+#if HAVE_SQLITE3
 
-#define SET_ERROR(...) \
-    g_set_error(error, RM_ERROR_QUARK, 0, __VA_ARGS__); \
-
+#define SET_ERROR(...) g_set_error(error, RM_ERROR_QUARK, 0, __VA_ARGS__);
 
 /////////////////////
 //  GENERAL TYPES  //
@@ -22,8 +20,7 @@ enum { STMT_CREATE_ATTR, STMT_INSERT_DATA, STMT_SELECT_DATA, N_STMTS };
 static const char *STATEMENTS[] =
     {[STMT_CREATE_ATTR] = "CREATE TABLE %s_vec (%s BLOB NOT NULL);",
      [STMT_INSERT_DATA] = "INSERT INTO %s_vec VALUES(?); -- %s",
-     [STMT_SELECT_DATA] = "SELECT %s FROM %s_vec WHERE rowid = ?;",
-     [N_STMTS] = NULL};
+     [STMT_SELECT_DATA] = "SELECT %s FROM %s_vec WHERE rowid = ?;", [N_STMTS] = NULL};
 
 typedef struct RmSwapAttr {
     int id;
@@ -31,13 +28,12 @@ typedef struct RmSwapAttr {
     sqlite3_stmt *stmts[N_STMTS];
 } RmSwapAttr;
 
-
 /////////////////////////
 //  UTILITY FUNCTIONS  //
 /////////////////////////
 
-static RmSwapAttr *rm_swap_attr_create(sqlite3 *handle, int id,
-                                       const char *name, GError **error) {
+static RmSwapAttr *rm_swap_attr_create(sqlite3 *handle, int id, const char *name,
+                                       GError **error) {
     g_assert(name);
 
     RmSwapAttr *self = g_malloc0(sizeof(RmSwapAttr));
@@ -47,8 +43,8 @@ static RmSwapAttr *rm_swap_attr_create(sqlite3 *handle, int id,
     for(int idx = 0; idx < N_STMTS; ++idx) {
         char *dynamic_sql = sqlite3_mprintf(STATEMENTS[idx], name, name);
 
-        if(sqlite3_prepare_v2(handle, dynamic_sql, -1, &self->stmts[idx],
-                              NULL) != SQLITE_OK) {
+        if(sqlite3_prepare_v2(handle, dynamic_sql, -1, &self->stmts[idx], NULL) !=
+           SQLITE_OK) {
             SET_ERROR("Unable to prepare statement");
         }
 
@@ -171,7 +167,8 @@ cleanup:
 void rm_swap_table_close(RmSwapTable *self, GError **error) {
     g_assert(self);
 
-    g_mutex_lock(&self->mtx); {
+    g_mutex_lock(&self->mtx);
+    {
         g_ptr_array_foreach(self->attrs, (GFunc)rm_swap_attr_destroy, self);
         g_ptr_array_free(self->attrs, TRUE);
 
@@ -190,13 +187,13 @@ void rm_swap_table_close(RmSwapTable *self, GError **error) {
     g_free(self);
 }
 
-int rm_swap_table_create_attr(RmSwapTable *self, const char *name,
-                              GError **error) {
+int rm_swap_table_create_attr(RmSwapTable *self, const char *name, GError **error) {
     g_assert(self);
 
     RmSwapAttr *attribute = NULL;
-    g_mutex_lock(&self->mtx); {
-        attribute  = rm_swap_attr_create(self->cache, self->attrs->len, name, error);
+    g_mutex_lock(&self->mtx);
+    {
+        attribute = rm_swap_attr_create(self->cache, self->attrs->len, name, error);
         g_ptr_array_add(self->attrs, attribute);
     }
     g_mutex_unlock(&self->mtx);
@@ -227,7 +224,8 @@ size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf,
 
     size_t bytes_written = 0;
 
-    g_mutex_lock(&self->mtx); {
+    g_mutex_lock(&self->mtx);
+    {
         /* Commit any stalled transactions */
         if(self->transaction_running) {
             rm_swap_table_commit(self);
@@ -254,13 +252,13 @@ size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf,
     return bytes_written;
 }
 
-RmOff rm_swap_table_insert(RmSwapTable *self, int attr, char *data,
-                         size_t data_len) {
+RmOff rm_swap_table_insert(RmSwapTable *self, int attr, char *data, size_t data_len) {
     g_assert(self);
 
     RmOff id = 0;
 
-    g_mutex_lock(&self->mtx); {
+    g_mutex_lock(&self->mtx);
+    {
         /* Begin an transaction if none is running yet */
         if(self->transaction_running == FALSE) {
             rm_swap_table_begin(self);
@@ -294,16 +292,18 @@ void rm_swap_table_close(_U RmSwapTable *self, _U GError **error) {
     return;
 }
 
-int rm_swap_table_create_attr(_U RmSwapTable *self, _U const char *name, _U GError **error) {
+int rm_swap_table_create_attr(_U RmSwapTable *self, _U const char *name,
+                              _U GError **error) {
     return 0;
 }
 
-RmOff rm_swap_table_insert(_U RmSwapTable *self, _U int attr, _U char *data, _U size_t data_len) {
+RmOff rm_swap_table_insert(_U RmSwapTable *self, _U int attr, _U char *data,
+                           _U size_t data_len) {
     return 0;
 }
 
-
-size_t rm_swap_table_lookup(_U RmSwapTable *self, _U int attr, _U RmOff id, _U char *buf, _U size_t buf_size) {
+size_t rm_swap_table_lookup(_U RmSwapTable *self, _U int attr, _U RmOff id, _U char *buf,
+                            _U size_t buf_size) {
     return 0;
 }
 
@@ -337,7 +337,6 @@ int main(void) {
 
         rm_swap_table_insert(table, PATH_ATTR, buf, sizeof(buf));
     }
-
 
     for(int i = 0; i < (N); i++) {
         char buf[PATH_MAX];

@@ -46,4 +46,3 @@ uint128 CityHashCrc128WithSeed(const char *s, size_t len, uint128 seed);
 void CityHashCrc256(const char *s, size_t len, uint64 *result);
 
 #endif  // CITY_HASH_CRC_H_
-

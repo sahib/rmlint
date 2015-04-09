@@ -47,17 +47,15 @@ typedef enum RmDigestType {
     RM_DIGEST_CITY512,
 
     /* special kids in town */
-    RM_DIGEST_CUMULATIVE,  /* hash([a, b]) = hash([b, a]) */
-    RM_DIGEST_EXT,         /* external hash functions     */
-    RM_DIGEST_PARANOID     /* direct block comparisons    */
+    RM_DIGEST_CUMULATIVE, /* hash([a, b]) = hash([b, a]) */
+    RM_DIGEST_EXT,        /* external hash functions     */
+    RM_DIGEST_PARANOID    /* direct block comparisons    */
 } RmDigestType;
-
 
 typedef struct RmUint128 {
     guint64 first;
     guint64 second;
 } RmUint128;
-
 
 typedef struct RmDigest {
     union {

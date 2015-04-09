@@ -87,13 +87,12 @@ struct RmSession;
  */
 
 typedef struct RmFile {
-
     union {
-		/* file basename (if not using swap table)
-		 * */
+        /* file basename (if not using swap table)
+         * */
         char *basename;
-		/* file path lookup ID (if using swap table)
-		 * */
+        /* file path lookup ID (if using swap table)
+         * */
         char *path_id;
     };
 
@@ -185,10 +184,12 @@ typedef struct RmFile {
      */
     RmOff seek_offset;
 
-    /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
+    /* Flag for when we do intermediate steps within a hash increment because the file is
+     * fragmented */
     RmFileState status;
 
-    /* digest of this file updated on every hash iteration.  Use a pointer so we can share with RmShredGroup
+    /* digest of this file updated on every hash iteration.  Use a pointer so we can share
+     * with RmShredGroup
      */
     RmDigest *digest;
 
@@ -212,30 +213,27 @@ typedef struct RmFile {
 } RmFile;
 
 /* Defines a path variable containing the file's path */
-#define RM_DEFINE_PATH(file)                                               \
-    char file ## _path[PATH_MAX];                                          \
-    if(file->session->cfg->use_meta_cache) {                               \
-        rm_file_lookup_path(file->session, (RmFile *)file, file ## _path); \
-    } else {                                                               \
-        rm_file_build_path((RmFile *)file, file ## _path);                 \
-    }                                                                      \
+#define RM_DEFINE_PATH(file)                                             \
+    char file##_path[PATH_MAX];                                          \
+    if(file->session->cfg->use_meta_cache) {                             \
+        rm_file_lookup_path(file->session, (RmFile *)file, file##_path); \
+    } else {                                                             \
+        rm_file_build_path((RmFile *)file, file##_path);                 \
+    }
 
-#define RM_DEFINE_BASENAME(file)                                      \
-    char * file ## _basename = NULL;                                  \
-    if(file->session->cfg->use_meta_cache) {                          \
-		RM_DEFINE_PATH(file);                                         \
-        file ## _basename = rm_util_basename((char*)&file ## _path);  \
-    } else {                                                          \
-        file ## _basename = file->basename;                           \
-    }                                                                 \
-/**
- * @brief Create a new RmFile handle.
+#define RM_DEFINE_BASENAME(file)                                  \
+    char *file##_basename = NULL;                                 \
+    if(file->session->cfg->use_meta_cache) {                      \
+        RM_DEFINE_PATH(file);                                     \
+        file##_basename = rm_util_basename((char *)&file##_path); \
+    } else {                                                      \
+        file##_basename = file->basename;                         \
+    }                                                             \
+/**                                                               \
+ * @brief Create a new RmFile handle.                             \
  */
-RmFile *rm_file_new(
-    struct RmSession *session, const char *path, size_t path_len,
-    RmStat *statp, RmLintType type,
-    bool is_ppath, unsigned pnum
-);
+RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
@@ -250,19 +248,20 @@ const char *rm_file_lint_type_to_string(RmLintType type);
 
 /**
  * @brief Set a path to the file. Normally, you should never do this since the
- * path is immutable. 
+ * path is immutable.
  */
 void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy);
 
 /**
- * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using rm_swap_table_lookup.
+ * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using
+ * rm_swap_table_lookup.
  */
 void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf);
 
 /**
- * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder tree and basename.
+ * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder
+ * tree and basename.
  */
 void rm_file_build_path(RmFile *file, char *buf);
-
 
 #endif /* end of include guard */

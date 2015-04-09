@@ -65,7 +65,7 @@ typedef struct RmCfg {
     gboolean build_fiemap;
 
     int permissions;
-        
+
     time_t min_mtime;
     gint depth;
     gint verbosity;
@@ -99,4 +99,3 @@ typedef struct RmCfg {
 void rm_cfg_set_default(RmCfg *cfg);
 
 #endif /* end of include guard */
-

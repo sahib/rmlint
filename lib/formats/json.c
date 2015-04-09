@@ -52,7 +52,7 @@ static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {
 }
 
 static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
-    fprintf(out, "\"%s\": %"LLU"", key, value);
+    fprintf(out, "\"%s\": %" LLU "", key, value);
 }
 
 static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
@@ -158,7 +158,8 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "args", session->cfg->joined_argv);
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key(out, "checksum_type", rm_digest_type_to_string(session->cfg->checksum_type));
+            rm_fmt_json_key(out, "checksum_type",
+                            rm_digest_type_to_string(session->cfg->checksum_type));
             if(session->hash_seed1 && session->hash_seed2) {
                 rm_fmt_json_sep(self, out);
                 rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
@@ -202,11 +203,8 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     fprintf(out, "]\n");
 }
 
-static void rm_fmt_elem(
-    _U RmSession *session,
-    _U RmFmtHandler *parent,
-    FILE *out, RmFile *file
-) {
+static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,
+                        RmFile *file) {
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
@@ -244,7 +242,8 @@ static void rm_fmt_elem(
                 RmFile *hardlink_head = file->hardlinks.hardlink_head;
 
                 if(hardlink_head && hardlink_head != file) {
-                    rm_fmt_json_key_int(out, "hardlink_of", GPOINTER_TO_UINT(hardlink_head));
+                    rm_fmt_json_key_int(out, "hardlink_of",
+                                        GPOINTER_TO_UINT(hardlink_head));
                     rm_fmt_json_sep(self, out);
                 }
             }
@@ -265,7 +264,6 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .foot = rm_fmt_foot,
         .valid_keys = {"no_header", "no_footer", "oneline", NULL},
     },
-    .pretty = true
-};
+    .pretty = true};
 
-RmFmtHandler *JSON_HANDLER = (RmFmtHandler *) &JSON_HANDLER_IMPL;
+RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;

@@ -35,26 +35,24 @@ typedef struct RmFmtHandlerSummary {
     RmFmtHandler parent;
 } RmFmtHandlerSummary;
 
-#define ARROW fprintf(out, "%s==>%s ", MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));
+#define ARROW \
+    fprintf(out, "%s==>%s ", MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));
 
 static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {
     return strcmp((char *)key, *(char **)value);
 }
 
-static void rm_fmt_prog(
-    RmSession *session,
-    _U RmFmtHandler *parent,
-    _U FILE *out,
-    RmFmtProgressState state
-) {
+static void rm_fmt_prog(RmSession *session,
+                        _U RmFmtHandler *parent,
+                        _U FILE *out,
+                        RmFmtProgressState state) {
     if(state != RM_PROGRESS_STATE_SUMMARY) {
         return;
     }
 
     if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%d%s",
-                      MAYBE_RED(out, session), session->total_files, MAYBE_RESET(out, session)
-                     );
+        ARROW fprintf(out, "%s%d%s", MAYBE_RED(out, session), session->total_files,
+                      MAYBE_RESET(out, session));
         fprintf(out, _(" file(s) after investigation, nothing to search through.\n"));
         return;
     }
@@ -64,34 +62,27 @@ static void rm_fmt_prog(
     }
 
     char numbers[3][512];
-    snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(out, session), session->total_files, MAYBE_RESET(out, session));
-    snprintf(numbers[1], sizeof(numbers[1]), "%s%"LLU"%s", MAYBE_RED(out, session), session->dup_counter, MAYBE_RESET(out, session));
-    snprintf(numbers[2], sizeof(numbers[2]), "%s%"LLU"%s", MAYBE_RED(out, session), session->dup_group_counter, MAYBE_RESET(out, session));
+    snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(out, session),
+             session->total_files, MAYBE_RESET(out, session));
+    snprintf(numbers[1], sizeof(numbers[1]), "%s%" LLU "%s", MAYBE_RED(out, session),
+             session->dup_counter, MAYBE_RESET(out, session));
+    snprintf(numbers[2], sizeof(numbers[2]), "%s%" LLU "%s", MAYBE_RED(out, session),
+             session->dup_group_counter, MAYBE_RESET(out, session));
 
-    ARROW fprintf(
-        out,
-        _("In total %s files, whereof %s are duplicates in %s groups.\n"),
-        numbers[0], numbers[1], numbers[2]
-    );
+    ARROW fprintf(out, _("In total %s files, whereof %s are duplicates in %s groups.\n"),
+                  numbers[0], numbers[1], numbers[2]);
 
     /* log10(2 ** 64) + 2 = 21; */
     char size_string_buf[22] = {0};
-    rm_util_size_to_human_readable(
-        session->total_lint_size, size_string_buf, sizeof(size_string_buf)
-    );
+    rm_util_size_to_human_readable(session->total_lint_size, size_string_buf,
+                                   sizeof(size_string_buf));
 
-    ARROW fprintf(
-        out,
-        _("This equals %s%s%s of duplicates which could be removed.\n"),
-        MAYBE_RED(out, session), size_string_buf, MAYBE_RESET(out, session)
-    );
+    ARROW fprintf(out, _("This equals %s%s%s of duplicates which could be removed.\n"),
+                  MAYBE_RED(out, session), size_string_buf, MAYBE_RESET(out, session));
 
     if(session->other_lint_cnt > 0) {
-        ARROW fprintf(
-            out,
-            "%s%"LLU"%s ",
-            MAYBE_RED(out, session), session->other_lint_cnt, MAYBE_RESET(out, session)
-        );
+        ARROW fprintf(out, "%s%" LLU "%s ", MAYBE_RED(out, session),
+                      session->other_lint_cnt, MAYBE_RESET(out, session));
 
         fprintf(out, _("other suspicious item(s) found, which may vary in size.\n"));
     }
@@ -106,7 +97,8 @@ static void rm_fmt_prog(
         static const char *forbidden[] = {"stdout", "stderr", "stdin"};
         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);
 
-        if(lfind(path, forbidden, &forbidden_len, sizeof(const char *), rm_fmt_summary_cmp)) {
+        if(lfind(path, forbidden, &forbidden_len, sizeof(const char *),
+                 rm_fmt_summary_cmp)) {
             continue;
         }
 
@@ -120,12 +112,9 @@ static void rm_fmt_prog(
             first_print_flag = false;
         }
 
-        fprintf(
-            out,
-            _("Wrote a %s%s%s file to %s%s%s.\n"),
-            MAYBE_BLUE(out, session), handler->name, MAYBE_RESET(out, session),
-            MAYBE_GREEN(out, session), path, MAYBE_RESET(out, session)
-        );
+        fprintf(out, _("Wrote a %s%s%s file to %s%s%s.\n"), MAYBE_BLUE(out, session),
+                handler->name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session), path,
+                MAYBE_RESET(out, session));
     }
 }
 
@@ -142,4 +131,4 @@ static RmFmtHandlerSummary SUMMARY_HANDLER_IMPL = {
     },
 };
 
-RmFmtHandler *SUMMARY_HANDLER = (RmFmtHandler *) &SUMMARY_HANDLER_IMPL;
+RmFmtHandler *SUMMARY_HANDLER = (RmFmtHandler *)&SUMMARY_HANDLER_IMPL;

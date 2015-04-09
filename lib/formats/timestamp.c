@@ -35,12 +35,10 @@ typedef struct RmFmtHandlerTimestamp {
     RmFmtHandler parent;
 } RmFmtHandlerSummary;
 
-static void rm_fmt_prog(
-    RmSession *session,
-    _U RmFmtHandler *parent,
-    _U FILE *out,
-    RmFmtProgressState state
-) {
+static void rm_fmt_prog(RmSession *session,
+                        _U RmFmtHandler *parent,
+                        _U FILE *out,
+                        RmFmtProgressState state) {
     if(state != RM_PROGRESS_STATE_INIT) {
         return;
     }
@@ -52,7 +50,7 @@ static void rm_fmt_prog(
         fprintf(out, "%s", time_buf);
     } else {
         /* Just write out current time */
-        fprintf(out, "%"LLU"", (guint64)time(NULL));
+        fprintf(out, "%" LLU "", (guint64)time(NULL));
     }
 }
 
@@ -69,4 +67,4 @@ static RmFmtHandlerSummary TIMESTAMP_HANDLER_IMPL = {
     },
 };
 
-RmFmtHandler *TIMESTAMP_HANDLER = (RmFmtHandler *) &TIMESTAMP_HANDLER_IMPL;
+RmFmtHandler *TIMESTAMP_HANDLER = (RmFmtHandler *)&TIMESTAMP_HANDLER_IMPL;

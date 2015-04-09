@@ -46,12 +46,12 @@
  * but might be on other non-linux systems
  * */
 #if HAVE_GIO_UNIX
-#  include <gio/gunixmounts.h>
+#include <gio/gunixmounts.h>
 #endif
 
 #if HAVE_FIEMAP
-#  include <linux/fs.h>
-#  include <linux/fiemap.h>
+#include <linux/fs.h>
+#include <linux/fiemap.h>
 #endif
 
 /* Internal headers */
@@ -63,20 +63,20 @@
 #include <glib.h>
 
 #if HAVE_LIBELF
-#  include <libelf.h>
-#  include <gelf.h>
+#include <libelf.h>
+#include <gelf.h>
 #endif
 
 #if HAVE_BLKID
-#  include <blkid.h>
+#include <blkid.h>
 #endif
 
 #if HAVE_SYSCTL
-#  include <sys/sysctl.h>
+#include <sys/sysctl.h>
 #endif
 
-#if  HAVE_JSON_GLIB
-#  include <json-glib/json-glib.h>
+#if HAVE_JSON_GLIB
+#include <json-glib/json-glib.h>
 #endif
 
 ////////////////////////////////////
@@ -85,9 +85,9 @@
 
 char *rm_util_strsub(const char *string, const char *subs, const char *with) {
     gchar *result = NULL;
-    if (string != NULL && string[0] != '\0') {
+    if(string != NULL && string[0] != '\0') {
         gchar **split = g_strsplit(string, subs, 0);
-        if (split != NULL) {
+        if(split != NULL) {
             result = g_strjoinv(with, split);
         }
         g_strfreev(split);
@@ -136,9 +136,8 @@ bool rm_util_path_is_hidden(const char *path) {
     return false;
 }
 
-GQueue *rm_hash_table_setdefault(
-    GHashTable *table, gpointer key, RmNewFunc default_func
-) {
+GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key,
+                                 RmNewFunc default_func) {
     gpointer value = g_hash_table_lookup(table, key);
     if(value == NULL) {
         value = default_func();
@@ -167,7 +166,8 @@ ino_t rm_util_parent_node(const char *path) {
  * to RmFile->filter types                                            */
 int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {
     bool has_gid = 1, has_uid = 1;
-    if (!rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid, &has_gid)) {
+    if(!rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid,
+                             &has_gid)) {
         if(has_gid == false && has_uid == false) {
             return RM_LINT_TYPE_BADUGID;
         } else if(has_gid == false && has_uid == true) {
@@ -264,7 +264,7 @@ char *rm_util_get_groupname(void) {
 
 void rm_util_size_to_human_readable(RmOff num, char *in, gsize len) {
     if(num < 512) {
-        snprintf(in, len, "%"LLU" B", num);
+        snprintf(in, len, "%" LLU " B", num);
     } else if(num < 512 * 1024) {
         snprintf(in, len, "%.2f KB", num / 1024.0);
     } else if(num < 512 * 1024 * 1024) {
@@ -293,32 +293,32 @@ RmUserList *rm_userlist_new(void) {
 
     setpwent();
     while((node = getpwent()) != NULL) {
-        g_sequence_insert_sorted(
-            self->users, GUINT_TO_POINTER(node->pw_uid), rm_userlist_cmp_ids, NULL
-        );
-        g_sequence_insert_sorted(
-            self->groups, GUINT_TO_POINTER(node->pw_gid), rm_userlist_cmp_ids, NULL
-        );
+        g_sequence_insert_sorted(self->users, GUINT_TO_POINTER(node->pw_uid),
+                                 rm_userlist_cmp_ids, NULL);
+        g_sequence_insert_sorted(self->groups, GUINT_TO_POINTER(node->pw_gid),
+                                 rm_userlist_cmp_ids, NULL);
     }
     endpwent();
 
     /* add all groups, not just those that are user primary gid's */
     while((grp = getgrent()) != NULL) {
-        g_sequence_insert_sorted(
-            self->groups, GUINT_TO_POINTER(grp->gr_gid), rm_userlist_cmp_ids, NULL
-        );
+        g_sequence_insert_sorted(self->groups, GUINT_TO_POINTER(grp->gr_gid),
+                                 rm_userlist_cmp_ids, NULL);
     }
 
     endgrent();
     return self;
 }
 
-bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid) {
+bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
+                          bool *valid_uid, bool *valid_gid) {
     g_assert(self);
 
     g_mutex_lock(&self->mutex);
-    bool gid_found = g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
-    bool uid_found = g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
+    bool gid_found =
+        g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
+    bool uid_found =
+        g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
     g_mutex_unlock(&self->mutex);
 
     if(valid_uid != NULL) {
@@ -347,7 +347,8 @@ void rm_userlist_destroy(RmUserList *self) {
 
 #if HAVE_JSON_GLIB
 
-void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index, JsonNode *element_node, GHashTable *cksum_table) {
+void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
+                               JsonNode *element_node, GHashTable *cksum_table) {
     if(JSON_NODE_TYPE(element_node) != JSON_NODE_OBJECT) {
         return;
     }
@@ -417,18 +418,16 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
         goto failure;
     }
 
-    JsonNode *root = json_parser_get_root (parser);
+    JsonNode *root = json_parser_get_root(parser);
     if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {
         rm_log_warning_line(_("No valid json cache (no array in /)"));
         goto failure;
     }
 
     /* Iterate over all objects in it */
-    json_array_foreach_element(
-        json_node_get_array(root),
-        (JsonArrayForeach)rm_json_cache_parse_entry,
-        cksum_table
-    );
+    json_array_foreach_element(json_node_get_array(root),
+                               (JsonArrayForeach)rm_json_cache_parse_entry,
+                               cksum_table);
 
     /* check if some entries were added */
     result = (keys_in_table >= g_hash_table_size(cksum_table));
@@ -456,7 +455,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
-#if (HAVE_GIO_UNIX)
+#if(HAVE_GIO_UNIX)
 
 RmPartitionInfo *rm_part_info_new(char *name, char *fsname, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
@@ -484,11 +483,10 @@ void rm_disk_info_free(RmDiskInfo *self) {
     g_free(self);
 }
 
-
 static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     gchar is_rotational = -1;
 
-#if HAVE_SYSBLOCK  /* this works only on linux */
+#if HAVE_SYSBLOCK /* this works only on linux */
     char sys_path[PATH_MAX];
 
     snprintf(sys_path, PATH_MAX, "/sys/block/%s/queue/rotational", dev);
@@ -508,7 +506,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     int device_num = 0;
     char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
     size_t delete_method_len = sizeof(delete_method_len);
-    (void) dev;
+    (void)dev;
 
     memset(cmd, 0, sizeof(cmd));
     memset(delete_method, 0, sizeof(delete_method));
@@ -525,7 +523,8 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
         }
     }
 
-    if(snprintf(cmd, sizeof(cmd), "kern.cam.%s.%d.delete_method", dev_copy, device_num) == -1) {
+    if(snprintf(cmd, sizeof(cmd), "kern.cam.%s.%d.delete_method", dev_copy, device_num) ==
+       -1) {
         return -1;
     }
 
@@ -540,18 +539,15 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
 #else
-    (void) dev;
+    (void)dev;
 #endif
 
     return is_rotational;
 }
 
 static bool rm_mounts_is_ramdisk(const char *fs_type) {
-    const char *valid[] = {
-        "tmpfs", "rootfs", "devtmpfs",
-        "cgroup", "proc", "sys", "dev",
-        NULL
-    };
+    const char *valid[] = {"tmpfs", "rootfs", "devtmpfs", "cgroup",
+                           "proc",  "sys",    "dev",      NULL};
 
     for(int i = 0; valid[i]; ++i) {
         if(strcmp(valid[i], fs_type) == 0) {
@@ -616,7 +612,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     for(GList *iter = self->mnt_entries; iter; iter = iter->next) {
         RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);
         GUnixMountEntry *entry = iter->data;
-        
+
         wrap_entry->fsname = g_strdup(g_unix_mount_get_device_path(entry));
         wrap_entry->dir = g_strdup(g_unix_mount_get_mount_path(entry));
         wrap_entry->type = g_strdup(g_unix_mount_get_fs_type(entry));
@@ -630,7 +626,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         * This cannot be detected properly by rmlint since
         * files in it have the same inode as their unmirrored file, but
         * a different dev_t.
-        * 
+        *
         * Also ignore kernel filesystems.
         *
         * So better go and ignore it.
@@ -638,16 +634,19 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         static struct RmEvilFs {
             /* fsname as show by `mount` */
             const char *name;
-            
+
             /* Wether to warn about the exclusion on this */
             bool unusual;
-        } evilfs_types[] = {
-            {"bindfs", 1}, {"nullfs", 1},
-            /* Ignore the usual linux file system spam */
-            {"proc", 0}, {"cgroup", 0}, {"configfs", 0},
-            {"sys", 0}, {"devtmpfs", 0}, {"debugfs", 0},
-            {NULL, 0}
-        };
+        } evilfs_types[] = {{"bindfs", 1},
+                            {"nullfs", 1},
+                            /* Ignore the usual linux file system spam */
+                            {"proc", 0},
+                            {"cgroup", 0},
+                            {"configfs", 0},
+                            {"sys", 0},
+                            {"devtmpfs", 0},
+                            {"debugfs", 0},
+                            {NULL, 0}};
 
         /* btrfs and ocfs2 filesystems support reflinks for deduplication */
         static const char *reflinkfs_types[] = {"btrfs", "ocfs2", NULL};
@@ -669,11 +668,9 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         if(evilfs_found != NULL) {
             RmStat dir_stat;
             rm_sys_stat(wrap_entry->dir, &dir_stat);
-            g_hash_table_insert(
-                table->evilfs_table,
-                GUINT_TO_POINTER(dir_stat.st_dev),
-                GUINT_TO_POINTER(1)
-            );
+            g_hash_table_insert(table->evilfs_table,
+                                GUINT_TO_POINTER(dir_stat.st_dev),
+                                GUINT_TO_POINTER(1));
 
             GLogLevelFlags log_level = G_LOG_LEVEL_DEBUG;
             if(evilfs_found->unusual) {
@@ -681,31 +678,25 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                 rm_log_warning_prefix();
             }
 
-            g_log(
-                "rmlint", log_level, 
-                _("`%s` mount detected at %s (#%u); Ignoring all files in it."),
-                evilfs_found->name,
-                wrap_entry->dir,
-                (unsigned)dir_stat.st_dev
-            );
+            g_log("rmlint", log_level,
+                  _("`%s` mount detected at %s (#%u); Ignoring all files in it."),
+                  evilfs_found->name, wrap_entry->dir, (unsigned)dir_stat.st_dev);
         }
 
-        rm_log_debug("Filesystem %s: %s\n", wrap_entry->dir, (reflinkfs_found) ? "reflink" : "normal");
+        rm_log_debug("Filesystem %s: %s\n", wrap_entry->dir,
+                     (reflinkfs_found) ? "reflink" : "normal");
 
         if(reflinkfs_found != NULL) {
             RmStat dir_stat;
             rm_sys_stat(wrap_entry->dir, &dir_stat);
-            g_hash_table_insert(
-                table->reflinkfs_table,
-                GUINT_TO_POINTER(dir_stat.st_dev),
-                GUINT_TO_POINTER(1)
-            );
+            g_hash_table_insert(table->reflinkfs_table,
+                                GUINT_TO_POINTER(dir_stat.st_dev),
+                                GUINT_TO_POINTER(1));
         }
     }
 
     return self;
 }
-
 
 #if HAVE_SYSCTL
 
@@ -739,8 +730,8 @@ static void rm_mounts_freebsd_list_disks(void) {
 }
 #endif
 
-
-int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char *disk, _U size_t disk_size, _U dev_t *result) {
+int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char *disk,
+                                 _U size_t disk_size, _U dev_t *result) {
 #if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
 #elif HAVE_SYSCTL
@@ -769,21 +760,14 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
 
 static bool rm_mounts_create_tables(RmMountTable *self) {
     /* partition dev_t to disk dev_t */
-    self->part_table = g_hash_table_new_full(g_direct_hash,
-                       g_direct_equal,
-                       NULL,
-                       (GDestroyNotify)rm_part_info_free);
+    self->part_table = g_hash_table_new_full(
+        g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)rm_part_info_free);
 
     /* disk dev_t to boolean indication if disk is rotational */
-    self->disk_table = g_hash_table_new_full(g_direct_hash,
-                       g_direct_equal,
-                       NULL,
-                       (GDestroyNotify)rm_disk_info_free);
+    self->disk_table = g_hash_table_new_full(
+        g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)rm_disk_info_free);
 
-    self->nfs_table = g_hash_table_new_full(g_str_hash,
-                                            g_str_equal,
-                                            g_free,
-                                            NULL);
+    self->nfs_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
     /* Mapping dev_t => true (used as set) */
     self->evilfs_table = g_hash_table_new(NULL, NULL);
@@ -810,7 +794,8 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
         RmStat stat_buf_dev;
         if(rm_sys_stat(entry->fsname, &stat_buf_dev) == -1) {
             char *nfs_marker = NULL;
-            /* folder rm_sys_stat() is ok but devname rm_sys_stat() is not; this happens for example
+            /* folder rm_sys_stat() is ok but devname rm_sys_stat() is not; this happens
+             * for example
              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
              * */
             if(rm_mounts_is_ramdisk(entry->fsname)) {
@@ -818,7 +803,8 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                 is_rotational = false;
                 whole_disk = stat_buf_folder.st_dev;
             } else if((nfs_marker = strstr(entry->fsname, ":/")) != NULL) {
-                size_t until_slash = MIN((int)sizeof(entry->fsname), nfs_marker - entry->fsname);
+                size_t until_slash =
+                    MIN((int)sizeof(entry->fsname), nfs_marker - entry->fsname);
                 strncpy(diskname, entry->fsname, until_slash);
                 is_rotational = true;
 
@@ -833,13 +819,14 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
                 whole_disk = 0;
             }
         } else {
-            if(rm_mounts_devno_to_wholedisk(
-                        entry, stat_buf_dev.st_rdev, diskname, sizeof(diskname), &whole_disk
-                    ) == -1) {
-                /* folder and devname rm_sys_stat() are ok but blkid failed; this happens when?
+            if(rm_mounts_devno_to_wholedisk(entry, stat_buf_dev.st_rdev, diskname,
+                                            sizeof(diskname), &whole_disk) == -1) {
+                /* folder and devname rm_sys_stat() are ok but blkid failed; this happens
+                 * when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
-                rm_log_debug(RED"devno_to_wholedisk failed for %s\n"RESET, entry->fsname);
+                rm_log_debug(RED "devno_to_wholedisk failed for %s\n" RESET,
+                             entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
                 strncpy(diskname, entry->fsname, sizeof(diskname));
                 is_rotational = false;
@@ -849,44 +836,40 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
         }
 
         RmPartitionInfo *existing = g_hash_table_lookup(
-                                        self->part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));
-        if ( !existing || (existing->disk == 0 && whole_disk != 0) ) {
-            if (existing) {
-                rm_log_debug("Replacing part_table entry %s for path %s with %s\n", existing->fsname, entry->dir, entry->fsname);
+            self->part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));
+        if(!existing || (existing->disk == 0 && whole_disk != 0)) {
+            if(existing) {
+                rm_log_debug("Replacing part_table entry %s for path %s with %s\n",
+                             existing->fsname, entry->dir, entry->fsname);
             }
-            g_hash_table_insert(
-                self->part_table,
-                GUINT_TO_POINTER(stat_buf_folder.st_dev),
-                rm_part_info_new (entry->dir, entry->fsname, whole_disk));
+            g_hash_table_insert(self->part_table,
+                                GUINT_TO_POINTER(stat_buf_folder.st_dev),
+                                rm_part_info_new(entry->dir, entry->fsname, whole_disk));
         } else {
-            rm_log_debug("Skipping duplicate mount entry for dir %s dev %02u:%02u\n", entry->dir, major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev));
+            rm_log_debug("Skipping duplicate mount entry for dir %s dev %02u:%02u\n",
+                         entry->dir, major(stat_buf_folder.st_dev),
+                         minor(stat_buf_folder.st_dev));
             continue;
         }
 
-
-
         /* small hack, so also the full disk id can be given to the api below */
-        if (!g_hash_table_contains(self->part_table, GINT_TO_POINTER(whole_disk))) {
-            g_hash_table_insert(
-                self->part_table,
-                GUINT_TO_POINTER(whole_disk),
-                rm_part_info_new (entry->dir, entry->fsname, whole_disk));
+        if(!g_hash_table_contains(self->part_table, GINT_TO_POINTER(whole_disk))) {
+            g_hash_table_insert(self->part_table,
+                                GUINT_TO_POINTER(whole_disk),
+                                rm_part_info_new(entry->dir, entry->fsname, whole_disk));
         }
 
-        if (!g_hash_table_contains(self->disk_table, GINT_TO_POINTER(whole_disk))) {
-            g_hash_table_insert(
-                self->disk_table,
-                GINT_TO_POINTER(whole_disk),
-                rm_disk_info_new(diskname, is_rotational));
+        if(!g_hash_table_contains(self->disk_table, GINT_TO_POINTER(whole_disk))) {
+            g_hash_table_insert(self->disk_table,
+                                GINT_TO_POINTER(whole_disk),
+                                rm_disk_info_new(diskname, is_rotational));
         }
 
-        rm_log_info("%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s)\n",
-                    major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev),
-                    entry->dir,
-                    major(whole_disk), minor(whole_disk),
-                    entry->fsname, diskname, is_rotational ? "yes" : "no"
-                   );
-
+        rm_log_info(
+            "%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s)\n",
+            major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev), entry->dir,
+            major(whole_disk), minor(whole_disk), entry->fsname, diskname,
+            is_rotational ? "yes" : "no");
     }
 
 #if HAVE_SYSCTL
@@ -939,10 +922,12 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
         return true;
     }
 
-    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    if (part) {
-        RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
-        if (disk) {
+    RmPartitionInfo *part =
+        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    if(part) {
+        RmDiskInfo *disk =
+            g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+        if(disk) {
             return !disk->is_rotational;
         } else {
             rm_log_error_line("Disk not found in rm_mounts_is_nonrotational");
@@ -971,39 +956,51 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
         return 0;
     }
 
-    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
-    if (part) {
+    RmPartitionInfo *part =
+        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
+    if(part) {
         return part->disk;
     } else {
-        /* probably a btrfs subvolume which is not a mountpoint; walk up tree until we get to *
+        /* probably a btrfs subvolume which is not a mountpoint; walk up tree until we get
+         * to *
          * a recognisable partition */
         char *prev = g_strdup(path);
-        while TRUE {
-        char *temp = g_strdup(prev);
-            char *parent_path = g_strdup(dirname(temp));
-            g_free(temp);
+        while
+            TRUE {
+                char *temp = g_strdup(prev);
+                char *parent_path = g_strdup(dirname(temp));
+                g_free(temp);
 
-            RmStat stat_buf;
-            if(!rm_sys_stat(parent_path, &stat_buf)) {
-                RmPartitionInfo *parent_part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
-                if (parent_part) {
-                    /* create new partition table entry */
-                    rm_log_debug("Adding partition info for "GREEN"%s"RESET" - looks like subvolume %s on disk "GREEN"%s"RESET"\n", path, prev, parent_part->name);
-                    part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
-                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition), part);
-                    if(g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(stat_buf.st_dev))) {
-                        g_hash_table_insert(self->reflinkfs_table, GUINT_TO_POINTER(partition), GUINT_TO_POINTER(1));
+                RmStat stat_buf;
+                if(!rm_sys_stat(parent_path, &stat_buf)) {
+                    RmPartitionInfo *parent_part = g_hash_table_lookup(
+                        self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
+                    if(parent_part) {
+                        /* create new partition table entry */
+                        rm_log_debug("Adding partition info for " GREEN "%s" RESET
+                                     " - looks like subvolume %s on disk " GREEN
+                                     "%s" RESET "\n",
+                                     path, prev, parent_part->name);
+                        part = rm_part_info_new(prev, parent_part->fsname,
+                                                parent_part->disk);
+                        g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
+                                            part);
+                        if(g_hash_table_contains(self->reflinkfs_table,
+                                                 GUINT_TO_POINTER(stat_buf.st_dev))) {
+                            g_hash_table_insert(self->reflinkfs_table,
+                                                GUINT_TO_POINTER(partition),
+                                                GUINT_TO_POINTER(1));
+                        }
+                        g_free(prev);
+                        g_free(parent_path);
+                        return parent_part->disk;
                     }
-                    g_free(prev);
-                    g_free(parent_path);
-                    return parent_part->disk;
                 }
+                g_free(prev);
+                prev = parent_path;
+                g_assert(strcmp(prev, "/") != 0);
+                g_assert(strcmp(prev, ".") != 0);
             }
-            g_free(prev);
-            prev = parent_path;
-            g_assert (strcmp(prev, "/") != 0);
-            g_assert (strcmp(prev, ".") != 0);
-        }
     }
 }
 
@@ -1025,9 +1022,11 @@ char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
         return NULL;
     }
 
-    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
+    RmPartitionInfo *part =
+        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
     if(part) {
-        RmDiskInfo *disk = g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
+        RmDiskInfo *disk =
+            g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
         return disk->name;
     } else {
         return NULL;
@@ -1042,21 +1041,22 @@ bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
 
 bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
     g_assert(self);
-    if (g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(source))) {
-        if (source == dest) {
+    if(g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(source))) {
+        if(source == dest) {
             return true;
         } else {
-            RmPartitionInfo *source_part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(source));
-            RmPartitionInfo *dest_part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dest));
+            RmPartitionInfo *source_part =
+                g_hash_table_lookup(self->part_table, GINT_TO_POINTER(source));
+            RmPartitionInfo *dest_part =
+                g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dest));
             g_assert(source_part);
             g_assert(dest_part);
-            return ( strcmp(source_part->fsname, dest_part->fsname) == 0 );
+            return (strcmp(source_part->fsname, dest_part->fsname) == 0);
         }
     } else {
         return false;
     }
 }
-
 
 /////////////////////////////////
 //    FIEMAP IMPLEMENATION     //
@@ -1067,16 +1067,15 @@ typedef struct RmOffsetEntry {
     RmOff physical;
 } RmOffsetEntry;
 
-
 #if HAVE_FIEMAP
 
 /* sort sequence into decreasing order of logical offsets */
 static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {
     const RmOffsetEntry *offset_a = a;
     const RmOffsetEntry *offset_b = b;
-    if (offset_b->logical > offset_a->logical) {
+    if(offset_b->logical > offset_a->logical) {
         return 1;
-    } else if (offset_b->logical == offset_a->logical) {
+    } else if(offset_b->logical == offset_a->logical) {
         return 0;
     } else {
         return -1;
@@ -1087,7 +1086,7 @@ static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {
 static int rm_offset_find_logical(gconstpointer a, gconstpointer b) {
     const RmOffsetEntry *offset_a = a;
     const RmOffsetEntry *offset_b = b;
-    if (offset_b->logical >= offset_a->logical) {
+    if(offset_b->logical >= offset_a->logical) {
         return 1;
     } else {
         return 0;
@@ -1109,7 +1108,8 @@ RmOffsetTable rm_offset_create_table(const char *path) {
      * so we choose ourself how many of them we allocate.
      * */
     const int n_extents = 256;
-    struct fiemap *fiemap = g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
+    struct fiemap *fiemap =
+        g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
     struct fiemap_extent *fm_ext = fiemap->fm_extents;
 
     /* data structure we save our offsets in */
@@ -1121,7 +1121,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
         fiemap->fm_extent_count = n_extents;
         fiemap->fm_length = FIEMAP_MAX_OFFSET;
 
-        if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long) fiemap) == -1) {
+        if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fiemap) == -1) {
             break;
         }
 
@@ -1137,7 +1137,7 @@ RmOffsetTable rm_offset_create_table(const char *path) {
 
         /* Remember all non contiguous extents */
         for(unsigned i = 0; i < fiemap->fm_mapped_extents && !last; i++) {
-            if (i == 0 || fm_ext[i].fe_physical != expected) {
+            if(i == 0 || fm_ext[i].fe_physical != expected) {
                 RmOffsetEntry *offset_entry = g_slice_new(RmOffsetEntry);
                 offset_entry->logical = fm_ext[i].fe_logical;
                 offset_entry->physical = fm_ext[i].fe_physical;
@@ -1158,15 +1158,13 @@ RmOffsetTable rm_offset_create_table(const char *path) {
 }
 
 RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
-    if (offset_list != NULL) {
+    if(offset_list != NULL) {
         RmOffsetEntry token;
         token.physical = 0;
         token.logical = file_offset;
 
         GSequenceIter *nearest = g_sequence_search(
-                                     offset_list, &token,
-                                     (GCompareDataFunc)rm_offset_find_logical, NULL
-                                 );
+            offset_list, &token, (GCompareDataFunc)rm_offset_find_logical, NULL);
 
         if(!g_sequence_iter_is_end(nearest)) {
             RmOffsetEntry *off = g_sequence_get(nearest);
@@ -1179,45 +1177,39 @@ RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
 }
 
 bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
-    if (!table1 || !table2) {
+    if(!table1 || !table2) {
         return false;
     }
-    if ( 0
-            || g_sequence_get_length(table1) == 0
-            || g_sequence_get_length(table1) != g_sequence_get_length(table2)
-       ) {
+    if(0 || g_sequence_get_length(table1) == 0 ||
+       g_sequence_get_length(table1) != g_sequence_get_length(table2)) {
         return false;
     }
     GSequenceIter *iter1 = g_sequence_get_begin_iter(table1);
     GSequenceIter *iter2 = g_sequence_get_begin_iter(table2);
 
-    while (!g_sequence_iter_is_end(iter1)) {
-        RmOffsetEntry *ent1 = g_sequence_get (iter1);
-        RmOffsetEntry *ent2 = g_sequence_get (iter2);
-        if (ent1->logical != ent2->logical || ent1->physical != ent2->physical) {
+    while(!g_sequence_iter_is_end(iter1)) {
+        RmOffsetEntry *ent1 = g_sequence_get(iter1);
+        RmOffsetEntry *ent2 = g_sequence_get(iter2);
+        if(ent1->logical != ent2->logical || ent1->physical != ent2->physical) {
             return false;
         }
-        iter1 = g_sequence_iter_next (iter1);
-        iter2 = g_sequence_iter_next (iter2);
+        iter1 = g_sequence_iter_next(iter1);
+        iter2 = g_sequence_iter_next(iter2);
     }
     return true;
 }
 
-
 RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_offset) {
-    if (offset_list != NULL) {
+    if(offset_list != NULL) {
         RmOffsetEntry token;
         token.physical = 0;
         token.logical = file_offset;
 
-        GSequenceIter *next_fragment = g_sequence_iter_prev(
-                                           g_sequence_search(
-                                               offset_list, &token,
-                                               (GCompareDataFunc)rm_offset_find_logical, NULL
-                                           )
-                                       );
+        GSequenceIter *next_fragment = g_sequence_iter_prev(g_sequence_search(
+            offset_list, &token, (GCompareDataFunc)rm_offset_find_logical, NULL));
 
-        if(!g_sequence_iter_is_end(next_fragment) && !g_sequence_iter_is_begin(next_fragment) ) {
+        if(!g_sequence_iter_is_end(next_fragment) &&
+           !g_sequence_iter_is_begin(next_fragment)) {
             RmOffsetEntry *off = g_sequence_get(next_fragment);
             return off->logical - file_offset;
         }

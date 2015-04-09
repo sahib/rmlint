@@ -65,12 +65,9 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file);
  *
  * Returns:
  */
-int rm_pp_cmp_orig_criteria_impl(
-    RmSession *session,
-    time_t mtime_a, time_t mtime_b,
-    const char *basename_a, const char *basename_b,
-    int path_index_a, int path_index_b
-);
+int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,
+                                 const char *basename_a, const char *basename_b,
+                                 int path_index_a, int path_index_b);
 
 /**
  * @brief Compare two files in order to find out which file is the

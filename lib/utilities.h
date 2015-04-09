@@ -75,7 +75,8 @@ static inline void rm_sys_close(int fd) {
     }
 }
 
-static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, RmOff offset) {
+static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
+                                   RmOff offset) {
 #if RM_PLATFORM_32
     if(lseek64(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
@@ -109,7 +110,8 @@ RmUserList *rm_userlist_new(void);
  *
  * @return true if both are valid.
  */
-bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid, bool *valid_uid, bool *valid_gid);
+bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid,
+                          bool *valid_uid, bool *valid_gid);
 
 /**
  * @brief Deallocate the memory allocated by rm_userlist_new()
@@ -169,7 +171,6 @@ char *rm_util_basename(const char *filename);
  * @return true if it is.
  */
 bool rm_util_path_is_hidden(const char *path);
-
 
 typedef gpointer (*RmNewFunc)(void);
 
@@ -263,7 +264,8 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path);
  * @brief Get the disk behind the partition.
  *
  * @param self the table to lookup from.
- * @param partition the dev_t of a partition (sda1 -> 8:1), e.g. looked up from rm_sys_stat(2)
+ * @param partition the dev_t of a partition (sda1 -> 8:1), e.g. looked up from
+ *rm_sys_stat(2)
  *
  * @return the dev_t of the whole disk. (sda 8:0)
  */
