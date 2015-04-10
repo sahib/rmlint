@@ -4,7 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.1.0 Malnourished Molly] [unreleased]
+## [2.2.0 Dreary Dropbear] [unreleased]
+
+### Fixed
+
+- Make rmlint usable for very hight amounts of files (works for 5M):
+  See also: https://github.com/sahib/rmlint/issues/109
+  A compression path trie is used as data structures for paths now (credits to Daniel)
+- Problems and crashes on 32bit with large files and normal files.
+
+### Added
+
+- A primitive benchmark suite.
+- A GUI sketch that can be shipped along rmlint.
+
+### Changed
+
+- Most internal filesystems like `proc` are ignored now.
+
+## [2.1.0 Malnourished Molly] [beta-release]
 
 ### Fixed
 
