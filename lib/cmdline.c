@@ -741,7 +741,7 @@ static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
                                           GError **error) {
     RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
 
-    if(error != NULL) {
+    if(*error != NULL) {
         g_prefix_error(error, _("Invalid size description \"%s\": "), size_spec);
         return false;
     } else {
