@@ -49,7 +49,7 @@ between. Therefore there will never be an "auto-pickup" of the cache file.
 I have a very large number of files and I run out of memory and patience.
 -------------------------------------------------------------------------
 
-As a rule of thumb, ``rmlint`` will allocate 350 bytes for every file it will
+As a rule of thumb, ``rmlint`` will allocate 300 bytes for every file it will
 investigate. The memory peak is usually short after it finished traversing all
 files. For example, 5 million files will result in a memory footprint of roughly
 1.6GB of memory.
@@ -58,7 +58,9 @@ files. For example, 5 million files will result in a memory footprint of roughly
 
 - Use ``--with-metadata-cache`` to swap paths to disk. When needed the path is
   selected from disk instead of keeping them all in memory. This lowers the 
-  memory footprint per file by around 100 bytes.
+  memory footprint per file by a few bytes. Sometimes the difference may be
+  very subtle since all paths in rmlint are stored by common prefix, i.e. for long
+  but mostly identically paths the point after the difference is stored.
 - Use ``--without-fiemap`` on rotational disk to disable this optimization. With
   it enabled a table of the file's extents is stored to optimize disk access
   patterns. This lowers the memory footprint per file by around 50 bytes.

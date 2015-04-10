@@ -407,6 +407,10 @@ Rarely used, miscellaneous Options
     where storing the paths alone can eat up several GB RAM.
     Enabling swapping may cause slowdowns in exchange.
 
+    Sometimes the difference may be very subtle since all paths in rmlint are
+    stored by common prefix, i.e. for long but mostly identically paths the
+    point after the difference is stored.
+
     The metadata cache will be stored in ``$XDG_CACHE_HOME/rmlint/$pid``.
     If the cache cannot be created, ``rmlint`` falls back to no caching mode.
     
