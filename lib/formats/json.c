@@ -117,7 +117,7 @@ static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value
     memset(safe_value, 0, sizeof(safe_value));
 
     if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value)) >= 0) {
-        fprintf(out, " \"%s\": \"%s\"", key, safe_value);
+        fprintf(out, "\"%s\": \"%s\"", key, safe_value);
     }
 }
 

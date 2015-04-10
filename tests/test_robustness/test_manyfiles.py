@@ -1,3 +1,4 @@
+from nose.plugins.attrib import attr
 from nose import with_setup
 from tests.utils import *
 
