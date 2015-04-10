@@ -185,7 +185,7 @@ static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
 }
 
 static void rm_path_double_free(RmPathDoubleKey *key) {
-    if(key->basename == NULL) {
+    if(key->basename != NULL) {
         g_free(key->basename);
     }
     g_free(key);

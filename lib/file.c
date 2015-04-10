@@ -138,7 +138,6 @@ void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
         file->path_id = rm_swap_table_insert(
             file->session->meta_cache, file->session->meta_cache_path_id, (char *)path,
             path_len + 1);
-        file->basename = NULL;
     }
 }
 
@@ -146,6 +145,7 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
     g_assert(file);
 
     RmOff id = file->path_id;
+
 
     memset(buf, 0, PATH_MAX);
     rm_swap_table_lookup(session->meta_cache, session->meta_cache_path_id, id, buf,

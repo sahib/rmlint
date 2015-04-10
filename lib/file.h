@@ -223,8 +223,8 @@ typedef struct RmFile {
 
 #define RM_DEFINE_BASENAME(file)                                  \
     char *file##_basename = NULL;                                 \
+    RM_DEFINE_PATH(file);                                         \
     if(file->session->cfg->use_meta_cache) {                      \
-        RM_DEFINE_PATH(file);                                     \
         file##_basename = rm_util_basename((char *)&file##_path); \
     } else {                                                      \
         file##_basename = file->basename;                         \
