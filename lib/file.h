@@ -93,7 +93,7 @@ typedef struct RmFile {
         char *basename;
         /* file path lookup ID (if using swap table)
          * */
-        char *path_id;
+        RmOff path_id;
     };
 
     /* file folder as node of folder n-ary tree

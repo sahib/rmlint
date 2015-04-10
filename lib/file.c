@@ -135,9 +135,9 @@ void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
             (copy) ? g_strdup(rm_util_basename(path)) : rm_util_basename(path);
         file->folder = rm_folders_add(file->session->cfg->folder_tree_root, path);
     } else {
-        file->path_id = GUINT_TO_POINTER(rm_swap_table_insert(
+        file->path_id = rm_swap_table_insert(
             file->session->meta_cache, file->session->meta_cache_path_id, (char *)path,
-            path_len + 1));
+            path_len + 1);
         file->basename = NULL;
     }
 }
@@ -145,7 +145,7 @@ void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
 void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf) {
     g_assert(file);
 
-    RmOff id = GPOINTER_TO_UINT(file->path_id);
+    RmOff id = file->path_id;
 
     memset(buf, 0, PATH_MAX);
     rm_swap_table_lookup(session->meta_cache, session->meta_cache_path_id, id, buf,
