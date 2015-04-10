@@ -210,10 +210,10 @@
 ////////////////////////////////////////////
 
 /* How many milliseconds to sleep if we encounter an empty file queue.
- * This prevents a "starving" RmShredDevice from hogging cpu by continually
- * recycling back to the joiner.
+ * This prevents a "starving" RmShredDevice from hogging cpu and cluttering up
+ * debug messages by continually recycling back to the joiner.
  */
-#define SHRED_EMPTYQUEUE_SLEEP_US (10 * 1000) /* 10ms */
+#define SHRED_EMPTYQUEUE_SLEEP_US (1000 * 1000) /* 1 second */
 
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
 #define SHRED_BALANCED_PAGES (4)
@@ -449,10 +449,10 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
 
     if(self->parent) {
         self->ref_count++;
-        if(self->parent->offset_factor <= SHRED_MAX_READ_FACTOR) {
-            self->offset_factor = self->parent->offset_factor * 2;
+        if(self->parent->offset_factor * 8 <= SHRED_MAX_READ_FACTOR) {
+            self->offset_factor = self->parent->offset_factor * 8;
         } else {
-            self->offset_factor = self->parent->offset_factor;
+            self->offset_factor = SHRED_MAX_READ_FACTOR;
         }
     } else {
         self->offset_factor = 1;
