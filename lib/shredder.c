@@ -1465,8 +1465,7 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
     rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
 }
 
-/* Deprecated: */
-static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) {
+static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, gboolean waiting) {
     FILE *fd = NULL;
     bool error_happended = false;
     gint32 total_bytes_read = 0;
@@ -1507,6 +1506,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         buffer->file = file;
         buffer->len = bytes_read;
         buffer->is_last = (bytes_to_read <= 0);
+        buffer->waiting = waiting;
 
         rm_util_thread_pool_push(device->hash_pool, buffer);
 
@@ -1523,7 +1523,11 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
 finish:
     if(error_happended) {
         file->status = RM_FILE_STATE_IGNORE;
-        g_async_queue_push(device->hashed_file_return, file);
+        if (waiting) {
+            g_async_queue_push(device->hashed_file_return, file);
+        } else {
+            rm_shred_sift(file, false);
+        }
     }
 
     if(fd != NULL) {
@@ -1755,7 +1759,7 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         rm_shred_readlink_factory(file, device);
     } else {
         if(SHRED_USE_BUFFERED_READ) {
-            rm_shred_buffered_read_factory(file, device);
+            rm_shred_buffered_read_factory(file, device, worth_waiting);
         } else {
             rm_shred_unbuffered_read_factory(file, device, worth_waiting);
         }
