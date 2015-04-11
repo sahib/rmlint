@@ -359,6 +359,8 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
     JsonNode *type_node = json_object_get_member(object, "type");
 
+    rm_log_debug("parsing\n");
+
     if(mtime_node && path_node && cksum_node && type_node) {
         RmStat stat_buf;
         const char *path = json_node_get_string(path_node);
@@ -414,6 +416,7 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     rm_log_info_line(_("Loading json-cache `%s'"), json_path);
 
     if(!json_parser_load_from_file(parser, json_path, &error)) {
+        rm_log_warning_line(_("FAILED: %s\n"), error->message);
         g_error_free(error);
         goto failure;
     }

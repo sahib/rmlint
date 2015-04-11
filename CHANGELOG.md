@@ -12,6 +12,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   See also: https://github.com/sahib/rmlint/issues/109
   A compression path trie is used as data structures for paths now (credits to Daniel)
 - Problems and crashes on 32bit with large files and normal files.
+- Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
 
 ### Added
 
