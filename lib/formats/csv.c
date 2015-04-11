@@ -30,9 +30,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#define CSV_SEP  ","
+#define CSV_SEP ","
 #define CSV_QUOTE "\""
-#define CSV_FORMAT "%s"CSV_SEP""CSV_QUOTE"%s"CSV_QUOTE""CSV_SEP"%"LLU""CSV_SEP"%s\n"
+#define CSV_FORMAT \
+    "%s" CSV_SEP "" CSV_QUOTE "%s" CSV_QUOTE "" CSV_SEP "%" LLU "" CSV_SEP "%s\n"
 
 typedef struct RmFmtHandlerCSV {
     /* must be first */
@@ -44,16 +45,12 @@ static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         return;
     }
 
-    fprintf(out, "%s%s%s%s%s%s%s\n",
-            "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP, "checksum"
-           );
+    fprintf(out, "%s%s%s%s%s%s%s\n", "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP,
+            "checksum");
 }
 
-static void rm_fmt_elem(
-    _U RmSession *session,
-    _U RmFmtHandler *parent,
-    FILE *out, RmFile *file
-) {
+static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,
+                        RmFile *file) {
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
@@ -63,11 +60,11 @@ static void rm_fmt_elem(
     }
 
     /* Escape quotes in the path (refer http://tools.ietf.org/html/rfc4180, item 6)*/
-    char *clean_path = rm_util_strsub(file->path, CSV_QUOTE, CSV_QUOTE""CSV_QUOTE);
+    RM_DEFINE_PATH(file);
+    char *clean_path = rm_util_strsub(file_path, CSV_QUOTE, CSV_QUOTE "" CSV_QUOTE);
 
-    fprintf(out, CSV_FORMAT,
-            rm_file_lint_type_to_string(file->lint_type), clean_path, file->file_size, checksum_str
-           );
+    fprintf(out, CSV_FORMAT, rm_file_lint_type_to_string(file->lint_type), clean_path,
+            file->file_size, checksum_str);
 
     g_free(clean_path);
 }
@@ -82,7 +79,6 @@ static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
         .prog = NULL,
         .foot = NULL,
         .valid_keys = {"no_header", NULL},
-    }
-};
+    }};
 
-RmFmtHandler *CSV_HANDLER = (RmFmtHandler *) &CSV_HANDLER_IMPL;
+RmFmtHandler *CSV_HANDLER = (RmFmtHandler *)&CSV_HANDLER_IMPL;

@@ -392,6 +392,27 @@ Rarely used, miscellaneous Options
     The shortcut ``-q / -Q`` can be easily remembered if you memorize the word
     ``quantile`` for it.
 
+:``--with-fiemap`` (**default**) / ``--without-fiemap``:
+    
+    Enable or disable reading the file extents on rotational disk in order to
+    optimize disk access patterns. Usually, this should be only disabled if 
+    you're low on memory since a table of extents have to be stored for every
+    file. In exchange the IO speed will decrease. No extent data will be
+    collected for non-rotational disks anyway.
+
+:``--with-metadata-cache`` / ``--without-metadata-cache`` (**default**):
+
+    Swap certain file metadata attributes onto disk in order to save memory.
+    This can help to save memory for very big datasets (several million files)
+    where storing the paths alone can eat up several GB RAM.
+    Enabling swapping may cause slowdowns in exchange.
+
+    Sometimes the difference may be very subtle since all paths in rmlint are
+    stored by common prefix, i.e. for long but mostly identically paths the
+    point after the difference is stored.
+
+    The metadata cache will be stored in ``$XDG_CACHE_HOME/rmlint/$pid``.
+    If the cache cannot be created, ``rmlint`` falls back to no caching mode.
     
 FORMATTERS
 ==========

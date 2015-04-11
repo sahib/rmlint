@@ -61,9 +61,11 @@ typedef struct RmCfg {
     gboolean read_cksum_from_xattr;
     gboolean clear_xattr_fields;
     gboolean write_unfinished;
+    gboolean use_meta_cache;
+    gboolean build_fiemap;
 
     int permissions;
-        
+
     time_t min_mtime;
     gint depth;
     gint verbosity;
@@ -82,6 +84,8 @@ typedef struct RmCfg {
     char *iwd;
     char *joined_argv;
 
+    GNode *folder_tree_root;
+
     RmOff minsize;
     RmOff maxsize;
     RmOff threads;
@@ -95,4 +99,3 @@ typedef struct RmCfg {
 void rm_cfg_set_default(RmCfg *cfg);
 
 #endif /* end of include guard */
-

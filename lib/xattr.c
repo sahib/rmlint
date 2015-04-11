@@ -31,11 +31,11 @@
 #include <errno.h>
 
 #if HAVE_XATTR
-#  include <sys/xattr.h>
+#include <sys/xattr.h>
 #endif
 
 #ifndef ENODATA
-#  define ENODATA ENOMSG
+#define ENODATA ENOMSG
 #endif
 
 ////////////////////////////
@@ -44,7 +44,10 @@
 
 #if HAVE_XATTR
 
-static int rm_xattr_build_key(RmSession *session, const char *suffix, char *buf, size_t buf_size) {
+static int rm_xattr_build_key(RmSession *session,
+                              const char *suffix,
+                              char *buf,
+                              size_t buf_size) {
     g_assert(session);
 
     /* Be safe, assume caller is not concentrated. */
@@ -86,16 +89,25 @@ static int rm_xattr_is_fail(const char *name, int rc) {
     return 0;
 }
 
-static int rm_xattr_set(RmFile *file, const char *key, const char *value, size_t value_size) {
-    return rm_xattr_is_fail("setxattr", setxattr(file->path, key, value, value_size, 0));
+static int rm_xattr_set(RmFile *file,
+                        const char *key,
+                        const char *value,
+                        size_t value_size) {
+    RM_DEFINE_PATH(file);
+    return rm_xattr_is_fail("setxattr", setxattr(file_path, key, value, value_size, 0));
 }
 
-static int rm_xattr_get(RmFile *file, const char *key, char *out_value, size_t value_size) {
-    return rm_xattr_is_fail("getxattr", getxattr(file->path, key, out_value, value_size));
+static int rm_xattr_get(RmFile *file,
+                        const char *key,
+                        char *out_value,
+                        size_t value_size) {
+    RM_DEFINE_PATH(file);
+    return rm_xattr_is_fail("getxattr", getxattr(file_path, key, out_value, value_size));
 }
 
 static int rm_xattr_del(RmFile *file, const char *key) {
-    return rm_xattr_is_fail("removexattr", removexattr(file->path, key));
+    RM_DEFINE_PATH(file);
+    return rm_xattr_is_fail("removexattr", removexattr(file_path, key));
 }
 
 #endif
@@ -114,22 +126,19 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
         return EINVAL;
     }
 
-    char cksum_key[64],
-         mtime_key[64],
-         cksum_hex_str[rm_digest_get_bytes(file->digest) * 2 + 1],
-         timestamp[64] = {0};
+    char cksum_key[64], mtime_key[64],
+        cksum_hex_str[rm_digest_get_bytes(file->digest) * 2 + 1], timestamp[64] = {0};
 
     int timestamp_bytes = 0;
     double actual_time_sec = difftime(file->mtime, 0);
 
-    if(0
-            || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key))
-            || rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key))
-            || rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0
-            || rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str))
-            || (timestamp_bytes = snprintf(timestamp, sizeof(timestamp), "%lld", (long long)actual_time_sec)) == -1
-            || rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes)
-      ) {
+    if(0 || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
+       rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
+       rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
+       rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str)) ||
+       (timestamp_bytes = snprintf(
+            timestamp, sizeof(timestamp), "%lld", (long long)actual_time_sec)) == -1 ||
+       rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes)) {
         return errno;
     }
 #endif
@@ -145,19 +154,16 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
         return NULL;
     }
 
-    char cksum_key[64] = {0},
-         mtime_key[64] = {0},
-         mtime_buf[64] = {0},
+    char cksum_key[64] = {0}, mtime_key[64] = {0}, mtime_buf[64] = {0},
          cksum_hex_str[512] = {0};
 
     memset(cksum_hex_str, '0', sizeof(cksum_hex_str));
     cksum_hex_str[sizeof(cksum_hex_str) - 1] = 0;
 
-    if(0
-            || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key))
-            || rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1)
-            || rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key))
-            || rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1)) {
+    if(0 || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
+       rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1) ||
+       rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
+       rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1)) {
         return NULL;
     }
 

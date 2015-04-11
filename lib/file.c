@@ -24,13 +24,61 @@
 
 #include "file.h"
 #include "utilities.h"
+#include "session.h"
+#include "swap-table.h"
 
+#include <string.h>
 #include <unistd.h>
 #include <sys/file.h>
+#include <string.h>
 
-RmFile *rm_file_new(
-    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index
-) {
+/**
+ * @brief Add folder node into folder tree (if not already there); return pointer to the
+ * node.
+ * @param *root root node of the folder tree
+ * @param *path absolute path of a file in the folder
+ */
+
+static GNode *rm_folders_add(GNode *root, const char *path) {
+    g_assert(path[0] == '/');
+    g_assert(strlen(path) > 1);
+
+    gchar **split_path = g_strsplit(path + 1, "/", 0);
+    GNode *current_folder = root;
+
+    /* walk and/or build down the folder tree from / until we reach the final path
+ * (exclude
+ * last element which is the basename) */
+    for(int i = 0; split_path[i]; i++) {
+        if(split_path[i + 1]) {
+            /* still in the folder tree */
+            GNode *next_folder;
+            for(next_folder = current_folder->children; next_folder;
+                next_folder = next_folder->next) {
+                if(strcmp(next_folder->data, split_path[i]) == 0) {
+                    break;
+                }
+            }
+
+            if(next_folder == NULL) {
+                next_folder = g_node_insert_data(current_folder, -1, split_path[i]);
+            } else {
+                g_free(split_path[i]);
+            }
+
+            current_folder = next_folder;
+        } else {
+            /* free the basename part */
+            g_free(split_path[i]);
+        }
+    }
+    g_free(split_path);
+    return current_folder;
+}
+
+RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index) {
+    RmCfg *cfg = session->cfg;
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;
 
@@ -54,8 +102,9 @@ RmFile *rm_file_new(
     }
 
     RmFile *self = g_slice_new0(RmFile);
-    self->path = g_strdup(path);
-    self->basename = rm_util_basename(self->path);
+    self->session = session;
+
+    rm_file_set_path(self, (char *)path, path_len, true);
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
@@ -76,37 +125,81 @@ RmFile *rm_file_new(
     self->is_original = false;
     self->is_symlink = false;
     self->path_index = path_index;
-    self->cfg = cfg;
 
     return self;
 }
 
+void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
+    if(file->session->cfg->use_meta_cache == false) {
+        file->basename =
+            (copy) ? g_strdup(rm_util_basename(path)) : rm_util_basename(path);
+        file->folder = rm_folders_add(file->session->cfg->folder_tree_root, path);
+    } else {
+        file->path_id = rm_swap_table_insert(
+            file->session->meta_cache, file->session->meta_cache_path_id, (char *)path,
+            path_len + 1);
+    }
+}
+
+void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf) {
+    g_assert(file);
+
+    RmOff id = file->path_id;
+
+
+    memset(buf, 0, PATH_MAX);
+    rm_swap_table_lookup(session->meta_cache, session->meta_cache_path_id, id, buf,
+                         PATH_MAX);
+}
+
+void rm_file_build_path(RmFile *file, char *buf) {
+    g_assert(file);
+
+    /* walk up the folder tree, collecting path elements into a GList*/
+    GList *path_elements = NULL;
+    path_elements = g_list_prepend(path_elements, file->basename);
+
+    for(GNode *folder = file->folder; folder->parent; folder = folder->parent) {
+        path_elements = g_list_prepend(path_elements, folder->data);
+    }
+
+    /* copy collected elements into *buf */
+    char *buf_ptr = buf;
+    while(path_elements) {
+        g_assert(buf + PATH_MAX > buf_ptr + 1 + strlen((char *)path_elements->data));
+        buf_ptr = g_stpcpy(buf_ptr, "/");
+        buf_ptr = g_stpcpy(buf_ptr, (char *)path_elements->data);
+        path_elements = g_list_delete_link(path_elements, path_elements);
+    }
+}
+
 void rm_file_destroy(RmFile *file) {
-    if (file->disk_offsets) {
+    if(file->disk_offsets) {
         g_sequence_free(file->disk_offsets);
     }
-    if (file->hardlinks.files) {
+    if(file->hardlinks.is_head && file->hardlinks.files) {
         g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
     }
 
-    g_free(file->path);
+    /* Only delete the basename when it really was in memory */
+    if(file->session->cfg->use_meta_cache == false) {
+        g_free(file->basename);
+    }
     g_slice_free(RmFile, file);
 }
 
 const char *rm_file_lint_type_to_string(RmLintType type) {
-    static const char *TABLE[] = {
-        [RM_LINT_TYPE_UNKNOWN]            = "",
-        [RM_LINT_TYPE_EMPTY_DIR]          = "emptydir",
-        [RM_LINT_TYPE_NONSTRIPPED]        = "nonstripped",
-        [RM_LINT_TYPE_BADLINK]            = "badlink",
-        [RM_LINT_TYPE_BADUID]             = "baduid",
-        [RM_LINT_TYPE_BADGID]             = "badgid",
-        [RM_LINT_TYPE_BADUGID]            = "badugid",
-        [RM_LINT_TYPE_EMPTY_FILE]         = "emptyfile",
-        [RM_LINT_TYPE_DUPE_CANDIDATE]     = "duplicate_file",
-        [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir",
-        [RM_LINT_TYPE_UNFINISHED_CKSUM]   = "unfinished_cksum"
-    };
+    static const char *TABLE[] = {[RM_LINT_TYPE_UNKNOWN] = "",
+                                  [RM_LINT_TYPE_EMPTY_DIR] = "emptydir",
+                                  [RM_LINT_TYPE_NONSTRIPPED] = "nonstripped",
+                                  [RM_LINT_TYPE_BADLINK] = "badlink",
+                                  [RM_LINT_TYPE_BADUID] = "baduid",
+                                  [RM_LINT_TYPE_BADGID] = "badgid",
+                                  [RM_LINT_TYPE_BADUGID] = "badugid",
+                                  [RM_LINT_TYPE_EMPTY_FILE] = "emptyfile",
+                                  [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file",
+                                  [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir",
+                                  [RM_LINT_TYPE_UNFINISHED_CKSUM] = "unfinished_cksum"};
 
     return TABLE[MIN(type, sizeof(TABLE) / sizeof(const char *))];
 }

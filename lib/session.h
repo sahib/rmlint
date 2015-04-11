@@ -31,6 +31,9 @@
 #include <stdbool.h>
 #include <glib.h>
 
+/* Needed for RmSwapTable */
+#include "swap-table.h"
+
 /* Needed for RmTreeMerger */
 #include "treemerge.h"
 
@@ -63,6 +66,11 @@ typedef struct RmSession {
 
     /* Treemerging for -D */
     struct RmTreeMerger *dir_merger;
+
+    /* Support for swapping path memory to disk */
+    RmSwapTable *meta_cache;
+    int meta_cache_path_id;
+    int meta_cache_dir_id;
 
     /* Counters for printing useful statistics */
     volatile gint total_files;
@@ -107,6 +115,12 @@ typedef struct RmSession {
 
     /* true if a cmdline parse error happened */
     bool cmdline_parse_error;
+
+    /* true once shredder finished running */
+    bool shredder_finished;
+
+    /* true once traverse finished running */
+    bool traverse_finished;
 } RmSession;
 
 /**
@@ -142,16 +156,17 @@ bool rm_session_was_aborted(RmSession *session);
  * MAYBE_COLOR checks the file we output too.
  * If it is stderr or stdout it consults the respective setting automatically.
  * */
-#define MAYBE_COLOR(o, s, col) \
-        (!s->cfg->with_color ? "" : \
-        (fileno(o) == 1 ? (s->cfg->with_stdout_color ? col : "") : \
-        (fileno(o) == 2 ? (s->cfg->with_stderr_color ? col : "") : "")))
-        
-#define MAYBE_RED(o, s)    MAYBE_COLOR(o, s, RED)
+#define MAYBE_COLOR(o, s, col)                           \
+    (!s->cfg->with_color                                 \
+         ? ""                                            \
+         : (fileno(o) == 1                               \
+                ? (s->cfg->with_stdout_color ? col : "") \
+                : (fileno(o) == 2 ? (s->cfg->with_stderr_color ? col : "") : "")))
+
+#define MAYBE_RED(o, s) MAYBE_COLOR(o, s, RED)
 #define MAYBE_YELLOW(o, s) MAYBE_COLOR(o, s, YELLOW)
-#define MAYBE_RESET(o, s)  MAYBE_COLOR(o, s, RESET)
-#define MAYBE_GREEN(o, s)  MAYBE_COLOR(o, s, GREEN)
-#define MAYBE_BLUE(o, s)   MAYBE_COLOR(o, s, BLUE)
+#define MAYBE_RESET(o, s) MAYBE_COLOR(o, s, RESET)
+#define MAYBE_GREEN(o, s) MAYBE_COLOR(o, s, GREEN)
+#define MAYBE_BLUE(o, s) MAYBE_COLOR(o, s, BLUE)
 
 #endif /* end of include guard */
-

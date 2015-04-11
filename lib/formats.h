@@ -62,10 +62,14 @@ typedef struct RmFmtTable {
 /* Callback definitions */
 struct RmFmtHandler;
 
-typedef void (* RmFmtHeadCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
-typedef void (* RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out);
-typedef void (* RmFmtElemCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFile *file);
-typedef void (* RmFmtProgCallback)(RmSession *session, struct RmFmtHandler *self, FILE *out, RmFmtProgressState state);
+typedef void (*RmFmtHeadCallback)(RmSession *session, struct RmFmtHandler *self,
+                                  FILE *out);
+typedef void (*RmFmtFootCallback)(RmSession *session, struct RmFmtHandler *self,
+                                  FILE *out);
+typedef void (*RmFmtElemCallback)(RmSession *session, struct RmFmtHandler *self,
+                                  FILE *out, RmFile *file);
+typedef void (*RmFmtProgCallback)(RmSession *session, struct RmFmtHandler *self,
+                                  FILE *out, RmFmtProgressState state);
 
 /* Parent "class" for output handlers */
 typedef struct RmFmtHandler {
@@ -182,14 +186,16 @@ const char *rm_fmt_progress_to_string(RmFmtProgressState state);
  * @param key The key to set.
  * @param value The value to set.
  */
-void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key, const char *value);
+void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key,
+                             const char *value);
 
 /**
  * @brief Get a configuration value.
  *
  * @return NULL if not foumd, the value for this key. Memory owned by RmFmtTable.
  */
-const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter, const char *key);
+const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter,
+                                    const char *key);
 
 /**
  * @brief Check if the formatter "formatter" has a config value called key.
@@ -246,10 +252,12 @@ typedef struct RmFmtHandlerProgress {
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 }
 
-static void rm_fmt_elem(RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file) {
+static void rm_fmt_elem(RmSession *session, RmFmtHandler *parent, FILE *out, RmFile *file)
+{
 }
 
-static void rm_fmt_prog(RmSession *session, RmFmtHandler *parent, FILE *out, RmFmtProgressState state) {
+static void rm_fmt_prog(RmSession *session, RmFmtHandler *parent, FILE *out,
+RmFmtProgressState state) {
 }
 
 static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, FILE *out) {

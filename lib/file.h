@@ -80,19 +80,25 @@ typedef enum RmLintType {
     RM_LINT_TYPE_UNFINISHED_CKSUM,
 } RmLintType;
 
+struct RmSession;
 
 /**
  * RmFile structure; used by pretty much all rmlint modules.
  */
 
 typedef struct RmFile {
-    /* Absolute path of the file
-     * */
-    char *path;
+    union {
+        /* file basename (if not using swap table)
+         * */
+        char *basename;
+        /* file path lookup ID (if using swap table)
+         * */
+        RmOff path_id;
+    };
 
-    /* Pointer to last part of the path
+    /* file folder as node of folder n-ary tree
      * */
-    char *basename;
+    GNode *folder;
 
     /* File modification date/time
      * */
@@ -145,13 +151,20 @@ typedef struct RmFile {
      */
     bool has_ext_cksum : 1;
 
+    /* If true, the file will be request to be pre-cached on the next read */
+    bool fadvise_requested : 1;
+
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
     struct {
         bool has_prefd : 1;
         bool has_non_prefd : 1;
-        GQueue *files;
+        bool is_head : 1;
+        union {
+            GQueue *files;
+            struct RmFile *hardlink_head;
+        };
     } hardlinks;
 
     /* The index of the path this file belongs to. */
@@ -171,10 +184,12 @@ typedef struct RmFile {
      */
     RmOff seek_offset;
 
-    /* Flag for when we do intermediate steps within a hash increment because the file is fragmented */
+    /* Flag for when we do intermediate steps within a hash increment because the file is
+     * fragmented */
     RmFileState status;
 
-    /* digest of this file updated on every hash iteration.  Use a pointer so we can share with RmShredGroup
+    /* digest of this file updated on every hash iteration.  Use a pointer so we can share
+     * with RmShredGroup
      */
     RmDigest *digest;
 
@@ -192,17 +207,33 @@ typedef struct RmFile {
     /* Link to the RmShredDevice that the file is associated with */
     struct RmShredDevice *device;
 
-    /* Required for rm_file_equal for building initial match_table */
-    const struct RmCfg *cfg;
+    /* Required for rm_file_equal for building initial match_table
+     * and for RM_DEFINE_PATH and RM_DEFINE_BASENAME */
+    const struct RmSession *session;
 } RmFile;
 
-/**
- * @brief Create a new RmFile handle.
+/* Defines a path variable containing the file's path */
+#define RM_DEFINE_PATH(file)                                             \
+    char file##_path[PATH_MAX];                                          \
+    if(file->session->cfg->use_meta_cache) {                             \
+        rm_file_lookup_path(file->session, (RmFile *)file, file##_path); \
+    } else {                                                             \
+        rm_file_build_path((RmFile *)file, file##_path);                 \
+    }
+
+#define RM_DEFINE_BASENAME(file)                                  \
+    char *file##_basename = NULL;                                 \
+    RM_DEFINE_PATH(file);                                         \
+    if(file->session->cfg->use_meta_cache) {                      \
+        file##_basename = rm_util_basename((char *)&file##_path); \
+    } else {                                                      \
+        file##_basename = file->basename;                         \
+    }                                                             \
+/**                                                               \
+ * @brief Create a new RmFile handle.                             \
  */
-RmFile *rm_file_new(
-    RmCfg *cfg, const char *path, RmStat *statp, RmLintType type,
-    bool is_ppath, unsigned pnum
-);
+RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
@@ -214,5 +245,23 @@ void rm_file_destroy(RmFile *file);
  * @brief Convert RmLintType to a human readable short string.
  */
 const char *rm_file_lint_type_to_string(RmLintType type);
+
+/**
+ * @brief Set a path to the file. Normally, you should never do this since the
+ * path is immutable.
+ */
+void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy);
+
+/**
+ * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using
+ * rm_swap_table_lookup.
+ */
+void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf);
+
+/**
+ * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder
+ * tree and basename.
+ */
+void rm_file_build_path(RmFile *file, char *buf);
 
 #endif /* end of include guard */

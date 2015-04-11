@@ -38,7 +38,6 @@
  * as RmFiles and written to the output module.
  */
 
-
 /* Opaque structure, details do not matter to caller */
 struct RmTreeMerger;
 typedef struct RmTreeMerger RmTreeMerger;
@@ -49,7 +48,7 @@ struct RmSession;
 /**
  * @brief Allocate a new RmTreeMerger structure.
  */
-RmTreeMerger * rm_tm_new(struct RmSession *session);
+RmTreeMerger *rm_tm_new(struct RmSession *session);
 
 /**
  * @brief Add a RmFile to the pool of (to be) investigated files.

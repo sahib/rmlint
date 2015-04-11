@@ -30,7 +30,8 @@
 #include "session.h"
 
 /**
- * @brief Find duplicate RmFile and pass them to postprocess; free/destroy all other RmFiles.
+ * @brief Find duplicate RmFile and pass them to postprocess; free/destroy all other
+ *RmFiles.
  *
  * @param session: rmlint session containing all cfg and pseudo-globals
  */

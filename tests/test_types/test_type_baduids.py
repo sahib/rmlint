@@ -15,7 +15,11 @@ def exec_cmds(cmds):
             g=RMLINT_DUMMY_GROUP,
             t=TESTDIR_NAME
         )
-        subprocess.check_call(fmt_cmd, shell=True)
+
+        try:
+            subprocess.check_call(fmt_cmd, shell=True)
+        except subprocess.CalledProcessError as err:
+            print(cmd, 'failed:', err)
 
 
 @with_setup(usual_setup_func, usual_teardown_func)

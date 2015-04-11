@@ -53,7 +53,8 @@ typedef struct RmFmtHandlerProgress {
     struct winsize terminal;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self, int max_len, FILE *out) {
+static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self,
+                                        int max_len, FILE *out) {
     char num_buf[32] = {0};
     memset(num_buf, 0, sizeof(num_buf));
 
@@ -61,48 +62,37 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
     case RM_PROGRESS_STATE_TRAVERSE:
         self->percent = 2.0;
         self->text_len = g_snprintf(
-                             self->text_buf, sizeof(self->text_buf),
-                             "%s (%s%d%s %s / %s%d%s + %s%d%s %s)",
-                             _("Traversing"),
-                             MAYBE_GREEN(out, session), session->total_files, MAYBE_RESET(out, session),
-                             _("usable files"),
-                             MAYBE_RED(out, session), session->ignored_files, MAYBE_RESET(out, session),
-                             MAYBE_RED(out, session), session->ignored_folders, MAYBE_RESET(out, session),
-                             _("ignored files / folders")
-                         );
+            self->text_buf, sizeof(self->text_buf), "%s (%s%d%s %s / %s%d%s + %s%d%s %s)",
+            _("Traversing"), MAYBE_GREEN(out, session), session->total_files,
+            MAYBE_RESET(out, session), _("usable files"), MAYBE_RED(out, session),
+            session->ignored_files, MAYBE_RESET(out, session), MAYBE_RED(out, session),
+            session->ignored_folders, MAYBE_RESET(out, session),
+            _("ignored files / folders"));
         break;
     case RM_PROGRESS_STATE_PREPROCESS:
         self->percent = 2.0;
-        self->text_len = g_snprintf(
-                             self->text_buf, sizeof(self->text_buf),
-                             "%s (%s %s%"LLU"%s / %s %s%"LLU"%s %s)",
-                             _("Preprocessing"),
-                             _("reduces files to"),
-                             MAYBE_GREEN(out, session), session->total_filtered_files, MAYBE_RESET(out, session),
-                             _("found"),
-                             MAYBE_RED(out, session), session->other_lint_cnt, MAYBE_RESET(out, session),
-                             _("other lint")
-                         );
+        self->text_len =
+            g_snprintf(self->text_buf, sizeof(self->text_buf),
+                       "%s (%s %s%" LLU "%s / %s %s%" LLU "%s %s)", _("Preprocessing"),
+                       _("reduces files to"), MAYBE_GREEN(out, session),
+                       session->total_filtered_files, MAYBE_RESET(out, session),
+                       _("found"), MAYBE_RED(out, session), session->other_lint_cnt,
+                       MAYBE_RESET(out, session), _("other lint"));
         break;
     case RM_PROGRESS_STATE_SHREDDER:
-        self->percent = 1.0 - (
-                            (gdouble)session->shred_bytes_remaining /
-                            (gdouble)session->shred_bytes_after_preprocess
-                        );
-        rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf, sizeof(num_buf));
+        self->percent = 1.0 - ((gdouble)session->shred_bytes_remaining /
+                               (gdouble)session->shred_bytes_after_preprocess);
+        rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf,
+                                       sizeof(num_buf));
         self->text_len = g_snprintf(
-                             self->text_buf, sizeof(self->text_buf),
-                             "%s (%s%"LLU"%s %s %s%"LLU"%s %s; %s%s%s %s %s%"LLU"%s %s)",
-                             _("Matching"),
-                             MAYBE_RED(out, session), session->dup_counter, MAYBE_RESET(out, session),
-                             _("dupes of"),
-                             MAYBE_YELLOW(out, session), session->dup_group_counter, MAYBE_RESET(out, session),
-                             _("originals"),
-                             MAYBE_GREEN(out, session), num_buf, MAYBE_RESET(out, session),
-                             _("to scan in"),
-                             MAYBE_GREEN(out, session), session->shred_files_remaining, MAYBE_RESET(out, session),
-                             _("files")
-                         );
+            self->text_buf, sizeof(self->text_buf),
+            "%s (%s%" LLU "%s %s %s%" LLU "%s %s; %s%s%s %s %s%" LLU "%s %s)",
+            _("Matching"), MAYBE_RED(out, session), session->dup_counter,
+            MAYBE_RESET(out, session), _("dupes of"), MAYBE_YELLOW(out, session),
+            session->dup_group_counter, MAYBE_RESET(out, session), _("originals"),
+            MAYBE_GREEN(out, session), num_buf, MAYBE_RESET(out, session),
+            _("to scan in"), MAYBE_GREEN(out, session), session->shred_files_remaining,
+            MAYBE_RESET(out, session), _("files"));
         break;
     case RM_PROGRESS_STATE_MERGE:
         self->percent = 1.0;
@@ -164,51 +154,44 @@ typedef enum RmProgressBarGlyph {
     PROGRESS_RIGHT_BRACKET
 } RmProgressBarGlyph;
 
-static const char *PROGRESS_FANCY_UNICODE_TABLE[] = {
-    [PROGRESS_ARROW] = "➤",
-    [PROGRESS_TICK_LOW] = "□",
-    [PROGRESS_TICK_HIGH] = "▢",
-    [PROGRESS_TICK_SPACE] = " ",
-    [PROGRESS_EMPTY] = "⌿",
-    [PROGRESS_FULL] = "—",
-    [PROGRESS_LEFT_BRACKET] = "⦃",
-    [PROGRESS_RIGHT_BRACKET] = "⦄"
-};
+static const char *PROGRESS_FANCY_UNICODE_TABLE[] = {[PROGRESS_ARROW] = "➤",
+                                                     [PROGRESS_TICK_LOW] = "□",
+                                                     [PROGRESS_TICK_HIGH] = "▢",
+                                                     [PROGRESS_TICK_SPACE] = " ",
+                                                     [PROGRESS_EMPTY] = "⌿",
+                                                     [PROGRESS_FULL] = "—",
+                                                     [PROGRESS_LEFT_BRACKET] = "⦃",
+                                                     [PROGRESS_RIGHT_BRACKET] = "⦄"};
 
-static const char *PROGRESS_FANCY_ASCII_TABLE[] = {
-    [PROGRESS_ARROW] = ">",
-    [PROGRESS_TICK_LOW] = "o",
-    [PROGRESS_TICK_HIGH] = "O",
-    [PROGRESS_TICK_SPACE] = " ",
-    [PROGRESS_EMPTY] = "/",
-    [PROGRESS_FULL] = "_",
-    [PROGRESS_LEFT_BRACKET] = "{",
-    [PROGRESS_RIGHT_BRACKET] = "}"
-};
+static const char *PROGRESS_FANCY_ASCII_TABLE[] = {[PROGRESS_ARROW] = ">",
+                                                   [PROGRESS_TICK_LOW] = "o",
+                                                   [PROGRESS_TICK_HIGH] = "O",
+                                                   [PROGRESS_TICK_SPACE] = " ",
+                                                   [PROGRESS_EMPTY] = "/",
+                                                   [PROGRESS_FULL] = "_",
+                                                   [PROGRESS_LEFT_BRACKET] = "{",
+                                                   [PROGRESS_RIGHT_BRACKET] = "}"};
 
-static const char *PROGRESS_PLAIN_UNICODE_TABLE[] = {
-    [PROGRESS_ARROW] = "▒",
-    [PROGRESS_TICK_LOW] = "░",
-    [PROGRESS_TICK_HIGH] = "▒",
-    [PROGRESS_TICK_SPACE] = "░",
-    [PROGRESS_EMPTY] = "░",
-    [PROGRESS_FULL] = "▓",
-    [PROGRESS_LEFT_BRACKET] = "▕",
-    [PROGRESS_RIGHT_BRACKET] = "▏"
-};
+static const char *PROGRESS_PLAIN_UNICODE_TABLE[] = {[PROGRESS_ARROW] = "▒",
+                                                     [PROGRESS_TICK_LOW] = "░",
+                                                     [PROGRESS_TICK_HIGH] = "▒",
+                                                     [PROGRESS_TICK_SPACE] = "░",
+                                                     [PROGRESS_EMPTY] = "░",
+                                                     [PROGRESS_FULL] = "▓",
+                                                     [PROGRESS_LEFT_BRACKET] = "▕",
+                                                     [PROGRESS_RIGHT_BRACKET] = "▏"};
 
-static const char *PROGRESS_PLAIN_ASCII_TABLE[] = {
-    [PROGRESS_ARROW] = "_",
-    [PROGRESS_TICK_LOW] = " ",
-    [PROGRESS_TICK_HIGH] = "_",
-    [PROGRESS_TICK_SPACE] = " ",
-    [PROGRESS_EMPTY] = "\\",
-    [PROGRESS_FULL] = "/",
-    [PROGRESS_LEFT_BRACKET] = "|",
-    [PROGRESS_RIGHT_BRACKET] = "|"
-};
+static const char *PROGRESS_PLAIN_ASCII_TABLE[] = {[PROGRESS_ARROW] = "_",
+                                                   [PROGRESS_TICK_LOW] = " ",
+                                                   [PROGRESS_TICK_HIGH] = "_",
+                                                   [PROGRESS_TICK_SPACE] = " ",
+                                                   [PROGRESS_EMPTY] = "\\",
+                                                   [PROGRESS_FULL] = "/",
+                                                   [PROGRESS_LEFT_BRACKET] = "|",
+                                                   [PROGRESS_RIGHT_BRACKET] = "|"};
 
-static const char *rm_fmt_progressbar_get_glyph(RmFmtHandlerProgress *self, RmProgressBarGlyph type) {
+static const char *rm_fmt_progressbar_get_glyph(RmFmtHandlerProgress *self,
+                                                RmProgressBarGlyph type) {
     if(self->plain && self->use_unicode_glyphs) {
         return PROGRESS_PLAIN_UNICODE_TABLE[type];
     } else if(self->plain) {
@@ -220,18 +203,15 @@ static const char *rm_fmt_progressbar_get_glyph(RmFmtHandlerProgress *self, RmPr
     }
 }
 
-static void rm_fmt_progressbar_print_glyph(
-    FILE *out, RmSession *session, RmFmtHandlerProgress *self, RmProgressBarGlyph type, const char *color
-) {
-    fprintf(
-        out, "%s%s%s", 
-        MAYBE_COLOR(out, session, color),
-        rm_fmt_progressbar_get_glyph(self, type),
-        MAYBE_COLOR(out, session, RESET)
-    );
+static void rm_fmt_progressbar_print_glyph(FILE *out, RmSession *session,
+                                           RmFmtHandlerProgress *self,
+                                           RmProgressBarGlyph type, const char *color) {
+    fprintf(out, "%s%s%s", MAYBE_COLOR(out, session, color),
+            rm_fmt_progressbar_get_glyph(self, type), MAYBE_COLOR(out, session, RESET));
 }
 
-static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *self, int width, FILE *out) {
+static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *self,
+                                      int width, FILE *out) {
     int cells = width * self->percent;
 
     /* true when we do not know when 100% is reached.
@@ -245,15 +225,19 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
         if(i < cells) {
             if(is_unknown) {
                 if((int)self->last_unknown_pos % 4 == i % 4) {
-                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_LOW, BLUE);
+                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_LOW,
+                                                   BLUE);
                 } else if((int)self->last_unknown_pos % 2 == i % 2) {
-                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_HIGH, YELLOW);
+                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_HIGH,
+                                                   YELLOW);
                 } else {
-                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_SPACE, GREEN);
+                    rm_fmt_progressbar_print_glyph(out, session, self,
+                                                   PROGRESS_TICK_SPACE, GREEN);
                 }
             } else {
                 const char *color = (self->percent > 1.01) ? BLUE : GREEN;
-                RmProgressBarGlyph glyph = (self->percent > 1.01) ? PROGRESS_EMPTY : PROGRESS_FULL;
+                RmProgressBarGlyph glyph =
+                    (self->percent > 1.01) ? PROGRESS_EMPTY : PROGRESS_FULL;
                 rm_fmt_progressbar_print_glyph(out, session, self, glyph, color);
             }
         } else if(i == cells) {
@@ -268,22 +252,19 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     self->last_unknown_pos = fmod(self->last_unknown_pos + 0.005, width - 2);
 }
 
-static void rm_fmt_prog(
-    RmSession *session,
-    RmFmtHandler *parent,
-    FILE *out,
-    RmFmtProgressState state
-) {
-    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *) parent;
+static void rm_fmt_prog(RmSession *session,
+                        RmFmtHandler *parent,
+                        FILE *out,
+                        RmFmtProgressState state) {
+    RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
     if(state == RM_PROGRESS_STATE_SUMMARY) {
         return;
     }
 
     if(state == RM_PROGRESS_STATE_INIT) {
         /* Do initializiation here */
-        const char *update_interval_str = rm_fmt_get_config_value(
-                                              session->formats, "progressbar", "update_interval"
-                                          );
+        const char *update_interval_str =
+            rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
         self->plain = true;
         if(rm_fmt_get_config_value(session->formats, "progressbar", "fancy") != NULL) {
@@ -321,7 +302,8 @@ static void rm_fmt_prog(
     }
 
     if(state == RM_PROGRESS_STATE_SHREDDER) {
-        self->total_lint_bytes = MAX(self->total_lint_bytes, session->shred_bytes_remaining);
+        self->total_lint_bytes =
+            MAX(self->total_lint_bytes, session->shred_bytes_remaining);
     }
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
@@ -332,7 +314,15 @@ static void rm_fmt_prog(
         }
         self->update_counter = 0;
     }
-    
+
+    if(state == RM_PROGRESS_STATE_TRAVERSE && session->traverse_finished) {
+        self->update_counter = 0;
+    }
+
+    if(state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished) {
+        self->update_counter = 0;
+    }
+
     if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
         rm_log_warning_line(_("Cannot figure out terminal width."));
     }
@@ -377,7 +367,6 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .update_counter = 0,
     .use_unicode_glyphs = true,
     .plain = true,
-    .last_state = RM_PROGRESS_STATE_INIT
-};
+    .last_state = RM_PROGRESS_STATE_INIT};
 
-RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *) &PROGRESS_HANDLER_IMPL;
+RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *)&PROGRESS_HANDLER_IMPL;

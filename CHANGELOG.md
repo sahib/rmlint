@@ -4,7 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.1.0 Malnourished Molly] [unreleased]
+## [2.2.0 Dreary Dropbear] [unreleased]
+
+### Fixed
+
+- Make rmlint usable for very hight amounts of files (works for 5M):
+  See also: https://github.com/sahib/rmlint/issues/109
+  A compression path trie is used as data structures for paths now (credits to Daniel)
+- Problems and crashes on 32bit with large files and normal files.
+- Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
+
+### Added
+
+- A primitive benchmark suite.
+- A GUI sketch that can be shipped along rmlint.
+
+### Changed
+
+- Most internal filesystems like `proc` are ignored now.
+
+## [2.1.0 Malnourished Molly] [beta-release]
 
 ### Fixed
 
@@ -20,6 +39,10 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Added
 
+- ``--with-metadata-cache`` makes ``rmlint`` less memory hungry by storing
+  it's paths in a sqlite3 database and selecting them when needed.
+- ``--without-fiemap`` disables the ``fiemap`` optimization when focus is on
+  memory footprint.
 - ``--perms`` can check if a file should be readable/writable or executable.
 - Json output is enabled by default and is written to ``rmlint.json``.
 - ``--partial-hidden`` does only see hidden files in duplicate directories.
@@ -32,6 +55,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Changed
 
+- Optional dependency for *sqlite3* for ``--with-metadata-cache``.
 - ``--hardlinked`` is enabled by default.
 - Support -n (dry-run) for rmlint.sh; require user input on ask.
 - Default digest is now *sha1* instead of *spooky*.

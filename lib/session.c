@@ -42,13 +42,18 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->formats = rm_fmt_open(session);
 
     session->verbosity_count = 2;
-    session->paranoia_count  = 0;
-    session->output_cnt[0]   = -1;
-    session->output_cnt[1]   = -1;
+    session->paranoia_count = 0;
+    session->output_cnt[0] = -1;
+    session->output_cnt[1] = -1;
 
     session->offsets_read = 0;
     session->offset_fragments = 0;
     session->offset_fails = 0;
+}
+
+static gboolean free_node(GNode *node, _U gpointer data) {
+    g_free(node->data);
+    return FALSE;
 }
 
 void rm_session_clear(RmSession *session) {
@@ -56,7 +61,11 @@ void rm_session_clear(RmSession *session) {
 
     /* Free mem */
     if(cfg->paths) {
-        g_strfreev(cfg->paths);
+        if(cfg->use_meta_cache) {
+            g_free(cfg->paths);
+        } else {
+            g_strfreev(cfg->paths);
+        }
     }
 
     g_timer_destroy(session->timer);
@@ -75,11 +84,25 @@ void rm_session_clear(RmSession *session) {
         g_free((char *)iter->data);
     }
 
+    if(session->meta_cache) {
+        GError *error = NULL;
+        rm_swap_table_close(session->meta_cache, &error);
+
+        if(error != NULL) {
+            rm_log_error_line(_("Cannot close tmp cache: %s\n"), error->message);
+            g_error_free(error);
+        }
+    }
+
     g_queue_clear(&session->cache_list);
 
     g_free(cfg->joined_argv);
     g_free(cfg->is_prefd);
     g_free(cfg->iwd);
+
+    g_node_traverse(cfg->folder_tree_root, G_IN_ORDER, G_TRAVERSE_ALL, -1,
+                    (GNodeTraverseFunc)free_node, NULL);
+    g_node_destroy(cfg->folder_tree_root);
 }
 
 void rm_session_abort(RmSession *session) {

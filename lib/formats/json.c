@@ -52,72 +52,71 @@ static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {
 }
 
 static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
-    fprintf(out, "\"%s\": %"LLU"", key, value);
+    fprintf(out, "\"%s\": %" LLU "", key, value);
 }
 
-static int rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
-    if(!g_utf8_validate(string, -1, NULL)) {
-        return -1;
-    }
-
+static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
     /* More information here:
      *
      * http://stackoverflow.com/questions/4901133/json-and-escaping-characters/4908960#4908960
      */
 
-    int n = g_utf8_strlen(string, -1);
-    int max = fixed_len;
+    int n = strlen(string);
+    char *safe_iter = fixed;
 
-    for(int i = 0; i < n && max; ++i) {
-        char *off = g_utf8_offset_to_pointer(string, i);
-        char *text = NULL;
+    for(int i = 0; i < n && (size_t)(safe_iter - fixed) < fixed_len; ++i) {
+        unsigned char *curr = (unsigned char *)&string[i];
 
-        switch(g_utf8_get_char(off)) {
-        case '\\':
-            text = "\\\\";
-            break;
-        case '\"':
-            text = "\\\"";
-            break;
-        case '\b':
-            text = "\\b";
-            break;
-        case '\f':
-            text = "\\f";
-            break;
-        case '\n':
-            text = "\\n";
-            break;
-        case '\r':
-            text = "\\r";
-            break;
-        case '\t':
-            text = "\\t";
-            break;
-        default:
-            g_utf8_strncpy(fixed, off, 1);
-
-            char *new_fixed = g_utf8_find_next_char(fixed, NULL);
-            max -= (new_fixed - fixed);
-            fixed = new_fixed;
-            break;
+        char text[20];
+        memset(text, 0, sizeof(text));
+        
+        if(*curr ==  '"' || *curr == '\\') {
+            /* Printable, but needs to be escaped */
+            text[0] = '\\';
+            text[1] = *curr;
+        } else if ((*curr > 0 && *curr < 0x1f) || *curr >= 0x7f) {
+            /* Something unprintable */
+            switch(*curr) {
+            case '\b':
+                g_snprintf(text, sizeof(text), "\\b");
+                break;
+            case '\f':
+                g_snprintf(text, sizeof(text), "\\f");
+                break;
+            case '\n':
+                g_snprintf(text, sizeof(text), "\\n");
+                break;
+            case '\r':
+                g_snprintf(text, sizeof(text), "\\r");
+                break;
+            case '\t':
+                g_snprintf(text, sizeof(text), "\\t");
+                break;
+            default:
+                g_snprintf(text, sizeof(text), "\\u00%02x", (guint)*curr);
+                break;
+            }
+        } else {
+            /* Take it unmodified */
+            text[0] = *curr;
         }
 
-        while(text && *text) {
-            *fixed++ = *text++;
-            max--;
-        }
+        safe_iter = g_stpcpy(safe_iter, text);
     }
 
-    return fixed_len - max;
+    return (size_t)(safe_iter - fixed) < fixed_len;
 }
+
 
 static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {
     char safe_value[PATH_MAX + 4 + 1];
     memset(safe_value, 0, sizeof(safe_value));
 
-    if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value)) >= 0) {
-        fprintf(out, " \"%s\": \"%s\"", key, safe_value);
+    if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value))) {
+        fprintf(out, "\"%s\": \"%s\"", key, safe_value);
+    } else {
+        /* This should never happen but give at least means of debugging */
+        fprintf(out, "\"%s\": \"<BROKEN PATH>\"", key);
     }
 }
 
@@ -158,7 +157,8 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "args", session->cfg->joined_argv);
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key(out, "checksum_type", rm_digest_type_to_string(session->cfg->checksum_type));
+            rm_fmt_json_key(out, "checksum_type",
+                            rm_digest_type_to_string(session->cfg->checksum_type));
             if(session->hash_seed1 && session->hash_seed2) {
                 rm_fmt_json_sep(self, out);
                 rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
@@ -202,11 +202,8 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     fprintf(out, "]\n");
 }
 
-static void rm_fmt_elem(
-    _U RmSession *session,
-    _U RmFmtHandler *parent,
-    FILE *out, RmFile *file
-) {
+static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,
+                        RmFile *file) {
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
     checksum_str[sizeof(checksum_str) - 1] = 0;
@@ -227,7 +224,8 @@ static void rm_fmt_elem(
             rm_fmt_json_sep(self, out);
         }
 
-        rm_fmt_json_key_unsafe(out, "path", file->path);
+        RM_DEFINE_PATH(file);
+        rm_fmt_json_key_unsafe(out, "path", file_path);
         rm_fmt_json_sep(self, out);
         if(file->lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {
             rm_fmt_json_key_int(out, "size", file->file_size);
@@ -240,12 +238,11 @@ static void rm_fmt_elem(
             rm_fmt_json_sep(self, out);
 
             if(session->cfg->find_hardlinked_dupes) {
-                RmFile *hardlink_head = g_hash_table_lookup(
-                        session->tables->node_table, file
-                );
+                RmFile *hardlink_head = file->hardlinks.hardlink_head;
 
-                if(hardlink_head != file) {
-                    rm_fmt_json_key_int(out, "hardlink_of", GPOINTER_TO_UINT(hardlink_head));
+                if(hardlink_head && hardlink_head != file) {
+                    rm_fmt_json_key_int(out, "hardlink_of",
+                                        GPOINTER_TO_UINT(hardlink_head));
                     rm_fmt_json_sep(self, out);
                 }
             }
@@ -266,7 +263,6 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .foot = rm_fmt_foot,
         .valid_keys = {"no_header", "no_footer", "oneline", NULL},
     },
-    .pretty = true
-};
+    .pretty = true};
 
-RmFmtHandler *JSON_HANDLER = (RmFmtHandler *) &JSON_HANDLER_IMPL;
+RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;

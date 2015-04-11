@@ -17,6 +17,7 @@
 #define HAVE_SSE42         ({HAVE_SSE42})
 #define HAVE_SYSBLOCK      ({HAVE_SYSBLOCK})
 #define HAVE_SYSCTL        ({HAVE_SYSCTL})
+#define HAVE_SQLITE3       ({HAVE_SQLITE3})
 
 #define RM_DEFAULT_DIGEST RM_DIGEST_SHA1
 #define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
@@ -88,25 +89,39 @@
 typedef guint64 RmOff;
 
 /* Stupid macros to make printing error lines easier */
-#define rm_log_error_line(...) \
-    rm_log_error(RED);         \
-    rm_log_error(_("ERROR"));  \
-    rm_log_error(": "RESET);   \
-    rm_log_error(__VA_ARGS__); \
-    rm_log_error("\n");        \
+#define rm_log_error_prefix() \
+    rm_log_error(RED);        \
+    rm_log_error(_("ERROR")); \
+    rm_log_error(": "RESET);  \
 
-#define rm_log_warning_line(...)  \
+#define rm_log_warning_prefix()   \
     rm_log_warning(YELLOW);       \
     rm_log_warning(_("WARNING")); \
     rm_log_warning(": "RESET);    \
-    rm_log_warning(__VA_ARGS__);  \
-    rm_log_warning("\n");         \
 
-#define rm_log_info_line(...)     \
-    rm_log_warning(GREEN);        \
-    rm_log_warning(_("INFO"));    \
-    rm_log_warning(": "RESET);    \
-    rm_log_warning(__VA_ARGS__);  \
-    rm_log_warning("\n");         \
+#define rm_log_info_prefix()   \
+    rm_log_warning(GREEN);     \
+    rm_log_warning(_("INFO")); \
+    rm_log_warning(": "RESET); \
+
+///////////////
+
+#define rm_log_error_line(...) \
+    rm_log_error_prefix()      \
+    rm_log_error(__VA_ARGS__); \
+    rm_log_error("\n");        \
+
+#define rm_log_warning_line(...) \
+    rm_log_warning_prefix()      \
+    rm_log_warning(__VA_ARGS__); \
+    rm_log_warning("\n");        \
+
+#define rm_log_info_line(...)    \
+    rm_log_info_prefix()         \
+    rm_log_warning(__VA_ARGS__); \
+    rm_log_warning("\n");        \
+
+/* Domain for reporting errors. Needed by GOptions */
+#define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))
 
 #endif

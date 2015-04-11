@@ -27,10 +27,7 @@
 #include "../formats.h"
 
 /* You guessed it: it does nothing. */
-typedef struct RmFmtHandlerNull {
-    RmFmtHandler parent;
-} RmFmtHandlerNull;
-
+typedef struct RmFmtHandlerNull { RmFmtHandler parent; } RmFmtHandlerNull;
 
 static RmFmtHandlerNull NULL_HANDLER_IMPL = {
     /* Initialize parent */
@@ -45,4 +42,4 @@ static RmFmtHandlerNull NULL_HANDLER_IMPL = {
     },
 };
 
-RmFmtHandler *NULL_HANDLER = (RmFmtHandler *) &NULL_HANDLER_IMPL;
+RmFmtHandler *NULL_HANDLER = (RmFmtHandler *)&NULL_HANDLER_IMPL;

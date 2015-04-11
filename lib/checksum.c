@@ -84,43 +84,37 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 }
 
 const char *rm_digest_type_to_string(RmDigestType type) {
-    static const char *names[] = {
-        [RM_DIGEST_UNKNOWN]    = "unknown",
-        [RM_DIGEST_MURMUR]     = "murmur",
-        [RM_DIGEST_SPOOKY]     = "spooky",
-        [RM_DIGEST_SPOOKY32]   = "spooky32",
-        [RM_DIGEST_SPOOKY64]   = "spooky64",
-        [RM_DIGEST_CITY]       = "city",
-        [RM_DIGEST_MD5]        = "md5",
-        [RM_DIGEST_SHA1]       = "sha1",
-        [RM_DIGEST_SHA256]     = "sha256",
-        [RM_DIGEST_SHA512]     = "sha512",
-        [RM_DIGEST_MURMUR256]  = "murmur256",
-        [RM_DIGEST_CITY256]    = "city256",
-        [RM_DIGEST_BASTARD]    = "bastard",
-        [RM_DIGEST_MURMUR512]  = "murmur512",
-        [RM_DIGEST_CITY512]    = "city512",
-        [RM_DIGEST_EXT]        = "ext",
-        [RM_DIGEST_CUMULATIVE] = "cumulative",
-        [RM_DIGEST_PARANOID]   = "paranoid"
-    };
+    static const char *names[] =
+        {[RM_DIGEST_UNKNOWN] = "unknown",       [RM_DIGEST_MURMUR] = "murmur",
+         [RM_DIGEST_SPOOKY] = "spooky",         [RM_DIGEST_SPOOKY32] = "spooky32",
+         [RM_DIGEST_SPOOKY64] = "spooky64",     [RM_DIGEST_CITY] = "city",
+         [RM_DIGEST_MD5] = "md5",               [RM_DIGEST_SHA1] = "sha1",
+         [RM_DIGEST_SHA256] = "sha256",         [RM_DIGEST_SHA512] = "sha512",
+         [RM_DIGEST_MURMUR256] = "murmur256",   [RM_DIGEST_CITY256] = "city256",
+         [RM_DIGEST_BASTARD] = "bastard",       [RM_DIGEST_MURMUR512] = "murmur512",
+         [RM_DIGEST_CITY512] = "city512",       [RM_DIGEST_EXT] = "ext",
+         [RM_DIGEST_CUMULATIVE] = "cumulative", [RM_DIGEST_PARANOID] = "paranoid"};
 
     return names[MIN(type, sizeof(names) / sizeof(names[0]))];
 }
 
 RmOff rm_digest_paranoia_bytes(void) {
     return 16 * 1024 * 1024;
-    /* this is big enough buffer size to make seek time fairly insignificant relative to sequential read time,
+    /* this is big enough buffer size to make seek time fairly insignificant relative to
+     * sequential read time,
      * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
 }
 
-#define ADD_SEED(digest, seed) {                                                           \
-    if(seed) {                                                                             \
-        g_checksum_update(digest->glib_checksum, (const guchar *)&seed, sizeof(RmOff));    \
-    }                                                                                      \
-}
+#define ADD_SEED(digest, seed)                                              \
+    {                                                                       \
+        if(seed) {                                                          \
+            g_checksum_update(digest->glib_checksum, (const guchar *)&seed, \
+                              sizeof(RmOff));                               \
+        }                                                                   \
+    }
 
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
+                        RmOff paranoid_size) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -195,25 +189,23 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
     /* starting values to let us generate up to 4 different hashes in parallel with
      * different starting seeds:
      * */
-    static const RmOff seeds[4] = {
-        0x0000000000000000,
-        0xf0f0f0f0f0f0f0f0,
-        0x3333333333333333,
-        0xaaaaaaaaaaaaaaaa
-    };
+    static const RmOff seeds[4] = {0x0000000000000000, 0xf0f0f0f0f0f0f0f0,
+                                   0x3333333333333333, 0xaaaaaaaaaaaaaaaa};
 
     if(digest->bytes > 0) {
         const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);
 
         /* checksum type - allocate memory and initialise */
         digest->checksum = g_slice_alloc0(digest->bytes);
-        for (gsize block = 0; block < (digest->bytes / 16); block++) {
-            digest->checksum[block].first = seeds[block % n_seeds] ^ digest->initial_seed1;
-            digest->checksum[block].second = seeds[block % n_seeds] ^ digest->initial_seed2;
+        for(gsize block = 0; block < (digest->bytes / 16); block++) {
+            digest->checksum[block].first =
+                seeds[block % n_seeds] ^ digest->initial_seed1;
+            digest->checksum[block].second =
+                seeds[block % n_seeds] ^ digest->initial_seed2;
         }
     }
 
-    if (digest->type == RM_DIGEST_BASTARD) {
+    if(digest->type == RM_DIGEST_BASTARD) {
         /* bastard type *always* has *pure* murmur hash for first checksum
          * and seeded city for second checksum */
         digest->checksum[0].first = digest->checksum[0].second = 0;
@@ -274,11 +266,11 @@ void rm_digest_free(RmDigest *digest) {
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     switch(digest->type) {
     case RM_DIGEST_EXT:
-        /* Data is assumed to be a hex representation of a cchecksum.
-         * Needs to be compressed in pure memory first.
-         *
-         * Checksum is not updated but rather overwritten.
-         * */
+/* Data is assumed to be a hex representation of a cchecksum.
+ * Needs to be compressed in pure memory first.
+ *
+ * Checksum is not updated but rather overwritten.
+ * */
 #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
         g_assert(data);
@@ -287,7 +279,8 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         digest->checksum = g_slice_alloc0(digest->bytes);
 
         for(unsigned i = 0; i < digest->bytes; ++i) {
-            ((guint8 *)digest->checksum)[i] = (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
+            ((guint8 *)digest->checksum)[i] =
+                (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
         }
 
         break;
@@ -304,19 +297,18 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         digest->checksum[0].first = spooky_hash64(data, size, digest->checksum[0].first);
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_hash128(data, size, &digest->checksum[0].first, &digest->checksum[0].second);
+        spooky_hash128(data, size, &digest->checksum[0].first,
+                       &digest->checksum[0].second);
         break;
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_MURMUR:
-        for (guint8 block = 0; block < ( digest->bytes / 16 ); block++) {
+        for(guint8 block = 0; block < (digest->bytes / 16); block++) {
 #if RM_PLATFORM_32
-            MurmurHash3_x86_128(data, size,
-                                (uint32_t)digest->checksum[block].first,
-                                &digest->checksum[block]); //&
+            MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[block].first,
+                                &digest->checksum[block]);  //&
 #elif RM_PLATFORM_64
-            MurmurHash3_x64_128(data, size,
-                                (uint32_t)digest->checksum[block].first,
+            MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum[block].first,
                                 &digest->checksum[block]);
 #else
 #error "Probably not a good idea to compile rmlint on 16bit."
@@ -326,7 +318,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     case RM_DIGEST_CITY:
     case RM_DIGEST_CITY256:
     case RM_DIGEST_CITY512:
-        for (guint8 block = 0; block < (digest->bytes / 16); block++) {
+        for(guint8 block = 0; block < (digest->bytes / 16); block++) {
             /* Opt out for the more optimized version.
             * This needs the crc command of sse4.2
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
@@ -341,13 +333,14 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         }
         break;
     case RM_DIGEST_BASTARD:
-        MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[0].first, &digest->checksum[0]);
+        MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[0].first,
+                            &digest->checksum[0]);
 
         uint128 old = {digest->checksum[1].first, digest->checksum[1].second};
 #if RM_PLATFORM_64 && HAVE_SSE42
         old = CityHashCrc128WithSeed((const char *)data, size, old);
 #else
-        old = CityHash128WithSeed((const char *) data, size, old);
+        old = CityHash128WithSeed((const char *)data, size, old);
 #endif
         memcpy(&digest->checksum[1], &old, sizeof(uint128));
         break;
@@ -364,8 +357,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             hash *= 0x100000001b3;
             ((guint8 *)digest->checksum)[i] += hash;
         }
-    }
-    break;
+    } break;
     case RM_DIGEST_PARANOID:
         g_assert(size + digest->paranoid_offset <= digest->bytes);
         memcpy((char *)digest->checksum + digest->paranoid_offset, data, size);
@@ -405,9 +397,8 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
-        self = rm_digest_new(
-                   digest->type, digest->initial_seed1, digest->initial_seed2, digest->bytes
-               );
+        self = rm_digest_new(digest->type, digest->initial_seed1, digest->initial_seed2,
+                             digest->bytes);
 
         if(self->type == RM_DIGEST_PARANOID) {
             self->paranoid_offset = digest->paranoid_offset;

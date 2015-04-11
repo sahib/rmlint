@@ -39,16 +39,15 @@ static char *remove_color_escapes(char *message) {
         }
     }
 
-    if(dst) *dst = 0;
+    if(dst)
+        *dst = 0;
     return message;
 }
 
-static void logging_callback(
-    _U const gchar *log_domain,
-    GLogLevelFlags log_level,
-    const gchar *message,
-    gpointer user_data) {
-
+static void logging_callback(_U const gchar *log_domain,
+                             GLogLevelFlags log_level,
+                             const gchar *message,
+                             gpointer user_data) {
     RmSession *session = user_data;
     if(session->cfg->verbosity >= log_level) {
         if(!session->cfg->with_stderr_color) {
@@ -67,11 +66,11 @@ static void signal_handler(int signum) {
     case SIGINT:
         if(CTRLC_COUNTER++ == 0) {
             rm_session_abort((RmSession *)SESSION_POINTER);
-            rm_log_warning(GREEN"\nINFO: "RESET);
+            rm_log_warning(GREEN "\nINFO: " RESET);
             rm_log_warning(_("Received Interrupt, stopping..."));
             rm_log_warning("\n");
         } else {
-            rm_log_warning(GREEN"\nINFO: "RESET);
+            rm_log_warning(GREEN "\nINFO: " RESET);
             rm_log_warning(_("Received second Interrupt, stopping hard."));
             rm_log_warning("\n");
             rm_session_clear((RmSession *)SESSION_POINTER);
@@ -81,7 +80,8 @@ static void signal_handler(int signum) {
     case SIGFPE:
     case SIGABRT:
     case SIGSEGV:
-        rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"), g_strsignal(signum));
+        rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
+                          g_strsignal(signum));
         rm_log_error_line(_("Please file a bug report (See rmlint -h)"));
     default:
         exit(EXIT_FAILURE);
@@ -92,7 +92,7 @@ static void signal_handler(int signum) {
 static void i18n_init(void) {
 #if HAVE_LIBINTL
     /* Tell gettext where to search for .mo files */
-    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX"/share/locale");
+    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX "/share/locale");
     bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
 
     /* Make printing umlauts work */
@@ -128,9 +128,9 @@ int main(int argc, const char **argv) {
     sa.sa_flags = 0;
     sa.sa_handler = signal_handler;
 
-    sigaction(SIGINT,  &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
     sigaction(SIGSEGV, &sa, NULL);
-    sigaction(SIGFPE,  &sa, NULL);
+    sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
 
     /* Parse commandline */

@@ -29,7 +29,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 typedef struct RmFmtHandlerFdupes {
     /* must be first */
     RmFmtHandler parent;
@@ -47,7 +46,8 @@ typedef struct RmFmtHandlerFdupes {
     bool use_same_line;
 } RmFmtHandlerFdupes;
 
-static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out, RmFile *file) {
+static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out,
+                        RmFile *file) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
     char line[512 + 32];
@@ -58,32 +58,23 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
         return;
     }
 
+    RM_DEFINE_PATH(file);
+
     switch(file->lint_type) {
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         if(self->omit_first_line && file->is_original) {
             strcpy(line, "\n");
         } else {
-            g_snprintf(
-                line, sizeof(line),
-                "%s%s%s%s%c",
-                (file->is_original) ? "\n" : "",
-                (file->is_original) ? MAYBE_GREEN(out, session) : "",
-                file->path,
-                (file->is_original) ? MAYBE_RESET(out, session) : "",
-                (self->use_same_line) ? ' ' : '\n'
-            );
+            g_snprintf(line, sizeof(line), "%s%s%s%s%c", (file->is_original) ? "\n" : "",
+                       (file->is_original) ? MAYBE_GREEN(out, session) : "", file_path,
+                       (file->is_original) ? MAYBE_RESET(out, session) : "",
+                       (self->use_same_line) ? ' ' : '\n');
         }
         break;
     default:
-        g_snprintf(
-            line, sizeof(line),
-            "%s%s%s%c",
-            MAYBE_BLUE(out, session),
-            file->path,
-            MAYBE_RESET(out, session),
-            (self->use_same_line) ? ' ' : '\n'
-        );
+        g_snprintf(line, sizeof(line), "%s%s%s%c", MAYBE_BLUE(out, session), file_path,
+                   MAYBE_RESET(out, session), (self->use_same_line) ? ' ' : '\n');
         break;
     }
 
@@ -93,23 +84,20 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
     }
 
     /* remember the line (use GStringChunk for effiecient storage) */
-    g_queue_push_tail(
-        self->text_lines,
-        g_string_chunk_insert(self->text_chunks, line)
-    );
+    g_queue_push_tail(self->text_lines, g_string_chunk_insert(self->text_chunks, line));
 }
 
-static void rm_fmt_prog(
-    RmSession *session,
-    _U RmFmtHandler *parent,
-    _U FILE *out,
-    RmFmtProgressState state
-) {
+static void rm_fmt_prog(RmSession *session,
+                        _U RmFmtHandler *parent,
+                        _U FILE *out,
+                        RmFmtProgressState state) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
     if(state == RM_PROGRESS_STATE_INIT) {
-        self->omit_first_line = (rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL);
-        self->use_same_line = (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
+        self->omit_first_line =
+            (rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL);
+        self->use_same_line =
+            (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
     }
 
     /* We do not respect `out` here; just use stderr and stdout directly.
@@ -154,4 +142,4 @@ static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
 
 };
 
-RmFmtHandler *FDUPES_HANDLER = (RmFmtHandler *) &FDUPES_HANDLER_IMPL;
+RmFmtHandler *FDUPES_HANDLER = (RmFmtHandler *)&FDUPES_HANDLER_IMPL;
