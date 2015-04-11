@@ -1740,10 +1740,13 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
     g_mutex_lock(&tag->group_lock);
     {
-        worth_waiting = device->is_rotational
-            && file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size
-            && rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT
-            && (file->status == RM_FILE_STATE_NORMAL);
+        worth_waiting = device->main->session->cfg->shred_always_wait
+            || ( device->is_rotational
+                && file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size
+                && rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT
+                && (file->status == RM_FILE_STATE_NORMAL)
+                && !device->main->session->cfg->shred_never_wait
+            );
     }
     g_mutex_unlock(&tag->group_lock);
 

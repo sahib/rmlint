@@ -1126,6 +1126,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Use fiemap(2) to optimize disk access patterns", NULL},
         {"without-fiemap", 0, DISABLE | HIDDEN, G_OPTION_ARG_NONE, &cfg->build_fiemap,
          "Do not use fiemap(2) in order to save memory", NULL},
+        {"shred-always-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_always_wait,
+         "Shredder always waits for file increment to finish hashing before moving on to the next file", NULL},
+        {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
+         "Shredder never waits for file increment to finish hashing before moving on to the next file", NULL},
         {NULL, 0, HIDDEN, 0, NULL, NULL, NULL}};
     // clang-format on
 
