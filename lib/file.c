@@ -155,20 +155,20 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
 void rm_file_build_path(RmFile *file, char *buf) {
     g_assert(file);
 
-    /* walk up the folder tree, collecting path elements into a GList*/
-    GSList *path_elements = NULL;
-    path_elements = g_slist_prepend(path_elements, file->basename);
+    size_t n_elements = 1;
+    char *elements[PATH_MAX / 2 + 1] = {file->basename, NULL};
 
+    /* walk up the folder tree, collecting path elements into a list */
     for(GNode *folder = file->folder; folder->parent; folder = folder->parent) {
-        path_elements = g_slist_prepend(path_elements, folder->data);
+        elements[n_elements++] = folder->data;
+        if(n_elements >= sizeof(elements)) break;
     }
 
     /* copy collected elements into *buf */
     char *buf_ptr = buf;
-    while(path_elements && (buf_ptr - buf) < PATH_MAX) {
+    while(n_elements && (buf_ptr - buf) < PATH_MAX) {
         *buf_ptr = '/'; 
-        buf_ptr = g_stpcpy(buf_ptr + 1, (char *)path_elements->data);
-        path_elements = g_slist_delete_link(path_elements, path_elements);
+        buf_ptr = g_stpcpy(buf_ptr + 1, (char *)elements[--n_elements]);
     }
 }
 
