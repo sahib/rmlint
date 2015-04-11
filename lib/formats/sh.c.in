@@ -97,8 +97,11 @@ static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, 
     if(!self->allow_hardlink) {
         return false;
     }
-
-    *out = g_strdup_printf("cp_hardlink '%s' '%s'", path, orig_path);
+    if (self->last_original && file->hardlinks.hardlink_head == self->last_original) {
+        *out = g_strdup_printf("skip_hardlink '%s' '%s'", path, orig_path);
+    } else {
+        *out = g_strdup_printf("cp_hardlink '%s' '%s'", path, orig_path);
+    }
     return true;
 }
 
