@@ -156,20 +156,19 @@ void rm_file_build_path(RmFile *file, char *buf) {
     g_assert(file);
 
     /* walk up the folder tree, collecting path elements into a GList*/
-    GList *path_elements = NULL;
-    path_elements = g_list_prepend(path_elements, file->basename);
+    GSList *path_elements = NULL;
+    path_elements = g_slist_prepend(path_elements, file->basename);
 
     for(GNode *folder = file->folder; folder->parent; folder = folder->parent) {
-        path_elements = g_list_prepend(path_elements, folder->data);
+        path_elements = g_slist_prepend(path_elements, folder->data);
     }
 
     /* copy collected elements into *buf */
     char *buf_ptr = buf;
-    while(path_elements) {
-        g_assert(buf + PATH_MAX > buf_ptr + 1 + strlen((char *)path_elements->data));
-        buf_ptr = g_stpcpy(buf_ptr, "/");
-        buf_ptr = g_stpcpy(buf_ptr, (char *)path_elements->data);
-        path_elements = g_list_delete_link(path_elements, path_elements);
+    while(path_elements && (buf_ptr - buf) < PATH_MAX) {
+        *buf_ptr = '/'; 
+        buf_ptr = g_stpcpy(buf_ptr + 1, (char *)path_elements->data);
+        path_elements = g_slist_delete_link(path_elements, path_elements);
     }
 }
 
