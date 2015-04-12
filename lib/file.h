@@ -213,17 +213,23 @@ typedef struct RmFile {
 } RmFile;
 
 /* Defines a path variable containing the file's path */
-#define RM_DEFINE_PATH(file)                                             \
+#define _RM_DEFINE_PATH(file, inherited)                                 \
     char file##_path[PATH_MAX];                                          \
     if(file->session->cfg->use_meta_cache) {                             \
         rm_file_lookup_path(file->session, (RmFile *)file, file##_path); \
-    } else {                                                             \
+    } else if(!inherited) {                                              \
         rm_file_build_path((RmFile *)file, file##_path);                 \
     }
 
+/* Fill path always */
+#define RM_DEFINE_PATH(file) _RM_DEFINE_PATH(file, false)
+
+/* Defines <file>_basename.
+ * Also defines <file>_path, but do not rely on it being filled!
+ */
 #define RM_DEFINE_BASENAME(file)                                  \
     char *file##_basename = NULL;                                 \
-    RM_DEFINE_PATH(file);                                         \
+    _RM_DEFINE_PATH(file, true);                                  \
     if(file->session->cfg->use_meta_cache) {                      \
         file##_basename = rm_util_basename((char *)&file##_path); \
     } else {                                                      \
