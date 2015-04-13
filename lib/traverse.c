@@ -188,12 +188,6 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
     }
 }
 
-static gpointer rm_traverse_allow_chdir(int *fts_flags) {
-    /* remove FTS_NOCHDIR flag for first path */
-    *fts_flags &= ~FTS_NOCHDIR;
-    return NULL;
-}
-
 static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierarchy,
                                   size_t hierarchy_len) {
     if(cfg->partial_hidden == false) {
@@ -260,9 +254,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     /* Initialize ftsp */
     int fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
-
-    static GOnce once = G_ONCE_INIT;
-    g_once(&once, (GThreadFunc)rm_traverse_allow_chdir, &fts_flags);
 
     RM_BUFFER_DEFINE_PATH(trav_session->session, buffer);
 
