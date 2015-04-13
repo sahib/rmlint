@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.2.0 Dreary Dropbear] [unreleased]
+## [2.2.0 Dreary Dropbear] -- [unreleased]
 
 ### Fixed
 
@@ -23,7 +23,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 - Most internal filesystems like `proc` are ignored now.
 
-## [2.1.0 Malnourished Molly] [beta-release]
+## [2.1.0 Malnourished Molly] -- beta-release 2015-04-13
 
 ### Fixed
 
@@ -66,11 +66,12 @@ The format follows [keepachangelog.com]. Please stick to it.
 - sahib made his 1000th commit on rmlint with this text
   and wonders where all the time has gone and why he isn't rich yet.
 
-## [2.0.0 Personable Pidgeon] - 2014-01-23
+## [2.0.0 Personable Pidgeon] -- 2014-01-23
 
 Initial release of the rewrite.
 
 [unreleased]: https://github.com/sahib/rmlint/compare/master...develop
-[2.1.0 Malnourished Molly]: https://github.com/sahib/rmlint/compare/master...develop
+[2.2.0 Dreary Dropbear]: https://github.com/sahib/rmlint/compare/master...develop
+[2.1.0 Malnourished Molly]: https://github.com/sahib/rmlint/releases/tag/v2.1.0
 [2.0.0 Personable Pidgeon]: https://github.com/sahib/rmlint/releases/tag/v2.0.0
 [keepachangelog.com]: http://keepachangelog.com/
