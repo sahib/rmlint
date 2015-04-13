@@ -117,8 +117,6 @@ typedef struct RmPathDoubleKey {
     /* File the key points to */
     RmFile *file;
 
-    /* GQueue iter the key tracks */
-    GList *iter;
 } RmPathDoubleKey;
 
 static guint rm_path_double_hash(const RmPathDoubleKey *key) {
@@ -309,25 +307,24 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                  * rm_pp_cmp_orig_criteria */
                 file->hardlinks.files = inode_match->hardlinks.files;
                 inode_match->hardlinks.files = NULL;
-                //                g_hash_table_replace(node_table, file, file); /*
-                //                replaces key and data*/
                 g_hash_table_add(node_table, file); /* replaces key and data*/
-                inode_match = file;
-            }
-
-            /* Find the right place to insert sorted */
-            GList *iter = inode_match->hardlinks.files->head;
-            while(iter && rm_pp_cmp_orig_criteria(iter->data, file, session) < 0) {
-                iter = iter->next;
-            }
-
-            /* Store the iter to this file, so we can swap it if needed */
-            if(iter) {
-                g_queue_insert_before(inode_match->hardlinks.files, iter, file);
-                iter = iter->prev;
+                g_queue_push_head(file->hardlinks.files, file);
             } else {
-                g_queue_push_tail(inode_match->hardlinks.files, file);
-                iter = inode_match->hardlinks.files->tail;
+
+                /* Find the right place to insert sorted */
+                GList *iter = inode_match->hardlinks.files->head;
+                while(iter && rm_pp_cmp_orig_criteria(iter->data, file, session) <= 0) {
+                    /* iter outranks file - keep moving down the queue */
+                    iter = iter->next;
+                }
+
+                /* Store the iter to this file, so we can swap it if needed */
+                if(iter) {
+                    /* file outranks iter (or is equal), so should be inserted before iter */
+                    g_queue_insert_before(inode_match->hardlinks.files, iter, file);
+                } else {
+                    g_queue_push_tail(inode_match->hardlinks.files, file);
+                }
             }
         }
     }
@@ -386,7 +383,6 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
             RmFile *iter_file = iter->data;
 
             RmPathDoubleKey *key = rm_path_double_new(iter_file);
-            key->iter = iter;
 
             /* Lookup if there is a file with the same path */
             RmPathDoubleKey *match_double_key =
@@ -398,15 +394,12 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
                 g_assert(match_double_key->file != iter_file);
                 RmFile *match_double = match_double_key->file;
 
-                g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) <= 0);
+                g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) >= 0);
 
-                rm_log_debug("Ignoring path double 1 %p, keeping %p\n", match_double,
-                             iter_file);
+                rm_log_debug("Ignoring path double %p, keeping %p\n", iter_file, match_double);
 
-                g_queue_delete_link(file->hardlinks.files, match_double_key->iter);
-                g_hash_table_add(unique_paths_table,
-                                 key); /* will also free match_double_key */
-                rm_file_destroy(match_double);
+                g_queue_delete_link(file->hardlinks.files, iter);
+                rm_file_destroy(iter_file);
                 
                 /* TODO: update counters for removal of path doubles */
             }
