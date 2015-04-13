@@ -398,24 +398,16 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
                 g_assert(match_double_key->file != iter_file);
                 RmFile *match_double = match_double_key->file;
 
-                if(rm_pp_cmp_orig_criteria(iter_file, match_double, session) < 0) {
-                    rm_log_debug("Ignoring path double %p, keeping %p\n", match_double,
-                                 iter_file);
+                g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) <= 0);
 
-                    g_queue_delete_link(file->hardlinks.files, match_double_key->iter);
-                    g_hash_table_add(unique_paths_table,
-                                     key); /* will also free match_double_key */
-                    rm_file_destroy(match_double);
+                rm_log_debug("Ignoring path double 1 %p, keeping %p\n", match_double,
+                             iter_file);
 
-                } else {
-                    rm_log_debug("Ignoring path double %p, keeping %p\n", file,
-                                 match_double);
-                    g_queue_delete_link(file->hardlinks.files, key->iter);
-                    /* Free the unused key */
-                    rm_path_double_free(key);
-                    key = NULL;
-                    rm_file_destroy(iter_file);
-                }
+                g_queue_delete_link(file->hardlinks.files, match_double_key->iter);
+                g_hash_table_add(unique_paths_table,
+                                 key); /* will also free match_double_key */
+                rm_file_destroy(match_double);
+                
                 /* TODO: update counters for removal of path doubles */
             }
         }
