@@ -34,7 +34,16 @@
 #include "shredder.h"
 
 static guint rm_file_hash(RmFile *file) {
-    return (guint)(file->file_size);
+    RmCfg *cfg = file->session->cfg;
+    if (cfg->match_basename || cfg->match_with_extension ) {
+        RM_DEFINE_BASENAME(file);
+        return (guint)(file->file_size
+                    ^ (cfg->match_basename ? g_str_hash(file_basename) : 0 )
+                    ^ (cfg->match_with_extension ? g_str_hash(rm_util_path_extension(file_basename)) : 0)
+                    );
+    } else {
+        return (guint)(file->file_size);
+    }
 }
 
 static bool rm_file_check_basename(const RmFile *file_a, const RmFile *file_b) {
