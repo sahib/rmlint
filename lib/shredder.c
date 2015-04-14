@@ -213,7 +213,7 @@
  * This prevents a "starving" RmShredDevice from hogging cpu and cluttering up
  * debug messages by continually recycling back to the joiner.
  */
-#define SHRED_EMPTYQUEUE_SLEEP_US (1000 * 1000) /* 1 second */
+#define SHRED_EMPTYQUEUE_SLEEP_US (60 * 1000 * 1000) /* wait up to 60 seconds */
 
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
 #define SHRED_BALANCED_PAGES (4)
@@ -311,6 +311,7 @@ typedef struct RmShredDevice {
 
     /* Lock for all of the above */
     GMutex lock;
+    GCond change;
 
     /* disk type; allows optimisation of parameters for rotational or non- */
     bool is_rotational;
@@ -671,6 +672,9 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     {
         device->remaining_files += files;
         device->remaining_bytes += bytes;
+        if (files<0) {
+            g_cond_signal (&device->change);
+        }
     }
     g_mutex_unlock(&(device->lock));
 
@@ -739,6 +743,7 @@ static RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_nam
     self->page_size = main->page_size;
 
     g_mutex_init(&(self->lock));
+    g_cond_init(&(self->change));
     return self;
 }
 
@@ -754,6 +759,7 @@ static void rm_shred_device_free(RmShredDevice *self) {
     g_queue_free(self->file_queue);
 
     g_free(self->disk_name);
+    g_cond_clear(&(self->change));
     g_mutex_clear(&(self->lock));
 
     g_slice_free(RmShredDevice, self);
@@ -851,6 +857,7 @@ static void rm_shred_push_queue_sorted_impl(RmFile *file, bool sorted) {
         } else {
             g_queue_push_head(device->file_queue, file);
         }
+        g_cond_signal (&device->change);
     }
     g_mutex_unlock(&device->lock);
 }
@@ -1724,7 +1731,6 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     GList *iter = NULL;
-    gboolean emptyqueue = FALSE;
 
     g_assert(device);
     g_assert(device->hash_pool); /* created when device created */
@@ -1744,19 +1750,15 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                          (GCompareDataFunc)rm_shred_compare_file_order, NULL);
         }
 
-        if(g_queue_get_length(device->file_queue) == 0) {
+        if(g_queue_get_length(device->file_queue) == 0 && device->remaining_files > 0) {
             /* give the other device threads a chance to catch up, which will hopefully
              * release held files from RmShredGroups to give us some work to do */
-            emptyqueue = TRUE;
+            gint64 end_time = g_get_monotonic_time () + SHRED_EMPTYQUEUE_SLEEP_US;
+            g_cond_wait_until (&device->change, &device->lock, end_time);
         }
         iter = device->file_queue->head;
     }
     g_mutex_unlock(&device->lock);
-
-    if(emptyqueue) {
-        /* brief sleep to stop starving devices from hogging too much cpu time */
-        g_usleep(SHRED_EMPTYQUEUE_SLEEP_US);
-    }
 
     /* scheduler for one file at a time, optimised to minimise seeks */
     while(iter && !rm_session_was_aborted(main->session)) {
