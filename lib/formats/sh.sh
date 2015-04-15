@@ -92,6 +92,10 @@ cp_reflink() {
     fi
 }
 
+skip_hardlink() {
+    echo 'Leaving as-is (already hardlinked to original):' "$1"
+}
+
 skip_reflink() {
     echo 'Leaving as-is (already reflinked to original):' "$1"
 }

@@ -409,7 +409,16 @@ Rarely used, miscellaneous Options
 
     Sometimes the difference may be very subtle since all paths in rmlint are
     stored by common prefix, i.e. for long but mostly identically paths the
-    point after the difference is stored.
+    point after the difference is stored. 
+
+    This feature may not play nice with some other options, causing heavy load
+    and long computations: 
+    
+    - The ``--match-*`` family of options (long )
+    - ``--cache`` might use more memory and takes longer.
+    - ``--merge-directories`` will not car about using the metadata cache yet.
+
+    Some of those restrictions might be removed in future ``rmlint`` versions.
 
     The metadata cache will be stored in ``$XDG_CACHE_HOME/rmlint/$pid``.
     If the cache cannot be created, ``rmlint`` falls back to no caching mode.

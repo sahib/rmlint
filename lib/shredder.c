@@ -213,7 +213,7 @@
  * This prevents a "starving" RmShredDevice from hogging cpu and cluttering up
  * debug messages by continually recycling back to the joiner.
  */
-#define SHRED_EMPTYQUEUE_SLEEP_US (1000 * 1000) /* 1 second */
+#define SHRED_EMPTYQUEUE_SLEEP_US (60 * 1000 * 1000) /* wait up to 60 seconds */
 
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
 #define SHRED_BALANCED_PAGES (4)
@@ -271,11 +271,11 @@ typedef struct RmBuffer {
     /* len of the read input */
     guint32 len;
 
-    /* is this the last buffer of the current increment? */
-    bool is_last : 1;
-
     /* is devlist factory waiting for the result? */
     bool waiting : 1;
+
+    /* flag to indicate that there is no more data for the current hash increment */
+    bool finished : 1;
 
     /* *must* be last member of RmBuffer,
      * gets all the rest of the allocated space
@@ -314,6 +314,7 @@ typedef struct RmShredDevice {
 
     /* Lock for all of the above */
     GMutex lock;
+    GCond change;
 
     /* disk type; allows optimisation of parameters for rotational or non- */
     bool is_rotational;
@@ -674,6 +675,9 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     {
         device->remaining_files += files;
         device->remaining_bytes += bytes;
+        if (files<0) {
+            g_cond_signal (&device->change);
+        }
     }
     g_mutex_unlock(&(device->lock));
 
@@ -708,29 +712,31 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredDevice *device) {
     g_assert(device);
     g_assert(buffer);
 
-    /* Hash buffer->len bytes_read of buffer->data into buffer->file */
-    rm_digest_update(buffer->file->digest, buffer->data, buffer->len);
-    buffer->file->hash_offset += buffer->len;
+    if (!buffer->finished) {
+        /* Hash buffer->len bytes_read of buffer->data into buffer->file */
+        rm_digest_update(buffer->file->digest, buffer->data, buffer->len);
+        buffer->file->hash_offset += buffer->len;
+    } else {
 
-    if(buffer->is_last) {
         /* Report the progress to rm_shred_devlist_factory */
         g_assert(buffer->file->hash_offset == buffer->file->shred_group->next_offset ||
-                 buffer->file->status == RM_FILE_STATE_FRAGMENT);
+                 buffer->file->status == RM_FILE_STATE_FRAGMENT ||
+                 buffer->file->status == RM_FILE_STATE_IGNORE);
 
-        /* remember that checksum */
-        rm_shred_write_cksum_to_xattr(device->main->session, buffer->file);
+        if (buffer->file->status != RM_FILE_STATE_IGNORE) {
+            /* remember that checksum */
+            rm_shred_write_cksum_to_xattr(device->main->session, buffer->file);
+        }
 
         if (buffer->waiting) {
             /* devlist factory is waiting for result */
             g_async_queue_push(device->hashed_file_return, buffer->file);
         } else {
             /* handle the file ourselves; devlist factory has moved on to the next file */
-            if (buffer->file->status==RM_FILE_STATE_NORMAL) {
-                rm_shred_sift(buffer->file, false);
-            } else {
-                /* RM_FILE_STATE_IGNORE should not make it to rm_shred_hash_factory */
-                g_assert(buffer->file->status==RM_FILE_STATE_FRAGMENT);
+            if (buffer->file->status==RM_FILE_STATE_FRAGMENT) {
                 rm_shred_push_queue_sorted(buffer->file);
+            } else {
+                rm_shred_sift(buffer->file, false);
             }
         }
     }
@@ -758,6 +764,7 @@ static RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_nam
     self->page_size = main->page_size;
 
     g_mutex_init(&(self->lock));
+    g_cond_init(&(self->change));
     return self;
 }
 
@@ -773,6 +780,7 @@ static void rm_shred_device_free(RmShredDevice *self) {
     g_queue_free(self->file_queue);
 
     g_free(self->disk_name);
+    g_cond_clear(&(self->change));
     g_mutex_clear(&(self->lock));
 
     g_slice_free(RmShredDevice, self);
@@ -869,6 +877,7 @@ static void rm_shred_push_queue_sorted_impl(RmFile *file, bool sorted) {
         } else {
             g_queue_push_head(device->file_queue, file);
         }
+        g_cond_signal (&device->change);
     }
     g_mutex_unlock(&device->lock);
 }
@@ -1467,11 +1476,12 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
 
 static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, gboolean waiting) {
     FILE *fd = NULL;
-    bool error_happended = false;
     gint32 total_bytes_read = 0;
 
     gint32 buf_size = rm_buffer_pool_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
+
+    RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
 
     if(file->seek_offset >= file->file_size) {
         goto finish;
@@ -1480,7 +1490,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, 
     RM_DEFINE_PATH(file);
 
     if((fd = fopen(file_path, "rb")) == NULL) {
-        error_happended = true;
+        file->status = RM_FILE_STATE_IGNORE;
         rm_log_info("fopen(3) failed for %s: %s", file_path, g_strerror(errno));
         goto finish;
     }
@@ -1491,22 +1501,20 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, 
     rm_shred_request_readahead(fileno(fd), file, bytes_to_read);
 
     if(fseek(fd, file->seek_offset, SEEK_SET) == -1) {
-        error_happended = true;
+        file->status = RM_FILE_STATE_IGNORE;
         rm_log_perror("fseek(3) failed");
         goto finish;
     }
 
     posix_fadvise(fileno(fd), file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
 
-    RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
     while((bytes_read = fread(buffer->data, 1, MIN(bytes_to_read, buf_size), fd)) > 0) {
         file->seek_offset += bytes_read;
         bytes_to_read -= bytes_read;
 
         buffer->file = file;
         buffer->len = bytes_read;
-        buffer->is_last = (bytes_to_read <= 0);
-        buffer->waiting = waiting;
+        buffer->finished = FALSE;
 
         rm_util_thread_pool_push(device->hash_pool, buffer);
 
@@ -1515,24 +1523,20 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, 
     }
 
     if(ferror(fd) != 0) {
-        error_happended = true;
+        file->status = RM_FILE_STATE_IGNORE;
         rm_log_perror("fread(3) failed");
-        goto finish;
     }
 
 finish:
-    if(error_happended) {
-        file->status = RM_FILE_STATE_IGNORE;
-        if (waiting) {
-            g_async_queue_push(device->hashed_file_return, file);
-        } else {
-            rm_shred_sift(file, false);
-        }
-    }
-
     if(fd != NULL) {
         fclose(fd);
     }
+
+    /* tell the hasher we have finished */
+    buffer->file = file;
+    buffer->finished = TRUE;
+    buffer->waiting = waiting;
+    rm_util_thread_pool_push(device->hash_pool, buffer);
 
     /* Update totals for device and session*/
     rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
@@ -1573,11 +1577,6 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
     if(fd == -1) {
         rm_log_info("open(2) failed for %s: %s", file_path, g_strerror(errno));
         file->status = RM_FILE_STATE_IGNORE;
-        if (waiting) {
-            g_async_queue_push(device->hashed_file_return, file);
-        } else {
-            rm_shred_sift(file, false);
-        }
         goto finish;
     }
 
@@ -1620,44 +1619,30 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
             RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
             buffer->file = file;
             buffer->len = MIN(buf_size, bytes_read - i * buf_size);
-            buffer->is_last = (i + 1 >= blocks && bytes_left_to_read <= 0);
-            buffer->waiting = waiting;
+            buffer->finished = FALSE;
             if(bytes_left_to_read < 0) {
                 rm_log_error_line(_("Negative bytes_left_to_read for %s"), file_path);
             }
 
-            if(buffer->is_last && total_bytes_read != bytes_to_read) {
-                rm_log_error_line(_("Something went wrong reading %s; expected %d bytes, "
-                                    "got %d; ignoring"),
-                                  file_path, bytes_to_read, total_bytes_read);
-                file->status = RM_FILE_STATE_IGNORE;
-                if (waiting) {
-                    g_async_queue_push(device->hashed_file_return, file);
-                } else {
-                    rm_shred_sift(file, false);
-                }
-            } else {
-                /* Send it to the hasher */
-                rm_util_thread_pool_push(device->hash_pool, buffer);
+            /* Send it to the hasher */
+            rm_util_thread_pool_push(device->hash_pool, buffer);
 
-                /* Allocate a new buffer - hasher will release the old buffer */
-                buffer = rm_buffer_pool_get(device->main->mem_pool);
-                readvec[i].iov_base = buffer->data;
-                readvec[i].iov_len = buf_size;
-            }
+            /* Allocate a new buffer - hasher will release the old buffer */
+            buffer = rm_buffer_pool_get(device->main->mem_pool);
+            readvec[i].iov_base = buffer->data;
+            readvec[i].iov_len = buf_size;
         }
     }
 
     if(bytes_read == -1) {
         rm_log_perror("preadv failed");
         file->status = RM_FILE_STATE_IGNORE;
-        /* TODO: clean up this spaghetti (this is the third time for the same 'if') */
-        if (waiting) {
-            g_async_queue_push(device->hashed_file_return, file);
-        } else {
-            rm_shred_sift(file, false);
-        }
         goto finish;
+    } else if(total_bytes_read != bytes_to_read) {
+        rm_log_error_line(_("Something went wrong reading %s; expected %d bytes, "
+                            "got %d; ignoring"),
+                          file_path, bytes_to_read, total_bytes_read);
+        file->status = RM_FILE_STATE_IGNORE;
     }
 
     /* Release the rest of the buffers */
@@ -1665,11 +1650,17 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
         rm_buffer_pool_release(device->main->mem_pool, buffer);
     }
-
 finish:
     if(fd > 0) {
         rm_sys_close(fd);
     }
+
+    /* tell the hasher we have finished via a dummy buffer*/
+    RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
+    buffer->file = file;
+    buffer->finished = TRUE;
+    buffer->waiting = waiting;
+    rm_util_thread_pool_push(device->hash_pool, buffer);
 
     /* Update totals for device and session*/
     rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
@@ -1777,7 +1768,6 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     GList *iter = NULL;
-    gboolean emptyqueue = FALSE;
 
     g_assert(device);
     g_assert(device->hash_pool); /* created when device created */
@@ -1797,19 +1787,15 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                          (GCompareDataFunc)rm_shred_compare_file_order, NULL);
         }
 
-        if(g_queue_get_length(device->file_queue) == 0) {
+        if(g_queue_get_length(device->file_queue) == 0 && device->remaining_files > 0) {
             /* give the other device threads a chance to catch up, which will hopefully
              * release held files from RmShredGroups to give us some work to do */
-            emptyqueue = TRUE;
+            gint64 end_time = g_get_monotonic_time () + SHRED_EMPTYQUEUE_SLEEP_US;
+            g_cond_wait_until (&device->change, &device->lock, end_time);
         }
         iter = device->file_queue->head;
     }
     g_mutex_unlock(&device->lock);
-
-    if(emptyqueue) {
-        /* brief sleep to stop starving devices from hogging too much cpu time */
-        g_usleep(SHRED_EMPTYQUEUE_SLEEP_US);
-    }
 
     /* scheduler for one file at a time, optimised to minimise seeks */
     while(iter && !rm_session_was_aborted(main->session)) {
