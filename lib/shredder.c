@@ -631,6 +631,7 @@ static void rm_shred_mem_return(RmShredGroup *group) {
                     tag->hash_mem_alloc, tag->active_groups, group->mem_allocation);
             tag->mem_refusing=FALSE;
             if (group->digest) {
+                g_assert(group->digest->type == RM_DIGEST_PARANOID);
                 rm_digest_free(group->digest);
                 group->digest = NULL;
             }
@@ -961,6 +962,10 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
  * each other */
 static void rm_shred_group_make_orphan(RmShredGroup *self);
 
+/* Only called by rm_shred_sift() or by rm_shred_group_make_orphan or
+ * recursively by self. The global group_lock is held by rm_shred_sift()
+ * in all cases.
+ */
 static void rm_shred_group_unref(RmShredGroup *self) {
     g_assert(self->ref_count>0);
     self->ref_count--;
@@ -1002,6 +1007,9 @@ static void rm_shred_group_unref(RmShredGroup *self) {
     }
 }
 
+/* Only called by rm_shred_sift() or by rm_shred_group_unref. The global group_lock
+ * is held by rm_shred_sift() in all cases.
+ */
 static void rm_shred_group_make_orphan(RmShredGroup *self) {
     /* parent is dead */
     self->parent = NULL;
@@ -1014,6 +1022,10 @@ static void rm_shred_group_make_orphan(RmShredGroup *self) {
     rm_shred_group_unref(self);
 }
 
+/* Only called by rm_shred_sift or by rm_shred_preprocess.
+ * In the former case, the global group lock is held by rm_shred_sift.
+ * In the latter case, there are no parallel threads so no lock required.
+ * */
 static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
                                          gboolean initial, gboolean waiting) {
     gboolean result = false;
@@ -1418,9 +1430,12 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
             rm_shred_forward_to_output(tag->session, group->held_files);
         }
     }
-
-    group->status = RM_SHRED_GROUP_FINISHED;
-    rm_shred_group_free_full(group, false);
+    g_mutex_lock(&tag->group_lock);
+    {
+        group->status = RM_SHRED_GROUP_FINISHED;
+        rm_shred_group_free_full(group, false);
+    }
+    g_mutex_unlock(&tag->group_lock);
 }
 
 /////////////////////////////////
