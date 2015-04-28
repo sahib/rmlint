@@ -808,8 +808,8 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
      * RmOff, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead
      */
-    RmOff phys_offset_a = rm_offset_lookup(a->disk_offsets, a->seek_offset);
-    RmOff phys_offset_b = rm_offset_lookup(b->disk_offsets, b->seek_offset);
+    RmOff phys_offset_a = a->current_disk_offset;
+    RmOff phys_offset_b = b->current_disk_offset;
 
     return (0 + 4 * SIGN_DIFF(a->dev, b->dev) +
             2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
@@ -1494,6 +1494,8 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
+    
+    file->current_disk_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
 
     if(ferror(fd) != 0) {
         error_happended = true;
@@ -1615,6 +1617,8 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
             }
         }
     }
+
+    file->current_disk_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
 
     if(bytes_read == -1) {
         rm_log_perror("preadv failed");
