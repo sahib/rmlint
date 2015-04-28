@@ -824,6 +824,7 @@ static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
 
         RM_DEFINE_PATH(file);
         file->disk_offsets = rm_offset_create_table(file_path);
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
         session->offsets_read++;
         if(file->disk_offsets) {
