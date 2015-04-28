@@ -309,6 +309,11 @@ typedef struct RmShredDevice {
     gint32 remaining_files;
     gint64 remaining_bytes;
 
+    /* True when actual shreddiner began.
+     * This is used to update the correct progressbar state.
+     */
+    bool after_preprocess : 1;
+
     /* Lock for all of the above */
     GMutex lock;
 
@@ -682,7 +687,8 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
             session->total_filtered_files += files;
         }
         session->shred_bytes_remaining += bytes;
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
+        rm_fmt_set_state(session->formats, (device->after_preprocess) ?
+                RM_PROGRESS_STATE_SHREDDER : RM_PROGRESS_STATE_PREPROCESS);
     }
     rm_fmt_unlock_state(session->formats);
 }
@@ -1844,6 +1850,7 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
+        device->after_preprocess = true;
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
                      NULL);
         rm_log_debug(GREEN "Pushing device %s to threadpool\n", device->disk_name);
