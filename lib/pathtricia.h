@@ -26,6 +26,7 @@
 #ifndef RM_PATHTRICIA_H
 #define RM_PATHTRICIA_H
 
+#include <stdbool.h>
 #include <glib.h>
 
 typedef struct _RmNode {
@@ -76,7 +77,7 @@ void rm_trie_destroy(RmTrie *self);
  * Insert a path to the trie and associate a value with it.
  * The value can be later requested with rm_trie_search*.
  */
-void rm_trie_insert(RmTrie *self, const char *path, void *value);
+RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value);
 
 /** 
  * rm_trie_search_node: 
