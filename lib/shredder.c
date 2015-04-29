@@ -213,7 +213,7 @@
  * This prevents a "starving" RmShredDevice from hogging cpu and cluttering up
  * debug messages by continually recycling back to the joiner.
  */
-#define SHRED_EMPTYQUEUE_SLEEP_US (1000 * 1000) /* 1 second */
+#define SHRED_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 0.05 second */
 
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
 #define SHRED_BALANCED_PAGES (4)
