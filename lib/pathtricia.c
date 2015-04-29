@@ -81,6 +81,7 @@ void rm_trie_insert(RmTrie *self, const char *path, void *value) {
     }
 
     if(curr_node != NULL) {
+        curr_node->has_value = true;
         curr_node->data = value;
         self->size++;
     }
@@ -130,7 +131,7 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
     char *elements[PATH_MAX / 2 + 1] = {node->basename, NULL};
 
     /* walk up the folder tree, collecting path elements into a list */
-    for(RmNode *folder = node->parent; folder->parent; folder = folder->parent) {
+    for(RmNode *folder = node->parent; folder && folder->parent; folder = folder->parent) {
         elements[n_elements++] = folder->basename;
         if(n_elements >= sizeof(elements))
             break;
@@ -152,7 +153,7 @@ size_t rm_trie_size(RmTrie *self) {
 
 static void _rm_trie_iter(RmTrie *self,
                           RmNode *root,
-                          bool pre_order,
+                          bool pre_order, bool all_nodes,
                           RmTrieIterCallback callback,
                           void *user_data,
                           int level) {
@@ -163,7 +164,7 @@ static void _rm_trie_iter(RmTrie *self,
         root = self->root;
     }
 
-    if(pre_order) {
+    if(pre_order && (all_nodes || root->has_value)) {
         if(callback(self, root, level, user_data) != 0) {
             return;
         }
@@ -172,11 +173,11 @@ static void _rm_trie_iter(RmTrie *self,
     if(root->children != NULL) {
         g_hash_table_iter_init(&iter, root->children);
         while(g_hash_table_iter_next(&iter, &key, &value)) {
-            _rm_trie_iter(self, value, pre_order, callback, user_data, level + 1);
+            _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data, level + 1);
         }
     }
 
-    if(!pre_order) {
+    if(!pre_order && (all_nodes || root->has_value)) {
         if(callback(self, root, level, user_data) != 0) {
             return;
         }
@@ -185,10 +186,10 @@ static void _rm_trie_iter(RmTrie *self,
 
 void rm_trie_iter(RmTrie *self,
                   RmNode *root,
-                  bool pre_order,
+                  bool pre_order, bool all_nodes,
                   RmTrieIterCallback callback,
                   void *user_data) {
-    _rm_trie_iter(self, root, pre_order, callback, user_data, 0);
+    _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);
 }
 
 static int rm_trie_print_callback(_U RmTrie *self,
@@ -207,7 +208,7 @@ static int rm_trie_print_callback(_U RmTrie *self,
 }
 
 void rm_trie_print(RmTrie *self) {
-    rm_trie_iter(self, NULL, true, rm_trie_print_callback, NULL);
+    rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
 }
 
 static int rm_trie_destroy_callback(_U RmTrie *self,
@@ -219,7 +220,7 @@ static int rm_trie_destroy_callback(_U RmTrie *self,
 }
 
 void rm_trie_destroy(RmTrie *self) {
-    rm_trie_iter(self, NULL, false, rm_trie_destroy_callback, NULL);
+    rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
     g_string_chunk_free(self->chunks);
 }
 
