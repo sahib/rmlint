@@ -6,12 +6,6 @@ import sys
 import glob
 import subprocess
 
-import urllib
-import traceback
-import zipfile
-import shutil
-import glob
-
 import SCons.Conftest as tests
 
 

@@ -63,8 +63,12 @@ env.Alias('man', env.Depends(manpage, sphinx))
 
 
 if 'install' in COMMAND_LINE_TARGETS:
-    man_install = env.Install('$PREFIX/share/man/man1', [manpage])
-    env.Alias('install', [man_install])
+    if os.access(str(manpage), os.R_OK):
+        man_install = env.Install('$PREFIX/share/man/man1', [manpage])
+        env.Alias('install', [man_install])
+    else:
+        print('WARNING: No manpage will be installed!')
+
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
