@@ -15,6 +15,11 @@ static RmNode *rm_node_new(RmTrie *trie, const char *elem) {
     RmNode *self = g_slice_alloc0(sizeof(RmNode));
 
     if(elem != NULL) {
+        /* Note: We could use g_string_chunk_insert_const here.
+         * That would keep a hash table with all strings internally though,
+         * but would sort out storing duplicate path elements. In normal
+         * setups this will not happen that much though I guess.
+         */
         self->basename = g_string_chunk_insert(trie->chunks, elem);
     }
     return self;
@@ -58,10 +63,10 @@ void rm_trie_init(RmTrie *self) {
     self->chunks = g_string_chunk_new(100);
 }
 
-void rm_trie_insert(RmTrie *self, const char *path, void *value) {
+RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     g_assert(self);
     g_assert(path);
-    g_return_if_fail(*path == '/');
+    g_return_val_if_fail(*path == '/', NULL);
 
     char path_buf[PATH_MAX];
     memset(path_buf, 0, sizeof(path_buf));
@@ -85,6 +90,8 @@ void rm_trie_insert(RmTrie *self, const char *path, void *value) {
         curr_node->data = value;
         self->size++;
     }
+
+    return curr_node;
 }
 
 RmNode *rm_trie_search_node(RmTrie *self, const char *path) {

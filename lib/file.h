@@ -31,6 +31,7 @@
 #include <glib.h>
 
 #include "cfg.h"
+#include "pathtricia.h"
 #include "utilities.h"
 
 typedef enum RmFileState {
@@ -98,7 +99,7 @@ typedef struct RmFile {
 
     /* file folder as node of folder n-ary tree
      * */
-    GNode *folder;
+    RmNode *folder;
 
     /* File modification date/time
      * */
