@@ -66,13 +66,9 @@ static void signal_handler(int signum) {
     case SIGINT:
         if(CTRLC_COUNTER++ == 0) {
             rm_session_abort((RmSession *)SESSION_POINTER);
-            rm_log_warning(GREEN "\nINFO: " RESET);
-            rm_log_warning(_("Received Interrupt, stopping..."));
-            rm_log_warning("\n");
+            rm_log_warning_line(_("Received Interrupt, stopping..."));
         } else {
-            rm_log_warning(GREEN "\nINFO: " RESET);
-            rm_log_warning(_("Received second Interrupt, stopping hard."));
-            rm_log_warning("\n");
+            rm_log_warning_line(_("Received second Interrupt, stopping hard."));
             rm_session_clear((RmSession *)SESSION_POINTER);
             exit(EXIT_FAILURE);
         }
