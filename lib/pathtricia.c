@@ -1,0 +1,265 @@
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <glib.h>
+#include <linux/limits.h>
+
+#include "pathtricia.h"
+#include "config.h"
+
+//////////////////////////
+//  RmPathNode Methods  //
+//////////////////////////
+
+static RmNode *rm_node_new(RmTrie *trie, const char *elem) {
+    RmNode *self = g_slice_alloc0(sizeof(RmNode));
+
+    if(elem != NULL) {
+        self->basename = g_string_chunk_insert(trie->chunks, elem);
+    }
+    return self;
+}
+
+static void rm_node_free(RmNode *node) {
+    if(node->children) {
+        g_hash_table_unref(node->children);
+    }
+    memset(node, 0, sizeof(RmNode));
+    g_slice_free(RmNode, node);
+}
+
+static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {
+    if(parent->children == NULL) {
+        parent->children = g_hash_table_new(g_str_hash, g_str_equal);
+    }
+
+    RmNode *exists = g_hash_table_lookup(parent->children, elem);
+    if(exists == NULL) {
+        RmNode *node = rm_node_new(trie, elem);
+        node->parent = parent;
+        g_hash_table_insert(parent->children, node->basename, node);
+        return node;
+    }
+
+    return exists;
+}
+
+///////////////////////////
+//    RmTrie Methods     //
+///////////////////////////
+
+void rm_trie_init(RmTrie *self) {
+    g_assert(self);
+    self->root = rm_node_new(self, NULL);
+
+    /* Average path len is 93.633236. 
+     * I did ze science! :-)
+     */
+    self->chunks = g_string_chunk_new(100);
+}
+
+void rm_trie_insert(RmTrie *self, const char *path, void *value) {
+    g_assert(self);
+    g_assert(path);
+    g_return_if_fail(*path == '/');
+
+    char path_buf[PATH_MAX];
+    memset(path_buf, 0, sizeof(path_buf));
+    strcpy(path_buf, &path[1]);
+
+    RmNode *curr_node = self->root;
+    char *curr_elem = path_buf;
+
+    while(curr_elem != NULL) {
+        char *elem_begin = curr_elem;
+        if((curr_elem = strchr(elem_begin, '/'))) {
+            *curr_elem = 0;
+            curr_elem += 1;
+        }
+
+        curr_node = rm_node_insert(self, curr_node, elem_begin);
+    }
+
+    if(curr_node != NULL) {
+        curr_node->data = value;
+        self->size++;
+    }
+}
+
+RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
+    g_assert(self);
+    g_assert(path);
+    g_return_val_if_fail(*path == '/', NULL);
+
+    char path_buf[PATH_MAX];
+    memset(path_buf, 0, sizeof(path_buf));
+    strcpy(path_buf, &path[1]);
+
+    RmNode *curr_node = self->root;
+    char *curr_elem = path_buf;
+
+    while(curr_elem != NULL && curr_node != NULL) {
+        char *elem_begin = curr_elem;
+        if((curr_elem = strchr(elem_begin, '/'))) {
+            *curr_elem = 0;
+            curr_elem += 1;
+        }
+
+        if(curr_node->children == NULL) {
+            /* Can't go any further */
+            return NULL;
+        }
+
+        curr_node = g_hash_table_lookup(curr_node->children, elem_begin);
+    }
+
+    return curr_node;
+}
+
+void *rm_trie_search(RmTrie *self, const char *path) {
+    RmNode *find = rm_trie_search_node(self, path);
+    return (find) ? find->data : NULL;
+}
+
+char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
+    if(node == NULL) {
+        return NULL;
+    }
+
+    size_t n_elements = 1;
+    char *elements[PATH_MAX / 2 + 1] = {node->basename, NULL};
+
+    /* walk up the folder tree, collecting path elements into a list */
+    for(RmNode *folder = node->parent; folder->parent; folder = folder->parent) {
+        elements[n_elements++] = folder->basename;
+        if(n_elements >= sizeof(elements))
+            break;
+    }
+
+    /* copy collected elements into *buf */
+    char *buf_ptr = buf;
+    while(n_elements && (size_t)(buf_ptr - buf) < buf_len) {
+        *buf_ptr = '/';
+        buf_ptr = g_stpcpy(buf_ptr + 1, (char *)elements[--n_elements]);
+    }
+
+    return buf;
+}
+
+size_t rm_trie_size(RmTrie *self) {
+    return self->size;
+}
+
+static void _rm_trie_iter(RmTrie *self,
+                          RmNode *root,
+                          bool pre_order,
+                          RmTrieIterCallback callback,
+                          void *user_data,
+                          int level) {
+    GHashTableIter iter;
+    gpointer key, value;
+
+    if(root == NULL) {
+        root = self->root;
+    }
+
+    if(pre_order) {
+        if(callback(self, root, level, user_data) != 0) {
+            return;
+        }
+    }
+
+    if(root->children != NULL) {
+        g_hash_table_iter_init(&iter, root->children);
+        while(g_hash_table_iter_next(&iter, &key, &value)) {
+            _rm_trie_iter(self, value, pre_order, callback, user_data, level + 1);
+        }
+    }
+
+    if(!pre_order) {
+        if(callback(self, root, level, user_data) != 0) {
+            return;
+        }
+    }
+}
+
+void rm_trie_iter(RmTrie *self,
+                  RmNode *root,
+                  bool pre_order,
+                  RmTrieIterCallback callback,
+                  void *user_data) {
+    _rm_trie_iter(self, root, pre_order, callback, user_data, 0);
+}
+
+static int rm_trie_print_callback(_U RmTrie *self,
+                                  RmNode *node,
+                                  int level,
+                                  _U void *user_data) {
+    for(int i = 0; i < level; ++i) {
+        g_printerr("    ");
+    }
+
+    g_printerr("%s %s\n",
+               (char *)((node->basename) ? node->basename : "[root]"),
+               (node->data) ? "[leaf]" : "");
+
+    return 0;
+}
+
+void rm_trie_print(RmTrie *self) {
+    rm_trie_iter(self, NULL, true, rm_trie_print_callback, NULL);
+}
+
+static int rm_trie_destroy_callback(_U RmTrie *self,
+                                    RmNode *node,
+                                    _U int level,
+                                    _U void *user_data) {
+    rm_node_free(node);
+    return 0;
+}
+
+void rm_trie_destroy(RmTrie *self) {
+    rm_trie_iter(self, NULL, false, rm_trie_destroy_callback, NULL);
+    g_string_chunk_free(self->chunks);
+}
+
+#ifdef _RM_PATHTRICIA_BUILD_MAIN
+
+#include <stdio.h>
+
+int main(void) {
+    RmTrie trie;
+    rm_trie_init(&trie);
+    GTimer *timer = g_timer_new();
+
+    g_timer_start(timer);
+    char buf[1024];
+    int i = 0;
+
+    while(fgets(buf, sizeof(buf), stdin)) {
+        buf[strlen(buf) - 1] = 0;
+        rm_trie_insert(&trie, buf, GUINT_TO_POINTER(++i));
+        memset(buf, 0, sizeof(buf));
+    }
+
+    g_printerr("Took %2.5f to insert %d items\n", g_timer_elapsed(timer, NULL), i);
+    // rm_trie_print(&trie);
+    memset(buf, 0, sizeof(buf));
+    rm_trie_build_path(rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf, sizeof(buf));
+    g_printerr("=> %s\n", buf);
+
+    g_timer_start(timer);
+    const int N = 10000000;
+    for(int x = 0; x < N; x++) {
+        rm_trie_search(&trie, "/usr/bin/rmlint");
+    }
+    g_printerr("Took %2.5f to search\n", g_timer_elapsed(timer, NULL));
+
+    g_printerr("%u\n", GPOINTER_TO_UINT(rm_trie_search(&trie, "/usr/bin/rmlint")));
+    g_printerr("%u\n", GPOINTER_TO_UINT(rm_trie_search(&trie, "/a/b/c")));
+    rm_trie_destroy(&trie);
+    g_timer_destroy(timer);
+    return 0;
+}
+
+#endif
