@@ -38,6 +38,9 @@ typedef struct _RmNode {
     /* Array of children nodes */
     GHashTable *children;
 
+    /* data was set explicitly */
+    bool has_value;
+
     /* User specific data */
     gpointer data;
 } RmNode;
@@ -110,11 +113,15 @@ size_t rm_trie_size(RmTrie *self);
  * If pre_order is true, the trie is iterated top-down (i.e. for printing)
  * if pre_order is false, the trie is iterated bottom-up (i.e. for freeing)
  *
+ * If all_nodes is true all nodes are traversed.
+ * If all_nodes is false only nodes that were explicitly inserted are traversed.
+ *
  * user_data will be passed to the callback.
  */
 void rm_trie_iter(RmTrie *self,
                   RmNode *root,
                   bool pre_order,
+                  bool all_nodes,
                   RmTrieIterCallback callback,
                   void *user_data);
 
