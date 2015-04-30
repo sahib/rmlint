@@ -397,7 +397,6 @@ int rm_json_cache_read(RmTrie *file_trie, const char *json_path) {
     (void)file_trie;
     (void)json_path;
 
-    // TODO: rename cfg->file_tree_root to cfg->file_trie
     rm_log_info_line(_("caching is not supported due to missing json-glib library."));
     return EXIT_FAILURE;
 #else
