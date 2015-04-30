@@ -65,10 +65,6 @@
 #include "formats.h"
 #include "pathtricia.h"
 
-/* patricia trie implementation */
-#include "libart/art.h"
-
-
 typedef struct RmDirectory {
     char *dirname;        /* Path to this directory without trailing slash              */
     GQueue known_files;   /* RmFiles in this directory                                  */
@@ -81,7 +77,7 @@ typedef struct RmDirectory {
     bool was_merged;      /* true if this directory was merged up already (only once)   */
     bool was_inserted;    /* true if this directory was added to results (only once)    */
     unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)        */
-    art_tree hash_trie;   /* Trie of hashes, used for equality check (to be sure)       */
+    GHashTable *hash_set; /* Set of hashes, used for equality check (to be sure)        */
     RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
 
     struct {
@@ -107,7 +103,8 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level, void *user_data) {
+int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
+                             void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
@@ -120,7 +117,7 @@ int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level, void *
 
     char path[PATH_MAX];
     memset(path, 0, sizeof(path));
-    rm_trie_build_path(node, path, sizeof(path)); 
+    rm_trie_build_path(node, path, sizeof(path));
 
     /* Ascend the path parts up, add one for each part we meet.
        If a part was never found before, add it.
@@ -145,8 +142,7 @@ int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level, void *
 
             if(error_flag == false) {
                 /* Lookup the count on this level */
-                int old_count =
-                    GPOINTER_TO_INT(rm_trie_search(count_tree, path));
+                int old_count = GPOINTER_TO_INT(rm_trie_search(count_tree, path));
 
                 /* Propagate old error up or just increment the count */
                 new_count = (old_count == -1) ? -1 : old_count + 1;
@@ -238,7 +234,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *sessi
      */
     for(int i = 0; paths[i]; ++i) {
         /* Just call the callback directly */
-        RmNode *node = rm_trie_search_node(&file_tree, paths[i]); 
+        RmNode *node = rm_trie_search_node(&file_tree, paths[i]);
         node->data = GINT_TO_POINTER(true);
         rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
     }
@@ -291,14 +287,17 @@ static RmDirectory *rm_directory_new(char *dirname) {
     g_queue_init(&self->known_files);
     g_queue_init(&self->children);
 
-    init_art_tree(&self->hash_trie);
+    self->hash_set =
+        g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);  // TODO
+    // init_art_tree(&self->hash_trie);
 
     return self;
 }
 
 static void rm_directory_free(RmDirectory *self) {
     rm_digest_free(self->digest);
-    destroy_art_tree(&self->hash_trie);
+    g_hash_table_unref(self->hash_set);
+    // destroy_art_tree(&self->hash_trie);
     g_queue_clear(&self->known_files);
     g_queue_clear(&self->children);
     g_free(self->dirname);
@@ -344,11 +343,6 @@ static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
     return file;
 }
 
-static int rm_directory_equal_iter(art_tree *other_hash_trie, const unsigned char *key,
-                                   uint32_t key_len, _U void *value) {
-    return !GPOINTER_TO_UINT(art_search(other_hash_trie, (unsigned char *)key, key_len));
-}
-
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
     /* Will this work with paranoid cfg? Probably, but in a weird way.
      * Also it might not be very secure when the last block of the file is
@@ -362,15 +356,21 @@ static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
         return false;
     }
 
-    if(art_size(&d1->hash_trie) != art_size(&d2->hash_trie)) {
+    if(g_hash_table_size(d1->hash_set) != g_hash_table_size(d2->hash_set)) {
         return false;
     }
 
-    /* Take the bitter pill and compare all hashes manually.
-     * This should only happen on hash collisions of ->digest.
-     */
-    return !art_iter(&d1->hash_trie, (art_callback)rm_directory_equal_iter,
-                     &d2->hash_trie);
+    gpointer digest_key;
+    GHashTableIter iter;
+
+    g_hash_table_iter_init(&iter, d1->hash_set);
+    while(g_hash_table_iter_next(&iter, &digest_key, NULL)) {
+        if(g_hash_table_contains(d2->hash_set, digest_key) == false) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static guint rm_directory_hash(const RmDirectory *d) {
@@ -410,7 +410,8 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     rm_digest_update(directory->digest, file_digest, digest_bytes);
 
     /* The file value is not really used, but we need some non-null value */
-    art_insert(&directory->hash_trie, file_digest, digest_bytes, file);
+    g_hash_table_add(directory->hash_set, file->digest);
+
     g_slice_free1(digest_bytes, file_digest);
 
     if(file->hardlinks.is_head && file->hardlinks.files) {
@@ -592,13 +593,11 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     char *dirname = g_path_get_dirname(file_path);
 
     /* See if we know that directory already */
-    RmDirectory *directory =
-        rm_trie_search(&self->dir_tree, dirname);
+    RmDirectory *directory = rm_trie_search(&self->dir_tree, dirname);
 
     if(directory == NULL) {
         /* Get the actual file count */
-        int file_count = GPOINTER_TO_INT(
-            rm_trie_search(&self->count_tree, dirname));
+        int file_count = GPOINTER_TO_INT(rm_trie_search(&self->count_tree, dirname));
         if(file_count == 0) {
             rm_log_error(
                 RED "Empty directory or weird RmFile encountered; rejecting.\n" RESET);
@@ -728,7 +727,8 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     }
 }
 
-static int rm_tm_iter_unfinished_files(_U RmTrie *trie, RmNode *node, _U int level, _U void *user_data) {
+static int rm_tm_iter_unfinished_files(_U RmTrie *trie, RmNode *node, _U int level,
+                                       _U void *user_data) {
     RmTreeMerger *self = user_data;
     rm_tm_forward_unresolved(self, node->data);
     return 0;
@@ -899,8 +899,7 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
     bool is_root = strcmp(parent_dir, "/") == 0;
 
     /* Lookup if we already found this parent before (if yes, merge with it) */
-    RmDirectory *parent =
-        rm_trie_search(&self->dir_tree, parent_dir);
+    RmDirectory *parent = rm_trie_search(&self->dir_tree, parent_dir);
 
     if(parent == NULL) {
         /* none yet, basically copy child */
@@ -908,8 +907,8 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
         rm_trie_insert(&self->dir_tree, parent_dir, parent);
 
         /* Get the actual file count */
-        parent->file_count = GPOINTER_TO_UINT(
-            rm_trie_search(&self->count_tree, parent_dir));
+        parent->file_count =
+            GPOINTER_TO_UINT(rm_trie_search(&self->count_tree, parent_dir));
 
     } else {
         g_free(parent_dir);
