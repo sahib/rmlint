@@ -288,8 +288,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
     g_queue_init(&self->children);
 
     self->hash_set =
-        g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);  // TODO
-    // init_art_tree(&self->hash_trie);
+        g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal); 
 
     return self;
 }
@@ -297,7 +296,6 @@ static RmDirectory *rm_directory_new(char *dirname) {
 static void rm_directory_free(RmDirectory *self) {
     rm_digest_free(self->digest);
     g_hash_table_unref(self->hash_set);
-    // destroy_art_tree(&self->hash_trie);
     g_queue_clear(&self->known_files);
     g_queue_clear(&self->children);
     g_free(self->dirname);
