@@ -87,8 +87,7 @@ library = env.Library(
     '../rmlint',
     Glob('*.c')           +
     Glob('checksums/*.c') +
-    Glob('formats/*.c')   +
-    Glob('libart/*.c')
+    Glob('formats/*.c')
 )
 
 headers = Glob('*.h')
