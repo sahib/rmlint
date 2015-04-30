@@ -1179,13 +1179,12 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     if(main->session->cfg->read_cksum_from_xattr) {
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
-            g_hash_table_insert(session->tables->ext_cksums, g_strdup(file_path),
-                                ext_cksum);
+            rm_trie_set_value(&main->session->cfg->folder_tree_root, file_path, ext_cksum);
         }
     }
 
     if(HAS_CACHE(session) &&
-       g_hash_table_lookup(session->tables->ext_cksums, file_path)) {
+       rm_trie_search(&session->cfg->folder_tree_root, file_path)) {
         group->num_ext_cksums += 1;
         file->has_ext_cksum = 1;
     }
@@ -1219,7 +1218,7 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     /* Read any cache files */
     for(GList *iter = main->session->cache_list.head; iter; iter = iter->next) {
         char *cache_path = iter->data;
-        rm_json_cache_read(session->tables->ext_cksums, cache_path);
+        rm_json_cache_read(&session->cfg->folder_tree_root, cache_path);
     }
 
     rm_log_debug("Moving files into size groups...\n");
@@ -1683,8 +1682,8 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
 
         RM_DEFINE_PATH(file);
 
-        char *hexstring =
-            g_hash_table_lookup(main->session->tables->ext_cksums, file_path);
+        char *hexstring = file->folder->data;
+
         if(hexstring != NULL) {
             rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
             rm_log_debug("%s=%s was read from cache.\n", hexstring, file_path);
@@ -1865,15 +1864,8 @@ void rm_shred_run(RmSession *session) {
 
     RmMainTag tag;
     tag.active_groups = 0;
-    tag.hash_mem_alloc = session->cfg->paranoid_mem;  // 0;
+    tag.hash_mem_alloc = session->cfg->paranoid_mem;
     tag.session = session;
-
-    if(HAS_CACHE(session)) {
-        session->tables->ext_cksums =
-            g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-    } else {
-        session->tables->ext_cksums = NULL;
-    }
 
     /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
     tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE);
@@ -1940,10 +1932,6 @@ void rm_shred_run(RmSession *session) {
 
     g_async_queue_unref(tag.device_return);
     rm_buffer_pool_destroy(tag.mem_pool);
-
-    if(session->tables->ext_cksums) {
-        g_hash_table_unref(session->tables->ext_cksums);
-    }
 
     g_hash_table_unref(session->tables->dev_table);
     g_mutex_clear(&tag.group_lock);

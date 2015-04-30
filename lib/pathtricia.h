@@ -91,6 +91,13 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path);
  */
 void *rm_trie_search(RmTrie *self, const char *path);
 
+/**
+ * rm_trie_set_value:
+ * Search a node in the trie and set it's value.
+ * If node does not exist, no value is set and false is returned..
+ */ 
+bool rm_trie_set_value(RmTrie *self, const char *path, void *data);
+
 /** 
  * rm_trie_build_path:
  * Take a node and go up till parent while writing all nodes 

@@ -348,7 +348,7 @@ void rm_userlist_destroy(RmUserList *self) {
 #if HAVE_JSON_GLIB
 
 void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
-                               JsonNode *element_node, GHashTable *cksum_table) {
+                               JsonNode *element_node, RmTrie *file_trie) {
     if(JSON_NODE_TYPE(element_node) != JSON_NODE_OBJECT) {
         return;
     }
@@ -385,22 +385,23 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
             return;
         }
 
-        g_hash_table_replace(cksum_table, g_strdup(path), g_strdup(cksum));
+        rm_trie_set_value(file_trie, path, g_strdup(cksum));
         rm_log_debug("* Adding cache entry %s (%s)\n", path, cksum);
     }
 }
 
 #endif
 
-int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
+int rm_json_cache_read(RmTrie *file_trie, const char *json_path) {
 #if !HAVE_JSON_GLIB
-    (void)cksum_table;
+    (void)file_trie;
     (void)json_path;
 
+    // TODO: rename cfg->file_tree_root to cfg->file_trie
     rm_log_info_line(_("caching is not supported due to missing json-glib library."));
     return EXIT_FAILURE;
 #else
-    g_assert(cksum_table);
+    g_assert(file_trie);
     g_assert(json_path);
 
 #if !GLIB_CHECK_VERSION(2, 36, 0)
@@ -410,7 +411,7 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
 
     int result = EXIT_FAILURE;
     GError *error = NULL;
-    size_t keys_in_table = g_hash_table_size(cksum_table);
+    size_t keys_in_table = rm_trie_size(file_trie);
     JsonParser *parser = json_parser_new();
 
     rm_log_info_line(_("Loading json-cache `%s'"), json_path);
@@ -430,10 +431,10 @@ int rm_json_cache_read(GHashTable *cksum_table, const char *json_path) {
     /* Iterate over all objects in it */
     json_array_foreach_element(json_node_get_array(root),
                                (JsonArrayForeach)rm_json_cache_parse_entry,
-                               cksum_table);
+                               file_trie);
 
     /* check if some entries were added */
-    result = (keys_in_table >= g_hash_table_size(cksum_table));
+    result = (keys_in_table >= rm_trie_size(file_trie));
 
 failure:
     if(parser) {
