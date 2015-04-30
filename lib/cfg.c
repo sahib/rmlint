@@ -70,5 +70,5 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->skip_start_offset = 0;
     cfg->skip_end_offset = 0;
 
-    rm_trie_init(&cfg->folder_tree_root);
+    rm_trie_init(&cfg->file_trie);
 }

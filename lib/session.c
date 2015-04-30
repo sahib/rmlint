@@ -95,7 +95,7 @@ void rm_session_clear(RmSession *session) {
     g_free(cfg->is_prefd);
     g_free(cfg->iwd);
 
-    rm_trie_destroy(&cfg->folder_tree_root);
+    rm_trie_destroy(&cfg->file_trie);
 }
 
 void rm_session_abort(RmSession *session) {

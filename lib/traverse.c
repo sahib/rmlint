@@ -328,7 +328,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                      * at the next level down to save a stat() call during preprocessing;
                      * alternatively store dev/inode in the
                      * Patricia Tree of folder structure under
-                     * session->cfg->folder_tree_root */
+                     * session->cfg->file_trie */
                 }
                 break;
             case FTS_DC: /* directory that causes cycles */

@@ -86,7 +86,7 @@ typedef struct RmCfg {
     char *iwd;
     char *joined_argv;
 
-    RmTrie folder_tree_root;
+    RmTrie file_trie;
 
     RmOff minsize;
     RmOff maxsize;

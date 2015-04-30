@@ -1179,12 +1179,12 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     if(main->session->cfg->read_cksum_from_xattr) {
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
-            rm_trie_set_value(&main->session->cfg->folder_tree_root, file_path, ext_cksum);
+            rm_trie_set_value(&main->session->cfg->file_trie, file_path, ext_cksum);
         }
     }
 
     if(HAS_CACHE(session) &&
-       rm_trie_search(&session->cfg->folder_tree_root, file_path)) {
+       rm_trie_search(&session->cfg->file_trie, file_path)) {
         group->num_ext_cksums += 1;
         file->has_ext_cksum = 1;
     }
@@ -1218,7 +1218,7 @@ static void rm_shred_preprocess_input(RmMainTag *main) {
     /* Read any cache files */
     for(GList *iter = main->session->cache_list.head; iter; iter = iter->next) {
         char *cache_path = iter->data;
-        rm_json_cache_read(&session->cfg->folder_tree_root, cache_path);
+        rm_json_cache_read(&session->cfg->file_trie, cache_path);
     }
 
     rm_log_debug("Moving files into size groups...\n");
