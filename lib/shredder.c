@@ -1179,7 +1179,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
     if(main->session->cfg->read_cksum_from_xattr) {
         char *ext_cksum = rm_xattr_read_hash(main->session, file);
         if(ext_cksum != NULL) {
-            rm_trie_set_value(&main->session->cfg->file_trie, file_path, ext_cksum);
+            file->folder->data = ext_cksum;
         }
     }
 
