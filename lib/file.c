@@ -88,7 +88,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
 
 void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
     if(file->session->cfg->use_meta_cache == false) {
-        file->folder = rm_trie_insert(&file->session->cfg->folder_tree_root, path, NULL);
+        file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, NULL);
         file->basename = (copy) ? g_strdup(file->folder->basename) : file->folder->basename;
 
     } else {
