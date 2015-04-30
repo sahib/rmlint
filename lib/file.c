@@ -125,7 +125,13 @@ void rm_file_destroy(RmFile *file) {
     /* Only delete the basename when it really was in memory */
     if(file->session->cfg->use_meta_cache == false) {
         g_free(file->basename);
+    } 
+
+    /* --cache can write cksums in here */
+    if(file->folder->data) {
+        g_free(file->folder->data);
     }
+
     g_slice_free(RmFile, file);
 }
 

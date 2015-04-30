@@ -129,6 +129,16 @@ void *rm_trie_search(RmTrie *self, const char *path) {
     return (find) ? find->data : NULL;
 }
 
+bool rm_trie_set_value(RmTrie *self, const char *path, void *data) {
+    RmNode *find = rm_trie_search_node(self, path);
+    if(find == NULL) {
+        return false;
+    } else {
+        find->data = data;
+        return true;
+    }
+}
+
 char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
     if(node == NULL) {
         return NULL;

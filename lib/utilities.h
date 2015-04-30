@@ -35,6 +35,9 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 
+/* Pat(h)tricia Trie implementation */
+#include "pathtricia.h"
+
 #if HAVE_STAT64
 typedef struct stat64 RmStat;
 #else
@@ -375,11 +378,11 @@ bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
 /**
  * @brief Read json_path and write (path:cksum) into cksum_table.
  *
- * @param cksum_table table to fill.
+ * @param file_trie to set read cksums in.
  * @param json_path path with .json file.
  *
  * @return 0 on success.
  */
-int rm_json_cache_read(GHashTable *cksum_table, const char *json_path);
+int rm_json_cache_read(RmTrie *file_trie, const char *json_path);
 
 #endif /* RM_UTILITIES_H_INCLUDE*/
