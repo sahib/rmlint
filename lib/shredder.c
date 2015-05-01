@@ -393,6 +393,9 @@ typedef struct RmShredGroup {
     /* set if group has 1 or more files newer than cfg->min_mtime */
     bool has_new;
 
+    /* set if group has been greenlighted by paranoid mem manager */
+    bool is_active;
+
     /* incremented for each file in the group that obtained it's checksum from ext.
      * If all files came from there we do not even need to hash the group.
      */
@@ -591,41 +594,14 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
  * filesystems are contemplated)
  */
 
-/* take or return mem allocation from main */
-static bool rm_shred_mem_take(RmShredGroup *group) {
-    bool result = true;
-    RmMainTag *tag = group->main;
-    g_mutex_lock(&tag->hash_mem_mtx);
-    {
-        if ((gint64)group->mem_allocation <= tag->hash_mem_alloc || tag->active_groups <= 0) {
-            tag->hash_mem_alloc -= group->mem_allocation;
-            tag->active_groups ++;
-            rm_log_debug("Mem avail %li, active groups %d. "
-                GREEN "Allocated %"LLU" bytes for paranoid hashing.\n" RESET,
-                tag->hash_mem_alloc, tag->active_groups, group->mem_allocation);
-            tag->mem_refusing=FALSE;
-        } else {
-            result = false;
-            if (!tag->mem_refusing) {
-                rm_log_debug("Mem avail %li, active groups %d. " 
-                    RED "Refused request for %"LLU" bytes for paranoid hashing.\n" RESET,
-                    tag->hash_mem_alloc, tag->active_groups, group->mem_allocation);
-                tag->mem_refusing = TRUE;
-            }
-        }
-    }
-    g_mutex_unlock(&tag->hash_mem_mtx);
-
-    return result;
-}
-
 static void rm_shred_mem_return(RmShredGroup *group) {
-    if (group->mem_allocation > 0) {
+    if (group->is_active) {
         RmMainTag *tag = group->main;
         g_mutex_lock(&tag->hash_mem_mtx);
         {
             tag->hash_mem_alloc += group->mem_allocation;
             tag->active_groups --;
+            group->is_active = FALSE;
             rm_log_debug("Mem avail %li, active groups %d. "
                     YELLOW "Returned %"LLU" bytes for paranoid hashing.\n" RESET,
                     tag->hash_mem_alloc, tag->active_groups, group->mem_allocation);
@@ -641,31 +617,84 @@ static void rm_shred_mem_return(RmShredGroup *group) {
     }
 }
 
+/* what is the maximum number of files that a group may end up with (including
+ * parent, grandparent etc group files that haven't been hashed yet)?
+ */
+static gulong rm_shred_group_potential_file_count(RmShredGroup *group){
+    if(group->parent) {
+        return group->ref_count + rm_shred_group_potential_file_count(group->parent) - 1;
+    } else {
+        return group->ref_count;
+    }
+}
+
 /* Governer to limit memory usage by limiting how many RmShredGroups can be
  * active at any one time
  * NOTE: group_lock must be held before calling rm_shred_check_hash_mem_alloc
  */
-static bool rm_shred_check_hash_mem_alloc(RmFile *file) {
-    RmShredGroup *group = file->shred_group;
+static bool rm_shred_check_hash_mem_alloc(RmShredGroup *group, int active_group_threshold) {
+
     if(group->status >= RM_SHRED_GROUP_HASHING) {
         /* group already committed */
         return true;
     }
 
-    bool result;
-    group->mem_allocation =
-        MIN(rm_digest_paranoia_bytes(), group->file_size - group->hash_offset) *
-        (1 + g_hash_table_size(file->session->tables->dev_table));
+    gint64 mem_required = rm_shred_group_potential_file_count(group)
+                        * MIN(group->file_size - group->hash_offset, 2 * rm_digest_paranoia_bytes());
 
-    result = rm_shred_mem_take(group);
-    if(result) {
-        group->status = RM_SHRED_GROUP_HASHING;
-    } else {
-        group->mem_allocation = 0;
+    bool result = FALSE;
+    RmMainTag *tag = group->main;
+    g_mutex_lock(&tag->hash_mem_mtx);
+    {
+        gint64 inherited = group->parent ? group->parent->mem_allocation : 0;
+
+        if (0
+            || mem_required <= tag->hash_mem_alloc + inherited
+            || (tag->active_groups <= active_group_threshold)){
+            /* ok to proceed */
+            /* only take what we need from parent */
+            inherited = MIN(inherited, mem_required);
+            if (inherited > 0){
+                group->parent->mem_allocation -= inherited;
+                group->mem_allocation += inherited;
+            }
+
+            /* take the rest from bank */
+            gint64 borrowed = MIN (mem_required - inherited, (gint64)tag->hash_mem_alloc);
+            tag->hash_mem_alloc -= borrowed;
+            group->mem_allocation += borrowed;
+
+            rm_log_debug("Mem avail %li, active groups %d."GREEN" Borrowed %li",
+                tag->hash_mem_alloc, tag->active_groups, borrowed);
+            if (inherited>0) {
+                rm_log_debug("and inherited %li", inherited);
+            }
+            rm_log_debug(" bytes for paranoid hashing");
+            if (mem_required > borrowed + inherited) {
+                rm_log_debug(" due to %i active group limit", active_group_threshold);
+            }
+            rm_log_debug("\n" RESET);
+
+            tag->active_groups ++;
+            group->is_active = TRUE;
+            tag->mem_refusing=FALSE;
+            group->status = RM_SHRED_GROUP_HASHING;
+            result = TRUE;
+        } else {
+            if (!tag->mem_refusing) {
+                rm_log_debug("Mem avail %li, active groups %d. "
+                    RED "Refused request for %"LLU" bytes for paranoid hashing.\n" RESET,
+                    tag->hash_mem_alloc, tag->active_groups, mem_required);
+                tag->mem_refusing = TRUE;
+            }
+            result = FALSE;
+        }
     }
+    g_mutex_unlock(&tag->hash_mem_mtx);
 
     return result;
 }
+
 
 ///////////////////////////////////
 //    RmShredDevice UTILITIES    //
@@ -676,9 +705,6 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     {
         device->remaining_files += files;
         device->remaining_bytes += bytes;
-        if (files<0) {
-            g_cond_signal (&device->change);
-        }
     }
     g_mutex_unlock(&(device->lock));
 
@@ -911,7 +937,8 @@ static void rm_shred_group_free_full(RmShredGroup *self, bool force_free) {
         self->held_files = NULL;
     }
 
-    g_assert(self->mem_allocation == 0);
+    rm_shred_mem_return(self);
+    //g_assert(self->mem_allocation == 0);
 
     if(self->digest && needs_free) {
         rm_digest_free(self->digest);
@@ -1016,7 +1043,7 @@ static void rm_shred_group_make_orphan(RmShredGroup *self) {
 
     /* all of parent's files have found new RmShredGroups so we won't receive any more*/
     /* therefore we don't need our paranoid "checksum" buffer any more */
-    rm_shred_mem_return(self);
+    //rm_shred_mem_return(self);
 
     /* reduce reference count for self and free self if possible */
     rm_shred_group_unref(self);
@@ -1059,6 +1086,9 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
                                                        : rm_shred_push_queue_sorted));
             shred_group->held_files = NULL; /* won't need shred_group queue any more,
                                                since new arrivals will bypass */
+        }
+        if (shred_group->digest_type == RM_DIGEST_PARANOID) {
+            rm_shred_check_hash_mem_alloc(shred_group, 1);
         }
     /* FALLTHROUGH */
     case RM_SHRED_GROUP_HASHING:
@@ -1134,6 +1164,7 @@ static gboolean rm_shred_sift(RmFile *file, bool waiting) {
             }
 
             result = rm_shred_group_push_file(child_group, file, false, waiting);
+
         }
 
         /* current_group now has one less file to process */
@@ -1686,7 +1717,7 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
 
     if(file->shred_group->digest_type == RM_DIGEST_PARANOID) {
         /* check if memory allocation is ok */
-        if(!rm_shred_check_hash_mem_alloc(file)) {
+        if(!rm_shred_check_hash_mem_alloc(file->shred_group, 0)) {
             can_process = false;
         } else {
             /* get the required target offset into file->shred_group->next_offset, so
