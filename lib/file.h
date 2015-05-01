@@ -196,6 +196,7 @@ typedef struct RmFile {
     /* Table of this file's extents.
      */
     RmOffsetTable disk_offsets;
+    RmOff current_disk_offset;
 
     /* What kind of lint this file is.
      */

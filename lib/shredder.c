@@ -312,6 +312,11 @@ typedef struct RmShredDevice {
     gint32 remaining_files;
     gint64 remaining_bytes;
 
+    /* True when actual shreddiner began.
+     * This is used to update the correct progressbar state.
+     */
+    bool after_preprocess : 1;
+
     /* Lock for all of the above */
     GMutex lock;
     GCond change;
@@ -716,7 +721,8 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
             session->total_filtered_files += files;
         }
         session->shred_bytes_remaining += bytes;
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
+        rm_fmt_set_state(session->formats, (device->after_preprocess) ?
+                RM_PROGRESS_STATE_SHREDDER : RM_PROGRESS_STATE_PREPROCESS);
     }
     rm_fmt_unlock_state(session->formats);
 }
@@ -861,8 +867,8 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
      * RmOff, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead
      */
-    RmOff phys_offset_a = rm_offset_lookup(a->disk_offsets, a->seek_offset);
-    RmOff phys_offset_b = rm_offset_lookup(b->disk_offsets, b->seek_offset);
+    RmOff phys_offset_a = a->current_disk_offset;
+    RmOff phys_offset_b = b->current_disk_offset;
 
     return (0 + 4 * SIGN_DIFF(a->dev, b->dev) +
             2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
@@ -877,6 +883,7 @@ static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
 
         RM_DEFINE_PATH(file);
         file->disk_offsets = rm_offset_create_table(file_path);
+        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
         session->offsets_read++;
         if(file->disk_offsets) {
@@ -1567,6 +1574,8 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
+    
+    file->current_disk_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
 
     if(ferror(fd) != 0) {
         file->status = RM_FILE_STATE_IGNORE;
@@ -1679,6 +1688,8 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
             readvec[i].iov_len = buf_size;
         }
     }
+
+    file->current_disk_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
 
     if(bytes_read == -1) {
         rm_log_perror("preadv failed");
@@ -1925,6 +1936,7 @@ static void rm_shred_create_devpool(RmMainTag *tag, GHashTable *dev_table) {
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
+        device->after_preprocess = true;
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
                      NULL);
         rm_log_debug(GREEN "Pushing device %s to threadpool\n", device->disk_name);

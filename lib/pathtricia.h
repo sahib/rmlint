@@ -1,0 +1,127 @@
+/**
+* This file is part of rmlint.
+*
+*  rmlint is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, either version 3 of the License, or
+*  (at your option) any later version.
+*
+*  rmlint is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+*
+* Authors:
+*
+*  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
+*  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+*
+* Hosted on http://github.com/sahib/rmlint
+*
+**/
+
+#ifndef RM_PATHTRICIA_H
+#define RM_PATHTRICIA_H
+
+#include <glib.h>
+
+typedef struct _RmNode {
+    /* Element of the path */
+    char *basename;
+
+    /* Parent node or NULL */
+    struct _RmNode *parent;
+
+    /* Array of children nodes */
+    GHashTable *children;
+
+    /* User specific data */
+    gpointer data;
+} RmNode;
+
+typedef struct _RmTrie {
+    /* Root node or NULL if empty */
+    RmNode *root;
+
+    /* chunk storage for strings */
+    GStringChunk *chunks;
+
+    /* size of the trie */
+    size_t size;
+} RmTrie;
+
+/* Callback to rm_trie_iter */
+typedef int (*RmTrieIterCallback)(RmTrie *self, RmNode *node, int level, void *user_data);
+
+/**
+ * rm_trie_init:
+ * Initialize a trie. 
+ */
+void rm_trie_init(RmTrie *self);
+
+/**
+ * rm_trie_destroy:
+ * Free all resources associated with the trie 
+ */
+void rm_trie_destroy(RmTrie *self);
+
+/**
+ * rm_trie_insert:
+ * Insert a path to the trie and associate a value with it.
+ * The value can be later requested with rm_trie_search*.
+ */
+void rm_trie_insert(RmTrie *self, const char *path, void *value);
+
+/** 
+ * rm_trie_search_node: 
+ * Search a node in the trie by path.
+ */
+RmNode *rm_trie_search_node(RmTrie *self, const char *path);
+
+/** 
+ * rm_trie_search:
+ * As rm_trie_search_node but returns node->value if it's not NULL.
+ */
+void *rm_trie_search(RmTrie *self, const char *path);
+
+/** 
+ * rm_trie_build_path:
+ * Take a node and go up till parent while writing all nodes 
+ * in buf (or until buf_len is reached).
+ *
+ * Returns the input buffer for chaining calls.
+ */
+char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len);
+
+/**
+ * rm_trie_size:
+ * Return the size of the trie.
+ */
+size_t rm_trie_size(RmTrie *self);
+
+/** 
+ * rm_trie_iter:
+ * Iterate over all nodes in the trie starting on root calling `callback` on
+ * each. If root is NULL, self->root is assumed. 
+ *
+ * If pre_order is true, the trie is iterated top-down (i.e. for printing)
+ * if pre_order is false, the trie is iterated bottom-up (i.e. for freeing)
+ *
+ * user_data will be passed to the callback.
+ */
+void rm_trie_iter(RmTrie *self,
+                  RmNode *root,
+                  bool pre_order,
+                  RmTrieIterCallback callback,
+                  void *user_data);
+
+/**
+ * rm_trie_print:
+ * Print the trie on stdout for debugging purposes.
+ */
+void rm_trie_print(RmTrie *self);
+
+#endif
