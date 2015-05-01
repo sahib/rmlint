@@ -555,41 +555,19 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmMainTag *tag) {
     target_bytes = target_pages * tag->page_size;
 
     /* test if cost-effective to read the whole file */
-    if(group->hash_offset + target_bytes + balanced_bytes >= group->file_size) {
-        target_bytes = group->file_size - group->hash_offset;
-    }
-
-    group->next_offset = group->hash_offset + target_bytes;
-
-    /* for paranoid digests, make sure next read is not > max size of paranoid
-     * buffer */
-    if(group->digest_type == RM_DIGEST_PARANOID) {
-        group->next_offset =
-            MIN(group->next_offset, group->hash_offset + rm_digest_paranoia_bytes());
-    }
-
-    /* read to end of current file fragment, or to group->next_offset, whichever
-     * comes first */
-    RmOff bytes_to_next_fragment = 0;
-
-    /* NOTE: need lock because queue sorting also accesses file->disk_offsets,
-     * which is not threadsafe */
-    g_assert(file->device);
-    g_mutex_lock(&file->device->lock);
-    {
-        bytes_to_next_fragment =
-            rm_offset_bytes_to_next_fragment(file->disk_offsets, file->seek_offset);
-    }
-    g_mutex_unlock(&file->device->lock);
-
-    if(bytes_to_next_fragment != 0 &&
-       bytes_to_next_fragment + file->seek_offset < group->next_offset) {
-        file->status = RM_FILE_STATE_FRAGMENT;
-        result = bytes_to_next_fragment;
+    if (group->hash_offset + target_bytes + SHRED_BALANCED_READ_BYTES >= group->file_size) {
+        group->next_offset = group->file_size;
     } else {
-        file->status = RM_FILE_STATE_NORMAL;
-        result = (group->next_offset - file->seek_offset);
+        group->next_offset = group->hash_offset + target_bytes;
     }
+
+    /* for paranoid digests, make sure next read is not > max size of paranoid buffer */
+    if(group->digest_type == RM_DIGEST_PARANOID) {
+        group->next_offset = MIN(group->next_offset, group->hash_offset + rm_digest_paranoia_bytes() );
+    }
+
+    file->status = RM_FILE_STATE_NORMAL;
+    result = (group->next_offset - file->seek_offset);
 
     return result;
 }
