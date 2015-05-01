@@ -63,26 +63,47 @@ void rm_trie_init(RmTrie *self) {
     self->chunks = g_string_chunk_new(100);
 }
 
+/* Path iterator that works with absolute paths.
+ * Absolute paths are required to start with a /
+ */
+typedef struct RmPathIter {
+    char *curr_elem;
+    char path_buf[PATH_MAX];
+} RmPathIter;
+
+void rm_path_iter_init(RmPathIter *iter, const char *path) {
+    if(*path != '/') {
+        path++;
+    }
+
+    memset(iter->path_buf, 0, PATH_MAX);
+    strncpy(iter->path_buf, &path[1], PATH_MAX);
+    
+    iter->curr_elem = iter->path_buf;
+}
+
+char *rm_path_iter_next(RmPathIter *iter) {
+    char *elem_begin = iter->curr_elem;
+
+    if(elem_begin && (iter->curr_elem = strchr(elem_begin, '/'))) {
+        *(iter->curr_elem) = 0;
+        iter->curr_elem += 1;
+    }
+
+    return elem_begin;
+}
+
 RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     g_assert(self);
     g_assert(path);
-    g_return_val_if_fail(*path == '/', NULL);
 
-    char path_buf[PATH_MAX];
-    memset(path_buf, 0, sizeof(path_buf));
-    strcpy(path_buf, &path[1]);
-
+    char *path_elem = NULL;
     RmNode *curr_node = self->root;
-    char *curr_elem = path_buf;
 
-    while(curr_elem != NULL) {
-        char *elem_begin = curr_elem;
-        if((curr_elem = strchr(elem_begin, '/'))) {
-            *curr_elem = 0;
-            curr_elem += 1;
-        }
-
-        curr_node = rm_node_insert(self, curr_node, elem_begin);
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+    while((path_elem = rm_path_iter_next(&iter))) {
+        curr_node = rm_node_insert(self, curr_node, path_elem);
     }
 
     if(curr_node != NULL) {
@@ -97,28 +118,19 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
 RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
     g_assert(self);
     g_assert(path);
-    g_return_val_if_fail(*path == '/', NULL);
 
-    char path_buf[PATH_MAX];
-    memset(path_buf, 0, sizeof(path_buf));
-    strcpy(path_buf, &path[1]);
-
+    char *path_elem = NULL;
     RmNode *curr_node = self->root;
-    char *curr_elem = path_buf;
 
-    while(curr_elem != NULL && curr_node != NULL) {
-        char *elem_begin = curr_elem;
-        if((curr_elem = strchr(elem_begin, '/'))) {
-            *curr_elem = 0;
-            curr_elem += 1;
-        }
-
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+    while(curr_node && (path_elem = rm_path_iter_next(&iter))) {
         if(curr_node->children == NULL) {
             /* Can't go any further */
             return NULL;
         }
 
-        curr_node = g_hash_table_lookup(curr_node->children, elem_begin);
+        curr_node = g_hash_table_lookup(curr_node->children, path_elem);
     }
 
     return curr_node;
@@ -261,7 +273,7 @@ int main(void) {
     }
 
     g_printerr("Took %2.5f to insert %d items\n", g_timer_elapsed(timer, NULL), i);
-    // rm_trie_print(&trie);
+    rm_trie_print(&trie);
     memset(buf, 0, sizeof(buf));
     rm_trie_build_path(rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf, sizeof(buf));
     g_printerr("=> %s\n", buf);
