@@ -817,7 +817,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
     RmOff phys_offset_a = a->current_disk_offset;
     RmOff phys_offset_b = b->current_disk_offset;
 
-    return (0 + 4 * SIGN_DIFF(a->dev, b->dev) +
+    return (4 * SIGN_DIFF(a->dev, b->dev) +
             2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
             1 * SIGN_DIFF(a->inode, b->inode));
 }
@@ -825,7 +825,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
-    if(file->device->is_rotational || 1 && session->cfg->build_fiemap || 1) {
+    if(file->device->is_rotational && session->cfg->build_fiemap) {
         g_assert(!file->disk_offsets);
 
         RM_DEFINE_PATH(file);

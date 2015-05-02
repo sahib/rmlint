@@ -55,7 +55,6 @@ typedef struct RmFmtHandlerProgress {
 
 static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf, size_t buf_len, FILE *out) {
     if(session->offsets_read > 0) {
-        // TODO: Translate.
         g_snprintf(
             buf, buf_len, "fiemap: %s+%" LLU "%s %s-%" LLU "%s %s#%" LLU "%s",
             MAYBE_GREEN(out, session), session->offsets_read, MAYBE_RESET(out, session),
