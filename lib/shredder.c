@@ -825,7 +825,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
 static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
-    if(file->device->is_rotational && session->cfg->build_fiemap) {
+    if(file->device->is_rotational || 1 && session->cfg->build_fiemap || 1) {
         g_assert(!file->disk_offsets);
 
         RM_DEFINE_PATH(file);
