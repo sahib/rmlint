@@ -53,10 +53,29 @@ typedef struct RmFmtHandlerProgress {
     struct winsize terminal;
 } RmFmtHandlerProgress;
 
+static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf, size_t buf_len, FILE *out) {
+    if(session->offsets_read > 0) {
+        g_snprintf(
+            buf, buf_len, "fiemap: %s+%" LLU "%s %s-%" LLU "%s %s#%" LLU "%s",
+            MAYBE_GREEN(out, session), session->offsets_read, MAYBE_RESET(out, session),
+            MAYBE_RED(out, session), session->offset_fails, MAYBE_RESET(out, session),
+            MAYBE_BLUE(out, session), session->total_filtered_files, MAYBE_RESET(out, session)
+        );
+    } else {
+        g_snprintf(
+            buf, buf_len, "%s %s%" LLU "%s",
+            _("reduces files to"), MAYBE_GREEN(out, session),
+            session->total_filtered_files, MAYBE_RESET(out, session)
+        );
+    }
+}
+
 static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self,
                                         int max_len, FILE *out) {
     char num_buf[32] = {0};
+    char preproc_buf[128] = {0};
     memset(num_buf, 0, sizeof(num_buf));
+    memset(preproc_buf, 0, sizeof(preproc_buf));
 
     switch(self->last_state) {
     case RM_PROGRESS_STATE_TRAVERSE:
@@ -71,11 +90,11 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
         break;
     case RM_PROGRESS_STATE_PREPROCESS:
         self->percent = 2.0;
+        rm_fmt_progress_format_preprocess(session, preproc_buf, sizeof(preproc_buf), out);
         self->text_len =
             g_snprintf(self->text_buf, sizeof(self->text_buf),
-                       "%s (%s %s%" LLU "%s / %s %s%" LLU "%s %s)", _("Preprocessing"),
-                       _("reduces files to"), MAYBE_GREEN(out, session),
-                       session->total_filtered_files, MAYBE_RESET(out, session),
+                       "%s (%s / %s %s%" LLU "%s %s)", _("Preprocessing"),
+                       preproc_buf,
                        _("found"), MAYBE_RED(out, session), session->other_lint_cnt,
                        MAYBE_RESET(out, session), _("other lint"));
         break;
@@ -281,7 +300,7 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 20;
+            self->update_interval = 50;
         }
 
         self->last_unknown_pos = 0;

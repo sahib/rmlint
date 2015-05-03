@@ -845,7 +845,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
     RmOff phys_offset_a = a->current_disk_offset;
     RmOff phys_offset_b = b->current_disk_offset;
 
-    return (0 + 4 * SIGN_DIFF(a->dev, b->dev) +
+    return (4 * SIGN_DIFF(a->dev, b->dev) +
             2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
             1 * SIGN_DIFF(a->inode, b->inode));
 }
