@@ -154,6 +154,9 @@ typedef struct RmFile {
     /* If true, the file will be request to be pre-cached on the next read */
     bool fadvise_requested : 1;
 
+    /* Set to true if rm_shred_devlist_factory is waiting for hash increment */
+    bool devlist_waiting : 1;
+
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
