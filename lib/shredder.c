@@ -1138,7 +1138,6 @@ static gboolean rm_shred_sift(RmFile *file) {
 
     RmShredGroup *child_group = NULL;
     RmShredGroup *current_group = file->shred_group;
-    RmMainTag *tag = current_group->main;
 
     if(file->status == RM_FILE_STATE_IGNORE) {
         rm_digest_free(file->digest);
@@ -1792,7 +1791,6 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
         return file;
     }
-    RmMainTag *tag = device->main;
 
     bool worth_waiting=FALSE;
 
