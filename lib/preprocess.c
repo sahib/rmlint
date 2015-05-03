@@ -409,8 +409,6 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
 
                 g_queue_delete_link(file->hardlinks.files, iter);
                 rm_file_destroy(iter_file);
-                
-                /* TODO: update counters for removal of path doubles */
             }
         }
 
@@ -477,8 +475,10 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
     if(file->hardlinks.is_head) {
-        /* TODO: update counters to reflect fewer files to traverse due to hardlink
-         * grouping? */
+        /* Hardlinks are processed on the fly by shredder later,
+         * so we do not really need to process them.
+         */
+        session->total_filtered_files -= file->hardlinks.files->length;
     }
 
     return remove;
