@@ -72,12 +72,12 @@ typedef struct RmPathIter {
 } RmPathIter;
 
 void rm_path_iter_init(RmPathIter *iter, const char *path) {
-    if(*path != '/') {
+    if(*path == '/') {
         path++;
     }
 
     memset(iter->path_buf, 0, PATH_MAX);
-    strncpy(iter->path_buf, &path[1], PATH_MAX);
+    strncpy(iter->path_buf, path, PATH_MAX);
     
     iter->curr_elem = iter->path_buf;
 }
