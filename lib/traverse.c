@@ -323,12 +323,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     is_hidden[p->fts_level + 1] =
                         is_hidden[p->fts_level] | (p->fts_name[0] == '.');
                     have_open_emptydirs = true;
-                    /* TODO: we could possibly store the parent (dev,inode) at this point
-                     * and pass it to any files found
-                     * at the next level down to save a stat() call during preprocessing;
-                     * alternatively store dev/inode in the
-                     * Patricia Tree of folder structure under
-                     * session->cfg->file_trie */
                 }
                 break;
             case FTS_DC: /* directory that causes cycles */
