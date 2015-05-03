@@ -128,7 +128,7 @@ void rm_file_destroy(RmFile *file) {
     } 
 
     /* --cache can write cksums in here */
-    if(file->folder->data) {
+    if(file->folder && file->folder->data) {
         g_free(file->folder->data);
     }
 
