@@ -1358,11 +1358,14 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     if(!file->is_original) {
         session->dup_counter++;
 
-        /* TODO: Add check for file->is_hardlink here.
-         *       If so, we should add nothing to the
-         *       size counter (only the boss twin should count)
-         * */
-        session->total_lint_size += file->file_size;
+        /* Only check file size if it's not a hardlink.
+         * Since deleting hardlinks does not free any space
+         * they should not be counted unless all of them would
+         * be removed.
+         */
+        if(file->hardlinks.is_head || file->hardlinks.hardlink_head == NULL) {
+            session->total_lint_size += file->file_size;
+        }
     }
 }
 

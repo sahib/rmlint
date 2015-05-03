@@ -427,7 +427,6 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
             RmFile *embedded = iter->data;
             g_assert(embedded != file);
             if(embedded->hardlinks.files != NULL) {
-                /* TODO: can this actually happen? */
                 rm_log_error("Warning: embedded file %p has hardlinks", embedded);
                 GQueue *hardlinks = embedded->hardlinks.files;
                 g_assert(hardlinks->length < 2);
