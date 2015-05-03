@@ -26,6 +26,8 @@
 #define RM_SETTINGS_H
 
 #include <stdio.h>
+
+#include "pathtricia.h"
 #include "checksum.h"
 #include "utilities.h"
 
@@ -84,7 +86,7 @@ typedef struct RmCfg {
     char *iwd;
     char *joined_argv;
 
-    GNode *folder_tree_root;
+    RmTrie file_trie;
 
     RmOff minsize;
     RmOff maxsize;

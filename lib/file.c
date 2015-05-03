@@ -32,49 +32,6 @@
 #include <sys/file.h>
 #include <string.h>
 
-/**
- * @brief Add folder node into folder tree (if not already there); return pointer to the
- * node.
- * @param *root root node of the folder tree
- * @param *path absolute path of a file in the folder
- */
-
-static GNode *rm_folders_add(GNode *root, const char *path) {
-    g_assert(path[0] == '/');
-    g_assert(strlen(path) > 1);
-
-    gchar **split_path = g_strsplit(path + 1, "/", 0);
-    GNode *current_folder = root;
-
-    /* walk and/or build down the folder tree from / until we reach the final path
- * (exclude
- * last element which is the basename) */
-    for(int i = 0; split_path[i]; i++) {
-        if(split_path[i + 1]) {
-            /* still in the folder tree */
-            GNode *next_folder;
-            for(next_folder = current_folder->children; next_folder;
-                next_folder = next_folder->next) {
-                if(strcmp(next_folder->data, split_path[i]) == 0) {
-                    break;
-                }
-            }
-
-            if(next_folder == NULL) {
-                next_folder = g_node_insert_data(current_folder, -1, split_path[i]);
-            } else {
-                g_free(split_path[i]);
-            }
-
-            current_folder = next_folder;
-        } else {
-            /* free the basename part */
-            g_free(split_path[i]);
-        }
-    }
-    g_free(split_path);
-    return current_folder;
-}
 
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index) {
@@ -131,9 +88,9 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
 
 void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
     if(file->session->cfg->use_meta_cache == false) {
-        file->basename =
-            (copy) ? g_strdup(rm_util_basename(path)) : rm_util_basename(path);
-        file->folder = rm_folders_add(file->session->cfg->folder_tree_root, path);
+        file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, NULL);
+        file->basename = (copy) ? g_strdup(file->folder->basename) : file->folder->basename;
+
     } else {
         file->path_id = rm_swap_table_insert(
             file->session->meta_cache, file->session->meta_cache_path_id, (char *)path,
@@ -146,7 +103,6 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
 
     RmOff id = file->path_id;
 
-
     memset(buf, 0, PATH_MAX);
     rm_swap_table_lookup(session->meta_cache, session->meta_cache_path_id, id, buf,
                          PATH_MAX);
@@ -155,21 +111,7 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
 void rm_file_build_path(RmFile *file, char *buf) {
     g_assert(file);
 
-    size_t n_elements = 1;
-    char *elements[PATH_MAX / 2 + 1] = {file->basename, NULL};
-
-    /* walk up the folder tree, collecting path elements into a list */
-    for(GNode *folder = file->folder; folder->parent; folder = folder->parent) {
-        elements[n_elements++] = folder->data;
-        if(n_elements >= sizeof(elements)) break;
-    }
-
-    /* copy collected elements into *buf */
-    char *buf_ptr = buf;
-    while(n_elements && (buf_ptr - buf) < PATH_MAX) {
-        *buf_ptr = '/'; 
-        buf_ptr = g_stpcpy(buf_ptr + 1, (char *)elements[--n_elements]);
-    }
+    rm_trie_build_path(file->folder, buf, PATH_MAX);
 }
 
 void rm_file_destroy(RmFile *file) {
@@ -183,7 +125,13 @@ void rm_file_destroy(RmFile *file) {
     /* Only delete the basename when it really was in memory */
     if(file->session->cfg->use_meta_cache == false) {
         g_free(file->basename);
+    } 
+
+    /* --cache can write cksums in here */
+    if(file->folder && file->folder->data) {
+        g_free(file->folder->data);
     }
+
     g_slice_free(RmFile, file);
 }
 

@@ -51,11 +51,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->offset_fails = 0;
 }
 
-static gboolean free_node(GNode *node, _U gpointer data) {
-    g_free(node->data);
-    return FALSE;
-}
-
 void rm_session_clear(RmSession *session) {
     RmCfg *cfg = session->cfg;
 
@@ -100,9 +95,7 @@ void rm_session_clear(RmSession *session) {
     g_free(cfg->is_prefd);
     g_free(cfg->iwd);
 
-    g_node_traverse(cfg->folder_tree_root, G_IN_ORDER, G_TRAVERSE_ALL, -1,
-                    (GNodeTraverseFunc)free_node, NULL);
-    g_node_destroy(cfg->folder_tree_root);
+    rm_trie_destroy(&cfg->file_trie);
 }
 
 void rm_session_abort(RmSession *session) {

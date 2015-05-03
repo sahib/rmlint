@@ -26,6 +26,7 @@
 #ifndef RM_PATHTRICIA_H
 #define RM_PATHTRICIA_H
 
+#include <stdbool.h>
 #include <glib.h>
 
 typedef struct _RmNode {
@@ -37,6 +38,9 @@ typedef struct _RmNode {
 
     /* Array of children nodes */
     GHashTable *children;
+
+    /* data was set explicitly */
+    bool has_value;
 
     /* User specific data */
     gpointer data;
@@ -73,7 +77,7 @@ void rm_trie_destroy(RmTrie *self);
  * Insert a path to the trie and associate a value with it.
  * The value can be later requested with rm_trie_search*.
  */
-void rm_trie_insert(RmTrie *self, const char *path, void *value);
+RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value);
 
 /** 
  * rm_trie_search_node: 
@@ -86,6 +90,13 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path);
  * As rm_trie_search_node but returns node->value if it's not NULL.
  */
 void *rm_trie_search(RmTrie *self, const char *path);
+
+/**
+ * rm_trie_set_value:
+ * Search a node in the trie and set it's value.
+ * If node does not exist, no value is set and false is returned..
+ */ 
+bool rm_trie_set_value(RmTrie *self, const char *path, void *data);
 
 /** 
  * rm_trie_build_path:
@@ -110,11 +121,15 @@ size_t rm_trie_size(RmTrie *self);
  * If pre_order is true, the trie is iterated top-down (i.e. for printing)
  * if pre_order is false, the trie is iterated bottom-up (i.e. for freeing)
  *
+ * If all_nodes is true all nodes are traversed.
+ * If all_nodes is false only nodes that were explicitly inserted are traversed.
+ *
  * user_data will be passed to the callback.
  */
 void rm_trie_iter(RmTrie *self,
                   RmNode *root,
                   bool pre_order,
+                  bool all_nodes,
                   RmTrieIterCallback callback,
                   void *user_data);
 

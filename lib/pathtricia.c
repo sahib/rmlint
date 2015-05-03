@@ -15,6 +15,11 @@ static RmNode *rm_node_new(RmTrie *trie, const char *elem) {
     RmNode *self = g_slice_alloc0(sizeof(RmNode));
 
     if(elem != NULL) {
+        /* Note: We could use g_string_chunk_insert_const here.
+         * That would keep a hash table with all strings internally though,
+         * but would sort out storing duplicate path elements. In normal
+         * setups this will not happen that much though I guess.
+         */
         self->basename = g_string_chunk_insert(trie->chunks, elem);
     }
     return self;
@@ -58,59 +63,74 @@ void rm_trie_init(RmTrie *self) {
     self->chunks = g_string_chunk_new(100);
 }
 
-void rm_trie_insert(RmTrie *self, const char *path, void *value) {
+/* Path iterator that works with absolute paths.
+ * Absolute paths are required to start with a /
+ */
+typedef struct RmPathIter {
+    char *curr_elem;
+    char path_buf[PATH_MAX];
+} RmPathIter;
+
+void rm_path_iter_init(RmPathIter *iter, const char *path) {
+    if(*path != '/') {
+        path++;
+    }
+
+    memset(iter->path_buf, 0, PATH_MAX);
+    strncpy(iter->path_buf, &path[1], PATH_MAX);
+    
+    iter->curr_elem = iter->path_buf;
+}
+
+char *rm_path_iter_next(RmPathIter *iter) {
+    char *elem_begin = iter->curr_elem;
+
+    if(elem_begin && (iter->curr_elem = strchr(elem_begin, '/'))) {
+        *(iter->curr_elem) = 0;
+        iter->curr_elem += 1;
+    }
+
+    return elem_begin;
+}
+
+RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     g_assert(self);
     g_assert(path);
-    g_return_if_fail(*path == '/');
 
-    char path_buf[PATH_MAX];
-    memset(path_buf, 0, sizeof(path_buf));
-    strcpy(path_buf, &path[1]);
-
+    char *path_elem = NULL;
     RmNode *curr_node = self->root;
-    char *curr_elem = path_buf;
 
-    while(curr_elem != NULL) {
-        char *elem_begin = curr_elem;
-        if((curr_elem = strchr(elem_begin, '/'))) {
-            *curr_elem = 0;
-            curr_elem += 1;
-        }
-
-        curr_node = rm_node_insert(self, curr_node, elem_begin);
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+    while((path_elem = rm_path_iter_next(&iter))) {
+        curr_node = rm_node_insert(self, curr_node, path_elem);
     }
 
     if(curr_node != NULL) {
+        curr_node->has_value = true;
         curr_node->data = value;
         self->size++;
     }
+
+    return curr_node;
 }
 
 RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
     g_assert(self);
     g_assert(path);
-    g_return_val_if_fail(*path == '/', NULL);
 
-    char path_buf[PATH_MAX];
-    memset(path_buf, 0, sizeof(path_buf));
-    strcpy(path_buf, &path[1]);
-
+    char *path_elem = NULL;
     RmNode *curr_node = self->root;
-    char *curr_elem = path_buf;
 
-    while(curr_elem != NULL && curr_node != NULL) {
-        char *elem_begin = curr_elem;
-        if((curr_elem = strchr(elem_begin, '/'))) {
-            *curr_elem = 0;
-            curr_elem += 1;
-        }
-
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+    while(curr_node && (path_elem = rm_path_iter_next(&iter))) {
         if(curr_node->children == NULL) {
             /* Can't go any further */
             return NULL;
         }
 
-        curr_node = g_hash_table_lookup(curr_node->children, elem_begin);
+        curr_node = g_hash_table_lookup(curr_node->children, path_elem);
     }
 
     return curr_node;
@@ -119,6 +139,16 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
 void *rm_trie_search(RmTrie *self, const char *path) {
     RmNode *find = rm_trie_search_node(self, path);
     return (find) ? find->data : NULL;
+}
+
+bool rm_trie_set_value(RmTrie *self, const char *path, void *data) {
+    RmNode *find = rm_trie_search_node(self, path);
+    if(find == NULL) {
+        return false;
+    } else {
+        find->data = data;
+        return true;
+    }
 }
 
 char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
@@ -130,7 +160,7 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
     char *elements[PATH_MAX / 2 + 1] = {node->basename, NULL};
 
     /* walk up the folder tree, collecting path elements into a list */
-    for(RmNode *folder = node->parent; folder->parent; folder = folder->parent) {
+    for(RmNode *folder = node->parent; folder && folder->parent; folder = folder->parent) {
         elements[n_elements++] = folder->basename;
         if(n_elements >= sizeof(elements))
             break;
@@ -152,7 +182,7 @@ size_t rm_trie_size(RmTrie *self) {
 
 static void _rm_trie_iter(RmTrie *self,
                           RmNode *root,
-                          bool pre_order,
+                          bool pre_order, bool all_nodes,
                           RmTrieIterCallback callback,
                           void *user_data,
                           int level) {
@@ -163,7 +193,7 @@ static void _rm_trie_iter(RmTrie *self,
         root = self->root;
     }
 
-    if(pre_order) {
+    if(pre_order && (all_nodes || root->has_value)) {
         if(callback(self, root, level, user_data) != 0) {
             return;
         }
@@ -172,11 +202,11 @@ static void _rm_trie_iter(RmTrie *self,
     if(root->children != NULL) {
         g_hash_table_iter_init(&iter, root->children);
         while(g_hash_table_iter_next(&iter, &key, &value)) {
-            _rm_trie_iter(self, value, pre_order, callback, user_data, level + 1);
+            _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data, level + 1);
         }
     }
 
-    if(!pre_order) {
+    if(!pre_order && (all_nodes || root->has_value)) {
         if(callback(self, root, level, user_data) != 0) {
             return;
         }
@@ -185,10 +215,10 @@ static void _rm_trie_iter(RmTrie *self,
 
 void rm_trie_iter(RmTrie *self,
                   RmNode *root,
-                  bool pre_order,
+                  bool pre_order, bool all_nodes,
                   RmTrieIterCallback callback,
                   void *user_data) {
-    _rm_trie_iter(self, root, pre_order, callback, user_data, 0);
+    _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);
 }
 
 static int rm_trie_print_callback(_U RmTrie *self,
@@ -207,7 +237,7 @@ static int rm_trie_print_callback(_U RmTrie *self,
 }
 
 void rm_trie_print(RmTrie *self) {
-    rm_trie_iter(self, NULL, true, rm_trie_print_callback, NULL);
+    rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
 }
 
 static int rm_trie_destroy_callback(_U RmTrie *self,
@@ -219,7 +249,7 @@ static int rm_trie_destroy_callback(_U RmTrie *self,
 }
 
 void rm_trie_destroy(RmTrie *self) {
-    rm_trie_iter(self, NULL, false, rm_trie_destroy_callback, NULL);
+    rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
     g_string_chunk_free(self->chunks);
 }
 
@@ -243,7 +273,7 @@ int main(void) {
     }
 
     g_printerr("Took %2.5f to insert %d items\n", g_timer_elapsed(timer, NULL), i);
-    // rm_trie_print(&trie);
+    rm_trie_print(&trie);
     memset(buf, 0, sizeof(buf));
     rm_trie_build_path(rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf, sizeof(buf));
     g_printerr("=> %s\n", buf);
