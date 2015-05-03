@@ -385,7 +385,10 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
             return;
         }
 
-        rm_trie_set_value(file_trie, path, g_strdup(cksum));
+        char *cksum_copy = g_strdup(cksum);
+        if(!rm_trie_set_value(file_trie, path, cksum_copy)) {
+            g_free(cksum_copy);
+        }
         rm_log_debug("* Adding cache entry %s (%s)\n", path, cksum);
     }
 }
