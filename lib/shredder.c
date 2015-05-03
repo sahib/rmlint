@@ -929,7 +929,7 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     if(self->children) {
         g_hash_table_unref(self->children);
     }
-    
+
     g_mutex_clear(&self->lock);
 
     g_slice_free(RmShredGroup, self);
@@ -989,7 +989,7 @@ static void rm_shred_group_unref(RmShredGroup *self) {
     bool needs_free = FALSE;
     bool unref_parent = FALSE;
     bool send_results = FALSE;
-    
+
     g_mutex_lock(&self->lock);
     {
         g_assert(self->ref_count>0);
@@ -997,7 +997,7 @@ static void rm_shred_group_unref(RmShredGroup *self) {
         if (self->ref_count == 0) {
             rm_shred_mem_return(self);
         }
-        
+
         switch(self->status) {
         case RM_SHRED_GROUP_DORMANT:
             /* group is not going to receive any more files; do required clean-up */
@@ -1031,7 +1031,7 @@ static void rm_shred_group_unref(RmShredGroup *self) {
         }
     }
     g_mutex_unlock(&self->lock);
-    
+
     if (send_results) {
         rm_util_thread_pool_push(self->main->result_pool, self);
     }
@@ -1066,7 +1066,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
         rm_digest_free(file->digest);
         file->digest = NULL;
     }
-    
+
     g_mutex_lock(&shred_group->lock);
     {
 
@@ -1574,7 +1574,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
-    
+
     file->current_disk_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
 
     if(ferror(fd) != 0) {
@@ -1830,6 +1830,24 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     return file;
 }
 
+static bool rm_shred_can_process(RmFile *file, RmMainTag *main) {
+    /* initialise hash (or recover progressive hash so far) */
+    bool result = TRUE;
+    g_assert(file->shred_group);
+    g_mutex_lock(&file->shred_group->lock);
+    {
+        if(file->digest == NULL) {
+            g_assert(file->shred_group);
+
+            result = rm_shred_reassign_checksum(main, file);
+        }
+    }
+    g_mutex_unlock(&file->shred_group->lock);
+    return result;
+}
+
+
+
 static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     GList *iter = NULL;
 
@@ -1863,23 +1881,24 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
     /* scheduler for one file at a time, optimised to minimise seeks */
     while(iter && !rm_session_was_aborted(main->session)) {
         RmFile *file = iter->data;
-        gboolean can_process = true;
+        gboolean can_process = rm_shred_can_process(file, main);
 
-        RmOff start_offset = file->hash_offset;
-
-        /* initialise hash (or recover progressive hash so far) */
-        g_assert(file->shred_group);
-        g_mutex_lock(&file->shred_group->lock);
+        /* remove current iter from queue and move to next in preparation for next file*/
+        g_mutex_lock(&device->lock);
         {
-            if(file->digest == NULL) {
-                g_assert(file->shred_group);
-
-                can_process = rm_shred_reassign_checksum(main, file);
+            GList *tmp = iter;
+            iter = iter->next;
+            if(can_process) {
+                /* file will be processed */
+                g_queue_delete_link(device->file_queue, tmp);
             }
         }
-        g_mutex_unlock(&file->shred_group->lock);
+        g_mutex_unlock(&device->lock);
 
-        if(can_process) {
+        while(can_process) {
+            can_process = FALSE;
+            RmOff start_offset = file->hash_offset;
+
             file = rm_shred_process_file(device, file);
             if (file) {
 
@@ -1896,34 +1915,24 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmMainTag *main) {
                     rm_log_debug("Recycling fragment %s\n", file_path);
 #endif
                     rm_shred_push_queue_sorted(file); /* call with device unlocked */
-                    /* NOTE: this temporarily means there are two copies of file in the queue
-                     */
                 } else if(rm_shred_sift(file)) {
                     /* continue hashing same file, ie no change to iter */
 #if _RM_SHRED_DEBUG
                     RM_DEFINE_PATH(file);
                     rm_log_debug("Continuing to next generation %s\n", file_path);
 #endif
+                    can_process = rm_shred_can_process(file, main);
+                    if (!can_process) {
+                        /* put file back in queue */
+                        rm_shred_push_queue(file);
+                    }
                     continue;
                 } else {
                     /* rm_shred_sift has taken responsibility for the file and either disposed
-                     * of it (careful!) or pushed it back into our queue (so there may be two
-                     * copies in the queue); unlink and move to next file (below).*/
+                     * of it or pushed it back into our queue */
                 }
             }
         }
-
-        /* remove current iter from queue and move to next*/
-        g_mutex_lock(&device->lock);
-        {
-            GList *tmp = iter;
-            iter = iter->next;
-            if(can_process || !file) {
-                /* file has been processed */
-                g_queue_delete_link(device->file_queue, tmp);
-            }
-        }
-        g_mutex_unlock(&device->lock);
     }
 
     /* threadpool thread terminates but the device will be recycled via
