@@ -156,15 +156,10 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "args", session->cfg->joined_argv);
             rm_fmt_json_sep(self, out);
-<<<<<<< HEAD
-            rm_fmt_json_key(out, "checksum_type",
-                            rm_digest_type_to_string(session->cfg->checksum_type));
-=======
             rm_fmt_json_key_int(out, "progress", 0); /* Header is always first. */
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "checksum_type",
                             rm_digest_type_to_string(session->cfg->checksum_type));
->>>>>>> 9de3176... json: add progress value from 0-100 to each element.
             if(session->hash_seed1 && session->hash_seed2) {
                 rm_fmt_json_sep(self, out);
                 rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
