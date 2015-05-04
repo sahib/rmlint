@@ -93,6 +93,9 @@ typedef struct RmCfg {
     RmOff threads;
     RmDigestType checksum_type;
     RmOff paranoid_mem;
+
+    gboolean shred_always_wait;
+    gboolean shred_never_wait;
 } RmCfg;
 
 /**
