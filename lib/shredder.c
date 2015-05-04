@@ -1032,13 +1032,14 @@ static void rm_shred_group_unref(RmShredGroup *self) {
     }
     g_mutex_unlock(&self->lock);
 
+    if (unref_parent && self->parent) {
+        rm_shred_group_unref(self->parent);
+    }
+
     if (send_results) {
         rm_util_thread_pool_push(self->main->result_pool, self);
     }
 
-    if (self->parent && unref_parent) {
-        rm_shred_group_unref(self->parent);
-    }
     if (needs_free) {
         rm_log_debug("Free from rm_shred_group_unref");
         rm_shred_group_free(self, false);
