@@ -438,6 +438,15 @@ typedef struct RmShredGroup {
     RmMainTag *main;
 } RmShredGroup;
 
+/////////////////////////
+// PROTOTYPE FUNCTIONS //
+/////////////////////////
+
+/* Prototypes for functions that reference each other */
+static gboolean rm_shred_sift(RmFile *file);
+static void rm_shred_push_queue_sorted(RmFile *file);
+static void rm_shred_group_make_orphan(RmShredGroup *self);
+
 /////////// RmShredGroup ////////////////
 
 /* allocate and initialise new RmShredGroup
@@ -712,10 +721,6 @@ static void rm_shred_write_cksum_to_xattr(RmSession *session, RmFile *file) {
     }
 }
 
-/* prototype functions (TODO: can we untangle the order to avoid this? */
-static gboolean rm_shred_sift(RmFile *file);
-static void rm_shred_push_queue_sorted(RmFile *file);
-
 /* Hash file. Runs as threadpool in parallel / tandem with rm_shred_read_factory above
  * */
 static void rm_shred_hash_factory(RmBuffer *buffer, RmMainTag *tag) {
@@ -963,11 +968,6 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
         }
     }
 }
-
-
-/* prototype for rm_shred_group_make_orphan since it and rm_shred_group_unref reference
- * each other */
-static void rm_shred_group_make_orphan(RmShredGroup *self);
 
 /* Decrease reference count for RmShredGroup; dispose of group if reference count is 0.
  * Each group has 1 reference for group->parent and one for each file that has not
