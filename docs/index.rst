@@ -1,38 +1,4 @@
-.. .. image:: _static/screenshot.png
-..    :align: center
-..    :width: 66%
-
-    
-----
-
-.. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
-   :align: left 
-   :width: 150
-
 |
-|
-|
-
-.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :target: https://rmlint.rtfd.org
-
-.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
-
-.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/issues
-
-|
-
-.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/releases
-
-.. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
-   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
-
-.. image:: https://www.codacy.com/project/badge/0a87c7b0766844f58635295655847f30
-   :target: https://www.codacy.com/public/sahib/rmlint/dashboard
-
 |
 
 **rmlint** finds space waste and other broken things on your filesystem and offers
@@ -59,6 +25,44 @@ to remove it. It is able to find:
    + Easy commandline interface.
    + Possibility to update files with newer mtime.
    + Many options for originaldetection.
+
+|
+
+.. image:: _static/screenshot.png
+   :align: center
+   :width: 42%
+
+----
+
+.. .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
+..    :align: left 
+..    :width: 150
+
+.. raw:: html
+
+    <center>
+
+.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
+   :target: https://rmlint.rtfd.org
+
+.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
+   :target: https://travis-ci.org/sahib/rmlint
+
+.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/issues
+
+.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
+   :target: https://github.com/sahib/rmlint/releases
+
+.. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
+   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+
+.. image:: https://www.codacy.com/project/badge/0a87c7b0766844f58635295655847f30
+   :target: https://www.codacy.com/public/sahib/rmlint/dashboard
+
+.. raw:: html
+
+    </center>
 
 
 .. .. DANGER::

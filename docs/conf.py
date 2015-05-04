@@ -27,7 +27,8 @@ try:
     templates_path = ['_templates']
     html_theme = 'bootstrap'
     html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
-except:
+except ImportError:
+    print('Cannot import sphinx_bootstrap_theme; falling back to `nature`.')
     html_theme = 'nature'
 
 # -- General configuration -----------------------------------------------------
@@ -62,7 +63,7 @@ todo_include_todos = True
 
 # General information about the project.
 project = 'rmlint documentation'
-copyright = '2014, Christopher Pahl & Daniel Thomas'
+copyright = '2014-2015, Christopher Pahl & Daniel Thomas'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -177,7 +178,8 @@ if html_theme == 'bootstrap':
         # 'bootswatch_theme': "simplex",
         # 'bootswatch_theme': "journal",
         # 'bootswatch_theme': "readable",
-        'bootswatch_theme': "sandstone",
+        #'bootswatch_theme': "sandstone",
+        'bootswatch_theme': "readable",
 
         # Choose Bootstrap version.
         # Values: "3" (default) or "2" (in quotes)

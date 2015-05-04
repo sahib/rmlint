@@ -43,7 +43,7 @@ So for the above example, the full process would be:
 
 .. code-block:: bash
 
-   `-FF`` together with this option. rmlint
+   $ rmlint some/path
    # (wait for rmlint to finish running)
    $ gedit rmlint.sh
    # (or any editor you prefer... review the content of rmlint.sh to
@@ -52,6 +52,13 @@ So for the above example, the full process would be:
    # (the rmlint.sh script will ask for confirmation, then delete the
    #  appropriate lint, then delete itself)
 
+
+On larger runs, it might be more preferable to show a progressbar instead of a
+long list of files. You can do this easily with the ``-g`` switch:
+
+.. code-block:: bash
+
+    $ rmlint -g
 
 Filtering
 ---------
@@ -605,7 +612,8 @@ that reference a file in each respective directory tree, consider using ``-f``.
 
     Do *never ever* modify the filesystem (especially deleting files) while
     running with the ``-D`` option. This can lead to mismatches in the file
-    count of a directory, possibly causing dataloss. You have been warned!
+    count of a directory, possibly causing dataloss. **You have been
+    warned!**
 
 Sometimes it might be nice to only search for duplicate directories, banning all
 the sole files from littering the screen. While this will not delete all files,
