@@ -187,8 +187,8 @@ uint128 WeakHashLen32WithSeeds6(uint64 w, uint64 x, uint64 y, uint64 z, uint64 a
 // Return a 16-byte hash for s[0] ... s[31], a, and b.  Quick and dirty.
 // static pair<uint64, uint64> WeakHashLen32WithSeeds(
 uint128 WeakHashLen32WithSeeds(const char *s, uint64 a, uint64 b) {
-    return WeakHashLen32WithSeeds6(
-        Fetch64(s), Fetch64(s + 8), Fetch64(s + 16), Fetch64(s + 24), a, b);
+    return WeakHashLen32WithSeeds6(Fetch64(s), Fetch64(s + 8), Fetch64(s + 16),
+                                   Fetch64(s + 24), a, b);
 }
 
 // Return an 8-byte hash for 33 to 64 bytes.

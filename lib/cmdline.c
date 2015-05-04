@@ -198,8 +198,8 @@ static gboolean rm_cmd_parse_limit_sizes(_U const char *option_name,
                                          const gchar *range_spec,
                                          RmSession *session,
                                          GError **error) {
-    if(!rm_cmd_size_range_string_to_bytes(
-           range_spec, &session->cfg->minsize, &session->cfg->maxsize, error)) {
+    if(!rm_cmd_size_range_string_to_bytes(range_spec, &session->cfg->minsize,
+                                          &session->cfg->maxsize, error)) {
         g_prefix_error(error, _("cannot parse --limit: "));
         return false;
     } else {
@@ -1127,9 +1127,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"without-fiemap", 0, DISABLE | HIDDEN, G_OPTION_ARG_NONE, &cfg->build_fiemap,
          "Do not use fiemap(2) in order to save memory", NULL},
         {"shred-always-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_always_wait,
-         "Shredder always waits for file increment to finish hashing before moving on to the next file", NULL},
+         "Shredder always waits for file increment to finish hashing before moving on to "
+         "the next file",
+         NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
-         "Shredder never waits for file increment to finish hashing before moving on to the next file", NULL},
+         "Shredder never waits for file increment to finish hashing before moving on to "
+         "the next file",
+         NULL},
         {NULL, 0, HIDDEN, 0, NULL, NULL, NULL}};
     // clang-format on
 

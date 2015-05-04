@@ -35,12 +35,12 @@
 
 static guint rm_file_hash(RmFile *file) {
     RmCfg *cfg = file->session->cfg;
-    if (cfg->match_basename || cfg->match_with_extension ) {
+    if(cfg->match_basename || cfg->match_with_extension) {
         RM_DEFINE_BASENAME(file);
-        return (guint)(file->file_size
-                    ^ (cfg->match_basename ? g_str_hash(file_basename) : 0 )
-                    ^ (cfg->match_with_extension ? g_str_hash(rm_util_path_extension(file_basename)) : 0)
-                    );
+        return (guint)(
+            file->file_size ^ (cfg->match_basename ? g_str_hash(file_basename) : 0) ^
+            (cfg->match_with_extension ? g_str_hash(rm_util_path_extension(file_basename))
+                                       : 0));
     } else {
         return (guint)(file->file_size);
     }
@@ -319,7 +319,6 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
                 g_hash_table_add(node_table, file); /* replaces key and data*/
                 g_queue_push_head(file->hardlinks.files, file);
             } else {
-
                 /* Find the right place to insert sorted */
                 GList *iter = inode_match->hardlinks.files->head;
                 while(iter && rm_pp_cmp_orig_criteria(iter->data, file, session) <= 0) {
@@ -329,7 +328,8 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 
                 /* Store the iter to this file, so we can swap it if needed */
                 if(iter) {
-                    /* file outranks iter (or is equal), so should be inserted before iter */
+                    /* file outranks iter (or is equal), so should be inserted before iter
+                     */
                     g_queue_insert_before(inode_match->hardlinks.files, iter, file);
                 } else {
                     g_queue_push_tail(inode_match->hardlinks.files, file);
@@ -405,7 +405,8 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
 
                 g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) >= 0);
 
-                rm_log_debug("Ignoring path double %p, keeping %p\n", iter_file, match_double);
+                rm_log_debug("Ignoring path double %p, keeping %p\n", iter_file,
+                             match_double);
 
                 g_queue_delete_link(file->hardlinks.files, iter);
                 rm_file_destroy(iter_file);

@@ -766,12 +766,12 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
 
 static bool rm_mounts_create_tables(RmMountTable *self) {
     /* partition dev_t to disk dev_t */
-    self->part_table = g_hash_table_new_full(
-        g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)rm_part_info_free);
+    self->part_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
+                                             (GDestroyNotify)rm_part_info_free);
 
     /* disk dev_t to boolean indication if disk is rotational */
-    self->disk_table = g_hash_table_new_full(
-        g_direct_hash, g_direct_equal, NULL, (GDestroyNotify)rm_disk_info_free);
+    self->disk_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
+                                             (GDestroyNotify)rm_disk_info_free);
 
     self->nfs_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 

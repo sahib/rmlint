@@ -69,12 +69,12 @@ static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
 
         char text[20];
         memset(text, 0, sizeof(text));
-        
-        if(*curr ==  '"' || *curr == '\\') {
+
+        if(*curr == '"' || *curr == '\\') {
             /* Printable, but needs to be escaped */
             text[0] = '\\';
             text[1] = *curr;
-        } else if ((*curr > 0 && *curr < 0x1f) || *curr >= 0x7f) {
+        } else if((*curr > 0 && *curr < 0x1f) || *curr >= 0x7f) {
             /* Something unprintable */
             switch(*curr) {
             case '\b':
@@ -106,7 +106,6 @@ static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
 
     return (size_t)(safe_iter - fixed) < fixed_len;
 }
-
 
 static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {
     char safe_value[PATH_MAX + 4 + 1];
@@ -161,9 +160,10 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_key(out, "checksum_type",
                             rm_digest_type_to_string(session->cfg->checksum_type));
 =======
-            rm_fmt_json_key_int(out, "progress", 0);  /* Header is always first. */
+            rm_fmt_json_key_int(out, "progress", 0); /* Header is always first. */
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key(out, "checksum_type", rm_digest_type_to_string(session->cfg->checksum_type));
+            rm_fmt_json_key(out, "checksum_type",
+                            rm_digest_type_to_string(session->cfg->checksum_type));
 >>>>>>> 9de3176... json: add progress value from 0-100 to each element.
             if(session->hash_seed1 && session->hash_seed2) {
                 rm_fmt_json_sep(self, out);
@@ -186,7 +186,7 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         {
             rm_fmt_json_key_bool(out, "aborted", rm_session_was_aborted(session));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "progress", 100);  /* Footer is always last. */
+            rm_fmt_json_key_int(out, "progress", 100); /* Footer is always last. */
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "total_files", session->total_files);
             rm_fmt_json_sep(self, out);
@@ -226,13 +226,10 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         rm_fmt_json_sep(self, out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(self, out);
-        rm_fmt_json_key_int(
-                out, "progress", 
-                100 - 100 * (
-                    (gdouble)session->shred_bytes_remaining /
-                    (gdouble)session->shred_bytes_after_preprocess
-                )
-        );
+        rm_fmt_json_key_int(out, "progress",
+                            100 -
+                                100 * ((gdouble)session->shred_bytes_remaining /
+                                       (gdouble)session->shred_bytes_after_preprocess));
         rm_fmt_json_sep(self, out);
 
         if(file->digest) {

@@ -288,7 +288,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
     g_queue_init(&self->children);
 
     self->hash_set =
-        g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal); 
+        g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);
 
     return self;
 }

@@ -32,7 +32,6 @@
 #include <sys/file.h>
 #include <string.h>
 
-
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index) {
     RmCfg *cfg = session->cfg;
@@ -89,12 +88,13 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
 void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
     if(file->session->cfg->use_meta_cache == false) {
         file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, NULL);
-        file->basename = (copy) ? g_strdup(file->folder->basename) : file->folder->basename;
+        file->basename =
+            (copy) ? g_strdup(file->folder->basename) : file->folder->basename;
 
     } else {
-        file->path_id = rm_swap_table_insert(
-            file->session->meta_cache, file->session->meta_cache_path_id, (char *)path,
-            path_len + 1);
+        file->path_id = rm_swap_table_insert(file->session->meta_cache,
+                                             file->session->meta_cache_path_id,
+                                             (char *)path, path_len + 1);
     }
 }
 
@@ -125,7 +125,7 @@ void rm_file_destroy(RmFile *file) {
     /* Only delete the basename when it really was in memory */
     if(file->session->cfg->use_meta_cache == false) {
         g_free(file->basename);
-    } 
+    }
 
     /* --cache can write cksums in here */
     if(file->folder && file->folder->data) {

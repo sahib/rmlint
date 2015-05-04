@@ -62,13 +62,13 @@ typedef int (*RmTrieIterCallback)(RmTrie *self, RmNode *node, int level, void *u
 
 /**
  * rm_trie_init:
- * Initialize a trie. 
+ * Initialize a trie.
  */
 void rm_trie_init(RmTrie *self);
 
 /**
  * rm_trie_destroy:
- * Free all resources associated with the trie 
+ * Free all resources associated with the trie
  */
 void rm_trie_destroy(RmTrie *self);
 
@@ -79,13 +79,13 @@ void rm_trie_destroy(RmTrie *self);
  */
 RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value);
 
-/** 
- * rm_trie_search_node: 
+/**
+ * rm_trie_search_node:
  * Search a node in the trie by path.
  */
 RmNode *rm_trie_search_node(RmTrie *self, const char *path);
 
-/** 
+/**
  * rm_trie_search:
  * As rm_trie_search_node but returns node->value if node is not NULL.
  */
@@ -95,12 +95,12 @@ void *rm_trie_search(RmTrie *self, const char *path);
  * rm_trie_set_value:
  * Search a node in the trie and set it's value.
  * If node does not exist, no value is set and false is returned..
- */ 
+ */
 bool rm_trie_set_value(RmTrie *self, const char *path, void *data);
 
-/** 
+/**
  * rm_trie_build_path:
- * Take a node and go up till parent while writing all nodes 
+ * Take a node and go up till parent while writing all nodes
  * in buf (or until buf_len is reached).
  *
  * Returns the input buffer for chaining calls.
@@ -113,10 +113,10 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len);
  */
 size_t rm_trie_size(RmTrie *self);
 
-/** 
+/**
  * rm_trie_iter:
  * Iterate over all nodes in the trie starting on root calling `callback` on
- * each. If root is NULL, self->root is assumed. 
+ * each. If root is NULL, self->root is assumed.
  *
  * If pre_order is true, the trie is iterated top-down (i.e. for printing)
  * if pre_order is false, the trie is iterated bottom-up (i.e. for freeing)

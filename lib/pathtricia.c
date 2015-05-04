@@ -57,7 +57,7 @@ void rm_trie_init(RmTrie *self) {
     g_assert(self);
     self->root = rm_node_new(self, NULL);
 
-    /* Average path len is 93.633236. 
+    /* Average path len is 93.633236.
      * I did ze science! :-)
      */
     self->chunks = g_string_chunk_new(100);
@@ -78,7 +78,7 @@ void rm_path_iter_init(RmPathIter *iter, const char *path) {
 
     memset(iter->path_buf, 0, PATH_MAX);
     strncpy(iter->path_buf, path, PATH_MAX);
-    
+
     iter->curr_elem = iter->path_buf;
 }
 
@@ -160,7 +160,8 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
     char *elements[PATH_MAX / 2 + 1] = {node->basename, NULL};
 
     /* walk up the folder tree, collecting path elements into a list */
-    for(RmNode *folder = node->parent; folder && folder->parent; folder = folder->parent) {
+    for(RmNode *folder = node->parent; folder && folder->parent;
+        folder = folder->parent) {
         elements[n_elements++] = folder->basename;
         if(n_elements >= sizeof(elements))
             break;
@@ -180,12 +181,8 @@ size_t rm_trie_size(RmTrie *self) {
     return self->size;
 }
 
-static void _rm_trie_iter(RmTrie *self,
-                          RmNode *root,
-                          bool pre_order, bool all_nodes,
-                          RmTrieIterCallback callback,
-                          void *user_data,
-                          int level) {
+static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
+                          RmTrieIterCallback callback, void *user_data, int level) {
     GHashTableIter iter;
     gpointer key, value;
 
@@ -202,7 +199,8 @@ static void _rm_trie_iter(RmTrie *self,
     if(root->children != NULL) {
         g_hash_table_iter_init(&iter, root->children);
         while(g_hash_table_iter_next(&iter, &key, &value)) {
-            _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data, level + 1);
+            _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data,
+                          level + 1);
         }
     }
 
@@ -213,11 +211,8 @@ static void _rm_trie_iter(RmTrie *self,
     }
 }
 
-void rm_trie_iter(RmTrie *self,
-                  RmNode *root,
-                  bool pre_order, bool all_nodes,
-                  RmTrieIterCallback callback,
-                  void *user_data) {
+void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
+                  RmTrieIterCallback callback, void *user_data) {
     _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);
 }
 
