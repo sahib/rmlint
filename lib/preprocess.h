@@ -16,8 +16,8 @@
 *
 ** Authors:
  *
- *  - Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
- *  - Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+ *  - Christopher <sahib> Pahl 2010-2015 (https://github.com/sahib)
+ *  - Daniel <SeeSpotRun> T.   2014-2015 (https://github.com/SeeSpotRun)
  *
 ** Hosted on http://github.com/sahib/rmlint
 *
