@@ -104,6 +104,12 @@ user. People that want to extend **rmlint** might want to read this though:
    translators
    Online-manpage of rmlint(1) <rmlint.1>
 
+The Changelog_ is also updated with new and futures features, fixes and overall
+changes.
+
+.. _Changelog: https://github.com/sahib/rmlint/blob/develop/CHANGELOG.md
+
+
 Authors
 -------
 
