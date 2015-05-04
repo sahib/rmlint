@@ -17,7 +17,7 @@ to remove it. It is able to find:
 **Key Features:**
 
 .. hlist::
-   :columns: 2
+   :columns: 3
 
    + Extremely fast.
    + Exchangeable hashing algorithm.
@@ -25,12 +25,15 @@ to remove it. It is able to find:
    + Easy commandline interface.
    + Possibility to update files with newer mtime.
    + Many options for originaldetection.
+   + Scales up to millions of files.
+   + Colorful progressbar. (😃)
+   + Fast byte-by-byte comparasion.
 
 |
 
 .. image:: _static/screenshot.png
    :align: center
-   :width: 42%
+   :width: 50%
 
 ----
 
@@ -86,7 +89,7 @@ They show you the basic principles and most of the advanced options:
    faq
 
 If you have usage questions or find weird behaviour, you can also try to reach
-us via IRC in ``#rmlint`` on ``irc.freenode.net``.
+us via *IRC* in ``#rmlint`` on ``irc.freenode.net``.
 
 Informative reference
 ---------------------
@@ -107,8 +110,8 @@ Authors
 **rmlint** was and is written by: 
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2014
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2014
+*Christopher Pahl*                   https://github.com/sahib      2010-2015
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2015
 ===================================  ============================= ===========================================
 
 Additional thanks to:
@@ -117,9 +120,9 @@ Additional thanks to:
     :columns: 3
 
     - qitta_ (Ideas & Testing)
-    - dieterbe_ (Bugs & -D was his idea)
+    - `vvs-`_ (Scalability testing)
     - `My cats`_.
-    - Attila Toth 
+    - *Attila* Toth 
     - All sane bugreporters (there are not many)
     - All packagers, porters and patchers.
 
@@ -127,6 +130,7 @@ Additional thanks to:
 .. _qitta: https://github.com/qitta
 .. _dieterbe: https://github.com/Dieterbe
 .. _`My cats`: http://imgur.com/gallery/rims0yl
+.. _`vvs-`: https://github.com/vvs-?tab=activity
 
 License
 -------
