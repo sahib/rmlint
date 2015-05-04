@@ -8,9 +8,16 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Fixed
 
+- Improvements to paranoid reading, which is about as fast as normal hashing.
+- Memory improvement: Never store full paths; use our implementation of a 
+  Pat(h)ricia-Trie to save memory in all parts of rmlint.
+- Speed improvement: Do not wait on return of the last hashed buffer.
+- Speed improvement: Use parallel hashing.
+- Speed improvement: Use a separate lock for each hash group.
 - Make rmlint usable for very hight amounts of files (works for 5M):
   See also: https://github.com/sahib/rmlint/issues/109
   A compression path trie is used as data structures for paths now (credits to Daniel)
+  Also many kudos to our user "vvs-" which provided many useful testcases.
 - Problems and crashes on 32bit with large files and normal files.
 - Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
 
@@ -22,6 +29,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Changed
 
 - Most internal filesystems like `proc` are ignored now.
+
 
 ## [2.1.0 Malnourished Molly] -- beta-release 2015-04-13
 

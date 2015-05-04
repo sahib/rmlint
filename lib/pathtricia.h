@@ -40,7 +40,7 @@ typedef struct _RmNode {
     GHashTable *children;
 
     /* data was set explicitly */
-    bool has_value;
+    char has_value : 1;
 
     /* User specific data */
     gpointer data;
@@ -87,7 +87,7 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path);
 
 /** 
  * rm_trie_search:
- * As rm_trie_search_node but returns node->value if it's not NULL.
+ * As rm_trie_search_node but returns node->value if node is not NULL.
  */
 void *rm_trie_search(RmTrie *self, const char *path);
 
