@@ -1041,7 +1041,9 @@ static void rm_shred_group_unref(RmShredGroup *self) {
     }
 
     if (needs_free) {
-        rm_log_debug("Free from rm_shred_group_unref");
+#if _RM_SHRED_DEBUG
+        rm_log_debug("Free from rm_shred_group_unref\n");
+#endif
         rm_shred_group_free(self, false);
     }
 }
@@ -1370,6 +1372,8 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
+        file->is_original = false;
+
         if(file->hardlinks.is_head && file->hardlinks.files) {
             /* if group member has a hardlink cluster attached to it then
              * unbundle the cluster and append it to the queue
@@ -1382,7 +1386,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
             file->hardlinks.files = NULL;
         }
         /* identify "tagged" originals: */
-        if(0 || ((file->is_prefd) && (session->cfg->keep_all_tagged)) ||
+        if(((file->is_prefd) && (session->cfg->keep_all_tagged)) ||
            ((!file->is_prefd) && (session->cfg->keep_all_untagged))) {
             file->is_original = true;
 
@@ -1472,7 +1476,9 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
         }
     }
     group->status = RM_SHRED_GROUP_FINISHED;
-    rm_log_debug("Free from rm_shred_result_factory");
+#if _RM_SHRED_DEBUG
+    rm_log_debug("Free from rm_shred_result_factory\n");
+#endif
     rm_shred_group_free(group, false);
 }
 
