@@ -8,16 +8,17 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Fixed
 
-- Fixed issue with excessive memory usage and processing delays with
+- Issue with excessive memory usage and processing delays with
   very large file counts (>5M files)
 - Problems and crashes on 32bit with large files and normal files.
-- Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
-- Fixed bug in memory manager for "paranoid" file comparison method which
+- Bug in memory manager for "paranoid" file comparison method which
   could lead to OOM error in some cases and infinite looping in others.
 - Fixed bug which prevented option --max-paranoid-mem working.
 - Note: much kudos to our user "vvs-" who provided many useful testcases
   and was prepared to re-run a 10-hour duplicate search after each effort
   to fix the underlying issues.
+- Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
+- Bug during file traversal when encountering symlinks to empty folders
 
 ### Added
 
@@ -27,6 +28,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Changed
 
 - Most internal filesystems like `proc` are ignored now.
+- Improved progressbar
 
 ### Under the Hood
 - Memory footprint reduced to enable larger filesets to be processed. See
@@ -44,6 +46,8 @@ The format follows [keepachangelog.com]. Please stick to it.
   Note the new threading strategy is particularly effective on the
   "paranoid" (byte-by-byte) file comparison method (option -pp), which is
   now almost as fast as the default (SHA1 hash) method.
+- The optimisation in 2.1.0 which detects existing reflinks has been
+  reverted for now due to conflicts between shredder and treemerge.
 
 
 ## [2.1.0 Malnourished Molly] -- beta-release 2015-04-13
