@@ -7,7 +7,7 @@ def test_simple():
     create_file('1234567890', 'a10')
     create_file('x23456789x', 'b10')
 
-    head, *data, footer = run_rmlint('-D')
+    head, *data, footer = run_rmlint_pedantic('-D')
     assert len(data) == 0
 
     for suffix in ['-Q .9 -q .1', '-Q 9 -q .1', '-Q .9 -q 1', '-Q 90% -q 10%']:
@@ -43,15 +43,15 @@ def test_absolute():
     head, *data, footer = run_rmlint('-D')
     assert len(data) == 0
 
-    head, *data, footer = run_rmlint('-D -q 1kb -S a')
+    head, *data, footer = run_rmlint_pedantic('-D -q 1kb -S a')
     assert data[0]['path'].endswith('a')
     assert data[1]['path'].endswith('b')
     assert len(data) == 2
 
-    head, *data, footer = run_rmlint('-D -q 1024 -S a')
+    head, *data, footer = run_rmlint_pedantic('-D -q 1024 -S a')
     assert data[0]['path'].endswith('a')
     assert data[1]['path'].endswith('b')
     assert len(data) == 2
 
-    head, *data, footer = run_rmlint('-D -q 1023 -S a')
+    head, *data, footer = run_rmlint_pedantic('-D -q 1023 -S a')
     assert len(data) == 0

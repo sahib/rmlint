@@ -258,4 +258,4 @@ Insane ones
   read once only.  To our knowledge this is the first dupefinder which achieves
   bytewise comparison in O(N) time, even if there are large clusters of same-size
   files.  The downside is that it is somewhat memory-intensive (the total memory used
-  is set to 256 MB by default but can be configured by ``--max-paranoid-ram`` option.
+  is set to 256 MB by default but can be configured by ``--max-paranoid-mem`` option.
