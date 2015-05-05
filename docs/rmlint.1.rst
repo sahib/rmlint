@@ -19,7 +19,7 @@ DESCRIPTION
 ``rmlint`` finds space waste and other broken things on your filesystem and offers
 to remove it. Types of waste include:
 
-* Duplicate files.
+* Duplicate files and directories.
 * Nonstripped Binaries (Binaries with debug symbols).
 * Broken links.
 * Empty files and directories.
