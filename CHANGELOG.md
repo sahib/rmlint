@@ -8,18 +8,16 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Fixed
 
-- Improvements to paranoid reading, which is about as fast as normal hashing.
-- Memory improvement: Never store full paths; use our implementation of a 
-  Pat(h)ricia-Trie to save memory in all parts of rmlint.
-- Speed improvement: Do not wait on return of the last hashed buffer.
-- Speed improvement: Use parallel hashing.
-- Speed improvement: Use a separate lock for each hash group.
-- Make rmlint usable for very hight amounts of files (works for 5M):
-  See also: https://github.com/sahib/rmlint/issues/109
-  A compression path trie is used as data structures for paths now (credits to Daniel)
-  Also many kudos to our user "vvs-" which provided many useful testcases.
+- Fixed issue with excessive memory usage and processing delays with
+  very large file counts (>5M files)
 - Problems and crashes on 32bit with large files and normal files.
 - Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
+- Note: much kudos to our user "vvs-" who provided many useful testcases
+  and was prepared to re-run a 10-hour duplicate search after each effort
+  to fix the underlying issues.
+- Fixed bug in memory manager for "paranoid" file comparison method which
+  could lead to OOM error in some cases and infinite looping in others.
+- Fixed bug which prevented option --max-paranoid-mem working.
 
 ### Added
 
@@ -29,6 +27,23 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Changed
 
 - Most internal filesystems like `proc` are ignored now.
+
+### Under the Hood
+- Memory footprint reduced to enable larger filesets to be processed. See
+  discussion at https://github.com/sahib/rmlint/issues/109.  Improvements
+  include a Pat(h)ricia-Trie used as data structure to efficiently map
+  file paths with much less memory consumption.  Also the file preprocessing
+  strategy (eg to find path doubles) has been improved to avoid having
+  several large hashtables active at the same time.
+- Improved threading strategy which increases speed of duplicate
+  matching.  As before, the threading strategy uses just one thread per
+  physical disk to enable fast reading without disk thrash.  The improved
+  algorithm now increases the number of cpu threads used to hash the data
+  as it is read in.  Also an improved mutex strategy reduces the wait time
+  before the hash results can be processed.   
+  Note the new threading strategy is particularly effective on the
+  "paranoid" (byte-by-byte) file comparison method (option -pp), which is
+  now almost as fast as the default (SHA1 hash) method.
 
 
 ## [2.1.0 Malnourished Molly] -- beta-release 2015-04-13
