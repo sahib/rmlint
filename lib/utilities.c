@@ -359,8 +359,6 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
     JsonNode *type_node = json_object_get_member(object, "type");
 
-    rm_log_debug("parsing\n");
-
     if(mtime_node && path_node && cksum_node && type_node) {
         RmStat stat_buf;
         const char *path = json_node_get_string(path_node);

@@ -235,8 +235,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *sessi
     for(int i = 0; paths[i]; ++i) {
         /* Just call the callback directly */
         RmNode *node = rm_trie_search_node(&file_tree, paths[i]);
-        node->data = GINT_TO_POINTER(true);
-        rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
+        if(node != NULL) {
+            node->data = GINT_TO_POINTER(true);
+            rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
+        }
     }
 
 #ifdef _RM_TREEMERGE_DEBUG

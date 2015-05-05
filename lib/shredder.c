@@ -1740,7 +1740,24 @@ finish:
 static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
     bool can_process = true;
 
-    if(file->shred_group->digest_type == RM_DIGEST_PARANOID) {
+    if(file->shred_group->has_only_ext_cksums) {
+        /* Cool, we were able to read the checksum from disk */
+        file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0);
+
+        RM_DEFINE_PATH(file);
+
+        char *hexstring = file->folder->data;
+
+        if(hexstring != NULL) {
+            rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
+            rm_log_debug("%s=%s was read from cache.\n", hexstring, file_path);
+        } else {
+            rm_log_warning_line(
+                "Unable to read external checksum from interal cache for %s", file_path);
+            file->has_ext_cksum = 0;
+            file->shred_group->has_only_ext_cksums = 0;
+        }
+    } else if(file->shred_group->digest_type == RM_DIGEST_PARANOID) {
         /* check if memory allocation is ok */
         if(!rm_shred_check_hash_mem_alloc(file->shred_group, 0)) {
             can_process = false;
@@ -1765,23 +1782,6 @@ static bool rm_shred_reassign_checksum(RmMainTag *main, RmFile *file) {
     } else if(file->shred_group->digest) {
         /* pick up the digest-so-far from the RmShredGroup */
         file->digest = rm_digest_copy(file->shred_group->digest);
-    } else if(file->shred_group->has_only_ext_cksums) {
-        /* Cool, we were able to read the checksum from disk */
-        file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0);
-
-        RM_DEFINE_PATH(file);
-
-        char *hexstring = file->folder->data;
-
-        if(hexstring != NULL) {
-            rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
-            rm_log_debug("%s=%s was read from cache.\n", hexstring, file_path);
-        } else {
-            rm_log_warning_line(
-                "Unable to read external checksum from interal cache for %s", file_path);
-            file->has_ext_cksum = 0;
-            file->shred_group->has_only_ext_cksums = 0;
-        }
     } else {
         /* this is first generation of RMGroups, so there is no progressive hash yet */
         file->digest = rm_digest_new(main->session->cfg->checksum_type,

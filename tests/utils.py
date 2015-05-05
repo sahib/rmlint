@@ -69,6 +69,9 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     # filter empty strings
     cmd = list(filter(None, cmd))
 
+    if os.env.get('PRINT_CMD'):
+        print('Run:', ' '.join(cmd))
+
     output = subprocess.check_output(cmd, shell=False, env=env)
     json_data = json.loads(output.decode('utf-8'))
 
@@ -84,12 +87,17 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
 
 
 def compare_json_doc(doc_a, doc_b):
+    # TODO: progress, is_original
     keys = [
-        'progress', 'disk_id', 'inode', 'is_original', 'mtime',
+        'disk_id', 'inode', 'mtime',
         'path', 'size', 'type'
     ]
 
     for key in keys:
+        # It's okay for unfinished checksums to have some missing fields.
+        if doc_a['type'] == doc_b['type'] == 'unfinished_cksum':
+            continue
+
         if doc_a[key] != doc_b[key]:
             print('  !! Key differs: ', key, doc_a[key], '!=', doc_b[key])
             return False
@@ -100,11 +108,15 @@ def compare_json_doc(doc_a, doc_b):
 def compare_json_docs(docs_a, docs_b):
     paths_a, paths_b = {}, {}
 
-    for doc_a, doc_b in zip(docs_a[1:-1], docs_b[1:-1]):
+    for doc_a in docs_a[1:-1]:
         paths_a[doc_a['path']] = doc_a
+
+    for doc_b in docs_b[1:-1]:
         paths_b[doc_b['path']] = doc_b
 
     for path_a, doc_a in paths_a.items():
+        # if path_a not in paths_b:
+        #     print('####', doc_a, path_a, '\n', docs_b, '\n\n', list(paths_b))
         doc_b = paths_b[path_a]
         if not compare_json_doc(doc_a, doc_b):
             print('!! OLD:')
@@ -114,7 +126,11 @@ def compare_json_docs(docs_a, docs_b):
             print('------- DIFF --------')
             return False
 
-    return docs_a[-1] == docs_b[-1]
+    if docs_a[-1] != docs_b[-1]:
+        print('!! FOOTER DIFFERS', docs_a[-1], docs_b[-1])
+        return False
+
+    return True
 
 def run_rmlint_pedantic(*args, **kwargs):
     options = [
@@ -127,11 +143,16 @@ def run_rmlint_pedantic(*args, **kwargs):
     ]
 
     cksum_types = [
-        'paranoid', 'sha1', 'sha256', 'sha512', 'spooky', 'bastard', 'city',
+        'paranoid', 'sha1', 'sha256', 'spooky', 'bastard', 'city',
         'md5', 'city256', 'city512', 'murmur', 'murmur256', 'murmur512',
         'spooky32', 'spooky64'
     ]
 
+    # Note: sha512 is not in there for now; since travis system does
+    #       not support a recent enough glib with sha512.
+    #       God forsaken debian people.
+
+    # TODO: also check checksum key where appropiate.
     for cksum_type in cksum_types:
         options.append('--algorithm=' + cksum_type)
 
@@ -151,6 +172,8 @@ def run_rmlint_pedantic(*args, **kwargs):
                 data_skip = data[:-output_len]
 
         if data is not None and not compare_json_docs(data_skip, new_data_skip):
+            pprint.pprint(data_skip)
+            pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
 
         data = new_data
@@ -159,7 +182,7 @@ def run_rmlint_pedantic(*args, **kwargs):
 
 
 def run_rmlint(*args, **kwargs):
-    if os.environ.get('USE_PEDANTIC'):
+    if os.environ.get('PEDANTIC'):
         return run_rmlint_pedantic(*args, **kwargs)
     else:
         return run_rmlint_once(*args, **kwargs)
