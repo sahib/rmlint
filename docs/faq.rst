@@ -1,7 +1,7 @@
 Frequently Asked Questions
 ==========================
 
-``rmlint`` finds more/less dupes than tool **X**!
+``rmlint`` finds more/less dupes than tool ``X``!
 -------------------------------------------------
 
 Make sure that *none* of the following applies to you:
@@ -21,7 +21,7 @@ If there's still a difference, check with another algorithm. In particular use
 
 Still here? Maybe talk to us on the `issue tracker`_.
 
-Can you implement feature **X**?
+Can you implement feature ``X``?
 --------------------------------
 
 Depends. Go to to the `issue tracker`_ and open a feature request.
@@ -49,10 +49,15 @@ between. Therefore there will never be an "auto-pickup" of the cache file.
 I have a very large number of files and I run out of memory and patience.
 -------------------------------------------------------------------------
 
-As a rule of thumb, ``rmlint`` will allocate 300 bytes for every file it will
-investigate. The memory peak is usually short after it finished traversing all
+As a rule of thumb, ``rmlint`` will allocate *~150 bytes* for every file it will
+investigate. Additionally paths are stored in a patricia trie, which will
+compress paths and save memory therefore.
+
+The memory peak is usually short after it finished traversing all
 files. For example, 5 million files will result in a memory footprint of roughly
-1.6GB of memory.
+1.0GB of memory in average. 
+
+If that's still not enough read on.
 
 *Some things to consider:*
 
@@ -61,6 +66,9 @@ files. For example, 5 million files will result in a memory footprint of roughly
   memory footprint per file by a few bytes. Sometimes the difference may be
   very subtle since all paths in rmlint are stored by common prefix, i.e. for long
   but mostly identically paths the point after the difference is stored.
+  
+  This option will most likely only make sense if you files with long basenames.
+  You might expect 10%-20% less memory as a rule of thumb.
 - Use ``--without-fiemap`` on rotational disk to disable this optimization. With
   it enabled a table of the file's extents is stored to optimize disk access
   patterns. This lowers the memory footprint per file by around 50 bytes.

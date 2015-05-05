@@ -112,7 +112,7 @@ static void rm_fmt_prog(RmSession *session,
             first_print_flag = false;
         }
 
-        fprintf(out, _("Wrote a %s%s%s file to %s%s%s.\n"), MAYBE_BLUE(out, session),
+        fprintf(out, _("Wrote a %s%s%s file to: %s%s%s\n"), MAYBE_BLUE(out, session),
                 handler->name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session), path,
                 MAYBE_RESET(out, session));
     }

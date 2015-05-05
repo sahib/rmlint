@@ -4,6 +4,7 @@
 
 import os
 import json
+import pprint
 import shutil
 import shlex
 import subprocess
@@ -39,7 +40,7 @@ def which(program):
     return None
 
 
-def run_rmlint(*args, dir_suffix=None, use_default_dir=True, outputs=None):
+def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -80,6 +81,88 @@ def run_rmlint(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         return json_data
     else:
         return json_data + read_outputs
+
+
+def compare_json_doc(doc_a, doc_b):
+    keys = [
+        'progress', 'disk_id', 'inode', 'is_original', 'mtime',
+        'path', 'size', 'type'
+    ]
+
+    for key in keys:
+        if doc_a[key] != doc_b[key]:
+            print('  !! Key differs: ', key, doc_a[key], '!=', doc_b[key])
+            return False
+
+    return True
+
+
+def compare_json_docs(docs_a, docs_b):
+    paths_a, paths_b = {}, {}
+
+    for doc_a, doc_b in zip(docs_a[1:-1], docs_b[1:-1]):
+        paths_a[doc_a['path']] = doc_a
+        paths_b[doc_b['path']] = doc_b
+
+    for path_a, doc_a in paths_a.items():
+        doc_b = paths_b[path_a]
+        if not compare_json_doc(doc_a, doc_b):
+            print('!! OLD:')
+            pprint.pprint(doc_a)
+            print('!! NEW:')
+            pprint.pprint(doc_b)
+            print('------- DIFF --------')
+            return False
+
+    return docs_a[-1] == docs_b[-1]
+
+def run_rmlint_pedantic(*args, **kwargs):
+    options = [
+        '--with-fiemap',
+        '--without-fiemap',
+        '--threads=1',
+        '--shred-never-wait',
+        '--shred-always-wait',
+        '--with-metadata-cache'
+    ]
+
+    cksum_types = [
+        'paranoid', 'sha1', 'sha256', 'sha512', 'spooky', 'bastard', 'city',
+        'md5', 'city256', 'city512', 'murmur', 'murmur256', 'murmur512',
+        'spooky32', 'spooky64'
+    ]
+
+    for cksum_type in cksum_types:
+        options.append('--algorithm=' + cksum_type)
+
+    data = None
+
+    output_len = len(kwargs['outputs']) if 'outputs' in kwargs else 0
+
+    for option in options:
+        new_data = run_rmlint_once(*(args + (option, )), **kwargs)
+
+        data_skip, new_data_skip = data, new_data
+        if output_len is not 0:
+            if new_data:
+                new_data_skip = new_data[:-output_len]
+
+            if data:
+                data_skip = data[:-output_len]
+
+        if data is not None and not compare_json_docs(data_skip, new_data_skip):
+            raise AssertionError("Optimisation too optimized: " + option)
+
+        data = new_data
+
+    return data
+
+
+def run_rmlint(*args, **kwargs):
+    if os.environ.get('USE_PEDANTIC'):
+        return run_rmlint_pedantic(*args, **kwargs)
+    else:
+        return run_rmlint_once(*args, **kwargs)
 
 
 def create_dirs(path):

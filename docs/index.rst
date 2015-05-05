@@ -1,7 +1,7 @@
 |
 |
 
-**rmlint** finds space waste and other broken things on your filesystem and offers
+``rmlint`` finds space waste and other broken things on your filesystem and offers
 to remove it. It is able to find:
 
 .. hlist::
@@ -70,7 +70,7 @@ to remove it. It is able to find:
 
 .. .. DANGER::
 .. 
-..     **rmlint** is currently in the progress of being rewritten. 
+..     ``rmlint`` is currently in the progress of being rewritten. 
 ..     This means that it still may contain bugs that might burn your data.
 .. 
 ..     Use at your own risk!
@@ -78,7 +78,7 @@ to remove it. It is able to find:
 User manual
 -----------
 
-Although **rmlint** is easy to use, you might want to read these chapters first.
+Although ``rmlint`` is easy to use, you might want to read these chapters first.
 They show you the basic principles and most of the advanced options:
 
 .. toctree::
@@ -95,7 +95,7 @@ Informative reference
 ---------------------
 
 These chapters are informative and are not essential for the average
-user. People that want to extend **rmlint** might want to read this though: 
+user. People that want to extend ``rmlint`` might want to read this though: 
 
 .. toctree::
    :maxdepth: 1
@@ -113,7 +113,7 @@ changes.
 Authors
 -------
 
-**rmlint** was and is written by: 
+``rmlint`` was and is written by: 
 
 ===================================  ============================= ===========================================
 *Christopher Pahl*                   https://github.com/sahib      2010-2015
@@ -141,7 +141,7 @@ Additional thanks to:
 License
 -------
 
-**rmlint** is licensed under the terms of GPLv3_.
+``rmlint`` is licensed under the terms of GPLv3_.
 
 .. _GPLv3: http://www.gnu.org/copyleft/gpl.htm
 .. _sahib: https://github.com/sahib

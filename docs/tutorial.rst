@@ -1,6 +1,6 @@
-========
-Tutorial
-========
+==========================
+Gentle Guide to ``rmlint``
+==========================
 
 Welcome to the Tutorial of ``rmlint``.
 
@@ -60,8 +60,8 @@ long list of files. You can do this easily with the ``-g`` switch:
 
     $ rmlint -g
 
-Filtering
----------
+Filtering input files
+---------------------
 
 What if we do not want to check all files as dupes? ``rmlint`` has a
 good reportoire of options to select only certain files. We won't cover
@@ -98,8 +98,8 @@ Limit files by their basename
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, ``rmlint`` compares file contents, regardless of file name.
-So if afile.jpg has the same content as bfile.txt (which is unlikely!),
-then rmlint will find and report this as a duplicate.
+So if *afile.jpg* has the same content as *bfile.txt* (which is unlikely!),
+then ``rmlint`` will find and report this as a duplicate.
 You can speed things up a little bit by telling rmlint not to try to
 match files unless they have the same or similar file names.  The three
 options here are:
@@ -138,7 +138,7 @@ The most obvious way is using ``-N`` (``--newer-than=<timestamp>``):
 .. code-block:: bash
    
    # Use a Unix-UTC Timestamp (seconds since epoch)
-   $ rmlint -N 1414755960%
+   $ rmlint -N 1414755960
 
    # Find all files newer than file.png
    $ rmlint -N $(stat --print %Y file.png)
@@ -173,8 +173,8 @@ Here's an example for incrementally scanning your home folder:
    
 Note that ``-n`` updates the timestamp file each time it is run.
 
-Outputs
--------
+Outputs & Formatters
+--------------------
 
 ``rmlint`` is capable to create it's reports in several output-formats. 
 Actually if you run it with the default options you already see two of those
@@ -187,7 +187,7 @@ does the same as ``-O`` afterwards.
 .. note:: 
 
     If you just came here to learn how to print a nice progressbar:
-    Just use the ``-g`` (``--progress``) option. Example:
+    Just use the ``-g`` (``--progress``) option:
 
     .. code-block:: bash
 
@@ -214,6 +214,7 @@ Here you would get this output printed on ``stderr``:
       "size": 2,
       "inode": 2492950,
       "disk_id": 64771,
+      "progress": 100, 
       "is_original": true,
       "mtime": 1414587002
     },
@@ -231,7 +232,7 @@ Here you would get this output printed on ``stderr``:
 You probably noticed the colon in the commandline above. Everything before it is
 the name of the output-format, everything behind is the path where the output
 should land. Instead of an path you can also use ``stdout`` and ``stderr``, as
-we did above.
+we did above or just omit the colon which will print everything to ``stdout``.
 
 Some formatters might be configured to generate subtly different output using
 the ``-c`` (``--config``) command.  Here's the list of currently available
@@ -258,7 +259,7 @@ formatters and their config options:
 :sh: 
 
     Outputs a shell script that has default commands for all lint types.
-    The script can be executed (it is already `chmod +x``'d by ``rmlint``).
+    The script can be executed (it is already ``chmod +x``'d by ``rmlint``).
     By default it will ask you if you really want to proceed. If you 
     do not want that you can pass the ``-d``. Addionally it will 
     delete itself after it ran, except you passed the ``-x`` switch.
@@ -401,8 +402,8 @@ formatters and their config options:
 
     Consider using the far more powerful ``json`` output for scripting purposes. 
   
-Paranoia
---------
+Paranoia mode
+-------------
 
 Let's face it, why should you trust ``rmlint``? 
 
@@ -413,11 +414,11 @@ possible values), the probablilty of having a hash-collision is
 :math:`\frac{1}{2^{128}}` for the default 128-bit hash.  Of course hash
 functions are not totally random, so the collision probability is slightly higher.
 
-If you're wary you might want to make a bit more paranoid than it's default. 
+If you're wary, you might want to make a bit more paranoid than it's default. 
 By default the ``sha1`` hash algorithm is used, which we consider a good
 trade-off of speed and accuracy. ``rmlint``'s paranoia level can be easily 
 inc/decreased using the ``-p`` (``--paranoid``)/ ``-P`` (``--less-paranoid``)
-option (which might be given up to three times each).
+option (which might be given twice each).
 
 Here's what they do in detail:
 
@@ -425,11 +426,11 @@ Here's what they do in detail:
 * ``-pp`` is equivalent to ``--algorithm=paranoid``
 
 As you see, it just enables a certain hash algorithm. ``--algorithm`` changes
-the hash algorithm to someting more secure. ``bastard`` is a 256bit hash that
-consists of two 128bit subhashes (``murmur3`` and ``city`` if you're curious).
-One level up the well-known ``sha512`` (with 512bits obviously) is used.
-Another level up, no hash function is used. Instead, files are compared
-byte-by-byte (which guarantees collision free output).
+the hash algorithm to someting more secure.  One level up the well-known
+``sha512`` (with 512bits obviously) is used.  Another level up, no hash function
+is used. Instead, files are compared byte-by-byte (which guarantees collision
+free output). While this might sound slow it's often only a few seconds slower
+than the default behaviour.
 
 There is a bunch of other hash functions you can lookup in the manpage.
 We recommend never to use the ``-P`` option.
@@ -547,7 +548,7 @@ Finding duplicate directories
 
 As far as we know, ``rmlint`` is the only duplicate finder that can do this.
 Basically, all you have to do is to specify the ``-D`` (``--merge-directories``)
-option and ``rmlint`` will cache all duplicate until everything is found and
+option and ``rmlint`` will cache all duplicates until everything is found and
 then merge them into full duplicate directories (if any). All other files are
 printed normally. 
 
@@ -623,8 +624,15 @@ Since duplicate directories are just a lint type as every other, you can just
 pass it to ``-T``: ``-T "none +dd"`` (or ``-T "none +duplicatedirs"``). 
 There's also a preset of it to save you some typing: ``-T minimaldirs``.
 
-Misc options
-------------
+.. warning::
+
+    Also take note that ``-D`` will cause a higher memory footprint and might
+    add a bit of processing time. This is due to the fact that all files need to
+    be cached till the end and some other internal data structures need to be 
+    created.
+
+Miscellaneous options
+---------------------
 
 If you read so far, you know ``rmlint`` pretty well by now. 
 Here's just a list of options that are nice to know, but not essential:

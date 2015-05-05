@@ -19,7 +19,7 @@ DESCRIPTION
 ``rmlint`` finds space waste and other broken things on your filesystem and offers
 to remove it. Types of waste include:
 
-* Duplicate files.
+* Duplicate files and directories.
 * Nonstripped Binaries (Binaries with debug symbols).
 * Broken links.
 * Empty files and directories.
@@ -151,7 +151,7 @@ General Options
     * **-pp** is equivalent to **--algorithm=paranoid**
 
     The last one is not a hash function in the traditional meaning, but performs
-    a byte-by-byte comparison of each file. See also **--max-paranoid-ram**.
+    a byte-by-byte comparison of each file. See also **--max-paranoid-mem**.
 
     For the adventurous, it is also possible to decrease the default paranoia:
 
@@ -368,7 +368,7 @@ Rarely used, miscellaneous Options
     The number of threads to use during file tree traversal and hashing.
     ``rmlint`` probably knows better than you how to set the value.
 
-:``-u --max-paranoid-ram=size``:
+:``-u --max-paranoid-mem=size``:
 
     Apply a maximum number of bytes to use for **--paranoid**. 
     The ``size``-description has the same format as for **--size**.
