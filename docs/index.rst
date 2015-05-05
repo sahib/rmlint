@@ -20,14 +20,14 @@ to remove it. It is able to find:
    :columns: 3
 
    + Extremely fast.
-   + Exchangeable hashing algorithm.
-   + Numerous output formats.
-   + Easy commandline interface.
-   + Possibility to update files with newer mtime.
-   + Many options for originaldetection.
-   + Scales up to millions of files.
+   + Flexible and easy commandline options.
+   + Choice of several hashes for hash-based deplicate detection
+   + Option for exact byte-by-byte comparison (only slightly slower).
+   + Numerous output options.
+   + Option to store time of last run; next time will only scan new files.
+   + Many options for original selection / prioritisation.
+   + Can handle very large file sets (millions of files).
    + Colorful progressbar. (😃)
-   + Fast byte-by-byte comparasion.
 
 |
 
