@@ -1017,7 +1017,9 @@ static void rm_shred_group_unref(RmShredGroup *self) {
              * after
              * processing results */
             g_assert(self->children == NULL);
-            send_results = TRUE;
+            if(self->parent == NULL) {
+                send_results = TRUE;
+            }
             break;
         case RM_SHRED_GROUP_START_HASHING:
         case RM_SHRED_GROUP_HASHING:
