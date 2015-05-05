@@ -144,8 +144,8 @@ Arguments
     Do not link with ``libintl`` and do not compile any message catalogs.
     
 All ``--without-*`` options come with a ``--with-*`` option that inverses its
-effect.  By default ``rmlint`` is built with all features on the system, so you
-do not need to specify any ``--with-*`` option normally.
+effect.  By default ``rmlint`` is built with all features available on the
+system, so you do not need to specify any ``--with-*`` option normally.
 
 Notable targets
 ~~~~~~~~~~~~~~~
@@ -195,7 +195,8 @@ Notable targets
 Sourcecode layout
 -----------------
 
-- All C-source lives in ``src``, the file names should be self explanatory.
+- All C-source lives in ``lib``, the file names should be self explanatory.
+- As an exception, the main lives in ``src/rmlint.c``.
 - All documentation is inside ``docs``. 
 - All translation stuff should go to ``po``.
 - All packaging should be done in ``pkg/<distribution>``.
