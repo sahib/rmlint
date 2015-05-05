@@ -69,7 +69,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     # filter empty strings
     cmd = list(filter(None, cmd))
 
-    if os.env.get('PRINT_CMD'):
+    if os.environ.get('PRINT_CMD'):
         print('Run:', ' '.join(cmd))
 
     output = subprocess.check_output(cmd, shell=False, env=env)
