@@ -1135,6 +1135,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Testing option for threading; pretends each input path is a separate physical "
          "disk",
          NULL},
+        {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
         {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read, 
          "Default to buffered reading calls (fread) during reading.", NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
@@ -1249,7 +1251,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
-    session->mounts = rm_mounts_table_new();
+    session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
     if(session->mounts == NULL) {
         exit_state = EXIT_FAILURE;
         goto failure;

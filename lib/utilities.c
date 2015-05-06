@@ -762,7 +762,7 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
     return -1;
 }
 
-static bool rm_mounts_create_tables(RmMountTable *self) {
+static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
     /* partition dev_t to disk dev_t */
     self->part_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
                                              (GDestroyNotify)rm_part_info_free);
@@ -839,6 +839,8 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
             }
         }
 
+        is_rotational |= force_fiemap;
+
         RmPartitionInfo *existing = g_hash_table_lookup(
             self->part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));
         if(!existing || (existing->disk == 0 && whole_disk != 0)) {
@@ -890,9 +892,9 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
 //         PUBLIC API          //
 /////////////////////////////////
 
-RmMountTable *rm_mounts_table_new(void) {
+RmMountTable *rm_mounts_table_new(bool force_fiemap) {
     RmMountTable *self = g_slice_new(RmMountTable);
-    if(rm_mounts_create_tables(self) == false) {
+    if(rm_mounts_create_tables(self, force_fiemap) == false) {
         g_slice_free(RmMountTable, self);
         return NULL;
     } else {
@@ -911,7 +913,7 @@ void rm_mounts_table_destroy(RmMountTable *self) {
 
 #else /* probably FreeBSD */
 
-RmMountTable *rm_mounts_table_new(void) {
+RmMountTable *rm_mounts_table_new(_U bool force_fiemap) {
     return NULL;
 }
 
@@ -1101,7 +1103,17 @@ static void rm_offset_free_func(RmOffsetEntry *entry) {
     g_slice_free(RmOffsetEntry, entry);
 }
 
-RmOffsetTable rm_offset_create_table(const char *path) {
+static void rm_offset_create_fake_data(GSequence *self) {
+    /* Create arbitary data for use with test (and test coverage) */
+    for(int i = 0; i < 5; ++i) {
+        RmOffsetEntry *offset_entry = g_slice_new(RmOffsetEntry);
+        offset_entry->logical = i * 42;
+        offset_entry->physical = i * 0xdeadbeef;
+        g_sequence_append(self, offset_entry);
+    }
+}
+
+RmOffsetTable rm_offset_create_table(const char *path, bool fake_fiemap) {
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in setup_fiemap_extents\n", path);
@@ -1152,6 +1164,10 @@ RmOffsetTable rm_offset_create_table(const char *path) {
             fiemap->fm_start = fm_ext[i].fe_logical + fm_ext[i].fe_length;
             last = fm_ext[i].fe_flags & FIEMAP_EXTENT_LAST;
         }
+    }
+
+    if(fake_fiemap && !g_sequence_get_length(self)) {
+        rm_offset_create_fake_data(self);
     }
 
     rm_sys_close(fd);
@@ -1224,7 +1240,7 @@ RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_off
 
 #else /* Probably FreeBSD */
 
-RmOffsetTable rm_offset_create_table(_U const char *path) {
+RmOffsetTable rm_offset_create_table(_U const char *path, _U bool force_fiemap) {
     return NULL;
 }
 

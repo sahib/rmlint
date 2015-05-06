@@ -136,6 +136,8 @@ def run_rmlint_pedantic(*args, **kwargs):
     options = [
         '--with-fiemap',
         '--without-fiemap',
+        '--fake-pathindex-as-disk',
+        '--fake-fiemap',
         '--buffered-read',
         '--threads=1',
         '--shred-never-wait',

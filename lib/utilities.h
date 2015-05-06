@@ -222,10 +222,11 @@ typedef struct RmMountTable {
 
 /**
  * @brief Allocates a new mounttable.
+ * @param force_fiemap Create random fiemap data always. Useful for testing.
  *
  * @return The mounttable. Free with rm_mounts_table_destroy.
  */
-RmMountTable *rm_mounts_table_new(void);
+RmMountTable *rm_mounts_table_new(bool force_fiemap);
 
 /**
  * @brief Destroy a previously allocated mounttable.
@@ -303,7 +304,7 @@ typedef GSequence *RmOffsetTable;
 /**
  * @brief Create a table with the extents for a file at path.
  */
-RmOffsetTable rm_offset_create_table(const char *path);
+RmOffsetTable rm_offset_create_table(const char *path, bool force_fiemap);
 
 /**
  * @brief Lookup the physical offset of a file at any given offset.
