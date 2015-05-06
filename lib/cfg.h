@@ -96,6 +96,7 @@ typedef struct RmCfg {
 
     gboolean shred_always_wait;
     gboolean shred_never_wait;
+    gboolean fake_pathindex_as_disk;
 } RmCfg;
 
 /**

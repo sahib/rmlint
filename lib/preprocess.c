@@ -456,6 +456,14 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
         }
     }
 
+
+    if(file->hardlinks.is_head) {
+        /* Hardlinks are processed on the fly by shredder later,
+         * so we do not really need to process them.
+         */
+        session->total_filtered_files -= file->hardlinks.files->length;
+    }
+
     /*
     * Check if the file is a output of rmlint itself. Which we definitely
     * not want to handle. Creating a script that deletes itself is fun but useless.
@@ -474,13 +482,6 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
 
     session->total_filtered_files -= remove;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
-
-    if(file->hardlinks.is_head) {
-        /* Hardlinks are processed on the fly by shredder later,
-         * so we do not really need to process them.
-         */
-        session->total_filtered_files -= file->hardlinks.files->length;
-    }
 
     return remove;
 }

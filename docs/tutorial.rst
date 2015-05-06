@@ -411,10 +411,12 @@ Technically it only computes a hash of your file which might, by it's nature,
 collide with the hash of a totally different file. If we assume a *perfect* hash
 function (i.e. one that distributes it's hash values perfectly even over all
 possible values), the probablilty of having a hash-collision is
-:math:`\frac{1}{2^{128}}` for the default 128-bit hash.  Of course hash
+:math:`\frac{1}{2^{160}}` for the default 160-bit hash.  Of course hash
 functions are not totally random, so the collision probability is slightly higher.
+Due to the "birthday paradox", this starts to become a real risk if you have more
+than about :math:`2^{80}` files.
 
-If you're wary, you might want to make a bit more paranoid than it's default. 
+If you're wary, you might want to make a bit more paranoid than the default.
 By default the ``sha1`` hash algorithm is used, which we consider a good
 trade-off of speed and accuracy. ``rmlint``'s paranoia level can be easily 
 inc/decreased using the ``-p`` (``--paranoid``)/ ``-P`` (``--less-paranoid``)
@@ -438,12 +440,13 @@ We recommend never to use the ``-P`` option.
 .. note::
 
    Even with the default options, the probability of a false positive doesn't
-   really start to get significant until you have around 1,000,000,000,000,000,000
-   files all of the same file size.  Bugs in ``rmlint`` are sadly (or happily?)
+   really start to get significant until you have around 1,000,000,000,000,000,000,000
+   different files all of the same file size.  Bugs in ``rmlint`` are sadly (or happily?)
    more likely than hash collisions.
+   See http://preshing.com/20110504/hash-collision-probabilities/ for discussion.
 
-Original detection
-------------------
+Original detection / selection
+------------------------------
 
 As mentioned before, ``rmlint`` divides a group of dupes in one original and
 clones of that one. While the chosen original might not be the one that was
