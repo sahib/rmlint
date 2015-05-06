@@ -505,7 +505,7 @@ void rm_traverse_tree(RmSession *session) {
     GThreadPool *traverse_pool = rm_util_thread_pool_new(
         (GFunc)rm_traverse_directories,
         trav_session,
-        CLAMP(cfg->threads, 1, g_hash_table_size(paths_per_disk)));
+        1);
 
     GHashTableIter iter;
     GQueue *path_queue = NULL;
