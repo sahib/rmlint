@@ -1228,14 +1228,17 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 
     /* create RmShredDevice for this file if one doesn't exist yet */
     RM_DEFINE_PATH(file);
-    dev_t disk = rm_mounts_get_disk_id(session->mounts, file->dev, file_path);
+    dev_t disk = (!session->cfg->fake_pathindex_as_disk
+            ?rm_mounts_get_disk_id(session->mounts, file->dev, file_path)
+            :(dev_t)file->path_index);
     RmShredDevice *device =
         g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
     if(device == NULL) {
         rm_log_debug(GREEN "Creating new RmShredDevice for disk %u\n" RESET,
                      (unsigned)disk);
-        device = rm_shred_device_new(!rm_mounts_is_nonrotational(session->mounts, disk),
+        device = rm_shred_device_new(session->cfg->fake_pathindex_as_disk ||
+                                     !rm_mounts_is_nonrotational(session->mounts, disk),
                                      rm_mounts_get_disk_name(session->mounts, disk),
                                      main);
         device->disk = disk;
@@ -2002,7 +2005,11 @@ void rm_shred_run(RmSession *session) {
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
-    rm_log_debug(BLUE "Devices = %d\n", devices_left);
+    if (session->cfg->fake_pathindex_as_disk) {
+        rm_log_warning(BLUE "Devices = %d\n", devices_left);
+    } else {
+        rm_log_debug(BLUE "Devices = %d\n", devices_left);
+    }
 
     /* Create a pool for results processing */
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);

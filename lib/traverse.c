@@ -491,7 +491,9 @@ void rm_traverse_tree(RmSession *session) {
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
-            dev_t disk = rm_mounts_get_disk_id_by_path(session->mounts, buffer_path);
+            dev_t disk = (!cfg->fake_pathindex_as_disk
+                    ? rm_mounts_get_disk_id_by_path(session->mounts, buffer_path)
+                    : (dev_t)idx);
 
             GQueue *path_queue = rm_hash_table_setdefault(
                 paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new);
