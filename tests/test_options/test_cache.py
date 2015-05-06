@@ -51,9 +51,9 @@ def test_cache():
         cache_path = os.path.join(TESTDIR_NAME, 'cache.json')
 
         if write_cache:
-            head, *data, footer = run_rmlint('-U -D -S p -o json:{c}'.format(c=cache_path))
+            head, *data, footer = run_rmlint('-U -D -S pa -o json:{c}'.format(c=cache_path))
         else:
-            head, *data, footer = run_rmlint('-D -S p -C {c}'.format(c=cache_path))
+            head, *data, footer = run_rmlint('-D -S pa -C {c}'.format(c=cache_path))
 
         check(data, write_cache)
 
@@ -63,11 +63,9 @@ def test_xattr():
     create_files()
 
     for write_cache in True, False:
-        cache_path = os.path.join(TESTDIR_NAME, 'cache.json')
-
         if write_cache:
-            head, *data, footer = run_rmlint('-U -D -S p --xattr-write')
+            head, *data, footer = run_rmlint('-U -D -S pa --xattr-write')
         else:
-            head, *data, footer = run_rmlint('-D -S p --xattr-read')
+            head, *data, footer = run_rmlint('-D -S pa --xattr-read')
 
         check(data, write_cache)

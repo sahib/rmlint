@@ -68,6 +68,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
 
     # filter empty strings
     cmd = list(filter(None, cmd))
+    # print(' '.join(cmd))
 
     if os.environ.get('PRINT_CMD'):
         print('Run:', ' '.join(cmd))
@@ -86,12 +87,13 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         return json_data + read_outputs
 
 
-def compare_json_doc(doc_a, doc_b):
-    # TODO: progress, is_original
+def compare_json_doc(doc_a, doc_b, compare_checksum=False):
     keys = [
-        'disk_id', 'inode', 'mtime',
-        'path', 'size', 'type'
+        'disk_id', 'inode', 'mtime', 'path', 'size', 'type'
     ]
+
+    if compare_checksum and 'checkum' in doc_a and 'checksum' in doc_b:
+        keys.append('checksum')
 
     for key in keys:
         # It's okay for unfinished checksums to have some missing fields.
@@ -105,7 +107,7 @@ def compare_json_doc(doc_a, doc_b):
     return True
 
 
-def compare_json_docs(docs_a, docs_b):
+def compare_json_docs(docs_a, docs_b, compare_checksum=False):
     paths_a, paths_b = {}, {}
 
     for doc_a in docs_a[1:-1]:
@@ -118,7 +120,7 @@ def compare_json_docs(docs_a, docs_b):
         # if path_a not in paths_b:
         #     print('####', doc_a, path_a, '\n', docs_b, '\n\n', list(paths_b))
         doc_b = paths_b[path_a]
-        if not compare_json_doc(doc_a, doc_b):
+        if not compare_json_doc(doc_a, doc_b, compare_checksum):
             print('!! OLD:')
             pprint.pprint(doc_a)
             print('!! NEW:')
@@ -131,6 +133,7 @@ def compare_json_docs(docs_a, docs_b):
         return False
 
     return True
+
 
 def run_rmlint_pedantic(*args, **kwargs):
     options = [
@@ -151,11 +154,10 @@ def run_rmlint_pedantic(*args, **kwargs):
         'spooky32', 'spooky64'
     ]
 
-    # Note: sha512 is not in there for now; since travis system does
+    # Note: sha512 is not in there for now; since travis' system does
     #       not support a recent enough glib with sha512.
     #       God forsaken debian people.
 
-    # TODO: also check checksum key where appropiate.
     for cksum_type in cksum_types:
         options.append('--algorithm=' + cksum_type)
 
@@ -174,7 +176,13 @@ def run_rmlint_pedantic(*args, **kwargs):
             if data:
                 data_skip = data[:-output_len]
 
-        if data is not None and not compare_json_docs(data_skip, new_data_skip):
+        # We cannot compare checksum in all cases.
+        compare_checksum = not option.startswith('--algorithm=')
+        for arg in args:
+            if '--cache' in args or '-C' in arg:
+                compare_checksum = False
+
+        if data is not None and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
             pprint.pprint(data_skip)
             pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
