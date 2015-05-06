@@ -1128,9 +1128,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Do not use fiemap(2) in order to save memory", NULL},
         {"shred-always-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_always_wait,
          "Shredder always waits for file increment to finish hashing before moving on to "
-         "the next file",NULL},
-        {"fake-pathindex-as-disk", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->fake_pathindex_as_disk,
-         "Testing option for threading; pretends each input path is a separate physical disk",
+         "the next file",
+         NULL},
+        {"fake-pathindex-as-disk", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->fake_pathindex_as_disk,
+         "Testing option for threading; pretends each input path is a separate physical "
+         "disk",
          NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
          "Shredder never waits for file increment to finish hashing before moving on to "

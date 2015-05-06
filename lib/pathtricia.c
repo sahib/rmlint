@@ -314,7 +314,8 @@ int main(void) {
     g_printerr("Took %2.5f to insert %d items\n", g_timer_elapsed(timer, NULL), i);
     rm_trie_print(&trie);
     memset(buf, 0, sizeof(buf));
-    rm_trie_build_path(&trie, rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf, sizeof(buf));
+    rm_trie_build_path(&trie, rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf,
+                       sizeof(buf));
     g_printerr("=> %s\n", buf);
 
     g_timer_start(timer);

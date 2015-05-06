@@ -214,9 +214,9 @@
  * debug messages by continually recycling back to the joiner.
  */
 #if _RM_SHRED_DEBUG
-    #define SHRED_EMPTYQUEUE_SLEEP_US (60 * 1000 * 1000) /* 60 seconds */
+#define SHRED_EMPTYQUEUE_SLEEP_US (60 * 1000 * 1000) /* 60 seconds */
 #else
-    #define SHRED_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 0.05 second */
+#define SHRED_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 0.05 second */
 #endif
 
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
@@ -1229,18 +1229,19 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
     /* create RmShredDevice for this file if one doesn't exist yet */
     RM_DEFINE_PATH(file);
     dev_t disk = (!session->cfg->fake_pathindex_as_disk
-            ?rm_mounts_get_disk_id(session->mounts, file->dev, file_path)
-            :(dev_t)file->path_index);
+                      ? rm_mounts_get_disk_id(session->mounts, file->dev, file_path)
+                      : (dev_t)file->path_index);
     RmShredDevice *device =
         g_hash_table_lookup(session->tables->dev_table, GUINT_TO_POINTER(disk));
 
     if(device == NULL) {
         rm_log_debug(GREEN "Creating new RmShredDevice for disk %u\n" RESET,
                      (unsigned)disk);
-        device = rm_shred_device_new(session->cfg->fake_pathindex_as_disk ||
-                                     !rm_mounts_is_nonrotational(session->mounts, disk),
-                                     rm_mounts_get_disk_name(session->mounts, disk),
-                                     main);
+        device =
+            rm_shred_device_new(session->cfg->fake_pathindex_as_disk ||
+                                    !rm_mounts_is_nonrotational(session->mounts, disk),
+                                rm_mounts_get_disk_name(session->mounts, disk),
+                                main);
         device->disk = disk;
         g_hash_table_insert(session->tables->dev_table, GUINT_TO_POINTER(disk), device);
     }
@@ -1492,8 +1493,8 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
     /* TODO:
      * With -D we get a memory leak here. Which is not that bad,
      * since all files need to be cached till the end of the run
-     * anyways, but valgrind shows a lot of output. 
-     * 
+     * anyways, but valgrind shows a lot of output.
+     *
      * (we're leaking group->digest and all RmFiles in it)
      */
     rm_shred_group_free(group);
@@ -1983,7 +1984,7 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
     }
 }
 
-static void hash_pool_free(GThreadPool *hash_pool) {
+static void rm_shred_hash_pool_free(GThreadPool *hash_pool) {
     g_thread_pool_free(hash_pool, FALSE, TRUE);
 }
 
@@ -2013,7 +2014,7 @@ void rm_shred_run(RmSession *session) {
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
-    if (session->cfg->fake_pathindex_as_disk) {
+    if(session->cfg->fake_pathindex_as_disk) {
         rm_log_warning(BLUE "Devices = %d\n", devices_left);
     } else {
         rm_log_debug(BLUE "Devices = %d\n", devices_left);
@@ -2023,7 +2024,7 @@ void rm_shred_run(RmSession *session) {
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);
 
     /* Create a pool of hashing threadpools */
-    tag.hash_pool_pool = g_async_queue_new_full((GDestroyNotify)hash_pool_free);
+    tag.hash_pool_pool = g_async_queue_new_full((GDestroyNotify)rm_shred_hash_pool_free);
     g_assert(session->cfg->threads > 0);
     for(uint i = 0; i < session->cfg->threads / 2 + 1; i++) {
         g_async_queue_push(

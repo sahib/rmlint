@@ -221,8 +221,12 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         rm_fmt_json_sep(self, out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(self, out);
-        rm_fmt_json_key_int(out, "progress",
-                            CLAMP(100 - 100 * ((gdouble)session->shred_bytes_remaining / (gdouble)session->shred_bytes_after_preprocess), 0, 100));
+        rm_fmt_json_key_int(
+            out, "progress",
+            CLAMP(100 -
+                      100 * ((gdouble)session->shred_bytes_remaining /
+                             (gdouble)session->shred_bytes_after_preprocess),
+                  0, 100));
         rm_fmt_json_sep(self, out);
 
         if(file->digest) {
