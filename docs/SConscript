@@ -63,7 +63,7 @@ env.Alias('man', env.Depends(manpage, sphinx))
 
 
 if 'install' in COMMAND_LINE_TARGETS:
-    if os.access(str(manpage), os.R_OK):
+    if os.access(str(manpage[0]), os.R_OK):
         man_install = env.Install('$PREFIX/share/man/man1', [manpage])
         env.Alias('install', [man_install])
     else:
