@@ -915,7 +915,7 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 
 /* Free RmShredGroup and any dormant files still in its queue
  */
-static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
+static void rm_shred_group_free(RmShredGroup *self) {
     g_assert(self->parent == NULL); /* children should outlive their parents! */
 
     /* For -D we need to hold back the memory a bit longer */
@@ -1053,7 +1053,7 @@ static void rm_shred_group_unref(RmShredGroup *self) {
 #if _RM_SHRED_DEBUG
         rm_log_debug("Free from rm_shred_group_unref\n");
 #endif
-        rm_shred_group_free(self, false);
+        rm_shred_group_free(self);
     }
 }
 
@@ -1275,7 +1275,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmMainTag *m
 static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
     g_assert(group);
     if(group->status == RM_SHRED_GROUP_DORMANT) {
-        rm_shred_group_free(group, FALSE);
+        rm_shred_group_free(group);
         return true;
     } else {
         return false;
@@ -1488,7 +1488,15 @@ static void rm_shred_result_factory(RmShredGroup *group, RmMainTag *tag) {
 #if _RM_SHRED_DEBUG
     rm_log_debug("Free from rm_shred_result_factory\n");
 #endif
-    rm_shred_group_free(group, false);
+
+    /* TODO:
+     * With -D we get a memory leak here. Which is not that bad,
+     * since all files need to be cached till the end of the run
+     * anyways, but valgrind shows a lot of output. 
+     * 
+     * (we're leaking group->digest and all RmFiles in it)
+     */
+    rm_shred_group_free(group);
 }
 
 /////////////////////////////////
