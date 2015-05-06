@@ -12,5 +12,5 @@ def test_just_call_it():
     # only if they fatally crash or create valgrind errors.
     # Also, you shouldn't see any output on the test run.
     head, *data, footer, csv = run_rmlint(
-        '-S a', outputs=['fdupes', 'stamp', 'progressbar', 'summary', 'pretty']
+        '-S a', outputs=['fdupes', 'stamp', 'progressbar', 'summary', 'pretty', 'py']
     )
