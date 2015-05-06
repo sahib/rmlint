@@ -47,14 +47,6 @@ void spooky_shorthash(const void *message,
                       uint64_t *hash1,
                       uint64_t *hash2);
 
-void spooky_init(struct spooky_state *state, uint64_t hash1, uint64_t hash2);
-
-void spooky_update(struct spooky_state *state, const void *msg, size_t len);
-
-void spooky_final(struct spooky_state *state, uint64_t *hash1, uint64_t *hash2);
-
-void spooky_copy(struct spooky_state *dest, struct spooky_state *src);
-
 // hash1/2 doubles as input parameter for seed1/2 and output for hash1/2
 void spooky_hash128(const void *message, size_t length, uint64_t *hash1, uint64_t *hash2);
 
