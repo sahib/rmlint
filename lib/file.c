@@ -60,7 +60,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
     RmFile *self = g_slice_new0(RmFile);
     self->session = session;
 
-    rm_file_set_path(self, (char *)path, path_len, true);
+    rm_file_set_path(self, (char *)path, path_len);
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
@@ -85,12 +85,9 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
     return self;
 }
 
-void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy) {
+void rm_file_set_path(RmFile *file, char *path, size_t path_len) {
     if(file->session->cfg->use_meta_cache == false) {
         file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, NULL);
-        file->basename =
-            (copy) ? g_strdup(file->folder->basename) : file->folder->basename;
-
     } else {
         file->path_id = rm_swap_table_insert(file->session->meta_cache,
                                              file->session->meta_cache_path_id,
@@ -120,11 +117,6 @@ void rm_file_destroy(RmFile *file) {
     }
     if(file->hardlinks.is_head && file->hardlinks.files) {
         g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
-    }
-
-    /* Only delete the basename when it really was in memory */
-    if(file->session->cfg->use_meta_cache == false) {
-        g_free(file->basename);
     }
 
     /* --cache can write cksums in here */

@@ -326,7 +326,7 @@ static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
 
     /* Need to set session first, since set_path expects that */
     file->session = merger->session;
-    rm_file_set_path(file, self->dirname, strlen(self->dirname), FALSE);
+    rm_file_set_path(file, self->dirname, strlen(self->dirname));
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
     file->digest = self->digest;

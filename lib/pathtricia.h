@@ -81,6 +81,7 @@ void rm_trie_destroy(RmTrie *self);
  * The value can be later requested with rm_trie_search*.
  */
 RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value);
+RmNode *rm_trie_insert_unlocked(RmTrie *self, const char *path, void *value);
 
 /**
  * rm_trie_search_node:
