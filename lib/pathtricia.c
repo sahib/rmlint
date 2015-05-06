@@ -163,8 +163,9 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
     for(RmNode *folder = node->parent; folder && folder->parent;
         folder = folder->parent) {
         elements[n_elements++] = folder->basename;
-        if(n_elements >= sizeof(elements))
+        if(n_elements >= sizeof(elements)) {
             break;
+        }
     }
 
     /* copy collected elements into *buf */
