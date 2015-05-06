@@ -136,6 +136,7 @@ def run_rmlint_pedantic(*args, **kwargs):
     options = [
         '--with-fiemap',
         '--without-fiemap',
+        '--buffered-read',
         '--threads=1',
         '--shred-never-wait',
         '--shred-always-wait',

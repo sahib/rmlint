@@ -1135,6 +1135,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Testing option for threading; pretends each input path is a separate physical "
          "disk",
          NULL},
+        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read, 
+         "Default to buffered reading calls (fread) during reading.", NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
          "Shredder never waits for file increment to finish hashing before moving on to "
          "the next file",

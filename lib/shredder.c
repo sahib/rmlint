@@ -919,7 +919,7 @@ static void rm_shred_group_free(RmShredGroup *self) {
     g_assert(self->parent == NULL); /* children should outlive their parents! */
 
     /* For -D we need to hold back the memory a bit longer */
-    bool needs_free = !(self->main->session->cfg->merge_directories) || force_free;
+    bool needs_free = !(self->main->session->cfg->merge_directories);
 
     if(self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file,
@@ -1839,7 +1839,7 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     if(file->is_symlink) {
         rm_shred_readlink_factory(file, device);
     } else {
-        if(SHRED_USE_BUFFERED_READ) {
+        if(device->main->session->cfg->use_buffered_read) {
             rm_shred_buffered_read_factory(file, device);
         } else {
             rm_shred_unbuffered_read_factory(file, device);

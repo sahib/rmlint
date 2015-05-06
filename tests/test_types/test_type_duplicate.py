@@ -38,13 +38,12 @@ def test_small_diffs():
 
     assert len(data) == 2
 
-    for algo in ['city', 'spooky', 'paranoid', 'md5', 'sha256']:
-        for i in range(0, N // 2):
-            create_file(create_data(len=N, flips=[+i]), 'a')
-            create_file(create_data(len=N, flips=[-i]), 'b')
-            head, *data, footer = run_rmlint('-S a -a ' + algo)
+    for i in range(0, N // 2):
+        create_file(create_data(len=N, flips=[+i]), 'a')
+        create_file(create_data(len=N, flips=[-i]), 'b')
+        head, *data, footer = run_rmlint('-S a')
 
-            if i == N - i or i is 0:
-                assert len(data) == 2
-            else:
-                assert len(data) == 0
+        if i == N - i or i is 0:
+            assert len(data) == 2
+        else:
+            assert len(data) == 0
