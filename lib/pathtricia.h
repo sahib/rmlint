@@ -55,6 +55,9 @@ typedef struct _RmTrie {
 
     /* size of the trie */
     size_t size;
+
+    /* read write lock for insert/search */
+    GRWLock lock;
 } RmTrie;
 
 /* Callback to rm_trie_iter */
@@ -105,7 +108,7 @@ bool rm_trie_set_value(RmTrie *self, const char *path, void *data);
  *
  * Returns the input buffer for chaining calls.
  */
-char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len);
+char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len);
 
 /**
  * rm_trie_size:

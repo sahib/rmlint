@@ -507,7 +507,7 @@ void rm_traverse_tree(RmSession *session) {
     GThreadPool *traverse_pool = rm_util_thread_pool_new(
         (GFunc)rm_traverse_directories,
         trav_session,
-        1);
+        session->cfg->threads);
 
     GHashTableIter iter;
     GQueue *path_queue = NULL;

@@ -103,7 +103,7 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
+int rm_tm_count_art_callback(RmTrie *self, RmNode *node, _U int level,
                              void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
@@ -117,7 +117,7 @@ int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
 
     char path[PATH_MAX];
     memset(path, 0, sizeof(path));
-    rm_trie_build_path(node, path, sizeof(path));
+    rm_trie_build_path(self, node, path, sizeof(path));
 
     /* Ascend the path parts up, add one for each part we meet.
        If a part was never found before, add it.

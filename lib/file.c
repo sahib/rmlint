@@ -111,7 +111,7 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
 void rm_file_build_path(RmFile *file, char *buf) {
     g_assert(file);
 
-    rm_trie_build_path(file->folder, buf, PATH_MAX);
+    rm_trie_build_path(&file->session->cfg->file_trie, file->folder, buf, PATH_MAX);
 }
 
 void rm_file_destroy(RmFile *file) {
