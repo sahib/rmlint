@@ -61,6 +61,8 @@ void rm_trie_init(RmTrie *self) {
      * I did ze science! :-)
      */
     self->chunks = g_string_chunk_new(100);
+
+    g_mutex_init(&self->lock);
 }
 
 /* Path iterator that works with absolute paths.
@@ -100,17 +102,23 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     char *path_elem = NULL;
     RmNode *curr_node = self->root;
 
-    RmPathIter iter;
-    rm_path_iter_init(&iter, path);
-    while((path_elem = rm_path_iter_next(&iter))) {
-        curr_node = rm_node_insert(self, curr_node, path_elem);
-    }
+    g_mutex_lock(&self->lock);
 
-    if(curr_node != NULL) {
-        curr_node->has_value = true;
-        curr_node->data = value;
-        self->size++;
+    {
+
+        RmPathIter iter;
+        rm_path_iter_init(&iter, path);
+        while((path_elem = rm_path_iter_next(&iter))) {
+            curr_node = rm_node_insert(self, curr_node, path_elem);
+        }
+
+        if(curr_node != NULL) {
+            curr_node->has_value = true;
+            curr_node->data = value;
+            self->size++;
+        }
     }
+    g_mutex_unlock(&self->lock);
 
     return curr_node;
 }
@@ -158,6 +166,8 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
 
     size_t n_elements = 1;
     char *elements[PATH_MAX / 2 + 1] = {node->basename, NULL};
+
+    /* TODO: do we need mutex lock here? */
 
     /* walk up the folder tree, collecting path elements into a list */
     for(RmNode *folder = node->parent; folder && folder->parent;
@@ -246,6 +256,7 @@ static int rm_trie_destroy_callback(_U RmTrie *self,
 void rm_trie_destroy(RmTrie *self) {
     rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
     g_string_chunk_free(self->chunks);
+    g_mutex_clear(&self->lock);
 }
 
 #ifdef _RM_PATHTRICIA_BUILD_MAIN

@@ -55,6 +55,10 @@ typedef struct _RmTrie {
 
     /* size of the trie */
     size_t size;
+
+    /* protect race during write */
+    GMutex lock;
+
 } RmTrie;
 
 /* Callback to rm_trie_iter */
