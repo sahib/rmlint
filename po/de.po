@@ -468,12 +468,13 @@ msgid "Preprocessing"
 msgstr "Bereite vor"
 
 #: lib/formats/progressbar.c:95
+# No translation needed / Translated
 msgid "found"
-msgstr " "
+msgstr "fand"
 
 #: lib/formats/progressbar.c:96
 msgid "other lint"
-msgstr "mal anderer Müll gefunden"
+msgstr "mal andereren Unsinn"
 
 #: lib/formats/progressbar.c:106
 msgid "Matching"
