@@ -340,7 +340,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
-        rm_log_warning_line(_("Cannot figure out terminal width."));
+        //rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
     self->last_state = state;

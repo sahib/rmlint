@@ -259,6 +259,24 @@ void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
     g_rw_lock_reader_unlock(&self->lock);
 }
 
+static int rm_trie_destroy_callback(_U RmTrie *self,
+                                    RmNode *node,
+                                    _U int level,
+                                    _U void *user_data) {
+    rm_node_free(node);
+    return 0;
+}
+
+void rm_trie_destroy(RmTrie *self) {
+    rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
+    g_string_chunk_free(self->chunks);
+    g_rw_lock_clear(&self->lock);
+}
+
+#ifdef _RM_PATHTRICIA_BUILD_MAIN
+
+#include <stdio.h>
+
 static int rm_trie_print_callback(_U RmTrie *self,
                                   RmNode *node,
                                   int level,
@@ -278,23 +296,6 @@ void rm_trie_print(RmTrie *self) {
     rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
 }
 
-static int rm_trie_destroy_callback(_U RmTrie *self,
-                                    RmNode *node,
-                                    _U int level,
-                                    _U void *user_data) {
-    rm_node_free(node);
-    return 0;
-}
-
-void rm_trie_destroy(RmTrie *self) {
-    rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
-    g_string_chunk_free(self->chunks);
-    g_rw_lock_clear(&self->lock);
-}
-
-#ifdef _RM_PATHTRICIA_BUILD_MAIN
-
-#include <stdio.h>
 
 int main(void) {
     RmTrie trie;

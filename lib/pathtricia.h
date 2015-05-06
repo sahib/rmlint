@@ -137,10 +137,4 @@ void rm_trie_iter(RmTrie *self,
                   RmTrieIterCallback callback,
                   void *user_data);
 
-/**
- * rm_trie_print:
- * Print the trie on stdout for debugging purposes.
- */
-void rm_trie_print(RmTrie *self);
-
 #endif
