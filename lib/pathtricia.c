@@ -99,13 +99,14 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     g_assert(self);
     g_assert(path);
 
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+
     g_rw_lock_writer_lock(&self->lock);
 
     char *path_elem = NULL;
     RmNode *curr_node = self->root;
 
-    RmPathIter iter;
-    rm_path_iter_init(&iter, path);
     while((path_elem = rm_path_iter_next(&iter))) {
         curr_node = rm_node_insert(self, curr_node, path_elem);
     }
@@ -117,6 +118,7 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     }
 
     g_rw_lock_writer_unlock(&self->lock);
+
     return curr_node;
 }
 
@@ -124,16 +126,18 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
     g_assert(self);
     g_assert(path);
 
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+
     g_rw_lock_reader_lock(&self->lock);
 
     char *path_elem = NULL;
     RmNode *curr_node = self->root;
 
-    RmPathIter iter;
-    rm_path_iter_init(&iter, path);
     while(curr_node && (path_elem = rm_path_iter_next(&iter))) {
         if(curr_node->children == NULL) {
             /* Can't go any further */
+            g_rw_lock_reader_unlock(&self->lock);
             return NULL;
         }
 
@@ -259,9 +263,7 @@ static int rm_trie_destroy_callback(_U RmTrie *self,
 
 void rm_trie_destroy(RmTrie *self) {
     rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
-    g_rw_lock_writer_lock(&self->lock);
     g_string_chunk_free(self->chunks);
-    g_rw_lock_writer_unlock(&self->lock);
     g_rw_lock_clear(&self->lock);
 }
 
