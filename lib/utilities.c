@@ -148,9 +148,7 @@ GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key,
 }
 
 ino_t rm_util_parent_node(const char *path) {
-    char *dummy = g_strdup(path);
-    char *parent_path = g_strdup(dirname(dummy));
-    g_free(dummy);
+    char *parent_path = g_path_get_dirname(path);
 
     RmStat stat_buf;
     if(!rm_sys_stat(parent_path, &stat_buf)) {
