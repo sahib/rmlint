@@ -231,7 +231,7 @@ class Rmlint(Program):
         return RMLINT_INSTALL
 
     def get_options(self):
-        return '-o summary {path} -o json:/tmp/rmlint.json -U'
+        return '-o summary {path} -o json:/tmp/rmlint.json -T df'
 
     def compute_version(self):
         version_text = subprocess.check_output(
@@ -261,6 +261,7 @@ class RmlintParanoid(Rmlint):
         return 'rmlint-paranoid'
 
 
+# TODO: This needs work.
 class RmlintCache(Rmlint):
     def get_options(self):
         return '-C /tmp/rmlint.json ' + Rmlint.get_options(self)
