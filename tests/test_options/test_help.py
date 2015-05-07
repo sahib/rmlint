@@ -8,7 +8,7 @@ from tests.utils import *
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_help():
     yelp = subprocess.check_output(
-        ['rmlint', '--help'], stderr=subprocess.STDOUT
+        ['./rmlint', '--help'], stderr=subprocess.STDOUT
     ).decode('utf-8')
     assert 'man 1 rmlint' in yelp
     assert '--show-man' in yelp
@@ -17,7 +17,7 @@ def test_help():
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_man():
     yelp = subprocess.check_output(
-        ['rmlint', '--show-man'], stderr=subprocess.STDOUT
+        ['./rmlint', '--show-man'], stderr=subprocess.STDOUT
     ).decode('utf-8')
     assert 'Pahl' in yelp
     assert 'Thomas' in yelp

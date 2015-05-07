@@ -12,11 +12,10 @@ def test_stdin_read():
     proc = subprocess.Popen(
         ['./rmlint', '-', TESTDIR_NAME, '-o', 'json', '-S', 'a', '--hidden'],
         stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        universal_newlines=True
+        stdout=subprocess.PIPE
     )
-    data, _ = proc.communicate(path_a + path_b + path_c)
-    head, *data, footer = json.loads(data)
+    data, _ = proc.communicate((path_a + path_b + path_c).encode('utf-8'))
+    head, *data, footer = json.loads(data.decode('utf-8'))
 
     assert data[0]['path'].endswith('.hidden')
     assert data[1]['path'].endswith('a')
