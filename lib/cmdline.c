@@ -659,7 +659,7 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
 static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
     cfg->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
         verbosity_counter,
-        0,
+        1,
         (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1)];
 }
 
@@ -1186,7 +1186,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
                                  _("rmlint finds space waste and other broken things on "
                                    "your filesystem and offers to remove it.\n"
                                    "It is especially good at finding duplicates and "
-                                   "offers a big varierty of options to handle them."));
+                                   "offers a big variety of options to handle them."));
     g_option_context_set_description(
         option_parser,
         _("Only the most important options and options that alter the defaults are shown "

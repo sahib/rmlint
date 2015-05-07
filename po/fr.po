@@ -360,7 +360,7 @@ msgstr "[RÉPERTOIRE_OU_FICHIER …] [//] [ORIGINAL_RÉPERTOIRE_OU_FICHIER …] 
 msgid ""
 "rmlint finds space waste and other broken things on your filesystem and "
 "offers to remove it.\n"
-"It is especially good at finding duplicates and offers a big varierty of "
+"It is especially good at finding duplicates and offers a big variety of "
 "options to handle them."
 msgstr ""
 "rmlint vous propose de récupérer l'espace perdu et de réparer certaines "

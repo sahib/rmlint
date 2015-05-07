@@ -72,7 +72,6 @@ def test_sorting():
 
     for combo in combos:
         combo_str = '-S ' + combo
-        print('Testing {}...'.format(combo_str), end='')
         head, *data, footer = run_rmlint(combo_str + search_paths, use_default_dir=False)
         assert len(data) == 6
 
