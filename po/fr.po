@@ -110,8 +110,8 @@ msgstr "Le maxi est plus petit que le mini"
 
 #: lib/cmdline.c:203
 #, fuzzy
-msgid "cannot parse --limit: "
-msgstr "impossible d'analyser --limit: %s"
+msgid "cannot parse --size: "
+msgstr "impossible d'analyser --size: %s"
 
 #: lib/cmdline.c:225
 #, fuzzy, c-format

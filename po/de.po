@@ -113,8 +113,8 @@ msgid "Max is smaller than min"
 msgstr "Maximum ist kleiner als das Minimum. Macht leider keinen Sinn"
 
 #: lib/cmdline.c:203
-msgid "cannot parse --limit: "
-msgstr "Kann --limit nicht parsen: "
+msgid "cannot parse --size: "
+msgstr "Kann --size nicht parsen: "
 
 #: lib/cmdline.c:225
 #, fuzzy, c-format

@@ -147,6 +147,8 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--without-fiemap',
         '--fake-pathindex-as-disk',
         '--fake-fiemap',
+        '-P',
+        '-PP',
         '--buffered-read',
         '--threads=1',
         '--shred-never-wait',

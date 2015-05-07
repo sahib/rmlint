@@ -200,7 +200,7 @@ static gboolean rm_cmd_parse_limit_sizes(_U const char *option_name,
                                          GError **error) {
     if(!rm_cmd_size_range_string_to_bytes(range_spec, &session->cfg->minsize,
                                           &session->cfg->maxsize, error)) {
-        g_prefix_error(error, _("cannot parse --limit: "));
+        g_prefix_error(error, _("cannot parse --size: "));
         return false;
     } else {
         session->cfg->limits_specified = true;
