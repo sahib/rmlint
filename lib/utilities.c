@@ -1198,7 +1198,7 @@ bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
     if(!table1 || !table2) {
         return false;
     }
-    if(0 || g_sequence_get_length(table1) == 0 ||
+    if(g_sequence_get_length(table1) == 0 ||
        g_sequence_get_length(table1) != g_sequence_get_length(table2)) {
         return false;
     }
@@ -1217,25 +1217,6 @@ bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
     return true;
 }
 
-RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_offset) {
-    if(offset_list != NULL) {
-        RmOffsetEntry token;
-        token.physical = 0;
-        token.logical = file_offset;
-
-        GSequenceIter *next_fragment = g_sequence_iter_prev(g_sequence_search(
-            offset_list, &token, (GCompareDataFunc)rm_offset_find_logical, NULL));
-
-        if(!g_sequence_iter_is_end(next_fragment) &&
-           !g_sequence_iter_is_begin(next_fragment)) {
-            RmOffsetEntry *off = g_sequence_get(next_fragment);
-            return off->logical - file_offset;
-        }
-    }
-    /* default to 0 always */
-    return 0;
-}
-
 #else /* Probably FreeBSD */
 
 RmOffsetTable rm_offset_create_table(_U const char *path, _U bool force_fiemap) {
@@ -1243,10 +1224,6 @@ RmOffsetTable rm_offset_create_table(_U const char *path, _U bool force_fiemap) 
 }
 
 RmOff rm_offset_lookup(_U RmOffsetTable table, _U RmOff file_offset) {
-    return 0;
-}
-
-RmOff rm_offset_bytes_to_next_fragment(_U RmOffsetTable table, _U RmOff file_offset) {
     return 0;
 }
 
