@@ -31,8 +31,6 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 - Most internal filesystems like `proc` are ignored now.
 - Improved progressbar
-
-### Under the Hood
 - Memory footprint reduced to enable larger filesets to be processed. See
   discussion at https://github.com/sahib/rmlint/issues/109.  Improvements
   include a Pat(h)ricia-Trie used as data structure to efficiently map
