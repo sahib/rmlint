@@ -22,6 +22,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Added
 
+- More aggressive test suite, leading to higher coverage rates (90% of lines,
+  almost 100% functions at least). Let's not speak of branch coverage for now. 😄
 - A primitive benchmark suite.
 - A GUI sketch that can be shipped along rmlint.
 
