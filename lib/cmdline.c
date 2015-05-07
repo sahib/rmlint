@@ -687,8 +687,10 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("Only up to -pp or down to -PP flags allowed"));
+        if(error && *error == NULL) {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Only up to -pp or down to -PP flags allowed"));
+        }
         break;
     }
 }

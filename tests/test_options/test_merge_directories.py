@@ -7,6 +7,7 @@ def test_simple():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
+
     head, *data, footer = run_rmlint('-pp -D --sortcriteria A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)

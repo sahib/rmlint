@@ -73,3 +73,22 @@ def test_xattr():
 
         head, *data, footer = run_rmlint('-D -S pa --xattr-clear')
 
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_bad_cache_file():
+    create_files()
+
+    # Valid json, but pointless cache.
+    create_file('{"blurb": 1}', 'badcache')
+
+    def run_cache(name, should_work):
+        try:
+            run_rmlint('-D -S pa -C {c}'.format(c=name))
+        except subprocess.CalledProcessError:
+            assert not should_work
+        else:
+            assert should_work
+
+    run_cache(os.path.join(TESTDIR_NAME, 'badcache'), True)
+    run_cache('/bin/bash', True)
+    run_cache('/nope', False)
