@@ -20,3 +20,11 @@ def test_just_call_it():
     subprocess.check_output(['./rmlint', '-g', '-c', 'progressbar:fancy', TESTDIR_NAME])
     subprocess.check_output(['./rmlint', '-g',  '-O' , 'fdupes', TESTDIR_NAME])
     subprocess.check_output(['./rmlint', '-g', TESTDIR_NAME])
+
+    for silly_option in ['-ppp', '-PPP']:
+        try:
+            subprocess.check_output(['./rmlint', silly_option, TESTDIR_NAME])
+        except subprocess.CalledProcessError:
+            pass
+        else:
+            assert False

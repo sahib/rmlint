@@ -62,10 +62,14 @@ def test_cache():
 def test_xattr():
     create_files()
 
-    for write_cache in True, False:
-        if write_cache:
-            head, *data, footer = run_rmlint('-U -D -S pa --xattr-write')
-        else:
-            head, *data, footer = run_rmlint('-D -S pa --xattr-read')
+    for _ in range(2):
+        for write_cache in True, False:
+            if write_cache:
+                head, *data, footer = run_rmlint('-U -D -S pa --xattr-write')
+            else:
+                head, *data, footer = run_rmlint('-D -S pa --xattr-read')
 
-        check(data, write_cache)
+            check(data, write_cache)
+
+        head, *data, footer = run_rmlint('-D -S pa --xattr-clear')
+

@@ -150,6 +150,7 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--fake-fiemap',
         '-P',
         '-PP',
+        '--max-paranoid-mem 1M -pp',
         '--buffered-read',
         '--threads=1',
         '--shred-never-wait',
@@ -231,6 +232,8 @@ def create_file(data, name):
 
     with open(full_path, 'w') as handle:
         handle.write(data)
+
+    return full_path
 
 
 def warp_file_to_future(name, seconds):
