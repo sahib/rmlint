@@ -40,6 +40,12 @@ def which(program):
     return None
 
 
+def has_feature(feature):
+    return ('+' + feature) in subprocess.check_output(
+        ['./rmlint', '--version'], stderr=subprocess.STDOUT
+    ).decode('utf-8')
+
+
 def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     if use_default_dir:
         if dir_suffix:
@@ -154,9 +160,10 @@ def run_rmlint_pedantic(*args, **kwargs):
         'spooky32', 'spooky64'
     ]
 
-    # Note: sha512 is not in there for now; since travis' system does
-    #       not support a recent enough glib with sha512.
-    #       God forsaken debian people.
+    # Note: sha512 is supported on all system which have
+    #       no recent enough glib with. God forsaken debian people.
+    if has_feature('sha512'):
+        cksum_types.append('sha512')
 
     for cksum_type in cksum_types:
         options.append('--algorithm=' + cksum_type)
