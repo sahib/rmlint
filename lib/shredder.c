@@ -2014,11 +2014,7 @@ void rm_shred_run(RmSession *session) {
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
-    if(session->cfg->fake_pathindex_as_disk) {
-        rm_log_warning(BLUE "Devices = %d\n", devices_left);
-    } else {
-        rm_log_debug(BLUE "Devices = %d\n", devices_left);
-    }
+    rm_log_debug(BLUE "Devices = %d\n", devices_left);
 
     /* Create a pool for results processing */
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);

@@ -33,6 +33,9 @@ def test_valid():
     *_, footer = run_rmlint('--size 2048-2048')
     assert footer['duplicates'] == 2
 
+    *_, footer = run_rmlint('--size 2K-2KB')
+    assert footer['duplicates'] == 2
+
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_invalid():

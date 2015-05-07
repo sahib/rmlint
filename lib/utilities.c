@@ -1290,15 +1290,13 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 time_t rm_iso8601_parse(const char *string) {
-    struct tm time_key;
-    memset(&time_key, 0, sizeof(struct tm));
-
-    if(strptime(string, "%FT%T%z", &time_key) == NULL) {
-        rm_log_perror("strptime(3) failed");
+    GTimeVal time_result; 
+    if(!g_time_val_from_iso8601(string, &time_result)) {
+        rm_log_perror("Converting time failed");
         return 0;
     }
 
-    return mktime(&time_key) + time_key.tm_gmtoff;
+    return time_result.tv_sec;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {

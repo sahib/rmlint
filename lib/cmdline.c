@@ -569,8 +569,6 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
     bool plain = rm_cmd_timestamp_is_plain(string);
     session->cfg->filter_mtime = false;
 
-    tzset();
-
     if(plain) {
         /* A simple integer is expected, just parse it as time_t */
         result = strtoll(string, NULL, 10);
@@ -583,7 +581,7 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
-            rm_log_debug("timestamp %ld understood as %s\n", result, time_buf);
+            rm_log_debug("timestamp %s understood as %lu\n", time_buf, result);
         }
     }
 
@@ -596,20 +594,21 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
     /* Some sort of success. */
     session->cfg->filter_mtime = true;
 
-    if(result > time(NULL)) {
+    time_t now = time(NULL);
+    if(result > now) {
         /* Not critical, maybe there are some uses for this,
          * but print at least a small warning as indication.
          * */
         if(plain) {
             rm_log_warning_line(_("-n %lu is newer than current time (%lu)."),
-                                (long)result, (long)time(NULL));
+                                (long)result, (long)now);
         } else {
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
 
-            rm_log_warning_line("-N %s is newer than current time (%s).", string,
-                                time_buf);
+            rm_log_warning_line("-N %s is newer than current time (%s) [%lu > %lu]", string,
+                                time_buf, result, now);
         }
     }
 

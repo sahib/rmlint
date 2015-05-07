@@ -11,6 +11,12 @@ def test_just_call_it():
     # are called from our tests. We don't test any results; basically
     # only if they fatally crash or create valgrind errors.
     # Also, you shouldn't see any output on the test run.
-    head, *data, footer, csv = run_rmlint(
+    run_rmlint(
         '-S a', outputs=['fdupes', 'stamp', 'progressbar', 'summary', 'pretty', 'py']
     )
+
+    # Check if the -g option does weird things. (i.e. segfault)
+    subprocess.check_output(['./rmlint', '-g', '-c', 'progressbar:ascii', TESTDIR_NAME])
+    subprocess.check_output(['./rmlint', '-g', '-c', 'progressbar:fancy', TESTDIR_NAME])
+    subprocess.check_output(['./rmlint', '-g',  '-O' , 'fdupes', TESTDIR_NAME])
+    subprocess.check_output(['./rmlint', '-g', TESTDIR_NAME])

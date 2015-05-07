@@ -4,6 +4,7 @@
 
 import os
 import json
+import time
 import pprint
 import shutil
 import shlex
@@ -191,7 +192,7 @@ def run_rmlint_pedantic(*args, **kwargs):
             if '--cache' in args or '-C' in arg:
                 compare_checksum = False
 
-        if data is not None and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
+        if data_skip is not None and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
             pprint.pprint(data_skip)
             pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
@@ -230,6 +231,11 @@ def create_file(data, name):
 
     with open(full_path, 'w') as handle:
         handle.write(data)
+
+
+def warp_file_to_future(name, seconds):
+    now = time.time()
+    os.utime(os.path.join(TESTDIR_NAME, name), (now + 2, now + 2))
 
 
 def usual_setup_func():
