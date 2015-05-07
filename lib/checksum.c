@@ -114,7 +114,7 @@ RmOff rm_digest_paranoia_bytes(void) {
     }
 
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
-                        RmOff paranoid_size) {
+                        RmOff paranoid_size, bool use_shadow_hash) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -180,7 +180,11 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
         g_assert(paranoid_size > 0);
         digest->bytes = paranoid_size;
         digest->paranoid_offset = 0;
-        digest->shadow_hash = rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0);
+        if(use_shadow_hash) {
+            digest->shadow_hash = rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0, false);
+        } else {
+            digest->shadow_hash = NULL;
+        }
         break;
     default:
         g_assert_not_reached();
@@ -362,7 +366,9 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         g_assert(size + digest->paranoid_offset <= digest->bytes);
         memcpy((char *)digest->checksum + digest->paranoid_offset, data, size);
         digest->paranoid_offset += size;
-        rm_digest_update(digest->shadow_hash, data, size);
+        if(digest->shadow_hash) {
+            rm_digest_update(digest->shadow_hash, data, size);
+        }
         break;
     default:
         g_assert_not_reached();
@@ -398,12 +404,14 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
         self = rm_digest_new(digest->type, digest->initial_seed1, digest->initial_seed2,
-                             digest->bytes);
+                             digest->bytes, digest->shadow_hash != NULL);
 
         if(self->type == RM_DIGEST_PARANOID) {
             self->paranoid_offset = digest->paranoid_offset;
-            rm_digest_free(self->shadow_hash);
-            self->shadow_hash = rm_digest_copy(digest->shadow_hash);
+            if(self->shadow_hash) {
+                rm_digest_free(self->shadow_hash);
+                self->shadow_hash = rm_digest_copy(digest->shadow_hash);
+            }
         }
 
         if(self->checksum && digest->checksum) {
@@ -462,15 +470,20 @@ guint rm_digest_hash(RmDigest *digest) {
     gsize bytes = 0;
 
     if(digest->type == RM_DIGEST_PARANOID) {
-        buf = rm_digest_steal_buffer(digest->shadow_hash);
-        bytes = digest->shadow_hash->bytes;
+        if(digest->shadow_hash) {
+            buf = rm_digest_steal_buffer(digest->shadow_hash);
+            bytes = digest->shadow_hash->bytes;
+        }
     } else {
         buf = rm_digest_steal_buffer(digest);
         bytes = digest->bytes;
     }
 
-    guint hash = *(RmOff *)buf;
-    g_slice_free1(bytes, buf);
+    guint hash = 0;
+    if(buf != NULL) {
+        hash = *(RmOff *)buf;
+        g_slice_free1(bytes, buf);
+    }
     return hash;
 }
 
@@ -495,8 +508,10 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     }
 
     if(digest->type == RM_DIGEST_PARANOID) {
-        input = rm_digest_steal_buffer(digest->shadow_hash);
-        bytes = digest->shadow_hash->bytes;
+        if(digest->shadow_hash) {
+            input = rm_digest_steal_buffer(digest->shadow_hash);
+            bytes = digest->shadow_hash->bytes;
+        }
     } else {
         input = rm_digest_steal_buffer(digest);
         bytes = digest->bytes;
@@ -524,7 +539,9 @@ int rm_digest_get_bytes(RmDigest *self) {
 
     if(self->type != RM_DIGEST_PARANOID) {
         return self->bytes;
-    } else {
+    } else if(self->shadow_hash) {
         return self->shadow_hash->bytes;
+    } else {
+        return 0;
     }
 }

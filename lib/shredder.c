@@ -362,6 +362,11 @@ typedef enum RmShredGroupStatus {
 #define HAS_CACHE(session) \
     (session->cfg->read_cksum_from_xattr || session->cache_list.length)
 
+
+#define NEEDS_SHADOW_HASH(cfg)  \
+    (cfg->merge_directories || cfg->read_cksum_from_xattr)
+
+
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
      * criteria for further hashing (normally just 2 or more files, but sometimes
@@ -567,8 +572,9 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
     target_bytes = target_pages * tag->page_size;
 
     /* test if cost-effective to read the whole file */
-    if(group->hash_offset + target_bytes + balanced_bytes >= group->file_size) {
+    if(group->hash_offset + target_bytes + (balanced_bytes) >= group->file_size) {
         group->next_offset = group->file_size;
+        file->fadvise_requested = 1;
     } else {
         group->next_offset = group->hash_offset + target_bytes;
     }
@@ -1757,10 +1763,11 @@ finish:
 
 static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
     bool can_process = true;
+    RmCfg *cfg = main->session->cfg;
 
     if(file->shred_group->has_only_ext_cksums) {
         /* Cool, we were able to read the checksum from disk */
-        file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0);
+        file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
 
         RM_DEFINE_PATH(file);
 
@@ -1789,12 +1796,15 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
 
             if(file->is_symlink) {
                 file->digest = rm_digest_new(main->session->cfg->checksum_type, 0, 0,
-                                             PATH_MAX + 1 /* max size of a symlink file */
+                                             PATH_MAX + 1 /* max size of a symlink file */,
+                                             NEEDS_SHADOW_HASH(cfg)
                                              );
             } else {
                 file->digest =
                     rm_digest_new(main->session->cfg->checksum_type, 0, 0,
-                                  file->shred_group->next_offset - file->hash_offset);
+                                  file->shred_group->next_offset - file->hash_offset,
+                                  NEEDS_SHADOW_HASH(cfg)
+                                  );
             }
         }
     } else if(file->shred_group->digest) {
@@ -1805,7 +1815,9 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
         file->digest = rm_digest_new(main->session->cfg->checksum_type,
                                      main->session->hash_seed1,
                                      main->session->hash_seed2,
-                                     0);
+                                     0,
+                                     NEEDS_SHADOW_HASH(cfg)
+                                     );
     }
 
     return can_process;

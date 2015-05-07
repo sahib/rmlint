@@ -27,6 +27,7 @@
 #define RM_CHECKSUM_H
 
 #include <glib.h>
+#include <stdbool.h>
 #include "config.h"
 
 typedef enum RmDigestType {
@@ -106,7 +107,7 @@ const char *rm_digest_type_to_string(RmDigestType type);
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
  */
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size, bool use_shadow_hash);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
