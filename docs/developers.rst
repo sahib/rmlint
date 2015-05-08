@@ -72,6 +72,8 @@ For language-translations/updates it is also okay to send the ``.po`` files via
 mail at sahib@online.de, since not every translator is necessarily a
 software developer.
 
+.. include:: testing.rst
+
 Buildsystem Helpers
 -------------------
 
