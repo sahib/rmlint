@@ -55,7 +55,7 @@ were executed (and how often) by the testsuite. Here's a short quickstart using
 
 The coverage results are updated from time to time here:
 
-    TODO
+    http://sahib.github.io/rmlint/gcov/index.html
 
 Structure
 ---------
