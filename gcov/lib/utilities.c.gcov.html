@@ -1,0 +1,1358 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/utilities.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - utilities.c<span style="font-size: 80%;"> (source / <a href="utilities.c.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">402</td>
+            <td class="headerCovTableEntry">531</td>
+            <td class="headerCovTableEntryMed">75.7 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-05-07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">45</td>
+            <td class="headerCovTableEntry">48</td>
+            <td class="headerCovTableEntryHi">93.8 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /**</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      28 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      29 </span>            : #include &lt;ctype.h&gt;
+<span class="lineNum">      30 </span>            : #include &lt;unistd.h&gt;
+<span class="lineNum">      31 </span>            : #include &lt;fcntl.h&gt;
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : #include &lt;sys/types.h&gt;
+<span class="lineNum">      34 </span>            : #include &lt;sys/stat.h&gt;
+<span class="lineNum">      35 </span>            : #include &lt;sys/ioctl.h&gt;
+<span class="lineNum">      36 </span>            : 
+<span class="lineNum">      37 </span>            : #include &lt;pwd.h&gt;
+<span class="lineNum">      38 </span>            : #include &lt;grp.h&gt;
+<span class="lineNum">      39 </span>            : 
+<span class="lineNum">      40 </span>            : #include &lt;fts.h&gt;
+<span class="lineNum">      41 </span>            : #include &lt;libgen.h&gt;
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span>            : #include &quot;config.h&quot;
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span>            : /* Not available there,
+<span class="lineNum">      46 </span>            :  * but might be on other non-linux systems
+<span class="lineNum">      47 </span>            :  * */
+<span class="lineNum">      48 </span>            : #if HAVE_GIO_UNIX
+<span class="lineNum">      49 </span>            : #include &lt;gio/gunixmounts.h&gt;
+<span class="lineNum">      50 </span>            : #endif
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span>            : #if HAVE_FIEMAP
+<span class="lineNum">      53 </span>            : #include &lt;linux/fs.h&gt;
+<span class="lineNum">      54 </span>            : #include &lt;linux/fiemap.h&gt;
+<span class="lineNum">      55 </span>            : #endif
+<span class="lineNum">      56 </span>            : 
+<span class="lineNum">      57 </span>            : /* Internal headers */
+<span class="lineNum">      58 </span>            : #include &quot;config.h&quot;
+<span class="lineNum">      59 </span>            : #include &quot;utilities.h&quot;
+<span class="lineNum">      60 </span>            : #include &quot;file.h&quot;
+<span class="lineNum">      61 </span>            : 
+<span class="lineNum">      62 </span>            : /* External libraries */
+<span class="lineNum">      63 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span>            : #if HAVE_LIBELF
+<span class="lineNum">      66 </span>            : #include &lt;libelf.h&gt;
+<span class="lineNum">      67 </span>            : #include &lt;gelf.h&gt;
+<span class="lineNum">      68 </span>            : #endif
+<span class="lineNum">      69 </span>            : 
+<span class="lineNum">      70 </span>            : #if HAVE_BLKID
+<span class="lineNum">      71 </span>            : #include &lt;blkid.h&gt;
+<span class="lineNum">      72 </span>            : #endif
+<span class="lineNum">      73 </span>            : 
+<span class="lineNum">      74 </span>            : #if HAVE_SYSCTL
+<span class="lineNum">      75 </span>            : #include &lt;sys/sysctl.h&gt;
+<span class="lineNum">      76 </span>            : #endif
+<span class="lineNum">      77 </span>            : 
+<span class="lineNum">      78 </span>            : #if HAVE_JSON_GLIB
+<span class="lineNum">      79 </span>            : #include &lt;json-glib/json-glib.h&gt;
+<span class="lineNum">      80 </span>            : #endif
+<span class="lineNum">      81 </span>            : 
+<span class="lineNum">      82 </span>            : ////////////////////////////////////
+<span class="lineNum">      83 </span>            : //       GENERAL UTILITES         //
+<a name="84"><span class="lineNum">      84 </span>            : ////////////////////////////////////</a>
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span><span class="lineCov">       3319 : char *rm_util_strsub(const char *string, const char *subs, const char *with) {</span>
+<span class="lineNum">      87 </span><span class="lineCov">       3319 :     gchar *result = NULL;</span>
+<span class="lineNum">      88 </span><span class="lineCov">       3319 :     if(string != NULL &amp;&amp; string[0] != '\0') {</span>
+<span class="lineNum">      89 </span><span class="lineCov">       3319 :         gchar **split = g_strsplit(string, subs, 0);</span>
+<span class="lineNum">      90 </span><span class="lineCov">       3319 :         if(split != NULL) {</span>
+<span class="lineNum">      91 </span><span class="lineCov">       3319 :             result = g_strjoinv(with, split);</span>
+<span class="lineNum">      92 </span>            :         }
+<span class="lineNum">      93 </span><span class="lineCov">       3319 :         g_strfreev(split);</span>
+<span class="lineNum">      94 </span>            :     }
+<span class="lineNum">      95 </span><span class="lineCov">       3319 :     return result;</span>
+<a name="96"><span class="lineNum">      96 </span>            : }</a>
+<span class="lineNum">      97 </span>            : 
+<span class="lineNum">      98 </span><span class="lineCov">       8224 : char *rm_util_basename(const char *filename) {</span>
+<span class="lineNum">      99 </span><span class="lineCov">       8224 :     char *base = strrchr(filename, G_DIR_SEPARATOR);</span>
+<span class="lineNum">     100 </span><span class="lineCov">       8224 :     if(base != NULL) {</span>
+<span class="lineNum">     101 </span>            :         /* Return a pointer to the part behind it
+<span class="lineNum">     102 </span>            :          * (which may be the empty string)
+<span class="lineNum">     103 </span>            :          * */
+<span class="lineNum">     104 </span><span class="lineCov">       8224 :         return base + 1;</span>
+<span class="lineNum">     105 </span>            :     }
+<span class="lineNum">     106 </span>            : 
+<span class="lineNum">     107 </span>            :     /* It's the full path anyway */
+<span class="lineNum">     108 </span><span class="lineNoCov">          0 :     return (char *)filename;</span>
+<a name="109"><span class="lineNum">     109 </span>            : }</a>
+<span class="lineNum">     110 </span>            : 
+<span class="lineNum">     111 </span><span class="lineCov">       1863 : char *rm_util_path_extension(const char *basename) {</span>
+<span class="lineNum">     112 </span><span class="lineCov">       1863 :     char *point = strrchr(basename, '.');</span>
+<span class="lineNum">     113 </span><span class="lineCov">       1863 :     if(point) {</span>
+<span class="lineNum">     114 </span><span class="lineCov">       1539 :         return point + 1;</span>
+<span class="lineNum">     115 </span>            :     } else {
+<span class="lineNum">     116 </span><span class="lineCov">        324 :         return NULL;</span>
+<span class="lineNum">     117 </span>            :     }
+<a name="118"><span class="lineNum">     118 </span>            : }</a>
+<span class="lineNum">     119 </span>            : 
+<span class="lineNum">     120 </span><span class="lineCov">          6 : bool rm_util_path_is_hidden(const char *path) {</span>
+<span class="lineNum">     121 </span><span class="lineCov">          6 :     if(path == NULL) {</span>
+<span class="lineNum">     122 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     123 </span>            :     }
+<span class="lineNum">     124 </span>            : 
+<span class="lineNum">     125 </span><span class="lineCov">          6 :     if(*path == '.') {</span>
+<span class="lineNum">     126 </span><span class="lineNoCov">          0 :         return true;</span>
+<span class="lineNum">     127 </span>            :     }
+<span class="lineNum">     128 </span>            : 
+<span class="lineNum">     129 </span><span class="lineCov">        162 :     while(*path++) {</span>
+<span class="lineNum">     130 </span>            :         /* Search for '/.' */
+<span class="lineNum">     131 </span><span class="lineCov">        152 :         if(*path == G_DIR_SEPARATOR &amp;&amp; *(path + 1) == '.') {</span>
+<span class="lineNum">     132 </span><span class="lineCov">          2 :             return true;</span>
+<span class="lineNum">     133 </span>            :         }
+<span class="lineNum">     134 </span>            :     }
+<span class="lineNum">     135 </span>            : 
+<span class="lineNum">     136 </span><span class="lineCov">          4 :     return false;</span>
+<a name="137"><span class="lineNum">     137 </span>            : }</a>
+<span class="lineNum">     138 </span>            : 
+<span class="lineNum">     139 </span><span class="lineCov">      37848 : GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key,</span>
+<span class="lineNum">     140 </span>            :                                  RmNewFunc default_func) {
+<span class="lineNum">     141 </span><span class="lineCov">      37848 :     gpointer value = g_hash_table_lookup(table, key);</span>
+<span class="lineNum">     142 </span><span class="lineCov">      37848 :     if(value == NULL) {</span>
+<span class="lineNum">     143 </span><span class="lineCov">      23667 :         value = default_func();</span>
+<span class="lineNum">     144 </span><span class="lineCov">      23667 :         g_hash_table_insert(table, key, value);</span>
+<span class="lineNum">     145 </span>            :     }
+<span class="lineNum">     146 </span>            : 
+<span class="lineNum">     147 </span><span class="lineCov">      37848 :     return value;</span>
+<a name="148"><span class="lineNum">     148 </span>            : }</a>
+<span class="lineNum">     149 </span>            : 
+<span class="lineNum">     150 </span><span class="lineCov">       7850 : ino_t rm_util_parent_node(const char *path) {</span>
+<span class="lineNum">     151 </span><span class="lineCov">       7850 :     char *parent_path = g_path_get_dirname(path);</span>
+<span class="lineNum">     152 </span>            : 
+<span class="lineNum">     153 </span>            :     RmStat stat_buf;
+<span class="lineNum">     154 </span><span class="lineCov">       7850 :     if(!rm_sys_stat(parent_path, &amp;stat_buf)) {</span>
+<span class="lineNum">     155 </span><span class="lineCov">       7850 :         g_free(parent_path);</span>
+<span class="lineNum">     156 </span><span class="lineCov">       7850 :         return stat_buf.st_ino;</span>
+<span class="lineNum">     157 </span>            :     } else {
+<span class="lineNum">     158 </span><span class="lineNoCov">          0 :         g_free(parent_path);</span>
+<span class="lineNum">     159 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     160 </span>            :     }
+<span class="lineNum">     161 </span>            : }
+<span class="lineNum">     162 </span>            : 
+<a name="163"><span class="lineNum">     163 </span>            : /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *</a>
+<span class="lineNum">     164 </span>            :  * to RmFile-&gt;filter types                                            */
+<span class="lineNum">     165 </span><span class="lineCov">      83636 : int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {</span>
+<span class="lineNum">     166 </span><span class="lineCov">      83636 :     bool has_gid = 1, has_uid = 1;</span>
+<span class="lineNum">     167 </span><span class="lineCov">      83636 :     if(!rm_userlist_contains(userlist, statp-&gt;st_uid, statp-&gt;st_gid, &amp;has_uid,</span>
+<span class="lineNum">     168 </span>            :                              &amp;has_gid)) {
+<span class="lineNum">     169 </span><span class="lineCov">        243 :         if(has_gid == false &amp;&amp; has_uid == false) {</span>
+<span class="lineNum">     170 </span><span class="lineCov">         81 :             return RM_LINT_TYPE_BADUGID;</span>
+<span class="lineNum">     171 </span><span class="lineCov">        162 :         } else if(has_gid == false &amp;&amp; has_uid == true) {</span>
+<span class="lineNum">     172 </span><span class="lineCov">         81 :             return RM_LINT_TYPE_BADGID;</span>
+<span class="lineNum">     173 </span><span class="lineCov">         81 :         } else if(has_gid == true &amp;&amp; has_uid == false) {</span>
+<span class="lineNum">     174 </span><span class="lineCov">         81 :             return RM_LINT_TYPE_BADUID;</span>
+<span class="lineNum">     175 </span>            :         }
+<span class="lineNum">     176 </span>            :     }
+<span class="lineNum">     177 </span>            : 
+<span class="lineNum">     178 </span><span class="lineCov">      83393 :     return RM_LINT_TYPE_UNKNOWN;</span>
+<span class="lineNum">     179 </span>            : }
+<a name="180"><span class="lineNum">     180 </span>            : </a>
+<span class="lineNum">     181 </span>            : /* Method to test if a file is non stripped binary. Uses libelf*/
+<span class="lineNum">     182 </span><span class="lineCov">        162 : bool rm_util_is_nonstripped(_U const char *path, _U RmStat *statp) {</span>
+<span class="lineNum">     183 </span><span class="lineCov">        162 :     bool is_ns = false;</span>
+<span class="lineNum">     184 </span>            : 
+<span class="lineNum">     185 </span>            : #if HAVE_LIBELF
+<span class="lineNum">     186 </span><span class="lineCov">        162 :     g_return_val_if_fail(path, false);</span>
+<span class="lineNum">     187 </span>            : 
+<span class="lineNum">     188 </span><span class="lineCov">        162 :     if(statp &amp;&amp; (statp-&gt;st_mode &amp; (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {</span>
+<span class="lineNum">     189 </span><span class="lineCov">         81 :         return false;</span>
+<span class="lineNum">     190 </span>            :     }
+<span class="lineNum">     191 </span>            : 
+<span class="lineNum">     192 </span>            :     /* inspired by &quot;jschmier&quot;'s answer at http://stackoverflow.com/a/5159890 */
+<span class="lineNum">     193 </span>            :     int fd;
+<span class="lineNum">     194 </span>            : 
+<span class="lineNum">     195 </span>            :     /* ELF handle */
+<span class="lineNum">     196 </span>            :     Elf *elf;
+<span class="lineNum">     197 </span>            : 
+<span class="lineNum">     198 </span>            :     /* section descriptor pointer */
+<span class="lineNum">     199 </span>            :     Elf_Scn *scn;
+<span class="lineNum">     200 </span>            : 
+<span class="lineNum">     201 </span>            :     /* section header */
+<span class="lineNum">     202 </span>            :     GElf_Shdr shdr;
+<span class="lineNum">     203 </span>            : 
+<span class="lineNum">     204 </span>            :     /* Open ELF file to obtain file descriptor */
+<span class="lineNum">     205 </span><span class="lineCov">         81 :     if((fd = rm_sys_open(path, O_RDONLY)) == -1) {</span>
+<span class="lineNum">     206 </span><span class="lineNoCov">          0 :         rm_log_warning_line(_(&quot;cannot open file '%s' for nonstripped test: &quot;), path);</span>
+<span class="lineNum">     207 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;&quot;);</span>
+<span class="lineNum">     208 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">     209 </span>            :     }
+<span class="lineNum">     210 </span>            : 
+<span class="lineNum">     211 </span>            :     /* Protect program from using an older library */
+<span class="lineNum">     212 </span><span class="lineCov">         81 :     if(elf_version(EV_CURRENT) == EV_NONE) {</span>
+<span class="lineNum">     213 </span><span class="lineNoCov">          0 :         rm_log_error_line(_(&quot;ELF Library is out of date!&quot;));</span>
+<span class="lineNum">     214 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     215 </span>            :     }
+<span class="lineNum">     216 </span>            : 
+<span class="lineNum">     217 </span>            :     /* Initialize elf pointer for examining contents of file */
+<span class="lineNum">     218 </span><span class="lineCov">         81 :     elf = elf_begin(fd, ELF_C_READ, NULL);</span>
+<span class="lineNum">     219 </span>            : 
+<span class="lineNum">     220 </span>            :     /* Initialize section descriptor pointer so that elf_nextscn()
+<span class="lineNum">     221 </span>            :      * returns a pointer to the section descriptor at index 1.
+<span class="lineNum">     222 </span>            :      * */
+<span class="lineNum">     223 </span><span class="lineCov">         81 :     scn = NULL;</span>
+<span class="lineNum">     224 </span>            : 
+<span class="lineNum">     225 </span>            :     /* Iterate through ELF sections */
+<span class="lineNum">     226 </span><span class="lineCov">       2835 :     while((scn = elf_nextscn(elf, scn)) != NULL) {</span>
+<span class="lineNum">     227 </span>            :         /* Retrieve section header */
+<span class="lineNum">     228 </span><span class="lineCov">       2754 :         gelf_getshdr(scn, &amp;shdr);</span>
+<span class="lineNum">     229 </span>            : 
+<span class="lineNum">     230 </span>            :         /* If a section header holding a symbol table (.symtab)
+<span class="lineNum">     231 </span>            :          * is found, this ELF file has not been stripped. */
+<span class="lineNum">     232 </span><span class="lineCov">       2754 :         if(shdr.sh_type == SHT_SYMTAB) {</span>
+<span class="lineNum">     233 </span><span class="lineCov">         81 :             is_ns = true;</span>
+<span class="lineNum">     234 </span><span class="lineCov">         81 :             break;</span>
+<span class="lineNum">     235 </span>            :         }
+<span class="lineNum">     236 </span>            :     }
+<span class="lineNum">     237 </span><span class="lineCov">         81 :     elf_end(elf);</span>
+<span class="lineNum">     238 </span><span class="lineCov">         81 :     rm_sys_close(fd);</span>
+<span class="lineNum">     239 </span>            : #endif
+<span class="lineNum">     240 </span>            : 
+<span class="lineNum">     241 </span><span class="lineCov">         81 :     return is_ns;</span>
+<a name="242"><span class="lineNum">     242 </span>            : }</a>
+<span class="lineNum">     243 </span>            : 
+<span class="lineNum">     244 </span><span class="lineCov">        196 : char *rm_util_get_username(void) {</span>
+<span class="lineNum">     245 </span><span class="lineCov">        196 :     struct passwd *user = getpwuid(geteuid());</span>
+<span class="lineNum">     246 </span><span class="lineCov">        196 :     if(user) {</span>
+<span class="lineNum">     247 </span><span class="lineCov">        196 :         return user-&gt;pw_name;</span>
+<span class="lineNum">     248 </span>            :     } else {
+<span class="lineNum">     249 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     250 </span>            :     }
+<a name="251"><span class="lineNum">     251 </span>            : }</a>
+<span class="lineNum">     252 </span>            : 
+<span class="lineNum">     253 </span><span class="lineCov">        196 : char *rm_util_get_groupname(void) {</span>
+<span class="lineNum">     254 </span><span class="lineCov">        196 :     struct passwd *user = getpwuid(geteuid());</span>
+<span class="lineNum">     255 </span><span class="lineCov">        196 :     struct group *grp = getgrgid(user-&gt;pw_gid);</span>
+<span class="lineNum">     256 </span><span class="lineCov">        196 :     if(grp) {</span>
+<span class="lineNum">     257 </span><span class="lineCov">        196 :         return grp-&gt;gr_name;</span>
+<span class="lineNum">     258 </span>            :     } else {
+<span class="lineNum">     259 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     260 </span>            :     }
+<a name="261"><span class="lineNum">     261 </span>            : }</a>
+<span class="lineNum">     262 </span>            : 
+<span class="lineNum">     263 </span><span class="lineCov">        535 : void rm_util_size_to_human_readable(RmOff num, char *in, gsize len) {</span>
+<span class="lineNum">     264 </span><span class="lineCov">        535 :     if(num &lt; 512) {</span>
+<span class="lineNum">     265 </span><span class="lineCov">        531 :         snprintf(in, len, &quot;%&quot; LLU &quot; B&quot;, num);</span>
+<span class="lineNum">     266 </span><span class="lineCov">          4 :     } else if(num &lt; 512 * 1024) {</span>
+<span class="lineNum">     267 </span><span class="lineNoCov">          0 :         snprintf(in, len, &quot;%.2f KB&quot;, num / 1024.0);</span>
+<span class="lineNum">     268 </span><span class="lineCov">          4 :     } else if(num &lt; 512 * 1024 * 1024) {</span>
+<span class="lineNum">     269 </span><span class="lineCov">          4 :         snprintf(in, len, &quot;%.2f MB&quot;, num / (1024.0 * 1024.0));</span>
+<span class="lineNum">     270 </span>            :     } else {
+<span class="lineNum">     271 </span><span class="lineNoCov">          0 :         snprintf(in, len, &quot;%.2f GB&quot;, num / (1024.0 * 1024.0 * 1024.0));</span>
+<span class="lineNum">     272 </span>            :     }
+<span class="lineNum">     273 </span><span class="lineCov">        535 : }</span>
+<span class="lineNum">     274 </span>            : 
+<span class="lineNum">     275 </span>            : /////////////////////////////////////
+<span class="lineNum">     276 </span>            : //   UID/GID VALIDITY CHECKING     //
+<a name="277"><span class="lineNum">     277 </span>            : /////////////////////////////////////</a>
+<span class="lineNum">     278 </span>            : 
+<span class="lineNum">     279 </span><span class="lineCov">   19493928 : static int rm_userlist_cmp_ids(gconstpointer a, gconstpointer b, _U gpointer ud) {</span>
+<span class="lineNum">     280 </span><span class="lineCov">   19493928 :     return GPOINTER_TO_UINT(a) - GPOINTER_TO_UINT(b);</span>
+<a name="281"><span class="lineNum">     281 </span>            : }</a>
+<span class="lineNum">     282 </span>            : 
+<span class="lineNum">     283 </span><span class="lineCov">      14322 : RmUserList *rm_userlist_new(void) {</span>
+<span class="lineNum">     284 </span><span class="lineCov">      14322 :     struct passwd *node = NULL;</span>
+<span class="lineNum">     285 </span><span class="lineCov">      14322 :     struct group *grp = NULL;</span>
+<span class="lineNum">     286 </span>            : 
+<span class="lineNum">     287 </span><span class="lineCov">      14322 :     RmUserList *self = g_malloc0(sizeof(RmUserList));</span>
+<span class="lineNum">     288 </span><span class="lineCov">      14322 :     self-&gt;users = g_sequence_new(NULL);</span>
+<span class="lineNum">     289 </span><span class="lineCov">      14322 :     self-&gt;groups = g_sequence_new(NULL);</span>
+<span class="lineNum">     290 </span><span class="lineCov">      14322 :     g_mutex_init(&amp;self-&gt;mutex);</span>
+<span class="lineNum">     291 </span>            : 
+<span class="lineNum">     292 </span><span class="lineCov">      14322 :     setpwent();</span>
+<span class="lineNum">     293 </span><span class="lineCov">     787710 :     while((node = getpwent()) != NULL) {</span>
+<span class="lineNum">     294 </span><span class="lineCov">     759066 :         g_sequence_insert_sorted(self-&gt;users, GUINT_TO_POINTER(node-&gt;pw_uid),</span>
+<span class="lineNum">     295 </span>            :                                  rm_userlist_cmp_ids, NULL);
+<span class="lineNum">     296 </span><span class="lineCov">     759066 :         g_sequence_insert_sorted(self-&gt;groups, GUINT_TO_POINTER(node-&gt;pw_gid),</span>
+<span class="lineNum">     297 </span>            :                                  rm_userlist_cmp_ids, NULL);
+<span class="lineNum">     298 </span>            :     }
+<span class="lineNum">     299 </span><span class="lineCov">      14322 :     endpwent();</span>
+<span class="lineNum">     300 </span>            : 
+<span class="lineNum">     301 </span>            :     /* add all groups, not just those that are user primary gid's */
+<span class="lineNum">     302 </span><span class="lineCov">    1274658 :     while((grp = getgrent()) != NULL) {</span>
+<span class="lineNum">     303 </span><span class="lineCov">    1246014 :         g_sequence_insert_sorted(self-&gt;groups, GUINT_TO_POINTER(grp-&gt;gr_gid),</span>
+<span class="lineNum">     304 </span>            :                                  rm_userlist_cmp_ids, NULL);
+<span class="lineNum">     305 </span>            :     }
+<span class="lineNum">     306 </span>            : 
+<span class="lineNum">     307 </span><span class="lineCov">      14322 :     endgrent();</span>
+<span class="lineNum">     308 </span><span class="lineCov">      14322 :     return self;</span>
+<a name="309"><span class="lineNum">     309 </span>            : }</a>
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span><span class="lineCov">      83636 : bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,</span>
+<span class="lineNum">     312 </span>            :                           bool *valid_uid, bool *valid_gid) {
+<span class="lineNum">     313 </span><span class="lineCov">      83636 :     g_assert(self);</span>
+<span class="lineNum">     314 </span>            : 
+<span class="lineNum">     315 </span><span class="lineCov">      83636 :     g_mutex_lock(&amp;self-&gt;mutex);</span>
+<span class="lineNum">     316 </span><span class="lineCov">      83636 :     bool gid_found =</span>
+<span class="lineNum">     317 </span><span class="lineCov">      83636 :         g_sequence_lookup(self-&gt;groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);</span>
+<span class="lineNum">     318 </span><span class="lineCov">      83636 :     bool uid_found =</span>
+<span class="lineNum">     319 </span><span class="lineCov">      83636 :         g_sequence_lookup(self-&gt;users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);</span>
+<span class="lineNum">     320 </span><span class="lineCov">      83636 :     g_mutex_unlock(&amp;self-&gt;mutex);</span>
+<span class="lineNum">     321 </span>            : 
+<span class="lineNum">     322 </span><span class="lineCov">      83636 :     if(valid_uid != NULL) {</span>
+<span class="lineNum">     323 </span><span class="lineCov">      83636 :         *valid_uid = uid_found;</span>
+<span class="lineNum">     324 </span>            :     }
+<span class="lineNum">     325 </span>            : 
+<span class="lineNum">     326 </span><span class="lineCov">      83636 :     if(valid_gid != NULL) {</span>
+<span class="lineNum">     327 </span><span class="lineCov">      83636 :         *valid_gid = gid_found;</span>
+<span class="lineNum">     328 </span>            :     }
+<span class="lineNum">     329 </span>            : 
+<span class="lineNum">     330 </span><span class="lineCov">      83636 :     return (gid_found &amp;&amp; uid_found);</span>
+<a name="331"><span class="lineNum">     331 </span>            : }</a>
+<span class="lineNum">     332 </span>            : 
+<span class="lineNum">     333 </span><span class="lineCov">      14322 : void rm_userlist_destroy(RmUserList *self) {</span>
+<span class="lineNum">     334 </span><span class="lineCov">      14322 :     g_assert(self);</span>
+<span class="lineNum">     335 </span>            : 
+<span class="lineNum">     336 </span><span class="lineCov">      14322 :     g_sequence_free(self-&gt;users);</span>
+<span class="lineNum">     337 </span><span class="lineCov">      14322 :     g_sequence_free(self-&gt;groups);</span>
+<span class="lineNum">     338 </span><span class="lineCov">      14322 :     g_mutex_clear(&amp;self-&gt;mutex);</span>
+<span class="lineNum">     339 </span><span class="lineCov">      14322 :     g_free(self);</span>
+<span class="lineNum">     340 </span><span class="lineCov">      14322 : }</span>
+<span class="lineNum">     341 </span>            : 
+<span class="lineNum">     342 </span>            : /////////////////////////////////////
+<span class="lineNum">     343 </span>            : //    JSON CACHE IMPLEMENTATION    //
+<span class="lineNum">     344 </span>            : /////////////////////////////////////
+<span class="lineNum">     345 </span>            : 
+<a name="346"><span class="lineNum">     346 </span>            : #if HAVE_JSON_GLIB</a>
+<span class="lineNum">     347 </span>            : 
+<span class="lineNum">     348 </span><span class="lineCov">        870 : void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,</span>
+<span class="lineNum">     349 </span>            :                                JsonNode *element_node, RmTrie *file_trie) {
+<span class="lineNum">     350 </span><span class="lineCov">        870 :     if(JSON_NODE_TYPE(element_node) != JSON_NODE_OBJECT) {</span>
+<span class="lineNum">     351 </span><span class="lineNoCov">          0 :         return;</span>
+<span class="lineNum">     352 </span>            :     }
+<span class="lineNum">     353 </span>            : 
+<span class="lineNum">     354 </span><span class="lineCov">        870 :     JsonObject *object = json_node_get_object(element_node);</span>
+<span class="lineNum">     355 </span><span class="lineCov">        870 :     JsonNode *mtime_node = json_object_get_member(object, &quot;mtime&quot;);</span>
+<span class="lineNum">     356 </span><span class="lineCov">        870 :     JsonNode *path_node = json_object_get_member(object, &quot;path&quot;);</span>
+<span class="lineNum">     357 </span><span class="lineCov">        870 :     JsonNode *cksum_node = json_object_get_member(object, &quot;checksum&quot;);</span>
+<span class="lineNum">     358 </span><span class="lineCov">        870 :     JsonNode *type_node = json_object_get_member(object, &quot;type&quot;);</span>
+<span class="lineNum">     359 </span>            : 
+<span class="lineNum">     360 </span><span class="lineCov">        870 :     if(mtime_node &amp;&amp; path_node &amp;&amp; cksum_node &amp;&amp; type_node) {</span>
+<span class="lineNum">     361 </span>            :         RmStat stat_buf;
+<span class="lineNum">     362 </span><span class="lineCov">        696 :         const char *path = json_node_get_string(path_node);</span>
+<span class="lineNum">     363 </span><span class="lineCov">        696 :         const char *cksum = json_node_get_string(cksum_node);</span>
+<span class="lineNum">     364 </span><span class="lineCov">        696 :         const char *type = json_node_get_string(type_node);</span>
+<span class="lineNum">     365 </span>            : 
+<span class="lineNum">     366 </span><span class="lineCov">        696 :         if(g_strcmp0(type, &quot;duplicate_file&quot;) &amp;&amp; g_strcmp0(type, &quot;unfinished_cksum&quot;)) {</span>
+<span class="lineNum">     367 </span>            :             /* some other file that has a checksum for weird reasons.
+<span class="lineNum">     368 </span>            :              * This is here to prevent errors like reporting files with
+<span class="lineNum">     369 </span>            :              * empty checksums as duplicates.
+<span class="lineNum">     370 </span>            :              * */
+<span class="lineNum">     371 </span><span class="lineCov">        348 :             return;</span>
+<span class="lineNum">     372 </span>            :         }
+<span class="lineNum">     373 </span>            : 
+<span class="lineNum">     374 </span><span class="lineCov">        522 :         if(rm_sys_stat(path, &amp;stat_buf) == -1) {</span>
+<span class="lineNum">     375 </span>            :             /* file does not appear to exist */
+<span class="lineNum">     376 </span><span class="lineNoCov">          0 :             return;</span>
+<span class="lineNum">     377 </span>            :         }
+<span class="lineNum">     378 </span>            : 
+<span class="lineNum">     379 </span><span class="lineCov">        522 :         if(json_node_get_int(mtime_node) &lt; stat_buf.st_mtim.tv_sec) {</span>
+<span class="lineNum">     380 </span>            :             /* file is newer than stored checksum */
+<span class="lineNum">     381 </span><span class="lineNoCov">          0 :             return;</span>
+<span class="lineNum">     382 </span>            :         }
+<span class="lineNum">     383 </span>            : 
+<span class="lineNum">     384 </span><span class="lineCov">        522 :         char *cksum_copy = g_strdup(cksum);</span>
+<span class="lineNum">     385 </span><span class="lineCov">        522 :         if(!rm_trie_set_value(file_trie, path, cksum_copy)) {</span>
+<span class="lineNum">     386 </span><span class="lineCov">         18 :             g_free(cksum_copy);</span>
+<span class="lineNum">     387 </span>            :         }
+<span class="lineNum">     388 </span><span class="lineCov">        522 :         rm_log_debug(&quot;* Adding cache entry %s (%s)\n&quot;, path, cksum);</span>
+<span class="lineNum">     389 </span>            :     }
+<span class="lineNum">     390 </span>            : }
+<span class="lineNum">     391 </span>            : 
+<a name="392"><span class="lineNum">     392 </span>            : #endif</a>
+<span class="lineNum">     393 </span>            : 
+<span class="lineNum">     394 </span><span class="lineCov">         93 : int rm_json_cache_read(RmTrie *file_trie, const char *json_path) {</span>
+<span class="lineNum">     395 </span>            : #if !HAVE_JSON_GLIB
+<span class="lineNum">     396 </span>            :     (void)file_trie;
+<span class="lineNum">     397 </span>            :     (void)json_path;
+<span class="lineNum">     398 </span>            : 
+<span class="lineNum">     399 </span>            :     rm_log_info_line(_(&quot;caching is not supported due to missing json-glib library.&quot;));
+<span class="lineNum">     400 </span>            :     return EXIT_FAILURE;
+<span class="lineNum">     401 </span>            : #else
+<span class="lineNum">     402 </span><span class="lineCov">         93 :     g_assert(file_trie);</span>
+<span class="lineNum">     403 </span><span class="lineCov">         93 :     g_assert(json_path);</span>
+<span class="lineNum">     404 </span>            : 
+<span class="lineNum">     405 </span>            : #if !GLIB_CHECK_VERSION(2, 36, 0)
+<span class="lineNum">     406 </span>            :     /* Very old glib. Debian, Im looking at you. */
+<span class="lineNum">     407 </span>            :     g_type_init();
+<span class="lineNum">     408 </span>            : #endif
+<span class="lineNum">     409 </span>            : 
+<span class="lineNum">     410 </span><span class="lineCov">         93 :     int result = EXIT_FAILURE;</span>
+<span class="lineNum">     411 </span><span class="lineCov">         93 :     GError *error = NULL;</span>
+<span class="lineNum">     412 </span><span class="lineCov">         93 :     size_t keys_in_table = rm_trie_size(file_trie);</span>
+<span class="lineNum">     413 </span><span class="lineCov">         93 :     JsonParser *parser = json_parser_new();</span>
+<span class="lineNum">     414 </span>            : 
+<span class="lineNum">     415 </span><span class="lineCov">         93 :     rm_log_info_line(_(&quot;Loading json-cache `%s'&quot;), json_path);</span>
+<span class="lineNum">     416 </span>            : 
+<span class="lineNum">     417 </span><span class="lineCov">         93 :     if(!json_parser_load_from_file(parser, json_path, &amp;error)) {</span>
+<span class="lineNum">     418 </span><span class="lineCov">          2 :         rm_log_warning_line(_(&quot;FAILED: %s\n&quot;), error-&gt;message);</span>
+<span class="lineNum">     419 </span><span class="lineCov">          2 :         g_error_free(error);</span>
+<span class="lineNum">     420 </span><span class="lineCov">          2 :         goto failure;</span>
+<span class="lineNum">     421 </span>            :     }
+<span class="lineNum">     422 </span>            : 
+<span class="lineNum">     423 </span><span class="lineCov">         91 :     JsonNode *root = json_parser_get_root(parser);</span>
+<span class="lineNum">     424 </span><span class="lineCov">         91 :     if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {</span>
+<span class="lineNum">     425 </span><span class="lineCov">          4 :         rm_log_warning_line(_(&quot;No valid json cache (no array in /)&quot;));</span>
+<span class="lineNum">     426 </span><span class="lineCov">          4 :         goto failure;</span>
+<span class="lineNum">     427 </span>            :     }
+<span class="lineNum">     428 </span>            : 
+<span class="lineNum">     429 </span>            :     /* Iterate over all objects in it */
+<span class="lineNum">     430 </span><span class="lineCov">         87 :     json_array_foreach_element(json_node_get_array(root),</span>
+<span class="lineNum">     431 </span>            :                                (JsonArrayForeach)rm_json_cache_parse_entry,
+<span class="lineNum">     432 </span>            :                                file_trie);
+<span class="lineNum">     433 </span>            : 
+<span class="lineNum">     434 </span>            :     /* check if some entries were added */
+<span class="lineNum">     435 </span><span class="lineCov">         87 :     result = (keys_in_table &gt;= rm_trie_size(file_trie));</span>
+<span class="lineNum">     436 </span>            : 
+<span class="lineNum">     437 </span>            : failure:
+<span class="lineNum">     438 </span><span class="lineCov">         93 :     if(parser) {</span>
+<span class="lineNum">     439 </span><span class="lineCov">         93 :         g_object_unref(parser);</span>
+<span class="lineNum">     440 </span>            :     }
+<span class="lineNum">     441 </span><span class="lineCov">         93 :     return result;</span>
+<span class="lineNum">     442 </span>            : #endif
+<span class="lineNum">     443 </span>            : }
+<span class="lineNum">     444 </span>            : 
+<span class="lineNum">     445 </span>            : /////////////////////////////////////
+<span class="lineNum">     446 </span>            : //    MOUNTTABLE IMPLEMENTATION    //
+<span class="lineNum">     447 </span>            : /////////////////////////////////////
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span>            : typedef struct RmDiskInfo {
+<span class="lineNum">     450 </span>            :     char *name;
+<span class="lineNum">     451 </span>            :     bool is_rotational;
+<span class="lineNum">     452 </span>            : } RmDiskInfo;
+<span class="lineNum">     453 </span>            : 
+<span class="lineNum">     454 </span>            : typedef struct RmPartitionInfo {
+<span class="lineNum">     455 </span>            :     char *name;
+<span class="lineNum">     456 </span>            :     char *fsname;
+<span class="lineNum">     457 </span>            :     dev_t disk;
+<span class="lineNum">     458 </span>            : } RmPartitionInfo;
+<span class="lineNum">     459 </span>            : 
+<a name="460"><span class="lineNum">     460 </span>            : #if(HAVE_GIO_UNIX)</a>
+<span class="lineNum">     461 </span>            : 
+<span class="lineNum">     462 </span><span class="lineCov">     545825 : RmPartitionInfo *rm_part_info_new(char *name, char *fsname, dev_t disk) {</span>
+<span class="lineNum">     463 </span><span class="lineCov">     545825 :     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);</span>
+<span class="lineNum">     464 </span><span class="lineCov">     545825 :     self-&gt;name = g_strdup(name);</span>
+<span class="lineNum">     465 </span><span class="lineCov">     545825 :     self-&gt;fsname = g_strdup(fsname);</span>
+<span class="lineNum">     466 </span><span class="lineCov">     545825 :     self-&gt;disk = disk;</span>
+<span class="lineNum">     467 </span><span class="lineCov">     545825 :     return self;</span>
+<a name="468"><span class="lineNum">     468 </span>            : }</a>
+<span class="lineNum">     469 </span>            : 
+<span class="lineNum">     470 </span><span class="lineCov">     545825 : void rm_part_info_free(RmPartitionInfo *self) {</span>
+<span class="lineNum">     471 </span><span class="lineCov">     545825 :     g_free(self-&gt;name);</span>
+<span class="lineNum">     472 </span><span class="lineCov">     545825 :     g_free(self-&gt;fsname);</span>
+<span class="lineNum">     473 </span><span class="lineCov">     545825 :     g_free(self);</span>
+<a name="474"><span class="lineNum">     474 </span><span class="lineCov">     545825 : }</span></a>
+<span class="lineNum">     475 </span>            : 
+<span class="lineNum">     476 </span><span class="lineCov">     315908 : RmDiskInfo *rm_disk_info_new(char *name, char is_rotational) {</span>
+<span class="lineNum">     477 </span><span class="lineCov">     315908 :     RmDiskInfo *self = g_new0(RmDiskInfo, 1);</span>
+<span class="lineNum">     478 </span><span class="lineCov">     315908 :     self-&gt;name = g_strdup(name);</span>
+<span class="lineNum">     479 </span><span class="lineCov">     315908 :     self-&gt;is_rotational = is_rotational;</span>
+<span class="lineNum">     480 </span><span class="lineCov">     315908 :     return self;</span>
+<a name="481"><span class="lineNum">     481 </span>            : }</a>
+<span class="lineNum">     482 </span>            : 
+<span class="lineNum">     483 </span><span class="lineCov">     315908 : void rm_disk_info_free(RmDiskInfo *self) {</span>
+<span class="lineNum">     484 </span><span class="lineCov">     315908 :     g_free(self-&gt;name);</span>
+<span class="lineNum">     485 </span><span class="lineCov">     315908 :     g_free(self);</span>
+<a name="486"><span class="lineNum">     486 </span><span class="lineCov">     315908 : }</span></a>
+<span class="lineNum">     487 </span>            : 
+<span class="lineNum">     488 </span><span class="lineCov">      57288 : static gchar rm_mounts_is_rotational_blockdev(const char *dev) {</span>
+<span class="lineNum">     489 </span><span class="lineCov">      57288 :     gchar is_rotational = -1;</span>
+<span class="lineNum">     490 </span>            : 
+<span class="lineNum">     491 </span>            : #if HAVE_SYSBLOCK /* this works only on linux */
+<span class="lineNum">     492 </span>            :     char sys_path[PATH_MAX];
+<span class="lineNum">     493 </span>            : 
+<span class="lineNum">     494 </span><span class="lineCov">      57288 :     snprintf(sys_path, PATH_MAX, &quot;/sys/block/%s/queue/rotational&quot;, dev);</span>
+<span class="lineNum">     495 </span>            : 
+<span class="lineNum">     496 </span><span class="lineCov">      57288 :     FILE *sys_fdes = fopen(sys_path, &quot;r&quot;);</span>
+<span class="lineNum">     497 </span><span class="lineCov">      57288 :     if(sys_fdes == NULL) {</span>
+<span class="lineNum">     498 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     499 </span>            :     }
+<span class="lineNum">     500 </span>            : 
+<span class="lineNum">     501 </span><span class="lineCov">      57288 :     if(fread(&amp;is_rotational, 1, 1, sys_fdes) == 1) {</span>
+<span class="lineNum">     502 </span><span class="lineCov">      57288 :         is_rotational -= '0';</span>
+<span class="lineNum">     503 </span>            :     }
+<span class="lineNum">     504 </span>            : 
+<span class="lineNum">     505 </span><span class="lineCov">      57288 :     fclose(sys_fdes);</span>
+<span class="lineNum">     506 </span>            : #elif HAVE_SYSCTL
+<span class="lineNum">     507 </span>            :     /* try with sysctl() */
+<span class="lineNum">     508 </span>            :     int device_num = 0;
+<span class="lineNum">     509 </span>            :     char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
+<span class="lineNum">     510 </span>            :     size_t delete_method_len = sizeof(delete_method_len);
+<span class="lineNum">     511 </span>            :     (void)dev;
+<span class="lineNum">     512 </span>            : 
+<span class="lineNum">     513 </span>            :     memset(cmd, 0, sizeof(cmd));
+<span class="lineNum">     514 </span>            :     memset(delete_method, 0, sizeof(delete_method));
+<span class="lineNum">     515 </span>            :     strncpy(dev_copy, dev, sizeof(dev_copy));
+<span class="lineNum">     516 </span>            : 
+<span class="lineNum">     517 </span>            :     for(int i = 0; dev_copy[i]; ++i) {
+<span class="lineNum">     518 </span>            :         if(isdigit(dev_copy[i])) {
+<span class="lineNum">     519 </span>            :             if(i &gt; 0) {
+<span class="lineNum">     520 </span>            :                 dev_copy[i - 1] = 0;
+<span class="lineNum">     521 </span>            :             }
+<span class="lineNum">     522 </span>            : 
+<span class="lineNum">     523 </span>            :             device_num = g_ascii_strtoll(&amp;dev_copy[i], NULL, 10);
+<span class="lineNum">     524 </span>            :             break;
+<span class="lineNum">     525 </span>            :         }
+<span class="lineNum">     526 </span>            :     }
+<span class="lineNum">     527 </span>            : 
+<span class="lineNum">     528 </span>            :     if(snprintf(cmd, sizeof(cmd), &quot;kern.cam.%s.%d.delete_method&quot;, dev_copy, device_num) ==
+<span class="lineNum">     529 </span>            :        -1) {
+<span class="lineNum">     530 </span>            :         return -1;
+<span class="lineNum">     531 </span>            :     }
+<span class="lineNum">     532 </span>            : 
+<span class="lineNum">     533 </span>            :     if(sysctlbyname(cmd, delete_method, &amp;delete_method_len, NULL, 0) != 0) {
+<span class="lineNum">     534 </span>            :         rm_log_perror(&quot;sysctlbyname&quot;);
+<span class="lineNum">     535 </span>            :     } else {
+<span class="lineNum">     536 </span>            :         if(memcmp(&quot;NONE&quot;, delete_method, MIN(delete_method_len, 4)) == 0) {
+<span class="lineNum">     537 </span>            :             is_rotational = 1;
+<span class="lineNum">     538 </span>            :         } else {
+<span class="lineNum">     539 </span>            :             is_rotational = 0;
+<span class="lineNum">     540 </span>            :         }
+<span class="lineNum">     541 </span>            :     }
+<span class="lineNum">     542 </span>            : 
+<span class="lineNum">     543 </span>            : #else
+<span class="lineNum">     544 </span>            :     (void)dev;
+<span class="lineNum">     545 </span>            : #endif
+<span class="lineNum">     546 </span>            : 
+<span class="lineNum">     547 </span><span class="lineCov">      57288 :     return is_rotational;</span>
+<a name="548"><span class="lineNum">     548 </span>            : }</a>
+<span class="lineNum">     549 </span>            : 
+<span class="lineNum">     550 </span><span class="lineCov">     459974 : static bool rm_mounts_is_ramdisk(const char *fs_type) {</span>
+<span class="lineNum">     551 </span><span class="lineCov">     459974 :     const char *valid[] = {&quot;tmpfs&quot;, &quot;rootfs&quot;, &quot;devtmpfs&quot;, &quot;cgroup&quot;,</span>
+<span class="lineNum">     552 </span>            :                            &quot;proc&quot;,  &quot;sys&quot;,    &quot;dev&quot;,      NULL};
+<span class="lineNum">     553 </span>            : 
+<span class="lineNum">     554 </span><span class="lineCov">    2484731 :     for(int i = 0; valid[i]; ++i) {</span>
+<span class="lineNum">     555 </span><span class="lineCov">    2269136 :         if(strcmp(valid[i], fs_type) == 0) {</span>
+<span class="lineNum">     556 </span><span class="lineCov">     244379 :             return true;</span>
+<span class="lineNum">     557 </span>            :         }
+<span class="lineNum">     558 </span>            :     }
+<span class="lineNum">     559 </span>            : 
+<span class="lineNum">     560 </span><span class="lineCov">     215595 :     return false;</span>
+<span class="lineNum">     561 </span>            : }
+<span class="lineNum">     562 </span>            : 
+<span class="lineNum">     563 </span>            : typedef struct RmMountEntry {
+<span class="lineNum">     564 </span>            :     char *fsname; /* name of mounted file system */
+<span class="lineNum">     565 </span>            :     char *dir;    /* file system path prefix     */
+<span class="lineNum">     566 </span>            :     char *type;   /* Type of fs: ufs, nfs, etc   */
+<span class="lineNum">     567 </span>            : } RmMountEntry;
+<span class="lineNum">     568 </span>            : 
+<span class="lineNum">     569 </span>            : typedef struct RmMountEntries {
+<span class="lineNum">     570 </span>            :     GList *mnt_entries;
+<span class="lineNum">     571 </span>            :     GList *entries;
+<span class="lineNum">     572 </span>            :     GList *current;
+<a name="573"><span class="lineNum">     573 </span>            : } RmMountEntries;</a>
+<span class="lineNum">     574 </span>            : 
+<span class="lineNum">     575 </span><span class="lineCov">      14322 : static void rm_mount_list_close(RmMountEntries *self) {</span>
+<span class="lineNum">     576 </span><span class="lineCov">      14322 :     g_assert(self);</span>
+<span class="lineNum">     577 </span>            : 
+<span class="lineNum">     578 </span><span class="lineCov">     545141 :     for(GList *iter = self-&gt;entries; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     579 </span><span class="lineCov">     530819 :         RmMountEntry *entry = iter-&gt;data;</span>
+<span class="lineNum">     580 </span><span class="lineCov">     530819 :         g_free(entry-&gt;fsname);</span>
+<span class="lineNum">     581 </span><span class="lineCov">     530819 :         g_free(entry-&gt;dir);</span>
+<span class="lineNum">     582 </span><span class="lineCov">     530819 :         g_free(entry-&gt;type);</span>
+<span class="lineNum">     583 </span><span class="lineCov">     530819 :         g_slice_free(RmMountEntry, entry);</span>
+<span class="lineNum">     584 </span>            :     }
+<span class="lineNum">     585 </span>            : 
+<span class="lineNum">     586 </span><span class="lineCov">      14322 :     g_list_free_full(self-&gt;mnt_entries, (GDestroyNotify)g_unix_mount_free);</span>
+<span class="lineNum">     587 </span><span class="lineCov">      14322 :     g_list_free(self-&gt;entries);</span>
+<span class="lineNum">     588 </span><span class="lineCov">      14322 :     g_slice_free(RmMountEntries, self);</span>
+<a name="589"><span class="lineNum">     589 </span><span class="lineCov">      14322 : }</span></a>
+<span class="lineNum">     590 </span>            : 
+<span class="lineNum">     591 </span><span class="lineCov">    1090282 : static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {</span>
+<span class="lineNum">     592 </span><span class="lineCov">    1090282 :     g_assert(self);</span>
+<span class="lineNum">     593 </span>            : 
+<span class="lineNum">     594 </span><span class="lineCov">    1090282 :     if(self-&gt;current) {</span>
+<span class="lineNum">     595 </span><span class="lineCov">    1061638 :         self-&gt;current = self-&gt;current-&gt;next;</span>
+<span class="lineNum">     596 </span>            :     } else {
+<span class="lineNum">     597 </span><span class="lineCov">      28644 :         self-&gt;current = self-&gt;entries;</span>
+<span class="lineNum">     598 </span>            :     }
+<span class="lineNum">     599 </span>            : 
+<span class="lineNum">     600 </span><span class="lineCov">    1090282 :     if(self-&gt;current) {</span>
+<span class="lineNum">     601 </span><span class="lineCov">    1061638 :         return self-&gt;current-&gt;data;</span>
+<span class="lineNum">     602 </span>            :     } else {
+<span class="lineNum">     603 </span><span class="lineCov">      28644 :         return NULL;</span>
+<span class="lineNum">     604 </span>            :     }
+<a name="605"><span class="lineNum">     605 </span>            : }</a>
+<span class="lineNum">     606 </span>            : 
+<span class="lineNum">     607 </span><span class="lineCov">      14322 : static RmMountEntries *rm_mount_list_open(RmMountTable *table) {</span>
+<span class="lineNum">     608 </span><span class="lineCov">      14322 :     RmMountEntries *self = g_slice_new(RmMountEntries);</span>
+<span class="lineNum">     609 </span>            : 
+<span class="lineNum">     610 </span><span class="lineCov">      14322 :     self-&gt;mnt_entries = g_unix_mounts_get(NULL);</span>
+<span class="lineNum">     611 </span><span class="lineCov">      14322 :     self-&gt;entries = NULL;</span>
+<span class="lineNum">     612 </span><span class="lineCov">      14322 :     self-&gt;current = NULL;</span>
+<span class="lineNum">     613 </span>            : 
+<span class="lineNum">     614 </span><span class="lineCov">     545141 :     for(GList *iter = self-&gt;mnt_entries; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     615 </span><span class="lineCov">     530819 :         RmMountEntry *wrap_entry = g_slice_new(RmMountEntry);</span>
+<span class="lineNum">     616 </span><span class="lineCov">     530819 :         GUnixMountEntry *entry = iter-&gt;data;</span>
+<span class="lineNum">     617 </span>            : 
+<span class="lineNum">     618 </span><span class="lineCov">     530819 :         wrap_entry-&gt;fsname = g_strdup(g_unix_mount_get_device_path(entry));</span>
+<span class="lineNum">     619 </span><span class="lineCov">     530819 :         wrap_entry-&gt;dir = g_strdup(g_unix_mount_get_mount_path(entry));</span>
+<span class="lineNum">     620 </span><span class="lineCov">     530819 :         wrap_entry-&gt;type = g_strdup(g_unix_mount_get_fs_type(entry));</span>
+<span class="lineNum">     621 </span>            : 
+<span class="lineNum">     622 </span><span class="lineCov">     530819 :         self-&gt;entries = g_list_prepend(self-&gt;entries, wrap_entry);</span>
+<span class="lineNum">     623 </span>            :     }
+<span class="lineNum">     624 </span>            : 
+<span class="lineNum">     625 </span><span class="lineCov">      14322 :     RmMountEntry *wrap_entry = NULL;</span>
+<span class="lineNum">     626 </span><span class="lineCov">     559463 :     while((wrap_entry = rm_mount_list_next(self))) {</span>
+<span class="lineNum">     627 </span>            :         /* bindfs mounts mirror directory trees.
+<span class="lineNum">     628 </span>            :         * This cannot be detected properly by rmlint since
+<span class="lineNum">     629 </span>            :         * files in it have the same inode as their unmirrored file, but
+<span class="lineNum">     630 </span>            :         * a different dev_t.
+<span class="lineNum">     631 </span>            :         *
+<span class="lineNum">     632 </span>            :         * Also ignore kernel filesystems.
+<span class="lineNum">     633 </span>            :         *
+<span class="lineNum">     634 </span>            :         * So better go and ignore it.
+<span class="lineNum">     635 </span>            :         */
+<span class="lineNum">     636 </span>            :         static struct RmEvilFs {
+<span class="lineNum">     637 </span>            :             /* fsname as show by `mount` */
+<span class="lineNum">     638 </span>            :             const char *name;
+<span class="lineNum">     639 </span>            : 
+<span class="lineNum">     640 </span>            :             /* Wether to warn about the exclusion on this */
+<span class="lineNum">     641 </span>            :             bool unusual;
+<span class="lineNum">     642 </span>            :         } evilfs_types[] = {{&quot;bindfs&quot;, 1},
+<span class="lineNum">     643 </span>            :                             {&quot;nullfs&quot;, 1},
+<span class="lineNum">     644 </span>            :                             /* Ignore the usual linux file system spam */
+<span class="lineNum">     645 </span>            :                             {&quot;proc&quot;, 0},
+<span class="lineNum">     646 </span>            :                             {&quot;cgroup&quot;, 0},
+<span class="lineNum">     647 </span>            :                             {&quot;configfs&quot;, 0},
+<span class="lineNum">     648 </span>            :                             {&quot;sys&quot;, 0},
+<span class="lineNum">     649 </span>            :                             {&quot;devtmpfs&quot;, 0},
+<span class="lineNum">     650 </span>            :                             {&quot;debugfs&quot;, 0},
+<span class="lineNum">     651 </span>            :                             {NULL, 0}};
+<span class="lineNum">     652 </span>            : 
+<span class="lineNum">     653 </span>            :         /* btrfs and ocfs2 filesystems support reflinks for deduplication */
+<span class="lineNum">     654 </span>            :         static const char *reflinkfs_types[] = {&quot;btrfs&quot;, &quot;ocfs2&quot;, NULL};
+<span class="lineNum">     655 </span>            : 
+<span class="lineNum">     656 </span><span class="lineCov">     530819 :         const struct RmEvilFs *evilfs_found = NULL;</span>
+<span class="lineNum">     657 </span><span class="lineCov">    4075593 :         for(int i = 0; evilfs_types[i].name &amp;&amp; !evilfs_found; ++i) {</span>
+<span class="lineNum">     658 </span><span class="lineCov">    3544774 :             if(strcmp(evilfs_types[i].name, wrap_entry-&gt;type) == 0) {</span>
+<span class="lineNum">     659 </span><span class="lineCov">     200508 :                 evilfs_found = &amp;evilfs_types[i];</span>
+<span class="lineNum">     660 </span>            :             }
+<span class="lineNum">     661 </span>            :         }
+<span class="lineNum">     662 </span>            : 
+<span class="lineNum">     663 </span><span class="lineCov">     530819 :         const char *reflinkfs_found = NULL;</span>
+<span class="lineNum">     664 </span><span class="lineCov">    1592457 :         for(int i = 0; reflinkfs_types[i] &amp;&amp; !reflinkfs_found; ++i) {</span>
+<span class="lineNum">     665 </span><span class="lineCov">    1061638 :             if(strcmp(reflinkfs_types[i], wrap_entry-&gt;type) == 0) {</span>
+<span class="lineNum">     666 </span><span class="lineNoCov">          0 :                 reflinkfs_found = reflinkfs_types[i];</span>
+<span class="lineNum">     667 </span>            :             }
+<span class="lineNum">     668 </span>            :         }
+<span class="lineNum">     669 </span>            : 
+<span class="lineNum">     670 </span><span class="lineCov">     530819 :         if(evilfs_found != NULL) {</span>
+<span class="lineNum">     671 </span>            :             RmStat dir_stat;
+<span class="lineNum">     672 </span><span class="lineCov">     200508 :             rm_sys_stat(wrap_entry-&gt;dir, &amp;dir_stat);</span>
+<span class="lineNum">     673 </span><span class="lineCov">     200508 :             g_hash_table_insert(table-&gt;evilfs_table,</span>
+<span class="lineNum">     674 </span><span class="lineCov">     200508 :                                 GUINT_TO_POINTER(dir_stat.st_dev),</span>
+<span class="lineNum">     675 </span>            :                                 GUINT_TO_POINTER(1));
+<span class="lineNum">     676 </span>            : 
+<span class="lineNum">     677 </span><span class="lineCov">     200508 :             GLogLevelFlags log_level = G_LOG_LEVEL_DEBUG;</span>
+<span class="lineNum">     678 </span><span class="lineCov">     200508 :             if(evilfs_found-&gt;unusual) {</span>
+<span class="lineNum">     679 </span><span class="lineNoCov">          0 :                 log_level = G_LOG_LEVEL_WARNING;</span>
+<span class="lineNum">     680 </span><span class="lineNoCov">          0 :                 rm_log_warning_prefix();</span>
+<span class="lineNum">     681 </span>            :             }
+<span class="lineNum">     682 </span>            : 
+<span class="lineNum">     683 </span><span class="lineCov">     401016 :             g_log(&quot;rmlint&quot;, log_level,</span>
+<span class="lineNum">     684 </span><span class="lineCov">     200508 :                   _(&quot;`%s` mount detected at %s (#%u); Ignoring all files in it.&quot;),</span>
+<span class="lineNum">     685 </span><span class="lineCov">     200508 :                   evilfs_found-&gt;name, wrap_entry-&gt;dir, (unsigned)dir_stat.st_dev);</span>
+<span class="lineNum">     686 </span>            :         }
+<span class="lineNum">     687 </span>            : 
+<span class="lineNum">     688 </span><span class="lineCov">     530819 :         rm_log_debug(&quot;Filesystem %s: %s\n&quot;, wrap_entry-&gt;dir,</span>
+<span class="lineNum">     689 </span>            :                      (reflinkfs_found) ? &quot;reflink&quot; : &quot;normal&quot;);
+<span class="lineNum">     690 </span>            : 
+<span class="lineNum">     691 </span><span class="lineCov">     530819 :         if(reflinkfs_found != NULL) {</span>
+<span class="lineNum">     692 </span>            :             RmStat dir_stat;
+<span class="lineNum">     693 </span><span class="lineNoCov">          0 :             rm_sys_stat(wrap_entry-&gt;dir, &amp;dir_stat);</span>
+<span class="lineNum">     694 </span><span class="lineNoCov">          0 :             g_hash_table_insert(table-&gt;reflinkfs_table,</span>
+<span class="lineNum">     695 </span><span class="lineNoCov">          0 :                                 GUINT_TO_POINTER(dir_stat.st_dev),</span>
+<span class="lineNum">     696 </span>            :                                 GUINT_TO_POINTER(1));
+<span class="lineNum">     697 </span>            :         }
+<span class="lineNum">     698 </span>            :     }
+<span class="lineNum">     699 </span>            : 
+<span class="lineNum">     700 </span><span class="lineCov">      14322 :     return self;</span>
+<span class="lineNum">     701 </span>            : }
+<span class="lineNum">     702 </span>            : 
+<span class="lineNum">     703 </span>            : #if HAVE_SYSCTL
+<span class="lineNum">     704 </span>            : 
+<span class="lineNum">     705 </span>            : static GHashTable *DISK_TABLE = NULL;
+<span class="lineNum">     706 </span>            : 
+<span class="lineNum">     707 </span>            : static void rm_mounts_freebsd_list_disks(void) {
+<span class="lineNum">     708 </span>            :     char disks[1024];
+<span class="lineNum">     709 </span>            :     size_t disks_len = sizeof(disks);
+<span class="lineNum">     710 </span>            :     memset(disks, 0, sizeof(disks));
+<span class="lineNum">     711 </span>            : 
+<span class="lineNum">     712 </span>            :     DISK_TABLE = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+<span class="lineNum">     713 </span>            : 
+<span class="lineNum">     714 </span>            :     if(sysctlbyname(&quot;kern.disks&quot;, disks, &amp;disks_len, NULL, 0) == 0) {
+<span class="lineNum">     715 </span>            :         char **disk_vec = g_strsplit(disks, &quot; &quot;, -1);
+<span class="lineNum">     716 </span>            :         for(int i = 0; disk_vec[i]; ++i) {
+<span class="lineNum">     717 </span>            :             char *disk = g_strdup_printf(&quot;/dev/%s&quot;, disk_vec[i]);
+<span class="lineNum">     718 </span>            :             RmStat dev_stat;
+<span class="lineNum">     719 </span>            : 
+<span class="lineNum">     720 </span>            :             if(rm_sys_stat(disk, &amp;dev_stat) != -1) {
+<span class="lineNum">     721 </span>            :                 g_hash_table_insert(DISK_TABLE, disk, GUINT_TO_POINTER(dev_stat.st_rdev));
+<span class="lineNum">     722 </span>            :             } else {
+<span class="lineNum">     723 </span>            :                 rm_log_perror(&quot;stat on /dev&quot;);
+<span class="lineNum">     724 </span>            :                 g_free(disk);
+<span class="lineNum">     725 </span>            :             }
+<span class="lineNum">     726 </span>            :         }
+<span class="lineNum">     727 </span>            : 
+<span class="lineNum">     728 </span>            :         g_strfreev(disk_vec);
+<span class="lineNum">     729 </span>            :     } else {
+<span class="lineNum">     730 </span>            :         rm_log_perror(&quot;sysctlbyname&quot;);
+<span class="lineNum">     731 </span>            :     }
+<span class="lineNum">     732 </span>            : }
+<a name="733"><span class="lineNum">     733 </span>            : #endif</a>
+<span class="lineNum">     734 </span>            : 
+<span class="lineNum">     735 </span><span class="lineCov">      57288 : int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char *disk,</span>
+<span class="lineNum">     736 </span>            :                                  _U size_t disk_size, _U dev_t *result) {
+<span class="lineNum">     737 </span>            : #if HAVE_BLKID
+<span class="lineNum">     738 </span><span class="lineCov">      57288 :     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);</span>
+<span class="lineNum">     739 </span>            : #elif HAVE_SYSCTL
+<span class="lineNum">     740 </span>            :     if(DISK_TABLE == NULL) {
+<span class="lineNum">     741 </span>            :         rm_mounts_freebsd_list_disks();
+<span class="lineNum">     742 </span>            :     }
+<span class="lineNum">     743 </span>            : 
+<span class="lineNum">     744 </span>            :     GHashTableIter iter;
+<span class="lineNum">     745 </span>            :     g_hash_table_iter_init(&amp;iter, DISK_TABLE);
+<span class="lineNum">     746 </span>            : 
+<span class="lineNum">     747 </span>            :     gpointer key = NULL;
+<span class="lineNum">     748 </span>            :     gpointer value = NULL;
+<span class="lineNum">     749 </span>            : 
+<span class="lineNum">     750 </span>            :     while(g_hash_table_iter_next(&amp;iter, &amp;key, &amp;value)) {
+<span class="lineNum">     751 </span>            :         char *str_key = key;
+<span class="lineNum">     752 </span>            :         if(g_str_has_prefix(str_key, entry-&gt;fsname)) {
+<span class="lineNum">     753 </span>            :             strncpy(disk, strrchr(str_key, '/'), disk_size);
+<span class="lineNum">     754 </span>            :             *result = (dev_t)GPOINTER_TO_UINT(value);
+<span class="lineNum">     755 </span>            :             return 0;
+<span class="lineNum">     756 </span>            :         }
+<span class="lineNum">     757 </span>            :     }
+<span class="lineNum">     758 </span>            : #endif
+<span class="lineNum">     759 </span>            : 
+<span class="lineNum">     760 </span>            :     return -1;
+<a name="761"><span class="lineNum">     761 </span>            : }</a>
+<span class="lineNum">     762 </span>            : 
+<span class="lineNum">     763 </span><span class="lineCov">      14322 : static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {</span>
+<span class="lineNum">     764 </span>            :     /* partition dev_t to disk dev_t */
+<span class="lineNum">     765 </span><span class="lineCov">      14322 :     self-&gt;part_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,</span>
+<span class="lineNum">     766 </span>            :                                              (GDestroyNotify)rm_part_info_free);
+<span class="lineNum">     767 </span>            : 
+<span class="lineNum">     768 </span>            :     /* disk dev_t to boolean indication if disk is rotational */
+<span class="lineNum">     769 </span><span class="lineCov">      14322 :     self-&gt;disk_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,</span>
+<span class="lineNum">     770 </span>            :                                              (GDestroyNotify)rm_disk_info_free);
+<span class="lineNum">     771 </span>            : 
+<span class="lineNum">     772 </span><span class="lineCov">      14322 :     self-&gt;nfs_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);</span>
+<span class="lineNum">     773 </span>            : 
+<span class="lineNum">     774 </span>            :     /* Mapping dev_t =&gt; true (used as set) */
+<span class="lineNum">     775 </span><span class="lineCov">      14322 :     self-&gt;evilfs_table = g_hash_table_new(NULL, NULL);</span>
+<span class="lineNum">     776 </span><span class="lineCov">      14322 :     self-&gt;reflinkfs_table = g_hash_table_new(NULL, NULL);</span>
+<span class="lineNum">     777 </span>            : 
+<span class="lineNum">     778 </span><span class="lineCov">      14322 :     RmMountEntry *entry = NULL;</span>
+<span class="lineNum">     779 </span><span class="lineCov">      14322 :     RmMountEntries *mnt_entries = rm_mount_list_open(self);</span>
+<span class="lineNum">     780 </span>            : 
+<span class="lineNum">     781 </span><span class="lineCov">      14322 :     if(mnt_entries == NULL) {</span>
+<span class="lineNum">     782 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     783 </span>            :     }
+<span class="lineNum">     784 </span>            : 
+<span class="lineNum">     785 </span><span class="lineCov">     559463 :     while((entry = rm_mount_list_next(mnt_entries))) {</span>
+<span class="lineNum">     786 </span>            :         RmStat stat_buf_folder;
+<span class="lineNum">     787 </span><span class="lineCov">     530819 :         if(rm_sys_stat(entry-&gt;dir, &amp;stat_buf_folder) == -1) {</span>
+<span class="lineNum">     788 </span><span class="lineCov">      41517 :             continue;</span>
+<span class="lineNum">     789 </span>            :         }
+<span class="lineNum">     790 </span>            : 
+<span class="lineNum">     791 </span><span class="lineCov">     517262 :         dev_t whole_disk = 0;</span>
+<span class="lineNum">     792 </span><span class="lineCov">     517262 :         gchar is_rotational = true;</span>
+<span class="lineNum">     793 </span>            :         char diskname[PATH_MAX];
+<span class="lineNum">     794 </span><span class="lineCov">     517262 :         memset(diskname, 0, sizeof(diskname));</span>
+<span class="lineNum">     795 </span>            : 
+<span class="lineNum">     796 </span>            :         RmStat stat_buf_dev;
+<span class="lineNum">     797 </span><span class="lineCov">     517262 :         if(rm_sys_stat(entry-&gt;fsname, &amp;stat_buf_dev) == -1) {</span>
+<span class="lineNum">     798 </span><span class="lineCov">     459974 :             char *nfs_marker = NULL;</span>
+<span class="lineNum">     799 </span>            :             /* folder rm_sys_stat() is ok but devname rm_sys_stat() is not; this happens
+<span class="lineNum">     800 </span>            :              * for example
+<span class="lineNum">     801 </span>            :              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
+<span class="lineNum">     802 </span>            :              * */
+<span class="lineNum">     803 </span><span class="lineCov">     459974 :             if(rm_mounts_is_ramdisk(entry-&gt;fsname)) {</span>
+<span class="lineNum">     804 </span><span class="lineCov">     244379 :                 strncpy(diskname, entry-&gt;fsname, sizeof(diskname));</span>
+<span class="lineNum">     805 </span><span class="lineCov">     244379 :                 is_rotational = false;</span>
+<span class="lineNum">     806 </span><span class="lineCov">     244379 :                 whole_disk = stat_buf_folder.st_dev;</span>
+<span class="lineNum">     807 </span><span class="lineCov">     215595 :             } else if((nfs_marker = strstr(entry-&gt;fsname, &quot;:/&quot;)) != NULL) {</span>
+<span class="lineNum">     808 </span><span class="lineNoCov">          0 :                 size_t until_slash =</span>
+<span class="lineNum">     809 </span><span class="lineNoCov">          0 :                     MIN((int)sizeof(entry-&gt;fsname), nfs_marker - entry-&gt;fsname);</span>
+<span class="lineNum">     810 </span><span class="lineNoCov">          0 :                 strncpy(diskname, entry-&gt;fsname, until_slash);</span>
+<span class="lineNum">     811 </span><span class="lineNoCov">          0 :                 is_rotational = true;</span>
+<span class="lineNum">     812 </span>            : 
+<span class="lineNum">     813 </span>            :                 /* Assign different dev ids (with major id 0) to different nfs servers */
+<span class="lineNum">     814 </span><span class="lineNoCov">          0 :                 if(!g_hash_table_contains(self-&gt;nfs_table, diskname)) {</span>
+<span class="lineNum">     815 </span><span class="lineNoCov">          0 :                     g_hash_table_insert(self-&gt;nfs_table, g_strdup(diskname), NULL);</span>
+<span class="lineNum">     816 </span>            :                 }
+<span class="lineNum">     817 </span><span class="lineNoCov">          0 :                 whole_disk = makedev(0, g_hash_table_size(self-&gt;nfs_table));</span>
+<span class="lineNum">     818 </span>            :             } else {
+<span class="lineNum">     819 </span><span class="lineCov">     215595 :                 strncpy(diskname, &quot;unknown&quot;, sizeof(diskname));</span>
+<span class="lineNum">     820 </span><span class="lineCov">     215595 :                 is_rotational = true;</span>
+<span class="lineNum">     821 </span><span class="lineCov">     215595 :                 whole_disk = 0;</span>
+<span class="lineNum">     822 </span>            :             }
+<span class="lineNum">     823 </span>            :         } else {
+<span class="lineNum">     824 </span><span class="lineCov">      57288 :             if(rm_mounts_devno_to_wholedisk(entry, stat_buf_dev.st_rdev, diskname,</span>
+<span class="lineNum">     825 </span>            :                                             sizeof(diskname), &amp;whole_disk) == -1) {
+<span class="lineNum">     826 </span>            :                 /* folder and devname rm_sys_stat() are ok but blkid failed; this happens
+<span class="lineNum">     827 </span>            :                  * when?
+<span class="lineNum">     828 </span>            :                  * Treat as a non-rotational device using devname dev as whole_disk key
+<span class="lineNum">     829 </span>            :                  * */
+<span class="lineNum">     830 </span><span class="lineNoCov">          0 :                 rm_log_debug(RED &quot;devno_to_wholedisk failed for %s\n&quot; RESET,</span>
+<span class="lineNum">     831 </span>            :                              entry-&gt;fsname);
+<span class="lineNum">     832 </span><span class="lineNoCov">          0 :                 whole_disk = stat_buf_dev.st_dev;</span>
+<span class="lineNum">     833 </span><span class="lineNoCov">          0 :                 strncpy(diskname, entry-&gt;fsname, sizeof(diskname));</span>
+<span class="lineNum">     834 </span><span class="lineNoCov">          0 :                 is_rotational = false;</span>
+<span class="lineNum">     835 </span>            :             } else {
+<span class="lineNum">     836 </span><span class="lineCov">      57288 :                 is_rotational = rm_mounts_is_rotational_blockdev(diskname);</span>
+<span class="lineNum">     837 </span>            :             }
+<span class="lineNum">     838 </span>            :         }
+<span class="lineNum">     839 </span>            : 
+<span class="lineNum">     840 </span><span class="lineCov">     517262 :         is_rotational |= force_fiemap;</span>
+<span class="lineNum">     841 </span>            : 
+<span class="lineNum">     842 </span><span class="lineCov">     517262 :         RmPartitionInfo *existing = g_hash_table_lookup(</span>
+<span class="lineNum">     843 </span><span class="lineCov">     517262 :             self-&gt;part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));</span>
+<span class="lineNum">     844 </span><span class="lineCov">     517262 :         if(!existing || (existing-&gt;disk == 0 &amp;&amp; whole_disk != 0)) {</span>
+<span class="lineNum">     845 </span><span class="lineCov">     502859 :             if(existing) {</span>
+<span class="lineNum">     846 </span><span class="lineNoCov">          0 :                 rm_log_debug(&quot;Replacing part_table entry %s for path %s with %s\n&quot;,</span>
+<span class="lineNum">     847 </span>            :                              existing-&gt;fsname, entry-&gt;dir, entry-&gt;fsname);
+<span class="lineNum">     848 </span>            :             }
+<span class="lineNum">     849 </span><span class="lineCov">    1005718 :             g_hash_table_insert(self-&gt;part_table,</span>
+<span class="lineNum">     850 </span><span class="lineCov">     502859 :                                 GUINT_TO_POINTER(stat_buf_folder.st_dev),</span>
+<span class="lineNum">     851 </span><span class="lineCov">     502859 :                                 rm_part_info_new(entry-&gt;dir, entry-&gt;fsname, whole_disk));</span>
+<span class="lineNum">     852 </span>            :         } else {
+<span class="lineNum">     853 </span><span class="lineCov">      14403 :             rm_log_debug(&quot;Skipping duplicate mount entry for dir %s dev %02u:%02u\n&quot;,</span>
+<span class="lineNum">     854 </span>            :                          entry-&gt;dir, major(stat_buf_folder.st_dev),
+<span class="lineNum">     855 </span>            :                          minor(stat_buf_folder.st_dev));
+<span class="lineNum">     856 </span><span class="lineCov">      14403 :             continue;</span>
+<span class="lineNum">     857 </span>            :         }
+<span class="lineNum">     858 </span>            : 
+<span class="lineNum">     859 </span>            :         /* small hack, so also the full disk id can be given to the api below */
+<span class="lineNum">     860 </span><span class="lineCov">     502859 :         if(!g_hash_table_contains(self-&gt;part_table, GINT_TO_POINTER(whole_disk))) {</span>
+<span class="lineNum">     861 </span><span class="lineCov">      85932 :             g_hash_table_insert(self-&gt;part_table,</span>
+<span class="lineNum">     862 </span>            :                                 GUINT_TO_POINTER(whole_disk),
+<span class="lineNum">     863 </span><span class="lineCov">      42966 :                                 rm_part_info_new(entry-&gt;dir, entry-&gt;fsname, whole_disk));</span>
+<span class="lineNum">     864 </span>            :         }
+<span class="lineNum">     865 </span>            : 
+<span class="lineNum">     866 </span><span class="lineCov">     502859 :         if(!g_hash_table_contains(self-&gt;disk_table, GINT_TO_POINTER(whole_disk))) {</span>
+<span class="lineNum">     867 </span><span class="lineCov">     315908 :             g_hash_table_insert(self-&gt;disk_table,</span>
+<span class="lineNum">     868 </span>            :                                 GINT_TO_POINTER(whole_disk),
+<span class="lineNum">     869 </span><span class="lineCov">     315908 :                                 rm_disk_info_new(diskname, is_rotational));</span>
+<span class="lineNum">     870 </span>            :         }
+<span class="lineNum">     871 </span>            : 
+<span class="lineNum">     872 </span><span class="lineCov">     502859 :         rm_log_info(</span>
+<span class="lineNum">     873 </span>            :             &quot;%02u:%02u %50s -&gt; %02u:%02u %-12s (underlying disk: %s; rotational: %3s)\n&quot;,
+<span class="lineNum">     874 </span>            :             major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev), entry-&gt;dir,
+<span class="lineNum">     875 </span>            :             major(whole_disk), minor(whole_disk), entry-&gt;fsname, diskname,
+<span class="lineNum">     876 </span>            :             is_rotational ? &quot;yes&quot; : &quot;no&quot;);
+<span class="lineNum">     877 </span>            :     }
+<span class="lineNum">     878 </span>            : 
+<span class="lineNum">     879 </span>            : #if HAVE_SYSCTL
+<span class="lineNum">     880 </span>            :     if(DISK_TABLE) {
+<span class="lineNum">     881 </span>            :         g_hash_table_unref(DISK_TABLE);
+<span class="lineNum">     882 </span>            :     }
+<span class="lineNum">     883 </span>            : #endif
+<span class="lineNum">     884 </span>            : 
+<span class="lineNum">     885 </span><span class="lineCov">      14322 :     rm_mount_list_close(mnt_entries);</span>
+<span class="lineNum">     886 </span><span class="lineCov">      14322 :     return true;</span>
+<span class="lineNum">     887 </span>            : }
+<span class="lineNum">     888 </span>            : 
+<span class="lineNum">     889 </span>            : /////////////////////////////////
+<span class="lineNum">     890 </span>            : //         PUBLIC API          //
+<a name="891"><span class="lineNum">     891 </span>            : /////////////////////////////////</a>
+<span class="lineNum">     892 </span>            : 
+<span class="lineNum">     893 </span><span class="lineCov">      14322 : RmMountTable *rm_mounts_table_new(bool force_fiemap) {</span>
+<span class="lineNum">     894 </span><span class="lineCov">      14322 :     RmMountTable *self = g_slice_new(RmMountTable);</span>
+<span class="lineNum">     895 </span><span class="lineCov">      14322 :     if(rm_mounts_create_tables(self, force_fiemap) == false) {</span>
+<span class="lineNum">     896 </span><span class="lineNoCov">          0 :         g_slice_free(RmMountTable, self);</span>
+<span class="lineNum">     897 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     898 </span>            :     } else {
+<span class="lineNum">     899 </span><span class="lineCov">      14322 :         return self;</span>
+<span class="lineNum">     900 </span>            :     }
+<a name="901"><span class="lineNum">     901 </span>            : }</a>
+<span class="lineNum">     902 </span>            : 
+<span class="lineNum">     903 </span><span class="lineCov">      14322 : void rm_mounts_table_destroy(RmMountTable *self) {</span>
+<span class="lineNum">     904 </span><span class="lineCov">      14322 :     g_hash_table_unref(self-&gt;part_table);</span>
+<span class="lineNum">     905 </span><span class="lineCov">      14322 :     g_hash_table_unref(self-&gt;disk_table);</span>
+<span class="lineNum">     906 </span><span class="lineCov">      14322 :     g_hash_table_unref(self-&gt;nfs_table);</span>
+<span class="lineNum">     907 </span><span class="lineCov">      14322 :     g_hash_table_unref(self-&gt;evilfs_table);</span>
+<span class="lineNum">     908 </span><span class="lineCov">      14322 :     g_hash_table_unref(self-&gt;reflinkfs_table);</span>
+<span class="lineNum">     909 </span><span class="lineCov">      14322 :     g_slice_free(RmMountTable, self);</span>
+<span class="lineNum">     910 </span><span class="lineCov">      14322 : }</span>
+<span class="lineNum">     911 </span>            : 
+<span class="lineNum">     912 </span>            : #else /* probably FreeBSD */
+<span class="lineNum">     913 </span>            : 
+<span class="lineNum">     914 </span>            : RmMountTable *rm_mounts_table_new(_U bool force_fiemap) {
+<span class="lineNum">     915 </span>            :     return NULL;
+<span class="lineNum">     916 </span>            : }
+<span class="lineNum">     917 </span>            : 
+<span class="lineNum">     918 </span>            : void rm_mounts_table_destroy(_U RmMountTable *self) {
+<span class="lineNum">     919 </span>            :     /* NO-OP */
+<span class="lineNum">     920 </span>            : }
+<span class="lineNum">     921 </span>            : 
+<a name="922"><span class="lineNum">     922 </span>            : #endif</a>
+<span class="lineNum">     923 </span>            : 
+<span class="lineNum">     924 </span><span class="lineCov">      12373 : bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {</span>
+<span class="lineNum">     925 </span><span class="lineCov">      12373 :     if(self == NULL) {</span>
+<span class="lineNum">     926 </span><span class="lineNoCov">          0 :         return true;</span>
+<span class="lineNum">     927 </span>            :     }
+<span class="lineNum">     928 </span>            : 
+<span class="lineNum">     929 </span><span class="lineCov">      12373 :     RmPartitionInfo *part =</span>
+<span class="lineNum">     930 </span><span class="lineCov">      12373 :         g_hash_table_lookup(self-&gt;part_table, GINT_TO_POINTER(device));</span>
+<span class="lineNum">     931 </span><span class="lineCov">      12373 :     if(part) {</span>
+<span class="lineNum">     932 </span><span class="lineCov">      12373 :         RmDiskInfo *disk =</span>
+<span class="lineNum">     933 </span><span class="lineCov">      12373 :             g_hash_table_lookup(self-&gt;disk_table, GINT_TO_POINTER(part-&gt;disk));</span>
+<span class="lineNum">     934 </span><span class="lineCov">      12373 :         if(disk) {</span>
+<span class="lineNum">     935 </span><span class="lineCov">      12373 :             return !disk-&gt;is_rotational;</span>
+<span class="lineNum">     936 </span>            :         } else {
+<span class="lineNum">     937 </span><span class="lineNoCov">          0 :             rm_log_error_line(&quot;Disk not found in rm_mounts_is_nonrotational&quot;);</span>
+<span class="lineNum">     938 </span><span class="lineNoCov">          0 :             return true;</span>
+<span class="lineNum">     939 </span>            :         }
+<span class="lineNum">     940 </span>            :     } else {
+<span class="lineNum">     941 </span><span class="lineNoCov">          0 :         rm_log_error_line(&quot;Partition not found in rm_mounts_is_nonrotational&quot;);</span>
+<span class="lineNum">     942 </span><span class="lineNoCov">          0 :         return true;</span>
+<span class="lineNum">     943 </span>            :     }
+<a name="944"><span class="lineNum">     944 </span>            : }</a>
+<span class="lineNum">     945 </span>            : 
+<span class="lineNum">     946 </span><span class="lineNoCov">          0 : bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {</span>
+<span class="lineNum">     947 </span><span class="lineNoCov">          0 :     if(self == NULL) {</span>
+<span class="lineNum">     948 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     949 </span>            :     }
+<span class="lineNum">     950 </span>            : 
+<span class="lineNum">     951 </span>            :     RmStat stat_buf;
+<span class="lineNum">     952 </span><span class="lineNoCov">          0 :     if(rm_sys_stat(path, &amp;stat_buf) == -1) {</span>
+<span class="lineNum">     953 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     954 </span>            :     }
+<span class="lineNum">     955 </span><span class="lineNoCov">          0 :     return rm_mounts_is_nonrotational(self, stat_buf.st_dev);</span>
+<a name="956"><span class="lineNum">     956 </span>            : }</a>
+<span class="lineNum">     957 </span>            : 
+<span class="lineNum">     958 </span><span class="lineCov">      92636 : dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {</span>
+<span class="lineNum">     959 </span><span class="lineCov">      92636 :     if(self == NULL) {</span>
+<span class="lineNum">     960 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">     961 </span>            :     }
+<span class="lineNum">     962 </span>            : 
+<span class="lineNum">     963 </span><span class="lineCov">      92636 :     RmPartitionInfo *part =</span>
+<span class="lineNum">     964 </span><span class="lineCov">      92636 :         g_hash_table_lookup(self-&gt;part_table, GINT_TO_POINTER(partition));</span>
+<span class="lineNum">     965 </span><span class="lineCov">      92636 :     if(part) {</span>
+<span class="lineNum">     966 </span><span class="lineCov">      92636 :         return part-&gt;disk;</span>
+<span class="lineNum">     967 </span>            :     } else {
+<span class="lineNum">     968 </span>            :         /* probably a btrfs subvolume which is not a mountpoint; walk up tree until we get
+<span class="lineNum">     969 </span>            :          * to *
+<span class="lineNum">     970 </span>            :          * a recognisable partition */
+<span class="lineNum">     971 </span><span class="lineNoCov">          0 :         char *prev = g_strdup(path);</span>
+<span class="lineNum">     972 </span>            :         while
+<span class="lineNum">     973 </span>            :             TRUE {
+<span class="lineNum">     974 </span><span class="lineNoCov">          0 :                 char *temp = g_strdup(prev);</span>
+<span class="lineNum">     975 </span><span class="lineNoCov">          0 :                 char *parent_path = g_strdup(dirname(temp));</span>
+<span class="lineNum">     976 </span><span class="lineNoCov">          0 :                 g_free(temp);</span>
+<span class="lineNum">     977 </span>            : 
+<span class="lineNum">     978 </span>            :                 RmStat stat_buf;
+<span class="lineNum">     979 </span><span class="lineNoCov">          0 :                 if(!rm_sys_stat(parent_path, &amp;stat_buf)) {</span>
+<span class="lineNum">     980 </span><span class="lineNoCov">          0 :                     RmPartitionInfo *parent_part = g_hash_table_lookup(</span>
+<span class="lineNum">     981 </span><span class="lineNoCov">          0 :                         self-&gt;part_table, GINT_TO_POINTER(stat_buf.st_dev));</span>
+<span class="lineNum">     982 </span><span class="lineNoCov">          0 :                     if(parent_part) {</span>
+<span class="lineNum">     983 </span>            :                         /* create new partition table entry */
+<span class="lineNum">     984 </span><span class="lineNoCov">          0 :                         rm_log_debug(&quot;Adding partition info for &quot; GREEN &quot;%s&quot; RESET</span>
+<span class="lineNum">     985 </span>            :                                      &quot; - looks like subvolume %s on disk &quot; GREEN
+<span class="lineNum">     986 </span>            :                                      &quot;%s&quot; RESET &quot;\n&quot;,
+<span class="lineNum">     987 </span>            :                                      path, prev, parent_part-&gt;name);
+<span class="lineNum">     988 </span><span class="lineNoCov">          0 :                         part = rm_part_info_new(prev, parent_part-&gt;fsname,</span>
+<span class="lineNum">     989 </span>            :                                                 parent_part-&gt;disk);
+<span class="lineNum">     990 </span><span class="lineNoCov">          0 :                         g_hash_table_insert(self-&gt;part_table, GINT_TO_POINTER(partition),</span>
+<span class="lineNum">     991 </span>            :                                             part);
+<span class="lineNum">     992 </span><span class="lineNoCov">          0 :                         if(g_hash_table_contains(self-&gt;reflinkfs_table,</span>
+<span class="lineNum">     993 </span><span class="lineNoCov">          0 :                                                  GUINT_TO_POINTER(stat_buf.st_dev))) {</span>
+<span class="lineNum">     994 </span><span class="lineNoCov">          0 :                             g_hash_table_insert(self-&gt;reflinkfs_table,</span>
+<span class="lineNum">     995 </span>            :                                                 GUINT_TO_POINTER(partition),
+<span class="lineNum">     996 </span>            :                                                 GUINT_TO_POINTER(1));
+<span class="lineNum">     997 </span>            :                         }
+<span class="lineNum">     998 </span><span class="lineNoCov">          0 :                         g_free(prev);</span>
+<span class="lineNum">     999 </span><span class="lineNoCov">          0 :                         g_free(parent_path);</span>
+<span class="lineNum">    1000 </span><span class="lineNoCov">          0 :                         return parent_part-&gt;disk;</span>
+<span class="lineNum">    1001 </span>            :                     }
+<span class="lineNum">    1002 </span>            :                 }
+<span class="lineNum">    1003 </span><span class="lineNoCov">          0 :                 g_free(prev);</span>
+<span class="lineNum">    1004 </span><span class="lineNoCov">          0 :                 prev = parent_path;</span>
+<span class="lineNum">    1005 </span><span class="lineNoCov">          0 :                 g_assert(strcmp(prev, &quot;/&quot;) != 0);</span>
+<span class="lineNum">    1006 </span><span class="lineNoCov">          0 :                 g_assert(strcmp(prev, &quot;.&quot;) != 0);</span>
+<span class="lineNum">    1007 </span><span class="lineNoCov">          0 :             }</span>
+<span class="lineNum">    1008 </span>            :     }
+<a name="1009"><span class="lineNum">    1009 </span>            : }</a>
+<span class="lineNum">    1010 </span>            : 
+<span class="lineNum">    1011 </span><span class="lineCov">      18560 : dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {</span>
+<span class="lineNum">    1012 </span><span class="lineCov">      18560 :     if(self == NULL) {</span>
+<span class="lineNum">    1013 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">    1014 </span>            :     }
+<span class="lineNum">    1015 </span>            : 
+<span class="lineNum">    1016 </span>            :     RmStat stat_buf;
+<span class="lineNum">    1017 </span><span class="lineCov">      18560 :     if(rm_sys_stat(path, &amp;stat_buf) == -1) {</span>
+<span class="lineNum">    1018 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">    1019 </span>            :     }
+<span class="lineNum">    1020 </span>            : 
+<span class="lineNum">    1021 </span><span class="lineCov">      18560 :     return rm_mounts_get_disk_id(self, stat_buf.st_dev, path);</span>
+<a name="1022"><span class="lineNum">    1022 </span>            : }</a>
+<span class="lineNum">    1023 </span>            : 
+<span class="lineNum">    1024 </span><span class="lineCov">      13050 : char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {</span>
+<span class="lineNum">    1025 </span><span class="lineCov">      13050 :     if(self == NULL) {</span>
+<span class="lineNum">    1026 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">    1027 </span>            :     }
+<span class="lineNum">    1028 </span>            : 
+<span class="lineNum">    1029 </span><span class="lineCov">      13050 :     RmPartitionInfo *part =</span>
+<span class="lineNum">    1030 </span><span class="lineCov">      13050 :         g_hash_table_lookup(self-&gt;part_table, GINT_TO_POINTER(device));</span>
+<span class="lineNum">    1031 </span><span class="lineCov">      13050 :     if(part) {</span>
+<span class="lineNum">    1032 </span><span class="lineCov">      12863 :         RmDiskInfo *disk =</span>
+<span class="lineNum">    1033 </span><span class="lineCov">      12863 :             g_hash_table_lookup(self-&gt;disk_table, GINT_TO_POINTER(part-&gt;disk));</span>
+<span class="lineNum">    1034 </span><span class="lineCov">      12863 :         return disk-&gt;name;</span>
+<span class="lineNum">    1035 </span>            :     } else {
+<span class="lineNum">    1036 </span><span class="lineCov">        187 :         return NULL;</span>
+<span class="lineNum">    1037 </span>            :     }
+<a name="1038"><span class="lineNum">    1038 </span>            : }</a>
+<span class="lineNum">    1039 </span>            : 
+<span class="lineNum">    1040 </span><span class="lineCov">      80801 : bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {</span>
+<span class="lineNum">    1041 </span><span class="lineCov">      80801 :     g_assert(self);</span>
+<span class="lineNum">    1042 </span>            : 
+<span class="lineNum">    1043 </span><span class="lineCov">      80801 :     return g_hash_table_contains(self-&gt;evilfs_table, GUINT_TO_POINTER(to_check));</span>
+<a name="1044"><span class="lineNum">    1044 </span>            : }</a>
+<span class="lineNum">    1045 </span>            : 
+<span class="lineNum">    1046 </span><span class="lineNoCov">          0 : bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {</span>
+<span class="lineNum">    1047 </span><span class="lineNoCov">          0 :     g_assert(self);</span>
+<span class="lineNum">    1048 </span><span class="lineNoCov">          0 :     if(g_hash_table_contains(self-&gt;reflinkfs_table, GUINT_TO_POINTER(source))) {</span>
+<span class="lineNum">    1049 </span><span class="lineNoCov">          0 :         if(source == dest) {</span>
+<span class="lineNum">    1050 </span><span class="lineNoCov">          0 :             return true;</span>
+<span class="lineNum">    1051 </span>            :         } else {
+<span class="lineNum">    1052 </span><span class="lineNoCov">          0 :             RmPartitionInfo *source_part =</span>
+<span class="lineNum">    1053 </span><span class="lineNoCov">          0 :                 g_hash_table_lookup(self-&gt;part_table, GINT_TO_POINTER(source));</span>
+<span class="lineNum">    1054 </span><span class="lineNoCov">          0 :             RmPartitionInfo *dest_part =</span>
+<span class="lineNum">    1055 </span><span class="lineNoCov">          0 :                 g_hash_table_lookup(self-&gt;part_table, GINT_TO_POINTER(dest));</span>
+<span class="lineNum">    1056 </span><span class="lineNoCov">          0 :             g_assert(source_part);</span>
+<span class="lineNum">    1057 </span><span class="lineNoCov">          0 :             g_assert(dest_part);</span>
+<span class="lineNum">    1058 </span><span class="lineNoCov">          0 :             return (strcmp(source_part-&gt;fsname, dest_part-&gt;fsname) == 0);</span>
+<span class="lineNum">    1059 </span>            :         }
+<span class="lineNum">    1060 </span>            :     } else {
+<span class="lineNum">    1061 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">    1062 </span>            :     }
+<span class="lineNum">    1063 </span>            : }
+<span class="lineNum">    1064 </span>            : 
+<span class="lineNum">    1065 </span>            : /////////////////////////////////
+<span class="lineNum">    1066 </span>            : //    FIEMAP IMPLEMENATION     //
+<span class="lineNum">    1067 </span>            : /////////////////////////////////
+<span class="lineNum">    1068 </span>            : 
+<span class="lineNum">    1069 </span>            : typedef struct RmOffsetEntry {
+<span class="lineNum">    1070 </span>            :     RmOff logical;
+<span class="lineNum">    1071 </span>            :     RmOff physical;
+<span class="lineNum">    1072 </span>            : } RmOffsetEntry;
+<span class="lineNum">    1073 </span>            : 
+<span class="lineNum">    1074 </span>            : #if HAVE_FIEMAP
+<a name="1075"><span class="lineNum">    1075 </span>            : </a>
+<span class="lineNum">    1076 </span>            : /* sort sequence into decreasing order of logical offsets */
+<span class="lineNum">    1077 </span><span class="lineCov">      13750 : static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {</span>
+<span class="lineNum">    1078 </span><span class="lineCov">      13750 :     const RmOffsetEntry *offset_a = a;</span>
+<span class="lineNum">    1079 </span><span class="lineCov">      13750 :     const RmOffsetEntry *offset_b = b;</span>
+<span class="lineNum">    1080 </span><span class="lineCov">      13750 :     if(offset_b-&gt;logical &gt; offset_a-&gt;logical) {</span>
+<span class="lineNum">    1081 </span><span class="lineCov">      13750 :         return 1;</span>
+<span class="lineNum">    1082 </span><span class="lineNoCov">          0 :     } else if(offset_b-&gt;logical == offset_a-&gt;logical) {</span>
+<span class="lineNum">    1083 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">    1084 </span>            :     } else {
+<span class="lineNum">    1085 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">    1086 </span>            :     }
+<span class="lineNum">    1087 </span>            : }
+<a name="1088"><span class="lineNum">    1088 </span>            : </a>
+<span class="lineNum">    1089 </span>            : /* find first item in sequence with logical offset &lt;= target */
+<span class="lineNum">    1090 </span><span class="lineCov">       5137 : static int rm_offset_find_logical(gconstpointer a, gconstpointer b) {</span>
+<span class="lineNum">    1091 </span><span class="lineCov">       5137 :     const RmOffsetEntry *offset_a = a;</span>
+<span class="lineNum">    1092 </span><span class="lineCov">       5137 :     const RmOffsetEntry *offset_b = b;</span>
+<span class="lineNum">    1093 </span><span class="lineCov">       5137 :     if(offset_b-&gt;logical &gt;= offset_a-&gt;logical) {</span>
+<span class="lineNum">    1094 </span><span class="lineCov">       2769 :         return 1;</span>
+<span class="lineNum">    1095 </span>            :     } else {
+<span class="lineNum">    1096 </span><span class="lineCov">       2368 :         return 0;</span>
+<span class="lineNum">    1097 </span>            :     }
+<a name="1098"><span class="lineNum">    1098 </span>            : }</a>
+<span class="lineNum">    1099 </span>            : 
+<span class="lineNum">    1100 </span><span class="lineCov">       8690 : static void rm_offset_free_func(RmOffsetEntry *entry) {</span>
+<span class="lineNum">    1101 </span><span class="lineCov">       8690 :     g_slice_free(RmOffsetEntry, entry);</span>
+<a name="1102"><span class="lineNum">    1102 </span><span class="lineCov">       8690 : }</span></a>
+<span class="lineNum">    1103 </span>            : 
+<span class="lineNum">    1104 </span><span class="lineCov">       1811 : static void rm_offset_create_fake_data(GSequence *self) {</span>
+<span class="lineNum">    1105 </span>            :     /* Create arbitary data for use with test (and test coverage) */
+<span class="lineNum">    1106 </span><span class="lineCov">      10866 :     for(int i = 0; i &lt; 5; ++i) {</span>
+<span class="lineNum">    1107 </span><span class="lineCov">       9055 :         RmOffsetEntry *offset_entry = g_slice_new(RmOffsetEntry);</span>
+<span class="lineNum">    1108 </span><span class="lineCov">       9055 :         offset_entry-&gt;logical = i * 42;</span>
+<span class="lineNum">    1109 </span><span class="lineCov">       9055 :         offset_entry-&gt;physical = i * 0xdeadbeef;</span>
+<span class="lineNum">    1110 </span><span class="lineCov">       9055 :         g_sequence_append(self, offset_entry);</span>
+<span class="lineNum">    1111 </span>            :     }
+<a name="1112"><span class="lineNum">    1112 </span><span class="lineCov">       1811 : }</span></a>
+<span class="lineNum">    1113 </span>            : 
+<span class="lineNum">    1114 </span><span class="lineCov">       3622 : RmOffsetTable rm_offset_create_table(const char *path, bool fake_fiemap) {</span>
+<span class="lineNum">    1115 </span><span class="lineCov">       3622 :     int fd = rm_sys_open(path, O_RDONLY);</span>
+<span class="lineNum">    1116 </span><span class="lineCov">       3622 :     if(fd == -1) {</span>
+<span class="lineNum">    1117 </span><span class="lineNoCov">          0 :         rm_log_info(&quot;Error opening %s in setup_fiemap_extents\n&quot;, path);</span>
+<span class="lineNum">    1118 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">    1119 </span>            :     }
+<span class="lineNum">    1120 </span>            : 
+<span class="lineNum">    1121 </span>            :     /* struct fiemap does not allocate any extents by default,
+<span class="lineNum">    1122 </span>            :      * so we choose ourself how many of them we allocate.
+<span class="lineNum">    1123 </span>            :      * */
+<span class="lineNum">    1124 </span><span class="lineCov">       3622 :     const int n_extents = 256;</span>
+<span class="lineNum">    1125 </span><span class="lineCov">       3622 :     struct fiemap *fiemap =</span>
+<span class="lineNum">    1126 </span><span class="lineCov">       3622 :         g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));</span>
+<span class="lineNum">    1127 </span><span class="lineCov">       3622 :     struct fiemap_extent *fm_ext = fiemap-&gt;fm_extents;</span>
+<span class="lineNum">    1128 </span>            : 
+<span class="lineNum">    1129 </span>            :     /* data structure we save our offsets in */
+<span class="lineNum">    1130 </span><span class="lineCov">       3622 :     GSequence *self = g_sequence_new((GFreeFunc)rm_offset_free_func);</span>
+<span class="lineNum">    1131 </span>            : 
+<span class="lineNum">    1132 </span><span class="lineCov">       3622 :     bool last = false;</span>
+<span class="lineNum">    1133 </span><span class="lineCov">       7244 :     while(!last) {</span>
+<span class="lineNum">    1134 </span><span class="lineCov">       3622 :         fiemap-&gt;fm_flags = 0;</span>
+<span class="lineNum">    1135 </span><span class="lineCov">       3622 :         fiemap-&gt;fm_extent_count = n_extents;</span>
+<span class="lineNum">    1136 </span><span class="lineCov">       3622 :         fiemap-&gt;fm_length = FIEMAP_MAX_OFFSET;</span>
+<span class="lineNum">    1137 </span>            : 
+<span class="lineNum">    1138 </span><span class="lineCov">       3622 :         if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fiemap) == -1) {</span>
+<span class="lineNum">    1139 </span><span class="lineCov">       3622 :             break;</span>
+<span class="lineNum">    1140 </span>            :         }
+<span class="lineNum">    1141 </span>            : 
+<span class="lineNum">    1142 </span>            :         /* This might happen on empty files - those have no
+<span class="lineNum">    1143 </span>            :          * extents, but they have an offset on the disk.
+<span class="lineNum">    1144 </span>            :          */
+<span class="lineNum">    1145 </span><span class="lineNoCov">          0 :         if(fiemap-&gt;fm_mapped_extents &lt;= 0) {</span>
+<span class="lineNum">    1146 </span><span class="lineNoCov">          0 :             break;</span>
+<span class="lineNum">    1147 </span>            :         }
+<span class="lineNum">    1148 </span>            : 
+<span class="lineNum">    1149 </span>            :         /* used for detecting contiguous extents, which we ignore */
+<span class="lineNum">    1150 </span><span class="lineNoCov">          0 :         unsigned long expected = 0;</span>
+<span class="lineNum">    1151 </span>            : 
+<span class="lineNum">    1152 </span>            :         /* Remember all non contiguous extents */
+<span class="lineNum">    1153 </span><span class="lineNoCov">          0 :         for(unsigned i = 0; i &lt; fiemap-&gt;fm_mapped_extents &amp;&amp; !last; i++) {</span>
+<span class="lineNum">    1154 </span><span class="lineNoCov">          0 :             if(i == 0 || fm_ext[i].fe_physical != expected) {</span>
+<span class="lineNum">    1155 </span><span class="lineNoCov">          0 :                 RmOffsetEntry *offset_entry = g_slice_new(RmOffsetEntry);</span>
+<span class="lineNum">    1156 </span><span class="lineNoCov">          0 :                 offset_entry-&gt;logical = fm_ext[i].fe_logical;</span>
+<span class="lineNum">    1157 </span><span class="lineNoCov">          0 :                 offset_entry-&gt;physical = fm_ext[i].fe_physical;</span>
+<span class="lineNum">    1158 </span><span class="lineNoCov">          0 :                 g_sequence_append(self, offset_entry);</span>
+<span class="lineNum">    1159 </span>            :             }
+<span class="lineNum">    1160 </span>            : 
+<span class="lineNum">    1161 </span><span class="lineNoCov">          0 :             expected = fm_ext[i].fe_physical + fm_ext[i].fe_length;</span>
+<span class="lineNum">    1162 </span><span class="lineNoCov">          0 :             fiemap-&gt;fm_start = fm_ext[i].fe_logical + fm_ext[i].fe_length;</span>
+<span class="lineNum">    1163 </span><span class="lineNoCov">          0 :             last = fm_ext[i].fe_flags &amp; FIEMAP_EXTENT_LAST;</span>
+<span class="lineNum">    1164 </span>            :         }
+<span class="lineNum">    1165 </span>            :     }
+<span class="lineNum">    1166 </span>            : 
+<span class="lineNum">    1167 </span><span class="lineCov">       3622 :     if(fake_fiemap &amp;&amp; !g_sequence_get_length(self)) {</span>
+<span class="lineNum">    1168 </span><span class="lineCov">       1811 :         rm_offset_create_fake_data(self);</span>
+<span class="lineNum">    1169 </span>            :     }
+<span class="lineNum">    1170 </span>            : 
+<span class="lineNum">    1171 </span><span class="lineCov">       3622 :     rm_sys_close(fd);</span>
+<span class="lineNum">    1172 </span><span class="lineCov">       3622 :     g_free(fiemap);</span>
+<span class="lineNum">    1173 </span>            : 
+<span class="lineNum">    1174 </span><span class="lineCov">       3622 :     g_sequence_sort(self, (GCompareDataFunc)rm_offset_sort_logical, NULL);</span>
+<span class="lineNum">    1175 </span><span class="lineCov">       3622 :     return self;</span>
+<a name="1176"><span class="lineNum">    1176 </span>            : }</a>
+<span class="lineNum">    1177 </span>            : 
+<span class="lineNum">    1178 </span><span class="lineCov">      65075 : RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {</span>
+<span class="lineNum">    1179 </span><span class="lineCov">      65075 :     if(offset_list != NULL) {</span>
+<span class="lineNum">    1180 </span>            :         RmOffsetEntry token;
+<span class="lineNum">    1181 </span><span class="lineCov">       3558 :         token.physical = 0;</span>
+<span class="lineNum">    1182 </span><span class="lineCov">       3558 :         token.logical = file_offset;</span>
+<span class="lineNum">    1183 </span>            : 
+<span class="lineNum">    1184 </span><span class="lineCov">       3558 :         GSequenceIter *nearest = g_sequence_search(</span>
+<span class="lineNum">    1185 </span>            :             offset_list, &amp;token, (GCompareDataFunc)rm_offset_find_logical, NULL);
+<span class="lineNum">    1186 </span>            : 
+<span class="lineNum">    1187 </span><span class="lineCov">       3558 :         if(!g_sequence_iter_is_end(nearest)) {</span>
+<span class="lineNum">    1188 </span><span class="lineCov">       1779 :             RmOffsetEntry *off = g_sequence_get(nearest);</span>
+<span class="lineNum">    1189 </span><span class="lineCov">       1779 :             return (gint64)(off-&gt;physical + file_offset) - (gint64)off-&gt;logical;</span>
+<span class="lineNum">    1190 </span>            :         }
+<span class="lineNum">    1191 </span>            :     }
+<span class="lineNum">    1192 </span>            : 
+<span class="lineNum">    1193 </span>            :     /* default to 0 always */
+<span class="lineNum">    1194 </span><span class="lineCov">      63296 :     return 0;</span>
+<a name="1195"><span class="lineNum">    1195 </span>            : }</a>
+<span class="lineNum">    1196 </span>            : 
+<span class="lineNum">    1197 </span><span class="lineNoCov">          0 : bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {</span>
+<span class="lineNum">    1198 </span><span class="lineNoCov">          0 :     if(!table1 || !table2) {</span>
+<span class="lineNum">    1199 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">    1200 </span>            :     }
+<span class="lineNum">    1201 </span><span class="lineNoCov">          0 :     if(g_sequence_get_length(table1) == 0 ||</span>
+<span class="lineNum">    1202 </span><span class="lineNoCov">          0 :        g_sequence_get_length(table1) != g_sequence_get_length(table2)) {</span>
+<span class="lineNum">    1203 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">    1204 </span>            :     }
+<span class="lineNum">    1205 </span><span class="lineNoCov">          0 :     GSequenceIter *iter1 = g_sequence_get_begin_iter(table1);</span>
+<span class="lineNum">    1206 </span><span class="lineNoCov">          0 :     GSequenceIter *iter2 = g_sequence_get_begin_iter(table2);</span>
+<span class="lineNum">    1207 </span>            : 
+<span class="lineNum">    1208 </span><span class="lineNoCov">          0 :     while(!g_sequence_iter_is_end(iter1)) {</span>
+<span class="lineNum">    1209 </span><span class="lineNoCov">          0 :         RmOffsetEntry *ent1 = g_sequence_get(iter1);</span>
+<span class="lineNum">    1210 </span><span class="lineNoCov">          0 :         RmOffsetEntry *ent2 = g_sequence_get(iter2);</span>
+<span class="lineNum">    1211 </span><span class="lineNoCov">          0 :         if(ent1-&gt;logical != ent2-&gt;logical || ent1-&gt;physical != ent2-&gt;physical) {</span>
+<span class="lineNum">    1212 </span><span class="lineNoCov">          0 :             return false;</span>
+<span class="lineNum">    1213 </span>            :         }
+<span class="lineNum">    1214 </span><span class="lineNoCov">          0 :         iter1 = g_sequence_iter_next(iter1);</span>
+<span class="lineNum">    1215 </span><span class="lineNoCov">          0 :         iter2 = g_sequence_iter_next(iter2);</span>
+<span class="lineNum">    1216 </span>            :     }
+<span class="lineNum">    1217 </span><span class="lineNoCov">          0 :     return true;</span>
+<span class="lineNum">    1218 </span>            : }
+<span class="lineNum">    1219 </span>            : 
+<span class="lineNum">    1220 </span>            : #else /* Probably FreeBSD */
+<span class="lineNum">    1221 </span>            : 
+<span class="lineNum">    1222 </span>            : RmOffsetTable rm_offset_create_table(_U const char *path, _U bool force_fiemap) {
+<span class="lineNum">    1223 </span>            :     return NULL;
+<span class="lineNum">    1224 </span>            : }
+<span class="lineNum">    1225 </span>            : 
+<span class="lineNum">    1226 </span>            : RmOff rm_offset_lookup(_U RmOffsetTable table, _U RmOff file_offset) {
+<span class="lineNum">    1227 </span>            :     return 0;
+<span class="lineNum">    1228 </span>            : }
+<span class="lineNum">    1229 </span>            : 
+<span class="lineNum">    1230 </span>            : bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
+<span class="lineNum">    1231 </span>            :     return false;
+<span class="lineNum">    1232 </span>            : }
+<span class="lineNum">    1233 </span>            : 
+<span class="lineNum">    1234 </span>            : #endif
+<span class="lineNum">    1235 </span>            : 
+<span class="lineNum">    1236 </span>            : /////////////////////////////////
+<span class="lineNum">    1237 </span>            : //  GTHREADPOOL WRAPPERS       //
+<span class="lineNum">    1238 </span>            : /////////////////////////////////
+<a name="1239"><span class="lineNum">    1239 </span>            : </a>
+<span class="lineNum">    1240 </span>            : /* wrapper for g_thread_pool_push with error reporting */
+<span class="lineNum">    1241 </span><span class="lineCov">     183752 : bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data) {</span>
+<span class="lineNum">    1242 </span><span class="lineCov">     183752 :     GError *error = NULL;</span>
+<span class="lineNum">    1243 </span><span class="lineCov">     183752 :     g_thread_pool_push(pool, data, &amp;error);</span>
+<span class="lineNum">    1244 </span><span class="lineCov">     183761 :     if(error != NULL) {</span>
+<span class="lineNum">    1245 </span><span class="lineNoCov">          0 :         rm_log_error_line(&quot;Unable to push thread to pool %p: %s&quot;, pool, error-&gt;message);</span>
+<span class="lineNum">    1246 </span><span class="lineNoCov">          0 :         g_error_free(error);</span>
+<span class="lineNum">    1247 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">    1248 </span>            :     } else {
+<span class="lineNum">    1249 </span><span class="lineCov">     183761 :         return true;</span>
+<span class="lineNum">    1250 </span>            :     }
+<span class="lineNum">    1251 </span>            : }
+<a name="1252"><span class="lineNum">    1252 </span>            : </a>
+<span class="lineNum">    1253 </span>            : /* wrapper for g_thread_pool_new with error reporting */
+<span class="lineNum">    1254 </span><span class="lineCov">     257230 : GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {</span>
+<span class="lineNum">    1255 </span><span class="lineCov">     257230 :     GError *error = NULL;</span>
+<span class="lineNum">    1256 </span><span class="lineCov">     257230 :     GThreadPool *pool = g_thread_pool_new(func, data, threads, FALSE, &amp;error);</span>
+<span class="lineNum">    1257 </span>            : 
+<span class="lineNum">    1258 </span><span class="lineCov">     257230 :     if(error != NULL) {</span>
+<span class="lineNum">    1259 </span><span class="lineNoCov">          0 :         rm_log_error_line(&quot;Unable to create thread pool.&quot;);</span>
+<span class="lineNum">    1260 </span><span class="lineNoCov">          0 :         g_error_free(error);</span>
+<span class="lineNum">    1261 </span>            :     }
+<span class="lineNum">    1262 </span><span class="lineCov">     257230 :     return pool;</span>
+<span class="lineNum">    1263 </span>            : }
+<span class="lineNum">    1264 </span>            : 
+<span class="lineNum">    1265 </span>            : //////////////////////////////
+<span class="lineNum">    1266 </span>            : //    TIMESTAMP HELPERS     //
+<a name="1267"><span class="lineNum">    1267 </span>            : //////////////////////////////</a>
+<span class="lineNum">    1268 </span>            : 
+<span class="lineNum">    1269 </span><span class="lineCov">          9 : time_t rm_iso8601_parse(const char *string) {</span>
+<span class="lineNum">    1270 </span>            :     GTimeVal time_result; 
+<span class="lineNum">    1271 </span><span class="lineCov">          9 :     if(!g_time_val_from_iso8601(string, &amp;time_result)) {</span>
+<span class="lineNum">    1272 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;Converting time failed&quot;);</span>
+<span class="lineNum">    1273 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">    1274 </span>            :     }
+<span class="lineNum">    1275 </span>            : 
+<span class="lineNum">    1276 </span><span class="lineCov">          9 :     return time_result.tv_sec;</span>
+<a name="1277"><span class="lineNum">    1277 </span>            : }</a>
+<span class="lineNum">    1278 </span>            : 
+<span class="lineNum">    1279 </span><span class="lineCov">         21 : bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {</span>
+<span class="lineNum">    1280 </span><span class="lineCov">         21 :     const struct tm *now_ctime = localtime(&amp;stamp);</span>
+<span class="lineNum">    1281 </span><span class="lineCov">         21 :     return (strftime(buf, buf_size, &quot;%FT%T%z&quot;, now_ctime) != 0);</span>
+<span class="lineNum">    1282 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

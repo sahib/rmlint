@@ -1,0 +1,386 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/formats/py.c</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - py.c<span style="font-size: 80%;"> (source / <a href="py.c.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">19</td>
+            <td class="headerCovTableEntry">20</td>
+            <td class="headerCovTableEntryHi">95.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-05-07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2014 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2014 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &quot;../formats.h&quot;
+<span class="lineNum">      27 </span>            : #include &quot;../utilities.h&quot;
+<span class="lineNum">      28 </span>            : #include &quot;../preprocess.h&quot;
+<span class="lineNum">      29 </span>            : 
+<span class="lineNum">      30 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      31 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      32 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            : static const char *PY_SOURCE = &quot;#!/usr/bin/env python3\n&quot;
+<span class="lineNum">      35 </span>            : &quot;# encoding: utf-8\n&quot;
+<span class="lineNum">      36 </span>            : &quot;\n&quot;
+<span class="lineNum">      37 </span>            : &quot;\&quot;\&quot;\&quot; This file is part of rmlint.\n&quot;
+<span class="lineNum">      38 </span>            : &quot;\n&quot;
+<span class="lineNum">      39 </span>            : &quot;rmlint is free software: you can redistribute it and/or modify\n&quot;
+<span class="lineNum">      40 </span>            : &quot;it under the terms of the GNU General Public License as published by\n&quot;
+<span class="lineNum">      41 </span>            : &quot;the Free Software Foundation, either version 3 of the License, or\n&quot;
+<span class="lineNum">      42 </span>            : &quot;(at your option) any later version.\n&quot;
+<span class="lineNum">      43 </span>            : &quot;\n&quot;
+<span class="lineNum">      44 </span>            : &quot;rmlint is distributed in the hope that it will be useful,\n&quot;
+<span class="lineNum">      45 </span>            : &quot;but WITHOUT ANY WARRANTY; without even the implied warranty of\n&quot;
+<span class="lineNum">      46 </span>            : &quot;MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n&quot;
+<span class="lineNum">      47 </span>            : &quot;GNU General Public License for more details.\n&quot;
+<span class="lineNum">      48 </span>            : &quot;\n&quot;
+<span class="lineNum">      49 </span>            : &quot;You should have received a copy of the GNU General Public License\n&quot;
+<span class="lineNum">      50 </span>            : &quot;along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.\n&quot;
+<span class="lineNum">      51 </span>            : &quot;\n&quot;
+<span class="lineNum">      52 </span>            : &quot;uthors:\n&quot;
+<span class="lineNum">      53 </span>            : &quot;\n&quot;
+<span class="lineNum">      54 </span>            : &quot;- Christopher &lt;sahib&gt; Pahl 2010-2014 (https://github.com/sahib)\n&quot;
+<span class="lineNum">      55 </span>            : &quot;- Daniel &lt;SeeSpotRun&gt; T.   2014-2014 (https://github.com/SeeSpotRun)\n&quot;
+<span class="lineNum">      56 </span>            : &quot;\&quot;\&quot;\&quot;\n&quot;
+<span class="lineNum">      57 </span>            : &quot;\n&quot;
+<span class="lineNum">      58 </span>            : &quot;# This is the python remover utility shipped inside the rmlint binary.\n&quot;
+<span class="lineNum">      59 </span>            : &quot;# The 200 lines source presented below is meant to be clean and hackable.\n&quot;
+<span class="lineNum">      60 </span>            : &quot;# It is intented to be used for corner cases where the built-in sh formatter\n&quot;
+<span class="lineNum">      61 </span>            : &quot;# is not enough or as an alternative to it. By default it works the same.\n&quot;
+<span class="lineNum">      62 </span>            : &quot;\n&quot;
+<span class="lineNum">      63 </span>            : &quot;import os\n&quot;
+<span class="lineNum">      64 </span>            : &quot;import sys\n&quot;
+<span class="lineNum">      65 </span>            : &quot;import pwd\n&quot;
+<span class="lineNum">      66 </span>            : &quot;import json\n&quot;
+<span class="lineNum">      67 </span>            : &quot;import shutil\n&quot;
+<span class="lineNum">      68 </span>            : &quot;import argparse\n&quot;
+<span class="lineNum">      69 </span>            : &quot;import subprocess\n&quot;
+<span class="lineNum">      70 </span>            : &quot;\n&quot;
+<span class="lineNum">      71 </span>            : &quot;\n&quot;
+<span class="lineNum">      72 </span>            : &quot;def handle_duplicate_dir(path, original, **kwargs):\n&quot;
+<span class="lineNum">      73 </span>            : &quot;    shutil.rmtree(path)\n&quot;
+<span class="lineNum">      74 </span>            : &quot;\n&quot;
+<span class="lineNum">      75 </span>            : &quot;\n&quot;
+<span class="lineNum">      76 </span>            : &quot;def handle_duplicate_file(path, original, **kwargs):\n&quot;
+<span class="lineNum">      77 </span>            : &quot;    os.remove(path)\n&quot;
+<span class="lineNum">      78 </span>            : &quot;\n&quot;
+<span class="lineNum">      79 </span>            : &quot;def handle_unfinished_cksum(path, **kwargs):\n&quot;
+<span class="lineNum">      80 </span>            : &quot;    pass  # doesn't need any handling.\n&quot;
+<span class="lineNum">      81 </span>            : &quot;\n&quot;
+<span class="lineNum">      82 </span>            : &quot;def handle_empty_dir(path, **kwargs):\n&quot;
+<span class="lineNum">      83 </span>            : &quot;    os.rmdir(path)\n&quot;
+<span class="lineNum">      84 </span>            : &quot;\n&quot;
+<span class="lineNum">      85 </span>            : &quot;\n&quot;
+<span class="lineNum">      86 </span>            : &quot;def handle_empy_file(path, **kwargs):\n&quot;
+<span class="lineNum">      87 </span>            : &quot;    os.remove(path)\n&quot;
+<span class="lineNum">      88 </span>            : &quot;\n&quot;
+<span class="lineNum">      89 </span>            : &quot;\n&quot;
+<span class="lineNum">      90 </span>            : &quot;def handle_nonstripped(path, **kwargs):\n&quot;
+<span class="lineNum">      91 </span>            : &quot;    subprocess.call([\&quot;strip\&quot;, \&quot;--strip-debug\&quot;, path])\n&quot;
+<span class="lineNum">      92 </span>            : &quot;\n&quot;
+<span class="lineNum">      93 </span>            : &quot;\n&quot;
+<span class="lineNum">      94 </span>            : &quot;def handle_badlink(path, **kwargs):\n&quot;
+<span class="lineNum">      95 </span>            : &quot;    os.remove(path)\n&quot;
+<span class="lineNum">      96 </span>            : &quot;\n&quot;
+<span class="lineNum">      97 </span>            : &quot;\n&quot;
+<span class="lineNum">      98 </span>            : &quot;CURRENT_UID = os.geteuid()\n&quot;
+<span class="lineNum">      99 </span>            : &quot;CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid\n&quot;
+<span class="lineNum">     100 </span>            : &quot;\n&quot;
+<span class="lineNum">     101 </span>            : &quot;\n&quot;
+<span class="lineNum">     102 </span>            : &quot;def handle_baduid(path, **kwargs):\n&quot;
+<span class="lineNum">     103 </span>            : &quot;    os.chmod(path, CURRENT_UID, -1)\n&quot;
+<span class="lineNum">     104 </span>            : &quot;\n&quot;
+<span class="lineNum">     105 </span>            : &quot;\n&quot;
+<span class="lineNum">     106 </span>            : &quot;def handle_badgid(path, **kwargs):\n&quot;
+<span class="lineNum">     107 </span>            : &quot;    os.chmod(path, -1, CURRENT_GID)\n&quot;
+<span class="lineNum">     108 </span>            : &quot;\n&quot;
+<span class="lineNum">     109 </span>            : &quot;\n&quot;
+<span class="lineNum">     110 </span>            : &quot;def handle_badugid(path, **kwargs):\n&quot;
+<span class="lineNum">     111 </span>            : &quot;    os.chmod(path, CURRENT_UID, CURRENT_GID)\n&quot;
+<span class="lineNum">     112 </span>            : &quot;\n&quot;
+<span class="lineNum">     113 </span>            : &quot;\n&quot;
+<span class="lineNum">     114 </span>            : &quot;OPERATIONS = {\n&quot;
+<span class="lineNum">     115 </span>            : &quot;    \&quot;duplicate_dir\&quot;: handle_duplicate_dir,\n&quot;
+<span class="lineNum">     116 </span>            : &quot;    \&quot;duplicate_file\&quot;: handle_duplicate_file,\n&quot;
+<span class="lineNum">     117 </span>            : &quot;    \&quot;unfinished_cksum\&quot;: handle_unfinished_cksum,\n&quot;
+<span class="lineNum">     118 </span>            : &quot;    \&quot;emptydir\&quot;: handle_empty_dir,\n&quot;
+<span class="lineNum">     119 </span>            : &quot;    \&quot;emptyfile\&quot;: handle_empy_file,\n&quot;
+<span class="lineNum">     120 </span>            : &quot;    \&quot;nonstripped\&quot;: handle_nonstripped,\n&quot;
+<span class="lineNum">     121 </span>            : &quot;    \&quot;badlink\&quot;: handle_badlink,\n&quot;
+<span class="lineNum">     122 </span>            : &quot;    \&quot;baduid\&quot;: handle_baduid,\n&quot;
+<span class="lineNum">     123 </span>            : &quot;    \&quot;badgid\&quot;: handle_badgid,\n&quot;
+<span class="lineNum">     124 </span>            : &quot;    \&quot;badugid\&quot;: handle_badugid,\n&quot;
+<span class="lineNum">     125 </span>            : &quot;}\n&quot;
+<span class="lineNum">     126 </span>            : &quot;\n&quot;
+<span class="lineNum">     127 </span>            : &quot;MESSAGES = {\n&quot;
+<span class="lineNum">     128 </span>            : &quot;    \&quot;duplicate_dir\&quot;: \&quot;removing tree\&quot;,\n&quot;
+<span class="lineNum">     129 </span>            : &quot;    \&quot;duplicate_file\&quot;: \&quot;removing\&quot;,\n&quot;
+<span class="lineNum">     130 </span>            : &quot;    \&quot;unfinished_cksum\&quot;: \&quot;checking\&quot;,\n&quot;
+<span class="lineNum">     131 </span>            : &quot;    \&quot;emptydir\&quot;: \&quot;removing\&quot;,\n&quot;
+<span class="lineNum">     132 </span>            : &quot;    \&quot;emptyfile\&quot;: \&quot;removing\&quot;,\n&quot;
+<span class="lineNum">     133 </span>            : &quot;    \&quot;nonstripped\&quot;: \&quot;stripping\&quot;,\n&quot;
+<span class="lineNum">     134 </span>            : &quot;    \&quot;badlink\&quot;: \&quot;removing\&quot;,\n&quot;
+<span class="lineNum">     135 </span>            : &quot;    \&quot;baduid\&quot;: \&quot;changing uid\&quot;,\n&quot;
+<span class="lineNum">     136 </span>            : &quot;    \&quot;badgid\&quot;: \&quot;changing gid\&quot;,\n&quot;
+<span class="lineNum">     137 </span>            : &quot;    \&quot;badugid\&quot;: \&quot;changing uid &amp; gid\&quot;,\n&quot;
+<span class="lineNum">     138 </span>            : &quot;}\n&quot;
+<span class="lineNum">     139 </span>            : &quot;\n&quot;
+<span class="lineNum">     140 </span>            : &quot;USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()\n&quot;
+<span class="lineNum">     141 </span>            : &quot;COLORS = {\n&quot;
+<span class="lineNum">     142 </span>            : &quot;    'red':    \&quot;\x1b[31;01m\&quot; if USE_COLOR else \&quot;\&quot;,\n&quot;
+<span class="lineNum">     143 </span>            : &quot;    'yellow': \&quot;\x1b[33;01m\&quot; if USE_COLOR else \&quot;\&quot;,\n&quot;
+<span class="lineNum">     144 </span>            : &quot;    'reset':  \&quot;\x1b[0m\&quot; if USE_COLOR else \&quot;\&quot;,\n&quot;
+<span class="lineNum">     145 </span>            : &quot;    'green':  \&quot;\x1b[32;01m\&quot; if USE_COLOR else \&quot;\&quot;,\n&quot;
+<span class="lineNum">     146 </span>            : &quot;    'blue':   \&quot;\x1b[34;01m\&quot; if USE_COLOR else \&quot;\&quot;\n&quot;
+<span class="lineNum">     147 </span>            : &quot;}\n&quot;
+<span class="lineNum">     148 </span>            : &quot;\n&quot;
+<span class="lineNum">     149 </span>            : &quot;\n&quot;
+<span class="lineNum">     150 </span>            : &quot;def exec_operation(item, original=None):\n&quot;
+<span class="lineNum">     151 </span>            : &quot;    try:\n&quot;
+<span class="lineNum">     152 </span>            : &quot;        OPERATIONS[item['type']](item['path'], original=original, item=item)\n&quot;
+<span class="lineNum">     153 </span>            : &quot;    except OSError as err:\n&quot;
+<span class="lineNum">     154 </span>            : &quot;        print(\n&quot;
+<span class="lineNum">     155 </span>            : &quot;            '{c[red]}#{c[reset]} Error on `{item[path]}`:\\n{c[red]}#{c[reset]}    {err}'.format(\n&quot;
+<span class="lineNum">     156 </span>            : &quot;                item=item, err=err, c=COLORS\n&quot;
+<span class="lineNum">     157 </span>            : &quot;            ),\n&quot;
+<span class="lineNum">     158 </span>            : &quot;            file=sys.stderr\n&quot;
+<span class="lineNum">     159 </span>            : &quot;        )\n&quot;
+<span class="lineNum">     160 </span>            : &quot;\n&quot;
+<span class="lineNum">     161 </span>            : &quot;\n&quot;
+<span class="lineNum">     162 </span>            : &quot;def main(args, header, data, footer):\n&quot;
+<span class="lineNum">     163 </span>            : &quot;    seen_cksums = set()\n&quot;
+<span class="lineNum">     164 </span>            : &quot;    last_original_item = None\n&quot;
+<span class="lineNum">     165 </span>            : &quot;\n&quot;
+<span class="lineNum">     166 </span>            : &quot;    for item in data:\n&quot;
+<span class="lineNum">     167 </span>            : &quot;        if item['type'].startswith('duplicate_') and item['is_original']:\n&quot;
+<span class="lineNum">     168 </span>            : &quot;            print(\n&quot;
+<span class="lineNum">     169 </span>            : &quot;                \&quot;\\n{c[green]}#{c[reset]} Deleting twins of {item[path]} \&quot;.format(\n&quot;
+<span class="lineNum">     170 </span>            : &quot;                    item=item, c=COLORS\n&quot;
+<span class="lineNum">     171 </span>            : &quot;                )\n&quot;
+<span class="lineNum">     172 </span>            : &quot;            )\n&quot;
+<span class="lineNum">     173 </span>            : &quot;            last_original_item = item\n&quot;
+<span class="lineNum">     174 </span>            : &quot;\n&quot;
+<span class="lineNum">     175 </span>            : &quot;            # Do not handle originals.\n&quot;
+<span class="lineNum">     176 </span>            : &quot;            continue\n&quot;
+<span class="lineNum">     177 </span>            : &quot;\n&quot;
+<span class="lineNum">     178 </span>            : &quot;        if not args.dry_run:\n&quot;
+<span class="lineNum">     179 </span>            : &quot;            exec_operation(item, original=last_original_item)\n&quot;
+<span class="lineNum">     180 </span>            : &quot;\n&quot;
+<span class="lineNum">     181 </span>            : &quot;        print('{c[blue]}#{c[reset]} Handling ({t} -&gt; {v}): {p}'.format(\n&quot;
+<span class="lineNum">     182 </span>            : &quot;            c=COLORS, t=item['type'], v=MESSAGES[item['type']], p=item['path'])\n&quot;
+<span class="lineNum">     183 </span>            : &quot;        )\n&quot;
+<span class="lineNum">     184 </span>            : &quot;\n&quot;
+<span class="lineNum">     185 </span>            : &quot;\n&quot;
+<span class="lineNum">     186 </span>            : &quot;if __name__ == '__main__':\n&quot;
+<span class="lineNum">     187 </span>            : &quot;    parser = argparse.ArgumentParser(\n&quot;
+<span class="lineNum">     188 </span>            : &quot;        description='Handle the files stored in rmlints json output'\n&quot;
+<span class="lineNum">     189 </span>            : &quot;    )\n&quot;
+<span class="lineNum">     190 </span>            : &quot;\n&quot;
+<span class="lineNum">     191 </span>            : &quot;    parser.add_argument(\n&quot;
+<span class="lineNum">     192 </span>            : &quot;        'json_docs', metavar='json_doc', type=open, nargs='*',\n&quot;
+<span class="lineNum">     193 </span>            : &quot;        help='A json output of rmlint to handle (can be given many times)'\n&quot;
+<span class="lineNum">     194 </span>            : &quot;    )\n&quot;
+<span class="lineNum">     195 </span>            : &quot;    parser.add_argument(\n&quot;
+<span class="lineNum">     196 </span>            : &quot;        '-n', '--dry-run', action='store_true',\n&quot;
+<span class="lineNum">     197 </span>            : &quot;        help='Only print what would be done.'\n&quot;
+<span class="lineNum">     198 </span>            : &quot;    )\n&quot;
+<span class="lineNum">     199 </span>            : &quot;    parser.add_argument(\n&quot;
+<span class="lineNum">     200 </span>            : &quot;        '-a', '--no-ask', action='store_true', default=False,\n&quot;
+<span class="lineNum">     201 </span>            : &quot;        help='ask for confirmation before running (does nothing for -n)'\n&quot;
+<span class="lineNum">     202 </span>            : &quot;    )\n&quot;
+<span class="lineNum">     203 </span>            : &quot;\n&quot;
+<span class="lineNum">     204 </span>            : &quot;    try:\n&quot;
+<span class="lineNum">     205 </span>            : &quot;        args = parser.parse_args()\n&quot;
+<span class="lineNum">     206 </span>            : &quot;    except FileNotFoundError as err:\n&quot;
+<span class="lineNum">     207 </span>            : &quot;        print(err)\n&quot;
+<span class="lineNum">     208 </span>            : &quot;        sys.exit(-1)\n&quot;
+<span class="lineNum">     209 </span>            : &quot;\n&quot;
+<span class="lineNum">     210 </span>            : &quot;    if not args.json_docs:\n&quot;
+<span class="lineNum">     211 </span>            : &quot;        # None given on the commandline\n&quot;
+<span class="lineNum">     212 </span>            : &quot;        try:\n&quot;
+<span class="lineNum">     213 </span>            : &quot;            args.json_docs.append(open('.rmlint.json', 'r'))\n&quot;
+<span class="lineNum">     214 </span>            : &quot;        except FileNotFoundError as err:\n&quot;
+<span class="lineNum">     215 </span>            : &quot;            print('Cannot load default json document: ', str(err), file=sys.stderr)\n&quot;
+<span class="lineNum">     216 </span>            : &quot;            sys.exit(-2)\n&quot;
+<span class="lineNum">     217 </span>            : &quot;\n&quot;
+<span class="lineNum">     218 </span>            : &quot;    json_docus = [json.load(doc) for doc in args.json_docs]\n&quot;
+<span class="lineNum">     219 </span>            : &quot;    json_elems = [item for sublist in json_docus for item in sublist]\n&quot;
+<span class="lineNum">     220 </span>            : &quot;\n&quot;
+<span class="lineNum">     221 </span>            : &quot;    try:\n&quot;
+<span class="lineNum">     222 </span>            : &quot;        if not args.no_ask and not args.dry_run:\n&quot;
+<span class="lineNum">     223 </span>            : &quot;            print('\\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)\n&quot;
+<span class="lineNum">     224 </span>            : &quot;            sys.stdin.read(1)\n&quot;
+<span class="lineNum">     225 </span>            : &quot;\n&quot;
+<span class="lineNum">     226 </span>            : &quot;        for json_doc in json_docus:\n&quot;
+<span class="lineNum">     227 </span>            : &quot;            head, *data, footer = json_doc\n&quot;
+<span class="lineNum">     228 </span>            : &quot;            main(args, head, data, footer)\n&quot;
+<span class="lineNum">     229 </span>            : &quot;\n&quot;
+<span class="lineNum">     230 </span>            : &quot;        if args.dry_run:\n&quot;
+<span class="lineNum">     231 </span>            : &quot;            print(\n&quot;
+<span class="lineNum">     232 </span>            : &quot;                '\\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(\n&quot;
+<span class="lineNum">     233 </span>            : &quot;                    c=COLORS\n&quot;
+<span class="lineNum">     234 </span>            : &quot;                )\n&quot;
+<span class="lineNum">     235 </span>            : &quot;            )\n&quot;
+<span class="lineNum">     236 </span>            : &quot;    except KeyboardInterrupt:\n&quot;
+<span class="lineNum">     237 </span>            : &quot;        print('canceled.')&quot;;
+<span class="lineNum">     238 </span>            : 
+<span class="lineNum">     239 </span>            : typedef struct RmFmtHandlerPy {
+<span class="lineNum">     240 </span>            :     /* must be first */
+<span class="lineNum">     241 </span>            :     RmFmtHandler parent;
+<span class="lineNum">     242 </span>            : 
+<span class="lineNum">     243 </span>            :     /* Filehandle to pass to the JSON Formatter. */
+<span class="lineNum">     244 </span>            :     FILE *json_out;
+<span class="lineNum">     245 </span>            : } RmFmtHandlerPy;
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span>            : /////////////////////////
+<span class="lineNum">     248 </span>            : //  ACTUAL CALLBACKS   //
+<a name="249"><span class="lineNum">     249 </span>            : /////////////////////////</a>
+<span class="lineNum">     250 </span>            : 
+<span class="lineNum">     251 </span><span class="lineCov">         81 : static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {</span>
+<span class="lineNum">     252 </span><span class="lineCov">         81 :     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;</span>
+<span class="lineNum">     253 </span>            : 
+<span class="lineNum">     254 </span><span class="lineCov">         81 :     fprintf(out, &quot;%s&quot;, PY_SOURCE);</span>
+<span class="lineNum">     255 </span><span class="lineCov">         81 :     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {</span>
+<span class="lineNum">     256 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;Could not chmod +x python-script&quot;);</span>
+<span class="lineNum">     257 </span>            :     }
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span><span class="lineCov">         81 :     self-&gt;json_out = fopen(&quot;.rmlint.json&quot;, &quot;w&quot;);</span>
+<span class="lineNum">     260 </span><span class="lineCov">         81 :     if(self-&gt;json_out == NULL)  {</span>
+<span class="lineNum">     261 </span><span class="lineCov">         81 :         return;</span>
+<span class="lineNum">     262 </span>            :     }
+<span class="lineNum">     263 </span>            : 
+<span class="lineNum">     264 </span>            :     /* Delegate */
+<span class="lineNum">     265 </span>            :     extern RmFmtHandler *JSON_HANDLER;
+<span class="lineNum">     266 </span><span class="lineCov">         81 :     JSON_HANDLER-&gt;head(session, (RmFmtHandler *)self, self-&gt;json_out);</span>
+<a name="267"><span class="lineNum">     267 </span>            : }</a>
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineCov">         81 : static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, _U FILE *out) {</span>
+<span class="lineNum">     270 </span><span class="lineCov">         81 :     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;</span>
+<span class="lineNum">     271 </span><span class="lineCov">         81 :     if(self-&gt;json_out == NULL) {</span>
+<span class="lineNum">     272 </span><span class="lineCov">         81 :         return;</span>
+<span class="lineNum">     273 </span>            :     }
+<span class="lineNum">     274 </span>            : 
+<span class="lineNum">     275 </span>            :     /* Delegate */
+<span class="lineNum">     276 </span>            :     extern RmFmtHandler *JSON_HANDLER;
+<span class="lineNum">     277 </span><span class="lineCov">         81 :     JSON_HANDLER-&gt;foot(session, (RmFmtHandler *)self, self-&gt;json_out);</span>
+<span class="lineNum">     278 </span>            : 
+<span class="lineNum">     279 </span><span class="lineCov">         81 :     fclose(self-&gt;json_out);</span>
+<a name="280"><span class="lineNum">     280 </span>            : }</a>
+<span class="lineNum">     281 </span>            : 
+<span class="lineNum">     282 </span><span class="lineCov">        162 : static void rm_fmt_elem(</span>
+<span class="lineNum">     283 </span>            :     RmSession *session,
+<span class="lineNum">     284 </span>            :     RmFmtHandler *parent,
+<span class="lineNum">     285 </span>            :     _U FILE *out, RmFile *file
+<span class="lineNum">     286 </span>            : ) {
+<span class="lineNum">     287 </span><span class="lineCov">        162 :     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;</span>
+<span class="lineNum">     288 </span><span class="lineCov">        162 :     if(self-&gt;json_out == NULL) {</span>
+<span class="lineNum">     289 </span><span class="lineCov">        162 :         return;</span>
+<span class="lineNum">     290 </span>            :     }
+<span class="lineNum">     291 </span>            : 
+<span class="lineNum">     292 </span>            :     /* Delegate */
+<span class="lineNum">     293 </span>            :     extern RmFmtHandler *JSON_HANDLER;
+<span class="lineNum">     294 </span><span class="lineCov">        162 :     JSON_HANDLER-&gt;elem(session, (RmFmtHandler *)self, self-&gt;json_out, file);</span>
+<span class="lineNum">     295 </span>            : }
+<span class="lineNum">     296 </span>            : 
+<span class="lineNum">     297 </span>            : static RmFmtHandlerPy PY_HANDLER_IMPL = {
+<span class="lineNum">     298 </span>            :     /* Initialize parent */
+<span class="lineNum">     299 </span>            :     .parent = {
+<span class="lineNum">     300 </span>            :         .size = sizeof(PY_HANDLER_IMPL),
+<span class="lineNum">     301 </span>            :         .name = &quot;py&quot;,
+<span class="lineNum">     302 </span>            :         .head = rm_fmt_head,
+<span class="lineNum">     303 </span>            :         .elem = rm_fmt_elem,
+<span class="lineNum">     304 </span>            :         .prog = NULL,
+<span class="lineNum">     305 </span>            :         .foot = rm_fmt_foot,
+<span class="lineNum">     306 </span>            :         .valid_keys = {NULL},
+<span class="lineNum">     307 </span>            :     }
+<span class="lineNum">     308 </span>            : };
+<span class="lineNum">     309 </span>            : 
+<span class="lineNum">     310 </span>            : RmFmtHandler *PY_HANDLER = (RmFmtHandler *) &amp;PY_HANDLER_IMPL;
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

@@ -1,0 +1,623 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/formats/sh.c</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - sh.c<span style="font-size: 80%;"> (source / <a href="sh.c.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">100</td>
+            <td class="headerCovTableEntry">147</td>
+            <td class="headerCovTableEntryLo">68.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-05-07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntryLo">72.7 %</td>
+          </tr>
+          <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2014 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2014 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &quot;../formats.h&quot;
+<span class="lineNum">      27 </span>            : #include &quot;../preprocess.h&quot;
+<span class="lineNum">      28 </span>            : 
+<span class="lineNum">      29 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      30 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      31 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            : typedef struct RmFmtHandlerShScript {
+<span class="lineNum">      35 </span>            :     RmFmtHandler parent;
+<span class="lineNum">      36 </span>            :     RmFile *last_original;
+<span class="lineNum">      37 </span>            :     RmSession *session;
+<span class="lineNum">      38 </span>            : 
+<span class="lineNum">      39 </span>            :     bool allow_user_cmd : 1;
+<span class="lineNum">      40 </span>            :     bool allow_reflink : 1;
+<span class="lineNum">      41 </span>            :     bool allow_symlink : 1;
+<span class="lineNum">      42 </span>            :     bool allow_hardlink : 1;
+<span class="lineNum">      43 </span>            :     bool allow_remove : 1;
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span>            :     const char *user_cmd;
+<span class="lineNum">      46 </span>            : 
+<span class="lineNum">      47 </span>            :     GByteArray *order;
+<span class="lineNum">      48 </span>            : } RmFmtHandlerShScript;
+<span class="lineNum">      49 </span>            : 
+<span class="lineNum">      50 </span>            : static const char *SH_SCRIPT_TEMPLATE_HEAD = &quot;#!/bin/sh\n&quot;
+<span class="lineNum">      51 </span>            : &quot;# This file was autowritten by rmlint\n&quot;
+<span class="lineNum">      52 </span>            : &quot;# rmlint was executed from: %s\n&quot;
+<span class="lineNum">      53 </span>            : &quot;# Your command line was: %s\n&quot;
+<span class="lineNum">      54 </span>            : &quot;\n&quot;
+<span class="lineNum">      55 </span>            : &quot;USER='%s'\n&quot;
+<span class="lineNum">      56 </span>            : &quot;GROUP='%s'\n&quot;
+<span class="lineNum">      57 </span>            : &quot;\n&quot;
+<span class="lineNum">      58 </span>            : &quot;# Set to true on -n\n&quot;
+<span class="lineNum">      59 </span>            : &quot;DO_DRY_RUN=\n&quot;
+<span class="lineNum">      60 </span>            : &quot;\n&quot;
+<span class="lineNum">      61 </span>            : &quot;##################################\n&quot;
+<span class="lineNum">      62 </span>            : &quot;# GENERAL LINT HANDLER FUNCTIONS #\n&quot;
+<span class="lineNum">      63 </span>            : &quot;##################################\n&quot;
+<span class="lineNum">      64 </span>            : &quot;\n&quot;
+<span class="lineNum">      65 </span>            : &quot;handle_emptyfile() {\n&quot;
+<span class="lineNum">      66 </span>            : &quot;    echo 'Deleting empty file:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      67 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">      68 </span>            : &quot;        rm -f \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      69 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">      70 </span>            : &quot;}\n&quot;
+<span class="lineNum">      71 </span>            : &quot;\n&quot;
+<span class="lineNum">      72 </span>            : &quot;handle_emptydir() {\n&quot;
+<span class="lineNum">      73 </span>            : &quot;    echo 'Deleting empty directory:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      74 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">      75 </span>            : &quot;        rmdir \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      76 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">      77 </span>            : &quot;}\n&quot;
+<span class="lineNum">      78 </span>            : &quot;\n&quot;
+<span class="lineNum">      79 </span>            : &quot;handle_bad_symlink() {\n&quot;
+<span class="lineNum">      80 </span>            : &quot;    echo 'Deleting symlink pointing nowhere:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      81 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">      82 </span>            : &quot;        rm -f \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      83 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">      84 </span>            : &quot;}\n&quot;
+<span class="lineNum">      85 </span>            : &quot;\n&quot;
+<span class="lineNum">      86 </span>            : &quot;handle_unstripped_binary() {\n&quot;
+<span class="lineNum">      87 </span>            : &quot;    echo 'Stripping debug symbols of:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      88 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">      89 </span>            : &quot;        strip -s \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      90 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">      91 </span>            : &quot;}\n&quot;
+<span class="lineNum">      92 </span>            : &quot;\n&quot;
+<span class="lineNum">      93 </span>            : &quot;handle_bad_user_id() {\n&quot;
+<span class="lineNum">      94 </span>            : &quot;    echo 'chown' \&quot;$USER\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      95 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">      96 </span>            : &quot;        chmod \&quot;$USER\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">      97 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">      98 </span>            : &quot;}\n&quot;
+<span class="lineNum">      99 </span>            : &quot;\n&quot;
+<span class="lineNum">     100 </span>            : &quot;handle_bad_group_id() {\n&quot;
+<span class="lineNum">     101 </span>            : &quot;    echo 'chgrp' \&quot;$GROUP\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     102 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">     103 </span>            : &quot;        chgrp \&quot;$GROUP\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     104 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">     105 </span>            : &quot;}\n&quot;
+<span class="lineNum">     106 </span>            : &quot;\n&quot;
+<span class="lineNum">     107 </span>            : &quot;handle_bad_user_and_group_id() {\n&quot;
+<span class="lineNum">     108 </span>            : &quot;    echo 'chmod' \&quot;$USER:$GROUP\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     109 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">     110 </span>            : &quot;        chmod \&quot;$USER:$GROUP\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     111 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">     112 </span>            : &quot;}\n&quot;
+<span class="lineNum">     113 </span>            : &quot;\n&quot;
+<span class="lineNum">     114 </span>            : &quot;###############################\n&quot;
+<span class="lineNum">     115 </span>            : &quot;# DUPLICATE HANDLER FUNCTIONS #\n&quot;
+<span class="lineNum">     116 </span>            : &quot;###############################\n&quot;
+<span class="lineNum">     117 </span>            : &quot;\n&quot;
+<span class="lineNum">     118 </span>            : &quot;cp_hardlink() {\n&quot;
+<span class="lineNum">     119 </span>            : &quot;    echo 'Hardlinking to original:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     120 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">     121 </span>            : &quot;        cp --remove-destination --archive --link \&quot;$2\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     122 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">     123 </span>            : &quot;}\n&quot;
+<span class="lineNum">     124 </span>            : &quot;\n&quot;
+<span class="lineNum">     125 </span>            : &quot;cp_symlink() {\n&quot;
+<span class="lineNum">     126 </span>            : &quot;    echo 'Symlinking to original:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     127 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">     128 </span>            : &quot;        touch -mr \&quot;$1\&quot; \&quot;$0\&quot;\n&quot;
+<span class="lineNum">     129 </span>            : &quot;        cp --remove-destination --archive --symbolic-link \&quot;$2\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     130 </span>            : &quot;        touch -mr \&quot;$0\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     131 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">     132 </span>            : &quot;}\n&quot;
+<span class="lineNum">     133 </span>            : &quot;\n&quot;
+<span class="lineNum">     134 </span>            : &quot;cp_reflink() {\n&quot;
+<span class="lineNum">     135 </span>            : &quot;    # reflink $1 to $2's data, preserving $1's  mtime\n&quot;
+<span class="lineNum">     136 </span>            : &quot;    echo 'Reflinking to original:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     137 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">     138 </span>            : &quot;        touch -mr \&quot;$1\&quot; \&quot;$0\&quot;\n&quot;
+<span class="lineNum">     139 </span>            : &quot;        cp --reflink=always \&quot;$2\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     140 </span>            : &quot;        touch -mr \&quot;$0\&quot; \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     141 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">     142 </span>            : &quot;}\n&quot;
+<span class="lineNum">     143 </span>            : &quot;\n&quot;
+<span class="lineNum">     144 </span>            : &quot;skip_hardlink() {\n&quot;
+<span class="lineNum">     145 </span>            : &quot;    echo 'Leaving as-is (already hardlinked to original):' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     146 </span>            : &quot;}\n&quot;
+<span class="lineNum">     147 </span>            : &quot;\n&quot;
+<span class="lineNum">     148 </span>            : &quot;skip_reflink() {\n&quot;
+<span class="lineNum">     149 </span>            : &quot;    echo 'Leaving as-is (already reflinked to original):' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     150 </span>            : &quot;}\n&quot;
+<span class="lineNum">     151 </span>            : &quot;\n&quot;
+<span class="lineNum">     152 </span>            : &quot;user_command() {\n&quot;
+<span class="lineNum">     153 </span>            : &quot;    # You can define this function to do what you want:\n&quot;
+<span class="lineNum">     154 </span>            : &quot;    %s\n&quot;
+<span class="lineNum">     155 </span>            : &quot;}\n&quot;
+<span class="lineNum">     156 </span>            : &quot;\n&quot;
+<span class="lineNum">     157 </span>            : &quot;remove_cmd() {\n&quot;
+<span class="lineNum">     158 </span>            : &quot;    echo 'Deleting:' \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     159 </span>            : &quot;    if [ -z \&quot;$DO_DRY_RUN\&quot; ]; then\n&quot;
+<span class="lineNum">     160 </span>            : &quot;        rm -rf \&quot;$1\&quot;\n&quot;
+<span class="lineNum">     161 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">     162 </span>            : &quot;}\n&quot;
+<span class="lineNum">     163 </span>            : &quot;\n&quot;
+<span class="lineNum">     164 </span>            : &quot;##################\n&quot;
+<span class="lineNum">     165 </span>            : &quot;# OPTION PARSING #\n&quot;
+<span class="lineNum">     166 </span>            : &quot;##################\n&quot;
+<span class="lineNum">     167 </span>            : &quot;\n&quot;
+<span class="lineNum">     168 </span>            : &quot;ask() {\n&quot;
+<span class="lineNum">     169 </span>            : &quot;    cat &lt;&lt; EOF\n&quot;
+<span class="lineNum">     170 </span>            : &quot;\n&quot;
+<span class="lineNum">     171 </span>            : &quot;This script will delete certain files rmlint found.\n&quot;
+<span class="lineNum">     172 </span>            : &quot;It is highly advisable to view the script first!\n&quot;
+<span class="lineNum">     173 </span>            : &quot;\n&quot;
+<span class="lineNum">     174 </span>            : &quot;Rmlint was executed in the following way:\n&quot;
+<span class="lineNum">     175 </span>            : &quot;\n&quot;
+<span class="lineNum">     176 </span>            : &quot;   $ %s\n&quot;
+<span class="lineNum">     177 </span>            : &quot;\n&quot;
+<span class="lineNum">     178 </span>            : &quot;Execute this script with -d to disable this informational message.\n&quot;
+<span class="lineNum">     179 </span>            : &quot;Type any string to continue; CTRL-C, Enter or CTRL-D to abort immediately\n&quot;
+<span class="lineNum">     180 </span>            : &quot;EOF\n&quot;
+<span class="lineNum">     181 </span>            : &quot;    read eof_check\n&quot;
+<span class="lineNum">     182 </span>            : &quot;    if [ -z \&quot;$eof_check\&quot; ]\n&quot;
+<span class="lineNum">     183 </span>            : &quot;    then\n&quot;
+<span class="lineNum">     184 </span>            : &quot;        # Count Ctrl-D and Enter as aborted too.\n&quot;
+<span class="lineNum">     185 </span>            : &quot;        echo \&quot;Aborted on behalf of the user.\&quot;\n&quot;
+<span class="lineNum">     186 </span>            : &quot;        exit 1;\n&quot;
+<span class="lineNum">     187 </span>            : &quot;    fi\n&quot;
+<span class="lineNum">     188 </span>            : &quot;}\n&quot;
+<span class="lineNum">     189 </span>            : &quot;\n&quot;
+<span class="lineNum">     190 </span>            : &quot;usage() {\n&quot;
+<span class="lineNum">     191 </span>            : &quot;    cat &lt;&lt; EOF\n&quot;
+<span class="lineNum">     192 </span>            : &quot;usage: $0 OPTIONS\n&quot;
+<span class="lineNum">     193 </span>            : &quot;\n&quot;
+<span class="lineNum">     194 </span>            : &quot;OPTIONS:\n&quot;
+<span class="lineNum">     195 </span>            : &quot;\n&quot;
+<span class="lineNum">     196 </span>            : &quot;  -h   Show this message.\n&quot;
+<span class="lineNum">     197 </span>            : &quot;  -d   Do not ask before running.\n&quot;
+<span class="lineNum">     198 </span>            : &quot;  -x   Keep rmlint.sh; do not autodelete it.\n&quot;
+<span class="lineNum">     199 </span>            : &quot;  -n   Do not perform any modifications, just print what would be done.\n&quot;
+<span class="lineNum">     200 </span>            : &quot;EOF\n&quot;
+<span class="lineNum">     201 </span>            : &quot;}\n&quot;
+<span class="lineNum">     202 </span>            : &quot;\n&quot;
+<span class="lineNum">     203 </span>            : &quot;DO_REMOVE=\n&quot;
+<span class="lineNum">     204 </span>            : &quot;DO_ASK=\n&quot;
+<span class="lineNum">     205 </span>            : &quot;\n&quot;
+<span class="lineNum">     206 </span>            : &quot;while getopts \&quot;dhxn\&quot; OPTION\n&quot;
+<span class="lineNum">     207 </span>            : &quot;do\n&quot;
+<span class="lineNum">     208 </span>            : &quot;  case $OPTION in\n&quot;
+<span class="lineNum">     209 </span>            : &quot;     h)\n&quot;
+<span class="lineNum">     210 </span>            : &quot;       usage\n&quot;
+<span class="lineNum">     211 </span>            : &quot;       exit 1\n&quot;
+<span class="lineNum">     212 </span>            : &quot;       ;;\n&quot;
+<span class="lineNum">     213 </span>            : &quot;     d)\n&quot;
+<span class="lineNum">     214 </span>            : &quot;       DO_ASK=false\n&quot;
+<span class="lineNum">     215 </span>            : &quot;       ;;\n&quot;
+<span class="lineNum">     216 </span>            : &quot;     x)\n&quot;
+<span class="lineNum">     217 </span>            : &quot;       DO_REMOVE=false\n&quot;
+<span class="lineNum">     218 </span>            : &quot;       ;;\n&quot;
+<span class="lineNum">     219 </span>            : &quot;     n)\n&quot;
+<span class="lineNum">     220 </span>            : &quot;       DO_DRY_RUN=true\n&quot;
+<span class="lineNum">     221 </span>            : &quot;  esac\n&quot;
+<span class="lineNum">     222 </span>            : &quot;done\n&quot;
+<span class="lineNum">     223 </span>            : &quot;\n&quot;
+<span class="lineNum">     224 </span>            : &quot;if [ -z $DO_ASK ]\n&quot;
+<span class="lineNum">     225 </span>            : &quot;then\n&quot;
+<span class="lineNum">     226 </span>            : &quot;  usage\n&quot;
+<span class="lineNum">     227 </span>            : &quot;  ask\n&quot;
+<span class="lineNum">     228 </span>            : &quot;fi\n&quot;
+<span class="lineNum">     229 </span>            : &quot;\n&quot;
+<span class="lineNum">     230 </span>            : &quot;######### START OF AUTOGENERATED OUTPUT #########\n&quot;
+<span class="lineNum">     231 </span>            : &quot;\n&quot;
+<span class="lineNum">     232 </span>            : &quot;&quot;;
+<span class="lineNum">     233 </span>            : static const char *SH_SCRIPT_TEMPLATE_FOOT =
+<span class="lineNum">     234 </span>            :     &quot;                                               \n&quot;
+<span class="lineNum">     235 </span>            :     &quot;######### END OF AUTOGENERATED OUTPUT #########\n&quot;
+<span class="lineNum">     236 </span>            :     &quot;                                               \n&quot;
+<span class="lineNum">     237 </span>            :     &quot;if [ -z $DO_REMOVE ] &amp;&amp; [ -z $DO_DRY_RUN ]     \n&quot;
+<span class="lineNum">     238 </span>            :     &quot;then                                           \n&quot;
+<span class="lineNum">     239 </span>            :     &quot;  echo \&quot;Deleting script \&quot; \&quot;$0\&quot;             \n&quot; 
+<span class="lineNum">     240 </span>            :     &quot;  %s '%s';                                     \n&quot;
+<span class="lineNum">     241 </span>            :     &quot;fi                                             \n&quot;
+<span class="lineNum">     242 </span>            :     ;
+<span class="lineNum">     243 </span>            : 
+<span class="lineNum">     244 </span>            : typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path);
+<a name="245"><span class="lineNum">     245 </span>            : </a>
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span><span class="lineCov">        594 : static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {</span>
+<span class="lineNum">     248 </span><span class="lineCov">        594 :     if(self-&gt;user_cmd == NULL || !self-&gt;allow_user_cmd) {</span>
+<span class="lineNum">     249 </span><span class="lineCov">        594 :         return false;</span>
+<span class="lineNum">     250 </span>            :     }
+<span class="lineNum">     251 </span>            : 
+<span class="lineNum">     252 </span><span class="lineNoCov">          0 :     *out = g_strdup_printf(&quot;user_command '%s' '%s'&quot;, path, orig_path);</span>
+<span class="lineNum">     253 </span><span class="lineNoCov">          0 :     return true;</span>
+<a name="254"><span class="lineNum">     254 </span>            : }</a>
+<span class="lineNum">     255 </span>            : 
+<span class="lineNum">     256 </span><span class="lineNoCov">          0 : static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {</span>
+<span class="lineNum">     257 </span><span class="lineNoCov">          0 :     if(!self-&gt;allow_reflink || !rm_mounts_can_reflink(self-&gt;session-&gt;mounts, self-&gt;last_original-&gt;dev, file-&gt;dev)) {</span>
+<span class="lineNum">     258 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     259 </span>            :     }
+<span class="lineNum">     260 </span>            : 
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :     if ( rm_offsets_match(file-&gt;disk_offsets, self-&gt;last_original-&gt;disk_offsets) ) {</span>
+<span class="lineNum">     262 </span><span class="lineNoCov">          0 :         *out = g_strdup_printf(&quot;skip_reflink '%s' '%s'&quot;, path, orig_path);</span>
+<span class="lineNum">     263 </span>            :     } else {
+<span class="lineNum">     264 </span><span class="lineNoCov">          0 :         *out = g_strdup_printf(&quot;cp_reflink '%s' '%s'&quot;, path, orig_path);</span>
+<span class="lineNum">     265 </span>            :     }
+<span class="lineNum">     266 </span><span class="lineNoCov">          0 :     return true;</span>
+<a name="267"><span class="lineNum">     267 </span>            : }</a>
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineNoCov">          0 : static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {</span>
+<span class="lineNum">     270 </span><span class="lineNoCov">          0 :     if(!self-&gt;allow_symlink || self-&gt;last_original-&gt;dev != file-&gt;dev) {</span>
+<span class="lineNum">     271 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     272 </span>            :     }
+<span class="lineNum">     273 </span>            : 
+<span class="lineNum">     274 </span><span class="lineNoCov">          0 :     *out = g_strdup_printf(&quot;cp_symlink '%s' '%s'&quot;, path, orig_path);</span>
+<span class="lineNum">     275 </span><span class="lineNoCov">          0 :     return true;</span>
+<a name="276"><span class="lineNum">     276 </span>            : }</a>
+<span class="lineNum">     277 </span>            : 
+<span class="lineNum">     278 </span><span class="lineNoCov">          0 : static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {</span>
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :     if(!self-&gt;allow_hardlink) {</span>
+<span class="lineNum">     280 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     281 </span>            :     }
+<span class="lineNum">     282 </span><span class="lineNoCov">          0 :     if (self-&gt;last_original &amp;&amp; file-&gt;hardlinks.hardlink_head == self-&gt;last_original) {</span>
+<span class="lineNum">     283 </span><span class="lineNoCov">          0 :         *out = g_strdup_printf(&quot;skip_hardlink '%s' '%s'&quot;, path, orig_path);</span>
+<span class="lineNum">     284 </span>            :     } else {
+<span class="lineNum">     285 </span><span class="lineNoCov">          0 :         *out = g_strdup_printf(&quot;cp_hardlink '%s' '%s'&quot;, path, orig_path);</span>
+<span class="lineNum">     286 </span>            :     }
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :     return true;</span>
+<a name="288"><span class="lineNum">     288 </span>            : }</a>
+<span class="lineNum">     289 </span>            : 
+<span class="lineNum">     290 </span><span class="lineCov">        594 : static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {</span>
+<span class="lineNum">     291 </span><span class="lineCov">        594 :     if(!self-&gt;allow_remove) {</span>
+<span class="lineNum">     292 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     293 </span>            :     }
+<span class="lineNum">     294 </span>            : 
+<span class="lineNum">     295 </span><span class="lineCov">        594 :     *out = g_strdup_printf(&quot;remove_cmd '%s' # == %s&quot;, path, orig_path);</span>
+<span class="lineNum">     296 </span><span class="lineCov">        594 :     return true;</span>
+<span class="lineNum">     297 </span>            : }
+<span class="lineNum">     298 </span>            : 
+<span class="lineNum">     299 </span>            : typedef enum RmShHandler {
+<span class="lineNum">     300 </span>            :     RM_SH_HANDLER_UNKNOWN = 0,
+<span class="lineNum">     301 </span>            :     RM_SH_HANDLER_USER_COMMAND,
+<span class="lineNum">     302 </span>            :     RM_SH_HANDLER_REFLINK,
+<span class="lineNum">     303 </span>            :     RM_SH_HANDLER_SYMLINK,
+<span class="lineNum">     304 </span>            :     RM_SH_HANDLER_HARDLINK,
+<span class="lineNum">     305 </span>            :     RM_SH_HANDLER_REMOVE,
+<span class="lineNum">     306 </span>            :     RM_SH_HANDLER_N
+<span class="lineNum">     307 </span>            : } RmShHandler;
+<span class="lineNum">     308 </span>            : 
+<span class="lineNum">     309 </span>            : static const char *ORDER_TO_STRING[] = {
+<span class="lineNum">     310 </span>            :     [RM_SH_HANDLER_UNKNOWN] = NULL,
+<span class="lineNum">     311 </span>            :     [RM_SH_HANDLER_USER_COMMAND] = &quot;cmd&quot;,
+<span class="lineNum">     312 </span>            :     [RM_SH_HANDLER_REFLINK] = &quot;reflink&quot;,
+<span class="lineNum">     313 </span>            :     [RM_SH_HANDLER_SYMLINK] = &quot;symlink&quot;,
+<span class="lineNum">     314 </span>            :     [RM_SH_HANDLER_HARDLINK] = &quot;hardlink&quot;,
+<span class="lineNum">     315 </span>            :     [RM_SH_HANDLER_REMOVE] = &quot;remove&quot;,
+<span class="lineNum">     316 </span>            :     [RM_SH_HANDLER_N] = NULL
+<span class="lineNum">     317 </span>            : };
+<span class="lineNum">     318 </span>            : 
+<span class="lineNum">     319 </span>            : static const RmShOrderEmitFunc ORDER_TO_FUNC[] = {
+<span class="lineNum">     320 </span>            :     [RM_SH_HANDLER_UNKNOWN] = NULL,
+<span class="lineNum">     321 </span>            :     [RM_SH_HANDLER_USER_COMMAND] = rm_sh_emit_handler_user,
+<span class="lineNum">     322 </span>            :     [RM_SH_HANDLER_REFLINK] = rm_sh_emit_handler_reflink,
+<span class="lineNum">     323 </span>            :     [RM_SH_HANDLER_SYMLINK] = rm_sh_emit_handler_symlink,
+<span class="lineNum">     324 </span>            :     [RM_SH_HANDLER_HARDLINK] = rm_sh_emit_handler_hardlink,
+<span class="lineNum">     325 </span>            :     [RM_SH_HANDLER_REMOVE] = rm_sh_emit_handler_remove
+<a name="326"><span class="lineNum">     326 </span>            : };</a>
+<span class="lineNum">     327 </span>            : 
+<span class="lineNum">     328 </span><span class="lineCov">        108 : static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler_cfg) {</span>
+<span class="lineNum">     329 </span><span class="lineCov">        108 :     self-&gt;order = g_byte_array_new();</span>
+<span class="lineNum">     330 </span>            : 
+<span class="lineNum">     331 </span><span class="lineCov">        108 :     char **order_vec = g_strsplit(handler_cfg, &quot;,&quot;, -1);</span>
+<span class="lineNum">     332 </span><span class="lineCov">        324 :     for(int i = 0; order_vec &amp;&amp; order_vec[i]; ++i) {</span>
+<span class="lineNum">     333 </span><span class="lineCov">        216 :         bool found = false;</span>
+<span class="lineNum">     334 </span><span class="lineCov">        864 :         for(RmShHandler n = 0; n &lt; RM_SH_HANDLER_N; ++n) {</span>
+<span class="lineNum">     335 </span><span class="lineCov">        864 :             if(ORDER_TO_STRING[n] == NULL) {</span>
+<span class="lineNum">     336 </span><span class="lineCov">        216 :                 continue;</span>
+<span class="lineNum">     337 </span>            :             }
+<span class="lineNum">     338 </span>            : 
+<span class="lineNum">     339 </span><span class="lineCov">        648 :             if(strcasecmp(order_vec[i], ORDER_TO_STRING[n]) == 0) {</span>
+<span class="lineNum">     340 </span><span class="lineCov">        216 :                 switch(n) {</span>
+<span class="lineNum">     341 </span>            :                 case RM_SH_HANDLER_USER_COMMAND:
+<span class="lineNum">     342 </span><span class="lineCov">        108 :                     self-&gt;allow_user_cmd = true;</span>
+<span class="lineNum">     343 </span><span class="lineCov">        108 :                     break;</span>
+<span class="lineNum">     344 </span>            :                 case RM_SH_HANDLER_REFLINK:
+<span class="lineNum">     345 </span><span class="lineNoCov">          0 :                     self-&gt;allow_reflink = true;</span>
+<span class="lineNum">     346 </span><span class="lineNoCov">          0 :                     break;</span>
+<span class="lineNum">     347 </span>            :                 case RM_SH_HANDLER_SYMLINK:
+<span class="lineNum">     348 </span><span class="lineNoCov">          0 :                     self-&gt;allow_symlink = true;</span>
+<span class="lineNum">     349 </span><span class="lineNoCov">          0 :                     break;</span>
+<span class="lineNum">     350 </span>            :                 case RM_SH_HANDLER_HARDLINK:
+<span class="lineNum">     351 </span><span class="lineNoCov">          0 :                     self-&gt;allow_hardlink = true;</span>
+<span class="lineNum">     352 </span><span class="lineNoCov">          0 :                     break;</span>
+<span class="lineNum">     353 </span>            :                 case RM_SH_HANDLER_REMOVE:
+<span class="lineNum">     354 </span><span class="lineCov">        108 :                     self-&gt;allow_remove = true;</span>
+<span class="lineNum">     355 </span><span class="lineCov">        108 :                     break;</span>
+<span class="lineNum">     356 </span>            :                 default:
+<span class="lineNum">     357 </span><span class="lineNoCov">          0 :                     g_assert_not_reached();</span>
+<span class="lineNum">     358 </span>            :                 }
+<span class="lineNum">     359 </span>            : 
+<span class="lineNum">     360 </span>            :                 /* we found the id */
+<span class="lineNum">     361 </span><span class="lineCov">        216 :                 g_byte_array_append(self-&gt;order, (guint8 *)&amp;n, 1);</span>
+<span class="lineNum">     362 </span><span class="lineCov">        216 :                 found = true;</span>
+<span class="lineNum">     363 </span><span class="lineCov">        216 :                 break;</span>
+<span class="lineNum">     364 </span>            :             }
+<span class="lineNum">     365 </span>            :         }
+<span class="lineNum">     366 </span>            : 
+<span class="lineNum">     367 </span><span class="lineCov">        216 :         if(!found) {</span>
+<span class="lineNum">     368 </span><span class="lineNoCov">          0 :             rm_log_error_line(_(&quot;%s is an invalid handler.&quot;), order_vec[i]);</span>
+<span class="lineNum">     369 </span>            :         }
+<span class="lineNum">     370 </span>            :     }
+<span class="lineNum">     371 </span>            : 
+<span class="lineNum">     372 </span><span class="lineCov">        108 :     g_strfreev(order_vec);</span>
+<a name="373"><span class="lineNum">     373 </span><span class="lineCov">        108 : }</span></a>
+<span class="lineNum">     374 </span>            : 
+<span class="lineNum">     375 </span><span class="lineCov">        108 : static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {</span>
+<span class="lineNum">     376 </span><span class="lineCov">        108 :     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;</span>
+<span class="lineNum">     377 </span><span class="lineCov">        108 :     char *script_header = NULL;</span>
+<span class="lineNum">     378 </span>            : 
+<span class="lineNum">     379 </span><span class="lineCov">        108 :     self-&gt;session = session;</span>
+<span class="lineNum">     380 </span><span class="lineCov">        108 :     self-&gt;user_cmd = rm_fmt_get_config_value(session-&gt;formats, &quot;sh&quot;, &quot;cmd&quot;);</span>
+<span class="lineNum">     381 </span>            : 
+<span class="lineNum">     382 </span><span class="lineCov">        108 :     const char *handler_cfg = rm_fmt_get_config_value(session-&gt;formats, &quot;sh&quot;, &quot;handler&quot;);</span>
+<span class="lineNum">     383 </span><span class="lineCov">        108 :     if(handler_cfg != NULL) {</span>
+<span class="lineNum">     384 </span>            :         /* user specified handlers */
+<span class="lineNum">     385 </span><span class="lineNoCov">          0 :         rm_sh_parse_handlers(self, handler_cfg);</span>
+<span class="lineNum">     386 </span><span class="lineCov">        108 :     } else if(rm_fmt_get_config_value(session-&gt;formats, &quot;sh&quot;, &quot;link&quot;) != NULL) {</span>
+<span class="lineNum">     387 </span>            :         /* Preset: try reflinks, then symlinks then hardlinks */
+<span class="lineNum">     388 </span><span class="lineNoCov">          0 :         rm_sh_parse_handlers(self, &quot;reflink,hardlink,symlink&quot;);</span>
+<span class="lineNum">     389 </span><span class="lineCov">        108 :     } else if(rm_fmt_get_config_value(session-&gt;formats, &quot;sh&quot;, &quot;hardlink&quot;) != NULL) {</span>
+<span class="lineNum">     390 </span>            :         /* Preset: try symlinks before using hardlinks */
+<span class="lineNum">     391 </span><span class="lineNoCov">          0 :         rm_sh_parse_handlers(self, &quot;hardlink,symlink&quot;);</span>
+<span class="lineNum">     392 </span><span class="lineCov">        108 :     } else if(rm_fmt_get_config_value(session-&gt;formats, &quot;sh&quot;, &quot;symlink&quot;) != NULL) {</span>
+<span class="lineNum">     393 </span>            :         /* Preset: only do hardlinks */
+<span class="lineNum">     394 </span><span class="lineNoCov">          0 :         rm_sh_parse_handlers(self, &quot;symlink&quot;);</span>
+<span class="lineNum">     395 </span>            :     } else {
+<span class="lineNum">     396 </span>            :         /* Default: remove the file */
+<span class="lineNum">     397 </span><span class="lineCov">        108 :         rm_sh_parse_handlers(self, &quot;cmd,remove&quot;);</span>
+<span class="lineNum">     398 </span>            :     }
+<span class="lineNum">     399 </span>            : 
+<span class="lineNum">     400 </span><span class="lineCov">        108 :     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {</span>
+<span class="lineNum">     401 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;Could not chmod +x sh script&quot;);</span>
+<span class="lineNum">     402 </span>            :     }
+<span class="lineNum">     403 </span>            : 
+<span class="lineNum">     404 </span>            :     /* Fill in all placeholders in the script template */
+<span class="lineNum">     405 </span><span class="lineCov">        648 :     fprintf(</span>
+<span class="lineNum">     406 </span>            :         out, SH_SCRIPT_TEMPLATE_HEAD,
+<span class="lineNum">     407 </span><span class="lineCov">        108 :         session-&gt;cfg-&gt;iwd,</span>
+<span class="lineNum">     408 </span><span class="lineCov">        216 :         (session-&gt;cfg-&gt;joined_argv) ? (session-&gt;cfg-&gt;joined_argv) : &quot;[unknown]&quot;,</span>
+<span class="lineNum">     409 </span>            :         rm_util_get_username(),
+<span class="lineNum">     410 </span>            :         rm_util_get_groupname(),
+<span class="lineNum">     411 </span><span class="lineCov">        108 :         (self-&gt;user_cmd) ? self-&gt;user_cmd : &quot;echo 'no user command defined.'&quot;,</span>
+<span class="lineNum">     412 </span><span class="lineCov">        216 :         (session-&gt;cfg-&gt;joined_argv) ? (session-&gt;cfg-&gt;joined_argv) : &quot;unknown_commandline&quot;</span>
+<span class="lineNum">     413 </span>            :     );
+<span class="lineNum">     414 </span>            : 
+<span class="lineNum">     415 </span><span class="lineCov">        108 :     g_free(script_header);</span>
+<a name="416"><span class="lineNum">     416 </span><span class="lineCov">        108 : }</span></a>
+<span class="lineNum">     417 </span>            : 
+<span class="lineNum">     418 </span><span class="lineCov">       3076 : static char *rm_fmt_sh_escape_path(char *path) {</span>
+<span class="lineNum">     419 </span>            :     /* See http://stackoverflow.com/questions/1250079/bash-escaping-single-quotes-inside-of-single-quoted-strings
+<span class="lineNum">     420 </span>            :      * for more info on this
+<span class="lineNum">     421 </span>            :      * */
+<span class="lineNum">     422 </span><span class="lineCov">       3076 :     return rm_util_strsub(path, &quot;'&quot;, &quot;'\&quot;'\&quot;'&quot;);</span>
+<a name="423"><span class="lineNum">     423 </span>            : }</a>
+<span class="lineNum">     424 </span>            : 
+<span class="lineNum">     425 </span><span class="lineCov">        976 : static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile *file) {</span>
+<span class="lineNum">     426 </span><span class="lineCov">        976 :     bool is_dir = (file-&gt;lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE);</span>
+<span class="lineNum">     427 </span>            : 
+<span class="lineNum">     428 </span><span class="lineCov">        976 :     RM_DEFINE_PATH(file);</span>
+<span class="lineNum">     429 </span>            : 
+<span class="lineNum">     430 </span><span class="lineCov">        976 :     char *path = rm_fmt_sh_escape_path(file_path);</span>
+<span class="lineNum">     431 </span><span class="lineCov">        976 :     char *prefix = NULL;</span>
+<span class="lineNum">     432 </span><span class="lineCov">        976 :     const char *comment = NULL;</span>
+<span class="lineNum">     433 </span>            : 
+<span class="lineNum">     434 </span><span class="lineCov">        976 :     if(file-&gt;is_original) {</span>
+<span class="lineNum">     435 </span><span class="lineCov">        382 :         if(is_dir) {</span>
+<span class="lineNum">     436 </span><span class="lineCov">        177 :             comment = &quot;# original directory&quot;;</span>
+<span class="lineNum">     437 </span>            :         } else {
+<span class="lineNum">     438 </span><span class="lineCov">        205 :             comment = &quot;# original&quot;;</span>
+<span class="lineNum">     439 </span>            :         }
+<span class="lineNum">     440 </span>            : 
+<span class="lineNum">     441 </span><span class="lineCov">        382 :         prefix = g_strdup_printf(&quot;echo 'Keeping: ' '%s'&quot;, path);</span>
+<span class="lineNum">     442 </span><span class="lineCov">        382 :         self-&gt;last_original = file;</span>
+<span class="lineNum">     443 </span>            :     } else {
+<span class="lineNum">     444 </span><span class="lineCov">        594 :         g_assert(self-&gt;last_original);</span>
+<span class="lineNum">     445 </span>            : 
+<span class="lineNum">     446 </span><span class="lineCov">        594 :         RmFile *last_original = self-&gt;last_original;</span>
+<span class="lineNum">     447 </span><span class="lineCov">        594 :         RM_DEFINE_PATH(last_original);</span>
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span><span class="lineCov">        594 :         char *orig_path = rm_fmt_sh_escape_path(last_original_path);</span>
+<span class="lineNum">     450 </span><span class="lineCov">        594 :         if(is_dir) {</span>
+<span class="lineNum">     451 </span><span class="lineCov">        237 :             comment = &quot;# duplicate directory&quot;;</span>
+<span class="lineNum">     452 </span>            :         } else {
+<span class="lineNum">     453 </span><span class="lineCov">        357 :             comment = &quot;# duplicate&quot;;</span>
+<span class="lineNum">     454 </span>            :         }
+<span class="lineNum">     455 </span>            : 
+<span class="lineNum">     456 </span><span class="lineCov">       1188 :         for(gsize n = 0; n &lt; self-&gt;order-&gt;len; ++n) {</span>
+<span class="lineNum">     457 </span><span class="lineCov">       1188 :             RmShOrderEmitFunc func = ORDER_TO_FUNC[self-&gt;order-&gt;data[n]];</span>
+<span class="lineNum">     458 </span><span class="lineCov">       1188 :             if(func == NULL) {</span>
+<span class="lineNum">     459 </span><span class="lineNoCov">          0 :                 rm_log_error_line(&quot;null-func in sh formatter. Should not happen.&quot;);</span>
+<span class="lineNum">     460 </span><span class="lineNoCov">          0 :                 continue;</span>
+<span class="lineNum">     461 </span>            :             }
+<span class="lineNum">     462 </span>            : 
+<span class="lineNum">     463 </span><span class="lineCov">       1188 :             if(func(self, &amp;prefix, file, path, orig_path) &amp;&amp; prefix) {</span>
+<span class="lineNum">     464 </span><span class="lineCov">        594 :                 break;</span>
+<span class="lineNum">     465 </span>            :             }
+<span class="lineNum">     466 </span>            :         }
+<span class="lineNum">     467 </span>            : 
+<span class="lineNum">     468 </span><span class="lineCov">        594 :         g_free(orig_path);</span>
+<span class="lineNum">     469 </span>            :     }
+<span class="lineNum">     470 </span>            : 
+<span class="lineNum">     471 </span><span class="lineCov">        976 :     if(prefix != NULL) {</span>
+<span class="lineNum">     472 </span><span class="lineCov">        976 :         fprintf(out, &quot;%s %s\n&quot;, prefix, comment);</span>
+<span class="lineNum">     473 </span><span class="lineCov">        976 :         g_free(prefix);</span>
+<span class="lineNum">     474 </span>            :     }
+<span class="lineNum">     475 </span>            : 
+<span class="lineNum">     476 </span><span class="lineCov">        976 :     g_free(path);</span>
+<a name="477"><span class="lineNum">     477 </span><span class="lineCov">        976 : }</span></a>
+<span class="lineNum">     478 </span>            : 
+<span class="lineNum">     479 </span><span class="lineCov">       1506 : static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {</span>
+<span class="lineNum">     480 </span><span class="lineCov">       1506 :     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;</span>
+<span class="lineNum">     481 </span><span class="lineCov">       1506 :     if(file-&gt;lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {</span>
+<span class="lineNum">     482 </span><span class="lineCov">       1506 :         return;</span>
+<span class="lineNum">     483 </span>            :     }
+<span class="lineNum">     484 </span>            : 
+<span class="lineNum">     485 </span><span class="lineCov">       1506 :     RM_DEFINE_PATH(file);</span>
+<span class="lineNum">     486 </span><span class="lineCov">       1506 :     char *path = rm_fmt_sh_escape_path(file_path);</span>
+<span class="lineNum">     487 </span>            : 
+<span class="lineNum">     488 </span><span class="lineCov">       1506 :     switch(file-&gt;lint_type) {</span>
+<span class="lineNum">     489 </span>            :     case RM_LINT_TYPE_EMPTY_DIR:
+<span class="lineNum">     490 </span><span class="lineCov">        304 :         fprintf(out, &quot;handle_emptydir '%s' # empty folder\n&quot;, path);</span>
+<span class="lineNum">     491 </span><span class="lineCov">        304 :         break;</span>
+<span class="lineNum">     492 </span>            :     case RM_LINT_TYPE_EMPTY_FILE:
+<span class="lineNum">     493 </span><span class="lineCov">        129 :         fprintf(out, &quot;handle_emptyfile '%s' # empty file\n&quot;, path);</span>
+<span class="lineNum">     494 </span><span class="lineCov">        129 :         break;</span>
+<span class="lineNum">     495 </span>            :     case RM_LINT_TYPE_BADLINK:
+<span class="lineNum">     496 </span><span class="lineCov">         97 :         fprintf(out, &quot;handle_bad_symlink '%s' # bad symlink pointing nowhere\n&quot;, path);</span>
+<span class="lineNum">     497 </span><span class="lineCov">         97 :         break;</span>
+<span class="lineNum">     498 </span>            :     case RM_LINT_TYPE_NONSTRIPPED:
+<span class="lineNum">     499 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;handle_unstripped_binary '%s' # binary with debugsymbols\n&quot;, path);</span>
+<span class="lineNum">     500 </span><span class="lineNoCov">          0 :         break;</span>
+<span class="lineNum">     501 </span>            :     case RM_LINT_TYPE_BADUID:
+<span class="lineNum">     502 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;handle_bad_user_id '%s' # bad uid\n&quot;, path);</span>
+<span class="lineNum">     503 </span><span class="lineNoCov">          0 :         break;</span>
+<span class="lineNum">     504 </span>            :     case RM_LINT_TYPE_BADGID:
+<span class="lineNum">     505 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;handle_bad_group_id '%s' # bad gid\n&quot;, path);</span>
+<span class="lineNum">     506 </span><span class="lineNoCov">          0 :         break;</span>
+<span class="lineNum">     507 </span>            :     case RM_LINT_TYPE_BADUGID:
+<span class="lineNum">     508 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;handle_bad_user_and_group_id '%s' # bad gid\n&quot;, path);</span>
+<span class="lineNum">     509 </span><span class="lineNoCov">          0 :         break;</span>
+<span class="lineNum">     510 </span>            :     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+<span class="lineNum">     511 </span>            :     case RM_LINT_TYPE_DUPE_CANDIDATE:
+<span class="lineNum">     512 </span><span class="lineCov">        976 :         rm_fmt_write_duplicate(self, out, file);</span>
+<span class="lineNum">     513 </span><span class="lineCov">        976 :         break;</span>
+<span class="lineNum">     514 </span>            :     default:
+<span class="lineNum">     515 </span><span class="lineNoCov">          0 :         rm_log_warning(&quot;Warning: unknown type in encountered: %d\n&quot;, file-&gt;lint_type);</span>
+<span class="lineNum">     516 </span><span class="lineNoCov">          0 :         break;</span>
+<span class="lineNum">     517 </span>            :     }
+<span class="lineNum">     518 </span>            : 
+<span class="lineNum">     519 </span><span class="lineCov">       1506 :     g_free(path);</span>
+<a name="520"><span class="lineNum">     520 </span>            : }</a>
+<span class="lineNum">     521 </span>            : 
+<span class="lineNum">     522 </span><span class="lineCov">        108 : static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {</span>
+<span class="lineNum">     523 </span><span class="lineCov">        108 :     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;</span>
+<span class="lineNum">     524 </span><span class="lineCov">        108 :     g_byte_array_free(self-&gt;order, true);</span>
+<span class="lineNum">     525 </span>            : 
+<span class="lineNum">     526 </span><span class="lineCov">        108 :     if(rm_fmt_is_stream(session-&gt;formats, parent)) {</span>
+<span class="lineNum">     527 </span>            :         /* You will have a hard time deleting standard streams. */
+<span class="lineNum">     528 </span><span class="lineCov">        108 :         return;</span>
+<span class="lineNum">     529 </span>            :     }
+<span class="lineNum">     530 </span>            : 
+<span class="lineNum">     531 </span><span class="lineCov">        108 :     fprintf(out, SH_SCRIPT_TEMPLATE_FOOT, &quot;rm -f&quot;, parent-&gt;path);</span>
+<span class="lineNum">     532 </span>            : }
+<span class="lineNum">     533 </span>            : 
+<span class="lineNum">     534 </span>            : static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
+<span class="lineNum">     535 </span>            :     .parent = {
+<span class="lineNum">     536 </span>            :         .size = sizeof(SH_SCRIPT_HANDLER_IMPL),
+<span class="lineNum">     537 </span>            :         .name = &quot;sh&quot;,
+<span class="lineNum">     538 </span>            :         .head = rm_fmt_head,
+<span class="lineNum">     539 </span>            :         .elem = rm_fmt_elem,
+<span class="lineNum">     540 </span>            :         .prog = NULL,
+<span class="lineNum">     541 </span>            :         .foot = rm_fmt_foot,
+<span class="lineNum">     542 </span>            :         .valid_keys = {&quot;handler&quot;, &quot;cmd&quot;, &quot;link&quot;, &quot;hardlink&quot;, &quot;symlink&quot;, NULL},
+<span class="lineNum">     543 </span>            :     },
+<span class="lineNum">     544 </span>            :     .last_original = NULL
+<span class="lineNum">     545 </span>            : };
+<span class="lineNum">     546 </span>            : 
+<span class="lineNum">     547 </span>            : RmFmtHandler *SH_SCRIPT_HANDLER = (RmFmtHandler *) &amp;SH_SCRIPT_HANDLER_IMPL;
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

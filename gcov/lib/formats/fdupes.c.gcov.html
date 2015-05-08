@@ -1,0 +1,218 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/formats/fdupes.c</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - fdupes.c<span style="font-size: 80%;"> (source / <a href="fdupes.c.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">37</td>
+            <td class="headerCovTableEntry">41</td>
+            <td class="headerCovTableEntryHi">90.2 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-05-07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &quot;../formats.h&quot;
+<span class="lineNum">      27 </span>            : 
+<span class="lineNum">      28 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      29 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      30 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      31 </span>            : 
+<span class="lineNum">      32 </span>            : typedef struct RmFmtHandlerFdupes {
+<span class="lineNum">      33 </span>            :     /* must be first */
+<span class="lineNum">      34 </span>            :     RmFmtHandler parent;
+<span class="lineNum">      35 </span>            : 
+<span class="lineNum">      36 </span>            :     /* Storage for all strings */
+<span class="lineNum">      37 </span>            :     GStringChunk *text_chunks;
+<span class="lineNum">      38 </span>            : 
+<span class="lineNum">      39 </span>            :     /* Pointers into text_chunks */
+<span class="lineNum">      40 </span>            :     GQueue *text_lines;
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span>            :     /* Do not print original (fdupes emulation) */
+<span class="lineNum">      43 </span>            :     bool omit_first_line;
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span>            :     /* Do not print newlines between files */
+<span class="lineNum">      46 </span>            :     bool use_same_line;
+<a name="47"><span class="lineNum">      47 </span>            : } RmFmtHandlerFdupes;</a>
+<span class="lineNum">      48 </span>            : 
+<span class="lineNum">      49 </span><span class="lineCov">        168 : static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out,</span>
+<span class="lineNum">      50 </span>            :                         RmFile *file) {
+<span class="lineNum">      51 </span><span class="lineCov">        168 :     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;</span>
+<span class="lineNum">      52 </span>            : 
+<span class="lineNum">      53 </span>            :     char line[512 + 32];
+<span class="lineNum">      54 </span><span class="lineCov">        168 :     memset(line, 0, sizeof(line));</span>
+<span class="lineNum">      55 </span>            : 
+<span class="lineNum">      56 </span><span class="lineCov">        168 :     if(file-&gt;lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {</span>
+<span class="lineNum">      57 </span>            :         /* we do not want to list unfinished files. */
+<span class="lineNum">      58 </span><span class="lineCov">        168 :         return;</span>
+<span class="lineNum">      59 </span>            :     }
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span><span class="lineCov">        168 :     RM_DEFINE_PATH(file);</span>
+<span class="lineNum">      62 </span>            : 
+<span class="lineNum">      63 </span><span class="lineCov">        168 :     switch(file-&gt;lint_type) {</span>
+<span class="lineNum">      64 </span>            :     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+<span class="lineNum">      65 </span>            :     case RM_LINT_TYPE_DUPE_CANDIDATE:
+<span class="lineNum">      66 </span><span class="lineCov">        168 :         if(self-&gt;omit_first_line &amp;&amp; file-&gt;is_original) {</span>
+<span class="lineNum">      67 </span><span class="lineNoCov">          0 :             strcpy(line, &quot;\n&quot;);</span>
+<span class="lineNum">      68 </span>            :         } else {
+<span class="lineNum">      69 </span><span class="lineCov">        672 :             g_snprintf(line, sizeof(line), &quot;%s%s%s%s%c&quot;, (file-&gt;is_original) ? &quot;\n&quot; : &quot;&quot;,</span>
+<span class="lineNum">      70 </span><span class="lineCov">        252 :                        (file-&gt;is_original) ? MAYBE_GREEN(out, session) : &quot;&quot;, file_path,</span>
+<span class="lineNum">      71 </span><span class="lineCov">        252 :                        (file-&gt;is_original) ? MAYBE_RESET(out, session) : &quot;&quot;,</span>
+<span class="lineNum">      72 </span><span class="lineCov">        168 :                        (self-&gt;use_same_line) ? ' ' : '\n');</span>
+<span class="lineNum">      73 </span>            :         }
+<span class="lineNum">      74 </span><span class="lineCov">        168 :         break;</span>
+<span class="lineNum">      75 </span>            :     default:
+<span class="lineNum">      76 </span><span class="lineNoCov">          0 :         g_snprintf(line, sizeof(line), &quot;%s%s%s%c&quot;, MAYBE_BLUE(out, session), file_path,</span>
+<span class="lineNum">      77 </span><span class="lineNoCov">          0 :                    MAYBE_RESET(out, session), (self-&gt;use_same_line) ? ' ' : '\n');</span>
+<span class="lineNum">      78 </span><span class="lineNoCov">          0 :         break;</span>
+<span class="lineNum">      79 </span>            :     }
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">        168 :     if(self-&gt;text_chunks == NULL) {</span>
+<span class="lineNum">      82 </span><span class="lineCov">         84 :         self-&gt;text_chunks = g_string_chunk_new(PATH_MAX / 2);</span>
+<span class="lineNum">      83 </span><span class="lineCov">         84 :         self-&gt;text_lines = g_queue_new();</span>
+<span class="lineNum">      84 </span>            :     }
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span>            :     /* remember the line (use GStringChunk for effiecient storage) */
+<span class="lineNum">      87 </span><span class="lineCov">        168 :     g_queue_push_tail(self-&gt;text_lines, g_string_chunk_insert(self-&gt;text_chunks, line));</span>
+<a name="88"><span class="lineNum">      88 </span>            : }</a>
+<span class="lineNum">      89 </span>            : 
+<span class="lineNum">      90 </span><span class="lineCov">       1692 : static void rm_fmt_prog(RmSession *session,</span>
+<span class="lineNum">      91 </span>            :                         _U RmFmtHandler *parent,
+<span class="lineNum">      92 </span>            :                         FILE *out,
+<span class="lineNum">      93 </span>            :                         RmFmtProgressState state) {
+<span class="lineNum">      94 </span><span class="lineCov">       1692 :     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;</span>
+<span class="lineNum">      95 </span>            : 
+<span class="lineNum">      96 </span><span class="lineCov">       1692 :     if(state == RM_PROGRESS_STATE_INIT) {</span>
+<span class="lineNum">      97 </span><span class="lineCov">         84 :         self-&gt;omit_first_line =</span>
+<span class="lineNum">      98 </span><span class="lineCov">         84 :             (rm_fmt_get_config_value(session-&gt;formats, &quot;fdupes&quot;, &quot;omitfirst&quot;) != NULL);</span>
+<span class="lineNum">      99 </span><span class="lineCov">         84 :         self-&gt;use_same_line =</span>
+<span class="lineNum">     100 </span><span class="lineCov">         84 :             (rm_fmt_get_config_value(session-&gt;formats, &quot;fdupes&quot;, &quot;sameline&quot;) != NULL);</span>
+<span class="lineNum">     101 </span>            :     }
+<span class="lineNum">     102 </span>            : 
+<span class="lineNum">     103 </span>            :     extern RmFmtHandler *PROGRESS_HANDLER;
+<span class="lineNum">     104 </span><span class="lineCov">       1692 :     g_assert(PROGRESS_HANDLER-&gt;prog);</span>
+<span class="lineNum">     105 </span><span class="lineCov">       1692 :     PROGRESS_HANDLER-&gt;prog(session, (RmFmtHandler *)PROGRESS_HANDLER, out, state);</span>
+<span class="lineNum">     106 </span>            : 
+<span class="lineNum">     107 </span>            :     /* Print all cached lines on shutdown. */
+<span class="lineNum">     108 </span><span class="lineCov">       1692 :     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN &amp;&amp; self-&gt;text_lines) {</span>
+<span class="lineNum">     109 </span><span class="lineCov">        252 :         for(GList *iter = self-&gt;text_lines-&gt;head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     110 </span><span class="lineCov">        168 :             char *line = iter-&gt;data;</span>
+<span class="lineNum">     111 </span><span class="lineCov">        168 :             if(line != NULL) {</span>
+<span class="lineNum">     112 </span><span class="lineCov">        168 :                 fprintf(out, &quot;%s&quot;, line);</span>
+<span class="lineNum">     113 </span>            :             }
+<span class="lineNum">     114 </span>            :         }
+<span class="lineNum">     115 </span><span class="lineCov">         84 :         g_queue_free(self-&gt;text_lines);</span>
+<span class="lineNum">     116 </span><span class="lineCov">         84 :         g_string_chunk_free(self-&gt;text_chunks);</span>
+<span class="lineNum">     117 </span><span class="lineCov">         84 :         fprintf(out, &quot;\n&quot;);</span>
+<span class="lineNum">     118 </span>            :     }
+<span class="lineNum">     119 </span>            : 
+<span class="lineNum">     120 </span>            :     extern RmFmtHandler *SUMMARY_HANDLER;
+<span class="lineNum">     121 </span><span class="lineCov">       1692 :     g_assert(SUMMARY_HANDLER-&gt;prog);</span>
+<span class="lineNum">     122 </span><span class="lineCov">       1692 :     SUMMARY_HANDLER-&gt;prog(session, (RmFmtHandler *)SUMMARY_HANDLER, out, state);</span>
+<span class="lineNum">     123 </span><span class="lineCov">       1692 : }</span>
+<span class="lineNum">     124 </span>            : 
+<span class="lineNum">     125 </span>            : static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
+<span class="lineNum">     126 </span>            :     /* Initialize parent */
+<span class="lineNum">     127 </span>            :     .parent = {
+<span class="lineNum">     128 </span>            :         .size = sizeof(FDUPES_HANDLER_IMPL),
+<span class="lineNum">     129 </span>            :         .name = &quot;fdupes&quot;,
+<span class="lineNum">     130 </span>            :         .head = NULL,
+<span class="lineNum">     131 </span>            :         .elem = rm_fmt_elem,
+<span class="lineNum">     132 </span>            :         .prog = rm_fmt_prog,
+<span class="lineNum">     133 </span>            :         .foot = NULL,
+<span class="lineNum">     134 </span>            :         .valid_keys = {&quot;omitfirst&quot;, &quot;sameline&quot;, NULL},
+<span class="lineNum">     135 </span>            :     },
+<span class="lineNum">     136 </span>            :     .text_lines = NULL,
+<span class="lineNum">     137 </span>            :     .use_same_line = false,
+<span class="lineNum">     138 </span>            :     .omit_first_line = false
+<span class="lineNum">     139 </span>            : 
+<span class="lineNum">     140 </span>            : };
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span>            : RmFmtHandler *FDUPES_HANDLER = (RmFmtHandler *)&amp;FDUPES_HANDLER_IMPL;
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

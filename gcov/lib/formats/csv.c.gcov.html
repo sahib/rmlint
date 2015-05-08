@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/formats/csv.c</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - csv.c<span style="font-size: 80%;"> (source / <a href="csv.c.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">16</td>
+            <td class="headerCovTableEntry">16</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-05-07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &quot;../formats.h&quot;
+<span class="lineNum">      27 </span>            : #include &quot;../utilities.h&quot;
+<span class="lineNum">      28 </span>            : 
+<span class="lineNum">      29 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      30 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      31 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : #define CSV_SEP &quot;,&quot;
+<span class="lineNum">      34 </span>            : #define CSV_QUOTE &quot;\&quot;&quot;
+<span class="lineNum">      35 </span>            : #define CSV_FORMAT \
+<span class="lineNum">      36 </span>            :     &quot;%s&quot; CSV_SEP &quot;&quot; CSV_QUOTE &quot;%s&quot; CSV_QUOTE &quot;&quot; CSV_SEP &quot;%&quot; LLU &quot;&quot; CSV_SEP &quot;%s\n&quot;
+<span class="lineNum">      37 </span>            : 
+<span class="lineNum">      38 </span>            : typedef struct RmFmtHandlerCSV {
+<span class="lineNum">      39 </span>            :     /* must be first */
+<span class="lineNum">      40 </span>            :     RmFmtHandler parent;
+<a name="41"><span class="lineNum">      41 </span>            : } RmFmtHandlerProgress;</a>
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span><span class="lineCov">         81 : static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {</span>
+<span class="lineNum">      44 </span><span class="lineCov">         81 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;csv&quot;, &quot;no_header&quot;)) {</span>
+<span class="lineNum">      45 </span><span class="lineCov">         81 :         return;</span>
+<span class="lineNum">      46 </span>            :     }
+<span class="lineNum">      47 </span>            : 
+<span class="lineNum">      48 </span><span class="lineCov">         81 :     fprintf(out, &quot;%s%s%s%s%s%s%s\n&quot;, &quot;type&quot;, CSV_SEP, &quot;path&quot;, CSV_SEP, &quot;size&quot;, CSV_SEP,</span>
+<span class="lineNum">      49 </span>            :             &quot;checksum&quot;);
+<a name="50"><span class="lineNum">      50 </span>            : }</a>
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span><span class="lineCov">        243 : static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,</span>
+<span class="lineNum">      53 </span>            :                         RmFile *file) {
+<span class="lineNum">      54 </span><span class="lineCov">        243 :     char checksum_str[rm_digest_get_bytes(file-&gt;digest) * 2 + 1];</span>
+<span class="lineNum">      55 </span><span class="lineCov">        243 :     memset(checksum_str, '0', sizeof(checksum_str));</span>
+<span class="lineNum">      56 </span><span class="lineCov">        243 :     checksum_str[sizeof(checksum_str) - 1] = 0;</span>
+<span class="lineNum">      57 </span>            : 
+<span class="lineNum">      58 </span><span class="lineCov">        243 :     if(file-&gt;digest) {</span>
+<span class="lineNum">      59 </span><span class="lineCov">        243 :         rm_digest_hexstring(file-&gt;digest, checksum_str);</span>
+<span class="lineNum">      60 </span>            :     }
+<span class="lineNum">      61 </span>            : 
+<span class="lineNum">      62 </span>            :     /* Escape quotes in the path (refer http://tools.ietf.org/html/rfc4180, item 6)*/
+<span class="lineNum">      63 </span><span class="lineCov">        243 :     RM_DEFINE_PATH(file);</span>
+<span class="lineNum">      64 </span><span class="lineCov">        243 :     char *clean_path = rm_util_strsub(file_path, CSV_QUOTE, CSV_QUOTE &quot;&quot; CSV_QUOTE);</span>
+<span class="lineNum">      65 </span>            : 
+<span class="lineNum">      66 </span><span class="lineCov">        243 :     fprintf(out, CSV_FORMAT, rm_file_lint_type_to_string(file-&gt;lint_type), clean_path,</span>
+<span class="lineNum">      67 </span><span class="lineCov">        243 :             file-&gt;file_size, checksum_str);</span>
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span><span class="lineCov">        243 :     g_free(clean_path);</span>
+<span class="lineNum">      70 </span><span class="lineCov">        243 : }</span>
+<span class="lineNum">      71 </span>            : 
+<span class="lineNum">      72 </span>            : static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
+<span class="lineNum">      73 </span>            :     /* Initialize parent */
+<span class="lineNum">      74 </span>            :     .parent = {
+<span class="lineNum">      75 </span>            :         .size = sizeof(CSV_HANDLER_IMPL),
+<span class="lineNum">      76 </span>            :         .name = &quot;csv&quot;,
+<span class="lineNum">      77 </span>            :         .head = rm_fmt_head,
+<span class="lineNum">      78 </span>            :         .elem = rm_fmt_elem,
+<span class="lineNum">      79 </span>            :         .prog = NULL,
+<span class="lineNum">      80 </span>            :         .foot = NULL,
+<span class="lineNum">      81 </span>            :         .valid_keys = {&quot;no_header&quot;, NULL},
+<span class="lineNum">      82 </span>            :     }};
+<span class="lineNum">      83 </span>            : 
+<span class="lineNum">      84 </span>            : RmFmtHandler *CSV_HANDLER = (RmFmtHandler *)&amp;CSV_HANDLER_IMPL;
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
