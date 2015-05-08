@@ -438,7 +438,7 @@ class UniqueNamesDataset(Dataset):
             name = faker.name()
             path = os.path.join(self.workpath, str(idx))
             with open(path, 'w') as handle:
-                handle.write(name)
+                handle.write(name * 1024 * 16)
 
     def get_path(self):
         return self.workpath
@@ -446,8 +446,8 @@ class UniqueNamesDataset(Dataset):
 
 if __name__ == '__main__':
     datasets = [
-        UsrDataset('usr'),
-        # UniqueNamesDataset('names', sys.argv[1])
+        # UsrDataset('usr'),
+        UniqueNamesDataset('names', sys.argv[1])
     ]
 
     for dataset in datasets:

@@ -33,7 +33,6 @@ to remove it. It is able to find:
 
 .. image:: _static/screenshot.png
    :align: center
-   :width: 50%
 
 ----
 
