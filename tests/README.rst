@@ -9,9 +9,53 @@ The tests are based on ``nosetest`` and are written in ``python>=3.0``.
 Every testcase just runs the (previously built) ``rmlint`` binary a
 and parses it's json output. So they are technically blackbox-tests.
 
-On every commit, those tests are additionally run on TravisCI:
+On every commit, those tests are additionally run on `TravisCI`_.
 
-    https://travis-ci.org/sahib/rmlint
+.. _`TravisCI`: https://travis-ci.org/sahib/rmlint
+
+Control Variables
+-----------------
+
+The behaviour of the testsuite can be controlled by certain environment
+variables which are:
+
+- ``USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
+- ``PEDANTIC``: Run each test several times with different optimization options
+  and check for errors between the runs. *(slow)*.
+- ``PRINT_CMD``: Print the command that is currently run.
+
+Additionally slow tests can be omitted with by appending ``-a '!slow'`` to 
+the commandline. More information on this syntax can be found on the `nosetest
+documentation`_.
+
+.. _`nosetest documentation`: http://nose.readthedocs.org/en/latest/plugins/attrib.html
+
+Before each release we call the testsuite (at least) like this:
+
+.. code-block:: bash
+
+   $ sudo USE_VALGRIND=1 PRINT_CMD=1 PEDANTIC=1 nosetests-3.4 -s -a '!slow' 
+
+The ``sudo`` here is there for executing some tests that need root access (like
+the creating of bad user and group ids). Most tests will work without.
+
+Coverage
+--------
+
+To see which functions need more testcases we use ``gcov`` to detect which lines
+were executed (and how often) by the testsuite. Here's a short quickstart using
+``lcov``:
+
+.. code-block:: bash
+
+    $ CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS="-fprofile-arcs -ftest-coverage" scons -j4 DEBUG=1
+    $ sudo USE_VALGRIND=1 PRINT_CMD=1 PEDANTIC=1 nosetests-3.4 -s -a '!slow'
+    $ lcov --capture --directory . --output-file coverage.info
+    $ genhtml coverage.info --output-directory out
+
+The coverage results are updated from time to time here:
+
+    TODO
 
 Structure
 ---------
@@ -49,7 +93,6 @@ A template for a testcase looks like this:
 Rules
 -----
 
-
 * Test should be able to run as normal user.
 * If that's not possible, check at the beginning of the testcase with this:
 
@@ -60,3 +103,13 @@ Rules
 
 * Regressions in ``rmlint`` should get their own testcase so they do not
   appear again. 
+* Slow tests can be marked with a slow attribute: 
+
+  .. code-block:: python
+
+    from nose.plugins.attrib import attr
+
+    @attr('slow')
+    @with_setup(usual_setup_func, usual_teardown_func)
+    def test_debian_support():
+        assert random.choice([True, False]):
