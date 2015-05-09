@@ -188,7 +188,7 @@ class Program:
 
         if os.path.exists(temp_bin):
             print('-- Path exists: ' + temp_bin)
-            print('-- Skipping install; Delete if you need an update.')
+            print('-- Skipping install; Delusrete if you need an update.')
             self.guess_version()
             os.chdir(current_path)
             return
@@ -432,6 +432,16 @@ class UsrDataset(ExistingDataset):
         return '/usr'
 
 
+class HomeDataset(ExistingDataset):
+    def get_path(self):
+        return '/home/sahib'
+
+
+class MusicDataset(ExistingDataset):
+    def get_path(self):
+        return '/run/media/sahib/35d4a401-ad4c-4221-afc0-f284808a1cdc/music'
+
+
 class UniqueNamesDataset(Dataset):
     def generate(self):
         for idx in range(10 ** 4):
@@ -447,7 +457,9 @@ class UniqueNamesDataset(Dataset):
 if __name__ == '__main__':
     datasets = [
         # UsrDataset('usr'),
-        UniqueNamesDataset('names', sys.argv[1])
+        # UniqueNamesDataset('names', sys.argv[1])
+        # MusicDataset('music')
+        HomeDataset('home')
     ]
 
     for dataset in datasets:
