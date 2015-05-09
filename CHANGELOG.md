@@ -13,6 +13,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 - traverse: get rid of fts(). (*sigh*)
 - gui: provide a basic working version.
 - tests: provide speed regression test (need a platform for that in background first)
+- feature: add back reflink support.
+- sh/py formatter: add safety net checks before removing.
 
 ## [2.2.0 Dreary Dropbear] -- 2015-05-09
 
