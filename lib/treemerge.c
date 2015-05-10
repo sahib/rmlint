@@ -57,6 +57,9 @@
 
 #include <glib.h>
 #include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fts.h>
 
 #include "treemerge.h"
