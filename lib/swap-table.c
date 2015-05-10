@@ -3,8 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <linux/limits.h>
-
+#include "config.h"
 #include "swap-table.h"
 
 #if HAVE_SQLITE3

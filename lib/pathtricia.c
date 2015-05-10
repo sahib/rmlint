@@ -27,7 +27,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <glib.h>
-#include <linux/limits.h>
 
 #include "pathtricia.h"
 #include "config.h"
