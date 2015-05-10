@@ -1227,7 +1227,7 @@ RmOff rm_offset_lookup(_U RmOffsetTable table, _U RmOff file_offset) {
     return 0;
 }
 
-bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
+bool rm_offsets_match(_U RmOffsetTable table1, _U RmOffsetTable table2) {
     return false;
 }
 
