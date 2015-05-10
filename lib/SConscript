@@ -88,6 +88,7 @@ library = env.Library(
     '../rmlint',
     Glob('*.c')           +
     Glob('checksums/*.c') +
+    Glob('checksums/xxhash/*.c') +
     Glob('formats/*.c')
 )
 
