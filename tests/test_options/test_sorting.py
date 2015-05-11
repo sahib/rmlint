@@ -76,4 +76,3 @@ def test_sorting():
         assert len(data) == 6
 
         validate_order(data, combo)
-        print('ok')
