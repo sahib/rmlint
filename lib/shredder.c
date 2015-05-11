@@ -1589,7 +1589,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
-    if (device->is_rotational && device->main->session->cfg->build_fiemap) {
+    if (file->current_disk_offset > 0) {
         file->current_disk_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset);
     }
 
@@ -1709,7 +1709,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         }
     }
 
-    if (device->is_rotational && device->main->session->cfg->build_fiemap) {
+    if (file->current_disk_offset > 0) {
         file->current_disk_offset = rm_offset_get_from_fd(fd, file->seek_offset);
     }
 
