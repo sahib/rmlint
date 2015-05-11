@@ -1589,8 +1589,9 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
-
-    file->current_disk_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset);
+    if (device->is_rotational && device->main->session->cfg->build_fiemap) {
+        file->current_disk_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset);
+    }
 
     if(ferror(fd) != 0) {
         file->status = RM_FILE_STATE_IGNORE;
@@ -1708,7 +1709,9 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         }
     }
 
-    file->current_disk_offset = rm_offset_get_from_fd(fd, file->seek_offset);
+    if (device->is_rotational && device->main->session->cfg->build_fiemap) {
+        file->current_disk_offset = rm_offset_get_from_fd(fd, file->seek_offset);
+    }
 
     if(bytes_read == -1) {
         rm_log_perror("preadv failed");
