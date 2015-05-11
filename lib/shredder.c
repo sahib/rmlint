@@ -1089,7 +1089,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     g_mutex_lock(&shred_group->lock);
     {
         shred_group->has_pref |= file->is_prefd | file->hardlinks.has_prefd;
-        shred_group->has_npref |= !file->is_prefd | file->hardlinks.has_non_prefd;
+        shred_group->has_npref |= (!file->is_prefd) | file->hardlinks.has_non_prefd;
         shred_group->has_new |= file->is_new_or_has_new;
 
         shred_group->ref_count++;
@@ -1154,7 +1154,6 @@ static gboolean rm_shred_sift(RmFile *file) {
     g_assert(file);
     g_assert(file->shred_group);
 
-    RmShredGroup *child_group = NULL;
     RmShredGroup *current_group = file->shred_group;
 
     if(file->status == RM_FILE_STATE_IGNORE) {
@@ -1162,6 +1161,8 @@ static gboolean rm_shred_sift(RmFile *file) {
         rm_shred_discard_file(file, true);
     } else {
         g_assert(file->digest);
+
+        RmShredGroup *child_group = NULL;
 
         if(file->digest->type == RM_DIGEST_PARANOID && !file->is_symlink) {
             g_assert(file->digest->bytes ==

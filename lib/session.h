@@ -49,7 +49,6 @@ typedef struct RmFileTables {
 } RmFileTables;
 
 struct RmFmtTable;
-struct RmTreeMerger;
 
 typedef struct RmSession {
     RmCfg *cfg;
