@@ -969,8 +969,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
          * to *
          * a recognisable partition */
         char *prev = g_strdup(path);
-        while
-            TRUE {
+        while(TRUE) {
                 char *temp = g_strdup(prev);
                 char *parent_path = g_strdup(dirname(temp));
                 g_free(temp);
