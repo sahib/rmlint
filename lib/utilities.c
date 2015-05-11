@@ -1110,6 +1110,41 @@ static void rm_offset_create_fake_data(GSequence *self) {
     }
 }
 
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset) {
+    RmOff result=0;
+
+    /* struct fiemap does not allocate any extents by default,
+     * so we choose ourself how many of them we allocate.
+     * */
+    const int n_extents = 1;
+    struct fiemap *fiemap =
+        g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
+    struct fiemap_extent *fm_ext = fiemap->fm_extents;
+
+    fiemap->fm_flags = 0;
+    fiemap->fm_extent_count = n_extents;
+    fiemap->fm_length = FIEMAP_MAX_OFFSET;
+    fiemap->fm_start = file_offset;
+
+    if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fiemap) != -1 &&
+       fiemap->fm_mapped_extents > 0) {
+        result = fm_ext[0].fe_physical;
+    }
+    g_free(fiemap);
+    return result;
+}
+
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset) {
+    int fd = rm_sys_open(path, O_RDONLY);
+    if(fd == -1) {
+        rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
+        return 0;
+    }
+    RmOff result=rm_offset_get_from_fd(fd, file_offset);
+    rm_sys_close(fd);
+    return result;
+}
+
 RmOffsetTable rm_offset_create_table(const char *path, bool fake_fiemap) {
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
@@ -1266,7 +1301,7 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 time_t rm_iso8601_parse(const char *string) {
-    GTimeVal time_result; 
+    GTimeVal time_result;
     if(!g_time_val_from_iso8601(string, &time_result)) {
         rm_log_perror("Converting time failed");
         return 0;

@@ -330,6 +330,21 @@ static inline void rm_offset_free(RmOffsetTable table) {
     g_sequence_free(table);
 }
 
+
+/**
+ * @brief Lookup the physical offset of a file fd at any given offset.
+ *
+ * @return the physical offset starting from the disk.
+ */
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset);
+
+/**
+ * @brief Lookup the physical offset of a file path at any given offset.
+ *
+ * @return the physical offset starting from the disk.
+ */
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset);
+
 //////////////////////////////
 //    TIMESTAMP HELPERS     //
 //////////////////////////////
