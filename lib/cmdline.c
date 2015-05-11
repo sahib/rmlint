@@ -1217,7 +1217,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     if(cfg->with_color) {
         cfg->with_stdout_color = isatty(fileno(stdout));
         cfg->with_stderr_color = isatty(fileno(stdout));
-        cfg->with_color = (cfg->with_stderr_color | cfg->with_stderr_color);
+        cfg->with_color = (cfg->with_stdout_color | cfg->with_stderr_color);
     } else {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }

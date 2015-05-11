@@ -83,8 +83,7 @@ static void rm_swap_table_clean_stmt(RmSwapTable *self, sqlite3_stmt *stmt,
     g_assert(self);
     g_assert(stmt);
 
-    int r = 0;
-    if((r = sqlite3_errcode(self->cache)) != SQLITE_DONE) {
+    if(sqlite3_errcode(self->cache) != SQLITE_DONE) {
         SET_ERROR("stmt failed: %s", sqlite3_errmsg(self->cache));
     }
 
