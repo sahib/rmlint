@@ -256,6 +256,14 @@ uint64 CityHash64(const char *s, size_t len) {
                      HashLen16(v.second, w.second) + x);
 }
 
+uint64 CityHash64WithSeed(const char *s, size_t len, uint64 seed) {
+    return CityHash64WithSeeds(s, len, k2, seed);
+}
+
+uint64 CityHash64WithSeeds(const char *s, size_t len, uint64 seed0, uint64 seed1) {
+    return HashLen16(CityHash64(s, len) - seed0, seed1);
+}
+
 // A subroutine for CityHash128().  Returns a decent 128-bit hash for strings
 // of any length representable in signed long.  Based on City and Murmur.
 static uint128 CityMurmur(const char *s, size_t len, uint128 seed) {
@@ -358,6 +366,26 @@ uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed) {
     result.first = (uint64)(HashLen16(x + v.second, w.second) + y);
     result.second = (uint64)HashLen16(x + w.second, y + v.second);
     return result;
+}
+
+uint128 CityHash128(const char *s, size_t len) {
+    uint128 r;
+    if(len >= 16) {
+        r.first = (uint64)(Fetch64(s) ^ k3);
+        r.second = (uint64)(Fetch64(s + 8));
+
+        return CityHash128WithSeed(s + 16, len - 16, r);
+
+    } else if(len >= 8) {
+        r.first = (uint64)(Fetch64(s) ^ (len * k0));
+        r.second = (uint64)(Fetch64(s + len - 8) ^ k1);
+
+        return CityHash128WithSeed(NULL, 0, r);
+    } else {
+        r.first = (uint64)k0;
+        r.second = (uint64)k1;
+        return CityHash128WithSeed(s, len, r);
+    }
 }
 
 #include "../config.h"
