@@ -8,6 +8,7 @@ import subprocess
 
 import SCons.Conftest as tests
 
+pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
 
 def read_version():
     with open('.version', 'r') as handle:
@@ -32,7 +33,7 @@ Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 
 def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
-    command = 'pkg-config --atleast-pkgconfig-version=%s' % version
+    command = pkg_config + ' --atleast-pkgconfig-version=' + version
     ret = context.TryAction(command)[0]
     context.Result(ret)
     return ret
@@ -50,7 +51,7 @@ def check_pkg(context, name, varname, required=True):
 
     if rc is not 0:
         context.Message('Checking for %s... ' % name)
-        rc, text = context.TryAction('pkg-config --exists \'%s\'' % name)
+        rc, text = context.TryAction('%s --exists \'%s\'' % (pkg_config, name))
 
     # 0 is defined as error by TryAction
     if rc is 0 and required:
@@ -549,7 +550,7 @@ conf.env.Append(CFLAGS=[
     '-Wstrict-prototypes',
 ])
 
-env.ParseConfig('pkg-config --cflags --libs ' + ' '.join(packages))
+env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 
 conf.env.Append(_LIBFLAGS=['-lm'])
