@@ -28,19 +28,6 @@
 
 #include "formats.h"
 
-const char *rm_fmt_progress_to_string(RmFmtProgressState state) {
-    static const char *table[] = {[RM_PROGRESS_STATE_INIT] = "Initializing",
-                                  [RM_PROGRESS_STATE_TRAVERSE] = "Traversing",
-                                  [RM_PROGRESS_STATE_PREPROCESS] = "Preprocessing",
-                                  [RM_PROGRESS_STATE_SHREDDER] = "Shreddering",
-                                  [RM_PROGRESS_STATE_MERGE] = "Merging",
-                                  [RM_PROGRESS_STATE_PRE_SHUTDOWN] = "",
-                                  [RM_PROGRESS_STATE_SUMMARY] = "Finalizing",
-                                  [RM_PROGRESS_STATE_N] = "Unknown state"};
-
-    return table[(state < RM_PROGRESS_STATE_N) ? state : RM_PROGRESS_STATE_N];
-}
-
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
     g_assert(handler);
 

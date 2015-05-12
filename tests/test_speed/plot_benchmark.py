@@ -18,7 +18,7 @@ def plot(data):
     )
 
     n_runs = data['metadata']['n_runs']
-    labels = ['Run #' + str(i) for i in range(n_runs)]
+    labels = ['Run #' + str(i + 1) for i in range(n_runs)]
     bar_chart.x_labels = labels + ['Average']
 
     for program in sorted(data['programs']):
@@ -30,7 +30,8 @@ def plot(data):
 
             numbers.append({
                 'value': round(value, 3),
-                'label': 'Memory: {mem} MB | CPU: {cpu}% | {ver}'.format(
+                'label': '{name} ({ver}): Peak: {mem}M CPU: {cpu}%'.format(
+                    name=program,
                     ver=result['version'],
                     mem=round(result['memory'], 2),
                     cpu=cpu_usage

@@ -164,7 +164,7 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
     }
 
     if(!file_a->session->cfg->use_meta_cache) {
-        return g_strcmp0(file_a->basename, file_b->basename) == 0;
+        return g_strcmp0(file_a->folder->basename, file_b->folder->basename) == 0;
     }
 
     /* If using --with-metadata-cache, save the basename for later use
@@ -455,7 +455,6 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
             file->hardlinks.is_head = TRUE;
         }
     }
-
 
     if(file->hardlinks.is_head) {
         /* Hardlinks are processed on the fly by shredder later,

@@ -4,6 +4,7 @@
 
 import os
 import json
+import time
 import pprint
 import shutil
 import shlex
@@ -40,6 +41,12 @@ def which(program):
     return None
 
 
+def has_feature(feature):
+    return ('+' + feature) in subprocess.check_output(
+        ['./rmlint', '--version'], stderr=subprocess.STDOUT
+    ).decode('utf-8')
+
+
 def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     if use_default_dir:
         if dir_suffix:
@@ -68,6 +75,10 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
 
     # filter empty strings
     cmd = list(filter(None, cmd))
+    # print(' '.join(cmd))
+
+    if os.environ.get('PRINT_CMD'):
+        print('Run:', ' '.join(cmd))
 
     output = subprocess.check_output(cmd, shell=False, env=env)
     json_data = json.loads(output.decode('utf-8'))
@@ -83,13 +94,19 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         return json_data + read_outputs
 
 
-def compare_json_doc(doc_a, doc_b):
+def compare_json_doc(doc_a, doc_b, compare_checksum=False):
     keys = [
-        'progress', 'disk_id', 'inode', 'is_original', 'mtime',
-        'path', 'size', 'type'
+        'disk_id', 'inode', 'mtime', 'path', 'size', 'type'
     ]
 
+    if compare_checksum and 'checkum' in doc_a and 'checksum' in doc_b:
+        keys.append('checksum')
+
     for key in keys:
+        # It's okay for unfinished checksums to have some missing fields.
+        if doc_a['type'] == doc_b['type'] == 'unfinished_cksum':
+            continue
+
         if doc_a[key] != doc_b[key]:
             print('  !! Key differs: ', key, doc_a[key], '!=', doc_b[key])
             return False
@@ -97,16 +114,20 @@ def compare_json_doc(doc_a, doc_b):
     return True
 
 
-def compare_json_docs(docs_a, docs_b):
+def compare_json_docs(docs_a, docs_b, compare_checksum=False):
     paths_a, paths_b = {}, {}
 
-    for doc_a, doc_b in zip(docs_a[1:-1], docs_b[1:-1]):
+    for doc_a in docs_a[1:-1]:
         paths_a[doc_a['path']] = doc_a
+
+    for doc_b in docs_b[1:-1]:
         paths_b[doc_b['path']] = doc_b
 
     for path_a, doc_a in paths_a.items():
+        # if path_a not in paths_b:
+        #     print('####', doc_a, path_a, '\n', docs_b, '\n\n', list(paths_b))
         doc_b = paths_b[path_a]
-        if not compare_json_doc(doc_a, doc_b):
+        if not compare_json_doc(doc_a, doc_b, compare_checksum):
             print('!! OLD:')
             pprint.pprint(doc_a)
             print('!! NEW:')
@@ -114,12 +135,23 @@ def compare_json_docs(docs_a, docs_b):
             print('------- DIFF --------')
             return False
 
-    return docs_a[-1] == docs_b[-1]
+    if docs_a[-1] != docs_b[-1]:
+        print('!! FOOTER DIFFERS', docs_a[-1], docs_b[-1])
+        return False
+
+    return True
+
 
 def run_rmlint_pedantic(*args, **kwargs):
     options = [
         '--with-fiemap',
         '--without-fiemap',
+        '--fake-pathindex-as-disk',
+        '--fake-fiemap',
+        '-P',
+        '-PP',
+        '--max-paranoid-mem 1M --algorithm=paranoid',
+        '--buffered-read',
         '--threads=1',
         '--shred-never-wait',
         '--shred-always-wait',
@@ -127,10 +159,15 @@ def run_rmlint_pedantic(*args, **kwargs):
     ]
 
     cksum_types = [
-        'paranoid', 'sha1', 'sha256', 'sha512', 'spooky', 'bastard', 'city',
+        'paranoid', 'sha1', 'sha256', 'spooky', 'bastard', 'city',
         'md5', 'city256', 'city512', 'murmur', 'murmur256', 'murmur512',
         'spooky32', 'spooky64'
     ]
+
+    # Note: sha512 is supported on all system which have
+    #       no recent enough glib with. God forsaken debian people.
+    if has_feature('sha512'):
+        cksum_types.append('sha512')
 
     for cksum_type in cksum_types:
         options.append('--algorithm=' + cksum_type)
@@ -150,7 +187,15 @@ def run_rmlint_pedantic(*args, **kwargs):
             if data:
                 data_skip = data[:-output_len]
 
-        if data is not None and not compare_json_docs(data_skip, new_data_skip):
+        # We cannot compare checksum in all cases.
+        compare_checksum = not option.startswith('--algorithm=')
+        for arg in args:
+            if '--cache' in args or '-C' in arg:
+                compare_checksum = False
+
+        if data_skip is not None and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
+            pprint.pprint(data_skip)
+            pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
 
         data = new_data
@@ -159,7 +204,7 @@ def run_rmlint_pedantic(*args, **kwargs):
 
 
 def run_rmlint(*args, **kwargs):
-    if os.environ.get('USE_PEDANTIC'):
+    if os.environ.get('PEDANTIC'):
         return run_rmlint_pedantic(*args, **kwargs)
     else:
         return run_rmlint_once(*args, **kwargs)
@@ -187,6 +232,13 @@ def create_file(data, name):
 
     with open(full_path, 'w') as handle:
         handle.write(data)
+
+    return full_path
+
+
+def warp_file_to_future(name, seconds):
+    now = time.time()
+    os.utime(os.path.join(TESTDIR_NAME, name), (now + 2, now + 2))
 
 
 def usual_setup_func():

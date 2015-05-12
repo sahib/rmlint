@@ -18,6 +18,7 @@
 #define HAVE_SYSBLOCK      ({HAVE_SYSBLOCK})
 #define HAVE_SYSCTL        ({HAVE_SYSCTL})
 #define HAVE_SQLITE3       ({HAVE_SQLITE3})
+#define HAVE_LINUX_LIMITS  ({HAVE_LINUX_LIMITS})
 
 #define RM_DEFAULT_DIGEST RM_DIGEST_SHA1
 #define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
@@ -44,6 +45,14 @@
 #define BLUE   "\x1b[34;01m"
 
 #include <errno.h>
+
+#if HAVE_LINUX_LIMITS
+#include <linux/limits.h>
+#else
+# ifndef PATH_MAX
+#  define PATH_MAX 4096
+# endif
+#endif
 
 #define rm_log_debug(...) \
     g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)

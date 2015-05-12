@@ -113,8 +113,8 @@ msgid "Max is smaller than min"
 msgstr "Maximum ist kleiner als das Minimum. Macht leider keinen Sinn"
 
 #: lib/cmdline.c:203
-msgid "cannot parse --limit: "
-msgstr "Kann --limit nicht parsen: "
+msgid "cannot parse --size: "
+msgstr "Kann --size nicht parsen: "
 
 #: lib/cmdline.c:225
 #, fuzzy, c-format
@@ -364,7 +364,7 @@ msgstr "[ZIEL_ORDERN_ODER_DATEIEN …] [//] [ZIEL_ORDERN_ODER_DATEIEN …] [-]"
 msgid ""
 "rmlint finds space waste and other broken things on your filesystem and "
 "offers to remove it.\n"
-"It is especially good at finding duplicates and offers a big varierty of "
+"It is especially good at finding duplicates and offers a big variety of "
 "options to handle them."
 msgstr ""
 "rmlint findet unnütz verschwendeten Platz und andere eigenartige Dateien "
@@ -468,12 +468,13 @@ msgid "Preprocessing"
 msgstr "Bereite vor"
 
 #: lib/formats/progressbar.c:95
+# No translation needed / Translated
 msgid "found"
-msgstr " "
+msgstr "fand"
 
 #: lib/formats/progressbar.c:96
 msgid "other lint"
-msgstr "mal anderer Müll gefunden"
+msgstr "mal andereren Unsinn"
 
 #: lib/formats/progressbar.c:106
 msgid "Matching"

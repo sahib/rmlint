@@ -200,7 +200,7 @@ static gboolean rm_cmd_parse_limit_sizes(_U const char *option_name,
                                          GError **error) {
     if(!rm_cmd_size_range_string_to_bytes(range_spec, &session->cfg->minsize,
                                           &session->cfg->maxsize, error)) {
-        g_prefix_error(error, _("cannot parse --limit: "));
+        g_prefix_error(error, _("cannot parse --size: "));
         return false;
     } else {
         session->cfg->limits_specified = true;
@@ -569,8 +569,6 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
     bool plain = rm_cmd_timestamp_is_plain(string);
     session->cfg->filter_mtime = false;
 
-    tzset();
-
     if(plain) {
         /* A simple integer is expected, just parse it as time_t */
         result = strtoll(string, NULL, 10);
@@ -583,7 +581,7 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
-            rm_log_debug("timestamp %ld understood as %s\n", result, time_buf);
+            rm_log_debug("timestamp %s understood as %lu\n", time_buf, result);
         }
     }
 
@@ -596,20 +594,21 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
     /* Some sort of success. */
     session->cfg->filter_mtime = true;
 
-    if(result > time(NULL)) {
+    time_t now = time(NULL);
+    if(result > now) {
         /* Not critical, maybe there are some uses for this,
          * but print at least a small warning as indication.
          * */
         if(plain) {
             rm_log_warning_line(_("-n %lu is newer than current time (%lu)."),
-                                (long)result, (long)time(NULL));
+                                (long)result, (long)now);
         } else {
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
 
-            rm_log_warning_line("-N %s is newer than current time (%s).", string,
-                                time_buf);
+            rm_log_warning_line("-N %s is newer than current time (%s) [%lu > %lu]", string,
+                                time_buf, result, now);
         }
     }
 
@@ -660,7 +659,7 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
 static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
     cfg->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
         verbosity_counter,
-        0,
+        1,
         (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1)];
 }
 
@@ -688,8 +687,10 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("Only up to -pp or down to -PP flags allowed"));
+        if(error && *error == NULL) {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Only up to -pp or down to -PP flags allowed"));
+        }
         break;
     }
 }
@@ -1128,10 +1129,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Do not use fiemap(2) in order to save memory", NULL},
         {"shred-always-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_always_wait,
          "Shredder always waits for file increment to finish hashing before moving on to "
-         "the next file",NULL},
-        {"fake-pathindex-as-disk", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->fake_pathindex_as_disk,
-         "Testing option for threading; pretends each input path is a separate physical disk",
+         "the next file",
          NULL},
+        {"fake-pathindex-as-disk", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->fake_pathindex_as_disk,
+         "Testing option for threading; pretends each input path is a separate physical "
+         "disk",
+         NULL},
+        {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
+        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read, 
+         "Default to buffered reading calls (fread) during reading.", NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
          "Shredder never waits for file increment to finish hashing before moving on to "
          "the next file",
@@ -1178,7 +1186,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
                                  _("rmlint finds space waste and other broken things on "
                                    "your filesystem and offers to remove it.\n"
                                    "It is especially good at finding duplicates and "
-                                   "offers a big varierty of options to handle them."));
+                                   "offers a big variety of options to handle them."));
     g_option_context_set_description(
         option_parser,
         _("Only the most important options and options that alter the defaults are shown "
@@ -1209,7 +1217,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     if(cfg->with_color) {
         cfg->with_stdout_color = isatty(fileno(stdout));
         cfg->with_stderr_color = isatty(fileno(stdout));
-        cfg->with_color = (cfg->with_stderr_color | cfg->with_stderr_color);
+        cfg->with_color = (cfg->with_stdout_color | cfg->with_stderr_color);
     } else {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }
@@ -1244,7 +1252,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
-    session->mounts = rm_mounts_table_new();
+    session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
     if(session->mounts == NULL) {
         exit_state = EXIT_FAILURE;
         goto failure;

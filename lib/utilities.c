@@ -148,9 +148,7 @@ GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key,
 }
 
 ino_t rm_util_parent_node(const char *path) {
-    char *dummy = g_strdup(path);
-    char *parent_path = g_strdup(dirname(dummy));
-    g_free(dummy);
+    char *parent_path = g_path_get_dirname(path);
 
     RmStat stat_buf;
     if(!rm_sys_stat(parent_path, &stat_buf)) {
@@ -358,8 +356,6 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
     JsonNode *path_node = json_object_get_member(object, "path");
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
     JsonNode *type_node = json_object_get_member(object, "type");
-
-    rm_log_debug("parsing\n");
 
     if(mtime_node && path_node && cksum_node && type_node) {
         RmStat stat_buf;
@@ -764,7 +760,7 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
     return -1;
 }
 
-static bool rm_mounts_create_tables(RmMountTable *self) {
+static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
     /* partition dev_t to disk dev_t */
     self->part_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
                                              (GDestroyNotify)rm_part_info_free);
@@ -841,6 +837,8 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
             }
         }
 
+        is_rotational |= force_fiemap;
+
         RmPartitionInfo *existing = g_hash_table_lookup(
             self->part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));
         if(!existing || (existing->disk == 0 && whole_disk != 0)) {
@@ -892,9 +890,9 @@ static bool rm_mounts_create_tables(RmMountTable *self) {
 //         PUBLIC API          //
 /////////////////////////////////
 
-RmMountTable *rm_mounts_table_new(void) {
+RmMountTable *rm_mounts_table_new(bool force_fiemap) {
     RmMountTable *self = g_slice_new(RmMountTable);
-    if(rm_mounts_create_tables(self) == false) {
+    if(rm_mounts_create_tables(self, force_fiemap) == false) {
         g_slice_free(RmMountTable, self);
         return NULL;
     } else {
@@ -913,7 +911,7 @@ void rm_mounts_table_destroy(RmMountTable *self) {
 
 #else /* probably FreeBSD */
 
-RmMountTable *rm_mounts_table_new(void) {
+RmMountTable *rm_mounts_table_new(_U bool force_fiemap) {
     return NULL;
 }
 
@@ -971,8 +969,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
          * to *
          * a recognisable partition */
         char *prev = g_strdup(path);
-        while
-            TRUE {
+        while(TRUE) {
                 char *temp = g_strdup(prev);
                 char *parent_path = g_strdup(dirname(temp));
                 g_free(temp);
@@ -1076,6 +1073,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
  * Needs to be freed with g_free if not NULL.
  * */
 static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const int file_offset){
+
     /* struct fiemap does not allocate any extents by default,
      * so we allocate the nominated number
      * */
@@ -1176,7 +1174,6 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_o
     return result;
 }
 
-
 bool rm_offsets_match(char *path1, char *path2) {
     bool result=FALSE;
     int fd1 = rm_sys_open(path1, O_RDONLY);
@@ -1257,15 +1254,13 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 time_t rm_iso8601_parse(const char *string) {
-    struct tm time_key;
-    memset(&time_key, 0, sizeof(struct tm));
-
-    if(strptime(string, "%FT%T%z", &time_key) == NULL) {
-        rm_log_perror("strptime(3) failed");
+    GTimeVal time_result; 
+    if(!g_time_val_from_iso8601(string, &time_result)) {
+        rm_log_perror("Converting time failed");
         return 0;
     }
 
-    return mktime(&time_key) + time_key.tm_gmtoff;
+    return time_result.tv_sec;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {

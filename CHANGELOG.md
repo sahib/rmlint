@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.2.0 Dreary Dropbear] -- [unreleased]
+## [2.3.0 (No name yet)] -- [unreleased]
+
+## [2.2.0 Dreary Dropbear] -- 2015-05-09
 
 ### Fixed
 
@@ -22,6 +24,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Added
 
+- More aggressive test suite, leading to higher coverage rates (90% of lines,
+  almost 100% functions at least). Let's not speak of branch coverage for now. 😄
 - A primitive benchmark suite.
 - A GUI sketch that can be shipped along rmlint.
 
@@ -29,8 +33,6 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 - Most internal filesystems like `proc` are ignored now.
 - Improved progressbar
-
-### Under the Hood
 - Memory footprint reduced to enable larger filesets to be processed. See
   discussion at https://github.com/sahib/rmlint/issues/109.  Improvements
   include a Pat(h)ricia-Trie used as data structure to efficiently map

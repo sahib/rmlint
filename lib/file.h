@@ -88,14 +88,9 @@ struct RmSession;
  */
 
 typedef struct RmFile {
-    union {
-        /* file basename (if not using swap table)
-         * */
-        char *basename;
-        /* file path lookup ID (if using swap table)
-         * */
-        RmOff path_id;
-    };
+    /* file path lookup ID (if using swap table)
+        * */
+    RmOff path_id;
 
     /* file folder as node of folder n-ary tree
      * */
@@ -238,7 +233,7 @@ typedef struct RmFile {
     if(file->session->cfg->use_meta_cache) {                      \
         file##_basename = rm_util_basename((char *)&file##_path); \
     } else {                                                      \
-        file##_basename = file->basename;                         \
+        file##_basename = file->folder->basename;                 \
     }                                                             \
 /**                                                               \
  * @brief Create a new RmFile handle.                             \
@@ -261,7 +256,7 @@ const char *rm_file_lint_type_to_string(RmLintType type);
  * @brief Set a path to the file. Normally, you should never do this since the
  * path is immutable.
  */
-void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy);
+void rm_file_set_path(RmFile *file, char *path, size_t path_len);
 
 /**
  * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using

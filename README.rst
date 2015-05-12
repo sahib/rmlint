@@ -16,17 +16,14 @@ to remove it.
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
-|
-
 .. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/releases
 
+.. image:: https://img.shields.io/github/downloads/sahib/rmlint/latest/total.svg
+   :target: https://github.com/sahib/rmlint/releases/latest
+
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
-
-.. image:: https://www.codacy.com/project/badge/0a87c7b0766844f58635295655847f30
-   :target: https://www.codacy.com/public/sahib/rmlint/dashboard
-
 
 **Features:**
 

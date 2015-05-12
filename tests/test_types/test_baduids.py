@@ -17,7 +17,7 @@ def exec_cmds(cmds):
         )
 
         try:
-            subprocess.check_call(fmt_cmd, shell=True)
+            subprocess.check_call(fmt_cmd, shell=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as err:
             print(cmd, 'failed:', err)
 

@@ -57,6 +57,9 @@
 
 #include <glib.h>
 #include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fts.h>
 
 #include "treemerge.h"
@@ -66,22 +69,21 @@
 #include "pathtricia.h"
 
 typedef struct RmDirectory {
-    char *dirname;        /* Path to this directory without trailing slash              */
-    GQueue known_files;   /* RmFiles in this directory                                  */
-    GQueue children;      /* Children for directories with subdirectories               */
-    gint64 prefd_files;   /* Files in this directory that are tagged as original        */
-    gint64 dupe_count;    /* Count of RmFiles actually in this directory                */
-    gint64 file_count;    /* Count of files actually in this directory (or -1 on error) */
-    gint64 mergeups;      /* number of times this directory was merged up               */
-    bool finished;        /* Was this dir or one of his parents already printed?        */
-    bool was_merged;      /* true if this directory was merged up already (only once)   */
-    bool was_inserted;    /* true if this directory was added to results (only once)    */
-    unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)        */
-    GHashTable *hash_set; /* Set of hashes, used for equality check (to be sure)        */
-    RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
+    char *dirname;         /* Path to this directory without trailing slash              */
+    GQueue known_files;    /* RmFiles in this directory                                  */
+    GQueue children;       /* Children for directories with subdirectories               */
+    gint64 prefd_files;    /* Files in this directory that are tagged as original        */
+    gint64 dupe_count;     /* Count of RmFiles actually in this directory                */
+    gint64 file_count;     /* Count of files actually in this directory (or -1 on error) */
+    gint64 mergeups;       /* number of times this directory was merged up               */
+    bool finished : 1;     /* Was this dir or one of his parents already printed?        */
+    bool was_merged : 1;   /* true if this directory was merged up already (only once)   */
+    bool was_inserted : 1; /* true if this directory was added to results (only once)    */
+    unsigned short depth;  /* path depth (i.e. count of / in path, no trailing /)        */
+    GHashTable *hash_set;  /* Set of hashes, used for equality check (to be sure)        */
+    RmDigest *digest;      /* Common digest of all RmFiles in this directory             */
 
     struct {
-        bool has_metadata; /* stat(2) called already                */
         time_t dir_mtime;  /* Directory Metadata: Modification Time */
         ino_t dir_inode;   /* Directory Metadata: Inode             */
         dev_t dir_dev;     /* Directory Metadata: Device ID         */
@@ -103,8 +105,7 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
-                             void *user_data) {
+int rm_tm_count_art_callback(RmTrie *self, RmNode *node, _U int level, void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
@@ -117,7 +118,7 @@ int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
 
     char path[PATH_MAX];
     memset(path, 0, sizeof(path));
-    rm_trie_build_path(node, path, sizeof(path));
+    rm_trie_build_path(self, node, path, sizeof(path));
 
     /* Ascend the path parts up, add one for each part we meet.
        If a part was never found before, add it.
@@ -235,8 +236,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *sessi
     for(int i = 0; paths[i]; ++i) {
         /* Just call the callback directly */
         RmNode *node = rm_trie_search_node(&file_tree, paths[i]);
-        node->data = GINT_TO_POINTER(true);
-        rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
+        if(node != NULL) {
+            node->data = GINT_TO_POINTER(true);
+            rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
+        }
     }
 
 #ifdef _RM_TREEMERGE_DEBUG
@@ -282,7 +285,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
      * order in which the file hashes were added.
      * It is not used as full hash, but as sorting speedup.
      */
-    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0);
+    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0, false);
 
     g_queue_init(&self->known_files);
     g_queue_init(&self->children);
@@ -324,7 +327,7 @@ static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
 
     /* Need to set session first, since set_path expects that */
     file->session = merger->session;
-    rm_file_set_path(file, self->dirname, strlen(self->dirname), FALSE);
+    rm_file_set_path(file, self->dirname, strlen(self->dirname));
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
     file->digest = self->digest;
@@ -856,7 +859,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
-        bool has_one_dupe = false;
         RmOff file_size_acc = 0;
 
         GList *next = NULL;
@@ -864,14 +866,13 @@ static void rm_tm_extract(RmTreeMerger *self) {
             RmFile *file = iter->data;
             next = iter->next;
 
-            bool is_duplicate = g_hash_table_contains(self->file_checks, file->digest);
-            has_one_dupe |= is_duplicate;
-
             /* with --partial-hidden we do not want to output */
             if(self->session->cfg->partial_hidden && file->is_hidden) {
                 g_queue_delete_link(file_list, iter);
                 continue;
             }
+
+            bool is_duplicate = g_hash_table_contains(self->file_checks, file->digest);
 
             if(iter != file_list->head && !is_duplicate) {
                 file_size_acc += file->file_size;

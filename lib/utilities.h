@@ -222,10 +222,11 @@ typedef struct RmMountTable {
 
 /**
  * @brief Allocates a new mounttable.
+ * @param force_fiemap Create random fiemap data always. Useful for testing.
  *
  * @return The mounttable. Free with rm_mounts_table_destroy.
  */
-RmMountTable *rm_mounts_table_new(void);
+RmMountTable *rm_mounts_table_new(bool force_fiemap);
 
 /**
  * @brief Destroy a previously allocated mounttable.

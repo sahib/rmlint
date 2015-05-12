@@ -33,7 +33,6 @@ to remove it. It is able to find:
 
 .. image:: _static/screenshot.png
    :align: center
-   :width: 50%
 
 ----
 
@@ -57,11 +56,12 @@ to remove it. It is able to find:
 .. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/releases
 
+.. image:: https://img.shields.io/github/downloads/sahib/rmlint/latest/total.svg
+   :target: https://github.com/sahib/rmlint/releases/latest
+
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
 
-.. image:: https://www.codacy.com/project/badge/0a87c7b0766844f58635295655847f30
-   :target: https://www.codacy.com/public/sahib/rmlint/dashboard
 
 .. raw:: html
 
@@ -102,6 +102,7 @@ user. People that want to extend ``rmlint`` might want to read this though:
        
    developers
    translators
+   benchmarks
    Online-manpage of rmlint(1) <rmlint.1>
 
 The Changelog_ is also updated with new and futures features, fixes and overall
