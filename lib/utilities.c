@@ -1179,15 +1179,16 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_o
 
 bool rm_offsets_match(char *path1, char *path2) {
     bool result=FALSE;
-
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 != -1) {
         int fd2 = rm_sys_open(path2, O_RDONLY);
         if(fd2 != -1) {
             RmOff file1_offset_next = 0;
             RmOff file2_offset_next = 0;
-            while ( rm_offset_get_from_fd(fd1, file1_offset_next, &file1_offset_next) ==
-                    rm_offset_get_from_fd(fd2, file2_offset_next, &file2_offset_next) &&
+            while ( !result &&
+                    (   rm_offset_get_from_fd(fd1, file1_offset_next, &file1_offset_next) ==
+                        rm_offset_get_from_fd(fd2, file2_offset_next, &file2_offset_next)
+                    ) &&
                     file1_offset_next != 0 &&
                     file1_offset_next == file2_offset_next ) {
                 if (file1_offset_next == G_MAXUINT64 || file2_offset_next == G_MAXUINT64) {
