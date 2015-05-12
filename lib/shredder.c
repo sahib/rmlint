@@ -858,8 +858,8 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
      * RmOff, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead
      */
-    RmOff phys_offset_a = a->current_disk_offset;
-    RmOff phys_offset_b = b->current_disk_offset;
+    RmOff phys_offset_a = a->current_fragment_physical_offset;
+    RmOff phys_offset_b = b->current_fragment_physical_offset;
 
     return (4 * SIGN_DIFF(a->dev, b->dev) + 2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
             1 * SIGN_DIFF(a->inode, b->inode));
@@ -867,18 +867,17 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
 
 /* Populate disk_offsets table for each file, if disk is rotational
  * */
-static void rm_shred_file_get_offset_table(RmFile *file, RmSession *session) {
+static void rm_shred_file_get_start_offset(RmFile *file, RmSession *session) {
     if(file->device->is_rotational && session->cfg->build_fiemap) {
-        g_assert(!file->disk_offsets);
 
         RM_DEFINE_PATH(file);
-        file->disk_offsets = rm_offset_create_table(file_path, session->cfg->fake_fiemap);
+        file->current_fragment_physical_offset = rm_offset_get_from_path(file_path, 0, &file->next_fragment_logical_offset);
+        /*TODO: fake fiemap option */
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
         session->offsets_read++;
-        if(file->disk_offsets) {
-            session->offset_fragments +=
-                g_sequence_get_length((GSequence *)file->disk_offsets);
+        if(file->current_fragment_physical_offset > 0) {
+            session->offset_fragments += 1;
         } else {
             session->offset_fails++;
         }
@@ -1293,7 +1292,7 @@ static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) 
 static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device,
                                        RmShredTag *main) {
     g_mutex_lock(&device->lock);
-    g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_offset_table,
+    g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_start_offset,
                     main->session);
     g_mutex_unlock(&device->lock);
 }
@@ -1607,8 +1606,10 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
-
-    file->current_disk_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
+    if (file->current_fragment_physical_offset > 0 &&
+        file->seek_offset >= file->next_fragment_logical_offset) {
+        file->current_fragment_physical_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset, &file->next_fragment_logical_offset);
+    }
 
     if(ferror(fd) != 0) {
         file->status = RM_FILE_STATE_IGNORE;
@@ -1726,7 +1727,12 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         }
     }
 
-    file->current_disk_offset = rm_offset_lookup(file->disk_offsets, file->seek_offset);
+    if (file->current_fragment_physical_offset > 0
+        && file->seek_offset >= file->next_fragment_logical_offset) {
+        /* TODO: test if second test actually improves speed
+         * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
+        file->current_fragment_physical_offset = rm_offset_get_from_fd(fd, file->seek_offset, &file->next_fragment_logical_offset);
+    }
 
     if(bytes_read == -1) {
         rm_log_perror("preadv failed");

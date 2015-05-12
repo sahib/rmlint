@@ -112,9 +112,6 @@ void rm_file_build_path(RmFile *file, char *buf) {
 }
 
 void rm_file_destroy(RmFile *file) {
-    if(file->disk_offsets) {
-        g_sequence_free(file->disk_offsets);
-    }
     if(file->hardlinks.is_head && file->hardlinks.files) {
         g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
     }
