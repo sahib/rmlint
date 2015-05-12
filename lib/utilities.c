@@ -1100,7 +1100,7 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const in
  * the next non-contiguous extent (fragment) is encountered and writes the corresponding
  * file offset to &file_offset_next.
  * */
-RmOff rm_offset_get_from_fd(int fd, const RmOff file_offset, RmOff *file_offset_next) {
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) {
     RmOff result=0;
     bool done = FALSE;
 
@@ -1114,12 +1114,13 @@ RmOff rm_offset_get_from_fd(int fd, const RmOff file_offset, RmOff *file_offset_
             done = TRUE;
         } else {
             if (!file_offset_next) {
-                /* no need to find end of fragment */
+                /* no need to find end of fragment so one loop is enough*/
                 done = TRUE;
             }
             if (fm->fm_mapped_extents > 0) {
                 /* retrieve data from fiemap */
                 struct fiemap_extent *fm_ext = fm->fm_extents;
+                file_offset += fm_ext[0].fe_length;
                 if (result == 0) {
                     /* this is the first extent */
                     result = fm_ext[0].fe_physical;
@@ -1135,16 +1136,27 @@ RmOff rm_offset_get_from_fd(int fd, const RmOff file_offset, RmOff *file_offset_
                         /* caller wants to know logical offset of next fragment */
                         *file_offset_next = fm_ext[0].fe_logical;
                     }
-                } else if (fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
-                    done = TRUE;
-                    if (file_offset_next) {
-                        /* caller wants to know logical offset of next fragment - signal
-                         * that it is EOF */
-                        *file_offset_next =  G_MAXUINT64;
+                } 
+                if (fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
+                    if (!done) {
+                        done = TRUE;
+                        if (file_offset_next) {
+                            /* caller wants to know logical offset of next fragment - signal
+                             * that it is EOF */
+                            *file_offset_next =  G_MAXUINT64;
+                        }
                     }
                 }
                 if (!done) {
                     expected = fm_ext[0].fe_physical + fm_ext[0].fe_length;
+                }
+            } else {
+                /* got no extents from rm_offset_get_fiemap */
+                done=true;
+                if (file_offset_next) {
+                    /* caller wants to know logical offset of next fragment but
+                     * we have an error... */
+                    *file_offset_next =  0;
                 }
             }
             g_free(fm);
@@ -1153,7 +1165,7 @@ RmOff rm_offset_get_from_fd(int fd, const RmOff file_offset, RmOff *file_offset_
     return result;
 }
 
-RmOff rm_offset_get_from_path(const char *path, const RmOff file_offset, RmOff *file_offset_next) {
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next) {
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
