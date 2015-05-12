@@ -1068,46 +1068,129 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 
 #if HAVE_FIEMAP
 
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset) {
+/* Return fiemap structure containing n_extents for file descriptor fd.
+ * Return NULL if errors encountered.
+ * Needs to be freed with g_free if not NULL.
+ * */
+static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const int file_offset){
+    /* struct fiemap does not allocate any extents by default,
+     * so we allocate the nominated number
+     * */
+    struct fiemap *fm =
+        g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
+
+    fm->fm_flags = 0;
+    fm->fm_extent_count = n_extents;
+    fm->fm_length = FIEMAP_MAX_OFFSET;
+    fm->fm_start = file_offset;
+
+    if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fm) == -1) {
+        g_free(fm);
+        fm=NULL;
+    }
+    return fm;
+}
+
+/* Return physical (disk) offset of the beginning of the file extent containing the
+ * specified logical file_offset.
+ * If a pointer to file_offset_next is provided then read fiemap extents until
+ * the next non-contiguous extent (fragment) is encountered and writes the corresponding
+ * file offset to &file_offset_next.
+ * */
+RmOff rm_offset_get_from_fd(int fd, const RmOff file_offset, RmOff *file_offset_next) {
     /* TODO: add fake_fiemap option */
     RmOff result=0;
+    bool done = FALSE;
 
-    /* struct fiemap does not allocate any extents by default,
-     * so we choose ourself how many of them we allocate.
-     * */
-    const int n_extents = 1;
-    struct fiemap *fiemap =
-        g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
-    struct fiemap_extent *fm_ext = fiemap->fm_extents;
+    /* used for detecting contiguous extents */
+    unsigned long expected = 0;
 
-    fiemap->fm_flags = 0;
-    fiemap->fm_extent_count = n_extents;
-    fiemap->fm_length = FIEMAP_MAX_OFFSET;
-    fiemap->fm_start = file_offset;
-
-    if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fiemap) != -1 &&
-       fiemap->fm_mapped_extents > 0) {
-        result = fm_ext[0].fe_physical;
+    while (!done) {
+        /* read in one extent */
+        struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);
+        if (!fm) {
+            done = TRUE;
+        } else {
+            if (!file_offset_next) {
+                /* no need to find end of fragment */
+                done = TRUE;
+            }
+            if (fm->fm_mapped_extents > 0) {
+                /* retrieve data from fiemap */
+                struct fiemap_extent *fm_ext = fm->fm_extents;
+                if (result == 0) {
+                    /* this is the first extent */
+                    result = fm_ext[0].fe_physical;
+                    if (result==0) {
+                        /* looks suspicious - let's get out of here */
+                        done = TRUE;
+                    }
+                } else if (fm_ext[0].fe_physical > expected ||
+                           fm_ext[0].fe_physical < result) {
+                    /* current extent is not contiguous with previous, so we can stop*/
+                    done = TRUE;
+                    if (file_offset_next) {
+                        /* caller wants to know logical offset of next fragment */
+                        *file_offset_next = fm_ext[0].fe_logical;
+                    }
+                } else if (fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
+                    done = TRUE;
+                    if (file_offset_next) {
+                        /* caller wants to know logical offset of next fragment - signal
+                         * that it is EOF */
+                        *file_offset_next =  G_MAXUINT64;
+                    }
+                }
+                if (!done) {
+                    expected = fm_ext[0].fe_physical + fm_ext[0].fe_length;
+                }
+            }
+            g_free(fm);
+        }
     }
-    g_free(fiemap);
     return result;
 }
 
-RmOff rm_offset_get_from_path(const char *path, RmOff file_offset) {
+RmOff rm_offset_get_from_path(const char *path, const RmOff file_offset, RmOff *file_offset_next) {
     /* TODO: add fake_fiemap option */
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result=rm_offset_get_from_fd(fd, file_offset);
+    RmOff result=rm_offset_get_from_fd(fd, file_offset, file_offset_next);
     rm_sys_close(fd);
     return result;
 }
 
+
 bool rm_offsets_match(char *path1, char *path2) {
-    /* TODO */
-    return (path1 == path2);
+    bool result=FALSE;
+
+    int fd1 = rm_sys_open(path1, O_RDONLY);
+    if(fd1 != -1) {
+        int fd2 = rm_sys_open(path2, O_RDONLY);
+        if(fd2 != -1) {
+            RmOff file1_offset_next = 0;
+            RmOff file2_offset_next = 0;
+            while ( rm_offset_get_from_fd(fd1, file1_offset_next, &file1_offset_next) ==
+                    rm_offset_get_from_fd(fd2, file2_offset_next, &file2_offset_next) &&
+                    file1_offset_next != 0 &&
+                    file1_offset_next == file2_offset_next ) {
+                if (file1_offset_next == G_MAXUINT64 || file2_offset_next == G_MAXUINT64) {
+                    /* phew, we got to the end */
+                    result = TRUE;
+                }
+            }
+            rm_sys_close(fd2);
+        } else {
+            rm_log_info("Error opening %s in rm_offsets_match\n", path2);
+        }
+        rm_sys_close(fd1);
+    } else {
+        rm_log_info("Error opening %s in rm_offsets_match\n", path1);
+    }
+    return result;
 }
 
 #else /* Probably FreeBSD */
