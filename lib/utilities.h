@@ -301,14 +301,14 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_fd(int fd, const RmOff file_offset, RmOff *file_offset_next);
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next);
 
 /**
  * @brief Lookup the physical offset of a file path at any given offset.
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_path(const char *path, const RmOff file_offset, RmOff *file_offset_next);
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next);
 
 /**
  * @brief Test if two files have identical fiemaps.
