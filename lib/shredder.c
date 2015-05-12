@@ -1728,6 +1728,8 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
 
     if (file->current_fragment_physical_offset > 0
         && file->seek_offset >= file->next_fragment_logical_offset) {
+        /* TODO: test if second test actually improves speed
+         * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
         file->current_fragment_physical_offset = rm_offset_get_from_fd(fd, file->seek_offset, &file->next_fragment_logical_offset);
     }
 
