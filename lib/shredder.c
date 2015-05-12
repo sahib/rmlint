@@ -852,8 +852,8 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
      * RmOff, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead
      */
-    RmOff phys_offset_a = a->current_disk_offset;
-    RmOff phys_offset_b = b->current_disk_offset;
+    RmOff phys_offset_a = a->current_fragment_physical_offset;
+    RmOff phys_offset_b = b->current_fragment_physical_offset;
 
     return (4 * SIGN_DIFF(a->dev, b->dev) + 2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
             1 * SIGN_DIFF(a->inode, b->inode));
@@ -865,11 +865,11 @@ static void rm_shred_file_get_start_offset(RmFile *file, RmSession *session) {
     if(file->device->is_rotational && session->cfg->build_fiemap) {
 
         RM_DEFINE_PATH(file);
-        file->current_disk_offset = rm_offset_get_from_path(file_path, 0);
+        file->current_fragment_physical_offset = rm_offset_get_from_path(file_path, 0);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
         session->offsets_read++;
-        if(file->current_disk_offset > 0) {
+        if(file->current_fragment_physical_offset > 0) {
             session->offset_fragments += 1;
         } else {
             session->offset_fails++;
@@ -1589,8 +1589,8 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
-    if (file->current_disk_offset > 0) {
-        file->current_disk_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset);
+    if (file->current_fragment_physical_offset > 0) {
+        file->current_fragment_physical_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset);
     }
 
     if(ferror(fd) != 0) {
@@ -1709,8 +1709,8 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         }
     }
 
-    if (file->current_disk_offset > 0) {
-        file->current_disk_offset = rm_offset_get_from_fd(fd, file->seek_offset);
+    if (file->current_fragment_physical_offset > 0) {
+        file->current_fragment_physical_offset = rm_offset_get_from_fd(fd, file->seek_offset);
     }
 
     if(bytes_read == -1) {

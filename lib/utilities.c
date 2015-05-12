@@ -1068,40 +1068,8 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 //    FIEMAP IMPLEMENATION     //
 /////////////////////////////////
 
-typedef struct RmOffsetEntry {
-    RmOff logical;
-    RmOff physical;
-} RmOffsetEntry;
 
 #if HAVE_FIEMAP
-
-/* sort sequence into decreasing order of logical offsets */
-static int rm_offset_sort_logical(gconstpointer a, gconstpointer b) {
-    const RmOffsetEntry *offset_a = a;
-    const RmOffsetEntry *offset_b = b;
-    if(offset_b->logical > offset_a->logical) {
-        return 1;
-    } else if(offset_b->logical == offset_a->logical) {
-        return 0;
-    } else {
-        return -1;
-    }
-}
-
-/* find first item in sequence with logical offset <= target */
-static int rm_offset_find_logical(gconstpointer a, gconstpointer b) {
-    const RmOffsetEntry *offset_a = a;
-    const RmOffsetEntry *offset_b = b;
-    if(offset_b->logical >= offset_a->logical) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-static void rm_offset_free_func(RmOffsetEntry *entry) {
-    g_slice_free(RmOffsetEntry, entry);
-}
 
 RmOff rm_offset_get_from_fd(int fd, RmOff file_offset) {
     RmOff result=0;
@@ -1138,143 +1106,23 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset) {
     return result;
 }
 
-RmOffsetTable rm_offset_create_table(const char *path) {
-    int fd = rm_sys_open(path, O_RDONLY);
-    if(fd == -1) {
-        rm_log_info("Error opening %s in setup_fiemap_extents\n", path);
-        return NULL;
-    }
-
-    /* struct fiemap does not allocate any extents by default,
-     * so we choose ourself how many of them we allocate.
-     * */
-    const int n_extents = 256;
-    struct fiemap *fiemap =
-        g_malloc0(sizeof(struct fiemap) + n_extents * sizeof(struct fiemap_extent));
-    struct fiemap_extent *fm_ext = fiemap->fm_extents;
-
-    /* data structure we save our offsets in */
-    GSequence *self = g_sequence_new((GFreeFunc)rm_offset_free_func);
-
-    bool last = false;
-    while(!last) {
-        fiemap->fm_flags = 0;
-        fiemap->fm_extent_count = n_extents;
-        fiemap->fm_length = FIEMAP_MAX_OFFSET;
-
-        if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fiemap) == -1) {
-            break;
-        }
-
-        /* This might happen on empty files - those have no
-         * extents, but they have an offset on the disk.
-         */
-        if(fiemap->fm_mapped_extents <= 0) {
-            break;
-        }
-
-        /* used for detecting contiguous extents, which we ignore */
-        unsigned long expected = 0;
-
-        /* Remember all non contiguous extents */
-        for(unsigned i = 0; i < fiemap->fm_mapped_extents && !last; i++) {
-            if(i == 0 || fm_ext[i].fe_physical != expected) {
-                RmOffsetEntry *offset_entry = g_slice_new(RmOffsetEntry);
-                offset_entry->logical = fm_ext[i].fe_logical;
-                offset_entry->physical = fm_ext[i].fe_physical;
-                g_sequence_append(self, offset_entry);
-            }
-
-            expected = fm_ext[i].fe_physical + fm_ext[i].fe_length;
-            fiemap->fm_start = fm_ext[i].fe_logical + fm_ext[i].fe_length;
-            last = fm_ext[i].fe_flags & FIEMAP_EXTENT_LAST;
-        }
-    }
-
-    rm_sys_close(fd);
-    g_free(fiemap);
-
-    g_sequence_sort(self, (GCompareDataFunc)rm_offset_sort_logical, NULL);
-    return self;
-}
-
-RmOff rm_offset_lookup(RmOffsetTable offset_list, RmOff file_offset) {
-    if(offset_list != NULL) {
-        RmOffsetEntry token;
-        token.physical = 0;
-        token.logical = file_offset;
-
-        GSequenceIter *nearest = g_sequence_search(
-            offset_list, &token, (GCompareDataFunc)rm_offset_find_logical, NULL);
-
-        if(!g_sequence_iter_is_end(nearest)) {
-            RmOffsetEntry *off = g_sequence_get(nearest);
-            return (gint64)(off->physical + file_offset) - (gint64)off->logical;
-        }
-    }
-
-    /* default to 0 always */
-    return 0;
-}
-
-bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
-    if(!table1 || !table2) {
-        return false;
-    }
-    if(0 || g_sequence_get_length(table1) == 0 ||
-       g_sequence_get_length(table1) != g_sequence_get_length(table2)) {
-        return false;
-    }
-    GSequenceIter *iter1 = g_sequence_get_begin_iter(table1);
-    GSequenceIter *iter2 = g_sequence_get_begin_iter(table2);
-
-    while(!g_sequence_iter_is_end(iter1)) {
-        RmOffsetEntry *ent1 = g_sequence_get(iter1);
-        RmOffsetEntry *ent2 = g_sequence_get(iter2);
-        if(ent1->logical != ent2->logical || ent1->physical != ent2->physical) {
-            return false;
-        }
-        iter1 = g_sequence_iter_next(iter1);
-        iter2 = g_sequence_iter_next(iter2);
-    }
-    return true;
-}
-
-RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable offset_list, RmOff file_offset) {
-    if(offset_list != NULL) {
-        RmOffsetEntry token;
-        token.physical = 0;
-        token.logical = file_offset;
-
-        GSequenceIter *next_fragment = g_sequence_iter_prev(g_sequence_search(
-            offset_list, &token, (GCompareDataFunc)rm_offset_find_logical, NULL));
-
-        if(!g_sequence_iter_is_end(next_fragment) &&
-           !g_sequence_iter_is_begin(next_fragment)) {
-            RmOffsetEntry *off = g_sequence_get(next_fragment);
-            return off->logical - file_offset;
-        }
-    }
-    /* default to 0 always */
-    return 0;
+bool rm_offsets_match(char *path1, char *path2) {
+    /* TODO */
+    return (path1 == path2);
 }
 
 #else /* Probably FreeBSD */
 
-RmOffsetTable rm_offset_create_table(_U const char *path) {
-    return NULL;
-}
-
-RmOff rm_offset_lookup(_U RmOffsetTable table, _U RmOff file_offset) {
+RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset) {
     return 0;
 }
 
-RmOff rm_offset_bytes_to_next_fragment(_U RmOffsetTable table, _U RmOff file_offset) {
-    return 0;
+RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset) {
+    return 0
 }
 
-bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2) {
-    return false;
+bool rm_offsets_match(char *path1, char *path2) {
+    return (path1 == path2);
 }
 
 #endif

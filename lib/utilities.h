@@ -295,40 +295,6 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
 //    FIEMAP IMPLEMENATION     //
 /////////////////////////////////
 
-/* typedef RmOffsetTable, in case we need to exchange
- * the data structure at any point.
- */
-typedef GSequence *RmOffsetTable;
-
-/**
- * @brief Create a table with the extents for a file at path.
- */
-RmOffsetTable rm_offset_create_table(const char *path);
-
-/**
- * @brief Lookup the physical offset of a file at any given offset.
- *
- * @return the physical offset starting from the disk.
- */
-RmOff rm_offset_lookup(RmOffsetTable table, RmOff file_offset);
-
-/**
- * @return next logical offset.
- */
-RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable table, RmOff file_offset);
-
-/**
- * @brief Test if two files already share same offsets.
- */
-bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2);
-
-/**
- * @brief Free the allocated table.
- */
-static inline void rm_offset_free(RmOffsetTable table) {
-    g_sequence_free(table);
-}
-
 
 /**
  * @brief Lookup the physical offset of a file fd at any given offset.
@@ -343,6 +309,11 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset);
  * @return the physical offset starting from the disk.
  */
 RmOff rm_offset_get_from_path(const char *path, RmOff file_offset);
+
+/**
+ * @brief Test if two files have identical fiemaps.
+ */
+bool rm_offsets_match(char *path1, char *path2);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //
