@@ -871,7 +871,7 @@ static void rm_shred_file_get_start_offset(RmFile *file, RmSession *session) {
     if(file->device->is_rotational && session->cfg->build_fiemap) {
 
         RM_DEFINE_PATH(file);
-        file->current_fragment_physical_offset = rm_offset_get_from_path(file_path, 0, NULL);
+        file->current_fragment_physical_offset = rm_offset_get_from_path(file_path, 0, &file->next_fragment_logical_offset);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
         session->offsets_read++;
@@ -1605,8 +1605,9 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
-    if (file->current_fragment_physical_offset > 0) {
-        file->current_fragment_physical_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset, NULL);
+    if (file->current_fragment_physical_offset > 0 &&
+        file->seek_offset >= file->next_fragment_logical_offset) {
+        file->current_fragment_physical_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset, &file->next_fragment_logical_offset);
     }
 
     if(ferror(fd) != 0) {
@@ -1725,8 +1726,9 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         }
     }
 
-    if (file->current_fragment_physical_offset > 0) {
-        file->current_fragment_physical_offset = rm_offset_get_from_fd(fd, file->seek_offset, NULL);
+    if (file->current_fragment_physical_offset > 0
+        && file->seek_offset >= file->next_fragment_logical_offset) {
+        file->current_fragment_physical_offset = rm_offset_get_from_fd(fd, file->seek_offset, &file->next_fragment_logical_offset);
     }
 
     if(bytes_read == -1) {
