@@ -219,6 +219,12 @@
 #define SHRED_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 0.05 second */
 #endif
 
+/* how many byts we read before going back to start of device for another sweep */
+/* (too long a sweep and metadata may be dumped from the OS's cache before we
+ * come back to read it again, which would defeat the whole purpose of reading
+ * files in physical disk order) */
+#define SHRED_SWEEP_SIZE (1024 * 1024 * 1024)
+
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
 #define SHRED_BALANCED_PAGES (4)
 
@@ -312,6 +318,8 @@ typedef struct RmShredDevice {
      * can get written to by other device threads so require mutex protection */
     gint32 remaining_files;
     gint64 remaining_bytes;
+    RmOff bytes_read_this_pass;
+    RmOff bytes_per_pass;
 
     /* True when actual shreddiner began.
      * This is used to update the correct progressbar state.
@@ -707,6 +715,9 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     {
         device->remaining_files += files;
         device->remaining_bytes += bytes;
+        if (bytes<0) {
+            device->bytes_read_this_pass = device->bytes_read_this_pass + (RmOff)(-bytes);
+        }
     }
     g_mutex_unlock(&(device->lock));
 
@@ -1118,7 +1129,11 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
             if(initial || !file->devlist_waiting) {
                 /* add file to device queue */
                 g_assert(file->device);
-                rm_shred_push_queue(file);
+                if (initial) {
+                    rm_shred_push_queue(file);
+                } else {
+                    rm_shred_push_queue_sorted(file);
+                }
             } else {
                 /* calling routine will handle the file */
                 result = true;
@@ -1894,6 +1909,8 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     GList *iter = NULL;
+    RmOff bytes_read_this_pass=0;
+    device->bytes_read_this_pass = 0;
 
     g_assert(device);
 
@@ -1907,11 +1924,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                      minor(device->disk),
                      (RmOff)g_queue_get_length(device->file_queue));
 
-        if(device->is_rotational) {
-            g_queue_sort(device->file_queue,
-                         (GCompareDataFunc)rm_shred_compare_file_order, NULL);
-        }
-
         if(g_queue_get_length(device->file_queue) == 0 && device->remaining_files > 0) {
             /* give the other device threads a chance to catch up, which will hopefully
              * release held files from RmShredGroups to give us some work to do */
@@ -1922,8 +1934,12 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     }
     g_mutex_unlock(&device->lock);
 
+
+
     /* scheduler for one file at a time, optimised to minimise seeks */
-    while(iter && !rm_session_was_aborted(main->session)) {
+    while(iter
+            && !rm_session_was_aborted(main->session)
+            && bytes_read_this_pass <= device->bytes_per_pass) {
         RmFile *file = iter->data;
         gboolean can_process = rm_shred_can_process(file, main);
 
@@ -1942,7 +1958,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
         while(can_process) {
             can_process = FALSE;
             RmOff start_offset = file->hash_offset;
-
             file = rm_shred_process_file(device, file);
             if(file) {
                 if(start_offset == file->hash_offset && file->has_ext_cksum == false) {
@@ -1967,7 +1982,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                     can_process = rm_shred_can_process(file, main);
                     if(!can_process) {
                         /* put file back in queue */
-                        rm_shred_push_queue(file);
+                        rm_shred_push_queue_sorted(file);
                     }
                     continue;
                 } else {
@@ -1977,19 +1992,26 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                 }
             }
         }
+        g_mutex_lock(&device->lock);
+        {
+            bytes_read_this_pass = device->bytes_read_this_pass;
+        }
+        g_mutex_unlock(&device->lock);
+
     }
 
     /* threadpool thread terminates but the device will be recycled via
      * the device_return queue
      */
-    rm_log_debug(BLUE "Pushing device back to main joiner %d\n" RESET, (int)device->disk);
+    rm_log_debug(BLUE "Pushing device back to main joiner %d after %"LLU" bytes\n" RESET, (int)device->disk, bytes_read_this_pass);
     g_async_queue_push(main->device_return, device);
 }
 
 static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
+    uint devices = g_hash_table_size(dev_table);
     tag->device_pool = rm_util_thread_pool_new(
         (GFunc)rm_shred_devlist_factory, tag,
-        MIN(tag->session->cfg->threads / 2 + 1, g_hash_table_size(dev_table)));
+        MIN(tag->session->cfg->threads / 2 + 1, devices));
 
     GHashTableIter iter;
     gpointer key, value;
@@ -1997,6 +2019,7 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
         device->after_preprocess = true;
+        device->bytes_per_pass = SHRED_SWEEP_SIZE / devices;
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
                      NULL);
         rm_log_debug(GREEN "Pushing device %s to threadpool\n", device->disk_name);
@@ -2070,6 +2093,7 @@ void rm_shred_run(RmSession *session) {
 
             if(device->remaining_files > 0) {
                 /* recycle the device */
+                device->bytes_per_pass = SHRED_SWEEP_SIZE / devices_left;
                 rm_util_thread_pool_push(tag.device_pool, device);
             } else {
                 devices_left--;
