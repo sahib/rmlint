@@ -1306,6 +1306,8 @@ static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) 
 static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device,
                                        RmShredTag *main) {
     g_mutex_lock(&device->lock);
+    /* sort by inode number to speed up FIEMAP */
+    g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
     g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_start_offset,
                     main->session);
     g_mutex_unlock(&device->lock);
