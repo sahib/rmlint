@@ -488,15 +488,20 @@ guint rm_digest_hash(RmDigest *digest) {
 }
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
-    guint8 *buf_a = rm_digest_steal_buffer(a);
-    guint8 *buf_b = rm_digest_steal_buffer(b);
+    if (a->type == RM_DIGEST_PARANOID) {
+        return (a->bytes == b->bytes
+                && !memcmp(a->checksum, b->checksum, a->bytes));
+    } else {
+        guint8 *buf_a = rm_digest_steal_buffer(a);
+        guint8 *buf_b = rm_digest_steal_buffer(b);
 
-    gboolean result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
+        gboolean result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
 
-    g_slice_free1(a->bytes, buf_a);
-    g_slice_free1(b->bytes, buf_b);
+        g_slice_free1(a->bytes, buf_a);
+        g_slice_free1(b->bytes, buf_b);
 
-    return result;
+        return result;
+    }
 }
 
 int rm_digest_hexstring(RmDigest *digest, char *buffer) {
