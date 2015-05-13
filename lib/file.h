@@ -192,10 +192,11 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
-    /* Table of this file's extents.
+    /* Disk fiemap / physical offset info.
+     * TODO: can we make do with less than 16 bytes here?
      */
-    RmOffsetTable disk_offsets;
-    RmOff current_disk_offset;
+    RmOff current_fragment_physical_offset;
+    RmOff next_fragment_logical_offset;
 
     /* What kind of lint this file is.
      */
