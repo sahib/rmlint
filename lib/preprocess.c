@@ -37,10 +37,10 @@ static guint rm_file_hash(RmFile *file) {
     RmCfg *cfg = file->session->cfg;
     if(cfg->match_basename || cfg->match_with_extension) {
         RM_DEFINE_BASENAME(file);
+        char *extension = rm_util_path_extension(file_basename);
         return (guint)(
             file->file_size ^ (cfg->match_basename ? g_str_hash(file_basename) : 0) ^
-            (cfg->match_with_extension ? g_str_hash(rm_util_path_extension(file_basename))
-                                       : 0));
+            ((cfg->match_with_extension && extension) ? g_str_hash(rm_util_path_extension(file_basename)) : 0));
     } else {
         return (guint)(file->file_size);
     }
