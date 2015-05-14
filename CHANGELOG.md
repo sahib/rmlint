@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.3.0 (No name yet)] -- [unreleased]
+## [2.3.0 Ominous Oscar] -- [unreleased]
 
 ## [2.2.0 Dreary Dropbear] -- 2015-05-09
 
