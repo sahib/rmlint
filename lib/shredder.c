@@ -850,8 +850,15 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
     RmOff phys_offset_a = a->current_fragment_physical_offset;
     RmOff phys_offset_b = b->current_fragment_physical_offset;
 
-    return (4 * SIGN_DIFF(a->dev, b->dev) + 2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
-            1 * SIGN_DIFF(a->inode, b->inode));
+    if (a->is_on_subvol_fs && b->is_on_subvol_fs && a->path_index==b->path_index) {
+        /* ignore dev because subvolumes on the same device have different dev numbers */
+        return (2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
+                1 * SIGN_DIFF(a->inode, b->inode));
+    } else {
+        return (4 * SIGN_DIFF(a->dev, b->dev) +
+                2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
+                1 * SIGN_DIFF(a->inode, b->inode));
+    }
 }
 
 /* Populate disk_offsets table for each file, if disk is rotational

@@ -261,7 +261,12 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
         cfg->is_prefd[index] = is_prefd;
         cfg->paths = g_realloc(cfg->paths, sizeof(char *) * (index + 2));
 
-        char *abs_path = realpath(path, NULL);
+        char *abs_path = NULL;
+        if (strncmp(path,"//",2) == 0) {
+            abs_path = g_strdup(path);
+        } else {
+            abs_path = realpath(path, NULL);
+        }
 
         if(cfg->use_meta_cache) {
             cfg->paths[index] = GUINT_TO_POINTER(
@@ -964,7 +969,8 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
         if(strncmp(dir_path, "-", 1) == 0) {
             read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);
-        } else if(strncmp(dir_path, "//", 2) == 0) {
+        } else if(strncmp(dir_path, "//", 2) == 0
+                && strlen(dir_path) == 2) {
             is_prefd = !is_prefd;
         } else {
             read_paths = rm_cmd_add_path(session, is_prefd, path_index, paths[i]);

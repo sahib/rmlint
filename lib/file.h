@@ -153,6 +153,9 @@ typedef struct RmFile {
     /* Set to true if rm_shred_devlist_factory is waiting for hash increment */
     bool devlist_waiting : 1;
 
+    /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
+    bool is_on_subvol_fs : 1;
+
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
