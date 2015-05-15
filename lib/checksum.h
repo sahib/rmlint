@@ -83,6 +83,42 @@ typedef struct RmDigest {
     };
 } RmDigest;
 
+/////////// RmBufferPool and RmBuffer ////////////////
+
+typedef struct RmBufferPool {
+    /* Place where the buffers are stored */
+    GTrashStack *stack;
+
+    /* size of each buffer */
+    gsize buffer_size;
+
+    /* how many new buffers can we allocate before hitting mem limit? */
+    gsize avail_buffers;
+
+    /* concurrent accesses may happen */
+    GMutex lock;
+    GCond change;
+
+} RmBufferPool;
+
+/* Represents one block of read data */
+typedef struct RmBuffer {
+    /* file structure the data belongs to */
+    RmFile *file;
+
+    /* len of the read input */
+    guint32 len;
+
+    /* flag to indicate that there is no more data for the current hash increment */
+    bool finished : 1;
+
+    /* *must* be last member of RmBuffer,
+     * gets all the rest of the allocated space
+     * */
+    guint8 data[];
+} RmBuffer;
+
+
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
  *
@@ -202,5 +238,12 @@ int rm_digest_get_bytes(RmDigest *self);
  * This is mainly useful for using an adjusted buffer for symlinks.
  */
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
+
+
+RmOff rm_buffer_size(RmBufferPool *pool);
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem);
+void rm_buffer_pool_destroy(RmBufferPool *pool);
+void *rm_buffer_pool_get(RmBufferPool *pool);
+void rm_buffer_pool_release(RmBufferPool *pool, void *buf);
 
 #endif /* end of include guard */

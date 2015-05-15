@@ -39,6 +39,73 @@
 #include "checksums/murmur3.h"
 #include "checksums/spooky-c.h"
 
+
+
+///////////////////////////////////////
+//    BUFFER POOL IMPLEMENTATION     //
+///////////////////////////////////////
+
+static RmOff rm_buffer_size(RmBufferPool *pool) {
+    return pool->buffer_size;
+}
+
+static RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
+    RmBufferPool *self = g_slice_new(RmBufferPool);
+    self->stack = NULL;
+    self->buffer_size = buffer_size;
+    self->avail_buffers = MAX(max_mem / buffer_size, 1);
+    rm_log_debug("rm_buffer_pool_init: allocated max %lu buffers of %lu bytes each\n", self->avail_buffers, self->buffer_size);
+    g_cond_init(&self->change);
+    g_mutex_init(&self->lock);
+    return self;
+}
+
+static void rm_buffer_pool_destroy(RmBufferPool *pool) {
+    g_mutex_lock(&pool->lock);
+    {
+        while(pool->stack != NULL) {
+            g_slice_free1(pool->buffer_size, g_trash_stack_pop(&pool->stack));
+        }
+    }
+    g_mutex_unlock(&pool->lock);
+    g_mutex_clear(&pool->lock);
+    g_cond_clear(&pool->change);
+    g_slice_free(RmBufferPool, pool);
+}
+
+static void *rm_buffer_pool_get(RmBufferPool *pool) {
+    void *buffer = NULL;
+    g_mutex_lock(&pool->lock);
+    {
+        if(!pool->stack && pool->avail_buffers > 0) {
+            buffer = g_slice_alloc(pool->buffer_size);
+            pool->avail_buffers --;
+        } else {
+            while (!pool->stack) {
+                g_cond_wait(&pool->change, &pool->lock);
+            }
+            buffer = g_trash_stack_pop(&pool->stack);
+        }
+    }
+    g_mutex_unlock(&pool->lock);
+
+    g_assert(buffer);
+    return buffer;
+}
+
+static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
+    g_mutex_lock(&pool->lock);
+    {
+        g_trash_stack_push(&pool->stack, buf);
+        g_cond_signal(&pool->change);
+    }
+    g_mutex_unlock(&pool->lock);
+}
+
+///////////////////////////////////////
+//      RMDIGEST IMPLEMENTATION      //
+///////////////////////////////////////
+
 RmDigestType rm_string_to_digest_type(const char *string) {
     if(string == NULL) {
         return RM_DIGEST_UNKNOWN;
