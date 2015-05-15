@@ -45,11 +45,11 @@
 //    BUFFER POOL IMPLEMENTATION     //
 ///////////////////////////////////////
 
-static RmOff rm_buffer_size(RmBufferPool *pool) {
+RmOff rm_buffer_size(RmBufferPool *pool) {
     return pool->buffer_size;
 }
 
-static RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
     RmBufferPool *self = g_slice_new(RmBufferPool);
     self->stack = NULL;
     self->buffer_size = buffer_size;
@@ -60,7 +60,7 @@ static RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
     return self;
 }
 
-static void rm_buffer_pool_destroy(RmBufferPool *pool) {
+void rm_buffer_pool_destroy(RmBufferPool *pool) {
     g_mutex_lock(&pool->lock);
     {
         while(pool->stack != NULL) {
@@ -73,7 +73,7 @@ static void rm_buffer_pool_destroy(RmBufferPool *pool) {
     g_slice_free(RmBufferPool, pool);
 }
 
-static void *rm_buffer_pool_get(RmBufferPool *pool) {
+void *rm_buffer_pool_get(RmBufferPool *pool) {
     void *buffer = NULL;
     g_mutex_lock(&pool->lock);
     {
@@ -93,7 +93,7 @@ static void *rm_buffer_pool_get(RmBufferPool *pool) {
     return buffer;
 }
 
-static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
+void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
     g_mutex_lock(&pool->lock);
     {
         g_trash_stack_push(&pool->stack, buf);

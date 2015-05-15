@@ -104,7 +104,7 @@ typedef struct RmBufferPool {
 /* Represents one block of read data */
 typedef struct RmBuffer {
     /* file structure the data belongs to */
-    RmFile *file;
+    struct RmFile *file;
 
     /* len of the read input */
     guint32 len;
