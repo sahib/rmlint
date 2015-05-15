@@ -266,11 +266,16 @@ typedef struct RmBufferPool {
     /* Place where the buffers are stored */
     GTrashStack *stack;
 
-    /* how many buffers are available? */
-    RmOff size;
+    /* size of each buffer */
+    gsize buffer_size;
+
+    /* how many new buffers can we allocate before hitting mem limit? */
+    gsize avail_buffers;
 
     /* concurrent accesses may happen */
     GMutex lock;
+    GCond change;
+
 } RmBufferPool;
 
 /* Represents one block of read data */
@@ -509,14 +514,17 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
 //    BUFFER POOL IMPLEMENTATION     //
 ///////////////////////////////////////
 
-static RmOff rm_buffer_pool_size(RmBufferPool *pool) {
-    return pool->size;
+static RmOff rm_buffer_size(RmBufferPool *pool) {
+    return pool->buffer_size;
 }
 
-static RmBufferPool *rm_buffer_pool_init(gsize size) {
+static RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
     RmBufferPool *self = g_slice_new(RmBufferPool);
     self->stack = NULL;
-    self->size = size;
+    self->buffer_size = buffer_size;
+    self->avail_buffers = MAX(max_mem / buffer_size, 1);
+    rm_log_debug("rm_buffer_pool_init: allocated max %lu buffers of %lu bytes each\n", self->avail_buffers, self->buffer_size);
+    g_cond_init(&self->change);
     g_mutex_init(&self->lock);
     return self;
 }
@@ -525,11 +533,12 @@ static void rm_buffer_pool_destroy(RmBufferPool *pool) {
     g_mutex_lock(&pool->lock);
     {
         while(pool->stack != NULL) {
-            g_slice_free1(pool->size, g_trash_stack_pop(&pool->stack));
+            g_slice_free1(pool->buffer_size, g_trash_stack_pop(&pool->stack));
         }
     }
     g_mutex_unlock(&pool->lock);
     g_mutex_clear(&pool->lock);
+    g_cond_clear(&pool->change);
     g_slice_free(RmBufferPool, pool);
 }
 
@@ -537,20 +546,28 @@ static void *rm_buffer_pool_get(RmBufferPool *pool) {
     void *buffer = NULL;
     g_mutex_lock(&pool->lock);
     {
-        if(!pool->stack) {
-            buffer = g_slice_alloc(pool->size);
+        if(!pool->stack && pool->avail_buffers > 0) {
+            buffer = g_slice_alloc(pool->buffer_size);
+            pool->avail_buffers --;
         } else {
+            while (!pool->stack) {
+                g_cond_wait(&pool->change, &pool->lock);
+            }
             buffer = g_trash_stack_pop(&pool->stack);
         }
     }
     g_mutex_unlock(&pool->lock);
+
     g_assert(buffer);
     return buffer;
 }
 
 static void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
     g_mutex_lock(&pool->lock);
-    { g_trash_stack_push(&pool->stack, buf); }
+    {
+        g_trash_stack_push(&pool->stack, buf);
+        g_cond_signal(&pool->change);
+    }
     g_mutex_unlock(&pool->lock);
 }
 
@@ -1577,7 +1594,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
     FILE *fd = NULL;
     gint32 total_bytes_read = 0;
 
-    gint32 buf_size = rm_buffer_pool_size(device->main->mem_pool);
+    gint32 buf_size = rm_buffer_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
     RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
@@ -1660,7 +1677,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
 
     GThreadPool *hash_pool = g_async_queue_pop(device->main->hash_pool_pool);
 
-    RmOff buf_size = rm_buffer_pool_size(device->main->mem_pool);
+    RmOff buf_size = rm_buffer_size(device->main->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
@@ -2040,11 +2057,11 @@ void rm_shred_run(RmSession *session) {
 
     RmShredTag tag;
     tag.active_groups = 0;
-    tag.hash_mem_alloc = session->cfg->paranoid_mem;
+    tag.hash_mem_alloc = session->cfg->hash_mem;
     tag.session = session;
 
     /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
-    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE);
+    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, tag.hash_mem_alloc);
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
 

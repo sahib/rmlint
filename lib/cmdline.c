@@ -737,7 +737,7 @@ static gboolean rm_cmd_parse_large_output(_U const char *option_name,
     return true;
 }
 
-static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
+static gboolean rm_cmd_parse_hash_mem(_U const char *option_name,
                                           const gchar *size_spec, RmSession *session,
                                           GError **error) {
     RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
@@ -746,7 +746,7 @@ static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
         g_prefix_error(error, _("Invalid size description \"%s\": "), size_spec);
         return false;
     } else {
-        session->cfg->paranoid_mem = size;
+        session->cfg->hash_mem = size;
         return true;
     }
 }
@@ -1107,8 +1107,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Limit lower reading barrier", "P"},
         {"clamp-top", 'Q', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(clamp_top),
          "Limit upper reading barrier", "P"},
-        {"max-paranoid-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
-         "Specify max. memory to use for -pp", "S"},
+        {"max-hash-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(hash_mem),
+         "Specify max. memory to use for hashing", "S"},
         {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
          "Specify max. number of threads", "N"},
         {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,
