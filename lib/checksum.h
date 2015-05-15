@@ -62,6 +62,7 @@ typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
         RmUint128 *checksum;
+        GSList *buffers;
     };
     RmDigestType type;
     gsize bytes;
@@ -94,6 +95,7 @@ typedef struct RmBufferPool {
 
     /* how many new buffers can we allocate before hitting mem limit? */
     gsize avail_buffers;
+    gsize max_buffers;
 
     /* concurrent accesses may happen */
     GMutex lock;
@@ -103,6 +105,9 @@ typedef struct RmBufferPool {
 
 /* Represents one block of read data */
 typedef struct RmBuffer {
+    /* buffer pool the buffer belongs to */
+    RmBufferPool *pool;
+
     /* file structure the data belongs to */
     struct RmFile *file;
 
@@ -158,6 +163,14 @@ void rm_digest_free(RmDigest *digest);
  * @param size the size of data
  */
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size);
+
+/**
+ * @brief Hash a datablock and add it to the current checksum.
+ *
+ * @param digest a pointer to a RmDigest
+ * @param buffer a RmBuffer of data.
+ */
+void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer);
 
 /**
  * @brief Convert the checksum to a hexstring (like `md5sum`)
@@ -243,7 +256,7 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
 RmOff rm_buffer_size(RmBufferPool *pool);
 RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem);
 void rm_buffer_pool_destroy(RmBufferPool *pool);
-void *rm_buffer_pool_get(RmBufferPool *pool);
-void rm_buffer_pool_release(RmBufferPool *pool, void *buf);
+RmBuffer *rm_buffer_pool_get(RmBufferPool *pool);
+void rm_buffer_pool_release(RmBuffer *buf);
 
 #endif /* end of include guard */

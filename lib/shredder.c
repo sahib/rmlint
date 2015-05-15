@@ -268,7 +268,7 @@ typedef struct RmShredTag {
     RmBufferPool *mem_pool;
     GAsyncQueue *device_return;
     GMutex hash_mem_mtx;
-    gint64 hash_mem_alloc; /* how much memory to allocate for paranoid checks */
+    gint64 paranoid_mem_alloc; /* how much memory to allocate for paranoid checks */
     gint32
         active_groups; /* how many shred groups active (only used with paranoid a.t.m.) */
     GThreadPool *device_pool;
@@ -343,7 +343,9 @@ typedef enum RmShredGroupStatus {
 
 
 #define NEEDS_SHADOW_HASH(cfg)  \
-    (cfg->merge_directories || cfg->read_cksum_from_xattr)
+    (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
+    /* @sahib - performance is faster with shadow hash, probably due to hash
+     * collisions in large RmShredGroups */
 
 
 typedef struct RmShredGroup {
@@ -443,8 +445,9 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
     RmShredGroup *self = g_slice_new0(RmShredGroup);
 
     if(file->digest) {
-        self->digest = rm_digest_copy(file->digest);
         self->digest_type = file->digest->type;
+        self->digest = file->digest;
+        file->digest = NULL;
     } else {
         /* initial groups have no checksum */
         g_assert(!file->shred_group);
@@ -531,12 +534,12 @@ static void rm_shred_mem_return(RmShredGroup *group) {
         RmShredTag *tag = group->main;
         g_mutex_lock(&tag->hash_mem_mtx);
         {
-            tag->hash_mem_alloc += group->mem_allocation;
+            tag->paranoid_mem_alloc += group->mem_allocation;
             tag->active_groups--;
             group->is_active = FALSE;
             rm_log_debug("Mem avail %li, active groups %d. " YELLOW "Returned %" LLU
                          " bytes for paranoid hashing.\n" RESET,
-                         tag->hash_mem_alloc, tag->active_groups, group->mem_allocation);
+                         tag->paranoid_mem_alloc, tag->active_groups, group->mem_allocation);
             tag->mem_refusing = FALSE;
             if(group->digest) {
                 g_assert(group->digest->type == RM_DIGEST_PARANOID);
@@ -562,9 +565,9 @@ static gulong rm_shred_group_potential_file_count(RmShredGroup *group) {
 
 /* Governer to limit memory usage by limiting how many RmShredGroups can be
  * active at any one time
- * NOTE: group_lock must be held before calling rm_shred_check_hash_mem_alloc
+ * NOTE: group_lock must be held before calling rm_shred_check_paranoid_mem_alloc
  */
-static bool rm_shred_check_hash_mem_alloc(RmShredGroup *group,
+static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
                                           int active_group_threshold) {
     if(group->status >= RM_SHRED_GROUP_HASHING) {
         /* group already committed */
@@ -581,7 +584,7 @@ static bool rm_shred_check_hash_mem_alloc(RmShredGroup *group,
     {
         gint64 inherited = group->parent ? group->parent->mem_allocation : 0;
 
-        if(0 || mem_required <= tag->hash_mem_alloc + inherited ||
+        if(0 || mem_required <= tag->paranoid_mem_alloc + inherited ||
            (tag->active_groups <= active_group_threshold)) {
             /* ok to proceed */
             /* only take what we need from parent */
@@ -592,12 +595,12 @@ static bool rm_shred_check_hash_mem_alloc(RmShredGroup *group,
             }
 
             /* take the rest from bank */
-            gint64 borrowed = MIN(mem_required - inherited, (gint64)tag->hash_mem_alloc);
-            tag->hash_mem_alloc -= borrowed;
+            gint64 borrowed = MIN(mem_required - inherited, (gint64)tag->paranoid_mem_alloc);
+            tag->paranoid_mem_alloc -= borrowed;
             group->mem_allocation += borrowed;
 
             rm_log_debug("Mem avail %li, active groups %d." GREEN " Borrowed %li",
-                         tag->hash_mem_alloc, tag->active_groups, borrowed);
+                         tag->paranoid_mem_alloc, tag->active_groups, borrowed);
             if(inherited > 0) {
                 rm_log_debug("and inherited %li", inherited);
             }
@@ -617,7 +620,7 @@ static bool rm_shred_check_hash_mem_alloc(RmShredGroup *group,
                 rm_log_debug("Mem avail %li, active groups %d. " RED
                              "Refused request for %" LLU
                              " bytes for paranoid hashing.\n" RESET,
-                             tag->hash_mem_alloc, tag->active_groups, mem_required);
+                             tag->paranoid_mem_alloc, tag->active_groups, mem_required);
                 tag->mem_refusing = TRUE;
             }
             result = FALSE;
@@ -671,10 +674,12 @@ static void rm_shred_write_cksum_to_xattr(RmSession *session, RmFile *file) {
 static void rm_shred_hash_factory(RmBuffer *buffer, RmShredTag *tag) {
     g_assert(tag);
     g_assert(buffer);
+    RmFile *file = buffer->file;
+    bool keep_buffer = (buffer->finished==FALSE  && file->digest->type==RM_DIGEST_PARANOID);
 
     if(!buffer->finished) {
         /* Hash buffer->len bytes_read of buffer->data into buffer->file */
-        rm_digest_update(buffer->file->digest, buffer->data, buffer->len);
+        rm_digest_buffered_update(buffer->file->digest, buffer);
         buffer->file->hash_offset += buffer->len;
     } else {
         /* Report the progress to rm_shred_devlist_factory */
@@ -701,7 +706,10 @@ static void rm_shred_hash_factory(RmBuffer *buffer, RmShredTag *tag) {
     }
 
     /* Return this buffer to the pool */
-    rm_buffer_pool_release(tag->mem_pool, buffer);
+    if (!keep_buffer) {
+        rm_buffer_pool_release(buffer);
+        /*TODO: probably easier to do this in checksum.c */
+    }
 }
 
 static RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name,
@@ -1044,7 +1052,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
                                                    since new arrivals will bypass */
             }
             if(shred_group->digest_type == RM_DIGEST_PARANOID) {
-                rm_shred_check_hash_mem_alloc(shred_group, 1);
+                rm_shred_check_paranoid_mem_alloc(shred_group, 1);
             }
         /* FALLTHROUGH */
         case RM_SHRED_GROUP_HASHING:
@@ -1462,8 +1470,9 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
 
     /* Fake an IO operation on the symlink.
      */
-    char id_buf[256];
-    memset(id_buf, 0, sizeof(id_buf));
+    RmBuffer *buf = rm_buffer_pool_get(device->main->mem_pool);
+    buf->len=256;
+    memset(buf->data, 0, buf->len);
     RM_DEFINE_PATH(file);
 
     RmStat stat_buf;
@@ -1480,16 +1489,18 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
 
     g_assert(file->digest);
 
-    gint data_size = snprintf(id_buf, sizeof(id_buf), "%ld:%ld", (long)stat_buf.st_dev,
+    gint data_size = snprintf((char *)buf->data, rm_buffer_size(buf->pool), "%"LLU":%ld", (long)stat_buf.st_dev,
                               (long)stat_buf.st_ino);
 
-    rm_digest_update(file->digest, (unsigned char *)id_buf, data_size);
+    rm_digest_buffered_update(file->digest, buf);
 
     /* In case of paranoia: shrink the used data buffer, so comparasion works
      * as expected. Otherwise a full buffer is used with possibly different
      * content */
     if(file->digest->type == RM_DIGEST_PARANOID) {
         rm_digest_paranoia_shrink(file->digest, data_size);
+    } else {
+        rm_buffer_pool_release(buf);
     }
 
     rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
@@ -1688,7 +1699,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
     /* Release the rest of the buffers */
     for(int i = 0; i < N_BUFFERS; ++i) {
         RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
-        rm_buffer_pool_release(device->main->mem_pool, buffer);
+        rm_buffer_pool_release(buffer);
     }
 finish:
     if(fd > 0) {
@@ -1731,7 +1742,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
         }
     } else if(file->shred_group->digest_type == RM_DIGEST_PARANOID) {
         /* check if memory allocation is ok */
-        if(!rm_shred_check_hash_mem_alloc(file->shred_group, 0)) {
+        if(!rm_shred_check_paranoid_mem_alloc(file->shred_group, 0)) {
             can_process = false;
         } else {
             /* get the required target offset into file->shred_group->next_offset, so
@@ -1962,11 +1973,17 @@ void rm_shred_run(RmSession *session) {
 
     RmShredTag tag;
     tag.active_groups = 0;
-    tag.hash_mem_alloc = session->cfg->hash_mem;
     tag.session = session;
 
-    /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
-    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, tag.hash_mem_alloc);
+    if (session->cfg->checksum_type == RM_DIGEST_PARANOID) {
+        /* allocate part of hash mem for paranoid hashing */
+        tag.paranoid_mem_alloc = session->cfg->hash_mem * 3 / 4;
+        tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->hash_mem / 4);
+    } else {
+        /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
+        tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->hash_mem);
+    }
+
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
 
@@ -2013,7 +2030,7 @@ void rm_shred_run(RmSession *session) {
                          device->remaining_bytes,
                          device->remaining_files,
                          tag.active_groups,
-                         tag.hash_mem_alloc);
+                         tag.paranoid_mem_alloc);
 
             if(device->remaining_files > 0) {
                 /* recycle the device */

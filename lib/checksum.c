@@ -54,6 +54,7 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
     self->stack = NULL;
     self->buffer_size = buffer_size;
     self->avail_buffers = MAX(max_mem / buffer_size, 1);
+    self->max_buffers = self->avail_buffers;
     rm_log_debug("rm_buffer_pool_init: allocated max %lu buffers of %lu bytes each\n", self->avail_buffers, self->buffer_size);
     g_cond_init(&self->change);
     g_mutex_init(&self->lock);
@@ -73,31 +74,60 @@ void rm_buffer_pool_destroy(RmBufferPool *pool) {
     g_slice_free(RmBufferPool, pool);
 }
 
-void *rm_buffer_pool_get(RmBufferPool *pool) {
-    void *buffer = NULL;
+RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
+    RmBuffer *buffer = NULL;
     g_mutex_lock(&pool->lock);
     {
-        if(!pool->stack && pool->avail_buffers > 0) {
-            buffer = g_slice_alloc(pool->buffer_size);
-            pool->avail_buffers --;
-        } else {
-            while (!pool->stack) {
+        while (!buffer) {
+            if(pool->stack) {
+                buffer = g_trash_stack_pop(&pool->stack);
+            } else if (pool->avail_buffers > 0) {
+                buffer = g_slice_alloc(pool->buffer_size);
+            } else {
                 g_cond_wait(&pool->change, &pool->lock);
             }
-            buffer = g_trash_stack_pop(&pool->stack);
         }
+        pool->avail_buffers --;
     }
     g_mutex_unlock(&pool->lock);
 
     g_assert(buffer);
+    buffer->pool = pool;
     return buffer;
 }
 
-void rm_buffer_pool_release(RmBufferPool *pool, void *buf) {
+void rm_buffer_pool_release(RmBuffer *buf) {
+    RmBufferPool *pool = buf->pool;
     g_mutex_lock(&pool->lock);
     {
         g_trash_stack_push(&pool->stack, buf);
+        pool->avail_buffers ++;
         g_cond_signal(&pool->change);
+    }
+    g_mutex_unlock(&pool->lock);
+}
+
+/* make another buffer available if one is being kept (in paranoid digest) */
+static void rm_buffer_pool_keeping(RmBuffer *buf) {
+    g_mutex_lock(&buf->pool->lock);
+    {
+        buf->pool->avail_buffers ++;
+    }
+    g_mutex_unlock(&buf->pool->lock);
+}
+
+static void rm_buffer_pool_release_kept(RmBuffer *buf) {
+    RmBufferPool *pool = buf->pool;
+    g_mutex_lock(&pool->lock);
+    {
+        if (pool->avail_buffers < pool->max_buffers) {
+            /* buffer is needed by the pool */
+            g_trash_stack_push(&pool->stack, buf);
+            pool->avail_buffers ++;
+            g_cond_signal(&pool->change);
+        } else {
+            g_slice_free1(pool->buffer_size, buf);
+        }
     }
     g_mutex_unlock(&pool->lock);
 }
@@ -263,7 +293,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
     static const RmOff seeds[4] = {0x0000000000000000, 0xf0f0f0f0f0f0f0f0,
                                    0x3333333333333333, 0xaaaaaaaaaaaaaaaa};
 
-    if(digest->bytes > 0) {
+    if(digest->bytes > 0 && type != RM_DIGEST_PARANOID) {
         const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);
 
         /* checksum type - allocate memory and initialise */
@@ -285,7 +315,9 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
 }
 
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
-    g_assert(new_size < digest->bytes);
+    /* TODO: @chris, not sure I understand this and how to make it work again*/
+
+    /*g_assert(new_size < digest->bytes);
     g_assert(digest->type == RM_DIGEST_PARANOID);
 
     RmUint128 *old_checksum = digest->checksum;
@@ -295,7 +327,7 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
     digest->bytes = new_size;
     memcpy(digest->checksum, old_checksum, new_size);
 
-    g_slice_free1(old_bytes, old_checksum);
+    g_slice_free1(old_bytes, old_checksum);*/
 }
 
 void rm_digest_free(RmDigest *digest) {
@@ -311,6 +343,11 @@ void rm_digest_free(RmDigest *digest) {
         if(digest->shadow_hash) {
             rm_digest_free(digest->shadow_hash);
         }
+        if (digest->buffers) {
+            g_slist_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
+        }
+        digest->buffers=NULL;
+        break;
     case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_MURMUR512:
@@ -430,15 +467,23 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         }
     } break;
     case RM_DIGEST_PARANOID:
-        g_assert(size + digest->paranoid_offset <= digest->bytes);
-        memcpy((char *)digest->checksum + digest->paranoid_offset, data, size);
-        digest->paranoid_offset += size;
-        if(digest->shadow_hash) {
-            rm_digest_update(digest->shadow_hash, data, size);
-        }
-        break;
     default:
         g_assert_not_reached();
+    }
+}
+
+void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
+    if (digest->type != RM_DIGEST_PARANOID) {
+        rm_digest_update(digest, buffer->data, buffer->len);
+    } else {
+        g_assert(buffer->len + offsetof(RmBuffer, data) <= buffer->pool->buffer_size);
+        g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
+        digest->buffers = g_slist_prepend(digest->buffers, buffer);
+        digest->paranoid_offset += buffer->len;
+        rm_buffer_pool_keeping(buffer);
+        if(digest->shadow_hash) {
+            rm_digest_update(digest->shadow_hash, buffer->data, buffer->len);
+        }
     }
 }
 
@@ -457,7 +502,6 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         self->type = digest->type;
         self->glib_checksum = g_checksum_copy(digest->glib_checksum);
         break;
-    case RM_DIGEST_PARANOID:
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
@@ -473,19 +517,12 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         self = rm_digest_new(digest->type, digest->initial_seed1, digest->initial_seed2,
                              digest->bytes, digest->shadow_hash != NULL);
 
-        if(self->type == RM_DIGEST_PARANOID) {
-            self->paranoid_offset = digest->paranoid_offset;
-            if(self->shadow_hash) {
-                rm_digest_free(self->shadow_hash);
-                self->shadow_hash = rm_digest_copy(digest->shadow_hash);
-            }
-        }
-
         if(self->checksum && digest->checksum) {
             memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
         }
 
         break;
+    case RM_DIGEST_PARANOID:
     default:
         g_assert_not_reached();
     }
@@ -521,10 +558,10 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
-    case RM_DIGEST_PARANOID:
     case RM_DIGEST_EXT:
         memcpy(result, digest->checksum, digest->bytes);
         break;
+    case RM_DIGEST_PARANOID:
     default:
         g_assert_not_reached();
     }
@@ -556,8 +593,39 @@ guint rm_digest_hash(RmDigest *digest) {
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     if (a->type == RM_DIGEST_PARANOID) {
-        return (a->bytes == b->bytes
-                && !memcmp(a->checksum, b->checksum, a->bytes));
+        if (a->bytes != b->bytes) {
+            return false;
+        }
+        GSList *a_iter = a->buffers;
+        GSList *b_iter = b->buffers;
+        RmOff a_bytes = 0;
+        RmOff b_bytes = 0;
+        while (a_iter && b_iter) {
+            RmBuffer *a_buf = a_iter->data;
+            RmBuffer *b_buf = b_iter->data;
+            g_assert(a_buf && b_buf);
+            if (a_bytes+a_buf->len <= b_bytes+b_buf->len) {
+                /* read to the end of a_buf */
+                a_iter = a_iter->next;
+                if (a_bytes+a_buf->len <= b_bytes+b_buf->len) {
+                    b_iter = b_iter->next;
+                }
+                if (memcmp(a_buf->data, b_buf->data, a_buf->len) != 0) {
+                    return false;
+                }
+                a_bytes += a_buf->len;
+                b_bytes += a_buf->len;
+            } else {
+                /* read to the end of b_buf */
+                b_iter = b_iter->next;
+                if (memcmp(a_buf->data, b_buf->data, b_buf->len) != 0) {
+                    return false;
+                }
+                a_bytes += b_buf->len;
+                b_bytes += b_buf->len;
+            }
+        }
+        return (a_bytes == a->bytes && b_bytes == b->bytes && !a_iter && !b_iter);
     } else {
         guint8 *buf_a = rm_digest_steal_buffer(a);
         guint8 *buf_b = rm_digest_steal_buffer(b);
