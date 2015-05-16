@@ -896,9 +896,7 @@ static void rm_shred_group_free(RmShredGroup *self) {
         g_hash_table_unref(self->children);
     }
 
-    if(self->in_progress_digests) {
-        g_list_free(self->in_progress_digests);
-    }
+    g_assert (!self->in_progress_digests);
 
     g_mutex_clear(&self->lock);
 
@@ -1098,8 +1096,10 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
         }
     }
     g_mutex_unlock(&shred_group->lock);
+
     return result;
 }
+
 
 /* After partial hashing of RmFile, add it back into the sieve for further
  * hashing if required.  If waiting option is set, then try to return the
@@ -1114,6 +1114,13 @@ static gboolean rm_shred_sift(RmFile *file) {
     g_assert(file->shred_group);
 
     RmShredGroup *current_group = file->shred_group;
+
+    g_mutex_lock(&current_group->lock);
+    {
+        current_group->in_progress_digests = g_list_remove(
+            current_group->in_progress_digests, file->digest);
+    }
+    g_mutex_unlock(&current_group->lock);
 
     if(file->status == RM_FILE_STATE_IGNORE) {
         rm_digest_free(file->digest);
@@ -1146,13 +1153,9 @@ static gboolean rm_shred_sift(RmFile *file) {
                 g_hash_table_insert(current_group->children, child_group->digest,
                                     child_group);
                 child_group->has_only_ext_cksums = current_group->has_only_ext_cksums;
+                /* signal any pending (paranoid) digests that there is a new candidate match */
 
-                /* signal any pending digests that there is a new candidate match */
-                GList *iter = current_group->in_progress_digests;
-                while (iter) {
-                    g_async_queue_push(iter->data, child_group->digest);
-                    iter = iter->next;
-                }
+                g_list_foreach(current_group->in_progress_digests, (GFunc)rm_digest_send_match_candidate, child_group->digest);
             }
         }
         g_mutex_unlock(&current_group->lock);
@@ -1163,6 +1166,7 @@ static gboolean rm_shred_sift(RmFile *file) {
     rm_shred_group_unref(current_group);
     return result;
 }
+
 
 ////////////////////////////////////
 //  SHRED-SPECIFIC PREPROCESSING  //
@@ -1259,10 +1263,12 @@ static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) 
 static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device,
                                        RmShredTag *main) {
     g_mutex_lock(&device->lock);
-    /* sort by inode number to speed up FIEMAP */
-    g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
-    g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_start_offset,
-                    main->session);
+    {
+        /* sort by inode number to speed up FIEMAP */
+        g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
+        g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_start_offset,
+                        main->session);
+    }
     g_mutex_unlock(&device->lock);
 }
 
@@ -1811,9 +1817,8 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                             children = g_list_delete_link(children, children);
                         }
                     }
-                    file->digest->incoming_twin_candidates = g_async_queue_new();
-                    file->shred_group->in_progress_digests = g_list_prepend(
-                        file->shred_group->in_progress_digests, file->digest->incoming_twin_candidates);
+                    file->shred_group->in_progress_digests =
+                        g_list_prepend(file->shred_group->in_progress_digests, file->digest);
                 }
             }
         }
@@ -1878,15 +1883,16 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     return file;
 }
 
+/* call with device unlocked */
 static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
     /* initialise hash (or recover progressive hash so far) */
     bool result = TRUE;
     g_assert(file->shred_group);
+
     g_mutex_lock(&file->shred_group->lock);
     {
         if(file->digest == NULL) {
             g_assert(file->shred_group);
-
             result = rm_shred_reassign_checksum(main, file);
         }
     }
@@ -1946,17 +1952,22 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                     iter = iter->next;
                 }
                 if (tmp != iter) {
-                    rm_log_error (RED"\nChanging file order due to fragmented file: next file in queue had offset %"LLU"M but head had jumped to %"LLU"M\n",
+                    rm_log_info (RED"\nChanging file order due to fragmented file: next file in queue had offset %"LLU"M but head had jumped to %"LLU"M\n",
                         file->current_fragment_physical_offset / 1024 / 1024,
                         device->new_seek_position / 1024 / 1024);
                     file = iter->data;
-                    rm_log_error (GREEN"    Switched to file with offset %"LLU"M to reduce disk seek.\n" RESET, file->current_fragment_physical_offset / 1024 / 1024);
+                    rm_log_info (GREEN"    Switched to file with offset %"LLU"M to reduce disk seek.\n" RESET, file->current_fragment_physical_offset / 1024 / 1024);
                 }
                 device->new_seek_position = 0;
             }
+        }
+        g_mutex_unlock(&device->lock);
 
-            can_process = rm_shred_can_process(file, main);
-            tmp = iter;
+        can_process = rm_shred_can_process(file, main);
+
+        g_mutex_lock(&device->lock);
+        {
+            GList *tmp = iter;
             iter = iter->next;
             if(can_process) {
                 /* file will be processed */
@@ -2055,6 +2066,7 @@ void rm_shred_run(RmSession *session) {
         tag.paranoid_mem_alloc = session->cfg->hash_mem * 3 / 4;
         tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->hash_mem / 4);
     } else {
+        tag.paranoid_mem_alloc = 0;
         /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
         tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->hash_mem);
     }

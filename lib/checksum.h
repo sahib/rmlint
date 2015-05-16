@@ -263,4 +263,6 @@ void rm_buffer_pool_destroy(RmBufferPool *pool);
 RmBuffer *rm_buffer_pool_get(RmBufferPool *pool);
 void rm_buffer_pool_release(RmBuffer *buf);
 
+void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate);
+
 #endif /* end of include guard */

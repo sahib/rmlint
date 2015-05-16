@@ -283,6 +283,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
         digest->bytes = paranoid_size;
         digest->paranoid_offset = 0;
         digest->buffers = g_queue_new();
+        digest->incoming_twin_candidates=g_async_queue_new();
         if(use_shadow_hash) {
             digest->shadow_hash = rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0, false);
         } else {
@@ -489,6 +490,7 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
         g_assert(buffer->len + offsetof(RmBuffer, data) <= buffer->pool->buffer_size);
         g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
         g_queue_push_tail(digest->buffers, buffer);
+        digest->buffer_count++;
         digest->paranoid_offset += buffer->len;
         rm_buffer_pool_signal_keeping(buffer);
         if(digest->shadow_hash) {
@@ -496,8 +498,13 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
         }
         if(digest->twin_candidates) {
             /* do a running check that digest remains the same as its candidate twin */
+            /* first check for incoming twin candidates */
             RmDigest *new_twin_candidate = NULL;
-            while ((new_twin_candidate = g_async_queue_try_pop(digest->incoming_twin_candidates))) {
+            /* every 16 buffers (64 kb), check for new match candidates */
+            while (digest->buffer_count % 16 == 0 &&
+                    (new_twin_candidate = g_async_queue_try_pop(digest->incoming_twin_candidates))) {
+                rm_log_debug(BLUE"Adding twin candidate %p\n"RESET, new_twin_candidate);
+                /* validate the new candidate by comparing the previous buffers (not including current)*/
                 GList *iter_new = new_twin_candidate->buffers->head;
                 GList *iter_self = digest->buffers->head;
                 gboolean match=TRUE;
@@ -507,11 +514,15 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
                     iter_new = iter_new->next;
                 }
                 if (match) {
+                    /* accept the twin candidate */
                     g_assert(iter_self == digest->buffers->tail);
                     digest->twin_candidates = g_list_prepend(digest->twin_candidates, new_twin_candidate);
+                    /* also store a pointer to the buffer corresponding to our current buffer */
                     digest->twin_candidate_buffers = g_list_prepend(digest->twin_candidate_buffers, iter_new);
                 }
             }
+
+            /* iterate through all twin candidates to see if they still match */
             GList *twin_candidate_iter = digest->twin_candidates;
             GList *twin_candidate_buffer_iter = digest->twin_candidate_buffers;
             while (twin_candidate_iter) {
@@ -526,8 +537,9 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
                     temp2->data = twin_candidate_buffer_ptr->next;
                 } else {
                     /* buffers don't match - delete candidate */
-                    digest->twin_candidates = g_list_remove_link(digest->twin_candidates, temp1);
-                    digest->twin_candidate_buffers = g_list_remove_link(digest->twin_candidate_buffers, temp2);
+                    digest->twin_candidates = g_list_delete_link(digest->twin_candidates, temp1);
+                    digest->twin_candidate_buffers = g_list_delete_link(digest->twin_candidate_buffers, temp2);
+                    rm_log_debug(RED"Ejected candidate match at buffer #%lu\n"RESET, digest->buffer_count);
                 }
             }
         }
@@ -641,11 +653,12 @@ guint rm_digest_hash(RmDigest *digest) {
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     if (a->type == RM_DIGEST_PARANOID) {
         if (a->bytes != b->bytes) {
+            rm_log_error(RED"byte mismatch\n"RESET);
             return false;
         } else if ((a->twin_candidates && a->twin_candidates->data == b)
                 || (b->twin_candidates && b->twin_candidates->data == a)) {
-            rm_log_warning(GREEN "+" RESET);
-            rm_log_info(GREEN "Found match of size %"LLU" via twin_candidate strategy\n" RESET, a->bytes);
+            rm_log_info(GREEN "+" RESET);
+            rm_log_debug(GREEN "Found match of size %"LLU" via twin_candidate strategy\n" RESET, a->bytes);
             return true;
         }
 
@@ -654,14 +667,20 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         guint bytes=0;
         while (a_iter && b_iter) {
             if (!rm_buffer_equal(a_iter->data, b_iter->data)) {
+                rm_log_error(RED"Paranoid digest compare found mismatch - must be hash collision in shadow hash"RESET);
                 return false;
             }
             bytes += ((RmBuffer*)a_iter->data)->len;
             a_iter = a_iter->next;
             b_iter = b_iter->next;
         }
-        return (!a_iter && !b_iter && bytes==a->bytes);
-
+        if (!a_iter && !b_iter && bytes==a->bytes) {
+            rm_log_info(RED "+" RESET);
+            rm_log_debug(RED "Found match of size %"LLU" the hard way\n" RESET, a->bytes);
+            return true;
+        } else {
+            return false;
+        }
     } else {
         guint8 *buf_a = rm_digest_steal_buffer(a);
         guint8 *buf_b = rm_digest_steal_buffer(b);
@@ -720,4 +739,8 @@ int rm_digest_get_bytes(RmDigest *self) {
     } else {
         return 0;
     }
+}
+
+void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
+    g_async_queue_push(target->incoming_twin_candidates, candidate);
 }
