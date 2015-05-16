@@ -318,7 +318,7 @@ typedef struct RmShredDevice {
     dev_t disk;
 
     /* head position information, to optimise selection of next file */
-    RmOff current_offset;
+    RmOff new_seek_position;
     dev_t current_dev;
 
     /* size of one page, cached, so
@@ -1565,11 +1565,19 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(device->main->mem_pool);
     }
+
     if (file->current_fragment_physical_offset > 0
         && file->seek_offset < file->file_size
         && file->seek_offset >= file->next_fragment_logical_offset) {
+        /* TODO: test if second test actually improves speed
+         * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
+        bool jumped = (file->next_fragment_logical_offset != 0);
         file->current_fragment_physical_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset, &file->next_fragment_logical_offset);
+        if (jumped && file->current_fragment_physical_offset != 0) {
+            device->new_seek_position = file->current_fragment_physical_offset; /* no lock required */
+        }
     }
+
 
     if(ferror(fd) != 0) {
         file->status = RM_FILE_STATE_IGNORE;
@@ -1692,7 +1700,11 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
         && file->seek_offset >= file->next_fragment_logical_offset) {
         /* TODO: test if second test actually improves speed
          * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
+        bool jumped = (file->next_fragment_logical_offset != 0);
         file->current_fragment_physical_offset = rm_offset_get_from_fd(fd, file->seek_offset, &file->next_fragment_logical_offset);
+        if (jumped && file->current_fragment_physical_offset != 0) {
+            device->new_seek_position = file->current_fragment_physical_offset; /* no lock required */
+        }
     }
 
     if(bytes_read == -1) {
@@ -1889,19 +1901,42 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     }
     g_mutex_unlock(&device->lock);
 
-
+    device->new_seek_position = 0;
 
     /* scheduler for one file at a time, optimised to minimise seeks */
     while(iter
             && !rm_session_was_aborted(main->session)
             && bytes_read_this_pass <= device->bytes_per_pass) {
         RmFile *file = iter->data;
-        gboolean can_process = rm_shred_can_process(file, main);
-
+        gboolean can_process=FALSE;
+        
         /* remove current iter from queue and move to next in preparation for next file*/
+        
         g_mutex_lock(&device->lock);
         {
             GList *tmp = iter;
+            if (device->new_seek_position > 0) {
+                tmp=iter;
+                if (device->new_seek_position < file->current_fragment_physical_offset) {
+                    /* search from beginning */
+                    iter=device->file_queue->head;
+                }
+                while (iter->next && 
+                        ((RmFile*)iter->data)->current_fragment_physical_offset < device->new_seek_position) {
+                    iter = iter->next;
+                }
+                if (tmp != iter) {
+                    rm_log_error (RED"\nChanging file order due to fragmented file: next file in queue had offset %"LLU"M but head had jumped to %"LLU"M\n",
+                        file->current_fragment_physical_offset / 1024 / 1024,
+                        device->new_seek_position / 1024 / 1024);
+                    file = iter->data;
+                    rm_log_error (GREEN"    Switched to file with offset %"LLU"M to reduce disk seek.\n" RESET, file->current_fragment_physical_offset / 1024 / 1024);
+                }
+                device->new_seek_position = 0;
+            }
+            
+            can_process = rm_shred_can_process(file, main);
+            tmp = iter;
             iter = iter->next;
             if(can_process) {
                 /* file will be processed */
