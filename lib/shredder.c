@@ -361,11 +361,13 @@ typedef struct RmShredGroup {
      * */
     GQueue *held_files;
 
+    GList *in_progress_digests;
+
     /* link(s) to next generation of RmShredGroups(s) which have this RmShredGroup as
      * parent*/
     union {
         GHashTable *children;
-        struct RmShredGroup *child; /* TODO - implement this as a speed/mem saver (after first 
+        struct RmShredGroup *child; /* TODO - implement this as a speed/mem saver (after first
                                       generation, most RmShredGroups only have 1 child */
     };
 
@@ -894,6 +896,10 @@ static void rm_shred_group_free(RmShredGroup *self) {
         g_hash_table_unref(self->children);
     }
 
+    if(self->in_progress_digests) {
+        g_list_free(self->in_progress_digests);
+    }
+
     g_mutex_clear(&self->lock);
 
     g_slice_free(RmShredGroup, self);
@@ -1140,6 +1146,13 @@ static gboolean rm_shred_sift(RmFile *file) {
                 g_hash_table_insert(current_group->children, child_group->digest,
                                     child_group);
                 child_group->has_only_ext_cksums = current_group->has_only_ext_cksums;
+
+                /* signal any pending digests that there is a new candidate match */
+                GList *iter = current_group->in_progress_digests;
+                while (iter) {
+                    g_async_queue_push(iter->data, child_group->digest);
+                    iter = iter->next;
+                }
             }
         }
         g_mutex_unlock(&current_group->lock);
@@ -1785,15 +1798,22 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                   file->shred_group->next_offset - file->hash_offset,
                                   NEEDS_SHADOW_HASH(cfg)
                                   );
-                if(file->shred_group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD
-                    && file->shred_group->children) {
-                    /* assign candidate twin */
-                    GList *twin_candidates = g_hash_table_get_values(file->shred_group->children);
-                    /* just take the first from the list (TODO: smarter selection policy? */
-                    RmShredGroup *twin_candidate = twin_candidates->data;
-                    g_list_free(twin_candidates);
-                    file->digest->twin_candidate = twin_candidate->digest;
-                    file->digest->twin_candidate_buffer_ptr=g_list_last(twin_candidate->digest->buffers);
+                if(file->shred_group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD) {
+                    /* assign candidate twin(s) */
+                    if (file->shred_group->children) {
+                        GList *children = g_hash_table_get_values(file->shred_group->children);
+                        while (children) {
+                            RmDigest *digest = ((RmShredGroup*)children->data)->digest;
+                            file->digest->twin_candidates =
+                                g_list_prepend(file->digest->twin_candidates, digest);
+                            file->digest->twin_candidate_buffers =
+                                g_list_prepend(file->digest->twin_candidate_buffers, digest->buffers->head);
+                            children = g_list_delete_link(children, children);
+                        }
+                    }
+                    file->digest->incoming_twin_candidates = g_async_queue_new();
+                    file->shred_group->in_progress_digests = g_list_prepend(
+                        file->shred_group->in_progress_digests, file->digest->incoming_twin_candidates);
                 }
             }
         }
@@ -1825,15 +1845,14 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
     g_mutex_lock(&file->shred_group->lock);
     {
-        worth_waiting = device->main->session->cfg->shred_always_wait ||
-                        (device->is_rotational &&
-                         file->seek_offset + rm_shred_get_read_size(file, device->main) !=
-                             file->file_size &&
-                         rm_shred_get_read_size(file, device->main) <
-                             RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
-                         (file->status == RM_FILE_STATE_NORMAL) &&
-                         !device->main->session->cfg->shred_never_wait &&
-                         file->shred_group->children);
+        worth_waiting = (file->shred_group->children &&
+                         file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size)
+                         &&
+                         (device->main->session->cfg->shred_always_wait ||
+                            (device->is_rotational &&
+                            rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
+                            (file->status == RM_FILE_STATE_NORMAL) &&
+                            !device->main->session->cfg->shred_never_wait));
     }
     g_mutex_unlock(&file->shred_group->lock);
 
@@ -1910,9 +1929,9 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
             && bytes_read_this_pass <= device->bytes_per_pass) {
         RmFile *file = iter->data;
         gboolean can_process=FALSE;
-        
+
         /* remove current iter from queue and move to next in preparation for next file*/
-        
+
         g_mutex_lock(&device->lock);
         {
             GList *tmp = iter;
@@ -1922,7 +1941,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                     /* search from beginning */
                     iter=device->file_queue->head;
                 }
-                while (iter->next && 
+                while (iter->next &&
                         ((RmFile*)iter->data)->current_fragment_physical_offset < device->new_seek_position) {
                     iter = iter->next;
                 }
@@ -1935,7 +1954,7 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                 }
                 device->new_seek_position = 0;
             }
-            
+
             can_process = rm_shred_can_process(file, main);
             tmp = iter;
             iter = iter->next;

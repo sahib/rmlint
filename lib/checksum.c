@@ -282,6 +282,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
         g_assert(paranoid_size > 0);
         digest->bytes = paranoid_size;
         digest->paranoid_offset = 0;
+        digest->buffers = g_queue_new();
         if(use_shadow_hash) {
             digest->shadow_hash = rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0, false);
         } else {
@@ -349,9 +350,13 @@ void rm_digest_free(RmDigest *digest) {
             rm_digest_free(digest->shadow_hash);
         }
         if (digest->buffers) {
-            g_list_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
+            g_queue_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
         }
-        digest->buffers=NULL;
+        if (digest->incoming_twin_candidates) {
+            g_async_queue_unref(digest->incoming_twin_candidates);
+        }
+        g_list_free(digest->twin_candidates);
+        g_list_free(digest->twin_candidate_buffers);
         break;
     case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
@@ -483,21 +488,47 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
     } else {
         g_assert(buffer->len + offsetof(RmBuffer, data) <= buffer->pool->buffer_size);
         g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
-        digest->buffers = g_list_prepend(digest->buffers, buffer);
+        g_queue_push_tail(digest->buffers, buffer);
         digest->paranoid_offset += buffer->len;
         rm_buffer_pool_signal_keeping(buffer);
         if(digest->shadow_hash) {
             rm_digest_update(digest->shadow_hash, buffer->data, buffer->len);
         }
-        if(digest->twin_candidate) {
+        if(digest->twin_candidates) {
             /* do a running check that digest remains the same as its candidate twin */
-            g_assert(digest->twin_candidate_buffer_ptr);
-            g_assert(digest->twin_candidate_buffer_ptr->data);
-            if (!rm_buffer_equal(digest->twin_candidate_buffer_ptr->data, buffer)) {
-                digest->twin_candidate=NULL;
-                rm_log_debug(RED "-" RESET);
-            } else {
-                digest->twin_candidate_buffer_ptr = digest->twin_candidate_buffer_ptr->prev;
+            RmDigest *new_twin_candidate = NULL;
+            while ((new_twin_candidate = g_async_queue_try_pop(digest->incoming_twin_candidates))) {
+                GList *iter_new = new_twin_candidate->buffers->head;
+                GList *iter_self = digest->buffers->head;
+                gboolean match=TRUE;
+                while (match && iter_self && iter_self != digest->buffers->tail) {
+                    match = (rm_buffer_equal(iter_new->data, iter_self->data));
+                    iter_self = iter_self->next;
+                    iter_new = iter_new->next;
+                }
+                if (match) {
+                    g_assert(iter_self == digest->buffers->tail);
+                    digest->twin_candidates = g_list_prepend(digest->twin_candidates, new_twin_candidate);
+                    digest->twin_candidate_buffers = g_list_prepend(digest->twin_candidate_buffers, iter_new);
+                }
+            }
+            GList *twin_candidate_iter = digest->twin_candidates;
+            GList *twin_candidate_buffer_iter = digest->twin_candidate_buffers;
+            while (twin_candidate_iter) {
+                /* check next increment of each candidate twin */
+                GList *twin_candidate_buffer_ptr = twin_candidate_buffer_iter->data;
+                GList *temp1 = twin_candidate_iter;
+                GList *temp2 = twin_candidate_buffer_iter;
+                twin_candidate_iter = twin_candidate_iter->next;
+                twin_candidate_buffer_iter = twin_candidate_buffer_iter->next;
+                if (rm_buffer_equal(buffer, twin_candidate_buffer_ptr->data)) {
+                    /* buffers match; move ptr to next one ready for next buffer */
+                    temp2->data = twin_candidate_buffer_ptr->next;
+                } else {
+                    /* buffers don't match - delete candidate */
+                    digest->twin_candidates = g_list_remove_link(digest->twin_candidates, temp1);
+                    digest->twin_candidate_buffers = g_list_remove_link(digest->twin_candidate_buffers, temp2);
+                }
             }
         }
     }
@@ -611,15 +642,15 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     if (a->type == RM_DIGEST_PARANOID) {
         if (a->bytes != b->bytes) {
             return false;
-        } else if (a->twin_candidate == b
-                || b->twin_candidate == a) {
+        } else if ((a->twin_candidates && a->twin_candidates->data == b)
+                || (b->twin_candidates && b->twin_candidates->data == a)) {
             rm_log_warning(GREEN "+" RESET);
             rm_log_info(GREEN "Found match of size %"LLU" via twin_candidate strategy\n" RESET, a->bytes);
             return true;
         }
 
-        GList *a_iter = a->buffers;
-        GList *b_iter = b->buffers;
+        GList *a_iter = a->buffers->head;
+        GList *b_iter = b->buffers->head;
         guint bytes=0;
         while (a_iter && b_iter) {
             if (!rm_buffer_equal(a_iter->data, b_iter->data)) {
