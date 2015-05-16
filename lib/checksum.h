@@ -62,7 +62,7 @@ typedef struct RmDigest {
     union {
         GChecksum *glib_checksum;
         RmUint128 *checksum;
-        GSList *buffers;
+        GList *buffers;
     };
     RmDigestType type;
     gsize bytes;
@@ -76,6 +76,8 @@ typedef struct RmDigest {
              * So we can make rm_digest_hash() and rm_digest_hexstring() work.
              */
             struct RmDigest *shadow_hash;
+            struct RmDigest *twin_candidate;
+            GList *twin_candidate_buffer_ptr;
         };
         struct {
             RmOff initial_seed1;

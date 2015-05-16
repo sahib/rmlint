@@ -248,6 +248,12 @@
      | POSIX_FADV_WILLNEED     /* Tell the kernel to readhead */ \
      | POSIX_FADV_NOREUSE      /* We will not reuse old data  */ \
      )
+/* When paranoid hashing, if a file increments is larger
+ * than SHRED_PREMATCH_THRESHOLD, we take a guess at the likely
+ * matching file and do a progressive memcmp() on each buffer
+ * rather than waiting until the whole increment has been read
+ * */
+#define SHRED_PREMATCH_THRESHOLD (SHRED_BALANCED_PAGES * SHRED_PAGE_SIZE)
 
 ////////////////////////
 //  MATHS SHORTCUTS   //
@@ -357,7 +363,11 @@ typedef struct RmShredGroup {
 
     /* link(s) to next generation of RmShredGroups(s) which have this RmShredGroup as
      * parent*/
-    GHashTable *children;
+    union {
+        GHashTable *children;
+        struct RmShredGroup *child; /* TODO - implement this as a speed/mem saver (after first 
+                                      generation, most RmShredGroups only have 1 child */
+    };
 
     /* RmShredGroup of the same size files but with lower RmFile->hash_offset;
      * getsset to null when parent dies
@@ -576,7 +586,7 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
 
     gint64 mem_required =
         rm_shred_group_potential_file_count(group) *
-        MIN(group->file_size - group->hash_offset, 2 * rm_digest_paranoia_bytes());
+        MIN(group->file_size - group->hash_offset, rm_digest_paranoia_bytes());
 
     bool result = FALSE;
     RmShredTag *tag = group->main;
@@ -1763,6 +1773,16 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                   file->shred_group->next_offset - file->hash_offset,
                                   NEEDS_SHADOW_HASH(cfg)
                                   );
+                if(file->shred_group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD
+                    && file->shred_group->children) {
+                    /* assign candidate twin */
+                    GList *twin_candidates = g_hash_table_get_values(file->shred_group->children);
+                    /* just take the first from the list (TODO: smarter selection policy? */
+                    RmShredGroup *twin_candidate = twin_candidates->data;
+                    g_list_free(twin_candidates);
+                    file->digest->twin_candidate = twin_candidate->digest;
+                    file->digest->twin_candidate_buffer_ptr=g_list_last(twin_candidate->digest->buffers);
+                }
             }
         }
     } else if(file->shred_group->digest) {

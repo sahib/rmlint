@@ -40,7 +40,6 @@
 #include "checksums/spooky-c.h"
 
 
-
 ///////////////////////////////////////
 //    BUFFER POOL IMPLEMENTATION     //
 ///////////////////////////////////////
@@ -108,7 +107,7 @@ void rm_buffer_pool_release(RmBuffer *buf) {
 }
 
 /* make another buffer available if one is being kept (in paranoid digest) */
-static void rm_buffer_pool_keeping(RmBuffer *buf) {
+static void rm_buffer_pool_signal_keeping(RmBuffer *buf) {
     g_mutex_lock(&buf->pool->lock);
     {
         buf->pool->avail_buffers ++;
@@ -131,6 +130,12 @@ static void rm_buffer_pool_release_kept(RmBuffer *buf) {
     }
     g_mutex_unlock(&pool->lock);
 }
+
+static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b){
+    return (a->len == b->len && memcmp(a->data, b->data, a->len)==0);
+}
+
+
 
 ///////////////////////////////////////
 //      RMDIGEST IMPLEMENTATION      //
@@ -196,10 +201,10 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 }
 
 RmOff rm_digest_paranoia_bytes(void) {
-    return 16 * 1024 * 1024;
+    return 64 * 1024 * 1024;
     /* this is big enough buffer size to make seek time fairly insignificant relative to
      * sequential read time,
-     * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
+     * eg 64MB read at typical 100 MB/s read rate = 640ms read vs typical seek time 10ms*/
 }
 
 #define ADD_SEED(digest, seed)                                              \
@@ -344,7 +349,7 @@ void rm_digest_free(RmDigest *digest) {
             rm_digest_free(digest->shadow_hash);
         }
         if (digest->buffers) {
-            g_slist_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
+            g_list_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
         }
         digest->buffers=NULL;
         break;
@@ -478,11 +483,22 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
     } else {
         g_assert(buffer->len + offsetof(RmBuffer, data) <= buffer->pool->buffer_size);
         g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
-        digest->buffers = g_slist_prepend(digest->buffers, buffer);
+        digest->buffers = g_list_prepend(digest->buffers, buffer);
         digest->paranoid_offset += buffer->len;
-        rm_buffer_pool_keeping(buffer);
+        rm_buffer_pool_signal_keeping(buffer);
         if(digest->shadow_hash) {
             rm_digest_update(digest->shadow_hash, buffer->data, buffer->len);
+        }
+        if(digest->twin_candidate) {
+            /* do a running check that digest remains the same as its candidate twin */
+            g_assert(digest->twin_candidate_buffer_ptr);
+            g_assert(digest->twin_candidate_buffer_ptr->data);
+            if (!rm_buffer_equal(digest->twin_candidate_buffer_ptr->data, buffer)) {
+                digest->twin_candidate=NULL;
+                rm_log_debug(RED "-" RESET);
+            } else {
+                digest->twin_candidate_buffer_ptr = digest->twin_candidate_buffer_ptr->prev;
+            }
         }
     }
 }
@@ -595,37 +611,26 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     if (a->type == RM_DIGEST_PARANOID) {
         if (a->bytes != b->bytes) {
             return false;
+        } else if (a->twin_candidate == b
+                || b->twin_candidate == a) {
+            rm_log_warning(GREEN "+" RESET);
+            rm_log_info(GREEN "Found match of size %"LLU" via twin_candidate strategy\n" RESET, a->bytes);
+            return true;
         }
-        GSList *a_iter = a->buffers;
-        GSList *b_iter = b->buffers;
-        RmOff a_bytes = 0;
-        RmOff b_bytes = 0;
+
+        GList *a_iter = a->buffers;
+        GList *b_iter = b->buffers;
+        guint bytes=0;
         while (a_iter && b_iter) {
-            RmBuffer *a_buf = a_iter->data;
-            RmBuffer *b_buf = b_iter->data;
-            g_assert(a_buf && b_buf);
-            if (a_bytes+a_buf->len <= b_bytes+b_buf->len) {
-                /* read to the end of a_buf */
-                a_iter = a_iter->next;
-                if (a_bytes+a_buf->len <= b_bytes+b_buf->len) {
-                    b_iter = b_iter->next;
-                }
-                if (memcmp(a_buf->data, b_buf->data, a_buf->len) != 0) {
-                    return false;
-                }
-                a_bytes += a_buf->len;
-                b_bytes += a_buf->len;
-            } else {
-                /* read to the end of b_buf */
-                b_iter = b_iter->next;
-                if (memcmp(a_buf->data, b_buf->data, b_buf->len) != 0) {
-                    return false;
-                }
-                a_bytes += b_buf->len;
-                b_bytes += b_buf->len;
+            if (!rm_buffer_equal(a_iter->data, b_iter->data)) {
+                return false;
             }
+            bytes += ((RmBuffer*)a_iter->data)->len;
+            a_iter = a_iter->next;
+            b_iter = b_iter->next;
         }
-        return (a_bytes == a->bytes && b_bytes == b->bytes && !a_iter && !b_iter);
+        return (!a_iter && !b_iter && bytes==a->bytes);
+
     } else {
         guint8 *buf_a = rm_digest_steal_buffer(a);
         guint8 *buf_b = rm_digest_steal_buffer(b);
