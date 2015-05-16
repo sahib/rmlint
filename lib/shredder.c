@@ -1832,7 +1832,8 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
                          rm_shred_get_read_size(file, device->main) <
                              RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
                          (file->status == RM_FILE_STATE_NORMAL) &&
-                         !device->main->session->cfg->shred_never_wait);
+                         !device->main->session->cfg->shred_never_wait &&
+                         file->shred_group->children);
     }
     g_mutex_unlock(&file->shred_group->lock);
 
