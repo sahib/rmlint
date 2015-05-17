@@ -255,6 +255,10 @@
  * */
 #define SHRED_PREMATCH_THRESHOLD (SHRED_BALANCED_PAGES * SHRED_PAGE_SIZE)
 
+/* empirical estimate of mem usage per file (excluding read buffers and
+ * paranoid digests) */
+#define RM_AVERAGE_MEM_PER_FILE (100)
+
 ////////////////////////
 //  MATHS SHORTCUTS   //
 ////////////////////////
@@ -2058,17 +2062,6 @@ void rm_shred_run(RmSession *session) {
     tag.active_groups = 0;
     tag.session = session;
 
-    if (session->cfg->checksum_type == RM_DIGEST_PARANOID) {
-        /* allocate mem for paranoid hashing */
-        tag.paranoid_mem_alloc = session->cfg->paranoid_mem;
-    } else {
-        /* steal paranoid allocation for read buffer */
-        tag.paranoid_mem_alloc = 0;
-        session->cfg->read_buffer_mem += session->cfg->paranoid_mem;
-    }
-
-    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
-
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
 
@@ -2080,6 +2073,27 @@ void rm_shred_run(RmSession *session) {
 
     rm_shred_preprocess_input(&tag);
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
+
+    /* estimate mem used for RmFiles and allocate any leftovers to read buffer and/or paranoid mem */
+    RmOff mem_used = RM_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
+
+
+    if (session->cfg->checksum_type == RM_DIGEST_PARANOID) {
+        /* allocate amy spare mem for paranoid hashing */
+        tag.paranoid_mem_alloc = MAX(
+            (gint64)session->cfg->paranoid_mem,
+            (gint64)session->cfg->total_mem - (gint64)mem_used - (gint64)session->cfg->read_buffer_mem);
+        rm_log_error(BLUE"Paranoid Mem: %"LLU"\n", session->cfg->paranoid_mem);
+    } else {
+        /* steal paranoid allocation for read buffer */
+        session->cfg->read_buffer_mem = MAX(
+            (gint64)session->cfg->read_buffer_mem,
+            (gint64)session->cfg->total_mem - (gint64)mem_used);
+    }
+
+    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
+    rm_log_error(BLUE"Read buffer Mem: %"LLU"\n", session->cfg->read_buffer_mem);
+
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);

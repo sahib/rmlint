@@ -101,6 +101,9 @@ typedef struct RmCfg {
     /* number of bytes to allocate to in-progress paranoid digests */
     RmOff paranoid_mem;
 
+    /* total number of bytes we are allowed to use (target only) */
+    RmOff total_mem;
+
     gboolean shred_always_wait;
     gboolean shred_never_wait;
     gboolean fake_pathindex_as_disk;
