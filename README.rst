@@ -1,6 +1,14 @@
       
 ======
 
+**oscar** branch
+
+This was an experimental branch targeting more speed, particularly with paranoid file comparison.
+In the end there was probably not enough speed gain to justify the complexity so the next task will be
+to remove the complexity without losing too much speed.
+
+======
+
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center
 
