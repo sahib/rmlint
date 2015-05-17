@@ -271,7 +271,7 @@
 
 typedef struct RmShredTag {
     RmSession *session;
-    RmBufferPool *mem_pool;
+    //RmBufferPool *mem_pool;
     GAsyncQueue *device_return;
     GMutex hash_mem_mtx;
     gint64 paranoid_mem_alloc; /* how much memory to allocate for paranoid checks */
@@ -320,6 +320,10 @@ typedef struct RmShredDevice {
     /* head position information, to optimise selection of next file */
     RmOff new_seek_position;
     dev_t current_dev;
+
+    /* pool of read/hash buffers (one per device rather than one shared one, so that fast devices
+     * don't starve slow devices */
+    RmBufferPool *mem_pool;
 
     /* size of one page, cached, so
      * sysconf() does not need to be called always.
@@ -755,6 +759,8 @@ static void rm_shred_device_free(RmShredDevice *self) {
 
     g_async_queue_unref(self->hashed_file_return);
     g_queue_free(self->file_queue);
+    
+    rm_buffer_pool_destroy(self->mem_pool);
 
     g_free(self->disk_name);
     g_cond_clear(&(self->change));
@@ -1499,7 +1505,7 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
 
     /* Fake an IO operation on the symlink.
      */
-    RmBuffer *buf = rm_buffer_pool_get(device->main->mem_pool);
+    RmBuffer *buf = rm_buffer_pool_get(device->mem_pool);
     buf->len=256;
     memset(buf->data, 0, buf->len);
     RM_DEFINE_PATH(file);
@@ -1539,10 +1545,10 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
     FILE *fd = NULL;
     gint32 total_bytes_read = 0;
 
-    gint32 buf_size = rm_buffer_size(device->main->mem_pool);
+    gint32 buf_size = rm_buffer_size(device->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
-    RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
+    RmBuffer *buffer = rm_buffer_pool_get(device->mem_pool);
 
     GThreadPool *hash_pool = g_async_queue_pop(device->main->hash_pool_pool);
 
@@ -1582,7 +1588,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         rm_util_thread_pool_push(hash_pool, buffer);
 
         total_bytes_read += bytes_read;
-        buffer = rm_buffer_pool_get(device->main->mem_pool);
+        buffer = rm_buffer_pool_get(device->mem_pool);
     }
 
     if (file->current_fragment_physical_offset > 0
@@ -1630,7 +1636,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
 
     GThreadPool *hash_pool = g_async_queue_pop(device->main->hash_pool_pool);
 
-    RmOff buf_size = rm_buffer_size(device->main->mem_pool);
+    RmOff buf_size = rm_buffer_size(device->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
 
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
@@ -1680,7 +1686,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
     memset(readvec, 0, sizeof(readvec));
     for(int i = 0; i < N_BUFFERS; ++i) {
         /* buffer is one contignous memory block */
-        RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
+        RmBuffer *buffer = rm_buffer_pool_get(device->mem_pool);
         readvec[i].iov_base = buffer->data;
         readvec[i].iov_len = buf_size;
     }
@@ -1708,7 +1714,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
             rm_util_thread_pool_push(hash_pool, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */
-            buffer = rm_buffer_pool_get(device->main->mem_pool);
+            buffer = rm_buffer_pool_get(device->mem_pool);
             readvec[i].iov_base = buffer->data;
             readvec[i].iov_len = buf_size;
         }
@@ -1748,7 +1754,7 @@ finish:
     }
 
     /* tell the hasher we have finished via a dummy buffer*/
-    RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
+    RmBuffer *buffer = rm_buffer_pool_get(device->mem_pool);
     buffer->file = file;
     buffer->finished = TRUE;
     rm_util_thread_pool_push(hash_pool, buffer);
@@ -2039,6 +2045,8 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
     g_hash_table_iter_init(&iter, dev_table);
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
+        device->mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE,
+                            tag->session->cfg->read_buffer_mem / devices);
         device->after_preprocess = true;
         device->bytes_per_pass = SHRED_SWEEP_SIZE / devices;
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
@@ -2070,7 +2078,7 @@ void rm_shred_run(RmSession *session) {
         session->cfg->read_buffer_mem += session->cfg->paranoid_mem;
     }
 
-    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
+    //tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
 
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
@@ -2146,7 +2154,7 @@ void rm_shred_run(RmSession *session) {
     g_thread_pool_free(tag.result_pool, FALSE, TRUE);
 
     g_async_queue_unref(tag.device_return);
-    rm_buffer_pool_destroy(tag.mem_pool);
+    //rm_buffer_pool_destroy(tag.mem_pool);
 
     g_hash_table_unref(session->tables->dev_table);
     g_mutex_clear(&tag.hash_mem_mtx);
