@@ -1069,7 +1069,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
                 shred_group->held_files = NULL; /* won't need shred_group queue any more,
                                                    since new arrivals will bypass */
             }
-            if(shred_group->digest_type == RM_DIGEST_PARANOID) {
+            if(shred_group->digest_type == RM_DIGEST_PARANOID && !initial) {
                 rm_shred_check_paranoid_mem_alloc(shred_group, 1);
             }
         /* FALLTHROUGH */
