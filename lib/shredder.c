@@ -1545,7 +1545,7 @@ static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
     rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
 }
 
-static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) {
+static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, GThreadPool *hash_pool) {
     FILE *fd = NULL;
     gint32 total_bytes_read = 0;
 
@@ -1553,8 +1553,6 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
     buf_size -= offsetof(RmBuffer, data);
 
     RmBuffer *buffer = rm_buffer_pool_get(device->mem_pool);
-
-    GThreadPool *hash_pool = g_async_queue_pop(device->hash_pool_pool);
 
     if(file->seek_offset >= file->file_size) {
         goto finish;
@@ -1618,14 +1616,6 @@ finish:
         fclose(fd);
     }
 
-    /* tell the hasher we have finished */
-    buffer->file = file;
-    buffer->finished = TRUE;
-    rm_util_thread_pool_push(hash_pool, buffer);
-
-    /* recycle our hash_pool */
-    g_async_queue_push(device->hash_pool_pool, hash_pool);
-
     /* Update totals for device and session*/
     rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
 }
@@ -1634,11 +1624,9 @@ finish:
  * Note this was initially a separate thread but is currently just called
  * directly from rm_devlist_factory.
  * */
-static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device) {
+static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device, GThreadPool *hash_pool) {
     gint32 bytes_read = 0;
     gint32 total_bytes_read = 0;
-
-    GThreadPool *hash_pool = g_async_queue_pop(device->hash_pool_pool);
 
     RmOff buf_size = rm_buffer_size(device->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
@@ -1757,15 +1745,6 @@ finish:
         rm_sys_close(fd);
     }
 
-    /* tell the hasher we have finished via a dummy buffer*/
-    RmBuffer *buffer = rm_buffer_pool_get(device->mem_pool);
-    buffer->file = file;
-    buffer->finished = TRUE;
-    rm_util_thread_pool_push(hash_pool, buffer);
-
-    /* recycle our hash_pool */
-    g_async_queue_push(device->hash_pool_pool, hash_pool);
-
     /* Update totals for device and session*/
     rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
 }
@@ -1856,31 +1835,50 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         return file;
     }
 
-    bool worth_waiting = FALSE;
-
-    g_mutex_lock(&file->shred_group->lock);
-    {
-        worth_waiting = (file->shred_group->children &&
-                         file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size)
-                         &&
-                         (device->main->session->cfg->shred_always_wait ||
-                            (device->is_rotational &&
-                            rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
-                            (file->status == RM_FILE_STATE_NORMAL) &&
-                            !device->main->session->cfg->shred_never_wait));
-    }
-    g_mutex_unlock(&file->shred_group->lock);
 
     /* hash the next increment of the file */
-    file->devlist_waiting = worth_waiting;
     if(file->is_symlink) {
         rm_shred_readlink_factory(file, device);
     } else {
-        if(device->main->session->cfg->use_buffered_read) {
-            rm_shred_buffered_read_factory(file, device);
-        } else {
-            rm_shred_unbuffered_read_factory(file, device);
+
+        GThreadPool *hash_pool = g_async_queue_pop(device->hash_pool_pool);
+        bool worth_waiting = FALSE;
+
+        g_mutex_lock(&file->shred_group->lock);
+        {
+            worth_waiting = (file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size)
+                             &&
+                             (device->main->session->cfg->shred_always_wait ||
+                                (device->is_rotational &&
+                                rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
+                                (file->status == RM_FILE_STATE_NORMAL) &&
+                                !device->main->session->cfg->shred_never_wait));
         }
+        g_mutex_unlock(&file->shred_group->lock);
+
+        if(device->main->session->cfg->use_buffered_read) {
+            rm_shred_buffered_read_factory(file, device, hash_pool);
+        } else {
+            rm_shred_unbuffered_read_factory(file, device, hash_pool);
+        }
+
+        /* decide if it's worth waiting for the hash result or to let it finish in the background */
+        g_mutex_lock(&file->shred_group->lock);
+        {
+            worth_waiting = worth_waiting && (file->shred_group->children);
+        }
+        g_mutex_unlock(&file->shred_group->lock);
+
+        file->devlist_waiting = worth_waiting;
+
+        /* tell the hasher we have finished via a dummy buffer*/
+        RmBuffer *buffer = rm_buffer_pool_get(device->mem_pool);
+        buffer->file = file;
+        buffer->finished = TRUE;
+        rm_util_thread_pool_push(hash_pool, buffer);
+
+        /* recycle our hash_pool */
+        g_async_queue_push(device->hash_pool_pool, hash_pool);
 
         if(worth_waiting) {
             /* wait until the increment has finished hashing */
@@ -1889,7 +1887,6 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
             file = NULL;
         }
     }
-
     return file;
 }
 
