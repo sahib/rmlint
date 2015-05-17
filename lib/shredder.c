@@ -1841,12 +1841,15 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         g_mutex_lock(&file->shred_group->lock);
         {
             worth_waiting = (file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size)
-                             &&
-                             (device->main->session->cfg->shred_always_wait ||
-                                (device->is_rotational &&
-                                rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
-                                (file->status == RM_FILE_STATE_NORMAL) &&
-                                !device->main->session->cfg->shred_never_wait));
+                            &&
+                            (device->main->session->cfg->shred_always_wait ||
+                                file->digest->type == RM_DIGEST_PARANOID || (
+                                    device->is_rotational &&
+                                    rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
+                                    (file->status == RM_FILE_STATE_NORMAL) &&
+                                    !device->main->session->cfg->shred_never_wait
+                                )
+                            );
         }
         g_mutex_unlock(&file->shred_group->lock);
 
@@ -2083,9 +2086,8 @@ void rm_shred_run(RmSession *session) {
         tag.paranoid_mem_alloc = MAX(
             (gint64)session->cfg->paranoid_mem,
             (gint64)session->cfg->total_mem - (gint64)mem_used - (gint64)session->cfg->read_buffer_mem);
-        rm_log_error(BLUE"Paranoid Mem: %"LLU"\n", session->cfg->paranoid_mem);
+        rm_log_error(BLUE"Paranoid Mem: %"LLU"\n", tag.paranoid_mem_alloc);
     } else {
-        /* steal paranoid allocation for read buffer */
         session->cfg->read_buffer_mem = MAX(
             (gint64)session->cfg->read_buffer_mem,
             (gint64)session->cfg->total_mem - (gint64)mem_used);

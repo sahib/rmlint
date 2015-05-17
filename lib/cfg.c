@@ -62,7 +62,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->follow_symlinks = false;
 
     cfg->read_buffer_mem = 128 * 1024 * 1024;
-    cfg->paranoid_mem = 512 * 1024 * 1024;
+    cfg->paranoid_mem = 256 * 1024 * 1024;
     cfg->total_mem = (RmOff) 2 * 1024 * 1024 * 1024;
 
     cfg->skip_start_factor = 0.0;
