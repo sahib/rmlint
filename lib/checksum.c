@@ -50,7 +50,6 @@ RmOff rm_buffer_size(RmBufferPool *pool) {
 
 RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
     RmBufferPool *self = g_slice_new(RmBufferPool);
-    self->stack = NULL;
     self->buffer_size = buffer_size;
     self->avail_buffers = MAX(max_mem / buffer_size, 1);
     self->min_buffers = self->avail_buffers;
@@ -63,11 +62,6 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
 
 void rm_buffer_pool_destroy(RmBufferPool *pool) {
     g_mutex_lock(&pool->lock);
-    {
-        while(pool->stack != NULL) {
-            g_slice_free1(pool->buffer_size, g_trash_stack_pop(&pool->stack));
-        }
-    }
     rm_log_info(BLUE"Info: had %lu unused read buffers\n"RESET, pool->min_buffers);
     g_mutex_unlock(&pool->lock);
     g_mutex_clear(&pool->lock);
@@ -79,20 +73,16 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     RmBuffer *buffer = NULL;
     g_mutex_lock(&pool->lock);
     {
-        while (!buffer) {
-            if(pool->stack) {
-                buffer = g_trash_stack_pop(&pool->stack);
-            } else if (pool->avail_buffers > 0) {
-                buffer = g_slice_alloc(pool->buffer_size);
-            } else {
-                if (!pool->mem_warned) {
-                    rm_log_warning(RED"Warning: read buffer limit reached - waiting for processing to catch up\n"RESET);
-                    pool->mem_warned = true;
-                }
-                g_cond_wait(&pool->change, &pool->lock);
+        while (pool->avail_buffers == 0) {
+            if (!pool->mem_warned) {
+                rm_log_warning(RED"Warning: read buffer limit reached - waiting for processing to catch up\n"RESET);
+                pool->mem_warned = true;
             }
+            g_cond_wait(&pool->change, &pool->lock);
         }
         pool->avail_buffers --;
+        buffer = g_slice_alloc(pool->buffer_size);
+
         if (pool->avail_buffers < pool->min_buffers) {
             pool->min_buffers = pool->avail_buffers;
         }
@@ -105,14 +95,13 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
 }
 
 void rm_buffer_pool_release(RmBuffer *buf) {
-    RmBufferPool *pool = buf->pool;
-    g_mutex_lock(&pool->lock);
+    g_mutex_lock(&buf->pool->lock);
     {
-        g_trash_stack_push(&pool->stack, buf);
-        pool->avail_buffers ++;
-        g_cond_signal(&pool->change);
+        buf->pool->avail_buffers ++;
+        g_cond_signal(&buf->pool->change);
     }
-    g_mutex_unlock(&pool->lock);
+    g_mutex_unlock(&buf->pool->lock);
+    g_slice_free1(buf->pool->buffer_size, buf);
 }
 
 /* make another buffer available if one is being kept (in paranoid digest) */
@@ -120,24 +109,14 @@ static void rm_buffer_pool_signal_keeping(RmBuffer *buf) {
     g_mutex_lock(&buf->pool->lock);
     {
         buf->pool->avail_buffers ++;
+        g_cond_signal(&buf->pool->change);
     }
     g_mutex_unlock(&buf->pool->lock);
 }
 
 static void rm_buffer_pool_release_kept(RmBuffer *buf) {
     RmBufferPool *pool = buf->pool;
-    g_mutex_lock(&pool->lock);
-    {
-        if (pool->avail_buffers < pool->max_buffers * 2) {
-            /* buffer is needed by the pool */
-            g_trash_stack_push(&pool->stack, buf);
-            pool->avail_buffers ++;
-            g_cond_signal(&pool->change);
-        } else {
-            g_slice_free1(pool->buffer_size, buf);
-        }
-    }
-    g_mutex_unlock(&pool->lock);
+    g_slice_free1(pool->buffer_size, buf);
 }
 
 static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b){

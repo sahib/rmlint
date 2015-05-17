@@ -91,9 +91,6 @@ typedef struct RmDigest {
 /////////// RmBufferPool and RmBuffer ////////////////
 
 typedef struct RmBufferPool {
-    /* Place where the buffers are stored */
-    GTrashStack *stack;
-
     /* size of each buffer */
     gsize buffer_size;
 
