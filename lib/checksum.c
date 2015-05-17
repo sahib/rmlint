@@ -119,7 +119,7 @@ static void rm_buffer_pool_release_kept(RmBuffer *buf) {
     RmBufferPool *pool = buf->pool;
     g_mutex_lock(&pool->lock);
     {
-        if (pool->avail_buffers < pool->max_buffers) {
+        if (pool->avail_buffers < pool->max_buffers * 2) {
             /* buffer is needed by the pool */
             g_trash_stack_push(&pool->stack, buf);
             pool->avail_buffers ++;
