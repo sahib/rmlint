@@ -2062,14 +2062,15 @@ void rm_shred_run(RmSession *session) {
     tag.session = session;
 
     if (session->cfg->checksum_type == RM_DIGEST_PARANOID) {
-        /* allocate part of hash mem for paranoid hashing */
-        tag.paranoid_mem_alloc = session->cfg->hash_mem * 3 / 4;
-        tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->hash_mem / 4);
+        /* allocate mem for paranoid hashing */
+        tag.paranoid_mem_alloc = session->cfg->paranoid_mem;
     } else {
+        /* steal paranoid allocation for read buffer */
         tag.paranoid_mem_alloc = 0;
-        /* Do not rely on sizeof(RmBuffer), compiler might add padding. */
-        tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->hash_mem);
+        session->cfg->read_buffer_mem += session->cfg->paranoid_mem;
     }
+
+    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
 
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;

@@ -94,7 +94,12 @@ typedef struct RmCfg {
     RmOff maxsize;
     RmOff threads;
     RmDigestType checksum_type;
-    RmOff hash_mem;
+
+    /* number of bytes to allocate to reading buffer during shredding */
+    RmOff read_buffer_mem;
+
+    /* number of bytes to allocate to in-progress paranoid digests */
+    RmOff paranoid_mem;
 
     gboolean shred_always_wait;
     gboolean shred_never_wait;

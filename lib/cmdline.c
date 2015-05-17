@@ -737,18 +737,28 @@ static gboolean rm_cmd_parse_large_output(_U const char *option_name,
     return true;
 }
 
-static gboolean rm_cmd_parse_hash_mem(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
+static gboolean rm_cmd_parse_mem( const gchar *size_spec, GError **error, RmOff *target) {
     RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
 
     if(*error != NULL) {
         g_prefix_error(error, _("Invalid size description \"%s\": "), size_spec);
         return false;
     } else {
-        session->cfg->hash_mem = size;
+        *target = size;
         return true;
     }
+}
+
+static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->paranoid_mem));
+}
+
+static gboolean rm_cmd_parse_read_buffer_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buffer_mem));
 }
 
 static gboolean rm_cmd_parse_clamp_low(_U const char *option_name, const gchar *spec,
@@ -1107,8 +1117,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Limit lower reading barrier", "P"},
         {"clamp-top", 'Q', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(clamp_top),
          "Limit upper reading barrier", "P"},
-        {"max-hash-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(hash_mem),
-         "Specify max. memory to use for hashing", "S"},
+        {"max-paranoid-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
+         "Specify max. memory to use for in-progress paranoid hashing", "S"},
+        {"max-read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
+         "Specify max. memory to use for read buffer during hashing", "S"},
         {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
          "Specify max. number of threads", "N"},
         {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,

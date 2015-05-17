@@ -59,9 +59,10 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->with_stderr_color = true;
     cfg->threads = 32;
     cfg->verbosity = G_LOG_LEVEL_INFO;
-    /* shared between paranoid hashing and read buffering: */
-    cfg->hash_mem = 512 * 1024 * 1024;
     cfg->follow_symlinks = false;
+
+    cfg->read_buffer_mem = 128 * 1024 * 1024;
+    cfg->paranoid_mem = 512 * 1024 * 1024;
 
     cfg->skip_start_factor = 0.0;
     cfg->skip_end_factor = 1.0;
