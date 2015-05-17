@@ -278,7 +278,7 @@ typedef struct RmShredTag {
     gint32
         active_groups; /* how many shred groups active (only used with paranoid a.t.m.) */
     GThreadPool *device_pool;
-    GAsyncQueue *hash_pool_pool;
+    //GAsyncQueue *hash_pool_pool;
     GThreadPool *result_pool;
     gint32 page_size;
     bool mem_refusing;
@@ -313,6 +313,7 @@ typedef struct RmShredDevice {
     /* Return queue for files which have finished the current increment */
     GAsyncQueue *hashed_file_return;
 
+
     /* disk identification, for debugging info only */
     char *disk_name;
     dev_t disk;
@@ -324,6 +325,7 @@ typedef struct RmShredDevice {
     /* pool of read/hash buffers (one per device rather than one shared one, so that fast devices
      * don't starve slow devices */
     RmBufferPool *mem_pool;
+    GAsyncQueue *hash_pool_pool;
 
     /* size of one page, cached, so
      * sysconf() does not need to be called always.
@@ -759,7 +761,9 @@ static void rm_shred_device_free(RmShredDevice *self) {
 
     g_async_queue_unref(self->hashed_file_return);
     g_queue_free(self->file_queue);
-    
+
+    g_async_queue_unref(self->hash_pool_pool);
+
     rm_buffer_pool_destroy(self->mem_pool);
 
     g_free(self->disk_name);
@@ -1550,7 +1554,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
 
     RmBuffer *buffer = rm_buffer_pool_get(device->mem_pool);
 
-    GThreadPool *hash_pool = g_async_queue_pop(device->main->hash_pool_pool);
+    GThreadPool *hash_pool = g_async_queue_pop(device->hash_pool_pool);
 
     if(file->seek_offset >= file->file_size) {
         goto finish;
@@ -1620,7 +1624,7 @@ finish:
     rm_util_thread_pool_push(hash_pool, buffer);
 
     /* recycle our hash_pool */
-    g_async_queue_push(device->main->hash_pool_pool, hash_pool);
+    g_async_queue_push(device->hash_pool_pool, hash_pool);
 
     /* Update totals for device and session*/
     rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
@@ -1634,7 +1638,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
     gint32 bytes_read = 0;
     gint32 total_bytes_read = 0;
 
-    GThreadPool *hash_pool = g_async_queue_pop(device->main->hash_pool_pool);
+    GThreadPool *hash_pool = g_async_queue_pop(device->hash_pool_pool);
 
     RmOff buf_size = rm_buffer_size(device->mem_pool);
     buf_size -= offsetof(RmBuffer, data);
@@ -1760,7 +1764,7 @@ finish:
     rm_util_thread_pool_push(hash_pool, buffer);
 
     /* recycle our hash_pool */
-    g_async_queue_push(device->main->hash_pool_pool, hash_pool);
+    g_async_queue_push(device->hash_pool_pool, hash_pool);
 
     /* Update totals for device and session*/
     rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
@@ -2034,6 +2038,11 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     g_async_queue_push(main->device_return, device);
 }
 
+
+static void rm_shred_hash_pool_free(GThreadPool *hash_pool) {
+    g_thread_pool_free(hash_pool, FALSE, TRUE);
+}
+
 static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
     uint devices = g_hash_table_size(dev_table);
     tag->device_pool = rm_util_thread_pool_new(
@@ -2047,6 +2056,16 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
         RmShredDevice *device = value;
         device->mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE,
                             tag->session->cfg->read_buffer_mem / devices);
+
+        /* Create a pool of hashing threadpools */
+        device->hash_pool_pool = g_async_queue_new_full((GDestroyNotify)rm_shred_hash_pool_free);
+        g_assert(tag->session->cfg->threads > 0);
+        for(uint i = 0; i < tag->session->cfg->threads / 2 / devices + 1; i++) {
+            g_async_queue_push(
+                device->hash_pool_pool,
+                rm_util_thread_pool_new((GFunc)rm_shred_hash_factory, tag, 1));
+        }
+
         device->after_preprocess = true;
         device->bytes_per_pass = SHRED_SWEEP_SIZE / devices;
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
@@ -2054,10 +2073,6 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
         rm_log_debug(GREEN "Pushing device %s to threadpool\n", device->disk_name);
         rm_util_thread_pool_push(tag->device_pool, device);
     }
-}
-
-static void rm_shred_hash_pool_free(GThreadPool *hash_pool) {
-    g_thread_pool_free(hash_pool, FALSE, TRUE);
 }
 
 void rm_shred_run(RmSession *session) {
@@ -2099,15 +2114,6 @@ void rm_shred_run(RmSession *session) {
     /* Create a pool for results processing */
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);
 
-    /* Create a pool of hashing threadpools */
-    tag.hash_pool_pool = g_async_queue_new_full((GDestroyNotify)rm_shred_hash_pool_free);
-    g_assert(session->cfg->threads > 0);
-    for(uint i = 0; i < session->cfg->threads / 2 + 1; i++) {
-        g_async_queue_push(
-            tag.hash_pool_pool,
-            rm_util_thread_pool_new((GFunc)rm_shred_hash_factory, &tag, 1));
-    }
-
     /* Create a pool fo the devlists and push each queue */
     rm_shred_create_devpool(&tag, session->tables->dev_table);
 
@@ -2144,7 +2150,7 @@ void rm_shred_run(RmSession *session) {
         }
     }
 
-    g_async_queue_unref(tag.hash_pool_pool);
+    //g_async_queue_unref(tag.hash_pool_pool);
 
     session->shredder_finished = TRUE;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
