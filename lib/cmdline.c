@@ -749,6 +749,13 @@ static gboolean rm_cmd_parse_mem( const gchar *size_spec, GError **error, RmOff 
     }
 }
 
+
+static gboolean rm_cmd_parse_limit_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
+}
+
 static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
                                           const gchar *size_spec, RmSession *session,
                                           GError **error) {
@@ -1117,10 +1124,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Limit lower reading barrier", "P"},
         {"clamp-top", 'Q', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(clamp_top),
          "Limit upper reading barrier", "P"},
-        {"max-paranoid-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
-         "Specify max. memory to use for in-progress paranoid hashing", "S"},
-        {"max-read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
-         "Specify max. memory to use for read buffer during hashing", "S"},
+        {"limit-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(limit_mem),
+         "Specify max. memory usage target", "S"},
+        {"paranoid-mem", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
+         "Specify min. memory to use for in-progress paranoid hashing", "S"},
+        {"read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
+         "Specify min. memory to use for read buffer during hashing", "S"},
         {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
          "Specify max. number of threads", "N"},
         {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,
@@ -1150,7 +1159,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          NULL},
         {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
          &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
-        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read, 
+        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read,
          "Default to buffered reading calls (fread) during reading.", NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
          "Shredder never waits for file increment to finish hashing before moving on to "
