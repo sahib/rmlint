@@ -591,7 +591,7 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
     }
 
     gint64 mem_required =
-        rm_shred_group_potential_file_count(group) *
+        (rm_shred_group_potential_file_count(group) / 2 + 1) *
         MIN(group->file_size - group->hash_offset, rm_digest_paranoia_bytes());
 
     bool result = FALSE;
@@ -1842,8 +1842,7 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         {
             worth_waiting = (file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size)
                             &&
-                            (device->main->session->cfg->shred_always_wait ||
-                                file->digest->type == RM_DIGEST_PARANOID || (
+                            (device->main->session->cfg->shred_always_wait || (
                                     device->is_rotational &&
                                     rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
                                     (file->status == RM_FILE_STATE_NORMAL) &&
@@ -1863,6 +1862,9 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         g_mutex_lock(&file->shred_group->lock);
         {
             worth_waiting = worth_waiting && (file->shred_group->children);
+            if (file->digest->type == RM_DIGEST_PARANOID) {
+                worth_waiting = worth_waiting && file->digest->twin_candidates;
+            }
         }
         g_mutex_unlock(&file->shred_group->lock);
 
@@ -2086,7 +2088,7 @@ void rm_shred_run(RmSession *session) {
         tag.paranoid_mem_alloc = MAX(
             (gint64)session->cfg->paranoid_mem,
             (gint64)session->cfg->total_mem - (gint64)mem_used - (gint64)session->cfg->read_buffer_mem);
-        rm_log_error(BLUE"Paranoid Mem: %"LLU"\n", tag.paranoid_mem_alloc);
+        rm_log_info(BLUE"Paranoid Mem: %"LLU"\n", tag.paranoid_mem_alloc);
     } else {
         session->cfg->read_buffer_mem = MAX(
             (gint64)session->cfg->read_buffer_mem,
@@ -2094,7 +2096,7 @@ void rm_shred_run(RmSession *session) {
     }
 
     tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
-    rm_log_error(BLUE"Read buffer Mem: %"LLU"\n", session->cfg->read_buffer_mem);
+    rm_log_info(BLUE"Read buffer Mem: %"LLU"\n", session->cfg->read_buffer_mem);
 
 
     /* Remember how many devlists we had - so we know when to stop */
@@ -2107,7 +2109,7 @@ void rm_shred_run(RmSession *session) {
     /* Create a pool of hashing threadpools */
     tag.hash_pool_pool = g_async_queue_new_full((GDestroyNotify)rm_shred_hash_pool_free);
     g_assert(session->cfg->threads > 0);
-    for(uint i = 0; i < session->cfg->threads / 2 + 1; i++) {
+    for(uint i = 0; i < session->cfg->threads; i++) {
         g_async_queue_push(
             tag.hash_pool_pool,
             rm_util_thread_pool_new((GFunc)rm_shred_hash_factory, &tag, 1));
