@@ -53,6 +53,7 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
     self->stack = NULL;
     self->buffer_size = buffer_size;
     self->avail_buffers = MAX(max_mem / buffer_size, 1);
+    self->min_buffers = self->avail_buffers;
     self->max_buffers = self->avail_buffers;
     rm_log_debug("rm_buffer_pool_init: allocated max %lu buffers of %lu bytes each\n", self->avail_buffers, self->buffer_size);
     g_cond_init(&self->change);
@@ -67,6 +68,7 @@ void rm_buffer_pool_destroy(RmBufferPool *pool) {
             g_slice_free1(pool->buffer_size, g_trash_stack_pop(&pool->stack));
         }
     }
+    rm_log_info(BLUE"Info: had %lu unused read buffers\n"RESET, pool->min_buffers);
     g_mutex_unlock(&pool->lock);
     g_mutex_clear(&pool->lock);
     g_cond_clear(&pool->change);
@@ -83,10 +85,17 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
             } else if (pool->avail_buffers > 0) {
                 buffer = g_slice_alloc(pool->buffer_size);
             } else {
+                if (!pool->mem_warned) {
+                    rm_log_warning(RED"Warning: read buffer limit reached - waiting for processing to catch up\n"RESET);
+                    pool->mem_warned = true;
+                }
                 g_cond_wait(&pool->change, &pool->lock);
             }
         }
         pool->avail_buffers --;
+        if (pool->avail_buffers < pool->min_buffers) {
+            pool->min_buffers = pool->avail_buffers;
+        }
     }
     g_mutex_unlock(&pool->lock);
 
@@ -201,10 +210,10 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 }
 
 RmOff rm_digest_paranoia_bytes(void) {
-    return 64 * 1024 * 1024;
+    return 16 * 1024 * 1024;
     /* this is big enough buffer size to make seek time fairly insignificant relative to
      * sequential read time,
-     * eg 64MB read at typical 100 MB/s read rate = 640ms read vs typical seek time 10ms*/
+     * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
 }
 
 #define ADD_SEED(digest, seed)                                              \
@@ -501,9 +510,8 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
             /* first check for incoming twin candidates */
             RmDigest *new_twin_candidate = NULL;
             /* every 16 buffers (64 kb), check for new match candidates */
-            while (digest->buffer_count % 16 == 0 &&
+            while ( !digest->twin_candidates &&
                     (new_twin_candidate = g_async_queue_try_pop(digest->incoming_twin_candidates))) {
-                rm_log_debug(BLUE"Adding twin candidate %p\n"RESET, new_twin_candidate);
                 /* validate the new candidate by comparing the previous buffers (not including current)*/
                 GList *iter_new = new_twin_candidate->buffers->head;
                 GList *iter_self = digest->buffers->head;
@@ -515,6 +523,7 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
                 }
                 if (match) {
                     /* accept the twin candidate */
+                    rm_log_debug(BLUE"Adding twin candidate %p\n"RESET, new_twin_candidate);
                     g_assert(iter_self == digest->buffers->tail);
                     digest->twin_candidates = g_list_prepend(digest->twin_candidates, new_twin_candidate);
                     /* also store a pointer to the buffer corresponding to our current buffer */
@@ -653,12 +662,14 @@ guint rm_digest_hash(RmDigest *digest) {
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     if (a->type == RM_DIGEST_PARANOID) {
         if (a->bytes != b->bytes) {
-            rm_log_error(RED"byte mismatch\n"RESET);
+            rm_log_error(RED"Error: byte counts don't match in rm_digest_equal\n"RESET);
             return false;
         } else if ((a->twin_candidates && a->twin_candidates->data == b)
                 || (b->twin_candidates && b->twin_candidates->data == a)) {
-            rm_log_info(GREEN "+" RESET);
-            rm_log_debug(GREEN "Found match of size %"LLU" via twin_candidate strategy\n" RESET, a->bytes);
+            if (a->bytes > 4 * 4096) {
+                rm_log_debug(GREEN "+" RESET);
+            }
+            //rm_log_debug(GREEN "Found match of size %"LLU" via twin_candidate strategy\n" RESET, a->bytes);
             return true;
         }
 
@@ -675,8 +686,9 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             b_iter = b_iter->next;
         }
         if (!a_iter && !b_iter && bytes==a->bytes) {
-            rm_log_info(RED "+" RESET);
-            rm_log_debug(RED "Found match of size %"LLU" the hard way\n" RESET, a->bytes);
+            if (a->bytes > 4 * 4096) {
+                rm_log_debug(RED "+" RESET);
+            }
             return true;
         } else {
             return false;

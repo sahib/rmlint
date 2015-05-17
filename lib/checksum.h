@@ -100,6 +100,8 @@ typedef struct RmBufferPool {
     /* how many new buffers can we allocate before hitting mem limit? */
     gsize avail_buffers;
     gsize max_buffers;
+    gsize min_buffers;
+    gboolean mem_warned;
 
     /* concurrent accesses may happen */
     GMutex lock;
