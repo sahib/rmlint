@@ -2057,7 +2057,7 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
         /* Create a pool of hashing threadpools */
         device->hash_pool_pool = g_async_queue_new_full((GDestroyNotify)rm_shred_hash_pool_free);
         g_assert(tag->session->cfg->threads > 0);
-        for(uint i = 0; i < tag->session->cfg->threads / 2 / devices + 1; i++) {
+        for(uint i = 0; i < tag->session->cfg->threads / 2 + 1; i++) {
             g_async_queue_push(
                 device->hash_pool_pool,
                 rm_util_thread_pool_new((GFunc)rm_shred_hash_factory, tag, 1));
