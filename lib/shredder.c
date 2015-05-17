@@ -1556,7 +1556,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, 
 
     if((fd = fopen(file_path, "rb")) == NULL) {
         file->status = RM_FILE_STATE_IGNORE;
-        rm_log_info("fopen(3) failed for %s: %s", file_path, g_strerror(errno));
+        rm_log_info("fopen(3) failed for %s: %s\n", file_path, g_strerror(errno));
         goto finish;
     }
 
@@ -1647,7 +1647,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
 
     fd = rm_sys_open(file_path, O_RDONLY);
     if(fd == -1) {
-        rm_log_info("open(2) failed for %s: %s", file_path, g_strerror(errno));
+        rm_log_info("open(2) failed for %s: %s\n", file_path, g_strerror(errno));
         file->status = RM_FILE_STATE_IGNORE;
         goto finish;
     }
@@ -1823,6 +1823,11 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
 
 #define RM_SHRED_TOO_MANY_BYTES_TO_WAIT (64 * 1024 * 1024)
 
+static int rm_shred_find_idle_thread_pool(GThreadPool *a, GThreadPool *b) {
+    return g_thread_pool_unprocessed(a) - g_thread_pool_unprocessed(b);
+}
+
+
 static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     if(file->shred_group->has_only_ext_cksums) {
         rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
@@ -1834,13 +1839,20 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     if(file->is_symlink) {
         rm_shred_readlink_factory(file, device);
     } else {
+        g_async_queue_sort (device->main->hash_pool_pool,
+                            (GCompareDataFunc) rm_shred_find_idle_thread_pool,
+                            NULL);
 
-        GThreadPool *hash_pool = NULL;
-        if (!(hash_pool=g_async_queue_try_pop(device->main->hash_pool_pool))) {
-            rm_log_info(RED"Blocked waiting for hash_pool..."RESET);
+        GThreadPool *hash_pool = g_async_queue_try_pop(device->main->hash_pool_pool);
+        if (!hash_pool) {
+            rm_log_info(YELLOW"Blocked waiting for hash_pool..."RESET);
             hash_pool=g_async_queue_pop(device->main->hash_pool_pool);
             rm_log_info(GREEN"got\n"RESET);
         }
+        if (g_thread_pool_unprocessed(hash_pool)>0) {
+            rm_log_debug(RED"Got hash pool with %d unprocessed\n"RESET, g_thread_pool_unprocessed(hash_pool));
+        }
+
 
         bool worth_waiting = FALSE;
 
@@ -1883,7 +1895,15 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         rm_util_thread_pool_push(hash_pool, buffer);
 
         /* recycle our hash_pool */
-        g_async_queue_push(device->main->hash_pool_pool, hash_pool);
+        g_async_queue_lock(device->main->hash_pool_pool);
+        {
+            g_async_queue_sort_unlocked(device->main->hash_pool_pool,
+                                (GCompareDataFunc) rm_shred_find_idle_thread_pool,
+                                NULL);
+            g_async_queue_push_sorted_unlocked(device->main->hash_pool_pool, hash_pool,
+                (GCompareDataFunc)rm_shred_find_idle_thread_pool, NULL);
+        }
+        g_async_queue_unlock(device->main->hash_pool_pool);
 
         if(worth_waiting) {
             /* wait until the increment has finished hashing */
@@ -2044,7 +2064,7 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
     uint devices = g_hash_table_size(dev_table);
     tag->device_pool = rm_util_thread_pool_new(
         (GFunc)rm_shred_devlist_factory, tag,
-        MIN(tag->session->cfg->threads / 2 + 1, devices));
+        devices);
 
     GHashTableIter iter;
     gpointer key, value;
@@ -2107,7 +2127,7 @@ void rm_shred_run(RmSession *session) {
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);
-    rm_log_debug(BLUE "Devices = %d\n", devices_left);
+    rm_log_info(BLUE "Devices = %d\n", devices_left);
 
     /* Create a pool for results processing */
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);
