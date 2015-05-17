@@ -69,6 +69,13 @@ void rm_buffer_pool_destroy(RmBufferPool *pool) {
     g_slice_free(RmBufferPool, pool);
 }
 
+RmBuffer *rm_buffer_new(RmBufferPool *pool) {
+    RmBuffer *self = g_slice_new(RmBuffer);
+    self->pool = pool;
+    self->data = g_slice_alloc(pool->buffer_size);
+    return self;
+}
+
 RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     RmBuffer *buffer = NULL;
     g_mutex_lock(&pool->lock);
@@ -81,7 +88,7 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
             g_cond_wait(&pool->change, &pool->lock);
         }
         pool->avail_buffers --;
-        buffer = g_slice_alloc(pool->buffer_size);
+        buffer = rm_buffer_new(pool);
 
         if (pool->avail_buffers < pool->min_buffers) {
             pool->min_buffers = pool->avail_buffers;
@@ -90,7 +97,6 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     g_mutex_unlock(&pool->lock);
 
     g_assert(buffer);
-    buffer->pool = pool;
     return buffer;
 }
 
@@ -101,7 +107,8 @@ void rm_buffer_pool_release(RmBuffer *buf) {
         g_cond_signal(&buf->pool->change);
     }
     g_mutex_unlock(&buf->pool->lock);
-    g_slice_free1(buf->pool->buffer_size, buf);
+    g_slice_free1(buf->pool->buffer_size, buf->data);
+    g_slice_free(RmBuffer, buf);
 }
 
 /* make another buffer available if one is being kept (in paranoid digest) */
@@ -115,8 +122,8 @@ static void rm_buffer_pool_signal_keeping(RmBuffer *buf) {
 }
 
 static void rm_buffer_pool_release_kept(RmBuffer *buf) {
-    RmBufferPool *pool = buf->pool;
-    g_slice_free1(pool->buffer_size, buf);
+    g_slice_free1(buf->pool->buffer_size, buf->data);
+    g_slice_free(RmBuffer, buf);
 }
 
 static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b){
@@ -475,7 +482,7 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
     if (digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
     } else {
-        g_assert(buffer->len + offsetof(RmBuffer, data) <= buffer->pool->buffer_size);
+        g_assert(buffer->len <= buffer->pool->buffer_size);
         g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
         g_queue_push_tail(digest->buffers, buffer);
         digest->buffer_count++;

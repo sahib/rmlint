@@ -123,7 +123,7 @@ typedef struct RmBuffer {
     /* *must* be last member of RmBuffer,
      * gets all the rest of the allocated space
      * */
-    guint8 data[];
+    unsigned char *data;
 } RmBuffer;
 
 

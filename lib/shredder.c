@@ -1544,7 +1544,7 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, 
     gint32 total_bytes_read = 0;
 
     gint32 buf_size = rm_buffer_size(device->main->mem_pool);
-    buf_size -= offsetof(RmBuffer, data);
+    //buf_size -= offsetof(RmBuffer, data);
 
     RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
 
@@ -1623,7 +1623,6 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
     gint32 total_bytes_read = 0;
 
     RmOff buf_size = rm_buffer_size(device->main->mem_pool);
-    buf_size -= offsetof(RmBuffer, data);
 
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_left_to_read = bytes_to_read;
@@ -1669,11 +1668,14 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
      */
+    RmBuffer **buffers;
+    buffers = g_slice_alloc(sizeof(*buffers) * N_BUFFERS);
+
     memset(readvec, 0, sizeof(readvec));
     for(int i = 0; i < N_BUFFERS; ++i) {
         /* buffer is one contignous memory block */
-        RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
-        readvec[i].iov_base = buffer->data;
+        buffers[i] = rm_buffer_pool_get(device->main->mem_pool);
+        readvec[i].iov_base = buffers[i]->data;
         readvec[i].iov_len = buf_size;
     }
 
@@ -1688,7 +1690,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
 
         for(int i = 0; i < blocks; ++i) {
             /* Get the RmBuffer from the datapointer */
-            RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
+            RmBuffer *buffer = buffers[i];
             buffer->file = file;
             buffer->len = MIN(buf_size, bytes_read - i * buf_size);
             buffer->finished = FALSE;
@@ -1700,8 +1702,8 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
             rm_util_thread_pool_push(hash_pool, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */
-            buffer = rm_buffer_pool_get(device->main->mem_pool);
-            readvec[i].iov_base = buffer->data;
+            buffers[i] = rm_buffer_pool_get(device->main->mem_pool);
+            readvec[i].iov_base = buffers[i]->data;
             readvec[i].iov_len = buf_size;
         }
     }
@@ -1731,9 +1733,9 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
 
     /* Release the rest of the buffers */
     for(int i = 0; i < N_BUFFERS; ++i) {
-        RmBuffer *buffer = readvec[i].iov_base - offsetof(RmBuffer, data);
-        rm_buffer_pool_release(buffer);
+        rm_buffer_pool_release(buffers[i]);
     }
+    g_slice_free1(sizeof(*buffers) * N_BUFFERS, buffers);
 finish:
     if(fd > 0) {
         rm_sys_close(fd);
@@ -2119,6 +2121,7 @@ void rm_shred_run(RmSession *session) {
         session->cfg->read_buffer_mem = MAX(
             (gint64)session->cfg->read_buffer_mem,
             (gint64)session->cfg->total_mem - (gint64)mem_used);
+        tag.paranoid_mem_alloc = 0;
     }
 
     tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
