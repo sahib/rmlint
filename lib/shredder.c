@@ -1835,7 +1835,13 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         rm_shred_readlink_factory(file, device);
     } else {
 
-        GThreadPool *hash_pool = g_async_queue_pop(device->main->hash_pool_pool);
+        GThreadPool *hash_pool = NULL;
+        if (!(hash_pool=g_async_queue_try_pop(device->main->hash_pool_pool))) {
+            rm_log_info(RED"Blocked waiting for hash_pool..."RESET);
+            hash_pool=g_async_queue_pop(device->main->hash_pool_pool);
+            rm_log_info(GREEN"got\n"RESET);
+        }
+
         bool worth_waiting = FALSE;
 
         g_mutex_lock(&file->shred_group->lock);
@@ -1958,11 +1964,11 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                     iter = iter->next;
                 }
                 if (tmp != iter) {
-                    rm_log_info (RED"\nChanging file order due to fragmented file: next file in queue had offset %"LLU"M but head had jumped to %"LLU"M\n",
+                    rm_log_debug (RED"\nChanging file order due to fragmented file: next file in queue had offset %"LLU"M but head had jumped to %"LLU"M\n",
                         file->current_fragment_physical_offset / 1024 / 1024,
                         device->new_seek_position / 1024 / 1024);
                     file = iter->data;
-                    rm_log_info (GREEN"    Switched to file with offset %"LLU"M to reduce disk seek.\n" RESET, file->current_fragment_physical_offset / 1024 / 1024);
+                    rm_log_debug (GREEN"    Switched to file with offset %"LLU"M to reduce disk seek.\n" RESET, file->current_fragment_physical_offset / 1024 / 1024);
                 }
                 device->new_seek_position = 0;
             }
@@ -2084,7 +2090,7 @@ void rm_shred_run(RmSession *session) {
 
 
     if (session->cfg->checksum_type == RM_DIGEST_PARANOID) {
-        /* allocate amy spare mem for paranoid hashing */
+        /* allocate any spare mem for paranoid hashing */
         tag.paranoid_mem_alloc = MAX(
             (gint64)session->cfg->paranoid_mem,
             (gint64)session->cfg->total_mem - (gint64)mem_used - (gint64)session->cfg->read_buffer_mem);
