@@ -198,6 +198,18 @@
  *        Q: What about the mutex loop from this child which is doing the unlinking?
  *        A: No problem, either unlock the child's mutex before calling parent unlink,
  *           or handle the calling child differently from the other children
+ *
+ * TODO: Oscar update of the above
+ * snippet:
+ * an interesting aspect is the difference between conventional hashing and paranoid
+ * "hashing" - in the former the hashing is cpu-intensive but the subsequent matching
+ * is very fast; with the latter the "hashing" requires virtually no CPU but the
+ * comparison at the end of hashing (particularly with large blocks eg 64MB) is slow.
+ * that shouldn't be a problem as long as the reader thread still has other files
+ * that it can go and read while the hasher/sorter does the memcmp... but once you're
+ * out of RAM then that's not an option.
+ * The "Oscar" strategy aims to short-cut the memcmp by pre-matching blocks against
+ * a candidate twin file as they are read into memory
 *
 * Below some performance controls are listed that may impact performance.
 * Controls are sorted by subjectve importanceness.
