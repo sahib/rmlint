@@ -1790,18 +1790,16 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                   NEEDS_SHADOW_HASH(cfg)
                                   );
                 if(file->shred_group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD) {
-                    /* assign candidate twin(s) */
+                    /* send candidate twin(s) */
                     if (file->shred_group->children) {
                         GList *children = g_hash_table_get_values(file->shred_group->children);
                         while (children) {
-                            RmDigest *digest = ((RmShredGroup*)children->data)->digest;
-                            file->digest->twin_candidates =
-                                g_list_prepend(file->digest->twin_candidates, digest);
-                            file->digest->twin_candidate_buffers =
-                                g_list_prepend(file->digest->twin_candidate_buffers, digest->buffers->head);
+                            RmShredGroup *child = children->data;
+                            rm_digest_send_match_candidate(file->digest, child->digest);
                             children = g_list_delete_link(children, children);
                         }
                     }
+                    /* store a reference so the shred group knows where to send any future twin candidate digests */
                     file->shred_group->in_progress_digests =
                         g_list_prepend(file->shred_group->in_progress_digests, file->digest);
                 }
@@ -1883,7 +1881,7 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         {
             worth_waiting = worth_waiting && (file->shred_group->children);
             if (file->digest->type == RM_DIGEST_PARANOID) {
-                worth_waiting = worth_waiting && file->digest->twin_candidates;
+                worth_waiting = worth_waiting && file->digest->twin_candidate;
             }
         }
         g_mutex_unlock(&file->shred_group->lock);

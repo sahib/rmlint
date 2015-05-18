@@ -76,8 +76,8 @@ typedef struct RmDigest {
              * So we can make rm_digest_hash() and rm_digest_hexstring() work.
              */
             struct RmDigest *shadow_hash;
-            GList *twin_candidates;
-            GList *twin_candidate_buffers;
+            struct RmDigest *twin_candidate;
+            GList *twin_candidate_buffer;
             guint buffer_count;
             GAsyncQueue *incoming_twin_candidates;
         };

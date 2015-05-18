@@ -351,8 +351,6 @@ void rm_digest_free(RmDigest *digest) {
         if (digest->incoming_twin_candidates) {
             g_async_queue_unref(digest->incoming_twin_candidates);
         }
-        g_list_free(digest->twin_candidates);
-        g_list_free(digest->twin_candidate_buffers);
         break;
     case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
@@ -491,51 +489,35 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
         if(digest->shadow_hash) {
             rm_digest_update(digest->shadow_hash, buffer->data, buffer->len);
         }
-        if(digest->twin_candidates) {
-            /* do a running check that digest remains the same as its candidate twin */
-            /* first check for incoming twin candidates */
-            RmDigest *new_twin_candidate = NULL;
-            /* every 16 buffers (64 kb), check for new match candidates */
-            while ( !digest->twin_candidates &&
-                    (new_twin_candidate = g_async_queue_try_pop(digest->incoming_twin_candidates))) {
+        if ( !digest->twin_candidate ) {
+            if ((digest->twin_candidate = g_async_queue_try_pop(digest->incoming_twin_candidates))) {
                 /* validate the new candidate by comparing the previous buffers (not including current)*/
-                GList *iter_new = new_twin_candidate->buffers->head;
+                digest->twin_candidate_buffer = digest->twin_candidate->buffers->head;
                 GList *iter_self = digest->buffers->head;
                 gboolean match=TRUE;
-                while (match && iter_self && iter_self != digest->buffers->tail) {
-                    match = (rm_buffer_equal(iter_new->data, iter_self->data));
+                while (match && iter_self) {
+                    match = (rm_buffer_equal(digest->twin_candidate_buffer->data, iter_self->data));
                     iter_self = iter_self->next;
-                    iter_new = iter_new->next;
+                    digest->twin_candidate_buffer = digest->twin_candidate_buffer->next;
                 }
-                if (match) {
-                    /* accept the twin candidate */
-                    rm_log_debug(BLUE"Adding twin candidate %p\n"RESET, new_twin_candidate);
-                    g_assert(iter_self == digest->buffers->tail);
-                    digest->twin_candidates = g_list_prepend(digest->twin_candidates, new_twin_candidate);
-                    /* also store a pointer to the buffer corresponding to our current buffer */
-                    digest->twin_candidate_buffers = g_list_prepend(digest->twin_candidate_buffers, iter_new);
+                if (!match) {
+                    /* reject the twin candidate */
+                    digest->twin_candidate = NULL;
+                    digest->twin_candidate_buffer = NULL;
+                } else {
+                    rm_log_debug(BLUE"Added twin candidate %p\n"RESET, digest->twin_candidate);
                 }
             }
-
-            /* iterate through all twin candidates to see if they still match */
-            GList *twin_candidate_iter = digest->twin_candidates;
-            GList *twin_candidate_buffer_iter = digest->twin_candidate_buffers;
-            while (twin_candidate_iter) {
-                /* check next increment of each candidate twin */
-                GList *twin_candidate_buffer_ptr = twin_candidate_buffer_iter->data;
-                GList *temp1 = twin_candidate_iter;
-                GList *temp2 = twin_candidate_buffer_iter;
-                twin_candidate_iter = twin_candidate_iter->next;
-                twin_candidate_buffer_iter = twin_candidate_buffer_iter->next;
-                if (rm_buffer_equal(buffer, twin_candidate_buffer_ptr->data)) {
-                    /* buffers match; move ptr to next one ready for next buffer */
-                    temp2->data = twin_candidate_buffer_ptr->next;
-                } else {
-                    /* buffers don't match - delete candidate */
-                    digest->twin_candidates = g_list_delete_link(digest->twin_candidates, temp1);
-                    digest->twin_candidate_buffers = g_list_delete_link(digest->twin_candidate_buffers, temp2);
-                    rm_log_debug(RED"Ejected candidate match at buffer #%lu\n"RESET, digest->buffer_count);
-                }
+        } else {
+            /* do a running check that digest remains the same as its candidate twin */
+            if (rm_buffer_equal(buffer, digest->twin_candidate_buffer->data)) {
+                /* buffers match; move ptr to next one ready for next buffer */
+                digest->twin_candidate_buffer = digest->twin_candidate_buffer->next;
+            } else {
+                /* buffers don't match - delete candidate */
+                digest->twin_candidate = NULL;
+                digest->twin_candidate_buffer = NULL;
+                rm_log_debug(RED"Ejected candidate match at buffer #%lu\n"RESET, digest->buffer_count);
             }
         }
     }
@@ -646,12 +628,13 @@ guint rm_digest_hash(RmDigest *digest) {
 }
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
+    g_assert (a && b);
     if (a->type == RM_DIGEST_PARANOID) {
         if (a->bytes != b->bytes) {
             rm_log_error(RED"Error: byte counts don't match in rm_digest_equal\n"RESET);
             return false;
-        } else if ((a->twin_candidates && a->twin_candidates->data == b)
-                || (b->twin_candidates && b->twin_candidates->data == a)) {
+        } else if ((a->twin_candidate == b)
+                || (b->twin_candidate == a)) {
             if (a->bytes > 4 * 4096) {
                 rm_log_debug(GREEN "+" RESET);
             }
