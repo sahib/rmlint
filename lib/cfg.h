@@ -103,6 +103,10 @@ typedef struct RmCfg {
 
     /* total number of bytes we are allowed to use (target only) */
     RmOff total_mem;
+    
+    /* number of bytes to read before going back to start of disk
+     * (too big a sweep risks metadata getting pushed out of ram)*/
+    RmOff sweep_size;
 
     gboolean shred_always_wait;
     gboolean shred_never_wait;

@@ -231,12 +231,6 @@
 #define SHRED_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 0.05 second */
 #endif
 
-/* how many byts we read before going back to start of device for another sweep */
-/* (too long a sweep and metadata may be dumped from the OS's cache before we
- * come back to read it again, which would defeat the whole purpose of reading
- * files in physical disk order) */
-#define SHRED_SWEEP_SIZE (1024 * 1024 * 1024)
-
 /* how many pages can we read in (seek_time)/(CHEAP)? (use for initial read) */
 #define SHRED_BALANCED_PAGES (4)
 
@@ -2084,7 +2078,7 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
     while(g_hash_table_iter_next(&iter, &key, &value)) {
         RmShredDevice *device = value;
         device->after_preprocess = true;
-        device->bytes_per_pass = SHRED_SWEEP_SIZE / devices;
+        device->bytes_per_pass = tag->session->cfg->sweep_size / devices;
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
                      NULL);
         rm_log_debug(GREEN "Pushing device %s to threadpool\n", device->disk_name);
@@ -2176,7 +2170,7 @@ void rm_shred_run(RmSession *session) {
 
             if(device->remaining_files > 0) {
                 /* recycle the device */
-                device->bytes_per_pass = SHRED_SWEEP_SIZE / devices_left;
+                device->bytes_per_pass = session->cfg->sweep_size / devices_left;
                 rm_util_thread_pool_push(tag.device_pool, device);
             } else {
                 devices_left--;

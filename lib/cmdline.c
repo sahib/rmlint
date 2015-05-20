@@ -768,6 +768,12 @@ static gboolean rm_cmd_parse_read_buffer_mem(_U const char *option_name,
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buffer_mem));
 }
 
+static gboolean rm_cmd_parse_sweep_size(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_size));
+}
+
 static gboolean rm_cmd_parse_clamp_low(_U const char *option_name, const gchar *spec,
                                        RmSession *session, _U GError **error) {
     rm_cmd_parse_clamp_option(session, spec, true, error);
@@ -1130,8 +1136,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Specify min. memory to use for in-progress paranoid hashing", "S"},
         {"read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
          "Specify min. memory to use for read buffer during hashing", "S"},
+        {"sweep-size", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_size),
+         "Specify max. memory usage target", "S"},
         {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
-         "Specify max. number of threads", "N"},
+         "Specify max. number of hasher threads", "N"},
         {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,
          "Output unfinished checksums", NULL},
         {"xattr-write", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->write_cksum_to_xattr,
