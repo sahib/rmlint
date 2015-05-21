@@ -86,7 +86,7 @@ void rm_trie_init(RmTrie *self) {
      */
     self->chunks = g_string_chunk_new(100);
 
-    g_rw_lock_init(&self->lock);
+    g_mutex_init(&self->lock);
 }
 
 /* Path iterator that works with absolute paths.
@@ -126,7 +126,7 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     RmPathIter iter;
     rm_path_iter_init(&iter, path);
 
-    g_rw_lock_writer_lock(&self->lock);
+    g_mutex_lock(&self->lock);
 
     char *path_elem = NULL;
     RmNode *curr_node = self->root;
@@ -141,7 +141,7 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
         self->size++;
     }
 
-    g_rw_lock_writer_unlock(&self->lock);
+    g_mutex_unlock(&self->lock);
 
     return curr_node;
 }
@@ -153,7 +153,7 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
     RmPathIter iter;
     rm_path_iter_init(&iter, path);
 
-    g_rw_lock_reader_lock(&self->lock);
+    g_mutex_lock(&self->lock);
 
     char *path_elem = NULL;
     RmNode *curr_node = self->root;
@@ -161,14 +161,14 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
     while(curr_node && (path_elem = rm_path_iter_next(&iter))) {
         if(curr_node->children == NULL) {
             /* Can't go any further */
-            g_rw_lock_reader_unlock(&self->lock);
+            g_mutex_unlock(&self->lock);
             return NULL;
         }
 
         curr_node = g_hash_table_lookup(curr_node->children, path_elem);
     }
 
-    g_rw_lock_reader_unlock(&self->lock);
+    g_mutex_unlock(&self->lock);
     return curr_node;
 }
 
@@ -192,7 +192,7 @@ char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) 
         return NULL;
     }
 
-    g_rw_lock_reader_lock(&self->lock);
+    g_mutex_lock(&self->lock);
 
     size_t n_elements = 1;
     char *elements[PATH_MAX / 2 + 1] = {node->basename, NULL};
@@ -213,7 +213,7 @@ char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) 
         buf_ptr = g_stpcpy(buf_ptr + 1, (char *)elements[--n_elements]);
     }
 
-    g_rw_lock_reader_unlock(&self->lock);
+    g_mutex_unlock(&self->lock);
     return buf;
 }
 
@@ -253,9 +253,9 @@ static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_n
 
 void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
                   RmTrieIterCallback callback, void *user_data) {
-    g_rw_lock_reader_lock(&self->lock);
+    g_mutex_lock(&self->lock);
     _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);
-    g_rw_lock_reader_unlock(&self->lock);
+    g_mutex_unlock(&self->lock);
 }
 
 static int rm_trie_destroy_callback(_U RmTrie *self,
@@ -269,7 +269,7 @@ static int rm_trie_destroy_callback(_U RmTrie *self,
 void rm_trie_destroy(RmTrie *self) {
     rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
     g_string_chunk_free(self->chunks);
-    g_rw_lock_clear(&self->lock);
+    g_mutex_clear(&self->lock);
 }
 
 #ifdef _RM_PATHTRICIA_BUILD_MAIN

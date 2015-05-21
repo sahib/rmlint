@@ -57,7 +57,7 @@ typedef struct _RmTrie {
     size_t size;
 
     /* read write lock for insert/search */
-    GRWLock lock;
+    GMutex lock;
 } RmTrie;
 
 /* Callback to rm_trie_iter */
