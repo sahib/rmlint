@@ -774,6 +774,12 @@ static gboolean rm_cmd_parse_sweep_size(_U const char *option_name,
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_size));
 }
 
+static gboolean rm_cmd_parse_sweep_count(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_count));
+}
+
 static gboolean rm_cmd_parse_clamp_low(_U const char *option_name, const gchar *spec,
                                        RmSession *session, _U GError **error) {
     rm_cmd_parse_clamp_option(session, spec, true, error);
@@ -1137,7 +1143,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
          "Specify min. memory to use for read buffer during hashing", "S"},
         {"sweep-size", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_size),
-         "Specify max. memory usage target", "S"},
+         "Specify max. bytes per pass when scanning disks", "S"},
+        {"sweep-files", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_count),
+         "Specify max. file count per pass when scanning disks", "S"},
         {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
          "Specify max. number of hasher threads", "N"},
         {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,

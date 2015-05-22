@@ -306,7 +306,9 @@ typedef struct RmShredDevice {
     gint32 remaining_files;
     gint64 remaining_bytes;
     RmOff bytes_read_this_pass;
+    RmOff files_read_this_pass;
     RmOff bytes_per_pass;
+    RmOff files_per_pass;
 
     /* True when actual shreddiner began.
      * This is used to update the correct progressbar state.
@@ -1966,6 +1968,8 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     GList *iter = NULL;
     RmOff bytes_read_this_pass=0;
     device->bytes_read_this_pass = 0;
+    RmOff files_read_this_pass=0;
+    device->files_read_this_pass=0;
 
     g_assert(device);
 
@@ -1994,7 +1998,8 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     /* scheduler for one file at a time, optimised to minimise seeks */
     while(iter
             && !rm_session_was_aborted(main->session)
-            && bytes_read_this_pass <= device->bytes_per_pass) {
+            && bytes_read_this_pass <= device->bytes_per_pass
+            && files_read_this_pass <= device->files_per_pass) {
         RmFile *file = iter->data;
         gboolean can_process=FALSE;
 
@@ -2078,15 +2083,17 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
         g_mutex_lock(&device->lock);
         {
             bytes_read_this_pass = device->bytes_read_this_pass;
+            files_read_this_pass = device->files_read_this_pass;
         }
         g_mutex_unlock(&device->lock);
+
 
     }
 
     /* threadpool thread terminates but the device will be recycled via
      * the device_return queue
      */
-    rm_log_debug(BLUE "Pushing device back to main joiner %d after %"LLU" bytes\n" RESET, (int)device->disk, bytes_read_this_pass);
+    rm_log_debug(BLUE "Pushing device back to main joiner %d after %"LLU" bytes and %"LLU" files\n" RESET, (int)device->disk, bytes_read_this_pass, files_read_this_pass);
     g_async_queue_push(main->device_return, device);
 }
 
@@ -2103,6 +2110,7 @@ static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
         RmShredDevice *device = value;
         device->after_preprocess = true;
         device->bytes_per_pass = tag->session->cfg->sweep_size / devices;
+        device->files_per_pass = tag->session->cfg->sweep_count / devices;
         g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
                      NULL);
         rm_log_debug(GREEN "Pushing device %s to threadpool\n", device->disk_name);
@@ -2195,6 +2203,7 @@ void rm_shred_run(RmSession *session) {
             if(device->remaining_files > 0) {
                 /* recycle the device */
                 device->bytes_per_pass = session->cfg->sweep_size / devices_left;
+                device->files_per_pass = session->cfg->sweep_count / devices_left;
                 rm_util_thread_pool_push(tag.device_pool, device);
             } else {
                 devices_left--;

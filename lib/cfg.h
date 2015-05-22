@@ -107,6 +107,7 @@ typedef struct RmCfg {
     /* number of bytes to read before going back to start of disk
      * (too big a sweep risks metadata getting pushed out of ram)*/
     RmOff sweep_size;
+    RmOff sweep_count;
 
     gboolean shred_always_wait;
     gboolean shred_never_wait;
