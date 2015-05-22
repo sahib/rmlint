@@ -335,7 +335,14 @@ typedef struct RmShredDevice {
      * sysconf() does not need to be called always.
      */
     RmOff page_size;
+
+    /* cached counters to avoid blocking delays in rm_shred_adjust_counters */
+    gint cache_file_count;
+    gint cache_filtered_count;
+    gint64 cache_byte_count;
+
     RmShredTag *main;
+
 } RmShredDevice;
 
 typedef enum RmShredGroupStatus {
@@ -661,26 +668,39 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     g_mutex_lock(&(device->lock));
     {
         device->remaining_files += files;
+        device->cache_file_count +=files;
+
         device->remaining_bytes += bytes;
+        device->cache_byte_count += bytes;
         if (bytes<0) {
             device->bytes_read_this_pass = device->bytes_read_this_pass + (RmOff)(-bytes);
         }
+        if (files<0) {
+            device->files_read_this_pass++;
+            device->cache_filtered_count +=files;
+        }
+
     }
     g_mutex_unlock(&(device->lock));
 
-    RmSession *session = device->main->session;
-    rm_fmt_lock_state(session->formats);
-    {
-        session->shred_files_remaining += files;
-        if(files < 0) {
-            session->total_filtered_files += files;
+    if (abs(device->cache_file_count) >= 16 /* TODO - #define */ ||
+        device->remaining_bytes == 0 ||
+        device->remaining_files == 0) {
+        RmSession *session = device->main->session;
+        rm_fmt_lock_state(session->formats);
+        {
+            session->shred_files_remaining += device->cache_file_count;
+            session->total_filtered_files += device->cache_filtered_count;
+            session->shred_bytes_remaining += device->cache_byte_count;
+            rm_fmt_set_state(session->formats, (device->after_preprocess)
+                                                   ? RM_PROGRESS_STATE_SHREDDER
+                                                   : RM_PROGRESS_STATE_PREPROCESS);
+            device->cache_file_count = 0;
+            device->cache_filtered_count = 0;
+            device->cache_byte_count = 0;
         }
-        session->shred_bytes_remaining += bytes;
-        rm_fmt_set_state(session->formats, (device->after_preprocess)
-                                               ? RM_PROGRESS_STATE_SHREDDER
-                                               : RM_PROGRESS_STATE_PREPROCESS);
+        rm_fmt_unlock_state(session->formats);
     }
-    rm_fmt_unlock_state(session->formats);
 }
 
 static void rm_shred_write_cksum_to_xattr(RmSession *session, RmFile *file) {
@@ -750,6 +770,10 @@ static RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_nam
 
     self->hashed_file_return = g_async_queue_new();
     self->page_size = main->page_size;
+
+    self->cache_file_count = 0;
+    self->cache_filtered_count = 0;
+    self->cache_byte_count = 0;
 
     g_mutex_init(&(self->lock));
     g_cond_init(&(self->change));
