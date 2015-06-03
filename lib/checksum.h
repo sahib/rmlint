@@ -91,6 +91,9 @@ typedef struct RmDigest {
 /////////// RmBufferPool and RmBuffer ////////////////
 
 typedef struct RmBufferPool {
+    /* Place where recycled buffers are stored */
+    GTrashStack *stack;
+
     /* size of each buffer */
     gsize buffer_size;
 
@@ -98,6 +101,8 @@ typedef struct RmBufferPool {
     gsize avail_buffers;
     gsize max_buffers;
     gsize min_buffers;
+    gsize kept_buffers;
+    gsize max_kept_buffers;
     gboolean mem_warned;
 
     /* concurrent accesses may happen */
@@ -108,8 +113,8 @@ typedef struct RmBufferPool {
 
 /* Represents one block of read data */
 typedef struct RmBuffer {
-    /* buffer pool the buffer belongs to */
-    RmBufferPool *pool;
+    /* note that first (sizeof(pointer)) bytes of this structure get overwritten when it gets
+     * pushed to the RmBufferPool stack, so first couple of elements can't be reused */
 
     /* file structure the data belongs to */
     struct RmFile *file;
@@ -120,9 +125,10 @@ typedef struct RmBuffer {
     /* flag to indicate that there is no more data for the current hash increment */
     bool finished : 1;
 
-    /* *must* be last member of RmBuffer,
-     * gets all the rest of the allocated space
-     * */
+    /* buffer pool the buffer belongs to */
+    RmBufferPool *pool;
+
+    /* pointer to the data allocated */
     unsigned char *data;
 } RmBuffer;
 
@@ -257,7 +263,7 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
 
 
 RmOff rm_buffer_size(RmBufferPool *pool);
-RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem);
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_kept_mem);
 void rm_buffer_pool_destroy(RmBufferPool *pool);
 RmBuffer *rm_buffer_pool_get(RmBufferPool *pool);
 void rm_buffer_pool_release(RmBuffer *buf);

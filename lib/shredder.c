@@ -2160,7 +2160,7 @@ void rm_shred_run(RmSession *session) {
         tag.paranoid_mem_alloc = 0;
     }
 
-    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem);
+    tag.mem_pool = rm_buffer_pool_init(offsetof(RmBuffer, data) + SHRED_PAGE_SIZE, session->cfg->read_buffer_mem, session->cfg->paranoid_mem);
     rm_log_info(BLUE"Read buffer Mem: %"LLU"\n", session->cfg->read_buffer_mem);
 
 
