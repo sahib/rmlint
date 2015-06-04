@@ -217,10 +217,12 @@ def test_symlinks():
     assert data[1]['path'].endswith('/b')
     assert not data[1]['is_original']
 
-    # x is a duplicate of z when following links
-    assert data[2]['path'].endswith('/a/x')
+    # z must come first, since it's the physical real file
+    assert data[2]['path'].endswith('/a/z')
     assert data[2]['is_original']
-    assert data[3]['path'].endswith('/a/z')
+
+    # x is a duplicate of z when following links
+    assert data[3]['path'].endswith('/a/x')
     assert not data[3]['is_original']
 
 

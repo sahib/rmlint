@@ -242,10 +242,6 @@ static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *sessi
         }
     }
 
-#ifdef _RM_TREEMERGE_DEBUG
-    rm_trie_print(count_tree);
-#endif
-
     rm_trie_destroy(&file_tree);
     return true;
 }

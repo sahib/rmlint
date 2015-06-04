@@ -838,6 +838,26 @@ static gboolean rm_cmd_parse_partial_hidden(_U const char *option_name,
     return true;
 }
 
+static gboolean rm_cmd_parse_see_symlinks(_U const char *option_name,
+                                           _U const gchar *count, RmSession *session,
+                                           _U GError **error) {
+    RmCfg *cfg = session->cfg;
+    cfg->see_symlinks = true;
+    cfg->follow_symlinks = false;
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_follow_symlinks(_U const char *option_name,
+                                             _U const gchar *count, RmSession *session,
+                                             _U GError **error) {
+    RmCfg *cfg = session->cfg;
+    cfg->see_symlinks = false;
+    cfg->follow_symlinks = true;
+
+    return true;
+}
+
 static gboolean rm_cmd_parse_no_partial_hidden(_U const char *option_name,
                                                _U const gchar *count, RmSession *session,
                                                _U GError **error) {
@@ -1031,7 +1051,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Be not that colorful"), NULL},
         {"hidden", 'r', DISABLE, G_OPTION_ARG_NONE, &cfg->ignore_hidden,
          _("Find hidden files"), NULL},
-        {"followlinks", 'f', 0, G_OPTION_ARG_NONE, &cfg->follow_symlinks,
+        {"followlinks", 'f', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(follow_symlinks),
          _("Follow symlinks"), NULL},
         {"no-followlinks", 'F', DISABLE, G_OPTION_ARG_NONE, &cfg->follow_symlinks,
          _("Ignore symlinks"), NULL},
@@ -1084,7 +1104,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Cross mountpoints", NULL},
         {"less-paranoid", 'P', EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(less_paranoid),
          "Use less paranoid hashing algorithm", NULL},
-        {"see-symlinks", '@', 0 | HIDDEN, G_OPTION_ARG_NONE, &cfg->see_symlinks,
+        {"see-symlinks", '@', EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(see_symlinks),
          "Treat symlinks a regular files", NULL},
         {"no-match-basename", 'B', DISABLE | HIDDEN, G_OPTION_ARG_NONE,
          &cfg->match_basename, "Disable --match-basename filter", NULL},
@@ -1236,8 +1256,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         error = g_error_new(RM_ERROR_QUARK, 0, _("No valid paths given."));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
+    } else if(cfg->follow_symlinks && cfg->see_symlinks) {
+        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks.");;;
+        g_assert_not_reached();
     }
-
 failure:
     if(error != NULL) {
         rm_cmd_on_error(NULL, NULL, session, &error);
