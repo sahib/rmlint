@@ -408,7 +408,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_DEFAULT: /* any file type not explicitly described by one of the
                                  above*/
                 clear_emptydir_flags = true; /* current dir not empty*/
-                rm_log_debug("Add file: %s: %d %d\n", p->fts_path, next_is_symlink, p->fts_statp->st_size);
                 ADD_FILE(RM_LINT_TYPE_UNKNOWN, next_is_symlink);
                 next_is_symlink = false;
                 break;

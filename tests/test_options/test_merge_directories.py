@@ -201,7 +201,7 @@ def test_symlinks():
     create_file('xxx', 'b/z')
     create_link('b/z', 'b/x', symlink=True)
 
-    head, *data, footer = run_rmlint('-pp -D -S a -FF')
+    head, *data, footer = run_rmlint('-pp -D -S a -F')
 
     assert len(data) == 2
     assert data[0]['path'].endswith('z')
