@@ -258,8 +258,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
 
         prefix = g_strdup_printf("echo 'Keeping: ' '%s'", path);
         self->last_original = file;
-    } else {
-        g_assert(self->last_original);
+    } else if(self->last_original) {
 
         RmFile *last_original = self->last_original;
         RM_DEFINE_PATH(last_original);
