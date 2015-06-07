@@ -362,7 +362,6 @@ typedef enum RmShredGroupStatus {
 #define HAS_CACHE(session) \
     (session->cfg->read_cksum_from_xattr || session->cache_list.length)
 
-
 #define NEEDS_SHADOW_HASH(cfg)  \
     (cfg->merge_directories || cfg->read_cksum_from_xattr)
 
@@ -922,8 +921,7 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 static void rm_shred_group_free(RmShredGroup *self) {
     g_assert(self->parent == NULL); /* children should outlive their parents! */
 
-    /* For -D we need to hold back the memory a bit longer */
-    bool needs_free = !(self->main->session->cfg->merge_directories);
+    bool needs_free = !(self->main->session->cfg->cache_file_structs);
 
     if(self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file,
@@ -1463,6 +1461,8 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
+    RmCfg *cfg = tag->session->cfg;
+
     if(g_queue_get_length(group->held_files) > 0) {
         /* find the original(s)
          * (note this also unbundles hardlinks and sorts the group from
@@ -1483,25 +1483,27 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
             RmFile *file = iter->data;
             file->digest = group->digest;
             file->free_digest = false;
-            if(tag->session->cfg->merge_directories) {
+
+            if(cfg->merge_directories) {
                 rm_tm_feed(tag->session->dir_merger, file);
             }
         }
 
-        if(tag->session->cfg->merge_directories == false) {
-            /* Output them directly */
+        if(cfg->merge_directories == false) {
+            /* Output them directly, do not merge them first. */
             rm_shred_forward_to_output(tag->session, group->held_files);
         }
     }
+
     group->status = RM_SHRED_GROUP_FINISHED;
 #if _RM_SHRED_DEBUG
     rm_log_debug("Free from rm_shred_result_factory\n");
 #endif
 
     /* TODO:
-     * With -D we get a memory leak here. Which is not that bad,
-     * since all files need to be cached till the end of the run
-     * anyways, but valgrind shows a lot of output.
+     * With cfg->cache_file_structs we get a memory leak here. Which is not that
+     * bad, since all files need to be cached till the end of the run anyways,
+     * but valgrind shows a lot of output.
      *
      * (we're leaking group->digest and all RmFiles in it)
      */

@@ -545,12 +545,8 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     return self;
 }
 
-int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, _U void *user_data) {
+int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, _U void *u) {
     RmDirectory *directory = node->data;
-
-    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
-        rm_file_destroy((RmFile *)iter->data);
-    }
 
     rm_directory_free(directory);
     return 0;
@@ -818,9 +814,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         if(result_dirs.length >= 2) {
             rm_shred_forward_to_output(self->session, &file_adaptor_group);
+        } else {
+            g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
         }
 
-        g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
         g_queue_clear(&file_adaptor_group);
         g_queue_clear(&result_dirs);
     }

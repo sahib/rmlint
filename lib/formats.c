@@ -26,7 +26,33 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "file.h"
 #include "formats.h"
+
+/* A group of output files. 
+ * These are only created when caching to the end of the run is requested.
+ * Otherwise, files are directly outputed and not stored in groups.
+ */
+typedef struct RmFmtGroup {
+    GQueue files;
+} RmFmtGroup;
+
+
+static RmFmtGroup *rm_fmt_group_new(void) {
+    RmFmtGroup *self = g_slice_new(RmFmtGroup);
+    g_queue_init(&self->files);
+    return self;
+}
+
+static void rm_fmt_group_destroy(RmFmtGroup *self) {
+    for(GList *iter = self->files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        rm_file_destroy(file);
+    }
+
+    g_queue_clear(&self->files);
+    g_slice_free(RmFmtGroup, self);
+}
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
     g_assert(handler);
@@ -49,6 +75,7 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
                                          (GDestroyNotify)g_hash_table_unref);
 
     self->session = session;
+    g_queue_init(&self->groups);
     g_rec_mutex_init(&self->state_mtx);
 
     extern RmFmtHandler *PROGRESS_HANDLER;
@@ -188,13 +215,32 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     }
 
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
-
     g_hash_table_insert(self->path_to_handler, new_handler_copy->path, new_handler);
 
     return true;
 }
 
+static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {
+    RM_FMT_FOR_EACH_HANDLER(self) {
+        RM_FMT_CALLBACK(handler->elem, result);
+    }
+}
+
+void rm_fmt_flush(RmFmtTable *self) {
+    if(!self->session->cfg->cache_file_structs) {
+        return;
+    }
+     
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        g_queue_foreach(&group->files, (GFunc)rm_fmt_write_impl, self);
+        rm_fmt_group_destroy(group);
+    }
+}
+
 void rm_fmt_close(RmFmtTable *self) {
+    g_queue_clear(&self->groups);
+
     RM_FMT_FOR_EACH_HANDLER(self) {
         RM_FMT_CALLBACK(handler->foot);
         fclose(file);
@@ -210,8 +256,16 @@ void rm_fmt_close(RmFmtTable *self) {
 }
 
 void rm_fmt_write(RmFile *result, RmFmtTable *self) {
-    RM_FMT_FOR_EACH_HANDLER(self) {
-        RM_FMT_CALLBACK(handler->elem, result);
+    bool direct = !(self->session->cfg->cache_file_structs);
+    if(direct) {
+        rm_fmt_write_impl(result, self);
+    } else {
+        if(result->is_original || self->groups.length == 0) {
+            g_queue_push_tail(&self->groups, rm_fmt_group_new());
+        }
+
+        RmFmtGroup *group = self->groups.tail->data;
+        g_queue_push_tail(&group->files, result);
     }
 }
 

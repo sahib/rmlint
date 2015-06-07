@@ -882,6 +882,10 @@ static gboolean rm_cmd_parse_merge_directories(_U const char *option_name,
     cfg->follow_symlinks = false;
     cfg->see_symlinks = true;
     rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
+
+    /* Keep RmFiles after shredder. */
+    cfg->cache_file_structs = true;
+
     return true;
 }
 
@@ -1156,6 +1160,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Testing option for threading; pretends each input path is a separate physical "
          "disk",
          NULL},
+        {"fake-holdback", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->cache_file_structs, "Hold back all files to the end before outputting.", NULL},
         {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
          &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
         {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read, 
@@ -1306,6 +1312,7 @@ int rm_cmd_main(RmSession *session) {
         rm_tm_finish(session->dir_merger);
     }
 
+    rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 
