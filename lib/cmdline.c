@@ -918,6 +918,30 @@ static gboolean rm_cmd_parse_permissions(_U const char *option_name, const gchar
     return true;
 }
 
+
+static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *criteria,
+                                         RmSession *session, GError **error) {
+    RmCfg *cfg = session->cfg;
+    const char valid[] = "moanspMOANSP";
+
+    for(int i = 0; criteria[i]; ++i) {
+        if(strchr(valid, criteria[i]) == NULL) {
+            g_set_error(error, RM_ERROR_QUARK, 0, 
+                        _("--rankby may only contain [%s], not `%c`"), 
+                        valid, criteria[i]);
+            return false;
+        }
+    }
+
+    /* Remember the criteria string */
+    strcpy(cfg->rank_criteria, criteria);
+
+    /* ranking the files depends on caching them to the end of the program */
+    cfg->cache_file_structs = true;
+
+    return true;
+}
+
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -1023,6 +1047,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Specify max traversal depth"), "N"},
         {"sortcriteria", 'S', 0, G_OPTION_ARG_STRING, &cfg->sort_criteria,
          _("Original criteria"), "[ampAMP]"},
+        {"rankby", 0, 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
+         _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),
          _("Specify lint types"), "T"},
         {"size", 's', 0, G_OPTION_ARG_CALLBACK, FUNC(limit_sizes),

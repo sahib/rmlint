@@ -23,6 +23,7 @@
  *
  */
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -35,6 +36,7 @@
  */
 typedef struct RmFmtGroup {
     GQueue files;
+    int index;
 } RmFmtGroup;
 
 
@@ -226,19 +228,99 @@ static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {
     }
 }
 
+static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
+    RmFile *fa = ga->files.head->data;
+    RmFile *fb = gb->files.head->data;
+
+    RmOff sa = fa->file_size * (ga->files.length - 1);
+    RmOff sb = fb->file_size * (gb->files.length - 1);
+
+    g_printerr("Comparing: %lu %lu\n", sa, sb);
+
+    /* Better do not compare big unsigneds via a - b... */
+    if(sa < sb) {
+        return -1;
+    } 
+
+    if(sa > sb) {
+        return +1;
+    } 
+
+    return 0;
+}
+
+static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {
+    const char *rank_order = self->session->cfg->rank_criteria;
+
+    if(ga->index == 0) {
+        return -1;
+    }
+
+    if(gb->index == 0) {
+        return +1;
+    }
+
+    RmFile *fa = ga->files.head->data;
+    RmFile *fb = gb->files.head->data;
+
+    for(int i = 0; rank_order[i]; ++i) {
+        gint64 r = 0;
+        switch(tolower(rank_order[i])) {
+            case 's':
+                r = rm_fmt_rank_size(ga, gb);
+                break;
+            case 'a': {
+                    RM_DEFINE_BASENAME(fa)
+                    RM_DEFINE_BASENAME(fb)
+                    r = strcasecmp(fa_basename, fb_basename);
+                }
+                break;
+            case 'm':
+                r = ((gint64)fa->mtime) - ((gint64)fb->mtime);
+                break;
+            case 'p':
+                r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
+                break;
+            case 'n':
+                r = ((gint64)ga->files.length) - ((gint64)gb->files.length);
+                break;
+            case 'o':
+                r = ga->index - gb->index;
+                break;
+        }
+
+        if(r != 0) {
+            r = CLAMP(r, -1, +1);
+            return isupper(rank_order[i]) ? -r : r;
+        }
+    }
+
+    return 0;
+}
+
 void rm_fmt_flush(RmFmtTable *self) {
-    if(!self->session->cfg->cache_file_structs) {
+    RmCfg *cfg = self->session->cfg;
+    if(!cfg->cache_file_structs) {
         return;
     }
-     
+
+    if(cfg->rank_criteria && *(cfg->rank_criteria)) {
+        g_printerr("-------- RANKING %s\n", cfg->rank_criteria);
+        g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
+    }
+
     for(GList *iter = self->groups.head; iter; iter = iter->next) {
         RmFmtGroup *group = iter->data;
         g_queue_foreach(&group->files, (GFunc)rm_fmt_write_impl, self);
-        rm_fmt_group_destroy(group);
     }
 }
 
 void rm_fmt_close(RmFmtTable *self) {
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        rm_fmt_group_destroy(group);
+    }
+
     g_queue_clear(&self->groups);
 
     RM_FMT_FOR_EACH_HANDLER(self) {
@@ -265,6 +347,8 @@ void rm_fmt_write(RmFile *result, RmFmtTable *self) {
         }
 
         RmFmtGroup *group = self->groups.tail->data;
+        group->index = self->groups.length - 1;
+
         g_queue_push_tail(&group->files, result);
     }
 }
