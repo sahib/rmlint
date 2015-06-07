@@ -665,11 +665,8 @@ static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *direct
 static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        RmLintType actual_type = file->lint_type;
-
         file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
         rm_fmt_write(file, self->session->formats);
-        file->lint_type = actual_type;
     }
 
     /* Recursively propagate to children */

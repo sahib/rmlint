@@ -821,7 +821,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
 
         /* ShredGroup that was going nowhere */
         if(file->shred_group->num_files <= 1 && session->cfg->write_unfinished) {
-            RmLintType actual_type = file->lint_type;
             file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
             file->digest = (file->digest) ? file->digest : file->shred_group->digest;
 
@@ -830,8 +829,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
                 rm_shred_write_cksum_to_xattr(session, file);
                 file->digest = NULL;
             }
-
-            file->lint_type = actual_type;
         }
 
         /* update paranoid memory allocator */
