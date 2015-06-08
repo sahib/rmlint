@@ -522,6 +522,8 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
 
         if(!session->cfg->cache_file_structs) {
             g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
+        } else {
+            g_list_free(list);
         }
     }
 

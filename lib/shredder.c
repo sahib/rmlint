@@ -915,10 +915,10 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 
 /* Free RmShredGroup and any dormant files still in its queue
  */
-static void rm_shred_group_free(RmShredGroup *self) {
+static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     g_assert(self->parent == NULL); /* children should outlive their parents! */
 
-    bool needs_free = !(self->main->session->cfg->cache_file_structs);
+    bool needs_free = !(self->main->session->cfg->cache_file_structs) | force_free;
 
     if(self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file,
@@ -929,7 +929,7 @@ static void rm_shred_group_free(RmShredGroup *self) {
 
     rm_shred_mem_return(self);
 
-    if(self->digest && needs_free) {
+    if(self->digest && force_free) {
         rm_digest_free(self->digest);
         self->digest = NULL;
     }
@@ -1052,7 +1052,7 @@ static void rm_shred_group_unref(RmShredGroup *self) {
 #if _RM_SHRED_DEBUG
         rm_log_debug("Free from rm_shred_group_unref\n");
 #endif
-        rm_shred_group_free(self);
+        rm_shred_group_free(self, true);
     }
 }
 
@@ -1276,7 +1276,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
 static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
     g_assert(group);
     if(group->status == RM_SHRED_GROUP_DORMANT) {
-        rm_shred_group_free(group);
+        rm_shred_group_free(group, true);
         return true;
     } else {
         return false;
@@ -1497,14 +1497,8 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
     rm_log_debug("Free from rm_shred_result_factory\n");
 #endif
 
-    /* TODO:
-     * With cfg->cache_file_structs we get a memory leak here. Which is not that
-     * bad, since all files need to be cached till the end of the run anyways,
-     * but valgrind shows a lot of output.
-     *
-     * (we're leaking group->digest and all RmFiles in it)
-     */
-    rm_shred_group_free(group);
+    /* Do not force free files here, output module might need do that itself. */
+    rm_shred_group_free(group, false);
 }
 
 /////////////////////////////////
