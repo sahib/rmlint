@@ -918,7 +918,16 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     g_assert(self->parent == NULL); /* children should outlive their parents! */
 
-    bool needs_free = !(self->main->session->cfg->cache_file_structs) | force_free;
+    RmCfg *cfg = self->main->session->cfg;
+
+    bool needs_free = !(cfg->cache_file_structs) | force_free;
+
+    /* May not free though when unfinished checksums are written.
+     * Those are freed by the output module. 
+     */
+    if(cfg->write_unfinished) {
+        needs_free = false;
+    }
 
     if(self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file,
@@ -929,7 +938,7 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
 
     rm_shred_mem_return(self);
 
-    if(self->digest && force_free) {
+    if(self->digest && needs_free) {
         rm_digest_free(self->digest);
         self->digest = NULL;
     }
