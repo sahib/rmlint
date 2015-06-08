@@ -91,14 +91,15 @@ typedef struct RmDirectory {
 } RmDirectory;
 
 struct RmTreeMerger {
-    RmSession *session;       /* Session state variables / Settings          */
-    RmTrie dir_tree;          /* Path-Trie with all RmFiles as value         */
-    RmTrie count_tree;        /* Path-Trie with all file's count as value    */
-    GHashTable *result_table; /* {hash => [RmDirectory]} mapping             */
-    GHashTable *file_groups;  /* Group files by hash                         */
-    GHashTable *file_checks;  /* Set of files that were handled already.     */
-    GHashTable *known_hashs;  /* Set of known hashes, only used for cleanup. */
-    GQueue valid_dirs;        /* Directories consisting of RmFiles only      */
+    RmSession *session;       /* Session state variables / Settings                  */
+    RmTrie dir_tree;          /* Path-Trie with all RmFiles as value                 */
+    RmTrie count_tree;        /* Path-Trie with all file's count as value            */
+    GHashTable *result_table; /* {hash => [RmDirectory]} mapping                     */
+    GHashTable *file_groups;  /* Group files by hash                                 */
+    GHashTable *file_checks;  /* Set of files that were handled already.             */
+    GHashTable *known_hashs;  /* Set of known hashes, only used for cleanup.         */
+    GHashTable *was_printed;  /* Set of files that were handed to rm_fmt_write()     */
+    GQueue valid_dirs;        /* Directories consisting of RmFiles only              */
 };
 
 //////////////////////////
@@ -536,6 +537,7 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
                                               (GEqualFunc)rm_digest_equal, NULL, NULL);
 
     self->known_hashs = g_hash_table_new_full(NULL, NULL, NULL, NULL);
+    self->was_printed = g_hash_table_new_full(NULL, NULL, NULL, NULL);
 
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
@@ -545,8 +547,16 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     return self;
 }
 
-int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, _U void *u) {
+int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, RmTreeMerger *tm) {
     RmDirectory *directory = node->data;
+
+    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        if(g_hash_table_contains(tm->was_printed, iter->data)) {
+            continue;
+        }
+
+        rm_file_destroy((RmFile *)iter->data);
+    }
 
     rm_directory_free(directory);
     return 0;
@@ -564,9 +574,15 @@ void rm_tm_destroy(RmTreeMerger *self) {
     g_queue_clear(&self->valid_dirs);
 
     /* Kill all RmDirectories stored in the tree */
-    rm_trie_iter(&self->dir_tree, NULL, true, false, rm_tm_destroy_iter, NULL);
+    rm_trie_iter(
+        &self->dir_tree, NULL, true, false, 
+        (RmTrieIterCallback)rm_tm_destroy_iter, self
+    );
+
     rm_trie_destroy(&self->dir_tree);
     rm_trie_destroy(&self->count_tree);
+    g_hash_table_unref(self->was_printed);
+
     g_slice_free(RmTreeMerger, self);
 }
 
@@ -667,6 +683,7 @@ static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *direc
         RmFile *file = iter->data;
         file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
         rm_fmt_write(file, self->session->formats);
+        g_hash_table_add(self->was_printed, file);
     }
 
     /* Recursively propagate to children */
@@ -867,6 +884,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
             if(iter != file_list->head && !is_duplicate) {
                 file_size_acc += file->file_size;
             }
+
+            g_hash_table_add(self->was_printed, file);
         }
 
         if(file_list->length >= 2) {
