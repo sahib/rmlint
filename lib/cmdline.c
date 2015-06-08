@@ -1047,7 +1047,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Specify max traversal depth"), "N"},
         {"sortcriteria", 'S', 0, G_OPTION_ARG_STRING, &cfg->sort_criteria,
          _("Original criteria"), "[ampAMP]"},
-        {"rankby", 0, 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
+        {"rankby", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
          _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),
          _("Specify lint types"), "T"},

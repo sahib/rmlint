@@ -180,6 +180,22 @@ General Options
     * This feature might add some runtime.
     * Consider using ``-@`` together with this option (this is the default).
 
+:``-y --rankby=order`` (**default\:** *none*):
+
+    Sort the found duplicate groups by criteria described by `order`.
+    `order` is a string that may consist of one or more of the following letters:
+
+    * `s`: Sort by size of group.
+    * `a`: Sort alphabetically by the basename of the original.
+    * `m`: Sort by mtime of the original.
+    * `p`: Sort by path-index of the original.
+    * `o`: Sort by natural found order (might be different on each run).
+    * `n`: Sort by number of files in the group.
+
+    The letter may also be written uppercase (similiar to ``-S /
+    --sortcriteria``) to reverse the sorting. Note that ``rmlint`` has to hold
+    back all results to the end of the run before sorting and printing. 
+
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them. 
@@ -646,8 +662,8 @@ PROGRAM AUTHORS
 
 ``rmlint`` was written by:
 
-* Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
-* Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+* Christopher <sahib> Pahl 2010-2015 (https://github.com/sahib)
+* Daniel <SeeSpotRun> T.   2014-2015 (https://github.com/SeeSpotRun)
 
 Also see the  http://rmlint.rtfd.org for other people that helped us.
 
