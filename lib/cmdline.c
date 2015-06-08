@@ -934,11 +934,31 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
     }
 
     /* Remember the criteria string */
-    strcpy(cfg->rank_criteria, criteria);
+    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria));
 
     /* ranking the files depends on caching them to the end of the program */
     cfg->cache_file_structs = true;
 
+    return true;
+}
+
+
+static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gchar *criteria,
+                                         RmSession *session, GError **error) {
+    RmCfg *cfg = session->cfg;
+
+    const char valid[] = "mapMAP";
+
+    for(int i = 0; criteria[i]; ++i) {
+        if(strchr(valid, criteria[i]) == NULL) {
+            g_set_error(error, RM_ERROR_QUARK, 0, 
+                        _("--sortcriteria may only contain [%s], not `%c`"), 
+                        valid, criteria[i]);
+            return false;
+        }
+    }
+
+    strncpy(cfg->sort_criteria, criteria, sizeof(cfg->sort_criteria));
     return true;
 }
 
@@ -1045,8 +1065,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         /* Option with required arguments */
         {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
          _("Specify max traversal depth"), "N"},
-        {"sortcriteria", 'S', 0, G_OPTION_ARG_STRING, &cfg->sort_criteria,
-         _("Original criteria"), "[ampAMP]"},
+        {"sortcriteria", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(sortcriteria),
+         _("Original criteria"), "[mapMAP]"},
         {"rankby", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
          _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),

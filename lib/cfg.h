@@ -84,9 +84,10 @@ typedef struct RmCfg {
 
     char **paths;
     char *is_prefd;
-    char *sort_criteria;
     char *iwd;
     char *joined_argv;
+
+    char sort_criteria[64];
     char rank_criteria[64];
 
     RmTrie file_trie;

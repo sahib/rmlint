@@ -52,7 +52,8 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->build_fiemap = true;
 
     /* Misc options */
-    cfg->sort_criteria = "pm";
+    strcpy(cfg->sort_criteria, "pm");
+
     cfg->checksum_type = RM_DEFAULT_DIGEST;
     cfg->with_color = true;
     cfg->with_stdout_color = true;
