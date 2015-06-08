@@ -918,11 +918,9 @@ static gboolean rm_cmd_parse_permissions(_U const char *option_name, const gchar
     return true;
 }
 
-
 static gboolean rm_cmd_check_lettervec(const char *option_name, const char *criteria, const char *valid, GError **error) {
     for(int i = 0; criteria[i]; ++i) {
         if(strchr(valid, criteria[i]) == NULL) {
-            // TODO: Translate:
             g_set_error(error, RM_ERROR_QUARK, 0, 
                         _("%s may only contain [%s], not `%c`"), 
                         option_name, valid, criteria[i]);
@@ -932,7 +930,6 @@ static gboolean rm_cmd_check_lettervec(const char *option_name, const char *crit
 
     return true;
 }
-
 
 static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *criteria,
                                          RmSession *session, GError **error) {
@@ -949,7 +946,6 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
 
     return true;
 }
-
 
 static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gchar *criteria,
                                          RmSession *session, GError **error) {
