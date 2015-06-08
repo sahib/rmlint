@@ -235,8 +235,6 @@ static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
     RmOff sa = fa->file_size * (ga->files.length - 1);
     RmOff sb = fb->file_size * (gb->files.length - 1);
 
-    g_printerr("Comparing: %lu %lu\n", sa, sb);
-
     /* Better do not compare big unsigneds via a - b... */
     if(sa < sb) {
         return -1;
@@ -252,16 +250,18 @@ static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
 static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {
     const char *rank_order = self->session->cfg->rank_criteria;
 
-    if(ga->index == 0) {
+    RmFile *fa = ga->files.head->data;
+    RmFile *fb = gb->files.head->data;
+
+    if(fa->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE
+    && fa->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         return -1;
     }
 
-    if(gb->index == 0) {
+    if(fb->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE 
+    && fb->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         return +1;
     }
-
-    RmFile *fa = ga->files.head->data;
-    RmFile *fb = gb->files.head->data;
 
     for(int i = 0; rank_order[i]; ++i) {
         gint64 r = 0;
@@ -305,7 +305,6 @@ void rm_fmt_flush(RmFmtTable *self) {
     }
 
     if(cfg->rank_criteria && *(cfg->rank_criteria)) {
-        g_printerr("-------- RANKING %s\n", cfg->rank_criteria);
         g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
     }
 
