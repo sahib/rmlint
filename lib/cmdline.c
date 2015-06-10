@@ -43,6 +43,7 @@
 #include "shredder.h"
 #include "utilities.h"
 #include "formats.h"
+#include "replay.h"
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
@@ -959,6 +960,14 @@ static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gcha
     return true;
 }
 
+static gboolean rm_cmd_parse_replay(_U const char *option_name, const gchar *json_path,
+                                    RmSession *session, GError **error) {
+    // TODO: g_access.
+    g_queue_push_tail(&session->replay_files, g_strdup(json_path));
+    session->cfg->cache_file_structs = true;
+    return true;
+}
+
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -1080,6 +1089,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Newer than stamp file"), "PATH"},
         {"newer-than", 'N', 0, G_OPTION_ARG_CALLBACK, FUNC(timestamp),
          _("Newer than timestamp"), "STAMP"},
+        {"replay", 'Y', 0, G_OPTION_ARG_CALLBACK, FUNC(replay),
+         _("Re-output a json file"), "path/to/rmlint.json"},
         {"config", 'c', 0, G_OPTION_ARG_CALLBACK, FUNC(config),
          _("Configure a formatter"), "FMT:K[=V]"},
         {"cache", 'C', 0, G_OPTION_ARG_CALLBACK, FUNC(cache), _("Add json cache file"),
@@ -1318,10 +1329,28 @@ failure:
     return !(session->cmdline_parse_error);
 }
 
+static int rm_cmd_replay_main(RmSession *session) {
+    /* User chose to replay some json files. */
+    for(GList *iter = session->replay_files.head; iter; iter = iter->next) {
+        rm_parrot_load(session, iter->data);
+    }
+
+    rm_fmt_flush(session->formats);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
+
+    return EXIT_SUCCESS;
+}
+
 int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
+
+    if(session->replay_files.length) {
+        return rm_cmd_replay_main(session);
+    }
+
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
     session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
     if(session->mounts == NULL) {

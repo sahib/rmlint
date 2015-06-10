@@ -254,6 +254,15 @@ void rm_file_destroy(RmFile *file);
 const char *rm_file_lint_type_to_string(RmLintType type);
 
 /**
+ * @brief Convert a string to a RmLintType
+ *
+ * @param type a string description.
+ *
+ * @return a valid lint type or RM_LINT_TYPE_UNKNOWN
+ */
+RmLintType rm_file_string_to_lint_type(const char *type);
+
+/**
  * @brief Set a path to the file. Normally, you should never do this since the
  * path is immutable.
  */
