@@ -1173,7 +1173,7 @@ static gboolean rm_shred_sift(RmFile *file) {
 
         RmShredGroup *child_group = NULL;
 
-        if(file->digest->type == RM_DIGEST_PARANOID && !file->is_symlink) {
+        if(file->digest->type == RM_DIGEST_PARANOID && !(file->is_symlink && file->session->cfg->see_symlinks)) {
             g_assert(file->digest->bytes ==
                      current_group->next_offset - current_group->hash_offset);
         }
@@ -1385,8 +1385,11 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
  */
 static int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     RmCfg *cfg = session->cfg;
-    if(1 && (a->is_prefd != b->is_prefd) &&
-       (cfg->keep_all_untagged || cfg->must_match_untagged)) {
+
+    /* Make sure to *never* make a symlink to be the original */
+    if(a->is_symlink != b->is_symlink) {
+        return a->is_symlink - b->is_symlink;
+    } else if((a->is_prefd != b->is_prefd) && (cfg->keep_all_untagged || cfg->must_match_untagged)) {
         return (a->is_prefd - b->is_prefd);
     } else {
         int comparasion = rm_pp_cmp_orig_criteria(a, b, session);
@@ -1666,7 +1669,7 @@ static void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device
     gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_left_to_read = bytes_to_read;
 
-    g_assert(!file->is_symlink);
+    // TODO g_assert(!file->is_symlink);
     g_assert(bytes_to_read > 0);
     g_assert(bytes_to_read + file->hash_offset <= file->file_size);
     g_assert(file->seek_offset == file->hash_offset);
@@ -1817,7 +1820,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
             }
             g_assert(file->shred_group->hash_offset == file->hash_offset);
 
-            if(file->is_symlink) {
+            if(file->is_symlink && file->session->cfg->see_symlinks) {
                 file->digest = rm_digest_new(main->session->cfg->checksum_type, 0, 0,
                                              PATH_MAX + 1 /* max size of a symlink file */,
                                              NEEDS_SHADOW_HASH(cfg)
@@ -1873,7 +1876,6 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         return file;
     }
 
-
     /* hash the next increment of the file */
     if(file->is_symlink) {
         rm_shred_readlink_factory(file, device);
@@ -1894,23 +1896,25 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
 
         bool worth_waiting = FALSE;
+        RmCfg *cfg = device->main->session->cfg;
 
         g_mutex_lock(&file->shred_group->lock);
         {
             worth_waiting = (file->seek_offset + rm_shred_get_read_size(file, device->main) != file->file_size)
                             &&
-                            (device->main->session->cfg->shred_always_wait || (
+                            (cfg->shred_always_wait || (
                                     device->is_rotational &&
                                     rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
                                     (file->status == RM_FILE_STATE_NORMAL) &&
-                                    !device->main->session->cfg->shred_never_wait
+                                    !cfg->shred_never_wait
                                 )
                             );
         }
         g_mutex_unlock(&file->shred_group->lock);
 
-        if(device->main->session->cfg->use_buffered_read) {
+        if(cfg->use_buffered_read) {
             rm_shred_buffered_read_factory(file, device, hash_pool);
+
         } else {
             rm_shred_unbuffered_read_factory(file, device, hash_pool);
         }

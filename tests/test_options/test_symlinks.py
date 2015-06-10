@@ -1,0 +1,48 @@
+from nose import with_setup
+from tests.utils import *
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_order():
+    create_file('xxx', 'a/z')
+    create_link('a/z', 'a/x', symlink=True)
+    create_file('xxx', 'b/z')
+    create_link('b/z', 'b/x', symlink=True)
+    create_link('b/z', 'b/y', symlink=True)
+
+    head, *data, footer = run_rmlint('-F')
+    assert len(data) == 2
+    assert data[0]['path'].endswith('z')
+    assert data[0]['is_original']
+    assert data[1]['path'].endswith('z')
+
+    head, *data, footer = run_rmlint('-f -S a')
+    assert sum(p['is_original'] for p in data) == 1
+
+    assert len(data) == 5
+    assert data[0]['path'].endswith('z')
+    assert data[0]['is_original']
+
+    assert data[1]['path'].endswith('z')
+    assert data[2]['path'].endswith('x')
+    assert data[3]['path'].endswith('x')
+    assert data[4]['path'].endswith('y')
+
+    head, *data, footer = run_rmlint('-@ -S a')
+    assert sum(p['is_original'] for p in data) == 2
+    assert len(data) == 4
+
+    if data[0]['path'].endswith('x'):
+        sym_idx, file_idx = 0, 2
+    else:
+        sym_idx, file_idx = 2, 0
+
+    # Same symlink -> dupe
+    assert data[sym_idx]['path'].endswith('x')
+    assert data[sym_idx]['is_original']
+    assert data[sym_idx + 1]['path'].endswith('y')
+
+    # Same file
+    assert data[file_idx]['path'].endswith('z')
+    assert data[file_idx]['is_original']
+    assert data[file_idx + 1]['path'].endswith('z')

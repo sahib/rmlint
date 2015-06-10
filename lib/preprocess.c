@@ -351,6 +351,13 @@ static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
             return true;
         }
 
+        /* Also protect other lint by --keep-all-{un,}tagged */
+        if((session->cfg->keep_all_tagged && file->is_prefd) ||
+           (session->cfg->keep_all_untagged && !file->is_prefd)) {
+            rm_file_destroy(file);
+            return true;
+        }
+
         session->tables->other_lint[file->lint_type] =
             g_list_prepend(session->tables->other_lint[file->lint_type], file);
         return true;

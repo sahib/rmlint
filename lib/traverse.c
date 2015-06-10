@@ -285,6 +285,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     char is_hidden[PATH_MAX / 2 + 1];
     bool have_open_emptydirs = false;
     bool clear_emptydir_flags = false;
+    bool next_is_symlink = false;
 
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
@@ -407,6 +408,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     }
                 } else {
                     rm_log_debug("Following symlink %s\n", p->fts_path);
+                    next_is_symlink = true;
                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
                 }
                 break;
@@ -415,7 +417,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_DEFAULT: /* any file type not explicitly described by one of the
                                  above*/
                 clear_emptydir_flags = true; /* current dir not empty*/
-                ADD_FILE(RM_LINT_TYPE_UNKNOWN, false);
+                ADD_FILE(RM_LINT_TYPE_UNKNOWN, next_is_symlink);
+                next_is_symlink = false;
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
