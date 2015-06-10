@@ -916,6 +916,10 @@ static gboolean rm_cmd_parse_merge_directories(_U const char *option_name,
     cfg->follow_symlinks = false;
     cfg->see_symlinks = true;
     rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
+
+    /* Keep RmFiles after shredder. */
+    cfg->cache_file_structs = true;
+
     return true;
 }
 
@@ -945,6 +949,47 @@ static gboolean rm_cmd_parse_permissions(_U const char *option_name, const gchar
         }
     }
 
+    return true;
+}
+
+static gboolean rm_cmd_check_lettervec(const char *option_name, const char *criteria, const char *valid, GError **error) {
+    for(int i = 0; criteria[i]; ++i) {
+        if(strchr(valid, criteria[i]) == NULL) {
+            g_set_error(error, RM_ERROR_QUARK, 0, 
+                        _("%s may only contain [%s], not `%c`"), 
+                        option_name, valid, criteria[i]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *criteria,
+                                         RmSession *session, GError **error) {
+    RmCfg *cfg = session->cfg;
+    if(!rm_cmd_check_lettervec(option_name, criteria, "moanspMOANSP", error)) {
+        return false;
+    }
+
+    /* Remember the criteria string */
+    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria));
+
+    /* ranking the files depends on caching them to the end of the program */
+    cfg->cache_file_structs = true;
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gchar *criteria,
+                                         RmSession *session, GError **error) {
+    RmCfg *cfg = session->cfg;
+
+    if(!rm_cmd_check_lettervec(option_name, criteria, "mapMAP", error)) {
+        return false;
+    }
+
+    strncpy(cfg->sort_criteria, criteria, sizeof(cfg->sort_criteria));
     return true;
 }
 
@@ -1052,8 +1097,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         /* Option with required arguments */
         {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
          _("Specify max traversal depth"), "N"},
-        {"sortcriteria", 'S', 0, G_OPTION_ARG_STRING, &cfg->sort_criteria,
-         _("Original criteria"), "[ampAMP]"},
+        {"sortcriteria", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(sortcriteria),
+         _("Original criteria"), "[mapMAP]"},
+        {"rankby", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
+         _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),
          _("Specify lint types"), "T"},
         {"size", 's', 0, G_OPTION_ARG_CALLBACK, FUNC(limit_sizes),
@@ -1199,6 +1246,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Testing option for threading; pretends each input path is a separate physical "
          "disk",
          NULL},
+        {"fake-holdback", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->cache_file_structs, "Hold back all files to the end before outputting.", NULL},
         {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
          &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
         {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read,
@@ -1349,6 +1398,7 @@ int rm_cmd_main(RmSession *session) {
         rm_tm_finish(session->dir_merger);
     }
 
+    rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 

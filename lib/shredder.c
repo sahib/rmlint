@@ -366,7 +366,6 @@ typedef enum RmShredGroupStatus {
 #define HAS_CACHE(session) \
     (session->cfg->read_cksum_from_xattr || session->cache_list.length)
 
-
 #define NEEDS_SHADOW_HASH(cfg)  \
     (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
     /* @sahib - performance is faster with shadow hash, probably due to hash
@@ -811,7 +810,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
 
         /* ShredGroup that was going nowhere */
         if(file->shred_group->num_files <= 1 && session->cfg->write_unfinished) {
-            RmLintType actual_type = file->lint_type;
             file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
             file->digest = (file->digest) ? file->digest : file->shred_group->digest;
 
@@ -820,8 +818,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
                 rm_shred_write_cksum_to_xattr(session, file);
                 file->digest = NULL;
             }
-
-            file->lint_type = actual_type;
         }
 
         /* update paranoid memory allocator */
@@ -915,11 +911,19 @@ static void rm_shred_push_queue_sorted(RmFile *file) {
 
 /* Free RmShredGroup and any dormant files still in its queue
  */
-static void rm_shred_group_free(RmShredGroup *self) {
+static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     g_assert(self->parent == NULL); /* children should outlive their parents! */
 
-    /* For -D we need to hold back the memory a bit longer */
-    bool needs_free = !(self->main->session->cfg->merge_directories);
+    RmCfg *cfg = self->main->session->cfg;
+
+    bool needs_free = !(cfg->cache_file_structs) | force_free;
+
+    /* May not free though when unfinished checksums are written.
+     * Those are freed by the output module. 
+     */
+    if(cfg->write_unfinished) {
+        needs_free = false;
+    }
 
     if(self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file,
@@ -1055,7 +1059,7 @@ static void rm_shred_group_unref(RmShredGroup *self) {
 #if _RM_SHRED_DEBUG
         rm_log_debug("Free from rm_shred_group_unref\n");
 #endif
-        rm_shred_group_free(self);
+        rm_shred_group_free(self, true);
     }
 }
 
@@ -1296,7 +1300,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
 static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group) {
     g_assert(group);
     if(group->status == RM_SHRED_GROUP_DORMANT) {
-        rm_shred_group_free(group);
+        rm_shred_group_free(group, true);
         return true;
     } else {
         return false;
@@ -1482,6 +1486,8 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
+    RmCfg *cfg = tag->session->cfg;
+
     if(g_queue_get_length(group->held_files) > 0) {
         /* find the original(s)
          * (note this also unbundles hardlinks and sorts the group from
@@ -1502,29 +1508,25 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
             RmFile *file = iter->data;
             file->digest = group->digest;
             file->free_digest = false;
-            if(tag->session->cfg->merge_directories) {
+
+            if(cfg->merge_directories) {
                 rm_tm_feed(tag->session->dir_merger, file);
             }
         }
 
-        if(tag->session->cfg->merge_directories == false) {
-            /* Output them directly */
+        if(cfg->merge_directories == false) {
+            /* Output them directly, do not merge them first. */
             rm_shred_forward_to_output(tag->session, group->held_files);
         }
     }
+
     group->status = RM_SHRED_GROUP_FINISHED;
 #if _RM_SHRED_DEBUG
     rm_log_debug("Free from rm_shred_result_factory\n");
 #endif
 
-    /* TODO:
-     * With -D we get a memory leak here. Which is not that bad,
-     * since all files need to be cached till the end of the run
-     * anyways, but valgrind shows a lot of output.
-     *
-     * (we're leaking group->digest and all RmFiles in it)
-     */
-    rm_shred_group_free(group);
+    /* Do not force free files here, output module might need do that itself. */
+    rm_shred_group_free(group, false);
 }
 
 /////////////////////////////////

@@ -84,9 +84,11 @@ typedef struct RmCfg {
 
     char **paths;
     char *is_prefd;
-    char *sort_criteria;
     char *iwd;
     char *joined_argv;
+
+    char sort_criteria[64];
+    char rank_criteria[64];
 
     RmTrie file_trie;
 
@@ -112,6 +114,11 @@ typedef struct RmCfg {
     gboolean shred_always_wait;
     gboolean shred_never_wait;
     gboolean fake_pathindex_as_disk;
+
+    /* If true, files are hold back to 
+     * the end of the program run and printed then.
+     */
+    gboolean cache_file_structs;
 } RmCfg;
 
 /**
