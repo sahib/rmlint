@@ -259,6 +259,8 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if(a->lint_type != b->lint_type) {
         /* "other" lint outranks duplicates and has lower ENUM */
         return a->lint_type - b->lint_type;
+    } else if(a->is_symlink != b->is_symlink) {
+        return a->is_symlink - b->is_symlink;
     } else if(a->is_prefd != b->is_prefd) {
         return (b->is_prefd - a->is_prefd);
     } else {

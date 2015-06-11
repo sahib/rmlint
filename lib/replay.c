@@ -28,6 +28,7 @@
 #include "session.h"
 #include "formats.h"
 #include "file.h"
+#include "shredder.h"
 
 /* External libraries */
 #include <string.h>
@@ -60,7 +61,7 @@ RmParrot *rm_parrot_open(RmSession *session, const char *json_path, GError **err
     RmParrot *self = g_malloc0(sizeof(RmParrot));
     self->session = session;
     self->parser = json_parser_new();
-    self->index = 0;
+    self->index = 1;
 
     // TODO: translate
     rm_log_info_line(_("Loading json-results `%s'"), json_path);
@@ -113,18 +114,27 @@ RmFile *rm_parrot_next(RmParrot *self) {
         return NULL;
     }
 
-    RmStat stat_buf;
-    if(rm_sys_stat(path, &stat_buf) == -1) {
+    RmStat lstat_buf, stat_buf;
+    RmStat *stat_info = &lstat_buf;
+
+    if(rm_sys_lstat(path, &lstat_buf) == -1) {
         return NULL;
     }
 
-    if(json_object_get_int_member(object, "mtime") < stat_buf.st_mtim.tv_sec) {
+    bool is_symlink = (lstat_buf.st_mode & S_IFLNK);
+
+    if(rm_sys_stat(path, &stat_buf) != -1) {
+        stat_info = &stat_buf;
+    }
+
+    if(json_object_get_int_member(object, "mtime") < stat_info->st_mtim.tv_sec) {
         rm_log_warning_line("modification time of `%s` changed. Ignoring.", path);
         return NULL;
     }
 
-    RmFile *file = rm_file_new(self->session, path, path_len, &stat_buf, type, 0, 0);
+    RmFile *file = rm_file_new(self->session, path, path_len, stat_info, type, 0, 0);
     file->is_original = json_object_get_boolean_member(object, "is_original");
+    file->is_symlink = is_symlink;
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, 0);
 
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
@@ -135,7 +145,136 @@ RmFile *rm_parrot_next(RmParrot *self) {
         }
     }
 
+    JsonNode *hardlink_of = json_object_get_member(object, "hardlink_of");
+    if(hardlink_of != NULL) {
+        file->hardlinks.is_head = false;
+        // TODO: link to last original.
+    } else {
+        file->hardlinks.is_head = true;
+    }
+
     return file;
+}
+
+static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
+    if(cfg->limits_specified == false) {
+        return true;
+    }
+
+    return
+        ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->file_size) &&
+        (cfg->maxsize == (RmOff)-1 || file->file_size <= cfg->maxsize));
+}
+
+static bool rm_parrot_check_hidden(RmCfg *cfg, RmFile *file) {
+    RM_DEFINE_PATH(file);
+    if(!cfg->ignore_hidden) {
+        return true;
+    }
+
+    return !rm_util_path_is_hidden(file_path);
+}
+
+static bool rm_parrot_check_permissions(RmCfg *cfg, RmFile *file) {
+    if(!cfg->permissions) {
+        return true;
+    }
+
+    RM_DEFINE_PATH(file);
+    if(access(file_path, cfg->permissions) == -1) {
+        rm_log_debug("[permissions]\n");
+        return false;
+    }
+
+    return true;
+}
+ 
+static bool rm_parrot_check_path(RmParrot *polly, RmFile *file) {
+    RmCfg *cfg = polly->session->cfg;
+    RM_DEFINE_PATH(file);
+
+    size_t highest_match = 0;
+
+    for(int i = 0; cfg->paths[i]; ++i) {
+        char *path = cfg->paths[i];
+        size_t path_len = strlen(path);
+
+        if(strncmp(file_path, path, path_len) == 0) {
+            if(path_len > highest_match) {
+                highest_match = path_len;
+
+                file->is_prefd = cfg->is_prefd[i];
+                file->path_index = i;
+
+                /* We can't just break here, a more fitting path may come. */
+            }
+        }
+    }
+
+    if(highest_match == 0) {
+        rm_log_debug("[wrong prefix]\n");
+    }
+
+    return highest_match > 0;
+}
+
+static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
+    switch(file->lint_type) {
+        case RM_LINT_TYPE_DUPE_CANDIDATE:
+            return cfg->find_duplicates;
+        case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+            return cfg->merge_directories;
+        case RM_LINT_TYPE_BADLINK:
+            return cfg->find_badlinks;
+        case RM_LINT_TYPE_EMPTY_DIR:
+            return cfg->find_emptydirs;
+        case RM_LINT_TYPE_EMPTY_FILE:
+            return cfg->find_emptyfiles;
+        case RM_LINT_TYPE_NONSTRIPPED:
+            return cfg->find_nonstripped;
+        case RM_LINT_TYPE_BADUID:
+        case RM_LINT_TYPE_BADGID:
+        case RM_LINT_TYPE_BADUGID:
+            return cfg->find_badids;
+        case RM_LINT_TYPE_UNFINISHED_CKSUM:
+            return cfg->write_unfinished;
+        case RM_LINT_TYPE_UNKNOWN:
+        default:
+            rm_log_debug("[type %d not allowed]\n", file->lint_type);
+            return false;
+    }
+}
+
+static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
+    RmCfg *cfg = self->session->cfg;
+
+    if(cfg->filter_mtime) {
+        gsize older = 0;
+        for(GList *iter = group->head; iter; iter = iter->next) {
+            RmFile *file = iter->data;
+            older += (file->mtime >= cfg->min_mtime);
+        }
+
+        if(older == group->length) {
+            // TODO: free.
+            return;
+        }
+    }
+
+    g_queue_sort(
+        group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, self->session
+    );
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        RM_DEFINE_PATH(file);
+        g_printerr("%s %d %d %d %d\n",
+                file_path, file->is_prefd, file->is_original, file->lint_type, file->is_symlink
+        );
+
+        file->is_original = (file == group->head->data);
+        rm_fmt_write(file, self->session->formats);
+    }
 }
 
 bool rm_parrot_load(RmSession *session, const char *json_path) {
@@ -151,6 +290,9 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
     RmCfg *cfg = session->cfg;
 
+    GQueue group;
+    g_queue_init(&group);
+
     while(rm_parrot_has_next(polly)) {
         RmFile *file = rm_parrot_next(polly);
         if(file == NULL) {
@@ -158,15 +300,28 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
             continue;
         }
 
-        if(cfg->limits_specified &&
-            ((cfg->minsize != (RmOff)-1 && cfg->minsize > file->file_size) ||
-            (cfg->maxsize != (RmOff)-1 && file->file_size > cfg->maxsize))) {
+        // TODO: We need path, just pass it over.
+        RM_DEFINE_PATH(file);
+        rm_log_debug("Checking `%s`: ", file_path);
 
+        /* Check --size, --perms, --hidden */
+        if(!(
+            rm_parrot_check_size(cfg, file) &&
+            rm_parrot_check_hidden(cfg, file) &&
+            rm_parrot_check_permissions(cfg, file) &&
+            rm_parrot_check_types(cfg, file) && 
+            rm_parrot_check_path(polly, file)
+        )) {
             rm_file_destroy(file);
             continue;
         }
 
-        // TODO: Checks for perms, types etc.
+        rm_log_debug("[okay]\n");
+
+        // TODO: max depth?
+        // TODO: match basename, with{,out}-ext
+        // TODO: subdirs -- check
+        // TODO: keep all / must match orig -- check
 
         session->total_files += 1;
 
@@ -180,9 +335,22 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
             session->other_lint_cnt += 1;
         }
 
-        rm_fmt_write(file, session->formats);
+        if(file->is_original) {
+            if(group.length > 1) {
+                g_printerr("Writing group\n");
+                rm_parrot_write_group(polly, &group);
+            }
+            g_queue_clear(&group);
+        }
+
+        g_queue_push_tail(&group, file);
+    }
+
+    if(group.length > 1) {
+        rm_parrot_write_group(polly, &group);
     }
 
     rm_parrot_close(polly);
+    g_queue_clear(&group);
     return true;
 }

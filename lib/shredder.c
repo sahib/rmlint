@@ -1368,7 +1368,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
  * this is slightly different to rm_shred_cmp_orig_criteria in the case of
  * either -K or -M options
  */
-static int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     RmCfg *cfg = session->cfg;
 
     /* Make sure to *never* make a symlink to be the original */

@@ -240,12 +240,12 @@ Traversal Options
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
     Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
-    If `-F` is specified, symbolic links will be ignored completely, if the
-    ``-F`` is specified once more ``rmlint`` will see symlinks an treats them
+    If `-F` is specified, symbolic links will be ignored completely, if 
+    ``-@`` is ``rmlint`` will see symlinks an treats them
     like small files with the path to their target in them. The latter is the
     default behaviour, since it is a sensible default for ``--merge-directories``.
 
-    **Note:** Hardlinks are always followed, but it depends on ``-L`` how those are
+    **Note:** Hardlinks are always ,,followed'', but it depends on ``-L`` how those are
     handled. 
 
 :``-x --crossdev`` (**default**) / ``-X --no-crossdev``:

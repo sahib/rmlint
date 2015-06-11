@@ -26,6 +26,7 @@
 #include "../formats.h"
 #include "../utilities.h"
 #include "../preprocess.h"
+#include "../checksums/spooky-c.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -38,6 +39,19 @@ typedef struct RmFmtHandlerJSON {
     /* More human readable output? */
     bool pretty;
 } RmFmtHandlerJSON;
+
+//////////////////////////////////////////
+//          FILE ID GENERATOR           //
+//////////////////////////////////////////
+
+static guint32 rm_fmt_json_generate_id(RmFile * file, const char *file_path, char *cksum) {
+    guint32 hash = file->inode ^ file->dev;
+    hash ^= file->file_size;
+    hash ^= spooky_hash32(file_path, strlen(file_path), 0);
+    hash ^= spooky_hash32(cksum, strlen(cksum), 0);
+
+    return hash;
+}
 
 //////////////////////////////////////////
 //  POOR MAN'S JSON FORMATTING TOOLBOX  //
@@ -217,7 +231,12 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     /* Make it look like a json element */
     rm_fmt_json_open(self, out);
     {
-        rm_fmt_json_key_int(out, "id", GPOINTER_TO_UINT(file));
+        RM_DEFINE_PATH(file);
+
+        rm_fmt_json_key_int(out, "id", rm_fmt_json_generate_id(
+                    file, file_path, checksum_str
+        ));
+
         rm_fmt_json_sep(self, out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(self, out);
@@ -234,7 +253,6 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
             rm_fmt_json_sep(self, out);
         }
 
-        RM_DEFINE_PATH(file);
         rm_fmt_json_key_unsafe(out, "path", file_path);
         rm_fmt_json_sep(self, out);
         if(file->lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {
