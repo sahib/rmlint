@@ -253,6 +253,45 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
     }
 }
 
+static void rm_parrot_fix_match_opts(RmParrot *self, GQueue *group) {
+    RmCfg *cfg = self->session->cfg;
+    if(!(cfg->match_with_extension 
+    || cfg->match_without_extension 
+    || cfg->match_basename)) {
+        return;
+    }
+
+    /* That's probably a sucky way to do it due to n^2,
+     * but I doubt that will make a large performance difference.
+     */
+
+    GList *iter = group->head;
+    while(iter) {
+        RmFile *file_a = iter->data;
+        bool delete = true;
+
+        for(GList *sub_iter = group->head; sub_iter; sub_iter = sub_iter->next) {
+            RmFile *file_b = sub_iter->data;
+            if(file_a == file_b) {
+                continue;
+            }
+
+            if(rm_file_equal(file_a, file_b)) {
+                delete = false;
+            }
+        }
+
+        if(delete) {
+            GList *old = iter;
+            iter = iter->next;
+            g_queue_delete_link(group, old);
+        } else {
+            iter = iter->next;
+        }
+    }
+}
+
+
 static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
     RmCfg *cfg = self->session->cfg;
 
@@ -269,9 +308,13 @@ static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
         }
     }
 
+    rm_parrot_fix_match_opts(self, group);
+
     g_queue_sort(
         group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, self->session
     );
+
+
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
@@ -327,8 +370,6 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
         rm_log_debug("[okay]\n");
 
-        // TODO: match basename, with{,out}-ext
-        // TODO: subdirs -- check
         // TODO: keep all / must match orig -- check
 
         session->total_files += 1;

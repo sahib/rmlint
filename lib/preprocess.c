@@ -89,7 +89,7 @@ static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *
     return false;
 }
 
-static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
+gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
     const RmCfg *cfg = file_a->session->cfg;
 
     return (1 && (file_a->file_size == file_b->file_size) &&
