@@ -187,12 +187,10 @@ bool rm_trie_set_value(RmTrie *self, const char *path, void *data) {
     }
 }
 
-char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) {
+char *rm_trie_build_path_unlocked(RmNode *node, char *buf, size_t buf_len) {
     if(node == NULL) {
         return NULL;
     }
-
-    g_mutex_lock(&self->lock);
 
     size_t n_elements = 1;
     char *elements[PATH_MAX / 2 + 1] = {node->basename, NULL};
@@ -213,8 +211,18 @@ char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) 
         buf_ptr = g_stpcpy(buf_ptr + 1, (char *)elements[--n_elements]);
     }
 
-    g_mutex_unlock(&self->lock);
     return buf;
+}
+
+char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) {
+    if(node == NULL) {
+        return NULL;
+    }
+    char *result = NULL;
+    g_mutex_lock(&self->lock);
+        {result = rm_trie_build_path_unlocked(node, buf, buf_len);}
+    g_mutex_unlock(&self->lock);
+    return result;
 }
 
 size_t rm_trie_size(RmTrie *self) {

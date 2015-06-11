@@ -110,6 +110,7 @@ bool rm_trie_set_value(RmTrie *self, const char *path, void *data);
  * Returns the input buffer for chaining calls.
  */
 char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len);
+char *rm_trie_build_path_unlocked(RmNode *node, char *buf, size_t buf_len);
 
 /**
  * rm_trie_size:
