@@ -110,7 +110,11 @@ RmFile *rm_parrot_next(RmParrot *self) {
     );
 
     if(type == RM_LINT_TYPE_UNKNOWN) {
-        rm_log_warning_line("... not a type: `%s`", json_object_get_string_member(object, "type"));
+        // TODO: translate:
+        rm_log_warning_line(
+            "... not a valid type: `%s`",
+            json_object_get_string_member(object, "type")
+        );
         return NULL;
     }
 
@@ -291,6 +295,32 @@ static void rm_parrot_fix_match_opts(RmParrot *self, GQueue *group) {
     }
 }
 
+static void rm_parrot_fix_must_match_tagged(RmParrot *self, GQueue *group) {
+    RmCfg *cfg = self->session->cfg;
+    if(!(cfg->must_match_tagged || cfg->must_match_untagged)) {
+        return;
+    }
+
+    bool has_prefd = false;
+    bool has_non_prefd = false;
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+
+        has_prefd |= file->is_prefd;
+        has_non_prefd |= !file->is_prefd;
+
+        if(has_prefd && has_non_prefd) {
+            break;
+        }
+    }
+
+    if((!has_prefd && cfg->must_match_tagged) 
+    || (!has_non_prefd && cfg->must_match_untagged)) {
+        // TODO: free.
+        g_queue_clear(group);
+    }
+}
 
 static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
     RmCfg *cfg = self->session->cfg;
@@ -309,21 +339,25 @@ static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
     }
 
     rm_parrot_fix_match_opts(self, group);
+    rm_parrot_fix_must_match_tagged(self, group);
 
     g_queue_sort(
         group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, self->session
     );
 
-
-
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        RM_DEFINE_PATH(file);
-        g_printerr("%s %d %d %d %d\n",
-                file_path, file->is_prefd, file->is_original, file->lint_type, file->is_symlink
-        );
 
-        file->is_original = (file == group->head->data);
+        if(file == group->head->data 
+        || (cfg->keep_all_tagged && file->is_prefd)
+        || (cfg->keep_all_untagged && !file->is_prefd)) {
+            file->is_original = true;
+        } else {
+            file->is_original = false;
+
+            
+        }
+
         rm_fmt_write(file, self->session->formats);
     }
 }
@@ -386,7 +420,7 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
         if(file->is_original) {
             if(group.length > 1) {
-                g_printerr("Writing group\n");
+                rm_log_debug("--- Writing group ---\n");
                 rm_parrot_write_group(polly, &group);
             }
             g_queue_clear(&group);
