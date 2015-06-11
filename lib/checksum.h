@@ -208,7 +208,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
  *
  * @return pointer to result (note: result length will = digest->bytes)
  */
-guint8 *rm_digest_steal_buffer(RmDigest *digest);
+guint8 *rm_digest_steal_buffer(RmDigest *digest); //TODO: rename to avoid confusion with read buffers
 
 /**
  * @brief Hash a Digest, suitable for GHashTable.
@@ -260,6 +260,11 @@ int rm_digest_get_bytes(RmDigest *self);
  * This is mainly useful for using an adjusted buffer for symlinks.
  */
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
+
+/**
+ * Release any kept (paranoid) buffers.
+ */
+void rm_digest_release_buffers(RmDigest *digest);
 
 
 RmOff rm_buffer_size(RmBufferPool *pool);

@@ -358,6 +358,13 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
     g_slice_free1(old_bytes, old_checksum);*/
 }
 
+void rm_digest_release_buffers(RmDigest *digest) {
+    if (digest->buffers) {
+        g_queue_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
+    }
+    digest->buffers = NULL;
+}
+
 void rm_digest_free(RmDigest *digest) {
     switch(digest->type) {
     case RM_DIGEST_MD5:
@@ -371,9 +378,8 @@ void rm_digest_free(RmDigest *digest) {
         if(digest->shadow_hash) {
             rm_digest_free(digest->shadow_hash);
         }
-        if (digest->buffers) {
-            g_queue_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
-        }
+        rm_digest_release_buffers(digest);
+
         if (digest->incoming_twin_candidates) {
             g_async_queue_unref(digest->incoming_twin_candidates);
         }
@@ -507,7 +513,7 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
         rm_digest_update(digest, buffer->data, buffer->len);
     } else {
         g_assert(buffer->len <= buffer->pool->buffer_size);
-        g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
+        //g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
         g_queue_push_tail(digest->buffers, buffer);
         digest->buffer_count++;
         digest->paranoid_offset += buffer->len;
@@ -656,6 +662,10 @@ guint rm_digest_hash(RmDigest *digest) {
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     g_assert (a && b);
     if (a->type == RM_DIGEST_PARANOID) {
+        if (!a->buffers) {
+            /* buffers have been freed so we need to rely on shadow hash */
+            return rm_digest_equal(a->shadow_hash, b->shadow_hash);
+        }
         if (a->bytes != b->bytes) {
             rm_log_error(RED"Error: byte counts don't match in rm_digest_equal\n"RESET);
             return false;

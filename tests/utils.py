@@ -150,7 +150,7 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--fake-fiemap',
         '-P',
         '-PP',
-        '--max-hash-mem 1M --algorithm=paranoid',
+        '--limit-mem 1M --algorithm=paranoid',
         '--buffered-read',
         '--threads=1',
         '--shred-never-wait',

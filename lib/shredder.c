@@ -919,7 +919,7 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     bool needs_free = !(cfg->cache_file_structs) | force_free;
 
     /* May not free though when unfinished checksums are written.
-     * Those are freed by the output module. 
+     * Those are freed by the output module.
      */
     if(cfg->write_unfinished) {
         needs_free = false;
@@ -1053,9 +1053,7 @@ static void rm_shred_group_unref(RmShredGroup *self) {
 
     if(send_results) {
         rm_util_thread_pool_push(self->main->result_pool, self);
-    }
-
-    if(needs_free) {
+    } else if(needs_free) {
 #if _RM_SHRED_DEBUG
         rm_log_debug("Free from rm_shred_group_unref\n");
 #endif
@@ -1502,6 +1500,11 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
             g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals, tag->session);
         }
         rm_fmt_unlock_state(tag->session->formats);
+
+        /* free any paranoid buffers held in group->digest */
+        if (group->digest_type == RM_DIGEST_PARANOID) {
+            rm_digest_release_buffers(group->digest);
+        }
 
         /* Cache the files for merging them into directories */
         for(GList *iter = group->held_files->head; iter; iter = iter->next) {
