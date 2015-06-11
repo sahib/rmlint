@@ -33,7 +33,7 @@
 #include <string.h>
 
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
-                    RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index) {
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index, short depth) {
     RmCfg *cfg = session->cfg;
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;
@@ -62,6 +62,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
 
     rm_file_set_path(self, (char *)path, path_len);
 
+    self->depth = depth;
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
     self->mtime = statp->st_mtim.tv_sec;

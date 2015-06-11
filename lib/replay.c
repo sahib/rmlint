@@ -132,9 +132,13 @@ RmFile *rm_parrot_next(RmParrot *self) {
         return NULL;
     }
 
-    RmFile *file = rm_file_new(self->session, path, path_len, stat_info, type, 0, 0);
+    RmFile *file = rm_file_new(
+        self->session, path, path_len, stat_info, type, 0, 0, 0
+    );
+
     file->is_original = json_object_get_boolean_member(object, "is_original");
     file->is_symlink = is_symlink;
+    file->depth = json_object_get_int_member(object, "depth");
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, 0);
 
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
@@ -154,6 +158,10 @@ RmFile *rm_parrot_next(RmParrot *self) {
     }
 
     return file;
+}
+
+static bool rm_parrot_check_depth(RmCfg *cfg, RmFile *file) {
+    return file->depth == 0 || file->depth <= cfg->depth;
 }
 
 static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
@@ -306,6 +314,7 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
         /* Check --size, --perms, --hidden */
         if(!(
+            rm_parrot_check_depth(cfg, file) &&
             rm_parrot_check_size(cfg, file) &&
             rm_parrot_check_hidden(cfg, file) &&
             rm_parrot_check_permissions(cfg, file) &&
@@ -318,7 +327,6 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
         rm_log_debug("[okay]\n");
 
-        // TODO: max depth?
         // TODO: match basename, with{,out}-ext
         // TODO: subdirs -- check
         // TODO: keep all / must match orig -- check

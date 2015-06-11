@@ -100,6 +100,10 @@ typedef struct RmFile {
      * */
     time_t mtime;
 
+    /* Depth of the file, relative to the path it was found in.
+     */
+    short depth;
+
     /* The inode and device of this file.
      * Used to filter double paths and hardlinks.
      */
@@ -240,7 +244,7 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.                             \
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
-                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum);
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum, short depth);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.

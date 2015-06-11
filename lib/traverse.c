@@ -122,7 +122,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
                              GQueue *file_queue, char *path, size_t path_len,
                              bool is_prefd, unsigned long path_index,
-                             RmLintType file_type, bool is_symlink, bool is_hidden) {
+                             RmLintType file_type, bool is_symlink, bool is_hidden, short depth) {
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
 
@@ -165,7 +165,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
     }
 
     RmFile *file =
-        rm_file_new(session, path, path_len, statp, file_type, is_prefd, path_index);
+        rm_file_new(session, path, path_len, statp, file_type, is_prefd, path_index, depth);
 
     if(file != NULL) {
         file->is_symlink = is_symlink;
@@ -205,7 +205,8 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
     rm_traverse_file(                                                               \
         trav_session, (RmStat *)stat_buf, &file_queue, p->fts_path, p->fts_pathlen, \
         is_prefd, path_index, lint_type, is_symlink,                                \
-        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1));
+        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),       \
+        p->fts_level);
 
 #if RM_PLATFORM_32 && HAVE_STAT64
 
@@ -374,7 +375,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                                      p->fts_pathlen, is_prefd, path_index,
                                      RM_LINT_TYPE_UNKNOWN, false,
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
-                                                           p->fts_level + 1));
+                                                           p->fts_level + 1), p->fts_level);
                     rm_log_warning_line(_("Added big file %s"), p->fts_path);
                 } else {
                     rm_log_warning(_("cannot stat file %s (skipping)"), p->fts_path);
@@ -490,7 +491,7 @@ void rm_traverse_tree(RmSession *session) {
 
             rm_traverse_file(trav_session, &buffer->stat_buf, NULL, buffer_path,
                              strlen(buffer_path), is_prefd, idx, RM_LINT_TYPE_UNKNOWN,
-                             false, is_hidden);
+                             false, is_hidden, 0);
 
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
