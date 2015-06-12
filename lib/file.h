@@ -176,15 +176,10 @@ typedef struct RmFile {
      */
     RmOff file_size;
 
-    /* How many bytes were already hashed
-     * (lower or equal seek_offset)
-     */
-    RmOff hash_offset;
-
     /* How many bytes were already read.
      * (lower or equal file_size)
      */
-    RmOff seek_offset;
+    RmOff hash_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is
      * fragmented */
