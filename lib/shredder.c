@@ -664,12 +664,11 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
         device->cache_byte_count += bytes;
         if (bytes<0) {
             device->bytes_read_this_pass = device->bytes_read_this_pass + (RmOff)(-bytes);
+            device->files_read_this_pass++;
         }
         if (files<0) {
-            device->files_read_this_pass++;
             device->cache_filtered_count +=files;
         }
-
     }
     g_mutex_unlock(&(device->lock));
 
