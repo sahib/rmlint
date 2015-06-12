@@ -119,21 +119,27 @@ typedef struct RmBufferPool {
 
 } RmBufferPool;
 
+/* Callback function definition */
+typedef int (*RmDigestCallback)(gpointer data);
+
 /* Represents one block of read data */
 typedef struct RmBuffer {
     /* note that first (sizeof(pointer)) bytes of this structure get overwritten when it gets
      * pushed to the RmBufferPool stack, so first couple of elements can't be reused */
 
-    /* file structure the data belongs to */
-    struct RmFile *file;
+    /* checksum the data belongs to */
+    struct RmDigest *digest;
 
-    /* len of the read input */
+    /* len of the data actualy filled */
     guint32 len;
 
-    /* flag to indicate that there is no more data for the current hash increment */
-    bool finished : 1;
+    /* callback function for post-processing */
+    RmDigestCallback callback;
 
-    /* buffer pool the buffer belongs to */
+    /*user data to send to post-processing callback */
+    gpointer user_data;
+
+    /* the pool the buffer belongs to */
     RmBufferPool *pool;
 
     /* pointer to the data allocated */
@@ -189,7 +195,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size);
  * @param digest a pointer to a RmDigest
  * @param buffer a RmBuffer of data.
  */
-void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer);
+void rm_digest_buffered_update(RmBuffer *buffer);
 
 /**
  * @brief Convert the checksum to a hexstring (like `md5sum`)

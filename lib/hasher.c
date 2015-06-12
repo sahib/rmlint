@@ -43,6 +43,8 @@
      )
 
 #define DIVIDE_CEIL(n, m) ((n) / (m) + !!((n) % (m)))
+
+
 struct _RmHasher {
     RmDigestType digest_type;
     gboolean use_buffered_read;
@@ -53,209 +55,141 @@ struct _RmHasher {
     gsize buf_size;
 };
 
-/* Hash file. Runs as threadpool in parallel / tandem with rm_shred_read_factory above
- * */
-static void rm_shred_hash_factory(RmBuffer *buffer, RmShredTag *tag) {
-    g_assert(tag);
-    g_assert(buffer);
-    RmFile *file = buffer->file;
-    bool keep_buffer = (buffer->finished==FALSE  && file->digest->type==RM_DIGEST_PARANOID);
+/* GThreadPool Worker for hashing */
+static void rm_hasher_hash(RmBuffer *buffer, _U RmHasher *hasher) {
 
-    if(!buffer->finished) {
+    bool keep_buffer = (buffer->len > 0  && buffer->digest->type==RM_DIGEST_PARANOID);
+
+    if(buffer->len > 0) {
         /* Hash buffer->len bytes_read of buffer->data into buffer->file */
-        rm_digest_buffered_update(buffer->file->digest, buffer);
-        buffer->file->hash_offset += buffer->len;
-    } else {
-        /* Report the progress to rm_shred_devlist_factory */
-        g_assert(buffer->file->hash_offset == buffer->file->shred_group->next_offset ||
-                 buffer->file->status == RM_FILE_STATE_FRAGMENT ||
-                 buffer->file->status == RM_FILE_STATE_IGNORE);
+        rm_digest_buffered_update(buffer);
+    }
 
-        if(buffer->file->status != RM_FILE_STATE_IGNORE) {
-            /* remember that checksum */
-            rm_shred_write_cksum_to_xattr(tag->session, buffer->file);
-        }
-
-        if(buffer->file->devlist_waiting) {
-            /* devlist factory is waiting for result */
-            g_async_queue_push(buffer->file->device->hashed_file_return, buffer->file);
-        } else {
-            /* handle the file ourselves; devlist factory has moved on to the next file */
-            if(buffer->file->status == RM_FILE_STATE_FRAGMENT) {
-                rm_shred_push_queue_sorted(buffer->file);
-            } else {
-                rm_shred_sift(buffer->file);
-            }
-        }
+    if (buffer->callback) {
+        buffer->callback(buffer);
     }
 
     /* Return this buffer to the pool */
     if (!keep_buffer) {
         rm_buffer_pool_release(buffer);
-        /*TODO: probably easier to do this in checksum.c */
     }
 }
 
 
-static void rm_shred_request_readahead(int fd, RmFile *file, RmOff bytes_to_read) {
+//////////////////////////////////////
+//  File Reading Utilities          //
+//////////////////////////////////////
+
+static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {
     /* Give the kernel scheduler some hints */
-    if(file->fadvise_requested) {
-        RmOff readahead = MIN(file->file_size - file->seek_offset, bytes_to_read * 8);
-        posix_fadvise(fd, file->seek_offset, readahead, SHRED_FADVISE_FLAGS);
-        file->fadvise_requested = 1;
-    }
+    RmOff readahead = bytes_to_read * 8;
+    posix_fadvise(fd, seek_offset, readahead, HASHER_FADVISE_FLAGS);
+    //TODO: avoid duplicate calls
 }
 
-void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
-    g_assert(file->is_symlink);
+
+static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path) {
 
     /* Fake an IO operation on the symlink.
      */
-    RmBuffer *buf = rm_buffer_pool_get(device->main->mem_pool);
+    RmBuffer *buf = rm_buffer_pool_get(hasher->mem_pool);
     buf->len=256;
     memset(buf->data, 0, buf->len);
-    RM_DEFINE_PATH(file);
 
     RmStat stat_buf;
-    if(rm_sys_stat(file_path, &stat_buf) == -1) {
+    if(rm_sys_stat(path, &stat_buf) == -1) {
         /* Oops, that did not work out, report as an error */
         rm_log_perror("Cannot stat symbolic link");
-        file->status = RM_FILE_STATE_IGNORE;
-        return;
+        return 0;
     }
 
-    file->status = RM_FILE_STATE_NORMAL;
-    file->seek_offset = file->file_size;
-    file->hash_offset = file->file_size;
-
-    g_assert(file->digest);
-
-    gint data_size = snprintf((char *)buf->data, rm_buffer_size(buf->pool), "%"LLU":%ld", (long)stat_buf.st_dev,
+    gint data_size = snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool), "%"LLU":%ld", (long)stat_buf.st_dev,
                               (long)stat_buf.st_ino);
 
-    rm_digest_buffered_update(file->digest, buf);
+    rm_digest_buffered_update(buf);
 
     /* In case of paranoia: shrink the used data buffer, so comparasion works
      * as expected. Otherwise a full buffer is used with possibly different
      * content */
-    if(file->digest->type == RM_DIGEST_PARANOID) {
-        rm_digest_paranoia_shrink(file->digest, data_size);
+    if(digest->type == RM_DIGEST_PARANOID) {
+        rm_digest_paranoia_shrink(digest, data_size);
     } else {
         rm_buffer_pool_release(buf);
     }
-
-    rm_shred_adjust_counters(device, 0, -(gint64)file->file_size);
+    return 0;  //TODO
 }
 
-void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device, GThreadPool *hash_pool) {
+
+/* Reads data from file and sends to hasher threadpool
+ * returns number of bytes successfully read */
+
+static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hash_pool, RmDigest *digest, char *path, gsize start_offset, gsize bytes_to_read) {
     FILE *fd = NULL;
-    gint32 total_bytes_read = 0;
+    gsize total_bytes_read = 0;
 
-    gint32 buf_size = rm_buffer_size(device->main->mem_pool);
-    //buf_size -= offsetof(RmBuffer, data);
-
-    RmBuffer *buffer = rm_buffer_pool_get(device->main->mem_pool);
-
-    if(file->seek_offset >= file->file_size) {
+    if((fd = fopen(path, "rb")) == NULL) {
+        rm_log_info("fopen(3) failed for %s: %s\n", path, g_strerror(errno));
         goto finish;
     }
 
-    RM_DEFINE_PATH(file);
-
-    if((fd = fopen(file_path, "rb")) == NULL) {
-        file->status = RM_FILE_STATE_IGNORE;
-        rm_log_info("fopen(3) failed for %s: %s\n", file_path, g_strerror(errno));
-        goto finish;
-    }
-
-    gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
     gint32 bytes_read = 0;
 
-    rm_shred_request_readahead(fileno(fd), file, bytes_to_read);
+    rm_hasher_request_readahead(fileno(fd), start_offset, bytes_to_read);
 
-    if(fseek(fd, file->seek_offset, SEEK_SET) == -1) {
-        file->status = RM_FILE_STATE_IGNORE;
+    if(fseek(fd, start_offset, SEEK_SET) == -1) {
         rm_log_perror("fseek(3) failed");
         goto finish;
     }
 
-    posix_fadvise(fileno(fd), file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
+    posix_fadvise(fileno(fd), start_offset, bytes_to_read, HASHER_FADVISE_FLAGS);
 
-    while((bytes_read = fread(buffer->data, 1, MIN(bytes_to_read, buf_size), fd)) > 0) {
-        file->seek_offset += bytes_read;
+    RmBuffer *buffer = rm_buffer_pool_get(hasher->mem_pool);
+
+    while((bytes_read = fread(buffer->data, 1, MIN(bytes_to_read, hasher->buf_size), fd)) > 0) {
         bytes_to_read -= bytes_read;
 
-        buffer->file = file;
         buffer->len = bytes_read;
-        buffer->finished = FALSE;
-
+        buffer->digest = digest;
         rm_util_thread_pool_push(hash_pool, buffer);
 
         total_bytes_read += bytes_read;
-        buffer = rm_buffer_pool_get(device->main->mem_pool);
+        buffer = rm_buffer_pool_get(hasher->mem_pool);
     }
-
-    if (file->current_fragment_physical_offset > 0
-        && file->seek_offset < file->file_size
-        && file->seek_offset >= file->next_fragment_logical_offset) {
-        /* TODO: test if second test actually improves speed
-         * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
-        bool jumped = (file->next_fragment_logical_offset != 0);
-        file->current_fragment_physical_offset = rm_offset_get_from_fd(fileno(fd), file->seek_offset, &file->next_fragment_logical_offset);
-        if (jumped && file->current_fragment_physical_offset != 0) {
-            device->new_seek_position = file->current_fragment_physical_offset; /* no lock required */
-        }
-    }
-
+    rm_buffer_pool_release(buffer);
 
     if(ferror(fd) != 0) {
-        file->status = RM_FILE_STATE_IGNORE;
         rm_log_perror("fread(3) failed");
+        if ( total_bytes_read == bytes_to_read ) {
+            /* signal error to caller */
+            total_bytes_read++;
+        }
     }
 
 finish:
     if(fd != NULL) {
         fclose(fd);
     }
+    return total_bytes_read;
 
-    /* Update totals for device and session*/
-    rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
 }
 
-/* Read from file and send to hasher
- * Note this was initially a separate thread but is currently just called
- * directly from rm_devlist_factory.
- * */
-void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device, GThreadPool *hash_pool) {
+/* Reads data from file and sends to hasher threadpool
+ * returns number of bytes successfully read */
+
+static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hash_pool, RmDigest *digest, char *path, gint64 start_offset, gint64 bytes_to_read) {
     gint32 bytes_read = 0;
-    gint32 total_bytes_read = 0;
-
-    RmOff buf_size = rm_buffer_size(device->main->mem_pool);
-
-    gint32 bytes_to_read = rm_shred_get_read_size(file, device->main);
-    gint32 bytes_left_to_read = bytes_to_read;
-
-    // TODO g_assert(!file->is_symlink);
-    g_assert(bytes_to_read > 0);
-    g_assert(bytes_to_read + file->hash_offset <= file->file_size);
-    g_assert(file->seek_offset == file->hash_offset);
+    gint64 total_bytes_read = 0;
+    guint64 file_offset = start_offset;
 
     /* how many buffers to read? */
-    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, buf_size));
+    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
     struct iovec readvec[N_BUFFERS + 1];
 
     int fd = 0;
 
-    if(file->seek_offset >= file->file_size) {
-        goto finish;
-    }
-
-    RM_DEFINE_PATH(file);
-
-    fd = rm_sys_open(file_path, O_RDONLY);
+    fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
-        rm_log_info("open(2) failed for %s: %s\n", file_path, g_strerror(errno));
-        file->status = RM_FILE_STATE_IGNORE;
+        rm_log_info("open(2) failed for %s: %s\n", path, g_strerror(errno));
         goto finish;
     }
 
@@ -271,7 +205,7 @@ void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device, GThre
      */
 
     /* Give the kernel scheduler some hints */
-    rm_shred_request_readahead(fd, file, bytes_to_read);
+    rm_hasher_request_readahead(fd, start_offset, bytes_to_read);
 
     /* Initialize the buffers to begin with.
      * After a buffer is full, a new one is retrieved.
@@ -282,61 +216,42 @@ void rm_shred_unbuffered_read_factory(RmFile *file, RmShredDevice *device, GThre
     memset(readvec, 0, sizeof(readvec));
     for(int i = 0; i < N_BUFFERS; ++i) {
         /* buffer is one contignous memory block */
-        buffers[i] = rm_buffer_pool_get(device->main->mem_pool);
+        buffers[i] = rm_buffer_pool_get(hasher->mem_pool);
         readvec[i].iov_base = buffers[i]->data;
-        readvec[i].iov_len = buf_size;
+        readvec[i].iov_len = hasher->buf_size;
     }
 
-    while(bytes_left_to_read > 0 &&
-          (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file->seek_offset)) > 0) {
-        bytes_read = MIN(bytes_read, bytes_left_to_read); /* ignore over-reads */
-        int blocks = DIVIDE_CEIL(bytes_read, buf_size);
+    while(total_bytes_read < bytes_to_read &&
+          (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset)) > 0) {
+        bytes_read = MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */
+        int blocks = DIVIDE_CEIL(bytes_read, hasher->buf_size);
+        g_assert(blocks <= N_BUFFERS);
 
-        bytes_left_to_read -= bytes_read;
-        file->seek_offset += bytes_read;
         total_bytes_read += bytes_read;
 
         for(int i = 0; i < blocks; ++i) {
             /* Get the RmBuffer from the datapointer */
             RmBuffer *buffer = buffers[i];
-            buffer->file = file;
-            buffer->len = MIN(buf_size, bytes_read - i * buf_size);
-            buffer->finished = FALSE;
-            if(bytes_left_to_read < 0) {
-                rm_log_error_line(_("Negative bytes_left_to_read for %s"), file_path);
-            }
+            buffer->len = MIN(hasher->buf_size, bytes_read - i * hasher->buf_size);
+            buffer->digest = digest;
 
             /* Send it to the hasher */
             rm_util_thread_pool_push(hash_pool, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */
-            buffers[i] = rm_buffer_pool_get(device->main->mem_pool);
+            buffers[i] = rm_buffer_pool_get(hasher->mem_pool);
             readvec[i].iov_base = buffers[i]->data;
-            readvec[i].iov_len = buf_size;
-        }
-    }
-
-    if (file->current_fragment_physical_offset > 0
-        && file->seek_offset < file->file_size
-        && file->seek_offset >= file->next_fragment_logical_offset) {
-        /* TODO: test if second test actually improves speed
-         * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
-        bool jumped = (file->next_fragment_logical_offset != 0);
-        file->current_fragment_physical_offset = rm_offset_get_from_fd(fd, file->seek_offset, &file->next_fragment_logical_offset);
-        if (jumped && file->current_fragment_physical_offset != 0) {
-            device->new_seek_position = file->current_fragment_physical_offset; /* no lock required */
+            readvec[i].iov_len = hasher->buf_size;
         }
     }
 
     if(bytes_read == -1) {
         rm_log_perror("preadv failed");
-        file->status = RM_FILE_STATE_IGNORE;
         goto finish;
     } else if(total_bytes_read != bytes_to_read) {
-        rm_log_error_line(_("Something went wrong reading %s; expected %d bytes, "
-                            "got %d; ignoring"),
-                          file_path, bytes_to_read, total_bytes_read);
-        file->status = RM_FILE_STATE_IGNORE;
+        rm_log_error_line(_("Something went wrong reading %s; expected %li bytes, "
+                            "got %li; ignoring"),
+                          path, bytes_to_read, total_bytes_read);
     }
 
     /* Release the rest of the buffers */
@@ -349,8 +264,9 @@ finish:
         rm_sys_close(fd);
     }
 
-    /* Update totals for device and session*/
-    rm_shred_adjust_counters(device, 0, -(gint64)total_bytes_read);
+    return total_bytes_read;
+}
+
 
 //////////////////////////////////////
 //  RmHasher                        //
@@ -427,6 +343,7 @@ RmHasher *rm_hasher_new(
 
 void rm_hasher_free(RmHasher *hasher) {
     g_async_queue_unref(hasher->hash_pool_pool);
+    rm_buffer_pool_destroy(hasher->mem_pool);
     g_slice_free(RmHasher, hasher);
 }
 

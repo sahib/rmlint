@@ -111,6 +111,7 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     g_mutex_unlock(&pool->lock);
 
     g_assert(buffer);
+    buffer->callback = NULL;
     return buffer;
 }
 
@@ -126,8 +127,9 @@ void rm_buffer_pool_release(RmBuffer *buf) {
 }
 
 /* make another buffer available if one is being kept (in paranoid digest) */
-static void rm_buffer_pool_signal_keeping(RmBuffer *buf) {
+static void rm_buffer_pool_signal_keeping(_U RmBuffer *buf) {
     RmBufferPool *pool = buf->pool;
+
     g_mutex_lock(&pool->lock);
     {
         pool->avail_buffers++;
@@ -342,18 +344,10 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
 
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
     /* TODO: @chris, not sure I understand this and how to make it work again*/
-
-    /*g_assert(new_size < digest->bytes);
+    g_assert(new_size < digest->bytes);
     g_assert(digest->type == RM_DIGEST_PARANOID);
 
-    RmUint128 *old_checksum = digest->checksum;
-    gsize old_bytes = digest->bytes;
-
-    digest->checksum = g_slice_alloc0(new_size);
     digest->bytes = new_size;
-    memcpy(digest->checksum, old_checksum, new_size);
-
-    g_slice_free1(old_bytes, old_checksum);*/
 }
 
 void rm_digest_release_buffers(RmDigest *digest) {
@@ -506,7 +500,8 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     }
 }
 
-void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
+void rm_digest_buffered_update(RmBuffer *buffer) {
+    RmDigest *digest = buffer->digest;
     if (digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
     } else {
