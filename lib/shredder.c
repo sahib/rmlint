@@ -299,12 +299,12 @@ typedef struct RmShredDevice {
     RmOff bytes_per_pass;
     RmOff files_per_pass;
 
-    /* True when actual shreddiner began.
+    /* True when actual shredding began.
      * This is used to update the correct progressbar state.
      */
     bool after_preprocess : 1;
 
-    /* Lock for all of the above */
+    /* Lock and signaller for all of the above */
     GMutex lock;
     GCond change;
 
@@ -318,8 +318,6 @@ typedef struct RmShredDevice {
     char *disk_name;
     dev_t disk;
 
-    /* head position information, to optimise selection of next file */
-    RmOff new_seek_position;
     dev_t current_dev;
 
     /* size of one page, cached, so
@@ -825,16 +823,14 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
      * RmOff, so do not substract them (will cause over or underflows on
      * regular basis) - use SIGN_DIFF instead
      */
-    RmOff phys_offset_a = a->current_fragment_physical_offset;
-    RmOff phys_offset_b = b->current_fragment_physical_offset;
 
     if (a->is_on_subvol_fs && b->is_on_subvol_fs && a->path_index==b->path_index) {
         /* ignore dev because subvolumes on the same device have different dev numbers */
-        return (2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
+        return (2 * SIGN_DIFF(a->disk_offset, b->disk_offset) +
                 1 * SIGN_DIFF(a->inode, b->inode));
     } else {
         return (4 * SIGN_DIFF(a->dev, b->dev) +
-                2 * SIGN_DIFF(phys_offset_a, phys_offset_b) +
+                2 * SIGN_DIFF(a->disk_offset, b->disk_offset) +
                 1 * SIGN_DIFF(a->inode, b->inode));
     }
 }
@@ -845,11 +841,11 @@ static void rm_shred_file_get_start_offset(RmFile *file, RmSession *session) {
     if(file->device->is_rotational && session->cfg->build_fiemap) {
 
         RM_DEFINE_PATH(file);
-        file->current_fragment_physical_offset = rm_offset_get_from_path(file_path, 0, NULL);
+        file->disk_offset = rm_offset_get_from_path(file_path, 0, NULL);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
         session->offsets_read++;
-        if(file->current_fragment_physical_offset > 0) {
+        if(file->disk_offset > 0) {
             session->offset_fragments += 1;
         } else {
             session->offset_fails++;
@@ -1642,18 +1638,6 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         return file;
     }
 
-    if (file->current_fragment_physical_offset > 0
-        && file->hash_offset >= file->next_fragment_logical_offset) {
-        /* TODO: test if second test actually improves speed
-         * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
-        bool jumped = (file->next_fragment_logical_offset != 0);
-        file->current_fragment_physical_offset = rm_offset_get_from_path(file_path,
-                file->hash_offset, &file->next_fragment_logical_offset);
-        if (jumped && file->current_fragment_physical_offset != 0) {
-            device->new_seek_position = file->current_fragment_physical_offset; /* no lock required */
-        }
-    }
-
     if (worth_waiting) {
         /* some final checks if it's still worth waiting for the hash result */
         g_mutex_lock(&file->shred_group->lock);
@@ -1726,45 +1710,15 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     }
     g_mutex_unlock(&device->lock);
 
-    device->new_seek_position = 0;
-
     /* scheduler for one file at a time, optimised to minimise seeks */
     while(iter
             && !rm_session_was_aborted(main->session)
             && bytes_read_this_pass <= device->bytes_per_pass
             && files_read_this_pass <= device->files_per_pass) {
         RmFile *file = iter->data;
-        gboolean can_process=FALSE;
+        gboolean can_process = rm_shred_can_process(file, main);
 
         /* remove current iter from queue and move to next in preparation for next file*/
-
-        g_mutex_lock(&device->lock);
-        {
-            GList *tmp = iter;
-            if (device->new_seek_position > 0) {
-                tmp=iter;
-                if (device->new_seek_position < file->current_fragment_physical_offset) {
-                    /* search from beginning */
-                    iter=device->file_queue->head;
-                }
-                while (iter->next &&
-                        ((RmFile*)iter->data)->current_fragment_physical_offset < device->new_seek_position) {
-                    iter = iter->next;
-                }
-                if (tmp != iter) {
-                    rm_log_debug (RED"\nChanging file order due to fragmented file: next file in queue had offset %"LLU"M but head had jumped to %"LLU"M\n",
-                        file->current_fragment_physical_offset / 1024 / 1024,
-                        device->new_seek_position / 1024 / 1024);
-                    file = iter->data;
-                    rm_log_debug (GREEN"    Switched to file with offset %"LLU"M to reduce disk seek.\n" RESET, file->current_fragment_physical_offset / 1024 / 1024);
-                }
-                device->new_seek_position = 0;
-            }
-        }
-        g_mutex_unlock(&device->lock);
-
-        can_process = rm_shred_can_process(file, main);
-
         g_mutex_lock(&device->lock);
         {
             GList *tmp = iter;
@@ -1776,25 +1730,13 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
         }
         g_mutex_unlock(&device->lock);
 
+        /* process one or more increments of current file */
         while(can_process) {
             can_process = FALSE;
-            RmOff start_offset = file->hash_offset;
             file = rm_shred_process_file(device, file);
             if(file) {
-                if(start_offset == file->hash_offset && file->has_ext_cksum == false) {
-                    rm_log_debug(RED "Offset stuck at %" LLU "\n" RESET, start_offset);
-                    file->status = RM_FILE_STATE_IGNORE;
-                    /* rm_shred_sift will dispose of the file */
-                }
 
-                if(file->status == RM_FILE_STATE_FRAGMENT) {
-/* file is not ready for checking yet; push it back into the queue */
-#if _RM_SHRED_DEBUG
-                    RM_DEFINE_PATH(file);
-                    rm_log_debug("Recycling fragment %s\n", file_path);
-#endif
-                    rm_shred_push_queue_sorted(file); /* call with device unlocked */
-                } else if(rm_shred_sift(file)) {
+                if(rm_shred_sift(file)) {
 /* continue hashing same file, ie no change to iter */
 #if _RM_SHRED_DEBUG
                     RM_DEFINE_PATH(file);
@@ -1806,10 +1748,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
                         rm_shred_push_queue_sorted(file);
                     }
                     continue;
-                } else {
-                    /* rm_shred_sift has taken responsibility for the file and either
-                     * disposed
-                     * of it or pushed it back into our queue */
                 }
             }
         }
