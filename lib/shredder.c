@@ -1642,6 +1642,18 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         return file;
     }
 
+    if (file->current_fragment_physical_offset > 0
+        && file->hash_offset >= file->next_fragment_logical_offset) {
+        /* TODO: test if second test actually improves speed
+         * (if not then RmFile can probably live without RmOff next_fragment_logical_offset) */
+        bool jumped = (file->next_fragment_logical_offset != 0);
+        file->current_fragment_physical_offset = rm_offset_get_from_path(file_path,
+                file->hash_offset, &file->next_fragment_logical_offset);
+        if (jumped && file->current_fragment_physical_offset != 0) {
+            device->new_seek_position = file->current_fragment_physical_offset; /* no lock required */
+        }
+    }
+
     if (worth_waiting) {
         /* some final checks if it's still worth waiting for the hash result */
         g_mutex_lock(&file->shred_group->lock);
