@@ -49,7 +49,7 @@ RmOff rm_buffer_size(RmBufferPool *pool) {
 }
 
 RmBuffer *rm_buffer_new(RmBufferPool *pool) {
-    RmBuffer *self = g_slice_new(RmBuffer);
+    RmBuffer *self = g_slice_new0(RmBuffer);
     self->pool = pool;
     self->data = g_slice_alloc(pool->buffer_size);
     return self;
@@ -244,9 +244,6 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
     digest->type = type;
     digest->bytes = 0;
 
-    digest->initial_seed1 = seed1;
-    digest->initial_seed2 = seed2;
-
     switch(type) {
     case RM_DIGEST_SPOOKY32:
         /* cannot go lower than 64, since we read 8 byte in some places.
@@ -302,13 +299,14 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
         g_assert(paranoid_size <= rm_digest_paranoia_bytes());
         g_assert(paranoid_size > 0);
         digest->bytes = paranoid_size;
-        digest->paranoid_offset = 0;
-        digest->buffers = g_queue_new();
-        digest->incoming_twin_candidates=g_async_queue_new();
+        digest->paranoid = g_slice_new0(RmParanoid);
+        digest->paranoid->buffers = g_queue_new();
+        digest->paranoid->incoming_twin_candidates=g_async_queue_new();
+        g_assert(use_shadow_hash);
         if(use_shadow_hash) {
-            digest->shadow_hash = rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0, false);
+            digest->paranoid->shadow_hash = rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0, false);
         } else {
-            digest->shadow_hash = NULL;
+            digest->paranoid->shadow_hash = NULL;
         }
         break;
     default:
@@ -328,9 +326,9 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
         digest->checksum = g_slice_alloc0(digest->bytes);
         for(gsize block = 0; block < (digest->bytes / 16); block++) {
             digest->checksum[block].first =
-                seeds[block % n_seeds] ^ digest->initial_seed1;
+                seeds[block % n_seeds] ^ seed1;
             digest->checksum[block].second =
-                seeds[block % n_seeds] ^ digest->initial_seed2;
+                seeds[block % n_seeds] ^ seed2;
         }
     }
 
@@ -359,10 +357,10 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
 }
 
 void rm_digest_release_buffers(RmDigest *digest) {
-    if (digest->buffers) {
-        g_queue_free_full(digest->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
+    if (digest->paranoid && digest->paranoid->buffers) {
+        g_queue_free_full(digest->paranoid->buffers, (GDestroyNotify)rm_buffer_pool_release_kept);
+        digest->paranoid->buffers = NULL;
     }
-    digest->buffers = NULL;
 }
 
 void rm_digest_free(RmDigest *digest) {
@@ -375,14 +373,14 @@ void rm_digest_free(RmDigest *digest) {
         digest->glib_checksum = NULL;
         break;
     case RM_DIGEST_PARANOID:
-        if(digest->shadow_hash) {
-            rm_digest_free(digest->shadow_hash);
+        if(digest->paranoid->shadow_hash) {
+            rm_digest_free(digest->paranoid->shadow_hash);
         }
         rm_digest_release_buffers(digest);
-
-        if (digest->incoming_twin_candidates) {
-            g_async_queue_unref(digest->incoming_twin_candidates);
+        if (digest->paranoid->incoming_twin_candidates) {
+            g_async_queue_unref(digest->paranoid->incoming_twin_candidates);
         }
+        g_slice_free(RmParanoid, digest->paranoid);
         break;
     case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
@@ -512,44 +510,51 @@ void rm_digest_buffered_update(RmDigest *digest, RmBuffer *buffer) {
     if (digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
     } else {
-        g_assert(buffer->len <= buffer->pool->buffer_size);
-        //g_assert(buffer->len + digest->paranoid_offset <= digest->bytes);
-        g_queue_push_tail(digest->buffers, buffer);
-        digest->buffer_count++;
-        digest->paranoid_offset += buffer->len;
+        RmParanoid *paranoid = digest->paranoid;
+
+        g_queue_push_tail(paranoid->buffers, buffer);
+        paranoid->buffer_count++;
         rm_buffer_pool_signal_keeping(buffer);
-        if(digest->shadow_hash) {
-            rm_digest_update(digest->shadow_hash, buffer->data, buffer->len);
+
+        g_assert(paranoid->shadow_hash);
+        if(paranoid->shadow_hash) {
+            rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);
         }
-        if ( !digest->twin_candidate ) {
-            if ((digest->twin_candidate = g_async_queue_try_pop(digest->incoming_twin_candidates))) {
+
+        if ( !paranoid->twin_candidate ) {
+            /* try to pop a candidate from the incoming queue */
+            if (paranoid->incoming_twin_candidates &&
+                    (paranoid->twin_candidate = g_async_queue_try_pop(paranoid->incoming_twin_candidates))
+                ) {
                 /* validate the new candidate by comparing the previous buffers (not including current)*/
-                digest->twin_candidate_buffer = digest->twin_candidate->buffers->head;
-                GList *iter_self = digest->buffers->head;
+                paranoid->twin_candidate_buffer = paranoid->twin_candidate->paranoid->buffers->head;
+                GList *iter_self = paranoid->buffers->head;
                 gboolean match=TRUE;
                 while (match && iter_self) {
-                    match = (rm_buffer_equal(digest->twin_candidate_buffer->data, iter_self->data));
+                    match = (rm_buffer_equal(paranoid->twin_candidate_buffer->data, iter_self->data));
                     iter_self = iter_self->next;
-                    digest->twin_candidate_buffer = digest->twin_candidate_buffer->next;
+                    paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
                 }
                 if (!match) {
-                    /* reject the twin candidate */
-                    digest->twin_candidate = NULL;
-                    digest->twin_candidate_buffer = NULL;
+                    /* reject the twin candidate (new candidate might be added on next call
+                     * to rm_digest_buffered_update)*/
+                    paranoid->twin_candidate = NULL;
+                    paranoid->twin_candidate_buffer = NULL;
                 } else {
-                    rm_log_debug(BLUE"Added twin candidate %p\n"RESET, digest->twin_candidate);
+                    rm_log_debug(BLUE"Added twin candidate %p\n"RESET, paranoid->twin_candidate);
                 }
             }
         } else {
             /* do a running check that digest remains the same as its candidate twin */
-            if (rm_buffer_equal(buffer, digest->twin_candidate_buffer->data)) {
+            if (rm_buffer_equal(buffer, paranoid->twin_candidate_buffer->data)) {
                 /* buffers match; move ptr to next one ready for next buffer */
-                digest->twin_candidate_buffer = digest->twin_candidate_buffer->next;
+                paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
             } else {
-                /* buffers don't match - delete candidate */
-                digest->twin_candidate = NULL;
-                digest->twin_candidate_buffer = NULL;
-                rm_log_debug(RED"Ejected candidate match at buffer #%lu\n"RESET, digest->buffer_count);
+                /* buffers don't match - delete candidate (new candidate might be added on next
+                 * call to rm_digest_buffered_update) */
+                paranoid->twin_candidate = NULL;
+                paranoid->twin_candidate_buffer = NULL;
+                rm_log_debug(RED"Ejected candidate match at buffer #%u\n"RESET, paranoid->buffer_count);
             }
         }
     }
@@ -582,8 +587,8 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
-        self = rm_digest_new(digest->type, digest->initial_seed1, digest->initial_seed2,
-                             digest->bytes, digest->shadow_hash != NULL);
+        self = rm_digest_new(digest->type, 0, 0,
+                             digest->bytes, FALSE);
 
         if(self->checksum && digest->checksum) {
             memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
@@ -642,9 +647,9 @@ guint rm_digest_hash(RmDigest *digest) {
     gsize bytes = 0;
 
     if(digest->type == RM_DIGEST_PARANOID) {
-        if(digest->shadow_hash) {
-            buf = rm_digest_steal_buffer(digest->shadow_hash);
-            bytes = digest->shadow_hash->bytes;
+        if(digest->paranoid->shadow_hash) {
+            buf = rm_digest_steal_buffer(digest->paranoid->shadow_hash);
+            bytes = digest->paranoid->shadow_hash->bytes;
         }
     } else {
         buf = rm_digest_steal_buffer(digest);
@@ -662,15 +667,15 @@ guint rm_digest_hash(RmDigest *digest) {
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     g_assert (a && b);
     if (a->type == RM_DIGEST_PARANOID) {
-        if (!a->buffers) {
+        if (!a->paranoid->buffers) {
             /* buffers have been freed so we need to rely on shadow hash */
-            return rm_digest_equal(a->shadow_hash, b->shadow_hash);
+            return rm_digest_equal(a->paranoid->shadow_hash, b->paranoid->shadow_hash);
         }
         if (a->bytes != b->bytes) {
             rm_log_error(RED"Error: byte counts don't match in rm_digest_equal\n"RESET);
             return false;
-        } else if ((a->twin_candidate == b)
-                || (b->twin_candidate == a)) {
+        } else if ((a->paranoid->twin_candidate == b)
+                || (b->paranoid->twin_candidate == a)) {
             if (a->bytes > 4 * 4096) {
                 rm_log_debug(GREEN "+" RESET);
             }
@@ -678,12 +683,12 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             return true;
         }
 
-        GList *a_iter = a->buffers->head;
-        GList *b_iter = b->buffers->head;
+        GList *a_iter = a->paranoid->buffers->head;
+        GList *b_iter = b->paranoid->buffers->head;
         guint bytes=0;
         while (a_iter && b_iter) {
             if (!rm_buffer_equal(a_iter->data, b_iter->data)) {
-                rm_log_error(RED"Paranoid digest compare found mismatch - must be hash collision in shadow hash"RESET);
+                rm_log_error(RED"Paranoid digest compare found mismatch - must be hash collision in shadow hash\n"RESET);
                 return false;
             }
             bytes += ((RmBuffer*)a_iter->data)->len;
@@ -720,9 +725,9 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     }
 
     if(digest->type == RM_DIGEST_PARANOID) {
-        if(digest->shadow_hash) {
-            input = rm_digest_steal_buffer(digest->shadow_hash);
-            bytes = digest->shadow_hash->bytes;
+        if(digest->paranoid->shadow_hash) {
+            input = rm_digest_steal_buffer(digest->paranoid->shadow_hash);
+            bytes = digest->paranoid->shadow_hash->bytes;
         }
     } else {
         input = rm_digest_steal_buffer(digest);
@@ -751,13 +756,16 @@ int rm_digest_get_bytes(RmDigest *self) {
 
     if(self->type != RM_DIGEST_PARANOID) {
         return self->bytes;
-    } else if(self->shadow_hash) {
-        return self->shadow_hash->bytes;
+    } else if(self->paranoid->shadow_hash) {
+        return self->paranoid->shadow_hash->bytes;
     } else {
         return 0;
     }
 }
 
 void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
-    g_async_queue_push(target->incoming_twin_candidates, candidate);
+    if (!target->paranoid->incoming_twin_candidates) {
+        target->paranoid->incoming_twin_candidates = g_async_queue_new();
+    }
+    g_async_queue_push(target->paranoid->incoming_twin_candidates, candidate);
 }

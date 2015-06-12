@@ -58,34 +58,42 @@ typedef struct RmUint128 {
     guint64 second;
 } RmUint128;
 
+typedef struct RmParanoid {
+    /* the buffers containing file data byte-by-byte */
+    GQueue *buffers;
+    guint buffer_count;
+
+    /* A SPOOKY hash is built for every paranoid digest.
+     * So we can make rm_digest_hash() and rm_digest_hexstring() work.
+     */
+    struct RmDigest *shadow_hash;
+
+    /* Optional: if known, a potentially matching *completed* RMDigest
+     * can be provided and will be progressively compared against
+     * this RmDigest *during* rm_digest_buffered_update(); this speeds
+     * up subsequent calls to rm_digest_equal() significantly.
+     */
+    struct RmDigest *twin_candidate;
+    /* Pointer to current buffer in twin_candidate->paranoid->buffers */
+    GList *twin_candidate_buffer;
+
+    /* Optional: incoming queue for additional twin candidate RmDigest's */
+    GAsyncQueue *incoming_twin_candidates;
+} RmParanoid;
+
 typedef struct RmDigest {
+    /* Different storage structures are used depending on digest type: */
     union {
         GChecksum *glib_checksum;
         RmUint128 *checksum;
-        GQueue *buffers;
+        RmParanoid *paranoid;
     };
+
+    /* digest type */
     RmDigestType type;
+
+    /* digest size in bytes */
     gsize bytes;
-
-    /* only one both configurations are valid */
-    union {
-        struct {
-            gsize paranoid_offset;
-
-            /* A SPOOKY hash is built for every paranoid digest.
-             * So we can make rm_digest_hash() and rm_digest_hexstring() work.
-             */
-            struct RmDigest *shadow_hash;
-            struct RmDigest *twin_candidate;
-            GList *twin_candidate_buffer;
-            guint buffer_count;
-            GAsyncQueue *incoming_twin_candidates;
-        };
-        struct {
-            RmOff initial_seed1;
-            RmOff initial_seed2;
-        };
-    };
 } RmDigest;
 
 /////////// RmBufferPool and RmBuffer ////////////////
@@ -156,6 +164,8 @@ const char *rm_digest_type_to_string(RmDigestType type);
  *
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
+ * @param paranoid_size. Digest size in bytes for "paranoid" (exact copy) digest
+ * @param use_shadow_hash.  Keep a shadow hash for lookup purposes.
  */
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size, bool use_shadow_hash);
 
