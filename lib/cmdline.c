@@ -792,8 +792,14 @@ static gboolean rm_cmd_parse_progress(_U const char *option_name, _U const gchar
 static void rm_cmd_set_default_outputs(RmSession *session) {
     rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
-    rm_fmt_add(session->formats, "sh", "rmlint.sh");
-    rm_fmt_add(session->formats, "json", "rmlint.json");
+
+    if(session->replay_files.length) {
+        rm_fmt_add(session->formats, "sh", "rmlint.replay.sh");
+        rm_fmt_add(session->formats, "json", "rmlint.replay.json");
+    } else {
+        rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        rm_fmt_add(session->formats, "json", "rmlint.json");
+    }
 }
 
 static gboolean rm_cmd_parse_no_progress(_U const char *option_name,
@@ -963,6 +969,10 @@ static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gcha
 
 static gboolean rm_cmd_parse_replay(_U const char *option_name, const gchar *json_path,
                                     RmSession *session, GError **error) {
+    if(json_path == NULL) {
+        json_path = "rmlint.json";
+    }
+
     if(g_access(json_path, R_OK) == -1) {
         g_set_error(
             error, RM_ERROR_QUARK, 0, "--replay: `%s`: %s", json_path, g_strerror(errno)
@@ -1096,7 +1106,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Newer than stamp file"), "PATH"},
         {"newer-than", 'N', 0, G_OPTION_ARG_CALLBACK, FUNC(timestamp),
          _("Newer than timestamp"), "STAMP"},
-        {"replay", 'Y', 0, G_OPTION_ARG_CALLBACK, FUNC(replay),
+        {"replay", 'Y', OPTIONAL, G_OPTION_ARG_CALLBACK, FUNC(replay),
          _("Re-output a json file"), "path/to/rmlint.json"},
         {"config", 'c', 0, G_OPTION_ARG_CALLBACK, FUNC(config),
          _("Configure a formatter"), "FMT:K[=V]"},

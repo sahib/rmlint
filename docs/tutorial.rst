@@ -634,6 +634,47 @@ There's also a preset of it to save you some typing: ``-T minimaldirs``.
     be cached till the end and some other internal data structures need to be 
     created.
 
+Replaying results
+-----------------
+
+Often it is useful to just re-output the results you got from ``rmlint``. That's
+kind of annoying for large datasets, especially when you have big files. 
+
+The usage of the ``--replay`` feature is best understood by example:
+
+.. code-block:: bash
+
+    $ rmlint real-large-dir --progress
+    # ... lots of output ...
+    $ cp rmlint.json large.json  # Save json, so we don't overwrite it.
+    $ rmlint --replay large.json real-large-dir
+    # ... same output, just faster ...
+    $ rmlint --replay large.json --size 2M-512M --rankby sn real-large-dir
+    # ... filter stuff; and rank by size and by size and groupsize ....
+    $ rmlint --replay large.json real-large-dir/subdir
+    # ... only show stuff in /subdir ...
+
+.. warning:: Details may differ
+
+    The generated output might differ slightly in order and details. 
+    For example the total number of files in the replayed runs will be the total
+    of entries in the json document, not the total number of traversed files.
+
+    Also be careful when replaying on a modified filesystem. ``rmlint`` will
+    ignore files with newer mtime than in the ``.json`` file for safety reason.
+
+.. warning:: Not all options might work
+
+   Options that are related to traversing and hashing/reading have no effect.
+   Those are:
+
+   * `--followlinks`
+   * `--algorithm and --paranoid`
+   * `--clamp-low`
+   * `--hardlinked`
+   * `--write-unfinished`
+   * all other caching options.
+
 Miscellaneous options
 ---------------------
 

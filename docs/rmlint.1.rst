@@ -331,6 +331,23 @@ Original Detection Options
 Caching
 -------
 
+:``--replay [path.json]``:
+
+    Read an existing json file and re-output it. This is very useful if you want
+    to reformat, refilter or resort the output you got from an previous run.
+    Usage is simple: Just pass ``--replay`` on the second run, with all other
+    options still there.
+
+    If you want to view only the duplicates of certain subdirectories, just pass
+    them on the commandline as usual.
+ 
+    The ``path.json`` argument is optional, if not given the it is assumed that
+    there is a `rmlint.json` in the current working directory.
+
+    By design, some options will not have any effect. Those are: `--followlinks`
+    `--algorithm and --paranoid` `--clamp-low` `--hardlinked`
+    `--write-unfinished` and all other caching options below.
+
 :``--xattr-read`` / ``--xattr-write`` / ``--xattr-clear``:
 
     Read or write cached checksums from the extended file attributes.
