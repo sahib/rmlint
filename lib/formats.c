@@ -23,10 +23,38 @@
  *
  */
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "file.h"
 #include "formats.h"
+
+/* A group of output files. 
+ * These are only created when caching to the end of the run is requested.
+ * Otherwise, files are directly outputed and not stored in groups.
+ */
+typedef struct RmFmtGroup {
+    GQueue files;
+    int index;
+} RmFmtGroup;
+
+
+static RmFmtGroup *rm_fmt_group_new(void) {
+    RmFmtGroup *self = g_slice_new(RmFmtGroup);
+    g_queue_init(&self->files);
+    return self;
+}
+
+static void rm_fmt_group_destroy(RmFmtGroup *self) {
+    for(GList *iter = self->files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        rm_file_destroy(file);
+    }
+
+    g_queue_clear(&self->files);
+    g_slice_free(RmFmtGroup, self);
+}
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
     g_assert(handler);
@@ -49,6 +77,7 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
                                          (GDestroyNotify)g_hash_table_unref);
 
     self->session = session;
+    g_queue_init(&self->groups);
     g_rec_mutex_init(&self->state_mtx);
 
     extern RmFmtHandler *PROGRESS_HANDLER;
@@ -188,13 +217,111 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     }
 
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
-
     g_hash_table_insert(self->path_to_handler, new_handler_copy->path, new_handler);
 
     return true;
 }
 
+static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {
+    RM_FMT_FOR_EACH_HANDLER(self) {
+        RM_FMT_CALLBACK(handler->elem, result);
+    }
+}
+
+static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
+    RmFile *fa = ga->files.head->data;
+    RmFile *fb = gb->files.head->data;
+
+    RmOff sa = fa->file_size * (ga->files.length - 1);
+    RmOff sb = fb->file_size * (gb->files.length - 1);
+
+    /* Better do not compare big unsigneds via a - b... */
+    if(sa < sb) {
+        return -1;
+    } 
+
+    if(sa > sb) {
+        return +1;
+    } 
+
+    return 0;
+}
+
+static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {
+    const char *rank_order = self->session->cfg->rank_criteria;
+
+    RmFile *fa = ga->files.head->data;
+    RmFile *fb = gb->files.head->data;
+
+    if(fa->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE
+    && fa->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        return -1;
+    }
+
+    if(fb->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE 
+    && fb->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        return +1;
+    }
+
+    for(int i = 0; rank_order[i]; ++i) {
+        gint64 r = 0;
+        switch(tolower(rank_order[i])) {
+            case 's':
+                r = rm_fmt_rank_size(ga, gb);
+                break;
+            case 'a': {
+                    RM_DEFINE_BASENAME(fa)
+                    RM_DEFINE_BASENAME(fb)
+                    r = strcasecmp(fa_basename, fb_basename);
+                }
+                break;
+            case 'm':
+                r = ((gint64)fa->mtime) - ((gint64)fb->mtime);
+                break;
+            case 'p':
+                r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
+                break;
+            case 'n':
+                r = ((gint64)ga->files.length) - ((gint64)gb->files.length);
+                break;
+            case 'o':
+                r = ga->index - gb->index;
+                break;
+        }
+
+        if(r != 0) {
+            r = CLAMP(r, -1, +1);
+            return isupper(rank_order[i]) ? -r : r;
+        }
+    }
+
+    return 0;
+}
+
+void rm_fmt_flush(RmFmtTable *self) {
+    RmCfg *cfg = self->session->cfg;
+    if(!cfg->cache_file_structs) {
+        return;
+    }
+
+    if(cfg->rank_criteria && *(cfg->rank_criteria)) {
+        g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
+    }
+
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        g_queue_foreach(&group->files, (GFunc)rm_fmt_write_impl, self);
+    }
+}
+
 void rm_fmt_close(RmFmtTable *self) {
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        rm_fmt_group_destroy(group);
+    }
+
+    g_queue_clear(&self->groups);
+
     RM_FMT_FOR_EACH_HANDLER(self) {
         RM_FMT_CALLBACK(handler->foot);
         fclose(file);
@@ -210,8 +337,18 @@ void rm_fmt_close(RmFmtTable *self) {
 }
 
 void rm_fmt_write(RmFile *result, RmFmtTable *self) {
-    RM_FMT_FOR_EACH_HANDLER(self) {
-        RM_FMT_CALLBACK(handler->elem, result);
+    bool direct = !(self->session->cfg->cache_file_structs);
+    if(direct) {
+        rm_fmt_write_impl(result, self);
+    } else {
+        if(result->is_original || self->groups.length == 0) {
+            g_queue_push_tail(&self->groups, rm_fmt_group_new());
+        }
+
+        RmFmtGroup *group = self->groups.tail->data;
+        group->index = self->groups.length - 1;
+
+        g_queue_push_tail(&group->files, result);
     }
 }
 

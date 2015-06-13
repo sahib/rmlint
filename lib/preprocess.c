@@ -89,7 +89,7 @@ static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *
     return false;
 }
 
-static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
+gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
     const RmCfg *cfg = file_a->session->cfg;
 
     return (1 && (file_a->file_size == file_b->file_size) &&
@@ -212,6 +212,14 @@ RmFileTables *rm_file_tables_new(_U RmSession *session) {
 }
 
 void rm_file_tables_destroy(RmFileTables *tables) {
+    if(tables->size_groups) {
+        g_hash_table_unref(tables->size_groups);
+    }
+
+    if(tables->node_table) {
+        g_hash_table_unref(tables->node_table);
+    }
+
     g_rec_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }
@@ -259,6 +267,8 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if(a->lint_type != b->lint_type) {
         /* "other" lint outranks duplicates and has lower ENUM */
         return a->lint_type - b->lint_type;
+    } else if(a->is_symlink != b->is_symlink) {
+        return a->is_symlink - b->is_symlink;
     } else if(a->is_prefd != b->is_prefd) {
         return (b->is_prefd - a->is_prefd);
     } else {
@@ -516,9 +526,15 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
             g_assert(type == file->lint_type);
 
             num_handled++;
+
             rm_fmt_write(file, session->formats);
         }
-        g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
+
+        if(!session->cfg->cache_file_structs) {
+            g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
+        } else {
+            g_list_free(list);
+        }
     }
 
     return num_handled;

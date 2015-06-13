@@ -119,6 +119,10 @@ typedef struct RmSession {
 
     /* true once traverse finished running */
     bool traverse_finished;
+
+    /* List of path to json files that should be re-outputted. */
+    GQueue replay_files;
+
 } RmSession;
 
 /**

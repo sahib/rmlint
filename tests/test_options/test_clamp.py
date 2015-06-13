@@ -11,7 +11,7 @@ def test_simple():
     assert len(data) == 0
 
     for suffix in ['-Q .9 -q .1', '-Q 9 -q .1', '-Q .9 -q 1', '-Q 90% -q 10%']:
-        head, *data, footer = run_rmlint('-D --sortcriteria a ' + suffix)
+        head, *data, footer = run_rmlint('-D --rank-by a ' + suffix)
         assert data[0]['path'].endswith('a10')
         assert data[1]['path'].endswith('b10')
         assert len(data) == 2

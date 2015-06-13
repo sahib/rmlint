@@ -57,6 +57,9 @@ typedef struct RmFmtTable {
     GHashTable *config;
     GRecMutex state_mtx;
     RmSession *session;
+
+    /* Group of RmFiles that will be cached until exit */
+    GQueue groups;
 } RmFmtTable;
 
 /* Callback definitions */
@@ -125,6 +128,15 @@ RmFmtTable *rm_fmt_open(RmSession *session);
  * @brief Close all open file, but write a footer to them if the handler wants it.
  */
 void rm_fmt_close(RmFmtTable *self);
+
+/**
+ * @brief If cfg->cache_file_structs is true, 
+ *        all files written by rm_fmt_write can
+ *        be flushed at once with this function.
+ *
+ * @param self
+ */
+void rm_fmt_flush(RmFmtTable *self);
 
 /**
  * @brief Get the number of added formatters.

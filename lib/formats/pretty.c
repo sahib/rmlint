@@ -167,6 +167,7 @@ static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {
 
     /* Initialize own stuff */
     .last_lint_type = RM_LINT_TYPE_UNKNOWN,
-    .elems_written = 0};
+    .elems_written = 0
+};
 
 RmFmtHandler *PRETTY_HANDLER = (RmFmtHandler *)&PRETTY_HANDLER_IMPL;
