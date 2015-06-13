@@ -169,7 +169,7 @@ General Options
     Output is deferred until all duplicates were found.
     Sole duplicate groups are printed after the directories.
 
-    **--sortcriteria** applies for directories too, but 'p' or 'P' (path index)
+    **--rank-by** applies for directories too, but 'p' or 'P' (path index)
     has no defined (useful) meaning. Sorting takes only place when the number of
     preferred files in the directory differs. 
 
@@ -180,7 +180,7 @@ General Options
     * This feature might add some runtime.
     * Consider using ``-@`` together with this option (this is the default).
 
-:``-y --rankby=order`` (**default\:** *none*):
+:``-y --sort-by=order`` (**default\:** *none*):
 
     Sort the found duplicate groups by criteria described by `order`.
     `order` is a string that may consist of one or more of the following letters:
@@ -193,7 +193,7 @@ General Options
     * `n`: Sort by number of files in the group.
 
     The letter may also be written uppercase (similiar to ``-S /
-    --sortcriteria``) to reverse the sorting. Note that ``rmlint`` has to hold
+    --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
     back all results to the end of the run before sorting and printing. 
 
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
@@ -318,7 +318,7 @@ Original Detection Options
     Only look for duplicates of which one is in original paths.
     (Paths that were named after **//**).
 
-:``-S --sortcriteria=criteria`` (**default\:** *pm*):
+:``-S --rank-by=criteria`` (**default\:** *pm*):
 
     - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)
     - **a**: keep first alphabetically   **A**: keep last alphabetically
@@ -327,6 +327,9 @@ Original Detection Options
     Alphabetical sort will only use the basename of the file and ignore it's case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+
+    The abbreviation is unfortunate, ``-S`` should stand for ``--sort-by`` and
+    ``--sort-by``'s ``-y`` should be used here.
 
 Caching
 -------

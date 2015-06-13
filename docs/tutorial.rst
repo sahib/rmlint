@@ -459,7 +459,7 @@ modification time then it's just a matter of chance which one is selected as the
 original.
 
 The way ``rmlint`` chooses the original can be driven by the ``-S``
-(``--sortcriteria``) option. 
+(``--rank-by``) option. 
 
 Here's an example:
 
@@ -649,7 +649,7 @@ The usage of the ``--replay`` feature is best understood by example:
     $ cp rmlint.json large.json  # Save json, so we don't overwrite it.
     $ rmlint --replay large.json real-large-dir
     # ... same output, just faster ...
-    $ rmlint --replay large.json --size 2M-512M --rankby sn real-large-dir
+    $ rmlint --replay large.json --size 2M-512M --sort-by sn real-large-dir
     # ... filter stuff; and rank by size and by size and groupsize ....
     $ rmlint --replay large.json real-large-dir/subdir
     # ... only show stuff in /subdir ...
