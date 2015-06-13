@@ -498,11 +498,7 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
     self->main = file->device->main;
 
     if(self->parent) {
-        if(self->parent->offset_factor * 8 <= SHRED_MAX_READ_FACTOR) {
-            self->offset_factor = self->parent->offset_factor * 8;
-        } else {
-            self->offset_factor = SHRED_MAX_READ_FACTOR;
-        }
+        self->offset_factor = MIN(self->parent->offset_factor * 8, SHRED_MAX_READ_FACTOR);
     } else {
         self->offset_factor = 1;
     }
