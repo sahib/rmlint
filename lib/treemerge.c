@@ -342,10 +342,6 @@ static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
-    /* Will this work with paranoid cfg? Probably, but in a weird way.
-     * Also it might not be very secure when the last block of the file is
-     * compared...
-     * */
     if(d1->mergeups != d2->mergeups) {
         return false;
     }

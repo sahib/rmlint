@@ -35,6 +35,7 @@
 #include <search.h>
 #include <sys/time.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include "cmdline.h"
 #include "treemerge.h"
@@ -962,7 +963,13 @@ static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gcha
 
 static gboolean rm_cmd_parse_replay(_U const char *option_name, const gchar *json_path,
                                     RmSession *session, GError **error) {
-    // TODO: g_access.
+    if(g_access(json_path, R_OK) == -1) {
+        g_set_error(
+            error, RM_ERROR_QUARK, 0, "--replay: `%s`: %s", json_path, g_strerror(errno)
+        );
+        return false;
+    }
+
     g_queue_push_tail(&session->replay_files, g_strdup(json_path));
     session->cfg->cache_file_structs = true;
     return true;

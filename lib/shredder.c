@@ -1488,7 +1488,6 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
         for(GList *iter = group->held_files->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
             file->digest = group->digest;
-            file->free_digest = false;
 
             if(cfg->merge_directories) {
                 rm_tm_feed(tag->session->dir_merger, file);

@@ -122,6 +122,10 @@ void rm_file_destroy(RmFile *file) {
         g_free(file->folder->data);
     }
 
+    if(file->free_digest) {
+        rm_digest_free(file->digest);
+    }
+
     g_slice_free(RmFile, file);
 }
 

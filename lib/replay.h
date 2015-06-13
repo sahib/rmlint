@@ -29,6 +29,23 @@
 #include "session.h"
 #include "stdbool.h"
 
+/**
+ * @brief Load a json file from disk and output it to the output module.
+ *
+ * Most relevant options are supported as far as possible.
+ * Options that alter the hashing/reading of duplicates will have no 
+ * effect since almost no IO will be done except for some lstat/stat.
+ *
+ * Additionally, --followlinks, --crossdev, --hardlink (as well as their
+ * negative pendants) and --write-unfinished will have no effect.
+ *
+ * Only paths are printed that are given on the commandline.
+ *
+ * @param session Global session.
+ * @param json_path Absolute path to the json file.
+ *
+ * @return true on (some) success.
+ */
 bool rm_parrot_load(RmSession *session, const char *json_path);
 
 #endif /* end of include guard */

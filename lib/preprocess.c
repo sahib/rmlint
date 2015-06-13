@@ -212,6 +212,14 @@ RmFileTables *rm_file_tables_new(_U RmSession *session) {
 }
 
 void rm_file_tables_destroy(RmFileTables *tables) {
+    if(tables->size_groups) {
+        g_hash_table_unref(tables->size_groups);
+    }
+
+    if(tables->node_table) {
+        g_hash_table_unref(tables->node_table);
+    }
+
     g_rec_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }

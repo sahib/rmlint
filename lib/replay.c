@@ -28,123 +28,154 @@
 #include "session.h"
 #include "formats.h"
 #include "file.h"
+#include "preprocess.h"
 #include "shredder.h"
 
 /* External libraries */
 #include <string.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #if HAVE_JSON_GLIB
-#include <json-glib/json-glib.h>
+# include <json-glib/json-glib.h>
 #endif
 
-//////////////////////////////////////
-//        JSON REPLAY PARSER        //
-//////////////////////////////////////
+/////////////////////////////////////////////////
+//  POLLY THE PARROT REPEATS WHAT RMLINT SAID  //
+/////////////////////////////////////////////////
 
 typedef struct RmParrot {
+    /* Global session */
     RmSession *session;
+    
+    /* Json parser instance */
     JsonParser *parser;
+
+    /* Root array of the json document */
     JsonArray *root;
+
+    /* Last original file that we encountered */
+    RmFile *last_original;
+
+    /* Index inside the document 
+     * (0 is header, 1 first element, len(root) is footer)
+     * */
     guint index;
 } RmParrot;
 
-void rm_parrot_close(RmParrot *self) {
-    if(self->parser) {
-        g_object_unref(self->parser);
+static void rm_parrot_close(RmParrot *polly) {
+    if(polly->parser) {
+        g_object_unref(polly->parser);
     }
 
-    g_free(self);
+    g_free(polly);
 }
 
-RmParrot *rm_parrot_open(RmSession *session, const char *json_path, GError **error) {
-    RmParrot *self = g_malloc0(sizeof(RmParrot));
-    self->session = session;
-    self->parser = json_parser_new();
-    self->index = 1;
+static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, GError **error) {
+    RmParrot *polly = g_malloc0(sizeof(RmParrot));
+    polly->session = session;
+    polly->parser = json_parser_new();
+    polly->index = 1;
 
-    // TODO: translate
-    rm_log_info_line(_("Loading json-results `%s'"), json_path);
-
-    if(!json_parser_load_from_file(self->parser, json_path, error)) {
+    if(!json_parser_load_from_file(polly->parser, json_path, error)) {
         goto failure;
     }
 
-    JsonNode *root = json_parser_get_root(self->parser);
+    JsonNode *root = json_parser_get_root(polly->parser);
     if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {
-        rm_log_warning_line(_("No valid json cache (no array in /)"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("No valid json cache (no array in /)"));
         goto failure;
     }
 
-    self->root = json_node_get_array(root);
-    return self;
+    polly->root = json_node_get_array(root);
+    return polly;
 
 failure:
-    rm_parrot_close(self);
+    rm_parrot_close(polly);
     return NULL;
 }
 
-bool rm_parrot_has_next(RmParrot *self) {
-    return self->index < json_array_get_length(self->root);
+static bool rm_parrot_has_next(RmParrot *polly) {
+    return (polly->index < json_array_get_length(polly->root));
 }
 
-RmFile *rm_parrot_next(RmParrot *self) {
-    if(!rm_parrot_has_next(self)) {
+static RmFile *rm_parrot_try_next(RmParrot *polly) {
+    if(!rm_parrot_has_next(polly)) {
         return NULL;
     }
 
-    JsonObject *object = json_array_get_object_element(self->root, self->index);
+    RmFile *file = NULL;
+    const char *path = NULL;
+    size_t path_len = 0;
 
-    self->index += 1;
+    JsonObject *object = json_array_get_object_element(polly->root, polly->index);
 
+    /* Deliver a higher index the next time, even if it fails */
+    polly->index += 1;
+
+    /* Read the path (without generating a warning if it's not there) */
     JsonNode *path_node = json_object_get_member(object, "path");
     if(path_node == NULL) {
         return NULL;
     }
 
-    const char *path = json_node_get_string(path_node);
-    size_t path_len = strlen(path);
+    path = json_node_get_string(path_node);
+    path_len = strlen(path);
 
+    /* Check for the lint type */
     RmLintType type = rm_file_string_to_lint_type(
         json_object_get_string_member(object, "type")
     );
 
     if(type == RM_LINT_TYPE_UNKNOWN) {
-        // TODO: translate:
         rm_log_warning_line(
-            "... not a valid type: `%s`",
+            _("lint type '%s' not recognised"),
             json_object_get_string_member(object, "type")
         );
         return NULL;
     }
 
+    /* Collect file information (for rm_file_new) */
     RmStat lstat_buf, stat_buf;
     RmStat *stat_info = &lstat_buf;
-
     if(rm_sys_lstat(path, &lstat_buf) == -1) {
         return NULL;
     }
 
-    bool is_symlink = (lstat_buf.st_mode & S_IFLNK);
-
+    /* use stat() after lstat() to find out if it's an symlink.
+     * If it's a bad link, this will fail with stat_info still pointing to lstat.
+     * */
     if(rm_sys_stat(path, &stat_buf) != -1) {
         stat_info = &stat_buf;
     }
 
-    if(json_object_get_int_member(object, "mtime") < stat_info->st_mtim.tv_sec) {
-        rm_log_warning_line("modification time of `%s` changed. Ignoring.", path);
+    /* Check if we're late and issue an warning */
+    JsonNode *mtime_node = json_object_get_member(object, "mtime");
+    if(mtime_node && json_node_get_int(mtime_node) < stat_info->st_mtim.tv_sec) {
+        // TODO: translate:
+        rm_log_warning_line(
+            _("modification time of `%s` changed. Ignoring."), path
+        );
         return NULL;
     }
 
-    RmFile *file = rm_file_new(
-        self->session, path, path_len, stat_info, type, 0, 0, 0
-    );
-
+    /* Fill up the RmFile */
+    file = rm_file_new(polly->session, path, path_len, stat_info, type, 0, 0, 0);
     file->is_original = json_object_get_boolean_member(object, "is_original");
-    file->is_symlink = is_symlink;
-    file->depth = json_object_get_int_member(object, "depth");
+    file->is_symlink = (lstat_buf.st_mode & S_IFLNK);
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, 0);
+    file->free_digest = true;
 
+    if(file->is_original) {
+        polly->last_original = file;
+    }
+
+    JsonNode *depth_node = json_object_get_member(object, "depth");
+    if(depth_node != NULL) {
+        file->depth = json_node_get_int(depth_node);
+    }
+
+    /* Fake the checksum using RM_DIGEST_EXT */
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
     if(cksum_node != NULL) {
         const char *cksum = json_object_get_string_member(object, "checksum");
@@ -153,10 +184,11 @@ RmFile *rm_parrot_next(RmParrot *self) {
         }
     }
 
+    /* Fix the hardlink relationship */
     JsonNode *hardlink_of = json_object_get_member(object, "hardlink_of");
     if(hardlink_of != NULL) {
         file->hardlinks.is_head = false;
-        // TODO: link to last original.
+        file->hardlinks.hardlink_head = polly->last_original;
     } else {
         file->hardlinks.is_head = true;
     }
@@ -164,8 +196,27 @@ RmFile *rm_parrot_next(RmParrot *self) {
     return file;
 }
 
+static RmFile *rm_parrot_next(RmParrot *polly) {
+    RmFile *file = NULL;
+
+    /* Skip NULL entries */
+    while(rm_parrot_has_next(polly)) {
+        if((file = rm_parrot_try_next(polly))) {
+            return file;
+        }
+    }
+
+    return NULL;
+}
+
+//////////////////////////////////
+//   OPTION FILTERING CHECKS    //
+//////////////////////////////////
+
+#define FAIL_MSG(msg) rm_log_debug(RED "[" msg "]\n" RESET)
+
 static bool rm_parrot_check_depth(RmCfg *cfg, RmFile *file) {
-    return file->depth == 0 || file->depth <= cfg->depth;
+    return (file->depth == 0 || file->depth <= cfg->depth);
 }
 
 static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
@@ -178,35 +229,44 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
         (cfg->maxsize == (RmOff)-1 || file->file_size <= cfg->maxsize));
 }
 
-static bool rm_parrot_check_hidden(RmCfg *cfg, RmFile *file) {
-    RM_DEFINE_PATH(file);
+static bool rm_parrot_check_hidden(RmCfg *cfg, _U RmFile *file, const char *file_path) {
     if(!cfg->ignore_hidden) {
         return true;
     }
 
-    return !rm_util_path_is_hidden(file_path);
+    if(rm_util_path_is_hidden(file_path)) {
+        FAIL_MSG("nope: hidden");
+        return false;
+    }
+
+    return true;
 }
 
-static bool rm_parrot_check_permissions(RmCfg *cfg, RmFile *file) {
+static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file, const char *file_path) {
     if(!cfg->permissions) {
         return true;
     }
 
-    RM_DEFINE_PATH(file);
-    if(access(file_path, cfg->permissions) == -1) {
-        rm_log_debug("[permissions]\n");
+    if(g_access(file_path, cfg->permissions) == -1) {
+        FAIL_MSG("nope: permissions");
         return false;
     }
 
     return true;
 }
  
-static bool rm_parrot_check_path(RmParrot *polly, RmFile *file) {
+static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file_path) {
     RmCfg *cfg = polly->session->cfg;
-    RM_DEFINE_PATH(file);
 
     size_t highest_match = 0;
 
+    /* Find the highest matching path given on the commandline.
+     * If found, the path_index and is_prefd information is taken from it.
+     * If not found, the file will be discarded.
+     *
+     * If this turns out to be an performance problem, we could turn cfg->paths
+     * into a RmTrie and use it to find the longest prefix easily.
+     */
     for(int i = 0; cfg->paths[i]; ++i) {
         char *path = cfg->paths[i];
         size_t path_len = strlen(path);
@@ -217,17 +277,15 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file) {
 
                 file->is_prefd = cfg->is_prefd[i];
                 file->path_index = i;
-
-                /* We can't just break here, a more fitting path may come. */
             }
         }
     }
 
     if(highest_match == 0) {
-        rm_log_debug("[wrong prefix]\n");
+        FAIL_MSG("nope: no prefix");
     }
 
-    return highest_match > 0;
+    return (highest_match > 0);
 }
 
 static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
@@ -252,20 +310,24 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
             return cfg->write_unfinished;
         case RM_LINT_TYPE_UNKNOWN:
         default:
-            rm_log_debug("[type %d not allowed]\n", file->lint_type);
+            FAIL_MSG("nope: invalid lint type.");
             return false;
     }
 }
 
-static void rm_parrot_fix_match_opts(RmParrot *self, GQueue *group) {
-    RmCfg *cfg = self->session->cfg;
+/////////////////////////////////////////////
+//   GROUPWISE FIXES (SORT, FILTER, ...)   //
+/////////////////////////////////////////////
+
+static void rm_parrot_fix_match_opts(RmParrot *polly, GQueue *group) {
+    RmCfg *cfg = polly->session->cfg;
     if(!(cfg->match_with_extension 
     || cfg->match_without_extension 
     || cfg->match_basename)) {
         return;
     }
 
-    /* That's probably a sucky way to do it due to n^2,
+    /* That's probably a sucky way to do it, due to n^2,
      * but I doubt that will make a large performance difference.
      */
 
@@ -282,34 +344,35 @@ static void rm_parrot_fix_match_opts(RmParrot *self, GQueue *group) {
 
             if(rm_file_equal(file_a, file_b)) {
                 delete = false;
+                break;
             }
         }
 
+        /* Remove this file */
         if(delete) {
-            GList *old = iter;
+            GList *tmp = iter;
             iter = iter->next;
-            g_queue_delete_link(group, old);
+            rm_file_destroy(file_a);
+            g_queue_delete_link(group, tmp);
         } else {
             iter = iter->next;
         }
     }
 }
 
-static void rm_parrot_fix_must_match_tagged(RmParrot *self, GQueue *group) {
-    RmCfg *cfg = self->session->cfg;
+static void rm_parrot_fix_must_match_tagged(RmParrot *polly, GQueue *group) {
+    RmCfg *cfg = polly->session->cfg;
     if(!(cfg->must_match_tagged || cfg->must_match_untagged)) {
         return;
     }
 
-    bool has_prefd = false;
-    bool has_non_prefd = false;
+    bool has_prefd = false, has_non_prefd = false;
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
         has_prefd |= file->is_prefd;
         has_non_prefd |= !file->is_prefd;
-
         if(has_prefd && has_non_prefd) {
             break;
         }
@@ -317,13 +380,28 @@ static void rm_parrot_fix_must_match_tagged(RmParrot *self, GQueue *group) {
 
     if((!has_prefd && cfg->must_match_tagged) 
     || (!has_non_prefd && cfg->must_match_untagged)) {
-        // TODO: free.
+        g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
         g_queue_clear(group);
     }
 }
 
-static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
-    RmCfg *cfg = self->session->cfg;
+static void rm_parrot_update_stats(RmParrot *polly, RmFile *file) {
+    RmSession *session = polly->session;
+
+    session->total_files += 1;
+    if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+        session->dup_group_counter += file->is_original;
+        if(!file->is_original) {
+            session->dup_counter += 1;
+            session->total_lint_size += file->file_size;
+        }
+    } else {
+        session->other_lint_cnt += 1;
+    }
+}
+
+static void rm_parrot_write_group(RmParrot *polly, GQueue *group) {
+    RmCfg *cfg = polly->session->cfg;
 
     if(cfg->filter_mtime) {
         gsize older = 0;
@@ -333,16 +411,17 @@ static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
         }
 
         if(older == group->length) {
-            // TODO: free.
+            g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
+            g_queue_clear(group);
             return;
         }
     }
 
-    rm_parrot_fix_match_opts(self, group);
-    rm_parrot_fix_must_match_tagged(self, group);
+    rm_parrot_fix_match_opts(polly, group);
+    rm_parrot_fix_must_match_tagged(polly, group);
 
     g_queue_sort(
-        group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, self->session
+        group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, polly->session
     );
 
     for(GList *iter = group->head; iter; iter = iter->next) {
@@ -354,38 +433,41 @@ static void rm_parrot_write_group(RmParrot *self, GQueue *group) {
             file->is_original = true;
         } else {
             file->is_original = false;
-
-            
         }
 
-        rm_fmt_write(file, self->session->formats);
+        rm_parrot_update_stats(polly, file);
+        rm_fmt_write(file, polly->session->formats);
     }
 }
 
+/////////////////////////////////////////
+//  ENTRY POINT TO TRIGGER THE PARROT  //
+/////////////////////////////////////////
+
 bool rm_parrot_load(RmSession *session, const char *json_path) {
     GError *error = NULL;
+
+    rm_log_info_line(_("Loading json-results `%s'"), json_path);
     RmParrot *polly = rm_parrot_open(session, json_path, &error);
-    if(polly == NULL) {
-        if(error != NULL) {
-            rm_log_warning_line("Error was: %s", error->message);
-            g_error_free(error);
-        }
+
+    if(polly == NULL || error != NULL) {
+        rm_log_warning_line("Error: %s", error->message);
+        g_error_free(error);
         return false; 
     }
 
     RmCfg *cfg = session->cfg;
 
+    /* group of files; first group is "other lint" */
     GQueue group;
     g_queue_init(&group);
 
     while(rm_parrot_has_next(polly)) {
         RmFile *file = rm_parrot_next(polly);
         if(file == NULL) {
-            /* Something went wrong during parse. */
             continue;
         }
 
-        // TODO: We need path, just pass it over.
         RM_DEFINE_PATH(file);
         rm_log_debug("Checking `%s`: ", file_path);
 
@@ -393,10 +475,10 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
         if(!(
             rm_parrot_check_depth(cfg, file) &&
             rm_parrot_check_size(cfg, file) &&
-            rm_parrot_check_hidden(cfg, file) &&
-            rm_parrot_check_permissions(cfg, file) &&
+            rm_parrot_check_hidden(cfg, file, file_path) &&
+            rm_parrot_check_permissions(cfg, file, file_path) &&
             rm_parrot_check_types(cfg, file) && 
-            rm_parrot_check_path(polly, file)
+            rm_parrot_check_path(polly, file, file_path)
         )) {
             rm_file_destroy(file);
             continue;
@@ -404,24 +486,12 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
         rm_log_debug("[okay]\n");
 
-        // TODO: keep all / must match orig -- check
-
-        session->total_files += 1;
-
-        if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-            session->dup_group_counter += file->is_original;
-            if(!file->is_original) {
-                session->dup_counter += 1;
-                session->total_lint_size += file->file_size;
-            }
-        } else {
-            session->other_lint_cnt += 1;
-        }
-
         if(file->is_original) {
             if(group.length > 1) {
                 rm_log_debug("--- Writing group ---\n");
                 rm_parrot_write_group(polly, &group);
+            } else {
+                g_queue_foreach(&group, (GFunc)rm_file_destroy, NULL);
             }
             g_queue_clear(&group);
         }
@@ -431,6 +501,8 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
     if(group.length > 1) {
         rm_parrot_write_group(polly, &group);
+    } else {
+        g_queue_foreach(&group, (GFunc)rm_file_destroy, NULL);
     }
 
     rm_parrot_close(polly);

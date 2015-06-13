@@ -219,12 +219,17 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     fprintf(out, "]\n");
 }
 
+
+static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
+    memset(checksum_str, '0', size);
+    checksum_str[size - 1] = 0;
+    rm_digest_hexstring(file->digest, checksum_str);
+}
+
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,
                         RmFile *file) {
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
-    memset(checksum_str, '0', sizeof(checksum_str));
-    checksum_str[sizeof(checksum_str) - 1] = 0;
-    rm_digest_hexstring(file->digest, checksum_str);
+    rm_fmt_json_cksum(file, checksum_str, sizeof(checksum_str));
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
@@ -271,8 +276,16 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
                 RmFile *hardlink_head = file->hardlinks.hardlink_head;
 
                 if(hardlink_head && hardlink_head != file) {
-                    rm_fmt_json_key_int(out, "hardlink_of",
-                                        GPOINTER_TO_UINT(hardlink_head));
+                    char orig_checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
+                    rm_fmt_json_cksum(hardlink_head, orig_checksum_str, sizeof(orig_checksum_str));
+
+                    RM_DEFINE_PATH(hardlink_head);
+
+                    guint32 orig_id = rm_fmt_json_generate_id(
+                        hardlink_head, hardlink_head_path, orig_checksum_str
+                    );
+
+                    rm_fmt_json_key_int(out, "hardlink_of", orig_id);
                     rm_fmt_json_sep(self, out);
                 }
             }
