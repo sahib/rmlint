@@ -43,10 +43,10 @@
 /* Enable extra debug messages? */
 #define _RM_SHRED_DEBUG 0
 
-/* This is the scheduler of rmlint.
+/* This is the scheduler of rmlint for file duplicate matching.
  *
  * Files are compared in progressive "generations" to identify matching
- * clusters:
+ * clusters termed "ShredGroup"s:
  * Generation 0: Same size files
  * Generation 1: Same size and same hash of first  ~16kB
  * Generation 2: Same size and same hash of first  ~50MB
@@ -55,11 +55,6 @@
  * ... and so on until the end of the file is reached.
  *
  * The default step size can be configured below.
- *
- * The step size algorithm has some adaptive logic and may shorten
- * or increase the step size if (a) a few extra MB will get to the end
- * of the file, or (b) there is a fragmented file which has a file
- * fragment ending within a few MB of the default read increment.
  *
  *
  * The clusters and generations look something like this:
@@ -88,34 +83,42 @@
  *
  *
  * The basic workflow is:
- * 1. Pick a file from the device_queue
- * 2. Hash the next increment
- * 3. Check back with the file's parent to see if there is a child RmShredGroup with
- *    matching hash; if not then create a new one.
- * 4. Add the file into the child RmShredGroup and unlink it from its parent(see note
- *    below on Unlinking from Parent)
- * 5. Check if the child RmShredGroup meets criteria for hashing; if no then loop
- *    back to (1) for another file to hash
- * 6. If file meets criteria and is not finished hash then loop back to 2 and
- *    hash its next increment
- * 7. If file meets criteria and is fully hashed then flag it as ready for post-
- *    processing (possibly via paranoid check).  Note that post-processing can't
- *    start until the RmShredGroup's parent is dead (because new siblings may still
- *    be coming).
+ * 1. One worker thread is established for each physical device
+ * 2. The device thread picks a file from its queue, reads the next increment of that
+ *    file, and sends it to a hashing thread.
+ * 3. Depending on some logic ("worth_waiting"), the device thread may wait for the
+ *    file increment to finish hashing, or may move straight on to the next file in
+ *    the queue.  The "worth_waiting" logic aims to reduce disk seeks on rotational
+ *    devices.
+ * 4. The hashed fragment result is "sifted" into a child RmShredGroup of its parent
+ *    group, and unlinked it from its parent.
+ * 5. (a) If the child RmShredGroup needs hashing (ie >= 2 files and not completely hashed
+ *    yet) then the file is pushed back to the device queue for further hashing;
+ *    (b) If the file is not completely hashed but is the only file in the group (or
+ *    otherwise fails criteria such as --must-match-tagged) then it is retained by the
+ *    child RmShredGroup until a suitable sibling arrives, whereupon it is released to
+ *    the device queue.
+ *    (c) If the file has finished hashing, it is retained by the child RmShredGroup
+ *    until its parent and all ancestors have finished processing, whereupon the file
+ *    is sent to the "result factory" (if >= 2 files in the group) or discarded.
  *
- * In the above example, the hashing order will end up being something like:
- * F1.1 F2.1 (F3.1,F3.2), (F4.1,F4.2), (F5.1,F5.2)...
- *                ^            ^            ^
- *  (^ indicates where hashing could continue on to a second increment because there
- * 	   was already a matching file after the first increment)
+ * In the above example, the hashing order will depend on the "worth_waiting" logic.
+ *    On a rotational device the hashing order should end up being something like:
+ *         F1.1 F2.1 (F3.1,F3.2), (F4.1,F4.2), (F5.1,F5.2,F5.3)...
+ *                        ^            ^            ^    ^
+ *        (^ indicates where hashing could continue on to a second increment (avoiding a
+ *           disk seek) because there was already a matching file after the first increment)
+ *
+ *    On a non-rotational device where there is no seek penalty, the hashing order is:
+ *         F1.1 F2.1 F3.1 F4.1 F5.1...
+ *
  *
  * The threading looks somewhat like this for two devices:
  *
  *                          +----------+
- *                          | Finisher |
- *                          |  Thread  |
- *                          |  incl    |
- *                          | paranoid |
+ *                          |  Result  |
+ *                          |  Factory |
+ *                          |  Pipe    |
  *                          +----------+
  *                                ^
  *                                |
@@ -124,93 +127,124 @@
  *                        | fully-hashed |
  *                        | dupe groups  |
  *    Device #1           +--------------+      Device #2
- *                               ^
- * +-------------------+         |           +------------------+
- * | +-------------+   |    +-----------+    | +-------------+  |
- * | | Devlist Mgr |<-------+--Push to--+----->| Devlist Mgr |  |
- * | +-------------+   |    |  device   |    | +-------------+  |
- * | pop from          |    |  queues   |    |        pop from  |
- * |  queue            |    |           |    |         queue    |
- * |     |             |    |ShredGroups|    |            |     |
- * |     |<--Continue  |    | (Matched  |    | Continue-->|     |
- * |     |      ^      |    |  partial  |    |    ^       |     |
- * |     v      |      |    |  hashes)  |    |    |       v     |
- * |   Read     Y      |    |           |    |    Y      Read   |
- * |     |      |      |    |    make   |    |    |       |     |
- * |     |   Partial------N----> new <---------Partial    |     |
- * |     |    Match?   |    |   group   |    | Match?     |     |
- * |     |      ^      |    |     ^     |    |    ^       |     |
- * +-----|------|------+    +-----|-----+    +----|-------|-----+
- *       v      |                 |               |       v
- *    +----------+      +------------------+     +----------+
- *    | Hasher   |      |Initial file list |     | Hasher   |
- *    |(1 thread)|      |                  |     |(1 thread)|
- *    +----------+      +------------------+     +----------+
+ *                                ^
+ * +-------------------+          |          +-------------------+
+ * | RmShredDevice     |          |          | RmShredDevice     |
+ * | Worker            |          |          | Worker            |
+ * | +-------------+   |          |          | +-------------+   |
+ * | | File Queue  |<--+----+     |     +----+>| File Queue  |   |
+ * | +-------------+   |    |     |     |    | +-------------+   |
+ * | pop from          |    |     |     |    |        pop from   |
+ * |  queue            |    |     |     |    |         queue     |
+ * |     |             |    |     |     |    |            |      |
+ * |     |<--Continue  |    |     |     |    | Continue-->|      |
+ * |     |     ^       |    |     |     |    |      ^     |      |
+ * |     v     |       |    |     |     |    |      |     v      |
+ * |   Read    |       |    |     |     |    |      |    Read    |
+ * |     |     |       |    |     |     |    |      |     |      |
+ * |     |     |       |    |     |     |    |      |     |      |
+ * |     |     |       |  Device  |  Device  |      |     |      |
+ * |    [1]    |       |   Not    |    Not   |      |    [1]     |
+ * +-----|-----+-------+ Waiting  |  Waiting +------|-----|------+
+ *       |     |            |     |     |           |     |
+ *       |     |            |     |     |           |     |
+ *       |  Device  +-------+-----+-----+------+  Device  |
+ *       | Waiting  |         Sifting          | Waiting  |
+ *       |     |    |  (Identifies which       |    |     |
+ *       |     -----+  partially-hashed files  +----+     |
+ *       |          |  qualify for further     |          |
+ *       |     +--->|  hashing)                |<--+      |
+ *       |     |    |                          |   |      |
+ *       |     |    +--------------------------+   |      |
+ *       |     |         ^            |            |      |
+ *       |     |         |            v            |      |
+ *       |     |  +----------+   +----------+      |      |
+ *       |     |  |Initial   |   | Rejects  |      |      |
+ *       |     |  |File List |   |          |      |      |
+ *       |     |  +----------+   +----------+      |      |
+ *       |     |                                   |      |
+ *  +----+-----+-----------------------------------+------+----+
+ *  |    v     |        Hashing Pool               |      v    |
+ *  |  +----------+                              +----------+  |
+ *  |  |Hash Pipe |                              |Hash Pipe |  |
+ *  |  +----------+                              +----------+  |
+ *  +----------------------------------------------------------+
+ *
+ *  Note [1] - at this point the read results are sent to the hashpipe
+ *             and the Device must decide if it is worth waiting for
+ *             the hashing/sifting result; if not then the device thread
+ *             will immediately pop the next file from its queue.
+ *
+ *
  *
  * Every subbox left and right are the task that are performed.
  *
- * The Devlist Managers, Hashers and Finisher run as separate threads
- * managed by GThreadPool.
+ * The Device Workers, Hash Pipes and Finisher Pipe run as separate threads
+ * managed by GThreadPool.  Note that while they are implemented as
+ * GThreadPools, the hashers and finisher are limited to 1 thread eash
+ * hence the term "pipe" is more appropriate than "pool".  This is
+ * particularly important for hashing because hash functions are generally
+ * order-dependent, ie hash(ab) != hash(ba); the only way to ensure hashing
+ * tasks are complete in correct sequence is to use a single pipe.
  *
- * The Devlist Managers work sequentially through the queue of hashing
- * jobs, sorted in order of disk offset in order to reduce seek times.
- * On init every device gets it's own thread. This thread spawns it own
- * hasher thread from another GTHreadPool.
+ * The Device Workers work sequentially through the queue of hashing
+ * jobs; if the device is rotational then the files are sorted in order of
+ * disk offset in order to reduce seek times.
  *
- * The Devlist Manager calls the reader function to read one file at a
- * time using readv(). The buffers for it come from a central buffer pool
- * that allocates some and just reuses them over and over. The buffers
- * which contain the read data are pushed to the hasher thread, where
- * the data-block is hashed into file->digest.  The buffer is released
- * back to the pool after use.
+ * The Devlist Manager calls the hasher library (see hasher.c) to read one
+ * file at a time.  The hasher library takes care of read buffers, hash
+ * pipe allocation, etc.  Once the hasher is done, the result is sent back
+ * via callback to rm_shred_hash_callback.
  *
- * Once the hasher is done, the file is sent back to the Devlist Manager
- * via a GAsyncQueue.  The Devlist Manager does a quick check to see if
- * it can continue with the same file; if not then the file is released
- * back to the RmShredGroups and a new file taken from the device queue.
- *
+ * If "worth_waiting" has been flagged then the callback sends the file
+ * back to the Device Worker thread via a GAsyncQueue, whereupon the Device
+ * Manager does a quick check to see if it can continue with the same file;
+ * if not then a new file is taken from the device queue.
  *
  * The RmShredGroups don't have a thread managing them, instead the individual
- * Devlist Managers write to the RmShredGroups under mutex protection.
+ * Device Workers and/or hash pipe callbacks write to the RmShredGroups
+ * under mutex protection.
  *
  *
- * The initial ("foreground") thread waits for the Devlist Managers to
+ * The main ("foreground") thread waits for the Devlist Managers to
  * finish their sequential walk through the files.  If there are still
  * files to process on the device, the initial thread sends them back to
- * the GThreadPool for another pass through the files (starting from the
- * lowest disk offset again).
+ * the GThreadPool for another pass through the files.
  *
- * Note re Unlinking a file from parent (this is the most thread-risky
- * part of the operation so sequencing needs to be clear):
- * * Decrease parent's child_file counter; if that is zero then check if
- * the parent's parent is dead; if yes then kill the parent.
- * * When killing the parent, tell all its children RMGroups that they
- * are now orphans (which may mean it is now time for some of them to
- * die too).
- * Note that we need to be careful here to avoid threadlock, eg:
- *    Child file 1 on device 1 has finished an increment.  It takes a look on its new
- *    RmGroup so that it can add itself.  It then locks its parent RmShredGroup so that
- *    it can do the unlinking.  If it turns out it is time for the parent to die, we
- *    we need to lock each of its children so that we can make them orphans:
- *        Q: What if another one of its other children was also trying to unlink?
- *        A: No problem, can't happen (since parent can't be ready to die if it has
- *           any active children left)
- *        Q: What about the mutex loop from this child which is doing the unlinking?
- *        A: No problem, either unlock the child's mutex before calling parent unlink,
- *           or handle the calling child differently from the other children
  *
- * TODO: Oscar update of the above
- * snippet:
- * an interesting aspect is the difference between conventional hashing and paranoid
- * "hashing" - in the former the hashing is cpu-intensive but the subsequent matching
- * is very fast; with the latter the "hashing" requires virtually no CPU but the
- * comparison at the end of hashing (particularly with large blocks eg 64MB) is slow.
- * that shouldn't be a problem as long as the reader thread still has other files
- * that it can go and read while the hasher/sorter does the memcmp... but once you're
- * out of RAM then that's not an option.
- * The "Oscar" strategy aims to short-cut the memcmp by pre-matching blocks against
- * a candidate twin file as they are read into memory
-*
+ *
+ * Additional notes regarding "paranoid" hashing:
+ *   The default file matching method uses the SHA1 cryptographic hash; there are
+ * several other hash functions available as well.  The data hashing is somewhat
+ * cpu-intensive but this is handled by separate threads (the hash pipes) so generally
+ * doesn't bottleneck rmlint (as long as CPU exceeds disk reading speed).  The subsequent
+ * hash matching is very fast because we only need to compare 20 bytes (in the case of
+ * SHA1) to find matching files.
+ *   The "paranoid" method uses byte-by-byte comparison.  In the implementation, this is
+ * masqueraded as a hash function, but there is no hashing involved.  Instead, the whole
+ * data increment is kept in memory.  This introduces 2 new challenges:
+ * (1) Memory management.  In order to avoid overflowing mem availability, we limit the
+ * number of concurrent active RmShredGroups and also limit the size of each file
+ * increment.
+ * (2) Matching time.  Unlike the conventional hashing strategy (CPU-intensive hashing
+ * followed by simple matching), the paranoid method requires almost no CPU during
+ * reading/hashing, but requires a large memcmp() at the end to find matching files/groups.
+ * That would not be a bottleneck as long as the reader thread still has other files
+ * that it can go and read while the hasher/sorter does the memcmp in parallel... but
+ * unfortunately the memory management issue means that's not always an option and so
+ * reading gets delayed while waiting for the memcmp() to catch up.
+ * Two strategies are used to speed this up:
+ * (a) Pre-matching of candidate digests.  During reading/hashing, as each buffer (4096 bytes)
+ * is read in, it can be checked against a "twin candidate".  We can send twin candidates to the
+ * hash pipe at any time via rm_digest_send_match_candidate().  If the correct twin candidate
+ * has been sent, then when the increment is finished the matching has already been done,
+ * and rm_digest_equal() is almost instantaneous.
+ * (b) Shadow hash.  A lightweight hash (Murmor) is calculated and used for hashtable lookup
+ * to quickly identify potential matches.  This saves time in the case of RmShredGroups
+ * with large number of child groups and where the pre-matching strategy failed.
+ * */
+
+/*
 * Below some performance controls are listed that may impact performance.
 * Controls are sorted by subjectve importanceness.
 */
@@ -738,7 +772,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
     /* update device counters */
     if(device) {
         RmSession *session = device->main->session;
-        rm_log_debug("Deducting counter\n");
         rm_shred_adjust_counters(device, -1,
                                  -(gint64)(file->file_size - file->hash_offset));
 
