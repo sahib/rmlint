@@ -300,8 +300,15 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
 
     if(separator == NULL) {
         /* default to stdout */
-        full_path = "stdout";
-        strncpy(format_name, pair, strlen(pair));
+        char *extension = strchr(pair, '.');
+        if(extension == NULL) {
+            full_path = "stdout";
+            strncpy(format_name, pair, strlen(pair));
+        } else {
+            extension += 1;
+            full_path = (char *)pair;
+            strncpy(format_name, extension, strlen(extension));
+        }
     } else {
         full_path = separator + 1;
         strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
