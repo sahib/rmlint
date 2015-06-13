@@ -61,6 +61,9 @@ typedef struct RmParrot {
      * (0 is header, 1 first element, len(root) is footer)
      * */
     guint index;
+
+    /* Set of diskids in cfg->paths */
+    GHashTable *disk_ids;
 } RmParrot;
 
 static void rm_parrot_close(RmParrot *polly) {
@@ -68,6 +71,7 @@ static void rm_parrot_close(RmParrot *polly) {
         g_object_unref(polly->parser);
     }
 
+    g_hash_table_unref(polly->disk_ids);
     g_free(polly);
 }
 
@@ -75,7 +79,17 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, GErro
     RmParrot *polly = g_malloc0(sizeof(RmParrot));
     polly->session = session;
     polly->parser = json_parser_new();
+    polly->disk_ids = g_hash_table_new(NULL, NULL);
     polly->index = 1;
+
+    for(int idx = 0; session->cfg->paths[idx]; ++idx) {
+        RmStat stat_buf;
+        const char *path = session->cfg->paths[idx];
+
+        if(rm_sys_stat(path, &stat_buf) != -1) {
+            g_hash_table_add(polly->disk_ids, GUINT_TO_POINTER(stat_buf.st_dev));
+        }   
+    }
 
     if(!json_parser_load_from_file(polly->parser, json_path, error)) {
         goto failure;
@@ -249,6 +263,19 @@ static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file, const char 
 
     if(g_access(file_path, cfg->permissions) == -1) {
         FAIL_MSG("nope: permissions");
+        return false;
+    }
+
+    return true;
+}
+ 
+static bool rm_parrot_check_crossdev(RmParrot *polly, _U RmFile *file) {
+    if(polly->session->cfg->crossdev) {
+        return true;
+    }
+
+    if(!g_hash_table_contains(polly->disk_ids, GUINT_TO_POINTER(file->dev))) {
+        FAIL_MSG("nope: on other device");
         return false;
     }
 
@@ -478,6 +505,7 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
             rm_parrot_check_hidden(cfg, file, file_path) &&
             rm_parrot_check_permissions(cfg, file, file_path) &&
             rm_parrot_check_types(cfg, file) && 
+            rm_parrot_check_crossdev(polly, file) && 
             rm_parrot_check_path(polly, file, file_path)
         )) {
             rm_file_destroy(file);
