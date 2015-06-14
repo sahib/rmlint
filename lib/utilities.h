@@ -64,6 +64,14 @@ static inline int rm_sys_lstat(const char *path, RmStat *buf) {
 #endif
 }
 
+static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {
+#if defined(__APPLE__) && defined(__MACH__)
+    return stat->st_mtimespec.tv_sec;
+#else
+    return stat->st_mtim.tv_sec;
+#endif
+}
+
 static inline int rm_sys_open(const char *path, int mode) {
 #if HAVE_STAT64
 # ifdef O_LARGEFILE

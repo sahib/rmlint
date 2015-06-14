@@ -64,7 +64,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
-    self->mtime = statp->st_mtim.tv_sec;
+    self->mtime = rm_sys_stat_mtime_seconds(statp);
 
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
         if(cfg->use_absolute_end_offset) {
