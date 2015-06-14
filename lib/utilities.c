@@ -714,7 +714,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     return self;
 }
 
-#if HAVE_SYSCTL
+#if HAVE_SYSCTL && !RM_IS_APPLE
 
 static GHashTable *DISK_TABLE = NULL;
 
@@ -750,7 +750,7 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
                                  _U size_t disk_size, _U dev_t *result) {
 #if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
-#elif HAVE_SYSCTL
+#elif HAVE_SYSCTL && !RM_IS_APPLE
     if(DISK_TABLE == NULL) {
         rm_mounts_freebsd_list_disks();
     }
@@ -890,7 +890,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
             is_rotational ? "yes" : "no");
     }
 
-#if HAVE_SYSCTL
+#if HAVE_SYSCTL && !RM_IS_APPLE
     if(DISK_TABLE) {
         g_hash_table_unref(DISK_TABLE);
     }
