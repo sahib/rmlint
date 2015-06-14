@@ -1341,7 +1341,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
  * this is slightly different to rm_shred_cmp_orig_criteria in the case of
  * either -K or -M options
  */
-static int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
+int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     RmCfg *cfg = session->cfg;
 
     /* Make sure to *never* make a symlink to be the original */
@@ -1461,7 +1461,6 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
         for(GList *iter = group->held_files->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
             file->digest = group->digest;
-            file->free_digest = false;
 
             if(cfg->merge_directories) {
                 rm_tm_feed(tag->session->dir_merger, file);

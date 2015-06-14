@@ -8,7 +8,7 @@ def test_simple():
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
 
-    head, *data, footer = run_rmlint('-pp -D --sortcriteria A')
+    head, *data, footer = run_rmlint('-pp -D --rank-by A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
 
@@ -30,7 +30,7 @@ def test_diff():
     create_file('xxx', '2/a')
     create_file('xxx', '3/a')
     create_file('yyy', '3/b')
-    head, *data, footer = run_rmlint('-pp -D --sortcriteria A')
+    head, *data, footer = run_rmlint('-pp -D --rank-by A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert data[0]['size'] == 3
@@ -47,7 +47,7 @@ def test_same_but_not_dupe():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '2/b')
-    head, *data, footer = run_rmlint('-pp -D --sortcriteria A')
+    head, *data, footer = run_rmlint('-pp -D --rank-by A')
 
     # No duplicate dirs, but 3 duplicate files should be found.
     assert 0 == sum(find['type'] == 'duplicate_dir' for find in data)

@@ -35,6 +35,7 @@
 #include <search.h>
 #include <sys/time.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include "cmdline.h"
 #include "treemerge.h"
@@ -43,6 +44,7 @@
 #include "shredder.h"
 #include "utilities.h"
 #include "formats.h"
+#include "replay.h"
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
@@ -305,8 +307,15 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
 
     if(separator == NULL) {
         /* default to stdout */
-        full_path = "stdout";
-        strncpy(format_name, pair, strlen(pair));
+        char *extension = strchr(pair, '.');
+        if(extension == NULL) {
+            full_path = "stdout";
+            strncpy(format_name, pair, strlen(pair));
+        } else {
+            extension += 1;
+            full_path = (char *)pair;
+            strncpy(format_name, extension, strlen(extension));
+        }
     } else {
         full_path = separator + 1;
         strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
@@ -824,8 +833,14 @@ static gboolean rm_cmd_parse_progress(_U const char *option_name, _U const gchar
 static void rm_cmd_set_default_outputs(RmSession *session) {
     rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
-    rm_fmt_add(session->formats, "sh", "rmlint.sh");
-    rm_fmt_add(session->formats, "json", "rmlint.json");
+
+    if(session->replay_files.length) {
+        rm_fmt_add(session->formats, "sh", "rmlint.replay.sh");
+        rm_fmt_add(session->formats, "json", "rmlint.replay.json");
+    } else {
+        rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        rm_fmt_add(session->formats, "json", "rmlint.json");
+    }
 }
 
 static gboolean rm_cmd_parse_no_progress(_U const char *option_name,
@@ -965,7 +980,7 @@ static gboolean rm_cmd_check_lettervec(const char *option_name, const char *crit
     return true;
 }
 
-static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *criteria,
+static gboolean rm_cmd_parse_sortby(_U const char *option_name, const gchar *criteria,
                                          RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
     if(!rm_cmd_check_lettervec(option_name, criteria, "moanspMOANSP", error)) {
@@ -981,7 +996,7 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
     return true;
 }
 
-static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gchar *criteria,
+static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *criteria,
                                          RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
@@ -990,6 +1005,24 @@ static gboolean rm_cmd_parse_sortcriteria(_U const char *option_name, const gcha
     }
 
     strncpy(cfg->sort_criteria, criteria, sizeof(cfg->sort_criteria));
+    return true;
+}
+
+static gboolean rm_cmd_parse_replay(_U const char *option_name, const gchar *json_path,
+                                    RmSession *session, GError **error) {
+    if(json_path == NULL) {
+        json_path = "rmlint.json";
+    }
+
+    if(g_access(json_path, R_OK) == -1) {
+        g_set_error(
+            error, RM_ERROR_QUARK, 0, "--replay: `%s`: %s", json_path, g_strerror(errno)
+        );
+        return false;
+    }
+
+    g_queue_push_tail(&session->replay_files, g_strdup(json_path));
+    session->cfg->cache_file_structs = true;
     return true;
 }
 
@@ -1090,16 +1123,16 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* Free/Used Options:
        Free: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxX
-       Used                   jJ                            yY Z
+       Used                   jJ                               Z
     */
     // clang-format off
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
         {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
          _("Specify max traversal depth"), "N"},
-        {"sortcriteria", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(sortcriteria),
+        {"rank-by", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
          _("Original criteria"), "[mapMAP]"},
-        {"rankby", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
+        {"sort-by", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(sortby),
          _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),
          _("Specify lint types"), "T"},
@@ -1115,6 +1148,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Newer than stamp file"), "PATH"},
         {"newer-than", 'N', 0, G_OPTION_ARG_CALLBACK, FUNC(timestamp),
          _("Newer than timestamp"), "STAMP"},
+        {"replay", 'Y', OPTIONAL, G_OPTION_ARG_CALLBACK, FUNC(replay),
+         _("Re-output a json file"), "path/to/rmlint.json"},
         {"config", 'c', 0, G_OPTION_ARG_CALLBACK, FUNC(config),
          _("Configure a formatter"), "FMT:K[=V]"},
         {"cache", 'C', 0, G_OPTION_ARG_CALLBACK, FUNC(cache), _("Add json cache file"),
@@ -1361,10 +1396,28 @@ failure:
     return !(session->cmdline_parse_error);
 }
 
+static int rm_cmd_replay_main(RmSession *session) {
+    /* User chose to replay some json files. */
+    for(GList *iter = session->replay_files.head; iter; iter = iter->next) {
+        rm_parrot_load(session, iter->data);
+    }
+
+    rm_fmt_flush(session->formats);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
+
+    return EXIT_SUCCESS;
+}
+
 int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
+
+    if(session->replay_files.length) {
+        return rm_cmd_replay_main(session);
+    }
+
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
     session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
     if(session->mounts == NULL) {

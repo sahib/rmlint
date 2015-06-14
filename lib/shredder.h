@@ -56,4 +56,11 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group);
  */
 void rm_shred_group_find_original(RmSession *session, GQueue *group);
 
+/**
+ * @brief post-processing sorting of files by criteria (-S and -[kmKM])
+ *
+ * This is slightly different to rm_shred_cmp_orig_criteria in the case of
+ * either -K or -M options
+ */
+int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session);
 #endif
