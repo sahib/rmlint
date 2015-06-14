@@ -49,7 +49,7 @@ typedef struct stat RmStat;
 ////////////////////////////////////
 
 static inline int rm_sys_stat(const char *path, RmStat *buf) {
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
     return stat64(path, buf);
 #else
     return stat(path, buf);
@@ -57,7 +57,7 @@ static inline int rm_sys_stat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
     return lstat64(path, buf);
 #else
     return lstat(path, buf);

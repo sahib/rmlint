@@ -301,8 +301,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         digest->checksum[0].first = spooky_hash64(data, size, digest->checksum[0].first);
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_hash128(data, size, &digest->checksum[0].first,
-                       &digest->checksum[0].second);
+        spooky_hash128(data, size, (uint64_t *)&digest->checksum[0].first, (uint64_t *)&digest->checksum[0].second);
         break;
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_MURMUR256:
