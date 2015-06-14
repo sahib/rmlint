@@ -55,6 +55,12 @@ struct _RmHasher {
     gsize buf_size;
 };
 
+typedef _RmHasherTask{
+    RmHasher *hasher;
+    GThreadPool hash_pipe;
+    RmDigest *digest;
+}
+
 /* GThreadPool Worker for hashing */
 static void rm_hasher_hash(RmBuffer *buffer, _U RmHasher *hasher) {
 
@@ -347,8 +353,12 @@ void rm_hasher_free(RmHasher *hasher) {
     g_slice_free(RmHasher, hasher);
 }
 
-RmHasherTask *rm_hasher_start_increment(RmHasher *hasher, char *path, RmDigest *digest, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink) {
+RmHasherTask *rm_hasher_hash(RmHasher *hasher, char *path, RmDigest *digest, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink) {
     GThreadPool *hash_pool = rm_hasher_pool_get(hasher->hash_pool_pool);
+    
+    If (!digest) {
+        //TODO create new digest
+    }
 
     guint64 bytes_read = 0;
     if (is_symlink) {
@@ -368,16 +378,16 @@ RmHasherTask *rm_hasher_start_increment(RmHasher *hasher, char *path, RmDigest *
     }
 }
 
-void rm_hasher_finish_increment(RmHasher *hasher, RmHasherTask *increment, RmDigest *digest, RmDigestCallback callback, gpointer user_data) {
+RmDigest *rm_hasher_finish_hash(RmHasherTask *task, RmDigestCallback callback, gpointer user_data) {
     /* get a dummy buffer to use to signal the hasher thread that this increment is finished */
-    RmBuffer *finisher = rm_buffer_pool_get(hasher->mem_pool);
-    finisher->digest = digest;
+    RmBuffer *finisher = rm_buffer_pool_get(task->hasher->mem_pool);
+    finisher->digest = task->digest;
     finisher->len = 0;
     finisher->callback = callback;
     finisher->user_data = user_data;
-    rm_util_thread_pool_push(increment, finisher);
+    rm_util_thread_pool_push(task->hash_pipe, finisher);
 
     /* return hash_pool to hash_pool_pool */
-    g_async_queue_push(hasher->hash_pool_pool, increment);
-
+    g_async_queue_push(task->hasher->hash_pool_pool, task->);
+    return task->digest;
 }

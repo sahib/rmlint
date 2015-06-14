@@ -31,7 +31,7 @@
 
 typedef struct _RmHasher RmHasher;
 
-typedef GThreadPool RmHasherTask;
+typedef _RmHasherTask RmHasherTask;
 
 RmHasher *rm_hasher_new(
             RmDigestType digest_type,
@@ -44,8 +44,8 @@ RmHasher *rm_hasher_new(
 
 void rm_hasher_free(RmHasher *hasher);
 
-RmHasherTask *rm_hasher_start_increment(RmHasher *hasher, char *path, RmDigest *digest, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink);
+RmHasherTask *rm_hasher_hash(RmHasher *hasher, char *path, RmDigest *digest, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink);
 
-void rm_hasher_finish_increment(RmHasher *hasher, RmHasherTask *increment, RmDigest *digest, RmDigestCallback callback, gpointer file_user_data);
+RmDigest *rm_hasher_finish_hash(RmHasherTask *task, RmDigestCallback callback, gpointer file_user_data);
 
 #endif /* end of include guard */
