@@ -51,13 +51,13 @@ struct _RmHasher {
     guint64 cache_quota_bytes;
     gpointer user_data;
     RmBufferPool *mem_pool;
-    GAsyncQueue *hash_pool_pool;
+    GAsyncQueue *hashpipe_pool;
     gsize buf_size;
 };
 
 typedef _RmHasherTask{
     RmHasher *hasher;
-    GThreadPool hash_pipe;
+    GThreadPool hashpipe;
     RmDigest *digest;
 }
 
@@ -129,7 +129,7 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
 /* Reads data from file and sends to hasher threadpool
  * returns number of bytes successfully read */
 
-static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hash_pool, RmDigest *digest, char *path, gsize start_offset, gsize bytes_to_read) {
+static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe, RmDigest *digest, char *path, gsize start_offset, gsize bytes_to_read) {
     FILE *fd = NULL;
     gsize total_bytes_read = 0;
 
@@ -156,7 +156,7 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hash_pool, 
 
         buffer->len = bytes_read;
         buffer->digest = digest;
-        rm_util_thread_pool_push(hash_pool, buffer);
+        rm_util_thread_pool_push(hashpipe, buffer);
 
         total_bytes_read += bytes_read;
         buffer = rm_buffer_pool_get(hasher->mem_pool);
@@ -182,7 +182,7 @@ finish:
 /* Reads data from file and sends to hasher threadpool
  * returns number of bytes successfully read */
 
-static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hash_pool, RmDigest *digest, char *path, gint64 start_offset, gint64 bytes_to_read) {
+static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe, RmDigest *digest, char *path, gint64 start_offset, gint64 bytes_to_read) {
     gint32 bytes_read = 0;
     gint64 total_bytes_read = 0;
     guint64 file_offset = start_offset;
@@ -242,7 +242,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hash_pool
             buffer->digest = digest;
 
             /* Send it to the hasher */
-            rm_util_thread_pool_push(hash_pool, buffer);
+            rm_util_thread_pool_push(hashpipe, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */
             buffers[i] = rm_buffer_pool_get(hasher->mem_pool);
@@ -279,36 +279,36 @@ finish:
 //////////////////////////////////////
 
 
-static void rm_hasher_pool_free(GThreadPool *hash_pool) {
+static void rm_hasher_hashpipe_free(GThreadPool *hashpipe) {
     /* free the GThreadPool; wait for any in-progress jobs to finish */
-    g_thread_pool_free(hash_pool, FALSE, TRUE);
+    g_thread_pool_free(hashpipe, FALSE, TRUE);
 }
 
-static int rm_hasher_pool_sort(GThreadPool *a, GThreadPool *b) {
+static int rm_hasher_hashpipe_sort(GThreadPool *a, GThreadPool *b) {
     return g_thread_pool_unprocessed(a) - g_thread_pool_unprocessed(b);
 }
 
-/* returns the least busy hash_pool in hash_pool_pool
+/* finds and pops the least busy hashpipe in hashpipe_pool
  * */
-static GThreadPool *rm_hasher_pool_get(GAsyncQueue *hash_pool_pool) {
-    GThreadPool *hash_pool = NULL;
-    g_async_queue_lock(hash_pool_pool);
+static GThreadPool *rm_hasher_hashpipe_get(GAsyncQueue *hashpipe_pool) {
+    GThreadPool *hashpipe = NULL;
+    g_async_queue_lock(hashpipe_pool);
     {
-        g_async_queue_sort_unlocked (hash_pool_pool, (GCompareDataFunc)rm_hasher_pool_sort, NULL);
+        g_async_queue_sort_unlocked (hashpipe_pool, (GCompareDataFunc)rm_hasher_hashpipe_sort, NULL);
 
-        /* for optimisation purposes only: print info message if we are ever blocked waiting for a hash_pool */
-        hash_pool = g_async_queue_try_pop_unlocked(hash_pool_pool);
-        if (!hash_pool) {
-            rm_log_info(YELLOW"Blocked waiting for hash_pool..."RESET);
-            hash_pool=g_async_queue_pop_unlocked(hash_pool_pool);
+        /* for optimisation purposes only: print info message if we are ever blocked waiting for a hashpipe */
+        hashpipe = g_async_queue_try_pop_unlocked(hashpipe_pool);
+        if (!hashpipe) {
+            rm_log_info(YELLOW"Blocked waiting for hashpipe..."RESET);
+            hashpipe=g_async_queue_pop_unlocked(hashpipe_pool);
             rm_log_info(GREEN"got\n"RESET);
         }
-        if (g_thread_pool_unprocessed(hash_pool)>0) {
-            rm_log_debug(RED"Got hash pool with %d unprocessed\n"RESET, g_thread_pool_unprocessed(hash_pool));
+        if (g_thread_pool_unprocessed(hashpipe)>0) {
+            rm_log_debug(RED"Got hash pool with %d unprocessed\n"RESET, g_thread_pool_unprocessed(hashpipe));
         }
     }
-    g_async_queue_unlock(hash_pool_pool);
-    return hash_pool;
+    g_async_queue_unlock(hashpipe_pool);
+    return hashpipe;
 }
 
 
@@ -337,18 +337,18 @@ RmHasher *rm_hasher_new(
 
     /* Create a pool of hashing thread "pools" - each "pool" can only have
      * one thread because hashing must be done in order */
-    self->hash_pool_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_pool_free);
+    self->hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);
     g_assert(num_threads > 0);
     for(uint i = 0; i < num_threads; i++) {
         g_async_queue_push(
-            self->hash_pool_pool,
+            self->hashpipe_pool,
             rm_util_thread_pool_new((GFunc)rm_hasher_hash, self, 1));
     }
     return self;
 }
 
 void rm_hasher_free(RmHasher *hasher) {
-    g_async_queue_unref(hasher->hash_pool_pool);
+    g_async_queue_unref(hasher->hashpipe_pool);
     rm_buffer_pool_destroy(hasher->mem_pool);
     g_slice_free(RmHasher, hasher);
 }
@@ -364,16 +364,16 @@ RmHasherTask *rm_hasher_hash(RmHasher *hasher, char *path, RmDigest *digest, gui
     if (is_symlink) {
         bytes_read = rm_hasher_symlink_read(hasher, digest, path);
     } else if (hasher->use_buffered_read) {
-        bytes_read = rm_hasher_buffered_read(hasher, hash_pool, digest, path, start_offset, bytes_to_read);
+        bytes_read = rm_hasher_buffered_read(hasher, hashpipe, digest, path, start_offset, bytes_to_read);
     } else {
-        bytes_read = rm_hasher_unbuffered_read(hasher, hash_pool, digest, path, start_offset, bytes_to_read);
+        bytes_read = rm_hasher_unbuffered_read(hasher, hashpipe, digest, path, start_offset, bytes_to_read);
     }
 
     if (bytes_read == bytes_to_read) {
-        return hash_pool;
+        return hashpipe;
     } else {
-        /* read failed, so close the hash_pool and return it to the hash_pool_pool */
-        rm_hasher_finish_increment(hasher, hash_pool, digest, NULL, NULL);
+        /* read failed, so close the hashpipe and return it to the hashpipe_pool */
+        rm_hasher_finish_task(hasher, hashpipe, digest, NULL, NULL);
         return NULL;
     }
 }
