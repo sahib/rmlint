@@ -966,7 +966,7 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
                                          RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
-    if(!rm_cmd_check_lettervec(option_name, criteria, "mapMAP", error)) {
+    if(!rm_cmd_check_lettervec(option_name, criteria, "dlampDLAMP", error)) {
         return false;
     }
 
@@ -1096,7 +1096,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
          _("Specify max traversal depth"), "N"},
         {"rank-by", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
-         _("Original criteria"), "[mapMAP]"},
+         _("Original criteria"), "[dlampDLAMP]"},
         {"sort-by", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(sortby),
          _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),

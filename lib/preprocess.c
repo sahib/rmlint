@@ -231,7 +231,8 @@ void rm_file_tables_destroy(RmFileTables *tables) {
  */
 int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,
                                  const char *basename_a, const char *basename_b,
-                                 int path_index_a, int path_index_b) {
+                                 int path_index_a, int path_index_b,
+                                 guint8 path_depth_a, guint8 path_depth_b) {
     RmCfg *sets = session->cfg;
 
     int sort_criteria_len = strlen(sets->sort_criteria);
@@ -243,6 +244,12 @@ int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtim
             break;
         case 'a':
             cmp = g_ascii_strcasecmp(basename_a, basename_b);
+            break;
+        case 'l':
+            cmp = strlen(basename_a) - strlen(basename_b);
+            break;
+        case 'd':
+            cmp = (short)path_depth_a - (short)path_depth_b;
             break;
         case 'p':
             cmp = (long)path_index_a - (long)path_index_b;
@@ -275,7 +282,8 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         RM_DEFINE_BASENAME(a);
         RM_DEFINE_BASENAME(b);
         return rm_pp_cmp_orig_criteria_impl(session, a->mtime, b->mtime, a_basename,
-                                            b_basename, a->path_index, b->path_index);
+                                            b_basename, a->path_index, b->path_index, 
+                                            a->path_depth, b->path_depth);
     }
 }
 

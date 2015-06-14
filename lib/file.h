@@ -104,6 +104,10 @@ typedef struct RmFile {
      */
     short depth;
 
+    /* Depth of the path of this file.
+     */
+    guint8 path_depth;
+
     /* The inode and device of this file.
      * Used to filter double paths and hardlinks.
      */

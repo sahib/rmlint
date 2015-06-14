@@ -482,11 +482,13 @@ backup files, ie **a.txt.bak** comes after **a.txt**.
 
 Here's a table of letters you can supply to the ``-S`` option:
 
-===== =========================== ===== ===========================
-**m** keep lowest mtime (oldest)  **M** keep highest mtime (newest)
-**a** keep first alphabetically   **A** keep last alphabetically
-**p** keep first named path       **P** keep last named path
-===== =========================== ===== ===========================
+===== ================================ ===== =================================
+**m** keep lowest mtime (oldest)       **M** keep highest mtime (newest)
+**a** keep first alphabetically        **A** keep last alphabetically
+**p** keep first named path            **P** keep last named path
+**d** keep path with lowest depth      **D** keep path with highest depth
+**l** keep path with shortest basename **L** keep path with longest basename
+===== ================================ ===== =================================
 
 The default setting is ``-S pm``.
 Multiple sort criteria can be specified, eg ``-S mpa`` will sort first by

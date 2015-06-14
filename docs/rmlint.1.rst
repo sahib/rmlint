@@ -320,13 +320,17 @@ Original Detection Options
 
 :``-S --rank-by=criteria`` (**default\:** *pm*):
 
-    - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)
-    - **a**: keep first alphabetically   **A**: keep last alphabetically
-    - **p**: keep first named path       **P**: keep last named path
+    - **m**: keep lowest mtime (oldest)       **M**: keep highest mtime (newest)
+    - **a**: keep first alphabetically        **A**: keep last alphabetically
+    - **p**: keep first named path            **P**: keep last named path
+    - **d**: keep path with lowest depth      **D**: keep path with highest depth
+    - **l**: keep path with shortest basename **L**: keep path with longest basename
 
     Alphabetical sort will only use the basename of the file and ignore it's case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+    
+    Tip: **l** is useful for files like `file.1.mp3 vs file.mp3`.
 
     The abbreviation is unfortunate, ``-S`` should stand for ``--sort-by`` and
     ``--sort-by``'s ``-y`` should be used here.

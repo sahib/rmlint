@@ -175,6 +175,15 @@ char *rm_util_basename(const char *filename);
  */
 bool rm_util_path_is_hidden(const char *path);
 
+/**
+ * @brief Get the depth of a path
+ *
+ * @param path 
+ *
+ * @return depth of path or 0.
+ */
+int rm_util_path_depth(const char *path);
+
 typedef gpointer (*RmNewFunc)(void);
 
 /**

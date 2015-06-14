@@ -136,6 +136,20 @@ bool rm_util_path_is_hidden(const char *path) {
     return false;
 }
 
+int rm_util_path_depth(const char *path) {
+    int depth = 0;
+
+    while(path) {
+        /* Skip trailing slashes */
+        if(*path == G_DIR_SEPARATOR && path[1] != 0) {
+            depth++;
+        }
+        path = strchr(&path[1], G_DIR_SEPARATOR);
+    }
+
+    return depth;
+}
+
 GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key,
                                  RmNewFunc default_func) {
     gpointer value = g_hash_table_lookup(table, key);
