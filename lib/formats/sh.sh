@@ -44,7 +44,7 @@ handle_unstripped_binary() {
 handle_bad_user_id() {
     echo 'chown' "$USER" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chmod "$USER" "$1"
+        chown "$USER" "$1"
     fi
 }
 
@@ -56,9 +56,9 @@ handle_bad_group_id() {
 }
 
 handle_bad_user_and_group_id() {
-    echo 'chmod' "$USER:$GROUP" "$1"
+    echo 'chown' "$USER:$GROUP" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chmod "$USER:$GROUP" "$1"
+        chown "$USER:$GROUP" "$1"
     fi
 }
 
