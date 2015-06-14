@@ -38,7 +38,7 @@
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
 
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
 #else
 typedef struct stat RmStat;

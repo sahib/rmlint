@@ -147,7 +147,10 @@ RmSwapTable *rm_swap_table_open(gboolean in_memory, GError **error) {
     sqlite3_exec(handle, "PRAGMA cache_size = 8000;", 0, 0, 0);
     sqlite3_exec(handle, "PRAGMA synchronous = OFF;", 0, 0, 0);
     sqlite3_exec(handle, "PRAGMA journal_mode = MEMORY;", 0, 0, 0);
+
+#if !RM_IS_APPLE
     sqlite3_enable_shared_cache(TRUE);
+#endif
 
     size_t path_len = strlen(path) + 1;
     self = g_malloc(sizeof(RmSwapTable) + path_len);
