@@ -1222,12 +1222,12 @@ bool rm_offsets_match(char *path1, char *path2) {
 
 #else /* Probably FreeBSD */
 
-RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset) {
+RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset, _U RmOff *file_offset_next) {
     return 0;
 }
 
-RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset) {
-    return 0
+RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset, _U RmOff *file_offset_next) {
+    return 0;
 }
 
 bool rm_offsets_match(char *path1, char *path2) {
