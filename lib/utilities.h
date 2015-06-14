@@ -65,7 +65,7 @@ static inline int rm_sys_lstat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {
-#if defined(__APPLE__) && defined(__MACH__)
+#if RM_IS_APPLE
     return stat->st_mtimespec.tv_sec;
 #else
     return stat->st_mtim.tv_sec;
@@ -90,7 +90,7 @@ static inline void rm_sys_close(int fd) {
 
 static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
                                    RmOff offset) {
-#if (defined(__APPLE__) && defined(__MACH__))
+#if RM_IS_APPLE
     if(lseek(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
     }

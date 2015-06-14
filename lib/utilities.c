@@ -517,7 +517,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
     fclose(sys_fdes);
-#elif HAVE_SYSCTL
+#elif HAVE_SYSCTL && !RM_IS_APPLE
     /* try with sysctl() */
     int device_num = 0;
     char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};

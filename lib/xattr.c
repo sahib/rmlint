@@ -47,7 +47,7 @@
 /* Compat wrappers for MacOSX and other platforms.
  */
 
-#if defined(__APPLE__) && defined(__MACH__)
+#if RM_IS_APPLE
 
 ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size) {
     return getxattr(path, name, value, size, 0, 0);
