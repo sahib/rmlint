@@ -90,7 +90,12 @@ static inline void rm_sys_close(int fd) {
 
 static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
                                    RmOff offset) {
-#if RM_PLATFORM_32 || (defined(__APPLE__) && defined(__MACH__))
+#if (defined(__APPLE__) && defined(__MACH__))
+    if(lseek(fd, offset, SEEK_SET) == -1) {
+        rm_log_perror("seek in emulated preadv failed");
+    }
+    return readv(fd, iov, iovcnt);
+#elif RM_PLATFORM_32
     if(lseek64(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
     }
