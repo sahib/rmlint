@@ -237,11 +237,17 @@
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
  */
-#define SHRED_FADVISE_FLAGS                                      \
-    (0 | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */ \
-     | POSIX_FADV_WILLNEED     /* Tell the kernel to readhead */ \
-     | POSIX_FADV_NOREUSE      /* We will not reuse old data  */ \
-     )
+const int SHRED_FADVISE_FLAGS = 0          
+#ifdef POSIX_FADV_SEQUENTIAL
+     | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */   
+#endif
+#ifdef POSIX_FADV_WILLNEED
+     | POSIX_FADV_WILLNEED     /* Tell the kernel to readhead */ 
+#endif
+#ifdef POSIX_FADV_NOREUSE
+     | POSIX_FADV_NOREUSE      /* We will not reuse old data  */ 
+#endif
+     ;
 
 ////////////////////////
 //  MATHS SHORTCUTS   //
