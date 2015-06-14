@@ -100,6 +100,10 @@ typedef struct RmFile {
      * */
     time_t mtime;
 
+    /* Depth of the file, relative to the path it was found in.
+     */
+    short depth;
+
     /* The inode and device of this file.
      * Used to filter double paths and hardlinks.
      */
@@ -236,7 +240,7 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.                             \
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
-                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum);
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum, short depth);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
@@ -248,6 +252,15 @@ void rm_file_destroy(RmFile *file);
  * @brief Convert RmLintType to a human readable short string.
  */
 const char *rm_file_lint_type_to_string(RmLintType type);
+
+/**
+ * @brief Convert a string to a RmLintType
+ *
+ * @param type a string description.
+ *
+ * @return a valid lint type or RM_LINT_TYPE_UNKNOWN
+ */
+RmLintType rm_file_string_to_lint_type(const char *type);
 
 /**
  * @brief Set a path to the file. Normally, you should never do this since the
