@@ -1523,7 +1523,10 @@ static void rm_shred_request_readahead(int fd, RmFile *file, RmOff bytes_to_read
     /* Give the kernel scheduler some hints */
     if(file->fadvise_requested) {
         RmOff readahead = MIN(file->file_size - file->seek_offset, bytes_to_read * 8);
+// TODO: Make a proper fix.
+#if ! (defined(__APPLE__) && defined(__MACH__))
         posix_fadvise(fd, file->seek_offset, readahead, SHRED_FADVISE_FLAGS);
+#endif
         file->fadvise_requested = 1;
     }
 }
@@ -1599,8 +1602,6 @@ static void rm_shred_buffered_read_factory(RmFile *file, RmShredDevice *device) 
         rm_log_perror("fseek(3) failed");
         goto finish;
     }
-
-    posix_fadvise(fileno(fd), file->seek_offset, bytes_to_read, SHRED_FADVISE_FLAGS);
 
     while((bytes_read = fread(buffer->data, 1, MIN(bytes_to_read, buf_size), fd)) > 0) {
         file->seek_offset += bytes_read;
