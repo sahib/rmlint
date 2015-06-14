@@ -66,7 +66,9 @@ static inline int rm_sys_lstat(const char *path, RmStat *buf) {
 
 static inline int rm_sys_open(const char *path, int mode) {
 #if HAVE_STAT64
+# ifdef O_LARGEFILE
     mode |= O_LARGEFILE;
+# endif
 #endif
 
     return open(path, mode, (S_IRUSR | S_IWUSR));
