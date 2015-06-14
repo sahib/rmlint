@@ -38,7 +38,6 @@
 
 #if HAVE_JSON_GLIB
 # include <json-glib/json-glib.h>
-#endif
 
 /////////////////////////////////////////////////
 //  POLLY THE PARROT REPEATS WHAT RMLINT SAID  //
@@ -537,3 +536,14 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
     g_queue_clear(&group);
     return true;
 }
+
+#else
+
+/* Provide an helpful message at least */
+bool rm_parrot_load(_U RmSession *session, _U const char *json_path) {
+    rm_log_error_line(_("json-glib is needed for using --replay."));
+    rm_log_error_line(_("Please recompile `rmlint` with it installed."));
+    return false;
+}
+
+#endif
