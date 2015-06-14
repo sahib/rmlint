@@ -1521,14 +1521,17 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 
 static void rm_shred_request_readahead(int fd, RmFile *file, RmOff bytes_to_read) {
     /* Give the kernel scheduler some hints */
+#if HAVE_POSIX_FADVISE
     if(file->fadvise_requested) {
         RmOff readahead = MIN(file->file_size - file->seek_offset, bytes_to_read * 8);
-// TODO: Make a proper fix.
-#if ! (defined(__APPLE__) && defined(__MACH__))
         posix_fadvise(fd, file->seek_offset, readahead, SHRED_FADVISE_FLAGS);
-#endif
         file->fadvise_requested = 1;
     }
+#else
+    (void) fd;
+    (void) file;
+    (void) bytes_to_read;
+#endif
 }
 
 static void rm_shred_readlink_factory(RmFile *file, RmShredDevice *device) {
