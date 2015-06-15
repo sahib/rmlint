@@ -111,7 +111,6 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     g_mutex_unlock(&pool->lock);
 
     g_assert(buffer);
-    buffer->callback = NULL;
     return buffer;
 }
 

@@ -1134,13 +1134,10 @@ static gboolean rm_shred_sift(RmFile *file) {
 
 /* Hasher callback file. Runs as threadpool in parallel / tandem with rm_shred_read_factory above
  * */
-static void rm_shred_hash_callback(RmBuffer *buffer) {
+static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShredTag *tag, RmFile *file) {
     /* Report the progress to rm_shred_devlist_factory */
-    RmFile *file = buffer->user_data;
-    file->digest = buffer->digest;
-    RmShredTag *tag = file->device->main;
+    g_assert (file->digest == digest);
 
-    g_assert(file);
     if (file->hash_offset == file->shred_group->next_offset ||
              file->status == RM_FILE_STATE_FRAGMENT ||
              file->status == RM_FILE_STATE_IGNORE) {
@@ -1155,7 +1152,7 @@ static void rm_shred_hash_callback(RmBuffer *buffer) {
             g_async_queue_push(file->device->hashed_file_return, file);
         } else {
             /* handle the file ourselves; devlist factory has moved on to the next file */
-            if(file->status == RM_FILE_STATE_FRAGMENT) {
+            if(file->status == RM_FILE_STATE_FRAGMENT) { //TODO: RM_FILE_STATE_FRAGMENT deprecated
                 rm_shred_push_queue_sorted(file);
             } else {
                 rm_shred_sift(file);
@@ -1593,8 +1590,12 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
     RM_DEFINE_PATH(file);
 
-    RmHasherTask *increment = rm_hasher_start_increment(
-            device->main->hasher, file_path, file->digest, file->hash_offset, bytes_to_read, file->is_symlink);
+    RmHasherTask *task = rm_hasher_task_new(device->main->hasher, file->digest, file);
+    if (!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read, file->is_symlink)) {
+        /* rm_hasher_start_increment failed somewhere */
+        file->status = RM_FILE_STATE_IGNORE;
+        worth_waiting = FALSE;
+    }
 
     /* Update totals for file, device and session*/
     file->hash_offset += bytes_to_read;
@@ -1602,12 +1603,6 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
         rm_shred_adjust_counters(file->device, 0, -(gint64)file->file_size);
     } else {
         rm_shred_adjust_counters(file->device, 0, -(gint64)bytes_to_read);
-    }
-
-    if (!increment) {
-        /* rm_hasher_start_increment failed somewhere */
-        file->status = RM_FILE_STATE_IGNORE;
-        return file;
     }
 
     if (worth_waiting) {
@@ -1625,7 +1620,7 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     file->devlist_waiting = worth_waiting;
 
     /* tell the hasher we have finished and where to callback the results*/
-    rm_hasher_finish_increment(device->main->hasher, increment, file->digest, (RmDigestCallback)rm_shred_hash_callback, file);
+    rm_hasher_task_finish(task);
 
     if(worth_waiting) {
         /* wait until the increment has finished hashing; assert that we get the expected file back */
@@ -1807,6 +1802,7 @@ void rm_shred_run(RmSession *session) {
             SHRED_PAGE_SIZE,
             session->cfg->read_buffer_mem,
             session->cfg->paranoid_mem,
+            (RmHasherCallback)rm_shred_hash_callback,
             &tag);
 
     /* Remember how many devlists we had - so we know when to stop */

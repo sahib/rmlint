@@ -119,9 +119,6 @@ typedef struct RmBufferPool {
 
 } RmBufferPool;
 
-/* Callback function definition */
-typedef int (*RmDigestCallback)(gpointer data);
-
 /* Represents one block of read data */
 typedef struct RmBuffer {
     /* note that first (sizeof(pointer)) bytes of this structure get overwritten when it gets
@@ -133,16 +130,13 @@ typedef struct RmBuffer {
     /* len of the data actualy filled */
     guint32 len;
 
-    /* callback function for post-processing */
-    RmDigestCallback callback;
-
-    /*user data to send to post-processing callback */
+    /* user utility data field */
     gpointer user_data;
 
     /* the pool the buffer belongs to */
     RmBufferPool *pool;
 
-    /* pointer to the data allocated */
+    /* pointer to the data block */
     unsigned char *data;
 } RmBuffer;
 

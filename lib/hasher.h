@@ -64,7 +64,7 @@ typedef struct _RmHasher RmHasher;
  * Individual tasks are created, executed and finalised via rm_hasher_task_new(),
  * rm_hasher_task_hash() and rm_hasher_task_finish().
  **/
-typedef _RmHasherTask RmHasherTask;
+typedef struct _RmHasherTask RmHasherTask;
 
 /**
  * @brief RmHasherCallback function prototype for rm_hasher_task_finish()
@@ -74,7 +74,7 @@ typedef _RmHasherTask RmHasherTask;
  * @param file_user_data User data passed to rm_hasher_task_new()
  * @retval (UNUSED)
  **/
-typedef int (*RmDigestCallback)(RmDigest *digest, gpointer session_user_data, gpointer task_user_data);
+typedef int (*RmHasherCallback)(RmHasher *hasher, RmDigest *digest, gpointer session_user_data, gpointer task_user_data);
 
 
 /**
@@ -100,7 +100,7 @@ RmHasher *rm_hasher_new(
             gsize buf_size,
             guint64 cache_quota_bytes,
             guint64 target_kept_bytes,
-            RmDigestCallback joiner,
+            RmHasherCallback joiner,
             gpointer session_user_data);
 
 
@@ -126,8 +126,9 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer ta
  * @param start_offset  Where to start reading the file (number of bytes from start)
  * @param bytes_to_read  How many bytes to read (pass 0 to read whole file)
  * @param is_symlink  If path is a symlink, pass TRUE to read the symlink itself rather than the linked file
+ * @retval FALSE if read errors occurred
  **/
-void rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink);
+gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink);
 
 /**
  * @brief Finalise a hashing task
