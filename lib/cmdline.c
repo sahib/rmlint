@@ -218,6 +218,12 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
 static int rm_cmd_create_metadata_cache(RmSession *session) {
+    if(session->replay_files.length) {
+        rm_log_warning_line(_("--replay given; --with-metadata-cache will be ignored."));
+        session->cfg->use_meta_cache = false;
+        return EXIT_SUCCESS;
+    }
+
     if(session->cfg->use_meta_cache) {
         GError *error = NULL;
         session->meta_cache = rm_swap_table_open(FALSE, &error);

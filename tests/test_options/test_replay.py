@@ -92,16 +92,23 @@ def test_sorting():
             (''.join(p) for p in permutations(all_opts, n_terms))
         )
 
-    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+    replay_path = '/tmp/replay.json'
 
     for combo in combos:
         combo_str = '-y ' + combo
-        head, *data, footer = run_rmlint(combo_str + search_paths, '-o json:{p}'.format(p=replay_path), use_default_dir=False)
+        head, *data, footer = run_rmlint(
+            combo_str + search_paths, '-o json:{p}'.format(p=replay_path),
+            use_default_dir=False
+        )
         assert len(data) == 7
 
         validate_order(data, combo)
 
-        head, *data, footer = run_rmlint(combo_str + search_paths, ' --replay ' + replay_path, use_default_dir=False)
+        head, *data, footer = run_rmlint(
+            combo_str + search_paths, ' --replay ' + replay_path,
+            use_default_dir=False
+        )
+
         assert len(data) == 7
 
         validate_order(data, combo)
