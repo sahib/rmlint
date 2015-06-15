@@ -9,8 +9,7 @@ compiler:
   - clang
   - gcc
 env:
-  - PEDANTIC=1
-  - PRINT_CMD=1
+  - PEDANTIC=1 PRINT_CMD=1
 
 notifications:
   email:
