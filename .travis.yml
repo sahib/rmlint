@@ -8,9 +8,13 @@ install:
 compiler:
   - clang
   - gcc
+env:
+  - PEDANTIC=1
+  - PRINT_CMD=1
+
 notifications:
   email:
     - sahib@online.de
     - thomas_d_j@yahoo.com.au
 
-script: scons VERBOSE=1 && scons config && export USE_VALGRIND=1 && PEDANTIC=1 PRINT_CMD=1 sudo nosetests3 -a '!slow'
+script: scons VERBOSE=1 && scons config && sudo -E nosetests3 -a '!slow'
