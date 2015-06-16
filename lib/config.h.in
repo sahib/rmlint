@@ -76,6 +76,8 @@
 #define RM_PLATFORM_32 (UINTPTR_MAX == 0xffffffff)
 #define RM_PLATFORM_64 (UINTPTR_MAX == 0xffffffffffffffff)
 
+#define RM_IS_APPLE (defined(__APPLE__) && defined(__MACH__))
+
 #include <glib.h>
 
 /* Printf formatting for large integers */

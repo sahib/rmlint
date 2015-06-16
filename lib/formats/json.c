@@ -38,18 +38,30 @@ typedef struct RmFmtHandlerJSON {
 
     /* More human readable output? */
     bool pretty;
+
+    /* set of already existing ids */
+    GHashTable *id_set;
 } RmFmtHandlerJSON;
 
 //////////////////////////////////////////
 //          FILE ID GENERATOR           //
 //////////////////////////////////////////
 
-static guint32 rm_fmt_json_generate_id(RmFile * file, const char *file_path, char *cksum) {
-    guint32 hash = file->inode ^ file->dev;
+static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile * file, const char *file_path, char *cksum) {
+    guint32 hash = 0;
+    hash = file->inode ^ file->dev;
     hash ^= file->file_size;
-    hash ^= spooky_hash32(file_path, strlen(file_path), 0);
-    hash ^= spooky_hash32(cksum, strlen(cksum), 0);
 
+    for(int i = 0; i < 8192; ++i) {
+        hash ^= spooky_hash32(file_path, strlen(file_path), i);
+        hash ^= spooky_hash32(cksum, strlen(cksum), i);
+
+        if(!g_hash_table_contains(self->id_set, GUINT_TO_POINTER(hash))) {
+            break;
+        }
+    }
+
+    g_hash_table_add(self->id_set, GUINT_TO_POINTER(hash));
     return hash;
 }
 
@@ -157,6 +169,8 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
     fprintf(out, "[\n");
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
+    self->id_set = g_hash_table_new(NULL, NULL);
+
     if(rm_fmt_get_config_value(session->formats, "json", "oneline")) {
         self->pretty = false;
     }
@@ -185,7 +199,7 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
     }
 }
 
-static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
     if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
@@ -217,6 +231,7 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     }
 
     fprintf(out, "]\n");
+    g_hash_table_unref(self->id_set);
 }
 
 
@@ -239,7 +254,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
         RM_DEFINE_PATH(file);
 
         rm_fmt_json_key_int(out, "id", rm_fmt_json_generate_id(
-                    file, file_path, checksum_str
+            self, file, file_path, checksum_str
         ));
 
         rm_fmt_json_sep(self, out);
@@ -282,7 +297,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
                     RM_DEFINE_PATH(hardlink_head);
 
                     guint32 orig_id = rm_fmt_json_generate_id(
-                        hardlink_head, hardlink_head_path, orig_checksum_str
+                        self, hardlink_head, hardlink_head_path, orig_checksum_str
                     );
 
                     rm_fmt_json_key_int(out, "hardlink_of", orig_id);

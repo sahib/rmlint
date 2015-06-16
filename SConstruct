@@ -210,6 +210,22 @@ def check_sysctl(context):
     return rc
 
 
+def check_posix_fadvise(context):
+    rc = 1
+
+    if tests.CheckFunc(
+        context, 'posix_fadvise',
+        header='#include <fcntl.h>'
+    ):
+        rc = 0
+
+    conf.env['HAVE_POSIX_FADVISE'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_xattr(context):
     rc = 1
 
@@ -456,6 +472,7 @@ conf = Configure(env, custom_tests={
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
     'check_sysctl': check_sysctl,
+    'check_posix_fadvise': check_posix_fadvise,
     'check_sys_block': check_sys_block,
     'check_bigfiles': check_bigfiles,
     'check_c11': check_c11,
@@ -566,6 +583,7 @@ conf.check_sha512()
 conf.check_gettext()
 conf.check_sqlite3()
 conf.check_linux_limits()
+conf.check_posix_fadvise()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])

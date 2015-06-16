@@ -4,32 +4,41 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.3.0 Ominous Oscar] -- [unreleased]
+## [2.3.0 Ominous Oscar] -- 2015-06-15
 
 ### Fixed
 
+- Compiles on Mac OSX now. See also: https://github.com/sahib/rmlint/issues/139
+- Fix a crash that happened with ``-e``.
+- Protect other lint than duplicates by ``-k`` or ``-K``.
+- ``chown`` in sh script fixed (was ``chmod`` by accident).
+
 ### Added
+
+- ``--replay``: Re-output a previously written json file. Allow filtering 
+  by using all other standard options (like size or directory filtering).
+- ``--sort-by``: Similar to ``-S``, but sorts groups of files. So showing
+  the group with the biggest size sucker is as easy as ``-y s``.
 
 ### Changed
 
-- Improved FIEMAP algorithm to reduce initial delay and reduce memory overhead
+- ``-S``'s long options is ``--rank-by`` now (prior ``--sortcriteria``).
+- ``-o`` can guess the formatter from the filename if given.
+- Remove some optimisations that gave no visible effect.
+- Simplified FIEMAP optimisation to reduce initial delay and reduce memory overhead
 - Improved hashing strategy for large disks (do repeated smaller sweeps across
   the disk instead of incrementally hashing every file on the disk)
-
-
 
 ## [2.2.1 Dreary Dropbear Bugfixes] -- [unreleased]
 
 ### Fixed
 
-- Segfault with [-e, --match-extension] option when encountering file with no extension
-- Incorrect hadnling of -W, --no-with-color option
+- Incorrect handling of -W, --no-with-color option
 - Handling of $PKG_CONFIG in SConstruct
 - Failure to build manpage
 - Various BSD compatibility issues
 - Nonstandard header sequence in modules using fts
 - Removed some unnecessary warnings
-
 
 
 ## [2.2.0 Dreary Dropbear] -- 2015-05-09

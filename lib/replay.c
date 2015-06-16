@@ -38,7 +38,6 @@
 
 #if HAVE_JSON_GLIB
 # include <json-glib/json-glib.h>
-#endif
 
 /////////////////////////////////////////////////
 //  POLLY THE PARROT REPEATS WHAT RMLINT SAID  //
@@ -165,7 +164,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
     /* Check if we're late and issue an warning */
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
-    if(mtime_node && json_node_get_int(mtime_node) < stat_info->st_mtim.tv_sec) {
+    if(mtime_node && json_node_get_int(mtime_node) < rm_sys_stat_mtime_seconds(stat_info)) {
         // TODO: translate:
         rm_log_warning_line(
             _("modification time of `%s` changed. Ignoring."), path
@@ -537,3 +536,14 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
     g_queue_clear(&group);
     return true;
 }
+
+#else
+
+/* Provide an helpful message at least */
+bool rm_parrot_load(_U RmSession *session, _U const char *json_path) {
+    rm_log_error_line(_("json-glib is needed for using --replay."));
+    rm_log_error_line(_("Please recompile `rmlint` with it installed."));
+    return false;
+}
+
+#endif

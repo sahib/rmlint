@@ -218,6 +218,12 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
 static int rm_cmd_create_metadata_cache(RmSession *session) {
+    if(session->replay_files.length) {
+        rm_log_warning_line(_("--replay given; --with-metadata-cache will be ignored."));
+        session->cfg->use_meta_cache = false;
+        return EXIT_SUCCESS;
+    }
+
     if(session->cfg->use_meta_cache) {
         GError *error = NULL;
         session->meta_cache = rm_swap_table_open(FALSE, &error);
@@ -1000,7 +1006,7 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
                                          RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
-    if(!rm_cmd_check_lettervec(option_name, criteria, "mapMAP", error)) {
+    if(!rm_cmd_check_lettervec(option_name, criteria, "dlampDLAMP", error)) {
         return false;
     }
 
@@ -1131,7 +1137,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
          _("Specify max traversal depth"), "N"},
         {"rank-by", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
-         _("Original criteria"), "[mapMAP]"},
+         _("Original criteria"), "[dlampDLAMP]"},
         {"sort-by", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(sortby),
          _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),

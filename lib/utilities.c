@@ -136,6 +136,20 @@ bool rm_util_path_is_hidden(const char *path) {
     return false;
 }
 
+int rm_util_path_depth(const char *path) {
+    int depth = 0;
+
+    while(path) {
+        /* Skip trailing slashes */
+        if(*path == G_DIR_SEPARATOR && path[1] != 0) {
+            depth++;
+        }
+        path = strchr(&path[1], G_DIR_SEPARATOR);
+    }
+
+    return depth;
+}
+
 GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key,
                                  RmNewFunc default_func) {
     gpointer value = g_hash_table_lookup(table, key);
@@ -503,7 +517,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
     fclose(sys_fdes);
-#elif HAVE_SYSCTL
+#elif HAVE_SYSCTL && !RM_IS_APPLE
     /* try with sysctl() */
     int device_num = 0;
     char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
@@ -700,7 +714,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     return self;
 }
 
-#if HAVE_SYSCTL
+#if HAVE_SYSCTL && !RM_IS_APPLE
 
 static GHashTable *DISK_TABLE = NULL;
 
@@ -736,7 +750,7 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
                                  _U size_t disk_size, _U dev_t *result) {
 #if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
-#elif HAVE_SYSCTL
+#elif HAVE_SYSCTL && !RM_IS_APPLE
     if(DISK_TABLE == NULL) {
         rm_mounts_freebsd_list_disks();
     }
@@ -876,7 +890,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
             is_rotational ? "yes" : "no");
     }
 
-#if HAVE_SYSCTL
+#if HAVE_SYSCTL && !RM_IS_APPLE
     if(DISK_TABLE) {
         g_hash_table_unref(DISK_TABLE);
     }
@@ -1219,12 +1233,12 @@ bool rm_offsets_match(char *path1, char *path2) {
 
 #else /* Probably FreeBSD */
 
-RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset) {
+RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset, _U RmOff *file_offset_next) {
     return 0;
 }
 
-RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset) {
-    return 0
+RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset, _U RmOff *file_offset_next) {
+    return 0;
 }
 
 bool rm_offsets_match(char *path1, char *path2) {

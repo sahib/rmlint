@@ -23,14 +23,24 @@ def path_depth(file_path):
 # dispatcher for comparison tests
 def validate_order(data, tests):
     testfuncs = {
-        'a': lambda p: os.path.basename(p['path']).lower(),
-        'm': lambda p: p['mtime'],
-        'p': lambda p: path_index(p['path']),
-        'd': lambda p: path_depth(p['path']),
-        'l': lambda p: len(os.path.basename(p['path']))
+        's': lambda g: sum([p['size'] for p in g]),
+        'a': lambda g: os.path.basename(g[0]['path']).lower(),
+        'm': lambda g: g[0]['mtime'],
+        'p': lambda g: path_index(g[0]['path']),
+        'n': lambda g: len(g)
     }
 
-    for a, b in combinations(data, 2):
+    groups, group = [], []
+    for point in data:
+        if point['is_original']:
+            group = []
+            groups.append(group)
+
+        group.append(point)
+
+    assert len(groups) == 2
+
+    for a, b in combinations(groups, 2):
         for test in tests:
             cmp_a, cmp_b = (testfuncs[test.lower()](e) for e in [a, b])
 
@@ -53,20 +63,22 @@ def validate_order(data, tests):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sorting():
     # create some dupes with different PATHS, names and mtimes:
-    create_file('xxx', PATHS[1] + 'a')
-    create_file('xxx', PATHS[0] + 'c')
-    create_file('xxx', PATHS[2] + 'B')
+    create_file('xxx', PATHS[0] + 'a')
+    create_file('xxx', PATHS[1] + 'bb')
+    create_file('xxx', PATHS[2] + 'ccc')
 
     # Make sure it takes some time to re-reun
-    time.sleep(1.2)
-    create_file('xxx', PATHS[2] + 'b')
-    create_file('xxx', PATHS[1] + 'c')
-    create_file('xxx', PATHS[2] + 'c')
+    time.sleep(1.25)
+    create_file('xxxx', PATHS[0] + 'A')
+    create_file('xxxx', PATHS[1] + 'B')
+    create_file('xxxx', PATHS[2] + 'C')
+    create_file('xxxx', PATHS[2] + 'D')
 
     joiner = ' ' + TESTDIR_NAME + '/'
     search_paths = joiner + joiner.join(PATHS)
 
-    opts = 'ampdl'
+    # Leave out 'o' for now, since its not really worth testing.
+    opts = 'sampn'
     all_opts = opts + opts.upper()
 
     combos = []
@@ -80,9 +92,23 @@ def test_sorting():
             (''.join(p) for p in permutations(all_opts, n_terms))
         )
 
+    replay_path = '/tmp/replay.json'
+
     for combo in combos:
-        combo_str = '-S ' + combo
-        head, *data, footer = run_rmlint(combo_str + search_paths, use_default_dir=False)
-        assert len(data) == 6
+        combo_str = '-y ' + combo
+        head, *data, footer = run_rmlint(
+            combo_str + search_paths, '-o json:{p}'.format(p=replay_path),
+            use_default_dir=False
+        )
+        assert len(data) == 7
+
+        validate_order(data, combo)
+
+        head, *data, footer = run_rmlint(
+            combo_str + search_paths, ' --replay ' + replay_path,
+            use_default_dir=False
+        )
+
+        assert len(data) == 7
 
         validate_order(data, combo)

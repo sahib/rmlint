@@ -123,7 +123,7 @@ int rm_fmt_len(RmFmtTable *self) {
 
 bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *key) {
     RmFmtHandler *handler = g_hash_table_lookup(self->name_to_handler, formatter);
-    if(handler == NULL || handler->valid_keys == NULL) {
+    if(handler == NULL) {
         return false;
     }
 

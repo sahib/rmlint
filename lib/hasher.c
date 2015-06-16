@@ -36,11 +36,17 @@
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
  */
-#define HASHER_FADVISE_FLAGS                                     \
-    (0 | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */ \
-     | POSIX_FADV_WILLNEED     /* Tell the kernel to readhead */ \
-     | POSIX_FADV_NOREUSE      /* We will not reuse old data  */ \
-     )
+const int HASHER_FADVISE_FLAGS = 0
+#ifdef POSIX_FADV_SEQUENTIAL
+     | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */
+#endif
+#ifdef POSIX_FADV_WILLNEED
+     | POSIX_FADV_WILLNEED     /* Tell the kernel to readhead */
+#endif
+#ifdef POSIX_FADV_NOREUSE
+     | POSIX_FADV_NOREUSE      /* We will not reuse old data  */
+#endif
+     ;
 
 #define DIVIDE_CEIL(n, m) ((n) / (m) + !!((n) % (m)))
 
@@ -102,9 +108,17 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
 
 static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {
     /* Give the kernel scheduler some hints */
-    RmOff readahead = bytes_to_read * 8;
-    posix_fadvise(fd, seek_offset, readahead, HASHER_FADVISE_FLAGS);
-    //TODO: avoid duplicate calls
+#if HAVE_POSIX_FADVISE
+    if(file->fadvise_requested) {
+        RmOff readahead = bytes_to_read * 8;
+        posix_fadvise(fd, file->seek_offset, readahead, SHRED_FADVISE_FLAGS);
+    }
+#else
+    (void) fd;
+    (void) seek_offset;
+    (void) bytes_to_read;
+#endif
+    //TODO: avoid duplicate calls via file->fadvise_requested check before calling
 }
 
 

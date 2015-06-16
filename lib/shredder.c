@@ -1483,8 +1483,6 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 //    ACTUAL IMPLEMENTATION    //
 /////////////////////////////////
 
-
-
 static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
     bool can_process = true;
     RmCfg *cfg = main->session->cfg;
