@@ -928,7 +928,7 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
     case RM_SHRED_GROUP_FINISHING:
         /* free any paranoid buffers held in group->digest (should not be needed for results processing */
         if (self->digest_type == RM_DIGEST_PARANOID) {
-            //rm_digest_release_buffers(group->digest); //TODO
+            rm_digest_release_buffers(self->digest);
         }
         /* send it to finisher (which takes responsibility for calling rm_shred_group_free())*/
         rm_util_thread_pool_push(self->main->result_pool, self);
