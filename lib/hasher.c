@@ -476,7 +476,7 @@ static void rm_hasher_print(RmDigest *digest, char *path) {
     memset(checksum_str, '0', size);
     checksum_str[size - 1] = 0;
     rm_digest_hexstring(digest, checksum_str);
-    g_printerr("%s %s\n", checksum_str, path);
+    g_print("%s %s\n", checksum_str, path);
 }
 
 static int rm_hasher_callback(_U RmHasher *hasher, RmDigest *digest, RmHasherTestMainSession *session, gpointer index_ptr) {
@@ -538,7 +538,7 @@ int main(int argc, char **argv) {
 
     if (!g_option_context_parse (context, &argc, &argv, &error))
     {
-        g_print ("option parsing failed: %s\n", error->message);
+        g_printerr ("option parsing failed: %s\n", error->message);
         exit (1);
     }
 
