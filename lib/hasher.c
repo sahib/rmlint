@@ -134,11 +134,13 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
     if(rm_sys_stat(path, &stat_buf) == -1) {
         /* Oops, that did not work out, report as an error */
         rm_log_perror("Cannot stat symbolic link");
-        return 0;
+        return -1;
     }
 
     gint data_size = snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool), "%"LLU":%ld", (long)stat_buf.st_dev,
                               (long)stat_buf.st_ino);
+    buf->len = data_size;
+    buf->digest = digest;
 
     rm_digest_buffered_update(buf);
 
@@ -150,7 +152,7 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
     } else {
         rm_buffer_pool_release(buf);
     }
-    return 0;  //TODO
+    return 0;
 }
 
 
@@ -418,6 +420,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer ta
 gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink) {
     guint64 bytes_read = 0;
     if (is_symlink) {
+        rm_log_error("reading symlink as symlink\n");
         bytes_read = rm_hasher_symlink_read(task->hasher, task->digest, path);
     } else if (task->hasher->use_buffered_read) {
         bytes_read = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest, path, start_offset, bytes_to_read);
@@ -425,7 +428,7 @@ gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offse
         bytes_read = rm_hasher_unbuffered_read(task->hasher, task->hashpipe, task->digest, path, start_offset, bytes_to_read);
     }
 
-    return (bytes_read == bytes_to_read); //TODO: is symlink case ok?
+    return ((is_symlink && bytes_read==0) || bytes_read == bytes_to_read); //TODO: is symlink case ok?
 }
 
 RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
