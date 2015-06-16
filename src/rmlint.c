@@ -23,6 +23,8 @@
 *
 **/
 
+#ifndef _RM_HASHER_BUILD_MAIN
+
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
@@ -102,6 +104,7 @@ static void i18n_init(void) {
 #endif
 }
 
+
 int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
 
@@ -138,3 +141,5 @@ int main(int argc, const char **argv) {
     rm_session_clear(&session);
     return exit_state;
 }
+#endif
+

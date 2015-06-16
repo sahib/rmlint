@@ -106,8 +106,10 @@ RmHasher *rm_hasher_new(
 
 /**
  * @brief Free a hashing object
+ * 
+ * @param TODO
  **/
-void rm_hasher_free(RmHasher *hasher);
+void rm_hasher_free(RmHasher *hasher, gboolean wait);
 
 /**
  * @brief Allocate and initialise a new hashing task.

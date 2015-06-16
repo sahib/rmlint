@@ -1849,7 +1849,7 @@ void rm_shred_run(RmSession *session) {
         }
     }
 
-    rm_hasher_free(tag.hasher);
+    rm_hasher_free(tag.hasher, FALSE);
 
     session->shredder_finished = TRUE;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);

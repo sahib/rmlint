@@ -145,6 +145,10 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
 
 static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe, RmDigest *digest, char *path, gsize start_offset, gsize bytes_to_read) {
     FILE *fd = NULL;
+    if (bytes_to_read==0) {
+        bytes_to_read = G_MAXSIZE;
+    }
+
     gsize total_bytes_read = 0;
 
     if((fd = fopen(path, "rb")) == NULL) {
@@ -241,7 +245,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
         readvec[i].iov_len = hasher->buf_size;
     }
 
-    while(total_bytes_read < bytes_to_read &&
+    while((bytes_to_read==0 || total_bytes_read < bytes_to_read) &&
           (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset)) > 0) {
         bytes_read = MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */
         int blocks = DIVIDE_CEIL(bytes_read, hasher->buf_size);
@@ -337,7 +341,7 @@ static RmHasherCallback *rm_hasher_joiner(RmHasher *hasher, RmDigest *digest, _U
 
 RmHasher *rm_hasher_new(
             RmDigestType digest_type,
-            uint num_threads,
+            guint num_threads,
             gboolean use_buffered_read,
             gsize buf_size,
             guint64 cache_quota_bytes,
@@ -366,7 +370,7 @@ RmHasher *rm_hasher_new(
      * one thread because hashing must be done in order */
     self->hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);
     g_assert(num_threads > 0);
-    for(uint i = 0; i < num_threads; i++) {
+    for(guint i = 0; i < num_threads; i++) {
         g_async_queue_push(
             self->hashpipe_pool,
             rm_util_thread_pool_new((GFunc)rm_hasher_hashpipe_worker, self, 1));
@@ -374,7 +378,13 @@ RmHasher *rm_hasher_new(
     return self;
 }
 
-void rm_hasher_free(RmHasher *hasher) {
+void rm_hasher_free(RmHasher *hasher, gboolean wait) {
+    if (wait) {
+        while (g_atomic_int_get(&hasher->active_tasks) > 0) {
+            g_usleep(1000);
+        }
+        //TODO: wait for pending tasks to finish
+    }
     g_async_queue_unref(hasher->hashpipe_pool);
     rm_buffer_pool_destroy(hasher->mem_pool);
     g_slice_free(RmHasher, hasher);
@@ -392,7 +402,6 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer ta
 }
 
 gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink) {
-
     guint64 bytes_read = 0;
     if (is_symlink) {
         bytes_read = rm_hasher_symlink_read(task->hasher, task->digest, path);
@@ -427,4 +436,141 @@ RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
 
 
 
+#ifdef _RM_HASHER_BUILD_MAIN
+/* compile with eg:
+ * CFLAGS=-D_RM_HASHER_BUILD_MAIN=1 scons -j4 DEBUG=1
+ */
+
+
+#include <stdlib.h>
+#include <stdio.h>
+
+typedef struct RmHasherTestMainSession {
+    gboolean print_in_order;
+    GMutex lock;
+    GCond signal;
+    RmDigestType digest_type;
+    char **paths;
+    gint path_index;
+    RmDigest **completed_digests_buffer;
+    gint remaining_tasks;
+} RmHasherTestMainSession;
+
+static gboolean rm_hasher_parse_type(_U const char *option_name,
+                                       const gchar *value,
+                                       RmHasherTestMainSession *session,
+                                       GError **error) {
+    session->digest_type = rm_string_to_digest_type(value);
+
+    if(session->digest_type == RM_DIGEST_UNKNOWN) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Unknown hash algorithm: '%s'"), value);
+        return FALSE;
+    }
+    return TRUE;
 }
+
+
+static void rm_hasher_print(RmDigest *digest, char *path) {
+    gsize size = digest->bytes * 2 + 1;
+    char checksum_str[size];
+    memset(checksum_str, '0', size);
+    checksum_str[size - 1] = 0;
+    rm_digest_hexstring(digest, checksum_str);
+    g_printerr("%s %s\n", checksum_str, path);
+}
+
+static int rm_hasher_callback(_U RmHasher *hasher, RmDigest *digest, RmHasherTestMainSession *session, gpointer index_ptr) {
+    gint index = GPOINTER_TO_INT(index_ptr);
+    g_mutex_lock(&session->lock);
+    {
+        if (session->print_in_order) {
+            session->completed_digests_buffer[index] = digest;
+            while (session->completed_digests_buffer[session->path_index]) {
+                rm_hasher_print(session->completed_digests_buffer[session->path_index], session->paths[session->path_index]);
+                rm_digest_free(session->completed_digests_buffer[session->path_index]);
+                session->completed_digests_buffer[session->path_index] = NULL;
+                session->path_index++;
+            }
+        } else {
+            rm_hasher_print(digest, session->paths[index]);
+        }
+    }
+    g_mutex_unlock(&session->lock);
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    ////////////// Option Parsing ///////////////
+    RmHasherTestMainSession tag;
+
+    /* List of paths we got passed (or NULL)   */
+    tag.paths = NULL;
+    /* Print hashes in the same order as files in command line args */
+    tag.print_in_order = TRUE;
+    /* Digest type (user option, default SHA1) */
+    tag.digest_type = RM_DIGEST_SHA1;
+    gint threads=8;
+    gint64 buffer_mbytes = 256;
+
+    const GOptionEntry entries[] =
+    {
+        {"digest-type", 'd', 0, G_OPTION_ARG_CALLBACK, (GOptionArgFunc)rm_hasher_parse_type,
+         "Digest type, eg spooky32, spooky64, md5, murmur[128], spooky[128], city[128], sha1, sha256, sha512"
+            "\n   (also murmur256, city256, bastard, city512, murmur512, ext, cumulative, paranoid)", "A"},
+        {"num-threads", 't', 0, G_OPTION_ARG_INT, &threads,
+         _("Number of hashing threads"), NULL},
+        {"buffer-mbytes", 'b', 0, G_OPTION_ARG_INT64, &buffer_mbytes,
+         _("Megabytes read buffer"), NULL},
+        {"ignore-order", 'i', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &tag.print_in_order,
+         _("Print hashes in order completed, not in order entered"), NULL},
+        {"keep-order", 'k', 0, G_OPTION_ARG_NONE, &tag.print_in_order,
+         _("Print hashes in order entered"), NULL},
+        { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths, "", NULL},
+        { NULL }
+    };
+
+    GError *error = NULL;
+    GOptionContext *context = g_option_context_new ("- test rmlint hash functions");
+    GOptionGroup *main_group = g_option_group_new("hasher", "test main for hasher.c", "", &tag, NULL);
+    g_option_group_add_entries(main_group, entries);
+    //g_option_context_add_main_entries (context, entries, NULL);
+    g_option_context_set_main_group (context, main_group);
+
+    if (!g_option_context_parse (context, &argc, &argv, &error))
+    {
+        g_print ("option parsing failed: %s\n", error->message);
+        exit (1);
+    }
+
+    g_option_context_free(context);
+
+    ////////// Simple test implementation //////
+    g_mutex_init(&tag.lock);
+    tag.completed_digests_buffer = g_slice_alloc0((g_strv_length(tag.paths) + 1) * sizeof(RmDigest*));
+    tag.path_index = 0;
+
+    RmHasher *hasher = rm_hasher_new(
+        tag.digest_type,
+        threads,
+        TRUE,
+        4096,
+        1024*1024*buffer_mbytes,
+        0,
+        (RmHasherCallback)rm_hasher_callback,
+        &tag);
+
+    for(int i = 0; tag.paths && tag.paths[i]; ++i) {
+        RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));
+        rm_hasher_task_hash(task, tag.paths[i], 0, 0, FALSE);
+        rm_hasher_task_finish(task);
+    }
+
+    rm_hasher_free(hasher, TRUE);
+
+    g_slice_free1((g_strv_length(tag.paths) + 1) * sizeof(RmDigest*), tag.completed_digests_buffer);
+    g_strfreev(tag.paths);
+
+    return 0;
+}
+
+#endif
