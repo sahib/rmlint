@@ -104,11 +104,11 @@ def test_sorting():
 
         validate_order(data, combo)
 
-        # head, *data, footer = run_rmlint(
-        #     combo_str + search_paths, ' --replay ' + replay_path,
-        #     use_default_dir=False
-        # )
+        head, *data, footer = run_rmlint(
+            combo_str + search_paths, ' --replay ' + replay_path,
+            use_default_dir=False
+        )
 
-        # assert len(data) == 7
+        assert len(data) == 7
 
         # validate_order(data, combo)
