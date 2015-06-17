@@ -14,7 +14,7 @@ def create_data(len, flips=None):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_small_diffs():
 
-    if os.environ.get('USE_VALGRIND'):
+    if use_valgrind():
         N = 32
     else:
         # Takes horribly long elsewhise

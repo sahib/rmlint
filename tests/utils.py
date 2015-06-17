@@ -11,10 +11,21 @@ import shlex
 import subprocess
 
 USE_VALGRIND = True
-TESTDIR_NAME = '/tmp/rmlint-unit-testdir'
+TESTDIR_NAME = os.getenv('RM_TS_DIR_NAME') or '/tmp/rmlint-unit-testdir'
 
 def runs_as_root():
     return os.geteuid() is 0
+
+
+def get_env_flag(name):
+    try:
+        return int(os.environ.get(name) or 0)
+    except ValueError:
+        print('{n} should be an integer.'.format(n=name))
+
+
+def use_valgrind():
+    return get_env_flag('RM_TS_USE_VALGRIND')
 
 
 def create_testdir():
@@ -32,7 +43,7 @@ def which(program):
     if fpath and is_exe(program):
         return program
     else:
-        for path in os.environ["PATH"].split(os.pathsep):
+        for path in (os.environ.get("PATH") or []).split(os.pathsep):
             path = path.strip('"')
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
@@ -56,7 +67,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     else:
         target_dir = ""
 
-    if os.environ.get('USE_VALGRIND'):
+    if use_valgrind():
         env = {
             'G_DEBUG': 'gc-friendly',
             'G_SLICE': 'always-malloc'
@@ -65,27 +76,29 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     else:
         env, cmd = {}, []
 
-    cmd += ['./rmlint', '-V', target_dir, '-o', 'json:stdout'] + shlex.split(' '.join(args))
+    cmd += [
+        './rmlint', '-V', target_dir,
+        '-o', 'json:stdout', '-c', 'json:oneline'
+    ] + shlex.split(' '.join(args))
 
-    for output in outputs or []:
+    for idx, output in enumerate(outputs or []):
         cmd.append('-o')
         cmd.append('{f}:{p}'.format(
-            f=output, p=os.path.join(TESTDIR_NAME, '.' + output))
+            f=output, p=os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)))
         )
 
     # filter empty strings
     cmd = list(filter(None, cmd))
-    # print(' '.join(cmd))
 
-    if os.environ.get('PRINT_CMD'):
+    if get_env_flag('RM_TS_PRINT_CMD'):
         print('Run:', ' '.join(cmd))
 
     output = subprocess.check_output(cmd, shell=False, env=env)
     json_data = json.loads(output.decode('utf-8'))
 
     read_outputs = []
-    for output in outputs or []:
-        with open(os.path.join(TESTDIR_NAME, '.' + output), 'r') as handle:
+    for idx, output in enumerate(outputs or []):
+        with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r') as handle:
             read_outputs.append(handle.read())
 
     if outputs is None:
@@ -204,7 +217,7 @@ def run_rmlint_pedantic(*args, **kwargs):
 
 
 def run_rmlint(*args, **kwargs):
-    if os.environ.get('PEDANTIC'):
+    if get_env_flag('RM_TS_PEDANTIC'):
         return run_rmlint_pedantic(*args, **kwargs)
     else:
         return run_rmlint_once(*args, **kwargs)
