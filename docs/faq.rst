@@ -36,8 +36,15 @@ Here is a list of features where you probably have no chance:
 I forgot to add some options before running on a large dataset. Do I need to re-run it?
 ---------------------------------------------------------------------------------------
 
-Probably. It's not as bad as it sounds though. Your filesystem is probably very
-good at caching. 
+Probably not. Since ``rmlint 2.3.0`` there is ``--replay`` which can be used to 
+to re-output a json file of a prior run.
+
+If you have changed the filesystem that might not be a good idea of course. In
+this case you'll have to re-run, but it's not as bad as it sounds though. Your
+filesystem is probably very good at caching. 
+
+If you only want to see the difference to what changed since last time you can
+look into ``-n --newer-than-stamp / -N --newer-than``.
 
 Still there are some cases where re-running might take a long time, like running
 on network mounts. By default, ``rmlint`` writes a ``rmlint.json`` file along
