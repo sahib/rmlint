@@ -14,4 +14,4 @@ notifications:
     - sahib@online.de
     - thomas_d_j@yahoo.com.au
 
-script: scons VERBOSE=1 && scons config && export PRINT_CMD=1 && export RM_TS_PEDANTIC=0 && sudo -E nosetests3 -s -a '!slow'
+script: scons VERBOSE=1 && scons config && export RM_TS_PRINT_CMD=1 && export RM_TS_PEDANTIC=0 && sudo -E nosetests3 -s -v -a '!slow'
