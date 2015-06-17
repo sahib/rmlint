@@ -11,7 +11,7 @@ import shlex
 import subprocess
 
 USE_VALGRIND = True
-TESTDIR_NAME = os.getenv('RM_TS_DIR_NAME') or '/tmp/rmlint-unit-testdir'
+TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
 def runs_as_root():
     return os.geteuid() is 0
@@ -77,7 +77,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         env, cmd = {}, []
 
     cmd += [
-        './rmlint', '-V', target_dir,
+        './rmlint', target_dir, '-V',
         '-o', 'json:stdout', '-c', 'json:oneline'
     ] + shlex.split(' '.join(args))
 

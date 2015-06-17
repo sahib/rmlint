@@ -58,10 +58,10 @@ def test_stamp_file():
     # in the third run.
     time.sleep(3)
 
-    head, *data, footer = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp'))
+    head, *data, footer = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))
     assert len(data) == 3
 
-    head, *data, footer = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp'))
+    head, *data, footer = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))
     assert len(data) == 0
 
 
@@ -69,5 +69,5 @@ def test_stamp_file():
 def test_stamp_file_iso8601():
     create_set(True, True)
 
-    head, *data, footer = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp'))
+    head, *data, footer = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))
     assert len(data) == 3

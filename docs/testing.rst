@@ -19,10 +19,13 @@ Control Variables
 The behaviour of the testsuite can be controlled by certain environment
 variables which are:
 
-- ``USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
-- ``PEDANTIC``: Run each test several times with different optimization options
+- ``RM_TS_DIR``: Testdir to create files in. Can be very large with some tests,
+  sometimes ``tmpfs`` might therefore slow down your computer. By default
+  ``/tmp`` will be used.
+- ``RM_TS_USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
+- ``RM_TSPEDANTIC``: Run each test several times with different optimization options
   and check for errors between the runs. *(slow)*.
-- ``PRINT_CMD``: Print the command that is currently run.
+- ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 
 Additionally slow tests can be omitted with by appending ``-a '!slow'`` to 
 the commandline. More information on this syntax can be found on the `nosetest
@@ -34,7 +37,7 @@ Before each release we call the testsuite (at least) like this:
 
 .. code-block:: bash
 
-   $ sudo USE_VALGRIND=1 PRINT_CMD=1 PEDANTIC=1 nosetests-3.4 -s -a '!slow' 
+   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 nosetests-3.4 -s -a '!slow' 
 
 The ``sudo`` here is there for executing some tests that need root access (like
 the creating of bad user and group ids). Most tests will work without.
@@ -49,7 +52,7 @@ were executed (and how often) by the testsuite. Here's a short quickstart using
 .. code-block:: bash
 
     $ CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS="-fprofile-arcs -ftest-coverage" scons -j4 DEBUG=1
-    $ sudo USE_VALGRIND=1 PRINT_CMD=1 PEDANTIC=1 nosetests-3.4 -s -a '!slow'
+    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 nosetests-3.4 -s -a '!slow'
     $ lcov --capture --directory . --output-file coverage.info
     $ genhtml coverage.info --output-directory out
 
