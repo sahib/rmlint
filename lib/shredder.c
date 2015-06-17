@@ -1517,7 +1517,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
             }
             g_assert(group->hash_offset == file->hash_offset);
 
-            if(file->is_symlink && file->session->cfg->see_symlinks) {
+            if(file->is_symlink && cfg->see_symlinks) {
                 file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0, 0,
                                              PATH_MAX + 1 /* max size of a symlink file */,
                                              NEEDS_SHADOW_HASH(cfg)
@@ -1548,7 +1548,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
         file->digest = rm_digest_copy(group->digest);
     } else {
         /* this is first generation of RMGroups, so there is no progressive hash yet */
-        file->digest = rm_digest_new(main->session->cfg->checksum_type,
+        file->digest = rm_digest_new(cfg->checksum_type,
                                      main->session->hash_seed1,
                                      main->session->hash_seed2,
                                      0,
@@ -1830,7 +1830,7 @@ void rm_shred_run(RmSession *session) {
                          tag.active_groups,
                          tag.paranoid_mem_alloc);
 
-            if(device->remaining_files > 0) {
+            if(device->remaining_files > 0 && devices_left != 0) {
                 /* recycle the device */
                 device->bytes_per_pass = session->cfg->sweep_size / devices_left;
                 device->files_per_pass = session->cfg->sweep_count / devices_left;

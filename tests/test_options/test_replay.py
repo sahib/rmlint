@@ -111,4 +111,4 @@ def test_sorting():
 
         assert len(data) == 7
 
-        # validate_order(data, combo)
+        validate_order(data, combo)
