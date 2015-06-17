@@ -161,6 +161,9 @@ typedef struct RmFile {
     /* Set to true if rm_shred_devlist_factory is waiting for hash increment */
     bool devlist_waiting : 1;
 
+    /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
+    bool is_on_subvol_fs : 1;
+
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
@@ -181,15 +184,10 @@ typedef struct RmFile {
      */
     RmOff file_size;
 
-    /* How many bytes were already hashed
-     * (lower or equal seek_offset)
-     */
-    RmOff hash_offset;
-
     /* How many bytes were already read.
      * (lower or equal file_size)
      */
-    RmOff seek_offset;
+    RmOff hash_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is
      * fragmented */
@@ -200,11 +198,9 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
-    /* Disk fiemap / physical offset info.
-     * TODO: can we make do with less than 16 bytes here?
-     */
-    RmOff current_fragment_physical_offset;
-    RmOff next_fragment_logical_offset;
+    /* Disk fiemap / physical offset at start of file (tests mapping subsequent
+     * file fragements did not deliver any significant additionl benefit) */
+    RmOff disk_offset;
 
     /* What kind of lint this file is.
      */

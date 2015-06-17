@@ -106,7 +106,7 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(RmTrie *self, RmNode *node, _U int level, void *user_data) {
+int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level, void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
@@ -119,7 +119,7 @@ int rm_tm_count_art_callback(RmTrie *self, RmNode *node, _U int level, void *use
 
     char path[PATH_MAX];
     memset(path, 0, sizeof(path));
-    rm_trie_build_path(self, node, path, sizeof(path));
+    rm_trie_build_path_unlocked(node, path, sizeof(path));
 
     /* Ascend the path parts up, add one for each part we meet.
        If a part was never found before, add it.
@@ -391,8 +391,8 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     RmOff digest_bytes = 0;
 
     if(file->digest->type == RM_DIGEST_PARANOID) {
-        file_digest = rm_digest_steal_buffer(file->digest->shadow_hash);
-        digest_bytes = file->digest->shadow_hash->bytes;
+        file_digest = rm_digest_steal_buffer(file->digest->paranoid->shadow_hash);
+        digest_bytes = file->digest->paranoid->shadow_hash->bytes;
     } else {
         file_digest = rm_digest_steal_buffer(file->digest);
         digest_bytes = file->digest->bytes;

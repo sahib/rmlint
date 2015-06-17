@@ -969,6 +969,14 @@ bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
     return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
 }
 
+//static void rm_mounts_subvol_add(RmMountTable *self, dev_t subvol, dev_t parent) {
+    //if(g_hash_table_contains(self->subvol_table, GUINT_TO_POINTER(parent))) {
+        /* parent volume is a subvolume itself */
+
+    //}
+//}
+
+
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {
     if(self == NULL) {
         return 0;
@@ -1148,14 +1156,14 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
                         /* caller wants to know logical offset of next fragment */
                         *file_offset_next = fm_ext[0].fe_logical;
                     }
-                } 
+                }
                 if (fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
                     if (!done) {
                         done = TRUE;
                         if (file_offset_next) {
                             /* caller wants to know logical offset of next fragment - signal
                              * that it is EOF */
-                            *file_offset_next =  G_MAXUINT64;
+                            *file_offset_next =  fm_ext[0].fe_logical + fm_ext[0].fe_length;
                         }
                     }
                 }
@@ -1198,16 +1206,19 @@ bool rm_offsets_match(char *path1, char *path2) {
         if(fd2 != -1) {
             RmOff file1_offset_next = 0;
             RmOff file2_offset_next = 0;
+            RmOff file_offset_current = 0;
             while ( !result &&
-                    (   rm_offset_get_from_fd(fd1, file1_offset_next, &file1_offset_next) ==
-                        rm_offset_get_from_fd(fd2, file2_offset_next, &file2_offset_next)
+                    (   rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
+                        rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)
                     ) &&
                     file1_offset_next != 0 &&
                     file1_offset_next == file2_offset_next ) {
-                if (file1_offset_next == G_MAXUINT64 || file2_offset_next == G_MAXUINT64) {
+                if (file1_offset_next == file_offset_current) {
                     /* phew, we got to the end */
                     result = TRUE;
+                    break;
                 }
+                file_offset_current = file1_offset_next;
             }
             rm_sys_close(fd2);
         } else {

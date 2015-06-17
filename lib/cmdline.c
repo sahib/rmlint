@@ -269,7 +269,12 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
         cfg->is_prefd[index] = is_prefd;
         cfg->paths = g_realloc(cfg->paths, sizeof(char *) * (index + 2));
 
-        char *abs_path = realpath(path, NULL);
+        char *abs_path = NULL;
+        if (strncmp(path,"//",2) == 0) {
+            abs_path = g_strdup(path);
+        } else {
+            abs_path = realpath(path, NULL);
+        }
 
         if(cfg->use_meta_cache) {
             cfg->paths[index] = GUINT_TO_POINTER(
@@ -752,18 +757,47 @@ static gboolean rm_cmd_parse_large_output(_U const char *option_name,
     return true;
 }
 
-static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
+static gboolean rm_cmd_parse_mem( const gchar *size_spec, GError **error, RmOff *target) {
     RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
 
     if(*error != NULL) {
         g_prefix_error(error, _("Invalid size description \"%s\": "), size_spec);
         return false;
     } else {
-        session->cfg->paranoid_mem = size;
+        *target = size;
         return true;
     }
+}
+
+
+static gboolean rm_cmd_parse_limit_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
+}
+
+static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->paranoid_mem));
+}
+
+static gboolean rm_cmd_parse_read_buffer_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buffer_mem));
+}
+
+static gboolean rm_cmd_parse_sweep_size(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_size));
+}
+
+static gboolean rm_cmd_parse_sweep_count(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_count));
 }
 
 static gboolean rm_cmd_parse_clamp_low(_U const char *option_name, const gchar *spec,
@@ -1039,7 +1073,8 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
         if(strncmp(dir_path, "-", 1) == 0) {
             read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);
-        } else if(strncmp(dir_path, "//", 2) == 0) {
+        } else if(strncmp(dir_path, "//", 2) == 0
+                && strlen(dir_path) == 2) {
             is_prefd = !is_prefd;
         } else {
             read_paths = rm_cmd_add_path(session, is_prefd, path_index, paths[i]);
@@ -1215,10 +1250,18 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Limit lower reading barrier", "P"},
         {"clamp-top", 'Q', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(clamp_top),
          "Limit upper reading barrier", "P"},
-        {"max-paranoid-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
-         "Specify max. memory to use for -pp", "S"},
+        {"limit-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(limit_mem),
+         "Specify max. memory usage target", "S"},
+        {"paranoid-mem", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
+         "Specify min. memory to use for in-progress paranoid hashing", "S"},
+        {"read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
+         "Specify min. memory to use for read buffer during hashing", "S"},
+        {"sweep-size", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_size),
+         "Specify max. bytes per pass when scanning disks", "S"},
+        {"sweep-files", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_count),
+         "Specify max. file count per pass when scanning disks", "S"},
         {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
-         "Specify max. number of threads", "N"},
+         "Specify max. number of hasher threads", "N"},
         {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,
          "Output unfinished checksums", NULL},
         {"xattr-write", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->write_cksum_to_xattr,
@@ -1248,7 +1291,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          &cfg->cache_file_structs, "Hold back all files to the end before outputting.", NULL},
         {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
          &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
-        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read, 
+        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read,
          "Default to buffered reading calls (fread) during reading.", NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
          "Shredder never waits for file increment to finish hashing before moving on to "

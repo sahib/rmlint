@@ -25,6 +25,21 @@ The format follows [keepachangelog.com]. Please stick to it.
 - ``-S``'s long options is ``--rank-by`` now (prior ``--sortcriteria``).
 - ``-o`` can guess the formatter from the filename if given.
 - Remove some optimisations that gave no visible effect.
+- Simplified FIEMAP optimisation to reduce initial delay and reduce memory overhead
+- Improved hashing strategy for large disks (do repeated smaller sweeps across
+  the disk instead of incrementally hashing every file on the disk)
+
+## [2.2.1 Dreary Dropbear Bugfixes] -- [unreleased]
+
+### Fixed
+
+- Incorrect handling of -W, --no-with-color option
+- Handling of $PKG_CONFIG in SConstruct
+- Failure to build manpage
+- Various BSD compatibility issues
+- Nonstandard header sequence in modules using fts
+- Removed some unnecessary warnings
+
 
 ## [2.2.0 Dreary Dropbear] -- 2015-05-09
 
@@ -64,7 +79,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   physical disk to enable fast reading without disk thrash.  The improved
   algorithm now increases the number of cpu threads used to hash the data
   as it is read in.  Also an improved mutex strategy reduces the wait time
-  before the hash results can be processed.   
+  before the hash results can be processed.
   Note the new threading strategy is particularly effective on the
   "paranoid" (byte-by-byte) file comparison method (option -pp), which is
   now almost as fast as the default (SHA1 hash) method.
@@ -80,7 +95,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   the core got slower very fast due to linear lookups. Fixed.
 - performance regression: No SSDs were detected due to two bugs.
 - commandline aborts also on non-fatal option misuses.
-- Some statistic counts were updated wrong sometimes. 
+- Some statistic counts were updated wrong sometimes.
 - Fixes in treemerge to respect directories tagges as originals.
 - Ignore "evil" fs types like bindfs, nullfs completely.
 - Fix race in file tree traversal.

@@ -77,7 +77,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
         }
     }
 
-    self->seek_offset = self->hash_offset = start_seek;
+    self->hash_offset = start_seek;
 
     self->lint_type = type;
     self->is_prefd = is_ppath;

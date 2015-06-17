@@ -102,8 +102,8 @@ static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
     buf[buf_size - 1] = 0;
 
     if(file->digest->type == RM_DIGEST_PARANOID) {
-        g_assert(file->digest->shadow_hash);
-        return rm_digest_hexstring(file->digest->shadow_hash, buf);
+        g_assert(file->digest->paranoid->shadow_hash);
+        return rm_digest_hexstring(file->digest->paranoid->shadow_hash, buf);
     } else {
         return rm_digest_hexstring(file->digest, buf);
     }
