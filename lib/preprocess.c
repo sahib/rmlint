@@ -481,7 +481,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
         }
     }
 
-    if(file->hardlinks.is_head) {
+    if(file->hardlinks.is_head && file->hardlinks.files) {
         /* Hardlinks are processed on the fly by shredder later,
          * so we do not really need to process them.
          */
