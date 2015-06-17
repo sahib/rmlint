@@ -241,12 +241,16 @@ static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
     rm_digest_hexstring(file->digest, checksum_str);
 }
 
-static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,
+static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
                         RmFile *file) {
+    if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
+        return;
+    }
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     rm_fmt_json_cksum(file, checksum_str, sizeof(checksum_str));
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
+
 
     /* Make it look like a json element */
     rm_fmt_json_open(self, out);
@@ -319,7 +323,7 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .elem = rm_fmt_elem,
         .prog = NULL,
         .foot = rm_fmt_foot,
-        .valid_keys = {"no_header", "no_footer", "oneline", NULL},
+        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", NULL},
     },
     .pretty = true};
 
