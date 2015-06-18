@@ -416,11 +416,6 @@ int rm_json_cache_read(RmTrie *file_trie, const char *json_path) {
     g_assert(file_trie);
     g_assert(json_path);
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-    /* Very old glib. Debian, Im looking at you. */
-    g_type_init();
-#endif
-
     int result = EXIT_FAILURE;
     GError *error = NULL;
     size_t keys_in_table = rm_trie_size(file_trie);

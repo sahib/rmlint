@@ -75,8 +75,6 @@ static void signal_handler(int signum) {
             exit(EXIT_FAILURE);
         }
         break;
-    case SIGFPE:
-    case SIGABRT:
     case SIGSEGV:
         rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
                           g_strsignal(signum));
@@ -132,11 +130,18 @@ int main(int argc, const char **argv) {
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+    /* Very old glib. Debian, Im looking at you. */
+    g_type_init();
+#endif
+
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
         exit_state = rm_cmd_main(&session);
     }
+
+    // g_usleep(1000000000000);
 
     rm_session_clear(&session);
     return exit_state;

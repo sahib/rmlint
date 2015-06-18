@@ -73,12 +73,14 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
             'G_SLICE': 'always-malloc'
         }
         cmd = [which('valgrind'), '--show-possibly-lost=no', '-q']
+    elif get_env_flag('RM_TS_USE_GDB'):
+        env, cmd = {}, ['/usr/bin/gdb', '-batch', '-ex=run', '-ex=bt', '-ex=quit', '--args']
     else:
         env, cmd = {}, []
 
     cmd += [
         './rmlint', target_dir, '-V',
-        '-o', 'json:stdout', '-c', 'json:oneline'
+        '-o', 'json:/tmp/out.json', '-c', 'json:oneline'
     ] + shlex.split(' '.join(args))
 
     for idx, output in enumerate(outputs or []):
@@ -94,7 +96,8 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         print('Run:', ' '.join(cmd))
 
     output = subprocess.check_output(cmd, shell=False, env=env)
-    json_data = json.loads(output.decode('utf-8'))
+    print(output.decode('utf-8'))
+    json_data = json.loads(open('/tmp/out.json', 'r').read())
 
     read_outputs = []
     for idx, output in enumerate(outputs or []):

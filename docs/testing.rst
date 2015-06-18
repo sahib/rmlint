@@ -23,6 +23,8 @@ variables which are:
   sometimes ``tmpfs`` might therefore slow down your computer. By default
   ``/tmp`` will be used.
 - ``RM_TS_USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
+- ``RM_TS_USE_GDB``: Run tests inside of ``gdb``. Fatal signals will trigger an
+  backtrace.
 - ``RM_TSPEDANTIC``: Run each test several times with different optimization options
   and check for errors between the runs. *(slow)*.
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
