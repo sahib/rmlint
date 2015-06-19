@@ -530,11 +530,11 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {
 
         rm_log_debug("[okay]\n");
 
-        g_queue_push_tail(group, file);
-
         if(file->is_original) {
             rm_parrot_cage_push_group(cage, &group, false);
         }
+
+        g_queue_push_tail(group, file);
     }
 
     rm_parrot_cage_push_group(cage, &group, true);
