@@ -110,7 +110,7 @@ static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U
         return false;
     }
 
-    *out = g_strdup_printf("remove_cmd '%s' # == %s", path, orig_path);
+    *out = g_strdup_printf("remove_cmd '%s' '%s'", path, orig_path);
     return true;
 }
 
