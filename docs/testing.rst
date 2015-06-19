@@ -25,8 +25,11 @@ variables which are:
 - ``RM_TS_USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
 - ``RM_TS_USE_GDB``: Run tests inside of ``gdb``. Fatal signals will trigger an
   backtrace.
-- ``RM_TSPEDANTIC``: Run each test several times with different optimization options
+- ``RM_TS_PEDANTIC``: Run each test several times with different optimization options
   and check for errors between the runs. *(slow)*.
+- ``RM_TS_SLEEP``: Waits a long time before executing a command. Useful for
+  starting the testcase and manually running `rmlint` on the priorly generated
+  testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 
 Additionally slow tests can be omitted with by appending ``-a '!slow'`` to 

@@ -343,7 +343,8 @@ Caching
     Read an existing json file and re-output it. This is very useful if you want
     to reformat, refilter or resort the output you got from an previous run.
     Usage is simple: Just pass ``--replay`` on the second run, with all other
-    options still there.
+    options still there. It can be given more than once, in this case it will
+    merge all files given and output them as one big run.
 
     If you want to view only the duplicates of certain subdirectories, just pass
     them on the commandline as usual.

@@ -74,7 +74,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         }
         cmd = [which('valgrind'), '--show-possibly-lost=no', '-q']
     elif get_env_flag('RM_TS_USE_GDB'):
-        env, cmd = {}, ['/usr/bin/gdb', '-batch', '-ex=run', '-ex=bt', '-ex=quit', '--args']
+        env, cmd = {}, ['/usr/bin/gdb', '-batch', '--silent', '-ex=run', '-ex=bt', '-ex=quit', '--args']
     else:
         env, cmd = {}, []
 
@@ -95,15 +95,23 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     if get_env_flag('RM_TS_PRINT_CMD'):
         print('Run:', ' '.join(cmd))
 
+    if get_env_flag('RM_TS_SLEEP'):
+        print('Waiting for 1000 seconds.')
+        time.sleep(1000)
+
     output = subprocess.check_output(cmd, shell=False, env=env)
-    print(output.decode('utf-8'))
-    json_data = json.loads(open('/tmp/out.json', 'r').read())
+    if get_env_flag('RM_TS_USE_GDB'):
+        print('==> START OF GDB OUTPUT <==')
+        print(output.decode('utf-8'))
+        print('==> END OF GDB OUTPUT <==')
+
+    with open('/tmp/out.json', 'r') as f:
+        json_data = json.loads(f.read())
 
     read_outputs = []
     for idx, output in enumerate(outputs or []):
         with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r') as handle:
             read_outputs.append(handle.read())
-
     if outputs is None:
         return json_data
     else:
