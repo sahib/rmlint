@@ -25,6 +25,7 @@
 
 /* Internal headers */
 #include "config.h"
+#include "replay.h"
 #include "session.h"
 #include "formats.h"
 #include "file.h"
@@ -134,6 +135,11 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
     path = json_node_get_string(path_node);
     path_len = strlen(path);
+
+    if(rm_trie_search_node(&polly->session->cfg->file_trie, path)) {
+        /* We have this node already */
+        return NULL;
+    }
 
     /* Check for the lint type */
     RmLintType type = rm_file_string_to_lint_type(
@@ -345,8 +351,8 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
 //   GROUPWISE FIXES (SORT, FILTER, ...)   //
 /////////////////////////////////////////////
 
-static void rm_parrot_fix_match_opts(RmParrot *polly, GQueue *group) {
-    RmCfg *cfg = polly->session->cfg;
+static void rm_parrot_fix_match_opts(RmParrotCage *cage, GQueue *group) {
+    RmCfg *cfg = cage->session->cfg;
     if(!(cfg->match_with_extension 
     || cfg->match_without_extension 
     || cfg->match_basename)) {
@@ -386,8 +392,8 @@ static void rm_parrot_fix_match_opts(RmParrot *polly, GQueue *group) {
     }
 }
 
-static void rm_parrot_fix_must_match_tagged(RmParrot *polly, GQueue *group) {
-    RmCfg *cfg = polly->session->cfg;
+static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
+    RmCfg *cfg = cage->session->cfg;
     if(!(cfg->must_match_tagged || cfg->must_match_untagged)) {
         return;
     }
@@ -411,8 +417,8 @@ static void rm_parrot_fix_must_match_tagged(RmParrot *polly, GQueue *group) {
     }
 }
 
-static void rm_parrot_update_stats(RmParrot *polly, RmFile *file) {
-    RmSession *session = polly->session;
+static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
+    RmSession *session = cage->session;
 
     session->total_files += 1;
     if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
@@ -426,8 +432,8 @@ static void rm_parrot_update_stats(RmParrot *polly, RmFile *file) {
     }
 }
 
-static void rm_parrot_write_group(RmParrot *polly, GQueue *group) {
-    RmCfg *cfg = polly->session->cfg;
+static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
+    RmCfg *cfg = cage->session->cfg;
 
     if(cfg->filter_mtime) {
         gsize older = 0;
@@ -443,11 +449,11 @@ static void rm_parrot_write_group(RmParrot *polly, GQueue *group) {
         }
     }
 
-    rm_parrot_fix_match_opts(polly, group);
-    rm_parrot_fix_must_match_tagged(polly, group);
+    rm_parrot_fix_match_opts(cage, group);
+    rm_parrot_fix_must_match_tagged(cage, group);
 
     g_queue_sort(
-        group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, polly->session
+        group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, cage->session
     );
 
     for(GList *iter = group->head; iter; iter = iter->next) {
@@ -461,8 +467,8 @@ static void rm_parrot_write_group(RmParrot *polly, GQueue *group) {
             file->is_original = false;
         }
 
-        rm_parrot_update_stats(polly, file);
-        rm_fmt_write(file, polly->session->formats);
+        rm_parrot_update_stats(cage, file);
+        rm_fmt_write(file, cage->session->formats);
     }
 }
 
@@ -470,11 +476,24 @@ static void rm_parrot_write_group(RmParrot *polly, GQueue *group) {
 //  ENTRY POINT TO TRIGGER THE PARROT  //
 /////////////////////////////////////////
 
-bool rm_parrot_load(RmSession *session, const char *json_path) {
+static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref, bool is_last) {
+    GQueue *group = *group_ref;
+    if(group->length > 1) {
+        g_queue_push_tail(cage->groups, group);
+    } else {
+        g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
+    }
+        
+    if(!is_last) {
+        *group_ref = g_queue_new();
+    }
+}
+
+bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {
     GError *error = NULL;
 
     rm_log_info_line(_("Loading json-results `%s'"), json_path);
-    RmParrot *polly = rm_parrot_open(session, json_path, &error);
+    RmParrot *polly = rm_parrot_open(cage->session, json_path, &error);
 
     if(polly == NULL || error != NULL) {
         rm_log_warning_line("Error: %s", error->message);
@@ -482,12 +501,10 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
         return false; 
     }
 
-    RmCfg *cfg = session->cfg;
+    RmCfg *cfg = cage->session->cfg;
+    GQueue *group = g_queue_new();
 
     /* group of files; first group is "other lint" */
-    GQueue group;
-    g_queue_init(&group);
-
     while(rm_parrot_has_next(polly)) {
         RmFile *file = rm_parrot_next(polly);
         if(file == NULL) {
@@ -513,37 +530,48 @@ bool rm_parrot_load(RmSession *session, const char *json_path) {
 
         rm_log_debug("[okay]\n");
 
+        g_queue_push_tail(group, file);
+
         if(file->is_original) {
-            if(group.length > 1) {
-                rm_log_debug("--- Writing group ---\n");
-                rm_parrot_write_group(polly, &group);
-            } else {
-                g_queue_foreach(&group, (GFunc)rm_file_destroy, NULL);
-            }
-            g_queue_clear(&group);
+            rm_parrot_cage_push_group(cage, &group, false);
         }
-
-        g_queue_push_tail(&group, file);
     }
 
-    if(group.length > 1) {
-        rm_parrot_write_group(polly, &group);
-    } else {
-        g_queue_foreach(&group, (GFunc)rm_file_destroy, NULL);
-    }
-
+    rm_parrot_cage_push_group(cage, &group, true);
     rm_parrot_close(polly);
-    g_queue_clear(&group);
     return true;
+}
+
+void rm_parrot_cage_open(RmParrotCage *cage, RmSession *session) {
+    cage->session = session;
+    cage->groups = g_queue_new();
+}
+
+void rm_parrot_cage_close(RmParrotCage *cage) {
+    for(GList *iter = cage->groups->head; iter; iter = iter->next) {
+        GQueue *group = iter->data;
+        if(group->length > 1) {
+            rm_parrot_write_group(cage, group);
+        } else {
+            g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
+        }
+    }
+
+    g_queue_free_full(cage->groups, (GDestroyNotify)g_queue_free);
 }
 
 #else
 
-/* Provide an helpful message at least */
-bool rm_parrot_load(_U RmSession *session, _U const char *json_path) {
+bool rm_parrot_cage_load(_U RmParrotCage *cage, _U const char *json_path) {
+    return false;
+}
+
+void rm_parrot_cage_open(_U RmParrotCage *cage, _U RmSession *session) {
     rm_log_error_line(_("json-glib is needed for using --replay."));
     rm_log_error_line(_("Please recompile `rmlint` with it installed."));
-    return false;
+}
+
+void rm_parrot_cage_close(_U RmParrotCage *cage) {
 }
 
 #endif

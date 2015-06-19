@@ -218,39 +218,41 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
 static int rm_cmd_create_metadata_cache(RmSession *session) {
+    if(session->cfg->use_meta_cache == false) {
+        return false;
+    }
+
     if(session->replay_files.length) {
         rm_log_warning_line(_("--replay given; --with-metadata-cache will be ignored."));
         session->cfg->use_meta_cache = false;
         return EXIT_SUCCESS;
     }
 
-    if(session->cfg->use_meta_cache) {
-        GError *error = NULL;
-        session->meta_cache = rm_swap_table_open(FALSE, &error);
-        session->cfg->use_meta_cache = !!(session->meta_cache);
+    GError *error = NULL;
+    session->meta_cache = rm_swap_table_open(FALSE, &error);
+    session->cfg->use_meta_cache = !!(session->meta_cache);
+
+    if(error != NULL) {
+        rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
+        g_error_free(error);
+        error = NULL;
+        return EXIT_FAILURE;
+    }
+
+    char *names[] = {"path", "dir", NULL};
+    int *attrs_ptrs[] = {&session->meta_cache_path_id, &session->meta_cache_dir_id,
+                            NULL};
+
+    for(int i = 0; attrs_ptrs[i] && names[i]; ++i) {
+        *attrs_ptrs[i] =
+            rm_swap_table_create_attr(session->meta_cache, names[i], &error);
 
         if(error != NULL) {
-            rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
+            rm_log_warning_line(_("Unable to create cache attr `%s`: %s"), names[i],
+                                error->message);
             g_error_free(error);
             error = NULL;
             return EXIT_FAILURE;
-        }
-
-        char *names[] = {"path", "dir", NULL};
-        int *attrs_ptrs[] = {&session->meta_cache_path_id, &session->meta_cache_dir_id,
-                             NULL};
-
-        for(int i = 0; attrs_ptrs[i] && names[i]; ++i) {
-            *attrs_ptrs[i] =
-                rm_swap_table_create_attr(session->meta_cache, names[i], &error);
-
-            if(error != NULL) {
-                rm_log_warning_line(_("Unable to create cache attr `%s`: %s"), names[i],
-                                    error->message);
-                g_error_free(error);
-                error = NULL;
-                return EXIT_FAILURE;
-            }
         }
     }
 
@@ -1404,10 +1406,14 @@ failure:
 
 static int rm_cmd_replay_main(RmSession *session) {
     /* User chose to replay some json files. */
+    RmParrotCage cage;
+    rm_parrot_cage_open(&cage, session);
+
     for(GList *iter = session->replay_files.head; iter; iter = iter->next) {
-        rm_parrot_load(session, iter->data);
+        rm_parrot_cage_load(&cage, iter->data);
     }
 
+    rm_parrot_cage_close(&cage);
     rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);

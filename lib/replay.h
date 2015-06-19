@@ -43,9 +43,29 @@
  *
  * @param session Global session.
  * @param json_path Absolute path to the json file.
- *
- * @return true on (some) success.
  */
-bool rm_parrot_load(RmSession *session, const char *json_path);
+typedef struct RmParrotCage {
+    RmSession *session;
+    GQueue *groups;
+} RmParrotCage;
+
+/**
+ * @brief Open a ParrotCage.
+ *
+ * A ParrotCage is where the json file will get accumulated.
+ */
+void rm_parrot_cage_open(RmParrotCage *cage, RmSession *session);
+
+/**
+ * @brief Load a single json file to the cage.
+ *
+ * @return true on (partial) success.
+ */
+bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path);
+
+/**
+ * @brief Close the cage, frees resources, but does not do rm_fmt_flush().
+ */
+void rm_parrot_cage_close(RmParrotCage *cage);
 
 #endif /* end of include guard */

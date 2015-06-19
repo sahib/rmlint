@@ -141,8 +141,6 @@ int main(int argc, const char **argv) {
         exit_state = rm_cmd_main(&session);
     }
 
-    // g_usleep(1000000000000);
-
     rm_session_clear(&session);
     return exit_state;
 }
