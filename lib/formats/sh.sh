@@ -8,6 +8,7 @@ GROUP='%s'
 
 # Set to true on -n
 DO_DRY_RUN=
+
 # Set to true on -p
 DO_PARANOID_CHECK=
 
@@ -70,34 +71,33 @@ handle_bad_user_and_group_id() {
 ###############################
 
 original_check() {
-    if [ -e "$2" ]; then             #orig exists
-        if [ -e "$1" ]; then         #dupe exists
-            #check they are not the exact same file:
-            if [ $(stat -c"%%D:%%i" "$1") == $(stat -c"%%D:%%i" "$2") ]; then
-                #look like hardlinks - check
-                if [ $(stat -c%h "$2") == 1 ]; then
-                    echo "^^^^^^ Error: original and duplicate point to the *same* file - cancelling....."
-                fi
-            fi
-            #do double-check if necessary:
-            if [ -z "$DO_PARANOID_CHECK" ]; then  #no re-check required
-                return 0
-            else
-                if cmp -s "$1" "$2"; then
-                    return 0
-                else
-                    echo "^^^^^^ Error: files no longer identical - cancelling....."
-                fi
-            fi
-        else
-            echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
-        fi
-    else
-        echo "^^^^^^ Error: original has disappeared - cancelling....."
+    if [ ! -e "$2" ]; then
+        echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
+        return 1
     fi
 
-    echo "       If this is unexpected, please file a bug report at https://github.com/sahib/rmlint/issues"
-    return 1
+    if [ ! -e "$1" ]; then
+        echo "^^^^^^ Error: original has disappeared - cancelling....."
+        return 1
+    fi
+
+    # Check they are not the exact same file:
+    if [ $(stat -c"%D:%i" "$1") == $(stat -c"%D:%i" "$2") ]; then
+        echo "^^^^^^ Error: original and duplicate point to the *same* file - cancelling....."
+        return 1
+    fi
+
+    # Do double-check if requested:
+    if [ -z "$DO_PARANOID_CHECK" ]; then
+        return 0
+    else
+        if cmp -s "$1" "$2"; then
+            return 0
+        else
+            echo "^^^^^^ Error: files no longer identical - cancelling....."
+            return 1
+        fi
+    fi
 }
 
 cp_hardlink() {

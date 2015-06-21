@@ -49,6 +49,7 @@ def prepare_c_source(text):
     # Prepare the Python source to be compatible with C-strings
     text = text.replace('"', '\\"')
     text = text.replace('\\n', '\\\\n')
+    text = text.replace('%', '%%')
     text = '\\n"\n"'.join(text.splitlines())
     return text
 
