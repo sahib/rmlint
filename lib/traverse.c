@@ -28,7 +28,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h>
 #include <errno.h>
 
 #include <glib.h>
@@ -38,6 +37,8 @@
 #include "utilities.h"
 #include "file.h"
 #include "xattr.h"
+
+#include "gnulib/gnulib_fts.h"
 
 ///////////////////////////////////////////
 // BUFFER FOR STARTING TRAVERSAL THREADS //
@@ -260,6 +261,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     /* Initialize ftsp */
     int fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
 
+    fts_flags |= FTS_TIGHT_CYCLE_CHECK | FTS_DEFER_STAT;
+
     RM_BUFFER_DEFINE_PATH(trav_session->session, buffer);
 
     bool is_on_subvol_fs = (buffer_path[0] == '/' && buffer_path[1] == '/');
@@ -321,7 +324,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     clear_emptydir_flags = true; /* flag current dir as not empty */
                     rm_log_debug("Not descending into %s because max depth reached\n",
                                  p->fts_path);
-                } else if(cfg->crossdev && p->fts_dev != chp->fts_dev) {
+                } else if(cfg->crossdev /* && p->fts_dev != chp->fts_dev */) {   // TODO: gnulib
                     /* continuing into folder would cross file systems*/
                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
                     clear_emptydir_flags = true; /*flag current dir as not empty*/
@@ -451,7 +454,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
 #undef ADD_FILE
 
-    fts_close(ftsp);
+    if(fts_close(ftsp) == -1) {
+        rm_log_perror("fts_close()");
+    }
+
     rm_trav_buffer_free(buffer);
 
     /* Pass the files to the preprocessing machinery. We collect the files first

@@ -37,7 +37,7 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include <fts.h>
+#include "gnulib/gnulib_fts.h"
 #include <libgen.h>
 
 #include "config.h"
