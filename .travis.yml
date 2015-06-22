@@ -18,6 +18,6 @@ notifications:
 script: 
     - scons VERBOSE=1 
     - scons config
-    - export RM_TS_PRINT_CMD=0
-    - export RM_TS_PEDANTIC=1
-    - travis_wait sudo -E nosetests3 -s -v -a '!slow'
+    - export RM_TS_PRINT_CMD=1
+    - export RM_TS_PEDANTIC=0
+    - sudo -E nosetests3 -s -v -a '!slow'
