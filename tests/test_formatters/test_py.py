@@ -30,7 +30,7 @@ def test_paranoia():
     text = text.decode('utf-8')
 
     # subprocess.call('ls  -l ' + TESTDIR_NAME, shell=True)
-    head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.py'.format(t=TESTDIR_NAME))
+    head, *data, footer = run_rmlint('-S a -o py:{t}/rmlint.py'.format(t=TESTDIR_NAME))
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 0
@@ -42,7 +42,7 @@ def test_paranoia():
     assert 'Same inode' in text
 
     text = subprocess.check_output([os.path.join(TESTDIR_NAME, 'rmlint.py'), '-d', '-p'])
-    head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.py'.format(t=TESTDIR_NAME))
+    head, *data, footer = run_rmlint('-S a -o py:{t}/rmlint.py'.format(t=TESTDIR_NAME))
 
     # Nothing should change.
     assert footer['duplicate_sets'] == 1

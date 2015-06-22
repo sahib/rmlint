@@ -20,4 +20,4 @@ script:
     - scons config
     - export RM_TS_PRINT_CMD=0
     - export RM_TS_PEDANTIC=1
-    - sudo -E nosetests3 -s -v -a '!slow'
+    - travis_wait sudo -E nosetests3 -s -v -a '!slow'
