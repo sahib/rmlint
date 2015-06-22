@@ -399,8 +399,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                                      p->fts_path);
                     }
 
-                    RmStat dummy_buf;
-                    if(rm_sys_stat(p->fts_path, &dummy_buf) == -1 && errno == ENOENT) {
+                    if(access(p->fts_path, R_OK) == -1 && errno == ENOENT) {
                         /* Oops, that's a badlink. */
                         if(cfg->find_badlinks) {
                             ADD_FILE(RM_LINT_TYPE_BADLINK, false);
