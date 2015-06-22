@@ -199,7 +199,7 @@ if __name__ == '__main__':
         help='Only print what would be done.'
     )
     parser.add_argument(
-        '-a', '--no-ask', action='store_true', default=False,
+        '-d', '--no-ask', action='store_true', default=False,
         help='ask for confirmation before running (does nothing for -n)'
     )
     parser.add_argument(
@@ -209,7 +209,7 @@ if __name__ == '__main__':
 
     try:
         args = parser.parse_args()
-    except FileNotFoundError as err:
+    except OSError as err:
         print(err)
         sys.exit(-1)
 
@@ -217,7 +217,7 @@ if __name__ == '__main__':
         # None given on the commandline
         try:
             args.json_docs.append(open('.rmlint.json', 'r'))
-        except FileNotFoundError as err:
+        except OSError as err:
             print('Cannot load default json document: ', str(err), file=sys.stderr)
             sys.exit(-2)
 
