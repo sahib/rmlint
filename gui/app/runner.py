@@ -102,7 +102,11 @@ class CrossMountType:
     }
 
 
-def _create_rmlint_process(settings, paths):
+def map_cfg(option, val):
+    return option.MAPPING.get(val)
+
+
+def _create_rmlint_process(cfg, paths):
     """Create a correctly configured rmlint GSuprocess for gui purposes.
 
     Returns the working directory of the run and the actual process instance.
@@ -117,36 +121,22 @@ def _create_rmlint_process(settings, paths):
         launcher.set_cwd(cwd)
 
         extra_options = [
-            MatchType.MAPPING.get(
-                settings.get_enum('traverse-match')
-            ),
-            SymlinkType.MAPPING.get(
-                settings.get_enum('general-find-symlinks')
-            ),
-            HiddenType.MAPPING.get(
-                settings.get_enum('traverse-hidden')
-            ),
-            KeepAllType.MAPPING.get(
-                settings.get_enum('computation-keep-all-tagged')
-            ),
-            MustMatchType.MAPPING.get(
-                settings.get_enum('computation-must-match-tagged')
-            ),
-            HardlinkType.MAPPING.get(
-                settings.get_boolean('general-find-hardlinks')
-            ),
-            CrossMountType.MAPPING.get(
-                settings.get_boolean('traverse-cross-mounts')
-            )
+            map_cfg(MatchType, cfg.get_enum('traverse-match')),
+            map_cfg(SymlinkType, cfg.get_enum('general-find-symlinks')),
+            map_cfg(HiddenType, cfg.get_enum('traverse-hidden')),
+            map_cfg(KeepAllType, cfg.get_enum('computation-keep-all-tagged')),
+            map_cfg(MustMatchType, cfg.get_enum('computation-must-match-tagged')),
+            map_cfg(HardlinkType, cfg.get_boolean('general-find-hardlinks')),
+            map_cfg(CrossMountType, cfg.get_boolean('traverse-cross-mounts'))
         ]
 
         extra_options += AlgorithmType.MAPPING.get(
-            settings.get_enum('computation-algorithm')
+            cfg.get_enum('computation-algorithm')
         )
 
-        print(settings.get_int('traverse-max-depth'))
+        print(cfg.get_int('traverse-max-depth'))
         extra_options += [
-            '--max-depth', str(settings.get_int('traverse-max-depth'))
+            '--max-depth', str(cfg.get_int('traverse-max-depth'))
         ]
 
         extra_options = list(filter(None, extra_options))
@@ -173,13 +163,16 @@ def _create_rmlint_process(settings, paths):
 
 
 def _parse_json_chunk(chunk):
+    # print('\n\n', chunk.splitlines(), '\n\n')
     incomplete_chunk, results = None, []
     decoder = json.JSONDecoder()
 
-    for line in chunk.splitlines():
-        line = line.strip()
-        if line.startswith('[') or line.startswith(']'):
+    for idx, line in enumerate(chunk.splitlines()):
+        line = line.strip(' ')
+        if not line or line.startswith('[') or line.startswith(']'):
             continue
+
+        # print('===> ', line)
 
         try:
             json_doc, _ = decoder.raw_decode(line)
@@ -189,7 +182,7 @@ def _parse_json_chunk(chunk):
                 raise ValueError('')
         except ValueError as err:
             incomplete_chunk = line
-            break
+            continue
 
     return results, incomplete_chunk
 
@@ -267,6 +260,7 @@ class Runner(GObject.Object):
     def _on_io_event(self, source, result):
         data = source.read_bytes_finish(result).get_data()
 
+
         # last block of data it seems:
         if not data:
             if self._last_original is not None:
@@ -284,7 +278,6 @@ class Runner(GObject.Object):
 
         # Try to find sense in the individual chunks:
         results, self._incomplete_chunk = _parse_json_chunk(data)
-        # print(results)
 
         for json_doc in results:
             if 'path' in json_doc:
