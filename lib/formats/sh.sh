@@ -82,7 +82,7 @@ original_check() {
     fi
 
     # Check they are not the exact same file:
-    if [ $(stat -c"%D:%i" "$1") == $(stat -c"%D:%i" "$2") ]; then
+    if [ $(stat -c '%D:%i' "$1") = $(stat -c '%D:%i' "$2") ]; then
         echo "^^^^^^ Error: original and duplicate point to the *same* file - cancelling....."
         return 1
     fi

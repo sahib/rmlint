@@ -50,6 +50,7 @@ def prepare_c_source(text):
     text = text.replace('"', '\\"')
     text = text.replace('\\n', '\\\\n')
     text = text.replace('%', '%%')
+    text = text.replace('%%s', '%s')
     text = '\\n"\n"'.join(text.splitlines())
     return text
 
