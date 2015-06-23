@@ -88,14 +88,9 @@ struct RmSession;
  */
 
 typedef struct RmFile {
-    union {
-        /* file basename (if not using swap table)
-         * */
-        char *basename;
-        /* file path lookup ID (if using swap table)
-         * */
-        RmOff path_id;
-    };
+    /* file path lookup ID (if using swap table)
+        * */
+    RmOff path_id;
 
     /* file folder as node of folder n-ary tree
      * */
@@ -104,6 +99,14 @@ typedef struct RmFile {
     /* File modification date/time
      * */
     time_t mtime;
+
+    /* Depth of the file, relative to the path it was found in.
+     */
+    short depth;
+
+    /* Depth of the path of this file.
+     */
+    guint8 path_depth;
 
     /* The inode and device of this file.
      * Used to filter double paths and hardlinks.
@@ -158,6 +161,9 @@ typedef struct RmFile {
     /* Set to true if rm_shred_devlist_factory is waiting for hash increment */
     bool devlist_waiting : 1;
 
+    /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
+    bool is_on_subvol_fs : 1;
+
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
      * hashing every file within a hardlink set */
@@ -178,15 +184,10 @@ typedef struct RmFile {
      */
     RmOff file_size;
 
-    /* How many bytes were already hashed
-     * (lower or equal seek_offset)
-     */
-    RmOff hash_offset;
-
     /* How many bytes were already read.
      * (lower or equal file_size)
      */
-    RmOff seek_offset;
+    RmOff hash_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is
      * fragmented */
@@ -197,10 +198,9 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
-    /* Table of this file's extents.
-     */
-    RmOffsetTable disk_offsets;
-    RmOff current_disk_offset;
+    /* Disk fiemap / physical offset at start of file (tests mapping subsequent
+     * file fragements did not deliver any significant additionl benefit) */
+    RmOff disk_offset;
 
     /* What kind of lint this file is.
      */
@@ -238,13 +238,13 @@ typedef struct RmFile {
     if(file->session->cfg->use_meta_cache) {                      \
         file##_basename = rm_util_basename((char *)&file##_path); \
     } else {                                                      \
-        file##_basename = file->basename;                         \
+        file##_basename = file->folder->basename;                 \
     }                                                             \
 /**                                                               \
  * @brief Create a new RmFile handle.                             \
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
-                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum);
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum, short depth);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
@@ -258,10 +258,19 @@ void rm_file_destroy(RmFile *file);
 const char *rm_file_lint_type_to_string(RmLintType type);
 
 /**
+ * @brief Convert a string to a RmLintType
+ *
+ * @param type a string description.
+ *
+ * @return a valid lint type or RM_LINT_TYPE_UNKNOWN
+ */
+RmLintType rm_file_string_to_lint_type(const char *type);
+
+/**
  * @brief Set a path to the file. Normally, you should never do this since the
  * path is immutable.
  */
-void rm_file_set_path(RmFile *file, char *path, size_t path_len, bool copy);
+void rm_file_set_path(RmFile *file, char *path, size_t path_len);
 
 /**
  * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using

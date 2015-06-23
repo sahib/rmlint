@@ -1,4 +1,6 @@
 *.o
+*.gcda
+*.gcno
 *.swp
 *.log
 *.status

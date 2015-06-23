@@ -7,6 +7,7 @@ def test_simple():
     create_file('xxx', '.a/1')
     create_file('xxx', '.b/1')
     create_file('xxx', '.1')
+
     head, *data, footer = run_rmlint('--hidden')
 
     assert footer['duplicates'] == 2

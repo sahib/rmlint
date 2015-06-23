@@ -169,7 +169,7 @@ General Options
     Output is deferred until all duplicates were found.
     Sole duplicate groups are printed after the directories.
 
-    **--sortcriteria** applies for directories too, but 'p' or 'P' (path index)
+    **--rank-by** applies for directories too, but 'p' or 'P' (path index)
     has no defined (useful) meaning. Sorting takes only place when the number of
     preferred files in the directory differs. 
 
@@ -179,6 +179,22 @@ General Options
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
     * Consider using ``-@`` together with this option (this is the default).
+
+:``-y --sort-by=order`` (**default\:** *none*):
+
+    Sort the found duplicate groups by criteria described by `order`.
+    `order` is a string that may consist of one or more of the following letters:
+
+    * `s`: Sort by size of group.
+    * `a`: Sort alphabetically by the basename of the original.
+    * `m`: Sort by mtime of the original.
+    * `p`: Sort by path-index of the original.
+    * `o`: Sort by natural found order (might be different on each run).
+    * `n`: Sort by number of files in the group.
+
+    The letter may also be written uppercase (similiar to ``-S /
+    --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
+    back all results to the end of the run before sorting and printing. 
 
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
@@ -224,12 +240,12 @@ Traversal Options
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
     Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
-    If `-F` is specified, symbolic links will be ignored completely, if the
-    ``-F`` is specified once more ``rmlint`` will see symlinks an treats them
+    If `-F` is specified, symbolic links will be ignored completely, if 
+    ``-@`` is ``rmlint`` will see symlinks an treats them
     like small files with the path to their target in them. The latter is the
     default behaviour, since it is a sensible default for ``--merge-directories``.
 
-    **Note:** Hardlinks are always followed, but it depends on ``-L`` how those are
+    **Note:** Hardlinks are always ,,followed'', but it depends on ``-L`` how those are
     handled. 
 
 :``-x --crossdev`` (**default**) / ``-X --no-crossdev``:
@@ -302,18 +318,43 @@ Original Detection Options
     Only look for duplicates of which one is in original paths.
     (Paths that were named after **//**).
 
-:``-S --sortcriteria=criteria`` (**default\:** *pm*):
+:``-S --rank-by=criteria`` (**default\:** *pm*):
 
-    - **m**: keep lowest mtime (oldest)  **M**: keep highest mtime (newest)
-    - **a**: keep first alphabetically   **A**: keep last alphabetically
-    - **p**: keep first named path       **P**: keep last named path
+    - **m**: keep lowest mtime (oldest)       **M**: keep highest mtime (newest)
+    - **a**: keep first alphabetically        **A**: keep last alphabetically
+    - **p**: keep first named path            **P**: keep last named path
+    - **d**: keep path with lowest depth      **D**: keep path with highest depth
+    - **l**: keep path with shortest basename **L**: keep path with longest basename
 
     Alphabetical sort will only use the basename of the file and ignore it's case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+    
+    Tip: **l** is useful for files like `file.1.mp3 vs file.mp3`.
+
+    The abbreviation is unfortunate, ``-S`` should stand for ``--sort-by`` and
+    ``--sort-by``'s ``-y`` should be used here.
 
 Caching
 -------
+
+:``--replay [path.json]``:
+
+    Read an existing json file and re-output it. This is very useful if you want
+    to reformat, refilter or resort the output you got from an previous run.
+    Usage is simple: Just pass ``--replay`` on the second run, with all other
+    options still there. It can be given more than once, in this case it will
+    merge all files given and output them as one big run.
+
+    If you want to view only the duplicates of certain subdirectories, just pass
+    them on the commandline as usual.
+ 
+    The ``path.json`` argument is optional, if not given the it is assumed that
+    there is a `rmlint.json` in the current working directory.
+
+    By design, some options will not have any effect. Those are: `--followlinks`
+    `--algorithm and --paranoid` `--clamp-low` `--hardlinked`
+    `--write-unfinished` and all other caching options below.
 
 :``--xattr-read`` / ``--xattr-write`` / ``--xattr-clear``:
 
@@ -646,8 +687,8 @@ PROGRAM AUTHORS
 
 ``rmlint`` was written by:
 
-* Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
-* Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+* Christopher <sahib> Pahl 2010-2015 (https://github.com/sahib)
+* Daniel <SeeSpotRun> T.   2014-2015 (https://github.com/SeeSpotRun)
 
 Also see the  http://rmlint.rtfd.org for other people that helped us.
 

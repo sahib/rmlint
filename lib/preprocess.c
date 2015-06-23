@@ -37,10 +37,10 @@ static guint rm_file_hash(RmFile *file) {
     RmCfg *cfg = file->session->cfg;
     if(cfg->match_basename || cfg->match_with_extension) {
         RM_DEFINE_BASENAME(file);
+        char *extension = rm_util_path_extension(file_basename);
         return (guint)(
             file->file_size ^ (cfg->match_basename ? g_str_hash(file_basename) : 0) ^
-            (cfg->match_with_extension ? g_str_hash(rm_util_path_extension(file_basename))
-                                       : 0));
+            ((cfg->match_with_extension && extension) ? g_str_hash(rm_util_path_extension(file_basename)) : 0));
     } else {
         return (guint)(file->file_size);
     }
@@ -89,7 +89,7 @@ static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *
     return false;
 }
 
-static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
+gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
     const RmCfg *cfg = file_a->session->cfg;
 
     return (1 && (file_a->file_size == file_b->file_size) &&
@@ -133,6 +133,28 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
     return rm_node_hash(key->file);
 }
 
+static bool rm_path_have_same_parent(
+    RmCfg *cfg, RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
+    RmFile *file_a = key_a->file, *file_b = key_b->file;
+
+    if(cfg->use_meta_cache) {
+        if(key_a->parent_inode_set && key_b->parent_inode_set) {
+            RM_DEFINE_PATH(file_a);
+            RM_DEFINE_PATH(file_b);
+
+            key_a->parent_inode = rm_util_parent_node(file_a_path);
+            key_a->parent_inode_set = TRUE;
+
+            key_b->parent_inode = rm_util_parent_node(file_b_path);
+            key_b->parent_inode_set = TRUE;
+        }
+
+        return key_a->parent_inode == key_b->parent_inode;
+    } else {
+        return file_a->folder->parent == file_b->folder->parent;
+    }
+}
+
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
     if(key_a->file->inode != key_b->file->inode) {
         return FALSE;
@@ -145,26 +167,12 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
     RmFile *file_a = key_a->file;
     RmFile *file_b = key_b->file;
 
-    if(key_a->parent_inode_set == false) {
-        RM_DEFINE_PATH(file_a);
-
-        key_a->parent_inode = rm_util_parent_node(file_a_path);
-        key_a->parent_inode_set = TRUE;
-    }
-
-    if(key_b->parent_inode_set == false) {
-        RM_DEFINE_PATH(file_b);
-
-        key_b->parent_inode = rm_util_parent_node(file_b_path);
-        key_b->parent_inode_set = TRUE;
-    }
-
-    if(key_a->parent_inode != key_b->parent_inode) {
+    if(!rm_path_have_same_parent(file_a->session->cfg, key_a, key_b)) {
         return FALSE;
     }
 
     if(!file_a->session->cfg->use_meta_cache) {
-        return g_strcmp0(file_a->basename, file_b->basename) == 0;
+        return g_strcmp0(file_a->folder->basename, file_b->folder->basename) == 0;
     }
 
     /* If using --with-metadata-cache, save the basename for later use
@@ -212,6 +220,14 @@ RmFileTables *rm_file_tables_new(_U RmSession *session) {
 }
 
 void rm_file_tables_destroy(RmFileTables *tables) {
+    if(tables->size_groups) {
+        g_hash_table_unref(tables->size_groups);
+    }
+
+    if(tables->node_table) {
+        g_hash_table_unref(tables->node_table);
+    }
+
     g_rec_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }
@@ -223,7 +239,8 @@ void rm_file_tables_destroy(RmFileTables *tables) {
  */
 int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,
                                  const char *basename_a, const char *basename_b,
-                                 int path_index_a, int path_index_b) {
+                                 int path_index_a, int path_index_b,
+                                 guint8 path_depth_a, guint8 path_depth_b) {
     RmCfg *sets = session->cfg;
 
     int sort_criteria_len = strlen(sets->sort_criteria);
@@ -235,6 +252,12 @@ int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtim
             break;
         case 'a':
             cmp = g_ascii_strcasecmp(basename_a, basename_b);
+            break;
+        case 'l':
+            cmp = strlen(basename_a) - strlen(basename_b);
+            break;
+        case 'd':
+            cmp = (short)path_depth_a - (short)path_depth_b;
             break;
         case 'p':
             cmp = (long)path_index_a - (long)path_index_b;
@@ -259,13 +282,16 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     if(a->lint_type != b->lint_type) {
         /* "other" lint outranks duplicates and has lower ENUM */
         return a->lint_type - b->lint_type;
+    } else if(a->is_symlink != b->is_symlink) {
+        return a->is_symlink - b->is_symlink;
     } else if(a->is_prefd != b->is_prefd) {
         return (b->is_prefd - a->is_prefd);
     } else {
         RM_DEFINE_BASENAME(a);
         RM_DEFINE_BASENAME(b);
         return rm_pp_cmp_orig_criteria_impl(session, a->mtime, b->mtime, a_basename,
-                                            b_basename, a->path_index, b->path_index);
+                                            b_basename, a->path_index, b->path_index, 
+                                            a->path_depth, b->path_depth);
     }
 }
 
@@ -347,6 +373,13 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
 static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
     if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
         if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
+            rm_file_destroy(file);
+            return true;
+        }
+
+        /* Also protect other lint by --keep-all-{un,}tagged */
+        if((session->cfg->keep_all_tagged && file->is_prefd) ||
+           (session->cfg->keep_all_untagged && !file->is_prefd)) {
             rm_file_destroy(file);
             return true;
         }
@@ -456,6 +489,13 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
         }
     }
 
+    if(file->hardlinks.is_head && file->hardlinks.files) {
+        /* Hardlinks are processed on the fly by shredder later,
+         * so we do not really need to process them.
+         */
+        session->total_filtered_files -= file->hardlinks.files->length;
+    }
+
     /*
     * Check if the file is a output of rmlint itself. Which we definitely
     * not want to handle. Creating a script that deletes itself is fun but useless.
@@ -474,13 +514,6 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
 
     session->total_filtered_files -= remove;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
-
-    if(file->hardlinks.is_head) {
-        /* Hardlinks are processed on the fly by shredder later,
-         * so we do not really need to process them.
-         */
-        session->total_filtered_files -= file->hardlinks.files->length;
-    }
 
     return remove;
 }
@@ -509,9 +542,15 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
             g_assert(type == file->lint_type);
 
             num_handled++;
+
             rm_fmt_write(file, session->formats);
         }
-        g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
+
+        if(!session->cfg->cache_file_structs) {
+            g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
+        } else {
+            g_list_free(list);
+        }
     }
 
     return num_handled;

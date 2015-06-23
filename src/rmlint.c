@@ -23,11 +23,19 @@
 *
 **/
 
+#ifndef _RM_HASHER_BUILD_MAIN
+
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
 
 #include "../lib/api.h"
+#include "../lib/config.h"
+
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0) 
+# include <glib-object.h>
+#endif
+
 
 static char *remove_color_escapes(char *message) {
     char *dst = message;
@@ -73,8 +81,6 @@ static void signal_handler(int signum) {
             exit(EXIT_FAILURE);
         }
         break;
-    case SIGFPE:
-    case SIGABRT:
     case SIGSEGV:
         rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
                           g_strsignal(signum));
@@ -101,6 +107,7 @@ static void i18n_init(void) {
     textdomain(RM_GETTEXT_PACKAGE);
 #endif
 }
+
 
 int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
@@ -129,6 +136,11 @@ int main(int argc, const char **argv) {
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
 
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
+    /* Very old glib. Debian, Im looking at you. */
+    g_type_init();
+#endif
+
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
@@ -138,3 +150,5 @@ int main(int argc, const char **argv) {
     rm_session_clear(&session);
     return exit_state;
 }
+#endif
+

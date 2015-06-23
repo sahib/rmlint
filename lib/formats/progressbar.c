@@ -277,6 +277,11 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
+    if(session->replay_files.length > 0) {
+        /* Makes not much sense to print a progressbar with --replay */
+        return;
+    }
+
     if(state == RM_PROGRESS_STATE_INIT) {
         /* Do initializiation here */
         const char *update_interval_str =
@@ -340,7 +345,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
-        rm_log_warning_line(_("Cannot figure out terminal width."));
+        //rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
     self->last_state = state;

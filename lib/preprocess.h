@@ -67,7 +67,8 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file);
  */
 int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,
                                  const char *basename_a, const char *basename_b,
-                                 int path_index_a, int path_index_b);
+                                 int path_index_a, int path_index_b,
+                                 guint8 path_depth_a, guint8 path_depth_b);
 
 /**
  * @brief Compare two files in order to find out which file is the
@@ -76,5 +77,10 @@ int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtim
  * Returns:
  */
 int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session);
+
+/**
+ * @brief: Check if two files are equal in terms of size, and match_* options.
+ */
+gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b);
 
 #endif

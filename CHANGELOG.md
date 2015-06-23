@@ -4,31 +4,87 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.2.0 Dreary Dropbear] -- [unreleased]
+## [2.3.0 Ominous Oscar] -- 2015-06-15
 
 ### Fixed
 
-- Improvements to paranoid reading, which is about as fast as normal hashing.
-- Memory improvement: Never store full paths; use our implementation of a 
-  Pat(h)ricia-Trie to save memory in all parts of rmlint.
-- Speed improvement: Do not wait on return of the last hashed buffer.
-- Speed improvement: Use parallel hashing.
-- Speed improvement: Use a separate lock for each hash group.
-- Make rmlint usable for very hight amounts of files (works for 5M):
-  See also: https://github.com/sahib/rmlint/issues/109
-  A compression path trie is used as data structures for paths now (credits to Daniel)
-  Also many kudos to our user "vvs-" which provided many useful testcases.
-- Problems and crashes on 32bit with large files and normal files.
-- Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
+- Compiles on Mac OSX now. See also: https://github.com/sahib/rmlint/issues/139
+- Fix a crash that happened with ``-e``.
+- Protect other lint than duplicates by ``-k`` or ``-K``.
+- ``chown`` in sh script fixed (was ``chmod`` by accident).
 
 ### Added
 
+- ``--replay``: Re-output a previously written json file. Allow filtering 
+  by using all other standard options (like size or directory filtering).
+- ``--sort-by``: Similar to ``-S``, but sorts groups of files. So showing
+  the group with the biggest size sucker is as easy as ``-y s``.
+
+### Changed
+
+- ``-S``'s long options is ``--rank-by`` now (prior ``--sortcriteria``).
+- ``-o`` can guess the formatter from the filename if given.
+- Remove some optimisations that gave no visible effect.
+- Simplified FIEMAP optimisation to reduce initial delay and reduce memory overhead
+- Improved hashing strategy for large disks (do repeated smaller sweeps across
+  the disk instead of incrementally hashing every file on the disk)
+
+## [2.2.1 Dreary Dropbear Bugfixes] -- [unreleased]
+
+### Fixed
+
+- Incorrect handling of -W, --no-with-color option
+- Handling of $PKG_CONFIG in SConstruct
+- Failure to build manpage
+- Various BSD compatibility issues
+- Nonstandard header sequence in modules using fts
+- Removed some unnecessary warnings
+
+
+## [2.2.0 Dreary Dropbear] -- 2015-05-09
+
+### Fixed
+
+- Issue with excessive memory usage and processing delays with
+  very large file counts (>5M files)
+- Problems and crashes on 32bit with large files and normal files.
+- Bug in memory manager for "paranoid" file comparison method which
+  could lead to OOM error in some cases and infinite looping in others.
+- Fixed bug which prevented option --max-paranoid-mem working.
+- Note: much kudos to our user "vvs-" who provided many useful testcases
+  and was prepared to re-run a 10-hour duplicate search after each effort
+  to fix the underlying issues.
+- Handling of json formatter on invalid utf8, which fixed ``--cache`` in return.
+- Bug during file traversal when encountering symlinks to empty folders
+
+### Added
+
+- More aggressive test suite, leading to higher coverage rates (90% of lines,
+  almost 100% functions at least). Let's not speak of branch coverage for now. 😄
 - A primitive benchmark suite.
 - A GUI sketch that can be shipped along rmlint.
 
 ### Changed
 
 - Most internal filesystems like `proc` are ignored now.
+- Improved progressbar
+- Memory footprint reduced to enable larger filesets to be processed. See
+  discussion at https://github.com/sahib/rmlint/issues/109.  Improvements
+  include a Pat(h)ricia-Trie used as data structure to efficiently map
+  file paths with much less memory consumption.  Also the file preprocessing
+  strategy (eg to find path doubles) has been improved to avoid having
+  several large hashtables active at the same time.
+- Improved threading strategy which increases speed of duplicate
+  matching.  As before, the threading strategy uses just one thread per
+  physical disk to enable fast reading without disk thrash.  The improved
+  algorithm now increases the number of cpu threads used to hash the data
+  as it is read in.  Also an improved mutex strategy reduces the wait time
+  before the hash results can be processed.
+  Note the new threading strategy is particularly effective on the
+  "paranoid" (byte-by-byte) file comparison method (option -pp), which is
+  now almost as fast as the default (SHA1 hash) method.
+- The optimisation in 2.1.0 which detects existing reflinks has been
+  reverted for now due to conflicts between shredder and treemerge.
 
 
 ## [2.1.0 Malnourished Molly] -- beta-release 2015-04-13
@@ -39,7 +95,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   the core got slower very fast due to linear lookups. Fixed.
 - performance regression: No SSDs were detected due to two bugs.
 - commandline aborts also on non-fatal option misuses.
-- Some statistic counts were updated wrong sometimes. 
+- Some statistic counts were updated wrong sometimes.
 - Fixes in treemerge to respect directories tagges as originals.
 - Ignore "evil" fs types like bindfs, nullfs completely.
 - Fix race in file tree traversal.

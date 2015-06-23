@@ -55,6 +55,9 @@ typedef struct _RmTrie {
 
     /* size of the trie */
     size_t size;
+
+    /* read write lock for insert/search */
+    GMutex lock;
 } RmTrie;
 
 /* Callback to rm_trie_iter */
@@ -78,6 +81,7 @@ void rm_trie_destroy(RmTrie *self);
  * The value can be later requested with rm_trie_search*.
  */
 RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value);
+RmNode *rm_trie_insert_unlocked(RmTrie *self, const char *path, void *value);
 
 /**
  * rm_trie_search_node:
@@ -105,7 +109,8 @@ bool rm_trie_set_value(RmTrie *self, const char *path, void *data);
  *
  * Returns the input buffer for chaining calls.
  */
-char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len);
+char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len);
+char *rm_trie_build_path_unlocked(RmNode *node, char *buf, size_t buf_len);
 
 /**
  * rm_trie_size:
@@ -132,11 +137,5 @@ void rm_trie_iter(RmTrie *self,
                   bool all_nodes,
                   RmTrieIterCallback callback,
                   void *user_data);
-
-/**
- * rm_trie_print:
- * Print the trie on stdout for debugging purposes.
- */
-void rm_trie_print(RmTrie *self);
 
 #endif

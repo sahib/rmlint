@@ -1,8 +1,32 @@
+/**
+* This file is part of rmlint.
+*
+*  rmlint is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, either version 3 of the License, or
+*  (at your option) any later version.
+*
+*  rmlint is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
+*
+* Authors:
+*
+*  - Christopher <sahib> Pahl 2010-2015 (https://github.com/sahib)
+*  - Daniel <SeeSpotRun> T.   2014-2015 (https://github.com/SeeSpotRun)
+*
+* Hosted on http://github.com/sahib/rmlint
+*
+**/
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <glib.h>
-#include <linux/limits.h>
 
 #include "pathtricia.h"
 #include "config.h"
@@ -61,6 +85,8 @@ void rm_trie_init(RmTrie *self) {
      * I did ze science! :-)
      */
     self->chunks = g_string_chunk_new(100);
+
+    g_mutex_init(&self->lock);
 }
 
 /* Path iterator that works with absolute paths.
@@ -97,11 +123,14 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
     g_assert(self);
     g_assert(path);
 
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+
+    g_mutex_lock(&self->lock);
+
     char *path_elem = NULL;
     RmNode *curr_node = self->root;
 
-    RmPathIter iter;
-    rm_path_iter_init(&iter, path);
     while((path_elem = rm_path_iter_next(&iter))) {
         curr_node = rm_node_insert(self, curr_node, path_elem);
     }
@@ -112,6 +141,8 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
         self->size++;
     }
 
+    g_mutex_unlock(&self->lock);
+
     return curr_node;
 }
 
@@ -119,20 +150,25 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
     g_assert(self);
     g_assert(path);
 
+    RmPathIter iter;
+    rm_path_iter_init(&iter, path);
+
+    g_mutex_lock(&self->lock);
+
     char *path_elem = NULL;
     RmNode *curr_node = self->root;
 
-    RmPathIter iter;
-    rm_path_iter_init(&iter, path);
     while(curr_node && (path_elem = rm_path_iter_next(&iter))) {
         if(curr_node->children == NULL) {
             /* Can't go any further */
+            g_mutex_unlock(&self->lock);
             return NULL;
         }
 
         curr_node = g_hash_table_lookup(curr_node->children, path_elem);
     }
 
+    g_mutex_unlock(&self->lock);
     return curr_node;
 }
 
@@ -151,7 +187,7 @@ bool rm_trie_set_value(RmTrie *self, const char *path, void *data) {
     }
 }
 
-char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
+char *rm_trie_build_path_unlocked(RmNode *node, char *buf, size_t buf_len) {
     if(node == NULL) {
         return NULL;
     }
@@ -163,8 +199,9 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
     for(RmNode *folder = node->parent; folder && folder->parent;
         folder = folder->parent) {
         elements[n_elements++] = folder->basename;
-        if(n_elements >= sizeof(elements))
+        if(n_elements >= sizeof(elements)) {
             break;
+        }
     }
 
     /* copy collected elements into *buf */
@@ -175,6 +212,17 @@ char *rm_trie_build_path(RmNode *node, char *buf, size_t buf_len) {
     }
 
     return buf;
+}
+
+char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) {
+    if(node == NULL) {
+        return NULL;
+    }
+    char *result = NULL;
+    g_mutex_lock(&self->lock);
+        {result = rm_trie_build_path_unlocked(node, buf, buf_len);}
+    g_mutex_unlock(&self->lock);
+    return result;
 }
 
 size_t rm_trie_size(RmTrie *self) {
@@ -213,8 +261,28 @@ static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_n
 
 void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
                   RmTrieIterCallback callback, void *user_data) {
+    g_mutex_lock(&self->lock);
     _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);
+    g_mutex_unlock(&self->lock);
 }
+
+static int rm_trie_destroy_callback(_U RmTrie *self,
+                                    RmNode *node,
+                                    _U int level,
+                                    _U void *user_data) {
+    rm_node_free(node);
+    return 0;
+}
+
+void rm_trie_destroy(RmTrie *self) {
+    rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
+    g_string_chunk_free(self->chunks);
+    g_mutex_clear(&self->lock);
+}
+
+#ifdef _RM_PATHTRICIA_BUILD_MAIN
+
+#include <stdio.h>
 
 static int rm_trie_print_callback(_U RmTrie *self,
                                   RmNode *node,
@@ -235,22 +303,6 @@ void rm_trie_print(RmTrie *self) {
     rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
 }
 
-static int rm_trie_destroy_callback(_U RmTrie *self,
-                                    RmNode *node,
-                                    _U int level,
-                                    _U void *user_data) {
-    rm_node_free(node);
-    return 0;
-}
-
-void rm_trie_destroy(RmTrie *self) {
-    rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);
-    g_string_chunk_free(self->chunks);
-}
-
-#ifdef _RM_PATHTRICIA_BUILD_MAIN
-
-#include <stdio.h>
 
 int main(void) {
     RmTrie trie;
@@ -270,7 +322,8 @@ int main(void) {
     g_printerr("Took %2.5f to insert %d items\n", g_timer_elapsed(timer, NULL), i);
     rm_trie_print(&trie);
     memset(buf, 0, sizeof(buf));
-    rm_trie_build_path(rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf, sizeof(buf));
+    rm_trie_build_path(&trie, rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf,
+                       sizeof(buf));
     g_printerr("=> %s\n", buf);
 
     g_timer_start(timer);

@@ -1,5 +1,5 @@
 Name:           rmlint
-Version:        2.0.0
+Version:        2.2.0
 Release:        0%{?dist}
 Summary:        rmlint finds space waste and other broken things on your filesystem and offers to remove it.
 Group:          Applications/System
@@ -41,7 +41,9 @@ rm -rf %{buildroot}
 # %{_includedir}/*
 
 %changelog
-* Sun Jan 12 2014 Christopher Pahl <sahib@online.de> - 2.0.0
+* Sun May 10 2015 Christopher Pahl <sahib@online.de> - 2.2.0
+- Update version to 2.2.0
+* Sun Jan 12 2015 Christopher Pahl <sahib@online.de> - 2.0.0
 - Fix rpm for lib separation.
 * Sat Dec 20 2014 Christopher Pahl <sahib@online.de> - 2.0.0
 - Use autosetup instead of setup -q

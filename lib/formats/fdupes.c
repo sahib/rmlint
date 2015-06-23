@@ -89,7 +89,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
 
 static void rm_fmt_prog(RmSession *session,
                         _U RmFmtHandler *parent,
-                        _U FILE *out,
+                        FILE *out,
                         RmFmtProgressState state) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
@@ -100,29 +100,26 @@ static void rm_fmt_prog(RmSession *session,
             (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
     }
 
-    /* We do not respect `out` here; just use stderr and stdout directly.
-     * Reason: fdupes does this, let's imitate weird behaviour!
-     */
     extern RmFmtHandler *PROGRESS_HANDLER;
     g_assert(PROGRESS_HANDLER->prog);
-    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, stderr, state);
+    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, out, state);
 
     /* Print all cached lines on shutdown. */
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->text_lines) {
         for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
             char *line = iter->data;
             if(line != NULL) {
-                fprintf(stdout, "%s", line);
+                fprintf(out, "%s", line);
             }
         }
         g_queue_free(self->text_lines);
         g_string_chunk_free(self->text_chunks);
-        fprintf(stdout, "\n");
+        fprintf(out, "\n");
     }
 
     extern RmFmtHandler *SUMMARY_HANDLER;
     g_assert(SUMMARY_HANDLER->prog);
-    SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, stderr, state);
+    SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, out, state);
 }
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {

@@ -7,7 +7,8 @@ def test_simple():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
-    head, *data, footer = run_rmlint('-pp -D --sortcriteria A')
+
+    head, *data, footer = run_rmlint('-pp -D --rank-by A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
 
@@ -29,7 +30,7 @@ def test_diff():
     create_file('xxx', '2/a')
     create_file('xxx', '3/a')
     create_file('yyy', '3/b')
-    head, *data, footer = run_rmlint('-pp -D --sortcriteria A')
+    head, *data, footer = run_rmlint('-pp -D --rank-by A')
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert data[0]['size'] == 3
@@ -46,7 +47,7 @@ def test_same_but_not_dupe():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '2/b')
-    head, *data, footer = run_rmlint('-pp -D --sortcriteria A')
+    head, *data, footer = run_rmlint('-pp -D --rank-by A')
 
     # No duplicate dirs, but 3 duplicate files should be found.
     assert 0 == sum(find['type'] == 'duplicate_dir' for find in data)
@@ -200,7 +201,7 @@ def test_symlinks():
     create_file('xxx', 'b/z')
     create_link('b/z', 'b/x', symlink=True)
 
-    head, *data, footer = run_rmlint('-pp -D -S a -FF')
+    head, *data, footer = run_rmlint('-pp -D -S a -F')
 
     assert len(data) == 2
     assert data[0]['path'].endswith('z')
@@ -216,10 +217,12 @@ def test_symlinks():
     assert data[1]['path'].endswith('/b')
     assert not data[1]['is_original']
 
-    # x is a duplicate of z when following links
-    assert data[2]['path'].endswith('/a/x')
+    # z must come first, since it's the physical real file
+    assert data[2]['path'].endswith('/a/z')
     assert data[2]['is_original']
-    assert data[3]['path'].endswith('/a/z')
+
+    # x is a duplicate of z when following links
+    assert data[3]['path'].endswith('/a/x')
     assert not data[3]['is_original']
 
 

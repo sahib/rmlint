@@ -57,6 +57,9 @@
 
 #include <glib.h>
 #include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fts.h>
 
 #include "treemerge.h"
@@ -66,22 +69,21 @@
 #include "pathtricia.h"
 
 typedef struct RmDirectory {
-    char *dirname;        /* Path to this directory without trailing slash              */
-    GQueue known_files;   /* RmFiles in this directory                                  */
-    GQueue children;      /* Children for directories with subdirectories               */
-    gint64 prefd_files;   /* Files in this directory that are tagged as original        */
-    gint64 dupe_count;    /* Count of RmFiles actually in this directory                */
-    gint64 file_count;    /* Count of files actually in this directory (or -1 on error) */
-    gint64 mergeups;      /* number of times this directory was merged up               */
-    bool finished;        /* Was this dir or one of his parents already printed?        */
-    bool was_merged;      /* true if this directory was merged up already (only once)   */
-    bool was_inserted;    /* true if this directory was added to results (only once)    */
-    unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)        */
-    GHashTable *hash_set; /* Set of hashes, used for equality check (to be sure)        */
-    RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
+    char *dirname;         /* Path to this directory without trailing slash              */
+    GQueue known_files;    /* RmFiles in this directory                                  */
+    GQueue children;       /* Children for directories with subdirectories               */
+    gint64 prefd_files;    /* Files in this directory that are tagged as original        */
+    gint64 dupe_count;     /* Count of RmFiles actually in this directory                */
+    gint64 file_count;     /* Count of files actually in this directory (or -1 on error) */
+    gint64 mergeups;       /* number of times this directory was merged up               */
+    bool finished : 1;     /* Was this dir or one of his parents already printed?        */
+    bool was_merged : 1;   /* true if this directory was merged up already (only once)   */
+    bool was_inserted : 1; /* true if this directory was added to results (only once)    */
+    unsigned short depth;  /* path depth (i.e. count of / in path, no trailing /)        */
+    GHashTable *hash_set;  /* Set of hashes, used for equality check (to be sure)        */
+    RmDigest *digest;      /* Common digest of all RmFiles in this directory             */
 
     struct {
-        bool has_metadata; /* stat(2) called already                */
         time_t dir_mtime;  /* Directory Metadata: Modification Time */
         ino_t dir_inode;   /* Directory Metadata: Inode             */
         dev_t dir_dev;     /* Directory Metadata: Device ID         */
@@ -89,22 +91,22 @@ typedef struct RmDirectory {
 } RmDirectory;
 
 struct RmTreeMerger {
-    RmSession *session;       /* Session state variables / Settings          */
-    RmTrie dir_tree;          /* Path-Trie with all RmFiles as value         */
-    RmTrie count_tree;        /* Path-Trie with all file's count as value    */
-    GHashTable *result_table; /* {hash => [RmDirectory]} mapping             */
-    GHashTable *file_groups;  /* Group files by hash                         */
-    GHashTable *file_checks;  /* Set of files that were handled already.     */
-    GHashTable *known_hashs;  /* Set of known hashes, only used for cleanup. */
-    GQueue valid_dirs;        /* Directories consisting of RmFiles only      */
+    RmSession *session;       /* Session state variables / Settings                  */
+    RmTrie dir_tree;          /* Path-Trie with all RmFiles as value                 */
+    RmTrie count_tree;        /* Path-Trie with all file's count as value            */
+    GHashTable *result_table; /* {hash => [RmDirectory]} mapping                     */
+    GHashTable *file_groups;  /* Group files by hash                                 */
+    GHashTable *file_checks;  /* Set of files that were handled already.             */
+    GHashTable *known_hashs;  /* Set of known hashes, only used for cleanup.         */
+    GHashTable *was_printed;  /* Set of files that were handed to rm_fmt_write()     */
+    GQueue valid_dirs;        /* Directories consisting of RmFiles only              */
 };
 
 //////////////////////////
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
-                             void *user_data) {
+int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level, void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
@@ -117,7 +119,7 @@ int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
 
     char path[PATH_MAX];
     memset(path, 0, sizeof(path));
-    rm_trie_build_path(node, path, sizeof(path));
+    rm_trie_build_path_unlocked(node, path, sizeof(path));
 
     /* Ascend the path parts up, add one for each part we meet.
        If a part was never found before, add it.
@@ -241,10 +243,6 @@ static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *sessi
         }
     }
 
-#ifdef _RM_TREEMERGE_DEBUG
-    rm_trie_print(count_tree);
-#endif
-
     rm_trie_destroy(&file_tree);
     return true;
 }
@@ -284,7 +282,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
      * order in which the file hashes were added.
      * It is not used as full hash, but as sorting speedup.
      */
-    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0);
+    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0, false);
 
     g_queue_init(&self->known_files);
     g_queue_init(&self->children);
@@ -326,7 +324,7 @@ static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
 
     /* Need to set session first, since set_path expects that */
     file->session = merger->session;
-    rm_file_set_path(file, self->dirname, strlen(self->dirname), FALSE);
+    rm_file_set_path(file, self->dirname, strlen(self->dirname));
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
     file->digest = self->digest;
@@ -344,10 +342,6 @@ static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
-    /* Will this work with paranoid cfg? Probably, but in a weird way.
-     * Also it might not be very secure when the last block of the file is
-     * compared...
-     * */
     if(d1->mergeups != d2->mergeups) {
         return false;
     }
@@ -397,8 +391,8 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     RmOff digest_bytes = 0;
 
     if(file->digest->type == RM_DIGEST_PARANOID) {
-        file_digest = rm_digest_steal_buffer(file->digest->shadow_hash);
-        digest_bytes = file->digest->shadow_hash->bytes;
+        file_digest = rm_digest_steal_buffer(file->digest->paranoid->shadow_hash);
+        digest_bytes = file->digest->paranoid->shadow_hash->bytes;
     } else {
         file_digest = rm_digest_steal_buffer(file->digest);
         digest_bytes = file->digest->bytes;
@@ -539,6 +533,7 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
                                               (GEqualFunc)rm_digest_equal, NULL, NULL);
 
     self->known_hashs = g_hash_table_new_full(NULL, NULL, NULL, NULL);
+    self->was_printed = g_hash_table_new_full(NULL, NULL, NULL, NULL);
 
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
@@ -548,10 +543,14 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     return self;
 }
 
-int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, _U void *user_data) {
+int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, RmTreeMerger *tm) {
     RmDirectory *directory = node->data;
 
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        if(g_hash_table_contains(tm->was_printed, iter->data)) {
+            continue;
+        }
+
         rm_file_destroy((RmFile *)iter->data);
     }
 
@@ -571,9 +570,15 @@ void rm_tm_destroy(RmTreeMerger *self) {
     g_queue_clear(&self->valid_dirs);
 
     /* Kill all RmDirectories stored in the tree */
-    rm_trie_iter(&self->dir_tree, NULL, true, false, rm_tm_destroy_iter, NULL);
+    rm_trie_iter(
+        &self->dir_tree, NULL, true, false, 
+        (RmTrieIterCallback)rm_tm_destroy_iter, self
+    );
+
     rm_trie_destroy(&self->dir_tree);
     rm_trie_destroy(&self->count_tree);
+    g_hash_table_unref(self->was_printed);
+
     g_slice_free(RmTreeMerger, self);
 }
 
@@ -672,11 +677,9 @@ static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *direct
 static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        RmLintType actual_type = file->lint_type;
-
         file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
         rm_fmt_write(file, self->session->formats);
-        file->lint_type = actual_type;
+        g_hash_table_add(self->was_printed, file);
     }
 
     /* Recursively propagate to children */
@@ -703,7 +706,9 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
 
     return rm_pp_cmp_orig_criteria_impl(
         self->session, da->metadata.dir_mtime, db->metadata.dir_mtime,
-        rm_util_basename(da->dirname), rm_util_basename(db->dirname), 0, 0);
+        rm_util_basename(da->dirname), rm_util_basename(db->dirname), 0, 0,
+        rm_util_path_depth(da->dirname), rm_util_path_depth(db->dirname)
+    );
 }
 
 static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {
@@ -821,9 +826,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         if(result_dirs.length >= 2) {
             rm_shred_forward_to_output(self->session, &file_adaptor_group);
+        } else {
+            g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
         }
 
-        g_queue_foreach(&file_adaptor_group, (GFunc)g_free, NULL);
         g_queue_clear(&file_adaptor_group);
         g_queue_clear(&result_dirs);
     }
@@ -858,7 +864,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
-        bool has_one_dupe = false;
         RmOff file_size_acc = 0;
 
         GList *next = NULL;
@@ -866,18 +871,19 @@ static void rm_tm_extract(RmTreeMerger *self) {
             RmFile *file = iter->data;
             next = iter->next;
 
-            bool is_duplicate = g_hash_table_contains(self->file_checks, file->digest);
-            has_one_dupe |= is_duplicate;
-
             /* with --partial-hidden we do not want to output */
             if(self->session->cfg->partial_hidden && file->is_hidden) {
                 g_queue_delete_link(file_list, iter);
                 continue;
             }
 
+            bool is_duplicate = g_hash_table_contains(self->file_checks, file->digest);
+
             if(iter != file_list->head && !is_duplicate) {
                 file_size_acc += file->file_size;
             }
+
+            g_hash_table_add(self->was_printed, file);
         }
 
         if(file_list->length >= 2) {

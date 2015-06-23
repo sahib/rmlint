@@ -35,6 +35,7 @@
 #include <search.h>
 #include <sys/time.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include "cmdline.h"
 #include "treemerge.h"
@@ -43,6 +44,7 @@
 #include "shredder.h"
 #include "utilities.h"
 #include "formats.h"
+#include "replay.h"
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
@@ -200,7 +202,7 @@ static gboolean rm_cmd_parse_limit_sizes(_U const char *option_name,
                                          GError **error) {
     if(!rm_cmd_size_range_string_to_bytes(range_spec, &session->cfg->minsize,
                                           &session->cfg->maxsize, error)) {
-        g_prefix_error(error, _("cannot parse --limit: "));
+        g_prefix_error(error, _("cannot parse --size: "));
         return false;
     } else {
         session->cfg->limits_specified = true;
@@ -216,33 +218,41 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
 static int rm_cmd_create_metadata_cache(RmSession *session) {
-    if(session->cfg->use_meta_cache) {
-        GError *error = NULL;
-        session->meta_cache = rm_swap_table_open(FALSE, &error);
-        session->cfg->use_meta_cache = !!(session->meta_cache);
+    if(session->cfg->use_meta_cache == false) {
+        return false;
+    }
+
+    if(session->replay_files.length) {
+        rm_log_warning_line(_("--replay given; --with-metadata-cache will be ignored."));
+        session->cfg->use_meta_cache = false;
+        return EXIT_SUCCESS;
+    }
+
+    GError *error = NULL;
+    session->meta_cache = rm_swap_table_open(FALSE, &error);
+    session->cfg->use_meta_cache = !!(session->meta_cache);
+
+    if(error != NULL) {
+        rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
+        g_error_free(error);
+        error = NULL;
+        return EXIT_FAILURE;
+    }
+
+    char *names[] = {"path", "dir", NULL};
+    int *attrs_ptrs[] = {&session->meta_cache_path_id, &session->meta_cache_dir_id,
+                            NULL};
+
+    for(int i = 0; attrs_ptrs[i] && names[i]; ++i) {
+        *attrs_ptrs[i] =
+            rm_swap_table_create_attr(session->meta_cache, names[i], &error);
 
         if(error != NULL) {
-            rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
+            rm_log_warning_line(_("Unable to create cache attr `%s`: %s"), names[i],
+                                error->message);
             g_error_free(error);
             error = NULL;
             return EXIT_FAILURE;
-        }
-
-        char *names[] = {"path", "dir", NULL};
-        int *attrs_ptrs[] = {&session->meta_cache_path_id, &session->meta_cache_dir_id,
-                             NULL};
-
-        for(int i = 0; attrs_ptrs[i] && names[i]; ++i) {
-            *attrs_ptrs[i] =
-                rm_swap_table_create_attr(session->meta_cache, names[i], &error);
-
-            if(error != NULL) {
-                rm_log_warning_line(_("Unable to create cache attr `%s`: %s"), names[i],
-                                    error->message);
-                g_error_free(error);
-                error = NULL;
-                return EXIT_FAILURE;
-            }
         }
     }
 
@@ -261,7 +271,12 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
         cfg->is_prefd[index] = is_prefd;
         cfg->paths = g_realloc(cfg->paths, sizeof(char *) * (index + 2));
 
-        char *abs_path = realpath(path, NULL);
+        char *abs_path = NULL;
+        if (strncmp(path,"//",2) == 0) {
+            abs_path = g_strdup(path);
+        } else {
+            abs_path = realpath(path, NULL);
+        }
 
         if(cfg->use_meta_cache) {
             cfg->paths[index] = GUINT_TO_POINTER(
@@ -300,8 +315,15 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
 
     if(separator == NULL) {
         /* default to stdout */
-        full_path = "stdout";
-        strncpy(format_name, pair, strlen(pair));
+        char *extension = strchr(pair, '.');
+        if(extension == NULL) {
+            full_path = "stdout";
+            strncpy(format_name, pair, strlen(pair));
+        } else {
+            extension += 1;
+            full_path = (char *)pair;
+            strncpy(format_name, extension, strlen(extension));
+        }
     } else {
         full_path = separator + 1;
         strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
@@ -569,8 +591,6 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
     bool plain = rm_cmd_timestamp_is_plain(string);
     session->cfg->filter_mtime = false;
 
-    tzset();
-
     if(plain) {
         /* A simple integer is expected, just parse it as time_t */
         result = strtoll(string, NULL, 10);
@@ -583,7 +603,7 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
-            rm_log_debug("timestamp %ld understood as %s\n", result, time_buf);
+            rm_log_debug("timestamp %s understood as %lu\n", time_buf, result);
         }
     }
 
@@ -596,20 +616,21 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
     /* Some sort of success. */
     session->cfg->filter_mtime = true;
 
-    if(result > time(NULL)) {
+    time_t now = time(NULL);
+    if(result > now) {
         /* Not critical, maybe there are some uses for this,
          * but print at least a small warning as indication.
          * */
         if(plain) {
             rm_log_warning_line(_("-n %lu is newer than current time (%lu)."),
-                                (long)result, (long)time(NULL));
+                                (long)result, (long)now);
         } else {
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
 
-            rm_log_warning_line("-N %s is newer than current time (%s).", string,
-                                time_buf);
+            rm_log_warning_line("-N %s is newer than current time (%s) [%lu > %lu]", string,
+                                time_buf, result, now);
         }
     }
 
@@ -660,7 +681,7 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
 static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
     cfg->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
         verbosity_counter,
-        0,
+        1,
         (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1)];
 }
 
@@ -688,8 +709,10 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
-        g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("Only up to -pp or down to -PP flags allowed"));
+        if(error && *error == NULL) {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Only up to -pp or down to -PP flags allowed"));
+        }
         break;
     }
 }
@@ -736,18 +759,47 @@ static gboolean rm_cmd_parse_large_output(_U const char *option_name,
     return true;
 }
 
-static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
+static gboolean rm_cmd_parse_mem( const gchar *size_spec, GError **error, RmOff *target) {
     RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
 
     if(*error != NULL) {
         g_prefix_error(error, _("Invalid size description \"%s\": "), size_spec);
         return false;
     } else {
-        session->cfg->paranoid_mem = size;
+        *target = size;
         return true;
     }
+}
+
+
+static gboolean rm_cmd_parse_limit_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
+}
+
+static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->paranoid_mem));
+}
+
+static gboolean rm_cmd_parse_read_buffer_mem(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buffer_mem));
+}
+
+static gboolean rm_cmd_parse_sweep_size(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_size));
+}
+
+static gboolean rm_cmd_parse_sweep_count(_U const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_count));
 }
 
 static gboolean rm_cmd_parse_clamp_low(_U const char *option_name, const gchar *spec,
@@ -789,8 +841,14 @@ static gboolean rm_cmd_parse_progress(_U const char *option_name, _U const gchar
 static void rm_cmd_set_default_outputs(RmSession *session) {
     rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
-    rm_fmt_add(session->formats, "sh", "rmlint.sh");
-    rm_fmt_add(session->formats, "json", "rmlint.json");
+
+    if(session->replay_files.length) {
+        rm_fmt_add(session->formats, "sh", "rmlint.replay.sh");
+        rm_fmt_add(session->formats, "json", "rmlint.replay.json");
+    } else {
+        rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        rm_fmt_add(session->formats, "json", "rmlint.json");
+    }
 }
 
 static gboolean rm_cmd_parse_no_progress(_U const char *option_name,
@@ -837,6 +895,26 @@ static gboolean rm_cmd_parse_partial_hidden(_U const char *option_name,
     return true;
 }
 
+static gboolean rm_cmd_parse_see_symlinks(_U const char *option_name,
+                                           _U const gchar *count, RmSession *session,
+                                           _U GError **error) {
+    RmCfg *cfg = session->cfg;
+    cfg->see_symlinks = true;
+    cfg->follow_symlinks = false;
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_follow_symlinks(_U const char *option_name,
+                                             _U const gchar *count, RmSession *session,
+                                             _U GError **error) {
+    RmCfg *cfg = session->cfg;
+    cfg->see_symlinks = false;
+    cfg->follow_symlinks = true;
+
+    return true;
+}
+
 static gboolean rm_cmd_parse_no_partial_hidden(_U const char *option_name,
                                                _U const gchar *count, RmSession *session,
                                                _U GError **error) {
@@ -861,6 +939,10 @@ static gboolean rm_cmd_parse_merge_directories(_U const char *option_name,
     cfg->follow_symlinks = false;
     cfg->see_symlinks = true;
     rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
+
+    /* Keep RmFiles after shredder. */
+    cfg->cache_file_structs = true;
+
     return true;
 }
 
@@ -890,6 +972,65 @@ static gboolean rm_cmd_parse_permissions(_U const char *option_name, const gchar
         }
     }
 
+    return true;
+}
+
+static gboolean rm_cmd_check_lettervec(const char *option_name, const char *criteria, const char *valid, GError **error) {
+    for(int i = 0; criteria[i]; ++i) {
+        if(strchr(valid, criteria[i]) == NULL) {
+            g_set_error(error, RM_ERROR_QUARK, 0, 
+                        _("%s may only contain [%s], not `%c`"), 
+                        option_name, valid, criteria[i]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_sortby(_U const char *option_name, const gchar *criteria,
+                                         RmSession *session, GError **error) {
+    RmCfg *cfg = session->cfg;
+    if(!rm_cmd_check_lettervec(option_name, criteria, "moanspMOANSP", error)) {
+        return false;
+    }
+
+    /* Remember the criteria string */
+    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria));
+
+    /* ranking the files depends on caching them to the end of the program */
+    cfg->cache_file_structs = true;
+
+    return true;
+}
+
+static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *criteria,
+                                         RmSession *session, GError **error) {
+    RmCfg *cfg = session->cfg;
+
+    if(!rm_cmd_check_lettervec(option_name, criteria, "dlampDLAMP", error)) {
+        return false;
+    }
+
+    strncpy(cfg->sort_criteria, criteria, sizeof(cfg->sort_criteria));
+    return true;
+}
+
+static gboolean rm_cmd_parse_replay(_U const char *option_name, const gchar *json_path,
+                                    RmSession *session, GError **error) {
+    if(json_path == NULL) {
+        json_path = "rmlint.json";
+    }
+
+    if(g_access(json_path, R_OK) == -1) {
+        g_set_error(
+            error, RM_ERROR_QUARK, 0, "--replay: `%s`: %s", json_path, g_strerror(errno)
+        );
+        return false;
+    }
+
+    g_queue_push_tail(&session->replay_files, g_strdup(json_path));
+    session->cfg->cache_file_structs = true;
     return true;
 }
 
@@ -934,7 +1075,8 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
         if(strncmp(dir_path, "-", 1) == 0) {
             read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);
-        } else if(strncmp(dir_path, "//", 2) == 0) {
+        } else if(strncmp(dir_path, "//", 2) == 0
+                && strlen(dir_path) == 2) {
             is_prefd = !is_prefd;
         } else {
             read_paths = rm_cmd_add_path(session, is_prefd, path_index, paths[i]);
@@ -989,15 +1131,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* Free/Used Options:
        Free: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxX
-       Used                   jJ                            yY Z
+       Used                   jJ                               Z
     */
     // clang-format off
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
         {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
          _("Specify max traversal depth"), "N"},
-        {"sortcriteria", 'S', 0, G_OPTION_ARG_STRING, &cfg->sort_criteria,
-         _("Original criteria"), "[ampAMP]"},
+        {"rank-by", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
+         _("Original criteria"), "[dlampDLAMP]"},
+        {"sort-by", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(sortby),
+         _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),
          _("Specify lint types"), "T"},
         {"size", 's', 0, G_OPTION_ARG_CALLBACK, FUNC(limit_sizes),
@@ -1012,6 +1156,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Newer than stamp file"), "PATH"},
         {"newer-than", 'N', 0, G_OPTION_ARG_CALLBACK, FUNC(timestamp),
          _("Newer than timestamp"), "STAMP"},
+        {"replay", 'Y', OPTIONAL, G_OPTION_ARG_CALLBACK, FUNC(replay),
+         _("Re-output a json file"), "path/to/rmlint.json"},
         {"config", 'c', 0, G_OPTION_ARG_CALLBACK, FUNC(config),
          _("Configure a formatter"), "FMT:K[=V]"},
         {"cache", 'C', 0, G_OPTION_ARG_CALLBACK, FUNC(cache), _("Add json cache file"),
@@ -1030,7 +1176,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Be not that colorful"), NULL},
         {"hidden", 'r', DISABLE, G_OPTION_ARG_NONE, &cfg->ignore_hidden,
          _("Find hidden files"), NULL},
-        {"followlinks", 'f', 0, G_OPTION_ARG_NONE, &cfg->follow_symlinks,
+        {"followlinks", 'f', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(follow_symlinks),
          _("Follow symlinks"), NULL},
         {"no-followlinks", 'F', DISABLE, G_OPTION_ARG_NONE, &cfg->follow_symlinks,
          _("Ignore symlinks"), NULL},
@@ -1083,7 +1229,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Cross mountpoints", NULL},
         {"less-paranoid", 'P', EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(less_paranoid),
          "Use less paranoid hashing algorithm", NULL},
-        {"see-symlinks", '@', 0 | HIDDEN, G_OPTION_ARG_NONE, &cfg->see_symlinks,
+        {"see-symlinks", '@', EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(see_symlinks),
          "Treat symlinks a regular files", NULL},
         {"no-match-basename", 'B', DISABLE | HIDDEN, G_OPTION_ARG_NONE,
          &cfg->match_basename, "Disable --match-basename filter", NULL},
@@ -1106,10 +1252,18 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Limit lower reading barrier", "P"},
         {"clamp-top", 'Q', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(clamp_top),
          "Limit upper reading barrier", "P"},
-        {"max-paranoid-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
-         "Specify max. memory to use for -pp", "S"},
+        {"limit-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(limit_mem),
+         "Specify max. memory usage target", "S"},
+        {"paranoid-mem", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
+         "Specify min. memory to use for in-progress paranoid hashing", "S"},
+        {"read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
+         "Specify min. memory to use for read buffer during hashing", "S"},
+        {"sweep-size", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_size),
+         "Specify max. bytes per pass when scanning disks", "S"},
+        {"sweep-files", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_count),
+         "Specify max. file count per pass when scanning disks", "S"},
         {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
-         "Specify max. number of threads", "N"},
+         "Specify max. number of hasher threads", "N"},
         {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,
          "Output unfinished checksums", NULL},
         {"xattr-write", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->write_cksum_to_xattr,
@@ -1130,6 +1284,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          "Shredder always waits for file increment to finish hashing before moving on to "
          "the next file",
          NULL},
+        {"fake-pathindex-as-disk", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->fake_pathindex_as_disk,
+         "Testing option for threading; pretends each input path is a separate physical "
+         "disk",
+         NULL},
+        {"fake-holdback", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->cache_file_structs, "Hold back all files to the end before outputting.", NULL},
+        {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
+         &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
+        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read,
+         "Default to buffered reading calls (fread) during reading.", NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
          "Shredder never waits for file increment to finish hashing before moving on to "
          "the next file",
@@ -1176,7 +1341,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
                                  _("rmlint finds space waste and other broken things on "
                                    "your filesystem and offers to remove it.\n"
                                    "It is especially good at finding duplicates and "
-                                   "offers a big varierty of options to handle them."));
+                                   "offers a big variety of options to handle them."));
     g_option_context_set_description(
         option_parser,
         _("Only the most important options and options that alter the defaults are shown "
@@ -1207,7 +1372,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     if(cfg->with_color) {
         cfg->with_stdout_color = isatty(fileno(stdout));
         cfg->with_stderr_color = isatty(fileno(stdout));
-        cfg->with_color = (cfg->with_stderr_color | cfg->with_stderr_color);
+        cfg->with_color = (cfg->with_stdout_color | cfg->with_stderr_color);
     } else {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }
@@ -1226,8 +1391,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         error = g_error_new(RM_ERROR_QUARK, 0, _("No valid paths given."));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
+    } else if(cfg->follow_symlinks && cfg->see_symlinks) {
+        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks.");;;
+        g_assert_not_reached();
     }
-
 failure:
     if(error != NULL) {
         rm_cmd_on_error(NULL, NULL, session, &error);
@@ -1237,12 +1404,34 @@ failure:
     return !(session->cmdline_parse_error);
 }
 
+static int rm_cmd_replay_main(RmSession *session) {
+    /* User chose to replay some json files. */
+    RmParrotCage cage;
+    rm_parrot_cage_open(&cage, session);
+
+    for(GList *iter = session->replay_files.head; iter; iter = iter->next) {
+        rm_parrot_cage_load(&cage, iter->data);
+    }
+
+    rm_parrot_cage_close(&cage);
+    rm_fmt_flush(session->formats);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
+
+    return EXIT_SUCCESS;
+}
+
 int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
+
+    if(session->replay_files.length) {
+        return rm_cmd_replay_main(session);
+    }
+
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
-    session->mounts = rm_mounts_table_new();
+    session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
     if(session->mounts == NULL) {
         exit_state = EXIT_FAILURE;
         goto failure;
@@ -1274,6 +1463,7 @@ int rm_cmd_main(RmSession *session) {
         rm_tm_finish(session->dir_merger);
     }
 
+    rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 

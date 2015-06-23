@@ -38,7 +38,7 @@
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
 
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
 #else
 typedef struct stat RmStat;
@@ -49,7 +49,7 @@ typedef struct stat RmStat;
 ////////////////////////////////////
 
 static inline int rm_sys_stat(const char *path, RmStat *buf) {
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
     return stat64(path, buf);
 #else
     return stat(path, buf);
@@ -57,16 +57,26 @@ static inline int rm_sys_stat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
     return lstat64(path, buf);
 #else
     return lstat(path, buf);
 #endif
 }
 
+static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {
+#if RM_IS_APPLE
+    return stat->st_mtimespec.tv_sec;
+#else
+    return stat->st_mtim.tv_sec;
+#endif
+}
+
 static inline int rm_sys_open(const char *path, int mode) {
 #if HAVE_STAT64
+# ifdef O_LARGEFILE
     mode |= O_LARGEFILE;
+# endif
 #endif
 
     return open(path, mode, (S_IRUSR | S_IWUSR));
@@ -80,7 +90,12 @@ static inline void rm_sys_close(int fd) {
 
 static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
                                    RmOff offset) {
-#if RM_PLATFORM_32
+#if RM_IS_APPLE
+    if(lseek(fd, offset, SEEK_SET) == -1) {
+        rm_log_perror("seek in emulated preadv failed");
+    }
+    return readv(fd, iov, iovcnt);
+#elif RM_PLATFORM_32
     if(lseek64(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
     }
@@ -175,6 +190,15 @@ char *rm_util_basename(const char *filename);
  */
 bool rm_util_path_is_hidden(const char *path);
 
+/**
+ * @brief Get the depth of a path
+ *
+ * @param path 
+ *
+ * @return depth of path or 0.
+ */
+int rm_util_path_depth(const char *path);
+
 typedef gpointer (*RmNewFunc)(void);
 
 /**
@@ -222,10 +246,11 @@ typedef struct RmMountTable {
 
 /**
  * @brief Allocates a new mounttable.
+ * @param force_fiemap Create random fiemap data always. Useful for testing.
  *
  * @return The mounttable. Free with rm_mounts_table_destroy.
  */
-RmMountTable *rm_mounts_table_new(void);
+RmMountTable *rm_mounts_table_new(bool force_fiemap);
 
 /**
  * @brief Destroy a previously allocated mounttable.
@@ -295,39 +320,24 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
 //    FIEMAP IMPLEMENATION     //
 /////////////////////////////////
 
-/* typedef RmOffsetTable, in case we need to exchange
- * the data structure at any point.
- */
-typedef GSequence *RmOffsetTable;
-
 /**
- * @brief Create a table with the extents for a file at path.
- */
-RmOffsetTable rm_offset_create_table(const char *path);
-
-/**
- * @brief Lookup the physical offset of a file at any given offset.
+ * @brief Lookup the physical offset of a file fd at any given offset.
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_lookup(RmOffsetTable table, RmOff file_offset);
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next);
 
 /**
- * @return next logical offset.
+ * @brief Lookup the physical offset of a file path at any given offset.
+ *
+ * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_bytes_to_next_fragment(RmOffsetTable table, RmOff file_offset);
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next);
 
 /**
- * @brief Test if two files already share same offsets.
+ * @brief Test if two files have identical fiemaps.
  */
-bool rm_offsets_match(RmOffsetTable table1, RmOffsetTable table2);
-
-/**
- * @brief Free the allocated table.
- */
-static inline void rm_offset_free(RmOffsetTable table) {
-    g_sequence_free(table);
-}
+bool rm_offsets_match(char *path1, char *path2);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //

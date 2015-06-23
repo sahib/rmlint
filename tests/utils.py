@@ -4,16 +4,28 @@
 
 import os
 import json
+import time
 import pprint
 import shutil
 import shlex
 import subprocess
 
 USE_VALGRIND = True
-TESTDIR_NAME = '/tmp/rmlint-unit-testdir'
+TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
 def runs_as_root():
     return os.geteuid() is 0
+
+
+def get_env_flag(name):
+    try:
+        return int(os.environ.get(name) or 0)
+    except ValueError:
+        print('{n} should be an integer.'.format(n=name))
+
+
+def use_valgrind():
+    return get_env_flag('RM_TS_USE_VALGRIND')
 
 
 def create_testdir():
@@ -31,13 +43,19 @@ def which(program):
     if fpath and is_exe(program):
         return program
     else:
-        for path in os.environ["PATH"].split(os.pathsep):
+        for path in (os.environ.get("PATH") or []).split(os.pathsep):
             path = path.strip('"')
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
 
     return None
+
+
+def has_feature(feature):
+    return ('+' + feature) in subprocess.check_output(
+        ['./rmlint', '--version'], stderr=subprocess.STDOUT
+    ).decode('utf-8')
 
 
 def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
@@ -49,49 +67,64 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     else:
         target_dir = ""
 
-    if os.environ.get('USE_VALGRIND'):
+    if use_valgrind():
         env = {
             'G_DEBUG': 'gc-friendly',
             'G_SLICE': 'always-malloc'
         }
         cmd = [which('valgrind'), '--show-possibly-lost=no', '-q']
+    elif get_env_flag('RM_TS_USE_GDB'):
+        env, cmd = {}, ['/usr/bin/gdb', '-batch', '--silent', '-ex=run', '-ex=bt', '-ex=quit', '--args']
     else:
         env, cmd = {}, []
 
-    cmd += ['./rmlint', '-V', target_dir, '-o', 'json:stdout'] + shlex.split(' '.join(args))
+    cmd += [
+        './rmlint', target_dir, '-V',
+        '-o', 'json:/tmp/out.json', '-c', 'json:oneline'
+    ] + shlex.split(' '.join(args))
 
-    for output in outputs or []:
+    for idx, output in enumerate(outputs or []):
         cmd.append('-o')
         cmd.append('{f}:{p}'.format(
-            f=output, p=os.path.join(TESTDIR_NAME, '.' + output))
+            f=output, p=os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)))
         )
 
     # filter empty strings
     cmd = list(filter(None, cmd))
 
-    if os.environ.get('PRINT_CMD'):
+    if get_env_flag('RM_TS_PRINT_CMD'):
         print('Run:', ' '.join(cmd))
 
+    if get_env_flag('RM_TS_SLEEP'):
+        print('Waiting for 1000 seconds.')
+        time.sleep(1000)
+
     output = subprocess.check_output(cmd, shell=False, env=env)
-    json_data = json.loads(output.decode('utf-8'))
+    if get_env_flag('RM_TS_USE_GDB'):
+        print('==> START OF GDB OUTPUT <==')
+        print(output.decode('utf-8'))
+        print('==> END OF GDB OUTPUT <==')
+
+    with open('/tmp/out.json', 'r') as f:
+        json_data = json.loads(f.read())
 
     read_outputs = []
-    for output in outputs or []:
-        with open(os.path.join(TESTDIR_NAME, '.' + output), 'r') as handle:
+    for idx, output in enumerate(outputs or []):
+        with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r') as handle:
             read_outputs.append(handle.read())
-
     if outputs is None:
         return json_data
     else:
         return json_data + read_outputs
 
 
-def compare_json_doc(doc_a, doc_b):
-    # TODO: progress, is_original
+def compare_json_doc(doc_a, doc_b, compare_checksum=False):
     keys = [
-        'disk_id', 'inode', 'mtime',
-        'path', 'size', 'type'
+        'disk_id', 'inode', 'mtime', 'path', 'size', 'type'
     ]
+
+    if compare_checksum and 'checkum' in doc_a and 'checksum' in doc_b:
+        keys.append('checksum')
 
     for key in keys:
         # It's okay for unfinished checksums to have some missing fields.
@@ -105,7 +138,7 @@ def compare_json_doc(doc_a, doc_b):
     return True
 
 
-def compare_json_docs(docs_a, docs_b):
+def compare_json_docs(docs_a, docs_b, compare_checksum=False):
     paths_a, paths_b = {}, {}
 
     for doc_a in docs_a[1:-1]:
@@ -118,7 +151,7 @@ def compare_json_docs(docs_a, docs_b):
         # if path_a not in paths_b:
         #     print('####', doc_a, path_a, '\n', docs_b, '\n\n', list(paths_b))
         doc_b = paths_b[path_a]
-        if not compare_json_doc(doc_a, doc_b):
+        if not compare_json_doc(doc_a, doc_b, compare_checksum):
             print('!! OLD:')
             pprint.pprint(doc_a)
             print('!! NEW:')
@@ -132,10 +165,17 @@ def compare_json_docs(docs_a, docs_b):
 
     return True
 
+
 def run_rmlint_pedantic(*args, **kwargs):
     options = [
         '--with-fiemap',
         '--without-fiemap',
+        '--fake-pathindex-as-disk',
+        '--fake-fiemap',
+        '-P',
+        '-PP',
+        '--limit-mem 1M --algorithm=paranoid',
+        '--buffered-read',
         '--threads=1',
         '--shred-never-wait',
         '--shred-always-wait',
@@ -148,11 +188,11 @@ def run_rmlint_pedantic(*args, **kwargs):
         'spooky32', 'spooky64'
     ]
 
-    # Note: sha512 is not in there for now; since travis system does
-    #       not support a recent enough glib with sha512.
-    #       God forsaken debian people.
+    # Note: sha512 is supported on all system which have
+    #       no recent enough glib with. God forsaken debian people.
+    if has_feature('sha512'):
+        cksum_types.append('sha512')
 
-    # TODO: also check checksum key where appropiate.
     for cksum_type in cksum_types:
         options.append('--algorithm=' + cksum_type)
 
@@ -171,7 +211,13 @@ def run_rmlint_pedantic(*args, **kwargs):
             if data:
                 data_skip = data[:-output_len]
 
-        if data is not None and not compare_json_docs(data_skip, new_data_skip):
+        # We cannot compare checksum in all cases.
+        compare_checksum = not option.startswith('--algorithm=')
+        for arg in args:
+            if '--cache' in args or '-C' in arg:
+                compare_checksum = False
+
+        if data_skip is not None and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
             pprint.pprint(data_skip)
             pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
@@ -182,7 +228,7 @@ def run_rmlint_pedantic(*args, **kwargs):
 
 
 def run_rmlint(*args, **kwargs):
-    if os.environ.get('PEDANTIC'):
+    if get_env_flag('RM_TS_PEDANTIC'):
         return run_rmlint_pedantic(*args, **kwargs)
     else:
         return run_rmlint_once(*args, **kwargs)
@@ -210,6 +256,13 @@ def create_file(data, name):
 
     with open(full_path, 'w') as handle:
         handle.write(data)
+
+    return full_path
+
+
+def warp_file_to_future(name, seconds):
+    now = time.time()
+    os.utime(os.path.join(TESTDIR_NAME, name), (now + 2, now + 2))
 
 
 def usual_setup_func():

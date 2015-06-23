@@ -20,20 +20,19 @@ to remove it. It is able to find:
    :columns: 3
 
    + Extremely fast.
-   + Exchangeable hashing algorithm.
-   + Numerous output formats.
-   + Easy commandline interface.
-   + Possibility to update files with newer mtime.
-   + Many options for originaldetection.
-   + Scales up to millions of files.
+   + Flexible and easy commandline options.
+   + Choice of several hashes for hash-based deplicate detection
+   + Option for exact byte-by-byte comparison (only slightly slower).
+   + Numerous output options.
+   + Option to store time of last run; next time will only scan new files.
+   + Many options for original selection / prioritisation.
+   + Can handle very large file sets (millions of files).
    + Colorful progressbar. (😃)
-   + Fast byte-by-byte comparasion.
 
 |
 
 .. image:: _static/screenshot.png
    :align: center
-   :width: 50%
 
 ----
 
@@ -57,11 +56,12 @@ to remove it. It is able to find:
 .. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/releases
 
+.. image:: https://img.shields.io/github/downloads/sahib/rmlint/latest/total.svg
+   :target: https://github.com/sahib/rmlint/releases/latest
+
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
 
-.. image:: https://www.codacy.com/project/badge/0a87c7b0766844f58635295655847f30
-   :target: https://www.codacy.com/public/sahib/rmlint/dashboard
 
 .. raw:: html
 
@@ -102,6 +102,7 @@ user. People that want to extend ``rmlint`` might want to read this though:
        
    developers
    translators
+   benchmarks
    Online-manpage of rmlint(1) <rmlint.1>
 
 The Changelog_ is also updated with new and futures features, fixes and overall

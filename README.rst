@@ -1,6 +1,36 @@
       
 ======
 
+**oscar** branch
+
+This was an experimental branch targeting more speed, particularly with paranoid file comparison.
+In the end there was probably not enough speed gain to justify the complexity so the next task will be
+to remove the complexity without losing too much speed.
+
+Some timings
+rmlint -pp --paranoid-mem=4G {on ext4 part of /home/daniel}
+==============================  ======  =======
+rmlint version                  Time    Max Mem
+==============================  ======  =======
+rmlint 2.2.0 (2be9de7)          389s    1801k
+develop branch (f4fd5e1)        309s    1847k
+oscar as at a52a60a             295s    1834k
+after async queue bugfix        282s    1852k 
+==============================  ======  =======
+
+rmlint -pp --paranoid-mem=512M:
+==============================  ======  =======
+rmlint version                  Time    Max Mem
+==============================  ======  =======
+rmlint 2.2.0 (2be9de7)          xxxs    xxxk
+develop branch (f4fd5e1)        xxxs    xxxk
+oscar as at a52a60a             558s    568k
+after async queue bugfix        535s    568k
+
+
+
+======
+
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center
 
@@ -16,17 +46,14 @@ to remove it.
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
-|
-
 .. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/releases
 
+.. image:: https://img.shields.io/github/downloads/sahib/rmlint/latest/total.svg
+   :target: https://github.com/sahib/rmlint/releases/latest
+
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
-
-.. image:: https://www.codacy.com/project/badge/0a87c7b0766844f58635295655847f30
-   :target: https://www.codacy.com/public/sahib/rmlint/dashboard
-
 
 **Features:**
 
@@ -97,8 +124,8 @@ AUTHORS
 Here's a list of developers to blame:
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2014
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2014
+*Christopher Pahl*                   https://github.com/sahib      2010-2015
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2015
 ===================================  ============================= ===========================================
 
 There are some other people that helped us of course.

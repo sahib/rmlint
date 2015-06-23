@@ -16,12 +16,18 @@ def path_index(file_path):
     assert False
 
 
+def path_depth(file_path):
+    return len([c for c in file_path if c == '/'])
+
+
 # dispatcher for comparison tests
 def validate_order(data, tests):
     testfuncs = {
         'a': lambda p: os.path.basename(p['path']).lower(),
         'm': lambda p: p['mtime'],
-        'p': lambda p: path_index(p['path'])
+        'p': lambda p: path_index(p['path']),
+        'd': lambda p: path_depth(p['path']),
+        'l': lambda p: len(os.path.basename(p['path']))
     }
 
     for a, b in combinations(data, 2):
@@ -50,6 +56,8 @@ def test_sorting():
     create_file('xxx', PATHS[1] + 'a')
     create_file('xxx', PATHS[0] + 'c')
     create_file('xxx', PATHS[2] + 'B')
+
+    # Make sure it takes some time to re-reun
     time.sleep(1.2)
     create_file('xxx', PATHS[2] + 'b')
     create_file('xxx', PATHS[1] + 'c')
@@ -58,13 +66,15 @@ def test_sorting():
     joiner = ' ' + TESTDIR_NAME + '/'
     search_paths = joiner + joiner.join(PATHS)
 
-    opts = 'amp'
+    opts = 'ampdl'
     all_opts = opts + opts.upper()
 
     combos = []
     is_legal_combo = lambda x: len(x) == len(set(x.lower()))
 
-    for n_terms in range(1, len(opts) + 1):
+    # Limit to 3-tuple combinations. 4-5-tuple combinations (just do +1)
+    # are possible if you have enough time (=> ~(10! / 2) tests).
+    for n_terms in range(1, len(opts) - 1):
         combos += filter(
             is_legal_combo,
             (''.join(p) for p in permutations(all_opts, n_terms))
@@ -72,9 +82,7 @@ def test_sorting():
 
     for combo in combos:
         combo_str = '-S ' + combo
-        print('Testing {}...'.format(combo_str), end='')
         head, *data, footer = run_rmlint(combo_str + search_paths, use_default_dir=False)
         assert len(data) == 6
 
         validate_order(data, combo)
-        print('ok')

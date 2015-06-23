@@ -411,10 +411,12 @@ Technically it only computes a hash of your file which might, by it's nature,
 collide with the hash of a totally different file. If we assume a *perfect* hash
 function (i.e. one that distributes it's hash values perfectly even over all
 possible values), the probablilty of having a hash-collision is
-:math:`\frac{1}{2^{128}}` for the default 128-bit hash.  Of course hash
+:math:`\frac{1}{2^{160}}` for the default 160-bit hash.  Of course hash
 functions are not totally random, so the collision probability is slightly higher.
+Due to the "birthday paradox", this starts to become a real risk if you have more
+than about :math:`2^{80}` files.
 
-If you're wary, you might want to make a bit more paranoid than it's default. 
+If you're wary, you might want to make a bit more paranoid than the default.
 By default the ``sha1`` hash algorithm is used, which we consider a good
 trade-off of speed and accuracy. ``rmlint``'s paranoia level can be easily 
 inc/decreased using the ``-p`` (``--paranoid``)/ ``-P`` (``--less-paranoid``)
@@ -438,12 +440,13 @@ We recommend never to use the ``-P`` option.
 .. note::
 
    Even with the default options, the probability of a false positive doesn't
-   really start to get significant until you have around 1,000,000,000,000,000,000
-   files all of the same file size.  Bugs in ``rmlint`` are sadly (or happily?)
+   really start to get significant until you have around 1,000,000,000,000,000,000,000
+   different files all of the same file size.  Bugs in ``rmlint`` are sadly (or happily?)
    more likely than hash collisions.
+   See http://preshing.com/20110504/hash-collision-probabilities/ for discussion.
 
-Original detection
-------------------
+Original detection / selection
+------------------------------
 
 As mentioned before, ``rmlint`` divides a group of dupes in one original and
 clones of that one. While the chosen original might not be the one that was
@@ -456,7 +459,7 @@ modification time then it's just a matter of chance which one is selected as the
 original.
 
 The way ``rmlint`` chooses the original can be driven by the ``-S``
-(``--sortcriteria``) option. 
+(``--rank-by``) option. 
 
 Here's an example:
 
@@ -479,11 +482,13 @@ backup files, ie **a.txt.bak** comes after **a.txt**.
 
 Here's a table of letters you can supply to the ``-S`` option:
 
-===== =========================== ===== ===========================
-**m** keep lowest mtime (oldest)  **M** keep highest mtime (newest)
-**a** keep first alphabetically   **A** keep last alphabetically
-**p** keep first named path       **P** keep last named path
-===== =========================== ===== ===========================
+===== ================================ ===== =================================
+**m** keep lowest mtime (oldest)       **M** keep highest mtime (newest)
+**a** keep first alphabetically        **A** keep last alphabetically
+**p** keep first named path            **P** keep last named path
+**d** keep path with lowest depth      **D** keep path with highest depth
+**l** keep path with shortest basename **L** keep path with longest basename
+===== ================================ ===== =================================
 
 The default setting is ``-S pm``.
 Multiple sort criteria can be specified, eg ``-S mpa`` will sort first by
@@ -630,6 +635,47 @@ There's also a preset of it to save you some typing: ``-T minimaldirs``.
     add a bit of processing time. This is due to the fact that all files need to
     be cached till the end and some other internal data structures need to be 
     created.
+
+Replaying results
+-----------------
+
+Often it is useful to just re-output the results you got from ``rmlint``. That's
+kind of annoying for large datasets, especially when you have big files. 
+
+The usage of the ``--replay`` feature is best understood by example:
+
+.. code-block:: bash
+
+    $ rmlint real-large-dir --progress
+    # ... lots of output ...
+    $ cp rmlint.json large.json  # Save json, so we don't overwrite it.
+    $ rmlint --replay large.json real-large-dir
+    # ... same output, just faster ...
+    $ rmlint --replay large.json --size 2M-512M --sort-by sn real-large-dir
+    # ... filter stuff; and rank by size and by size and groupsize ....
+    $ rmlint --replay large.json real-large-dir/subdir
+    # ... only show stuff in /subdir ...
+
+.. warning:: Details may differ
+
+    The generated output might differ slightly in order and details. 
+    For example the total number of files in the replayed runs will be the total
+    of entries in the json document, not the total number of traversed files.
+
+    Also be careful when replaying on a modified filesystem. ``rmlint`` will
+    ignore files with newer mtime than in the ``.json`` file for safety reason.
+
+.. warning:: Not all options might work
+
+   Options that are related to traversing and hashing/reading have no effect.
+   Those are:
+
+   * `--followlinks`
+   * `--algorithm and --paranoid`
+   * `--clamp-low`
+   * `--hardlinked`
+   * `--write-unfinished`
+   * all other caching options.
 
 Miscellaneous options
 ---------------------

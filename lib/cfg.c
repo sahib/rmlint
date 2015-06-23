@@ -52,15 +52,21 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->build_fiemap = true;
 
     /* Misc options */
-    cfg->sort_criteria = "pm";
+    strcpy(cfg->sort_criteria, "pm");
+
     cfg->checksum_type = RM_DEFAULT_DIGEST;
     cfg->with_color = true;
     cfg->with_stdout_color = true;
     cfg->with_stderr_color = true;
     cfg->threads = 32;
     cfg->verbosity = G_LOG_LEVEL_INFO;
-    cfg->paranoid_mem = 256 * 1024 * 1024;
     cfg->follow_symlinks = false;
+
+    cfg->read_buffer_mem = 16 * 1024 * 1024;
+    cfg->paranoid_mem = 256 * 1024 * 1024;
+    cfg->total_mem = (RmOff) 2 * 1024 * 1024 * 1024;
+    cfg->sweep_size = 1024 * 1024 * 1024;
+    cfg->sweep_count = 1024 * 16;
 
     cfg->skip_start_factor = 0.0;
     cfg->skip_end_factor = 1.0;

@@ -3,8 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <linux/limits.h>
-
+#include "config.h"
 #include "swap-table.h"
 
 #if HAVE_SQLITE3
@@ -84,8 +83,7 @@ static void rm_swap_table_clean_stmt(RmSwapTable *self, sqlite3_stmt *stmt,
     g_assert(self);
     g_assert(stmt);
 
-    int r = 0;
-    if((r = sqlite3_errcode(self->cache)) != SQLITE_DONE) {
+    if(sqlite3_errcode(self->cache) != SQLITE_DONE) {
         SET_ERROR("stmt failed: %s", sqlite3_errmsg(self->cache));
     }
 
@@ -149,7 +147,10 @@ RmSwapTable *rm_swap_table_open(gboolean in_memory, GError **error) {
     sqlite3_exec(handle, "PRAGMA cache_size = 8000;", 0, 0, 0);
     sqlite3_exec(handle, "PRAGMA synchronous = OFF;", 0, 0, 0);
     sqlite3_exec(handle, "PRAGMA journal_mode = MEMORY;", 0, 0, 0);
+
+#if !RM_IS_APPLE
     sqlite3_enable_shared_cache(TRUE);
+#endif
 
     size_t path_len = strlen(path) + 1;
     self = g_malloc(sizeof(RmSwapTable) + path_len);

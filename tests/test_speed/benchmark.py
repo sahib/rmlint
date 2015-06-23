@@ -188,7 +188,7 @@ class Program:
 
         if os.path.exists(temp_bin):
             print('-- Path exists: ' + temp_bin)
-            print('-- Skipping install; Delete if you need an update.')
+            print('-- Skipping install; Delusrete if you need an update.')
             self.guess_version()
             os.chdir(current_path)
             return
@@ -231,7 +231,7 @@ class Rmlint(Program):
         return RMLINT_INSTALL
 
     def get_options(self):
-        return '-o summary {path} -o json:/tmp/rmlint.json -U'
+        return '-o summary {path} -o json:/tmp/rmlint.json -T df'
 
     def compute_version(self):
         version_text = subprocess.check_output(
@@ -261,6 +261,7 @@ class RmlintParanoid(Rmlint):
         return 'rmlint-paranoid'
 
 
+# TODO: This needs work.
 class RmlintCache(Rmlint):
     def get_options(self):
         return '-C /tmp/rmlint.json ' + Rmlint.get_options(self)
@@ -431,13 +432,23 @@ class UsrDataset(ExistingDataset):
         return '/usr'
 
 
+class HomeDataset(ExistingDataset):
+    def get_path(self):
+        return '/home/sahib'
+
+
+class MusicDataset(ExistingDataset):
+    def get_path(self):
+        return '/run/media/sahib/35d4a401-ad4c-4221-afc0-f284808a1cdc/music'
+
+
 class UniqueNamesDataset(Dataset):
     def generate(self):
         for idx in range(10 ** 4):
             name = faker.name()
             path = os.path.join(self.workpath, str(idx))
             with open(path, 'w') as handle:
-                handle.write(name)
+                handle.write(name * 1024 * 16)
 
     def get_path(self):
         return self.workpath
@@ -445,8 +456,10 @@ class UniqueNamesDataset(Dataset):
 
 if __name__ == '__main__':
     datasets = [
-        UsrDataset('usr'),
+        # UsrDataset('usr'),
         # UniqueNamesDataset('names', sys.argv[1])
+        # MusicDataset('music')
+        HomeDataset('home')
     ]
 
     for dataset in datasets:

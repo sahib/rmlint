@@ -50,16 +50,29 @@ Here's a short step-by-step:
 Here are some other things to check before submitting your contribution:
 
 - Does your code look alien to the other code? Is the style the same?
-- Do all tests run? (Simply run ``nosetests`` to find out)
+  You can run this command to make sure it is the same:
+
+  .. code-block:: bash
+
+      $ clang-format -style=file -i $(find lib src -iname '*.[ch]')
+
+- Do all tests run? Go to the `test documentation`_ for more info.
   Also after opening the pull request, your code will be checked via `TravisCI`_.
-- Is your commit message descriptive?
+- Is your commit message descriptive? `whatthecommit.com`_ has some good
+  examples how they should **not** look like.
 - Is ``rmlint`` running okay inside of ``valgrind`` (i.e. no leaks and no memory violations)?
 
 .. _`TravisCI`: https://travis-ci.org/sahib/rmlint
 
+.. _`test documentation`: https://github.com/sahib/rmlint/blob/develop/tests/README.rst
+
+.. _`whatthecommit.com`: http://whatthecommit.com/
+
 For language-translations/updates it is also okay to send the ``.po`` files via
 mail at sahib@online.de, since not every translator is necessarily a
 software developer.
+
+.. include:: testing.rst
 
 Buildsystem Helpers
 -------------------
