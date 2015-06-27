@@ -1,6 +1,13 @@
 |
 |
 
+.. image:: _static/shredder.svg
+   :width: 25%
+   :align: center
+
+|
+
+
 ``rmlint`` finds space waste and other broken things on your filesystem and offers
 to remove it. It is able to find:
 
