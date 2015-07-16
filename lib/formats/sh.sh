@@ -102,7 +102,7 @@ original_check() {
 
 cp_hardlink() {
     echo 'Hardlinking to original:' "$1"
-    if original_check $1 $2; then
+    if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             cp --remove-destination --archive --link "$2" "$1"
         fi
@@ -111,7 +111,7 @@ cp_hardlink() {
 
 cp_symlink() {
     echo 'Symlinking to original:' "$1"
-    if original_check $1 $2; then
+    if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
             cp --remove-destination --archive --symbolic-link "$2" "$1"
@@ -123,7 +123,7 @@ cp_symlink() {
 cp_reflink() {
     # reflink $1 to $2's data, preserving $1's  mtime
     echo 'Reflinking to original:' "$1"
-    if original_check $1 $2; then
+    if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
             cp --reflink=always "$2" "$1"
@@ -147,7 +147,7 @@ user_command() {
 
 remove_cmd() {
     echo 'Deleting:' "$1"
-    if original_check $1 $2; then
+    if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             rm -rf "$1"
         fi
