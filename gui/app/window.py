@@ -3,13 +3,14 @@
 
 # Stdlib:
 from functools import partial
+from gettext import gettext
+_ = gettext
 
 # Internal:
 import app
-from app.util import IconButton
 
 # External:
-from gi.repository import Gdk, Gtk, GLib, Gio, GObject
+from gi.repository import Gdk, Gtk, GLib, Gio
 
 
 class ViewSwitcher(Gtk.Box):
@@ -27,7 +28,9 @@ class ViewSwitcher(Gtk.Box):
             (self.go_right, Gtk.ArrowType.RIGHT, +1)
         ):
             btn.add(Gtk.Arrow(arrow, Gtk.ShadowType.NONE))
-            btn.connect('clicked', partial(self._set_widget_at, step=direction))
+            btn.connect('clicked', partial(
+                self._set_widget_at, step=direction
+            ))
             btn.set_sensitive(False)
             self.add(btn)
 
@@ -97,7 +100,6 @@ class ViewSwitcher(Gtk.Box):
 
         self._set_visible_child(self._prev, update_prev=False)
         self._update_sensitivness()
-
 
 
 class HeaderBar(Gtk.HeaderBar):
@@ -269,8 +271,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.search_bar, self.search_entry = create_searchbar(self)
         self.main_grid.attach(self.infobar, 0, 0, 1, 1)
         self.main_grid.attach(self.search_bar, 0, 1, 1, 1)
-        self.main_grid.attach(self.view_stack, 0, 2, 1, 1)
-        self.main_grid.attach(self.progressbar_revealer, 0, 3, 1, 1)
+        self.main_grid.attach(self.progressbar_revealer, 0, 2, 1, 1)
+        self.main_grid.attach(self.view_stack, 0, 3, 1, 1)
         self.headerbar.pack_end(menu_button)
         self.headerbar.pack_end(search_button)
         self.add(self.main_grid)
@@ -312,9 +314,9 @@ class MainWindow(Gtk.ApplicationWindow):
         # Trigger a fake keypress event on the search bar.
         self.search_bar.set_search_mode(active)
         if active:
-             self.search_bar.show()
+            self.search_bar.show()
         else:
-             self.search_bar.hide()
+            self.search_bar.hide()
 
     def add_header_widget(self, widget, align=Gtk.Align.END):
         """

@@ -116,8 +116,10 @@ def _draw_segment(
     h, s, v = _hsv_by_degree(deg_a / 2 + deg_b / 2)
 
     # "Fix" the color for some special cases
-    s += 0.2 if is_selected else -0.05
-    v -= (layer / (max_plus_one + 1)) / 4
+    s += 0.2 if is_selected else -0.07
+
+    # Make more distant segments darker
+    v *= 1.25 - (layer / max_layers / 1.5)
 
     if is_selected:
         v += 0.2
@@ -236,6 +238,10 @@ class ShredderChart(Gtk.DrawingArea):
         self.add_events(self.get_events() | Gdk.EventMask.POINTER_MOTION_MASK)
         self.connect('motion-notify-event', self._on_motion)
 
+    ##############################
+    # TO BE OVERWRITTEN BY CHILD #
+    ##############################
+
     def _on_draw(self, area, ctx):
         pass
 
@@ -252,6 +258,9 @@ class Segment:
         self.is_selected = False
 
     def draw(self, ctx, alloc, max_layers, bg_col):
+        if self.size <= math.pi / 128:
+            print('mow')
+
         _draw_segment(
             ctx, alloc,
             self.layer, max_layers,
@@ -304,30 +313,25 @@ class ShredderRingChart(ShredderChart):
     def add_segment(self, segment):
         self._segment_list.append(segment)
 
-    def _group_nodes(self, model, root):
-        nodes = sorted(_dfs(model, root), key=itemgetter(1))
-        grouped, layer_off = {}, 0
-
+    def _group_nodes(self, trie, root):
+        nodes = sorted(iter(trie), key=itemgetter(1))
         for layer, group in groupby(nodes, key=itemgetter(1)):
             grouped[layer] = list(group)
 
         return grouped
 
-    def _calculate_angles(self, nodes, model, root, pseudo_segment):
+    def _calculate_angles(self, nodes, trie, root, pseudo_segment):
         angles = {}
-        total_size = model[root][Column.SIZE]
+        total_size = root.size
 
         for layer, group in nodes.items():
-            for iter_, _ in group:
-                up_path = model.get_path(iter_)
-                up_path.up()
-
-                parent = angles.get(str(up_path)) if up_path else None
+            for node, _ in group:
+                parent = node.parent
                 if parent is None:
                     # Assume an invisible segment on layer 0
                     parent, prev_size = pseudo_segment, total_size
                 else:
-                    prev_size = model[model.get_iter(str(up_path))][Column.SIZE]
+                    prev_size = parent.size
 
                 if prev_size:
                     angle_len = parent.size * model[iter_][Column.SIZE] / prev_size
@@ -341,13 +345,29 @@ class ShredderRingChart(ShredderChart):
                 self.add_segment(segment)
                 angles[str(model.get_path(iter_))] = segment
 
-    def render(self, model, root):
-        nodes = self._group_nodes(model, root)
+    def find_root(self, trie):
+        """Iterate to the first child that has more than one children"""
+        root = trie.root
+        for node, _ in trie:
+            if len(node.children) > 1:
+                return child
+
+        # Default to the actual root:
+        return root
+
+    def render(self, trie):
+        root = self.find_root(trie)
+        nodes = self._group_nodes(trie, root)
+
+        # TODO: implement trie.depth?
         self.max_layers = max(nodes.keys()) + 1
 
         pseudo_segment = Segment(0, 0, 2 * math.pi)
-        self._calculate_angles(nodes, model, root, pseudo_segment)
         self.total_size = model[model.get_iter_from_string('0')][Column.SIZE]
+        self._calculate_angles(nodes, model, root, pseudo_segment)
+
+        # Make sure it gets rendered soon:
+        self.queue_draw()
 
     def _on_draw(self, area, ctx):
         # Figure out the background color of the drawing area
@@ -356,7 +376,11 @@ class ShredderRingChart(ShredderChart):
 
         # Caluclate the font size of the inner label.
         # Make it smaller if not enough place but cut off at a size of 12
-        inner_circle = (1 / self.max_layers) * min(alloc.width, alloc.height) / 2
+        if self.max_layers > 0:
+            inner_circle = (1 / self.max_layers) * min(alloc.width, alloc.height) / 2
+        else:
+            inner_circle = 3
+
         font_size = min(12, inner_circle / 3)
 
         # Draw the center text:
@@ -370,8 +394,8 @@ class ShredderRingChart(ShredderChart):
 
         # Extract the segments sorted by layer
         # Also filter very small segments for performance reasons
-        segs = filter(lambda seg: seg.size > math.pi / 128, self._segment_list)
-        segs = sorted(segs, key=lambda e: e.layer, reverse=True)
+        # segs = filter(lambda seg: seg.size > math.pi / 128, self._segment_list)
+        segs = sorted(self._segment_list, key=lambda e: e.layer, reverse=True)
 
         for segment in segs:
             segment.draw(ctx, alloc, self.max_layers, bg_col)
@@ -458,8 +482,8 @@ class ShredderChartStack(Gtk.Stack):
         self.chart = ShredderRingChart(model)
         self.add_named(self.chart, 'directory')
 
-    def render(self, model, root):
-        self.chart.render(model, root)
+    def render(self, model):
+        self.chart.render(model)
 
 
 if __name__ == '__main__':
@@ -469,17 +493,19 @@ if __name__ == '__main__':
     Column.PATH = 0
     Column.SIZE = 1
 
-    # root = model.append(None, ('', 6000))
-    # home = model.append(root, ('home', 6000))
-    sahib = model.append(None, ('sahib', 6000))
+    root = model.append(None, ('', 6000))
+    home = model.append(root, ('home', 6000))
+    sahib = model.append(home, ('sahib', 6000))
 
     docs = model.append(sahib, ('docs', 2000))
     model.append(docs, ('stuff.pdf', 500))
 
-    more = model.append(docs, ('more', 1500))
+    more = model.append(docs, ('more', 2000))
     model.append(more, ('stuff.pdf.1', 700))
     model.append(more, ('stuff.pdf.2', 600))
     model.append(more, ('stuff.pdf.3', 200))
+    for i in range(50):
+        model.append(more, ('stuff.pdf.' + str(i), 10))
 
     music = model.append(sahib, ('music', 4000))
     model.append(music, ('1.mp3', 1000))
@@ -490,7 +516,7 @@ if __name__ == '__main__':
     model.append(sub, ('4.mp3', 600))
 
     area = ShredderRingChart(model)
-    area.render(model, model.get_iter_from_string('0'))
+    area.render(model)
 
     win = Gtk.Window()
     win.set_size_request(300, 500)

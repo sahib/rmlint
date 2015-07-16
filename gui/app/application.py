@@ -90,5 +90,6 @@ class ShredderApplication(Gtk.Application):
         self.win.views.add_view(EditorView(self), 'editor')
 
         # Set the default view visible at startup
-        self.win.views.switch('locations')
+        self.win.views.switch('main')
+        self.win.views['main'].trigger_run(['/tmp/dummy'])
         self.win.show_all()

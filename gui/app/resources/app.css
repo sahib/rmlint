@@ -5,6 +5,9 @@
 #AppProgress {
     border-width: 0px;
     border-radius: 0px;
+    -GtkProgressBar-min-horizontal-bar-height: 10px;
+    background: linear-gradient(alpha(black, 0.1), transparent);
+    background: linear-gradient(transparent, alpha(black, 0.1));
 }
 
 /* Support for colored labels.

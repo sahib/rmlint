@@ -54,16 +54,16 @@ static void rm_cmd_show_version(void) {
     struct {
         bool enabled : 1;
         const char *name;
-    } features[] = {{.name = "mounts", .enabled = HAVE_BLKID & HAVE_GIO_UNIX},
-                    {.name = "nonstripped", .enabled = HAVE_LIBELF},
-                    {.name = "fiemap", .enabled = HAVE_FIEMAP},
-                    {.name = "sha512", .enabled = HAVE_SHA512},
-                    {.name = "bigfiles", .enabled = HAVE_BIGFILES},
-                    {.name = "intl", .enabled = HAVE_LIBINTL},
-                    {.name = "json-cache", .enabled = HAVE_JSON_GLIB},
-                    {.name = "xattr", .enabled = HAVE_XATTR},
-                    {.name = "metadata-cache", .enabled = HAVE_SQLITE3},
-                    {.name = NULL, .enabled = 0}};
+    } features[] = {{ .name = "mounts",         .enabled = HAVE_BLKID & HAVE_GIO_UNIX},
+                    { .name = "nonstripped",    .enabled = HAVE_LIBELF},
+                    { .name = "fiemap",         .enabled = HAVE_FIEMAP},
+                    { .name = "sha512",         .enabled = HAVE_SHA512},
+                    { .name = "bigfiles",       .enabled = HAVE_BIGFILES},
+                    { .name = "intl",           .enabled = HAVE_LIBINTL},
+                    { .name = "json-cache",     .enabled = HAVE_JSON_GLIB},
+                    { .name = "xattr",          .enabled = HAVE_XATTR},
+                    { .name = "metadata-cache", .enabled = HAVE_SQLITE3},
+                    { .name = NULL,             .enabled = 0}};
 
     fprintf(stderr, _("compiled with:"));
     for(int i = 0; features[i].name; ++i) {
@@ -240,12 +240,10 @@ static int rm_cmd_create_metadata_cache(RmSession *session) {
     }
 
     char *names[] = {"path", "dir", NULL};
-    int *attrs_ptrs[] = {&session->meta_cache_path_id, &session->meta_cache_dir_id,
-                            NULL};
+    int *attrs_ptrs[] = {&session->meta_cache_path_id, &session->meta_cache_dir_id, NULL};
 
     for(int i = 0; attrs_ptrs[i] && names[i]; ++i) {
-        *attrs_ptrs[i] =
-            rm_swap_table_create_attr(session->meta_cache, names[i], &error);
+        *attrs_ptrs[i] = rm_swap_table_create_attr(session->meta_cache, names[i], &error);
 
         if(error != NULL) {
             rm_log_warning_line(_("Unable to create cache attr `%s`: %s"), names[i],
@@ -272,7 +270,7 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
         cfg->paths = g_realloc(cfg->paths, sizeof(char *) * (index + 2));
 
         char *abs_path = NULL;
-        if (strncmp(path,"//",2) == 0) {
+        if(strncmp(path, "//", 2) == 0) {
             abs_path = g_strdup(path);
         } else {
             abs_path = realpath(path, NULL);
@@ -629,8 +627,8 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
 
-            rm_log_warning_line("-N %s is newer than current time (%s) [%lu > %lu]", string,
-                                time_buf, result, now);
+            rm_log_warning_line("-N %s is newer than current time (%s) [%lu > %lu]",
+                                string, time_buf, result, now);
         }
     }
 
@@ -759,7 +757,7 @@ static gboolean rm_cmd_parse_large_output(_U const char *option_name,
     return true;
 }
 
-static gboolean rm_cmd_parse_mem( const gchar *size_spec, GError **error, RmOff *target) {
+static gboolean rm_cmd_parse_mem(const gchar *size_spec, GError **error, RmOff *target) {
     RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
 
     if(*error != NULL) {
@@ -771,10 +769,8 @@ static gboolean rm_cmd_parse_mem( const gchar *size_spec, GError **error, RmOff 
     }
 }
 
-
-static gboolean rm_cmd_parse_limit_mem(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
+static gboolean rm_cmd_parse_limit_mem(_U const char *option_name, const gchar *size_spec,
+                                       RmSession *session, GError **error) {
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
 }
 
@@ -785,20 +781,20 @@ static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
 }
 
 static gboolean rm_cmd_parse_read_buffer_mem(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
+                                             const gchar *size_spec, RmSession *session,
+                                             GError **error) {
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buffer_mem));
 }
 
 static gboolean rm_cmd_parse_sweep_size(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
+                                        const gchar *size_spec, RmSession *session,
+                                        GError **error) {
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_size));
 }
 
 static gboolean rm_cmd_parse_sweep_count(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
+                                         const gchar *size_spec, RmSession *session,
+                                         GError **error) {
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_count));
 }
 
@@ -896,8 +892,8 @@ static gboolean rm_cmd_parse_partial_hidden(_U const char *option_name,
 }
 
 static gboolean rm_cmd_parse_see_symlinks(_U const char *option_name,
-                                           _U const gchar *count, RmSession *session,
-                                           _U GError **error) {
+                                          _U const gchar *count, RmSession *session,
+                                          _U GError **error) {
     RmCfg *cfg = session->cfg;
     cfg->see_symlinks = true;
     cfg->follow_symlinks = false;
@@ -975,11 +971,11 @@ static gboolean rm_cmd_parse_permissions(_U const char *option_name, const gchar
     return true;
 }
 
-static gboolean rm_cmd_check_lettervec(const char *option_name, const char *criteria, const char *valid, GError **error) {
+static gboolean rm_cmd_check_lettervec(const char *option_name, const char *criteria,
+                                       const char *valid, GError **error) {
     for(int i = 0; criteria[i]; ++i) {
         if(strchr(valid, criteria[i]) == NULL) {
-            g_set_error(error, RM_ERROR_QUARK, 0, 
-                        _("%s may only contain [%s], not `%c`"), 
+            g_set_error(error, RM_ERROR_QUARK, 0, _("%s may only contain [%s], not `%c`"),
                         option_name, valid, criteria[i]);
             return false;
         }
@@ -989,7 +985,7 @@ static gboolean rm_cmd_check_lettervec(const char *option_name, const char *crit
 }
 
 static gboolean rm_cmd_parse_sortby(_U const char *option_name, const gchar *criteria,
-                                         RmSession *session, GError **error) {
+                                    RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
     if(!rm_cmd_check_lettervec(option_name, criteria, "moanspMOANSP", error)) {
         return false;
@@ -1005,7 +1001,7 @@ static gboolean rm_cmd_parse_sortby(_U const char *option_name, const gchar *cri
 }
 
 static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *criteria,
-                                         RmSession *session, GError **error) {
+                                    RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
     if(!rm_cmd_check_lettervec(option_name, criteria, "dlampDLAMP", error)) {
@@ -1023,9 +1019,8 @@ static gboolean rm_cmd_parse_replay(_U const char *option_name, const gchar *jso
     }
 
     if(g_access(json_path, R_OK) == -1) {
-        g_set_error(
-            error, RM_ERROR_QUARK, 0, "--replay: `%s`: %s", json_path, g_strerror(errno)
-        );
+        g_set_error(error, RM_ERROR_QUARK, 0, "--replay: `%s`: %s", json_path,
+                    g_strerror(errno));
         return false;
     }
 
@@ -1075,8 +1070,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
         if(strncmp(dir_path, "-", 1) == 0) {
             read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);
-        } else if(strncmp(dir_path, "//", 2) == 0
-                && strlen(dir_path) == 2) {
+        } else if(strncmp(dir_path, "//", 2) == 0 && strlen(dir_path) == 2) {
             is_prefd = !is_prefd;
         } else {
             read_paths = rm_cmd_add_path(session, is_prefd, path_index, paths[i]);
@@ -1133,13 +1127,14 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
        Free: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxX
        Used                   jJ                               Z
     */
-    // clang-format off
+
+    /* clang-format off */
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
         {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
          _("Specify max traversal depth"), "N"},
-        {"rank-by", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby),
-         _("Original criteria"), "[dlampDLAMP]"},
+        {"rank-by", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby), _("Original criteria"),
+         "[dlampDLAMP]"},
         {"sort-by", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(sortby),
          _("Rank lint groups by certain criteria"), "[moansMOANS]"},
         {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),
@@ -1281,25 +1276,20 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"without-fiemap", 0, DISABLE | HIDDEN, G_OPTION_ARG_NONE, &cfg->build_fiemap,
          "Do not use fiemap(2) in order to save memory", NULL},
         {"shred-always-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_always_wait,
-         "Shredder always waits for file increment to finish hashing before moving on to "
-         "the next file",
-         NULL},
+         "Always waits for file increment to finish hashing", NULL},
         {"fake-pathindex-as-disk", 0, HIDDEN, G_OPTION_ARG_NONE,
          &cfg->fake_pathindex_as_disk,
-         "Testing option for threading; pretends each input path is a separate physical "
-         "disk",
-         NULL},
-        {"fake-holdback", 0, HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->cache_file_structs, "Hold back all files to the end before outputting.", NULL},
-        {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->fake_fiemap, "Create faked fiemap data for all files", NULL},
+         "Pretends each input path is a separate physical disk", NULL},
+        {"fake-holdback", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->cache_file_structs,
+         "Hold back all files to the end before outputting.", NULL},
+        {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->fake_fiemap,
+         "Create faked fiemap data for all files", NULL},
         {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read,
          "Default to buffered reading calls (fread) during reading.", NULL},
         {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
-         "Shredder never waits for file increment to finish hashing before moving on to "
-         "the next file",
-         NULL},
+         "Never waits for file increment to finish hashing", NULL},
         {NULL, 0, HIDDEN, 0, NULL, NULL, NULL}};
+
     // clang-format on
 
     /* Initialize default verbosity */
@@ -1392,7 +1382,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
-        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks.");;;
+        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks.");
+        ;
+        ;
         g_assert_not_reached();
     }
 failure:

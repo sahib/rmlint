@@ -14,7 +14,7 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 
-class ShredderDeferredSizeLabel(Gtk.Bin):
+class DeferSizeLabel(Gtk.Bin):
     """Recursively calculates the size of a directory in a non-blocking way.
 
     While calculating the widget will look like a spinner, when done the size
@@ -23,8 +23,6 @@ class ShredderDeferredSizeLabel(Gtk.Bin):
     def __init__(self, path):
         Gtk.Frame.__init__(self)
 
-        self._size_count = 0
-
         spinner = Gtk.Spinner()
         spinner.start()
         self.add(spinner)
@@ -32,8 +30,9 @@ class ShredderDeferredSizeLabel(Gtk.Bin):
         # `du` still seems to be the fastest way to do the job.
         # All self-implemented ways in python were way slower.
         du = Gio.Subprocess.new(
-            ['du', '-s', path], Gio.SubprocessFlags.STDERR_SILENCE |
-            Gio.SubprocessFlags.STDOUT_PIPE)
+            ['du', '-s', path],
+            Gio.SubprocessFlags.STDERR_SILENCE | Gio.SubprocessFlags.STDOUT_PIPE
+        )
         du.communicate_utf8_async(None, None, self._du_finished)
 
     def _du_finished(self, du, result):
@@ -45,13 +44,14 @@ class ShredderDeferredSizeLabel(Gtk.Bin):
         self.show_all()
 
 
-class ShredderLocationEntry(Gtk.ListBoxRow):
+class LocationEntry(Gtk.ListBoxRow):
     preferred = GObject.Property(type=bool, default=False)
 
     def __init__(self, name, path, themed_icon, fill_level=None):
         Gtk.ListBoxRow.__init__(self)
 
-        self.set_name('ShredderLocationEntry')
+        # CSS Name
+        self.set_name('LocationEntry')
 
         grid = Gtk.Grid()
         self.add(grid)
@@ -138,7 +138,7 @@ class ShredderLocationEntry(Gtk.ListBoxRow):
             grid.attach(level_label, 6, 3, 1, 1)
             grid.attach(level_bar, 6, 2, 1, 1)
         else:
-            size_widget = ShredderDeferredSizeLabel(path)
+            size_widget = DeferSizeLabel(path)
             size_widget.set_margin_top(15)
             size_widget.set_margin_end(20)
             grid.attach(size_widget, 6, 2, 1, 1)
@@ -200,6 +200,8 @@ class LocationView(View):
         self.volume_monitor = Gio.VolumeMonitor.get()
         self.recent_mgr = Gtk.RecentManager.get_default()
         self.recent_mgr.connect('changed', self.refill_entries)
+        self.volume_monitor.connect('volume-changed', self.refill_entries)
+        self.volume_monitor.connect('drive-changed', self.refill_entries)
         self.volume_monitor.connect('mount-changed', self.refill_entries)
         self.refill_entries()
 
@@ -237,8 +239,11 @@ class LocationView(View):
         self.sub_title = 'Step 1: Choose locations to check'
 
     def refill_entries(self, *_):
+        print('...refill')
         for child in list(self.box):
             self.box.remove(child)
+
+        self.known_paths = set()
 
         self.add_entry(
             'Personal directory',
@@ -291,7 +296,7 @@ class LocationView(View):
         if path in self.known_paths:
             return
 
-        entry = ShredderLocationEntry(name, path, icon, fill_level)
+        entry = LocationEntry(name, path, icon, fill_level)
         self.known_paths.add(path)
         self.box.insert(entry, idx)
 
@@ -314,7 +319,7 @@ class LocationView(View):
         self._update_selected_label()
 
     def _update_selected_label(self):
-        prefd_paths = sum(row.props.preferred for row in self.selected_locations)
+        prefd_paths = sum(rw.props.preferred for rw in self.selected_locations)
         self.selected_label.set_markup(
             '{sel} directories - {pref} of them preferred'.format(
                 sel=len(self.selected_locations),

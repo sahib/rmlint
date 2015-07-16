@@ -6,7 +6,7 @@ import json
 import errno
 import tempfile
 
-from collections import defaultdict
+from collections import defaultdict, UserDict
 from functools import partial
 
 # Internal:
@@ -17,11 +17,6 @@ from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
 
-
-# Determines the chunksize in which the json output is parsed.
-# Higher values are more performant but lower ones trigger
-# updates more often and leads to a more fluent user interface.
-IO_BUFFER_SIZE = 1024
 
 # TODO: Move to settings?
 # TODO: Document relation to schema.xml
@@ -145,6 +140,7 @@ def _create_rmlint_process(cfg, paths):
         process = launcher.spawnv([
             'rmlint',
             '--no-with-color',
+            '--merge-directories',
             '-o', 'sh:rmlint.sh',
             '-o', 'json',
             '-c', 'json:oneline',
@@ -162,46 +158,9 @@ def _create_rmlint_process(cfg, paths):
         return cwd, process
 
 
-def _parse_json_chunk(chunk):
-    # print('\n\n', chunk.splitlines(), '\n\n')
-    incomplete_chunk, results = None, []
-    decoder = json.JSONDecoder()
-
-    for idx, line in enumerate(chunk.splitlines()):
-        line = line.strip(' ')
-        if not line or line.startswith('[') or line.startswith(']'):
-            continue
-
-        # print('===> ', line)
-
-        try:
-            json_doc, _ = decoder.raw_decode(line)
-            if isinstance(json_doc, dict):
-                results.append(json_doc)
-            else:
-                raise ValueError('')
-        except ValueError as err:
-            incomplete_chunk = line
-            continue
-
-    return results, incomplete_chunk
-
-
-class Lint(GObject.Object):
-    def __init__(self, data):
-        GObject.Object.__init__(self)
-        self.data, self.silbings = data, []
-
-    def __getattr__(self, key):
-        return self.data.get(key)
-
-    def __iter__(self):
-        return iter(self.silbings)
-
-
 class Runner(GObject.Object):
     __gsignals__ = {
-        'lint-added': (GObject.SIGNAL_RUN_FIRST, None, (Lint, )),
+        'lint-added': (GObject.SIGNAL_RUN_FIRST, None, ()),
         'process-finished': (GObject.SIGNAL_RUN_FIRST, None, (str, ))
     }
 
@@ -210,24 +169,19 @@ class Runner(GObject.Object):
 
         self.settings, self.paths = settings, paths
 
-        self._incomplete_chunk = self._process = self._message = None
-
-        # True when the underlying process is no longer alive.
-        # Note: This does not mean parsing is finished yet!
-        self.is_running = False
+        self._data_stream = self._process = self._message = None
 
         # Working directory
         self.cwd = None
 
         # Metadata about the run:
-        self.header, self.footer = {}, {}
-
-        # Result list
-        self.results = []
-
-        self._last_original = None
+        self.element, self.header, self.footer = {}, {}, {}
 
     def _on_process_termination(self, process, result):
+        # We dont emit process-finished yet here.
+        # We still might get some items from the stream.
+        # Call process-finished once we hit EOF.
+
         try:
             process.wait_check_finish(result)
         except GLib.Error as err:
@@ -240,72 +194,53 @@ class Runner(GObject.Object):
                 # Nothing concrete to say it seems
                 self._message = err.message
 
-        # Remember that this process is done.
-        self.is_running = False
-
-
     def _queue_read(self):
         """Schedule a async read on process's stdout"""
         if self.process is None:
             return
 
-        stream = self.process.get_stdout_pipe()
-        stream.read_bytes_async(
-            IO_BUFFER_SIZE,
-            io_priority=0,
+        self._data_stream.read_line_async(
+            io_priority=GLib.PRIORITY_HIGH,
             cancellable=None,
             callback=self._on_io_event
         )
 
     def _on_io_event(self, source, result):
-        data = source.read_bytes_finish(result).get_data()
-
+        line, _ = source.read_line_finish_utf8(result)
 
         # last block of data it seems:
-        if not data:
-            if self._last_original is not None:
-                self.emit('lint-added', self._last_original)
+        if not line:
             self.emit('process-finished', self._message)
             self._message = None
             return
 
-        data = data.decode('utf-8')
+        line = line.strip(', ')
+        if line in ['[', ']']:
+            self._queue_read()
+            return
 
-        # There was some leftover data from the last read:
-        if self._incomplete_chunk is not None:
-            data = self._incomplete_chunk + data
-            self._incomplete_chunk = None
-
-        # Try to find sense in the individual chunks:
-        results, self._incomplete_chunk = _parse_json_chunk(data)
-
-        for json_doc in results:
+        try:
+            json_doc = json.loads(line)
+        except ValueError as err:
+            print(err)
+        else:
             if 'path' in json_doc:
-                lint = Lint(json_doc)
-                if lint.is_original:
-                    if self._last_original is not None:
-                        self.emit('lint-added', self._last_original)
-                    self.results.append(lint)
-                    self._last_original = lint
-
-                if lint is not self._last_original:
-                    self._last_original.silbings.append(lint)
-            elif 'aborted' in json_doc:
-                self.footer = json_doc
+                self.element = json_doc
+                self.emit('lint-added')
             elif 'description' in json_doc:
                 self.header = json_doc
+            elif 'aborted' in json_doc:
+                self.footer = json_doc
 
         # Schedule another read:
         self._queue_read()
 
     def run(self):
         self.cwd, self.process = _create_rmlint_process(self.settings, self.paths)
+        self._data_stream = Gio.DataInputStream.new(self.process.get_stdout_pipe())
 
         # We want to get notified once the child dies
         self.process.wait_check_async(None, self._on_process_termination)
-
-        # queue_read checks this.
-        self.is_running = True
 
         # Schedule some reads from stdout (where the json gets written)
         self._queue_read()
@@ -367,13 +302,14 @@ class Script(GObject.Object):
 
 if __name__ == '__main__':
     settings = Gio.Settings.new('org.gnome.Rmlint')
+    loop = GLib.MainLoop()
 
-    runner = Runner(settings, ['/usr/bin'])
-    runner.connect('lint-added', lambda _, e: print([x.path for x in e]))
-    runner.connect('process-finished', lambda _, m: print(m, len(runner.results)))
+    runner = Runner(settings, ['/usr/'])
+    runner.connect('lint-added', lambda _: print(runner.element))
+    runner.connect('process-finished', lambda _, msg: print('Status:', msg))
+    runner.connect('process-finished', lambda *_: loop.quit())
     runner.run()
 
-    loop = GLib.MainLoop()
     try:
         loop.run()
     except KeyboardInterrupt:

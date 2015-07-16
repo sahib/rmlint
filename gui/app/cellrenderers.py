@@ -172,4 +172,5 @@ class CellRendererLint(Gtk.CellRendererText):
             x += CellRendererText.ICON_SIZE
             w += CellRendererText.ICON_SIZE
 
+        print(x, y, w, h)
         return x, y, w, h
