@@ -91,26 +91,11 @@ def _draw_segment(
 
     The dimensions of ctx are given by size in pixels.
     """
-
-    # Convenience addition
-    max_plus_one = max_layers + 1
-
     mid_x, mid_y = alloc.width / 2, alloc.height / 2
     mid = min(mid_x, mid_y)
 
-    radius_a_px = (layer / max_plus_one) * mid
-    radius_b_px = radius_a_px + (1 / max_plus_one) * mid
-
-    if layer is 1:
-        ctx.set_source_rgba(0.4, 0.4, 0.4, 0.4)
-        ctx.set_line_width(5)
-        ctx.arc(mid_x, mid_y, radius_b_px - 30, 0, 2 * math.pi)
-        ctx.stroke()
-        ctx.set_line_width(1)
-        return
-
-    radius_a_px -= 20
-    radius_b_px -= 20
+    radius_a_px = (layer / (max_layers + 1)) * mid
+    radius_b_px = radius_a_px + (1 / (max_layers + 1)) * mid
 
     # Draw the actual segment path
     ctx.arc(mid_x, mid_y, radius_a_px, deg_a, deg_b)
@@ -341,20 +326,29 @@ class ShredderRingChart(ShredderChart):
         return node
 
     def render(self, root):
+        """Render `root` and all children of it as chart."""
+        # Skip over duplicate full circles:
         virt_root = self.find_root(root)
+
+        # Reset the segment list, fill it again by dfs and sort it.
         self._segment_list = []
         self.recursive_angle(virt_root, 2 * math.pi, 0, virt_root.depth - 1)
+        self._segment_list.sort(key=lambda node: node.layer)
+
+        # Make sure we show the right total size
         self.total_size = virt_root[Column.SIZE]
 
         # Make sure it gets rendered soon:
         self.queue_draw()
 
     def _on_draw(self, area, ctx):
+        """Actual signal callback that triggers all the drawing."""
+
+        # May happen on empty charts:
         if self.max_layers is 0:
             return False
 
         # Figure out the background color of the drawing area
-        bg = self.get_toplevel().get_style_context().get_background_color(0)
         alloc = area.get_allocation()
 
         # Caluclate the font size of the inner label.
@@ -372,6 +366,7 @@ class ShredderRingChart(ShredderChart):
             font_size=font_size
         )
 
+        bg = self.get_toplevel().get_style_context().get_background_color(0)
         for segment in reversed(self._segment_list):
             segment.draw(ctx, alloc, self.max_layers, bg)
 
@@ -402,7 +397,8 @@ class ShredderRingChart(ShredderChart):
         self.queue_draw()
         self._timeout_id = None
 
-    def _hit(self, area, event):
+    def _hit(self, area, event, click_only=False):
+        """Check what segments were hitten by a GdkEvent"""
         alloc = area.get_allocation()
         mid_x, mid_y = alloc.width / 2, alloc.height / 2
         mid = min(mid_x, mid_y)
@@ -423,9 +419,14 @@ class ShredderRingChart(ShredderChart):
         # Check which layer we are operating on.
         selected_layer = math.floor(xy_abs * (self.max_layers + 1) / mid)
 
+        hit_segment = None
         for segment in self._segment_list:
             if segment.hit(selected_layer, selected_deg):
-                return segment
+                hit_segment = segment
+                if click_only:
+                    break
+
+        return hit_segment
 
     def _on_motion(self, area, event):
         hit_segment = self._hit(area, event)
@@ -444,7 +445,7 @@ class ShredderRingChart(ShredderChart):
         self.queue_draw()
 
     def _on_button_press_event(self, area, event):
-        hit_segment = self._hit(area, event)
+        hit_segment = self._hit(area, event, click_only=True)
         if hit_segment is not None:
             self.render(hit_segment.node)
 
