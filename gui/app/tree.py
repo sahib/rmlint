@@ -84,7 +84,7 @@ class PathNode:
         'name', 'parent', 'children', 'row',
 
         # Private:
-        'is_leaf', 'idx', 'indices'
+        'is_leaf', 'idx', 'indices', 'depth'
     ]
 
     def __init__(self, name, parent, metadata=None, children=None):
@@ -100,6 +100,7 @@ class PathNode:
         self.indices = deque()
         self.idx = 0
         self.is_leaf = False
+        self.depth = (parent.depth + 1) if parent else 0
 
     def __getitem__(self, idx):
         """Get a column value by it's column index.
@@ -179,7 +180,8 @@ class PathNode:
 
 def _create_root_path_index(index, path, node):
     """Create a (trie-like) recursive dict as fast root path lookup."""
-    curr_map, last_map = index, None
+    curr_map, last_map, name = index, None, ''
+
     for name in filter(None, path.split('/')):
         last_map = curr_map
         curr_map = curr_map.setdefault(name, {})
@@ -211,6 +213,8 @@ class PathTrie:
         self.sub_roots = []
         self.nodes = {id(self.root): self.root}
 
+        self.max_depth = 0
+
         self.root_paths = {}
         for root_path in root_paths or []:
             # Append the sub root node manually:
@@ -227,8 +231,8 @@ class PathTrie:
     def __repr__(self):
         """Return a simple string version of the trie"""
         view = []
-        for node, depth in self:
-            view.append((' ' * depth * 2) + node.name)
+        for node in self:
+            view.append((' ' * node.depth * 2) + node.name)
 
         return '\n'.join(view)
 
@@ -238,17 +242,15 @@ class PathTrie:
     def __setitem__(self, path, value):
         self.insert(path, value)
 
-    def iterate(self, node=None, depth=0):
+    def iterate(self, node=None):
         """Iterate trie down from node.
         If node is None, root is assumed;
-        `depth` specifies the intial depth count.
         """
         node = node or self.root
-
-        yield (node, depth)
+        yield node
 
         for child in node.children.values():
-            yield from self.iterate(child, depth=depth + 1)
+            yield from self.iterate(child)
 
     def insert(self, path, row):
         components = list(filter(None, path.split('/')))
@@ -267,6 +269,7 @@ class PathTrie:
             curr = node
 
         curr.make_leaf(row)
+        self.max_depth = max(self.max_depth, curr.depth)
         return new_nodes
 
     def find(self, path):
@@ -295,9 +298,6 @@ class PathTrie:
             curr = curr.indices[idx]
 
         return curr
-
-    def get_path(self):
-        return
 
 
 def make_iter(node):
@@ -455,7 +455,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
             base_trie = self._partial_model.trie
 
         # Iterate over the trie; do not add unmatched.
-        for node, depth in base_trie:
+        for node in base_trie:
             # For now we only search through leafs.
             if not node.is_leaf:
                 continue

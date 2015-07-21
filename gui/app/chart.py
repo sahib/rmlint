@@ -5,11 +5,9 @@
 import math
 import colorsys
 
-from operator import itemgetter
-from itertools import groupby
-
 # Internal:
 from app.util import size_to_human_readable
+from app.tree import Column
 
 # External:
 import cairo
@@ -27,11 +25,6 @@ from gi.repository import PangoCairo
 #       However this code is not ported, but rewritten.   #
 ###########################################################
 
-# TODO
-class Column:
-    """Column Enumeration to avoid using direct incides.
-    """
-    SELECTED, PATH, SIZE, COUNT, MTIME, TAG, TOOLTIP = range(7)
 
 def _draw_center_text(ctx, x, y, text, font_size=10, do_draw=True):
     '''Draw a text at the center of ctx/alloc.
@@ -98,6 +91,7 @@ def _draw_segment(
 
     The dimensions of ctx are given by size in pixels.
     """
+
     # Convenience addition
     max_plus_one = max_layers + 1
 
@@ -106,6 +100,17 @@ def _draw_segment(
 
     radius_a_px = (layer / max_plus_one) * mid
     radius_b_px = radius_a_px + (1 / max_plus_one) * mid
+
+    if layer is 1:
+        ctx.set_source_rgba(0.4, 0.4, 0.4, 0.4)
+        ctx.set_line_width(5)
+        ctx.arc(mid_x, mid_y, radius_b_px - 30, 0, 2 * math.pi)
+        ctx.stroke()
+        ctx.set_line_width(1)
+        return
+
+    radius_a_px -= 20
+    radius_b_px -= 20
 
     # Draw the actual segment path
     ctx.arc(mid_x, mid_y, radius_a_px, deg_a, deg_b)
@@ -214,29 +219,19 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
     ctx.set_source_rgba(0.8, 0.8, 0.8, 1.0)
     _draw_center_text(ctx, new_x, new_y, text, do_draw=True)
 
-# TODO: Move to (and create) model.py
-def _dfs(model, iter_, layer=1):
-    """Generator for a depth first traversal in a TreeModel.
-    Yields a GtkTreeIter for all iters below and after iter_.
-    """
-    while iter_ is not None:
-        yield iter_, layer
-        child = model.iter_children(iter_)
-        if child is not None:
-            yield from _dfs(model, child, layer + 1)
-
-        iter_ = model.iter_next(iter_)
-
 
 class ShredderChart(Gtk.DrawingArea):
-    def __init__(self, model):
+    def __init__(self):
         Gtk.DrawingArea.__init__(self)
         self.connect('draw', self._on_draw)
 
-        self._model = model
-
-        self.add_events(self.get_events() | Gdk.EventMask.POINTER_MOTION_MASK)
+        self.add_events(
+            self.get_events() |
+            Gdk.EventMask.POINTER_MOTION_MASK |
+            Gdk.EventMask.BUTTON_PRESS_MASK
+        )
         self.connect('motion-notify-event', self._on_motion)
+        self.connect('button-press-event', self._on_button_press_event)
 
     ##############################
     # TO BE OVERWRITTEN BY CHILD #
@@ -248,9 +243,13 @@ class ShredderChart(Gtk.DrawingArea):
     def _on_motion(self, area, event):
         pass
 
+    def _on_button_press_event(self, area, event):
+        pass
+
 
 class Segment:
-    def __init__(self, layer, degree, size, tooltip=None):
+    def __init__(self, node, layer, degree, size, tooltip=None):
+        self.node = node
         self.children = []
         self.layer, self.degree, self.size = layer, degree, size
         self.degree = math.fmod(self.degree, math.pi * 2)
@@ -258,9 +257,6 @@ class Segment:
         self.is_selected = False
 
     def draw(self, ctx, alloc, max_layers, bg_col):
-        if self.size <= math.pi / 128:
-            print('mow')
-
         _draw_segment(
             ctx, alloc,
             self.layer, max_layers,
@@ -300,8 +296,8 @@ class Segment:
 
 
 class ShredderRingChart(ShredderChart):
-    def __init__(self, model):
-        ShredderChart.__init__(self, model)
+    def __init__(self):
+        ShredderChart.__init__(self)
 
         # Id of the tooltip timeout
         self._timeout_id = None
@@ -310,77 +306,61 @@ class ShredderRingChart(ShredderChart):
         self.total_size = 1
         self._selected_segment = None
 
-    def add_segment(self, segment):
-        self._segment_list.append(segment)
+    def recursive_angle(self, node, angle, offset, layer_offset=0):
+        """Calculates the angles of the segments and stores them in a
+        list that is ordered by Z-Depth, so the plot appears to be layered
+        with the root circle on top. This resembles a depth first traversal.
+        """
+        self._segment_list.append(Segment(
+            node, node.depth - layer_offset,
+            offset, angle, node[Column.PATH]
+        ))
 
-    def _group_nodes(self, trie, root):
-        nodes = sorted(iter(trie), key=itemgetter(1))
-        for layer, group in groupby(nodes, key=itemgetter(1)):
-            grouped[layer] = list(group)
+        child_offset = offset
+        for child in node.children.values():
+            child_angle = (child[Column.SIZE] / node[Column.SIZE]) * angle
 
-        return grouped
+            # Do not investigate smaller nodes:
+            if child_angle > math.pi / 64:
+                self.recursive_angle(child, child_angle, child_offset, layer_offset)
+                # Remember deepest layer:
+                self.max_layers = max(child.depth, self.max_layers)
 
-    def _calculate_angles(self, nodes, trie, root, pseudo_segment):
-        angles = {}
-        total_size = root.size
+            child_offset += child_angle
 
-        for layer, group in nodes.items():
-            for node, _ in group:
-                parent = node.parent
-                if parent is None:
-                    # Assume an invisible segment on layer 0
-                    parent, prev_size = pseudo_segment, total_size
-                else:
-                    prev_size = parent.size
 
-                if prev_size:
-                    angle_len = parent.size * model[iter_][Column.SIZE] / prev_size
-                else:
-                    angle_len = 0
-
-                angle = parent.degree + sum(child.size for child in parent.children)
-                segment = Segment(layer, angle, angle_len, model[iter_][Column.PATH])
-
-                parent.children.append(segment)
-                self.add_segment(segment)
-                angles[str(model.get_path(iter_))] = segment
-
-    def find_root(self, trie):
+    def find_root(self, node):
         """Iterate to the first child that has more than one children"""
-        root = trie.root
-        for node, _ in trie:
-            if len(node.children) > 1:
-                return child
+        if len(node.children) > 1:
+            return node
+
+        for child in node.children.values():
+            return self.find_root(child)
 
         # Default to the actual root:
-        return root
+        return node
 
-    def render(self, trie):
-        root = self.find_root(trie)
-        nodes = self._group_nodes(trie, root)
-
-        # TODO: implement trie.depth?
-        self.max_layers = max(nodes.keys()) + 1
-
-        pseudo_segment = Segment(0, 0, 2 * math.pi)
-        self.total_size = model[model.get_iter_from_string('0')][Column.SIZE]
-        self._calculate_angles(nodes, model, root, pseudo_segment)
+    def render(self, root):
+        virt_root = self.find_root(root)
+        self._segment_list = []
+        self.recursive_angle(virt_root, 2 * math.pi, 0, virt_root.depth - 1)
+        self.total_size = virt_root[Column.SIZE]
 
         # Make sure it gets rendered soon:
         self.queue_draw()
 
     def _on_draw(self, area, ctx):
+        if self.max_layers is 0:
+            return False
+
         # Figure out the background color of the drawing area
-        bg_col = self.get_toplevel().get_style_context().get_background_color(0)
+        bg = self.get_toplevel().get_style_context().get_background_color(0)
         alloc = area.get_allocation()
 
         # Caluclate the font size of the inner label.
         # Make it smaller if not enough place but cut off at a size of 12
-        if self.max_layers > 0:
-            inner_circle = (1 / self.max_layers) * min(alloc.width, alloc.height) / 2
-        else:
-            inner_circle = 3
-
+        inner_circle = (1 / self.max_layers)
+        inner_circle *= min(alloc.width, alloc.height) / 2
         font_size = min(12, inner_circle / 3)
 
         # Draw the center text:
@@ -392,18 +372,13 @@ class ShredderRingChart(ShredderChart):
             font_size=font_size
         )
 
-        # Extract the segments sorted by layer
-        # Also filter very small segments for performance reasons
-        # segs = filter(lambda seg: seg.size > math.pi / 128, self._segment_list)
-        segs = sorted(self._segment_list, key=lambda e: e.layer, reverse=True)
-
-        for segment in segs:
-            segment.draw(ctx, alloc, self.max_layers, bg_col)
+        for segment in reversed(self._segment_list):
+            segment.draw(ctx, alloc, self.max_layers, bg)
 
         if self._selected_segment is None:
             return
 
-        for segment in segs:
+        for segment in self._segment_list:
             if segment.layer != self._selected_segment.layer:
                 continue
 
@@ -427,7 +402,7 @@ class ShredderRingChart(ShredderChart):
         self.queue_draw()
         self._timeout_id = None
 
-    def _on_motion(self, area, event):
+    def _hit(self, area, event):
         alloc = area.get_allocation()
         mid_x, mid_y = alloc.width / 2, alloc.height / 2
         mid = min(mid_x, mid_y)
@@ -448,10 +423,12 @@ class ShredderRingChart(ShredderChart):
         # Check which layer we are operating on.
         selected_layer = math.floor(xy_abs * (self.max_layers + 1) / mid)
 
-        hit_segment = None
         for segment in self._segment_list:
             if segment.hit(selected_layer, selected_deg):
-                hit_segment = segment
+                return segment
+
+    def _on_motion(self, area, event):
+        hit_segment = self._hit(area, event)
 
         if self._timeout_id is not None:
             GLib.source_remove(self._timeout_id)
@@ -466,57 +443,57 @@ class ShredderRingChart(ShredderChart):
 
         self.queue_draw()
 
+    def _on_button_press_event(self, area, event):
+        hit_segment = self._hit(area, event)
+        if hit_segment is not None:
+            self.render(hit_segment.node)
+
 
 class ShredderChartStack(Gtk.Stack):
     LOADING = 'loading'
     DIRECTORY = 'directory'
     GROUP = 'group'
 
-    def __init__(self, model):
+    def __init__(self):
         Gtk.Stack.__init__(self)
 
         self.spinner = Gtk.Spinner()
         self.spinner.start()
         self.add_named(self.spinner, 'loading')
 
-        self.chart = ShredderRingChart(model)
+        self.chart = ShredderRingChart()
         self.add_named(self.chart, 'directory')
 
-    def render(self, model):
-        self.chart.render(model)
+    def render(self, root):
+        self.chart.render(root)
 
 
 if __name__ == '__main__':
-    model = Gtk.TreeStore(str, int)
+    from app.tree import PathTreeModel
+    model = PathTreeModel(['/home/sahib'])
 
-    # (!) HACK FOR MAIN (!)
-    Column.PATH = 0
-    Column.SIZE = 1
+    def push(size, path):
+        model.add_path(path, Column.make_row({'size': size}), True)
 
-    root = model.append(None, ('', 6000))
-    home = model.append(root, ('home', 6000))
-    sahib = model.append(home, ('sahib', 6000))
+    push(500,  '/home/sahib/docs/stuff.pdf')
 
-    docs = model.append(sahib, ('docs', 2000))
-    model.append(docs, ('stuff.pdf', 500))
+    for idx, size in enumerate((700, 600, 200)):
+        push(size,  '/home/sahib/docs/more/' + 'stuff.pdf-' + str(idx))
 
-    more = model.append(docs, ('more', 2000))
-    model.append(more, ('stuff.pdf.1', 700))
-    model.append(more, ('stuff.pdf.2', 600))
-    model.append(more, ('stuff.pdf.3', 200))
-    for i in range(50):
-        model.append(more, ('stuff.pdf.' + str(i), 10))
+    for idx in range(50):
+        push(10,  '/home/sahib/docs/more/' + 'small.pdf-' + str(idx))
 
-    music = model.append(sahib, ('music', 4000))
-    model.append(music, ('1.mp3', 1000))
+    for idx in range(10):
+        push(100,  '/home/sahib/' + 'dummy-' + str(idx))
 
-    sub = model.append(music, ('sub', 3000))
-    model.append(sub, ('2.mp3', 1200))
-    model.append(sub, ('3.mp3', 1200))
-    model.append(sub, ('4.mp3', 600))
+    push(1000, '/home/sahib/music/1.mp3')
+    push(1200, '/home/sahib/music/sub/2.mp3')
+    push(1200, '/home/sahib/music/sub/3.mp3')
+    push(600,  '/home/sahib/music/sub/4.mp3')
+    print(model.trie)
 
-    area = ShredderRingChart(model)
-    area.render(model)
+    area = ShredderRingChart()
+    area.render(model.trie.root)
 
     win = Gtk.Window()
     win.set_size_request(300, 500)

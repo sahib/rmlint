@@ -72,7 +72,7 @@ class MainView(View):
         scw.set_valign(Gtk.Align.FILL)
         scw.add(self.treeview)
 
-        self.chart_stack = ShredderChartStack(self.model)
+        self.chart_stack = ShredderChartStack()
         self.actionbar = ResultActionBar(self)
 
         # Right part of the view
@@ -128,7 +128,7 @@ class MainView(View):
 
         if len(text) > 1:
             sub_model = self.model.filter_model(text)
-            self.chart_stack.render(sub_model)
+            self.chart_stack.render(sub_model.trie.root)
             self.treeview.set_model(sub_model)
 
     def on_add_elem(self, runner):
@@ -164,7 +164,7 @@ class MainView(View):
             self.chart_stack.set_visible_child_name(
                 ShredderChartStack.DIRECTORY
             )
-            self.chart_stack.render(self.treeview.get_model())
+            self.chart_stack.render(model.trie.root)
             GLib.timeout_add(1500, self.on_delayed_chart_render, current_size)
 
         return False
