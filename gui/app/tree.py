@@ -44,7 +44,7 @@ PATH_MODEL_STAMP = 0xDEAD
 # mainloop run for a short time. This is to prevent
 # lagging in the user interface.
 # This does not speed up the operation itself of course.
-PATH_MODEL_CHUNK_SIZE = 1000
+PATH_MODEL_CHUNK_SIZE = 500
 
 # Wait this much ms before processing the next chunk.
 PATH_MODEL_TIMEOUT_MS = 50
@@ -62,7 +62,10 @@ class Column:
     def make_row(map):
         """Convert a rmlint json dict to a tree row"""
         is_original = map.get('is_original', False)
-        tag = IndicatorLabel.SUCCESS if is_original else IndicatorLabel.ERROR
+        if map.get('type', '').startswith('duplicate_'):
+            tag = IndicatorLabel.SUCCESS if is_original else IndicatorLabel.WARNING
+        else:
+            tag = IndicatorLabel.THEME
 
         # Use a list so we can update the counts and size later:
         return [
@@ -71,7 +74,7 @@ class Column:
             map.get('size', 0),
             0,
             map.get('mtime', 0),
-            is_original,
+            tag,
             ''
         ]
 
@@ -617,7 +620,6 @@ def _create_column(title, renderers, fixed_width=100):
     return column
 
 
-# TODO:
 def _dfs(model, iter_):
     """Generator for a depth first traversal in a TreeModel.
     Yields a GtkTreeIter for all iters below and after iter_.
@@ -631,19 +633,15 @@ def _dfs(model, iter_):
         iter_ = model.iter_next(iter_)
 
 
-def _mark_row(model, iter_, state):
-    row = model[iter_]
-    if row[Column.TAG] is IndicatorLabel.SUCCESS and state:
-        row[Column.TAG] = IndicatorLabel.WARNING
-    elif row[Column.TAG] is IndicatorLabel.WARNING and not state:
-        row[Column.TAG] = IndicatorLabel.SUCCESS
-
-    row[Column.SELECTED] = state
-
-
 def _recursive_flick(model, iter_, state):
     for child_iter in _dfs(model, iter_):
-        _mark_row(model, child_iter, state)
+        row = model[child_iter]
+        if row[Column.TAG] is IndicatorLabel.SUCCESS and state:
+            row[Column.TAG] = IndicatorLabel.WARNING
+        elif row[Column.TAG] is IndicatorLabel.WARNING and not state:
+            row[Column.TAG] = IndicatorLabel.SUCCESS
+
+        row[Column.SELECTED] = state
 
 
 def _on_toggle(renderer, path, treeview):
@@ -676,14 +674,9 @@ class PathTreeView(Gtk.TreeView):
         self.set_tooltip_column(Column.TOOLTIP)
 
         # Configure the column rendering:
-        # TODO: Fix.
-        # self.append_column(_create_column(
-        #     '',
-        #     [(CellRendererLint(), False, False, dict(tag=Column.TAG))],
-        #     80
-        # ))
         self.append_column(_create_column(
             'Path', [
+                (CellRendererLint(), False, False, dict(tag=Column.TAG)),
                 (
                     _create_toggle_cellrenderer(self),
                     False, False, dict(active=Column.SELECTED)
@@ -775,7 +768,7 @@ if __name__ == '__main__':
     view = PathTreeView()
     view.set_model(model)
 
-    runner.connect('process-finished', lambda _, msg: GLib.idle_add(view.expand_all))
+    runner.connect('process-finished', lambda _, msg: GLib.timeout_add(500, view.expand_all))
 
 
     def _search_changed(entry):

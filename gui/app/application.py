@@ -5,7 +5,7 @@
 import gettext
 
 # Internal
-from app import APP_TITLE, APP_DESCRIPTION
+from app import APP_TITLE
 from app.util import load_css_from_data
 from app.about import ShredderAboutDialog
 from app.window import MainWindow
@@ -34,6 +34,7 @@ def _load_app_icon():
     return logo_handle.get_pixbuf().scale_simple(
         200, 200, GdkPixbuf.InterpType.HYPER
     )
+
 
 class ShredderApplication(Gtk.Application):
     def __init__(self):
@@ -90,6 +91,5 @@ class ShredderApplication(Gtk.Application):
         self.win.views.add_view(EditorView(self), 'editor')
 
         # Set the default view visible at startup
-        self.win.views.switch('main')
-        self.win.views['main'].trigger_run(['/tmp/dummy'])
+        self.win.views.switch('locations')
         self.win.show_all()

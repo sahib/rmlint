@@ -63,6 +63,7 @@ def scrolled(widget):
     scw.add(widget)
     return scw
 
+
 def get_theme_color(widget, background=True, state=Gtk.StateFlags.SELECTED):
     color = None
     sctx = widget.get_style_context()
@@ -117,6 +118,7 @@ class DestructiveButton(IconButton):
         self.get_style_context().add_class(
             Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION
         )
+
 
 class IndicatorLabel(Gtk.Label):
     """A label that has a rounded, colored background.
@@ -205,7 +207,6 @@ class View(Gtk.ScrolledWindow):
     @property
     def is_visible(self):
         return self._is_visible
-
 
 
 class ShredderPopupMenu(Gtk.Menu):

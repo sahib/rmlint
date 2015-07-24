@@ -31,7 +31,8 @@ class DeferSizeLabel(Gtk.Bin):
         # All self-implemented ways in python were way slower.
         du = Gio.Subprocess.new(
             ['du', '-s', path],
-            Gio.SubprocessFlags.STDERR_SILENCE | Gio.SubprocessFlags.STDOUT_PIPE
+            Gio.SubprocessFlags.STDERR_SILENCE |
+            Gio.SubprocessFlags.STDOUT_PIPE
         )
         du.communicate_utf8_async(None, None, self._du_finished)
 
@@ -49,21 +50,12 @@ class LocationEntry(Gtk.ListBoxRow):
 
     def __init__(self, name, path, themed_icon, fill_level=None):
         Gtk.ListBoxRow.__init__(self)
+        self.set_size_request(-1, 80)
 
         # CSS Name
         self.set_name('LocationEntry')
 
-        grid = Gtk.Grid()
-        self.add(grid)
-
-        self.set_size_request(-1, 80)
-
-        self.path = path
-        self.name = name
-
-        self.separator = Gtk.Separator()
-        self.separator.set_hexpand(True)
-        self.separator.set_halign(Gtk.Align.FILL)
+        self.path, self.name = path, name
 
         name_label = Gtk.Label(
             '<b>{}</b>'.format(GLib.markup_escape_text(name))
@@ -98,6 +90,17 @@ class LocationEntry(Gtk.ListBoxRow):
         self.check_box.set_margin_top(13)
         self.check_box.set_can_focus(False)
 
+        self.separator = Gtk.Separator()
+        self.separator.set_hexpand(True)
+        self.separator.set_halign(Gtk.Align.FILL)
+
+        #######################
+        # Put it all together #
+        #######################
+
+        grid = Gtk.Grid()
+        self.add(grid)
+
         grid.attach(icon_img, 0, 0, 5, 5)
         grid.attach(name_label, 5, 2, 1, 1)
         grid.attach(path_label, 5, 3, 1, 1)
@@ -113,6 +116,7 @@ class LocationEntry(Gtk.ListBoxRow):
             level_bar.set_margin_end(20)
             level_bar.set_margin_top(20)
 
+            # Define new values for 'high' and 'low'
             level_bar.remove_offset_value(Gtk.LEVEL_BAR_OFFSET_HIGH)
             level_bar.remove_offset_value(Gtk.LEVEL_BAR_OFFSET_LOW)
             level_bar.add_offset_value(Gtk.LEVEL_BAR_OFFSET_LOW, 0.75)
@@ -154,7 +158,6 @@ class LocationEntry(Gtk.ListBoxRow):
 
 
 class LocationView(View):
-
     def __init__(self, app):
         View.__init__(self, app)
         self.selected_locations = []
@@ -289,7 +292,9 @@ class LocationView(View):
         self.show_all()
 
     def add_entry(self, name, path, icon, fill_level=None, idx=-1):
+        """Add a new LocationEntry to the list"""
         path = path.strip()
+
         if path == '/':
             return
 

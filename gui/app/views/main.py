@@ -25,7 +25,7 @@ class ResultActionBar(Gtk.ActionBar):
         self.settings_button = IconButton('system-run-symbolic')
 
         self.refresh_button.connect(
-            'clicked', lambda _: view.app_window.views.switch('editor')
+            'clicked', lambda _: view.app_window.views['main'].rerun()
         )
         self.settings_button.connect(
             'clicked', lambda _: view.app_window.views.switch('settings')
@@ -53,6 +53,9 @@ class ResultActionBar(Gtk.ActionBar):
 class MainView(View):
     def __init__(self, app):
         View.__init__(self, app, 'Step 2: Running...')
+
+        # Public: The runner.
+        self.runner = None
 
         # Disable scrolling for the main view:
         self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
@@ -101,23 +104,28 @@ class MainView(View):
         )
 
         # TODO: DEBUG
-        GLib.timeout_add(1000, lambda *_: self.trigger_run(['/usr/lib']))
+        # GLib.timeout_add(1000, lambda *_: self.trigger_run(['/usr/lib']))
 
     def trigger_run(self, paths):
+        # Remember last paths for rerun()
+        self.last_paths = paths
+
         # Fork off the rmlint process:
-        runner = Runner(self.app.settings, paths)
-        runner.connect('lint-added', self.on_add_elem)
-        runner.connect('process-finished', self.on_process_finish)
-        runner.run()
+        self.runner = Runner(self.app.settings, paths)
+        self.runner.connect('lint-added', self.on_add_elem)
+        self.runner.connect('process-finished', self.on_process_finish)
+        self.script = self.runner.run()
 
         # Make sure the previous run is not visible anymore:
         self.model = PathTreeModel([])
         self.treeview.set_model(self.model)
-        # TODO: Clear chart?
 
         # Indicate that we're in a fresh run:
         self.is_running = True
         self.app_window.show_progress(0)
+
+    def rerun(self):
+        self.trigger_run(self.last_paths)
 
     ###########################
     #     SIGNAL CALLBACKS    #
@@ -152,8 +160,6 @@ class MainView(View):
             )
 
         GLib.timeout_add(1500, self.on_delayed_chart_render, -1)
-
-        self.app_window.views['editor'].give_runner(runner)
         self.app_window.views.go_right.set_sensitive(True)
 
     def on_delayed_chart_render(self, last_size):
@@ -170,7 +176,7 @@ class MainView(View):
         return False
 
     def on_view_enter(self):
-        has_script = self.app_window.views['editor'].has_script
+        has_script = bool(self.runner)
         GLib.idle_add(
             lambda: self.app_window.views.go_right.set_sensitive(has_script)
         )

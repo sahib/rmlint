@@ -9,7 +9,7 @@ import tempfile
 from functools import partial
 
 # Internal:
-from app.util import View, IconButton, scrolled
+from app.util import View, IconButton, scrolled, size_to_human_readable
 from app.runner import Script
 
 # External:
@@ -17,6 +17,11 @@ from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Pango
 from gi.repository import GObject
+
+
+#############################
+# Try to load GtkSourceView #
+#############################
 
 try:
     from gi.repository import GtkSource
@@ -55,10 +60,10 @@ except ImportError:
         return view, buffer_
 
     def _set_source_style(view, style_name):
-        pass
+        pass  # Not supported.
 
     def _set_source_lang(view, lang):
-        pass
+        pass  # Not supported.
 
 
 def _create_running_screen():
@@ -95,35 +100,30 @@ def _create_finished_screen(callback):
     return control_grid
 
 
-class ShredderDeletedTree(Gtk.TreeView):
+class RunningLabel(Gtk.Label):
     def __init__(self):
-        Gtk.TreeView.__init__(self)
-        model = Gtk.TreeStore(str, int)
-        self.set_model(model)
+        Gtk.Label.__init__(self)
 
-        renderer = Gtk.CellRendererText()
-
-        text_column = Gtk.TreeViewColumn()
-        text_column.pack_start(renderer, True)
-        text_column.set_title("Files")
-        text_column.set_attributes(
-            cell_renderer=renderer,
-            text=0, weight=1,
+        # Make it appeared a bit dimmed:
+        self.get_style_context().add_class(
+            Gtk.STYLE_CLASS_DIM_LABEL
         )
-        self.append_column(text_column)
+        self.set_justify(Gtk.Justification.CENTER)
 
-        self._dupe_row = model.append(
-            None, ('Duplicate files & directories', Pango.Weight.SEMIBOLD)
-        )
+        self._size_sum = 0
+        self.push('', '')
 
-    def add_line(self, prefix, line):
+    def push(self, prefix, path):
         if prefix.lower() == 'keeping':
-            weight = Pango.Weight.BOLD
-        else:
-            weight = Pango.Weight.ULTRALIGHT
+            # TODO
+            return
 
-        self.get_model().append(self._dupe_row, (line, weight))
-        self.expand_all()
+        text = '<big>{s}</big><small> removed</small>\n<big>{p}</big>'.format(
+            s=size_to_human_readable(self._size_sum),
+            p=GLib.markup_escape_text(path)
+        )
+        self.set_markup(text)
+        self._size_sum += 100
 
 
 class ShredderRunButton(Gtk.Box):
@@ -238,7 +238,7 @@ When done, click the `Run Script` button below.
 
         icon_theme = Gtk.IconTheme.get_default()
 
-        self.left_listbox = ShredderDeletedTree()
+        self.left_listbox = RunningLabel()
 
         self.left_stack = Gtk.Stack()
         self.left_stack.set_transition_type(
@@ -285,20 +285,12 @@ When done, click the `Run Script` button below.
             _create_finished_screen(self._switch_back), 'finished'
         )
 
-        self.switch_to_script()
+        self.left_stack.set_visible_child_name('script')
 
         grid = Gtk.Grid()
         grid.attach(left_pane, 0, 0, 1, 1)
         grid.attach_next_to(self.stack, left_pane, Gtk.PositionType.RIGHT, 1, 1)
         self.add(grid)
-
-    @property
-    def has_script(self):
-        return bool(self._runner)
-
-    def give_runner(self, runner):
-        self._runner = runner
-        self.run_button.set_sensitive(True)
 
     def _switch_back(self):
         self.run_button.set_sensitive(False)
@@ -308,44 +300,27 @@ When done, click the `Run Script` button below.
         self.sub_title = 'Step 3: Check the results'
         self.left_stack.set_visible_child_name('script')
         buffer_ = self.text_view.get_buffer()
-        try:
-            with open('/tmp/rmlint.sh', 'r') as handle:
-                buffer_.set_text(handle.read())
-        except OSError:
-            buffer_.set_text('echo "Place a rmlint.sh in /tmp/rmlint.sh"')
+        buffer_.set_text(self.script.read())
 
+        # Make sure it gets colored again:
         _set_source_style(self.text_view, 'solarized-light')
         _set_source_lang(self.text_view, 'sh')
-
         self.stack.set_visible_child_name('danger')
 
     def on_run_script_clicked(self, button):
         self.sub_title = 'Step 4: Cross fingers!'
         self.stack.set_visible_child_name('progressing')
         self.left_stack.set_visible_child_name('list')
+        self.script.connect(
+            'line-read',
+            lambda _, prefix, line: partial(self.left_listbox.push, prefix, line)
+        )
+        self.script.connect(
+            'script-finished',
+            lambda *_: self.stack.set_visible_child_name('finished')
+        )
+        self.script.run(dry_run=True)
 
-        def _line_read(script, prefix, line):
-            GLib.idle_add(
-                partial(self.left_listbox.add_line, prefix, line)
-            )
-
-        def _script_finished(script):
-            self.stack.set_visible_child_name('finished')
-
-        temp_path = tempfile.mktemp(suffix='-rmlint.sh', prefix='Shredder-')
-
-        with open(temp_path, 'w') as handle:
-            buffer_ = self.text_view.get_buffer()
-            handle.write(
-                buffer_.get_text(
-                    buffer_.get_start_iter(),
-                    buffer_.get_end_iter(),
-                    False
-                )
-            )
-        os.chmod(temp_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-
-        script = Script(temp_path)
-        script.connect('line-read', _line_read)
-        script.connect('script-finished', _script_finished)
-        script.run()
+    def on_view_enter(self):
+        self.script = self.app_window.views['main'].script
+        self.switch_to_script()

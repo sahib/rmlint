@@ -25,6 +25,11 @@ class CellRendererSize(Gtk.CellRendererText):
         )
 
 
+def _rnd(num):
+    """Round to minimal decimal places & convert to str"""
+    return str(round(num, 1) if num % 1 else int(num))
+
+
 def pretty_date(time=False):
     """Get a datetime object or a int() Epoch timestamp and return a
     pretty string like 'an hour ago', 'Yesterday', '3 months ago',
@@ -37,30 +42,29 @@ def pretty_date(time=False):
     if day_diff < 0:
         return ''
 
-    rnd = lambda t: '{}'.format(round(t, 1) if t % 1 else int(t))
-
     if day_diff == 0:
         if second_diff < 10:
             return "just now"
-        if second_diff < 60:
-            return rnd(second_diff) + " seconds ago"
-        if second_diff < 120:
+        elif second_diff < 60:
+            return _rnd(second_diff) + " seconds ago"
+        elif second_diff < 120:
             return "a minute ago"
-        if second_diff < 3600:
-            return rnd(second_diff / 60) + " minutes ago"
-        if second_diff < 7200:
+        elif second_diff < 3600:
+            return _rnd(second_diff / 60) + " minutes ago"
+        elif second_diff < 7200:
             return "an hour ago"
-        if second_diff < 86400:
-            return rnd(second_diff / 3600) + " hours ago"
-    if day_diff == 1:
+        elif second_diff < 86400:
+            return _rnd(second_diff / 3600) + " hours ago"
+    elif day_diff == 1:
         return "Yesterday"
-    if day_diff < 7:
-        return rnd(day_diff) + " days ago"
-    if day_diff < 31:
-        return rnd(day_diff / 7) + " weeks ago"
-    if day_diff < 365:
-        return rnd(day_diff / 30) + " months ago"
-    return rnd(day_diff / 365) + " years ago"
+    elif day_diff < 7:
+        return _rnd(day_diff) + " days ago"
+    elif day_diff < 31:
+        return _rnd(day_diff / 7) + " weeks ago"
+    elif day_diff < 365:
+        return _rnd(day_diff / 30) + " months ago"
+
+    return _rnd(day_diff / 365) + " years ago"
 
 
 class CellRendererModifiedTime(Gtk.CellRendererText):
@@ -112,65 +116,56 @@ class CellRendererCount(Gtk.CellRendererText):
 def _render_tag_label(tag):
     state_to_symbol = {
         IndicatorLabel.NONE: '',
-        IndicatorLabel.SUCCESS: '✔',
-        IndicatorLabel.WARNING: '⚠',
+        IndicatorLabel.SUCCESS: '<span color="green">✔</span>',
+        IndicatorLabel.WARNING: '<span color="orange">⚠</span>',
         IndicatorLabel.ERROR: '✗',
-        IndicatorLabel.THEME: '♔'
+        IndicatorLabel.THEME: '<span color="blue">♔</span>'
     }
 
-    tag_label = IndicatorLabel('')
+    tag_label = Gtk.Label('')
     tag_label.set_markup('<small>{symbol}</small>'.format(
         symbol=state_to_symbol[tag]
     ))
-    tag_label.set_state(tag)
+    # tag_label.set_state(tag)
 
     # Render the label tag
     return render_pixbuf(tag_label, -1, -1)
 
 
-class CellRendererLint(Gtk.CellRendererText):
+class CellRendererLint(Gtk.CellRendererPixbuf):
     ICON_SIZE = 20
     STATE_TO_PIXBUF = {}
 
     tag = GObject.Property(type=int, default=IndicatorLabel.ERROR)
 
     def __init__(self, **kwargs):
-        Gtk.CellRendererText.__init__(self, **kwargs)
-        self._pixbuf_renderer = Gtk.CellRendererPixbuf()
-        self._pixbuf_renderer.set_alignment(0.0, 0.6)
+        Gtk.CellRendererPixbuf.__init__(self, **kwargs)
+        self.set_alignment(0.0, 0.6)
 
     def do_render(self, ctx, widget, background_area, cell_area, flags):
         tag = self.get_property('tag')
-        if tag is not IndicatorLabel.NONE:
-            # Render the label tag
-            pixbuf = CellRendererLint.STATE_TO_PIXBUF.get(tag)
-            if pixbuf is None:
-                pixbuf = CellRendererLint.STATE_TO_PIXBUF[tag] = _render_tag_label(tag)
-                # pixbuf = GdkPixbuf.Pixbuf.new_from_file('/tmp/icon.png')
+        if tag is IndicatorLabel.NONE:
+            return
 
-            self._pixbuf_renderer.set_property('pixbuf', pixbuf)
-            self._pixbuf_renderer.render(
-                ctx, widget, background_area, cell_area, flags
-            )
+        # Render the label tag and cache it if necessary
+        lookup_table = CellRendererLint.STATE_TO_PIXBUF
+        pixbuf = lookup_table.get(tag)
+        if pixbuf is None:
+            pixbuf = lookup_table[tag] = _render_tag_label(tag)
 
-            # Render the text by calling super. Tell it where to render first.
-            w = self._pixbuf_renderer.get_size(widget, cell_area)[2] + 3
-            cell_area.x += w
-            cell_area.width -= w
-            background_area.x += w
-            background_area.width -= w
-
-        Gtk.CellRendererText.do_render(
+        # Actual rendering
+        self.set_property('pixbuf', pixbuf)
+        ctx.set_source_rgb(0, 255, 0)
+        Gtk.CellRendererPixbuf.do_render(
             self, ctx, widget, background_area, cell_area, flags
         )
 
     def do_get_size(self, widget, cell_area):
-        x, y, w, h = Gtk.CellRendererText.do_get_size()
+        w, h = [self.props.xpad * 2 + CellRendererLint.ICON_SIZE] * 2
 
-        tag = self.get_property('tag')
-        if tag is not IndicatorLabel.NONE:
-            x += CellRendererText.ICON_SIZE
-            w += CellRendererText.ICON_SIZE
+        x, y = 0, 0
+        if cell_area:
+            x = max(0, self.props.xalign * (cell_area.width - w))
+            y = max(0, self.props.yalign * (cell_area.height - h))
 
-        print(x, y, w, h)
         return x, y, w, h

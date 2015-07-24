@@ -186,7 +186,7 @@ def create_searchbar(win):
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, application):
         Gtk.Window.__init__(
-            self, title='Welcome to the Demo', application=application
+            self, title='Shredder', application=application
         )
 
         # Set the css name:
@@ -233,9 +233,6 @@ class MainWindow(Gtk.ApplicationWindow):
         )
         main_menu.append_item(
             create_item(_('Search'), 'app.search', 'find-location-symbolic')
-        )
-        main_menu.append_item(
-            create_item(_('Work'), 'app.work', 'folder-symbolic')
         )
         main_menu.append_item(
             create_item(_('Quit'), 'app.quit', 'window-close')
@@ -309,7 +306,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.progressbar_revealer.set_reveal_child(False)
 
     def set_search_mode(self, active):
-        """Show the
+        """Show the search bar.
         """
         # Trigger a fake keypress event on the search bar.
         self.search_bar.set_search_mode(active)
@@ -319,7 +316,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.search_bar.hide()
 
     def add_header_widget(self, widget, align=Gtk.Align.END):
-        """
+        """Add a widget to the header, either left or right of the title.
         """
         if align is Gtk.Align.END:
             self.headerbar.pack_end(widget)
