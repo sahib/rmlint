@@ -3,6 +3,9 @@
 
 # Stdlib:
 import os
+import logging
+
+LOGGER = logging.getLogger('locations')
 
 # Internal:
 from app.util import View, IconButton, size_to_human_readable
@@ -242,7 +245,7 @@ class LocationView(View):
         self.sub_title = 'Step 1: Choose locations to check'
 
     def refill_entries(self, *_):
-        print('...refill')
+        LOGGER.info('refilling location entries')
         for child in list(self.box):
             self.box.remove(child)
 
@@ -421,7 +424,7 @@ class LocationView(View):
 
     def _del_clicked(self, _):
         for row in self.selected_locations:
-            print(row)
+            LOGGER.debug('Removing location entry:' + str(row))
             self.box.remove(row)
 
         self.selected_locations = []

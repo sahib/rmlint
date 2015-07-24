@@ -27,10 +27,8 @@ def boolean_widget(settings, key_name, summary, description):
 def _format_range_value(spin, draw_size, draw_percent):
     adj = spin.get_adjustment()
     value = adj.get_value()
-    print(value, draw_size, draw_percent)
 
     if draw_size:
-        print('{}'.format(value))
         spin.set_text('{}'.format(value))
         return True
     elif draw_percent:
@@ -49,8 +47,6 @@ def numeric_widget(
 
     step = 0.1 if floating_point else 1
     range_wdgt = Gtk.SpinButton.new_with_range(0, 10 ** 10, step)
-
-
 
     if range_type == 'range':
         min_val, max_val = range_variant
@@ -94,11 +90,9 @@ class InteractiveLevelBar(Gtk.ProgressBar):
         self.set_fraction(value)
 
     def _on_button_press(self, event):
-        print(event, event.x, event.type)
         if event.type == Gdk.EventType.BUTTON_RELEASE:
             alloc = self.get_allocation()
             percent = event.x / alloc.width
-            print(percent)
             self.set_value(percent)
             return True
         return False
@@ -190,7 +184,6 @@ class _CurrentChoiceLabel(Gtk.Label):
             )
         )
 
-        print(new_value)
         self.notify('choice')
 
 

@@ -5,6 +5,10 @@
 import json
 import errno
 import tempfile
+import logging
+
+LOGGER = logging.getLogger('runner')
+
 
 from collections import defaultdict, UserDict
 from functools import partial
@@ -148,13 +152,13 @@ def _create_rmlint_process(cfg, paths):
             '-T', 'duplicates'
         ] + extra_options + paths
 
-        print(' '.join(cmdline))
+        LOGGER.info('Running: ' + ' '.join(cmdline))
         process = launcher.spawnv(cmdline)
     except GLib.Error as err:
         if err.code == errno.ENOEXEC:
-            print('Error: rmlint does not seem to be installed.')
+            LOGGER.error('Error: rmlint does not seem to be installed.')
         else:
-            print(err)
+            LOGGER.exception('Process failed')
 
         # No point in going any further
         return None, None, None
@@ -227,7 +231,7 @@ class Runner(GObject.Object):
         try:
             json_doc = json.loads(line)
         except ValueError as err:
-            print(err)
+            LOGGER.exception('Parsing json document failed')
         else:
             if 'path' in json_doc:
                 self.element = json_doc

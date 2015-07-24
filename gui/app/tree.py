@@ -18,6 +18,9 @@ If you don't find it, that's good. If you do, blame @sahib.
 # Stdlib:
 import os
 import time
+import logging
+
+LOGGER = logging.getLogger('tree')
 
 from collections import OrderedDict, deque
 
@@ -413,8 +416,14 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
                 self._intermediate_nodes.add(node)
 
     def _add_defer(self):
-        """Add a pack of paths to the trie, max 1000 at the same time."""
-        print('Adding pack', min(PATH_MODEL_CHUNK_SIZE, len(self._file_pack)))
+        """Add a pack of paths to the trie, max 500 at the same time."""
+        LOGGER.info(
+            'Adding pack: {}/{}'.format(
+                min(PATH_MODEL_CHUNK_SIZE, len(self._file_pack)),
+                PATH_MODEL_CHUNK_SIZE
+            )
+        )
+
         for path, row in self._file_pack[:PATH_MODEL_CHUNK_SIZE]:
             self._add_and_signal(path, row)
 
@@ -506,7 +515,6 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
 
         The implementation returns a 2-tuple (bool, TreeIter|None).
         """
-        # print('get:', path.get_indices())
         node = self.trie.resolve(path.get_indices())
 
         if node is not None:
