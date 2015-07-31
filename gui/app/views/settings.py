@@ -8,6 +8,7 @@ from functools import partial
 
 # Internal:
 from app.util import View, SuggestedButton, DestructiveButton
+from app.filesizerange import FileSizeRange
 
 # External:
 from gi.repository import Gtk
@@ -60,7 +61,7 @@ def numeric_widget(
         value = settings.get_int(key_name)
 
     range_wdgt.set_value(value)
-    # TODO: FOr weird reasons this is not working.
+    # TODO: For weird reasons this is not working.
     range_wdgt.connect('output', _format_range_value, draw_size, draw_percent)
     return range_wdgt
 
@@ -99,18 +100,17 @@ class InteractiveLevelBar(Gtk.ProgressBar):
 
 
 def range_widget(settings, key_name, summary, description):
-    grid = Gtk.Grid()
+    min_val, max_val = settings.get_value(key_name)
+    widget = FileSizeRange(min_val, max_val)
 
-    upper, lower = InteractiveLevelBar(), InteractiveLevelBar()
+    def _changed(*_):
+        min_val, max_val = settings.get_value(key_name)
+        widget.props.min_value = min_val
+        widget.props.max_value = max_val
 
-    for idx, bar in enumerate([upper, lower]):
-        grid.attach(bar, 0, idx, 1, 1)
-        bar.props.vexpand = False
-        bar.props.valign = Gtk.Align.CENTER
-        bar.props.halign = Gtk.Align.FILL
-        bar.props.margin_top = 5
+    settings.connect('changed::' + key_name, _changed)
 
-    return grid
+    return widget
 
 
 class _ChoiceRow(Gtk.ListBoxRow):
@@ -187,71 +187,81 @@ class _CurrentChoiceLabel(Gtk.Label):
         self.notify('choice')
 
 
-def choice_widget(settings, key_name, summary, description):
-    schema = settings.props.settings_schema
-    key = schema.get_key(key_name)
 
-    value = settings.get_string(key_name)
-    value_label = _CurrentChoiceLabel(value)
-    value_label.set_use_markup(True)
+class MultipleChoiceButton(Gtk.Button):
+    def __init__(self, values, default, selected, summary):
+        Gtk.Button.__init__(self)
+        self.set_relief(Gtk.ReliefStyle.NONE)
+        self.set_can_focus(False)
 
-    button = Gtk.Button()
-    button.add(value_label)
-    button.set_relief(Gtk.ReliefStyle.NONE)
-    button.set_can_focus(False)
+        self.value_label = _CurrentChoiceLabel(default)
+        self.add(self.value_label)
 
-    popover = Gtk.Popover.new(button)
-    popover.set_modal(True)
+        popover = Gtk.Popover.new(self)
+        popover.set_modal(True)
 
-    listbox = Gtk.ListBox()
-    listbox.set_border_width(10)
-    listbox.set_selection_mode(Gtk.SelectionMode.NONE)
-    listbox.set_activate_on_single_click(True)
+        listbox = Gtk.ListBox()
+        listbox.set_border_width(10)
+        listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        listbox.set_activate_on_single_click(True)
 
-    def _update_value(listbox, row):
+        listbox.connect('row-activated', self.on_update_value)
+        listbox_header = Gtk.Label(
+            '<small><b>{txt}?</b></small>'.format(txt=summary)
+        )
+        listbox_header.get_style_context().add_class(
+            Gtk.STYLE_CLASS_DIM_LABEL
+        )
+        listbox_header.set_use_markup(True)
+        listbox_header.set_size_request(90, -1)
+
+        for widget in Gtk.Separator(), listbox_header:
+            row = Gtk.ListBoxRow()
+            row.set_selectable(False)
+            row.set_activatable(False)
+            row.add(widget)
+            listbox.prepend(row)
+
+        frame = Gtk.Frame()
+        frame.add(listbox)
+        frame.set_border_width(5)
+        popover.add(frame)
+
+        for choice in values:
+            row = _ChoiceRow(choice, default == choice)
+            listbox.add(row)
+
+            if choice == selected:
+                listbox.select_row(row)
+                row.set_show_checkmark(True)
+
+        self.connect('clicked', lambda *_: popover.show_all())
+
+    def on_update_value(self, listbox, row):
         for other_row in listbox:
-            # Might be a different
+            # Might be a different type:
             if isinstance(other_row, _ChoiceRow):
                 other_row.set_show_checkmark(row is other_row)
 
         settings.set_string(key_name, row.value)
         popover.hide()
 
-    listbox.connect('row-activated', _update_value)
-    listbox_header = Gtk.Label(
-        '<small><b>{txt}?</b></small>'.format(txt=summary)
-    )
-    listbox_header.get_style_context().add_class(
-        Gtk.STYLE_CLASS_DIM_LABEL
-    )
-    listbox_header.set_use_markup(True)
-    listbox_header.set_size_request(90, -1)
 
-    for widget in Gtk.Separator(), listbox_header:
-        row = Gtk.ListBoxRow()
-        row.set_selectable(False)
-        row.set_activatable(False)
-        row.add(widget)
-        listbox.prepend(row)
+def choice_widget(settings, key_name, summary, description):
+    schema = settings.props.settings_schema
+    key = schema.get_key(key_name)
 
-    frame = Gtk.Frame()
-    frame.add(listbox)
-    frame.set_border_width(5)
-    popover.add(frame)
+    selected = settings.get_string(key_name)
+    default = key.get_default_value().get_string()
 
     range_type, range_variant = key.get_range()
-    if range_type == 'enum':
-        for choice in range_variant:
-            default = key.get_default_value().get_string()
-            row = _ChoiceRow(choice, default == choice)
-            listbox.add(row)
+    if range_type != 'enum':
+        print('uh oh')
 
-            if choice == value:
-                listbox.select_row(row)
-                row.set_show_checkmark(True)
-
+    choices = list(range_variant)
+    button = MultipleChoiceButton(choices, default, selected, summary)
     button.connect('clicked', lambda *_: popover.show_all())
-    settings.bind(key_name, value_label, 'choice', 0)
+    settings.bind(key_name, button.value_label, 'choice', 0)
 
     return button
 
@@ -261,7 +271,8 @@ VARIANT_TO_WIDGET = {
     'i': partial(numeric_widget, floating_point=False),
     'd': partial(numeric_widget, floating_point=True),
     's': choice_widget,
-    '(ii)': range_widget
+    '(ii)': range_widget,
+    '(tt)': range_widget
 }
 
 

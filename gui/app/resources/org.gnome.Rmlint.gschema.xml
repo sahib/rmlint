@@ -55,8 +55,8 @@
         <!-- TODO: low,high range widget -->
         <!-- TODO: flags widget -->
         <!-- TODO: mb widget -->
-        <key name="traverse-size-limits" type="(ii)">
-            <default>(0, 0)</default>
+        <key name="traverse-size-limits" type="(tt)">
+            <default>(1, 18446744073709551615)</default>
             <summary>[2] Size limits</summary>
             <description>What size the duplicate files may have</description>
         </key>
