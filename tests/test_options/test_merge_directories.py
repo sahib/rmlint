@@ -263,6 +263,12 @@ def test_mount_binds():
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_keepall_tagged():
+    # Test for Issue #141:
+    # https://github.com/sahib/rmlint/issues/141
+    #
+    # Make sure -k protects duplicate directories too,
+    # when they're in a pref'd path.
+
     create_file('test', 'origs/folder/subfolder/file')
     create_file('test', 'origs/samefolder/subfolder/file')
     create_file('test', 'dups/folder/subfolder/file')
