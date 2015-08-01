@@ -187,10 +187,16 @@ class _CurrentChoiceLabel(Gtk.Label):
         self.notify('choice')
 
 
-
 class MultipleChoiceButton(Gtk.Button):
+    __gsignals__ = {
+        'row-selected': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
+
     def __init__(self, values, default, selected, summary):
         Gtk.Button.__init__(self)
+
+        self._selected_row = None
+
         self.set_relief(Gtk.ReliefStyle.NONE)
         self.set_can_focus(False)
 
@@ -199,13 +205,14 @@ class MultipleChoiceButton(Gtk.Button):
 
         popover = Gtk.Popover.new(self)
         popover.set_modal(True)
+        self.connect('clicked', lambda *_: popover.show_all())
 
         listbox = Gtk.ListBox()
         listbox.set_border_width(10)
         listbox.set_selection_mode(Gtk.SelectionMode.NONE)
         listbox.set_activate_on_single_click(True)
 
-        listbox.connect('row-activated', self.on_update_value)
+        listbox.connect('row-activated', self.on_update_value, popover)
         listbox_header = Gtk.Label(
             '<small><b>{txt}?</b></small>'.format(txt=summary)
         )
@@ -237,13 +244,17 @@ class MultipleChoiceButton(Gtk.Button):
 
         self.connect('clicked', lambda *_: popover.show_all())
 
-    def on_update_value(self, listbox, row):
+    def get_selected_row(self):
+        return self._selected_row
+
+    def on_update_value(self, listbox, row, popover):
         for other_row in listbox:
             # Might be a different type:
             if isinstance(other_row, _ChoiceRow):
                 other_row.set_show_checkmark(row is other_row)
 
-        settings.set_string(key_name, row.value)
+        self._selected_row = row
+        self.emit('row-selected')
         popover.hide()
 
 
@@ -260,7 +271,11 @@ def choice_widget(settings, key_name, summary, description):
 
     choices = list(range_variant)
     button = MultipleChoiceButton(choices, default, selected, summary)
-    button.connect('clicked', lambda *_: popover.show_all())
+    button.connect(
+        'row-selected',
+        lambda _: settings.set_string(key_name, button.get_selected_row().value)
+    )
+
     settings.bind(key_name, button.value_label, 'choice', 0)
 
     return button
