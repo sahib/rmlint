@@ -816,7 +816,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 if(prefd == directory->dupe_count) {
                     /* Mark the file as original when all files in it are preferred. */
                     mask->is_original = true;
-                    rm_tm_mark_original_files(self, directory);
                 }
             }
 
