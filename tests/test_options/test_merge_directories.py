@@ -295,3 +295,33 @@ def test_keepall_tagged():
 
     assert data[3]['path'].endswith('origs/samefolder')
     assert data[3]['is_original']
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_keepall_untagged():
+    create_file('test', 'origs/folder/subfolder/file')
+    create_file('test', 'origs/samefolder/subfolder/file')
+    create_file('test', 'dups/folder/subfolder/file')
+    create_file('test', 'dups/samefolder/subfolder/file')
+
+    head, *data, footer = run_rmlint('-D -S a -K -m {d} // {o}'.format(
+        d=os.path.join(TESTDIR_NAME, 'dups'),
+        o=os.path.join(TESTDIR_NAME, 'origs')
+    ))
+
+    assert len(data) == 4
+    assert footer['total_files'] == 8
+    assert footer['duplicates'] == 2
+    assert footer['duplicate_sets'] == 1
+
+    assert data[0]['path'].endswith('dups')
+    assert data[0]['is_original']
+
+    assert data[1]['path'].endswith('origs')
+    assert not data[1]['is_original']
+
+    assert data[2]['path'].endswith('dups/folder')
+    assert data[2]['is_original']
+
+    assert data[3]['path'].endswith('dups/samefolder')
+    assert data[3]['is_original']
