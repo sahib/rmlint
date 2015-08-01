@@ -657,8 +657,9 @@ static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory
     }
 }
 
-static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory,
-                                         gint64 acc) {
+static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory) {
+    gint64 acc = 0;
+
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         acc += file->is_prefd;
@@ -668,7 +669,7 @@ static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *direct
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
         RmDirectory *child = iter->data;
-        rm_tm_mark_duplicate_files(self, child, acc);
+        acc += rm_tm_mark_duplicate_files(self, child);
     }
 
     return acc;
@@ -811,8 +812,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 mask->is_original = true;
                 rm_tm_mark_original_files(self, directory);
             } else {
-                if(rm_tm_mark_duplicate_files(self, directory, 0) ==
-                   directory->dupe_count) {
+                gint64 prefd = rm_tm_mark_duplicate_files(self, directory);
+                if(prefd == directory->dupe_count) {
                     /* Mark the file as original when all files in it are preferred. */
                     mask->is_original = true;
                     rm_tm_mark_original_files(self, directory);
