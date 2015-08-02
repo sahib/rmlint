@@ -50,11 +50,6 @@
             <summary>Find hidden files and directories</summary>
             <description>Hidden files and directories begin with a ».«</description>
         </key>
-        <!-- TODO: Use levelbar? -->
-        <!-- TODO: sortcriteria and newer-than-stamp max-paranoid-size clamp-low -->
-        <!-- TODO: low,high range widget -->
-        <!-- TODO: flags widget -->
-        <!-- TODO: mb widget -->
         <key name="traverse-size-limits" type="(tt)">
             <default>(1, 18446744073709551615)</default>
             <summary>[2] Size limits</summary>
