@@ -24,8 +24,7 @@ from gi.repository import GObject
 
 # TODO: Move to settings?
 # TODO: Document relation to schema.xml
-# TODO: --limits
-# TODO: Restore defaults?
+# TODO: Restore defaults working?
 
 class AlgorithmType:
     SPOOKY, CITY, SHA1, SHA256, SHA512, MD5, PARANOID = range(1, 8)
@@ -101,7 +100,10 @@ class CrossMountType:
     }
 
 
+
+
 def map_cfg(option, val):
+    """Helper function to save some characters"""
     return option.MAPPING.get(val)
 
 
@@ -129,6 +131,14 @@ def _create_rmlint_process(cfg, paths):
             map_cfg(CrossMountType, cfg.get_boolean('traverse-cross-mounts'))
         ]
 
+        min_size, max_size = cfg.get_value('traverse-size-limits')
+        extra_options += [
+            '--size', '{a}M-{b}M'.format(
+                a=min_size // (1024 ** 2),
+                b=max_size // (1024 ** 2)
+            )
+        ]
+
         extra_options += AlgorithmType.MAPPING.get(
             cfg.get_enum('computation-algorithm')
         )
@@ -137,7 +147,10 @@ def _create_rmlint_process(cfg, paths):
             '--max-depth', str(cfg.get_int('traverse-max-depth'))
         ]
 
+        # Get rid of empty options:
         extra_options = list(filter(None, extra_options))
+
+        # Find a place to put the script file:
         sh_file = tempfile.NamedTemporaryFile(
             suffix='.sh', delete=False
         )
