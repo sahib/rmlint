@@ -105,6 +105,53 @@ static void rm_cmd_show_manpage(void) {
     exit(0);
 }
 
+static void rm_cmd_start_gui(int argc, const char **argv) {
+    const char *commands[] = {"python3", "python", NULL};
+    const char **command = &commands[0];
+
+    while(*command) {
+        const char *all_argv[512];
+        const char **argp = &all_argv[0];
+        memset(all_argv, 0, sizeof(all_argv));
+        
+        *argp++ = *command;
+        *argp++ = "-m";
+        *argp++ = "shredder";
+
+        for(size_t i = 0; i < (size_t)argc && i < sizeof(all_argv) / 2; i++) {
+            *argp++ = argv[i];
+        }
+
+        if(execvp(*command, (char * const *)all_argv) == -1) {
+            rm_log_warning("Executed: %s ", *command);
+            for(int j = 0; j < (argp - all_argv); j++) {
+                rm_log_warning("%s ", all_argv[j]);
+            }
+            rm_log_warning("\n");
+            rm_log_error_line("%s %d", g_strerror(errno), errno == ENOENT);
+        } else {
+            /* This is not reached anymore when execve suceeded */
+            break;
+        }
+
+        /* Try next command... */
+        command++;
+    }
+}
+
+static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
+    for(int i = 0; i < argc; i++) {
+        if(g_strcmp0("--gui", argv[i]) == 0) {
+            rm_cmd_start_gui(argc - i - 1, &argv[i + 1]);
+            
+            /* We returned? Something's wrong */
+            return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
 static const struct FormatSpec {
     const char *id;
     unsigned base;
@@ -1111,6 +1158,14 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     RmCfg *cfg = session->cfg;
+
+    /* Handle --gui before all other processing,
+     * since we need to pass other args to the python interpreter.
+     */
+    if(rm_cmd_maybe_switch_to_gui(argc, (const char **)argv) == EXIT_FAILURE) {
+        rm_log_error_line(_("Could not start graphical user interface."));
+        return false;
+    }
 
     /* List of paths we got passed (or NULL) */
     char **paths = NULL;
