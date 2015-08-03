@@ -12,7 +12,7 @@ are displayed by the widget and changes of the widget cause a change of the
 key's value.
 
 For reference, keys can be changed on the commandline too:
-$ gsettings --schemadir ~/.glib-schemas set org.gnome.Rmlint traverse-depth 2
+$ gsettings --schemadir ~/.glib-schemas set org.gnome.Shredder traverse-depth 2
 """
 
 # Stdlib:

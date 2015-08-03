@@ -762,7 +762,7 @@ if __name__ == '__main__':
         model.add_path(path, Column.make_row({'mtime': time.time(), 'size': 0}))
 
     from shredder.runner import Runner
-    settings = Gio.Settings.new('org.gnome.Rmlint')
+    settings = Gio.Settings.new('org.gnome.Shredder')
 
     runner = Runner(settings, sys.argv[1:])
     runner.connect(

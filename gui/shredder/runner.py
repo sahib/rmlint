@@ -344,7 +344,7 @@ class Script(GObject.Object):
 
 
 if __name__ == '__main__':
-    settings = Gio.Settings.new('org.gnome.Rmlint')
+    settings = Gio.Settings.new('org.gnome.Shredder')
     loop = GLib.MainLoop()
 
     runner = Runner(settings, ['/usr/'])

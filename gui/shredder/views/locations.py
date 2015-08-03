@@ -245,7 +245,7 @@ class LocationView(View):
         self.sub_title = 'Step 1: Choose locations to check'
 
     def refill_entries(self, *_):
-        LOGGER.info('refilling location entries')
+        LOGGER.info('Refilling location entries')
         for child in list(self.box):
             self.box.remove(child)
 

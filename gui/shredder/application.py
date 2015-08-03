@@ -2,7 +2,11 @@
 # encoding: utf-8
 
 # Stdlib:
+import os
 import gettext
+import logging
+
+LOGGER = logging.getLogger('application')
 
 # Internal
 from shredder import APP_TITLE
@@ -53,7 +57,10 @@ class Application(Gtk.Application):
         # Make tranlsating strings possible:
         gettext.install(APP_TITLE)
 
-        resource_bundle = Gio.Resource.load('shredder/resources/shredder.gresource')
+        resource_dir = os.path.dirname(__file__)
+        resource_file = os.path.join(resource_dir, 'resources/shredder.gresource')
+        LOGGER.info('Loading resources from: ' + resource_file)
+        resource_bundle = Gio.Resource.load(resource_file)
         Gio.resources_register(resource_bundle)
 
         # Load the application CSS files.
@@ -61,7 +68,7 @@ class Application(Gtk.Application):
         load_css_from_data(css_data.get_data())
 
         # Init the config system
-        self.settings = Gio.Settings.new('org.gnome.Rmlint')
+        self.settings = Gio.Settings.new('org.gnome.Shredder')
 
         self.win = MainWindow(self)
 
