@@ -32,7 +32,7 @@ def _create_action(name, callback=None):
 
 
 def _load_app_icon():
-    logo_svg = Gio.resources_lookup_data('/org/gnome/shredder/logo.svg', 0)
+    logo_svg = Gio.resources_lookup_data('/org/gnome/shredder/shredder.svg', 0)
     logo_handle = Rsvg.Handle.new_from_data(logo_svg.get_data())
     logo_handle.set_dpi_x_y(75, 75)
     return logo_handle.get_pixbuf().scale_simple(
@@ -57,8 +57,8 @@ class Application(Gtk.Application):
         # Make tranlsating strings possible:
         gettext.install(APP_TITLE)
 
-        resource_dir = os.path.dirname(__file__)
-        resource_file = os.path.join(resource_dir, 'resources/shredder.gresource')
+        rel_dir = os.path.dirname(__file__)
+        resource_file = os.path.join(rel_dir, 'resources/shredder.gresource')
         LOGGER.info('Loading resources from: ' + resource_file)
         resource_bundle = Gio.Resource.load(resource_file)
         Gio.resources_register(resource_bundle)

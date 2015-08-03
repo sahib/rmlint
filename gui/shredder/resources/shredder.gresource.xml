@@ -2,6 +2,6 @@
 <gresources>
     <gresource prefix="/org/gnome/shredder">
         <file compressed="true">shredder.css</file>
-        <file compressed="true">logo.svg</file>
+        <file compressed="true">shredder.svg</file>
     </gresource>
 </gresources>
