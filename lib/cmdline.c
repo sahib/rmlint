@@ -1263,6 +1263,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Show the manpage"), NULL},
         {"version", 0, EMPTY, G_OPTION_ARG_CALLBACK, rm_cmd_show_version,
          _("Show the version & features"), NULL},
+        /* Dummy option for --help output only: */
+        {"gui", 0, EMPTY, G_OPTION_ARG_NONE, NULL,
+         _("If installed, start the optional gui with all following args"), NULL},
 
         /* Special case: accumulate leftover args (paths) in &paths */
         {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &paths, "", NULL},

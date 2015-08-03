@@ -196,6 +196,14 @@ General Options
     --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
     back all results to the end of the run before sorting and printing. 
 
+:``--gui``:
+
+    Start the optional graphical frontend to ``rmlint`` called ``Shredder``.
+    All following options are passed to the gui application.
+
+    This will only work when ``Shredder`` and it's dependencies were installed
+    in prior.
+
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them. 
@@ -306,16 +314,15 @@ Traversal Options
 Original Detection Options
 --------------------------
 
-:``-k --keep-all-tagged`` / ``-K --keep-all-untagged`` (**default**):
+:``-k --keep-all-tagged`` / ``-K --keep-all-untagged`` 
 
-    Don't delete any duplicates that are in original paths.
-    (Paths that were named after **//**).
-    
-    **Note:** for lint types other than duplicates, ``--keep-all-tagged`` option is ignored.
+    Don't delete any duplicates that are in tagged paths (``-k``) or that are
+    in non-tagged paths (``-K``).
+    (Tagged paths are those that were named after **//**).
 
-:``-m --must-match-tagged`` / ``-M --must-match-untagged`` (**default**):
+:``-m --must-match-tagged`` / ``-M --must-match-untagged``
 
-    Only look for duplicates of which one is in original paths.
+    Only look for duplicates of which one is in tagged paths.
     (Paths that were named after **//**).
 
 :``-S --rank-by=criteria`` (**default\:** *pm*):
