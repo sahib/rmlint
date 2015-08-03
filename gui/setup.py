@@ -56,11 +56,13 @@ setup(
     cmdclass={'install': pre_and_post_install},
     packages=['shredder', 'shredder.views'],
     package_data={'': [
-        'resources/*.svg',
-        'resources/*.css',
         'resources/*.gresource'
     ]},
     data_files=[
+        (
+            '/usr/share/icons/hicolor/scalable/apps',
+            ['shredder/resources/shredder.svg']
+        ),
         (
             '/usr/share/glib-2.0/schemas',
             ['shredder/resources/org.gnome.Shredder.gschema.xml']
