@@ -7,7 +7,7 @@ from gettext import gettext
 _ = gettext
 
 # Internal:
-import app
+import shredder
 
 # External:
 from gi.repository import Gdk, Gtk, GLib, Gio
@@ -106,8 +106,8 @@ class HeaderBar(Gtk.HeaderBar):
     def __init__(self):
         Gtk.HeaderBar.__init__(self)
 
-        self.set_title(app.APP_TITLE)
-        self.set_subtitle(app.APP_DESCRIPTION)
+        self.set_title(shredder.APP_TITLE)
+        self.set_subtitle(shredder.APP_DESCRIPTION)
 
         # This is a hack to get a small annoying bug under control:
         # If adding buttons to the headerbar, it's size will increase
@@ -190,8 +190,8 @@ class MainWindow(Gtk.ApplicationWindow):
         )
 
         # Set the css name:
-        self.set_name('AppWindow')
-        self.set_title(app.APP_TITLE)
+        self.set_name('ShredderWindow')
+        self.set_title(shredder.APP_TITLE)
         self.set_default_size(1280, 660)
 
         self.infobar = InfoBar()
@@ -208,7 +208,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.set_titlebar(self.headerbar)
 
         self.progressbar = Gtk.ProgressBar()
-        self.progressbar.set_name('AppProgress')
+        self.progressbar.set_name('ShredderProgress')
         self.progressbar.set_pulse_step(0.1)
 
         # This is a workaround for removing a small gap at the bottom
@@ -262,7 +262,7 @@ class MainWindow(Gtk.ApplicationWindow):
             'clicked', lambda btn: self.set_search_mode(btn.get_active())
         )
 
-        if app.APP_USE_TRADITIONAL_MENU:
+        if shredder.APP_USE_TRADITIONAL_MENU:
             menu_button.set_use_popover(False)
 
         self.search_bar, self.search_entry = create_searchbar(self)

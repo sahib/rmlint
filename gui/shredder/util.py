@@ -144,16 +144,16 @@ class IndicatorLabel(Gtk.Label):
 
     def set_state(self, state):
         classes = {
-            IndicatorLabel.ERROR: 'AppIndicatorLabelError',
-            IndicatorLabel.SUCCESS: 'AppIndicatorLabelSuccess',
-            IndicatorLabel.WARNING: 'AppIndicatorLabelWarning',
-            IndicatorLabel.THEME: 'AppIndicatorLabelTheme',
-            IndicatorLabel.NONE: 'AppIndicatorLabelEmpty'
+            IndicatorLabel.ERROR: 'ShredderIndicatorLabelError',
+            IndicatorLabel.SUCCESS: 'ShredderIndicatorLabelSuccess',
+            IndicatorLabel.WARNING: 'ShredderIndicatorLabelWarning',
+            IndicatorLabel.THEME: 'ShredderIndicatorLabelTheme',
+            IndicatorLabel.NONE: 'ShredderIndicatorLabelEmpty'
         }
 
         # Will act as normal label for invalid states.
         # Useful for highlighting problematic input.
-        self.set_name(classes.get(state, 'AppIndicatorLabelEmpty'))
+        self.set_name(classes.get(state, 'ShredderIndicatorLabelEmpty'))
 
 
 class View(Gtk.ScrolledWindow):
@@ -209,7 +209,7 @@ class View(Gtk.ScrolledWindow):
         return self._is_visible
 
 
-class ShredderPopupMenu(Gtk.Menu):
+class PopupMenu(Gtk.Menu):
     '''Just a simpler version of Gtk.Menu with quicker to type methods.
 
     Otherwise it is a normal Gtk.Menu and can be used as such.

@@ -6,8 +6,8 @@ import math
 import colorsys
 
 # Internal:
-from app.util import size_to_human_readable
-from app.tree import Column
+from shredder.util import size_to_human_readable
+from shredder.tree import Column
 
 # External:
 import cairo
@@ -205,7 +205,7 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
     _draw_center_text(ctx, new_x, new_y, text, do_draw=True)
 
 
-class ShredderChart(Gtk.DrawingArea):
+class Chart(Gtk.DrawingArea):
     def __init__(self):
         Gtk.DrawingArea.__init__(self)
         self.connect('draw', self._on_draw)
@@ -280,9 +280,9 @@ class Segment:
         return self.degree + self.size / 2
 
 
-class ShredderRingChart(ShredderChart):
+class RingChart(Chart):
     def __init__(self):
-        ShredderChart.__init__(self)
+        Chart.__init__(self)
 
         # Id of the tooltip timeout
         self._timeout_id = None
@@ -450,7 +450,7 @@ class ShredderRingChart(ShredderChart):
             self.render(hit_segment.node)
 
 
-class ShredderChartStack(Gtk.Stack):
+class ChartStack(Gtk.Stack):
     LOADING = 'loading'
     DIRECTORY = 'directory'
     GROUP = 'group'
@@ -462,7 +462,7 @@ class ShredderChartStack(Gtk.Stack):
         self.spinner.start()
         self.add_named(self.spinner, 'loading')
 
-        self.chart = ShredderRingChart()
+        self.chart = RingChart()
         self.add_named(self.chart, 'directory')
 
     def render(self, root):
@@ -470,7 +470,7 @@ class ShredderChartStack(Gtk.Stack):
 
 
 if __name__ == '__main__':
-    from app.tree import PathTreeModel
+    from shredder.tree import PathTreeModel
     model = PathTreeModel(['/home/sahib'])
 
     def push(size, path):
@@ -493,7 +493,7 @@ if __name__ == '__main__':
     push(600,  '/home/sahib/music/sub/4.mp3')
     print(model.trie)
 
-    area = ShredderRingChart()
+    area = RingChart()
     area.render(model.trie.root)
 
     win = Gtk.Window()

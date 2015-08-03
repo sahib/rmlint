@@ -8,7 +8,7 @@ import logging
 LOGGER = logging.getLogger('locations')
 
 # Internal:
-from app.util import View, IconButton, size_to_human_readable
+from shredder.util import View, IconButton, size_to_human_readable
 
 # External:
 from gi.repository import Gtk
@@ -56,7 +56,7 @@ class LocationEntry(Gtk.ListBoxRow):
         self.set_size_request(-1, 80)
 
         # CSS Name
-        self.set_name('LocationEntry')
+        self.set_name('ShredderLocationEntry')
 
         self.path, self.name = path, name
 
@@ -352,7 +352,7 @@ class LocationView(View):
 
         # If no process is currently running it should not be
         # possible to go right from locations view.
-        main_view = self.app_window.views['main']
+        main_view = self.app_window.views['runner']
         if not main_view.is_running:
             GLib.idle_add(
                 lambda: self.app_window.views.go_right.set_sensitive(False)
@@ -417,8 +417,8 @@ class LocationView(View):
         close_button.show_all()
 
     def _run_clicked(self, _):
-        self.app_window.views.switch('main')
-        main_view = self.app_window.views['main']
+        self.app_window.views.switch('runner')
+        main_view = self.app_window.views['runner']
         paths = [entry.path for entry in self.selected_locations]
         main_view.trigger_run(paths)
 

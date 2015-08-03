@@ -178,7 +178,6 @@ class MultipleChoiceButton(Gtk.Button):
         self.emit('row-selected')
 
 
-
 ############################
 # File size ranger chooser #
 ############################

@@ -6,10 +6,10 @@ from gi.repository import Gtk
 from gi.repository import GLib
 
 # Internal:
-from app.util import View, IconButton
-from app.chart import ShredderChartStack
-from app.tree import PathTreeView, PathTreeModel, Column
-from app.runner import Runner
+from shredder.util import View, IconButton
+from shredder.chart import ChartStack
+from shredder.tree import PathTreeView, PathTreeModel, Column
+from shredder.runner import Runner
 
 
 class ResultActionBar(Gtk.ActionBar):
@@ -25,7 +25,7 @@ class ResultActionBar(Gtk.ActionBar):
         self.settings_button = IconButton('system-run-symbolic')
 
         self.refresh_button.connect(
-            'clicked', lambda _: view.app_window.views['main'].rerun()
+            'clicked', lambda _: view.app_window.views['runner'].rerun()
         )
         self.settings_button.connect(
             'clicked', lambda _: view.app_window.views.switch('settings')
@@ -49,8 +49,7 @@ class ResultActionBar(Gtk.ActionBar):
         self.script_btn.set_sensitive(True)
 
 
-# TODO: Rename. Main is a stupid name.
-class MainView(View):
+class RunnerView(View):
     def __init__(self, app):
         View.__init__(self, app, 'Step 2: Running...')
 
@@ -75,7 +74,7 @@ class MainView(View):
         scw.set_valign(Gtk.Align.FILL)
         scw.add(self.treeview)
 
-        self.chart_stack = ShredderChartStack()
+        self.chart_stack = ChartStack()
         self.actionbar = ResultActionBar(self)
 
         # Right part of the view
@@ -168,7 +167,7 @@ class MainView(View):
 
         if current_size != last_size:
             self.chart_stack.set_visible_child_name(
-                ShredderChartStack.DIRECTORY
+                ChartStack.DIRECTORY
             )
             self.chart_stack.render(model.trie.root)
             GLib.timeout_add(1500, self.on_delayed_chart_render, current_size)

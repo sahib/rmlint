@@ -5,7 +5,7 @@
 import re
 
 # Internal
-from app import APP_TITLE, APP_DESCRIPTION
+from shredder import APP_TITLE, APP_DESCRIPTION
 
 # External:
 from gi.repository import Gtk, Gio
@@ -39,7 +39,7 @@ def _guess_rmlint_version():
 
     return '?.?.?'
 
-class ShredderAboutDialog(Gtk.AboutDialog):
+class AboutDialog(Gtk.AboutDialog):
     def __init__(self, app_win):
         Gtk.AboutDialog.__init__(self)
 

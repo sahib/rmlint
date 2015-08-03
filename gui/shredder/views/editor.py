@@ -1,16 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-# Stdlib:
-import os
-import stat
-import tempfile
-
 from functools import partial
 
 # Internal:
-from app.util import View, IconButton, scrolled, size_to_human_readable
-from app.runner import Script
+from shredder.util import View, IconButton, scrolled, size_to_human_readable
 
 # External:
 from gi.repository import Gtk
@@ -126,7 +120,7 @@ class RunningLabel(Gtk.Label):
         self._size_sum += 100
 
 
-class ShredderRunButton(Gtk.Box):
+class RunButton(Gtk.Box):
     dry_run = GObject.Property(type=bool, default=True)
 
     def __init__(self, icon, label):
@@ -227,7 +221,7 @@ When done, click the `Run Script` button below.
         icon_stack = _create_icon_stack()
 
         self.text_view, buffer_ = _create_source_view()
-        self.text_view.set_name('ScriptEditor')
+        self.text_view.set_name('ShredderScriptEditor')
         self.text_view.set_vexpand(True)
         self.text_view.set_valign(Gtk.Align.FILL)
         self.text_view.set_hexpand(True)
@@ -253,7 +247,7 @@ When done, click the `Run Script` button below.
         left_pane.pack_start(self.left_stack, True , True, 0)
         left_pane.pack_start(separator, False, False, 0)
 
-        self.run_button = ShredderRunButton(
+        self.run_button = RunButton(
             'user-trash-symbolic', 'Run Script'
         )
         self.run_button.button.connect('clicked', self.on_run_script_clicked)
@@ -322,5 +316,5 @@ When done, click the `Run Script` button below.
         self.script.run(dry_run=True)
 
     def on_view_enter(self):
-        self.script = self.app_window.views['main'].script
+        self.script = self.app_window.views['runner'].script
         self.switch_to_script()

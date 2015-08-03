@@ -5,7 +5,7 @@
 This is a rather generic interface for building a settings view
 from a GSettingsSchema, which is (usually) defined as XML File.
 
-For shredder this file is `org.gnome.Rmlint.gschema.xml` and contains a
+For shredder this file is `org.gnome.Shredder.gschema.xml` and contains a
 description of all keys used by Shredder.  Keys are typed in GSettings, so
 depending on the type a suitable widget is constructed.  Changes from outside
 are displayed by the widget and changes of the widget cause a change of the
@@ -25,8 +25,8 @@ from operator import itemgetter
 from functools import partial
 
 # Internal:
-from app.util import View, SuggestedButton, DestructiveButton
-from app.widgets import FileSizeRange, MultipleChoiceButton
+from shredder.util import View, SuggestedButton, DestructiveButton
+from shredder.widgets import FileSizeRange, MultipleChoiceButton
 
 # External:
 from gi.repository import Gtk

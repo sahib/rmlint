@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 # Internal:
-from app.util import View
+from shredder.util import View
 
 # External:
 from gi.repository import Gtk, GLib

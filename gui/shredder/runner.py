@@ -14,7 +14,7 @@ from collections import defaultdict, UserDict
 from functools import partial
 
 # Internal:
-from app import APP_TITLE
+from shredder import APP_TITLE
 
 # External:
 from gi.repository import Gio

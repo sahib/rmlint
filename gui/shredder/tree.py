@@ -31,12 +31,12 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from app.cellrenderers import CellRendererSize
-from app.cellrenderers import CellRendererModifiedTime
-from app.cellrenderers import CellRendererCount
-from app.cellrenderers import CellRendererLint
+from shredder.cellrenderers import CellRendererSize
+from shredder.cellrenderers import CellRendererModifiedTime
+from shredder.cellrenderers import CellRendererCount
+from shredder.cellrenderers import CellRendererLint
 
-from app.util import ShredderPopupMenu, IndicatorLabel
+from shredder.util import PopupMenu, IndicatorLabel
 
 # Unique ID used for PathTreeModel's GtkTreeIters:
 # Useful for debugging, sometimes iters will
@@ -726,7 +726,7 @@ class PathTreeView(Gtk.TreeView):
             return
 
         # HACK: bind to self, since the ref would get lost.
-        self._menu = ShredderPopupMenu()
+        self._menu = PopupMenu()
         self._menu.simple_add('Toggle all', None)
         self._menu.simple_add('Toggle selected', None)
         self._menu.simple_add_separator()
@@ -761,7 +761,7 @@ if __name__ == '__main__':
     for path in sys.argv[1:]:
         model.add_path(path, Column.make_row({'mtime': time.time(), 'size': 0}))
 
-    from app.runner import Runner
+    from shredder.runner import Runner
     settings = Gio.Settings.new('org.gnome.Rmlint')
 
     runner = Runner(settings, sys.argv[1:])

@@ -5,7 +5,7 @@
 from datetime import datetime
 
 # Internal:
-from app.util import IndicatorLabel, render_pixbuf, size_to_human_readable
+from shredder.util import IndicatorLabel, render_pixbuf, size_to_human_readable
 
 # External:
 from gi.repository import Gtk

@@ -5,15 +5,15 @@
 import gettext
 
 # Internal
-from app import APP_TITLE
-from app.util import load_css_from_data
-from app.about import ShredderAboutDialog
-from app.window import MainWindow
+from shredder import APP_TITLE
+from shredder.util import load_css_from_data
+from shredder.about import AboutDialog
+from shredder.window import MainWindow
 
-from app.views.settings import SettingsView
-from app.views.locations import LocationView
-from app.views.main import MainView
-from app.views.editor import EditorView
+from shredder.views.settings import SettingsView
+from shredder.views.locations import LocationView
+from shredder.views.runner import RunnerView
+from shredder.views.editor import EditorView
 
 # External:
 from gi.repository import Gtk, Gio, Rsvg, GdkPixbuf
@@ -28,7 +28,7 @@ def _create_action(name, callback=None):
 
 
 def _load_app_icon():
-    logo_svg = Gio.resources_lookup_data('/org/gnome/rmlint/logo.svg', 0)
+    logo_svg = Gio.resources_lookup_data('/org/gnome/shredder/logo.svg', 0)
     logo_handle = Rsvg.Handle.new_from_data(logo_svg.get_data())
     logo_handle.set_dpi_x_y(75, 75)
     return logo_handle.get_pixbuf().scale_simple(
@@ -36,7 +36,7 @@ def _load_app_icon():
     )
 
 
-class ShredderApplication(Gtk.Application):
+class Application(Gtk.Application):
     def __init__(self):
         Gtk.Application.__init__(
             self,
@@ -53,11 +53,11 @@ class ShredderApplication(Gtk.Application):
         # Make tranlsating strings possible:
         gettext.install(APP_TITLE)
 
-        resource_bundle = Gio.Resource.load('app/resources/app.gresource')
+        resource_bundle = Gio.Resource.load('shredder/resources/shredder.gresource')
         Gio.resources_register(resource_bundle)
 
         # Load the application CSS files.
-        css_data = Gio.resources_lookup_data('/org/gnome/rmlint/app.css', 0)
+        css_data = Gio.resources_lookup_data('/org/gnome/shredder/shredder.css', 0)
         load_css_from_data(css_data.get_data())
 
         # Init the config system
@@ -66,7 +66,7 @@ class ShredderApplication(Gtk.Application):
         self.win = MainWindow(self)
 
         self.add_action(_create_action(
-            'about', lambda *_: ShredderAboutDialog(self.win).show_all()
+            'about', lambda *_: AboutDialog(self.win).show_all()
         ))
         self.add_action(_create_action(
             'search', lambda *_: self.win.set_search_mode(True)
@@ -87,7 +87,7 @@ class ShredderApplication(Gtk.Application):
 
         self.win.views.add_view(SettingsView(self), 'settings')
         self.win.views.add_view(LocationView(self), 'locations')
-        self.win.views.add_view(MainView(self), 'main')
+        self.win.views.add_view(RunnerView(self), 'runner')
         self.win.views.add_view(EditorView(self), 'editor')
 
         # Set the default view visible at startup

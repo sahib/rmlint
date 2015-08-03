@@ -5,12 +5,12 @@
 import sys
 
 # Internal:
-from app.application import ShredderApplication
-from app.logger import create_logger
+from shredder.application import Application
+from shredder.logger import create_logger
 
 ROOT_LOGGER = create_logger(None)
 
 # Gtk will take over now.
-app = ShredderApplication()
+app = Application()
 ROOT_LOGGER.info('Starting up')
 sys.exit(app.run(sys.argv))
