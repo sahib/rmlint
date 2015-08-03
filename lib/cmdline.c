@@ -143,7 +143,7 @@ static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
     for(int i = 0; i < argc; i++) {
         if(g_strcmp0("--gui", argv[i]) == 0) {
             rm_cmd_start_gui(argc - i - 1, &argv[i + 1]);
-            
+
             /* We returned? Something's wrong */
             return EXIT_FAILURE;
         }
