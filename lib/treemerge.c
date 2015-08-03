@@ -657,8 +657,9 @@ static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory
     }
 }
 
-static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory,
-                                         gint64 acc) {
+static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory) {
+    gint64 acc = 0;
+
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         acc += file->is_prefd;
@@ -668,7 +669,7 @@ static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *direct
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
         RmDirectory *child = iter->data;
-        rm_tm_mark_duplicate_files(self, child, acc);
+        acc += rm_tm_mark_duplicate_files(self, child);
     }
 
     return acc;
@@ -693,6 +694,7 @@ static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db,
                             _U RmTreeMerger *self) {
     return da->depth - db->depth;
 }
+
 static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db,
                                     _U RmTreeMerger *self) {
     return -rm_tm_sort_paths(da, db, self);
@@ -700,8 +702,14 @@ static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db
 
 static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db,
                                     RmTreeMerger *self) {
-    if(db->prefd_files - da->prefd_files) {
-        return db->prefd_files - da->prefd_files;
+    RmCfg *cfg = self->session->cfg;
+
+    if(da->prefd_files - db->prefd_files) {
+        if(cfg->keep_all_tagged) {
+            return db->prefd_files - da->prefd_files;
+        } else {
+            return da->prefd_files - db->prefd_files;
+        }
     }
 
     return rm_pp_cmp_orig_criteria_impl(
@@ -751,6 +759,7 @@ static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {
 
 static void rm_tm_extract(RmTreeMerger *self) {
     /* Iterate over all directories per hash (which are same therefore) */
+    RmCfg *cfg = self->session->cfg;
     GList *result_table_values = g_hash_table_get_values(self->result_table);
     result_table_values =
         g_list_sort(result_table_values, (GCompareFunc)rm_tm_cmp_directory_groups);
@@ -811,11 +820,12 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 mask->is_original = true;
                 rm_tm_mark_original_files(self, directory);
             } else {
-                if(rm_tm_mark_duplicate_files(self, directory, 0) ==
-                   directory->dupe_count) {
+                gint64 prefd = rm_tm_mark_duplicate_files(self, directory);
+                if(prefd == directory->dupe_count && cfg->keep_all_tagged) {
                     /* Mark the file as original when all files in it are preferred. */
                     mask->is_original = true;
-                    rm_tm_mark_original_files(self, directory);
+                } else if(prefd == 0 && cfg->keep_all_untagged) {
+                    mask->is_original = true;
                 }
             }
 
