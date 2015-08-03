@@ -1,0 +1,12 @@
+- Settings: make range widget for --limits -- done
+- Translation: Mark strings/use more standard buttons?
+- Design: See if we follow Gnome HIG mostly (buttons with icons?)
+- Design: Add context menu to treeview.
+- Design: Decide which kind of chart to use. -- done
+- Design: Add recently used back to GtkResourceManager.
+- Design: Introduce more keybindings/actions.
+- Fix: Allow no right going in main if no script is yet generated. -- done
+- Fix: Actually load the right script from the working directory. -- done
+- Fix: Handle errors gracefully / test more cornercases.
+- Fix: Add commandline to jump to path directly etc.
+- Fix: Handle weird path encodings gracefully
