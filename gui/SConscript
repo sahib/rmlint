@@ -2,15 +2,9 @@
 # encoding: utf-8
 
 Import('env')
-Import('create_uninstall_target')
 
 
-import os
-import time
-import subprocess
-
-
-if 'install' in COMMAND_LINE_TARGETS:
+if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
     py_install = env.Command(
         'always.install',
         ['setup.py'],
