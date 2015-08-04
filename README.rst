@@ -1,35 +1,6 @@
       
 ======
 
-**oscar** branch
-
-This was an experimental branch targeting more speed, particularly with paranoid file comparison.
-In the end there was probably not enough speed gain to justify the complexity so the next task will be
-to remove the complexity without losing too much speed.
-
-Some timings
-rmlint -pp --paranoid-mem=4G {on ext4 part of /home/daniel}
-==============================  ======  =======
-rmlint version                  Time    Max Mem
-==============================  ======  =======
-rmlint 2.2.0 (2be9de7)          389s    1801k
-develop branch (f4fd5e1)        309s    1847k
-oscar as at a52a60a             295s    1834k
-after async queue bugfix        282s    1852k 
-==============================  ======  =======
-
-rmlint -pp --paranoid-mem=512M:
-==============================  ======  =======
-rmlint version                  Time    Max Mem
-==============================  ======  =======
-rmlint 2.2.0 (2be9de7)          xxxs    xxxk
-develop branch (f4fd5e1)        xxxs    xxxk
-oscar as at a52a60a             558s    568k
-after async queue bugfix        535s    568k
-
-
-
-======
 
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center

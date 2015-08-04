@@ -599,6 +599,7 @@ program = SConscript('src/SConscript', exports='library')
 SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
+SConscript('gui/SConscript')
 
 def build_tar_gz(target=None, source=None, env=None):
     tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(
