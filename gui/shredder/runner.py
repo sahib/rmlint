@@ -4,8 +4,9 @@
 # Stdlib:
 import json
 import errno
-import tempfile
+import codecs
 import logging
+import tempfile
 
 LOGGER = logging.getLogger('runner')
 
@@ -293,7 +294,10 @@ class Script(GObject.Object):
         """Read the script from disk and return it as string.
         """
         # Do not reuse the file descriptor, since it is only valid once.
-        with open(self.script_file, 'r') as f:
+        # Be a bit careful, since the script might contain weird encoding,
+        # since there is no path encoding guaranteed in Unix usually:
+        print('local')
+        with codecs.open(self.script_file, 'r', encoding='utf-8', errors='ignore') as f:
             return f.read()
 
     def run(self, dry_run=True):
