@@ -244,6 +244,18 @@ class LocationView(View):
     def _set_title(self):
         self.sub_title = 'Step 1: Choose locations to check'
 
+    def _add_recent_item(self, path):
+        """Add item to GtkRecentManager"""
+        data = Gtk.RecentData()
+        data.is_private = False
+        data.app_exec = 'gedit %s'
+        data.app_name = 'gedit'
+        data.description = path
+        data.display_name = path
+        data.mime_type = 'inode/directory'
+
+        Gtk.RecentManager.get_default().add_full(path, data)
+
     def refill_entries(self, *_):
         LOGGER.info('Refilling location entries')
         for child in list(self.box):
@@ -281,16 +293,19 @@ class LocationView(View):
                         Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE)))
 
         for item in self.recent_mgr.get_items():
-            if item.get_mime_type() == 'inode/directory' and item.exists():
-                path = item.get_uri()
-                if path.startswith('file://'):
-                    path = path[7:]
+            # Note: item.get_exists() tells us bullshit sometimes.
+            if item.get_mime_type() != 'inode/directory':
+                continue
 
-                self.add_entry(
-                    os.path.basename(path),
-                    path,
-                    item.get_gicon()
-                )
+            path = item.get_uri()
+            if path.startswith('file://'):
+                path = path[7:]
+
+            self.add_entry(
+                os.path.basename(path),
+                path,
+                item.get_gicon()
+            )
 
         self.show_all()
 
@@ -302,6 +317,7 @@ class LocationView(View):
             return
 
         if path in self.known_paths:
+            LOGGER.info('In known paths: ' + path)
             return
 
         entry = LocationEntry(name, path, icon, fill_level)
@@ -392,6 +408,8 @@ class LocationView(View):
         def _open_clicked(_):
             for path in self.file_chooser.get_filenames():
                 name = os.path.basename(path)
+                # self.recent_mgr.add_item(path)
+                self._add_recent_item(path)
                 entry = self.add_entry(
                     name, path, Gio.ThemedIcon(
                         name='folder-new'
