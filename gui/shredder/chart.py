@@ -452,21 +452,30 @@ class RingChart(Chart):
 
 class ChartStack(Gtk.Stack):
     LOADING = 'loading'
-    DIRECTORY = 'directory'
-    GROUP = 'group'
+    CHART = 'chart'
+    EMPTY = 'empty'
 
     def __init__(self):
         Gtk.Stack.__init__(self)
+        self.set_transition_duration(750)
+        self.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
 
         # Make sure we don't stick on the border:
         self.set_border_width(5)
 
         self.spinner = Gtk.Spinner()
         self.spinner.start()
-        self.add_named(self.spinner, 'loading')
+        self.add_named(self.spinner, ChartStack.LOADING)
 
         self.chart = RingChart()
-        self.add_named(self.chart, 'directory')
+        self.add_named(self.chart, ChartStack.CHART)
+
+        self.empty_label = Gtk.Label('<span font="90">✔</span>\nNothing found!')
+        self.empty_label.set_use_markup(True)
+        self.empty_label.get_style_context().add_class(
+            Gtk.STYLE_CLASS_DIM_LABEL
+        )
+        self.add_named(self.empty_label, ChartStack.EMPTY)
 
     def render(self, root):
         self.chart.render(root)

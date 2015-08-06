@@ -64,7 +64,7 @@
         <key name="traverse-cross-mounts" type="b">
             <default>true</default>
             <summary>Cross mountpoints</summary>
-            <description></description>
+            <description>Traverse over mount borders?</description>
         </key>
         <key name='traverse-match' enum='org.gnome.Shredder.MatchType'>
             <default>'No limitation'</default>

@@ -218,7 +218,6 @@ class PathTrie:
         self.root = PathNode('/', None, {})
         self.sub_roots = []
         self.nodes = {id(self.root): self.root}
-
         self.max_depth = 0
 
         self.root_paths = {}
@@ -233,6 +232,9 @@ class PathTrie:
 
     def __iter__(self):
         return self.iterate(None)
+
+    def __len__(self):
+        return len(self.nodes)
 
     def __repr__(self):
         """Return a simple string version of the trie"""
@@ -509,6 +511,9 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
 
         # Signal our change:
         self.row_changed(path, iter_)
+
+    def __len__(self):
+        return len(self.trie)
 
     ##################################
     # Tree Model Spec Implementation #

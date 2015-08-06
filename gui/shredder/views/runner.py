@@ -43,9 +43,11 @@ class ResultActionBar(Gtk.ActionBar):
         self.script_btn.connect(
             'clicked', lambda _: view.app_window.views.switch('editor')
         )
+        self.script_btn.set_sensitive(False)
         self.pack_end(self.script_btn)
 
     def finish(self):
+        print('finish')
         self.script_btn.set_sensitive(True)
 
 
@@ -164,18 +166,24 @@ class RunnerView(View):
             )
 
         GLib.timeout_add(1500, self.on_delayed_chart_render, -1)
-        self.app_window.views.go_right.set_sensitive(True)
 
     def on_delayed_chart_render(self, last_size):
         model = self.treeview.get_model()
         current_size = len(model)
 
-        if current_size != last_size:
-            self.chart_stack.set_visible_child_name(
-                ChartStack.DIRECTORY
-            )
+        if current_size == last_size:
+            # Come back later:
+            return False
+
+        if len(model) > 1:
+            self.chart_stack.set_visible_child_name(ChartStack.CHART)
             self.chart_stack.render(model.trie.root)
-            GLib.timeout_add(1500, self.on_delayed_chart_render, current_size)
+            self.app_window.views.go_right.set_sensitive(True)
+            self.actionbar.finish()
+        else:
+            self.chart_stack.set_visible_child_name(ChartStack.EMPTY)
+
+        GLib.timeout_add(1500, self.on_delayed_chart_render, current_size)
 
         return False
 

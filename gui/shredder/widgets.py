@@ -31,6 +31,7 @@ class ChoiceRow(Gtk.ListBoxRow):
             Gio.ThemedIcon(name='emblem-ok-symbolic'),
             Gtk.IconSize.BUTTON
         )
+        self.symbol.props.margin_start = 10
         self.symbol.set_no_show_all(True)
 
         label = Gtk.Label(value.capitalize())
