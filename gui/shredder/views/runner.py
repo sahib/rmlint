@@ -51,7 +51,7 @@ class ResultActionBar(Gtk.ActionBar):
 
 class RunnerView(View):
     def __init__(self, app):
-        View.__init__(self, app, 'Step 2: Running...')
+        View.__init__(self, app, 'Running…')
 
         # Public: The runner.
         self.runner = None
@@ -109,6 +109,9 @@ class RunnerView(View):
         # Remember last paths for rerun()
         self.last_paths = paths
 
+        # Make sure it looks busy:
+        self.sub_title = 'Running…'
+
         # Fork off the rmlint process:
         self.runner = Runner(self.app.settings, paths)
         self.runner.connect('lint-added', self.on_add_elem)
@@ -152,6 +155,8 @@ class RunnerView(View):
         self.app_window.show_progress(100)
         GLib.timeout_add(300, self.app_window.hide_progress)
         GLib.timeout_add(350, self.treeview.expand_all)
+
+        self.sub_title = 'Finished scanning.'
 
         if error_msg is not None:
             self.app_window.show_infobar(

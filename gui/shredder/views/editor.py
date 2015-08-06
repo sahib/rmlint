@@ -309,7 +309,7 @@ When done, click the `Run Script` button below.
         self.switch_to_script()
 
     def switch_to_script(self):
-        self.sub_title = 'Step 3: Check the results'
+        self.sub_title = 'Check the results'
         self.left_stack.set_visible_child_name('script')
         buffer_ = self.text_view.get_buffer()
         buffer_.set_text(self.script.read())
@@ -320,7 +320,7 @@ When done, click the `Run Script` button below.
         self.stack.set_visible_child_name('danger')
 
     def on_run_script_clicked(self, button):
-        self.sub_title = 'Step 4: Cross fingers!'
+        self.sub_title = 'Shreddering. Cross fingers!'
         self.stack.set_visible_child_name('progressing')
         self.left_stack.set_visible_child_name('list')
 

@@ -242,7 +242,7 @@ class LocationView(View):
         self.add(grid)
 
     def _set_title(self):
-        self.sub_title = 'Step 1: Choose locations to check'
+        self.sub_title = 'Choose locations to scan'
 
     def _add_recent_item(self, path):
         """Add item to GtkRecentManager"""
