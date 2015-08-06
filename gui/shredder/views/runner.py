@@ -47,7 +47,6 @@ class ResultActionBar(Gtk.ActionBar):
         self.pack_end(self.script_btn)
 
     def finish(self):
-        print('finish')
         self.script_btn.set_sensitive(True)
 
 
@@ -69,6 +68,10 @@ class RunnerView(View):
         self.treeview = PathTreeView()
         self.treeview.set_model(self.model)
         self.treeview.set_halign(Gtk.Align.FILL)
+        self.treeview.get_selection().connect(
+            'changed',
+            self.on_selection_changed
+        )
 
         # Scrolled window on the left
         scw = Gtk.ScrolledWindow()
@@ -195,3 +198,9 @@ class RunnerView(View):
 
     def on_view_leave(self):
         self.app_window.views.go_right.set_sensitive(True)
+
+    def on_selection_changed(self, selection):
+        model, iter_ = selection.get_selected()
+        if iter_ is not None:
+            node = model.iter_to_node(iter_)
+            self.chart_stack.render(node)

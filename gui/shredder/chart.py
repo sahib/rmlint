@@ -290,6 +290,7 @@ class RingChart(Chart):
         self.max_layers = 0
         self.total_size = 1
         self._selected_segment = None
+        self._last_root = None
 
     def recursive_angle(self, node, angle, offset, layer_offset=0):
         """Calculates the angles of the segments and stores them in a
@@ -313,7 +314,6 @@ class RingChart(Chart):
 
             child_offset += child_angle
 
-
     def find_root(self, node):
         """Iterate to the first child that has more than one children"""
         if len(node.children) > 1:
@@ -325,7 +325,7 @@ class RingChart(Chart):
         # Default to the actual root:
         return node
 
-    def render(self, root):
+    def render(self, root, overwrite_root=True):
         """Render `root` and all children of it as chart."""
         # Skip over duplicate full circles:
         virt_root = self.find_root(root)
@@ -337,6 +337,9 @@ class RingChart(Chart):
 
         # Make sure we show the right total size
         self.total_size = virt_root[Column.SIZE]
+
+        if overwrite_root:
+            self._last_root = root
 
         # Make sure it gets rendered soon:
         self.queue_draw()
@@ -416,8 +419,11 @@ class RingChart(Chart):
             # lower half
             selected_deg = math.acos(cos)
 
+
         # Check which layer we are operating on.
         selected_layer = math.floor(xy_abs * (self.max_layers + 1) / mid)
+        if selected_layer is 0:
+            return (True, None)
 
         hit_segment = None
         for segment in self._segment_list:
@@ -426,28 +432,31 @@ class RingChart(Chart):
                 if click_only:
                     break
 
-        return hit_segment
+        return bool(hit_segment), hit_segment
 
     def _on_motion(self, area, event):
-        hit_segment = self._hit(area, event)
+        hit, segment = self._hit(area, event)
 
         if self._timeout_id is not None:
             GLib.source_remove(self._timeout_id)
             self._timeout_id = None
             self._selected_segment = None
 
-        if hit_segment:
+        if hit and segment:
             id_ = GLib.timeout_add(
-                250, self._on_tooltip_timeout, hit_segment
+                250, self._on_tooltip_timeout, segment
             )
             self._timeout_id = id_
 
         self.queue_draw()
 
     def _on_button_press_event(self, area, event):
-        hit_segment = self._hit(area, event, click_only=True)
-        if hit_segment is not None:
-            self.render(hit_segment.node)
+        hit, segment = self._hit(area, event, click_only=True)
+        if hit:
+            if segment is not None:
+                self.render(segment.node, overwrite_root=False)
+            elif self._last_root:
+                self.render(self._last_root, overwrite_root=False)
 
 
 class ChartStack(Gtk.Stack):

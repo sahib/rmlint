@@ -616,6 +616,14 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
         """Returns the flags supported by this interface."""
         return Gtk.TreeModelFlags.ITERS_PERSIST
 
+    ########################
+    # Misc utility methods #
+    ########################
+
+    def iter_to_node(self, iter_):
+        """Convert a GtkTreeIter to the related PathNode"""
+        return self.trie.nodes.get(iter_.user_data)
+
 
 def _create_column(title, renderers, fixed_width=100):
     """Convinience method for creating a TreeView Column.
