@@ -296,7 +296,6 @@ class Script(GObject.Object):
         # Do not reuse the file descriptor, since it is only valid once.
         # Be a bit careful, since the script might contain weird encoding,
         # since there is no path encoding guaranteed in Unix usually:
-        print('local')
         with codecs.open(self.script_file, 'r', encoding='utf-8', errors='ignore') as f:
             return f.read()
 
@@ -312,38 +311,40 @@ class Script(GObject.Object):
         self._queue_read()
 
     def _queue_read(self):
-        stream = self._process.get_stdout_pipe()
-        stream.read_bytes_async(16 * 1024, 0, callback=self._read_chunk)
+        stream = Gio.DataInputStream.new(
+            self._process.get_stdout_pipe()
+        )
+
+        stream.read_line_async(
+            io_priority=GLib.PRIORITY_HIGH,
+            cancellable=None,
+            callback=self._read_chunk
+        )
 
     def _report_line(self, line):
         if not line:
             return
 
-        prefix, path = line.split(':', maxsplit=1)
-        self.emit('line-read', prefix, path)
+        line_split = line.split(':', maxsplit=1)
+        if len(line_split) < 2:
+            LOGGER.warning('Invalid line fed: ' + line)
+            return
 
-    def _read_chunk(self, stdout, result):
-        bytes_ = stdout.read_bytes_finish(result)
-        data = bytes_.get_data()
+        prefix, path = line_split
+        self.emit('line-read', prefix.strip(), path.strip())
 
-        if not data:
-            self._report_line(self._incomplete_chunk)
+    def _read_chunk(self, source, result):
+        try:
+            line, _ = source.read_line_finish_utf8(result)
+        except GLib.Error:
+            LOGGER.exception('Could not read line from script:')
+            return
+
+        if not line:
             self.emit('script-finished')
             return
 
-        try:
-            chunk = data.decode('utf-8')
-        except UnicodeDecodeError:
-            pass
-
-        if self._incomplete_chunk:
-            chunk = self._incomplete_chunk + chunk
-            self._incomplete_chunk = None
-
-        *lines, self._incomplete_chunk = chunk.splitlines()
-        for line in lines:
-            self._report_line(line)
-
+        self._report_line(line)
         self._queue_read()
 
 

@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+# Stdlib:
+import logging
+LOGGER = logging.getLogger('editor')
+
 from functools import partial
 
 # Internal:
 from shredder.util import View, IconButton, scrolled, size_to_human_readable
+from shredder.tree import Column
 
 # External:
 from gi.repository import Gtk
@@ -19,6 +24,8 @@ from gi.repository import GObject
 
 try:
     from gi.repository import GtkSource
+
+    LOGGER.info('Using GtkSourceView since we have it.')
 
     def _create_source_view():
         buffer_ = GtkSource.Buffer()
@@ -48,6 +55,8 @@ try:
 
 # Fallback to the normal Gtk.TextView if no GtkSource.View could be imported
 except ImportError:
+    LOGGER.info('No GtkSourceView found.')
+
     def _create_source_view():
         buffer_ = Gtk.Buffer()
         view = Gtk.TextView()
@@ -98,6 +107,9 @@ class RunningLabel(Gtk.Label):
     def __init__(self):
         Gtk.Label.__init__(self)
 
+        # Basename is more important:
+        self.set_ellipsize(Pango.EllipsizeMode.START)
+
         # Make it appeared a bit dimmed:
         self.get_style_context().add_class(
             Gtk.STYLE_CLASS_DIM_LABEL
@@ -105,19 +117,25 @@ class RunningLabel(Gtk.Label):
         self.set_justify(Gtk.Justification.CENTER)
 
         self._size_sum = 0
-        self.push('', '')
+        self.push(None, '', '')
 
-    def push(self, prefix, path):
+    def push(self, model, prefix, path):
         if prefix.lower() == 'keeping':
-            # TODO
             return
 
-        text = '<big>{s}</big><small> removed</small>\n<big>{p}</big>'.format(
+        text = '<big>{s}</big><small> removed</small>\n<small>{t}</small> <b><big>{p}</big></b>'.format(
+            t=prefix,
             s=size_to_human_readable(self._size_sum),
             p=GLib.markup_escape_text(path)
         )
         self.set_markup(text)
-        self._size_sum += 100
+
+        if model is None:
+            return
+
+        node = model.lookup_by_path(path)
+        if node is not None:
+            self._size_sum += node[Column.SIZE]
 
 
 class RunButton(Gtk.Box):
@@ -215,8 +233,7 @@ class EditorView(View):
 
 <big><b>Review the script on the left!</b></big>
 When done, click the `Run Script` button below.
-\n\n'''
-        )
+\n\n''')
 
         icon_stack = _create_icon_stack()
 
@@ -230,9 +247,9 @@ When done, click the `Run Script` button below.
         buffer_.create_tag("original", weight=Pango.Weight.BOLD)
         buffer_.create_tag("normal")
 
-        icon_theme = Gtk.IconTheme.get_default()
-
-        self.left_listbox = RunningLabel()
+        self.run_label = RunningLabel()
+        self.run_label.set_hexpand(False)
+        self.run_label.set_halign(Gtk.Align.FILL)
 
         self.left_stack = Gtk.Stack()
         self.left_stack.set_transition_type(
@@ -240,11 +257,11 @@ When done, click the `Run Script` button below.
         )
 
         self.left_stack.add_named(scrolled(self.text_view), 'script')
-        self.left_stack.add_named(scrolled(self.left_listbox), 'list')
+        self.left_stack.add_named(scrolled(self.run_label), 'list')
 
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         left_pane = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        left_pane.pack_start(self.left_stack, True , True, 0)
+        left_pane.pack_start(self.left_stack, True, True, 0)
         left_pane.pack_start(separator, False, False, 0)
 
         self.run_button = RunButton(
@@ -274,7 +291,6 @@ When done, click the `Run Script` button below.
         self.stack.add_named(control_grid, 'danger')
         self.stack.add_named(_create_running_screen(), 'progressing')
 
-
         self.stack.add_named(
             _create_finished_screen(self._switch_back), 'finished'
         )
@@ -283,7 +299,9 @@ When done, click the `Run Script` button below.
 
         grid = Gtk.Grid()
         grid.attach(left_pane, 0, 0, 1, 1)
-        grid.attach_next_to(self.stack, left_pane, Gtk.PositionType.RIGHT, 1, 1)
+        grid.attach_next_to(
+            self.stack, left_pane, Gtk.PositionType.RIGHT, 1, 1
+        )
         self.add(grid)
 
     def _switch_back(self):
@@ -305,10 +323,14 @@ When done, click the `Run Script` button below.
         self.sub_title = 'Step 4: Cross fingers!'
         self.stack.set_visible_child_name('progressing')
         self.left_stack.set_visible_child_name('list')
+
+        model = self.app_window.views['runner'].model
+
         self.script.connect(
             'line-read',
-            lambda _, prefix, line: partial(self.left_listbox.push, prefix, line)
+            lambda _, prefix, line: self.run_label.push(model, prefix, line)
         )
+
         self.script.connect(
             'script-finished',
             lambda *_: self.stack.set_visible_child_name('finished')
@@ -316,5 +338,6 @@ When done, click the `Run Script` button below.
         self.script.run(dry_run=True)
 
     def on_view_enter(self):
+        self.run_button.set_sensitive(True)
         self.script = self.app_window.views['runner'].script
         self.switch_to_script()

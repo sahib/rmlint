@@ -440,6 +440,10 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
 
         return False
 
+    def lookup_by_path(self, path):
+        """Calls trie.find() to find the node attached to a path"""
+        return self.trie.find(path)
+
     ##################################
     #     Filter Implementation      #
     ##################################
