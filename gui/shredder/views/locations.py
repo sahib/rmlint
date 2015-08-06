@@ -254,7 +254,8 @@ class LocationView(View):
         data.display_name = path
         data.mime_type = 'inode/directory'
 
-        Gtk.RecentManager.get_default().add_full(path, data)
+        if not Gtk.RecentManager.get_default().add_full(path, data):
+            LOGGER.warning('Could not add to recently used: ' + path)
 
     def refill_entries(self, *_):
         LOGGER.info('Refilling location entries')
@@ -263,6 +264,7 @@ class LocationView(View):
 
         self.known_paths = set()
 
+        # Static entries:
         self.add_entry(
             'Personal directory',
             os.path.expanduser('~'),
@@ -274,6 +276,7 @@ class LocationView(View):
             Gio.ThemedIcon(name='folder-templates')
         )
 
+        # Mounted volumes:
         for mount in self.volume_monitor.get_mounts():
             info = mount.get_root().query_filesystem_info(
                 ','.join([
@@ -292,6 +295,7 @@ class LocationView(View):
                     info.get_attribute_uint64(
                         Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE)))
 
+        # Recently used items:
         for item in self.recent_mgr.get_items():
             # Note: item.get_exists() tells us bullshit sometimes.
             if item.get_mime_type() != 'inode/directory':
@@ -442,7 +446,8 @@ class LocationView(View):
 
     def _del_clicked(self, _):
         for row in self.selected_locations:
-            LOGGER.debug('Removing location entry:' + str(row))
+            LOGGER.debug('Removing location entry:' + row.path)
             self.box.remove(row)
+            Gtk.RecentManager.get_default().remove_item(row.path)
 
         self.selected_locations = []
