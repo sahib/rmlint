@@ -458,6 +458,9 @@ class ChartStack(Gtk.Stack):
     def __init__(self):
         Gtk.Stack.__init__(self)
 
+        # Make sure we don't stick on the border:
+        self.set_border_width(5)
+
         self.spinner = Gtk.Spinner()
         self.spinner.start()
         self.add_named(self.spinner, 'loading')
