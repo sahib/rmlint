@@ -24,8 +24,8 @@ class ChoiceRow(Gtk.ListBoxRow):
         self.value, self.is_default = value, is_default
 
         self.set_can_focus(False)
-        self.set_margin_left(3)
-        self.set_margin_right(3)
+        self.set_margin_start(3)
+        self.set_margin_end(3)
 
         self.symbol = Gtk.Image.new_from_gicon(
             Gio.ThemedIcon(name='emblem-ok-symbolic'),

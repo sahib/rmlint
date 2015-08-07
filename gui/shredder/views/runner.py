@@ -58,7 +58,8 @@ class RunnerView(View):
         self.runner = None
 
         # Disable scrolling for the main view:
-        self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+        # TODO
+        # self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
 
         # Public flag for checking if the view is still
         # in running mode (thus en/disabling certain features)
@@ -103,7 +104,7 @@ class RunnerView(View):
 
         self.add(grid)
 
-        self.app_window.search_entry.connect(
+        self.search_entry.connect(
             'search-changed', self.on_search_changed
         )
 
@@ -129,7 +130,7 @@ class RunnerView(View):
 
         # Indicate that we're in a fresh run:
         self.is_running = True
-        self.app_window.show_progress(0)
+        self.show_progress(0)
 
     def rerun(self):
         self.trigger_run(self.last_paths)
@@ -152,13 +153,13 @@ class RunnerView(View):
 
         # Decide how much progress to show (or just move a bit)
         tick = (elem.get('progress', 0) / 100.0) or None
-        self.app_window.show_progress(tick)
+        self.show_progress(tick)
 
     def on_process_finish(self, runner, error_msg):
         # Make sure we end up at 100% progress and show
         # the progress for a short time after (for the nice cozy feeling)
-        self.app_window.show_progress(100)
-        GLib.timeout_add(300, self.app_window.hide_progress)
+        self.show_progress(100)
+        GLib.timeout_add(300, self.hide_progress)
         GLib.timeout_add(350, self.treeview.expand_all)
 
         self.sub_title = 'Finished scanning.'

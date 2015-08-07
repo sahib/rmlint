@@ -101,6 +101,10 @@ class ViewSwitcher(Gtk.Box):
         self._set_visible_child(self._prev, update_prev=False)
         self._update_sensitivness()
 
+    def set_search_mode(self, mode):
+        view = self._stack.get_visible_child()
+        view.set_search_mode(mode)
+
 
 class HeaderBar(Gtk.HeaderBar):
     def __init__(self):
@@ -116,27 +120,6 @@ class HeaderBar(Gtk.HeaderBar):
         self.set_size_request(-1, 46)
 
 
-class InfoBar(Gtk.InfoBar):
-    def __init__(self):
-        Gtk.InfoBar.__init__(self)
-        self._label = Gtk.Label()
-
-        self.set_show_close_button(True)
-        self.get_content_area().add(self._label)
-        self.get_content_area().show_all()
-        self.set_no_show_all(True)
-        self.connect('response', self._on_response)
-
-    def show(self, message, message_type):
-        self.set_message_type(message_type)
-        self._label.set_markup(GLib.markup_escape_text(message, -1))
-        Gtk.InfoBar.show(self)
-
-    def _on_response(self, infobar, response_id):
-        if response_id == Gtk.ResponseType.CLOSE:
-            self.hide()
-
-
 def create_item(name, action, icon, variant=None):
     if variant is not None:
         name = '{n} ({v})'.format(n=name, v=str(variant))
@@ -150,39 +133,6 @@ def create_item(name, action, icon, variant=None):
     return item
 
 
-def create_searchbar(win):
-    search_bar = Gtk.SearchBar()
-    search_entry = Gtk.SearchEntry()
-
-    # Box that shows
-    search_box = Gtk.Box(
-        orientation=Gtk.Orientation.HORIZONTAL, spacing=6
-    )
-    search_box.pack_start(search_entry, True, True, 0)
-
-    search_bar.add(search_box)
-    search_bar.connect_entry(search_entry)
-    search_bar.set_search_mode(False)
-    search_bar.set_show_close_button(True)
-    search_bar.set_no_show_all(True)
-    search_bar.hide()
-    search_box.show_all()
-
-    def _hide_search_bar():
-        if not search_bar.get_search_mode():
-            search_bar.hide()
-        return False
-
-    def _key_press_event(win, event, bar):
-        bar.handle_event(event)
-        if event.keyval == Gdk.KEY_Escape:
-            bar.set_search_mode(False)
-            GLib.timeout_add(250, _hide_search_bar)
-
-    win.connect('key-press-event', _key_press_event, search_bar)
-    return search_bar, search_entry
-
-
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, application):
         Gtk.Window.__init__(
@@ -194,38 +144,15 @@ class MainWindow(Gtk.ApplicationWindow):
         self.set_title(shredder.APP_TITLE)
         self.set_default_size(1280, 660)
 
-        self.infobar = InfoBar()
-
         self.view_stack = Gtk.Stack()
         self.view_stack.set_transition_type(
             Gtk.StackTransitionType.SLIDE_LEFT_RIGHT
         )
         self.views = ViewSwitcher(self.view_stack)
 
-        self.main_grid = Gtk.Grid()
         self.headerbar = HeaderBar()
         self.headerbar.pack_start(self.views)
         self.set_titlebar(self.headerbar)
-
-        self.progressbar = Gtk.ProgressBar()
-        self.progressbar.set_name('ShredderProgress')
-        self.progressbar.set_pulse_step(0.1)
-
-        # This is a workaround for removing a small gap at the bottom
-        # of the application. Set the widget to be a backdrop always.
-        def _on_state_cange(pgb, flags):
-            pgb.set_state_flags(flags | Gtk.StateFlags.BACKDROP, True)
-
-        self.progressbar.connect('state-flags-changed', _on_state_cange)
-        self.progressbar_revealer = Gtk.Revealer()
-        self.progressbar_revealer.add(self.progressbar)
-        self.progressbar_revealer.show_all()
-        self.progressbar_revealer.set_transition_type(
-            Gtk.RevealerTransitionType.SLIDE_UP
-        )
-        self.progressbar_revealer.set_transition_duration(
-            500
-        )
 
         main_menu = Gio.Menu()
         main_menu.append_item(
@@ -246,6 +173,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 Gtk.IconSize.BUTTON
             )
         )
+
         menu_button.set_menu_model(main_menu)
 
         # Add the symbolic search button:
@@ -259,61 +187,17 @@ class MainWindow(Gtk.ApplicationWindow):
 
         application = Gio.Application.get_default()
         search_button.connect(
-            'clicked', lambda btn: self.set_search_mode(btn.get_active())
+            'clicked', lambda btn: self.views.set_search_mode(btn.get_active())
         )
 
         if shredder.APP_USE_TRADITIONAL_MENU:
             menu_button.set_use_popover(False)
 
-        self.search_bar, self.search_entry = create_searchbar(self)
-        self.main_grid.attach(self.infobar, 0, 0, 1, 1)
-        self.main_grid.attach(self.search_bar, 0, 1, 1, 1)
-        self.main_grid.attach(self.progressbar_revealer, 0, 2, 1, 1)
+        self.main_grid = Gtk.Grid()
         self.main_grid.attach(self.view_stack, 0, 3, 1, 1)
         self.headerbar.pack_end(menu_button)
         self.headerbar.pack_end(search_button)
         self.add(self.main_grid)
-
-    def show_infobar(self, message, message_type=Gtk.MessageType.INFO):
-        """Show an inforbar with a text message in it.
-
-        Note: Latest gtk version color the infobar always blue.
-              This is slightly retarted and basically makes
-              the message_type parameter useless.
-        """
-        self.infobar.show(message, message_type)
-
-    def hide_infobar(self):
-        """Hide an infobar (if displayed)
-        """
-        self.infobar.hide()
-
-    def show_progress(self, percent):
-        """Set a percentage value to display as progress.
-
-        If percent is None, the progressbar will pulse without a goal.
-        """
-        self.progressbar_revealer.set_reveal_child(True)
-
-        if percent is not None:
-            self.progressbar.set_fraction(percent)
-        else:
-            self.progressbar.pulse()
-
-    def hide_progress(self):
-        """Hide the progressbar from the user.
-        """
-        self.progressbar_revealer.set_reveal_child(False)
-
-    def set_search_mode(self, active):
-        """Show the search bar.
-        """
-        # Trigger a fake keypress event on the search bar.
-        self.search_bar.set_search_mode(active)
-        if active:
-            self.search_bar.show()
-        else:
-            self.search_bar.hide()
 
     def add_header_widget(self, widget, align=Gtk.Align.END):
         """Add a widget to the header, either left or right of the title.

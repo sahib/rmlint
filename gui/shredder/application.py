@@ -76,7 +76,7 @@ class Application(Gtk.Application):
             'about', lambda *_: AboutDialog(self.win).show_all()
         ))
         self.add_action(_create_action(
-            'search', lambda *_: self.win.set_search_mode(True)
+            'search', lambda *_: self.win.views.set_search_mode(True)
         ))
         self.add_action(_create_action(
             'quit', lambda *_: self.quit()

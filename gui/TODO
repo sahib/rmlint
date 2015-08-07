@@ -3,7 +3,7 @@
 - Design: See if we follow Gnome HIG mostly (buttons with icons?)
 - Design: Add context menu to treeview.
 - Design: Decide which kind of chart to use. -- done
-- Design: Add recently used back to GtkResourceManager.
+- Design: Add recently used back to GtkResourceManager. -- done
 - Design: Introduce more keybindings/actions.
 - Fix: Allow no right going in main if no script is yet generated. -- done
 - Fix: Actually load the right script from the working directory. -- done

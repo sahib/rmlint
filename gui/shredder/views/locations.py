@@ -199,7 +199,7 @@ class LocationView(View):
         self.box.set_filter_func(self._filter_func)
         self.box.connect('row-activated', self._on_row_clicked)
 
-        self.app_window.search_entry.connect(
+        self.search_entry.connect(
             'search-changed', self._on_search_changed
         )
 
@@ -360,7 +360,7 @@ class LocationView(View):
             self.box.invalidate_filter()
 
     def _filter_func(self, row):
-        query = self.app_window.search_entry.get_text().lower()
+        query = self.search_entry.get_text().lower()
         if query in row.path.lower():
             return True
 

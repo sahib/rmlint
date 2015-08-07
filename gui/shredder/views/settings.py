@@ -138,8 +138,8 @@ class SettingsView(View):
         )
 
         self._grid = Gtk.Grid()
-        self._grid.set_margin_left(30)
-        self._grid.set_margin_right(40)
+        self._grid.set_margin_start(30)
+        self._grid.set_margin_end(40)
         self._grid.set_margin_top(5)
         self._grid.set_margin_bottom(15)
         self._grid.set_hexpand(True)

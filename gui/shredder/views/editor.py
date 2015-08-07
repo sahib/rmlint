@@ -212,7 +212,8 @@ def _create_icon_stack():
 class EditorView(View):
     def __init__(self, win):
         View.__init__(self, win)
-        self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+        # TODO
+        # self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
 
         self._runner = None
 
