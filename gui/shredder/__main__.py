@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""Init triggering goes here.
+
+This code will be executed first when doing:
+
+    $ python -m shredder
+"""
+
 # Stdlib:
 import sys
 
@@ -11,6 +18,6 @@ from shredder.logger import create_logger
 ROOT_LOGGER = create_logger(None)
 
 # Gtk will take over now.
-app = Application()
+APP = Application()
 ROOT_LOGGER.info('Starting up')
-sys.exit(app.run(sys.argv))
+sys.exit(APP.run(sys.argv))
