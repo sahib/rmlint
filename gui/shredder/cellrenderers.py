@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+Various specialised GtkCellRenderer implementation.
+
+Reason for special derivates are given in the respective class.
+"""
+
 # Stdlib:
 from datetime import datetime
 
@@ -13,6 +19,7 @@ from gi.repository import GObject
 
 
 class CellRendererSize(Gtk.CellRendererText):
+    """Render the byte size in a human readable form"""
     size = GObject.Property(type=int, default=0)
 
     def __init__(self, **kwargs):
@@ -20,6 +27,7 @@ class CellRendererSize(Gtk.CellRendererText):
         self.connect('notify::size', CellRendererSize._transform_size)
 
     def _transform_size(self, _):
+        """Convert bytes to human readable sizes on size property changes"""
         self.set_property(
             'text', size_to_human_readable(self.get_property('size'))
         )
@@ -27,7 +35,26 @@ class CellRendererSize(Gtk.CellRendererText):
 
 def _rnd(num):
     """Round to minimal decimal places & convert to str"""
-    return str(round(num, 1) if num % 1 else int(num))
+    if num % 1:
+        return str(round(num, 1))
+    else:
+        return int(num)
+
+
+def pretty_seconds(second_diff):
+    """Convert a second difference to sub-day human readable string"""
+    if second_diff < 10:
+        return "just now"
+    elif second_diff < 60:
+        return _rnd(second_diff) + " seconds ago"
+    elif second_diff < 120:
+        return "a minute ago"
+    elif second_diff < 3600:
+        return _rnd(second_diff / 60) + " minutes ago"
+    elif second_diff < 7200:
+        return "an hour ago"
+    elif second_diff < 86400:
+        return _rnd(second_diff / 3600) + " hours ago"
 
 
 def pretty_date(time=False):
@@ -39,22 +66,8 @@ def pretty_date(time=False):
     second_diff = diff.seconds
     day_diff = diff.days
 
-    if day_diff < 0:
-        return ''
-
-    if day_diff == 0:
-        if second_diff < 10:
-            return "just now"
-        elif second_diff < 60:
-            return _rnd(second_diff) + " seconds ago"
-        elif second_diff < 120:
-            return "a minute ago"
-        elif second_diff < 3600:
-            return _rnd(second_diff / 60) + " minutes ago"
-        elif second_diff < 7200:
-            return "an hour ago"
-        elif second_diff < 86400:
-            return _rnd(second_diff / 3600) + " hours ago"
+    if day_diff <= 0:
+        return pretty_seconds(second_diff)
     elif day_diff == 1:
         return "Yesterday"
     elif day_diff < 7:
@@ -68,6 +81,7 @@ def pretty_date(time=False):
 
 
 class CellRendererModifiedTime(Gtk.CellRendererText):
+    """Display a mtime (unix timestamp) as readable difference to now"""
     mtime = GObject.Property(type=int, default=0)
 
     def __init__(self, **kwargs):
@@ -78,6 +92,7 @@ class CellRendererModifiedTime(Gtk.CellRendererText):
         )
 
     def _transform_mtime(self, _):
+        """Convert the modification time to a human readable form on change"""
         mtime = self.get_property('mtime')
         if mtime <= 0:
             pretty_date_str = ''
@@ -88,6 +103,7 @@ class CellRendererModifiedTime(Gtk.CellRendererText):
 
 
 class CellRendererCount(Gtk.CellRendererText):
+    """Render a count of objects (1 Object, 2 Objects...)"""
     count = GObject.Property(type=int, default=-1)
 
     def __init__(self, **kwargs):
@@ -98,6 +114,11 @@ class CellRendererCount(Gtk.CellRendererText):
         )
 
     def _transform_count(self, _):
+        """Convert the count property to a meaningful message.
+
+        Negative numbers are regarded as twins,
+        positive numbers as objects in a directory.
+        """
         count = self.get_property('count')
         is_plural = abs(count) is not 1
 
@@ -114,6 +135,7 @@ class CellRendererCount(Gtk.CellRendererText):
 
 
 def _render_tag_label(tag):
+    """Render a IndicatorLabel to a Gdk.Pixbuf suitable for tree widgets"""
     state_to_symbol = {
         IndicatorLabel.NONE: '',
         IndicatorLabel.SUCCESS: '<span color="green">✔</span>',
@@ -133,6 +155,10 @@ def _render_tag_label(tag):
 
 
 class CellRendererLint(Gtk.CellRendererPixbuf):
+    """Render the lint tag (checkmark, error, warning icon) in a cell.
+
+    This cellrenderer caches previously rendered buffers.
+    """
     ICON_SIZE = 20
     STATE_TO_PIXBUF = {}
 
@@ -142,7 +168,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
         Gtk.CellRendererPixbuf.__init__(self, **kwargs)
         self.set_alignment(0.0, 0.6)
 
-    def do_render(self, ctx, widget, background_area, cell_area, flags):
+    def do_render(self, ctx, *args):
         tag = self.get_property('tag')
         if tag is IndicatorLabel.NONE:
             return
@@ -157,15 +183,18 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
         self.set_property('pixbuf', pixbuf)
         ctx.set_source_rgb(0, 255, 0)
         Gtk.CellRendererPixbuf.do_render(
-            self, ctx, widget, background_area, cell_area, flags
+            self, ctx, *args
         )
 
-    def do_get_size(self, widget, cell_area):
-        w, h = [self.props.xpad * 2 + CellRendererLint.ICON_SIZE] * 2
+    def do_get_size(self, _, cell_area):
+        xpad = self.get_property('xpad')
+        width = height = [xpad * 2 + CellRendererLint.ICON_SIZE] * 2
 
-        x, y = 0, 0
+        x_loc, y_loc = 0, 0
         if cell_area:
-            x = max(0, self.props.xalign * (cell_area.width - w))
-            y = max(0, self.props.yalign * (cell_area.height - h))
+            xalign = self.get_property('xalign')
+            yalign = self.get_property('yalign')
+            x_loc = max(0, xalign * (cell_area.width - width))
+            y_loc = max(0, yalign * (cell_area.height - height))
 
-        return x, y, w, h
+        return x_loc, y_loc, width, height
