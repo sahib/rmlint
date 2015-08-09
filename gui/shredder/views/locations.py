@@ -1,20 +1,31 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""Location view.
+
+Give the users a list of directories he might want to scan.
+Also give him the choice of adding new directories.
+
+Integrate with GtkRecentManager and detect mounted volumes.
+Also show the directory size alongside.
+"""
+
+
 # Stdlib:
 import os
 import logging
-
-LOGGER = logging.getLogger('locations')
-
-# Internal:
-from shredder.util import View, IconButton, size_to_human_readable
 
 # External:
 from gi.repository import Gtk
 from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
+
+# Internal:
+from shredder.util import View, IconButton, size_to_human_readable
+
+
+LOGGER = logging.getLogger('locations')
 
 
 class DeferSizeLabel(Gtk.Bin):
@@ -24,7 +35,7 @@ class DeferSizeLabel(Gtk.Bin):
     is displayed as normal text label.
     """
     def __init__(self, path):
-        Gtk.Frame.__init__(self)
+        Gtk.Bin.__init__(self)
 
         spinner = Gtk.Spinner()
         spinner.start()
@@ -32,16 +43,17 @@ class DeferSizeLabel(Gtk.Bin):
 
         # `du` still seems to be the fastest way to do the job.
         # All self-implemented ways in python were way slower.
-        du = Gio.Subprocess.new(
+        du_proc = Gio.Subprocess.new(
             ['du', '-s', path],
             Gio.SubprocessFlags.STDERR_SILENCE |
             Gio.SubprocessFlags.STDOUT_PIPE
         )
-        du.communicate_utf8_async(None, None, self._du_finished)
+        du_proc.communicate_utf8_async(None, None, self._du_finished)
 
-    def _du_finished(self, du, result):
-        result, du_data, _ = du.communicate_utf8_finish(result)
-        kbytes = int(''.join(filter(str.isdigit, du_data)))
+    def _du_finished(self, du_proc, result):
+        """Called when the coreutil du finished running. Harvest results."""
+        result, du_data, _ = du_proc.communicate_utf8_finish(result)
+        kbytes = int(''.join([num for num in du_data if num.isdigit()]))
 
         self.remove(self.get_child())
         self.add(Gtk.Label(size_to_human_readable(kbytes * 1024)))
@@ -49,6 +61,7 @@ class DeferSizeLabel(Gtk.Bin):
 
 
 class LocationEntry(Gtk.ListBoxRow):
+    """A single entry representing an existing file system location."""
     preferred = GObject.Property(type=bool, default=False)
 
     def __init__(self, name, path, themed_icon, fill_level=None):
@@ -151,6 +164,7 @@ class LocationEntry(Gtk.ListBoxRow):
             grid.attach(size_widget, 6, 2, 1, 1)
 
     def _on_check_box_toggled(self, btn):
+        """Called once the `original` checkbox was hit."""
         ctx = self.get_style_context()
         if btn.get_active():
             ctx.add_class('original')
@@ -161,6 +175,7 @@ class LocationEntry(Gtk.ListBoxRow):
 
 
 class LocationView(View):
+    """The actual view instance."""
     def __init__(self, app):
         View.__init__(self, app)
         self.selected_locations = []
@@ -242,6 +257,7 @@ class LocationView(View):
         self.add(grid)
 
     def _set_title(self):
+        """Make it an own method, so we don't need to retype it."""
         self.sub_title = 'Choose locations to scan'
 
     def _add_recent_item(self, path):
@@ -254,10 +270,11 @@ class LocationView(View):
         data.display_name = path
         data.mime_type = 'inode/directory'
 
-        if not Gtk.RecentManager.get_default().add_full(path, data):
+        if not self.recent_mgr.add_full(path, data):
             LOGGER.warning('Could not add to recently used: ' + path)
 
     def refill_entries(self, *_):
+        """Re-read all LocationEntries from every possible source."""
         LOGGER.info('Refilling location entries')
         for child in list(self.box):
             self.box.remove(child)
@@ -334,7 +351,8 @@ class LocationView(View):
         )
         return entry
 
-    def _on_row_clicked(self, box, row):
+    def _on_row_clicked(self, _, row):
+        """Highlight an entry when a row was clicked."""
         style_ctx = row.get_style_context()
         if style_ctx.has_class('selected'):
             style_ctx.remove_class('selected')
@@ -347,6 +365,7 @@ class LocationView(View):
         self._update_selected_label()
 
     def _update_selected_label(self):
+        """Update the lower count of selected LocationEntries."""
         prefd_paths = sum(rw.props.preferred for rw in self.selected_locations)
         self.selected_label.set_markup(
             '{sel} directories - {pref} of them preferred'.format(
@@ -355,11 +374,13 @@ class LocationView(View):
             )
         )
 
-    def _on_search_changed(self, entry):
+    def _on_search_changed(self, _):
+        """Called once the user enteres a new search query."""
         if self.is_visible:
             self.box.invalidate_filter()
 
     def _filter_func(self, row):
+        """Decide if a row shoul be visible depending on the search term."""
         query = self.search_entry.get_text().lower()
         if query in row.path.lower():
             return True
@@ -367,6 +388,7 @@ class LocationView(View):
         return query in row.name.lower()
 
     def on_view_enter(self):
+        """Called when the view gets visible."""
         self.app_window.add_header_widget(self.chooser_button)
         self.chooser_button.show_all()
 
@@ -379,9 +401,11 @@ class LocationView(View):
             )
 
     def on_view_leave(self):
+        """Called when the view gets out of sight."""
         self.app_window.remove_header_widget(self.chooser_button)
 
-    def _on_chooser_button_clicked(self, btn):
+    def _on_chooser_button_clicked(self, _):
+        """Button click on the location chooser."""
         self.stack.set_visible_child_name('chooser')
         self.app_window.remove_header_widget(self.chooser_button)
         self.app_window.views.go_right.set_sensitive(False)
@@ -400,6 +424,7 @@ class LocationView(View):
         self.app_window.add_header_widget(close_button, align=Gtk.Align.START)
 
         def _go_back():
+            """Switch back to the LocationEntry list."""
             self.app_window.remove_header_widget(open_button)
             self.app_window.remove_header_widget(close_button)
             self.app_window.add_header_widget(self.chooser_button)
@@ -410,6 +435,7 @@ class LocationView(View):
             self._set_title()
 
         def _open_clicked(_):
+            """The open file button was clicked. Add paths."""
             for path in self.file_chooser.get_filenames():
                 name = os.path.basename(path)
                 # self.recent_mgr.add_item(path)
@@ -426,9 +452,11 @@ class LocationView(View):
             _go_back()
 
         def _close_clicked(_):
+            """Abort choosing."""
             _go_back()
 
-        def _selection_changed(chooser):
+        def _selection_changed(_):
+            """Make the open button sensitive when something is selected."""
             is_sensitive = bool(self.file_chooser.get_filenames())
             open_button.set_sensitive(is_sensitive)
 
@@ -439,15 +467,19 @@ class LocationView(View):
         close_button.show_all()
 
     def _run_clicked(self, _):
+        """Switch one view further to the runner view."""
         self.app_window.views.switch('runner')
         main_view = self.app_window.views['runner']
         paths = [entry.path for entry in self.selected_locations]
         main_view.trigger_run(paths)
 
     def _del_clicked(self, _):
+        """Delete all selected LocationEntries."""
         for row in self.selected_locations:
             LOGGER.debug('Removing location entry:' + row.path)
             self.box.remove(row)
             Gtk.RecentManager.get_default().remove_item(row.path)
+            if row.path in self.known_paths:
+                self.known_paths.remove(row.path)
 
         self.selected_locations = []
