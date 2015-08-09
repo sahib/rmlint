@@ -38,7 +38,7 @@ def _rnd(num):
     if num % 1:
         return str(round(num, 1))
     else:
-        return int(num)
+        return str(int(num))
 
 
 def pretty_seconds(second_diff):
