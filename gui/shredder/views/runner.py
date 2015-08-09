@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+Main view of Shredder.
+
+Shows the chart and a treeview of suspicious files.
+"""
+
+
 # External:
 from gi.repository import Gtk
 from gi.repository import GLib
@@ -47,19 +54,29 @@ class ResultActionBar(Gtk.ActionBar):
         self.pack_end(self.script_btn)
 
     def finish(self):
+        """Indicate that we finished running."""
         self.script_btn.set_sensitive(True)
 
 
 class RunnerView(View):
+    """Main action View.
+
+    Public attributes:
+
+        - script: A Script instance.
+        - runner: The current run-instance.
+        - model: The data.
+    """
     def __init__(self, app):
         View.__init__(self, app, 'Running…')
 
         # Public: The runner.
-        self.runner = None
+        self.runner, self.script = None, None
+
+        self.last_paths = []
 
         # Disable scrolling for the main view:
-        # TODO
-        # self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+        self.scw.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
 
         # Public flag for checking if the view is still
         # in running mode (thus en/disabling certain features)
@@ -108,10 +125,8 @@ class RunnerView(View):
             'search-changed', self.on_search_changed
         )
 
-        # TODO: DEBUG
-        # GLib.timeout_add(1000, lambda *_: self.trigger_run(['/usr/lib']))
-
     def trigger_run(self, paths):
+        """Trigger a new run on all paths in `paths`"""
         # Remember last paths for rerun()
         self.last_paths = paths
 
@@ -133,6 +148,7 @@ class RunnerView(View):
         self.show_progress(0)
 
     def rerun(self):
+        """Rerun with last given paths."""
         self.trigger_run(self.last_paths)
 
     ###########################
@@ -140,6 +156,7 @@ class RunnerView(View):
     ###########################
 
     def on_search_changed(self, entry):
+        """Called once the user entered a new query."""
         text = entry.get_text()
 
         if len(text) > 1:
@@ -148,6 +165,7 @@ class RunnerView(View):
             self.treeview.set_model(sub_model)
 
     def on_add_elem(self, runner):
+        """Called once the runner found a new element."""
         elem = runner.element
         self.model.add_path(elem['path'], Column.make_row(elem))
 
@@ -155,7 +173,8 @@ class RunnerView(View):
         tick = (elem.get('progress', 0) / 100.0) or None
         self.show_progress(tick)
 
-    def on_process_finish(self, runner, error_msg):
+    def on_process_finish(self, _, error_msg):
+        """Called once self.runner finished running."""
         # Make sure we end up at 100% progress and show
         # the progress for a short time after (for the nice cozy feeling)
         self.show_progress(100)
@@ -172,6 +191,7 @@ class RunnerView(View):
         GLib.timeout_add(1500, self.on_delayed_chart_render, -1)
 
     def on_delayed_chart_render(self, last_size):
+        """Called after a short delay to reduce chart redraws."""
         model = self.treeview.get_model()
         current_size = len(model)
 
@@ -192,15 +212,18 @@ class RunnerView(View):
         return False
 
     def on_view_enter(self):
+        """Called when the view enters sight."""
         has_script = bool(self.runner)
         GLib.idle_add(
             lambda: self.app_window.views.go_right.set_sensitive(has_script)
         )
 
     def on_view_leave(self):
+        """Called when the view leaves sight."""
         self.app_window.views.go_right.set_sensitive(True)
 
     def on_selection_changed(self, selection):
+        """Called when the user clicks a specific row."""
         model, iter_ = selection.get_selected()
         if iter_ is not None:
             node = model.iter_to_node(iter_)
