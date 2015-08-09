@@ -188,7 +188,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
 
     def do_get_size(self, _, cell_area):
         xpad = self.get_property('xpad')
-        width = height = [xpad * 2 + CellRendererLint.ICON_SIZE] * 2
+        width = height = xpad * 2 + CellRendererLint.ICON_SIZE
 
         x_loc, y_loc = 0, 0
         if cell_area:
