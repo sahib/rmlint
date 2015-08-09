@@ -1,21 +1,37 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+Editor view.
+
+Provides means to view the generated script and edit it.
+Also contains the dangerous run button that triggers the final run.
+Once clicked, a counter will be shown, showing the total number
+of killed files in terms of size.
+"""
+
+
 # Stdlib:
 import logging
-LOGGER = logging.getLogger('editor')
-
-from functools import partial
-
-# Internal:
-from shredder.util import View, IconButton, scrolled, size_to_human_readable
-from shredder.tree import Column
 
 # External:
 from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Pango
 from gi.repository import GObject
+
+
+# Internal:
+from shredder.util import View, IconButton, scrolled, size_to_human_readable
+from shredder.tree import Column
+
+
+LOGGER = logging.getLogger('editor')
+
+
+REMOVED_LABEL = '''<big>{s}</big><small> removed</small>
+<small>{t}</small> <b><big>{p}</big></b>
+'''
 
 
 #############################
@@ -28,6 +44,7 @@ try:
     LOGGER.info('Using GtkSourceView since we have it.')
 
     def _create_source_view():
+        """Create a suitable text view + buffer for showing a sh script."""
         buffer_ = GtkSource.Buffer()
         buffer_.set_highlight_syntax(True)
 
@@ -40,6 +57,7 @@ try:
         return view, buffer_
 
     def _set_source_style(view, style_name):
+        """If supported, set a color scheme by name."""
         style = GtkSource.StyleSchemeManager.get_default().get_scheme(
             style_name
         )
@@ -49,6 +67,7 @@ try:
             buffer_.set_style_scheme(style)
 
     def _set_source_lang(view, lang):
+        """If supported, set a syntax highlighter to use."""
         language = GtkSource.LanguageManager.get_default().get_language(lang)
         buffer_ = view.get_buffer()
         buffer_.set_language(language)
@@ -58,24 +77,29 @@ except ImportError:
     LOGGER.info('No GtkSourceView found.')
 
     def _create_source_view():
+        """Create a suitable text view + buffer for showing a sh script."""
         buffer_ = Gtk.Buffer()
         view = Gtk.TextView()
         return view, buffer_
 
-    def _set_source_style(view, style_name):
+    def _set_source_style(*_):
+        """If supported, set a color scheme by name."""
         pass  # Not supported.
 
-    def _set_source_lang(view, lang):
+    def _set_source_lang(*_):
+        """If supported, set a syntax highlighter to use."""
         pass  # Not supported.
 
 
 def _create_running_screen():
+    """Helper to configure a spinner for the delete screen."""
     spinner = Gtk.Spinner()
     spinner.start()
     return spinner
 
 
 def _create_finished_screen(callback):
+    """Give the user a nice, warm feeling."""
     control_grid = Gtk.Grid()
     control_grid.set_hexpand(False)
     control_grid.set_vexpand(False)
@@ -84,7 +108,15 @@ def _create_finished_screen(callback):
 
     label = Gtk.Label(
         use_markup=True,
-        label='<span font="65">✔</span>\n\n\n<big><b>All went well!</b></big>\n\n\n\n\n',
+        label='''<span font="65">✔</span>
+
+
+<big><b>All went well!</b></big>
+
+
+
+
+''',
         justify=Gtk.Justification.CENTER
     )
     label.get_style_context().add_class('dim-label')
@@ -104,6 +136,7 @@ def _create_finished_screen(callback):
 
 
 class RunningLabel(Gtk.Label):
+    """Centered large label showing a size sum and the current deleted path."""
     def __init__(self):
         Gtk.Label.__init__(self)
 
@@ -120,10 +153,11 @@ class RunningLabel(Gtk.Label):
         self.push(None, '', '')
 
     def push(self, model, prefix, path):
+        """Push a new path to the label, removing the old one."""
         if prefix.lower() == 'keeping':
             return
 
-        text = '<big>{s}</big><small> removed</small>\n<small>{t}</small> <b><big>{p}</big></b>'.format(
+        text = REMOVED_LABEL.format(
             t=prefix,
             s=size_to_human_readable(self._size_sum),
             p=GLib.markup_escape_text(path)
@@ -139,6 +173,7 @@ class RunningLabel(Gtk.Label):
 
 
 class RunButton(Gtk.Box):
+    """Customized run button that can change color."""
     dry_run = GObject.Property(type=bool, default=True)
 
     def __init__(self, icon, label):
@@ -167,6 +202,7 @@ class RunButton(Gtk.Box):
         self._toggle_dry_run(self.state)
 
     def _toggle_dry_run(self, btn):
+        """Change the color and severeness of the button."""
         for widget in [self.button, self.state]:
             ctx = widget.get_style_context()
             if not btn.get_active():
@@ -177,6 +213,7 @@ class RunButton(Gtk.Box):
                 ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
 
     def set_sensitive(self, is_sensitive):
+        """Overwrite Gtk.Widget.set_sensitive to disable style classes."""
         Gtk.Box.set_sensitive(self, is_sensitive)
 
         if not is_sensitive:
@@ -188,6 +225,7 @@ class RunButton(Gtk.Box):
 
 
 def _create_icon_stack():
+    """Create a small widget that shows alternating icons."""
     icon_stack = Gtk.Stack()
     icon_stack.set_transition_type(
         Gtk.StackTransitionType.SLIDE_LEFT_RIGHT
@@ -210,12 +248,12 @@ def _create_icon_stack():
 
 
 class EditorView(View):
+    """Actual view class."""
     def __init__(self, win):
         View.__init__(self, win)
-        # TODO
-        # self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
 
         self._runner = None
+        self.script = None
 
         control_grid = Gtk.Grid()
         control_grid.set_hexpand(False)
@@ -306,10 +344,12 @@ When done, click the `Run Script` button below.
         self.add(grid)
 
     def _switch_back(self):
+        """Switch back from delete-view to script view"""
         self.run_button.set_sensitive(False)
         self.switch_to_script()
 
     def switch_to_script(self):
+        """Read and show the script."""
         self.sub_title = 'Check the results'
         self.left_stack.set_visible_child_name('script')
         buffer_ = self.text_view.get_buffer()
@@ -320,7 +360,8 @@ When done, click the `Run Script` button below.
         _set_source_lang(self.text_view, 'sh')
         self.stack.set_visible_child_name('danger')
 
-    def on_run_script_clicked(self, button):
+    def on_run_script_clicked(self, _):
+        """The critical function callback that is run when action is done."""
         self.sub_title = 'Shreddering. Cross fingers!'
         self.stack.set_visible_child_name('progressing')
         self.left_stack.set_visible_child_name('list')
@@ -339,6 +380,9 @@ When done, click the `Run Script` button below.
         self.script.run(dry_run=True)
 
     def on_view_enter(self):
+        """Called once the view becomes visible."""
         self.run_button.set_sensitive(True)
+
+        # Re-read the script.
         self.script = self.app_window.views['runner'].script
         self.switch_to_script()
