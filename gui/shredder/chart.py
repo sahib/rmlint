@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+Chart rendering code and relevant Gtk widgets.
+The chart is drawn via cairo and a tiny bit of math.
+"""
+
+
 # Stdlib:
 import math
 import colorsys
@@ -73,6 +79,9 @@ TANGO_TABLE = [
 
 
 def _hsv_by_degree(degree):
+    """Convert degree (in rad) to a pre defined color.
+    Currently only one colorscheme is supported (Tango)
+    """
     percent = degree / (2 * math.pi)
     idx = percent * len(TANGO_TABLE)
     h, s, v = TANGO_TABLE[int(idx) - 1]
@@ -80,8 +89,8 @@ def _hsv_by_degree(degree):
 
 
 def _draw_segment(
-    ctx, alloc, layer, max_layers, deg_a, deg_b, is_selected, bg_col
-):
+        ctx, alloc, layer, max_layers,
+        deg_a, deg_b, is_selected, bg_col):
     """Draw a radial segment on the context ctx with the following params:
 
     layer: The segment layer to draw (or "how far from the midpoint we are")
@@ -148,7 +157,9 @@ def _draw_segment(
     ctx.set_line_width(1)
 
 
-def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
+def _draw_tooltip(ctx, alloc, x, y, dist, angle, text):
+    """Draw a tooltip rooting at (x,y) and hitting the bounding box with `text`
+    """
     # Draw the anchor circle on the segment
     ctx.set_source_rgba(0, 0, 0, 1.0)
     ctx.arc(x, y, 3, 0, 2 * math.pi)
@@ -206,6 +217,7 @@ def _draw_tooltip(ctx, alloc, x, y, dist, layer, angle, text):
 
 
 class Chart(Gtk.DrawingArea):
+    """Base class for charts providing the basic interfaces and signals."""
     def __init__(self):
         Gtk.DrawingArea.__init__(self)
         self.connect('draw', self._on_draw)
@@ -223,16 +235,20 @@ class Chart(Gtk.DrawingArea):
     ##############################
 
     def _on_draw(self, area, ctx):
+        """Put your subclass draw code here."""
         pass
 
     def _on_motion(self, area, event):
+        """Executed on ever pointer motion."""
         pass
 
     def _on_button_press_event(self, area, event):
+        """Executed on every pointer or keyboard press."""
         pass
 
 
 class Segment:
+    """Helper and data class for a single segment in a RingChart."""
     def __init__(self, node, layer, degree, size, tooltip=None):
         self.node = node
         self.children = []
@@ -242,6 +258,7 @@ class Segment:
         self.is_selected = False
 
     def draw(self, ctx, alloc, max_layers, bg_col):
+        """Trigger the actual drawing of the segment."""
         _draw_segment(
             ctx, alloc,
             self.layer, max_layers,
@@ -251,6 +268,9 @@ class Segment:
         )
 
     def hit(self, layer, deg):
+        """Check if the segment was hit by a click,
+        depending on a certain layer and angle.
+        """
         if self.layer != layer:
             self.is_selected = False
         else:
@@ -277,10 +297,15 @@ class Segment:
         return mid_x + rad * math.cos(deg), mid_y + rad * math.sin(deg)
 
     def middle_angle(self):
+        """Calculate an angle that goes through the mid of the segment."""
         return self.degree + self.size / 2
 
 
 class RingChart(Chart):
+    """Chart type for visualizing the node-tree as segmented ring.
+    Each depth becomes one ring. Each segment has 0 to one parent.
+    Size of the node determines the size of the segment.
+    """
     def __init__(self):
         Chart.__init__(self)
 
@@ -385,7 +410,7 @@ class RingChart(Chart):
 
             x, y = segment.middle_point(alloc, self.max_layers)
             _draw_tooltip(
-                ctx, alloc, x, y, 8, segment.layer,
+                ctx, alloc, x, y, 8,
                 segment.middle_angle(), segment.tooltip
             )
 
@@ -404,7 +429,6 @@ class RingChart(Chart):
         """Check what segments were hitten by a GdkEvent"""
         alloc = area.get_allocation()
         mid_x, mid_y = alloc.width / 2, alloc.height / 2
-        mid = min(mid_x, mid_y)
 
         # Calculate the degree between the vectors
         # a = (event.x + m, event.y + m) and (0, 1)
@@ -419,9 +443,9 @@ class RingChart(Chart):
             # lower half
             selected_deg = math.acos(cos)
 
-
         # Check which layer we are operating on.
-        selected_layer = math.floor(xy_abs * (self.max_layers + 1) / mid)
+        selected_layer = (self.max_layers + 1) / min(mid_x, mid_y)
+        selected_layer = math.floor(xy_abs * selected_layer)
         if selected_layer is 0:
             return (True, None)
 
@@ -435,6 +459,7 @@ class RingChart(Chart):
         return bool(hit_segment), hit_segment
 
     def _on_motion(self, area, event):
+        """Called on pointer motion."""
         hit, segment = self._hit(area, event)
 
         if self._timeout_id is not None:
@@ -451,6 +476,7 @@ class RingChart(Chart):
         self.queue_draw()
 
     def _on_button_press_event(self, area, event):
+        """Called on pointer and keyboard events"""
         hit, segment = self._hit(area, event, click_only=True)
         if hit:
             if segment is not None:
@@ -460,6 +486,10 @@ class RingChart(Chart):
 
 
 class ChartStack(Gtk.Stack):
+    """Wrapper around the chart drawing area.
+    Provides a loading screen and "nothing" found screen.
+    Change between those are crossfaded.
+    """
     LOADING = 'loading'
     CHART = 'chart'
     EMPTY = 'empty'
@@ -487,40 +517,46 @@ class ChartStack(Gtk.Stack):
         self.add_named(self.empty_label, ChartStack.EMPTY)
 
     def render(self, root):
+        """Trigger all render procedure"""
         self.chart.render(root)
 
 
 if __name__ == '__main__':
-    from shredder.tree import PathTreeModel
-    model = PathTreeModel(['/home/sahib'])
+    def main():
+        """Stupied test main"""
+        from shredder.tree import PathTreeModel
+        model = PathTreeModel(['/home/sahib'])
 
-    def push(size, path):
-        model.add_path(path, Column.make_row({'size': size}), True)
+        def push(size, path):
+            """Helper for pushing a dummy path"""
+            model.add_path(path, Column.make_row({'size': size}), True)
 
-    push(500,  '/home/sahib/docs/stuff.pdf')
+        push(500, '/home/sahib/docs/stuff.pdf')
 
-    for idx, size in enumerate((700, 600, 200)):
-        push(size,  '/home/sahib/docs/more/' + 'stuff.pdf-' + str(idx))
+        for idx, size in enumerate((700, 600, 200)):
+            push(size, '/home/sahib/docs/more/' + 'stuff.pdf-' + str(idx))
 
-    for idx in range(50):
-        push(10,  '/home/sahib/docs/more/' + 'small.pdf-' + str(idx))
+        for idx in range(50):
+            push(10, '/home/sahib/docs/more/' + 'small.pdf-' + str(idx))
 
-    for idx in range(10):
-        push(100,  '/home/sahib/' + 'dummy-' + str(idx))
+        for idx in range(10):
+            push(100, '/home/sahib/' + 'dummy-' + str(idx))
 
-    push(1000, '/home/sahib/music/1.mp3')
-    push(1200, '/home/sahib/music/sub/2.mp3')
-    push(1200, '/home/sahib/music/sub/3.mp3')
-    push(600,  '/home/sahib/music/sub/4.mp3')
-    print(model.trie)
+        push(1000, '/home/sahib/music/1.mp3')
+        push(1200, '/home/sahib/music/sub/2.mp3')
+        push(1200, '/home/sahib/music/sub/3.mp3')
+        push(600, '/home/sahib/music/sub/4.mp3')
+        print(model.trie)
 
-    area = RingChart()
-    area.render(model.trie.root)
+        area = RingChart()
+        area.render(model.trie.root)
 
-    win = Gtk.Window()
-    win.set_size_request(300, 500)
-    win.connect('destroy', Gtk.main_quit)
-    win.add(area)
-    win.show_all()
+        win = Gtk.Window()
+        win.set_size_request(300, 500)
+        win.connect('destroy', Gtk.main_quit)
+        win.add(area)
+        win.show_all()
 
-    Gtk.main()
+        Gtk.main()
+
+    main()
