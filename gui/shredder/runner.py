@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+
+"""
+This module coordinates the actual running of the `rmlint` utility.
+For running GLib's GSuprocess is used, which provides a nice API.
+Before running, the command will be constructed according to the
+options set in prior by GSettings (e.g. from the Settings view).
+The settings are described and defined in the settings schema.
+"""
+
 # Stdlib:
 import json
 import errno
@@ -8,11 +17,7 @@ import codecs
 import logging
 import tempfile
 
-LOGGER = logging.getLogger('runner')
-
-
-from collections import defaultdict, UserDict
-from functools import partial
+from enum import Enum
 
 # Internal:
 from shredder import APP_TITLE
@@ -23,11 +28,11 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 
-# TODO: Move to settings?
-# TODO: Document relation to schema.xml
-# TODO: Restore defaults working?
+LOGGER = logging.getLogger('runner')
 
-class AlgorithmType:
+
+class AlgorithmType(Enum):
+    """Key: computation-algorithm"""
     SPOOKY, CITY, SHA1, SHA256, SHA512, MD5, PARANOID = range(1, 8)
     MAPPING = {
         SPOOKY:   ['--algorithm', 'spooky'],
@@ -39,7 +44,9 @@ class AlgorithmType:
         PARANOID: ['--algorithm', 'paranoid']
     }
 
-class MatchType:
+
+class MatchType(Enum):
+    """Key: traverse-match"""
     NONE, BASENAME, EXTENSION, WITHOUT_EXTENSION = range(1, 5)
     MAPPING = {
         NONE: '',
@@ -49,7 +56,8 @@ class MatchType:
     }
 
 
-class SymlinkType:
+class SymlinkType(Enum):
+    """Key: general-find-symlinks"""
     IGNORE, SEE, FOLLOW = range(1, 4)
     MAPPING = {
         IGNORE: '--no-followlinks',
@@ -58,7 +66,8 @@ class SymlinkType:
     }
 
 
-class HiddenType:
+class HiddenType(Enum):
+    """Key: traverse-hidden"""
     IGNORE, PARTIAL, FOLLOW = range(1, 4)
     MAPPING = {
         IGNORE: '--no-hidden',
@@ -67,7 +76,8 @@ class HiddenType:
     }
 
 
-class KeepAllType:
+class KeepAllType(Enum):
+    """Key: computation-keep-all-tagged"""
     NONE, TAGGED, UNTAGGED = range(1, 4)
     MAPPING = {
         NONE: '',
@@ -76,7 +86,8 @@ class KeepAllType:
     }
 
 
-class MustMatchType:
+class MustMatchType(Enum):
+    """Key: computation-must-match-tagged"""
     NONE, TAGGED, UNTAGGED = range(1, 4)
     MAPPING = {
         NONE: '',
@@ -85,27 +96,27 @@ class MustMatchType:
     }
 
 
-class HardlinkType:
-    OFF, ON = False, True
+class HardlinkType(Enum):
+    """Key: "general-find-hardlinks"""
+    OFF, ACTIVE = False, True
     MAPPING = {
-        ON: '--hardlinked',
+        ACTIVE: '--hardlinked',
         OFF: '--no-hardlinked'
     }
 
 
-class CrossMountType:
-    OFF, ON = False, True
+class CrossMountType(Enum):
+    """Key: traverse-cross-mounts"""
+    OFF, ACTIVE = False, True
     MAPPING = {
-        ON: '--crossdev',
+        ACTIVE: '--crossdev',
         OFF: '--no-crossdev'
     }
 
 
-
-
 def map_cfg(option, val):
     """Helper function to save some characters"""
-    return option.MAPPING.get(val)
+    return option.MAPPING.value.get(val)
 
 
 def _create_rmlint_process(cfg, paths):
@@ -123,13 +134,20 @@ def _create_rmlint_process(cfg, paths):
         launcher.set_cwd(cwd)
 
         extra_options = [
-            map_cfg(MatchType, cfg.get_enum('traverse-match')),
-            map_cfg(SymlinkType, cfg.get_enum('general-find-symlinks')),
-            map_cfg(HiddenType, cfg.get_enum('traverse-hidden')),
-            map_cfg(KeepAllType, cfg.get_enum('computation-keep-all-tagged')),
-            map_cfg(MustMatchType, cfg.get_enum('computation-must-match-tagged')),
-            map_cfg(HardlinkType, cfg.get_boolean('general-find-hardlinks')),
-            map_cfg(CrossMountType, cfg.get_boolean('traverse-cross-mounts'))
+            map_cfg(MatchType,
+                    cfg.get_enum('traverse-match')),
+            map_cfg(SymlinkType,
+                    cfg.get_enum('general-find-symlinks')),
+            map_cfg(HiddenType,
+                    cfg.get_enum('traverse-hidden')),
+            map_cfg(KeepAllType,
+                    cfg.get_enum('computation-keep-all-tagged')),
+            map_cfg(MustMatchType,
+                    cfg.get_enum('computation-must-match-tagged')),
+            map_cfg(HardlinkType,
+                    cfg.get_boolean('general-find-hardlinks')),
+            map_cfg(CrossMountType,
+                    cfg.get_boolean('traverse-cross-mounts'))
         ]
 
         min_size, max_size = cfg.get_value('traverse-size-limits')
@@ -140,7 +158,8 @@ def _create_rmlint_process(cfg, paths):
             )
         ]
 
-        extra_options += AlgorithmType.MAPPING.get(
+        extra_options += map_cfg(
+            AlgorithmType,
             cfg.get_enum('computation-algorithm')
         )
 
@@ -149,7 +168,7 @@ def _create_rmlint_process(cfg, paths):
         ]
 
         # Get rid of empty options:
-        extra_options = list(filter(None, extra_options))
+        extra_options = [opt for opt in extra_options if opt]
 
         # Find a place to put the script file:
         sh_file = tempfile.NamedTemporaryFile(
@@ -183,6 +202,7 @@ def _create_rmlint_process(cfg, paths):
 
 
 class Runner(GObject.Object):
+    """Wrapper class for a process of rmlint."""
     __gsignals__ = {
         'lint-added': (GObject.SIGNAL_RUN_FIRST, None, ()),
         'process-finished': (GObject.SIGNAL_RUN_FIRST, None, (str, ))
@@ -201,6 +221,7 @@ class Runner(GObject.Object):
         self.element, self.header, self.footer = {}, {}, {}
 
     def _on_process_termination(self, process, result):
+        """Called once GSuprocess sees it's child die."""
         # We dont emit process-finished yet here.
         # We still might get some items from the stream.
         # Call process-finished once we hit EOF.
@@ -229,6 +250,7 @@ class Runner(GObject.Object):
         )
 
     def _on_io_event(self, source, result):
+        """Called on every async io event."""
         line, _ = source.read_line_finish_utf8(result)
 
         # last block of data it seems:
@@ -244,7 +266,7 @@ class Runner(GObject.Object):
 
         try:
             json_doc = json.loads(line)
-        except ValueError as err:
+        except ValueError:
             LOGGER.exception('Parsing json document failed')
         else:
             if 'path' in json_doc:
@@ -259,6 +281,9 @@ class Runner(GObject.Object):
         self._queue_read()
 
     def run(self):
+        """Trigger the run of the rmlint process.
+        Returns: a `Script` instance.
+        """
         self.cwd, self.process, sh_script = _create_rmlint_process(
             self.settings, self.paths
         )
@@ -296,21 +321,25 @@ class Script(GObject.Object):
         # Do not reuse the file descriptor, since it is only valid once.
         # Be a bit careful, since the script might contain weird encoding,
         # since there is no path encoding guaranteed in Unix usually:
-        with codecs.open(self.script_file, 'r', encoding='utf-8', errors='ignore') as f:
-            return f.read()
+        opts = dict(encoding='utf-8', errors='ignore')
+        with codecs.open(self.script_file, 'r', **opts) as handle:
+            return handle.read()
 
     def run(self, dry_run=True):
         """Run the script.
         Will trigger a `line-read` signal for each line it processed
         and one `script-finished` signal once all lines are done.
         """
+        flags = Gio.SubprocessFlags
+
         self._process = Gio.Subprocess.new(
             [self.script_file, '-d', '-x', '-n' if dry_run else ''],
-            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE
+            flags.STDERR_SILENCE | flags.STDOUT_PIPE
         )
         self._queue_read()
 
     def _queue_read(self):
+        """Schedule a read from rmlint's stdout stream."""
         stream = Gio.DataInputStream.new(
             self._process.get_stdout_pipe()
         )
@@ -322,6 +351,7 @@ class Script(GObject.Object):
         )
 
     def _report_line(self, line):
+        """Postprocess and signal the receival of a single line."""
         if not line:
             return
 
@@ -334,6 +364,7 @@ class Script(GObject.Object):
         self.emit('line-read', prefix.strip(), path.strip())
 
     def _read_chunk(self, source, result):
+        """Called once a new line is ready to be read."""
         try:
             line, _ = source.read_line_finish_utf8(result)
         except GLib.Error:
@@ -349,16 +380,23 @@ class Script(GObject.Object):
 
 
 if __name__ == '__main__':
-    settings = Gio.Settings.new('org.gnome.Shredder')
-    loop = GLib.MainLoop()
+    def main():
+        """Stupid test main."""
+        settings = Gio.Settings.new('org.gnome.Shredder')
+        loop = GLib.MainLoop()
 
-    runner = Runner(settings, ['/usr/'])
-    runner.connect('lint-added', lambda _: print(runner.element))
-    runner.connect('process-finished', lambda _, msg: print('Status:', msg))
-    runner.connect('process-finished', lambda *_: loop.quit())
-    runner.run()
+        runner = Runner(settings, ['/usr/'])
+        runner.connect('lint-added', lambda _: print(runner.element))
+        runner.connect(
+            'process-finished',
+            lambda _, msg: print('Status:', msg)
+        )
+        runner.connect('process-finished', lambda *_: loop.quit())
+        runner.run()
 
-    try:
-        loop.run()
-    except KeyboardInterrupt:
-        pass
+        try:
+            loop.run()
+        except KeyboardInterrupt:
+            pass
+
+    main()
