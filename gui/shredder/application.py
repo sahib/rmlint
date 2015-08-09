@@ -105,10 +105,12 @@ class Application(Gtk.Application):
         # Load the application icon
         self.win.set_default_icon(_load_app_icon())
 
+        LOGGER.debug('Instancing views.')
         self.win.views.add_view(SettingsView(self), 'settings')
         self.win.views.add_view(LocationView(self), 'locations')
         self.win.views.add_view(RunnerView(self), 'runner')
         self.win.views.add_view(EditorView(self), 'editor')
+        LOGGER.debug('Done instancing views.')
 
         # Set the default view visible at startup
         self.win.views.switch('locations')

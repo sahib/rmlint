@@ -62,10 +62,10 @@ class Column:
     TYPES = [bool, str, int, int, int, int]
 
     @staticmethod
-    def make_row(map):
+    def make_row(md_map):
         """Convert a rmlint json dict to a tree row"""
-        is_original = map.get('is_original', False)
-        if map.get('type', '').startswith('duplicate_'):
+        is_original = md_map.get('is_original', False)
+        if md_map.get('type', '').startswith('duplicate_'):
             tag = IndicatorLabel.SUCCESS if is_original else IndicatorLabel.WARNING
         else:
             tag = IndicatorLabel.THEME
@@ -74,9 +74,9 @@ class Column:
         return [
             is_original,
             '',
-            map.get('size', 0),
+            md_map.get('size', 0),
             0,
-            map.get('mtime', 0),
+            md_map.get('mtime', 0),
             tag,
             ''
         ]
@@ -188,7 +188,7 @@ def _create_root_path_index(index, path, node):
     """Create a (trie-like) recursive dict as fast root path lookup."""
     curr_map, last_map, name = index, None, ''
 
-    for name in filter(None, path.split('/')):
+    for name in (comp for comp in path.split('/') if comp):
         last_map = curr_map
         curr_map = curr_map.setdefault(name, {})
 
@@ -261,7 +261,8 @@ class PathTrie:
             yield from self.iterate(child)
 
     def insert(self, path, row):
-        components = list(filter(None, path.split('/')))
+        """Insert a path into the trie, with metadata in `row`"""
+        components = [comp for comp in path.split('/') if comp]
         curr = _lookup_root_path_index(self.root_paths, components) or self.root
 
         new_nodes = []
@@ -281,8 +282,9 @@ class PathTrie:
         return new_nodes
 
     def find(self, path):
+        """Find a PathNode in the trie by it's path"""
         curr = self.root
-        for name in filter(None, path.split('/')):
+        for name in (comp for comp in path.split('/') if comp):
             curr = curr.children.get(name)
             if curr is None:
                 return None
@@ -404,6 +406,9 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
                 )
 
     def _add_and_signal(self, path, row):
+        """Actually add the path and it's metadata here.
+        Also signal the GtkTreeView to update if necessary.
+        """
         parents = self.trie.insert(path, row)
 
         for node, was_new in parents:
@@ -420,10 +425,9 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
     def _add_defer(self):
         """Add a pack of paths to the trie, max 500 at the same time."""
         LOGGER.info(
-            'Adding pack: {}/{}'.format(
-                min(PATH_MODEL_CHUNK_SIZE, len(self._file_pack)),
-                PATH_MODEL_CHUNK_SIZE
-            )
+            'Adding pack: %d/%d',
+            min(PATH_MODEL_CHUNK_SIZE, len(self._file_pack)),
+            PATH_MODEL_CHUNK_SIZE
         )
 
         for path, row in self._file_pack[:PATH_MODEL_CHUNK_SIZE]:
@@ -557,6 +561,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
         return self._iter_move(iter_, -1)
 
     def do_iter_parent(self, child_iter):
+        """Returns an iter pointing to the parent of child_iter or None."""
         node = self.trie.nodes[child_iter.user_data]
         if node.parent:
             return (True, make_iter(node.parent))
@@ -578,7 +583,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
         """Return first child or (False|None)"""
         return self.do_iter_nth_child(parent, 0)
 
-    def do_iter_nth_child(self, parent, n):
+    def do_iter_nth_child(self, parent, nth):
         """Return iter that is set to the nth child of iter."""
         if parent is None:
             node = self.trie.root
@@ -589,8 +594,8 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
         else:
             node = self.trie.nodes[parent.user_data]
 
-        if n < len(node.indices):
-            return (True, make_iter(node.indices[n]))
+        if nth < len(node.indices):
+            return (True, make_iter(node.indices[nth]))
 
         return (False, None)
 
@@ -658,18 +663,25 @@ def _dfs(model, iter_):
         iter_ = model.iter_next(iter_)
 
 
+def _mark_row(model, child_iter, state):
+    """Check if we need to update the tag icon"""
+    row = model[child_iter]
+    if row[Column.TAG] is IndicatorLabel.SUCCESS and state:
+        row[Column.TAG] = IndicatorLabel.WARNING
+    elif row[Column.TAG] is IndicatorLabel.WARNING and not state:
+        row[Column.TAG] = IndicatorLabel.SUCCESS
+
+    row[Column.SELECTED] = state
+
+
 def _recursive_flick(model, iter_, state):
+    """Propapgate flick in a depth first manner"""
     for child_iter in _dfs(model, iter_):
-        row = model[child_iter]
-        if row[Column.TAG] is IndicatorLabel.SUCCESS and state:
-            row[Column.TAG] = IndicatorLabel.WARNING
-        elif row[Column.TAG] is IndicatorLabel.WARNING and not state:
-            row[Column.TAG] = IndicatorLabel.SUCCESS
-
-        row[Column.SELECTED] = state
+        _mark_row(model, child_iter, state)
 
 
-def _on_toggle(renderer, path, treeview):
+def _on_toggle(_, path, treeview):
+    """Toggle renderer state and it's children"""
     model = treeview.get_model()
     iter_ = model.get_iter_from_string(path)
     new_state = not model[iter_][Column.SELECTED]
@@ -678,6 +690,7 @@ def _on_toggle(renderer, path, treeview):
 
 
 def _create_toggle_cellrenderer(treeview):
+    """Return a normal Gtk.CellRendererToggle, but also toggle childs."""
     renderer = Gtk.CellRendererToggle()
     renderer.connect('toggled', _on_toggle, treeview)
     return renderer
@@ -731,13 +744,15 @@ class PathTreeView(Gtk.TreeView):
             PathTreeView.on_button_press_event
         )
 
+        self._menu = None
+
     def set_model(self, model):
         """Overwrite Gtk.TreeView.set_model, but expand sub root paths"""
         Gtk.TreeView.set_model(self, model)
         self.expand_all()
 
-
     def on_button_press_event(self, event):
+        """Callback handler only used for mouse clicks."""
         # TODO: Actually implement all those.
         if event.button != 3:
             return
@@ -752,69 +767,53 @@ class PathTreeView(Gtk.TreeView):
         self._menu.simple_popup(event)
 
 
+
 if __name__ == '__main__':
-    import unittest
-    import sys
+    def main():
+        import sys
 
-    class PathTrieTest(unittest.TestCase):
-        def test_insert_stupid(self):
-            trie = PathTrie()
-            trie['x'] = 1
-            assert trie['x'].value == 1
+        model = PathTreeModel(sys.argv[1:])
+        for arg_path in sys.argv[1:]:
+            model.add_path(arg_path, Column.make_row({'mtime': time.time(), 'size': 0}))
 
+        from shredder.runner import Runner
+        settings = Gio.Settings.new('org.gnome.Shredder')
 
-        def test_insert(self):
-            trie = PathTrie()
-            trie['/a/b/c'] = "Hello"
-            trie['/a/b/d'] = "World"
-            print(trie)
-            print(trie['/a/b/c'].value)
-            print('---')
-            print(trie)
-            print(trie['/a/b/c'].build_path())
+        runner = Runner(settings, sys.argv[1:])
+        runner.connect(
+            'lint-added',
+            lambda _: model.add_path(runner.element['path'], Column.make_row(runner.element))
+        )
+        #runner.connect('lint-added', lambda _: print(runner.element))
+        runner.connect('process-finished', lambda _, msg: print('Status:', msg))
+        runner.run()
 
-    # unittest.main()
-    model = PathTreeModel(sys.argv[1:])
-    for path in sys.argv[1:]:
-        model.add_path(path, Column.make_row({'mtime': time.time(), 'size': 0}))
+        view = PathTreeView()
+        view.set_model(model)
 
-    from shredder.runner import Runner
-    settings = Gio.Settings.new('org.gnome.Shredder')
+        runner.connect('process-finished', lambda _, msg: GLib.timeout_add(500, view.expand_all))
 
-    runner = Runner(settings, sys.argv[1:])
-    runner.connect(
-        'lint-added',
-        lambda _: model.add_path(runner.element['path'], Column.make_row(runner.element))
-    )
-    #runner.connect('lint-added', lambda _: print(runner.element))
-    runner.connect('process-finished', lambda _, msg: print('Status:', msg))
-    runner.run()
+        def _search_changed(entry):
+            view.set_model(model.filter_model(entry.get_text()))
+            view.expand_all()
 
-    view = PathTreeView()
-    view.set_model(model)
+        entry = Gtk.SearchEntry()
+        entry.connect('search-changed', _search_changed)
 
-    runner.connect('process-finished', lambda _, msg: GLib.timeout_add(500, view.expand_all))
+        scw = Gtk.ScrolledWindow()
+        scw.add(view)
 
+        win = Gtk.Window()
+        win.set_default_size(640, 480)
+        win.connect('destroy', Gtk.main_quit)
 
-    def _search_changed(entry):
-        view.set_model(model.filter_model(entry.get_text()))
-        view.expand_all()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.pack_start(scw, True, True, 0)
+        box.pack_start(entry, False, False, 0)
 
-    entry = Gtk.SearchEntry()
-    entry.connect('search-changed', _search_changed)
+        win.add(box)
+        win.show_all()
 
-    scw = Gtk.ScrolledWindow()
-    scw.add(view)
+        Gtk.main()
 
-    win = Gtk.Window()
-    win.set_default_size(640, 480)
-    win.connect('destroy', Gtk.main_quit)
-
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    box.pack_start(scw, True, True, 0)
-    box.pack_start(entry, False, False, 0)
-
-    win.add(box)
-    win.show_all()
-
-    Gtk.main()
+    main()
