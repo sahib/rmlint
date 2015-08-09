@@ -13,14 +13,16 @@ Notable classes:
 # Stdlib:
 from functools import partial
 from gettext import gettext
-_ = gettext
-
-# Internal:
-import shredder
 
 # External:
 from gi.repository import Gtk
 from gi.repository import Gio
+
+# Internal:
+import shredder
+
+
+_ = gettext
 
 
 class ViewSwitcher(Gtk.Box):
@@ -239,6 +241,6 @@ class MainWindow(Gtk.ApplicationWindow):
         widget.show_all()
 
     def remove_header_widget(self, widget):
-        """Remove a previsouly added header widget. No-op if it did not exist"""
+        """Remove a previously added headerwidget. Noop if it did not exist"""
         if widget in self.headerbar:
             self.headerbar.remove(widget)

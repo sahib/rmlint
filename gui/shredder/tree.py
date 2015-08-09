@@ -20,8 +20,6 @@ import os
 import time
 import logging
 
-LOGGER = logging.getLogger('tree')
-
 from collections import OrderedDict, deque
 
 # External:
@@ -37,6 +35,10 @@ from shredder.cellrenderers import CellRendererCount
 from shredder.cellrenderers import CellRendererLint
 
 from shredder.util import PopupMenu, IndicatorLabel
+
+
+LOGGER = logging.getLogger('tree')
+
 
 # Unique ID used for PathTreeModel's GtkTreeIters:
 # Useful for debugging, sometimes iters will
@@ -66,7 +68,10 @@ class Column:
         """Convert a rmlint json dict to a tree row"""
         is_original = md_map.get('is_original', False)
         if md_map.get('type', '').startswith('duplicate_'):
-            tag = IndicatorLabel.SUCCESS if is_original else IndicatorLabel.WARNING
+            if is_original:
+                tag = IndicatorLabel.SUCCESS
+            else:
+                tag = IndicatorLabel.WARNING
         else:
             tag = IndicatorLabel.THEME
 
@@ -214,6 +219,7 @@ def _lookup_root_path_index(index, components):
 
 class PathTrie:
     """Python version of rmlint's pathtricia trie."""
+
     def __init__(self, root_paths=None):
         self.root = PathNode('/', None, {})
         self.sub_roots = []
@@ -263,7 +269,9 @@ class PathTrie:
     def insert(self, path, row):
         """Insert a path into the trie, with metadata in `row`"""
         components = [comp for comp in path.split('/') if comp]
-        curr = _lookup_root_path_index(self.root_paths, components) or self.root
+        curr = _lookup_root_path_index(
+            self.root_paths,
+            components) or self.root
 
         new_nodes = []
 
@@ -329,6 +337,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
         Therefore we store a hashtable with the id of our nodes and set the id
         as user_data as workaround. (see make_iter())
     """
+
     def __init__(self, paths):
         super(PathTreeModel, self).__init__()
 
@@ -698,6 +707,7 @@ def _create_toggle_cellrenderer(treeview):
 
 class PathTreeView(Gtk.TreeView):
     """A GtkTreeView that is readily configured for using PathTreeModel"""
+
     def __init__(self):
         Gtk.TreeView.__init__(self)
 
@@ -733,11 +743,11 @@ class PathTreeView(Gtk.TreeView):
             [(CellRendererCount(), True, False, dict(count=Column.COUNT))],
             100
         ))
-        self.append_column(_create_column(
-            'Changed',
-            [(CellRendererModifiedTime(), True, False, dict(mtime=Column.MTIME))],
-            110
-        ))
+        self.append_column(
+            _create_column(
+                'Changed', [
+                    (CellRendererModifiedTime(), True, False, dict(
+                        mtime=Column.MTIME))], 110))
 
         self.connect(
             'button-press-event',
@@ -767,14 +777,14 @@ class PathTreeView(Gtk.TreeView):
         self._menu.simple_popup(event)
 
 
-
 if __name__ == '__main__':
     def main():
         import sys
 
         model = PathTreeModel(sys.argv[1:])
         for arg_path in sys.argv[1:]:
-            model.add_path(arg_path, Column.make_row({'mtime': time.time(), 'size': 0}))
+            model.add_path(
+                arg_path, Column.make_row({'mtime': time.time(), 'size': 0}))
 
         from shredder.runner import Runner
         settings = Gio.Settings.new('org.gnome.Shredder')
@@ -782,16 +792,28 @@ if __name__ == '__main__':
         runner = Runner(settings, sys.argv[1:])
         runner.connect(
             'lint-added',
-            lambda _: model.add_path(runner.element['path'], Column.make_row(runner.element))
-        )
-        #runner.connect('lint-added', lambda _: print(runner.element))
-        runner.connect('process-finished', lambda _, msg: print('Status:', msg))
+            lambda _: model.add_path(
+                runner.element['path'],
+                Column.make_row(
+                    runner.element)))
+
+        runner.connect(
+            'process-finished',
+            lambda _,
+            msg: print(
+                'Status:',
+                msg))
         runner.run()
 
         view = PathTreeView()
         view.set_model(model)
 
-        runner.connect('process-finished', lambda _, msg: GLib.timeout_add(500, view.expand_all))
+        runner.connect(
+            'process-finished',
+            lambda _,
+            msg: GLib.timeout_add(
+                500,
+                view.expand_all))
 
         def _search_changed(entry):
             view.set_model(model.filter_model(entry.get_text()))

@@ -333,7 +333,9 @@ class RingChart(Chart):
 
             # Do not investigate smaller nodes:
             if child_angle > math.pi / 64:
-                self.recursive_angle(child, child_angle, child_offset, layer_offset)
+                self.recursive_angle(
+                    child, child_angle, child_offset, layer_offset
+                )
                 # Remember deepest layer:
                 self.max_layers = max(child.depth, self.max_layers)
 
@@ -509,7 +511,9 @@ class ChartStack(Gtk.Stack):
         self.chart = RingChart()
         self.add_named(self.chart, ChartStack.CHART)
 
-        self.empty_label = Gtk.Label('<span font="90">✔</span>\nNothing found!')
+        self.empty_label = Gtk.Label(
+            '<span font="90">✔</span>\nNothing found!'
+        )
         self.empty_label.set_use_markup(True)
         self.empty_label.get_style_context().add_class(
             Gtk.STYLE_CLASS_DIM_LABEL

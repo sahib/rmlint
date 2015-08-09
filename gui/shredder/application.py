@@ -12,7 +12,8 @@ import os
 import gettext
 import logging
 
-LOGGER = logging.getLogger('application')
+# External:
+from gi.repository import Gtk, Gio, Rsvg, GdkPixbuf
 
 # Internal
 from shredder import APP_TITLE
@@ -25,8 +26,8 @@ from shredder.views.locations import LocationView
 from shredder.views.runner import RunnerView
 from shredder.views.editor import EditorView
 
-# External:
-from gi.repository import Gtk, Gio, Rsvg, GdkPixbuf
+
+LOGGER = logging.getLogger('application')
 
 
 def _create_action(name, callback=None):
