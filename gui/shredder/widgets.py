@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+Misc widgets used throughout the code.
+This code here is supposed to be drop-in able
+into other projects if necessary.
+"""
+
+
 # Stdlib:
 import math
 from operator import itemgetter
@@ -43,16 +50,17 @@ class ChoiceRow(Gtk.ListBoxRow):
         self.add(box)
 
     def set_show_checkmark(self, state):
+        """Choose a icon based on the current `state`"""
         self.symbol.set_visible(state or self.is_default)
 
-        CHECKMARK_TABLE = {
+        checkmark_table = {
             (False, False): (None, False),
             (False, True): ('emblem-ok-symbolic', False),
             (True, False): ('non-starred-symbolic', True),
             (True, True): ('starred-symbolic', False)
         }
 
-        icon_name, dim_down = CHECKMARK_TABLE[(self.is_default, bool(state))]
+        icon_name, dim_down = checkmark_table[(self.is_default, bool(state))]
         if icon_name is not None:
             self.symbol.set_from_gicon(
                 Gio.ThemedIcon(name=icon_name), Gtk.IconSize.BUTTON
@@ -76,9 +84,11 @@ class CurrentChoiceLabel(Gtk.Label):
 
     @GObject.Property(type=str, default='')
     def choice(self):
-        self._choice
+        """Currently active choice"""
+        return self._choice
 
     def set_choice(self, new_value):
+        """Set choice to a markup'd form of `new_value`"""
         self._choice = new_value
         self.set_markup(
             '<u>{v}</u>'.format(
@@ -90,6 +100,13 @@ class CurrentChoiceLabel(Gtk.Label):
 
 
 class MultipleChoiceButton(Gtk.Button):
+    """Button that offers a selection of different choices.
+
+    - Only one choice can be active at the same time.
+    - The button will look like an underlined label.
+    - Default values are marked with a separate icon.
+    - The popup is a GtkPopover.
+    """
     __gsignals__ = {
         'row-selected': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
@@ -152,6 +169,7 @@ class MultipleChoiceButton(Gtk.Button):
         self.connect('clicked', lambda *_: popover.show_all())
 
     def _set_current_row(self, row):
+        """Set current row & update checkmarks accordingly"""
         for other_row in self.listbox:
             # Might be a different type:
             if isinstance(other_row, ChoiceRow):
@@ -161,7 +179,7 @@ class MultipleChoiceButton(Gtk.Button):
         self._selected_row = row
 
     def get_selected_choice(self):
-        """Return the currently selcted label text"""
+        """Return the currently selected label text"""
         return self._selected_row.value
 
     def set_selected_choice(self, value):
@@ -171,7 +189,8 @@ class MultipleChoiceButton(Gtk.Button):
                 if row.value == value:
                     self._set_current_row(row)
 
-    def on_update_value(self, listbox, row, popover):
+    def on_update_value(self, _, row, popover):
+        """Called on a click on a row. Will hide the popover."""
         self._set_current_row(row)
         popover.hide()
 
@@ -194,7 +213,7 @@ EXPONENTS = {
 }
 
 
-MAX_EXPONENT =  max(EXPONENTS.values())
+MAX_EXPONENT = max(EXPONENTS.values())
 SORTED_KEYS = sorted(EXPONENTS.items(), key=itemgetter(1))
 
 
@@ -210,7 +229,7 @@ class FileSizeSpinButton(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL)
 
-        self._last_val, self._last_exp = 1, 1
+        self._last_val, self._curr_exp = 1, 1
         self._units = MultipleChoiceButton(
             [label for label, _ in SORTED_KEYS],
             'MB', 'MB', 'Unit'
@@ -238,9 +257,9 @@ class FileSizeSpinButton(Gtk.Box):
         """Set the current number of displayed bytes"""
         # Find out what unit to use:
         if size is 0:
-           exponent = 1
+            exponent = 1
         else:
-           exponent = math.floor(math.log(size, 1024))
+            exponent = math.floor(math.log(size, 1024))
 
         # Convert raw size to a factor
         display_size = size / (1024 ** exponent)
@@ -251,7 +270,9 @@ class FileSizeSpinButton(Gtk.Box):
         self._last_val = display_size
 
     def _set_exponent(self, exponent):
+        """Remember the exponent and select the fitting unit."""
         # linear search for the correct label
+        key, value = None, None
         for key, value in EXPONENTS.items():
             if value == exponent:
                 break
@@ -310,21 +331,26 @@ class FileSizeRange(Gtk.Grid):
 
     @property
     def min_value(self):
+        """Minimum value the widget (i.e. left side)"""
         return self._min_wdgt.get_bytes()
 
     @min_value.setter
     def min_value(self, val):
+        """Set the minum value."""
         self._min_wdgt.set_bytes(val)
 
     @property
     def max_value(self):
+        """Maximum value of the widget (i.e. right side)"""
         return self._max_wdgt.get_bytes()
 
     @max_value.setter
     def max_value(self, val):
+        """Set the maximum value."""
         self._max_wdgt.set_bytes(val)
 
     def on_value_changed(self, wdgt, _):
+        """Called when any of the both sides change."""
         min_val = self._min_wdgt.get_bytes()
         max_val = self._max_wdgt.get_bytes()
 
@@ -340,8 +366,12 @@ class FileSizeRange(Gtk.Grid):
 
 
 if __name__ == '__main__':
-    win = Gtk.Window()
-    win.connect('destroy', Gtk.main_quit)
-    win.add(FileSizeRange(1, 1024 ** MAX_EXPONENT))
-    win.show_all()
-    Gtk.main()
+    def main():
+        """Test main."""
+        win = Gtk.Window()
+        win.connect('destroy', Gtk.main_quit)
+        win.add(FileSizeRange(1, 1024 ** MAX_EXPONENT))
+        win.show_all()
+        Gtk.main()
+
+    main()
