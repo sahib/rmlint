@@ -19,21 +19,19 @@ $ gsettings --schemadir ~/.glib-schemas set org.gnome.Shredder traverse-depth 2
 import re
 import logging
 
-LOGGER = logging.getLogger('settings')
-
 from operator import itemgetter
 from functools import partial
+
+# External:
+from gi.repository import Gtk
+from gi.repository import GLib
 
 # Internal:
 from shredder.util import View, SuggestedButton, DestructiveButton
 from shredder.widgets import FileSizeRange, MultipleChoiceButton
 
-# External:
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import GLib
-from gi.repository import Gio
-from gi.repository import GObject
+
+LOGGER = logging.getLogger('settings')
 
 
 ################
@@ -41,7 +39,7 @@ from gi.repository import GObject
 ################
 
 
-def boolean_widget(settings, key_name, summary, description):
+def boolean_widget(settings, key_name, *_):
     """Provide a simple widget for a boolean option key"""
     switch = Gtk.Switch()
     settings.bind(key_name, switch, 'active', 0)
@@ -49,7 +47,7 @@ def boolean_widget(settings, key_name, summary, description):
     return switch
 
 
-def numeric_widget(settings, key_name, summary, desc, step=1):
+def numeric_widget(settings, key_name, *_, step=1):
     """Provide a single widget to change a numeric key"""
     # Use GSetting's "reflection" to get key metadata:
     schema = settings.get_property('settings-schema')
@@ -69,19 +67,19 @@ def numeric_widget(settings, key_name, summary, desc, step=1):
     return range_wdgt
 
 
-def range_widget(settings, key_name, summary, description):
+def range_widget(settings, key_name, *_):
     """Create a range widget for key types like (tt)"""
     min_val, max_val = settings.get_value(key_name)
     widget = FileSizeRange(min_val, max_val)
 
-    # GSettings -> Widget
     def setting_changed(*_):
+        """GSettings -> Widget callback."""
         min_val, max_val = settings.get_value(key_name)
         widget.min_value = min_val
         widget.max_value = max_val
 
-    # Widget -> GSettings
     def widget_changed(*_):
+        """Widget -> GSettings callback."""
         min_val, max_val = widget.min_value, widget.max_value
         settings.set_value(key_name, GLib.Variant('(tt)', (min_val, max_val)))
 
@@ -92,7 +90,7 @@ def range_widget(settings, key_name, summary, description):
     return widget
 
 
-def choice_widget(settings, key_name, summary, description):
+def choice_widget(settings, key_name, summary, _):
     """Create a widget for choosing between a list of selections"""
     schema = settings.props.settings_schema
     key = schema.get_key(key_name)
@@ -102,7 +100,7 @@ def choice_widget(settings, key_name, summary, description):
 
     range_type, range_variant = key.get_range()
     if range_type != 'enum':
-        LOGGER.warning('{k} is not an enum.'.format(k=key_name))
+        LOGGER.warning('%s is not an enum.', key_name)
         return
 
     choices = list(range_variant)
@@ -132,6 +130,7 @@ VARIANT_TO_WIDGET = {
 
 
 class SettingsView(View):
+    """Generic GSettingsView in a modern Gnome like appearance."""
     def __init__(self, app):
         View.__init__(
             self, app, sub_title='Configure how duplicates are searched'
@@ -183,11 +182,10 @@ class SettingsView(View):
         self._grid.attach(label, 0, len(self._grid), 1, 1)
         self._grid.attach(frame, 0, len(self._grid), 1, 1)
 
-    def append_entry(self, section, key_name, val_widget, summary, desc=None):
+    def append_entry(self, section, val_widget, summary, desc=None):
         """Append an entry to a named section.
 
-        section: A prviously inserted section name.
-        key_name: The key to bind.
+        section: A previously inserted section name.
         val_widget: The widget to show the key in.
         summary: A short summary to show.
         desc: A longer description.
@@ -233,12 +231,10 @@ class SettingsView(View):
     def build(self):
         """Built all entries and sections"""
         gst = self.app.settings
-        schema = gst.get_property('settings-schema')
-
         entry_rows = []
 
         for key_name in gst.list_keys():
-            key = schema.get_key(key_name)
+            key = gst.get_property('settings-schema').get_key(key_name)
             variant_key = gst.get_value(key_name)
 
             # Try to find a way to render this option:
@@ -253,9 +249,9 @@ class SettingsView(View):
             if summary.startswith('[hidden]'):
                 continue
 
-            order, order_match = 0, re.match('\[(\d+)]\s(.*)', summary)
-            if order_match is not None:
-                order, summary = int(order_match.group(1)), order_match.group(2)
+            order, order_grep = 0, re.match(r'\[(\d+)]\s(.*)', summary)
+            if order_grep is not None:
+                order, summary = int(order_grep.group(1)), order_grep.group(2)
 
             description = key.get_description()
             if description:
@@ -273,10 +269,10 @@ class SettingsView(View):
                 section, _ = key_name.split('-', maxsplit=1)
 
             entry_rows.append(
-                (order, section, key_name, val_widget, summary, description)
+                (order, section, val_widget, summary, description)
             )
 
-        for section in sorted(set(map(itemgetter(1), entry_rows))):
+        for section in sorted(set([entry[1] for entry in entry_rows])):
             self.append_section(section.capitalize())
 
         for entry in sorted(entry_rows, key=itemgetter(0, 2)):
@@ -287,6 +283,7 @@ class SettingsView(View):
     ####################
 
     def on_view_enter(self):
+        """Called once the view is visible. Delay save of settings."""
         self.save_settings = False
         self.app.settings.delay()
 
@@ -298,6 +295,7 @@ class SettingsView(View):
         self.app_window.add_header_widget(self.deny_btn, Gtk.Align.START)
 
     def on_view_leave(self):
+        """Called once the view gets out of sight. Revert or apply."""
         self.app_window.remove_header_widget(self.appy_btn)
         self.app_window.remove_header_widget(self.deny_btn)
         if self.save_settings:
@@ -306,10 +304,12 @@ class SettingsView(View):
             self.app.settings.revert()
 
     def on_apply_settings(self, *_):
+        """Callback for the apply button."""
         self.save_settings = True
         self.app_window.views.switch_to_previous()
 
     def on_reset_to_defaults(self, *_):
+        """Callback for the reset button."""
         self.app.settings.revert()
 
         GLib.timeout_add(
@@ -319,6 +319,7 @@ class SettingsView(View):
         self.save_settings = False
 
     def on_key_changed(self, settings, _):
+        """Called when a key in GSettings changes."""
         is_sensitive = settings.get_has_unapplied()
         self.appy_btn.set_sensitive(is_sensitive)
         self.deny_btn.set_sensitive(is_sensitive)
