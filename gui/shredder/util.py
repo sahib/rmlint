@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+Misc. utils.
+"""
+
+
 # External:
 from gi.repository import Gtk
 from gi.repository import Gdk
@@ -10,6 +15,7 @@ from gi.repository import GLib
 
 
 def size_to_human_readable(size):
+    """Convert a size in bytes to a human readable string."""
     human_readable = ''
 
     if size > 0:
@@ -63,12 +69,14 @@ def load_css_from_data(css_data):
 
 
 def scrolled(widget):
+    """Return a Gtk.ScrolledWindow with `widget` inside"""
     scw = Gtk.ScrolledWindow()
     scw.add(widget)
     return scw
 
 
 def get_theme_color(widget, background=True, state=Gtk.StateFlags.SELECTED):
+    """Get current theme's color for a certain widget being in `state`"""
     color = None
     sctx = widget.get_style_context()
     if background:
@@ -83,6 +91,7 @@ def get_theme_color(widget, background=True, state=Gtk.StateFlags.SELECTED):
 
 
 class IconButton(Gtk.Button):
+    """Button with easy icon support."""
     def __init__(self, icon_name, label=None):
         Gtk.Button.__init__(self)
 
@@ -104,21 +113,24 @@ class IconButton(Gtk.Button):
         self.add(box)
 
     def set_markup(self, text):
+        """Same function as Gtk.Label.set_markup."""
         if self.label is not None:
             self.label.set_markup(text)
 
 
 class SuggestedButton(IconButton):
+    """Gtk.Button with suggested-action style class pre-added."""
     def __init__(self, text=None):
-        IconButton.__init__(self, 'object-select-symbolic', text or _('Apply'))
+        IconButton.__init__(self, 'object-select-symbolic', text or 'Apply')
         self.get_style_context().add_class(
             Gtk.STYLE_CLASS_SUGGESTED_ACTION
         )
 
 
 class DestructiveButton(IconButton):
+    """Gtk.Button with destructive style class pre-added."""
     def __init__(self, text=None):
-        IconButton.__init__(self, 'user-trash-symbolic', text or _('Cancel'))
+        IconButton.__init__(self, 'user-trash-symbolic', text or 'Cancel')
         self.get_style_context().add_class(
             Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION
         )
@@ -144,9 +156,10 @@ class IndicatorLabel(Gtk.Label):
         self.set_hexpand(False)
 
         # Use the theme's color by default.
-        self.set_state(IndicatorLabel.THEME)
+        self.set_indication(IndicatorLabel.THEME)
 
-    def set_state(self, state):
+    def set_indication(self, state):
+        """Set state of Indicator label."""
         classes = {
             IndicatorLabel.ERROR: 'ShredderIndicatorLabelError',
             IndicatorLabel.SUCCESS: 'ShredderIndicatorLabelSuccess',
@@ -161,6 +174,7 @@ class IndicatorLabel(Gtk.Label):
 
 
 def create_searchbar(win):
+    """Create a searchbar that takes the keyboard events of `win`"""
     search_bar = Gtk.SearchBar()
     search_entry = Gtk.SearchEntry()
 
@@ -179,14 +193,16 @@ def create_searchbar(win):
     search_box.show_all()
 
     def _hide_search_bar():
+        """Called on timeout after pressing ESC"""
         if not search_bar.get_search_mode():
             search_bar.hide()
         return False
 
-    def _key_press_event(win, event, bar):
-        bar.handle_event(event)
+    def _key_press_event(_, event, search_bar):
+        """Called on keyboard input with search entry in focus"""
+        search_bar.handle_event(event)
         if event.keyval == Gdk.KEY_Escape:
-            bar.set_search_mode(False)
+            search_bar.set_search_mode(False)
             GLib.timeout_add(250, _hide_search_bar)
 
     win.connect('key-press-event', _key_press_event, search_bar)
@@ -194,6 +210,7 @@ def create_searchbar(win):
 
 
 class InfoBar(Gtk.InfoBar):
+    """Easier to use version Gtk.InfoBar."""
     def __init__(self):
         Gtk.InfoBar.__init__(self)
         self._label = Gtk.Label()
@@ -205,11 +222,13 @@ class InfoBar(Gtk.InfoBar):
         self.connect('response', self._on_response)
 
     def show(self, message, message_type):
+        """Show with a certain message and severity level."""
         self.set_message_type(message_type)
         self._label.set_markup(GLib.markup_escape_text(message, -1))
         Gtk.InfoBar.show(self)
 
-    def _on_response(self, infobar, response_id):
+    def _on_response(self, _, response_id):
+        """Just hide once an action was done."""
         if response_id == Gtk.ResponseType.CLOSE:
             self.hide()
 
@@ -238,6 +257,7 @@ class View(Gtk.Grid):
         # This is a workaround for removing a small gap at the bottom
         # of the application. Set the widget to be a backdrop always.
         def _on_state_cange(pgb, flags):
+            """Hack: Make progressbar to be always appear as backdrop."""
             pgb.set_state_flags(flags | Gtk.StateFlags.BACKDROP, True)
 
         self.progressbar.connect('state-flags-changed', _on_state_cange)
@@ -261,9 +281,15 @@ class View(Gtk.Grid):
         self.connect('view-leave', self._on_view_leave)
 
     def add(self, widget):
+        """Add the root widget to the view.
+        It will be placed inside a scrolled window.
+        """
         self.scw.add(widget)
 
     def _on_view_enter(self, _):
+        """Hidden method that is called once a view change is detected.
+        The change will be propagated to the underlying view.
+        """
         self._is_visible = True
         if hasattr(self, 'on_view_enter'):
             self.on_view_enter()
@@ -272,6 +298,9 @@ class View(Gtk.Grid):
         self.sub_title = self._sub_title
 
     def _on_view_leave(self, _):
+        """Hidden method that is called once the view gets out of sight.
+        If possible the change will be propagated down.
+        """
         self._is_visible = False
         if hasattr(self, 'on_view_leave'):
             self.on_view_leave()
@@ -319,23 +348,28 @@ class View(Gtk.Grid):
 
     @property
     def app_window(self):
+        """The associated Gtk.ApplicationWindow."""
         return self._app.win
 
     @property
     def app(self):
+        """The associated GtkApplication instance."""
         return self._app
 
     @GObject.Property(type=str, default='')
     def sub_title(self):
+        """Title shown below the main title in the main window."""
         return self._sub_title
 
     @sub_title.setter
     def sub_title(self, new_sub_title):
+        """Setter for sub_title. Use to describe current step."""
         self.app_window.headerbar.set_subtitle(new_sub_title)
         self._sub_title = new_sub_title
 
     @property
     def is_visible(self):
+        """Is the view currently visible to the user?"""
         return self._is_visible
 
 
@@ -348,6 +382,7 @@ class PopupMenu(Gtk.Menu):
         Gtk.Menu.__init__(self)
 
     def _add_item(self, item):
+        """Append and show_all for safety"""
         self.append(item)
         self.show_all()
 
@@ -363,7 +398,7 @@ class PopupMenu(Gtk.Menu):
             item.connect('activate', callback)
         self._add_item(item)
 
-    def simple_add_checkbox(self, name, state=False, toggled=None):
+    def simple_add_checkbox(self, name, toggled=None):
         '''Add a Gtk.CheckMenuItem to the Menu with the initial *state* and
         the callable *toggled* that is called when the state changes.
         '''
@@ -379,5 +414,8 @@ class PopupMenu(Gtk.Menu):
         self._add_item(Gtk.SeparatorMenuItem())
 
     def simple_popup(self, button_event):
-        'A simpler version of Gtk.Menu.popup(), only requiring a GdkEventButton.'
-        self.popup(None, None, None, None, button_event.button, button_event.time)
+        'A simpler version of GtkMenu.popup(); only requiring GdkEventButton.'
+        self.popup(
+            None, None, None, None,
+            button_event.button, button_event.time
+        )

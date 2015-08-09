@@ -10,3 +10,4 @@
 - Fix: Handle errors gracefully / test more cornercases.
 - Fix: Add commandline to jump to path directly etc.
 - Fix: Handle weird path encodings gracefully
+- Fix: Merge widgets.py, utils.py, cellrenderers.py into one combined file.
