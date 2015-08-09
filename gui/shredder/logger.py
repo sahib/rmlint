@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+General purpose logger, used in many python projects by @sahib.
+It has colors and symbols! Enough reasoning.
+"""
+
+
 # Stdlib:
 import logging
 import logging.handlers
@@ -49,6 +55,7 @@ def create_logger(name=None, path=None, verbosity=logging.DEBUG):
         import colorlog
 
         class SymbolFormatter(colorlog.ColoredFormatter):
+            """Hack to replace the symbol marker with the actual icon."""
             def format(self, record):
                 result = colorlog.ColoredFormatter.format(self, record)
                 return result.replace(
