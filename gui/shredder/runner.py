@@ -178,7 +178,7 @@ def _create_rmlint_process(cfg, paths):
         cmdline = [
             'rmlint',
             '--no-with-color',
-            '--merge-directories',
+            # '--merge-directories',  # TODO: Disable for now.
             '-o', 'sh:' + sh_file.name,
             '-o', 'json',
             '-c', 'json:oneline',

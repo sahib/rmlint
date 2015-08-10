@@ -25,6 +25,11 @@ from gi.repository import GLib
 from gi.repository import Pango
 from gi.repository import PangoCairo
 
+
+ANGLE_LIMIT_TOOLTIP = math.pi / 32
+ANGLE_LIMIT_VISIBLE = math.pi / 128
+
+
 ###########################################################
 # NOTE: This code is inspired by the baobab code,         #
 #       since it's very clean and a good read.            #
@@ -332,7 +337,7 @@ class RingChart(Chart):
             child_angle = (child[Column.SIZE] / node[Column.SIZE]) * angle
 
             # Do not investigate smaller nodes:
-            if child_angle > math.pi / 64:
+            if child_angle > ANGLE_LIMIT_VISIBLE:
                 self.recursive_angle(
                     child, child_angle, child_offset, layer_offset
                 )
@@ -407,7 +412,7 @@ class RingChart(Chart):
             if segment.layer != self._selected_segment.layer:
                 continue
 
-            if segment.size < math.pi / 32:
+            if segment.size < ANGLE_LIMIT_TOOLTIP:
                 continue
 
             x, y = segment.middle_point(alloc, self.max_layers)
@@ -527,7 +532,7 @@ class ChartStack(Gtk.Stack):
 
 if __name__ == '__main__':
     def main():
-        """Stupied test main"""
+        """Stupid test main"""
         from shredder.tree import PathTreeModel
         model = PathTreeModel(['/home/sahib'])
 

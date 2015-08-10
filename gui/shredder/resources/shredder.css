@@ -93,8 +93,9 @@
 @define-color script_editor rgb(220, 220, 220);
 
 #ShredderScriptEditor {
-    font: monospaced 12;
+    font: monospaced 9;
     
+    /* TODO: This seems to be broken? */
     /* Draw a grid, like on mm paper */
     background-size: 40px 40px, 40px 40px, 10px 10px, 10px 10px;
     background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
