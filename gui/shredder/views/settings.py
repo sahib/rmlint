@@ -28,7 +28,7 @@ from gi.repository import GLib
 
 # Internal:
 from shredder.util import View, SuggestedButton, DestructiveButton
-from shredder.widgets import FileSizeRange, MultipleChoiceButton
+from shredder.util import FileSizeRange, MultipleChoiceButton
 
 
 LOGGER = logging.getLogger('settings')

@@ -29,11 +29,10 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.cellrenderers import CellRendererSize
-from shredder.cellrenderers import CellRendererModifiedTime
-from shredder.cellrenderers import CellRendererCount
-from shredder.cellrenderers import CellRendererLint
-
+from shredder.util import CellRendererSize
+from shredder.util import CellRendererModifiedTime
+from shredder.util import CellRendererCount
+from shredder.util import CellRendererLint
 from shredder.util import PopupMenu, IndicatorLabel
 
 
