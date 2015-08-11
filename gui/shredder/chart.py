@@ -27,7 +27,7 @@ from gi.repository import PangoCairo
 
 
 ANGLE_LIMIT_TOOLTIP = math.pi / 32
-ANGLE_LIMIT_VISIBLE = math.pi / 128
+ANGLE_LIMIT_VISIBLE = math.pi / 256
 
 
 ###########################################################

@@ -13,6 +13,7 @@ of killed files in terms of size.
 
 # Stdlib:
 import os
+import time
 import logging
 
 # External:
@@ -25,7 +26,9 @@ from gi.repository import GObject
 
 # Internal:
 from shredder.util import View, IconButton, scrolled, size_to_human_readable
+from shredder.util import MultipleChoiceButton, SuggestedButton
 from shredder.tree import Column
+from shredder.runner import Script
 
 
 LOGGER = logging.getLogger('editor')
@@ -249,7 +252,101 @@ def _create_icon_stack():
     return icon_stack
 
 
+class ScriptSaverDialog(Gtk.FileChooserWidget):
+    """GtkFileChooserWidget tailored for saving a `Script` instance."""
+
+    __gsignals__ = {
+        'saved': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
+
+    def __init__(self, editor_view):
+        Gtk.FileChooserWidget.__init__(self)
+
+        self.editor_view = editor_view
+        self.set_select_multiple(False)
+        self.set_create_folders(False)
+        self.set_action(Gtk.FileChooserAction.SAVE)
+
+        self.file_type = MultipleChoiceButton(
+            ['sh', 'json', 'csv'],
+            'sh',
+            'sh',
+            'Filetype to choose'
+        )
+        self.file_type.set_halign(Gtk.Align.START)
+        self.file_type.set_hexpand(True)
+        self.file_type.connect('row-selected', self.on_file_type_changed)
+
+        self.confirm = SuggestedButton('Save')
+        self.confirm.connect('clicked', self.on_save_clicked)
+        self.confirm.set_halign(Gtk.Align.END)
+        self.confirm.set_hexpand(True)
+        self.confirm.set_sensitive(False)
+
+        self.connect('selection-changed', self.on_selection_changed)
+
+        extra_box = Gtk.Grid()
+        extra_box.attach(self.file_type, 0, 0, 1, 1)
+        extra_box.attach(self.confirm, 1, 0, 1, 1)
+        extra_box.attach_next_to(
+            Gtk.Label('Filetype: '),
+            self.file_type,
+            Gtk.PositionType.LEFT,
+            1,
+            1
+        )
+        extra_box.set_hexpand(True)
+        extra_box.set_halign(Gtk.Align.FILL)
+        self.set_extra_widget(extra_box)
+
+        self.update_file_suggestion()
+
+    def update_file_suggestion(self):
+        """Suggest a name for the script to save."""
+        file_type = self.file_type.get_selected_choice() or 'sh'
+        self.set_current_name(time.strftime('rmlint-%FT%T%z.' + file_type))
+
+    def on_file_type_changed(self, _):
+        """Called once the user chose a different format"""
+        current_path = self.get_filename()
+        if not current_path:
+            self.update_file_suggestion()
+        else:
+            try:
+                path, ext = current_path.rsplit('.', 1)
+                self.set_current_name(
+                    path + '.' + self.file_type.get_selected_choice() or ''
+                )
+            except ValueError:
+                # No extension. Leave it.
+                pass
+
+    def on_save_clicked(self, _):
+        """Called once the user clicked the `Save` button"""
+        file_type = self.file_type.get_selected_choice()
+        abs_path = self.get_filename()
+
+        LOGGER.info('Saving script to: %s', abs_path)
+        self.editor_view.get_script().save(abs_path, file_type)
+        self.emit('saved')
+
+    def on_selection_changed(self, _):
+        """Called once a file or directory was clicked"""
+        self.confirm.set_sensitive(bool(self.get_filename()))
+
+
 class OverlaySaveButton(Gtk.Overlay):
+    """Button box that contains two buttons in a overlay.
+    The overlay is shown on top of the script editor.
+    Buttons are: A unlock button for asking for root permissions
+    and a save button to save the script somewhere.
+    """
+
+    __gsignals__ = {
+        'save-clicked': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'unlock-clicked': (GObject.SIGNAL_RUN_FIRST, None, ())
+    }
+
     def __init__(self):
         Gtk.Overlay.__init__(self)
 
@@ -267,12 +364,18 @@ class OverlaySaveButton(Gtk.Overlay):
         self._lock_button.set_permission(perm)
         self._lock_button.props.margin = 20
         self._lock_button.props.margin_end = 0
+        self._lock_button.connect(
+            'clicked', lambda _: self.emit('unlock-clicked')
+        )
 
         self._save_button = IconButton(
             'folder-download-symbolic', 'Save to file'
         )
         self._save_button.props.margin = 20
         self._save_button.props.margin_start = 0
+        self._save_button.connect(
+            'clicked', lambda _: self.emit('save-clicked')
+        )
 
         self._box.pack_start(self._lock_button, False, True, 0)
         self._box.pack_start(self._save_button, False, True, 0)
@@ -289,7 +392,7 @@ class EditorView(View):
         View.__init__(self, win)
 
         self._runner = None
-        self.script = None
+        self.script = Script.create_dummy()
 
         control_grid = Gtk.Grid()
         control_grid.set_hexpand(False)
@@ -320,6 +423,15 @@ When done, click the `Run Script` button below.
         self.text_view.set_halign(Gtk.Align.FILL)
         self.save_button = OverlaySaveButton()
         self.save_button.add(scrolled(self.text_view))
+        self.save_chooser = ScriptSaverDialog(self)
+        self.save_button.connect(
+            'save-clicked',
+            lambda _: self.left_stack.set_visible_child_name('chooser')
+        )
+        self.save_chooser.connect(
+            'saved',
+            lambda _: self.left_stack.set_visible_child_name('script')
+        )
 
         buffer_.create_tag("original", weight=Pango.Weight.BOLD)
         buffer_.create_tag("normal")
@@ -334,6 +446,7 @@ When done, click the `Run Script` button below.
         )
 
         self.left_stack.add_named(self.save_button, 'script')
+        self.left_stack.add_named(self.save_chooser, 'chooser')
         self.left_stack.add_named(scrolled(self.run_label), 'list')
 
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
@@ -422,5 +535,13 @@ When done, click the `Run Script` button below.
         self.run_button.set_sensitive(True)
 
         # Re-read the script.
-        self.script = self.app_window.views['runner'].script
+        run_script = self.app_window.views['runner'].script
+        if run_script:
+            self.script = run_script
         self.switch_to_script()
+
+    def get_script(self):
+        """Get the current Script instance.
+        This will be always valid (i.e. not None)
+        """
+        return self.script

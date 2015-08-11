@@ -315,6 +315,12 @@ class Script(GObject.Object):
         self._incomplete_chunk = self._process = None
         self.script_file = script_file
 
+    @staticmethod
+    def create_dummy():
+        """Create a empty dummy script for testing purpose"""
+        _, path = tempfile.mkstemp(prefix='.')
+        return Script(path)
+
     def read(self):
         """Read the script from disk and return it as string.
         """
@@ -324,6 +330,27 @@ class Script(GObject.Object):
         opts = dict(encoding='utf-8', errors='ignore')
         with codecs.open(self.script_file, 'r', **opts) as handle:
             return handle.read()
+
+    def read_bytes(self):
+        """Same as read() but do not not attempt conversion to string.
+        Return raw bytes instead.
+        """
+        with open(self.script_file, 'rb') as handle:
+            return handle.read()
+
+    def save(self, path, file_type='sh'):
+        """Save the script to `path`.
+        The script can be converted to a different format if necessary.
+        Valid formats are:
+
+            - sh
+            - json
+            - csv
+        """
+        # TODO: Actually honour file_type.
+
+        with open(path, 'wb') as handle:
+            handle.write(self.read_bytes())
 
     def run(self, dry_run=True):
         """Run the script.

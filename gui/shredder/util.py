@@ -624,7 +624,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
 
 class ChoiceRow(Gtk.ListBoxRow):
     """Row representing a single choice"""
-    def __init__(self, value, is_default):
+    def __init__(self, value, is_default, capitalize=False):
         Gtk.ListBoxRow.__init__(self)
 
         self.value, self.is_default = value, is_default
@@ -640,7 +640,12 @@ class ChoiceRow(Gtk.ListBoxRow):
         self.symbol.props.margin_start = 10
         self.symbol.set_no_show_all(True)
 
-        label = Gtk.Label(value.capitalize())
+        if capitalize:
+            display_value = value.capitalize()
+        else:
+            display_value = value
+
+        label = Gtk.Label(display_value)
         label.props.xalign = 0
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -676,8 +681,9 @@ class ChoiceRow(Gtk.ListBoxRow):
 
 class CurrentChoiceLabel(Gtk.Label):
     """Helper class for displaying the current choice as label"""
-    def __init__(self, text):
+    def __init__(self, text, capitalize=False):
         Gtk.Label.__init__(self)
+        self._capitalize = capitalize
         self.set_use_markup(True)
         self.set_choice(text)
 
@@ -689,9 +695,15 @@ class CurrentChoiceLabel(Gtk.Label):
     def set_choice(self, new_value):
         """Set choice to a markup'd form of `new_value`"""
         self._choice = new_value
+
+        if self._capitalize:
+            display_value = new_value.capitalize()
+        else:
+            display_value = new_value
+
         self.set_markup(
             '<u>{v}</u>'.format(
-                v=self._choice.capitalize()
+                v=display_value
             )
         )
 
@@ -710,7 +722,7 @@ class MultipleChoiceButton(Gtk.Button):
         'row-selected': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, values, default, selected, summary):
+    def __init__(self, values, default, selected, summary, capitalize=False):
         Gtk.Button.__init__(self)
         self._selected_row = None
 
@@ -757,7 +769,7 @@ class MultipleChoiceButton(Gtk.Button):
 
         # Populate the rows:
         for choice in values:
-            row = ChoiceRow(choice, default == choice)
+            row = ChoiceRow(choice, default == choice, capitalize)
             self.listbox.add(row)
 
             if choice == selected:
@@ -779,6 +791,9 @@ class MultipleChoiceButton(Gtk.Button):
 
     def get_selected_choice(self):
         """Return the currently selected label text"""
+        if self._selected_row is None:
+            return None
+
         return self._selected_row.value
 
     def set_selected_choice(self, value):
