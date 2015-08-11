@@ -225,29 +225,29 @@ class Chart(Gtk.DrawingArea):
     """Base class for charts providing the basic interfaces and signals."""
     def __init__(self):
         Gtk.DrawingArea.__init__(self)
-        self.connect('draw', self._on_draw)
+        self.connect('draw', self.on_draw)
 
         self.add_events(
             self.get_events() |
             Gdk.EventMask.POINTER_MOTION_MASK |
             Gdk.EventMask.BUTTON_PRESS_MASK
         )
-        self.connect('motion-notify-event', self._on_motion)
-        self.connect('button-press-event', self._on_button_press_event)
+        self.connect('motion-notify-event', self.on_motion)
+        self.connect('button-press-event', self.on_button_press_event)
 
     ##############################
     # TO BE OVERWRITTEN BY CHILD #
     ##############################
 
-    def _on_draw(self, area, ctx):
+    def on_draw(self, area, ctx):
         """Put your subclass draw code here."""
         pass
 
-    def _on_motion(self, area, event):
+    def on_motion(self, area, event):
         """Executed on ever pointer motion."""
         pass
 
-    def _on_button_press_event(self, area, event):
+    def on_button_press_event(self, area, event):
         """Executed on every pointer or keyboard press."""
         pass
 
@@ -376,7 +376,7 @@ class RingChart(Chart):
         # Make sure it gets rendered soon:
         self.queue_draw()
 
-    def _on_draw(self, area, ctx):
+    def on_draw(self, area, ctx):
         """Actual signal callback that triggers all the drawing."""
 
         # May happen on empty charts:
@@ -421,7 +421,7 @@ class RingChart(Chart):
                 segment.middle_angle(), segment.tooltip
             )
 
-    def _on_tooltip_timeout(self, segment):
+    def on_tooltip_timeout(self, segment):
         """Called once the mouse stayed over a segment for a longer time.
         """
         if self._timeout_id:
@@ -465,7 +465,7 @@ class RingChart(Chart):
 
         return bool(hit_segment), hit_segment
 
-    def _on_motion(self, area, event):
+    def on_motion(self, area, event):
         """Called on pointer motion."""
         hit, segment = self._hit(area, event)
 
@@ -476,13 +476,13 @@ class RingChart(Chart):
 
         if hit and segment:
             id_ = GLib.timeout_add(
-                250, self._on_tooltip_timeout, segment
+                250, self.on_tooltip_timeout, segment
             )
             self._timeout_id = id_
 
         self.queue_draw()
 
-    def _on_button_press_event(self, area, event):
+    def on_button_press_event(self, area, event):
         """Called on pointer and keyboard events"""
         hit, segment = self._hit(area, event, click_only=True)
         if hit:

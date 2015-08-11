@@ -688,7 +688,7 @@ def _recursive_flick(model, iter_, state):
         _mark_row(model, child_iter, state)
 
 
-def _on_toggle(_, path, treeview):
+def on_toggle(_, path, treeview):
     """Toggle renderer state and it's children"""
     model = treeview.get_model()
     iter_ = model.get_iter_from_string(path)
@@ -700,7 +700,7 @@ def _on_toggle(_, path, treeview):
 def _create_toggle_cellrenderer(treeview):
     """Return a normal Gtk.CellRendererToggle, but also toggle childs."""
     renderer = Gtk.CellRendererToggle()
-    renderer.connect('toggled', _on_toggle, treeview)
+    renderer.connect('toggled', on_toggle, treeview)
     return renderer
 
 

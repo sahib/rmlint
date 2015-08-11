@@ -229,7 +229,7 @@ class InfoBar(Gtk.InfoBar):
         self.get_content_area().add(self._label)
         self.get_content_area().show_all()
         self.set_no_show_all(True)
-        self.connect('response', self._on_response)
+        self.connect('response', self.on_response)
 
     def show(self, message, message_type):
         """Show with a certain message and severity level."""
@@ -237,7 +237,7 @@ class InfoBar(Gtk.InfoBar):
         self._label.set_markup(GLib.markup_escape_text(message, -1))
         Gtk.InfoBar.show(self)
 
-    def _on_response(self, _, response_id):
+    def on_response(self, _, response_id):
         """Just hide once an action was done."""
         if response_id == Gtk.ResponseType.CLOSE:
             self.hide()
@@ -266,11 +266,11 @@ class View(Gtk.Grid):
 
         # This is a workaround for removing a small gap at the bottom
         # of the application. Set the widget to be a backdrop always.
-        def _on_state_cange(pgb, flags):
+        def on_state_cange(pgb, flags):
             """Hack: Make progressbar to be always appear as backdrop."""
             pgb.set_state_flags(flags | Gtk.StateFlags.BACKDROP, True)
 
-        self.progressbar.connect('state-flags-changed', _on_state_cange)
+        self.progressbar.connect('state-flags-changed', on_state_cange)
         self.progressbar_revealer = Gtk.Revealer()
         self.progressbar_revealer.add(self.progressbar)
         self.progressbar_revealer.show_all()

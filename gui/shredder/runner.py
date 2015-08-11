@@ -220,7 +220,7 @@ class Runner(GObject.Object):
         # Metadata about the run:
         self.element, self.header, self.footer = {}, {}, {}
 
-    def _on_process_termination(self, process, result):
+    def on_process_termination(self, process, result):
         """Called once GSuprocess sees it's child die."""
         # We dont emit process-finished yet here.
         # We still might get some items from the stream.
@@ -246,10 +246,10 @@ class Runner(GObject.Object):
         self._data_stream.read_line_async(
             io_priority=GLib.PRIORITY_HIGH,
             cancellable=None,
-            callback=self._on_io_event
+            callback=self.on_io_event
         )
 
-    def _on_io_event(self, source, result):
+    def on_io_event(self, source, result):
         """Called on every async io event."""
         line, _ = source.read_line_finish_utf8(result)
 
@@ -292,7 +292,7 @@ class Runner(GObject.Object):
         )
 
         # We want to get notified once the child dies
-        self.process.wait_check_async(None, self._on_process_termination)
+        self.process.wait_check_async(None, self.on_process_termination)
 
         # Schedule some reads from stdout (where the json gets written)
         self._queue_read()

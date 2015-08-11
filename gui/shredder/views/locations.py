@@ -100,7 +100,7 @@ class LocationEntry(Gtk.ListBoxRow):
         icon_img.set_valign(Gtk.Align.FILL)
 
         self.check_box = Gtk.CheckButton()
-        self.check_box.connect('toggled', self._on_check_box_toggled)
+        self.check_box.connect('toggled', self.on_check_box_toggled)
         self.check_box.set_tooltip_text('Prefer this directory?')
         self.check_box.set_margin_end(5)
         self.check_box.set_margin_top(13)
@@ -163,7 +163,7 @@ class LocationEntry(Gtk.ListBoxRow):
             size_widget.set_margin_end(20)
             grid.attach(size_widget, 6, 2, 1, 1)
 
-    def _on_check_box_toggled(self, btn):
+    def on_check_box_toggled(self, btn):
         """Called once the `original` checkbox was hit."""
         ctx = self.get_style_context()
         if btn.get_active():
@@ -193,7 +193,7 @@ class LocationView(View):
             'list-add-symbolic', 'Add Location'
         )
         self.chooser_button.connect(
-            'clicked', self._on_chooser_button_clicked
+            'clicked', self.on_chooser_button_clicked
         )
 
         self.file_chooser = Gtk.FileChooserWidget()
@@ -212,10 +212,10 @@ class LocationView(View):
 
         self.box.set_activate_on_single_click(True)
         self.box.set_filter_func(self._filter_func)
-        self.box.connect('row-activated', self._on_row_clicked)
+        self.box.connect('row-activated', self.on_row_clicked)
 
         self.search_entry.connect(
-            'search-changed', self._on_search_changed
+            'search-changed', self.on_search_changed
         )
 
         self.volume_monitor = Gio.VolumeMonitor.get()
@@ -351,7 +351,7 @@ class LocationView(View):
         )
         return entry
 
-    def _on_row_clicked(self, _, row):
+    def on_row_clicked(self, _, row):
         """Highlight an entry when a row was clicked."""
         style_ctx = row.get_style_context()
         if style_ctx.has_class('selected'):
@@ -374,7 +374,7 @@ class LocationView(View):
             )
         )
 
-    def _on_search_changed(self, _):
+    def on_search_changed(self, _):
         """Called once the user enteres a new search query."""
         if self.is_visible:
             self.box.invalidate_filter()
@@ -404,7 +404,7 @@ class LocationView(View):
         """Called when the view gets out of sight."""
         self.app_window.remove_header_widget(self.chooser_button)
 
-    def _on_chooser_button_clicked(self, _):
+    def on_chooser_button_clicked(self, _):
         """Button click on the location chooser."""
         self.stack.set_visible_child_name('chooser')
         self.app_window.remove_header_widget(self.chooser_button)
