@@ -7,6 +7,8 @@ Main view of Shredder.
 Shows the chart and a treeview of suspicious files.
 """
 
+# Stdlib:
+import logging
 
 # External:
 from gi.repository import Gtk
@@ -17,6 +19,9 @@ from shredder.util import View, IconButton
 from shredder.chart import ChartStack
 from shredder.tree import PathTreeView, PathTreeModel, Column
 from shredder.runner import Runner
+
+
+LOGGER = logging.getLogger('runview')
 
 
 class ResultActionBar(Gtk.ActionBar):
@@ -177,6 +182,7 @@ class RunnerView(View):
         """Called once self.runner finished running."""
         # Make sure we end up at 100% progress and show
         # the progress for a short time after (for the nice cozy feeling)
+        LOGGER.info('`rmlint` finished.')
         self.show_progress(100)
         GLib.timeout_add(300, self.hide_progress)
         GLib.timeout_add(350, self.treeview.expand_all)
@@ -194,6 +200,8 @@ class RunnerView(View):
         """Called after a short delay to reduce chart redraws."""
         model = self.treeview.get_model()
         current_size = len(model)
+
+        LOGGER.info('Refreshing chart.')
 
         if current_size == last_size:
             # Come back later:
