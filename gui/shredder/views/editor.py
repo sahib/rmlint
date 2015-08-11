@@ -12,12 +12,14 @@ of killed files in terms of size.
 
 
 # Stdlib:
+import os
 import logging
 
 # External:
 from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Pango
+from gi.repository import Polkit
 from gi.repository import GObject
 
 
@@ -247,6 +249,40 @@ def _create_icon_stack():
     return icon_stack
 
 
+class OverlaySaveButton(Gtk.Overlay):
+    def __init__(self):
+        Gtk.Overlay.__init__(self)
+
+        self._box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self._box.get_style_context().add_class(
+            Gtk.STYLE_CLASS_LINKED
+        )
+
+        perm = Polkit.Permission.new_sync(
+            'org.freedesktop.accounts.user-administration',
+            Polkit.UnixProcess.new_for_owner(os.getpid(), 0, -1),
+            None
+        )
+        self._lock_button = Gtk.LockButton()
+        self._lock_button.set_permission(perm)
+        self._lock_button.props.margin = 20
+        self._lock_button.props.margin_end = 0
+
+        self._save_button = IconButton(
+            'folder-download-symbolic', 'Save to file'
+        )
+        self._save_button.props.margin = 20
+        self._save_button.props.margin_start = 0
+
+        self._box.pack_start(self._lock_button, False, True, 0)
+        self._box.pack_start(self._save_button, False, True, 0)
+        self._box.set_hexpand(False)
+        self._box.set_vexpand(False)
+        self._box.set_halign(Gtk.Align.END)
+        self._box.set_valign(Gtk.Align.END)
+        self.add_overlay(self._box)
+
+
 class EditorView(View):
     """Actual view class."""
     def __init__(self, win):
@@ -282,6 +318,8 @@ When done, click the `Run Script` button below.
         self.text_view.set_valign(Gtk.Align.FILL)
         self.text_view.set_hexpand(True)
         self.text_view.set_halign(Gtk.Align.FILL)
+        self.save_button = OverlaySaveButton()
+        self.save_button.add(scrolled(self.text_view))
 
         buffer_.create_tag("original", weight=Pango.Weight.BOLD)
         buffer_.create_tag("normal")
@@ -295,7 +333,7 @@ When done, click the `Run Script` button below.
             Gtk.StackTransitionType.OVER_RIGHT_LEFT
         )
 
-        self.left_stack.add_named(scrolled(self.text_view), 'script')
+        self.left_stack.add_named(self.save_button, 'script')
         self.left_stack.add_named(scrolled(self.run_label), 'list')
 
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
