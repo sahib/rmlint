@@ -309,14 +309,14 @@ class SettingsView(View):
                 row = info['widget']
                 if query in info['summary'] or query in info['description']:
                     section_visible += 1
-                    row.show()
+                    row.set_sensitive(True)
                 else:
-                    row.hide()
+                    row.set_sensitive(False)
 
             section_frame = metadata['frame']
             section_label = metadata['label']
-            section_frame.set_visible(section_visible > 0)
-            section_label.set_visible(section_visible > 0)
+            section_frame.set_sensitive(section_visible > 0)
+            section_label.set_sensitive(section_visible > 0)
 
             listbox = self.sections[section.lower()]
             grand_children = [child.get_child() for child in listbox]
@@ -324,7 +324,7 @@ class SettingsView(View):
             prev_was_sep = True
             for idx, child in enumerate(grand_children):
                 if isinstance(child, Gtk.Separator):
-                    child.set_visible(
+                    child.set_sensitive(
                         not (prev_was_sep or idx == section_visible * 2 - 1)
                     )
 
