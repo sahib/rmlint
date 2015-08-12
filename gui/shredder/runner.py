@@ -319,6 +319,9 @@ class Script(GObject.Object):
     def create_dummy():
         """Create a empty dummy script for testing purpose"""
         _, path = tempfile.mkstemp(prefix='.')
+        with open(path, 'w') as handle:
+            handle.write('#!/bin/sh\n\nBleep!\nBlop!\nIm a bot!')
+
         return Script(path)
 
     def read(self):

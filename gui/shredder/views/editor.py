@@ -61,6 +61,50 @@ try:
 
         return view, buffer_
 
+    class _SearchRun:
+        """Represent a run through all matches relative a query."""
+        def __init__(self, buffer_, query):
+            settings = GtkSource.SearchSettings()
+            settings.set_search_text(query)
+            settings.set_case_sensitive(False)
+
+            self.ctx = GtkSource.SearchContext.new(buffer_, settings)
+            self.ctx.set_highlight(True)
+            self.ctx.set_match_style(GtkSource.Style(underline=True))
+            self._last_mark = None
+
+        @property
+        def query(self):
+            """Query of this search run"""
+            return self.ctx.get_settings().get_search_text()
+
+        def next_hop(self, view):
+            """Return a GtkTextMark pointing at the next find or None.
+
+            All matching items will be highlighted by default.
+            """
+            # Find out at which position we were last:
+            buffer_ = self.ctx.props.buffer
+            if self._last_mark is None:
+                offset = buffer_.get_start_iter()
+            else:
+                offset = buffer_.get_iter_at_mark(self._last_mark)
+
+            # Trigger actual searching:
+            self.ctx.forward_async(offset, None, self.on_forward_finish, view)
+
+        def on_forward_finish(self, source, result, view):
+            """Called once GtkSourceSearchContext has finished processing."""
+            valid, start, end = self.ctx.forward_finish(result)
+            self._last_mark = None
+
+            # Select & remember mark for next hop
+            if valid:
+                buffer_ = self.ctx.props.buffer
+                buffer_.select_range(start, end)
+                self._last_mark = buffer_.create_mark(None, end, True)
+                view.scroll_mark_onscreen(self._last_mark)
+
     def _set_source_style(view, style_name):
         """If supported, set a color scheme by name."""
         style = GtkSource.StyleSchemeManager.get_default().get_scheme(
@@ -78,14 +122,22 @@ try:
         buffer_.set_language(language)
 
 # Fallback to the normal Gtk.TextView if no GtkSource.View could be imported
+# This is the bare minimum we support. It's neither pretty nor very useful.
 except ImportError:
     LOGGER.info('No GtkSourceView found.')
 
     def _create_source_view():
         """Create a suitable text view + buffer for showing a sh script."""
-        buffer_ = Gtk.Buffer()
+        buffer_ = Gtk.TextBuffer()
         view = Gtk.TextView()
         return view, buffer_
+
+    class _SearchRun:
+        def __init__(self, *args, **kwargs):
+            self.query = None
+
+        def next_hop(self, *args, **kwargs):
+            pass
 
     def _set_source_style(*_):
         """If supported, set a color scheme by name."""
@@ -512,6 +564,14 @@ When done, click the `Run Script` button below.
         )
         self.add(grid)
 
+        self._last_search = None
+        self.search_entry.connect(
+            'search-changed', self.on_search_changed
+        )
+        self.search_entry.connect(
+            'next-match', self.on_search_changed
+        )
+
     def _switch_back(self):
         """Switch back from delete-view to script view"""
         self.run_button.set_sensitive(False)
@@ -528,6 +588,25 @@ When done, click the `Run Script` button below.
         _set_source_style(self.text_view, 'solarized-light')
         _set_source_lang(self.text_view, 'sh')
         self.stack.set_visible_child_name('danger')
+
+    def on_search_changed(self, _):
+        """Called once the user enteres a new search query."""
+        query = self.search_entry.get_text().lower()
+        buffer_ = self.text_view.get_buffer()
+
+        # If query is empty, just deselect everything.
+        if not query:
+            buffer_.select_range(
+                buffer_.get_start_iter(),
+                buffer_.get_start_iter()
+            )
+
+        # Check if query changed and if we need to get a new search ctx
+        if self._last_search is None or self._last_search.query != query:
+            self._last_search = _SearchRun(buffer_, query)
+
+        # Jump one position ahead (or do initial search)
+        self._last_search.next_hop(self.text_view)
 
     def on_run_script_clicked(self, _):
         """The critical function callback that is run when action is done."""
