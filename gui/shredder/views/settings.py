@@ -149,12 +149,16 @@ class SettingsView(View):
 
         self.save_settings = False
         self.sections = {}
+        self.metadata = {}
 
         self.appy_btn = SuggestedButton()
         self.deny_btn = DestructiveButton('Reset to defaults')
 
         self.appy_btn.connect('clicked', self.on_apply_settings)
         self.deny_btn.connect('clicked', self.on_reset_to_defaults)
+        self.search_entry.connect(
+            'search-changed', self.on_search_changed
+        )
 
         # Initialize from current settings:
         self.build()
@@ -179,10 +183,13 @@ class SettingsView(View):
         label.set_margin_bottom(2)
 
         self.sections[heading.lower()] = box
+        self.metadata[heading.lower()] = {
+            'label': label, 'frame': frame
+        }
         self._grid.attach(label, 0, len(self._grid), 1, 1)
         self._grid.attach(frame, 0, len(self._grid), 1, 1)
 
-    def append_entry(self, section, val_widget, summary, desc=None):
+    def append_entry(self, section, val_widget, key_name, summary, desc=None):
         """Append an entry to a named section.
 
         section: A previously inserted section name.
@@ -222,6 +229,12 @@ class SettingsView(View):
         row.add(sub_grid)
         row.set_can_focus(False)
         listbox.insert(row, -1)
+
+        self.metadata[section.lower()][key_name] = {
+            'summary': summary or '',
+            'description': desc or '',
+            'widget': row
+        }
 
     def reset_to_defaults(self):
         """Reset whole view and keys to their defaults"""
@@ -269,7 +282,7 @@ class SettingsView(View):
                 section, _ = key_name.split('-', maxsplit=1)
 
             entry_rows.append(
-                (order, section, val_widget, summary, description)
+                (order, section, val_widget, key_name, summary, description)
             )
 
         for section in sorted(set([entry[1] for entry in entry_rows])):
@@ -281,6 +294,43 @@ class SettingsView(View):
     ####################
     # SIGNAL CALLBACKS #
     ####################
+
+    def on_search_changed(self, _):
+        """Called once the user enteres a new search query."""
+        query = self.search_entry.get_text().lower()
+
+        for section, metadata in self.metadata.items():
+            section_visible = 0
+
+            for key_name, info in metadata.items():
+                if key_name in ['label', 'frame']:
+                    continue
+
+                row = info['widget']
+                if query in info['summary'] or query in info['description']:
+                    section_visible += 1
+                    row.show()
+                else:
+                    row.hide()
+
+            section_frame = metadata['frame']
+            section_label = metadata['label']
+            section_frame.set_visible(section_visible > 0)
+            section_label.set_visible(section_visible > 0)
+
+            listbox = self.sections[section.lower()]
+            grand_children = [child.get_child() for child in listbox]
+
+            prev_was_sep = True
+            for idx, child in enumerate(grand_children):
+                if isinstance(child, Gtk.Separator):
+                    child.set_visible(
+                        not (prev_was_sep or idx == section_visible * 2 - 1)
+                    )
+
+                    prev_was_sep = True
+                elif child.is_visible():
+                    prev_was_sep = False
 
     def on_view_enter(self):
         """Called once the view is visible. Delay save of settings."""
