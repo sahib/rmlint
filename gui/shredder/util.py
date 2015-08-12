@@ -350,11 +350,11 @@ class View(Gtk.Grid):
         """Show the search bar.
         """
         # Trigger a fake keypress event on the search bar.
-        self.search_bar.set_search_mode(active)
         if active:
             self.search_bar.show()
         else:
-            self.search_bar.hide()
+            GLib.timeout_add(150, self.search_bar.hide)
+        self.search_bar.set_search_mode(active)
 
     @property
     def app_window(self):
