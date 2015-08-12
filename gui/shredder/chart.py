@@ -369,7 +369,6 @@ class RingChart(Chart):
         self._segment_list = []
         self.max_layers = 0
         self.recursive_angle(virt_root, 2 * math.pi, 0, virt_root.depth - 1)
-
         self._segment_list.sort(key=lambda node: node.layer)
 
         # Make sure we show the right total size

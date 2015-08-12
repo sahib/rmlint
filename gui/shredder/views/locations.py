@@ -99,8 +99,8 @@ class LocationEntry(Gtk.ListBoxRow):
         icon_img.set_vexpand(True)
         icon_img.set_valign(Gtk.Align.FILL)
 
-        self.check_box = Gtk.CheckButton()
-        self.check_box.connect('toggled', self.on_check_box_toggled)
+        self.check_box = Gtk.Switch()
+        self.check_box.connect('notify::active', self.on_check_box_toggled)
         self.check_box.set_tooltip_text('Prefer this directory?')
         self.check_box.set_margin_end(5)
         self.check_box.set_margin_top(13)
@@ -163,7 +163,7 @@ class LocationEntry(Gtk.ListBoxRow):
             size_widget.set_margin_end(20)
             grid.attach(size_widget, 6, 2, 1, 1)
 
-    def on_check_box_toggled(self, btn):
+    def on_check_box_toggled(self, btn, _):
         """Called once the `original` checkbox was hit."""
         ctx = self.get_style_context()
         if btn.get_active():
