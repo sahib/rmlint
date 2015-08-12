@@ -233,7 +233,7 @@ def _create_icon_stack():
     """Create a small widget that shows alternating icons."""
     icon_stack = Gtk.Stack()
     icon_stack.set_transition_type(
-        Gtk.StackTransitionType.SLIDE_LEFT_RIGHT
+        Gtk.StackTransitionType.CROSSFADE
     )
 
     for name, symbol in (('warning', '⚠'), ('danger', '☠')):
@@ -280,8 +280,14 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         self.confirm = SuggestedButton('Save')
         self.confirm.connect('clicked', self.on_save_clicked)
         self.confirm.set_halign(Gtk.Align.END)
-        self.confirm.set_hexpand(True)
+        self.confirm.set_hexpand(False)
         self.confirm.set_sensitive(False)
+
+        cancel_button = IconButton('window-close-symbolic', 'Cancel')
+        cancel_button.connect('clicked', self.on_cancel_clicked)
+        cancel_button.set_halign(Gtk.Align.END)
+        cancel_button.set_hexpand(False)
+        cancel_button.props.margin_end = 10
 
         self.connect('selection-changed', self.on_selection_changed)
 
@@ -295,6 +301,14 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
             1,
             1
         )
+        extra_box.attach_next_to(
+            cancel_button,
+            self.confirm,
+            Gtk.PositionType.LEFT,
+            1,
+            1
+        )
+
         extra_box.set_hexpand(True)
         extra_box.set_halign(Gtk.Align.FILL)
         self.set_extra_widget(extra_box)
@@ -320,6 +334,10 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
             except ValueError:
                 # No extension. Leave it.
                 pass
+
+    def on_cancel_clicked(self, _):
+        """Signal handler for the cancel button."""
+        self.emit('saved')
 
     def on_save_clicked(self, _):
         """Called once the user clicked the `Save` button"""
@@ -442,7 +460,7 @@ When done, click the `Run Script` button below.
 
         self.left_stack = Gtk.Stack()
         self.left_stack.set_transition_type(
-            Gtk.StackTransitionType.OVER_RIGHT_LEFT
+            Gtk.StackTransitionType.SLIDE_UP
         )
 
         self.left_stack.add_named(self.save_button, 'script')
