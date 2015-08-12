@@ -299,7 +299,11 @@ class SettingsView(View):
         """Called once the user enteres a new search query."""
         query = self.search_entry.get_text().lower()
 
-        for section, metadata in self.metadata.items():
+        def _set_vis(widget, state, lower):
+            widget.set_sensitive(state)
+            widget.set_opacity(1.0 if state else lower)
+
+        for _, metadata in self.metadata.items():
             section_visible = 0
 
             for key_name, info in metadata.items():
@@ -309,14 +313,14 @@ class SettingsView(View):
                 row = info['widget']
                 if query in info['summary'] or query in info['description']:
                     section_visible += 1
-                    row.set_sensitive(True)
+                    _set_vis(row, True, 0.5)
                 else:
-                    row.set_sensitive(False)
+                    _set_vis(row, False, 0.5)
 
             section_frame = metadata['frame']
             section_label = metadata['label']
-            section_frame.set_sensitive(section_visible > 0)
-            section_label.set_sensitive(section_visible > 0)
+            _set_vis(section_frame, section_visible > 0, 0.2)
+            _set_vis(section_label, section_visible > 0, 0.2)
 
     def on_view_enter(self):
         """Called once the view is visible. Delay save of settings."""
