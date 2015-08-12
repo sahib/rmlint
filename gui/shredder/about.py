@@ -3,12 +3,16 @@
 
 # Stdlib:
 import re
+import logging
 
 # Internal
 from shredder import APP_TITLE, APP_DESCRIPTION
 
 # External:
 from gi.repository import Gtk, Gio
+
+
+LOGGER = logging.getLogger('about')
 
 
 MAIN_AUTHORS = [
@@ -44,6 +48,15 @@ class AboutDialog(Gtk.AboutDialog):
     def __init__(self, app_win):
         Gtk.AboutDialog.__init__(self)
 
+        try:
+            buttons = list(self.get_action_area())
+            close_button = buttons[2]
+            close_button.connect('clicked', lambda _: self.destroy())
+            license_button = buttons[1]
+            license_button.set_no_show_all(True)
+        except IndexError:
+            LOGGER.error('GtkAboutDialog layout changed...')
+
         self.set_transient_for(app_win)
         self.set_modal(True)
         self.set_license_type(Gtk.License.GPL_3_0)
@@ -54,5 +67,29 @@ class AboutDialog(Gtk.AboutDialog):
         self.set_authors(MAIN_AUTHORS)
         self.set_documenters(DOCUMENTERS)
         self.set_website('http://rmlint.rtfd.org')
+        self.set_website_label('rmlint.rtfd.org')
         self.set_logo(None)
         self.show_all()
+
+
+if __name__ == '__main__':
+    def main():
+        import os
+        from shredder.application import _load_app_icon
+
+        win = Gtk.Window()
+        win.connect('destroy', Gtk.main_quit)
+        win.show_all()
+
+        rel_dir = os.path.dirname(__file__)
+        resource_file = os.path.join(rel_dir, 'resources/shredder.gresource')
+        resource_bundle = Gio.Resource.load(resource_file)
+        Gio.resources_register(resource_bundle)
+        win.set_default_icon(_load_app_icon())
+
+        about = AboutDialog(win)
+        about.show()
+
+        Gtk.main()
+
+    main()
