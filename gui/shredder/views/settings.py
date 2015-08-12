@@ -231,8 +231,8 @@ class SettingsView(View):
         listbox.insert(row, -1)
 
         self.metadata[section.lower()][key_name] = {
-            'summary': summary or '',
-            'description': desc or '',
+            'summary': summary.lower() or '',
+            'description': desc.lower() or '',
             'widget': row
         }
 
@@ -317,20 +317,6 @@ class SettingsView(View):
             section_label = metadata['label']
             section_frame.set_sensitive(section_visible > 0)
             section_label.set_sensitive(section_visible > 0)
-
-            listbox = self.sections[section.lower()]
-            grand_children = [child.get_child() for child in listbox]
-
-            prev_was_sep = True
-            for idx, child in enumerate(grand_children):
-                if isinstance(child, Gtk.Separator):
-                    child.set_sensitive(
-                        not (prev_was_sep or idx == section_visible * 2 - 1)
-                    )
-
-                    prev_was_sep = True
-                elif child.is_visible():
-                    prev_was_sep = False
 
     def on_view_enter(self):
         """Called once the view is visible. Delay save of settings."""
