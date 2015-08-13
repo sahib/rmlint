@@ -667,7 +667,7 @@ class ChoiceRow(Gtk.ListBoxRow):
         icon_name, dim_down = checkmark_table[(self.is_default, bool(state))]
         if icon_name is not None:
             self.symbol.set_from_gicon(
-                Gio.ThemedIcon(name=icon_name), Gtk.IconSize.BUTTON
+                Gio.ThemedIcon(name=icon_name), Gtk.IconSize.MENU
             )
 
         ctx = self.symbol.get_style_context()
@@ -676,7 +676,7 @@ class ChoiceRow(Gtk.ListBoxRow):
             self.symbol.set_opacity(0.5)
         else:
             ctx.remove_class(Gtk.STYLE_CLASS_DIM_LABEL)
-            self.symbol.set_opacity(1.0)
+            self.symbol.set_opacity(0.7)
 
 
 class CurrentChoiceLabel(Gtk.Label):
@@ -725,7 +725,6 @@ class MultipleChoiceButton(Gtk.Button):
     def __init__(self, values, default, selected, summary, capitalize=False):
         Gtk.Button.__init__(self)
         self._selected_row = None
-
         self.set_relief(Gtk.ReliefStyle.NONE)
         self.set_can_focus(False)
 
@@ -743,23 +742,6 @@ class MultipleChoiceButton(Gtk.Button):
         self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
         self.listbox.set_activate_on_single_click(True)
         self.listbox.connect('row-activated', self.on_update_value, popover)
-
-        # Createh the header:
-        listbox_header = Gtk.Label(
-            '<small><b>{txt}?</b></small>'.format(txt=summary)
-        )
-        listbox_header.get_style_context().add_class(
-            Gtk.STYLE_CLASS_DIM_LABEL
-        )
-        listbox_header.set_use_markup(True)
-        listbox_header.set_size_request(90, -1)
-
-        for widget in Gtk.Separator(), listbox_header:
-            row = Gtk.ListBoxRow()
-            row.set_selectable(False)
-            row.set_activatable(False)
-            row.add(widget)
-            self.listbox.prepend(row)
 
         # Add a decorative frame:
         frame = Gtk.Frame()
