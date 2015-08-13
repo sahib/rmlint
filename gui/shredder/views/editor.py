@@ -322,6 +322,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         self.set_select_multiple(False)
         self.set_create_folders(False)
         self.set_action(Gtk.FileChooserAction.SAVE)
+        self.set_do_overwrite_confirmation(True)
 
         self.file_type = MultipleChoiceButton(
             ['sh', 'json', 'csv'],
