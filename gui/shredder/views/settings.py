@@ -331,13 +331,11 @@ class SettingsView(View):
         self.on_key_changed(self.app.settings, None)
         self.app.settings.connect('changed', self.on_key_changed)
 
-        self.app_window.add_header_widget(self.appy_btn)
-        self.app_window.add_header_widget(self.deny_btn, Gtk.Align.START)
+        self.add_header_widget(self.appy_btn)
+        self.add_header_widget(self.deny_btn, Gtk.Align.START)
 
     def on_view_leave(self):
         """Called once the view gets out of sight. Revert or apply."""
-        self.app_window.remove_header_widget(self.appy_btn)
-        self.app_window.remove_header_widget(self.deny_btn)
         if self.save_settings:
             self.app.settings.apply()
         else:

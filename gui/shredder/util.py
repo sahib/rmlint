@@ -259,6 +259,7 @@ class View(Gtk.Grid):
         self._app = app
         self._sub_title = sub_title or View.sub_title.default
         self._is_visible = False
+        self._header_widgets = []
 
         self.progressbar = Gtk.ProgressBar()
         self.progressbar.set_name('ShredderProgress')
@@ -311,6 +312,8 @@ class View(Gtk.Grid):
         """Hidden method that is called once the view gets out of sight.
         If possible the change will be propagated down.
         """
+        self.clear_header_widgets()
+
         self._is_visible = False
         if hasattr(self, 'on_view_leave'):
             self.on_view_leave()
@@ -381,6 +384,24 @@ class View(Gtk.Grid):
     def is_visible(self):
         """Is the view currently visible to the user?"""
         return self._is_visible
+
+    def add_header_widget(self, widget, align=Gtk.Align.END):
+        """Add a widget to the header, either left or right of the title.
+        """
+        self.app_window.add_header_widget(widget, align)
+        self._header_widgets.append(widget)
+
+    def remove_header_widget(self, widget):
+        """Remove a previously added headerwidget. Noop if it did not exist"""
+        self._header_widgets.remove(widget)
+        self.app_window.remove_header_widget(widget)
+
+    def clear_header_widgets(self):
+        """Clear all widget headers of this view"""
+        for widget in self._header_widgets:
+            self.app_window.remove_header_widget(widget)
+
+        self._header_widgets = []
 
 
 class PopupMenu(Gtk.Menu):

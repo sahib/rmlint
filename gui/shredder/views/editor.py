@@ -363,8 +363,8 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         self.extra_box.set_halign(Gtk.Align.FILL)
 
     def show_controls(self):
-        self.editor_view.app_window.add_header_widget(self.extra_box)
-        self.editor_view.app_window.add_header_widget(
+        self.editor_view.add_header_widget(self.extra_box)
+        self.editor_view.add_header_widget(
             self.cancel_button, align=Gtk.Align.START
         )
 
@@ -393,9 +393,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
 
     def _exit_from_save(self):
         self.emit('saved')
-
-        self.editor_view.app_window.remove_header_widget(self.extra_box)
-        self.editor_view.app_window.remove_header_widget(self.cancel_button)
+        self.editor_view.clear_header_widgets()
 
     def on_cancel_clicked(self, _):
         """Signal handler for the cancel button."""

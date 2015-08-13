@@ -389,7 +389,7 @@ class LocationView(View):
 
     def on_view_enter(self):
         """Called when the view gets visible."""
-        self.app_window.add_header_widget(self.chooser_button)
+        self.add_header_widget(self.chooser_button)
         self.chooser_button.show_all()
 
         # If no process is currently running it should not be
@@ -399,10 +399,6 @@ class LocationView(View):
             GLib.idle_add(
                 lambda: self.app_window.views.go_right.set_sensitive(False)
             )
-
-    def on_view_leave(self):
-        """Called when the view gets out of sight."""
-        self.app_window.remove_header_widget(self.chooser_button)
 
     def on_chooser_button_clicked(self, _):
         """Button click on the location chooser."""
@@ -420,14 +416,14 @@ class LocationView(View):
 
         close_button = IconButton('window-close-symbolic', 'Cancel')
 
-        self.app_window.add_header_widget(open_button)
-        self.app_window.add_header_widget(close_button, align=Gtk.Align.START)
+        self.add_header_widget(open_button)
+        self.add_header_widget(close_button, align=Gtk.Align.START)
 
         def _go_back():
             """Switch back to the LocationEntry list."""
             self.app_window.remove_header_widget(open_button)
             self.app_window.remove_header_widget(close_button)
-            self.app_window.add_header_widget(self.chooser_button)
+            self.add_header_widget(self.chooser_button)
             self.stack.set_visible_child_name('list')
             self.app_window.views.go_right.set_sensitive(True)
             self.app_window.views.go_left.set_sensitive(True)
