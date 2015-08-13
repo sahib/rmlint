@@ -46,10 +46,10 @@ REMOVED_LABEL = '''<big>{s}</big><small> removed</small>
 try:
     from gi.repository import GtkSource
 
-    LOGGER.info('Using GtkSourceView since we have it.')
-
     def _create_source_view():
         """Create a suitable text view + buffer for showing a sh script."""
+        LOGGER.info('Using GtkSourceView since we have it.')
+
         buffer_ = GtkSource.Buffer()
         buffer_.set_highlight_syntax(True)
 
@@ -124,19 +124,22 @@ try:
 # Fallback to the normal Gtk.TextView if no GtkSource.View could be imported
 # This is the bare minimum we support. It's neither pretty nor very useful.
 except ImportError:
-    LOGGER.info('No GtkSourceView found.')
 
     def _create_source_view():
         """Create a suitable text view + buffer for showing a sh script."""
+        LOGGER.info('No GtkSourceView found.')
+
         buffer_ = Gtk.TextBuffer()
         view = Gtk.TextView()
         return view, buffer_
 
     class _SearchRun:
+        """Dummy search functor that does nothing."""
         def __init__(self, *args, **kwargs):
             self.query = None
 
         def next_hop(self, *args, **kwargs):
+            """No-op"""
             pass
 
     def _set_source_style(*_):
@@ -287,6 +290,7 @@ def _create_icon_stack():
     icon_stack.set_transition_type(
         Gtk.StackTransitionType.CROSSFADE
     )
+    icon_stack.set_transition_duration(100)
 
     for name, symbol in (('warning', '⚠'), ('danger', '☠')):
         icon_label = Gtk.Label(
@@ -335,37 +339,36 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         self.confirm.set_hexpand(False)
         self.confirm.set_sensitive(False)
 
-        cancel_button = IconButton('window-close-symbolic', 'Cancel')
-        cancel_button.connect('clicked', self.on_cancel_clicked)
-        cancel_button.set_halign(Gtk.Align.END)
-        cancel_button.set_hexpand(False)
-        cancel_button.props.margin_end = 10
+        self.cancel_button = IconButton('window-close-symbolic', 'Cancel')
+        self.cancel_button.connect('clicked', self.on_cancel_clicked)
+        self.cancel_button.set_halign(Gtk.Align.END)
+        self.cancel_button.set_hexpand(False)
+        self.cancel_button.props.margin_end = 10
 
         self.connect('selection-changed', self.on_selection_changed)
 
-        extra_box = Gtk.Grid()
-        extra_box.attach(self.file_type, 0, 0, 1, 1)
-        extra_box.attach(self.confirm, 1, 0, 1, 1)
-        extra_box.attach_next_to(
+        self.extra_box = Gtk.Grid()
+        self.extra_box.attach(self.file_type, 0, 0, 1, 1)
+        self.extra_box.attach(self.confirm, 1, 0, 1, 1)
+        self.extra_box.attach_next_to(
             Gtk.Label('Filetype: '),
             self.file_type,
             Gtk.PositionType.LEFT,
             1,
             1
         )
-        extra_box.attach_next_to(
-            cancel_button,
-            self.confirm,
-            Gtk.PositionType.LEFT,
-            1,
-            1
+
+        self.extra_box.set_hexpand(True)
+        self.extra_box.set_halign(Gtk.Align.FILL)
+
+    def show_controls(self):
+        self.editor_view.app_window.add_header_widget(self.extra_box)
+        self.editor_view.app_window.add_header_widget(
+            self.cancel_button, align=Gtk.Align.START
         )
 
-        extra_box.set_hexpand(True)
-        extra_box.set_halign(Gtk.Align.FILL)
-        self.set_extra_widget(extra_box)
-
         self.update_file_suggestion()
+
 
     def update_file_suggestion(self):
         """Suggest a name for the script to save."""
@@ -387,9 +390,15 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
                 # No extension. Leave it.
                 pass
 
+    def _exit_from_save(self):
+        self.emit('saved')
+
+        self.editor_view.app_window.remove_header_widget(self.extra_box)
+        self.editor_view.app_window.remove_header_widget(self.cancel_button)
+
     def on_cancel_clicked(self, _):
         """Signal handler for the cancel button."""
-        self.emit('saved')
+        self._exit_from_save()
 
     def on_save_clicked(self, _):
         """Called once the user clicked the `Save` button"""
@@ -398,7 +407,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
 
         LOGGER.info('Saving script to: %s', abs_path)
         self.editor_view.get_script().save(abs_path, file_type)
-        self.emit('saved')
+        self._exit_from_save()
 
     def on_selection_changed(self, _):
         """Called once a file or directory was clicked"""
@@ -497,6 +506,10 @@ When done, click the `Run Script` button below.
         self.save_button.connect(
             'save-clicked',
             lambda _: self.left_stack.set_visible_child_name('chooser')
+        )
+        self.save_button.connect(
+            'save-clicked',
+            lambda _: self.save_chooser.show_controls()
         )
         self.save_chooser.connect(
             'saved',

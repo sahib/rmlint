@@ -114,5 +114,5 @@ class Application(Gtk.Application):
         LOGGER.debug('Done instancing views.')
 
         # Set the default view visible at startup
-        self.win.views.switch('locations')
+        self.win.views.switch('editor')
         self.win.show_all()
