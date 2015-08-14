@@ -11,6 +11,7 @@ Notable classes:
 """
 
 # Stdlib:
+import logging
 from functools import partial
 from gettext import gettext
 
@@ -23,6 +24,7 @@ import shredder
 
 
 _ = gettext
+LOGGER = logging.getLogger('window')
 
 
 class ViewSwitcher(Gtk.Box):
@@ -122,6 +124,10 @@ class ViewSwitcher(Gtk.Box):
 
     def switch(self, name):
         """Switch to a certain view by name."""
+        if name == self._stack.get_visible_child_name():
+            LOGGER.warning('view `%s` already visible.', name)
+            return
+
         widget = self._stack.get_child_by_name(name)
         self._set_visible_child(widget)
         self._update_sensitivness()
