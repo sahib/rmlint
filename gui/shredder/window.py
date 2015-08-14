@@ -185,6 +185,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         main_menu = Gio.Menu()
         main_menu.append_item(
+            _create_item(_('Settings'), 'app.settings', 'emblem-system')
+        )
+        main_menu.append_item(
             _create_item(_('About'), 'app.about', 'help-about')
         )
         main_menu.append_item(

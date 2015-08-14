@@ -87,6 +87,9 @@ class Application(Gtk.Application):
         self.win = MainWindow(self)
 
         self.add_action(_create_action(
+            'settings', lambda *_: self.win.views.switch('settings')
+        ))
+        self.add_action(_create_action(
             'about', lambda *_: AboutDialog(self.win).show_all()
         ))
         self.add_action(_create_action(
