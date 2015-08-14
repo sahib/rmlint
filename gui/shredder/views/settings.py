@@ -334,6 +334,11 @@ class SettingsView(View):
         self.add_header_widget(self.appy_btn)
         self.add_header_widget(self.deny_btn, Gtk.Align.START)
 
+        # It's usually more useful when switching back to the latest view,
+        # not to the view to the right since user might just have wanted
+        # to have a quick settings change from anywhere in the application.
+        self.app_window.views.switch_to_previous_next()
+
     def on_view_leave(self):
         """Called once the view gets out of sight. Revert or apply."""
         if self.save_settings:
@@ -355,6 +360,7 @@ class SettingsView(View):
         )
 
         self.save_settings = False
+        self.app_window.views.switch_to_previous()
 
     def on_key_changed(self, settings, _):
         """Called when a key in GSettings changes."""

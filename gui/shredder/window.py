@@ -33,6 +33,7 @@ class ViewSwitcher(Gtk.Box):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL)
         self._stack = stack
         self._prev = None
+        self._switch_to_previous_next = False
 
         # Make the buttons appear connected:
         self.get_style_context().add_class('linked')
@@ -71,6 +72,13 @@ class ViewSwitcher(Gtk.Box):
 
     def _set_widget_at(self, _=None, step=+1):
         """Step right (or left if step is negative) from current view"""
+
+        if self._switch_to_previous_next:
+            self._switch_to_previous_next = False
+            if self._prev:
+                self.switch_to_previous()
+                return
+
         current_idx = self._find_curr_index()
         next_widget = self._get_widget_at(current_idx + step)
         self._set_visible_child(next_widget)
@@ -125,6 +133,10 @@ class ViewSwitcher(Gtk.Box):
 
         self._set_visible_child(self._prev, update_prev=False)
         self._update_sensitivness()
+
+    def switch_to_previous_next(self):
+        """Next click on direction buttons will call switch_to_previous()"""
+        self._switch_to_previous_next = True
 
     def set_search_mode(self, mode):
         """Activate or deactivate search bar for current view."""
