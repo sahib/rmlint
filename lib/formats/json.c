@@ -184,6 +184,10 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "args", session->cfg->joined_argv);
             rm_fmt_json_sep(self, out);
+            rm_fmt_json_key(out, "version", RM_VERSION);
+            rm_fmt_json_sep(self, out);
+            rm_fmt_json_key(out, "rev", RM_VERSION_GIT_REVISION);
+            rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "progress", 0); /* Header is always first. */
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "checksum_type",
