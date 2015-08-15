@@ -1180,8 +1180,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
               HIDDEN = G_OPTION_FLAG_HIDDEN, OPTIONAL = G_OPTION_FLAG_OPTIONAL_ARG;
 
     /* Free/Used Options:
-       Free: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxX
-       Used                   jJ                               Z
+       Used: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxXyY
+       Free:                  jJ                              zZ
     */
 
     /* clang-format off */

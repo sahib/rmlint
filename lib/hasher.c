@@ -420,7 +420,6 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer ta
 gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink) {
     guint64 bytes_read = 0;
     if (is_symlink) {
-        rm_log_error("reading symlink as symlink\n");
         bytes_read = rm_hasher_symlink_read(task->hasher, task->digest, path);
     } else if (task->hasher->use_buffered_read) {
         bytes_read = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest, path, start_offset, bytes_to_read);
