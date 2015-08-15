@@ -1161,6 +1161,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* Handle --gui before all other processing,
      * since we need to pass other args to the python interpreter.
+     * This is not possible with GOption alone.
      */
     if(rm_cmd_maybe_switch_to_gui(argc, (const char **)argv) == EXIT_FAILURE) {
         rm_log_error_line(_("Could not start graphical user interface."));
@@ -1264,7 +1265,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"version", 0, EMPTY, G_OPTION_ARG_CALLBACK, rm_cmd_show_version,
          _("Show the version & features"), NULL},
         /* Dummy option for --help output only: */
-        {"gui", 0, EMPTY, G_OPTION_ARG_NONE, NULL,
+        {"gui", 0, 0, G_OPTION_ARG_NONE, NULL,
          _("If installed, start the optional gui with all following args"), NULL},
 
         /* Special case: accumulate leftover args (paths) in &paths */
