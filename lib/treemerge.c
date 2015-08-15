@@ -679,7 +679,7 @@ static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *direc
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
-        rm_fmt_write(file, self->session->formats);
+        rm_fmt_write(file, self->session->formats, -1);
         g_hash_table_add(self->was_printed, file);
     }
 

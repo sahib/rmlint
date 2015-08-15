@@ -777,7 +777,7 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
             file->digest = (file->digest) ? file->digest : file->shred_group->digest;
 
             if(file->digest) {
-                rm_fmt_write(file, session->formats);
+                rm_fmt_write(file, session->formats, -1);
                 rm_shred_write_cksum_to_xattr(session, file);
                 file->digest = NULL;
             }
@@ -1418,7 +1418,10 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 #endif
 
     /* Hand it over to the printing module */
-    g_queue_foreach(group, (GFunc)rm_fmt_write, session->formats);
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        rm_fmt_write(file, session->formats, group->length);
+    }
 }
 
 static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {

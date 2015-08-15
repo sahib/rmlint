@@ -286,6 +286,10 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
         if(file->lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {
             rm_fmt_json_key_int(out, "size", file->file_size);
             rm_fmt_json_sep(self, out);
+            if(file->twin_count >= 0) {
+                rm_fmt_json_key_int(out, "twins", file->twin_count);
+                rm_fmt_json_sep(self, out);
+            }
             rm_fmt_json_key_int(out, "depth", file->depth);
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "inode", file->inode);

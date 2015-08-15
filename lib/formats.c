@@ -336,8 +336,11 @@ void rm_fmt_close(RmFmtTable *self) {
     g_slice_free(RmFmtTable, self);
 }
 
-void rm_fmt_write(RmFile *result, RmFmtTable *self) {
+void rm_fmt_write(RmFile *result, RmFmtTable *self, gint64 twin_count) {
     bool direct = !(self->session->cfg->cache_file_structs);
+    
+    result->twin_count = twin_count;
+
     if(direct) {
         rm_fmt_write_impl(result, self);
     } else {

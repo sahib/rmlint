@@ -543,7 +543,7 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
 
             num_handled++;
 
-            rm_fmt_write(file, session->formats);
+            rm_fmt_write(file, session->formats, -1);
         }
 
         if(!session->cfg->cache_file_structs) {

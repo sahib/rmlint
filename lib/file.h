@@ -184,10 +184,21 @@ typedef struct RmFile {
      */
     RmOff file_size;
 
-    /* How many bytes were already read.
-     * (lower or equal file_size)
+    /* Those are never used at the same time.
+     * hash_offset is used during computation,
+     * twin_count during output.
      */
-    RmOff hash_offset;
+    union {
+        /* How many bytes were already read.
+        * (lower or equal file_size)
+        */
+        RmOff hash_offset;
+
+        /* Count of twins of this file.
+         * (i.e. length of group of this file)
+         */
+        gint64 twin_count;
+    };
 
     /* Flag for when we do intermediate steps within a hash increment because the file is
      * fragmented */

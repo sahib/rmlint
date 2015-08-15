@@ -468,7 +468,7 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
         }
 
         rm_parrot_update_stats(cage, file);
-        rm_fmt_write(file, cage->session->formats);
+        rm_fmt_write(file, cage->session->formats, group->length);
     }
 }
 
