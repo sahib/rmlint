@@ -59,7 +59,7 @@ class Column:
 
     Only this class needs to be changed when adding/modifying columns.
     """
-    SELECTED, PATH, SIZE, COUNT, MTIME, TAG, TOOLTIP = range(7)
+    SELECTED, SIZE, COUNT, MTIME, TAG, PATH, TOOLTIP = range(7)
     TYPES = [bool, str, int, int, int, int]
 
     @staticmethod
@@ -75,14 +75,16 @@ class Column:
             tag = IndicatorLabel.THEME
 
         # Use a list so we can update the counts and size later:
+        # Note1: PATH and TOOLTIP are not included.
+        #        Those are generated on demand.
+        # Note2: Twins is negative, to differentiate between
+        #        directory count and number of twins (!= 0)
         return [
             is_original,
-            '',
             md_map.get('size', 0),
-            0,
+            -md_map.get('twins', 0),
             md_map.get('mtime', 0),
-            tag,
-            ''
+            tag
         ]
 
 
@@ -147,8 +149,6 @@ class PathNode:
         """
         self.is_leaf = True
         self.row = row
-
-        row[Column.COUNT] = -1
 
         # Update intermediate directories top of it:
         for parent in (node for node in self.up() if not node.is_leaf):
