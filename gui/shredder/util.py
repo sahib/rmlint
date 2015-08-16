@@ -473,7 +473,7 @@ class CellRendererSize(Gtk.CellRendererText):
 
 def _rnd(num):
     """Round to minimal decimal places & convert to str"""
-    if num % 1:
+    if round(num, 1) % 1:
         return str(round(num, 1))
     else:
         return str(int(num))
