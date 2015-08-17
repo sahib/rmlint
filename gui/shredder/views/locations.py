@@ -226,7 +226,7 @@ class LocationView(View):
         self.volume_monitor.connect('mount-changed', self.refill_entries)
         self.refill_entries()
 
-        run_button = IconButton('emblem-system', 'Scan folders')
+        run_button = IconButton('edit-find-symbolic', 'Scan folders')
         run_button.connect('clicked', self._run_clicked)
         run_button.get_style_context().add_class(
             Gtk.STYLE_CLASS_SUGGESTED_ACTION

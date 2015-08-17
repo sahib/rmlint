@@ -122,12 +122,10 @@ def map_cfg(option, val):
     return option.MAPPING.value.get(val)
 
 
-def _create_rmlint_process(cfg, untagged, tagged, replay_path=None, outputs=None):
+def _create_rmlint_process(cfg, cwd, untagged, tagged, replay_path=None, outputs=None):
     """Create a correctly configured rmlint GSuprocess for gui purposes.
     If `replay_path` is not None, "--replay `replay_path`" will be appended.
     """
-    cwd = tempfile.mkdtemp(suffix=APP_TITLE, prefix='.tmp')
-
     try:
         launcher = Gio.SubprocessLauncher.new(
             Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
@@ -315,7 +313,8 @@ class Runner(GObject.Object):
         """
         self.was_replayed = False
         self.process = _create_rmlint_process(
-            self.settings, self.untagged_paths, self.tagged_paths
+            self.settings, self._tmpdir.name,
+            self.untagged_paths, self.tagged_paths
         )
         self._data_stream = Gio.DataInputStream.new(
             self.process.get_stdout_pipe()
@@ -376,6 +375,7 @@ class Runner(GObject.Object):
 
         process = _create_rmlint_process(
             self.settings,
+            self._tmpdir.name,
             self.untagged_paths, self.tagged_paths,
             replay_path=replay_path,
             outputs=[
