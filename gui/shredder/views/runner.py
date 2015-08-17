@@ -13,6 +13,7 @@ import logging
 # External:
 from gi.repository import Gtk
 from gi.repository import GLib
+from gi.repository import GObject
 
 # Internal:
 from shredder.util import View, IconButton
@@ -26,6 +27,10 @@ LOGGER = logging.getLogger('runview')
 
 class ResultActionBar(Gtk.ActionBar):
     """Down right bar with the controls"""
+    __gsignals__ = {
+        'generate-script': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
+
     def __init__(self, view):
         Gtk.ActionBar.__init__(self)
 
@@ -53,7 +58,7 @@ class ResultActionBar(Gtk.ActionBar):
             Gtk.STYLE_CLASS_SUGGESTED_ACTION
         )
         self.script_btn.connect(
-            'clicked', lambda _: view.app_window.views.switch('editor')
+            'clicked', lambda _: self.emit('generate-script')
         )
         self.script_btn.set_sensitive(False)
         self.pack_end(self.script_btn)
@@ -76,7 +81,7 @@ class RunnerView(View):
         View.__init__(self, app, 'Running…')
 
         # Public: The runner.
-        self.runner, self.script = None, None
+        self.runner = None
 
         self.last_paths = []
 
@@ -130,6 +135,10 @@ class RunnerView(View):
             'search-changed', self.on_search_changed
         )
 
+        self.actionbar.connect(
+            'generate-script', self.on_generate_script
+        )
+
     def trigger_run(self, paths):
         """Trigger a new run on all paths in `paths`"""
         # Remember last paths for rerun()
@@ -142,7 +151,7 @@ class RunnerView(View):
         self.runner = Runner(self.app.settings, paths)
         self.runner.connect('lint-added', self.on_add_elem)
         self.runner.connect('process-finished', self.on_process_finish)
-        self.script = self.runner.run()
+        self.runner.run()
 
         # Make sure the previous run is not visible anymore:
         self.model = PathTreeModel([])
@@ -236,3 +245,10 @@ class RunnerView(View):
         if iter_ is not None:
             node = model.iter_to_node(iter_)
             self.chart_stack.render(node)
+
+    def on_generate_script(self, _):
+        self.runner.replay({
+            ch.build_path(): ch[Column.SELECTED] for ch in self.model.trie if ch.is_leaf
+        })
+
+        self.app_window.views.switch('editor')

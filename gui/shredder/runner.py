@@ -11,8 +11,10 @@ The settings are described and defined in the settings schema.
 """
 
 # Stdlib:
+import os
 import json
 import errno
+import shutil
 import codecs
 import logging
 import tempfile
@@ -116,13 +118,13 @@ class CrossMountType(Enum):
 
 def map_cfg(option, val):
     """Helper function to save some characters"""
+    # TODO: Leave out if default?
     return option.MAPPING.value.get(val)
 
 
-def _create_rmlint_process(cfg, paths):
+def _create_rmlint_process(cfg, paths, replay_path=None, outputs=None):
     """Create a correctly configured rmlint GSuprocess for gui purposes.
-
-    Returns the working directory of the run and the actual process instance.
+    If `replay_path` is not None, "--replay `replay_path`" will be appended.
     """
     cwd = tempfile.mkdtemp(suffix=APP_TITLE, prefix='.tmp')
 
@@ -167,21 +169,28 @@ def _create_rmlint_process(cfg, paths):
             '--max-depth', str(cfg.get_int('traverse-max-depth'))
         ]
 
+        if replay_path:
+            extra_options += ['--replay', replay_path]
+
+        if outputs:
+            for output, path in outputs or []:
+                extra_options += [
+                    '-o', ':'.join([output, path])
+                ]
+        else:
+            # Default to json parsing.
+            extra_options += [
+                '-o', 'json',
+                '-c', 'json:oneline',
+            ]
+
         # Get rid of empty options:
         extra_options = [opt for opt in extra_options if opt]
-
-        # Find a place to put the script file:
-        sh_file = tempfile.NamedTemporaryFile(
-            suffix='.sh', delete=False
-        )
 
         cmdline = [
             'rmlint',
             '--no-with-color',
             # '--merge-directories',  # TODO: Disable for now.
-            '-o', 'sh:' + sh_file.name,
-            '-o', 'json',
-            '-c', 'json:oneline',
             '-T', 'duplicates'
         ] + extra_options + paths
 
@@ -196,15 +205,14 @@ def _create_rmlint_process(cfg, paths):
         # No point in going any further
         return None, None, None
     else:
-        return cwd, process, sh_file.name
-    finally:
-        sh_file.close()
+        return process
 
 
 class Runner(GObject.Object):
     """Wrapper class for a process of rmlint."""
     __gsignals__ = {
         'lint-added': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'replay-finished': (GObject.SIGNAL_RUN_FIRST, None, ()),
         'process-finished': (GObject.SIGNAL_RUN_FIRST, None, (str, ))
     }
 
@@ -214,11 +222,13 @@ class Runner(GObject.Object):
         self.settings, self.paths = settings, paths
         self._data_stream = self.process = self._message = None
 
-        # Working directory
-        self.cwd = None
+        # Temporary directory for storing formatted files
+        self._tmpdir = tempfile.TemporaryDirectory(prefix='shredder-')
 
         # Metadata about the run:
         self.element, self.header, self.footer = {}, {}, {}
+        self.objects = []
+        self.was_replayed = False
 
     def on_process_termination(self, process, result):
         """Called once GSuprocess sees it's child die."""
@@ -237,6 +247,16 @@ class Runner(GObject.Object):
             else:
                 # Nothing concrete to say it seems
                 self._message = err.message
+
+    def on_replay_finish(self, process, result):
+        try:
+            process.wait_check_finish(result)
+            LOGGER.info('`rmlint --replay` finished.')
+        except GLib.Error:
+            LOGGER.exception('Replay process failed')
+        finally:
+            self.emit('replay-finished')
+
 
     def _queue_read(self):
         """Schedule a async read on process's stdout"""
@@ -257,6 +277,7 @@ class Runner(GObject.Object):
         if not line:
             self.emit('process-finished', self._message)
             self._message = None
+            self.process = None
             return
 
         line = line.strip(', ')
@@ -277,6 +298,8 @@ class Runner(GObject.Object):
             elif 'aborted' in json_doc:
                 self.footer = json_doc
 
+            self.objects.append(json_doc)
+
         # Schedule another read:
         self._queue_read()
 
@@ -284,7 +307,8 @@ class Runner(GObject.Object):
         """Trigger the run of the rmlint process.
         Returns: a `Script` instance.
         """
-        self.cwd, self.process, sh_script = _create_rmlint_process(
+        self.was_replayed = False
+        self.process = _create_rmlint_process(
             self.settings, self.paths
         )
         self._data_stream = Gio.DataInputStream.new(
@@ -297,8 +321,93 @@ class Runner(GObject.Object):
         # Schedule some reads from stdout (where the json gets written)
         self._queue_read()
 
-        # Return the script associated with the run:
-        return Script(sh_script)
+    def get_json_path(self):
+        """Return /tmp/.../shredder.json if replay() was called in prior."""
+        return os.path.join(self._tmpdir.name, 'shredder.json')
+
+    def get_csv_path(self):
+        """Return /tmp/.../shredder.csv if replay() was called in prior."""
+        return os.path.join(self._tmpdir.name, 'shredder.csv')
+
+    def get_sh_path(self):
+        """Return /tmp/.../shredder.sh if replay() was called in prior."""
+        return os.path.join(self._tmpdir.name, 'shredder.sh')
+
+    def replay(self, allowed_paths=None):
+        """Replay the last run using --replay.
+
+        Together with `allowed_paths` this allows easy filtering
+        and re-formatting of the outputted files.
+        `allowed_paths` is a dictionary of paths to booleans (is_original).
+        """
+        # Filter the data points we want in the result.
+
+        try:
+            header, *data, footer = self.objects
+        except ValueError:
+            # Not enough values to unpack:
+            LOGGER.exception('Could not replay')
+            return
+
+        self.was_replayed = True
+        results = [header]
+
+        for point in data:
+            path = point['path']
+            if path is None:
+                continue
+
+            if allowed_paths is None or path in allowed_paths:
+                point['is_original'] = allowed_paths[path]
+                results.append(point)
+
+        results.append(footer)
+
+        # Write the replay script to filter the input.
+        replay_path = os.path.join(self._tmpdir.name, 'shredder.replay.json')
+        with open(replay_path, 'w') as handle:
+            handle.write(json.dumps(results))
+
+        process = _create_rmlint_process(
+            self.settings,
+            self.paths,
+            replay_path=replay_path,
+            outputs=[
+                ('sh', self.get_sh_path()),
+                ('csv', self.get_csv_path()),
+                ('json', self.get_json_path())
+            ]
+        )
+        process.wait_check_async(None, self.on_replay_finish)
+
+    def save(self, dest_path, file_type='sh'):
+        """Save the output to `path`.
+        The script can be converted to a different format if necessary.
+        Valid formats are:
+
+            - sh
+            - json
+            - csv
+        """
+        if not self.was_replayed:
+            LOGGER.error('Cannot save. replay() was not called.')
+            return
+
+        source_path_func = {
+            'sh': self.get_sh_path,
+            'csv': self.get_csv_path,
+            'json': self.get_json_path
+        }.get(file_type)
+
+        if source_path_func is None:
+            LOGGER.error('No valid file type `%s`.', file_type)
+            return
+
+        try:
+            shutil.copy(source_path_func(), dest_path)
+        except OSError:
+            LOGGER.exception('Could not save')
+
 
 
 class Script(GObject.Object):
@@ -340,20 +449,6 @@ class Script(GObject.Object):
         """
         with open(self.script_file, 'rb') as handle:
             return handle.read()
-
-    def save(self, path, file_type='sh'):
-        """Save the script to `path`.
-        The script can be converted to a different format if necessary.
-        Valid formats are:
-
-            - sh
-            - json
-            - csv
-        """
-        # TODO: Actually honour file_type.
-
-        with open(path, 'wb') as handle:
-            handle.write(self.read_bytes())
 
     def run(self, dry_run=True):
         """Run the script.

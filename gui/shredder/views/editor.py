@@ -370,7 +370,6 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
 
         self.update_file_suggestion()
 
-
     def update_file_suggestion(self):
         """Suggest a name for the script to save."""
         file_type = self.file_type.get_selected_choice() or 'sh'
@@ -404,8 +403,9 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         file_type = self.file_type.get_selected_choice()
         abs_path = self.get_filename()
 
-        LOGGER.info('Saving script to: %s', abs_path)
-        self.editor_view.get_script().save(abs_path, file_type)
+        runner = self.editor_view.app_window.views['runner'].runner
+        LOGGER.info('Saving script as `%s` to: %s', file_type, abs_path)
+        runner.save(abs_path, file_type)
         self._exit_from_save()
 
     def on_selection_changed(self, _):
@@ -644,13 +644,11 @@ When done, click the `Run Script` button below.
         self.run_button.set_sensitive(True)
 
         # Re-read the script.
-        run_script = self.app_window.views['runner'].script
-        if run_script:
-            self.script = run_script
-        self.switch_to_script()
+        runner = self.app_window.views['runner'].runner
+        runner.connect('replay-finished', self.on_replay_finish, runner)
 
-    def get_script(self):
-        """Get the current Script instance.
-        This will be always valid (i.e. not None)
-        """
-        return self.script
+    def on_replay_finish(self, _, runner):
+        """Called once ``rmlint --replay`` finished running."""
+        LOGGER.info('Loading script from temporary directory')
+        self.script = Script(runner.get_sh_path())
+        self.switch_to_script()
