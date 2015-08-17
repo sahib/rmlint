@@ -745,7 +745,7 @@ class MultipleChoiceButton(Gtk.Button):
 
     def __init__(self, values, default, selected, summary, capitalize=False):
         Gtk.Button.__init__(self)
-        self._selected_row = None
+        self._selected_choice = selected
         self.set_relief(Gtk.ReliefStyle.NONE)
         self.set_can_focus(False)
 
@@ -776,6 +776,7 @@ class MultipleChoiceButton(Gtk.Button):
             self.listbox.add(row)
 
             if choice == selected:
+                print('selecting row', row, row.value)
                 self.listbox.select_row(row)
                 row.set_show_checkmark(True)
 
@@ -790,14 +791,11 @@ class MultipleChoiceButton(Gtk.Button):
                 other_row.set_show_checkmark(row is other_row)
 
         self.value_label.set_choice(row.value)
-        self._selected_row = row
+        self._selected_choice = row.value
 
     def get_selected_choice(self):
         """Return the currently selected label text"""
-        if self._selected_row is None:
-            return None
-
-        return self._selected_row.value
+        return self._selected_choice
 
     def set_selected_choice(self, value):
         """Set the choice of the widget by name"""

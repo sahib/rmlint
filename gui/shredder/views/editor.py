@@ -333,26 +333,33 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         self.file_type.set_halign(Gtk.Align.START)
         self.file_type.set_hexpand(True)
         self.file_type.connect('row-selected', self.on_file_type_changed)
+        self.file_type.props.margin_end = 10
 
         self.confirm = SuggestedButton('Save')
         self.confirm.connect('clicked', self.on_save_clicked)
         self.confirm.set_halign(Gtk.Align.END)
         self.confirm.set_hexpand(False)
         self.confirm.set_sensitive(False)
+        self.confirm.props.margin_end = 10
 
         self.cancel_button = IconButton('window-close-symbolic', 'Cancel')
         self.cancel_button.connect('clicked', self.on_cancel_clicked)
         self.cancel_button.set_halign(Gtk.Align.END)
         self.cancel_button.set_hexpand(False)
-        self.cancel_button.props.margin_end = 10
 
         self.connect('selection-changed', self.on_selection_changed)
+
+        file_type_label = Gtk.Label('<b>Filetype</b>')
+        file_type_label.set_use_markup(True)
+        file_type_label.get_style_context().add_class(
+            Gtk.STYLE_CLASS_DIM_LABEL
+        )
 
         self.extra_box = Gtk.Grid()
         self.extra_box.attach(self.file_type, 0, 0, 1, 1)
         self.extra_box.attach(self.confirm, 1, 0, 1, 1)
         self.extra_box.attach_next_to(
-            Gtk.Label('Filetype: '),
+            file_type_label,
             self.file_type,
             Gtk.PositionType.LEFT,
             1,
