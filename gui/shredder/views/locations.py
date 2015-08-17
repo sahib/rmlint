@@ -466,8 +466,15 @@ class LocationView(View):
         """Switch one view further to the runner view."""
         self.app_window.views.switch('runner')
         main_view = self.app_window.views['runner']
-        paths = [entry.path for entry in self.selected_locations]
-        main_view.trigger_run(paths)
+
+        tagged, untagged = [], []
+        for row in self.selected_locations:
+            if row.props.preferred:
+                tagged.append(row.path)
+            else:
+                untagged.append(row.path)
+
+        main_view.trigger_run(untagged, tagged)
 
     def _del_clicked(self, _):
         """Delete all selected LocationEntries."""

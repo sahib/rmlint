@@ -139,16 +139,16 @@ class RunnerView(View):
             'generate-script', self.on_generate_script
         )
 
-    def trigger_run(self, paths):
+    def trigger_run(self, untagged_paths, tagged_paths):
         """Trigger a new run on all paths in `paths`"""
         # Remember last paths for rerun()
-        self.last_paths = paths
+        self.last_paths = (untagged_paths, tagged_paths)
 
         # Make sure it looks busy:
         self.sub_title = 'Running…'
 
         # Fork off the rmlint process:
-        self.runner = Runner(self.app.settings, paths)
+        self.runner = Runner(self.app.settings, untagged_paths, tagged_paths)
         self.runner.connect('lint-added', self.on_add_elem)
         self.runner.connect('process-finished', self.on_process_finish)
         self.runner.run()
@@ -163,7 +163,7 @@ class RunnerView(View):
 
     def rerun(self):
         """Rerun with last given paths."""
-        self.trigger_run(self.last_paths)
+        self.trigger_run(*self.last_paths)
 
     ###########################
     #     SIGNAL CALLBACKS    #

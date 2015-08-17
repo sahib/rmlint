@@ -776,7 +776,6 @@ class MultipleChoiceButton(Gtk.Button):
             self.listbox.add(row)
 
             if choice == selected:
-                print('selecting row', row, row.value)
                 self.listbox.select_row(row)
                 row.set_show_checkmark(True)
 

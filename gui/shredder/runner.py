@@ -122,7 +122,7 @@ def map_cfg(option, val):
     return option.MAPPING.value.get(val)
 
 
-def _create_rmlint_process(cfg, paths, replay_path=None, outputs=None):
+def _create_rmlint_process(cfg, untagged, tagged, replay_path=None, outputs=None):
     """Create a correctly configured rmlint GSuprocess for gui purposes.
     If `replay_path` is not None, "--replay `replay_path`" will be appended.
     """
@@ -192,7 +192,11 @@ def _create_rmlint_process(cfg, paths, replay_path=None, outputs=None):
             '--no-with-color',
             # '--merge-directories',  # TODO: Disable for now.
             '-T', 'duplicates'
-        ] + extra_options + paths
+        ] + extra_options + untagged
+
+        if tagged:
+            cmdline.append('//')
+            cmdline += tagged
 
         LOGGER.info('Running: ' + ' '.join(cmdline))
         process = launcher.spawnv(cmdline)
@@ -216,10 +220,12 @@ class Runner(GObject.Object):
         'process-finished': (GObject.SIGNAL_RUN_FIRST, None, (str, ))
     }
 
-    def __init__(self, settings, paths):
+    def __init__(self, settings, untagged_paths, tagged_paths):
         GObject.Object.__init__(self)
 
-        self.settings, self.paths = settings, paths
+        self.settings = settings
+        self.tagged_paths = tagged_paths
+        self.untagged_paths = untagged_paths
         self._data_stream = self.process = self._message = None
 
         # Temporary directory for storing formatted files
@@ -309,7 +315,7 @@ class Runner(GObject.Object):
         """
         self.was_replayed = False
         self.process = _create_rmlint_process(
-            self.settings, self.paths
+            self.settings, self.untagged_paths, self.tagged_paths
         )
         self._data_stream = Gio.DataInputStream.new(
             self.process.get_stdout_pipe()
@@ -370,7 +376,7 @@ class Runner(GObject.Object):
 
         process = _create_rmlint_process(
             self.settings,
-            self.paths,
+            self.untagged_paths, self.tagged_paths,
             replay_path=replay_path,
             outputs=[
                 ('sh', self.get_sh_path()),
