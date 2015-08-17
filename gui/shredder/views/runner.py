@@ -29,6 +29,7 @@ class ResultActionBar(Gtk.ActionBar):
     """Down right bar with the controls"""
     __gsignals__ = {
         'generate-script': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'partial-generate-script': (GObject.SIGNAL_RUN_FIRST, None, ())
     }
 
     def __init__(self, view):
@@ -60,12 +61,25 @@ class ResultActionBar(Gtk.ActionBar):
         self.script_btn.connect(
             'clicked', lambda _: self.emit('generate-script')
         )
-        self.script_btn.set_sensitive(False)
-        self.pack_end(self.script_btn)
 
-    def finish(self):
-        """Indicate that we finished running."""
-        self.script_btn.set_sensitive(True)
+        self.script_btn.set_sensitive(False)
+
+        self.partial_script_btn = IconButton(
+            'printer-printing-symbolic', 'Visible to script'
+        )
+        self.partial_script_btn.connect(
+            'clicked', lambda _: self.emit('partial-generate-script')
+        )
+        self.partial_script_btn.set_sensitive(False)
+
+        self.pack_end(self.script_btn)
+        self.pack_end(self.partial_script_btn)
+
+    def activate_script_btn(self, mode):
+        self.script_btn.set_sensitive(mode)
+
+    def activate_partial_script_btn(self, mode):
+        self.partial_script_btn.set_sensitive(mode)
 
 
 class RunnerView(View):
@@ -139,6 +153,10 @@ class RunnerView(View):
             'generate-script', self.on_generate_script
         )
 
+        self.actionbar.connect(
+            'partial-generate-script', self.on_generate_partial_script
+        )
+
     def trigger_run(self, untagged_paths, tagged_paths):
         """Trigger a new run on all paths in `paths`"""
         # Remember last paths for rerun()
@@ -177,6 +195,9 @@ class RunnerView(View):
             sub_model = self.model.filter_model(text)
             self.chart_stack.render(sub_model.trie.root)
             self.treeview.set_model(sub_model)
+            self.actionbar.activate_partial_script_btn(True)
+        else:
+            self.actionbar.activate_partial_script_btn(False)
 
     def on_add_elem(self, runner):
         """Called once the runner found a new element."""
@@ -220,7 +241,7 @@ class RunnerView(View):
             self.chart_stack.set_visible_child_name(ChartStack.CHART)
             self.chart_stack.render(model.trie.root)
             self.app_window.views.go_right.set_sensitive(True)
-            self.actionbar.finish()
+            self.actionbar.activate_script_btn(True)
         else:
             self.chart_stack.set_visible_child_name(ChartStack.EMPTY)
 
@@ -246,9 +267,16 @@ class RunnerView(View):
             node = model.iter_to_node(iter_)
             self.chart_stack.render(node)
 
-    def on_generate_script(self, _):
+    def _generate_script(self, model):
+        trie = model.trie
         self.runner.replay({
-            ch.build_path(): ch[Column.SELECTED] for ch in self.model.trie if ch.is_leaf
+            ch.build_path(): ch[Column.SELECTED] for ch in trie if ch.is_leaf
         })
 
         self.app_window.views.switch('editor')
+
+    def on_generate_script(self, _):
+        self._generate_script(self.model)
+
+    def on_generate_partial_script(self, _):
+        self._generate_script(self.treeview.get_model())
