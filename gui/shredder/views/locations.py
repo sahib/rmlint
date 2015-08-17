@@ -361,7 +361,6 @@ class LocationView(View):
             style_ctx.add_class('selected')
             self.selected_locations.append(row)
 
-        self.revealer.set_reveal_child(bool(self.selected_locations))
         self._update_selected_label()
 
     def _update_selected_label(self):
@@ -373,6 +372,7 @@ class LocationView(View):
                 pref=prefd_paths
             )
         )
+        self.revealer.set_reveal_child(bool(self.selected_locations))
 
     def on_search_changed(self, _):
         """Called once the user enteres a new search query."""
@@ -474,8 +474,13 @@ class LocationView(View):
         for row in self.selected_locations:
             LOGGER.debug('Removing location entry:' + row.path)
             self.box.remove(row)
-            Gtk.RecentManager.get_default().remove_item(row.path)
+
+            try:
+                Gtk.RecentManager.get_default().remove_item(row.path)
+            except GLib.Error:
+                LOGGER.warning('Could not remove recent item: %s', row.path)
+
             if row.path in self.known_paths:
                 self.known_paths.remove(row.path)
-
         self.selected_locations = []
+        self._update_selected_label()
