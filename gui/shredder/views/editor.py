@@ -534,6 +534,10 @@ When done, click the `Run Script` button below.
             Gtk.StackTransitionType.SLIDE_UP
         )
 
+        spinner = Gtk.Spinner()
+        spinner.start()
+
+        self.left_stack.add_named(spinner, 'loading')
         self.left_stack.add_named(self.save_button, 'script')
         self.left_stack.add_named(self.save_chooser, 'chooser')
         self.left_stack.add_named(scrolled(self.run_label), 'list')
@@ -652,7 +656,9 @@ When done, click the `Run Script` button below.
 
         # Re-read the script.
         runner = self.app_window.views['runner'].runner
-        runner.connect('replay-finished', self.on_replay_finish, runner)
+        if runner is not None:
+            runner.connect('replay-finished', self.on_replay_finish, runner)
+        self.left_stack.set_visible_child_name('loading')
 
     def on_replay_finish(self, _, runner):
         """Called once ``rmlint --replay`` finished running."""
