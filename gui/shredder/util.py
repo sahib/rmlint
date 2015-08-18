@@ -21,6 +21,7 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import Gio
 from gi.repository import GObject
+from gi.repository import Pango, PangoCairo
 from gi.repository import GLib
 
 
@@ -40,30 +41,6 @@ def size_to_human_readable(size):
             break
 
     return human_readable
-
-
-def render_pixbuf(widget, width=-1, height=-1):
-    """Renders any widget that is not realized yet
-    into a pixbuf with the supplied width and height.
-
-    Note: this function may trigger mainloop events,
-          since it needs to spin the loop to trigger
-          the rendering.
-    """
-    # Use an OffscreenWindow to render the widget
-    off_win = Gtk.OffscreenWindow()
-    off_win.add(widget)
-    off_win.set_size_request(width, height)
-    off_win.show_all()
-
-    # this is needed, otherwise the screenshot is black
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-
-    # Render the widget to a GdkPixbuf
-    widget_pix = off_win.get_pixbuf()
-    off_win.remove(widget)
-    return widget_pix
 
 
 def load_css_from_data(css_data):
@@ -572,24 +549,13 @@ class CellRendererCount(Gtk.CellRendererText):
         self.set_property('text', text)
 
 
-def _render_tag_label(tag):
-    """Render a IndicatorLabel to a Gdk.Pixbuf suitable for tree widgets"""
-    state_to_symbol = {
-        IndicatorLabel.NONE: '',
-        IndicatorLabel.SUCCESS: '<span color="green">✔</span>',
-        IndicatorLabel.WARNING: '<span color="orange">⚠</span>',
-        IndicatorLabel.ERROR: '✗',
-        IndicatorLabel.THEME: '<span color="blue">♔</span>'
-    }
-
-    tag_label = Gtk.Label('')
-    tag_label.set_markup('<small>{symbol}</small>'.format(
-        symbol=state_to_symbol[tag]
-    ))
-    # tag_label.set_state(tag)
-
-    # Render the label tag
-    return render_pixbuf(tag_label, -1, -1)
+STATE_TO_SYMBOL = {
+    IndicatorLabel.NONE: '',
+    IndicatorLabel.SUCCESS: '<span color="green">✔</span>',
+    IndicatorLabel.WARNING: '<span color="orange">⚠</span>',
+    IndicatorLabel.ERROR: '<span color="red">✗</span>',
+    IndicatorLabel.THEME: '<span color="blue">♔</span>'
+}
 
 
 class CellRendererLint(Gtk.CellRendererPixbuf):
@@ -597,8 +563,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
 
     This cellrenderer caches previously rendered buffers.
     """
-    ICON_SIZE = 20
-    STATE_TO_PIXBUF = {}
+    ICON_SIZE = 10
 
     tag = GObject.Property(type=int, default=IndicatorLabel.ERROR)
 
@@ -606,23 +571,27 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
         Gtk.CellRendererPixbuf.__init__(self, **kwargs)
         self.set_alignment(0.0, 0.6)
 
-    def do_render(self, ctx, *args):
+    def do_render(self, ctx, widget, bg, cell, flags):
         tag = self.get_property('tag')
         if tag is IndicatorLabel.NONE:
             return
 
-        # Render the label tag and cache it if necessary
-        lookup_table = CellRendererLint.STATE_TO_PIXBUF
-        pixbuf = lookup_table.get(tag)
-        if pixbuf is None:
-            pixbuf = lookup_table[tag] = _render_tag_label(tag)
+        text = STATE_TO_SYMBOL.get(tag)
+        if not text:
+            return
 
-        # Actual rendering
-        self.set_property('pixbuf', pixbuf)
-        ctx.set_source_rgb(0, 255, 0)
-        Gtk.CellRendererPixbuf.do_render(
-            self, ctx, *args
-        )
+        layout = PangoCairo.create_layout(ctx)
+        font = Pango.FontDescription.new()
+        font.set_size(6 * Pango.SCALE)
+        layout.set_markup(text, -1)
+        layout.set_alignment(Pango.Alignment.CENTER)
+
+        xpad = self.get_property('xpad')
+        ypad = self.get_property('ypad') - 10
+
+        fw, fh = [num / Pango.SCALE / 2 for num in layout.get_size()]
+        ctx.move_to(cell.x - fw + xpad, cell.y + fh + ypad)
+        PangoCairo.show_layout(ctx, layout)
 
     def do_get_size(self, _, cell_area):
         xpad = self.get_property('xpad')

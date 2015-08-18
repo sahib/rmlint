@@ -157,9 +157,18 @@ class RunnerView(View):
             'partial-generate-script', self.on_generate_partial_script
         )
 
+    def reset(self):
+        """Reset internally to freshly initialized."""
+        self.is_running = False
+        self.runner = None
+        self.last_paths = []
+
+        self.chart_stack.set_visible_child_name(ChartStack.LOADING)
+
     def trigger_run(self, untagged_paths, tagged_paths):
         """Trigger a new run on all paths in `paths`"""
         # Remember last paths for rerun()
+        self.reset()
         self.last_paths = (untagged_paths, tagged_paths)
 
         # Make sure it looks busy:

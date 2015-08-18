@@ -70,9 +70,9 @@ class Column:
             if is_original:
                 tag = IndicatorLabel.SUCCESS
             else:
-                tag = IndicatorLabel.WARNING
+                tag = IndicatorLabel.ERROR
         else:
-            tag = IndicatorLabel.THEME
+            tag = IndicatorLabel.NONE
 
         # Use a list so we can update the counts and size later:
         # Note1: PATH and TOOLTIP are not included.
@@ -724,10 +724,10 @@ class PathTreeView(Gtk.TreeView):
         self.append_column(_create_column(
             'Path', [
                 (CellRendererLint(), False, False, dict(tag=Column.TAG)),
-                (
-                    _create_toggle_cellrenderer(self),
-                    False, False, dict(active=Column.SELECTED)
-                ),
+                # (
+                #     _create_toggle_cellrenderer(self),
+                #     False, False, dict(active=Column.SELECTED)
+                # ),
                 (Gtk.CellRendererText(), False, True, dict(text=Column.PATH)),
             ],
             250
