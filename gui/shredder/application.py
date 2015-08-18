@@ -9,6 +9,7 @@ the gui build by instancing the MainWindow.
 
 # Stdlib:
 import os
+import sys
 import gettext
 import logging
 
@@ -28,6 +29,23 @@ from shredder.views.editor import EditorView
 
 
 LOGGER = logging.getLogger('application')
+
+
+def have_feature(feature):
+    """Execute rmlint --version to check for some feature.
+
+    --version will print the compile time configuration of rmlint.
+    If a feature is missing, -somefeature is printed. A + in front else.
+    """
+    proc = Gio.Subprocess.new(
+        ['rmlint', '--version'],
+        Gio.SubprocessFlags.STDERR_PIPE
+    )
+    result, _, data = proc.communicate_utf8()
+    if not result or not data:
+        return False
+
+    return '+' + feature in data
 
 
 def _create_action(name, callback=None):
@@ -58,6 +76,13 @@ class Application(Gtk.Application):
             flags=Gio.ApplicationFlags.FLAGS_NONE
         )
         self.settings = self.win = None
+
+        # Check compile time features of rmlint that we need later.
+        if not have_feature('json-cache'):
+            LOGGER.error('No support for +json-cache in rmlint binary.')
+            LOGGER.error('Please recompile with --with-json-glib...')
+            LOGGER.error('...and `json-glib-1.0` installed on your system.')
+            sys.exit(-1)
 
     def do_activate(self, **kw):
         Gtk.Application.do_activate(self, **kw)
