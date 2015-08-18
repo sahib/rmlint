@@ -21,9 +21,6 @@ import tempfile
 
 from enum import Enum
 
-# Internal:
-from shredder import APP_TITLE
-
 # External:
 from gi.repository import Gio
 from gi.repository import GLib
@@ -122,7 +119,9 @@ def map_cfg(option, val):
     return option.MAPPING.value.get(val)
 
 
-def _create_rmlint_process(cfg, cwd, untagged, tagged, replay_path=None, outputs=None):
+def _create_rmlint_process(
+    cfg, cwd, untagged, tagged, replay_path=None, outputs=None
+):
     """Create a correctly configured rmlint GSuprocess for gui purposes.
     If `replay_path` is not None, "--replay `replay_path`" will be appended.
     """
@@ -260,7 +259,6 @@ class Runner(GObject.Object):
             LOGGER.exception('Replay process failed')
         finally:
             self.emit('replay-finished')
-
 
     def _queue_read(self):
         """Schedule a async read on process's stdout"""
@@ -413,7 +411,6 @@ class Runner(GObject.Object):
             shutil.copy(source_path_func(), dest_path)
         except OSError:
             LOGGER.exception('Could not save')
-
 
 
 class Script(GObject.Object):
