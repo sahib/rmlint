@@ -12,12 +12,19 @@ This code will be executed first when doing:
 import sys
 
 # Internal:
-from shredder.application import Application
+from shredder.cmdline import parse_arguments
 from shredder.logger import create_logger
 
 ROOT_LOGGER = create_logger(None)
+OPTIONS = parse_arguments(ROOT_LOGGER)
 
-# Gtk will take over now.
-APP = Application()
-ROOT_LOGGER.info('Starting up')
-sys.exit(APP.run(sys.argv))
+
+# Later import due to logging.
+from shredder.application import Application
+
+
+if OPTIONS:
+    # Gtk will take over now.
+    APP = Application(OPTIONS)
+    ROOT_LOGGER.info('Starting up.')
+    sys.exit(APP.run([sys.argv[0]]))

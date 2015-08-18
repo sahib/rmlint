@@ -260,7 +260,7 @@ class LocationView(View):
         """Make it an own method, so we don't need to retype it."""
         self.sub_title = 'Choose locations to scan'
 
-    def _add_recent_item(self, path):
+    def add_recent_item(self, path):
         """Add item to GtkRecentManager"""
         data = Gtk.RecentData()
         data.is_private = False
@@ -435,7 +435,7 @@ class LocationView(View):
             for path in self.file_chooser.get_filenames():
                 name = os.path.basename(path)
                 # self.recent_mgr.add_item(path)
-                self._add_recent_item(path)
+                self.add_recent_item(path)
                 entry = self.add_entry(
                     name, path, Gio.ThemedIcon(
                         name='folder-new'

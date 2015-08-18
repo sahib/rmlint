@@ -603,7 +603,9 @@ When done, click the `Run Script` button below.
     def switch_to_script(self):
         """Read and show the script."""
         self.sub_title = 'Check the results'
-        self.left_stack.set_visible_child_name('script')
+        GLib.idle_add(
+            lambda: self.left_stack.set_visible_child_name('script')
+        )
         buffer_ = self.text_view.get_buffer()
         buffer_.set_text(self.script.read())
 
@@ -664,4 +666,10 @@ When done, click the `Run Script` button below.
         """Called once ``rmlint --replay`` finished running."""
         LOGGER.info('Loading script from temporary directory')
         self.script = Script(runner.get_sh_path())
+        self.switch_to_script()
+
+    def override_script(self, script):
+        """This method is for testing and cmdline use only."""
+        LOGGER.info('Loading developer-defined script.')
+        self.script = script
         self.switch_to_script()

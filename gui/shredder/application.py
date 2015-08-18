@@ -20,6 +20,7 @@ from gi.repository import Gtk, Gio, Rsvg, GdkPixbuf
 from shredder import APP_TITLE
 from shredder.util import load_css_from_data
 from shredder.about import AboutDialog
+from shredder.runner import Script
 from shredder.window import MainWindow
 
 from shredder.views.settings import SettingsView
@@ -69,12 +70,13 @@ def _load_app_icon():
 
 class Application(Gtk.Application):
     """GtkApplication implementation of Shredder."""
-    def __init__(self):
+    def __init__(self, options):
         Gtk.Application.__init__(
             self,
             application_id='org.gnome.Shredder',
             flags=Gio.ApplicationFlags.FLAGS_NONE
         )
+        self.cmd_opts = options
         self.settings = self.win = None
 
         # Check compile time features of rmlint that we need later.
@@ -141,6 +143,27 @@ class Application(Gtk.Application):
         self.win.views.add_view(EditorView(self), 'editor')
         LOGGER.debug('Done instancing views.')
 
+        initial_view = 'locations'
+
+        if self.cmd_opts.tagged or self.cmd_opts.untagged:
+            self.win.views['runner'].trigger_run(
+                self.cmd_opts.untagged or [],
+                self.cmd_opts.tagged or []
+            )
+            initial_view = 'runner'
+
+        if self.cmd_opts.show_settings:
+            initial_view = 'settings'
+
+        for path in self.cmd_opts.locations or []:
+            self.win.views['locations'].add_recent_item(path)
+
+        if self.cmd_opts.script:
+            self.win.views['editor'].override_script(
+                Script(self.cmd_opts.script)
+            )
+            initial_view = 'editor'
+
         # Set the default view visible at startup
-        self.win.views.switch('locations')
+        self.win.views.switch(initial_view)
         self.win.show_all()
