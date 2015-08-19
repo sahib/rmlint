@@ -97,12 +97,10 @@ typedef struct _ftsent {
 	char fts_name[1];		/* file name */
 } FTSENT;
 
-__BEGIN_DECLS
 int	 fts_close(FTS *);
 FTS	*fts_open(char * const *, int, void *);
 FTSENT	*fts_read(FTS *);
 int	 fts_set(FTS *, FTSENT *, int);
 FTSENT *fts_children(FTS *ftsp, int options);
-__END_DECLS
 
 #endif /* !_FTS_H_ */
