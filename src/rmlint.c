@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
-#include <signal.h>
+#include <sys/signal.h>
 
 #include "../lib/api.h"
 #include "../lib/config.h"
