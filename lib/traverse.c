@@ -28,7 +28,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h>
 #include <errno.h>
 
 #include <glib.h>
@@ -38,6 +37,7 @@
 #include "utilities.h"
 #include "file.h"
 #include "xattr.h"
+#include "compat_fts.h"
 
 ///////////////////////////////////////////
 // BUFFER FOR STARTING TRAVERSAL THREADS //
@@ -278,7 +278,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     chp = fts_children(ftsp, 0);
     if(chp == NULL) {
         rm_log_warning_line("fts_children() == NULL");
-        return;
     }
 
     /* start main processing */
@@ -321,7 +320,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     clear_emptydir_flags = true; /* flag current dir as not empty */
                     rm_log_debug("Not descending into %s because max depth reached\n",
                                  p->fts_path);
-                } else if(cfg->crossdev && p->fts_dev != chp->fts_dev) {
+                } else if(cfg->crossdev && p->fts_dev != (chp ? chp->fts_dev : 0)) {
                     /* continuing into folder would cross file systems*/
                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
                     clear_emptydir_flags = true; /*flag current dir as not empty*/

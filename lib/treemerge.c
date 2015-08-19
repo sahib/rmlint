@@ -60,7 +60,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h>
+#include "compat_fts.h"
 
 #include "treemerge.h"
 #include "shredder.h"

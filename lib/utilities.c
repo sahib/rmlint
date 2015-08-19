@@ -37,10 +37,10 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include <fts.h>
 #include <libgen.h>
 
 #include "config.h"
+#include "compat_fts.h"
 
 /* Not available there,
  * but might be on other non-linux systems
