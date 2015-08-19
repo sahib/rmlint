@@ -67,6 +67,7 @@ class LocationEntry(Gtk.ListBoxRow):
     def __init__(self, name, path, themed_icon, fill_level=None):
         Gtk.ListBoxRow.__init__(self)
         self.set_size_request(-1, 80)
+        self.set_can_focus(False)
 
         # CSS Name
         self.set_name('ShredderLocationEntry')
