@@ -476,7 +476,7 @@ class EditorView(View):
     def __init__(self, win):
         View.__init__(self, win)
 
-        self._runner = None
+        self._last_runner = None
         self.script = Script.create_dummy()
 
         control_grid = Gtk.Grid()
@@ -658,8 +658,9 @@ When done, click the `Run Script` button below.
 
         # Re-read the script.
         runner = self.app_window.views['runner'].runner
-        if runner is not None:
+        if runner is not None and self._last_runner is not runner:
             runner.connect('replay-finished', self.on_replay_finish, runner)
+            self._last_runner = runner
         self.left_stack.set_visible_child_name('loading')
 
     def on_replay_finish(self, _, runner):
