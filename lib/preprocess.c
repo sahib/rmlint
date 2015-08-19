@@ -133,6 +133,28 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
     return rm_node_hash(key->file);
 }
 
+static bool rm_path_have_same_parent(
+    RmCfg *cfg, RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
+    RmFile *file_a = key_a->file, *file_b = key_b->file;
+
+    if(cfg->use_meta_cache) {
+        if(key_a->parent_inode_set && key_b->parent_inode_set) {
+            RM_DEFINE_PATH(file_a);
+            RM_DEFINE_PATH(file_b);
+
+            key_a->parent_inode = rm_util_parent_node(file_a_path);
+            key_a->parent_inode_set = TRUE;
+
+            key_b->parent_inode = rm_util_parent_node(file_b_path);
+            key_b->parent_inode_set = TRUE;
+        }
+
+        return key_a->parent_inode == key_b->parent_inode;
+    } else {
+        return file_a->folder->parent == file_b->folder->parent;
+    }
+}
+
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
     if(key_a->file->inode != key_b->file->inode) {
         return FALSE;
@@ -145,21 +167,7 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
     RmFile *file_a = key_a->file;
     RmFile *file_b = key_b->file;
 
-    if(key_a->parent_inode_set == false) {
-        RM_DEFINE_PATH(file_a);
-
-        key_a->parent_inode = rm_util_parent_node(file_a_path);
-        key_a->parent_inode_set = TRUE;
-    }
-
-    if(key_b->parent_inode_set == false) {
-        RM_DEFINE_PATH(file_b);
-
-        key_b->parent_inode = rm_util_parent_node(file_b_path);
-        key_b->parent_inode_set = TRUE;
-    }
-
-    if(key_a->parent_inode != key_b->parent_inode) {
+    if(!rm_path_have_same_parent(file_a->session->cfg, key_a, key_b)) {
         return FALSE;
     }
 

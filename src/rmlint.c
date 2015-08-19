@@ -30,6 +30,12 @@
 #include <locale.h>
 
 #include "../lib/api.h"
+#include "../lib/config.h"
+
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0) 
+# include <glib-object.h>
+#endif
+
 
 static char *remove_color_escapes(char *message) {
     char *dst = message;
@@ -130,7 +136,7 @@ int main(int argc, const char **argv) {
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
     /* Very old glib. Debian, Im looking at you. */
     g_type_init();
 #endif

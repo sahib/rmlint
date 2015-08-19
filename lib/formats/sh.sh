@@ -9,9 +9,13 @@ GROUP='%s'
 # Set to true on -n
 DO_DRY_RUN=
 
+# Set to true on -p
+DO_PARANOID_CHECK=
+
 ##################################
 # GENERAL LINT HANDLER FUNCTIONS #
 ##################################
+
 
 handle_emptyfile() {
     echo 'Deleting empty file:' "$1"
@@ -66,29 +70,65 @@ handle_bad_user_and_group_id() {
 # DUPLICATE HANDLER FUNCTIONS #
 ###############################
 
+original_check() {
+    if [ ! -e "$2" ]; then
+        echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
+        return 1
+    fi
+
+    if [ ! -e "$1" ]; then
+        echo "^^^^^^ Error: original has disappeared - cancelling....."
+        return 1
+    fi
+
+    # Check they are not the exact same file:
+    if [ $(stat -c '%D:%i' "$1") = $(stat -c '%D:%i' "$2") ]; then
+        echo "^^^^^^ Error: original and duplicate point to the *same* file - cancelling....."
+        return 1
+    fi
+
+    # Do double-check if requested:
+    if [ -z "$DO_PARANOID_CHECK" ]; then
+        return 0
+    else
+        if cmp -s "$1" "$2"; then
+            return 0
+        else
+            echo "^^^^^^ Error: files no longer identical - cancelling....."
+            return 1
+        fi
+    fi
+}
+
 cp_hardlink() {
     echo 'Hardlinking to original:' "$1"
-    if [ -z "$DO_DRY_RUN" ]; then
-        cp --remove-destination --archive --link "$2" "$1"
+    if original_check "$1" "$2"; then
+        if [ -z "$DO_DRY_RUN" ]; then
+            cp --remove-destination --archive --link "$2" "$1"
+        fi
     fi
 }
 
 cp_symlink() {
     echo 'Symlinking to original:' "$1"
-    if [ -z "$DO_DRY_RUN" ]; then
-        touch -mr "$1" "$0"
-        cp --remove-destination --archive --symbolic-link "$2" "$1"
-        touch -mr "$0" "$1"
+    if original_check "$1" "$2"; then
+        if [ -z "$DO_DRY_RUN" ]; then
+            touch -mr "$1" "$0"
+            cp --remove-destination --archive --symbolic-link "$2" "$1"
+            touch -mr "$0" "$1"
+        fi
     fi
 }
 
 cp_reflink() {
     # reflink $1 to $2's data, preserving $1's  mtime
     echo 'Reflinking to original:' "$1"
-    if [ -z "$DO_DRY_RUN" ]; then
-        touch -mr "$1" "$0"
-        cp --reflink=always "$2" "$1"
-        touch -mr "$0" "$1"
+    if original_check "$1" "$2"; then
+        if [ -z "$DO_DRY_RUN" ]; then
+            touch -mr "$1" "$0"
+            cp --reflink=always "$2" "$1"
+            touch -mr "$0" "$1"
+        fi
     fi
 }
 
@@ -107,8 +147,10 @@ user_command() {
 
 remove_cmd() {
     echo 'Deleting:' "$1"
-    if [ -z "$DO_DRY_RUN" ]; then
-        rm -rf "$1"
+    if original_check "$1" "$2"; then
+        if [ -z "$DO_DRY_RUN" ]; then
+            rm -rf "$1"
+        fi
     fi
 }
 
@@ -147,6 +189,7 @@ OPTIONS:
   -h   Show this message.
   -d   Do not ask before running.
   -x   Keep rmlint.sh; do not autodelete it.
+  -p   Recheck that files are still identical before removing duplicates.
   -n   Do not perform any modifications, just print what would be done.
 EOF
 }
@@ -154,7 +197,7 @@ EOF
 DO_REMOVE=
 DO_ASK=
 
-while getopts "dhxn" OPTION
+while getopts "dhxnp" OPTION
 do
   case $OPTION in
      h)
@@ -169,6 +212,9 @@ do
        ;;
      n)
        DO_DRY_RUN=true
+       ;;
+     p)
+       DO_PARANOID_CHECK=true
   esac
 done
 

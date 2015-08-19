@@ -259,3 +259,69 @@ def test_mount_binds():
     assert data[0]['path'].endswith('c/2')
     assert data[1]['path'].endswith('a/3')
     assert len(data) == 2
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_keepall_tagged():
+    # Test for Issue #141:
+    # https://github.com/sahib/rmlint/issues/141
+    #
+    # Make sure -k protects duplicate directories too,
+    # when they're in a pref'd path.
+
+    create_file('test', 'origs/folder/subfolder/file')
+    create_file('test', 'origs/samefolder/subfolder/file')
+    create_file('test', 'dups/folder/subfolder/file')
+    create_file('test', 'dups/samefolder/subfolder/file')
+
+    head, *data, footer = run_rmlint('-D -S a -k -m {d} // {o}'.format(
+        d=os.path.join(TESTDIR_NAME, 'dups'),
+        o=os.path.join(TESTDIR_NAME, 'origs')
+    ))
+
+    assert len(data) == 4
+    assert footer['total_files'] == 8
+    assert footer['duplicates'] == 2
+    assert footer['duplicate_sets'] == 1
+
+    assert data[0]['path'].endswith('origs')
+    assert data[0]['is_original']
+
+    assert data[1]['path'].endswith('dups')
+    assert not data[1]['is_original']
+
+    assert data[2]['path'].endswith('origs/folder')
+    assert data[2]['is_original']
+
+    assert data[3]['path'].endswith('origs/samefolder')
+    assert data[3]['is_original']
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_keepall_untagged():
+    create_file('test', 'origs/folder/subfolder/file')
+    create_file('test', 'origs/samefolder/subfolder/file')
+    create_file('test', 'dups/folder/subfolder/file')
+    create_file('test', 'dups/samefolder/subfolder/file')
+
+    head, *data, footer = run_rmlint('-D -S a -K -m {d} // {o}'.format(
+        d=os.path.join(TESTDIR_NAME, 'dups'),
+        o=os.path.join(TESTDIR_NAME, 'origs')
+    ))
+
+    assert len(data) == 4
+    assert footer['total_files'] == 8
+    assert footer['duplicates'] == 2
+    assert footer['duplicate_sets'] == 1
+
+    assert data[0]['path'].endswith('dups')
+    assert data[0]['is_original']
+
+    assert data[1]['path'].endswith('origs')
+    assert not data[1]['is_original']
+
+    assert data[2]['path'].endswith('dups/folder')
+    assert data[2]['is_original']
+
+    assert data[3]['path'].endswith('dups/samefolder')
+    assert data[3]['is_original']
