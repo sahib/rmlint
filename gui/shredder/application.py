@@ -123,11 +123,15 @@ class Application(Gtk.Application):
             'search', lambda *_: self.win.views.set_search_mode(True)
         ))
         self.add_action(_create_action(
+            'activate', lambda *_: self.win.views.do_default_action()
+        ))
+        self.add_action(_create_action(
             'quit', lambda *_: self.quit()
         ))
 
         self.set_accels_for_action('app.quit', ['<Ctrl>Q'])
         self.set_accels_for_action('app.search', ['<Ctrl>F'])
+        self.set_accels_for_action('app.activate', ['<Ctrl>Return'])
 
         # Set the fallback window title.
         # This is only used if no .desktop file is provided.

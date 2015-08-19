@@ -149,6 +149,14 @@ class ViewSwitcher(Gtk.Box):
         view = self._stack.get_visible_child()
         view.set_search_mode(mode)
 
+    def do_default_action(self):
+        """Emits the default action on the current view.
+        This is usually equal to clicking the suggested button.
+        """
+        view = self._stack.get_visible_child()
+        if view and hasattr(view, 'on_default_action'):
+            view.on_default_action()
+
 
 class HeaderBar(Gtk.HeaderBar):
     """Container for the headerbar logic."""

@@ -492,3 +492,6 @@ class LocationView(View):
                 self.known_paths.remove(row.path)
         self.selected_locations = []
         self._update_selected_label()
+
+    def on_default_action(self):
+        pass
