@@ -530,6 +530,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {
 
         rm_log_debug("[okay]\n");
 
+        // TODO: Rather watch for changing checksum?
         if(file->is_original) {
             rm_parrot_cage_push_group(cage, &group, false);
         }
