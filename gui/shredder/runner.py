@@ -434,7 +434,7 @@ class Script(GObject.Object):
 
     def __init__(self, script_file):
         GObject.Object.__init__(self)
-        self._incomplete_chunk = self._process = None
+        self._incomplete_chunk = self._process = self._stream = None
         self.script_file = script_file
 
     @staticmethod
@@ -478,11 +478,12 @@ class Script(GObject.Object):
 
     def _queue_read(self):
         """Schedule a read from rmlint's stdout stream."""
-        stream = Gio.DataInputStream.new(
-            self._process.get_stdout_pipe()
-        )
+        if self._stream is None:
+            self._stream = Gio.DataInputStream.new(
+                self._process.get_stdout_pipe()
+            )
 
-        stream.read_line_async(
+        self._stream.read_line_async(
             io_priority=GLib.PRIORITY_HIGH,
             cancellable=None,
             callback=self._read_chunk
@@ -507,14 +508,14 @@ class Script(GObject.Object):
             line, _ = source.read_line_finish_utf8(result)
         except GLib.Error:
             LOGGER.exception('Could not read line from script:')
-            return
-
-        if not line:
             self.emit('script-finished')
             return
 
-        self._report_line(line)
-        self._queue_read()
+        if line:
+            self._report_line(line)
+            self._queue_read()
+        else:
+            self.emit('script-finished')
 
 
 if __name__ == '__main__':
