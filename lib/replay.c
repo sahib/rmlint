@@ -503,6 +503,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {
 
     RmCfg *cfg = cage->session->cfg;
     GQueue *group = g_queue_new();
+    RmDigest *last_digest = NULL;
 
     /* group of files; first group is "other lint" */
     while(rm_parrot_has_next(polly)) {
@@ -528,10 +529,15 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {
             continue;
         }
 
+        if(last_digest == NULL) {
+            last_digest = rm_digest_copy(file->digest);
+        }
+
         rm_log_debug("[okay]\n");
 
-        // TODO: Rather watch for changing checksum?
-        if(file->is_original) {
+        if(!rm_digest_equal(file->digest, last_digest)) {
+            rm_digest_free(last_digest);
+            last_digest = rm_digest_copy(file->digest);
             rm_parrot_cage_push_group(cage, &group, false);
         }
 
