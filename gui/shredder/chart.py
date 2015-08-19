@@ -384,15 +384,19 @@ class RingChart(Chart):
         """Actual signal callback that triggers all the drawing."""
 
         # May happen on empty charts:
-        if self.max_layers is 0:
-            return False
+        max_layers = self.max_layers
+        if max_layers <= 0:
+            max_layers = 1
+            draw_empty = True
+        else:
+            draw_empty = False
 
         # Figure out the background color of the drawing area
         alloc = area.get_allocation()
 
         # Caluclate the font size of the inner label.
         # Make it smaller if not enough place but cut off at a size of 12
-        inner_circle = (1 / self.max_layers)
+        inner_circle = (1 / max_layers)
         inner_circle *= min(alloc.width, alloc.height) / 2
         font_size = min(12, inner_circle / 3)
 
@@ -406,10 +410,18 @@ class RingChart(Chart):
         )
 
         bg = self.get_toplevel().get_style_context().get_background_color(0)
-        for segment in reversed(self._segment_list):
-            segment.draw(ctx, alloc, self.max_layers, bg)
 
-        if self._selected_segment is None:
+        if not draw_empty:
+            for segment in reversed(self._segment_list):
+                segment.draw(ctx, alloc, max_layers, bg)
+        else:
+            ctx.arc(
+                alloc.width / 2, alloc.height / 2,
+                inner_circle / 2, 0, 2 * math.pi
+            )
+            ctx.stroke()
+
+        if self._selected_segment is None or draw_empty:
             return
 
         for segment in self._segment_list:
@@ -419,7 +431,7 @@ class RingChart(Chart):
             if segment.size < ANGLE_LIMIT_TOOLTIP:
                 continue
 
-            x, y = segment.middle_point(alloc, self.max_layers)
+            x, y = segment.middle_point(alloc, max_layers)
             _draw_tooltip(
                 ctx, alloc, x, y, 8,
                 segment.middle_angle(), segment.tooltip
