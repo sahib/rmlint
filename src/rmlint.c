@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
+#include <signal.h>
 
 #include "../lib/api.h"
 #include "../lib/config.h"
@@ -47,8 +48,9 @@ static char *remove_color_escapes(char *message) {
         }
     }
 
-    if(dst)
+    if(dst) {
         *dst = 0;
+    }
     return message;
 }
 
