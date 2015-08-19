@@ -18,7 +18,7 @@ from gi.repository import GObject
 # Internal:
 from shredder.util import View, IconButton
 from shredder.chart import ChartStack
-from shredder.tree import PathTreeView, PathTreeModel, Column
+from shredder.tree import PathTreeView, PathTreeModel, Column, PathTrie
 from shredder.runner import Runner
 
 
@@ -233,7 +233,7 @@ class RunnerView(View):
                 error_msg, message_type=Gtk.MessageType.WARNING
             )
 
-        GLib.timeout_add(1500, self.on_delayed_chart_render, -1)
+        GLib.timeout_add(1000, self.on_delayed_chart_render, -1)
 
     def on_delayed_chart_render(self, last_size):
         """Called after a short delay to reduce chart redraws."""
@@ -274,7 +274,24 @@ class RunnerView(View):
         model, iter_ = selection.get_selected()
         if iter_ is not None:
             node = model.iter_to_node(iter_)
-            self.chart_stack.render(node)
+            if not model.iter_has_child(iter_):
+                # It is a single file.
+                # Show a chart containing all twins of this file.
+                # This is helpful to see quickly where those lie.
+
+                cksum = node[Column.CKSUM]
+                group = self.runner.group(cksum)
+                trie = PathTrie()
+
+                for doc in group:
+                    trie.insert(
+                        doc['path'],
+                        Column.make_row(doc)
+                    )
+
+                self.chart_stack.render(trie.root)
+            else:
+                self.chart_stack.render(node)
 
     def _generate_script(self, model):
         trie = model.trie

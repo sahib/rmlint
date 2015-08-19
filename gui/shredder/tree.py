@@ -59,8 +59,8 @@ class Column:
 
     Only this class needs to be changed when adding/modifying columns.
     """
-    SELECTED, SIZE, COUNT, MTIME, TAG, PATH, TOOLTIP = range(7)
-    TYPES = [bool, str, int, int, int, int]
+    SELECTED, SIZE, COUNT, MTIME, TAG, CKSUM, PATH, TOOLTIP = range(8)
+    TYPES = [bool, str, int, int, int, int, str]
 
     @staticmethod
     def make_row(md_map):
@@ -84,7 +84,8 @@ class Column:
             md_map.get('size', 0),
             -md_map.get('twins', 0),
             md_map.get('mtime', 0),
-            tag
+            tag,
+            md_map.get('checksum', '')
         ]
 
 
