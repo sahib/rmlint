@@ -427,7 +427,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
             if was_new:
                 self.row_inserted(path, make_iter(node))
 
-            if not was_new or not node.is_leaf:
+            if not was_new:
                 # Remember to update it somewhen later.
                 self._intermediate_nodes.add(node)
 

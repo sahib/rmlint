@@ -84,12 +84,12 @@ TANGO_TABLE = [
 
 
 def _hsv_by_degree(degree):
-    """Convert degree (in rad) to a pre defined color.
+    """Convert degree (in rad) to a predefined color.
     Currently only one colorscheme is supported (Tango)
     """
-    percent = degree / (2 * math.pi)
+    percent = max(0.0, min(1.0, degree / (2 * math.pi)))
     idx = percent * len(TANGO_TABLE)
-    h, s, v = TANGO_TABLE[int(idx) - 1]
+    h, s, v = TANGO_TABLE[max(0, int(idx) - 1)]
     return h, s, v
 
 
@@ -334,7 +334,12 @@ class RingChart(Chart):
 
         child_offset = offset
         for child in node.children.values():
-            child_angle = (child[Column.SIZE] / node[Column.SIZE]) * angle
+            node_size = node[Column.SIZE]
+
+            if node_size is not 0:
+                child_angle = (child[Column.SIZE] / node_size) * angle
+            else:
+                child_angle = angle
 
             # Do not investigate smaller nodes:
             if child_angle > ANGLE_LIMIT_VISIBLE:

@@ -39,6 +39,8 @@ def size_to_human_readable(size):
             size = round(size, 1) if size % 1 else int(size)
             human_readable = "{s} {f}B".format(s=size, f=unit)
             break
+    else:
+        human_readable = '0 Byte'
 
     return human_readable
 
