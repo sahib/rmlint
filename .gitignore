@@ -23,7 +23,6 @@ __pycache__
 lib/config.h
 lib/formats/py.c
 lib/formats/sh.c
-test_*
 uninstall-
 gui/app/resources/app.gresource
 *.a
