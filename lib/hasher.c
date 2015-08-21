@@ -268,6 +268,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
         g_assert(blocks <= N_BUFFERS);
 
         total_bytes_read += bytes_read;
+        file_offset += bytes_read;
 
         for(int i = 0; i < blocks; ++i) {
             /* Get the RmBuffer from the datapointer */
