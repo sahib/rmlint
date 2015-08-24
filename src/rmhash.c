@@ -174,13 +174,13 @@ int main(int argc, char **argv) {
         {"multihash", 'm', 0, G_OPTION_ARG_NONE, &tag.print_multihash,
          _("Print hash as self identifying multihash"), NULL},
         {"buffer-mbytes", 'b', 0, G_OPTION_ARG_INT64, &buffer_mbytes,
-         _("Megabytes read buffer (default 256 MB)"), NULL},
+         _("Megabytes read buffer [256 MB]"), NULL},
         {"ignore-order", 'i', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE,
          &tag.print_in_order, _("Print hashes in order completed, not in order entered "
                                 "(reduces memory usage)"),
          NULL},
         {"", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths,
-         "Space-separated list of files", "[FILE...]"},
+         "Space-separated list of files", "[FILE…]"},
         {NULL}};
 
     GError *error = NULL;
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
     g_option_context_set_main_group(context, main_group);
     g_option_context_set_summary(
         context,
-        "Multi-threaded file digest (hash) calculator."
+        "Multi-threaded file digest (hash) calculator.\n"
         "\n  Available digest types:"
         "\n    spooky32, spooky64, md5, murmur[128], spooky[128], "
         "city[128], sha1, sha256, sha512"

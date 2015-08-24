@@ -224,7 +224,7 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 
 int rm_digest_type_to_multihash_id(RmDigestType type) {
     static int ids[] =
-        {[RM_DIGEST_UNKNOWN] = -0x1  , [RM_DIGEST_MURMUR] = 17     ,
+        {[RM_DIGEST_UNKNOWN] = -1    , [RM_DIGEST_MURMUR] = 17     ,
          [RM_DIGEST_SPOOKY] = 14     , [RM_DIGEST_SPOOKY32] = 16   ,
          [RM_DIGEST_SPOOKY64] = 18   , [RM_DIGEST_CITY] = 15       ,
          [RM_DIGEST_MD5] = 1         , [RM_DIGEST_SHA1] = 2        ,
