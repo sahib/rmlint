@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include "config.h"
+#include "checksum.h"
 
 /**
  * @file hasher.h

@@ -23,8 +23,6 @@
 *
 **/
 
-#ifndef _RM_HASHER_BUILD_MAIN
-
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
@@ -150,5 +148,3 @@ int main(int argc, const char **argv) {
     rm_session_clear(&session);
     return exit_state;
 }
-#endif
-

@@ -596,23 +596,15 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     return self;
 }
 
-guint8 *rm_digest_steal_buffer(RmDigest *digest) {
-    guint8 *result = g_slice_alloc0(digest->bytes);
-    RmDigest *copy = NULL;
-    gsize buflen = digest->bytes;
-
-    switch(digest->type) {
+static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
+    switch(digest_type) {
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:
     case RM_DIGEST_SHA256:
     case RM_DIGEST_SHA1:
         /* for all of the above, reading the digest is destructive, so we
          * need to take a copy */
-        copy = rm_digest_copy(digest);
-        g_checksum_get_digest(copy->glib_checksum, result, &buflen);
-        g_assert(buflen == digest->bytes);
-        rm_digest_free(copy);
-        break;
+        return TRUE;
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_SPOOKY:
@@ -625,13 +617,27 @@ guint8 *rm_digest_steal_buffer(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
-        memcpy(result, digest->checksum, digest->bytes);
-        break;
     case RM_DIGEST_PARANOID:
+        return FALSE;
     default:
         g_assert_not_reached();
     }
+}
 
+guint8 *rm_digest_steal_buffer(RmDigest *digest) {
+    guint8 *result = g_slice_alloc0(digest->bytes);
+    RmDigest *copy = NULL;
+    gsize buflen = digest->bytes;
+
+    if (rm_digest_needs_steal(digest->type)) {
+        /* reading the digest is destructive, so we need to take a copy */
+        copy = rm_digest_copy(digest);
+        g_checksum_get_digest(copy->glib_checksum, result, &buflen);
+        g_assert(buflen == digest->bytes);
+        rm_digest_free(copy);
+    } else {
+        memcpy(result, digest->checksum, digest->bytes);
+    }
     return result;
 }
 
@@ -659,20 +665,15 @@ guint rm_digest_hash(RmDigest *digest) {
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     g_assert (a && b);
+    g_assert (a->type == b->type);
+    g_assert (a->bytes == b->bytes);
+
     if (a->type == RM_DIGEST_PARANOID) {
         if (!a->paranoid->buffers) {
             /* buffers have been freed so we need to rely on shadow hash */
             return rm_digest_equal(a->paranoid->shadow_hash, b->paranoid->shadow_hash);
         }
-        if (a->bytes != b->bytes) {
-            rm_log_error(RED"Error: byte counts don't match in rm_digest_equal\n"RESET);
-            return false;
-        } else if ((a->paranoid->twin_candidate == b)
-                || (b->paranoid->twin_candidate == a)) {
-            if (a->bytes > 4 * 4096) {
-                rm_log_debug(GREEN "+" RESET);
-            }
-            //rm_log_debug(GREEN "Found match of size %"LLU" via twin_candidate strategy\n" RESET, a->bytes);
+        if ( a->paranoid->twin_candidate == b || b->paranoid->twin_candidate == a ) {
             return true;
         }
 
@@ -688,30 +689,29 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             a_iter = a_iter->next;
             b_iter = b_iter->next;
         }
-        if (!a_iter && !b_iter && bytes==a->bytes) {
-            if (a->bytes > 4 * 4096) {
-                rm_log_debug(RED "+" RESET);
-            }
-            return true;
-        } else {
-            return false;
-        }
+
+        return (!a_iter && !b_iter && bytes==a->bytes);
+
     } else {
-        guint8 *buf_a = rm_digest_steal_buffer(a);
-        guint8 *buf_b = rm_digest_steal_buffer(b);
+        if (rm_digest_needs_steal(a->type)) {
+            guint8 *buf_a = rm_digest_steal_buffer(a);
+            guint8 *buf_b = rm_digest_steal_buffer(b);
 
-        gboolean result;
-        
-        if(a->bytes != b->bytes) {
-            result = false;
+            gboolean result;
+
+            if(a->bytes != b->bytes) {
+                result = false;
+            } else {
+                result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
+            }
+
+            g_slice_free1(a->bytes, buf_a);
+            g_slice_free1(b->bytes, buf_b);
+
+            return result;
         } else {
-            result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
+            return !memcmp(a->checksum, b->checksum, MIN(a->bytes, b->bytes));
         }
-
-        g_slice_free1(a->bytes, buf_a);
-        g_slice_free1(b->bytes, buf_b);
-
-        return result;
     }
 }
 
