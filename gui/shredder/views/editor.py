@@ -23,7 +23,6 @@ from gi.repository import Pango
 from gi.repository import Polkit
 from gi.repository import GObject
 
-
 # Internal:
 from shredder.util import View, IconButton, scrolled, size_to_human_readable
 from shredder.util import MultipleChoiceButton, SuggestedButton
@@ -271,17 +270,6 @@ class RunButton(Gtk.Box):
             else:
                 ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
                 ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-
-    def set_sensitive(self, is_sensitive):
-        """Overwrite Gtk.Widget.set_sensitive to disable style classes."""
-        Gtk.Box.set_sensitive(self, is_sensitive)
-
-        if not is_sensitive:
-            ctx = self.state.get_style_context()
-            ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-            ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
-        else:
-            self._toggle_dry_run(self.state)
 
 
 def _create_icon_stack():
@@ -597,7 +585,6 @@ When done, click the `Run Script` button below.
 
     def _switch_back(self):
         """Switch back from delete-view to script view"""
-        self.run_button.set_sensitive(False)
         self.switch_to_script()
 
     def switch_to_script(self):
