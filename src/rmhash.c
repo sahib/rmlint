@@ -31,14 +31,11 @@
 
 typedef struct RmHasherTestMainSession {
     gboolean print_in_order;
-    gboolean recurse; /* TODO: not implemented yet */
     GMutex lock;
-    GCond signal;
     RmDigestType digest_type;
     char **paths;
     gint path_index;
     RmDigest **completed_digests_buffer;
-    gint remaining_tasks;
     gint verbosity;
 } RmHasherTestMainSession;
 
@@ -111,14 +108,14 @@ int main(int argc, char **argv) {
     RmHasherTestMainSession tag;
     g_log_set_default_handler(logging_callback, &tag);
 
-    ////////////// Set default options: //////////////
     tag.verbosity = G_LOG_LEVEL_WARNING;
+
     /* List of paths we got passed (or NULL)   */
     tag.paths = NULL;
+
     /* Print hashes in the same order as files in command line args */
     tag.print_in_order = TRUE;
-    /* Recurse (not implemented) */
-    tag.recurse = FALSE;
+
     /* Digest type (user option, default SHA1) */
     tag.digest_type = RM_DIGEST_SHA1;
     gint threads = 8;
@@ -137,8 +134,6 @@ int main(int argc, char **argv) {
          &tag.print_in_order, _("Print hashes in order completed, not in order entered "
                                 "(reduces memory usage)"),
          NULL},
-        {"recurse", 'r', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE, &tag.recurse,
-         _("Recurse into folders (not implemented yet)"), NULL},
         {"", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths,
          "Space-separated list of files", "[FILE...]"},
         {NULL}};
@@ -166,16 +161,22 @@ int main(int argc, char **argv) {
         g_printerr("%s", g_option_context_get_help(context, FALSE, NULL));
         exit(1);
     } else if(argc_initial == 1) {
-        /* print help */
-        g_printerr("%s", g_option_context_get_help(context, FALSE, NULL));
+        /* read paths from stdin */
+        char path_buf[PATH_MAX];
+        GPtrArray *paths = g_ptr_array_new();
+
+        while(fgets(path_buf, PATH_MAX, stdin)) {
+            char *abs_path = realpath(strtok(path_buf, "\n"), NULL);
+            g_ptr_array_add(paths, abs_path);
+        }
+
+        tag.paths = (char **)g_ptr_array_free(paths, FALSE);
+    } 
+    
+    if(tag.paths == NULL || tag.paths[0] == NULL) {
+        g_printerr("Error: no file names provided %p\n", tag.paths);
         exit(1);
-    } else if(!tag.paths) {
-        g_printerr("Error: no file names provided\n");
-        exit(1);
-    } else if(tag.recurse) {
-        g_printerr("Error: recursion not implemented yet\n");
-        exit(1);
-    }
+    } 
 
     g_option_context_free(context);
 
@@ -202,6 +203,7 @@ int main(int argc, char **argv) {
     /* Iterate over paths, pushing to hasher threads */
     for(int i = 0; tag.paths && tag.paths[i]; ++i) {
         /* check it is a regular file */
+
         RmStat stat_buf;
         if(rm_sys_stat(tag.paths[i], &stat_buf) == -1) {
             rm_log_warning("Cannot stat %s\n", tag.paths[i]);
@@ -215,6 +217,7 @@ int main(int argc, char **argv) {
         } else {
             rm_log_warning("warning: %s: Unknown type\n", tag.paths[i]);
         }
+
         /* dummy callback for failed paths */
         g_free(tag.paths[i]);
         tag.paths[i] = NULL;
@@ -229,7 +232,7 @@ int main(int argc, char **argv) {
         g_slice_free1((g_strv_length(tag.paths) + 1) * sizeof(RmDigest *),
                       tag.completed_digests_buffer);
     }
-    g_strfreev(tag.paths);
 
+    g_strfreev(tag.paths);
     return 0;
 }
