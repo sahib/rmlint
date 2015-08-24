@@ -26,8 +26,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <locale.h>
+
+#include "../lib/config.h"
 #include "../lib/hasher.h"
 #include "../lib/utilities.h"
+
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
+#include <glib-object.h>
+#endif
 
 typedef struct RmHasherTestMainSession {
     /* Internal */
@@ -81,9 +88,10 @@ static int rm_hasher_callback(_U RmHasher *hasher,
                               RmHasherTestMainSession *session,
                               gpointer index_ptr) {
     gint index = GPOINTER_TO_INT(index_ptr);
+
     g_mutex_lock(&session->lock);
     {
-        if(session->print_in_order) {
+        if(session->print_in_order && digest) {
             /* add digest in buffer array */
             session->completed_digests_buffer[index] = digest;
             /* check if the next due digest has been completed; if yes then print
@@ -99,7 +107,7 @@ static int rm_hasher_callback(_U RmHasher *hasher,
                 session->completed_digests_buffer[session->path_index] = NULL;
                 session->path_index++;
             }
-        } else {
+        } else if(digest) {
             rm_hasher_print(digest, session->paths[index]);
         }
     }
@@ -107,7 +115,31 @@ static int rm_hasher_callback(_U RmHasher *hasher,
     return 0;
 }
 
+static void i18n_init(void) {
+#if HAVE_LIBINTL
+    /* Tell gettext where to search for .mo files */
+    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX "/share/locale");
+    bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
+
+    /* Make printing umlauts work */
+    setlocale(LC_ALL, "");
+
+    /* Say we're the textdomain "rmlint"
+     * so gettext can find us in
+     * /usr/share/locale/de/LC_MESSAGEs/rmlint.mo
+     * */
+    textdomain(RM_GETTEXT_PACKAGE);
+#endif
+}
+
 int main(int argc, char **argv) {
+    i18n_init();
+
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
+    /* Very old glib. Debian, Im looking at you. */
+    g_type_init();
+#endif
+
     RmHasherTestMainSession tag;
     g_log_set_default_handler(logging_callback, &tag);
 
@@ -157,13 +189,13 @@ int main(int argc, char **argv) {
         "\n    Also: murmur256, city256, bastard, city512, "
         "murmur512, ext, cumulative, paranoid");
 
-    int argc_initial = argc;
-
     if(!g_option_context_parse(context, &argc, &argv, &error)) {
         /* print g_option error message, followed by help */
-        g_printerr("Error: %s\n---------------\n", error->message);
+        rm_log_error_line("%s", error->message);
         exit(EXIT_FAILURE);
-    } else if(argc_initial == 1) {
+    }
+
+    if(tag.paths == NULL) {
         /* read paths from stdin */
         char path_buf[PATH_MAX];
         GPtrArray *paths = g_ptr_array_new();
@@ -177,7 +209,7 @@ int main(int argc, char **argv) {
     }
 
     if(tag.paths == NULL || tag.paths[0] == NULL) {
-        g_printerr("Error: no file names provided %p\n", tag.paths);
+        rm_log_error_line(_("No valid paths given."));
         exit(EXIT_FAILURE);
     }
 
@@ -209,22 +241,23 @@ int main(int argc, char **argv) {
 
         RmStat stat_buf;
         if(rm_sys_stat(tag.paths[i], &stat_buf) == -1) {
-            rm_log_warning("Cannot stat %s\n", tag.paths[i]);
+            rm_log_warning_line(_("Can't open directory or file \"%s\": %s"),
+                                tag.paths[i], strerror(errno));
         } else if(S_ISDIR(stat_buf.st_mode)) {
-            rm_log_info("rmhash: %s: Is a directory\n", tag.paths[i]);
+            rm_log_warning_line(_("Directories are not supported: %s"), tag.paths[i]);
         } else if(S_ISREG(stat_buf.st_mode)) {
             RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));
             rm_hasher_task_hash(task, tag.paths[i], 0, 0, FALSE);
             rm_hasher_task_finish(task);
             continue;
         } else {
-            rm_log_warning("warning: %s: Unknown type\n", tag.paths[i]);
+            rm_log_warning_line(_("%s: Unknown file type"), tag.paths[i]);
         }
 
         /* dummy callback for failed paths */
         g_free(tag.paths[i]);
         tag.paths[i] = NULL;
-        rm_hasher_callback(hasher, GINT_TO_POINTER(1), &tag, GINT_TO_POINTER(i));
+        rm_hasher_callback(hasher, NULL, &tag, GINT_TO_POINTER(i));
     }
 
     /* wait for all hasher threads to finish... */
