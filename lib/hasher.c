@@ -219,6 +219,12 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
     gint32 bytes_read = 0;
     gint64 total_bytes_read = 0;
     guint64 file_offset = start_offset;
+    if (bytes_to_read==0) {
+        RmStat stat_buf;
+        if (rm_sys_stat(path, &stat_buf) != -1) {
+            bytes_to_read = MAX(stat_buf.st_size - start_offset, 0);
+        }
+    }
 
     /* how many buffers to read? */
     const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
