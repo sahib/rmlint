@@ -31,7 +31,7 @@
 
 typedef struct RmHasherTestMainSession {
     gboolean print_in_order;
-    gboolean recurse;  /* TODO: not implemented yet */
+    gboolean recurse; /* TODO: not implemented yet */
     GMutex lock;
     GCond signal;
     RmDigestType digest_type;
@@ -53,9 +53,9 @@ static void logging_callback(_U const gchar *log_domain,
 }
 
 static gboolean rm_hasher_parse_type(_U const char *option_name,
-                                       const gchar *value,
-                                       RmHasherTestMainSession *session,
-                                       GError **error) {
+                                     const gchar *value,
+                                     RmHasherTestMainSession *session,
+                                     GError **error) {
     session->digest_type = rm_string_to_digest_type(value);
 
     if(session->digest_type == RM_DIGEST_UNKNOWN) {
@@ -65,29 +65,36 @@ static gboolean rm_hasher_parse_type(_U const char *option_name,
     return TRUE;
 }
 
-
 static void rm_hasher_print(RmDigest *digest, char *path) {
-    gsize size = digest->bytes * 2 + 1;
+    gsize size = rm_digest_get_bytes(digest) * 2 + 1;
+
     char checksum_str[size];
     memset(checksum_str, '0', size);
     checksum_str[size - 1] = 0;
+
     rm_digest_hexstring(digest, checksum_str);
     g_print("%s  %s\n", checksum_str, path);
 }
 
-static int rm_hasher_callback(_U RmHasher *hasher, RmDigest *digest, RmHasherTestMainSession *session, gpointer index_ptr) {
+static int rm_hasher_callback(_U RmHasher *hasher,
+                              RmDigest *digest,
+                              RmHasherTestMainSession *session,
+                              gpointer index_ptr) {
     gint index = GPOINTER_TO_INT(index_ptr);
     g_mutex_lock(&session->lock);
     {
-        if (session->print_in_order) {
+        if(session->print_in_order) {
             /* add digest in buffer array */
             session->completed_digests_buffer[index] = digest;
             /* check if the next due digest has been completed; if yes then print
              * it (and possibly any following digests) */
-            while (session->completed_digests_buffer[session->path_index]) {
-                if (session->paths[session->path_index]) {
-                    rm_hasher_print(session->completed_digests_buffer[session->path_index], session->paths[session->path_index]);
-                    rm_digest_free(session->completed_digests_buffer[session->path_index]);
+            while(session->completed_digests_buffer[session->path_index]) {
+                if(session->paths[session->path_index]) {
+                    rm_hasher_print(
+                        session->completed_digests_buffer[session->path_index],
+                        session->paths[session->path_index]);
+                    rm_digest_free(
+                        session->completed_digests_buffer[session->path_index]);
                 }
                 session->completed_digests_buffer[session->path_index] = NULL;
                 session->path_index++;
@@ -114,57 +121,60 @@ int main(int argc, char **argv) {
     tag.recurse = FALSE;
     /* Digest type (user option, default SHA1) */
     tag.digest_type = RM_DIGEST_SHA1;
-    gint threads=8;
+    gint threads = 8;
     gint64 buffer_mbytes = 256;
-
 
     ////////////// Option Parsing ///////////////
 
-    const GOptionEntry entries[] =
-    {
-        {"digest-type", 'd', 0, G_OPTION_ARG_CALLBACK, (GOptionArgFunc)rm_hasher_parse_type,
-         "Digest type [SHA1]", "[TYPE]"},
+    const GOptionEntry entries[] = {
+        {"digest-type", 'd', 0, G_OPTION_ARG_CALLBACK,
+         (GOptionArgFunc)rm_hasher_parse_type, "Digest type [SHA1]", "[TYPE]"},
         {"num-threads", 't', 0, G_OPTION_ARG_INT, &threads,
          _("Number of hashing threads [8]"), NULL},
         {"buffer-mbytes", 'b', 0, G_OPTION_ARG_INT64, &buffer_mbytes,
          _("Megabytes read buffer (default 256 MB)"), NULL},
-        {"ignore-order", 'i', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &tag.print_in_order,
-         _("Print hashes in order completed, not in order entered (reduces memory usage)"), NULL},
+        {"ignore-order", 'i', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE,
+         &tag.print_in_order, _("Print hashes in order completed, not in order entered "
+                                "(reduces memory usage)"),
+         NULL},
         {"recurse", 'r', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE, &tag.recurse,
          _("Recurse into folders (not implemented yet)"), NULL},
-        { "", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths, "Space-separated list of files", "[FILE...]"},
-        { NULL }
-    };
+        {"", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths,
+         "Space-separated list of files", "[FILE...]"},
+        {NULL}};
 
     GError *error = NULL;
-    GOptionContext *context = g_option_context_new ("      Hash a list of files");
-    GOptionGroup *main_group = g_option_group_new("rmhash", "Hash a list of files", "", &tag, NULL);
+    GOptionContext *context = g_option_context_new("      Hash a list of files");
+    GOptionGroup *main_group =
+        g_option_group_new("rmhash", "Hash a list of files", "", &tag, NULL);
+
     g_option_group_add_entries(main_group, entries);
-    //g_option_context_add_main_entries (context, entries, NULL);
-    g_option_context_set_main_group (context, main_group);
-    g_option_context_set_summary (context,
-        "Multi-threaded file digest (hash) calculator."
-        "\n Available digest types:"
-        "\n  spooky32, spooky64, md5, murmur[128], spooky[128], city[128], sha1, sha256, sha512"
-        "\n  Also: murmur256, city256, bastard, city512, murmur512, ext, cumulative, paranoid)");
+    g_option_context_set_main_group(context, main_group);
+    g_option_context_set_summary(context,
+                                 "Multi-threaded file digest (hash) calculator."
+                                 "\n  Available digest types:"
+                                 "\n    spooky32, spooky64, md5, murmur[128], spooky[128], "
+                                 "city[128], sha1, sha256, sha512"
+                                 "\n    Also: murmur256, city256, bastard, city512, "
+                                 "murmur512, ext, cumulative, paranoid");
 
     int argc_initial = argc;
 
-    if (!g_option_context_parse (context, &argc, &argv, &error)) {
+    if(!g_option_context_parse(context, &argc, &argv, &error)) {
         /* print g_option error message, followed by help */
-        g_printerr ("Error: %s\n---------------\n", error->message);
-        g_printerr("%s", g_option_context_get_help (context, FALSE, NULL));
-        exit (1);
-    } else if (argc_initial==1) {
+        g_printerr("Error: %s\n---------------\n", error->message);
+        g_printerr("%s", g_option_context_get_help(context, FALSE, NULL));
+        exit(1);
+    } else if(argc_initial == 1) {
         /* print help */
-        g_printerr("%s", g_option_context_get_help (context, FALSE, NULL));
-        exit (1);
-    } else if (!tag.paths) {
+        g_printerr("%s", g_option_context_get_help(context, FALSE, NULL));
+        exit(1);
+    } else if(!tag.paths) {
         g_printerr("Error: no file names provided\n");
-        exit (1);
-    } else if (tag.recurse) {
+        exit(1);
+    } else if(tag.recurse) {
         g_printerr("Error: recursion not implemented yet\n");
-        exit (1);
+        exit(1);
     }
 
     g_option_context_free(context);
@@ -173,31 +183,31 @@ int main(int argc, char **argv) {
 
     if(tag.print_in_order) {
         /* allocate buffer to collect results */
-        tag.completed_digests_buffer = g_slice_alloc0((g_strv_length(tag.paths) + 1) * sizeof(RmDigest*));
+        tag.completed_digests_buffer =
+            g_slice_alloc0((g_strv_length(tag.paths) + 1) * sizeof(RmDigest *));
         tag.path_index = 0;
     }
 
     /* initialise structures */
     g_mutex_init(&tag.lock);
-    RmHasher *hasher = rm_hasher_new(
-        tag.digest_type,
-        threads,
-        FALSE,
-        4096,
-        1024*1024*buffer_mbytes,
-        0,
-        (RmHasherCallback)rm_hasher_callback,
-        &tag);
+    RmHasher *hasher = rm_hasher_new(tag.digest_type,
+                                     threads,
+                                     FALSE,
+                                     4096,
+                                     1024 * 1024 * buffer_mbytes,
+                                     0,
+                                     (RmHasherCallback)rm_hasher_callback,
+                                     &tag);
 
     /* Iterate over paths, pushing to hasher threads */
     for(int i = 0; tag.paths && tag.paths[i]; ++i) {
         /* check it is a regular file */
         RmStat stat_buf;
-        if (rm_sys_stat(tag.paths[i], &stat_buf) == -1) {
+        if(rm_sys_stat(tag.paths[i], &stat_buf) == -1) {
             rm_log_warning("Cannot stat %s\n", tag.paths[i]);
-        } else if S_ISDIR(stat_buf.st_mode) {
+        } else if(S_ISDIR(stat_buf.st_mode)) {
             rm_log_info("rmhash: %s: Is a directory\n", tag.paths[i]);
-        } else if S_ISREG(stat_buf.st_mode) {
+        } else if(S_ISREG(stat_buf.st_mode)) {
             RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));
             rm_hasher_task_hash(task, tag.paths[i], 0, 0, FALSE);
             rm_hasher_task_finish(task);
@@ -216,7 +226,8 @@ int main(int argc, char **argv) {
 
     /* tidy up */
     if(tag.print_in_order) {
-        g_slice_free1((g_strv_length(tag.paths) + 1) * sizeof(RmDigest*), tag.completed_digests_buffer);
+        g_slice_free1((g_strv_length(tag.paths) + 1) * sizeof(RmDigest *),
+                      tag.completed_digests_buffer);
     }
     g_strfreev(tag.paths);
 
