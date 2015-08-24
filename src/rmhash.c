@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../lib/hasher.h"
+#include "../lib/utilities.h"
 
 typedef struct RmHasherTestMainSession {
     gboolean print_in_order;
@@ -84,8 +85,10 @@ static int rm_hasher_callback(_U RmHasher *hasher, RmDigest *digest, RmHasherTes
             /* check if the next due digest has been completed; if yes then print
              * it (and possibly any following digests) */
             while (session->completed_digests_buffer[session->path_index]) {
-                rm_hasher_print(session->completed_digests_buffer[session->path_index], session->paths[session->path_index]);
-                rm_digest_free(session->completed_digests_buffer[session->path_index]);
+                if (session->paths[session->path_index]) {
+                    rm_hasher_print(session->completed_digests_buffer[session->path_index], session->paths[session->path_index]);
+                    rm_digest_free(session->completed_digests_buffer[session->path_index]);
+                }
                 session->completed_digests_buffer[session->path_index] = NULL;
                 session->path_index++;
             }
@@ -114,9 +117,9 @@ int main(int argc, char **argv) {
     gint threads=8;
     gint64 buffer_mbytes = 256;
 
-    
+
     ////////////// Option Parsing ///////////////
-    
+
     const GOptionEntry entries[] =
     {
         {"digest-type", 'd', 0, G_OPTION_ARG_CALLBACK, (GOptionArgFunc)rm_hasher_parse_type,
@@ -144,7 +147,7 @@ int main(int argc, char **argv) {
         "\n Available digest types:"
         "\n  spooky32, spooky64, md5, murmur[128], spooky[128], city[128], sha1, sha256, sha512"
         "\n  Also: murmur256, city256, bastard, city512, murmur512, ext, cumulative, paranoid)");
-    
+
     int argc_initial = argc;
 
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
@@ -188,9 +191,24 @@ int main(int argc, char **argv) {
 
     /* Iterate over paths, pushing to hasher threads */
     for(int i = 0; tag.paths && tag.paths[i]; ++i) {
-        RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));
-        rm_hasher_task_hash(task, tag.paths[i], 0, 0, FALSE);
-        rm_hasher_task_finish(task);
+        /* check it is a regular file */
+        RmStat stat_buf;
+        if (rm_sys_stat(tag.paths[i], &stat_buf) == -1) {
+            rm_log_warning("Cannot stat %s\n", tag.paths[i]);
+        } else if S_ISDIR(stat_buf.st_mode) {
+            rm_log_info("rmhash: %s: Is a directory\n", tag.paths[i]);
+        } else if S_ISREG(stat_buf.st_mode) {
+            RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));
+            rm_hasher_task_hash(task, tag.paths[i], 0, 0, FALSE);
+            rm_hasher_task_finish(task);
+            continue;
+        } else {
+            rm_log_warning("warning: %s: Unknown type\n", tag.paths[i]);
+        }
+        /* dummy callback for failed paths */
+        g_free(tag.paths[i]);
+        tag.paths[i] = NULL;
+        rm_hasher_callback(hasher, GINT_TO_POINTER(1), &tag, GINT_TO_POINTER(i));
     }
 
     /* wait for all hasher threads to finish... */
