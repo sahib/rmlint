@@ -30,12 +30,15 @@
 #include "../lib/utilities.h"
 
 typedef struct RmHasherTestMainSession {
-    gboolean print_in_order;
-    GMutex lock;
-    RmDigestType digest_type;
+    /* Internal */
     char **paths;
     gint path_index;
+    GMutex lock;
     RmDigest **completed_digests_buffer;
+
+    /* Options */
+    RmDigestType digest_type;
+    gboolean print_in_order;
     gint verbosity;
 } RmHasherTestMainSession;
 
@@ -145,21 +148,21 @@ int main(int argc, char **argv) {
 
     g_option_group_add_entries(main_group, entries);
     g_option_context_set_main_group(context, main_group);
-    g_option_context_set_summary(context,
-                                 "Multi-threaded file digest (hash) calculator."
-                                 "\n  Available digest types:"
-                                 "\n    spooky32, spooky64, md5, murmur[128], spooky[128], "
-                                 "city[128], sha1, sha256, sha512"
-                                 "\n    Also: murmur256, city256, bastard, city512, "
-                                 "murmur512, ext, cumulative, paranoid");
+    g_option_context_set_summary(
+        context,
+        "Multi-threaded file digest (hash) calculator."
+        "\n  Available digest types:"
+        "\n    spooky32, spooky64, md5, murmur[128], spooky[128], "
+        "city[128], sha1, sha256, sha512"
+        "\n    Also: murmur256, city256, bastard, city512, "
+        "murmur512, ext, cumulative, paranoid");
 
     int argc_initial = argc;
 
     if(!g_option_context_parse(context, &argc, &argv, &error)) {
         /* print g_option error message, followed by help */
         g_printerr("Error: %s\n---------------\n", error->message);
-        g_printerr("%s", g_option_context_get_help(context, FALSE, NULL));
-        exit(1);
+        exit(EXIT_FAILURE);
     } else if(argc_initial == 1) {
         /* read paths from stdin */
         char path_buf[PATH_MAX];
@@ -171,12 +174,12 @@ int main(int argc, char **argv) {
         }
 
         tag.paths = (char **)g_ptr_array_free(paths, FALSE);
-    } 
-    
+    }
+
     if(tag.paths == NULL || tag.paths[0] == NULL) {
         g_printerr("Error: no file names provided %p\n", tag.paths);
-        exit(1);
-    } 
+        exit(EXIT_FAILURE);
+    }
 
     g_option_context_free(context);
 
@@ -234,5 +237,6 @@ int main(int argc, char **argv) {
     }
 
     g_strfreev(tag.paths);
-    return 0;
+
+    return EXIT_SUCCESS;
 }
