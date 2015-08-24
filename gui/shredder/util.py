@@ -306,8 +306,6 @@ class View(Gtk.Grid):
 
         if percent is not None:
             self.progressbar.set_fraction(percent)
-        else:
-            self.progressbar.pulse()
 
     def hide_progress(self):
         """Hide the progressbar from the user.
