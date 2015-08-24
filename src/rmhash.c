@@ -46,6 +46,7 @@ typedef struct RmHasherTestMainSession {
     /* Options */
     RmDigestType digest_type;
     gboolean print_in_order;
+    gboolean print_multihash;
     gint verbosity;
 } RmHasherTestMainSession;
 
@@ -72,7 +73,7 @@ static gboolean rm_hasher_parse_type(_U const char *option_name,
     return TRUE;
 }
 
-static void rm_hasher_print(RmDigest *digest, char *path) {
+static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) {
     gsize size = rm_digest_get_bytes(digest) * 2 + 1;
 
     char checksum_str[size];
@@ -80,6 +81,12 @@ static void rm_hasher_print(RmDigest *digest, char *path) {
     checksum_str[size - 1] = 0;
 
     rm_digest_hexstring(digest, checksum_str);
+
+    if(print_multihash) {
+        g_print("%02X%02X", rm_digest_type_to_multihash_id(digest->type),
+                rm_digest_get_bytes(digest));
+    }
+
     g_print("%s  %s\n", checksum_str, path);
 }
 
@@ -100,7 +107,8 @@ static int rm_hasher_callback(_U RmHasher *hasher,
                 if(session->paths[session->path_index]) {
                     rm_hasher_print(
                         session->completed_digests_buffer[session->path_index],
-                        session->paths[session->path_index]);
+                        session->paths[session->path_index],
+                        session->print_multihash);
                     rm_digest_free(
                         session->completed_digests_buffer[session->path_index]);
                 }
@@ -108,7 +116,7 @@ static int rm_hasher_callback(_U RmHasher *hasher,
                 session->path_index++;
             }
         } else if(digest) {
-            rm_hasher_print(digest, session->paths[index]);
+            rm_hasher_print(digest, session->paths[index], session->print_multihash);
         }
     }
     g_mutex_unlock(&session->lock);
@@ -163,6 +171,8 @@ int main(int argc, char **argv) {
          (GOptionArgFunc)rm_hasher_parse_type, "Digest type [SHA1]", "[TYPE]"},
         {"num-threads", 't', 0, G_OPTION_ARG_INT, &threads,
          _("Number of hashing threads [8]"), NULL},
+        {"multihash", 'm', 0, G_OPTION_ARG_NONE, &tag.print_multihash,
+         _("Print hash as self identifying multihash"), NULL},
         {"buffer-mbytes", 'b', 0, G_OPTION_ARG_INT64, &buffer_mbytes,
          _("Megabytes read buffer (default 256 MB)"), NULL},
         {"ignore-order", 'i', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE,
