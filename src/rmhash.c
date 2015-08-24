@@ -38,7 +38,18 @@ typedef struct RmHasherTestMainSession {
     gint path_index;
     RmDigest **completed_digests_buffer;
     gint remaining_tasks;
+    gint verbosity;
 } RmHasherTestMainSession;
+
+static void logging_callback(_U const gchar *log_domain,
+                             GLogLevelFlags log_level,
+                             const gchar *message,
+                             gpointer user_data) {
+    RmHasherTestMainSession *session = user_data;
+    if(session->verbosity >= log_level) {
+        fputs(message, stderr);
+    }
+}
 
 static gboolean rm_hasher_parse_type(_U const char *option_name,
                                        const gchar *value,
@@ -60,7 +71,7 @@ static void rm_hasher_print(RmDigest *digest, char *path) {
     memset(checksum_str, '0', size);
     checksum_str[size - 1] = 0;
     rm_digest_hexstring(digest, checksum_str);
-    g_print("%s %s\n", checksum_str, path);
+    g_print("%s  %s\n", checksum_str, path);
 }
 
 static int rm_hasher_callback(_U RmHasher *hasher, RmDigest *digest, RmHasherTestMainSession *session, gpointer index_ptr) {
@@ -88,8 +99,10 @@ static int rm_hasher_callback(_U RmHasher *hasher, RmDigest *digest, RmHasherTes
 
 int main(int argc, char **argv) {
     RmHasherTestMainSession tag;
+    g_log_set_default_handler(logging_callback, &tag);
 
     ////////////// Set default options: //////////////
+    tag.verbosity = G_LOG_LEVEL_WARNING;
     /* List of paths we got passed (or NULL)   */
     tag.paths = NULL;
     /* Print hashes in the same order as files in command line args */
