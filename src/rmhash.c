@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
     RmHasher *hasher = rm_hasher_new(
         tag.digest_type,
         threads,
-        TRUE,
+        FALSE,
         4096,
         1024*1024*buffer_mbytes,
         0,
