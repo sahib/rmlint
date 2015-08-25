@@ -799,6 +799,10 @@ def _create_toggle_cellrenderer(treeview):
 
 
 class PathTreeView(Gtk.TreeView):
+    __gsignals__ = {
+        'show-menu': (GObject.SIGNAL_RUN_LAST, PopupMenu, ()),
+    }
+
     """A GtkTreeView that is readily configured for using PathTreeModel"""
     def __init__(self):
         Gtk.TreeView.__init__(self)
@@ -846,8 +850,6 @@ class PathTreeView(Gtk.TreeView):
             PathTreeView.on_button_press_event
         )
 
-        self._menu = None
-
     def set_model(self, model):
         """Overwrite Gtk.TreeView.set_model, but expand sub root paths"""
         Gtk.TreeView.set_model(self, model)
@@ -855,18 +857,11 @@ class PathTreeView(Gtk.TreeView):
 
     def on_button_press_event(self, event):
         """Callback handler only used for mouse clicks."""
-        # TODO: Actually implement all those.
         if event.button != 3:
             return
 
-        # HACK: bind to self, since the ref would get lost.
-        self._menu = PopupMenu()
-        self._menu.simple_add('Toggle all', None)
-        self._menu.simple_add('Toggle selected', None)
-        self._menu.simple_add_separator()
-        self._menu.simple_add('Open folder', None)
-        self._menu.simple_add('Copy path to buffer', None)
-        self._menu.simple_popup(event)
+        menu = self.emit('show-menu')
+        menu.simple_popup(event)
 
 
 if __name__ == '__main__':

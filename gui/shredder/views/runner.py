@@ -12,11 +12,12 @@ import logging
 
 # External:
 from gi.repository import Gtk
+from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.util import View, IconButton
+from shredder.util import View, IconButton, PopupMenu
 from shredder.chart import ChartStack
 from shredder.tree import PathTreeView, PathTreeModel, Column, PathTrie
 from shredder.runner import Runner
@@ -163,6 +164,9 @@ class RunnerView(View):
             'partial-generate-script', self.on_generate_partial_script
         )
 
+        self._menu = None
+        self.treeview.connect('show-menu', self.on_show_menu)
+
     def reset(self):
         """Reset internally to freshly initialized."""
         self.is_running = False
@@ -293,7 +297,7 @@ class RunnerView(View):
                 group = self.runner.group(cksum)
                 trie = PathTrie()
 
-                for doc in group:
+                for doc in group or []:
                     trie.insert(
                         doc['path'],
                         Column.make_row(doc)
@@ -316,3 +320,29 @@ class RunnerView(View):
 
     def on_generate_partial_script(self, _):
         self._generate_script(self.treeview.get_model())
+
+    def on_show_menu(self, _):
+        # HACK: bind to self, since the ref would get lost.
+        self._menu = PopupMenu()
+        self._menu.simple_add('Toggle all', None)
+        self._menu.simple_add('Toggle selected', None)
+        self._menu.simple_add_separator()
+        self._menu.simple_add('Open folder', self.on_open_folder)
+        self._menu.simple_add('Copy path to buffer', None)
+        return self._menu
+
+    def on_open_folder(self, _):
+        model, iter_ = self.treeview.get_selection().get_selected()
+        if not model:
+            return
+
+        node = self.model.iter_to_node(iter_)
+
+        try:
+            LOGGER.info('Calling xdg-open %s', node.build_path())
+            Gio.Subprocess.new(
+                ['xdg-open', node.build_path()], 0
+            )
+        except GLib.Error as err:
+            LOGGER.exception('Could not open directory via xdg-open')
+            self.app_window.show_infobar(str(err))
