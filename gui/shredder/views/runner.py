@@ -334,7 +334,10 @@ class RunnerView(View):
         self._menu.simple_add('Toggle all', self.on_toggle_all)
         self._menu.simple_add('Toggle selected', self.on_toggle_selected)
         self._menu.simple_add_separator()
-        self._menu.simple_add('Open folder', self.on_open_folder)
+        self._menu.simple_add('Expand all', self.on_expand_all)
+        self._menu.simple_add('Collapse all', self.on_collapse_all)
+        self._menu.simple_add_separator()
+        self._menu.simple_add('Open item', self.on_open_folder)
         self._menu.simple_add(
             'Copy path to clipboard',
             self.on_copy_to_clipboard
@@ -381,6 +384,7 @@ class RunnerView(View):
         self._toggle_tag_state(self.model.trie)
 
     def on_toggle_selected(self, _):
+        # TODO: This is dead ugly, fix.
         nodes = list(self.treeview.get_selected_nodes())
         self._toggle_tag_state(nodes)
 
@@ -411,3 +415,9 @@ class RunnerView(View):
                         twin_node, Column.TAG, IndicatorLabel.SUCCESS
                     )
                     break
+
+    def on_expand_all(self, _):
+        self.treeview.expand_all()
+
+    def on_collapse_all(self, _):
+        self.treeview.collapse_all()
