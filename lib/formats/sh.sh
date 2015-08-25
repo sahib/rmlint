@@ -81,9 +81,9 @@ original_check() {
         return 1
     fi
 
-    # Check they are not the exact same file:
-    if [ $(stat -c '%D:%i' "$1") = $(stat -c '%D:%i' "$2") ]; then
-        echo "^^^^^^ Error: original and duplicate point to the *same* file - cancelling....."
+    # Check they are not the exact same file (hardlinks allowed):
+    if [ "$1" = "$2" ]; then
+        echo "^^^^^^ Error: original and duplicate point to the *same* path - cancelling....."
         return 1
     fi
 
