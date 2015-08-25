@@ -12,6 +12,7 @@ import logging
 
 # External:
 from gi.repository import Gtk
+from gi.repository import Gdk
 from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
@@ -328,7 +329,10 @@ class RunnerView(View):
         self._menu.simple_add('Toggle selected', None)
         self._menu.simple_add_separator()
         self._menu.simple_add('Open folder', self.on_open_folder)
-        self._menu.simple_add('Copy path to buffer', None)
+        self._menu.simple_add(
+            'Copy path to clipboard',
+            self.on_copy_to_clipboard
+        )
         return self._menu
 
     def on_open_folder(self, _):
@@ -346,3 +350,14 @@ class RunnerView(View):
         except GLib.Error as err:
             LOGGER.exception('Could not open directory via xdg-open')
             self.app_window.show_infobar(str(err))
+
+    def on_copy_to_clipboard(self, _):
+        model, iter_ = self.treeview.get_selection().get_selected()
+        if not model:
+            return
+
+        node = self.model.iter_to_node(iter_)
+        path = node.build_path()
+
+        clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default())
+        clipboard.set_text(path, len(path))
