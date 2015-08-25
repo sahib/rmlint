@@ -576,6 +576,7 @@ if __name__ == '__main__':
         push(1200, '/home/sahib/music/sub/2.mp3')
         push(1200, '/home/sahib/music/sub/3.mp3')
         push(600, '/home/sahib/music/sub/4.mp3')
+        model.trie.sort(Column.SIZE)
         print(model.trie)
 
         area = RingChart()
