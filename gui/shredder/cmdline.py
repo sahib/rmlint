@@ -131,4 +131,5 @@ def parse_arguments(root_logger):
 
 
 if __name__ == '__main__':
+    LOGGER = logging.getLogger('test-cmdline')
     print(parse_arguments(LOGGER))

@@ -246,7 +246,6 @@ class RunnerView(View):
 
         GLib.timeout_add(1000, self.on_delayed_chart_render, -1)
 
-
     def on_delayed_chart_render(self, last_size):
         """Called after a short delay to reduce chart redraws."""
         model = self.treeview.get_model()
