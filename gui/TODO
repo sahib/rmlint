@@ -7,12 +7,12 @@ DONE:
 - Fix: Actually load the right script from the working directory. -- done
 - Fix: Add commandline to jump to path directly etc. -- done
 - Fix: Merge widgets.py, utils.py, cellrenderers.py into one combined file. -- done
+- Fix: Make main view sortable. -- done
 - Design: Add a chart when clicking on a single file that shows 
-  only the file and it's twins.
+  only the file and it's twins. -- done
 
 OPEN:
 
-- Make main view sortable. (GtkTreeModelSort possible?)
 - Translation: Mark strings/use more standard buttons
 - Design: Add context menu to treeview.
 - Design: Introduce more keybindings/actions.

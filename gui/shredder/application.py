@@ -82,8 +82,8 @@ class Application(Gtk.Application):
         # Check compile time features of rmlint that we need later.
         if not have_feature('json-cache'):
             LOGGER.error('No support for +json-cache in rmlint binary.')
-            LOGGER.error('Please recompile with --with-json-glib...')
-            LOGGER.error('...and `json-glib-1.0` installed on your system.')
+            LOGGER.error('Please recompile with --with-json-glib…')
+            LOGGER.error('…and `json-glib-1.0` installed on your system.')
             sys.exit(-1)
 
     def do_activate(self, **kw):
@@ -94,7 +94,8 @@ class Application(Gtk.Application):
         Gtk.Application.do_startup(self, **kw)
 
         # Make tranlsating strings possible:
-        gettext.install(APP_TITLE)
+        # (We use the same message catalouge as rmlint)
+        gettext.install('rmlint')
 
         rel_dir = os.path.dirname(__file__)
         resource_file = os.path.join(rel_dir, 'resources/shredder.gresource')
