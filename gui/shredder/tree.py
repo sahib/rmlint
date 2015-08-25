@@ -562,6 +562,10 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
     def __len__(self):
         return len(self.trie)
 
+    def set_node_value(self, node, column, value):
+        """Like set_value(), but works on a PathNode"""
+        self.set_value(make_iter(node), column, value)
+
     ##################################
     # Tree Model Spec Implementation #
     ##################################
@@ -811,6 +815,9 @@ class PathTreeView(Gtk.TreeView):
         self.set_grid_lines(Gtk.TreeViewGridLines.NONE)
         self.set_enable_tree_lines(True)
 
+        # Make selecting multiple rows possible:
+        self.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
+
         # Small spedup:
         self.set_fixed_height_mode(True)
 
@@ -854,6 +861,20 @@ class PathTreeView(Gtk.TreeView):
         """Overwrite Gtk.TreeView.set_model, but expand sub root paths"""
         Gtk.TreeView.set_model(self, model)
         self.expand_all()
+
+    def get_selected_nodes(self):
+        """Extra convinience method for getting the currently selected nodes."""
+        model, rows = self.get_selection().get_selected_rows()
+        for tp_path in rows:
+            node = model.trie.resolve(tp_path.get_indices())
+            yield node
+
+    def get_selected_node(self):
+        """Return thefirst selected node or None."""
+        try:
+            return next(self.get_selected_nodes())
+        except StopIteration:
+            return None
 
     def on_button_press_event(self, event):
         """Callback handler only used for mouse clicks."""

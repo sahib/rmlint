@@ -18,7 +18,7 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.util import View, IconButton, PopupMenu
+from shredder.util import View, IconButton, PopupMenu, IndicatorLabel
 from shredder.chart import ChartStack
 from shredder.tree import PathTreeView, PathTreeModel, Column, PathTrie
 from shredder.runner import Runner
@@ -246,6 +246,7 @@ class RunnerView(View):
 
         GLib.timeout_add(1000, self.on_delayed_chart_render, -1)
 
+
     def on_delayed_chart_render(self, last_size):
         """Called after a short delay to reduce chart redraws."""
         model = self.treeview.get_model()
@@ -286,27 +287,28 @@ class RunnerView(View):
 
     def on_selection_changed(self, selection):
         """Called when the user clicks a specific row."""
-        model, iter_ = selection.get_selected()
-        if iter_ is not None:
-            node = model.iter_to_node(iter_)
-            if not model.iter_has_child(iter_):
-                # It is a single file.
-                # Show a chart containing all twins of this file.
-                # This is helpful to see quickly where those lie.
+        node = self.treeview.get_selected_node()
+        if node is None:
+            return
 
-                cksum = node[Column.CKSUM]
-                group = self.runner.group(cksum)
-                trie = PathTrie()
+        if not node.children:
+            # It is a single file.
+            # Show a chart containing all twins of this file.
+            # This is helpful to see quickly where those lie.
 
-                for doc in group or []:
-                    trie.insert(
-                        doc['path'],
-                        Column.make_row(doc)
-                    )
+            cksum = node[Column.CKSUM]
+            group = self.runner.group(cksum)
+            trie = PathTrie()
 
-                self.chart_stack.render(trie.root)
-            else:
-                self.chart_stack.render(node)
+            for doc in group or []:
+                trie.insert(
+                    doc['path'],
+                    Column.make_row(doc)
+                )
+
+            self.chart_stack.render(trie.root)
+        else:
+            self.chart_stack.render(node)
 
     def _generate_script(self, model):
         trie = model.trie
@@ -322,11 +324,15 @@ class RunnerView(View):
     def on_generate_partial_script(self, _):
         self._generate_script(self.treeview.get_model())
 
+    #######################
+    # MENU ENTRY HANDLING #
+    #######################
+
     def on_show_menu(self, _):
         # HACK: bind to self, since the ref would get lost.
         self._menu = PopupMenu()
-        self._menu.simple_add('Toggle all', None)
-        self._menu.simple_add('Toggle selected', None)
+        self._menu.simple_add('Toggle all', self.on_toggle_all)
+        self._menu.simple_add('Toggle selected', self.on_toggle_selected)
         self._menu.simple_add_separator()
         self._menu.simple_add('Open folder', self.on_open_folder)
         self._menu.simple_add(
@@ -336,11 +342,9 @@ class RunnerView(View):
         return self._menu
 
     def on_open_folder(self, _):
-        model, iter_ = self.treeview.get_selection().get_selected()
-        if not model:
+        node = self.treeview.get_selected_node()
+        if node is None:
             return
-
-        node = self.model.iter_to_node(iter_)
 
         try:
             LOGGER.info('Calling xdg-open %s', node.build_path())
@@ -352,12 +356,58 @@ class RunnerView(View):
             self.app_window.show_infobar(str(err))
 
     def on_copy_to_clipboard(self, _):
-        model, iter_ = self.treeview.get_selection().get_selected()
-        if not model:
+        node = self.treeview.get_selected_node()
+        if node is None:
             return
 
-        node = self.model.iter_to_node(iter_)
         path = node.build_path()
 
         clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default())
         clipboard.set_text(path, len(path))
+
+    def _toggle_tag_state(self, node_iter):
+        model = self.treeview.get_model()
+        for node in node_iter:
+            current, new = node[Column.TAG], IndicatorLabel.NONE
+
+            if current is IndicatorLabel.ERROR:
+                new = IndicatorLabel.SUCCESS
+            elif current is IndicatorLabel.SUCCESS:
+                new = IndicatorLabel.ERROR
+
+            model.set_node_value(node, Column.TAG, new)
+
+    def on_toggle_all(self, _):
+        self._toggle_tag_state(self.model.trie)
+
+    def on_toggle_selected(self, _):
+        nodes = list(self.treeview.get_selected_nodes())
+        self._toggle_tag_state(nodes)
+
+        for node in nodes:
+            # Json documents with all related twins:
+            group = self.runner.group(node[Column.CKSUM])
+            if group is None:
+                continue
+
+            # List of PathNodes which are twins:
+            group_nodes = []
+            for doc in group:
+                group_nodes.append(self.model.trie.find(doc['path']))
+
+            has_original = False
+            for twin_node in group_nodes:
+                if twin_node[Column.TAG] is IndicatorLabel.SUCCESS:
+                    has_original = True
+                    break
+
+            if has_original:
+                continue
+
+            # No original
+            for twin_node in group_nodes:
+                if twin_node is not node:
+                    self.model.set_node_value(
+                        twin_node, Column.TAG, IndicatorLabel.SUCCESS
+                    )
+                    break
