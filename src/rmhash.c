@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
          NULL},
         {"", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths,
          "Space-separated list of files", "[FILE…]"},
-        {NULL}};
+        {NULL, 0, 0, 0, NULL, NULL, NULL}};
 
     GError *error = NULL;
     GOptionContext *context = g_option_context_new("      Hash a list of files");
