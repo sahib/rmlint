@@ -72,12 +72,12 @@ handle_bad_user_and_group_id() {
 
 original_check() {
     if [ ! -e "$2" ]; then
-        echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
+        echo "^^^^^^ Error: original has disappeared - cancelling....."
         return 1
     fi
 
     if [ ! -e "$1" ]; then
-        echo "^^^^^^ Error: original has disappeared - cancelling....."
+        echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
         return 1
     fi
 
