@@ -333,7 +333,7 @@ class RingChart(Chart):
         ))
 
         child_offset = offset
-        for child in node.children.values():
+        for child in node.indices:
             node_size = node[Column.SIZE]
 
             if node_size is not 0:

@@ -115,6 +115,12 @@ class RunnerView(View):
             self.on_selection_changed
         )
 
+        for column in self.treeview.get_columns():
+            column.connect(
+                'clicked',
+                lambda _: self.rerender_chart()
+            )
+
         # Scrolled window on the left
         scw = Gtk.ScrolledWindow()
         scw.set_vexpand(True)
@@ -240,15 +246,13 @@ class RunnerView(View):
         model = self.treeview.get_model()
         current_size = len(model)
 
-        LOGGER.info('Refreshing chart.')
-
         if current_size == last_size:
             # Come back later:
             return False
 
         if len(model) > 1:
             self.chart_stack.set_visible_child_name(ChartStack.CHART)
-            self.chart_stack.render(model.trie.root)
+            self.rerender_chart()
             self.app_window.views.go_right.set_sensitive(True)
             self.actionbar.activate_script_btn(True)
         else:
@@ -257,6 +261,12 @@ class RunnerView(View):
         GLib.timeout_add(1500, self.on_delayed_chart_render, current_size)
 
         return False
+
+    def rerender_chart(self):
+        """Re-render the chart from the current model root."""
+        LOGGER.info('Refreshing chart.')
+        model = self.treeview.get_model()
+        self.chart_stack.render(model.trie.root)
 
     def on_view_enter(self):
         """Called when the view enters sight."""

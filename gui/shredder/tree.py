@@ -263,7 +263,7 @@ class PathTrie:
         node = node or self.root
         yield node
 
-        for child in node.children.values():
+        for child in node.indices:
             yield from self.iterate(child)
 
     def insert(self, path, row):
@@ -800,7 +800,6 @@ def _create_toggle_cellrenderer(treeview):
 
 class PathTreeView(Gtk.TreeView):
     """A GtkTreeView that is readily configured for using PathTreeModel"""
-
     def __init__(self):
         Gtk.TreeView.__init__(self)
 
@@ -911,6 +910,13 @@ if __name__ == '__main__':
             lambda *_: GLib.timeout_add(
                 500,
                 lambda: model.sort(Column.SIZE)
+            )
+        )
+        runner.connect(
+            'process-finished',
+            lambda *_: GLib.timeout_add(
+                600,
+                lambda: print(model.trie)
             )
         )
 
