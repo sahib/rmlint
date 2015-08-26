@@ -471,7 +471,7 @@ class Script(GObject.Object):
         flags = Gio.SubprocessFlags
 
         self._process = Gio.Subprocess.new(
-            [self.script_file, '-d', '-x', '-n' if dry_run else ''],
+            [self.script_file, '-d', '-x', '-p', '-n' if dry_run else ''],
             flags.STDERR_SILENCE | flags.STDOUT_PIPE
         )
         self._queue_read()

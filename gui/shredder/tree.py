@@ -263,7 +263,7 @@ class PathTrie:
         node = node or self.root
         yield node
 
-        for child in node.children.values():
+        for child in node.indices:
             yield from self.iterate(child)
 
     def insert(self, path, row):
@@ -317,6 +317,36 @@ class PathTrie:
 
         return curr
 
+    def sort(self, column_id, reverse=False, root=None):
+        """Sort the trie nodes by their value in at `column_id`.
+        If reverse is True, biger values appear first.
+
+        This implementation is a generator that yields
+        each visited node after sorting and a mapping from
+        the new position to their old position
+        """
+        # Do the actual sorting:
+        root = root or self.root
+        children = deque(root.children.values())
+
+        root.indices = sorted(
+            children,
+            key=lambda node: node[column_id],
+            reverse=reverse
+        )
+
+        # Remember what changed:
+        old_indices = []
+        for idx, child in enumerate(root.indices):
+            old_indices.append(child.idx)
+            child.idx = idx
+
+        yield root, old_indices
+
+        # Propagate to children:
+        for child in children:
+            yield from self.sort(column_id, reverse, child)
+
 
 def make_iter(node):
     """Make a GtkTreeIter, suitable for our PathTreeModel."""
@@ -326,7 +356,7 @@ def make_iter(node):
     return iter_
 
 
-class PathTreeModel(GObject.GObject, Gtk.TreeModel):
+class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
     """Pack lint nodes into a tree structure compatible with Gtk
 
     This implements Gtk.TreeModel and can be therefore used as backend of
@@ -357,6 +387,10 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
         # When typing '.pyo' after searching for '.py' we
         # can just filter the previous results.
         self._partial_model, self._last_query = None, None
+
+        # Last column we sorted by or None (needed for GtkTreeSortable)
+        self._sort_last_id = None
+        self._sort_last_order = Gtk.SortType.DESCENDING
 
         # Set of nodes that need to get updated periodically.
         # It would be expensive to do that on every insert
@@ -528,6 +562,10 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
     def __len__(self):
         return len(self.trie)
 
+    def set_node_value(self, node, column, value):
+        """Like set_value(), but works on a PathNode"""
+        self.set_value(make_iter(node), column, value)
+
     ##################################
     # Tree Model Spec Implementation #
     ##################################
@@ -638,8 +676,65 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel):
         """Convert a GtkTreeIter to the related PathNode"""
         return self.trie.nodes.get(iter_.user_data)
 
+    ###########################
+    # GtkTreeSortable methods #
+    ###########################
 
-def _create_column(title, renderers, fixed_width=100):
+    def do_get_sort_column_id(self):
+        """Return the column the model is sorted by.
+        Returns (True if sorted, columnd id, order)
+        """
+        # Assume no initial sort order.
+        if self._sort_last_id is None:
+            id_ = Gtk.TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID
+            return (False, id_, self._sort_last_order)
+        else:
+            return (True, self._sort_last_id, self._sort_last_order)
+
+    def do_set_sort_column_id(self, id_, order):
+        """Sort this model by the values in the column `id_` by `order`.
+        The changes should be visible in the treeview immediately.
+        """
+        if id_ is Gtk.TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID:
+            return
+
+        if id_ is Gtk.TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID:
+            id_ = Column.PATH
+
+        self._sort_last_id = id_
+        self._sort_last_order = order
+
+        # Indicate the sort column was changed *before* sorting.
+        self.emit('sort-column-changed')
+
+        # Do the actual sort:
+        reverse = order is Gtk.SortType.DESCENDING
+        for node, old_ind in self.trie.sort(id_, reverse):
+            indices = node.build_iter_path()
+            path = Gtk.TreePath.new_from_indices(indices)
+
+            # Update the treeview:
+            if old_ind:
+                self.rows_reordered(path, make_iter(node), old_ind)
+
+    def do_set_sort_func(self, id_, func):
+        """Custom sort functions are hard to implement with tries."""
+        raise NotImplementedError('Custom sort funcs are not supported.')
+
+    def do_set_default_sort_func(self, id_, func):
+        """Custom sort functions are hard to implement with tries."""
+        raise NotImplementedError('Custom sort funcs are not supported.')
+
+    def do_has_default_sort_func(self):
+        """See above, not supported."""
+        return False
+
+    def sort(self, id_, order=Gtk.SortType.ASCENDING):
+        """Convinience method for do_set_sort_column_id."""
+        self.do_set_sort_column_id(id_, order)
+
+
+def _create_column(title, id_, renderers, fixed_width=100):
     """Convinience method for creating a TreeView Column.
     Several renderers can be given with certain options.
     """
@@ -648,6 +743,9 @@ def _create_column(title, renderers, fixed_width=100):
     column.set_resizable(True)
     column.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
     column.set_fixed_width(fixed_width)
+
+    if id_ is not None:
+        column.set_sort_column_id(id_)
 
     for renderer, pack_end, expand, kwargs in renderers:
         renderer.set_alignment(1.0 if pack_end else 0.0, 0.5)
@@ -706,14 +804,20 @@ def _create_toggle_cellrenderer(treeview):
 
 
 class PathTreeView(Gtk.TreeView):
-    """A GtkTreeView that is readily configured for using PathTreeModel"""
+    __gsignals__ = {
+        'show-menu': (GObject.SIGNAL_RUN_LAST, PopupMenu, ()),
+    }
 
+    """A GtkTreeView that is readily configured for using PathTreeModel"""
     def __init__(self):
         Gtk.TreeView.__init__(self)
 
         # Enable separator lines:
         self.set_grid_lines(Gtk.TreeViewGridLines.NONE)
         self.set_enable_tree_lines(True)
+
+        # Make selecting multiple rows possible:
+        self.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
 
         # Small spedup:
         self.set_fixed_height_mode(True)
@@ -723,7 +827,7 @@ class PathTreeView(Gtk.TreeView):
 
         # Configure the column rendering:
         self.append_column(_create_column(
-            'Path', [
+            'Path', Column.PATH, [
                 (CellRendererLint(), False, False, dict(tag=Column.TAG)),
                 # (
                 #     _create_toggle_cellrenderer(self),
@@ -734,18 +838,18 @@ class PathTreeView(Gtk.TreeView):
             250
         ))
         self.append_column(_create_column(
-            'Size',
+            'Size', Column.SIZE,
             [(CellRendererSize(), True, False, dict(size=Column.SIZE))],
             80
         ))
         self.append_column(_create_column(
-            'Count',
+            'Count', Column.COUNT,
             [(CellRendererCount(), True, False, dict(count=Column.COUNT))],
             100
         ))
         self.append_column(
             _create_column(
-                'Changed', [
+                'Changed', Column.MTIME, [
                     (CellRendererModifiedTime(), True, False, dict(
                         mtime=Column.MTIME))], 110))
 
@@ -754,27 +858,32 @@ class PathTreeView(Gtk.TreeView):
             PathTreeView.on_button_press_event
         )
 
-        self._menu = None
-
     def set_model(self, model):
         """Overwrite Gtk.TreeView.set_model, but expand sub root paths"""
         Gtk.TreeView.set_model(self, model)
         self.expand_all()
 
+    def get_selected_nodes(self):
+        """Extra convinience method for getting the currently selected nodes"""
+        model, rows = self.get_selection().get_selected_rows()
+        for tp_path in rows:
+            node = model.trie.resolve(tp_path.get_indices())
+            yield node
+
+    def get_selected_node(self):
+        """Return thefirst selected node or None."""
+        try:
+            return next(self.get_selected_nodes())
+        except StopIteration:
+            return None
+
     def on_button_press_event(self, event):
         """Callback handler only used for mouse clicks."""
-        # TODO: Actually implement all those.
         if event.button != 3:
             return
 
-        # HACK: bind to self, since the ref would get lost.
-        self._menu = PopupMenu()
-        self._menu.simple_add('Toggle all', None)
-        self._menu.simple_add('Toggle selected', None)
-        self._menu.simple_add_separator()
-        self._menu.simple_add('Open folder', None)
-        self._menu.simple_add('Copy path to buffer', None)
-        self._menu.simple_popup(event)
+        menu = self.emit('show-menu')
+        menu.simple_popup(event)
 
 
 if __name__ == '__main__':
@@ -789,18 +898,17 @@ if __name__ == '__main__':
         from shredder.runner import Runner
         settings = Gio.Settings.new('org.gnome.Shredder')
 
-        runner = Runner(settings, sys.argv[1:])
+        runner = Runner(settings, sys.argv[1:], [])
         runner.connect(
             'lint-added',
-            lambda _: model.add_path(
+            lambda *_: model.add_path(
                 runner.element['path'],
                 Column.make_row(
                     runner.element)))
 
         runner.connect(
             'process-finished',
-            lambda _,
-            msg: print(
+            lambda _, msg: print(
                 'Status:',
                 msg))
         runner.run()
@@ -810,10 +918,24 @@ if __name__ == '__main__':
 
         runner.connect(
             'process-finished',
-            lambda _,
-            msg: GLib.timeout_add(
+            lambda _, msg: GLib.timeout_add(
                 500,
                 view.expand_all))
+
+        runner.connect(
+            'process-finished',
+            lambda *_: GLib.timeout_add(
+                500,
+                lambda: model.sort(Column.SIZE)
+            )
+        )
+        runner.connect(
+            'process-finished',
+            lambda *_: GLib.timeout_add(
+                600,
+                lambda: print(model.trie)
+            )
+        )
 
         def _search_changed(entry):
             view.set_model(model.filter_model(entry.get_text()))

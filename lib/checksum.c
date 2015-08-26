@@ -222,6 +222,21 @@ const char *rm_digest_type_to_string(RmDigestType type) {
     return names[MIN(type, sizeof(names) / sizeof(names[0]))];
 }
 
+int rm_digest_type_to_multihash_id(RmDigestType type) {
+    static int ids[] =
+        {[RM_DIGEST_UNKNOWN] = -1    , [RM_DIGEST_MURMUR] = 17     ,
+         [RM_DIGEST_SPOOKY] = 14     , [RM_DIGEST_SPOOKY32] = 16   ,
+         [RM_DIGEST_SPOOKY64] = 18   , [RM_DIGEST_CITY] = 15       ,
+         [RM_DIGEST_MD5] = 1         , [RM_DIGEST_SHA1] = 2        ,
+         [RM_DIGEST_SHA256] = 4      , [RM_DIGEST_SHA512] = 6      ,
+         [RM_DIGEST_MURMUR256] = 7   , [RM_DIGEST_CITY256] = 8     ,
+         [RM_DIGEST_BASTARD] = 9     , [RM_DIGEST_MURMUR512] = 10  ,
+         [RM_DIGEST_CITY512] = 11    , [RM_DIGEST_EXT] = 12        ,
+         [RM_DIGEST_CUMULATIVE] = 13 , [RM_DIGEST_PARANOID] = 14};
+
+    return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
+}
+
 RmOff rm_digest_paranoia_bytes(void) {
     return 16 * 1024 * 1024;
     /* this is big enough buffer size to make seek time fairly insignificant relative to

@@ -346,6 +346,8 @@ class SettingsView(View):
         else:
             self.app.settings.revert()
 
+        self.clear_header_widgets()
+
     def on_apply_settings(self, *_):
         """Callback for the apply button."""
         self.save_settings = True
@@ -367,3 +369,10 @@ class SettingsView(View):
         is_sensitive = settings.get_has_unapplied()
         self.appy_btn.set_sensitive(is_sensitive)
         self.deny_btn.set_sensitive(is_sensitive)
+
+    def on_default_action(self):
+        """Called on Ctrl-Enter"""
+        if self.appy_btn.is_sensitive():
+            self.on_apply_settings()
+        else:
+            self.app_window.views.switch_to_previous()

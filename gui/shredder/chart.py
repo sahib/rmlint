@@ -333,7 +333,7 @@ class RingChart(Chart):
         ))
 
         child_offset = offset
-        for child in node.children.values():
+        for child in node.indices:
             node_size = node[Column.SIZE]
 
             if node_size is not 0:
@@ -433,8 +433,9 @@ class RingChart(Chart):
             if segment.layer != self._selected_segment.layer:
                 continue
 
-            if segment.size < ANGLE_LIMIT_TOOLTIP:
-                continue
+            if segment is not self._selected_segment:
+                if segment.size < ANGLE_LIMIT_TOOLTIP:
+                    continue
 
             x, y = segment.middle_point(alloc, max_layers)
             _draw_tooltip(
@@ -576,6 +577,7 @@ if __name__ == '__main__':
         push(1200, '/home/sahib/music/sub/2.mp3')
         push(1200, '/home/sahib/music/sub/3.mp3')
         push(600, '/home/sahib/music/sub/4.mp3')
+        model.trie.sort(Column.SIZE)
         print(model.trie)
 
         area = RingChart()

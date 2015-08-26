@@ -72,18 +72,18 @@ handle_bad_user_and_group_id() {
 
 original_check() {
     if [ ! -e "$2" ]; then
-        echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
-        return 1
-    fi
-
-    if [ ! -e "$1" ]; then
         echo "^^^^^^ Error: original has disappeared - cancelling....."
         return 1
     fi
 
-    # Check they are not the exact same file:
-    if [ $(stat -c '%D:%i' "$1") = $(stat -c '%D:%i' "$2") ]; then
-        echo "^^^^^^ Error: original and duplicate point to the *same* file - cancelling....."
+    if [ ! -e "$1" ]; then
+        echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
+        return 1
+    fi
+
+    # Check they are not the exact same file (hardlinks allowed):
+    if [ "$1" = "$2" ]; then
+        echo "^^^^^^ Error: original and duplicate point to the *same* path - cancelling....."
         return 1
     fi
 

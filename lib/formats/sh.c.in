@@ -87,7 +87,7 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
 static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
     if(!self->allow_symlink || self->last_original->dev != file->dev) {
         return false;
-   }
+    }
 
     *out = g_strdup_printf("cp_symlink '%s' '%s'", path, orig_path);
     return true;
@@ -97,6 +97,7 @@ static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, 
     if(!self->allow_hardlink) {
         return false;
     }
+
     if (self->last_original && file->hardlinks.hardlink_head == self->last_original) {
         *out = g_strdup_printf("skip_hardlink '%s' '%s'", path, orig_path);
     } else {

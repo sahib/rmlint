@@ -12,11 +12,13 @@ import logging
 
 # External:
 from gi.repository import Gtk
+from gi.repository import Gdk
+from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.util import View, IconButton
+from shredder.util import View, IconButton, PopupMenu, IndicatorLabel
 from shredder.chart import ChartStack
 from shredder.tree import PathTreeView, PathTreeModel, Column, PathTrie
 from shredder.runner import Runner
@@ -81,6 +83,9 @@ class ResultActionBar(Gtk.ActionBar):
     def activate_partial_script_btn(self, mode):
         self.partial_script_btn.set_sensitive(mode)
 
+    def is_active(self):
+        return self.script_btn.is_sensitive()
+
 
 class RunnerView(View):
     """Main action View.
@@ -106,6 +111,8 @@ class RunnerView(View):
         # in running mode (thus en/disabling certain features)
         self.is_running = False
 
+        self._script_generated = False
+
         self.model = PathTreeModel([])
         self.treeview = PathTreeView()
         self.treeview.set_model(self.model)
@@ -114,6 +121,12 @@ class RunnerView(View):
             'changed',
             self.on_selection_changed
         )
+
+        for column in self.treeview.get_columns():
+            column.connect(
+                'clicked',
+                lambda _: self.rerender_chart()
+            )
 
         # Scrolled window on the left
         scw = Gtk.ScrolledWindow()
@@ -157,9 +170,13 @@ class RunnerView(View):
             'partial-generate-script', self.on_generate_partial_script
         )
 
+        self._menu = None
+        self.treeview.connect('show-menu', self.on_show_menu)
+
     def reset(self):
         """Reset internally to freshly initialized."""
         self.is_running = False
+        self._script_generated = False
         self.runner = None
         self.last_paths = []
 
@@ -240,16 +257,13 @@ class RunnerView(View):
         model = self.treeview.get_model()
         current_size = len(model)
 
-        LOGGER.info('Refreshing chart.')
-
         if current_size == last_size:
             # Come back later:
             return False
 
         if len(model) > 1:
             self.chart_stack.set_visible_child_name(ChartStack.CHART)
-            self.chart_stack.render(model.trie.root)
-            self.app_window.views.go_right.set_sensitive(True)
+            self.rerender_chart()
             self.actionbar.activate_script_btn(True)
         else:
             self.chart_stack.set_visible_child_name(ChartStack.EMPTY)
@@ -258,11 +272,18 @@ class RunnerView(View):
 
         return False
 
+    def rerender_chart(self):
+        """Re-render the chart from the current model root."""
+        LOGGER.info('Refreshing chart.')
+        model = self.treeview.get_model()
+        self.chart_stack.render(model.trie.root)
+
     def on_view_enter(self):
         """Called when the view enters sight."""
-        has_script = bool(self.runner)
         GLib.idle_add(
-            lambda: self.app_window.views.go_right.set_sensitive(has_script)
+            lambda: self.app_window.views.go_right.set_sensitive(
+                self._script_generated
+            )
         )
 
     def on_view_leave(self):
@@ -271,34 +292,38 @@ class RunnerView(View):
 
     def on_selection_changed(self, selection):
         """Called when the user clicks a specific row."""
-        model, iter_ = selection.get_selected()
-        if iter_ is not None:
-            node = model.iter_to_node(iter_)
-            if not model.iter_has_child(iter_):
-                # It is a single file.
-                # Show a chart containing all twins of this file.
-                # This is helpful to see quickly where those lie.
+        node = self.treeview.get_selected_node()
+        if node is None:
+            return
 
-                cksum = node[Column.CKSUM]
-                group = self.runner.group(cksum)
-                trie = PathTrie()
+        if not node.children:
+            # It is a single file.
+            # Show a chart containing all twins of this file.
+            # This is helpful to see quickly where those lie.
 
-                for doc in group:
-                    trie.insert(
-                        doc['path'],
-                        Column.make_row(doc)
-                    )
+            cksum = node[Column.CKSUM]
+            group = self.runner.group(cksum)
+            trie = PathTrie()
 
-                self.chart_stack.render(trie.root)
-            else:
-                self.chart_stack.render(node)
+            for doc in group or []:
+                trie.insert(
+                    doc['path'],
+                    Column.make_row(doc)
+                )
+
+            self.chart_stack.render(trie.root)
+        else:
+            self.chart_stack.render(node)
 
     def _generate_script(self, model):
+        self._script_generated = True
+
         trie = model.trie
         self.runner.replay({
             ch.build_path(): ch[Column.SELECTED] for ch in trie if ch.is_leaf
         })
 
+        self.app_window.views.go_right.set_sensitive(True)
         self.app_window.views.switch('editor')
 
     def on_generate_script(self, _):
@@ -306,3 +331,106 @@ class RunnerView(View):
 
     def on_generate_partial_script(self, _):
         self._generate_script(self.treeview.get_model())
+
+    def on_default_action(self):
+        """Called on Ctrl-Enter"""
+        if self.actionbar.is_active():
+            self._generate_script(self.model)
+
+    #######################
+    # MENU ENTRY HANDLING #
+    #######################
+
+    def on_show_menu(self, _):
+        # HACK: bind to self, since the ref would get lost.
+        self._menu = PopupMenu()
+        self._menu.simple_add('Toggle all', self.on_toggle_all)
+        self._menu.simple_add('Toggle selected', self.on_toggle_selected)
+        self._menu.simple_add_separator()
+        self._menu.simple_add('Expand all', self.on_expand_all)
+        self._menu.simple_add('Collapse all', self.on_collapse_all)
+        self._menu.simple_add_separator()
+        self._menu.simple_add('Open item', self.on_open_folder)
+        self._menu.simple_add(
+            'Copy path to clipboard',
+            self.on_copy_to_clipboard
+        )
+        return self._menu
+
+    def on_open_folder(self, _):
+        node = self.treeview.get_selected_node()
+        if node is None:
+            return
+
+        try:
+            LOGGER.info('Calling xdg-open %s', node.build_path())
+            Gio.Subprocess.new(
+                ['xdg-open', node.build_path()], 0
+            )
+        except GLib.Error as err:
+            LOGGER.exception('Could not open directory via xdg-open')
+            self.app_window.show_infobar(str(err))
+
+    def on_copy_to_clipboard(self, _):
+        node = self.treeview.get_selected_node()
+        if node is None:
+            return
+
+        path = node.build_path()
+
+        clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default())
+        clipboard.set_text(path, len(path))
+
+    def _toggle_tag_state(self, node_iter):
+        model = self.treeview.get_model()
+        for node in node_iter:
+            current, new = node[Column.TAG], IndicatorLabel.NONE
+
+            if current is IndicatorLabel.ERROR:
+                new = IndicatorLabel.SUCCESS
+            elif current is IndicatorLabel.SUCCESS:
+                new = IndicatorLabel.ERROR
+
+            model.set_node_value(node, Column.TAG, new)
+
+    def on_toggle_all(self, _):
+        self._toggle_tag_state(self.model.trie)
+
+    def on_toggle_selected(self, _):
+        # TODO: This is dead ugly, fix.
+        nodes = list(self.treeview.get_selected_nodes())
+        self._toggle_tag_state(nodes)
+
+        for node in nodes:
+            # Json documents with all related twins:
+            group = self.runner.group(node[Column.CKSUM])
+            if group is None:
+                continue
+
+            # List of PathNodes which are twins:
+            group_nodes = []
+            for doc in group:
+                group_nodes.append(self.model.trie.find(doc['path']))
+
+            has_original = False
+            for twin_node in group_nodes:
+                if twin_node[Column.TAG] is IndicatorLabel.SUCCESS:
+                    has_original = True
+                    break
+
+            if has_original:
+                continue
+
+            # No original
+            for twin_node in group_nodes:
+                if twin_node is not node:
+                    self.model.set_node_value(
+                        twin_node, Column.TAG, IndicatorLabel.SUCCESS
+                    )
+                    break
+
+    def on_expand_all(self, _):
+        self.treeview.expand_all()
+
+    def on_collapse_all(self, _):
+        self.treeview.collapse_all()

@@ -465,7 +465,6 @@ class LocationView(View):
 
     def _run_clicked(self, _):
         """Switch one view further to the runner view."""
-        self.app_window.views.switch('runner')
         main_view = self.app_window.views['runner']
 
         tagged, untagged = [], []
@@ -475,7 +474,9 @@ class LocationView(View):
             else:
                 untagged.append(row.path)
 
-        main_view.trigger_run(untagged, tagged)
+        if tagged or untagged:
+            main_view.trigger_run(untagged, tagged)
+            self.app_window.views.switch('runner')
 
     def _del_clicked(self, _):
         """Delete all selected LocationEntries."""
@@ -494,4 +495,5 @@ class LocationView(View):
         self._update_selected_label()
 
     def on_default_action(self):
-        pass
+        """Executed on Ctrl-Enter"""
+        self._run_clicked(None)

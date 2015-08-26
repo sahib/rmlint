@@ -23,7 +23,6 @@ from gi.repository import Pango
 from gi.repository import Polkit
 from gi.repository import GObject
 
-
 # Internal:
 from shredder.util import View, IconButton, scrolled, size_to_human_readable
 from shredder.util import MultipleChoiceButton, SuggestedButton
@@ -272,17 +271,6 @@ class RunButton(Gtk.Box):
                 ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
                 ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
 
-    def set_sensitive(self, is_sensitive):
-        """Overwrite Gtk.Widget.set_sensitive to disable style classes."""
-        Gtk.Box.set_sensitive(self, is_sensitive)
-
-        if not is_sensitive:
-            ctx = self.state.get_style_context()
-            ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-            ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
-        else:
-            self._toggle_dry_run(self.state)
-
 
 def _create_icon_stack():
     """Create a small widget that shows alternating icons."""
@@ -351,6 +339,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
 
         file_type_label = Gtk.Label('<b>Filetype</b>')
         file_type_label.set_use_markup(True)
+        file_type_label.props.margin_end = 5
         file_type_label.get_style_context().add_class(
             Gtk.STYLE_CLASS_DIM_LABEL
         )
@@ -509,17 +498,22 @@ When done, click the `Run Script` button below.
         self.save_button = OverlaySaveButton()
         self.save_button.add(scrolled(self.text_view))
         self.save_chooser = ScriptSaverDialog(self)
+
+        def on_save_button_clicked(_):
+            self.left_stack.set_visible_child_name('chooser')
+            self.save_chooser.show_controls()
+            self.stack.set_sensitive(False)
+
+        def on_save_clicked(_):
+            self.left_stack.set_visible_child_name('script')
+            self.stack.set_sensitive(True)
+
         self.save_button.connect(
-            'save-clicked',
-            lambda _: self.left_stack.set_visible_child_name('chooser')
+            'save-clicked', on_save_button_clicked
         )
-        self.save_button.connect(
-            'save-clicked',
-            lambda _: self.save_chooser.show_controls()
-        )
+
         self.save_chooser.connect(
-            'saved',
-            lambda _: self.left_stack.set_visible_child_name('script')
+            'saved', on_save_clicked
         )
 
         buffer_.create_tag("original", weight=Pango.Weight.BOLD)
@@ -597,7 +591,6 @@ When done, click the `Run Script` button below.
 
     def _switch_back(self):
         """Switch back from delete-view to script view"""
-        self.run_button.set_sensitive(False)
         self.switch_to_script()
 
     def switch_to_script(self):
@@ -661,13 +654,21 @@ When done, click the `Run Script` button below.
         if runner is not None and self._last_runner is not runner:
             runner.connect('replay-finished', self.on_replay_finish, runner)
             self._last_runner = runner
-        self.left_stack.set_visible_child_name('loading')
+            self.left_stack.set_visible_child_name('loading')
 
     def on_replay_finish(self, _, runner):
         """Called once ``rmlint --replay`` finished running."""
         LOGGER.info('Loading script from temporary directory')
         self.script = Script(runner.get_sh_path())
         self.switch_to_script()
+
+    def on_default_action(self):
+        """Called on Ctrl-Enter"""
+        visible_screen = self.stack.get_visible_child_name()
+        if visible_screen == 'danger':
+            self.on_run_script_clicked(None)
+        elif visible_screen == 'finished':
+            self.switch_to_script()
 
     def override_script(self, script):
         """This method is for testing and cmdline use only."""
