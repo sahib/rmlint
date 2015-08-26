@@ -648,7 +648,7 @@ When done, click the `Run Script` button below.
         if runner is not None and self._last_runner is not runner:
             runner.connect('replay-finished', self.on_replay_finish, runner)
             self._last_runner = runner
-        self.left_stack.set_visible_child_name('loading')
+            self.left_stack.set_visible_child_name('loading')
 
     def on_replay_finish(self, _, runner):
         """Called once ``rmlint --replay`` finished running."""
