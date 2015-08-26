@@ -155,6 +155,10 @@ class ViewSwitcher(Gtk.Box):
         """
         view = self._stack.get_visible_child()
         if view and hasattr(view, 'on_default_action'):
+            LOGGER.info(
+                'Doing default action for `%s`',
+                self._stack.get_visible_child_name()
+            )
             view.on_default_action()
 
 

@@ -83,6 +83,9 @@ class ResultActionBar(Gtk.ActionBar):
     def activate_partial_script_btn(self, mode):
         self.partial_script_btn.set_sensitive(mode)
 
+    def is_active(self):
+        return self.script_btn.is_sensitive()
+
 
 class RunnerView(View):
     """Main action View.
@@ -328,6 +331,11 @@ class RunnerView(View):
 
     def on_generate_partial_script(self, _):
         self._generate_script(self.treeview.get_model())
+
+    def on_default_action(self):
+        """Called on Ctrl-Enter"""
+        if self.actionbar.is_active():
+            self._generate_script(self.model)
 
     #######################
     # MENU ENTRY HANDLING #

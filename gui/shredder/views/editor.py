@@ -498,17 +498,22 @@ When done, click the `Run Script` button below.
         self.save_button = OverlaySaveButton()
         self.save_button.add(scrolled(self.text_view))
         self.save_chooser = ScriptSaverDialog(self)
+
+        def on_save_button_clicked(_):
+            self.left_stack.set_visible_child_name('chooser')
+            self.save_chooser.show_controls()
+            self.stack.set_sensitive(False)
+
+        def on_save_clicked(_):
+            self.left_stack.set_visible_child_name('script')
+            self.stack.set_sensitive(True)
+
         self.save_button.connect(
-            'save-clicked',
-            lambda _: self.left_stack.set_visible_child_name('chooser')
+            'save-clicked', on_save_button_clicked
         )
-        self.save_button.connect(
-            'save-clicked',
-            lambda _: self.save_chooser.show_controls()
-        )
+
         self.save_chooser.connect(
-            'saved',
-            lambda _: self.left_stack.set_visible_child_name('script')
+            'saved', on_save_clicked
         )
 
         buffer_.create_tag("original", weight=Pango.Weight.BOLD)
@@ -656,6 +661,14 @@ When done, click the `Run Script` button below.
         LOGGER.info('Loading script from temporary directory')
         self.script = Script(runner.get_sh_path())
         self.switch_to_script()
+
+    def on_default_action(self):
+        """Called on Ctrl-Enter"""
+        visible_screen = self.stack.get_visible_child_name()
+        if visible_screen == 'danger':
+            self.on_run_script_clicked(None)
+        elif visible_screen == 'finished':
+            self.switch_to_script()
 
     def override_script(self, script):
         """This method is for testing and cmdline use only."""
