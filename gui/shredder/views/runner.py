@@ -108,6 +108,8 @@ class RunnerView(View):
         # in running mode (thus en/disabling certain features)
         self.is_running = False
 
+        self._script_generated = False
+
         self.model = PathTreeModel([])
         self.treeview = PathTreeView()
         self.treeview.set_model(self.model)
@@ -171,6 +173,7 @@ class RunnerView(View):
     def reset(self):
         """Reset internally to freshly initialized."""
         self.is_running = False
+        self._script_generated = False
         self.runner = None
         self.last_paths = []
 
@@ -258,7 +261,6 @@ class RunnerView(View):
         if len(model) > 1:
             self.chart_stack.set_visible_child_name(ChartStack.CHART)
             self.rerender_chart()
-            self.app_window.views.go_right.set_sensitive(True)
             self.actionbar.activate_script_btn(True)
         else:
             self.chart_stack.set_visible_child_name(ChartStack.EMPTY)
@@ -275,9 +277,10 @@ class RunnerView(View):
 
     def on_view_enter(self):
         """Called when the view enters sight."""
-        has_script = bool(self.runner)
         GLib.idle_add(
-            lambda: self.app_window.views.go_right.set_sensitive(has_script)
+            lambda: self.app_window.views.go_right.set_sensitive(
+                self._script_generated
+            )
         )
 
     def on_view_leave(self):
@@ -310,11 +313,14 @@ class RunnerView(View):
             self.chart_stack.render(node)
 
     def _generate_script(self, model):
+        self._script_generated = True
+
         trie = model.trie
         self.runner.replay({
             ch.build_path(): ch[Column.SELECTED] for ch in trie if ch.is_leaf
         })
 
+        self.app_window.views.go_right.set_sensitive(True)
         self.app_window.views.switch('editor')
 
     def on_generate_script(self, _):
