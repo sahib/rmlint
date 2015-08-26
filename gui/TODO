@@ -10,10 +10,10 @@ DONE:
 - Fix: Make main view sortable. -- done
 - Design: Add a chart when clicking on a single file that shows 
   only the file and it's twins. -- done
+- Design: Add context menu to treeview. -- done
 
 OPEN:
 
 - Translation: Mark strings/use more standard buttons
-- Design: Add context menu to treeview.
 - Design: Introduce more keybindings/actions.
 - Fix: Handle weird path encodings gracefully
