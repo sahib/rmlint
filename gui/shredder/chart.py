@@ -433,8 +433,9 @@ class RingChart(Chart):
             if segment.layer != self._selected_segment.layer:
                 continue
 
-            if segment.size < ANGLE_LIMIT_TOOLTIP:
-                continue
+            if segment is not self._selected_segment:
+                if segment.size < ANGLE_LIMIT_TOOLTIP:
+                    continue
 
             x, y = segment.middle_point(alloc, max_layers)
             _draw_tooltip(
