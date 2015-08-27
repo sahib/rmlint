@@ -224,7 +224,13 @@ static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff 
     *min = 0;
     *max = G_MAXULONG;
 
+    range_spec = (const char *)g_strstrip((char *)range_spec);
     gchar **split = g_strsplit(range_spec, "-", 2);
+
+    if(*range_spec == '-') {
+        /* Act like it was "0-..." */
+        split[0] = g_strdup("0");
+    }
 
     if(split[0] != NULL) {
         *min = rm_cmd_size_string_to_bytes(split[0], error);
