@@ -17,3 +17,5 @@ OPEN:
 - Translation: Mark strings/use more standard buttons
 - Design: Introduce more keybindings/actions.
 - Fix: Handle weird path encodings gracefully
+- Get rid of runner groups, make groups of PathNode to save memory.
+- special search: size, mtime and twins?
