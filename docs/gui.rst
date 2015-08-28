@@ -30,6 +30,11 @@ Developers
 Location view
 ~~~~~~~~~~~~~
 
+.. image:: _static/gui_locations.png
+   :width: 50%
+   :align: center
+
+
 Shows a list of locations the user might want to scan.  A number of locations is
 guessed from the list of mounted volumes, recently used files and a static set
 of paths.  The user can of course add a new location via a filebrowser.
@@ -40,6 +45,10 @@ deleted if they have a twin in a preferred path.
 
 Runner view
 ~~~~~~~~~~~
+
+.. image:: _static/gui_runner.png
+   :width: 50%
+   :align: center
 
 After hitting scan in the locations view, the application will start ``rmlint``
 in the background. The output will be shown live in the treeview on the left.
@@ -58,6 +67,10 @@ Once happy with the results, the user can generate a script out of the results
 Editor view
 ~~~~~~~~~~~
 
+.. image:: _static/gui_editor.png
+   :width: 50%
+   :align: center
+
 A source editor will show the generated script. It can be edited and searched
 through. Apart from that, the file can be saved not only a ``.sh`` file, but
 also as ``.csv`` and ``.json`` file. 
@@ -69,6 +82,10 @@ In any way, a running counter of deleted bytes will be shown.
 
 Settings view
 ~~~~~~~~~~~~~
+
+.. image:: _static/gui_settings.png
+   :width: 50%
+   :align: center
 
 The settings view is the leftmost view and will not be shown by default in the
 process. It can always be accessed by:
@@ -84,10 +101,12 @@ the commandline of ``rmlint``.
 Design
 ~~~~~~
 
-The design loosely follows the Gnome Human Interface Guidelines. TODO: link.
+The design loosely follows the Gnome Human Interface Guidelines. [*]_
 Beside the appeareance, this means that the program should be easy and intuitive
 to use. Suggested actions should be clear to recognize and the application
 should always be responsive and never just *do work in the background*.
+
+.. [*] https://developer.gnome.org/hig/stable/
 
 Internal
 ~~~~~~~~
