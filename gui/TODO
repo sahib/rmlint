@@ -11,8 +11,6 @@ DONE:
 - Design: Add a chart when clicking on a single file that shows 
   only the file and it's twins. -- done
 - Design: Add context menu to treeview. -- done
-- Get rid of runner groups, make groups of PathNode to save memory. -- done
-- special search: size, mtime and twins? -- done
 
 OPEN:
 
