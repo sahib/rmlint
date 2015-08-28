@@ -680,8 +680,14 @@ guint rm_digest_hash(RmDigest *digest) {
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     g_assert (a && b);
-    g_assert (a->type == b->type);
-    g_assert (a->bytes == b->bytes);
+
+    if(a->type != b->type) {
+        return false;
+    }
+
+    if(a->bytes != b->bytes) {
+        return false;
+    }
 
     if (a->type == RM_DIGEST_PARANOID) {
         if (!a->paranoid->buffers) {
@@ -694,7 +700,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
 
         GList *a_iter = a->paranoid->buffers->head;
         GList *b_iter = b->paranoid->buffers->head;
-        guint bytes=0;
+        guint bytes = 0;
         while (a_iter && b_iter) {
             if (!rm_buffer_equal(a_iter->data, b_iter->data)) {
                 rm_log_error(RED"Paranoid digest compare found mismatch - must be hash collision in shadow hash\n"RESET);
@@ -705,7 +711,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             b_iter = b_iter->next;
         }
 
-        return (!a_iter && !b_iter && bytes==a->bytes);
+        return (!a_iter && !b_iter && bytes == a->bytes);
 
     } else {
         if (rm_digest_needs_steal(a->type)) {

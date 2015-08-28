@@ -606,6 +606,7 @@ When done, click the `Run Script` button below.
         _set_source_style(self.text_view, 'solarized-light')
         _set_source_lang(self.text_view, 'sh')
         self.stack.set_visible_child_name('danger')
+        self.stack.set_sensitive(True)
 
     def on_search_changed(self, _):
         """Called once the user enteres a new search query."""
@@ -655,6 +656,7 @@ When done, click the `Run Script` button below.
             runner.connect('replay-finished', self.on_replay_finish, runner)
             self._last_runner = runner
             self.left_stack.set_visible_child_name('loading')
+            self.stack.set_sensitive(False)
 
     def on_replay_finish(self, _, runner):
         """Called once ``rmlint --replay`` finished running."""

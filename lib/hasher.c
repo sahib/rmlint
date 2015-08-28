@@ -180,7 +180,9 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe, R
         goto finish;
     }
 
+#if HAVE_POSIX_FADVISE
     posix_fadvise(fileno(fd), start_offset, bytes_to_read, HASHER_FADVISE_FLAGS);
+#endif
 
     RmBuffer *buffer = rm_buffer_pool_get(hasher->mem_pool);
 

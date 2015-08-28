@@ -120,6 +120,8 @@ char *rm_util_path_extension(const char *basename) {
 bool rm_util_path_is_hidden(const char *path) {
     if(path == NULL) {
         return false;
+
+
     }
 
     if(*path == '.') {
@@ -390,7 +392,7 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
             return;
         }
 
-        if(json_node_get_int(mtime_node) < stat_buf.st_mtim.tv_sec) {
+        if(json_node_get_int(mtime_node) < rm_sys_stat_mtime_seconds(&stat_buf)) {
             /* file is newer than stored checksum */
             return;
         }

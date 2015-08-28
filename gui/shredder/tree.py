@@ -20,7 +20,7 @@ import os
 import time
 import logging
 
-from collections import OrderedDict, deque
+from collections import OrderedDict, defaultdict, deque
 
 # External:
 from gi.repository import Gtk
@@ -34,6 +34,8 @@ from shredder.util import CellRendererModifiedTime
 from shredder.util import CellRendererCount
 from shredder.util import CellRendererLint
 from shredder.util import PopupMenu, IndicatorLabel
+
+from shredder.query import Query
 
 
 LOGGER = logging.getLogger('tree')
@@ -162,13 +164,6 @@ class PathNode:
         if self.parent is not None:
             yield from self.parent.up()
 
-    def match(self, query):
-        """Check if a node matches query (simple string matching)"""
-        for node in self.up():
-            if query in node.name.lower():
-                return True
-        return False
-
     def build_path(self):
         """Recursively build the absolute path of this node"""
         return os.path.join(*reversed([n.name for n in self.up()]))
@@ -236,6 +231,8 @@ class PathTrie:
             # Also add it to the "special" index.
             _create_root_path_index(self.root_paths, root_path, sub_root_node)
 
+        self._groups = defaultdict(list)
+
     def __iter__(self):
         return self.iterate(None)
 
@@ -266,6 +263,10 @@ class PathTrie:
         for child in node.indices:
             yield from self.iterate(child)
 
+    def group(self, cksum):
+        """Get a list of nodes that have the same checksum."""
+        return self._groups.get(cksum)
+
     def insert(self, path, row):
         """Insert a path into the trie, with metadata in `row`"""
         components = [comp for comp in path.split('/') if comp]
@@ -286,6 +287,7 @@ class PathTrie:
             curr = node
 
         curr.make_leaf(row)
+        self._groups[row[Column.CKSUM]].append(curr)
         self.max_depth = max(self.max_depth, curr.depth)
         return new_nodes
 
@@ -497,7 +499,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
     #     Filter Implementation      #
     ##################################
 
-    def filter_model(self, query):
+    def filter_model(self, term):
         """Filter the model (and thus update the view) by `query`.
         Instead of modifying the model, a new model is returned,
         which shows only contains the filtered nodes.
@@ -506,17 +508,22 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         very little effort.  Small drawback: External code cannot rely on a
         single model
         """
-        if not query:
+        if len(term) < 2:
+            LOGGER.debug('too short, showing full model')
             return self
 
-        query = query.lower()
+        term = term.lower()
         partial_model = PathTreeModel(self.paths)
+
+        query = Query.parse(term)
+        if query is None:
+            return
 
         # Find out which trie to filter.
         # If we had a search query with matching prefix before we can just
         # use the previous resulting model.
         base_trie = self.trie
-        if self._partial_model and query.startswith(self._last_query):
+        if self._partial_model and query.issubset(self._last_query):
             base_trie = self._partial_model.trie
 
         # Iterate over the trie; do not add unmatched.
@@ -525,10 +532,12 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
             if not node.is_leaf:
                 continue
 
-            # TODO: Not sure if we should search the full path...
-            #       Maybe searching the leaf.name is enough for most usecases.
-            #       (plus that would be faster too!)
-            if not node.match(query):
+            if not query.matches(
+                node,
+                node[Column.SIZE],
+                node[Column.MTIME],
+                -node[Column.COUNT]
+            ):
                 continue
 
             # Do not copy the rows, just ref them.

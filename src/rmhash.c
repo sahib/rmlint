@@ -83,7 +83,7 @@ static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) 
     rm_digest_hexstring(digest, checksum_str);
 
     if(print_multihash) {
-        g_print("%02X%02X", rm_digest_type_to_multihash_id(digest->type),
+        g_print("%02x%02x", rm_digest_type_to_multihash_id(digest->type),
                 rm_digest_get_bytes(digest));
     }
 
