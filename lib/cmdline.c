@@ -625,6 +625,7 @@ static gboolean rm_cmd_parse_lint_types(_U const char *option_name,
     if(cfg->merge_directories) {
         cfg->ignore_hidden = false;
         cfg->find_hardlinked_dupes = true;
+        cfg->cache_file_structs = true;
     }
 
     /* clean up */
@@ -1500,6 +1501,7 @@ int rm_cmd_main(RmSession *session) {
                  g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(session->cfg->merge_directories) {
+        g_assert(session->cfg->cache_file_structs);
         session->dir_merger = rm_tm_new(session);
     }
 
