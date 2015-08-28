@@ -22,7 +22,7 @@ Usage
 -----
 
 The gui can be started via ``rmlint --gui``.The application is divided into several
-views that.
+views that guide you through the duplicate finding process.
 
 Developers
 ----------
@@ -33,6 +33,8 @@ Location view
 .. image:: _static/gui_locations.png
    :width: 50%
    :align: center
+
+|
 
 
 Shows a list of locations the user might want to scan.  A number of locations is
@@ -50,6 +52,8 @@ Runner view
    :width: 50%
    :align: center
 
+|
+
 After hitting scan in the locations view, the application will start ``rmlint``
 in the background. The output will be shown live in the treeview on the left.
 
@@ -59,7 +63,11 @@ detailed list of found files. A red cross will indicate that ``Shredder`` wants
 to delete this file, a green checkmark will make it keep it.
 The user can edit those to his liking. 
 
-Additionally, the view can be filtered after a search query.
+Additionally, the view can be filtered after a search query. In the simplest
+case this filters by a path element, in more complex usecases you can also
+filter by size, mtime and twincount. The latter can be done by adding
+``size:10K`` or ``size:1M-2M,3M-4M`` to the query (similar with ``mtime:`` and
+``count:``).
 
 Once happy with the results, the user can generate a script out of the results
 (all or just those that are visible).
@@ -70,6 +78,8 @@ Editor view
 .. image:: _static/gui_editor.png
    :width: 50%
    :align: center
+
+|
 
 A source editor will show the generated script. It can be edited and searched
 through. Apart from that, the file can be saved not only a ``.sh`` file, but
@@ -86,6 +96,8 @@ Settings view
 .. image:: _static/gui_settings.png
    :width: 50%
    :align: center
+
+|
 
 The settings view is the leftmost view and will not be shown by default in the
 process. It can always be accessed by:
