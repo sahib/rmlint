@@ -302,16 +302,16 @@ class RunnerView(View):
             # This is helpful to see quickly where those lie.
 
             cksum = node[Column.CKSUM]
-            group = self.runner.group(cksum)
-            trie = PathTrie()
+            group = self.model.trie.group(cksum)
+            group_trie = PathTrie()
 
-            for doc in group or []:
-                trie.insert(
-                    doc['path'],
-                    Column.make_row(doc)
+            for twin_node in group or []:
+                group_trie.insert(
+                    twin_node.build_path(),
+                    node.row
                 )
 
-            self.chart_stack.render(trie.root)
+            self.chart_stack.render(group_trie.root)
         else:
             self.chart_stack.render(node)
 
@@ -401,31 +401,33 @@ class RunnerView(View):
         nodes = list(self.treeview.get_selected_nodes())
         self._toggle_tag_state(nodes)
 
+        # Note: this is the *full* trie.
+        trie = self.model.trie
+
         for node in nodes:
             # Json documents with all related twins:
-            group = self.runner.group(node[Column.CKSUM])
-            if group is None:
+            group = trie.group(node[Column.CKSUM])
+            if not group:
                 continue
 
             # List of PathNodes which are twins:
-            group_nodes = []
-            for doc in group:
-                group_nodes.append(self.model.trie.find(doc['path']))
-
             has_original = False
-            for twin_node in group_nodes:
+            for twin_node in group:
                 if twin_node[Column.TAG] is IndicatorLabel.SUCCESS:
                     has_original = True
                     break
 
+            # All good:
             if has_original:
                 continue
 
-            # No original
-            for twin_node in group_nodes:
+            # No original in group, set first twin as original.
+            for twin_node in group:
                 if twin_node is not node:
                     self.model.set_node_value(
-                        twin_node, Column.TAG, IndicatorLabel.SUCCESS
+                        twin_node,
+                        Column.TAG,
+                        IndicatorLabel.SUCCESS
                     )
                     break
 

@@ -20,7 +20,6 @@ import logging
 import tempfile
 
 from enum import Enum
-from collections import defaultdict
 
 # External:
 from gi.repository import Gio
@@ -226,9 +225,6 @@ class Runner(GObject.Object):
         self.untagged_paths = untagged_paths
         self._data_stream = self.process = self._message = None
 
-        # File groups (digest -> [files])
-        self._groups = defaultdict(list)
-
         # Temporary directory for storing formatted files
         self._tmpdir = tempfile.TemporaryDirectory(prefix='shredder-')
 
@@ -299,7 +295,6 @@ class Runner(GObject.Object):
             if 'path' in json_doc:
                 self.element = json_doc
                 self.emit('lint-added')
-                self._groups[json_doc['checksum']].append(json_doc)
             elif 'description' in json_doc:
                 self.header = json_doc
             elif 'aborted' in json_doc:
@@ -388,11 +383,6 @@ class Runner(GObject.Object):
             ]
         )
         process.wait_check_async(None, self.on_replay_finish)
-
-    def group(self, cksum):
-        """Get a group of duplicates by it's checksum.
-        """
-        return self._groups.get(cksum)
 
     def save(self, dest_path, file_type='sh'):
         """Save the output to `path`.

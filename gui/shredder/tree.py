@@ -20,7 +20,7 @@ import os
 import time
 import logging
 
-from collections import OrderedDict, deque
+from collections import OrderedDict, defaultdict, deque
 
 # External:
 from gi.repository import Gtk
@@ -231,6 +231,8 @@ class PathTrie:
             # Also add it to the "special" index.
             _create_root_path_index(self.root_paths, root_path, sub_root_node)
 
+        self._groups = defaultdict(list)
+
     def __iter__(self):
         return self.iterate(None)
 
@@ -261,6 +263,10 @@ class PathTrie:
         for child in node.indices:
             yield from self.iterate(child)
 
+    def group(self, cksum):
+        """Get a list of nodes that have the same checksum."""
+        return self._groups.get(cksum)
+
     def insert(self, path, row):
         """Insert a path into the trie, with metadata in `row`"""
         components = [comp for comp in path.split('/') if comp]
@@ -281,6 +287,7 @@ class PathTrie:
             curr = node
 
         curr.make_leaf(row)
+        self._groups[row[Column.CKSUM]].append(curr)
         self.max_depth = max(self.max_depth, curr.depth)
         return new_nodes
 
