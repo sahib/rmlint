@@ -67,7 +67,7 @@ Additionally, the view can be filtered after a search query. In the simplest
 case this filters by a path element, in more complex usecases you can also
 filter by size, mtime and twincount. The latter can be done by adding
 ``size:10K`` or ``size:1M-2M,3M-4M`` to the query (similar with ``mtime:`` and
-``count:``).
+``count:``)
 
 Once happy with the results, the user can generate a script out of the results
 (all or just those that are visible).

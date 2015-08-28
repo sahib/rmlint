@@ -17,3 +17,8 @@ OPEN:
 - Translation: Mark strings/use more standard buttons
 - Design: Introduce more keybindings/actions.
 - Fix: Handle weird path encodings gracefully
+- Feature: Show twins of a file in treeview.
+- Fix: Revise build system of Shredder. (uninstalling, respecting prefix etc.)
+- Fix: font size in chart for large charts. Provide a sane minimum radius.
+- Fix: Speed improvements. Profile search code. Maybe index some stuff.
+- Fix: Actually support non-dry-run.
