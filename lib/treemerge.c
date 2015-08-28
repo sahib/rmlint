@@ -899,7 +899,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
         if(file_list->length >= 2) {
             /* If no separate duplicate files are requested, we can stop here */
             if(self->session->cfg->find_duplicates == false) {
-                self->session->total_lint_size -= file_size_acc;
                 self->session->dup_group_counter -= 1;
                 self->session->dup_counter -= file_list->length - 1;
             } else {
