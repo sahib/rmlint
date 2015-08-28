@@ -217,8 +217,8 @@ class RunnerView(View):
         """Called once the user entered a new query."""
         text = entry.get_text()
 
-        if len(text) > 1:
-            sub_model = self.model.filter_model(text)
+        sub_model = self.model.filter_model(text)
+        if sub_model is not self.treeview.get_model():
             self.chart_stack.render(sub_model.trie.root)
             self.treeview.set_model(sub_model)
             self.actionbar.activate_partial_script_btn(True)
