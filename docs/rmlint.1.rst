@@ -141,6 +141,8 @@ General Options
     It is recommended to run ``-g`` with ``-VVV`` to prevent the printing
     of warnings in between.
 
+    Note: This flag clears all previous outputs. Specify your outputs after this flag!
+
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase the paranoia of rmlint's internals. Both options can be specified up

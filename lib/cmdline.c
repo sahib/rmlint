@@ -880,8 +880,8 @@ static gboolean rm_cmd_parse_progress(_U const char *option_name, _U const gchar
     rm_fmt_clear(session->formats);
     rm_fmt_add(session->formats, "progressbar", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
-    rm_fmt_add(session->formats, "sh", "rmlint.sh");
-    rm_fmt_add(session->formats, "json", "rmlint.json");
+
+    session->cfg->progress_enabled = true;
 
     /* Set verbosity to minimal */
     rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
@@ -1422,6 +1422,16 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          * If the latter is not specfified, ignore it all together */
         cfg->ignore_hidden = true;
         cfg->partial_hidden = false;
+    }
+
+    if(cfg->progress_enabled) {
+        if(!rm_fmt_has_formatter(session->formats, "sh")) {
+            rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        }
+
+        if(!rm_fmt_has_formatter(session->formats, "json")) {
+            rm_fmt_add(session->formats, "json", "rmlint.json");
+        }
     }
 
     /* Overwrite color if we do not print to a terminal directly */

@@ -403,6 +403,21 @@ void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
     g_hash_table_iter_init(iter, self->path_to_handler);
 }
 
+bool rm_fmt_has_formatter(RmFmtTable *self, const char *name) {
+    GHashTableIter iter;
+    RmFmtHandler *handler = NULL;
+
+    g_hash_table_iter_init(&iter, self->path_to_handler);
+    
+    while(g_hash_table_iter_next(&iter, NULL, (gpointer *)&handler)) {
+        if(!strcmp(handler->name, name)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {
     if(0 || handler->path == NULL || strcmp(handler->path, "stdout") == 0 ||
        strcmp(handler->path, "stderr") == 0 || strcmp(handler->path, "stdin") == 0) {

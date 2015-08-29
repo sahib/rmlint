@@ -251,6 +251,11 @@ void rm_fmt_unlock_state(RmFmtTable *self);
 bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
 
 /**
+ * @brief Check if there is at least one formatter with `name`.
+ */ 
+bool rm_fmt_has_formatter(RmFmtTable *self, const char *name);
+
+/**
  * You can use this template for implementing new RmFmtHandlers.
  * All callbacks are not required to be implemented, leave them to NULL if
  * you do not implement them:
