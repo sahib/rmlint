@@ -675,10 +675,11 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     g_mutex_lock(&(device->lock));
     {
         device->remaining_files += files;
-        device->cache_file_count +=files;
+        device->cache_file_count += files;
 
         device->remaining_bytes += bytes;
         device->cache_byte_count += bytes;
+
         if (bytes<0) {
             device->bytes_read_this_pass = device->bytes_read_this_pass + (RmOff)(-bytes);
             device->files_read_this_pass++;
@@ -697,7 +698,13 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
         {
             session->shred_files_remaining += device->cache_file_count;
             session->total_filtered_files += device->cache_filtered_count;
-            session->shred_bytes_remaining += device->cache_byte_count;
+
+            if((gint64)session->shred_bytes_remaining + device->cache_byte_count >= 0) {
+                session->shred_bytes_remaining += device->cache_byte_count;
+            } else {
+                session->shred_bytes_remaining = 0;
+            }
+
             rm_fmt_set_state(session->formats, (device->after_preprocess)
                                                    ? RM_PROGRESS_STATE_SHREDDER
                                                    : RM_PROGRESS_STATE_PREPROCESS);
