@@ -8,7 +8,9 @@ if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
     py_install = env.Command(
         'always.install',
         ['setup.py'],
-        'cd gui && python3 setup.py install'
+        'cd gui && python3 setup.py install --prefix {prefix}'.format(
+            prefix=GetOption('prefix')
+        )
     )
     env.Alias('install', py_install)
 
