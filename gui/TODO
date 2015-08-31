@@ -11,6 +11,10 @@ DONE:
 - Design: Add a chart when clicking on a single file that shows 
   only the file and it's twins. -- done
 - Design: Add context menu to treeview. -- done
+- Fix: font size in chart for large charts. Provide a sane minimum radius. --
+  done (thinner inner circle)
+- Fix: Revise build system of Shredder. (uninstalling, respecting prefix etc.)
+  -- done
 
 OPEN:
 
@@ -18,7 +22,5 @@ OPEN:
 - Design: Introduce more keybindings/actions.
 - Fix: Handle weird path encodings gracefully
 - Feature: Show twins of a file in treeview.
-- Fix: Revise build system of Shredder. (uninstalling, respecting prefix etc.)
-- Fix: font size in chart for large charts. Provide a sane minimum radius.
 - Fix: Speed improvements. Profile search code. Maybe index some stuff.
 - Fix: Actually support non-dry-run.
