@@ -111,6 +111,9 @@ def _draw_segment(
     radius_a_px = (layer / (max_layers + 1)) * mid
     radius_b_px = radius_a_px + (1 / (max_layers + 1)) * mid
 
+    if layer is 1:
+        radius_a_px += (radius_b_px - radius_a_px) / 2
+
     # Draw the actual segment path
     ctx.arc(mid_x, mid_y, radius_a_px, deg_a, deg_b)
     ctx.arc_negative(mid_x, mid_y, radius_b_px, deg_b, deg_a)
@@ -295,7 +298,12 @@ class Segment:
         mid_x, mid_y = alloc.width / 2, alloc.height / 2
 
         # Distance from (mid_x, mid_y) to middle point
-        rad = ((self.layer + 0.5) / (max_layers + 1)) * min(mid_x, mid_y)
+        if self.layer is 1:
+            offset = 0.75
+        else:
+            offset = 0.5
+
+        rad = ((self.layer + offset) / (max_layers + 1)) * min(mid_x, mid_y)
 
         # Half of the degree range + start
         deg = self.degree + self.size / 2
@@ -401,7 +409,7 @@ class RingChart(Chart):
 
         # Caluclate the font size of the inner label.
         # Make it smaller if not enough place but cut off at a size of 12
-        inner_circle = (1 / max_layers)
+        inner_circle = (1.4 / max_layers)
         inner_circle *= min(alloc.width, alloc.height) / 2
         font_size = min(12, inner_circle / 3)
 
