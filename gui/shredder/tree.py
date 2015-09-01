@@ -844,23 +844,23 @@ class PathTreeView(Gtk.TreeView):
                 # ),
                 (Gtk.CellRendererText(), False, True, dict(text=Column.PATH)),
             ],
-            250
+            240
         ))
         self.append_column(_create_column(
             'Size', Column.SIZE,
             [(CellRendererSize(), True, False, dict(size=Column.SIZE))],
-            80
+            70
         ))
         self.append_column(_create_column(
             'Count', Column.COUNT,
             [(CellRendererCount(), True, False, dict(count=Column.COUNT))],
-            100
+            90
         ))
         self.append_column(
             _create_column(
                 'Changed', Column.MTIME, [
                     (CellRendererModifiedTime(), True, False, dict(
-                        mtime=Column.MTIME))], 110))
+                        mtime=Column.MTIME))], 100))
 
         self.connect(
             'button-press-event',

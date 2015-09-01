@@ -18,7 +18,7 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.util import View, IconButton, PopupMenu, IndicatorLabel
+from shredder.util import View, IconButton, PopupMenu, IndicatorLabel, scrolled
 from shredder.chart import ChartStack
 from shredder.tree import PathTreeView, PathTreeModel, Column, PathTrie
 from shredder.runner import Runner
@@ -122,28 +122,46 @@ class RunnerView(View):
             self.on_selection_changed
         )
 
+        self.group_treeview = PathTreeView()
+        self.group_treeview.set_vexpand(True)
+        self.group_treeview.set_valign(Gtk.Align.FILL)
+        self.group_treeview.set_sensitive(False)
+
+        group_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        group_box.pack_start(scrolled(self.group_treeview), True, True, 0)
+        group_box.pack_start(Gtk.HSeparator(), False, False, 0)
+
+        self.group_revealer = Gtk.Revealer()
+        self.group_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
+        self.group_revealer.set_vexpand(True)
+        self.group_revealer.set_valign(Gtk.Align.FILL)
+        self.group_revealer.add(group_box)
+        self.group_revealer.set_no_show_all(True)
+
         for column in self.treeview.get_columns():
             column.connect(
                 'clicked',
                 lambda _: self.rerender_chart()
             )
 
-        # Scrolled window on the left
-        scw = Gtk.ScrolledWindow()
-        scw.set_vexpand(True)
-        scw.set_valign(Gtk.Align.FILL)
-        scw.add(self.treeview)
-
         self.chart_stack = ChartStack()
         self.actionbar = ResultActionBar(self)
+        self.actionbar.set_valign(Gtk.Align.END)
+        self.actionbar.set_halign(Gtk.Align.FILL)
 
         # Right part of the view
         stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        stats_box.pack_start(self.group_revealer, True, True, 0)
         stats_box.pack_start(self.chart_stack, True, True, 0)
-        stats_box.pack_start(self.actionbar, False, True, 0)
+        stats_box.pack_start(self.actionbar, False, False, 0)
         stats_box.set_halign(Gtk.Align.FILL)
-        stats_box.set_vexpand(True)
         stats_box.set_valign(Gtk.Align.FILL)
+        stats_box.set_vexpand(True)
+
+        self.chart_stack.set_halign(Gtk.Align.FILL)
+        self.chart_stack.set_valign(Gtk.Align.FILL)
+        self.chart_stack.set_hexpand(True)
+        self.chart_stack.set_vexpand(True)
 
         # Separator container for separator|chart (could have used grid)
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
@@ -151,6 +169,7 @@ class RunnerView(View):
         right_pane.pack_start(separator, False, False, 0)
         right_pane.pack_start(stats_box, True, True, 0)
 
+        scw = scrolled(self.treeview)
         grid = Gtk.Grid()
         grid.set_column_homogeneous(True)
         grid.attach(scw, 0, 0, 1, 1)
@@ -198,7 +217,7 @@ class RunnerView(View):
         self.runner.run()
 
         # Make sure the previous run is not visible anymore:
-        self.model = PathTreeModel([])
+        self.model = PathTreeModel(untagged_paths + tagged_paths)
         self.treeview.set_model(self.model)
 
         # Indicate that we're in a fresh run:
@@ -303,16 +322,26 @@ class RunnerView(View):
 
             cksum = node[Column.CKSUM]
             group = self.model.trie.group(cksum)
-            group_trie = PathTrie()
+
+            group_model = PathTreeModel(
+                self.last_paths[0] + self.last_paths[1]
+            )
 
             for twin_node in group or []:
-                group_trie.insert(
+                group_model.add_path(
                     twin_node.build_path(),
-                    node.row
+                    twin_node.row,
+                    immediately=True
                 )
 
-            self.chart_stack.render(group_trie.root)
+            self.group_treeview.set_model(group_model)
+            self.group_revealer.show()
+            self.group_revealer.get_child().show_all()
+            self.group_revealer.set_reveal_child(True)
+            self.chart_stack.render(group_model.trie.root)
         else:
+            self.group_revealer.hide()
+            self.group_revealer.set_reveal_child(False)
             self.chart_stack.render(node)
 
     def _generate_script(self, model):
@@ -397,7 +426,6 @@ class RunnerView(View):
         self._toggle_tag_state(self.model.trie)
 
     def on_toggle_selected(self, _):
-        # TODO: This is dead ugly, fix.
         nodes = list(self.treeview.get_selected_nodes())
         self._toggle_tag_state(nodes)
 
