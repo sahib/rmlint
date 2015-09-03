@@ -429,6 +429,8 @@ class LocationView(View):
             self.app_window.views.go_right.set_sensitive(True)
             self.app_window.views.go_left.set_sensitive(True)
             self.revealer.set_reveal_child(True)
+            self.selected_locations = []
+            self._update_selected_label()
             self._set_title()
 
         def _open_clicked(_):
@@ -485,12 +487,15 @@ class LocationView(View):
             self.box.remove(row)
 
             try:
+                print('== DEL ===')
                 Gtk.RecentManager.get_default().remove_item(row.path)
+                print('== DEL! ===')
             except GLib.Error:
                 LOGGER.warning('Could not remove recent item: %s', row.path)
 
             if row.path in self.known_paths:
                 self.known_paths.remove(row.path)
+
         self.selected_locations = []
         self._update_selected_label()
 
