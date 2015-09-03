@@ -36,7 +36,7 @@
 #include <glib-object.h>
 #endif
 
-typedef struct RmHasherTestMainSession {
+typedef struct RmHasherSession {
     /* Internal */
     char **paths;
     gint path_index;
@@ -47,18 +47,11 @@ typedef struct RmHasherTestMainSession {
     RmDigestType digest_type;
     gboolean print_in_order;
     gboolean print_multihash;
-} RmHasherTestMainSession;
-
-static void logging_callback(_U const gchar *log_domain,
-                             _U GLogLevelFlags log_level,
-                             const gchar *message,
-                             _U gpointer user_data) {
-    fputs(message, stderr);
-}
+} RmHasherSession;
 
 static gboolean rm_hasher_parse_type(_U const char *option_name,
                                      const gchar *value,
-                                     RmHasherTestMainSession *session,
+                                     RmHasherSession *session,
                                      GError **error) {
     session->digest_type = rm_string_to_digest_type(value);
 
@@ -88,7 +81,7 @@ static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) 
 
 static int rm_hasher_callback(_U RmHasher *hasher,
                               RmDigest *digest,
-                              RmHasherTestMainSession *session,
+                              RmHasherSession *session,
                               gpointer index_ptr) {
     gint index = GPOINTER_TO_INT(index_ptr);
 
@@ -119,33 +112,8 @@ static int rm_hasher_callback(_U RmHasher *hasher,
     return 0;
 }
 
-static void i18n_init(void) {
-#if HAVE_LIBINTL
-    /* Tell gettext where to search for .mo files */
-    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX "/share/locale");
-    bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
-
-    /* Make printing umlauts work */
-    setlocale(LC_ALL, "");
-
-    /* Say we're the textdomain "rmlint"
-     * so gettext can find us in
-     * /usr/share/locale/de/LC_MESSAGEs/rmlint.mo
-     * */
-    textdomain(RM_GETTEXT_PACKAGE);
-#endif
-}
-
-int main(int argc, char **argv) {
-    i18n_init();
-
-#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
-    /* Very old glib. Debian, Im looking at you. */
-    g_type_init();
-#endif
-
-    RmHasherTestMainSession tag;
-    g_log_set_default_handler(logging_callback, &tag);
+int rm_hasher_main(int argc, const char **argv) {
+    RmHasherSession tag;
 
     /* List of paths we got passed (or NULL)   */
     tag.paths = NULL;
@@ -180,7 +148,7 @@ int main(int argc, char **argv) {
     GError *error = NULL;
     GOptionContext *context = g_option_context_new("      Hash a list of files");
     GOptionGroup *main_group =
-        g_option_group_new("rmhash", "Hash a list of files", "", &tag, NULL);
+        g_option_group_new(argv[0], "Hash a list of files", "", &tag, NULL);
 
     g_option_group_add_entries(main_group, entries);
     g_option_context_set_main_group(context, main_group);
@@ -193,7 +161,7 @@ int main(int argc, char **argv) {
         "\n    Also: murmur256, city256, bastard, city512, "
         "murmur512, ext, cumulative, paranoid");
 
-    if(!g_option_context_parse(context, &argc, &argv, &error)) {
+    if(!g_option_context_parse(context, &argc, (char ***)&argv, &error)) {
         /* print g_option error message, followed by help */
         rm_log_error_line("%s", error->message);
         exit(EXIT_FAILURE);
@@ -276,4 +244,46 @@ int main(int argc, char **argv) {
     g_strfreev(tag.paths);
 
     return EXIT_SUCCESS;
+}
+
+////////////////////////////////////////////
+// ACTUAL MAIN WHICH CALLS rm_hasher_main //
+////////////////////////////////////////////
+
+static void logging_callback(_U const gchar *log_domain,
+                             _U GLogLevelFlags log_level,
+                             const gchar *message,
+                             _U gpointer user_data) {
+    fputs(message, stderr);
+}
+
+static void i18n_init(void) {
+#if HAVE_LIBINTL
+    /* Tell gettext where to search for .mo files */
+    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX "/share/locale");
+    bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
+
+    /* Make printing umlauts work */
+    setlocale(LC_ALL, "");
+
+    /* Say we're the textdomain "rmlint"
+     * so gettext can find us in
+     * /usr/share/locale/de/LC_MESSAGEs/rmlint.mo
+     * */
+    textdomain(RM_GETTEXT_PACKAGE);
+#endif
+}
+
+int main(int argc, char const* argv[]) {
+    i18n_init();
+
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
+    /* Very old glib. Debian, Im looking at you. */
+    g_type_init();
+#endif
+
+    g_log_set_default_handler(logging_callback, NULL);
+
+    rm_hasher_main(argc, argv);
+    return 0;
 }
