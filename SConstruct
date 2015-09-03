@@ -596,6 +596,9 @@ env = conf.Finish()
 
 library = SConscript('lib/SConscript')
 program = SConscript('src/SConscript', exports='library')
+Default(library)
+Default(program)
+
 SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')

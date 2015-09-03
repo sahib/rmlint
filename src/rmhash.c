@@ -251,10 +251,12 @@ int rm_hasher_main(int argc, const char **argv) {
 ////////////////////////////////////////////
 
 static void logging_callback(_U const gchar *log_domain,
-                             _U GLogLevelFlags log_level,
+                             GLogLevelFlags log_level,
                              const gchar *message,
                              _U gpointer user_data) {
-    fputs(message, stderr);
+    if(log_level < G_LOG_LEVEL_INFO) {
+        fputs(message, stderr);
+    }
 }
 
 static void i18n_init(void) {
