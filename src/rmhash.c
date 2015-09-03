@@ -47,17 +47,13 @@ typedef struct RmHasherTestMainSession {
     RmDigestType digest_type;
     gboolean print_in_order;
     gboolean print_multihash;
-    gint verbosity;
 } RmHasherTestMainSession;
 
 static void logging_callback(_U const gchar *log_domain,
-                             GLogLevelFlags log_level,
+                             _U GLogLevelFlags log_level,
                              const gchar *message,
-                             gpointer user_data) {
-    RmHasherTestMainSession *session = user_data;
-    if(session->verbosity >= log_level) {
-        fputs(message, stderr);
-    }
+                             _U gpointer user_data) {
+    fputs(message, stderr);
 }
 
 static gboolean rm_hasher_parse_type(_U const char *option_name,
@@ -150,8 +146,6 @@ int main(int argc, char **argv) {
 
     RmHasherTestMainSession tag;
     g_log_set_default_handler(logging_callback, &tag);
-
-    tag.verbosity = G_LOG_LEVEL_WARNING;
 
     /* List of paths we got passed (or NULL)   */
     tag.paths = NULL;
