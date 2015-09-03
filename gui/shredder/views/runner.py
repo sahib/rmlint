@@ -125,7 +125,6 @@ class RunnerView(View):
         self.group_treeview = PathTreeView()
         self.group_treeview.set_vexpand(True)
         self.group_treeview.set_valign(Gtk.Align.FILL)
-        self.group_treeview.set_sensitive(False)
 
         group_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         group_box.pack_start(scrolled(self.group_treeview), True, True, 0)
@@ -280,7 +279,7 @@ class RunnerView(View):
             # Come back later:
             return False
 
-        if len(model) > 1:
+        if model.trie.has_leaves():
             self.chart_stack.set_visible_child_name(ChartStack.CHART)
             self.rerender_chart()
             self.actionbar.activate_script_btn(True)

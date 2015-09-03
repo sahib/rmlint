@@ -259,7 +259,7 @@ class LocationView(View):
 
     def _set_title(self):
         """Make it an own method, so we don't need to retype it."""
-        self.sub_title = 'Choose locations to scan'
+        self.sub_title = 'Click locations to scan'
 
     def add_recent_item(self, path):
         """Add item to GtkRecentManager"""

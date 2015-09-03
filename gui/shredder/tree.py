@@ -349,6 +349,17 @@ class PathTrie:
         for child in children:
             yield from self.sort(column_id, reverse, child)
 
+    def has_leaves(self):
+        """Check if this trie has any leaf nodes.
+        This might be different from nodes that are inserted as sub root nodes,
+        or as intermediate directories.
+        """
+        for node in self:
+            if node.is_leaf:
+                return True
+
+        return False
+
 
 def make_iter(node):
     """Make a GtkTreeIter, suitable for our PathTreeModel."""
@@ -892,7 +903,8 @@ class PathTreeView(Gtk.TreeView):
             return
 
         menu = self.emit('show-menu')
-        menu.simple_popup(event)
+        if menu:
+            menu.simple_popup(event)
 
 
 if __name__ == '__main__':
