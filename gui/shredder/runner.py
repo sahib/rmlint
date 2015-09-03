@@ -115,7 +115,6 @@ class CrossMountType(Enum):
 
 def map_cfg(option, val):
     """Helper function to save some characters"""
-    # TODO: Leave out if default?
     return option.MAPPING.value.get(val)
 
 
@@ -187,7 +186,6 @@ def _create_rmlint_process(
         cmdline = [
             'rmlint',
             '--no-with-color',
-            # '--merge-directories',  # TODO: Disable for now.
             '-T', 'duplicates'
         ] + extra_options + untagged
 

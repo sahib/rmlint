@@ -94,17 +94,7 @@
 
 #ShredderScriptEditor {
     font: monospaced 9;
-    
-    /* TODO: This seems to be broken? */
-    /* Draw a grid, like on mm paper */
-    background-size: 40px 40px, 40px 40px, 10px 10px, 10px 10px;
-    background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
-    background-image: linear-gradient(alpha(@script_editor, 0.35) 1px, transparent 1px),
-                      linear-gradient(90deg, alpha(@script_editor, 0.35) 1px, transparent 1px),
-                      linear-gradient(alpha(@script_editor, 0.3) 1px, transparent 1px),
-                      linear-gradient(90deg, alpha(@script_editor,.3) 1px, transparent 1px);
 }
-
 
 #ShredderLocationEntry {
     padding: 0px;

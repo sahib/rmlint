@@ -537,7 +537,7 @@ class ChartStack(Gtk.Stack):
         self.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
 
         # Make sure we don't stick on the border:
-        self.set_border_width(3)
+        self.set_border_width(5)
 
         self.spinner = Gtk.Spinner()
         self.spinner.start()
