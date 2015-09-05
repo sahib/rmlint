@@ -209,12 +209,18 @@ class RunningLabel(Gtk.Label):
         self.set_justify(Gtk.Justification.CENTER)
 
         self._size_sum = 0
-        self.push(None, '', '')
+        self.push('', '')
 
-    def push(self, model, prefix, path):
+    def push(self, prefix, path):
         """Push a new path to the label, removing the old one."""
         if prefix.lower() == 'keeping':
             return
+
+        try:
+            buf = os.stat(path)
+            self._size_sum += buf.st_size
+        except OSError:
+            pass
 
         text = REMOVED_LABEL.format(
             t=prefix,
@@ -222,13 +228,6 @@ class RunningLabel(Gtk.Label):
             p=GLib.markup_escape_text(path)
         )
         self.set_markup(text)
-
-        if model is None:
-            return
-
-        node = model.lookup_by_path(path)
-        if node is not None:
-            self._size_sum += node[Column.SIZE]
 
 
 class RunButton(Gtk.Box):
@@ -637,7 +636,7 @@ When done, click the `Run Script` button below.
 
         self.script.connect(
             'line-read',
-            lambda _, prefix, line: self.run_label.push(model, prefix, line)
+            lambda _, prefix, line: self.run_label.push(prefix, line)
         )
 
         self.script.connect(

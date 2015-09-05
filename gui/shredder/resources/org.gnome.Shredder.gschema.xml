@@ -69,7 +69,7 @@
         <key name='traverse-match' enum='org.gnome.Shredder.MatchType'>
             <default>'No limitation'</default>
             <summary>Path limitations</summary>
-            <description>Only find twins a certain limitation</description>
+            <description>Only find twins with a certain limitation</description>
         </key>
         <key name='computation-algorithm' enum='org.gnome.Shredder.AlgorithmType'>
             <default>'sha1'</default>

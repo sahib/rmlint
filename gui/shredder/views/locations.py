@@ -487,9 +487,7 @@ class LocationView(View):
             self.box.remove(row)
 
             try:
-                print('== DEL ===')
                 Gtk.RecentManager.get_default().remove_item(row.path)
-                print('== DEL! ===')
             except GLib.Error:
                 LOGGER.warning('Could not remove recent item: %s', row.path)
 
