@@ -777,52 +777,6 @@ def _create_column(title, id_, renderers, fixed_width=100):
     return column
 
 
-def _dfs(model, iter_):
-    """Generator for a depth first traversal in a TreeModel.
-    Yields a GtkTreeIter for all iters below and after iter_.
-    """
-    while iter_ is not None:
-        child = model.iter_children(iter_)
-        if child is not None:
-            yield from _dfs(model, child)
-
-        yield iter_
-        iter_ = model.iter_next(iter_)
-
-
-def _mark_row(model, child_iter, state):
-    """Check if we need to update the tag icon"""
-    row = model[child_iter]
-    if row[Column.TAG] is IndicatorLabel.SUCCESS and state:
-        row[Column.TAG] = IndicatorLabel.WARNING
-    elif row[Column.TAG] is IndicatorLabel.WARNING and not state:
-        row[Column.TAG] = IndicatorLabel.SUCCESS
-
-    row[Column.SELECTED] = state
-
-
-def _recursive_flick(model, iter_, state):
-    """Propapgate flick in a depth first manner"""
-    for child_iter in _dfs(model, iter_):
-        _mark_row(model, child_iter, state)
-
-
-def on_toggle(_, path, treeview):
-    """Toggle renderer state and it's children"""
-    model = treeview.get_model()
-    iter_ = model.get_iter_from_string(path)
-    new_state = not model[iter_][Column.SELECTED]
-    _mark_row(model, iter_, new_state)
-    _recursive_flick(model, model.iter_children(iter_), new_state)
-
-
-def _create_toggle_cellrenderer(treeview):
-    """Return a normal Gtk.CellRendererToggle, but also toggle childs."""
-    renderer = Gtk.CellRendererToggle()
-    renderer.connect('toggled', on_toggle, treeview)
-    return renderer
-
-
 class PathTreeView(Gtk.TreeView):
     __gsignals__ = {
         'show-menu': (GObject.SIGNAL_RUN_LAST, PopupMenu, ()),
@@ -849,10 +803,6 @@ class PathTreeView(Gtk.TreeView):
         self.append_column(_create_column(
             'Path', Column.PATH, [
                 (CellRendererLint(), False, False, dict(tag=Column.TAG)),
-                # (
-                #     _create_toggle_cellrenderer(self),
-                #     False, False, dict(active=Column.SELECTED)
-                # ),
                 (Gtk.CellRendererText(), False, True, dict(text=Column.PATH)),
             ],
             240
