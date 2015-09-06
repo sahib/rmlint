@@ -114,6 +114,7 @@ class RunnerView(View):
         self._script_generated = False
 
         self.model = PathTreeModel([])
+
         self.treeview = PathTreeView()
         self.treeview.set_model(self.model)
         self.treeview.set_halign(Gtk.Align.FILL)

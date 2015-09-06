@@ -62,7 +62,7 @@ class Column:
     Only this class needs to be changed when adding/modifying columns.
     """
     SELECTED, SIZE, COUNT, MTIME, TAG, CKSUM, PATH, TOOLTIP = range(8)
-    TYPES = [bool, float, int, int, int, int, str]
+    TYPES = [bool, float, int, int, int, int, str, str]
 
     @staticmethod
     def make_row(md_map):
@@ -673,7 +673,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
     def do_get_value(self, iter_, column):
         """Returns the value for iter and column."""
         node = self.trie.nodes[iter_.user_data]
-        return node[column]
+        return Column.TYPES[column](node[column])
 
     def do_get_n_columns(self):
         """Returns the number of columns."""
