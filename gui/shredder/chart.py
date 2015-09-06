@@ -262,8 +262,13 @@ class Segment:
         self.children = []
         self.layer, self.degree, self.size = layer, degree, size
         self.degree = math.fmod(self.degree, math.pi * 2)
-        self.tooltip = tooltip
         self.is_selected = False
+
+        # Cut off too long tooltips:
+        if len(tooltip) > 60:
+            self.tooltip = tooltip[:60] + '...'
+        else:
+            self.tooltip = tooltip
 
     def draw(self, ctx, alloc, max_layers, bg_col):
         """Trigger the actual drawing of the segment."""
@@ -448,7 +453,8 @@ class RingChart(Chart):
             x, y = segment.middle_point(alloc, max_layers)
             _draw_tooltip(
                 ctx, alloc, x, y, 8,
-                segment.middle_angle(), segment.tooltip
+                segment.middle_angle(),
+                segment.tooltip
             )
 
     def on_tooltip_timeout(self, segment):
