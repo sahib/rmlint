@@ -595,14 +595,14 @@ if conf.env['HAVE_SQLITE3']:
 env = conf.Finish()
 
 library = SConscript('lib/SConscript')
-program = SConscript('src/SConscript', exports='library')
-Default(library)
-Default(program)
+programs = SConscript('src/SConscript', exports='library')
+env.Default(library)
 
-SConscript('tests/SConscript', exports='program')
+SConscript('tests/SConscript', exports='programs')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
 SConscript('gui/SConscript')
+
 
 def build_tar_gz(target=None, source=None, env=None):
     tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(

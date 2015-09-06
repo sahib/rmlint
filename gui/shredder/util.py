@@ -435,7 +435,7 @@ class PopupMenu(Gtk.Menu):
 
 class CellRendererSize(Gtk.CellRendererText):
     """Render the byte size in a human readable form"""
-    size = GObject.Property(type=int, default=0)
+    size = GObject.Property(type=float, default=0)
 
     def __init__(self, **kwargs):
         Gtk.CellRendererText.__init__(self, **kwargs)

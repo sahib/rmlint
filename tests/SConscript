@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 Import('env')
-Import('program')
+Import('programs')
 
 
 import subprocess
@@ -23,6 +23,6 @@ if 'test' in COMMAND_LINE_TARGETS:
     env.Alias('test',
         env.Depends(
             env.Command('run_tests', None, Action(run_tests, "Running tests")),
-            program
+            programs
         )
     )
