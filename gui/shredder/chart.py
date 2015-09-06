@@ -70,7 +70,6 @@ def _draw_rounded(ctx, area, radius):
     ctx.arc(b - radius, d - radius, radius, 0 * mpi2, 1 * mpi2)
     ctx.arc(a + radius, d - radius, radius, 1 * mpi2, 2 * mpi2)
     ctx.close_path()
-    ctx.fill()
 
 
 TANGO_TABLE = [
@@ -218,7 +217,9 @@ def _draw_tooltip(ctx, alloc, x, y, dist, angle, text):
     _draw_rounded(
         ctx, (new_x - tip_w, new_x + tip_w, new_y - tip_h, new_y + tip_h), 3
     )
-    ctx.fill()
+    ctx.fill_preserve()
+    ctx.set_source_rgba(0.3, 0.3, 0.3, 1.0)
+    ctx.stroke()
 
     ctx.set_source_rgba(0.8, 0.8, 0.8, 1.0)
     _draw_center_text(ctx, new_x, new_y, text, do_draw=True)
