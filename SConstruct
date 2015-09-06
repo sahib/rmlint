@@ -213,9 +213,9 @@ def check_sysctl(context):
 def check_posix_fadvise(context):
     rc = 1
 
-    if tests.CheckFunc(
+    if tests.CheckDeclaration(
         context, 'posix_fadvise',
-        header='#include <fcntl.h>'
+        includes='#include <fcntl.h>'
     ):
         rc = 0
 

@@ -108,10 +108,8 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
 static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {
     /* Give the kernel scheduler some hints */
 #if HAVE_POSIX_FADVISE
-    if(file->fadvise_requested) {
-        RmOff readahead = bytes_to_read * 8;
-        posix_fadvise(fd, file->seek_offset, readahead, SHRED_FADVISE_FLAGS);
-    }
+    RmOff readahead = bytes_to_read * 8;
+    posix_fadvise(fd, seek_offset, readahead, HASHER_FADVISE_FLAGS);
 #else
     (void) fd;
     (void) seek_offset;
@@ -179,10 +177,6 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe, R
         rm_log_perror("fseek(3) failed");
         goto finish;
     }
-
-#if HAVE_POSIX_FADVISE
-    posix_fadvise(fileno(fd), start_offset, bytes_to_read, HASHER_FADVISE_FLAGS);
-#endif
 
     RmBuffer *buffer = rm_buffer_pool_get(hasher->mem_pool);
 
