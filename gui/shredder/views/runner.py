@@ -12,7 +12,6 @@ import logging
 
 # External:
 from gi.repository import Gtk
-from gi.repository import Gdk
 from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
@@ -217,7 +216,6 @@ class RunnerView(View):
         )
 
         self._menu = None
-        self.treeview.connect('show-menu', self.on_show_menu)
 
     def reset(self):
         """Reset internally to freshly initialized."""
@@ -400,102 +398,3 @@ class RunnerView(View):
         """Called on Ctrl-Enter"""
         if self.actionbar.is_sensitive():
             self._generate_script(self.model)
-
-    #######################
-    # MENU ENTRY HANDLING #
-    #######################
-
-    def on_show_menu(self, _):
-        # HACK: bind to self, since the ref would get lost.
-        self._menu = PopupMenu()
-        self._menu.simple_add('Toggle all', self.on_toggle_all)
-        self._menu.simple_add('Toggle selected', self.on_toggle_selected)
-        self._menu.simple_add_separator()
-        self._menu.simple_add('Expand all', self.on_expand_all)
-        self._menu.simple_add('Collapse all', self.on_collapse_all)
-        self._menu.simple_add_separator()
-        self._menu.simple_add('Open item', self.on_open_folder)
-        self._menu.simple_add(
-            'Copy path to clipboard',
-            self.on_copy_to_clipboard
-        )
-        return self._menu
-
-    def on_open_folder(self, _):
-        node = self.treeview.get_selected_node()
-        if node is None:
-            return
-
-        try:
-            LOGGER.info('Calling xdg-open %s', node.build_path())
-            Gio.Subprocess.new(
-                ['xdg-open', node.build_path()], 0
-            )
-        except GLib.Error as err:
-            LOGGER.exception('Could not open directory via xdg-open')
-            self.app_window.show_infobar(str(err))
-
-    def on_copy_to_clipboard(self, _):
-        node = self.treeview.get_selected_node()
-        if node is None:
-            return
-
-        path = node.build_path()
-
-        clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default())
-        clipboard.set_text(path, len(path))
-
-    def _toggle_tag_state(self, node_iter):
-        model = self.treeview.get_model()
-        for node in node_iter:
-            current, new = node[Column.TAG], IndicatorLabel.NONE
-
-            if current is IndicatorLabel.ERROR:
-                new = IndicatorLabel.SUCCESS
-            elif current is IndicatorLabel.SUCCESS:
-                new = IndicatorLabel.ERROR
-
-            model.set_node_value(node, Column.TAG, new)
-
-    def on_toggle_all(self, _):
-        self._toggle_tag_state(self.model.trie)
-
-    def on_toggle_selected(self, _):
-        nodes = list(self.treeview.get_selected_nodes())
-        self._toggle_tag_state(nodes)
-
-        # Note: this is the *full* trie.
-        trie = self.model.trie
-
-        for node in nodes:
-            # Json documents with all related twins:
-            group = trie.group(node[Column.CKSUM])
-            if not group:
-                continue
-
-            # List of PathNodes which are twins:
-            has_original = False
-            for twin_node in group:
-                if twin_node[Column.TAG] is IndicatorLabel.SUCCESS:
-                    has_original = True
-                    break
-
-            # All good:
-            if has_original:
-                continue
-
-            # No original in group, set first twin as original.
-            for twin_node in group:
-                if twin_node is not node:
-                    self.model.set_node_value(
-                        twin_node,
-                        Column.TAG,
-                        IndicatorLabel.SUCCESS
-                    )
-                    break
-
-    def on_expand_all(self, _):
-        self.treeview.expand_all()
-
-    def on_collapse_all(self, _):
-        self.treeview.collapse_all()
