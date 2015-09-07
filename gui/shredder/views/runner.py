@@ -18,7 +18,8 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.util import View, IconButton, PopupMenu, IndicatorLabel, scrolled
+from shredder.util import View, IconButton, PopupMenu, IndicatorLabel
+from shredder.util import MultipleChoiceButton, scrolled
 from shredder.chart import ChartStack
 from shredder.tree import PathTreeView, PathTreeModel, Column, PathTrie
 from shredder.runner import Runner
@@ -30,16 +31,17 @@ LOGGER = logging.getLogger('runview')
 class ResultActionBar(Gtk.ActionBar):
     """Down right bar with the controls"""
     __gsignals__ = {
-        'generate-script': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'partial-generate-script': (GObject.SIGNAL_RUN_FIRST, None, ())
+        'generate-all-script': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'generate-filtered-script': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'generate-selection-script': (GObject.SIGNAL_RUN_FIRST, None, ())
     }
 
     def __init__(self, view):
         Gtk.ActionBar.__init__(self)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        box.get_style_context().add_class("linked")
-        self.pack_start(box)
+        left_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        left_box.get_style_context().add_class("linked")
+        self.pack_start(left_box)
 
         self.refresh_button = IconButton('view-refresh-symbolic')
         self.settings_button = IconButton('system-run-symbolic')
@@ -51,39 +53,62 @@ class ResultActionBar(Gtk.ActionBar):
             'clicked', lambda _: view.app_window.views.switch('settings')
         )
 
-        box.pack_start(self.refresh_button, False, False, 0)
-        box.pack_start(self.settings_button, False, False, 0)
+        left_box.pack_start(self.refresh_button, False, False, 0)
+        left_box.pack_start(self.settings_button, False, False, 0)
+
+        right_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        right_box.get_style_context().add_class(
+            Gtk.STYLE_CLASS_LINKED
+        )
 
         self.script_btn = IconButton(
-            'printer-printing-symbolic', 'Render script'
-        )
-        self.script_btn.get_style_context().add_class(
-            Gtk.STYLE_CLASS_SUGGESTED_ACTION
+            'emblem-documents-symbolic', 'Render script from'
         )
         self.script_btn.connect(
-            'clicked', lambda _: self.emit('generate-script')
+            'clicked', self.on_generate_script
         )
 
-        self.script_btn.set_sensitive(False)
-
-        self.partial_script_btn = IconButton(
-            'printer-printing-symbolic', 'Visible to script'
+        self.script_type_btn = MultipleChoiceButton(
+            ['All', 'Filtered', 'Selected'],
+            'All',
+            'All',
+            'What part of the results to generate the script from'
         )
-        self.partial_script_btn.connect(
-            'clicked', lambda _: self.emit('partial-generate-script')
-        )
-        self.partial_script_btn.set_sensitive(False)
+        self.script_type_btn.set_relief(Gtk.ReliefStyle.NORMAL)
 
-        self.pack_end(self.script_btn)
-        self.pack_end(self.partial_script_btn)
+        right_box.pack_start(self.script_btn, True, True, 0)
+        right_box.pack_start(self.script_type_btn, True, False, 0)
 
-    def activate_script_btn(self, mode):
+        self.pack_end(right_box)
+        self.set_sensitive(False)
+
+    def on_generate_script(self, _):
+        choice = self.script_type_btn.get_selected_choice().lower()
+
+        if choice == 'all':
+            self.emit('generate-all-script')
+        elif choice == 'filtered':
+            self.emit('generate-filtered-script')
+        elif choice == 'selected':
+            self.emit('generate-selection-script')
+        else:
+            LOGGER.error('Bug: bad choice selection: %s', choice)
+
+    def set_sensitive(self, mode):
+        btn_ctx = self.script_btn.get_style_context()
+        type_ctx = self.script_type_btn.get_style_context()
+
+        if mode:
+            btn_ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            type_ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+        else:
+            btn_ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            type_ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+
         self.script_btn.set_sensitive(mode)
+        self.script_type_btn.set_sensitive(mode)
 
-    def activate_partial_script_btn(self, mode):
-        self.partial_script_btn.set_sensitive(mode)
-
-    def is_active(self):
+    def is_sensitive(self):
         return self.script_btn.is_sensitive()
 
 
@@ -182,11 +207,13 @@ class RunnerView(View):
         )
 
         self.actionbar.connect(
-            'generate-script', self.on_generate_script
+            'generate-all-script', self.on_generate_script
         )
-
         self.actionbar.connect(
-            'partial-generate-script', self.on_generate_partial_script
+            'generate-filtered-script', self.on_generate_filtered_script
+        )
+        self.actionbar.connect(
+            'generate-selection-script', self.on_generate_selection_script
         )
 
         self._menu = None
@@ -240,9 +267,6 @@ class RunnerView(View):
         if sub_model is not self.treeview.get_model():
             self.chart_stack.render(sub_model.trie.root)
             self.treeview.set_model(sub_model)
-            self.actionbar.activate_partial_script_btn(True)
-        else:
-            self.actionbar.activate_partial_script_btn(False)
 
     def on_add_elem(self, runner):
         """Called once the runner found a new element."""
@@ -283,7 +307,7 @@ class RunnerView(View):
         if model.trie.has_leaves():
             self.chart_stack.set_visible_child_name(ChartStack.CHART)
             self.rerender_chart()
-            self.actionbar.activate_script_btn(True)
+            self.actionbar.set_sensitive(True)
         else:
             self.chart_stack.set_visible_child_name(ChartStack.EMPTY)
 
@@ -344,26 +368,41 @@ class RunnerView(View):
             self.group_revealer.set_reveal_child(False)
             self.chart_stack.render(node)
 
-    def _generate_script(self, model):
+    def _generate_script(self, trie, node):
         self._script_generated = True
 
-        trie = model.trie
+        iterator = trie.iterate(node=node)
         self.runner.replay({
-            ch.build_path(): ch[Column.SELECTED] for ch in trie if ch.is_leaf
+            ch.build_path(): ch[Column.SELECTED] for ch in iterator if ch.is_leaf
+        })
+        iterator = trie.iterate(node=node)
+        print({
+            ch.build_path(): ch[Column.SELECTED] for ch in iterator if ch.is_leaf
         })
 
         self.app_window.views.go_right.set_sensitive(True)
         self.app_window.views.switch('editor')
 
     def on_generate_script(self, _):
-        self._generate_script(self.model)
+        self._generate_script(self.model.trie, self.model.trie.root)
 
-    def on_generate_partial_script(self, _):
-        self._generate_script(self.treeview.get_model())
+    def on_generate_filtered_script(self, _):
+        model = self.treeview.get_model()
+        self._generate_script(model.trie, model.trie.root)
+
+    def on_generate_selection_script(self, _):
+        model = self.treeview.get_model()
+        selected_node = self.treeview.get_selected_node()
+
+        if selected_node is None:
+            LOGGER.info('Nothing selected to make script from.')
+            return
+
+        self._generate_script(model.trie, selected_node)
 
     def on_default_action(self):
         """Called on Ctrl-Enter"""
-        if self.actionbar.is_active():
+        if self.actionbar.is_sensitive():
             self._generate_script(self.model)
 
     #######################
