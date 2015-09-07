@@ -420,7 +420,13 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
 
     def on_selection_changed(self, _):
         """Called once a file or directory was clicked"""
-        self.confirm.set_sensitive(bool(self.get_filename()))
+        filename = self.get_filename()
+        self.confirm.set_sensitive(bool(filename))
+
+        # Make sure the user-typed extension gets set in teh type chooser also.
+        name = self.get_current_name()
+        *_, extension = name.rsplit('.', 1)
+        self.file_type.set_selected_choice(extension)
 
 
 class OverlaySaveButton(Gtk.Overlay):
