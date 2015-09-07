@@ -178,7 +178,6 @@ class RunnerView(View):
         stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         stats_box.pack_start(self.group_revealer, True, True, 0)
         stats_box.pack_start(self.chart_stack, True, True, 0)
-        stats_box.pack_start(self.actionbar, False, False, 0)
         stats_box.set_halign(Gtk.Align.FILL)
         stats_box.set_valign(Gtk.Align.FILL)
         stats_box.set_vexpand(True)
@@ -198,7 +197,8 @@ class RunnerView(View):
         grid = Gtk.Grid()
         grid.set_column_homogeneous(True)
         grid.attach(scw, 0, 0, 1, 1)
-        grid.attach_next_to(right_pane, scw, Gtk.PositionType.RIGHT, 1, 1)
+        grid.attach(right_pane, 1, 0, 1, 1)
+        grid.attach(self.actionbar, 0, 1, 2, 1)
 
         self.add(grid)
 
@@ -373,10 +373,6 @@ class RunnerView(View):
 
         iterator = trie.iterate(node=node)
         self.runner.replay({
-            ch.build_path(): ch[Column.SELECTED] for ch in iterator if ch.is_leaf
-        })
-        iterator = trie.iterate(node=node)
-        print({
             ch.build_path(): ch[Column.SELECTED] for ch in iterator if ch.is_leaf
         })
 
