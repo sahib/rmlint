@@ -165,6 +165,7 @@ def _create_finished_screen(callback):
     control_grid.set_halign(Gtk.Align.CENTER)
     control_grid.set_valign(Gtk.Align.CENTER)
 
+    # Lies make the user feel comfortable:
     label = Gtk.Label(
         use_markup=True,
         label='''<span font="65">✔</span>
@@ -258,6 +259,20 @@ class RunButton(Gtk.Box):
 
         self.state.set_active(True)
         self._toggle_dry_run(self.state)
+
+    def set_sensitive(self, mode):
+        btn_ctx = self.button.get_style_context()
+        dry_ctx = self.state.get_style_context()
+
+        if mode:
+            btn_ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            dry_ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+        else:
+            btn_ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            dry_ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+
+        self.button.set_sensitive(mode)
+        self.state.set_sensitive(mode)
 
     def _toggle_dry_run(self, btn):
         """Change the color and severeness of the button."""
@@ -501,11 +516,11 @@ When done, click the `Run Script` button below.
         def on_save_button_clicked(_):
             self.left_stack.set_visible_child_name('chooser')
             self.save_chooser.show_controls()
-            self.stack.set_sensitive(False)
+            self.run_button.set_sensitive(False)
 
         def on_save_clicked(_):
             self.left_stack.set_visible_child_name('script')
-            self.stack.set_sensitive(True)
+            self.run_button.set_sensitive(True)
 
         self.save_button.connect(
             'save-clicked', on_save_button_clicked
