@@ -208,9 +208,7 @@ class RunningLabel(Gtk.Label):
             Gtk.STYLE_CLASS_DIM_LABEL
         )
         self.set_justify(Gtk.Justification.CENTER)
-
-        self._size_sum = 0
-        self.push('', '')
+        self.reset()
 
     def push(self, prefix, path):
         """Push a new path to the label, removing the old one."""
@@ -229,6 +227,11 @@ class RunningLabel(Gtk.Label):
             p=GLib.markup_escape_text(path)
         )
         self.set_markup(text)
+
+    def reset(self):
+        """Reset the counter to initial state (zero)"""
+        self._size_sum = 0
+        self.push('', '')
 
 
 class RunButton(Gtk.Box):
@@ -653,17 +656,8 @@ When done, click the `Run Script` button below.
         self.stack.set_visible_child_name('progressing')
         self.left_stack.set_visible_child_name('list')
 
-        model = self.app_window.views['runner'].model
-
-        self.script.connect(
-            'line-read',
-            lambda _, prefix, line: self.run_label.push(prefix, line)
-        )
-
-        self.script.connect(
-            'script-finished',
-            lambda *_: self.stack.set_visible_child_name('finished')
-        )
+        LOGGER.info('Running script.')
+        self.run_label.reset()
         self.script.run(dry_run=True)
 
     def on_view_enter(self):
@@ -681,8 +675,7 @@ When done, click the `Run Script` button below.
     def on_replay_finish(self, _, runner):
         """Called once ``rmlint --replay`` finished running."""
         LOGGER.info('Loading script from temporary directory')
-        self.script = Script(runner.get_sh_path())
-        self.switch_to_script()
+        self.override_script(Script(runner.get_sh_path()))
 
     def on_default_action(self):
         """Called on Ctrl-Enter"""
@@ -696,4 +689,14 @@ When done, click the `Run Script` button below.
         """This method is for testing and cmdline use only."""
         LOGGER.info('Loading developer-defined script.')
         self.script = script
+
+        self.script.connect(
+            'line-read',
+            lambda _, prefix, line: self.run_label.push(prefix, line)
+        )
+
+        self.script.connect(
+            'script-finished',
+            lambda *_: self.stack.set_visible_child_name('finished')
+        )
         self.switch_to_script()

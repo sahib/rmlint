@@ -347,9 +347,11 @@ class RunnerView(View):
             cksum = node[Column.CKSUM]
             group = self.model.trie.group(cksum)
 
-            group_model = PathTreeModel(
-                self.last_paths[0] + self.last_paths[1]
-            )
+            paths = []
+            if len(self.last_paths) > 1:
+                paths = self.last_paths[0] + self.last_paths[1]
+
+            group_model = PathTreeModel(paths)
 
             for twin_node in group or []:
                 group_model.add_path(

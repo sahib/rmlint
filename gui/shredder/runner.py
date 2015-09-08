@@ -462,6 +462,7 @@ class Script(GObject.Object):
             [self.script_file, '-d', '-x', '-p', '-n' if dry_run else ''],
             flags.STDERR_SILENCE | flags.STDOUT_PIPE
         )
+        self._stream = None
         self._queue_read()
 
     def _queue_read(self):
