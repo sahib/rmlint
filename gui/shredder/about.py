@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""Own module for the about dialog."""
+
+
 # Stdlib:
 import re
 import logging
@@ -45,6 +48,7 @@ def _guess_rmlint_version():
 
 
 class AboutDialog(Gtk.AboutDialog):
+    """GtkAboutDialog for Shreddder"""
     def __init__(self, app_win):
         Gtk.AboutDialog.__init__(self)
 
@@ -74,6 +78,7 @@ class AboutDialog(Gtk.AboutDialog):
 
 if __name__ == '__main__':
     def main():
+        """Show the about dialog as modal window."""
         import os
         from shredder.application import _load_app_icon
 

@@ -285,7 +285,7 @@ class View(Gtk.Grid):
             self.on_view_enter()
 
         # Restore the sub_title.
-        self.sub_title = self._sub_title
+        View.sub_title.fset(self, self._sub_title)
 
     def _on_view_leave(self, _):
         """Hidden method that is called once the view gets out of sight.
@@ -571,7 +571,8 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
         Gtk.CellRendererPixbuf.__init__(self, **kwargs)
         self.set_alignment(0.0, 0.6)
 
-    def do_render(self, ctx, widget, bg, cell, flags):
+    def do_render(self, ctx, widget, bg, cell, *_):
+        """Render a unicode symbol using Pango."""
         tag = self.get_property('tag')
         if tag is IndicatorLabel.NONE:
             return
@@ -671,9 +672,8 @@ class ChoiceRow(Gtk.ListBoxRow):
 
 class CurrentChoiceLabel(Gtk.Label):
     """Helper class for displaying the current choice as label"""
-    def __init__(self, text, capitalize=False):
+    def __init__(self, text):
         Gtk.Label.__init__(self)
-        self._capitalize = capitalize
         self.set_use_markup(True)
         self.set_choice(text)
 
@@ -686,10 +686,7 @@ class CurrentChoiceLabel(Gtk.Label):
         """Set choice to a markup'd form of `new_value`"""
         self._choice = new_value
 
-        if self._capitalize:
-            display_value = new_value.capitalize()
-        else:
-            display_value = new_value
+        display_value = new_value
 
         self.set_markup(
             '<u>{v}</u>'.format(
@@ -712,7 +709,7 @@ class MultipleChoiceButton(Gtk.Button):
         'row-selected': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, values, default, selected, summary, capitalize=False):
+    def __init__(self, values, default, selected):
         Gtk.Button.__init__(self)
         self._selected_choice = selected
         self.set_relief(Gtk.ReliefStyle.NONE)
@@ -741,7 +738,7 @@ class MultipleChoiceButton(Gtk.Button):
 
         # Populate the rows:
         for choice in values:
-            row = ChoiceRow(choice, default == choice, capitalize)
+            row = ChoiceRow(choice, default == choice)
             self.listbox.add(row)
 
             if choice == selected:
@@ -814,8 +811,7 @@ class FileSizeSpinButton(Gtk.Box):
 
         self._last_val, self._curr_exp = 1, 1
         self._units = MultipleChoiceButton(
-            [label for label, _ in SORTED_KEYS],
-            'MB', 'MB', 'Unit'
+            [label for label, _ in SORTED_KEYS], 'MB', 'MB'
         )
         self._entry = Gtk.SpinButton.new_with_range(1, 1023, 1)
         self._entry.set_wrap(True)

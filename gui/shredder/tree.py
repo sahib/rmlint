@@ -544,10 +544,10 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
                 continue
 
             if not query.matches(
-                node,
-                node[Column.SIZE],
-                node[Column.MTIME],
-                -node[Column.COUNT]
+                    node,
+                    node[Column.SIZE],
+                    node[Column.MTIME],
+                    -node[Column.COUNT]
             ):
                 continue
 
@@ -824,6 +824,9 @@ class PathTreeView(Gtk.TreeView):
             PathTreeView.on_button_press_event
         )
 
+        # Shut up, pylint.
+        self._menu = None
+
     def set_model(self, model):
         """Overwrite Gtk.TreeView.set_model, but expand sub root paths"""
         Gtk.TreeView.set_model(self, model)
@@ -857,6 +860,7 @@ class PathTreeView(Gtk.TreeView):
     #######################
 
     def on_show_menu(self):
+        """Called during the button-press-event to show the actual menu."""
         # HACK: bind to self, since the ref would get lost.
         self._menu = PopupMenu()
         self._menu.simple_add('Toggle all', self.on_toggle_all)
@@ -873,6 +877,7 @@ class PathTreeView(Gtk.TreeView):
         return self._menu
 
     def on_open_folder(self, _):
+        """Open the selected item or folder via xdg-open."""
         node = self.get_selected_node()
         if node is None:
             return
@@ -884,19 +889,19 @@ class PathTreeView(Gtk.TreeView):
             )
         except GLib.Error as err:
             LOGGER.exception('Could not open directory via xdg-open')
-            self.app_window.show_infobar(str(err))
 
     def on_copy_to_clipboard(self, _):
+        """Copy the currently selected full path to the clipboard."""
         node = self.get_selected_node()
         if node is None:
             return
 
         path = node.build_path()
-
         clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default())
         clipboard.set_text(path, len(path))
 
     def _toggle_tag_state(self, node_iter):
+        """Iterate over `node_iter` and toggle the `tag` state."""
         model = self.get_model()
         for node in node_iter:
             current, new = node[Column.TAG], IndicatorLabel.NONE
@@ -909,10 +914,12 @@ class PathTreeView(Gtk.TreeView):
             model.set_node_value(node, Column.TAG, new)
 
     def on_toggle_all(self, _):
+        """Toggle all nodes in the current visible model."""
         model = self.get_model()
         self._toggle_tag_state(model.trie)
 
     def on_toggle_selected(self, _):
+        """Toggle all selected nodes in the current visible model."""
         nodes = list(self.get_selected_nodes())
         self._toggle_tag_state(nodes)
 
@@ -948,14 +955,17 @@ class PathTreeView(Gtk.TreeView):
                     break
 
     def on_expand_all(self, _):
+        """Just expand everything in the tree."""
         self.expand_all()
 
     def on_collapse_all(self, _):
+        """Just collpase everything in the tree."""
         self.collapse_all()
 
 
 if __name__ == '__main__':
     def main():
+        """Show a window with the dupe-contents of a user specified path."""
         import sys
 
         model = PathTreeModel(sys.argv[1:])

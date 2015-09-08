@@ -44,6 +44,10 @@ class Query:
 
     It should not be directly instantiated.
     """
+    def __init__(self):
+        """You should not use this."""
+        self.name = self.sizes = self.mtimes = self.amounts = None
+
     @staticmethod
     def parse(query_input):
         """Parse a query and return a fresh Query object."""
@@ -159,7 +163,7 @@ VALID_ATTRS = {
 }
 
 ATTR_PATTERN = re.compile(
-    '({attrs}):(.*?)(?=\s|$)'.format(
+    r'({attrs}):(.*?)(?=\s|$)'.format(
         attrs='|'.join(VALID_ATTRS.keys())
     )
 )

@@ -133,10 +133,10 @@ except ImportError:
 
     class _SearchRun:
         """Dummy search functor that does nothing."""
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_):
             self.query = None
 
-        def next_hop(self, *args, **kwargs):
+        def next_hop(self, *_):
             """No-op"""
             pass
 
@@ -329,10 +329,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         self.set_do_overwrite_confirmation(True)
 
         self.file_type = MultipleChoiceButton(
-            ['sh', 'json', 'csv'],
-            'sh',
-            'sh',
-            'Filetype to choose'
+            ['sh', 'json', 'csv'], 'sh', 'sh'
         )
         self.file_type.set_halign(Gtk.Align.START)
         self.file_type.set_hexpand(True)
@@ -375,6 +372,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         self.extra_box.set_halign(Gtk.Align.FILL)
 
     def show_controls(self):
+        """Show cancel, save and file type chooser buttons."""
         self.editor_view.add_header_widget(self.extra_box)
         self.editor_view.add_header_widget(
             self.cancel_button, align=Gtk.Align.START
@@ -394,7 +392,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
             self.update_file_suggestion()
         else:
             try:
-                path, ext = current_path.rsplit('.', 1)
+                path, _ = current_path.rsplit('.', 1)
                 self.set_current_name(
                     path + '.' + self.file_type.get_selected_choice() or ''
                 )
@@ -403,6 +401,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
                 pass
 
     def _exit_from_save(self):
+        """Preparation to go back to script view."""
         self.emit('saved')
         self.editor_view.clear_header_widgets()
 
@@ -518,6 +517,7 @@ class EditorView(View):
         self.save_chooser = ScriptSaverDialog(self)
 
         def on_save_button_clicked(_):
+            """Switch to the save dialog in the stack."""
             self.left_stack.set_visible_child_name('chooser')
             self.save_chooser.show_controls()
             self.set_info_help_text()
@@ -525,6 +525,7 @@ class EditorView(View):
             self.run_button.set_sensitive(False)
 
         def on_save_clicked(_):
+            """Switch back when the user has saved."""
             self.left_stack.set_visible_child_name('script')
             self.set_info_review_text()
             self.set_correct_icon()
@@ -608,6 +609,7 @@ class EditorView(View):
         )
 
     def set_correct_icon(self):
+        """Set the correct icon of icon_stack (either warning, skull or info)"""
         icon_name = 'info'
 
         if self.left_stack.get_visible_child_name() == 'script':
@@ -619,6 +621,7 @@ class EditorView(View):
         self.icon_stack.set_visible_child_name(icon_name)
 
     def set_info_review_text(self):
+        """Set the normal 'Review the script' text."""
         self.info_label.set_markup('''
 
 <big><b>Review the script on the left!</b></big>
@@ -626,6 +629,7 @@ When done, click the `Run Script` button below.
 \n\n''')
 
     def set_info_help_text(self):
+        """Be a bit more helpful on the help dialog."""
         self.info_label.set_markup('''
 <big><b>Save the script for later!</b></big>
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""Common constants."""
+
 # Name of your application:
 APP_TITLE = 'Shredder'
 

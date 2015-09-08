@@ -119,7 +119,7 @@ def map_cfg(option, val):
 
 
 def _create_rmlint_process(
-    cfg, cwd, untagged, tagged, replay_path=None, outputs=None
+        cfg, cwd, untagged, tagged, replay_path=None, outputs=None
 ):
     """Create a correctly configured rmlint GSuprocess for gui purposes.
     If `replay_path` is not None, "--replay `replay_path`" will be appended.
@@ -202,7 +202,7 @@ def _create_rmlint_process(
             LOGGER.exception('Process failed')
 
         # No point in going any further
-        return None, None, None
+        return None
     else:
         return process
 
@@ -242,7 +242,7 @@ class Runner(GObject.Object):
         except GLib.Error as err:
             # Try to read what went wrong from stderr.
             # Do not read everything - cut after 4096 bytes.
-            bytes_ = self.process.get_stderr_pipe().read_bytes(4096)
+            bytes_ = process.get_stderr_pipe().read_bytes(4096)
             if bytes_ and bytes_.get_size():
                 self._message = bytes_.get_data().decode('utf-8')
             else:
@@ -250,6 +250,7 @@ class Runner(GObject.Object):
                 self._message = err.message
 
     def on_replay_finish(self, process, result):
+        """Called once rmlint --replay finished running."""
         try:
             process.wait_check_finish(result)
             LOGGER.info('`rmlint --replay` finished.')
@@ -509,11 +510,11 @@ class Script(GObject.Object):
 
 if __name__ == '__main__':
     def main():
-        """Stupid test main."""
+        """Stupid test main: Run on /usr."""
         settings = Gio.Settings.new('org.gnome.Shredder')
         loop = GLib.MainLoop()
 
-        runner = Runner(settings, ['/usr/'])
+        runner = Runner(settings, ['/usr/'], [])
         runner.connect('lint-added', lambda _: print(runner.element))
         runner.connect(
             'process-finished',

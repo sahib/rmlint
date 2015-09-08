@@ -67,10 +67,7 @@ class ResultActionBar(Gtk.ActionBar):
         )
 
         self.script_type_btn = MultipleChoiceButton(
-            ['All', 'Filtered', 'Selected'],
-            'All',
-            'All',
-            'What part of the results to generate the script from'
+            ['All', 'Filtered', 'Selected'], 'All', 'All'
         )
         self.script_type_btn.set_relief(Gtk.ReliefStyle.NORMAL)
 
@@ -81,6 +78,7 @@ class ResultActionBar(Gtk.ActionBar):
         self.set_sensitive(False)
 
     def on_generate_script(self, _):
+        """Called when the left side of the compound button was clicked."""
         choice = self.script_type_btn.get_selected_choice().lower()
 
         if choice == 'all':
@@ -93,6 +91,7 @@ class ResultActionBar(Gtk.ActionBar):
             LOGGER.error('Bug: bad choice selection: %s', choice)
 
     def set_sensitive(self, mode):
+        """Set the gen-script button (non)-sensitive and (non)-suggested"""
         btn_ctx = self.script_btn.get_style_context()
         type_ctx = self.script_type_btn.get_style_context()
 
@@ -331,7 +330,7 @@ class RunnerView(View):
         """Called when the view leaves sight."""
         self.app_window.views.go_right.set_sensitive(True)
 
-    def on_selection_changed(self, selection):
+    def on_selection_changed(self, _):
         """Called when the user clicks a specific row."""
         node = self.treeview.get_selected_node()
         if node is None:
@@ -369,6 +368,7 @@ class RunnerView(View):
             self.chart_stack.render(node)
 
     def _generate_script(self, trie, node):
+        """Do the actual generation work, starting at `node` in `trie`."""
         self._script_generated = True
 
         gen = trie.iterate(node=node)
@@ -380,13 +380,16 @@ class RunnerView(View):
         self.app_window.views.switch('editor')
 
     def on_generate_script(self, _):
+        """Generate the full script."""
         self._generate_script(self.model.trie, self.model.trie.root)
 
     def on_generate_filtered_script(self, _):
+        """Generate the script with only the visible content."""
         model = self.treeview.get_model()
         self._generate_script(model.trie, model.trie.root)
 
     def on_generate_selection_script(self, _):
+        """Generate the script only from the current selected dir or files."""
         model = self.treeview.get_model()
         selected_node = self.treeview.get_selected_node()
 
@@ -399,4 +402,5 @@ class RunnerView(View):
     def on_default_action(self):
         """Called on Ctrl-Enter"""
         if self.actionbar.is_sensitive():
-            self._generate_script(self.model)
+            trie = self.model.trie
+            self._generate_script(trie, trie.root)

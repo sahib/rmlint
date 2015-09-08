@@ -104,7 +104,7 @@ def choice_widget(settings, key_name, summary, _):
         return
 
     choices = list(range_variant)
-    button = MultipleChoiceButton(choices, default, selected, summary)
+    button = MultipleChoiceButton(choices, default, selected)
     button.connect(
         'row-selected',
         lambda _: settings.set_string(key_name, button.get_selected_choice())
@@ -300,6 +300,7 @@ class SettingsView(View):
         query = self.search_entry.get_text().lower()
 
         def _set_vis(widget, state, lower):
+            """Set opacity and sensitivity in one."""
             widget.set_sensitive(state)
             widget.set_opacity(1.0 if state else lower)
 

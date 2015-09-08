@@ -1,10 +1,6 @@
-#ShredderWindow {
-    /* background-color: #ffffff; */
-}
-
 #ShredderProgress {
-    border-width: 0px;
-    border-radius: 0px;
+    border-width: 0;
+    border-radius: 0;
     -GtkProgressBar-min-horizontal-bar-height: 10px;
     background: linear-gradient(alpha(black, 0.1), transparent);
     background: linear-gradient(transparent, alpha(black, 0.1));
