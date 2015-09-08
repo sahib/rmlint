@@ -367,9 +367,12 @@ class LocationView(View):
     def _update_selected_label(self):
         """Update the lower count of selected LocationEntries."""
         prefd_paths = sum(rw.props.preferred for rw in self.selected_locations)
+        count = len(self.selected_locations)
+
         self.selected_label.set_markup(
-            '{sel} directories - {pref} of them preferred'.format(
-                sel=len(self.selected_locations),
+            '{sel} {dirs} － {pref} of them preferred'.format(
+                sel=count,
+                dirs='directory' if count is 1 else 'directories',
                 pref=prefd_paths
             )
         )
