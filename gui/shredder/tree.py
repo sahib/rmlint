@@ -62,8 +62,8 @@ class Column:
 
     Only this class needs to be changed when adding/modifying columns.
     """
-    SELECTED, SIZE, COUNT, MTIME, TAG, CKSUM, PATH, TOOLTIP = range(8)
-    TYPES = [bool, float, int, int, int, int, str, str]
+    SIZE, COUNT, MTIME, TAG, CKSUM, PATH, TOOLTIP = range(7)
+    TYPES = [float, int, int, int, int, str, str]
 
     @staticmethod
     def make_row(md_map):
@@ -83,7 +83,6 @@ class Column:
         # Note2: Twins is negative, to differentiate between
         #        directory count and number of twins (!= 0)
         return [
-            is_original,
             md_map.get('size', 0),
             -md_map.get('twins', 0),
             md_map.get('mtime', 0),

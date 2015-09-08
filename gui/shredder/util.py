@@ -518,6 +518,11 @@ class NodeState:
     ORIGINAL = 1
     DUPLICATE = 2
 
+    @staticmethod
+    def should_keep(state):
+        """Check if we should keep a file with this state"""
+        return state is NodeState.ORIGINAL or state is NodeState.NONE
+
 
 STATE_TO_SYMBOL = {
     NodeState.NONE: '',

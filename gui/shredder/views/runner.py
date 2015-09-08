@@ -16,7 +16,7 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.util import View, IconButton
+from shredder.util import View, IconButton, NodeState
 from shredder.util import MultipleChoiceButton, scrolled
 from shredder.chart import ChartStack
 from shredder.tree import PathTreeView, PathTreeModel, Column
@@ -373,7 +373,7 @@ class RunnerView(View):
 
         gen = trie.iterate(node=node)
         self.runner.replay({
-            ch.build_path(): ch[Column.SELECTED] for ch in gen if ch.is_leaf
+            ch.build_path(): NodeState.should_keep(ch[Column.TAG]) for ch in gen if ch.is_leaf
         })
 
         self.app_window.views.go_right.set_sensitive(True)
