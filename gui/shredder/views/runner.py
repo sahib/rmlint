@@ -160,7 +160,7 @@ class RunnerView(View):
         self.group_revealer.set_valign(Gtk.Align.FILL)
         self.group_revealer.add(group_box)
         self.group_revealer.set_no_show_all(True)
-        self.group_revealer.set_size_request(-1, 200)
+        self.group_revealer.set_size_request(-1, 70)
 
         for column in self.treeview.get_columns():
             column.connect(
@@ -175,24 +175,27 @@ class RunnerView(View):
 
         # Right part of the view
         stats_box = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
-        stats_box.pack1(self.group_revealer, True, False)
+        stats_box.pack1(self.group_revealer, True, True)
         stats_box.pack2(self.chart_stack, True, True)
+        stats_box.props.position = 200
 
         # Separator container for separator|chart (could have used grid)
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         right_pane = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         right_pane.pack_start(separator, False, False, 0)
         right_pane.pack_start(stats_box, True, True, 0)
-        right_pane.set_size_request(580, -1)
+        right_pane.set_size_request(100, -1)
 
         scw = scrolled(self.treeview)
-        scw.set_size_request(700, -1)
+        scw.set_size_request(200, -1)
 
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         paned.set_vexpand(True)
         paned.set_valign(Gtk.Align.FILL)
         paned.pack1(scw, True, True)
         paned.pack2(right_pane, True, True)
+        paned.props.position = 720
+        paned.set_hexpand(True)
 
         grid = Gtk.Grid()
         grid.attach(paned, 0, 0, 1, 1)
