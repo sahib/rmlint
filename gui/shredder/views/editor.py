@@ -506,7 +506,7 @@ class EditorView(View):
         )
         self.set_info_review_text()
 
-        icon_stack = _create_icon_stack()
+        self.icon_stack = _create_icon_stack()
 
         self.text_view, buffer_ = _create_source_view()
         self.text_view.set_name('ShredderScriptEditor')
@@ -522,11 +522,13 @@ class EditorView(View):
             self.left_stack.set_visible_child_name('chooser')
             self.save_chooser.show_controls()
             self.set_info_help_text()
+            self.set_correct_icon()
             self.run_button.set_sensitive(False)
 
         def on_save_clicked(_):
             self.left_stack.set_visible_child_name('script')
             self.set_info_review_text()
+            self.set_correct_icon()
             self.run_button.set_sensitive(True)
 
         self.save_button.connect(
@@ -568,10 +570,7 @@ class EditorView(View):
         self.run_button.button.connect('clicked', self.on_run_script_clicked)
         self.run_button.set_halign(Gtk.Align.CENTER)
         self.run_button.connect(
-            'notify::dry-run',
-            lambda btn, _: icon_stack.set_visible_child_name(
-                'warning' if btn.dry_run else 'danger'
-            )
+            'notify::dry-run', lambda *_: self.set_correct_icon()
         )
 
         control_grid.attach(self.info_label, 0, 0, 1, 1)
@@ -579,7 +578,7 @@ class EditorView(View):
             self.run_button, self.info_label, Gtk.PositionType.BOTTOM, 1, 1
         )
         control_grid.attach_next_to(
-            icon_stack, self.info_label, Gtk.PositionType.TOP, 1, 1
+            self.icon_stack, self.info_label, Gtk.PositionType.TOP, 1, 1
         )
         control_grid.set_border_width(15)
 
@@ -610,6 +609,18 @@ class EditorView(View):
             'next-match', self.on_search_changed
         )
 
+    def set_correct_icon(self):
+        icon_name = 'info'
+
+        if self.left_stack.get_visible_child_name() == 'script':
+            if self.run_button.dry_run:
+                icon_name = 'warning'
+            else:
+                icon_name = 'danger'
+
+        self.icon_stack.set_visible_child_name(icon_name)
+
+
     def set_info_review_text(self):
         self.info_label.set_markup('''
 
@@ -619,15 +630,12 @@ When done, click the `Run Script` button below.
 
     def set_info_help_text(self):
         self.info_label.set_markup('''
+<big><b>Save the script for later!</b></big>
 
-<big><b>Save the script for later.</b></big>
 It can be executed via <span font_family="monospace">./rmlint.sh</span>
-
 Or you can replay the output later with:
-
     <span font_family="monospace">rmlint --replay /path/to/file.json</span>
-
-\n\n''')
+''')
 
     def _switch_back(self):
         """Switch back from delete-view to script view"""
