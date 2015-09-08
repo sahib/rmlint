@@ -31,7 +31,7 @@ Location view
 ~~~~~~~~~~~~~
 
 .. image:: _static/gui_locations.png
-   :width: 50%
+   :width: 70%
    :align: center
 
 |
@@ -49,7 +49,7 @@ Runner view
 ~~~~~~~~~~~
 
 .. image:: _static/gui_runner.png
-   :width: 50%
+   :width: 70%
    :align: center
 
 |
@@ -76,7 +76,7 @@ Editor view
 ~~~~~~~~~~~
 
 .. image:: _static/gui_editor.png
-   :width: 50%
+   :width: 70%
    :align: center
 
 |
@@ -94,7 +94,7 @@ Settings view
 ~~~~~~~~~~~~~
 
 .. image:: _static/gui_settings.png
-   :width: 50%
+   :width: 70%
    :align: center
 
 |
