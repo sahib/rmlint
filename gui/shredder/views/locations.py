@@ -64,6 +64,10 @@ class LocationEntry(Gtk.ListBoxRow):
     """A single entry representing an existing file system location."""
     preferred = GObject.Property(type=bool, default=False)
 
+    __gsignals__ = {
+        'shortcut': (GObject.SIGNAL_RUN_FIRST, None, ())
+    }
+
     def __init__(self, name, path, themed_icon, fill_level=None):
         Gtk.ListBoxRow.__init__(self)
         self.set_size_request(-1, 80)
@@ -118,11 +122,25 @@ class LocationEntry(Gtk.ListBoxRow):
         grid = Gtk.Grid()
         self.add(grid)
 
+        # Quick-select button with arrow inside:
+        shortcut_btn = Gtk.Button()
+        shortcut_btn.add(Gtk.Arrow(Gtk.ArrowType.RIGHT, Gtk.ShadowType.NONE))
+        shortcut_btn.set_relief(Gtk.ReliefStyle.NONE)
+        shortcut_btn.set_vexpand(False)
+        shortcut_btn.set_valign(Gtk.Align.START)
+        shortcut_btn.set_margin_top(17)
+        shortcut_btn.set_margin_end(15)
+        shortcut_btn.set_opacity(0.7)
+        shortcut_btn.set_can_focus(False)
+        shortcut_btn.set_size_request(-1, 28)
+        shortcut_btn.connect('clicked', lambda *_: self.emit('shortcut'))
+
         grid.attach(icon_img, 0, 0, 5, 5)
         grid.attach(name_label, 5, 2, 1, 1)
         grid.attach(path_label, 5, 3, 1, 1)
         grid.attach(self.check_box, 7, 2, 1, 1)
-        grid.attach(self.separator, 0, 8, 8, 1)
+        grid.attach(shortcut_btn, 8, 2, 1, 1)
+        grid.attach(self.separator, 0, 8, 9, 1)
 
         if fill_level is not None:
             level_bar = Gtk.LevelBar()
@@ -350,6 +368,9 @@ class LocationView(View):
             'notify::preferred',
             lambda *_: self._update_selected_label()
         )
+        entry.connect(
+            'shortcut', self._shortcut_clicked
+        )
         return entry
 
     def on_row_clicked(self, _, row):
@@ -470,8 +491,6 @@ class LocationView(View):
 
     def _run_clicked(self, _):
         """Switch one view further to the runner view."""
-        main_view = self.app_window.views['runner']
-
         tagged, untagged = [], []
         for row in self.selected_locations:
             if row.props.preferred:
@@ -479,6 +498,16 @@ class LocationView(View):
             else:
                 untagged.append(row.path)
 
+        self.scan_paths(untagged, tagged)
+
+    def _shortcut_clicked(self, row):
+        """User clicked on one of the row side arrows."""
+        # It's only one path. Do not worry about tagged/untagged.
+        self.scan_paths([row.path], [])
+
+    def scan_paths(self, untagged, tagged):
+        """Actually go to the main view and trigger scan."""
+        main_view = self.app_window.views['runner']
         if tagged or untagged:
             main_view.trigger_run(untagged, tagged)
             self.app_window.views.switch('runner')
