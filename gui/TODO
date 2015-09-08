@@ -15,12 +15,15 @@ DONE:
   done (thinner inner circle)
 - Fix: Revise build system of Shredder. (uninstalling, respecting prefix etc.)
   -- done
+- Feature: Show twins of a file in treeview. -- done
+- Fix: Handle weird path encodings gracefully -- done (hopefully)
 
 OPEN:
 
-- Translation: Mark strings/use more standard buttons
-- Design: Introduce more keybindings/actions.
-- Fix: Handle weird path encodings gracefully
-- Feature: Show twins of a file in treeview.
 - Fix: Speed improvements. Profile search code. Maybe index some stuff.
 - Fix: Actually support non-dry-run.
+- Fix: Properly sync between model and sub-model. 
+- Fix: Correct re-run of script object.
+
+- Translation: Mark strings/use more standard buttons
+- Design: Introduce more keybindings/actions.

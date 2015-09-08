@@ -1,8 +1,9 @@
 [Desktop Entry]
-Version=2.3.0
 Type=Application
-Name=Duplicate Finder
+Name=Shredder Duplicate Finder
+GenericName=Duplicate Finder
 Comment=Find and delete duplicates
-TryExec=python3 -m shredder
-Exec=python3 -m shredder %F
+TryExec=rmlint
+Exec=rmlint --gui
 Icon=shredder
+Categories=System;
