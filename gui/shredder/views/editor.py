@@ -682,7 +682,7 @@ Or you can replay the output later with:
 
         LOGGER.info('Running script.')
         self.run_label.reset()
-        self.script.run(dry_run=True)
+        self.script.run(dry_run=self.run_button.dry_run)
 
     def on_view_enter(self):
         """Called once the view becomes visible."""
