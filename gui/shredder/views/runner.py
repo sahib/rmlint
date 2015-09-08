@@ -12,15 +12,14 @@ import logging
 
 # External:
 from gi.repository import Gtk
-from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
 
 # Internal:
-from shredder.util import View, IconButton, PopupMenu, IndicatorLabel
+from shredder.util import View, IconButton
 from shredder.util import MultipleChoiceButton, scrolled
 from shredder.chart import ChartStack
-from shredder.tree import PathTreeView, PathTreeModel, Column, PathTrie
+from shredder.tree import PathTreeView, PathTreeModel, Column
 from shredder.runner import Runner
 
 
@@ -155,7 +154,6 @@ class RunnerView(View):
         group_box.pack_start(Gtk.HSeparator(), False, False, 0)
 
         self.group_revealer = Gtk.Revealer()
-        self.group_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
         self.group_revealer.set_vexpand(True)
         self.group_revealer.set_valign(Gtk.Align.FILL)
         self.group_revealer.add(group_box)
@@ -373,9 +371,9 @@ class RunnerView(View):
     def _generate_script(self, trie, node):
         self._script_generated = True
 
-        iterator = trie.iterate(node=node)
+        gen = trie.iterate(node=node)
         self.runner.replay({
-            ch.build_path(): ch[Column.SELECTED] for ch in iterator if ch.is_leaf
+            ch.build_path(): ch[Column.SELECTED] for ch in gen if ch.is_leaf
         })
 
         self.app_window.views.go_right.set_sensitive(True)

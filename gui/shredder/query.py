@@ -103,7 +103,7 @@ def parse_generic_range(value, converter):
         for sub in part.split('-', maxsplit=1):
             try:
                 parsed = converter(sub)
-            except ValueError as err:
+            except ValueError:
                 LOGGER.exception('Could not convert value:')
             else:
                 if parsed:
@@ -121,6 +121,7 @@ EXPONENTS = {
     'T': 4,
     'P': 5
 }
+
 
 def parse_size_single(value):
     """Convert a size description to a byte amount."""

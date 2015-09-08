@@ -26,7 +26,6 @@ from gi.repository import GObject
 # Internal:
 from shredder.util import View, IconButton, scrolled, size_to_human_readable
 from shredder.util import MultipleChoiceButton, SuggestedButton
-from shredder.tree import Column
 from shredder.runner import Script
 
 
@@ -618,7 +617,6 @@ class EditorView(View):
                 icon_name = 'danger'
 
         self.icon_stack.set_visible_child_name(icon_name)
-
 
     def set_info_review_text(self):
         self.info_label.set_markup('''
