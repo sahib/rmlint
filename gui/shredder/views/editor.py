@@ -594,12 +594,11 @@ class EditorView(View):
 
         self.left_stack.set_visible_child_name('script')
 
-        grid = Gtk.Grid()
-        grid.attach(left_pane, 0, 0, 1, 1)
-        grid.attach_next_to(
-            self.stack, left_pane, Gtk.PositionType.RIGHT, 1, 1
-        )
-        self.add(grid)
+        paned = Gtk.Paned()
+        paned.pack1(left_pane, True, True)
+        paned.pack2(self.stack, True, True)
+        paned.props.position = 920
+        self.add(paned)
 
         self._last_search = None
         self.search_entry.connect(
