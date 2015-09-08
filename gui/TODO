@@ -17,13 +17,11 @@ DONE:
   -- done
 - Feature: Show twins of a file in treeview. -- done
 - Fix: Handle weird path encodings gracefully -- done (hopefully)
+- Fix: Correct re-run of script object. -- done
+- Fix: Actually support non-dry-run. -- done
 
 OPEN:
 
 - Fix: Speed improvements. Profile search code. Maybe index some stuff.
-- Fix: Actually support non-dry-run.
 - Fix: Properly sync between model and sub-model. 
-- Fix: Correct re-run of script object.
-
 - Translation: Mark strings/use more standard buttons
-- Design: Introduce more keybindings/actions.
