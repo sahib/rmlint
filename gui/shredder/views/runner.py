@@ -141,7 +141,6 @@ class RunnerView(View):
 
         self.treeview = PathTreeView()
         self.treeview.set_model(self.model)
-        self.treeview.set_halign(Gtk.Align.FILL)
         self.treeview.get_selection().connect(
             'changed',
             self.on_selection_changed
@@ -161,6 +160,7 @@ class RunnerView(View):
         self.group_revealer.set_valign(Gtk.Align.FILL)
         self.group_revealer.add(group_box)
         self.group_revealer.set_no_show_all(True)
+        self.group_revealer.set_size_request(-1, 200)
 
         for column in self.treeview.get_columns():
             column.connect(
@@ -174,30 +174,29 @@ class RunnerView(View):
         self.actionbar.set_halign(Gtk.Align.FILL)
 
         # Right part of the view
-        stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        stats_box.pack_start(self.group_revealer, True, True, 0)
-        stats_box.pack_start(self.chart_stack, True, True, 0)
-        stats_box.set_halign(Gtk.Align.FILL)
-        stats_box.set_valign(Gtk.Align.FILL)
-        stats_box.set_vexpand(True)
-
-        self.chart_stack.set_halign(Gtk.Align.FILL)
-        self.chart_stack.set_valign(Gtk.Align.FILL)
-        self.chart_stack.set_hexpand(True)
-        self.chart_stack.set_vexpand(True)
+        stats_box = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
+        stats_box.pack1(self.group_revealer, True, False)
+        stats_box.pack2(self.chart_stack, True, True)
 
         # Separator container for separator|chart (could have used grid)
         separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         right_pane = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         right_pane.pack_start(separator, False, False, 0)
         right_pane.pack_start(stats_box, True, True, 0)
+        right_pane.set_size_request(580, -1)
 
         scw = scrolled(self.treeview)
+        scw.set_size_request(700, -1)
+
+        paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        paned.set_vexpand(True)
+        paned.set_valign(Gtk.Align.FILL)
+        paned.pack1(scw, True, True)
+        paned.pack2(right_pane, True, True)
+
         grid = Gtk.Grid()
-        grid.set_column_homogeneous(True)
-        grid.attach(scw, 0, 0, 1, 1)
-        grid.attach(right_pane, 1, 0, 1, 1)
-        grid.attach(self.actionbar, 0, 1, 2, 1)
+        grid.attach(paned, 0, 0, 1, 1)
+        grid.attach(self.actionbar, 0, 1, 1, 1)
 
         self.add(grid)
 
