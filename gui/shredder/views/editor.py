@@ -297,7 +297,7 @@ def _create_icon_stack():
     )
     icon_stack.set_transition_duration(100)
 
-    for name, symbol in (('warning', '⚠'), ('danger', '☠')):
+    for name, symbol in (('warning', '⚠'), ('danger', '☠'), ('info', 'ℹ')):
         icon_label = Gtk.Label(
             use_markup=True,
             justify=Gtk.Justification.CENTER
@@ -497,18 +497,14 @@ class EditorView(View):
         control_grid.set_halign(Gtk.Align.CENTER)
         control_grid.set_valign(Gtk.Align.CENTER)
 
-        label = Gtk.Label(
+        self.info_label = Gtk.Label(
             use_markup=True,
             justify=Gtk.Justification.CENTER
         )
-        label.get_style_context().add_class(
+        self.info_label.get_style_context().add_class(
             Gtk.STYLE_CLASS_DIM_LABEL
         )
-        label.set_markup('''
-
-<big><b>Review the script on the left!</b></big>
-When done, click the `Run Script` button below.
-\n\n''')
+        self.set_info_review_text()
 
         icon_stack = _create_icon_stack()
 
@@ -525,10 +521,12 @@ When done, click the `Run Script` button below.
         def on_save_button_clicked(_):
             self.left_stack.set_visible_child_name('chooser')
             self.save_chooser.show_controls()
+            self.set_info_help_text()
             self.run_button.set_sensitive(False)
 
         def on_save_clicked(_):
             self.left_stack.set_visible_child_name('script')
+            self.set_info_review_text()
             self.run_button.set_sensitive(True)
 
         self.save_button.connect(
@@ -576,12 +574,12 @@ When done, click the `Run Script` button below.
             )
         )
 
-        control_grid.attach(label, 0, 0, 1, 1)
+        control_grid.attach(self.info_label, 0, 0, 1, 1)
         control_grid.attach_next_to(
-            self.run_button, label, Gtk.PositionType.BOTTOM, 1, 1
+            self.run_button, self.info_label, Gtk.PositionType.BOTTOM, 1, 1
         )
         control_grid.attach_next_to(
-            icon_stack, label, Gtk.PositionType.TOP, 1, 1
+            icon_stack, self.info_label, Gtk.PositionType.TOP, 1, 1
         )
         control_grid.set_border_width(15)
 
@@ -611,6 +609,25 @@ When done, click the `Run Script` button below.
         self.search_entry.connect(
             'next-match', self.on_search_changed
         )
+
+    def set_info_review_text(self):
+        self.info_label.set_markup('''
+
+<big><b>Review the script on the left!</b></big>
+When done, click the `Run Script` button below.
+\n\n''')
+
+    def set_info_help_text(self):
+        self.info_label.set_markup('''
+
+<big><b>Save the script for later.</b></big>
+It can be executed via <span font_family="monospace">./rmlint.sh</span>
+
+Or you can replay the output later with:
+
+    <span font_family="monospace">rmlint --replay /path/to/file.json</span>
+
+\n\n''')
 
     def _switch_back(self):
         """Switch back from delete-view to script view"""
