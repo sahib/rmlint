@@ -15,6 +15,7 @@ import math
 
 from datetime import datetime
 from operator import itemgetter
+from enum import Enum
 
 # External:
 from gi.repository import Gtk
@@ -123,43 +124,6 @@ class DestructiveButton(IconButton):
         self.get_style_context().add_class(
             Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION
         )
-
-
-class IndicatorLabel(Gtk.Label):
-    """A label that has a rounded, colored background.
-
-    It is mainly useful for showing new entries or indicate errors.
-    There are 3 colors available, plus a color derived from the
-    theme's main color. In case of Adwaita blue.
-    """
-    NONE, SUCCESS, WARNING, ERROR, THEME = range(5)
-
-    def __init__(self, *args):
-        Gtk.Label.__init__(self, *args)
-        self.set_use_markup(True)
-
-        # Do not expand space.
-        self.set_valign(Gtk.Align.CENTER)
-        self.set_halign(Gtk.Align.CENTER)
-        self.set_vexpand(False)
-        self.set_hexpand(False)
-
-        # Use the theme's color by default.
-        self.set_indication(IndicatorLabel.THEME)
-
-    def set_indication(self, state):
-        """Set state of Indicator label."""
-        classes = {
-            IndicatorLabel.ERROR: 'ShredderIndicatorLabelError',
-            IndicatorLabel.SUCCESS: 'ShredderIndicatorLabelSuccess',
-            IndicatorLabel.WARNING: 'ShredderIndicatorLabelWarning',
-            IndicatorLabel.THEME: 'ShredderIndicatorLabelTheme',
-            IndicatorLabel.NONE: 'ShredderIndicatorLabelEmpty'
-        }
-
-        # Will act as normal label for invalid states.
-        # Useful for highlighting problematic input.
-        self.set_name(classes.get(state, 'ShredderIndicatorLabelEmpty'))
 
 
 def create_searchbar(win):
@@ -549,12 +513,16 @@ class CellRendererCount(Gtk.CellRendererText):
         self.set_property('text', text)
 
 
+class NodeState:
+    NONE = 0
+    ORIGINAL = 1
+    DUPLICATE = 2
+
+
 STATE_TO_SYMBOL = {
-    IndicatorLabel.NONE: '',
-    IndicatorLabel.SUCCESS: '<span color="green">✔</span>',
-    IndicatorLabel.WARNING: '<span color="orange">⚠</span>',
-    IndicatorLabel.ERROR: '<span color="red">✗</span>',
-    IndicatorLabel.THEME: '<span color="blue">♔</span>'
+    NodeState.NONE: '',
+    NodeState.ORIGINAL: '<span color="green">✔</span>',
+    NodeState.DUPLICATE: '<span color="red">✗</span>',
 }
 
 
@@ -565,7 +533,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
     """
     ICON_SIZE = 10
 
-    tag = GObject.Property(type=int, default=IndicatorLabel.ERROR)
+    tag = GObject.Property(type=int, default=NodeState.DUPLICATE)
 
     def __init__(self, **kwargs):
         Gtk.CellRendererPixbuf.__init__(self, **kwargs)
@@ -574,7 +542,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
     def do_render(self, ctx, widget, bg, cell, *_):
         """Render a unicode symbol using Pango."""
         tag = self.get_property('tag')
-        if tag is IndicatorLabel.NONE:
+        if tag is NodeState.NONE:
             return
 
         text = STATE_TO_SYMBOL.get(tag)

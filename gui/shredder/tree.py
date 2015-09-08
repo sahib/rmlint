@@ -34,7 +34,7 @@ from shredder.util import CellRendererSize
 from shredder.util import CellRendererModifiedTime
 from shredder.util import CellRendererCount
 from shredder.util import CellRendererLint
-from shredder.util import PopupMenu, IndicatorLabel
+from shredder.util import PopupMenu, NodeState
 
 from shredder.query import Query
 
@@ -71,11 +71,11 @@ class Column:
         is_original = md_map.get('is_original', False)
         if md_map.get('type', '').startswith('duplicate_'):
             if is_original:
-                tag = IndicatorLabel.SUCCESS
+                tag = NodeState.ORIGINAL
             else:
-                tag = IndicatorLabel.ERROR
+                tag = NodeState.DUPLICATE
         else:
-            tag = IndicatorLabel.NONE
+            tag = NodeState.NONE
 
         # Use a list so we can update the counts and size later:
         # Note1: PATH and TOOLTIP are not included.
@@ -904,12 +904,12 @@ class PathTreeView(Gtk.TreeView):
         """Iterate over `node_iter` and toggle the `tag` state."""
         model = self.get_model()
         for node in node_iter:
-            current, new = node[Column.TAG], IndicatorLabel.NONE
+            current, new = node[Column.TAG], NodeState.NONE
 
-            if current is IndicatorLabel.ERROR:
-                new = IndicatorLabel.SUCCESS
-            elif current is IndicatorLabel.SUCCESS:
-                new = IndicatorLabel.ERROR
+            if current is NodeState.DUPLICATE:
+                new = NodeState.ORIGINAL
+            elif current is NodeState.ORIGINAL:
+                new = NodeState.DUPLICATE
 
             model.set_node_value(node, Column.TAG, new)
 
@@ -936,7 +936,7 @@ class PathTreeView(Gtk.TreeView):
             # List of PathNodes which are twins:
             has_original = False
             for twin_node in group:
-                if twin_node[Column.TAG] is IndicatorLabel.SUCCESS:
+                if twin_node[Column.TAG] is NodeState.ORIGINAL:
                     has_original = True
                     break
 
@@ -950,7 +950,7 @@ class PathTreeView(Gtk.TreeView):
                     model.set_node_value(
                         twin_node,
                         Column.TAG,
-                        IndicatorLabel.SUCCESS
+                        NodeState.ORIGINAL
                     )
                     break
 
