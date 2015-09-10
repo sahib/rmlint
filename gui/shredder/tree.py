@@ -442,15 +442,8 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
             indices = node.build_iter_path()
             path = Gtk.TreePath.new_from_indices(indices)
 
-            if node not in self._mtime_cache:
-                self._mtime_cache.add(node)
-                full_path = node.build_path()
-
-                # Attempt to read the mtime from file:
-                try:
-                    node.row[Column.MTIME] = os.stat(full_path).st_mtime
-                except OSError:
-                    pass
+            if id(node.row) not in self._mtime_cache:
+                self._update_mtime(node.build_path(), node.row)
 
             self.row_changed(path, make_iter(node))
 
@@ -468,6 +461,8 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         If immediately is False, the path will be cached and
         added after a small timeout as performance optimization.
         """
+        self._update_mtime(path, row)
+
         if immediately:
             # Add it it immediately.
             self._add_and_signal(path, row)
@@ -478,6 +473,17 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
                 self._pack_timeout_id = GLib.timeout_add(
                     PATH_MODEL_TIMEOUT_MS, self._add_defer
                 )
+
+    def _update_mtime(self, path, row):
+        """Update the mtime by reading it from disk."""
+        if row[Column.MTIME] <= 0 and id(row) not in self._mtime_cache:
+            # Attempt to read the mtime from file:
+            try:
+                row[Column.MTIME] = os.stat(path).st_mtime
+            except OSError as err:
+                LOGGER.debug('stat: %s', str(err))
+
+            self._mtime_cache.add(id(row))
 
     def _add_and_signal(self, path, row):
         """Actually add the path and it's metadata here.
@@ -491,9 +497,8 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
 
             if was_new:
                 self.row_inserted(path, make_iter(node))
-            else:
-                # Remember to update it somewhen later.
-                self._intermediate_nodes.add(node)
+
+            self._intermediate_nodes.add(node)
 
     def _add_defer(self):
         """Add a pack of paths to the trie, max 500 at the same time."""
@@ -542,6 +547,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
 
         term = term.lower()
         partial_model = PathTreeModel(self.paths)
+        partial_model._mtime_cache = self._mtime_cache
 
         query = Query.parse(term)
         if query is None:
