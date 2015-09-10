@@ -129,7 +129,7 @@ class PathNode:
         else:
             return self.row[idx]
 
-    def append(self, name, is_leaf=False):
+    def append(self, name):
         """Append a node as child of this node.
 
         If is_leaf is True the size/count of all intermediate
@@ -140,7 +140,6 @@ class PathNode:
 
         self.children[name] = node
         self.indices.append(node)
-        self.is_leaf = is_leaf
 
         return node
 
@@ -212,10 +211,15 @@ def _lookup_root_path_index(index, components):
     return None
 
 
-class PathTrie:
+class PathTrie(GObject.Object):
     """Python version of rmlint's pathtricia trie."""
+    __gsignals__ = {
+        'node-updated': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_UINT64, ))
+    }
 
     def __init__(self, root_paths=None):
+        GObject.Object.__init__(self)
+
         self.root = PathNode('/', None, {})
         self.sub_roots = []
         self.nodes = {id(self.root): self.root}
@@ -263,9 +267,18 @@ class PathTrie:
         for child in node.indices:
             yield from self.iterate(child)
 
+    def lookup_node_id(self, node_id):
+        """Lookup a node by it's id."""
+        return self.nodes.get(node_id)
+
+    def update_node(self, node, column_id, value):
+        """Update a PathNode *and* emit a node-updated signal."""
+        node.row[column_id] = value
+        self.emit('node-updated', id(node))
+
     def group(self, cksum):
         """Get a list of nodes that have the same checksum."""
-        return self._groups.get(cksum)
+        return self._groups.get(cksum, [])
 
     def insert(self, path, row):
         """Insert a path into the trie, with metadata in `row`"""
@@ -276,7 +289,7 @@ class PathTrie:
 
         new_nodes = [(curr, False)]
 
-        for name in components:
+        for idx, name in enumerate(components):
             node = curr.children.get(name)
             if node is None:
                 node = curr.append(name)
@@ -284,9 +297,11 @@ class PathTrie:
                 new_nodes.append((node, True))
             else:
                 new_nodes.append((node, False))
+
             curr = node
 
         curr.make_leaf(row)
+
         self._groups[row[Column.CKSUM]].append(curr)
         self.max_depth = max(self.max_depth, curr.depth)
         return new_nodes
@@ -412,6 +427,10 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         self._mtime_cache = set()
         GLib.timeout_add(1000, self._update_intermediate_nodes)
 
+        # A node was updated from the outside, i.e. by another model,
+        # or by directly modifiying a PathNode or PathTrie.
+        self.trie.connect('node-updated', self.on_node_updated)
+
     def _update_intermediate_nodes(self):
         """Make sure the intermediate nodes get updated in a slow
         but sufficient interval.
@@ -451,7 +470,6 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         """
         if immediately:
             # Add it it immediately.
-            # self.trie.insert(path, row)
             self._add_and_signal(path, row)
         else:
             # Defer the addition a bit more.
@@ -581,9 +599,17 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
     def __len__(self):
         return len(self.trie)
 
-    def set_node_value(self, node, column, value):
-        """Like set_value(), but works on a PathNode"""
-        self.set_value(make_iter(node), column, value)
+    def on_node_updated(self, trie, node_id):
+        """Called when a node was changed on the outside."""
+        node = trie.lookup_node_id(node_id)
+
+        # Mark for updating:
+        if node is not None:
+            self._intermediate_nodes.add(node)
+
+    def mark_for_update(self, node):
+        """Mark this node to be updated soon."""
+        self._intermediate_nodes.add(node)
 
     ##################################
     # Tree Model Spec Implementation #
@@ -910,7 +936,7 @@ class PathTreeView(Gtk.TreeView):
             elif current is NodeState.ORIGINAL:
                 new = NodeState.DUPLICATE
 
-            model.set_node_value(node, Column.TAG, new)
+            self.update_node(node, Column.TAG, new)
 
     def on_toggle_all(self, _):
         """Toggle all nodes in the current visible model."""
@@ -946,11 +972,7 @@ class PathTreeView(Gtk.TreeView):
             # No original in group, set first twin as original.
             for twin_node in group:
                 if twin_node is not node:
-                    model.set_node_value(
-                        twin_node,
-                        Column.TAG,
-                        NodeState.ORIGINAL
-                    )
+                    self.update_node(twin_node, Column.TAG, NodeState.ORIGINAL)
                     break
 
     def on_expand_all(self, _):
@@ -960,6 +982,17 @@ class PathTreeView(Gtk.TreeView):
     def on_collapse_all(self, _):
         """Just collpase everything in the tree."""
         self.collapse_all()
+
+    def set_twin(self, view):
+        self.twin_view = view
+
+    def update_node(self, node, column_id, value):
+        main_model, twin_model = self.get_model(), self.twin_view.get_model()
+        for model in [m for m in (main_model, twin_model) if m]:
+            model.trie.update_node(node, column_id, value)
+
+            for child in model.trie.group(node[Column.CKSUM]):
+                model.mark_for_update(child)
 
 
 if __name__ == '__main__':

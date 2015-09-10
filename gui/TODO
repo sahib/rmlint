@@ -19,9 +19,9 @@ DONE:
 - Fix: Handle weird path encodings gracefully -- done (hopefully)
 - Fix: Correct re-run of script object. -- done
 - Fix: Actually support non-dry-run. -- done
+- Fix: Properly sync between model and sub-model.  -- done
 
 OPEN:
 
 - Fix: Speed improvements. Profile search code. Maybe index some stuff.
-- Fix: Properly sync between model and sub-model. 
 - Translation: Mark strings/use more standard buttons

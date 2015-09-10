@@ -148,6 +148,12 @@ class RunnerView(View):
         self.group_treeview.set_vexpand(True)
         self.group_treeview.set_valign(Gtk.Align.FILL)
 
+        # This is needed to make sure operations on the one update
+        # the other. Interally the same nodes are updated, but it has
+        # to be made sure that the models get updated.
+        self.group_treeview.set_twin(self.treeview)
+        self.treeview.set_twin(self.group_treeview)
+
         group_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         group_box.pack_start(scrolled(self.group_treeview), True, True, 0)
         group_box.pack_start(Gtk.HSeparator(), False, False, 0)
