@@ -38,17 +38,27 @@ def flush_fs_caches():
 
 VALGRIND_MASSIF_PEAK_MEM = '''
 valgrind --tool=massif --log-file=0 --massif-out-file=/tmp/massif.out \
-    {command} >/dev/null 2>/dev/null && \
+    {interp} {command} >/dev/null 2>/dev/null && \
     cat /tmp/massif.out | grep mem_heap_B  | cut -d= -f2 | sort -rn | head -n1
 '''
 
 
 def measure_peak_memory(shell_command):
     try:
+        # Hack to get python scripts working:
+        # (normally a real binary is assumed)
+        interp = ''
+        if '.py' in shell_command:
+            interp = '/usr/bin/python'
+
         peak_bytes_b = subprocess.check_output(
-            VALGRIND_MASSIF_PEAK_MEM.format(command=shell_command), shell=True
+            VALGRIND_MASSIF_PEAK_MEM.format(
+                interp=interp,
+                command=shell_command
+            ),
+            shell=True
         )
-        return int(peak_bytes_b)
+        return int(peak_bytes_b or '0')
     except subprocess.CalledProcessError as err:
         print('!! Unable to execute massif: {err}'.format(err=err))
         return None
@@ -69,14 +79,25 @@ class Program:
     version = ''
     binary_path = None
     website = None
+    script = None
+
+    def __init__(self):
+        # Do the path building now.
+        # Later on we call chdir() which might mess this up:
+        self.build_path = os.path.join(
+            os.path.realpath(os.path.dirname(__file__)),
+            'build_scripts',
+            self.script or ''
+        )
+
+    def get_install(self):
+        if self.script:
+            with open(self.build_path, 'r') as fd:
+                return fd.read()
 
     ####################
     # ABSTRACT METHODS #
     ####################
-
-    @abstractmethod
-    def get_install(self):
-        pass
 
     @abstractmethod
     def get_binary(self):
@@ -128,9 +149,11 @@ class Program:
         memory_usage = -1
 
         bin_cmd = '' + self.binary_path + ' ' + self.get_options().format(
-            path=dataset.get_path()
+            path=' '.join(dataset.get_paths())
         )
         print('== Executing: {c}'.format(c=bin_cmd))
+
+        time_cmd = '/bin/time --format "%P" --output /tmp/.cpu_usage -- ' + bin_cmd
 
         try:
             for _ in range(N_SUB_RUNS):
@@ -139,8 +162,9 @@ class Program:
                 for run_idx in range(1, N_RUNS + 1):
                     start_time = time.time()
                     subprocess.check_output(
-                        '/bin/time --format "%P" --output /tmp/.cpu_usage -- ' + bin_cmd,
-                        shell=True, stderr=subprocess.STDOUT
+                        time_cmd,
+                        shell=True,
+                        stderr=subprocess.STDOUT
                     )
 
                     time_diff = time.time() - start_time
@@ -188,14 +212,18 @@ class Program:
 
         if os.path.exists(temp_bin):
             print('-- Path exists: ' + temp_bin)
-            print('-- Skipping install; Delusrete if you need an update.')
+            print('-- Skipping install; Delete if you need an update.')
             self.guess_version()
             os.chdir(current_path)
             return
 
+        sh_procedure = self.get_install()
+        if not sh_procedure:
+            return
+
         try:
             subprocess.check_output(
-                self.get_install(), stderr=subprocess.STDOUT, shell=True
+                sh_procedure, stderr=subprocess.STDOUT, shell=True
             )
             print('-- Installed {n} to {p}'.format(
                 n=self.get_name(), p=temp_dir
@@ -213,22 +241,12 @@ class Program:
             os.chdir(current_path)
 
 
-RMLINT_INSTALL = '''
-git clone https://github.com/sahib/rmlint
-cd rmlint
-git checkout develop
-scons -j4 DEBUG=0
-'''
-
-
 class Rmlint(Program):
     website = 'https://github.com/sahib/rmlint'
+    script = 'rmlint-new.sh'
 
     def get_binary(self):
         return 'rmlint/rmlint'
-
-    def get_install(self):
-        return RMLINT_INSTALL
 
     def get_options(self):
         return '-o summary {path} -o json:/tmp/rmlint.json -T df'
@@ -246,6 +264,7 @@ class Rmlint(Program):
 
 
 class RmlintSpooky(Rmlint):
+
     def get_options(self):
         return '-PP ' + Rmlint.get_options(self)
 
@@ -254,6 +273,7 @@ class RmlintSpooky(Rmlint):
 
 
 class RmlintParanoid(Rmlint):
+
     def get_options(self):
         return '-pp ' + Rmlint.get_options(self)
 
@@ -261,34 +281,21 @@ class RmlintParanoid(Rmlint):
         return 'rmlint-paranoid'
 
 
-# TODO: This needs work.
-class RmlintCache(Rmlint):
+class RmlintReplay(Rmlint):
+
     def get_options(self):
-        return '-C /tmp/rmlint.json ' + Rmlint.get_options(self)
+        return '--replay /tmp/rmlint.json ' + Rmlint.get_options(self)
 
     def get_benchid(self):
         return 'rmlint-cache'
 
 
-OLD_RMLINT_INSTALL = '''
-git clone https://github.com/sahib/rmlint
-cd rmlint
-git checkout v1.0.6
-make
-
-# Needed, so that new and old don't get confused.
-mv rmlint rmlint-old
-'''
-
-
 class OldRmlint(Program):
     website = 'https://github.com/sahib/rmlint'
+    script = 'rmlint-old.sh'
 
     def get_binary(self):
         return 'rmlint/rmlint-old'
-
-    def get_install(self):
-        return OLD_RMLINT_INSTALL
 
     def get_options(self):
         return '{path}'
@@ -305,19 +312,9 @@ class OldRmlint(Program):
         return ""
 
 
-
-DUPD_INSTALL = '''
-git clone https://github.com/jvirkki/dupd
-cd dupd
-make -j4
-'''
-
-
 class Dupd(Program):
     website = 'http://rdfind.pauldreik.se'
-
-    def get_install(self):
-        return DUPD_INSTALL
+    script = 'dupd.sh'
 
     def get_binary(self):
         return 'dupd/dupd'
@@ -331,26 +328,16 @@ class Dupd(Program):
         ).decode('utf-8')
 
 
-RDFIND_INSTALL = '''
-wget http://rdfind.pauldreik.se/rdfind-1.3.4.tar.gz
-tar xvf rdfind-1.3.4.tar.gz
-cd rdfind-1.3.4
-./configure
-make
-'''
-
-
 class Rdfind(Program):
     website = 'https://github.com/jvirkki/dupd'
-
-    def get_install(self):
-        return RDFIND_INSTALL
+    script = 'rdfind.sh'
 
     def get_binary(self):
         return 'rdfind-1.3.4/rdfind'
 
     def get_options(self):
-        return '-ignoreempty true -removeidentinode false -checksum sha1 -dryrun true {path}'
+        return '-ignoreempty true -removeidentinode\
+            false -checksum sha1 -dryrun true {path}'
 
     def compute_version(self):
         words = subprocess.check_output(
@@ -360,18 +347,9 @@ class Rdfind(Program):
         return words.split(' ')[-1]
 
 
-FDUPES_INSTALL = '''
-git clone https://github.com/adrianlopezroche/fdupes.git
-cd fdupes
-make
-'''
-
-
 class Fdupes(Program):
     website = 'http://en.wikipedia.org/wiki/Fdupes'
-
-    def get_install(self):
-        return FDUPES_INSTALL
+    script = 'fdupes.sh'
 
     def get_binary(self):
         return 'fdupes/fdupes'
@@ -388,6 +366,19 @@ class Fdupes(Program):
         return subprocess.check_output(
             'fdupes/fdupes --version', shell=True
         ).decode('utf-8')
+
+
+class Baseline(Program):
+    script = 'baseline.sh'
+
+    def get_binary(self):
+        return 'baseline/baseline.py'
+
+    def get_options(self):
+        return '{path}'
+
+    def compute_version(self):
+        return '1.0'
 
 ############################
 #    DATASET GENERATORS    #
@@ -418,31 +409,45 @@ class Dataset:
         pass
 
     @abstractmethod
-    def get_path(self):
+    def get_paths(self):
         pass
 
 
 class ExistingDataset(Dataset):
+
     def generate(self):
         pass
 
 
 class UsrDataset(ExistingDataset):
-    def get_path(self):
-        return '/usr'
+
+    def get_paths(self):
+        return ['/usr']
 
 
 class HomeDataset(ExistingDataset):
-    def get_path(self):
-        return '/home/sahib'
+
+    def get_paths(self):
+        # return [os.path.expanduser('~')]
+        return ['/tmp']
+
+
+class UsrAndHomeDataset(ExistingDataset):
+
+    def get_paths(self):
+        d1 = HomeDataset()
+        d2 = UsrDataset()
+        return d1.get_paths() + d2.get_paths()
 
 
 class MusicDataset(ExistingDataset):
-    def get_path(self):
-        return '/run/media/sahib/35d4a401-ad4c-4221-afc0-f284808a1cdc/music'
+
+    def get_paths(self):
+        return ['/run/media/sahib/35d4a401-ad4c-4221-afc0-f284808a1cdc/music']
 
 
 class UniqueNamesDataset(Dataset):
+
     def generate(self):
         for idx in range(10 ** 4):
             name = faker.name()
@@ -450,8 +455,8 @@ class UniqueNamesDataset(Dataset):
             with open(path, 'w') as handle:
                 handle.write(name * 1024 * 16)
 
-    def get_path(self):
-        return self.workpath
+    def get_paths(self):
+        return [self.workpath]
 
 
 if __name__ == '__main__':
@@ -468,18 +473,19 @@ if __name__ == '__main__':
 
         results = {
             'metadata': {
-                'path': dataset.get_path(),
+                'path': dataset.get_paths(),
                 'n_runs': N_RUNS,
                 'n_sub_runs': N_SUB_RUNS
             },
             'programs': {}
         }
 
-        programs = [
-            OldRmlint(),
-            Fdupes(), Rdfind(), Dupd(),
-            RmlintSpooky(), RmlintParanoid(), Rmlint(), RmlintCache()
-        ]
+        programs = [Baseline()]
+        # programs = [
+        #     OldRmlint(),
+        #     Fdupes(), Rdfind(), Dupd(),
+        #     RmlintSpooky(), RmlintParanoid(), Rmlint(), RmlintReplay()
+        # ]
 
         for program in programs:
             program.install()
