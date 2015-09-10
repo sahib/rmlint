@@ -15,6 +15,12 @@ import re
 import logging
 from collections import defaultdict
 
+try:
+    from parsedatetime import Calendar
+    HAS_PARSEDATETIME = True
+except ImportError:
+    HAS_PARSEDATETIME = False
+
 
 LOGGER = logging.getLogger('query')
 
@@ -107,8 +113,8 @@ def parse_generic_range(value, converter):
         for sub in part.split('-', maxsplit=1):
             try:
                 parsed = converter(sub)
-            except ValueError:
-                LOGGER.exception('Could not convert value:')
+            except ValueError as err:
+                LOGGER.warning('Could not convert value: %s', str(err))
             else:
                 if parsed:
                     sub_results.append(parsed)
@@ -141,6 +147,21 @@ def parse_size_single(value):
     return int(value) * (1024 ** exponent)
 
 
+def parse_mtime_single(value):
+    """Convert a human readable time description to a """
+    if not HAS_PARSEDATETIME:
+        return int(value)
+
+    calendar = Calendar()
+    guess, rc = calendar.parseDT(value)
+
+    if rc is 0:
+        LOGGER.warning('Could not parse date: %s', value)
+        return int(value)
+
+    return guess.timestamp()
+
+
 def parse_size(value):
     """Parse size values and ranges."""
     return parse_generic_range(value, parse_size_single)
@@ -148,7 +169,7 @@ def parse_size(value):
 
 def parse_mtime(value):
     """Parse mtime values and time ranges."""
-    return parse_generic_range(value, int)
+    return parse_generic_range(value, parse_mtime_single)
 
 
 def parse_count(value):
