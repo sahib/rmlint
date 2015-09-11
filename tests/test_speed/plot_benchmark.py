@@ -9,7 +9,7 @@ from pygal.style import LightSolarizedStyle
 
 
 def plot(data):
-    bar_chart = pygal.Line(style=LightSolarizedStyle)
+    bar_chart = pygal.Bar(style=LightSolarizedStyle)
     bar_chart.title = 'Performance comparasion on {path}'.format(
         path=data['metadata']['path']
     )

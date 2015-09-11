@@ -429,7 +429,7 @@ class HomeDataset(ExistingDataset):
 
     def get_paths(self):
         # return [os.path.expanduser('~')]
-        return ['/tmp']
+        return ['/home/sahib']
 
 
 class UsrAndHomeDataset(ExistingDataset):
@@ -480,7 +480,10 @@ if __name__ == '__main__':
             'programs': {}
         }
 
-        programs = [Baseline()]
+        programs = [
+            Baseline(),
+            RmlintSpooky(), RmlintParanoid(), Rmlint(), RmlintReplay()
+        ]
         # programs = [
         #     OldRmlint(),
         #     Fdupes(), Rdfind(), Dupd(),
