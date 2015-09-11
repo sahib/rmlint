@@ -5,7 +5,6 @@ mkdir -p baseline && cd baseline
 cat << EOF > baseline.py
 #!/usr/bin/env python
 # encoding: utf-8
-
 import os
 import sys
 import pprint
@@ -35,18 +34,32 @@ def hash_file(file_path):
 
 def find_dups(input_dir):
     hashes, dups = {}, {}
+    cnt = 0
+
     for path, dirs, files in os.walk(input_dir):
         abspathes = (os.path.join(path, n) for n in files)
         for file_path in filter(os.path.isfile, abspathes):
+            # Filter empty files:
+            if os.path.getsize(file_path) is 0:
+                continue
+
             md5 = hash_file(file_path)
             if md5 and hashes.setdefault(md5, file_path) is not file_path:
                 at = dups.setdefault(md5, [hashes[md5]])
                 at.append(file_path)
-    return dups
+                cnt += 1
+
+    return dups, cnt
 
 
 if __name__ == '__main__':
-    pprint.pprint(find_dups(sys.argv[1]))
+    for input_dir in sys.argv[1:]:
+        dups, cnt = find_dups(input_dir)
+
+        pprint.pprint({
+            'dupe_count': cnt,
+            'group_count': len(dups)
+        })
 EOF
 
 chmod +x baseline.py
