@@ -7,9 +7,11 @@ import sys
 import time
 import json
 import hashlib
+import argparse
 import subprocess
 
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
 
 # Easy: Pseudorandom data generation:
 from faker import Faker
@@ -18,12 +20,14 @@ faker = Faker()
 faker.seed(0xDEADBEEF)
 
 
-# How often to run the program on the dataset.
-# The fs cache is flushed only the first time.
-N_RUNS = 4
+CFG = namedtuple('Config', [
+    # How often to run the program on the dataset.
+    # The fs cache is flushed only the first time.
+    'n_runs',
 
-# How many times to run each individual program.
-N_SUB_RUNS = 2
+    # How many times to run each individual program.
+    'n_sub_runs'
+])(4, 2)
 
 
 def flush_fs_caches():
@@ -148,6 +152,7 @@ class Program:
         run_benchmarks = {}
         memory_usage = -1
 
+        print(self.binary_path, self)
         bin_cmd = '' + self.binary_path + ' ' + self.get_options().format(
             path=' '.join(dataset.get_paths())
         )
@@ -156,10 +161,10 @@ class Program:
         time_cmd = '/bin/time --format "%P" --output /tmp/.cpu_usage -- ' + bin_cmd
 
         try:
-            for _ in range(N_SUB_RUNS):
+            for _ in range(CFG.n_sub_runs):
                 flush_fs_caches()
 
-                for run_idx in range(1, N_RUNS + 1):
+                for run_idx in range(1, CFG.n_runs + 1):
                     start_time = time.time()
                     subprocess.check_output(
                         time_cmd,
@@ -173,8 +178,8 @@ class Program:
                     if run_idx not in run_benchmarks:
                         run_benchmarks[run_idx] = [0, 0]
 
-                    run_benchmarks[run_idx][0] += time_diff / N_SUB_RUNS
-                    run_benchmarks[run_idx][1] += read_cpu_usage() / N_SUB_RUNS
+                    run_benchmarks[run_idx][0] += time_diff / CFG.n_sub_runs
+                    run_benchmarks[run_idx][1] += read_cpu_usage() / CFG.n_sub_runs
 
             # Make valgrind run a bit faster, profit from caches.
             # Also known as 'the big ball of mud'
@@ -185,8 +190,8 @@ class Program:
                 n=self.binary_path, err=err
             ))
 
-        avg_time = sum([v[0] for v in run_benchmarks.values()]) / N_RUNS
-        avg_cpus = sum([v[1] for v in run_benchmarks.values()]) / N_RUNS
+        avg_time = sum([v[0] for v in run_benchmarks.values()]) / CFG.n_runs
+        avg_cpus = sum([v[1] for v in run_benchmarks.values()]) / CFG.n_runs
 
         print('== Took avg time of {t}s / {c}% cpu'.format(
             t=avg_time, c=avg_cpus
@@ -201,8 +206,7 @@ class Program:
             print('-- Guessed version: ', self.version)
 
     def install(self):
-        """Install the program in /tmp; fetch source from internet.
-        """
+        """Install the program in /tmp; fetch source from internet."""
         temp_dir = self.get_temp_dir()
         temp_bin = os.path.join(temp_dir, self.get_binary())
         current_path = os.getcwd()
@@ -307,7 +311,7 @@ class OldRmlint(Program):
 
         match = re.search('Version (\d.\d.\d)', str(version_text))
         if match is not None:
-            return ' '.join(match.groups())
+            return ' '.join(match.groups()).strip()
 
         return ""
 
@@ -325,7 +329,7 @@ class Dupd(Program):
     def compute_version(self):
         return subprocess.check_output(
             'dupd/dupd version', shell=True
-        ).decode('utf-8')
+        ).decode('utf-8').strip()
 
 
 class Rdfind(Program):
@@ -344,7 +348,7 @@ class Rdfind(Program):
             'rdfind-1.3.4/rdfind --version', shell=True
         ).decode('utf-8')
 
-        return words.split(' ')[-1]
+        return words.split(' ')[-1].strip()
 
 
 class Fdupes(Program):
@@ -365,7 +369,7 @@ class Fdupes(Program):
     def compute_version(self):
         return subprocess.check_output(
             'fdupes/fdupes --version', shell=True
-        ).decode('utf-8')
+        ).decode('utf-8').strip()
 
 
 class Baseline(Program):
@@ -459,50 +463,123 @@ class UniqueNamesDataset(Dataset):
         return [self.workpath]
 
 
-if __name__ == '__main__':
-    datasets = [
-        # UsrDataset('usr'),
-        # UniqueNamesDataset('names', sys.argv[1])
-        # MusicDataset('music')
-        HomeDataset('home')
-    ]
-
-    for dataset in datasets:
-        # Generate the data in the dataset:
-        dataset.generate()
-
+def do_run(programs, dataset):
+    for program in programs:
+        program.install()
         results = {
             'metadata': {
                 'path': dataset.get_paths(),
-                'n_runs': N_RUNS,
-                'n_sub_runs': N_SUB_RUNS
+                'n_runs': CFG.n_runs,
+                'n_sub_runs': CFG.n_sub_runs
             },
             'programs': {}
         }
 
-        programs = [
-            Baseline(),
-            RmlintSpooky(), RmlintParanoid(), Rmlint(), RmlintReplay()
-        ]
-        # programs = [
-        #     OldRmlint(),
-        #     Fdupes(), Rdfind(), Dupd(),
-        #     RmlintSpooky(), RmlintParanoid(), Rmlint(), RmlintReplay()
-        # ]
+        data, memory_usage = program.run(dataset)
+        print('>> Timing was ', data)
 
+        bench_id = program.get_benchid()
+        results['programs'][bench_id] = {}
+        results['programs'][bench_id]['version'] = program.version
+        results['programs'][bench_id]['website'] = program.get_website()
+        results['programs'][bench_id]['numbers'] = data
+        results['programs'][bench_id]['memory'] = memory_usage
+
+    benchmark_json_path = 'benchmark_{name}.json'.format(name=dataset.name)
+    print('-- Writing benchmark to benchmark.json')
+    with open('benchmark.json', 'w') as json_file:
+        json_file.write(json.dumps(results, indent=4))
+
+
+def main():
+    datasets = [
+        # UsrDataset('usr'),
+        UniqueNamesDataset('names'),
+        # MusicDataset('music')
+        HomeDataset('home')
+    ]
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-r", "--run", help="Run the benchmarks.",
+        dest='do_run', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-i", "--install", help="Install all competitors from source.",
+        dest='do_install', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-g", "--generate", help="Generate datasets.",
+        dest='do_generate', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-v", "--print-versions", help="Print versions of programs.",
+        dest='do_print_versions', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-d", "--dataset",
+        help="Dataset to run on. Can be given multiple times.",
+        dest='datasets', action='append'
+    )
+    parser.add_argument(
+        "-p", "--program",
+        help="Choose program to run. Can be given multiple times.",
+        dest='programs', action='append'
+    )
+    options = parser.parse_args()
+
+    if options.do_generate or options.datasets:
+        for dataset in datasets:
+            if dataset in options.datasets or len(options.datasets) is 0:
+                dataset.generate()
+
+    programs = [
+        # (hopefully) slowest:
+        Baseline(),
+        # Current:
+        Rmlint(),
+        RmlintSpooky(),
+        RmlintParanoid(),
+        RmlintReplay(),
+        # Old rmlint:
+        OldRmlint(),
+        # Actual competitors:
+        Fdupes(),
+        Rdfind(),
+        Dupd()
+    ]
+
+    # Filter the `programs` list if necessary.
+    if options.programs:
+        options.programs = set(options.programs)
+        programs = [p for p in programs if p.get_name() in options.programs]
+
+    # Do the install procedure only:
+    if options.do_install:
         for program in programs:
+            print('++ Installing ' + program.get_name() + ':')
             program.install()
-            data, memory_usage = program.run(dataset)
-            print('>> Timing was ', data)
 
-            bench_id = program.get_benchid()
-            results['programs'][bench_id] = {}
-            results['programs'][bench_id]['version'] = program.version
-            results['programs'][bench_id]['website'] = program.get_website()
-            results['programs'][bench_id]['numbers'] = data
-            results['programs'][bench_id]['memory'] = memory_usage
+    # Print informative version if needed.
+    if options.do_print_versions:
+        current_path = os.getcwd()
+        for program in programs:
+            os.chdir(program.get_temp_dir())
+            print(program.get_binary() + ':', program.compute_version())
 
-        benchmark_json_path = 'benchmark_{name}.json'.format(name=dataset.name)
-        print('-- Writing benchmark to benchmark.json')
-        with open('benchmark.json', 'w') as json_file:
-            json_file.write(json.dumps(results, indent=4))
+        os.chdir(current_path)
+
+    # Execute the actual run:
+    if options.do_run:
+        for dataset_name in options.datasets:
+            for dataset in datasets:
+                if dataset.name == dataset_name:
+                    try:
+                        do_run(programs, dataset)
+                        break
+                    except KeyboardInterrupt:
+                        print(' Interrupted this run. Next.')
+
+
+if __name__ == '__main__':
+    main()
