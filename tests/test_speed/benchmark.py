@@ -27,7 +27,7 @@ CFG = namedtuple('Config', [
 
     # How many times to run each individual program.
     'n_sub_runs'
-])(4, 2)
+])(3, 2)
 
 
 def flush_fs_caches():
@@ -152,12 +152,12 @@ class Program:
         run_benchmarks = {}
         memory_usage = -1
 
-        print(self.binary_path, self)
         bin_cmd = '' + self.binary_path + ' ' + self.get_options().format(
             path=' '.join(dataset.get_paths())
         )
         print('== Executing: {c}'.format(c=bin_cmd))
 
+        data_dump = None
         time_cmd = '/bin/time --format "%P" --output /tmp/.cpu_usage -- ' + bin_cmd
 
         try:
@@ -166,7 +166,7 @@ class Program:
 
                 for run_idx in range(1, CFG.n_runs + 1):
                     start_time = time.time()
-                    subprocess.check_output(
+                    data_dump = subprocess.check_output(
                         time_cmd,
                         shell=True,
                         stderr=subprocess.STDOUT
@@ -197,7 +197,14 @@ class Program:
             t=avg_time, c=avg_cpus
         ))
         run_benchmarks['average'] = [avg_time, avg_cpus]
-        return run_benchmarks, memory_usage
+
+        stats = None
+        if data_dump:
+            stats = self.parse_statistics(
+                data_dump.decode('utf-8').strip()
+            )
+
+        return run_benchmarks, memory_usage, stats
 
     def guess_version(self):
         version = self.compute_version()
@@ -359,12 +366,18 @@ class Fdupes(Program):
         return 'fdupes/fdupes'
 
     def get_options(self):
-        return '-f -q -rnH {path}'
+        return '-f -q -rnH -m {path}'
 
     def parse_statistics(self, dump):
-        lines = dump.splitlines()
-        empty = sum(bool(line.strip()) for line in lines)
-        return empty, len(lines) - empty
+        match = re.match(
+            '(\d+) duplicate files \(in (\d+) sets\)', dump
+        )
+
+        if match:
+            return {
+                'dupes': int(match.group(1)),
+                'sets': int(match.group(2))
+            }
 
     def compute_version(self):
         return subprocess.check_output(
@@ -383,6 +396,10 @@ class Baseline(Program):
 
     def compute_version(self):
         return '1.0'
+
+    def parse_statistics(self, dump):
+        print(dump)
+        return json.loads(dump)
 
 ############################
 #    DATASET GENERATORS    #
@@ -419,39 +436,18 @@ class Dataset:
 
 class ExistingDataset(Dataset):
 
+    def __init__(self, name, path):
+        Dataset.__init__(self, name, path)
+        self.path = path
+
     def generate(self):
         pass
 
-
-class UsrDataset(ExistingDataset):
-
     def get_paths(self):
-        return ['/usr']
-
-
-class HomeDataset(ExistingDataset):
-
-    def get_paths(self):
-        # return [os.path.expanduser('~')]
-        return ['/home/sahib']
-
-
-class UsrAndHomeDataset(ExistingDataset):
-
-    def get_paths(self):
-        d1 = HomeDataset()
-        d2 = UsrDataset()
-        return d1.get_paths() + d2.get_paths()
-
-
-class MusicDataset(ExistingDataset):
-
-    def get_paths(self):
-        return ['/run/media/sahib/35d4a401-ad4c-4221-afc0-f284808a1cdc/music']
+        return [self.path]
 
 
 class UniqueNamesDataset(Dataset):
-
     def generate(self):
         for idx in range(10 ** 4):
             name = faker.name()
@@ -475,7 +471,7 @@ def do_run(programs, dataset):
             'programs': {}
         }
 
-        data, memory_usage = program.run(dataset)
+        data, memory_usage, stats = program.run(dataset)
         print('>> Timing was ', data)
 
         bench_id = program.get_benchid()
@@ -484,6 +480,7 @@ def do_run(programs, dataset):
         results['programs'][bench_id]['website'] = program.get_website()
         results['programs'][bench_id]['numbers'] = data
         results['programs'][bench_id]['memory'] = memory_usage
+        results['programs'][bench_id]['results'] = stats or {}
 
     benchmark_json_path = 'benchmark_{name}.json'.format(name=dataset.name)
     print('-- Writing benchmark to benchmark.json')
@@ -493,10 +490,10 @@ def do_run(programs, dataset):
 
 def main():
     datasets = [
-        # UsrDataset('usr'),
         UniqueNamesDataset('names'),
-        # MusicDataset('music')
-        HomeDataset('home')
+        ExistingDataset('usr', '/usr'),
+        ExistingDataset('tmp', '/tmp'),
+        ExistingDataset('home', '/home/sahib')
     ]
 
     parser = argparse.ArgumentParser()

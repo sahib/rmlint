@@ -7,6 +7,7 @@ cat << EOF > baseline.py
 # encoding: utf-8
 import os
 import sys
+import json
 import pprint
 import hashlib
 
@@ -56,10 +57,10 @@ if __name__ == '__main__':
     for input_dir in sys.argv[1:]:
         dups, cnt = find_dups(input_dir)
 
-        pprint.pprint({
-            'dupe_count': cnt,
-            'group_count': len(dups)
-        })
+        print(json.dumps({
+            'dupes': cnt,
+            'sets': len(dups)
+        }))
 EOF
 
 chmod +x baseline.py
