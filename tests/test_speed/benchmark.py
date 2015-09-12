@@ -11,7 +11,7 @@ import argparse
 import subprocess
 
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple
+from collections import namedtuple, Counter
 
 # Easy: Pseudorandom data generation:
 from faker import Faker
@@ -363,16 +363,19 @@ class Dupd(Program):
         except ValueError as err:
             print('doh', err)
 
+
 class Rdfind(Program):
     website = 'https://github.com/jvirkki/dupd'
     script = 'rdfind.sh'
+    result_file = '/tmp/rmlint-bench/.rdfind.results'
 
     def get_binary(self):
         return 'rdfind-1.3.4/rdfind'
 
     def get_options(self):
-        return '-ignoreempty true -removeidentinode\
-            false -checksum sha1 -dryrun true {path}'
+        return '-ignoreempty true -removeidentinode \
+            false -checksum sha1 -dryrun true {path} \
+            -outputname ' + self.result_file
 
     def compute_version(self):
         words = subprocess.check_output(
@@ -380,6 +383,24 @@ class Rdfind(Program):
         ).decode('utf-8')
 
         return words.split(' ')[-1].strip()
+
+    def parse_statistics(self, _):
+        try:
+            stats = Counter()
+            with open(self.result_file, 'r') as fd:
+                for line in fd:
+                    line = line.strip()
+                    if line:
+                        stats[line.split()[0]] += 1
+
+            return {
+                'dupes': stats['DUPTYPE_WITHIN_SAME_TREE'],
+                'sets': stats['DUPTYPE_FIRST_OCCURRENCE']
+            }
+        except OSError:
+            pass
+        except ValueError:
+            pass
 
 
 class Fdupes(Program):
