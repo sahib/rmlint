@@ -26,8 +26,13 @@ CFG = namedtuple('Config', [
     'n_runs',
 
     # How many times to run each individual program.
-    'n_sub_runs'
-])(3, 2)
+    'n_sub_runs',
+
+    # Output directory
+    'output'
+])(3, 2, 'bench-output-{stamp}'.format(
+    stamp=time.strftime('%FT%T%z', time.localtime())
+))
 
 
 def flush_fs_caches():
@@ -272,6 +277,18 @@ class Rmlint(Program):
             return ' '.join(match.groups())
 
         return ""
+
+    def parse_statistics(self, _):
+        try:
+            with open('/tmp/rmlint.json', 'r') as fd:
+                stats = json.loads(fd.read())
+
+            return {
+                'sets': stats[-1]['duplicate_sets'],
+                'dupes': stats[-1]['duplicates']
+            }
+        except OSError:
+            pass
 
 
 class RmlintSpooky(Rmlint):
@@ -527,9 +544,13 @@ def do_run(programs, dataset):
         results['programs'][bench_id]['memory'] = memory_usage
         results['programs'][bench_id]['results'] = stats or {}
 
-    benchmark_json_path = 'benchmark_{name}.json'.format(name=dataset.name)
-    print('-- Writing benchmark to benchmark.json')
-    with open('benchmark.json', 'w') as json_file:
+    benchmark_json_path = os.path.join(
+        CFG.output,
+        'benchmark_{name}.json'.format(name=dataset.name)
+    )
+
+    print('-- Writing benchmark to', benchmark_json_path)
+    with open(benchmark_json_path, 'w') as json_file:
         json_file.write(json.dumps(results, indent=4))
 
 
@@ -594,7 +615,7 @@ def main():
     # Filter the `programs` list if necessary.
     if options.programs:
         options.programs = set(options.programs)
-        programs = [p for p in programs if p.get_name() in options.programs]
+        programs = [p for p in programs if p.get_benchid() in options.programs]
 
     # Do the install procedure only:
     if options.do_install:
@@ -613,6 +634,12 @@ def main():
 
     # Execute the actual run:
     if options.do_run:
+        # Make sure the output directory exists:
+        try:
+            os.mkdir(CFG.output)
+        except OSError:
+            pass
+
         for dataset_name in options.datasets:
             for dataset in datasets:
                 if dataset.name == dataset_name:
