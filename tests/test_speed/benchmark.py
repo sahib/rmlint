@@ -326,18 +326,42 @@ class OldRmlint(Program):
 class Dupd(Program):
     website = 'http://rdfind.pauldreik.se'
     script = 'dupd.sh'
+    stats_file = '/tmp/rmlint-bench/.dupd.stats'
 
     def get_binary(self):
         return 'dupd/dupd'
 
     def get_options(self):
-        return 'scan --path {path}'
+        try:
+            os.remove(self.stats_file)
+        except OSError:
+            pass
+
+        return 'scan --path {path} --stats-file ' + self.stats_file
 
     def compute_version(self):
         return subprocess.check_output(
             'dupd/dupd version', shell=True
         ).decode('utf-8').strip()
 
+    def parse_statistics(self, _):
+        stats = {}
+
+        try:
+            with open(self.stats_file, 'r') as fd:
+                for line in fd:
+                    line = line.strip()
+                    if line:
+                        key, value = line.split(' ', 1)
+                        stats[key] = value
+            return {
+                'dupes': int(stats['stats_duplicate_files']),
+                'sets': int(stats['stats_duplicate_sets'])
+            }
+        except OSError:
+            pass
+        except ValueError as err:
+            print('doh', err)
 
 class Rdfind(Program):
     website = 'https://github.com/jvirkki/dupd'
