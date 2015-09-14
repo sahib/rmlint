@@ -162,8 +162,8 @@ class Program:
         )
         print('== Executing: {c}'.format(c=bin_cmd))
 
-        data_dump = None
-        time_cmd = '/bin/time --format "%P" --output /tmp/.cpu_usage -- ' + bin_cmd
+        time_cmd = '/bin/time --format "%P" \
+            --output /tmp/.cpu_usage -- ' + bin_cmd
 
         try:
             for _ in range(CFG.n_sub_runs):
@@ -181,10 +181,19 @@ class Program:
 
                     # Remember the time difference as result.
                     if run_idx not in run_benchmarks:
-                        run_benchmarks[run_idx] = [0, 0]
+                        run_benchmarks[run_idx] = [0] * 4
 
+                    cpu_usage = read_cpu_usage()
                     run_benchmarks[run_idx][0] += time_diff / CFG.n_sub_runs
-                    run_benchmarks[run_idx][1] += read_cpu_usage() / CFG.n_sub_runs
+                    run_benchmarks[run_idx][1] += cpu_usage / CFG.n_sub_runs
+
+                    if data_dump:
+                        stats = self.parse_statistics(
+                            data_dump.decode('utf-8').strip()
+                        )
+                        if stats:
+                            run_benchmarks[run_idx][2] += stats['dupes']
+                            run_benchmarks[run_idx][3] += stats['sets']
 
             # Make valgrind run a bit faster, profit from caches.
             # Also known as 'the big ball of mud'
@@ -195,21 +204,17 @@ class Program:
                 n=self.binary_path, err=err
             ))
 
-        avg_time = sum([v[0] for v in run_benchmarks.values()]) / CFG.n_runs
-        avg_cpus = sum([v[1] for v in run_benchmarks.values()]) / CFG.n_runs
+        avg_point = [0] * 4
+        for idx in range(4):
+            avg_point[idx] = sum([v[idx] for v in run_benchmarks.values()])
+            avg_point[idx] /= CFG.n_runs
 
         print('== Took avg time of {t}s / {c}% cpu'.format(
-            t=avg_time, c=avg_cpus
+            t=avg_point[0], c=avg_point[1]
         ))
-        run_benchmarks['average'] = [avg_time, avg_cpus]
+        run_benchmarks['average'] = avg_point
 
-        stats = None
-        if data_dump:
-            stats = self.parse_statistics(
-                data_dump.decode('utf-8').strip()
-            )
-
-        return run_benchmarks, memory_usage, stats
+        return run_benchmarks, memory_usage
 
     def guess_version(self):
         version = self.compute_version()
@@ -533,7 +538,7 @@ def do_run(programs, dataset):
             'programs': {}
         }
 
-        data, memory_usage, stats = program.run(dataset)
+        data, memory_usage = program.run(dataset)
         print('>> Timing was ', data)
 
         bench_id = program.get_benchid()
@@ -542,7 +547,6 @@ def do_run(programs, dataset):
         results['programs'][bench_id]['website'] = program.get_website()
         results['programs'][bench_id]['numbers'] = data
         results['programs'][bench_id]['memory'] = memory_usage
-        results['programs'][bench_id]['results'] = stats or {}
 
     benchmark_json_path = os.path.join(
         CFG.output,
@@ -554,14 +558,7 @@ def do_run(programs, dataset):
         json_file.write(json.dumps(results, indent=4))
 
 
-def main():
-    datasets = [
-        UniqueNamesDataset('names'),
-        ExistingDataset('usr', '/usr'),
-        ExistingDataset('tmp', '/tmp'),
-        ExistingDataset('home', '/home/sahib')
-    ]
-
+def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-r", "--run", help="Run the benchmarks.",
@@ -589,7 +586,18 @@ def main():
         help="Choose program to run. Can be given multiple times.",
         dest='programs', action='append'
     )
-    options = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    datasets = [
+        UniqueNamesDataset('names'),
+        ExistingDataset('usr', '/usr'),
+        ExistingDataset('tmp', '/tmp'),
+        ExistingDataset('home', '/home/sahib')
+    ]
+
+    options = parse_arguments()
 
     if options.do_generate or options.datasets:
         for dataset in datasets:
