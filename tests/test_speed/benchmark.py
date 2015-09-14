@@ -13,12 +13,6 @@ import subprocess
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, Counter
 
-# Easy: Pseudorandom data generation:
-from faker import Faker
-
-faker = Faker()
-faker.seed(0xDEADBEEF)
-
 
 CFG = namedtuple('Config', [
     # How often to run the program on the dataset.
@@ -520,19 +514,6 @@ class ExistingDataset(Dataset):
         return self.paths
 
 
-class UniqueNamesDataset(Dataset):
-    def generate(self):
-        self.workpath = tempfile.mkdtemp(prefix='unique-names-', dir='.')
-        for idx in range(10 ** 4):
-            name = faker.name()
-            path = os.path.join(self.workpath, str(idx))
-            with open(path, 'w') as handle:
-                handle.write(name * 1024 * 16)
-
-    def get_paths(self):
-        return [self.workpath]
-
-
 def do_run(programs, dataset):
     results = {
         'metadata': {
@@ -603,6 +584,8 @@ def main():
         ExistingDataset('usr', ['/usr']),
         ExistingDataset('tmp', ['/tmp']),
         ExistingDataset('tmpvar', ['/tmp', '/var']),
+        ExistingDataset('usrvar', ['/usr', '/var']),
+        ExistingDataset('usrhome', ['/usr', '/home/sahib']),
         ExistingDataset('home', ['/home/sahib'])
     ]
 
