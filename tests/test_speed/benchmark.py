@@ -370,7 +370,7 @@ class Dupd(Program):
             pass
 
         args = ' '.join(['--path ' + path for path in paths])
-        return 'scan ' + args + ' --stats-file ' + self.stats_file
+        return 'scan ' + args + '--nodb --stats-file ' + self.stats_file
 
     def compute_version(self):
         return subprocess.check_output(
