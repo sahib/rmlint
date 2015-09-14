@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+# Stdlib:
 import sys
 import json
+import argparse
+
+# External:
 import pygal
 
 from pygal.style import LightSolarizedStyle
@@ -44,10 +48,49 @@ def plot(data):
     return bar_chart.render()
 
 
-if __name__ == '__main__':
-    with open(sys.argv[1], 'r') as handle:
-        data = json.loads(handle.read())
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "input-dir", help="Directory with bench files"
+    )
+    parser.add_argument(
+        "output-dir", help="Where to store the plots"
+    )
 
-    svg = plot(data)
-    with open(sys.argv[2], 'wb') as handle:
-        handle.write(svg)
+    return parser.parse_args()
+
+
+def guess_output_dir(input_dir):
+    if input_dir.startswith('bench-'):
+        _, stamp = input_dir.split('-', 1)
+        return 'plot-' + stamp
+
+    return 'plot-output'
+
+
+def main():
+    options = parse_arguments()
+    print(options)
+
+    if not options.output_dir:
+        options.output_dir = guess_output_dir(options.input_dir)
+
+    os.makedirs(options.output_dir, exist_ok=True)
+
+    for path in glob.glob(os.path.join(options.input_dir, '*.json')):
+        print(path)
+        with open(path, 'r') as handle:
+            data = json.loads(handle.read())
+            svg = plot(data)
+
+        output_path = os.path.join(
+            options.output_dir,
+            os.path.basename(path)
+        )
+
+        with open(output_path, 'wb') as handle:
+            handle.write(svg)
+
+
+if __name__ == '__main__':
+    main()
