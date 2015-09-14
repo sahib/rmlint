@@ -368,6 +368,19 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
     return is_hardlink;
 }
 
+void rm_file_tables_clear(RmSession *session) {
+    GHashTableIter iter;
+    gpointer key;
+
+    g_hash_table_iter_init(&iter, session->tables->node_table);
+    while(g_hash_table_iter_next(&iter, &key, NULL)) {
+        RmFile *file = key;
+        if(file) {
+            rm_file_destroy(file);
+        }
+    }
+}
+
 /* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint
  * and return true; else return false */
 static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {

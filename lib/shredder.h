@@ -63,4 +63,5 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group);
  * either -K or -M options
  */
 int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session);
+
 #endif

@@ -60,6 +60,11 @@ void rm_file_tables_destroy(RmFileTables *list);
 bool rm_file_tables_insert(RmSession *session, RmFile *file);
 
 /**
+ * @brief Clear potential leftover files when shredder was not used.
+ */
+void rm_file_tables_clear(RmSession *session);
+
+/**
  * @brief Compare certain attributes (listed below) of files
  *        in order to find out which file is the original.
  *
