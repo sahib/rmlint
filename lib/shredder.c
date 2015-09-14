@@ -884,7 +884,7 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
 
     RmCfg *cfg = self->main->session->cfg;
 
-    bool needs_free = !(cfg->cache_file_structs) | force_free;
+    bool needs_free = !(cfg->cache_file_structs) || force_free;
 
     /* May not free though when unfinished checksums are written.
      * Those are freed by the output module.
@@ -1005,8 +1005,8 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
 
     g_mutex_lock(&shred_group->lock);
     {
-        shred_group->has_pref |= file->is_prefd | file->hardlinks.has_prefd;
-        shred_group->has_npref |= (!file->is_prefd) | file->hardlinks.has_non_prefd;
+        shred_group->has_pref |= file->is_prefd || file->hardlinks.has_prefd;
+        shred_group->has_npref |= (!file->is_prefd) || file->hardlinks.has_non_prefd;
         shred_group->has_new |= file->is_new_or_has_new;
 
         shred_group->num_files++;
@@ -1202,7 +1202,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
     if(file->hardlinks.is_head) {
         for(GList *iter = file->hardlinks.files->head; iter; iter = iter->next) {
             RmFile *link = iter->data;
-            file->hardlinks.has_non_prefd |= !link->is_prefd;
+            file->hardlinks.has_non_prefd |= !(link->is_prefd);
             file->hardlinks.has_prefd |= link->is_prefd;
             file->is_new_or_has_new |= (link->mtime >= session->cfg->min_mtime);
         }

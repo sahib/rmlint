@@ -284,11 +284,6 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
 char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device);
 
 /**
- * @brief Same as above, but calls rm_sys_stat(2) on path for you.
- */
-bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path);
-
-/**
  * @brief Get the disk behind the partition.
  *
  * @param self the table to lookup from.

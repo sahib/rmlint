@@ -216,10 +216,9 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 }
 
 static RmFile *rm_parrot_next(RmParrot *polly) {
-    RmFile *file = NULL;
-
     /* Skip NULL entries */
     while(rm_parrot_has_next(polly)) {
+        RmFile *file = NULL;
         if((file = rm_parrot_try_next(polly))) {
             return file;
         }

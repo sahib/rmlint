@@ -227,6 +227,7 @@ bool rm_util_is_nonstripped(_U const char *path, _U RmStat *statp) {
     /* Protect program from using an older library */
     if(elf_version(EV_CURRENT) == EV_NONE) {
         rm_log_error_line(_("ELF Library is out of date!"));
+        rm_sys_close(fd);
         return false;
     }
 
@@ -766,9 +767,9 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
             return 0;
         }
     }
-#endif
-
+#else
     return -1;
+#endif
 }
 
 static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
@@ -952,18 +953,6 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
         rm_log_error_line("Partition not found in rm_mounts_is_nonrotational");
         return true;
     }
-}
-
-bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
-    if(self == NULL) {
-        return -1;
-    }
-
-    RmStat stat_buf;
-    if(rm_sys_stat(path, &stat_buf) == -1) {
-        return -1;
-    }
-    return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
 }
 
 //static void rm_mounts_subvol_add(RmMountTable *self, dev_t subvol, dev_t parent) {

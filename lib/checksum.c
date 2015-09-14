@@ -641,12 +641,11 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
 
 guint8 *rm_digest_steal_buffer(RmDigest *digest) {
     guint8 *result = g_slice_alloc0(digest->bytes);
-    RmDigest *copy = NULL;
     gsize buflen = digest->bytes;
 
     if (rm_digest_needs_steal(digest->type)) {
         /* reading the digest is destructive, so we need to take a copy */
-        copy = rm_digest_copy(digest);
+        RmDigest *copy = rm_digest_copy(digest);
         g_checksum_get_digest(copy->glib_checksum, result, &buflen);
         g_assert(buflen == digest->bytes);
         rm_digest_free(copy);

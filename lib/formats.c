@@ -304,7 +304,7 @@ void rm_fmt_flush(RmFmtTable *self) {
         return;
     }
 
-    if(cfg->rank_criteria && *(cfg->rank_criteria)) {
+    if(*(cfg->rank_criteria)) {
         g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
     }
 

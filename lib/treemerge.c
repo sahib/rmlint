@@ -529,9 +529,6 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
         g_hash_table_new_full((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,
                               NULL, (GDestroyNotify)g_queue_free);
 
-    self->file_checks = g_hash_table_new_full((GHashFunc)rm_digest_hash,
-                                              (GEqualFunc)rm_digest_equal, NULL, NULL);
-
     self->known_hashs = g_hash_table_new_full(NULL, NULL, NULL, NULL);
     self->was_printed = g_hash_table_new_full(NULL, NULL, NULL, NULL);
 
@@ -561,7 +558,6 @@ int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, RmTreeMerger
 void rm_tm_destroy(RmTreeMerger *self) {
     g_hash_table_unref(self->result_table);
     g_hash_table_unref(self->file_groups);
-    g_hash_table_unref(self->file_checks);
 
     GList *digest_keys = g_hash_table_get_keys(self->known_hashs);
     g_list_free_full(digest_keys, (GDestroyNotify)rm_digest_free);
@@ -663,7 +659,6 @@ static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *direct
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         acc += file->is_prefd;
-        g_hash_table_insert(self->file_checks, file->digest, file);
     }
 
     /* Recursively propagate to children */
@@ -874,8 +869,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
-        RmOff file_size_acc = 0;
-
         GList *next = NULL;
         for(GList *iter = file_list->head; iter; iter = next) {
             RmFile *file = iter->data;
@@ -885,12 +878,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
             if(self->session->cfg->partial_hidden && file->is_hidden) {
                 g_queue_delete_link(file_list, iter);
                 continue;
-            }
-
-            bool is_duplicate = g_hash_table_contains(self->file_checks, file->digest);
-
-            if(iter != file_list->head && !is_duplicate) {
-                file_size_acc += file->file_size;
             }
 
             g_hash_table_add(self->was_printed, file);
