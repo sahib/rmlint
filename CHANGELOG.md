@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.4.0 Unnamed] -- [unreleased]
+
+### Fixed
+
+- Bugfix: memory corruption when specifying ``-T dd`` alone.
+- Bugfix: Make ``-D`` and ``-k / -K`` play together nicely.
+
+### Added
+
+- A fully working graphical user interface which is installed as a python module
+  by default (can be disabled with ``--without-gui``).
+- Support for automatic deduplication on btrfs using
+  ``BTRFS_IOC_FILE_EXTENT_SAME``.
+- Benchmark suite that will track the performance of rmlint from time to time.
+  This is supposed to prevent speed decrease over time.
+
+### Changed
+
+- ``-g`` now checks if there is already a ``sh`` and ``json`` formatter before
+  it adds one.
+
 ## [2.3.0 Ominous Oscar] -- 2015-06-15
 
 ### Fixed
@@ -29,7 +50,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 - Improved hashing strategy for large disks (do repeated smaller sweeps across
   the disk instead of incrementally hashing every file on the disk)
 
-## [2.2.1 Dreary Dropbear Bugfixes] -- [unreleased]
+## [2.2.1 Dreary Dropbear Bugfixes]
 
 ### Fixed
 
@@ -135,7 +156,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 Initial release of the rewrite.
 
 [unreleased]: https://github.com/sahib/rmlint/compare/master...develop
-[2.2.0 Dreary Dropbear]: https://github.com/sahib/rmlint/compare/master...develop
+[2.2.1 Dreary Dropbear Bugfixes]: https://github.com/sahib/rmlint/compare/master...develop
+[2.2.0 Dreary Dropbear]: https://github.com/sahib/rmlint/releases/tag/v2.2.0
 [2.1.0 Malnourished Molly]: https://github.com/sahib/rmlint/releases/tag/v2.1.0
 [2.0.0 Personable Pidgeon]: https://github.com/sahib/rmlint/releases/tag/v2.0.0
 [keepachangelog.com]: http://keepachangelog.com/
