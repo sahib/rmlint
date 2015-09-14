@@ -72,6 +72,10 @@ def check_git_rev(context):
         rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
     except subprocess.CalledProcessError:
         print('Unable to find git revision.')
+    except AttributeError:
+        # Patch for some special sandbox permission problems.
+        # See https://github.com/sahib/rmlint/issues/143#issuecomment-139929733
+        print('Not allowed.')
 
     rev = rev or 'unknown'
     conf.env['gitrev'] = rev
