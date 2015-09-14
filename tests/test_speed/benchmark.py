@@ -191,6 +191,7 @@ class Program:
 
             # Make valgrind run a bit faster, profit from caches.
             # Also known as 'the big ball of mud'
+            print('-- Measuring peak memory usage using massif.')
             memory_usage = measure_peak_memory(bin_cmd) / 1024 ** 2
             print('-- Memory usage was {b} MB'.format(b=memory_usage))
         except subprocess.CalledProcessError as err:
@@ -539,7 +540,9 @@ def do_run(programs, dataset):
 
     benchmark_json_path = os.path.join(
         CFG.output,
-        'benchmark_{name}.json'.format(name=dataset.name)
+        'benchmark_{name}.json'.format(
+            name=dataset.name.replace('/', '\\')
+        )
     )
 
     print('-- Writing benchmark to', benchmark_json_path)
@@ -580,7 +583,6 @@ def parse_arguments():
 
 def main():
     datasets = [
-        UniqueNamesDataset('names'),
         ExistingDataset('usr', ['/usr']),
         ExistingDataset('tmp', ['/tmp']),
         ExistingDataset('tmpvar', ['/tmp', '/var']),
@@ -590,6 +592,14 @@ def main():
     ]
 
     options = parse_arguments()
+
+    # Make specifying absolute paths to -d possible.
+    for dataset_name in options.datasets:
+        if dataset_name.startswith('/'):
+            datasets.append(ExistingDataset(
+                dataset_name,
+                [dataset_name]
+            ))
 
     if options.do_generate or options.datasets:
         for dataset in datasets:
