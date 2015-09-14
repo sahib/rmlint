@@ -2,8 +2,10 @@
 # encoding: utf-8
 
 # Stdlib:
+import os
 import sys
 import json
+import glob
 import argparse
 
 # External:
@@ -12,7 +14,15 @@ import pygal
 from pygal.style import LightSolarizedStyle
 
 
-def plot(data):
+VALID_ARGS = {
+    'timing': 0,
+    'cpu_usage': 1,
+    'dupes': 2,
+    'sets': 3
+}
+
+
+def plot(data, attr_key=VALID_ARGS['timing']):
     bar_chart = pygal.Bar(style=LightSolarizedStyle)
     bar_chart.title = 'Performance comparasion on {path}'.format(
         path=data['metadata']['path']
@@ -30,7 +40,8 @@ def plot(data):
 
         numbers = []
         for key in [str(run + 1) for run in range(n_runs)] + ['average']:
-            value, cpu_usage = result['numbers'][key]
+            timing, cpu_usage, dupes, sets = result['numbers'][key]
+            value = result['numbers'][key][attr_key]
 
             numbers.append({
                 'value': round(value, 3),
@@ -51,10 +62,10 @@ def plot(data):
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "input-dir", help="Directory with bench files"
+        "input_dir", help="Directory with bench files"
     )
     parser.add_argument(
-        "output-dir", help="Where to store the plots"
+        "output_dir", help="Where to store the plots", nargs='?'
     )
 
     return parser.parse_args()
@@ -70,7 +81,6 @@ def guess_output_dir(input_dir):
 
 def main():
     options = parse_arguments()
-    print(options)
 
     if not options.output_dir:
         options.output_dir = guess_output_dir(options.input_dir)
@@ -78,18 +88,18 @@ def main():
     os.makedirs(options.output_dir, exist_ok=True)
 
     for path in glob.glob(os.path.join(options.input_dir, '*.json')):
-        print(path)
         with open(path, 'r') as handle:
             data = json.loads(handle.read())
-            svg = plot(data)
+            for attr, attr_id in VALID_ARGS.items():
+                svg = plot(data, attr_id)
 
-        output_path = os.path.join(
-            options.output_dir,
-            os.path.basename(path)
-        )
+                output_path = os.path.join(
+                    options.output_dir,
+                    attr + '-' + os.path.basename(path) + '.svg'
+                )
 
-        with open(output_path, 'wb') as handle:
-            handle.write(svg)
+                with open(output_path, 'wb') as handle:
+                    handle.write(svg)
 
 
 if __name__ == '__main__':

@@ -33,8 +33,10 @@ def hash_file(file_path):
         return
 
 
+hashes, dups = {}, {}
+
+
 def find_dups(input_dir):
-    hashes, dups = {}, {}
     cnt = 0
 
     for path, dirs, files in os.walk(input_dir):
@@ -45,7 +47,7 @@ def find_dups(input_dir):
                 continue
 
             md5 = hash_file(file_path)
-            if md5 and hashes.setdefault(md5, file_path) is not file_path:
+            if md5 and hashes.setdefault(md5, file_path) != file_path:
                 at = dups.setdefault(md5, [hashes[md5]])
                 at.append(file_path)
                 cnt += 1
@@ -54,13 +56,15 @@ def find_dups(input_dir):
 
 
 if __name__ == '__main__':
+    sum_dupes = 0
     for input_dir in sys.argv[1:]:
         dups, cnt = find_dups(input_dir)
+        sum_dupes += cnt
 
-        print(json.dumps({
-            'dupes': cnt,
-            'sets': len(dups)
-        }))
+    print(json.dumps({
+        'dupes': sum_dupes,
+        'sets': len(dups)
+    }))
 EOF
 
 chmod +x baseline.py

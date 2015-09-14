@@ -116,7 +116,7 @@ class Program:
     def compute_version(self):
         pass
 
-    def get_options(self):
+    def get_options(self, paths):
         return ''
 
     def get_benchid(self):
@@ -157,9 +157,9 @@ class Program:
         run_benchmarks = {}
         memory_usage = -1
 
-        bin_cmd = '' + self.binary_path + ' ' + self.get_options().format(
-            path=' '.join(dataset.get_paths())
-        )
+        paths = dataset.get_paths()
+        bin_cmd = self.binary_path + ' ' + self.get_options(paths)
+
         print('== Executing: {c}'.format(c=bin_cmd))
 
         time_cmd = '/bin/time --format "%P" \
@@ -269,8 +269,8 @@ class Rmlint(Program):
     def get_binary(self):
         return 'rmlint/rmlint'
 
-    def get_options(self):
-        return '-o summary {path} -o json:/tmp/rmlint.json -T df'
+    def get_options(self, paths):
+        return '-o summary -o json:/tmp/rmlint.json -T df ' + ' '.join(paths)
 
     def compute_version(self):
         version_text = subprocess.check_output(
@@ -298,8 +298,8 @@ class Rmlint(Program):
 
 class RmlintSpooky(Rmlint):
 
-    def get_options(self):
-        return '-PP ' + Rmlint.get_options(self)
+    def get_options(self, paths):
+        return '-PP ' + Rmlint.get_options(self, paths)
 
     def get_benchid(self):
         return 'rmlint-spooky'
@@ -307,8 +307,8 @@ class RmlintSpooky(Rmlint):
 
 class RmlintParanoid(Rmlint):
 
-    def get_options(self):
-        return '-pp ' + Rmlint.get_options(self)
+    def get_options(self, paths):
+        return '-pp ' + Rmlint.get_options(self, paths)
 
     def get_benchid(self):
         return 'rmlint-paranoid'
@@ -316,11 +316,11 @@ class RmlintParanoid(Rmlint):
 
 class RmlintReplay(Rmlint):
 
-    def get_options(self):
-        return '--replay /tmp/rmlint.json ' + Rmlint.get_options(self)
+    def get_options(self, paths):
+        return '--replay /tmp/rmlint.json -T df -o summary ' + ' '.join(paths)
 
     def get_benchid(self):
-        return 'rmlint-cache'
+        return 'rmlint-replay'
 
 
 class OldRmlint(Program):
@@ -330,8 +330,8 @@ class OldRmlint(Program):
     def get_binary(self):
         return 'rmlint/rmlint-old'
 
-    def get_options(self):
-        return '{path}'
+    def get_options(self, paths):
+        return ' '.join(paths) + ' -v4'  # log output to stdout
 
     def compute_version(self):
         version_text = subprocess.check_output(
@@ -344,6 +344,21 @@ class OldRmlint(Program):
 
         return ""
 
+    def parse_statistics(self, dump):
+        dups, sets = 0, 0
+        for line in dump.splitlines():
+            if line.startswith('ORIG'):
+                sets += 1
+                dups += 1
+
+            if line.startswith('DUPL'):
+                dups += 1
+
+        return {
+            'dupes': dups,
+            'sets': sets
+        }
+
 
 class Dupd(Program):
     website = 'http://rdfind.pauldreik.se'
@@ -353,13 +368,14 @@ class Dupd(Program):
     def get_binary(self):
         return 'dupd/dupd'
 
-    def get_options(self):
+    def get_options(self, paths):
         try:
             os.remove(self.stats_file)
         except OSError:
             pass
 
-        return 'scan --path {path} --stats-file ' + self.stats_file
+        args = ' '.join(['--path ' + path for path in paths])
+        return 'scan ' + args + ' --stats-file ' + self.stats_file
 
     def compute_version(self):
         return subprocess.check_output(
@@ -394,10 +410,10 @@ class Rdfind(Program):
     def get_binary(self):
         return 'rdfind-1.3.4/rdfind'
 
-    def get_options(self):
+    def get_options(self, paths):
         return '-ignoreempty true -removeidentinode \
-            false -checksum sha1 -dryrun true {path} \
-            -outputname ' + self.result_file
+            false -checksum sha1 -dryrun true \
+            -outputname ' + self.result_file + ' '.join(paths)
 
     def compute_version(self):
         words = subprocess.check_output(
@@ -432,8 +448,8 @@ class Fdupes(Program):
     def get_binary(self):
         return 'fdupes/fdupes'
 
-    def get_options(self):
-        return '-f -q -rnH -m {path}'
+    def get_options(self, paths):
+        return '-f -q -rnH -m ' + ' '.join(paths)
 
     def parse_statistics(self, dump):
         match = re.match(
@@ -458,14 +474,13 @@ class Baseline(Program):
     def get_binary(self):
         return 'baseline/baseline.py'
 
-    def get_options(self):
-        return '{path}'
+    def get_options(self, paths):
+        return ' '.join(paths)
 
     def compute_version(self):
         return '1.0'
 
     def parse_statistics(self, dump):
-        print(dump)
         return json.loads(dump)
 
 ############################
@@ -476,17 +491,8 @@ class Baseline(Program):
 class Dataset:
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, basedir=None):
+    def __init__(self, name):
         self.name = name
-        if basedir is not None:
-            self.workpath = os.path.join(basedir, name)
-
-            try:
-                os.makedirs(self.workpath)
-            except OSError:
-                pass
-        else:
-            self.workpath = None
 
     ####################
     # ABSTRACT METHODS #
@@ -503,19 +509,20 @@ class Dataset:
 
 class ExistingDataset(Dataset):
 
-    def __init__(self, name, path):
-        Dataset.__init__(self, name, path)
-        self.path = path
+    def __init__(self, name, paths):
+        Dataset.__init__(self, name)
+        self.paths = paths
 
     def generate(self):
         pass
 
     def get_paths(self):
-        return [self.path]
+        return self.paths
 
 
 class UniqueNamesDataset(Dataset):
     def generate(self):
+        self.workpath = tempfile.mkdtemp(prefix='unique-names-', dir='.')
         for idx in range(10 ** 4):
             name = faker.name()
             path = os.path.join(self.workpath, str(idx))
@@ -527,16 +534,17 @@ class UniqueNamesDataset(Dataset):
 
 
 def do_run(programs, dataset):
+    results = {
+        'metadata': {
+            'path': dataset.get_paths(),
+            'n_runs': CFG.n_runs,
+            'n_sub_runs': CFG.n_sub_runs
+        },
+        'programs': {}
+    }
+
     for program in programs:
         program.install()
-        results = {
-            'metadata': {
-                'path': dataset.get_paths(),
-                'n_runs': CFG.n_runs,
-                'n_sub_runs': CFG.n_sub_runs
-            },
-            'programs': {}
-        }
 
         data, memory_usage = program.run(dataset)
         print('>> Timing was ', data)
@@ -592,9 +600,10 @@ def parse_arguments():
 def main():
     datasets = [
         UniqueNamesDataset('names'),
-        ExistingDataset('usr', '/usr'),
-        ExistingDataset('tmp', '/tmp'),
-        ExistingDataset('home', '/home/sahib')
+        ExistingDataset('usr', ['/usr']),
+        ExistingDataset('tmp', ['/tmp']),
+        ExistingDataset('tmpvar', ['/tmp', '/var']),
+        ExistingDataset('home', ['/home/sahib'])
     ]
 
     options = parse_arguments()
@@ -624,6 +633,10 @@ def main():
     if options.programs:
         options.programs = set(options.programs)
         programs = [p for p in programs if p.get_benchid() in options.programs]
+
+    if not programs:
+        print('!! No valid programs given.')
+        return
 
     # Do the install procedure only:
     if options.do_install:
@@ -655,7 +668,7 @@ def main():
                         do_run(programs, dataset)
                         break
                     except KeyboardInterrupt:
-                        print(' Interrupted this run. Next.')
+                        print(' Interrupted this run. Next dataset.')
 
 
 if __name__ == '__main__':
