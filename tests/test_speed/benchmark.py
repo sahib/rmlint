@@ -6,6 +6,7 @@ import re
 import sys
 import time
 import json
+import pprint
 import hashlib
 import argparse
 import subprocess
@@ -182,16 +183,14 @@ class Program:
                     run_benchmarks[run_idx][1] += cpu_usage / CFG.n_sub_runs
 
                     if data_dump:
-                        stats = self.parse_statistics(
-                            data_dump.decode('utf-8').strip()
-                        )
+                        stats = self.parse_statistics(data_dump)
                         if stats:
                             run_benchmarks[run_idx][2] += stats['dupes']
                             run_benchmarks[run_idx][3] += stats['sets']
 
             # Make valgrind run a bit faster, profit from caches.
             # Also known as 'the big ball of mud'
-            print('-- Measuring peak memory usage using massif.')
+            print('-- Measuring peak memory usage using massif. This may take ages.')
             memory_usage = measure_peak_memory(bin_cmd) / 1024 ** 2
             print('-- Memory usage was {b} MB'.format(b=memory_usage))
         except subprocess.CalledProcessError as err:
@@ -342,11 +341,11 @@ class OldRmlint(Program):
     def parse_statistics(self, dump):
         dups, sets = 0, 0
         for line in dump.splitlines():
-            if line.startswith('ORIG'):
+            if line.startswith(b'ORIG'):
                 sets += 1
                 dups += 1
 
-            if line.startswith('DUPL'):
+            if line.startswith(b'DUPL'):
                 dups += 1
 
         return {
@@ -447,6 +446,7 @@ class Fdupes(Program):
         return '-f -q -rnH -m ' + ' '.join(paths)
 
     def parse_statistics(self, dump):
+        dump = dump.decode('utf-8')
         match = re.match(
             '(\d+) duplicate files \(in (\d+) sets\)', dump
         )
@@ -476,7 +476,7 @@ class Baseline(Program):
         return '1.0'
 
     def parse_statistics(self, dump):
-        return json.loads(dump)
+        return json.loads(dump.decode('utf-8'))
 
 ############################
 #    DATASET GENERATORS    #
@@ -529,7 +529,8 @@ def do_run(programs, dataset):
         program.install()
 
         data, memory_usage = program.run(dataset)
-        print('>> Timing was ', data)
+        print('>> Timing was #run: [time, cpu, dupes, sets]:')
+        pprint.pprint(data)
 
         bench_id = program.get_benchid()
         results['programs'][bench_id] = {}
