@@ -53,10 +53,14 @@ class DeferSizeLabel(Gtk.Bin):
     def _du_finished(self, du_proc, result):
         """Called when the coreutil du finished running. Harvest results."""
         result, du_data, _ = du_proc.communicate_utf8_finish(result)
-        kbytes = int(''.join([num for num in du_data if num.isdigit()]))
+        if du_data:
+            kbytes = int(''.join([num for num in du_data if num.isdigit()]))
+            text = size_to_human_readable(kbytes * 1024)
+        else:
+            text = ''
 
         self.remove(self.get_child())
-        self.add(Gtk.Label(size_to_human_readable(kbytes * 1024)))
+        self.add(Gtk.Label(text))
         self.show_all()
 
 
