@@ -99,7 +99,7 @@ def plot_memory(data):
 
 
 def plot_timing(data):
-    chart = pygal.Bar(CONFIG)
+    chart = pygal.Bar(CONFIG, logarithmic=True)
     _plot_generic(
         data, chart, 'Timing', lambda p: p[VALID_ATTRS['timing']]
     )

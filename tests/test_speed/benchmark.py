@@ -165,6 +165,7 @@ class Program:
                 flush_fs_caches()
 
                 for run_idx in range(1, CFG.n_runs + 1):
+                    print('.. Doing run #' + str(run_idx))
                     start_time = time.time()
                     data_dump = subprocess.check_output(
                         time_cmd,
@@ -179,14 +180,18 @@ class Program:
                         run_benchmarks[run_idx] = [0] * 4
 
                     cpu_usage = read_cpu_usage()
-                    run_benchmarks[run_idx][0] += time_diff / CFG.n_sub_runs
-                    run_benchmarks[run_idx][1] += cpu_usage / CFG.n_sub_runs
+
+                    if run_benchmarks[run_idx][0] > time_diff:
+                        run_benchmarks[run_idx][0] = time_diff
+
+                    if run_benchmarks[run_idx][1] > cpu_usage:
+                        run_benchmarks[run_idx][1] = cpu_usage
 
                     if data_dump:
                         stats = self.parse_statistics(data_dump)
                         if stats:
-                            run_benchmarks[run_idx][2] += stats['dupes']
-                            run_benchmarks[run_idx][3] += stats['sets']
+                            run_benchmarks[run_idx][2] = stats['dupes']
+                            run_benchmarks[run_idx][3] = stats['sets']
 
             # Make valgrind run a bit faster, profit from caches.
             # Also known as 'the big ball of mud'
