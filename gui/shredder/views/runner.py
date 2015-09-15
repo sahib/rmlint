@@ -230,6 +230,7 @@ class RunnerView(View):
         self.last_paths = []
 
         self.chart_stack.set_visible_child_name(ChartStack.LOADING)
+        self.actionbar.set_sensitive(False)
 
     def trigger_run(self, untagged_paths, tagged_paths):
         """Trigger a new run on all paths in `paths`"""
