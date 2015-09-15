@@ -6,24 +6,28 @@ import re
 import sys
 import time
 import json
+import pprint
 import hashlib
+import argparse
 import subprocess
 
 from abc import ABCMeta, abstractmethod
-
-# Easy: Pseudorandom data generation:
-from faker import Faker
-
-faker = Faker()
-faker.seed(0xDEADBEEF)
+from collections import namedtuple, Counter
 
 
-# How often to run the program on the dataset.
-# The fs cache is flushed only the first time.
-N_RUNS = 4
+CFG = namedtuple('Config', [
+    # How often to run the program on the dataset.
+    # The fs cache is flushed only the first time.
+    'n_runs',
 
-# How many times to run each individual program.
-N_SUB_RUNS = 2
+    # How many times to run each individual program.
+    'n_sub_runs',
+
+    # Output directory
+    'output'
+])(3, 2, 'bench-output-{stamp}'.format(
+    stamp=time.strftime('%FT%T%z', time.localtime())
+))
 
 
 def flush_fs_caches():
@@ -38,17 +42,27 @@ def flush_fs_caches():
 
 VALGRIND_MASSIF_PEAK_MEM = '''
 valgrind --tool=massif --log-file=0 --massif-out-file=/tmp/massif.out \
-    {command} >/dev/null 2>/dev/null && \
+    {interp} {command} >/dev/null 2>/dev/null && \
     cat /tmp/massif.out | grep mem_heap_B  | cut -d= -f2 | sort -rn | head -n1
 '''
 
 
 def measure_peak_memory(shell_command):
     try:
+        # Hack to get python scripts working:
+        # (normally a real binary is assumed)
+        interp = ''
+        if '.py' in shell_command:
+            interp = '/usr/bin/python'
+
         peak_bytes_b = subprocess.check_output(
-            VALGRIND_MASSIF_PEAK_MEM.format(command=shell_command), shell=True
+            VALGRIND_MASSIF_PEAK_MEM.format(
+                interp=interp,
+                command=shell_command
+            ),
+            shell=True
         )
-        return int(peak_bytes_b)
+        return int(peak_bytes_b or '0')
     except subprocess.CalledProcessError as err:
         print('!! Unable to execute massif: {err}'.format(err=err))
         return None
@@ -69,14 +83,25 @@ class Program:
     version = ''
     binary_path = None
     website = None
+    script = None
+
+    def __init__(self):
+        # Do the path building now.
+        # Later on we call chdir() which might mess this up:
+        self.build_path = os.path.join(
+            os.path.realpath(os.path.dirname(__file__)),
+            'build_scripts',
+            self.script or ''
+        )
+
+    def get_install(self):
+        if self.script:
+            with open(self.build_path, 'r') as fd:
+                return fd.read()
 
     ####################
     # ABSTRACT METHODS #
     ####################
-
-    @abstractmethod
-    def get_install(self):
-        pass
 
     @abstractmethod
     def get_binary(self):
@@ -86,7 +111,7 @@ class Program:
     def compute_version(self):
         pass
 
-    def get_options(self):
+    def get_options(self, paths):
         return ''
 
     def get_benchid(self):
@@ -127,33 +152,50 @@ class Program:
         run_benchmarks = {}
         memory_usage = -1
 
-        bin_cmd = '' + self.binary_path + ' ' + self.get_options().format(
-            path=dataset.get_path()
-        )
+        paths = dataset.get_paths()
+        bin_cmd = self.binary_path + ' ' + self.get_options(paths)
+
         print('== Executing: {c}'.format(c=bin_cmd))
 
+        time_cmd = '/bin/time --format "%P" \
+            --output /tmp/.cpu_usage -- ' + bin_cmd
+
         try:
-            for _ in range(N_SUB_RUNS):
+            for _ in range(CFG.n_sub_runs):
                 flush_fs_caches()
 
-                for run_idx in range(1, N_RUNS + 1):
+                for run_idx in range(1, CFG.n_runs + 1):
+                    print('.. Doing run #' + str(run_idx))
                     start_time = time.time()
-                    subprocess.check_output(
-                        '/bin/time --format "%P" --output /tmp/.cpu_usage -- ' + bin_cmd,
-                        shell=True, stderr=subprocess.STDOUT
+                    data_dump = subprocess.check_output(
+                        time_cmd,
+                        shell=True,
+                        stderr=subprocess.STDOUT
                     )
 
                     time_diff = time.time() - start_time
 
                     # Remember the time difference as result.
                     if run_idx not in run_benchmarks:
-                        run_benchmarks[run_idx] = [0, 0]
+                        run_benchmarks[run_idx] = [0] * 4
 
-                    run_benchmarks[run_idx][0] += time_diff / N_SUB_RUNS
-                    run_benchmarks[run_idx][1] += read_cpu_usage() / N_SUB_RUNS
+                    cpu_usage = read_cpu_usage()
+
+                    if run_benchmarks[run_idx][0] > time_diff:
+                        run_benchmarks[run_idx][0] = time_diff
+
+                    if run_benchmarks[run_idx][1] > cpu_usage:
+                        run_benchmarks[run_idx][1] = cpu_usage
+
+                    if data_dump:
+                        stats = self.parse_statistics(data_dump)
+                        if stats:
+                            run_benchmarks[run_idx][2] = stats['dupes']
+                            run_benchmarks[run_idx][3] = stats['sets']
 
             # Make valgrind run a bit faster, profit from caches.
             # Also known as 'the big ball of mud'
+            print('-- Measuring peak memory usage using massif. This may take ages.')
             memory_usage = measure_peak_memory(bin_cmd) / 1024 ** 2
             print('-- Memory usage was {b} MB'.format(b=memory_usage))
         except subprocess.CalledProcessError as err:
@@ -161,13 +203,16 @@ class Program:
                 n=self.binary_path, err=err
             ))
 
-        avg_time = sum([v[0] for v in run_benchmarks.values()]) / N_RUNS
-        avg_cpus = sum([v[1] for v in run_benchmarks.values()]) / N_RUNS
+        avg_point = [0] * 4
+        for idx in range(4):
+            avg_point[idx] = sum([v[idx] for v in run_benchmarks.values()])
+            avg_point[idx] /= CFG.n_runs
 
         print('== Took avg time of {t}s / {c}% cpu'.format(
-            t=avg_time, c=avg_cpus
+            t=avg_point[0], c=avg_point[1]
         ))
-        run_benchmarks['average'] = [avg_time, avg_cpus]
+        run_benchmarks['average'] = avg_point
+
         return run_benchmarks, memory_usage
 
     def guess_version(self):
@@ -177,8 +222,7 @@ class Program:
             print('-- Guessed version: ', self.version)
 
     def install(self):
-        """Install the program in /tmp; fetch source from internet.
-        """
+        """Install the program in /tmp; fetch source from internet."""
         temp_dir = self.get_temp_dir()
         temp_bin = os.path.join(temp_dir, self.get_binary())
         current_path = os.getcwd()
@@ -188,14 +232,18 @@ class Program:
 
         if os.path.exists(temp_bin):
             print('-- Path exists: ' + temp_bin)
-            print('-- Skipping install; Delusrete if you need an update.')
+            print('-- Skipping install; Delete if you need an update.')
             self.guess_version()
             os.chdir(current_path)
             return
 
+        sh_procedure = self.get_install()
+        if not sh_procedure:
+            return
+
         try:
             subprocess.check_output(
-                self.get_install(), stderr=subprocess.STDOUT, shell=True
+                sh_procedure, stderr=subprocess.STDOUT, shell=True
             )
             print('-- Installed {n} to {p}'.format(
                 n=self.get_name(), p=temp_dir
@@ -213,25 +261,15 @@ class Program:
             os.chdir(current_path)
 
 
-RMLINT_INSTALL = '''
-git clone https://github.com/sahib/rmlint
-cd rmlint
-git checkout develop
-scons -j4 DEBUG=0
-'''
-
-
 class Rmlint(Program):
     website = 'https://github.com/sahib/rmlint'
+    script = 'rmlint-new.sh'
 
     def get_binary(self):
         return 'rmlint/rmlint'
 
-    def get_install(self):
-        return RMLINT_INSTALL
-
-    def get_options(self):
-        return '-o summary {path} -o json:/tmp/rmlint.json -T df'
+    def get_options(self, paths):
+        return '-o summary -o json:/tmp/rmlint.json -T df ' + ' '.join(paths)
 
     def compute_version(self):
         version_text = subprocess.check_output(
@@ -244,54 +282,55 @@ class Rmlint(Program):
 
         return ""
 
+    def parse_statistics(self, _):
+        try:
+            with open('/tmp/rmlint.json', 'r') as fd:
+                stats = json.loads(fd.read())
+
+            return {
+                'sets': stats[-1]['duplicate_sets'],
+                'dupes': stats[-1]['duplicates']
+            }
+        except OSError:
+            pass
+
 
 class RmlintSpooky(Rmlint):
-    def get_options(self):
-        return '-PP ' + Rmlint.get_options(self)
+
+    def get_options(self, paths):
+        return '-PP ' + Rmlint.get_options(self, paths)
 
     def get_benchid(self):
         return 'rmlint-spooky'
 
 
 class RmlintParanoid(Rmlint):
-    def get_options(self):
-        return '-pp ' + Rmlint.get_options(self)
+
+    def get_options(self, paths):
+        return '-pp ' + Rmlint.get_options(self, paths)
 
     def get_benchid(self):
         return 'rmlint-paranoid'
 
 
-# TODO: This needs work.
-class RmlintCache(Rmlint):
-    def get_options(self):
-        return '-C /tmp/rmlint.json ' + Rmlint.get_options(self)
+class RmlintReplay(Rmlint):
+
+    def get_options(self, paths):
+        return '--replay /tmp/rmlint.json -T df -o summary ' + ' '.join(paths)
 
     def get_benchid(self):
-        return 'rmlint-cache'
-
-
-OLD_RMLINT_INSTALL = '''
-git clone https://github.com/sahib/rmlint
-cd rmlint
-git checkout v1.0.6
-make
-
-# Needed, so that new and old don't get confused.
-mv rmlint rmlint-old
-'''
+        return 'rmlint-replay'
 
 
 class OldRmlint(Program):
     website = 'https://github.com/sahib/rmlint'
+    script = 'rmlint-old.sh'
 
     def get_binary(self):
         return 'rmlint/rmlint-old'
 
-    def get_install(self):
-        return OLD_RMLINT_INSTALL
-
-    def get_options(self):
-        return '{path}'
+    def get_options(self, paths):
+        return ' '.join(paths) + ' -v4'  # log output to stdout
 
     def compute_version(self):
         version_text = subprocess.check_output(
@@ -300,94 +339,152 @@ class OldRmlint(Program):
 
         match = re.search('Version (\d.\d.\d)', str(version_text))
         if match is not None:
-            return ' '.join(match.groups())
+            return ' '.join(match.groups()).strip()
 
         return ""
 
+    def parse_statistics(self, dump):
+        dups, sets = 0, 0
+        for line in dump.splitlines():
+            if line.startswith(b'ORIG'):
+                sets += 1
+                dups += 1
 
+            if line.startswith(b'DUPL'):
+                dups += 1
 
-DUPD_INSTALL = '''
-git clone https://github.com/jvirkki/dupd
-cd dupd
-make -j4
-'''
+        return {
+            'dupes': dups,
+            'sets': sets
+        }
 
 
 class Dupd(Program):
     website = 'http://rdfind.pauldreik.se'
-
-    def get_install(self):
-        return DUPD_INSTALL
+    script = 'dupd.sh'
+    stats_file = '/tmp/rmlint-bench/.dupd.stats'
 
     def get_binary(self):
         return 'dupd/dupd'
 
-    def get_options(self):
-        return 'scan --path {path}'
+    def get_options(self, paths):
+        try:
+            os.remove(self.stats_file)
+        except OSError:
+            pass
+
+        args = ' '.join(['--path ' + path for path in paths])
+        return 'scan ' + args + '--nodb --stats-file ' + self.stats_file
 
     def compute_version(self):
         return subprocess.check_output(
             'dupd/dupd version', shell=True
-        ).decode('utf-8')
+        ).decode('utf-8').strip()
 
+    def parse_statistics(self, _):
+        stats = {}
 
-RDFIND_INSTALL = '''
-wget http://rdfind.pauldreik.se/rdfind-1.3.4.tar.gz
-tar xvf rdfind-1.3.4.tar.gz
-cd rdfind-1.3.4
-./configure
-make
-'''
+        try:
+            with open(self.stats_file, 'r') as fd:
+                for line in fd:
+                    line = line.strip()
+                    if line:
+                        key, value = line.split(' ', 1)
+                        stats[key] = value
+            return {
+                'dupes': int(stats['stats_duplicate_files']),
+                'sets': int(stats['stats_duplicate_sets'])
+            }
+        except OSError:
+            pass
+        except ValueError as err:
+            print('doh', err)
 
 
 class Rdfind(Program):
     website = 'https://github.com/jvirkki/dupd'
-
-    def get_install(self):
-        return RDFIND_INSTALL
+    script = 'rdfind.sh'
+    result_file = '/tmp/rmlint-bench/.rdfind.results'
 
     def get_binary(self):
         return 'rdfind-1.3.4/rdfind'
 
-    def get_options(self):
-        return '-ignoreempty true -removeidentinode false -checksum sha1 -dryrun true {path}'
+    def get_options(self, paths):
+        return '-ignoreempty true -removeidentinode \
+            false -checksum sha1 -dryrun true \
+            -outputname ' + self.result_file + ' '.join(paths)
 
     def compute_version(self):
         words = subprocess.check_output(
             'rdfind-1.3.4/rdfind --version', shell=True
         ).decode('utf-8')
 
-        return words.split(' ')[-1]
+        return words.split(' ')[-1].strip()
 
+    def parse_statistics(self, _):
+        try:
+            stats = Counter()
+            with open(self.result_file, 'r') as fd:
+                for line in fd:
+                    line = line.strip()
+                    if line:
+                        stats[line.split()[0]] += 1
 
-FDUPES_INSTALL = '''
-git clone https://github.com/adrianlopezroche/fdupes.git
-cd fdupes
-make
-'''
+            return {
+                'dupes': stats['DUPTYPE_WITHIN_SAME_TREE'],
+                'sets': stats['DUPTYPE_FIRST_OCCURRENCE']
+            }
+        except OSError:
+            pass
+        except ValueError:
+            pass
 
 
 class Fdupes(Program):
     website = 'http://en.wikipedia.org/wiki/Fdupes'
-
-    def get_install(self):
-        return FDUPES_INSTALL
+    script = 'fdupes.sh'
 
     def get_binary(self):
         return 'fdupes/fdupes'
 
-    def get_options(self):
-        return '-f -q -rnH {path}'
+    def get_options(self, paths):
+        return '-f -q -rnH -m ' + ' '.join(paths)
 
     def parse_statistics(self, dump):
-        lines = dump.splitlines()
-        empty = sum(bool(line.strip()) for line in lines)
-        return empty, len(lines) - empty
+        dump = dump.decode('utf-8')
+        match = re.match(
+            '(\d+) duplicate files \(in (\d+) sets\)', dump
+        )
+
+        if match:
+            return {
+                'dupes': int(match.group(1)),
+                'sets': int(match.group(2))
+            }
 
     def compute_version(self):
         return subprocess.check_output(
             'fdupes/fdupes --version', shell=True
-        ).decode('utf-8')
+        ).decode('utf-8').strip()
+
+
+class Baseline(Program):
+    website = 'https://github.com/sahib/rmlint/blob/develop\
+/tests/test_speed/build_scripts/baseline.sh'
+
+    script = 'baseline.sh'
+
+    def get_binary(self):
+        return 'baseline/baseline.py'
+
+    def get_options(self, paths):
+        return ' '.join(paths)
+
+    def compute_version(self):
+        return '1.0'
+
+    def parse_statistics(self, dump):
+        return json.loads(dump.decode('utf-8'))
 
 ############################
 #    DATASET GENERATORS    #
@@ -397,17 +494,8 @@ class Fdupes(Program):
 class Dataset:
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, basedir=None):
+    def __init__(self, name):
         self.name = name
-        if basedir is not None:
-            self.workpath = os.path.join(basedir, name)
-
-            try:
-                os.makedirs(self.workpath)
-            except OSError:
-                pass
-        else:
-            self.workpath = None
 
     ####################
     # ABSTRACT METHODS #
@@ -418,82 +506,172 @@ class Dataset:
         pass
 
     @abstractmethod
-    def get_path(self):
+    def get_paths(self):
         pass
 
 
 class ExistingDataset(Dataset):
+
+    def __init__(self, name, paths):
+        Dataset.__init__(self, name)
+        self.paths = paths
+
     def generate(self):
         pass
 
-
-class UsrDataset(ExistingDataset):
-    def get_path(self):
-        return '/usr'
+    def get_paths(self):
+        return self.paths
 
 
-class HomeDataset(ExistingDataset):
-    def get_path(self):
-        return '/home/sahib'
+def do_run(programs, dataset):
+    results = {
+        'metadata': {
+            'path': dataset.get_paths(),
+            'n_runs': CFG.n_runs,
+            'n_sub_runs': CFG.n_sub_runs
+        },
+        'programs': {}
+    }
+
+    benchmark_json_path = os.path.join(
+        CFG.output,
+        'benchmark_{name}.json'.format(
+            name=dataset.name.replace('/', '\\')
+        )
+    )
+
+    for program in programs:
+        program.install()
+
+        data, memory_usage = program.run(dataset)
+        print('>> Timing was #run: [time, cpu, dupes, sets]:')
+        pprint.pprint(data)
+
+        bench_id = program.get_benchid()
+        results['programs'][bench_id] = {}
+        results['programs'][bench_id]['version'] = program.version
+        results['programs'][bench_id]['website'] = program.get_website()
+        results['programs'][bench_id]['numbers'] = data
+        results['programs'][bench_id]['memory'] = memory_usage
+
+        print('-- Writing current benchmark results to', benchmark_json_path)
+        with open(benchmark_json_path, 'w') as json_file:
+            json_file.write(json.dumps(results, indent=4))
 
 
-class MusicDataset(ExistingDataset):
-    def get_path(self):
-        return '/run/media/sahib/35d4a401-ad4c-4221-afc0-f284808a1cdc/music'
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-r", "--run", help="Run the benchmarks.",
+        dest='do_run', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-i", "--install", help="Install all competitors from source.",
+        dest='do_install', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-g", "--generate", help="Generate datasets.",
+        dest='do_generate', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-v", "--print-versions", help="Print versions of programs.",
+        dest='do_print_versions', default=False, action='store_true'
+    )
+    parser.add_argument(
+        "-d", "--dataset",
+        help="Dataset to run on. Can be given multiple times.",
+        dest='datasets', action='append'
+    )
+    parser.add_argument(
+        "-p", "--program",
+        help="Choose program to run. Can be given multiple times.",
+        dest='programs', action='append'
+    )
+    return parser.parse_args()
 
 
-class UniqueNamesDataset(Dataset):
-    def generate(self):
-        for idx in range(10 ** 4):
-            name = faker.name()
-            path = os.path.join(self.workpath, str(idx))
-            with open(path, 'w') as handle:
-                handle.write(name * 1024 * 16)
+def main():
+    datasets = [
+        ExistingDataset('usr', ['/usr']),
+        ExistingDataset('tmp', ['/tmp']),
+        ExistingDataset('tmpvar', ['/tmp', '/var']),
+        ExistingDataset('usrvar', ['/usr', '/var']),
+        ExistingDataset('usr_music', ['/usr', '/mnt/music']),
+        ExistingDataset('home', ['/home/sahib'])
+    ]
 
-    def get_path(self):
-        return self.workpath
+    options = parse_arguments()
+
+    # Make specifying absolute paths to -d possible.
+    for dataset_name in options.datasets:
+        if dataset_name.startswith('/'):
+            datasets.append(ExistingDataset(
+                dataset_name,
+                [dataset_name]
+            ))
+
+    if options.do_generate or options.datasets:
+        for dataset in datasets:
+            if dataset in options.datasets or len(options.datasets) is 0:
+                dataset.generate()
+
+    programs = [
+        # (hopefully) slowest:
+        Baseline(),
+        # Current:
+        Rmlint(),
+        RmlintSpooky(),
+        RmlintParanoid(),
+        RmlintReplay(),
+        # Old rmlint:
+        OldRmlint(),
+        # Actual competitors:
+        Fdupes(),
+        Rdfind(),
+        Dupd()
+    ]
+
+    # Filter the `programs` list if necessary.
+    if options.programs:
+        options.programs = set(options.programs)
+        programs = [p for p in programs if p.get_benchid() in options.programs]
+
+    if not programs:
+        print('!! No valid programs given.')
+        return
+
+    # Do the install procedure only:
+    if options.do_install:
+        for program in programs:
+            print('++ Installing ' + program.get_name() + ':')
+            program.install()
+
+    # Print informative version if needed.
+    if options.do_print_versions:
+        current_path = os.getcwd()
+        for program in programs:
+            os.chdir(program.get_temp_dir())
+            print(program.get_binary() + ':', program.compute_version())
+
+        os.chdir(current_path)
+
+    # Execute the actual run:
+    if options.do_run:
+        # Make sure the output directory exists:
+        try:
+            os.mkdir(CFG.output)
+        except OSError:
+            pass
+
+        for dataset_name in options.datasets:
+            for dataset in datasets:
+                if dataset.name == dataset_name:
+                    try:
+                        do_run(programs, dataset)
+                        break
+                    except KeyboardInterrupt:
+                        print(' Interrupted this run. Next dataset.')
 
 
 if __name__ == '__main__':
-    datasets = [
-        # UsrDataset('usr'),
-        # UniqueNamesDataset('names', sys.argv[1])
-        # MusicDataset('music')
-        HomeDataset('home')
-    ]
-
-    for dataset in datasets:
-        # Generate the data in the dataset:
-        dataset.generate()
-
-        results = {
-            'metadata': {
-                'path': dataset.get_path(),
-                'n_runs': N_RUNS,
-                'n_sub_runs': N_SUB_RUNS
-            },
-            'programs': {}
-        }
-
-        programs = [
-            OldRmlint(),
-            Fdupes(), Rdfind(), Dupd(),
-            RmlintSpooky(), RmlintParanoid(), Rmlint(), RmlintCache()
-        ]
-
-        for program in programs:
-            program.install()
-            data, memory_usage = program.run(dataset)
-            print('>> Timing was ', data)
-
-            bench_id = program.get_benchid()
-            results['programs'][bench_id] = {}
-            results['programs'][bench_id]['version'] = program.version
-            results['programs'][bench_id]['website'] = program.get_website()
-            results['programs'][bench_id]['numbers'] = data
-            results['programs'][bench_id]['memory'] = memory_usage
-
-        benchmark_json_path = 'benchmark_{name}.json'.format(name=dataset.name)
-        print('-- Writing benchmark to benchmark.json')
-        with open('benchmark.json', 'w') as json_file:
-            json_file.write(json.dumps(results, indent=4))
+    main()
