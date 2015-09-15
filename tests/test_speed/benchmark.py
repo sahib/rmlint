@@ -464,6 +464,9 @@ class Fdupes(Program):
 
 
 class Baseline(Program):
+    website = 'https://github.com/sahib/rmlint/blob/develop\
+/tests/test_speed/build_scripts/baseline.sh'
+
     script = 'baseline.sh'
 
     def get_binary(self):
@@ -525,6 +528,13 @@ def do_run(programs, dataset):
         'programs': {}
     }
 
+    benchmark_json_path = os.path.join(
+        CFG.output,
+        'benchmark_{name}.json'.format(
+            name=dataset.name.replace('/', '\\')
+        )
+    )
+
     for program in programs:
         program.install()
 
@@ -539,16 +549,9 @@ def do_run(programs, dataset):
         results['programs'][bench_id]['numbers'] = data
         results['programs'][bench_id]['memory'] = memory_usage
 
-    benchmark_json_path = os.path.join(
-        CFG.output,
-        'benchmark_{name}.json'.format(
-            name=dataset.name.replace('/', '\\')
-        )
-    )
-
-    print('-- Writing benchmark to', benchmark_json_path)
-    with open(benchmark_json_path, 'w') as json_file:
-        json_file.write(json.dumps(results, indent=4))
+        print('-- Writing current benchmark results to', benchmark_json_path)
+        with open(benchmark_json_path, 'w') as json_file:
+            json_file.write(json.dumps(results, indent=4))
 
 
 def parse_arguments():
@@ -588,7 +591,7 @@ def main():
         ExistingDataset('tmp', ['/tmp']),
         ExistingDataset('tmpvar', ['/tmp', '/var']),
         ExistingDataset('usrvar', ['/usr', '/var']),
-        ExistingDataset('usrhome', ['/usr', '/home/sahib']),
+        ExistingDataset('usr_music', ['/usr', '/mnt/music']),
         ExistingDataset('home', ['/home/sahib'])
     ]
 

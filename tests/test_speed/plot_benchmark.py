@@ -7,6 +7,7 @@ import sys
 import json
 import glob
 import argparse
+import statistics
 
 # External:
 import pygal
@@ -14,58 +15,151 @@ import pygal
 from pygal.style import LightSolarizedStyle
 
 
-VALID_ARGS = {
+VALID_ATTRS = {
     'timing': 0,
     'cpu_usage': 1,
     'dupes': 2,
     'sets': 3
 }
 
+LightSolarizedStyle.background = '#FFFFFF'
 
-def plot(data, attr_key=VALID_ARGS['timing']):
-    bar_chart = pygal.Bar(style=LightSolarizedStyle)
-    bar_chart.title = 'Performance comparasion on {path}'.format(
+CONFIG = pygal.Config()
+CONFIG.human_readable = True
+CONFIG.tooltip_fancy_mode = True
+CONFIG.style = LightSolarizedStyle
+
+
+def unpack(chart, data, bench_name, add_x_labels=True):
+    chart.title = '{name} comparison on {path}'.format(
+        name=bench_name,
         path=data['metadata']['path']
     )
-    bar_chart.y_title = 'Averaged seconds over {rn} runs'.format(
-        rn=data['metadata']['n_sub_runs']
-    )
+
+    if bench_name:
+        chart.y_title = 'Averaged {name} over {rn} runs'.format(
+            rn=data['metadata']['n_sub_runs'],
+            name=bench_name
+        )
 
     n_runs = data['metadata']['n_runs']
-    labels = ['Run #' + str(i + 1) for i in range(n_runs)]
-    bar_chart.x_labels = labels + ['Average']
+    if add_x_labels:
+        labels = ['Run #' + str(i + 1) for i in range(n_runs)]
+        chart.x_labels = labels + ['Average']
 
     for program in sorted(data['programs']):
         result = data['programs'][program]
 
-        numbers = []
+        points = []
         for key in [str(run + 1) for run in range(n_runs)] + ['average']:
-            timing, cpu_usage, dupes, sets = result['numbers'][key]
-            value = result['numbers'][key][attr_key]
+            points.append(result['numbers'][key])
 
+        yield program, result, points
+
+
+def format_tooltip(program, memory, version):
+    return '{name} ({ver}): Peakmem: {mem}M'.format(
+        name=program,
+        ver=version,
+        mem=round(memory, 2)
+    )
+
+
+def _plot_generic(data, chart, name, key):
+    for program, metadata, points in unpack(chart, data, name):
+        numbers = []
+
+        for point in points:
             numbers.append({
-                'value': round(value, 3),
-                'label': '{name} ({ver}): Peak: {mem}M CPU: {cpu}%'.format(
-                    name=program,
-                    ver=result['version'],
-                    mem=round(result['memory'], 2),
-                    cpu=cpu_usage
+                'value': round(key(point), 3),
+                'label': format_tooltip(
+                    program,
+                    metadata['memory'],
+                    metadata['version']
                 ),
-                'xlabel': result.get('website')
+                'xlink': metadata.get('website')
             })
 
-        bar_chart.add(program, numbers)
+        chart.add(program, numbers)
 
-    return bar_chart.render()
+
+def plot_memory(data):
+    chart = pygal.Pie(CONFIG, inner_radius=.4)
+
+    points = []
+    unpacked = unpack(chart, data, 'memory', add_x_labels=False)
+    for program, metadata, _ in unpacked:
+        points.append((metadata['memory'], program))
+
+    points.sort()
+    for memory, program in points:
+        chart.add(program, memory)
+
+    return chart.render(is_unicode=True)
+
+
+def plot_timing(data):
+    chart = pygal.Bar(CONFIG)
+    _plot_generic(
+        data, chart, 'Timing', lambda p: p[VALID_ATTRS['timing']]
+    )
+
+    return chart.render(is_unicode=True)
+
+
+def plot_cpu_usage(data):
+    chart = pygal.Bar(CONFIG)
+    _plot_generic(
+        data, chart, 'CPU usage', lambda p: p[VALID_ATTRS['cpu_usage']]
+    )
+
+    return chart.render(is_unicode=True)
+
+
+def plot_found_results(data):
+    chart = pygal.Pie(CONFIG, inner_radius=.4)
+
+    results = []
+    unpacked = unpack(chart, data, 'Found results', add_x_labels=False)
+    for program, metadata, points in unpacked:
+        average = points[-1]
+
+        results.append(([
+            average[VALID_ATTRS['dupes']],
+            average[VALID_ATTRS['sets']],
+            statistics.variance([p[2] for p in points[:-1]]),
+            statistics.variance([p[3] for p in points[:-1]])
+        ], program))
+
+    labels = [
+        'Dupes found',
+        'Set of dupes',
+        'Dupevariance between runs',
+        'Setvariance between runs'
+    ]
+
+    results.sort()
+
+    for point, program in results:
+        chart.add(
+            program, [{
+                'value': value,
+                'label': '{v} {l}'.format(
+                    v=value, l=labels[idx]
+                )
+            } for idx, value in enumerate(point)]
+        )
+
+    return chart.render(is_unicode=True)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "input_dir", help="Directory with bench files"
+        'input_dir', help='Directory with bench files'
     )
     parser.add_argument(
-        "output_dir", help="Where to store the plots", nargs='?'
+        'output_dir', help='Where to store the plots', nargs='?'
     )
 
     return parser.parse_args()
@@ -87,18 +181,26 @@ def main():
 
     os.makedirs(options.output_dir, exist_ok=True)
 
+    PLOT_FUNCS = {
+        'timing': plot_timing,
+        'memory': plot_memory,
+        'cpu_usage': plot_cpu_usage,
+        'found_items': plot_found_results
+    }
+
     for path in glob.glob(os.path.join(options.input_dir, '*.json')):
         with open(path, 'r') as handle:
             data = json.loads(handle.read())
-            for attr, attr_id in VALID_ARGS.items():
-                svg = plot(data, attr_id)
+            for attr, plot_func in PLOT_FUNCS.items():
+                svg = plot_func(data)
 
                 output_path = os.path.join(
                     options.output_dir,
                     attr + '-' + os.path.basename(path) + '.svg'
                 )
 
-                with open(output_path, 'wb') as handle:
+                print('Writing:', output_path)
+                with open(output_path, 'w') as handle:
                     handle.write(svg)
 
 

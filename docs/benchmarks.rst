@@ -1,10 +1,24 @@
 Benchmarks
 ==========
 
-We will post some benchmark results here once the respective scripts
-are ready enough. Here, have some early one to see what they look like:
+This page contains the images that our benchmark suite renders for the current
+release. Inside the benchmark suite, ``rmlint`` is *challenged* against other
+popular and some less known duplicate finders. Apart from that a very dumb
+duplicate finder called ``baseline.py`` is used to see how bad it could be.
 
-.. image:: _static/benchmark.svg
+.. image:: _static/benchmarks/timing.svg
+   :width: 75%
+   :align: center
+
+.. image:: _static/benchmarks/cpu_usage.svg
+   :width: 75%
+   :align: center
+
+.. image:: _static/benchmarks/memory.svg
+   :width: 75%
+   :align: center
+
+.. image:: _static/benchmarks/found_items.svg
    :width: 75%
    :align: center
 
