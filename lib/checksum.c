@@ -76,7 +76,7 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_ke
 }
 
 void rm_buffer_pool_destroy(RmBufferPool *pool) {
-    rm_log_info(BLUE"Info: had %lu unused read buffers\n"RESET, pool->min_buffers);
+    rm_log_debug(BLUE"had %lu unused read buffers\n"RESET, pool->min_buffers);
     while(pool->stack != NULL) {
         rm_buffer_free(g_trash_stack_pop(&pool->stack));
     }

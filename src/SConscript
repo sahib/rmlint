@@ -12,7 +12,7 @@ Import('create_uninstall_target')
 Import('library')
 
 programs = []
-for progname in ['rmlint', 'rmhash']:
+for progname in ['rmlint']:
     print("Building " + progname)
     program = env.Program(
         '../' + progname, [progname + '.c', library]

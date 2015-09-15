@@ -45,6 +45,7 @@
 #include "utilities.h"
 #include "formats.h"
 #include "replay.h"
+#include "hash-utility.h"
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
@@ -142,10 +143,22 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
 static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
     for(int i = 0; i < argc; i++) {
         if(g_strcmp0("--gui", argv[i]) == 0) {
+            argv[i] = "shredder";
             rm_cmd_start_gui(argc - i - 1, &argv[i + 1]);
 
             /* We returned? Something's wrong */
             return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
+    for(int i = 0; i < argc; i++) {
+        if(g_strcmp0("--hash", argv[i]) == 0) {
+            argv[i] = argv[0];
+            exit(rm_hasher_main(argc - i, &argv[i]));
         }
     }
 
@@ -1175,6 +1188,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         return false;
     }
 
+    if(rm_cmd_maybe_switch_to_hasher(argc, (const char **)argv) == EXIT_FAILURE) {
+        return false;
+    }
+
     /* List of paths we got passed (or NULL) */
     char **paths = NULL;
 
@@ -1271,9 +1288,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          _("Show the manpage"), NULL},
         {"version", 0, EMPTY, G_OPTION_ARG_CALLBACK, rm_cmd_show_version,
          _("Show the version & features"), NULL},
-        /* Dummy option for --help output only: */
+        /* Dummy options for --help output only: */
         {"gui", 0, 0, G_OPTION_ARG_NONE, NULL,
-         _("If installed, start the optional gui with all following args"), NULL},
+         _("If installed, start the optional gui. (see also --gui --help)"), NULL},
+        {"hash", 0, 0, G_OPTION_ARG_NONE, NULL,
+         _("Work like sha1sum for all supported hash algorithms (see also --hash --help)"), NULL},
 
         /* Special case: accumulate leftover args (paths) in &paths */
         {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &paths, "", NULL},
