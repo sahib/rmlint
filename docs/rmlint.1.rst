@@ -31,12 +31,14 @@ If no directories or files were given, the current working directory is assumed.
 traversing. 
 
 Found duplicates are divided into the original and duplicates. Original
-are what ``rmlint`` thinks to be the file that was first there. You can drive
+are what ``rmlint`` thinks to be the file that the user wants to keep. You can drive
 the original detection with the `-S` option. If you know which path contains the
-originals you can prefix the path with **//**, 
+originals you can name the path after giving the special path **//**, 
 
-**Note:** ``rmlint`` will not delete any files. It only produces executable output
-for you to remove it.
+``rmlint`` will not delete any files. It only produces executable output (for example
+in the form of a shell script) for you to remove it.
+
+Examples are given at the end of this manual.
 
 OPTIONS
 =======
@@ -75,12 +77,12 @@ General Options
         # -ed is recognized as -e and -d here, -d takes "-s 10M" as parameter.
         # This will fail to do the supposed, finding also files smaller than 10M.
         $ rmlint -T all -ef -ed -s10M /media/music/  
-        # Actual user wanted to do this:
+        # Actually, user wanted to do this:
         $ rmlint -T "all -ef -ed" -s10M /media/music
 
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
-    Configure the way rmlint outputs it's results. You link a formatter to a
+    Configure the way ``rmlint`` outputs it's results. You link a formatter to a
     file through ``spec``. A file might either be an arbitrary path or ``stdout`` or ``stderr``.
     If file is omitted, ``stdout`` is assumed.
 
@@ -105,7 +107,7 @@ General Options
 :``-z --perms[=[rwx]]`` (**default\:** *no check*):
 
     Only look into file if it is readable, writable or executable by the current user.
-    Which one of the can be given as argument as one of *rwx*. 
+    Which one of the can be given as argument as one of *"rwx"*. 
 
     If no argument is given, *"rw"* is assumed. Note that *r* does basically
     nothing user-visible since ``rmlint`` will ignore unreadable files anyways.
@@ -118,10 +120,10 @@ General Options
     Choose the hash algorithm to use for finding duplicate files.
     The following well-known algorithms are available:
 
-    **spooky**, **city**, **murmur**, **md5**.  **sha1**, **sha256**,
+    **spooky**, **city**, **murmur**, **md5**, **sha1**, **sha256**,
     **sha512**.
 
-    If not explicitly stated in the name the hash functions use 128 bit.
+    If not explicitly stated in the name the hash functions use a length of 128 bit.
     There are variations of the above functions:
 
     * **bastard:** 256bit, half seeded **city**, half **murmur**. 
@@ -132,8 +134,9 @@ General Options
 :``-v --loud`` / ``-V --quiet``:
     
     Increase or decrease the verbosity. You can pass these options several
-    times. This only affects rmlint's logging on *stderr*, but not the outputs
-    defined with **-o**.
+    times. This only affects ``rmlint``'s logging on *stderr*, but not the outputs
+    defined with **-o**. Passing either option more than three times has no
+    effect.
 
 :``-g --progress`` / ``-G --no-progress`` (**default**):
 
@@ -145,7 +148,7 @@ General Options
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
-    Increase the paranoia of rmlint's internals. Both options can be specified up
+    Increase the paranoia of ``rmlint``'s internals. Both options can be specified up
     to two times. They do not do any work themselves, but set some other
     options implicitly as a shortcut. 
 
@@ -160,24 +163,25 @@ General Options
     * **-P** is equivalent to **--algorithm bastard**
     * **-PP** is equivalent to **--algorithm spooky**
 
-:``-D --merge-directories`` (**[experimental] default\:** *disabled*):
+:``-D --merge-directories`` (**default\:** *disabled*):
 
     Makes rmlint use a special mode where all found duplicates are collected and
-    checked if whole directory trees are duplicates. This is an HIGHLY
-    EXPERIMENTAL FEATURE and was/is tricky to implement right. Use with caution.
-    You always should make sure that the investigated directory is not modified 
-    during rmlint or it's removal scripts run. 
+    checked if whole directory trees are duplicates. Use with caution: You
+    always should make sure that the investigated directory is not modified
+    during ``rmlint``'s or it's removal scripts run. 
 
     Output is deferred until all duplicates were found.
     Sole duplicate groups are printed after the directories.
 
     **--rank-by** applies for directories too, but 'p' or 'P' (path index)
-    has no defined (useful) meaning. Sorting takes only place when the number of
+    has no defined (i.e. useful) meaning. Sorting takes only place when the number of
     preferred files in the directory differs. 
 
-    *Notes:*
+    **NOTES:**
 
-    * This option pulls in ``--partial-hidden`` and ``-@`` (``--see-symlinks``) for convenience.
+    * This option enables ``--partial-hidden`` and ``-@`` (``--see-symlinks``)
+      for convenience. If this is not desired, you should change this after
+      specifying ``-D``.
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
     * Consider using ``-@`` together with this option (this is the default).
@@ -204,12 +208,12 @@ General Options
     All following options are passed to the gui application.
 
     This will only work when ``Shredder`` and it's dependencies were installed
-    in prior.
+    in prior. See also: http://rmlint.readthedocs.org/en/latest/gui.html
 
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them. 
-    If you pipe `rmlints` output to a file -W is assumed automatically.
+    If you pipe `rmlints` output to a file ``-W`` is assumed automatically.
 
 :``-h --help`` / ``-H --show-man``:
 
@@ -235,7 +239,8 @@ Traversal Options
     The size format is about the same as `dd(1)` uses. Example: **"100KB-2M"**.
 
     It's also possible to specify only one size. In this case the size is
-    interpreted as "up to this size".
+    interpreted as *"bigger than this size"*. If you want to to filter for files
+    *up to this size* you can add a ``-`` in front (``-s -1M``).
 
 :``-d --max-depth=depth`` (**default\:** *INF*):
 
@@ -249,19 +254,17 @@ Traversal Options
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
-    Follow symbolic links? If file system loops occur ``rmlint`` will detect this.
-    If `-F` is specified, symbolic links will be ignored completely, if 
-    ``-@`` is ``rmlint`` will see symlinks an treats them
-    like small files with the path to their target in them. The latter is the
-    default behaviour, since it is a sensible default for ``--merge-directories``.
-
-    **Note:** Hardlinks are always ,,followed'', but it depends on ``-L`` how those are
-    handled. 
+    ``-f`` will always follow symbolic links. If file system loops occur
+    ``rmlint`` will detect this. If `-F` is specified, symbolic links will be
+    ignored completely, if ``-@`` is specified, ``rmlint`` will see symlinks and
+    treats them like small files with the path to their target in them. The
+    latter is the default behaviour, since it is a sensible default for
+    ``--merge-directories``.
 
 :``-x --crossdev`` (**default**) / ``-X --no-crossdev``:
 
-    Do cross over mount points (``-x``)? Or stay always on the same device
-    (``-X``)?
+    Do cross over mount points (``-x``)? 
+    Or stay always on the same device (``-X``)?
 
 :``-r --hidden`` / ``-R --no-hidden`` (**default**) / ``--partial-hidden``:
 
@@ -316,18 +319,20 @@ Traversal Options
 Original Detection Options
 --------------------------
 
-:``-k --keep-all-tagged`` / ``-K --keep-all-untagged`` 
+:``-k --keep-all-tagged`` / ``-K --keep-all-untagged``:
 
     Don't delete any duplicates that are in tagged paths (``-k``) or that are
     in non-tagged paths (``-K``).
     (Tagged paths are those that were named after **//**).
 
-:``-m --must-match-tagged`` / ``-M --must-match-untagged``
+:``-m --must-match-tagged`` / ``-M --must-match-untagged``:
 
-    Only look for duplicates of which one is in tagged paths.
+    Only look for duplicates of which at least one is in one of the tagged paths.
     (Paths that were named after **//**).
 
 :``-S --rank-by=criteria`` (**default\:** *pm*):
+
+    Sort the files in a group of duplicates by one or more criteria.    
 
     - **m**: keep lowest mtime (oldest)       **M**: keep highest mtime (newest)
     - **a**: keep first alphabetically        **A**: keep last alphabetically
@@ -342,7 +347,7 @@ Original Detection Options
     Tip: **l** is useful for files like `file.1.mp3 vs file.mp3`.
 
     The abbreviation is unfortunate, ``-S`` should stand for ``--sort-by`` and
-    ``--sort-by``'s ``-y`` should be used here.
+    ``--sort-by``'s ``-y`` should be used here. This is historical.
 
 Caching
 -------
@@ -356,7 +361,8 @@ Caching
     merge all files given and output them as one big run.
 
     If you want to view only the duplicates of certain subdirectories, just pass
-    them on the commandline as usual.
+    them on the commandline as usual or give no directory and ``cd`` to the
+    directory you want to filter.
  
     The ``path.json`` argument is optional, if not given the it is assumed that
     there is a `rmlint.json` in the current working directory.
@@ -370,12 +376,13 @@ Caching
     Read or write cached checksums from the extended file attributes.
     This feature can be used to speed up consecutive runs.
 
-    The same notes as in ``--cache`` apply.
+    This is an slighter securer alternative to ``--cache``, but the same notes
+    as in ``--cache`` apply.
 
     **NOTE:** Many tools do not support extended file attributes properly,
     resulting in a loss of the information when copying the file or editing it.
     Also, this is a linux specific feature that works not on all filesystems and 
-    only if you write permissions to the file.
+    only if you have write permissions to the file.
 
 :``-C --cache file.json``:
 
@@ -398,8 +405,7 @@ Caching
     the cached json file will not be of use when doing many modifications
     between the runs, i.e. causing an update of `mtime` on most files. This
     feature is mostly intended for large datasets in order to prevent the
-    re-hashing of large files. If you want to ensure this, you can use
-    ``--size``.
+    re-hashing of large files. 
 
 :``-U --write-unfinished``: 
 
@@ -455,23 +461,23 @@ Rarely used, miscellaneous Options
     Swap certain file metadata attributes onto disk in order to save memory.
     This can help to save memory for very big datasets (several million files)
     where storing the paths alone can eat up several GB RAM.
-    Enabling swapping may cause slowdowns in exchange.
+    Enabling swapping will cause slowdowns in exchange.
 
     Sometimes the difference may be very subtle since all paths in rmlint are
-    stored by common prefix, i.e. for long but mostly identically paths the
+    stored by common prefix, i.e. for long but mostly identically paths only the
     point after the difference is stored. 
 
     This feature may not play nice with some other options, causing heavy load
     and long computations: 
     
-    - The ``--match-*`` family of options (long )
+    - The ``--match-*`` family of options.
     - ``--cache`` might use more memory and takes longer.
-    - ``--merge-directories`` will not car about using the metadata cache yet.
 
     Some of those restrictions might be removed in future ``rmlint`` versions.
 
-    The metadata cache will be stored in ``$XDG_CACHE_HOME/rmlint/$pid``.
-    If the cache cannot be created, ``rmlint`` falls back to no caching mode.
+    The metadata cache will be stored in ``$XDG_CACHE_HOME/rmlint/$pid``. If the
+    cache cannot be created, ``rmlint`` warns you and falls back to normal
+    uncached mode.
     
 FORMATTERS
 ==========
@@ -491,7 +497,7 @@ FORMATTERS
     The command can be any valid ``/bin/sh``-expression. The duplicate 
     path and original path can be accessed via ``"$1"`` and ``"$2"``. 
     Not the actual command will be written to the script, but the content 
-    of the ``user_command`` function will be replaced with it.
+    of the ``user_command`` function in the ``sh``-file will be replaced with it.
 
   * *handler* Define a comma separated list of handlers to try on duplicate
     files in that given order until one handler succeeds. Handlers are just the
@@ -558,7 +564,7 @@ FORMATTERS
   is activated as default.
 
 * ``summary``: Shows counts of files and their respective size after the run.
-  Also list all written files.
+  Also list all written output files. 
 
 * ``fdupes``: Prints an output similar to the popular duplicate finder
   **fdupes(1)**. At first a progressbar is printed on **stderr.** Afterwards the
@@ -598,7 +604,7 @@ This is a collection of common usecases and other tricks:
 
   ``$ rmlint large_dir/ # First run; writes rmlint.json``
 
-  ``$ rmlint -C rmlint.json large_dir # Reads checksums from rmlint.json``
+  ``$ rmlint --replay rmlint.json large_dir``
 
 * Search only for duplicates and duplicate directories
 
@@ -635,7 +641,7 @@ This is a collection of common usecases and other tricks:
 * Use *data* as master directory with all originals. Find only duplicates that are
   in *data* and *backup*. Do not delete any files in *data*:
 
-  ``$ rmlint backup/ // data/ --keep-all-tagged --must-match-tagged``
+  ``$ rmlint backup // data --keep-all-tagged --must-match-tagged``
 
 PROBLEMS
 ========
@@ -646,7 +652,10 @@ PROBLEMS
    hashfunctions may, in theory, map two different files to the same
    fingerprint. This happens about once in 2 ** 64 files. Since ``rmlint`` computes 
    at least 3 hashes per file and requires them to be the same size, it's very
-   unlikely to happen. If you're really wary, try the *--paranoid* option.
+   unlikely to happen. If you're really wary, try the ``--paranoid`` (``-pp``)
+   option. This will compare all the files incrementally in a pretty fast way
+   with zero collision chance.
+
 2. **File modification during or after rmlint run:** It is possible that a file
    that ``rmlint`` recognized as duplicate is modified afterwards, resulting in a
    different file.  This is a general problem and cannot be solved from ``rmlint's``
@@ -659,6 +668,7 @@ SEE ALSO
 
 * `find(1)`
 * `rm(1)`
+* `cp(1)`
 
 Extended documentation and an in-depth tutorial can be found at:
 
