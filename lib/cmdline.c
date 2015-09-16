@@ -51,19 +51,21 @@ static void rm_cmd_show_version(void) {
             __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);
 
     /* Make a list of all supported features from the macros in config.h */
+    /* clang-format off */
     struct {
         bool enabled : 1;
         const char *name;
-    } features[] = {{ .name = "mounts",         .enabled = HAVE_BLKID & HAVE_GIO_UNIX},
-                    { .name = "nonstripped",    .enabled = HAVE_LIBELF},
-                    { .name = "fiemap",         .enabled = HAVE_FIEMAP},
-                    { .name = "sha512",         .enabled = HAVE_SHA512},
-                    { .name = "bigfiles",       .enabled = HAVE_BIGFILES},
-                    { .name = "intl",           .enabled = HAVE_LIBINTL},
-                    { .name = "json-cache",     .enabled = HAVE_JSON_GLIB},
-                    { .name = "xattr",          .enabled = HAVE_XATTR},
-                    { .name = "metadata-cache", .enabled = HAVE_SQLITE3},
-                    { .name = NULL,             .enabled = 0}};
+    } features[] = {{.name = "mounts",         .enabled = HAVE_BLKID & HAVE_GIO_UNIX},
+                    {.name = "nonstripped",    .enabled = HAVE_LIBELF},
+                    {.name = "fiemap",         .enabled = HAVE_FIEMAP},
+                    {.name = "sha512",         .enabled = HAVE_SHA512},
+                    {.name = "bigfiles",       .enabled = HAVE_BIGFILES},
+                    {.name = "intl",           .enabled = HAVE_LIBINTL},
+                    {.name = "json-cache",     .enabled = HAVE_JSON_GLIB},
+                    {.name = "xattr",          .enabled = HAVE_XATTR},
+                    {.name = "metadata-cache", .enabled = HAVE_SQLITE3},
+                    {.name = NULL,             .enabled = 0}};
+    /* clang-format on */
 
     fprintf(stderr, _("compiled with:"));
     for(int i = 0; features[i].name; ++i) {
@@ -113,7 +115,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
         const char *all_argv[512];
         const char **argp = &all_argv[0];
         memset(all_argv, 0, sizeof(all_argv));
-        
+
         *argp++ = *command;
         *argp++ = "-m";
         *argp++ = "shredder";
@@ -122,7 +124,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
             *argp++ = argv[i];
         }
 
-        if(execvp(*command, (char * const *)all_argv) == -1) {
+        if(execvp(*command, (char *const *)all_argv) == -1) {
             rm_log_warning("Executed: %s ", *command);
             for(int j = 0; j < (argp - all_argv); j++) {
                 rm_log_warning("%s ", all_argv[j]);
@@ -152,27 +154,30 @@ static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
     return EXIT_SUCCESS;
 }
 
+/* clang-format off */
 static const struct FormatSpec {
     const char *id;
     unsigned base;
     unsigned exponent;
 } SIZE_FORMAT_TABLE[] = {
-      /* This list is sorted, so bsearch() can be used */
-      {.id = "b", .base = 512, .exponent = 1},
-      {.id = "c", .base = 1, .exponent = 1},
-      {.id = "e", .base = 1000, .exponent = 6},
-      {.id = "eb", .base = 1024, .exponent = 6},
-      {.id = "g", .base = 1000, .exponent = 3},
-      {.id = "gb", .base = 1024, .exponent = 3},
-      {.id = "k", .base = 1000, .exponent = 1},
-      {.id = "kb", .base = 1024, .exponent = 1},
-      {.id = "m", .base = 1000, .exponent = 2},
-      {.id = "mb", .base = 1024, .exponent = 2},
-      {.id = "p", .base = 1000, .exponent = 5},
-      {.id = "pb", .base = 1024, .exponent = 5},
-      {.id = "t", .base = 1000, .exponent = 4},
-      {.id = "tb", .base = 1024, .exponent = 4},
-      {.id = "w", .base = 2, .exponent = 1}};
+    /* This list is sorted, so bsearch() can be used */
+    {.id = "b",  .base = 512,  .exponent = 1},
+    {.id = "c",  .base = 1,    .exponent = 1},
+    {.id = "e",  .base = 1000, .exponent = 6},
+    {.id = "eb", .base = 1024, .exponent = 6},
+    {.id = "g",  .base = 1000, .exponent = 3},
+    {.id = "gb", .base = 1024, .exponent = 3},
+    {.id = "k",  .base = 1000, .exponent = 1},
+    {.id = "kb", .base = 1024, .exponent = 1},
+    {.id = "m",  .base = 1000, .exponent = 2},
+    {.id = "mb", .base = 1024, .exponent = 2},
+    {.id = "p",  .base = 1000, .exponent = 5},
+    {.id = "pb", .base = 1024, .exponent = 5},
+    {.id = "t",  .base = 1000, .exponent = 4},
+    {.id = "tb", .base = 1024, .exponent = 4},
+    {.id = "w",  .base = 2,    .exponent = 1}
+};
+/* clang-format on */
 
 typedef struct FormatSpec FormatSpec;
 
@@ -1194,169 +1199,99 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     /* clang-format off */
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
-        {"max-depth", 'd', 0, G_OPTION_ARG_INT, &cfg->depth,
-         _("Specify max traversal depth"), "N"},
-        {"rank-by", 'S', 0, G_OPTION_ARG_CALLBACK, FUNC(rankby), _("Original criteria"),
-         "[dlampDLAMP]"},
-        {"sort-by", 'y', 0, G_OPTION_ARG_CALLBACK, FUNC(sortby),
-         _("Rank lint groups by certain criteria"), "[moansMOANS]"},
-        {"types", 'T', 0, G_OPTION_ARG_CALLBACK, FUNC(lint_types),
-         _("Specify lint types"), "T"},
-        {"size", 's', 0, G_OPTION_ARG_CALLBACK, FUNC(limit_sizes),
-         _("Specify size limits"), "m-M"},
-        {"algorithm", 'a', 0, G_OPTION_ARG_CALLBACK, FUNC(algorithm),
-         _("Choose hash algorithm"), "A"},
-        {"output", 'o', 0, G_OPTION_ARG_CALLBACK, FUNC(small_output),
-         _("Add output (override default)"), "FMT[:PATH]"},
-        {"add-output", 'O', 0, G_OPTION_ARG_CALLBACK, FUNC(large_output),
-         _("Add output (add to defaults)"), "FMT[:PATH]"},
-        {"newer-than-stamp", 'n', 0, G_OPTION_ARG_CALLBACK, FUNC(timestamp_file),
-         _("Newer than stamp file"), "PATH"},
-        {"newer-than", 'N', 0, G_OPTION_ARG_CALLBACK, FUNC(timestamp),
-         _("Newer than timestamp"), "STAMP"},
-        {"replay", 'Y', OPTIONAL, G_OPTION_ARG_CALLBACK, FUNC(replay),
-         _("Re-output a json file"), "path/to/rmlint.json"},
-        {"config", 'c', 0, G_OPTION_ARG_CALLBACK, FUNC(config),
-         _("Configure a formatter"), "FMT:K[=V]"},
-        {"cache", 'C', 0, G_OPTION_ARG_CALLBACK, FUNC(cache), _("Add json cache file"),
-         "PATH"},
+        {"max-depth"        , 'd' , 0        , G_OPTION_ARG_INT      , &cfg->depth          , _("Specify max traversal depth")          , "N"}                   ,
+        {"rank-by"          , 'S' , 0        , G_OPTION_ARG_CALLBACK , FUNC(rankby)         , _("Original criteria")                    , "[dlampDLAMP]"}        ,
+        {"sort-by"          , 'y' , 0        , G_OPTION_ARG_CALLBACK , FUNC(sortby)         , _("Rank lint groups by certain criteria") , "[moansMOANS]"}        ,
+        {"types"            , 'T' , 0        , G_OPTION_ARG_CALLBACK , FUNC(lint_types)     , _("Specify lint types")                   , "T"}                   ,
+        {"size"             , 's' , 0        , G_OPTION_ARG_CALLBACK , FUNC(limit_sizes)    , _("Specify size limits")                  , "m-M"}                 ,
+        {"algorithm"        , 'a' , 0        , G_OPTION_ARG_CALLBACK , FUNC(algorithm)      , _("Choose hash algorithm")                , "A"}                   ,
+        {"output"           , 'o' , 0        , G_OPTION_ARG_CALLBACK , FUNC(small_output)   , _("Add output (override default)")        , "FMT[:PATH]"}          ,
+        {"add-output"       , 'O' , 0        , G_OPTION_ARG_CALLBACK , FUNC(large_output)   , _("Add output (add to defaults)")         , "FMT[:PATH]"}          ,
+        {"newer-than-stamp" , 'n' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp_file) , _("Newer than stamp file")                , "PATH"}                ,
+        {"newer-than"       , 'N' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp)      , _("Newer than timestamp")                 , "STAMP"}               ,
+        {"replay"           , 'Y' , OPTIONAL , G_OPTION_ARG_CALLBACK , FUNC(replay)         , _("Re-output a json file")                , "path/to/rmlint.json"} ,
+        {"config"           , 'c' , 0        , G_OPTION_ARG_CALLBACK , FUNC(config)         , _("Configure a formatter")                , "FMT:K[=V]"}           ,
+        {"cache"            , 'C' , 0        , G_OPTION_ARG_CALLBACK , FUNC(cache)          , _("Add json cache file")                  , "PATH"}                ,
 
         /* Non-trvial switches */
-        {"progress", 'g', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(progress),
-         _("Enable progressbar"), NULL},
-        {"loud", 'v', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(loud),
-         _("Be more verbose (-vvv for much more)"), NULL},
-        {"quiet", 'V', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(quiet),
-         _("Be less verbose (-VVV for much less)"), NULL},
+        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,
+        {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)     , _("Be more verbose (-vvv for much more)") , NULL} ,
+        {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)    , _("Be less verbose (-VVV for much less)") , NULL} ,
 
         /* Trivial boolean options */
-        {"no-with-color", 'W', DISABLE, G_OPTION_ARG_NONE, &cfg->with_color,
-         _("Be not that colorful"), NULL},
-        {"hidden", 'r', DISABLE, G_OPTION_ARG_NONE, &cfg->ignore_hidden,
-         _("Find hidden files"), NULL},
-        {"followlinks", 'f', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(follow_symlinks),
-         _("Follow symlinks"), NULL},
-        {"no-followlinks", 'F', DISABLE, G_OPTION_ARG_NONE, &cfg->follow_symlinks,
-         _("Ignore symlinks"), NULL},
-        {"crossdev", 'x', 0, G_OPTION_ARG_NONE, &cfg->crossdev,
-         _("Do not cross mounpoints"), NULL},
-        {"paranoid", 'p', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(paranoid),
-         _("Use more paranoid hashing"), NULL},
-        {"keep-all-tagged", 'k', 0, G_OPTION_ARG_NONE, &cfg->keep_all_tagged,
-         _("Keep all tagged files"), NULL},
-        {"keep-all-untagged", 'K', 0, G_OPTION_ARG_NONE, &cfg->keep_all_untagged,
-         _("Keep all untagged files"), NULL},
-        {"must-match-tagged", 'm', 0, G_OPTION_ARG_NONE, &cfg->must_match_tagged,
-         _("Must have twin in tagged dir"), NULL},
-        {"must-match-untagged", 'M', 0, G_OPTION_ARG_NONE, &cfg->must_match_untagged,
-         _("Must have twin in untagged dir"), NULL},
-        {"match-basename", 'b', 0, G_OPTION_ARG_NONE, &cfg->match_basename,
-         _("Only find twins with same basename"), NULL},
-        {"match-extension", 'e', 0, G_OPTION_ARG_NONE, &cfg->match_with_extension,
-         _("Only find twins with same extension"), NULL},
-        {"match-without-extension", 'i', 0, G_OPTION_ARG_NONE,
-         &cfg->match_without_extension,
-         _("Only find twins with same basename minus extension"), NULL},
-        {"merge-directories", 'D', EMPTY, G_OPTION_ARG_CALLBACK, FUNC(merge_directories),
-         _("Find duplicate directories"), NULL},
-        {"perms", 'z', OPTIONAL, G_OPTION_ARG_CALLBACK, FUNC(permissions),
-         _("Only use files with certain permissions"), "[RWX]+"},
-        {"no-hardlinked", 'L', DISABLE, G_OPTION_ARG_NONE, &cfg->find_hardlinked_dupes,
-         _("Ignore hardlink twins"), NULL},
-        {"partial-hidden", 0, EMPTY, G_OPTION_ARG_CALLBACK, FUNC(partial_hidden),
-         _("Find hidden files in duplicate folders only"), NULL},
+        {"no-with-color"           , 'W' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->with_color              , _("Be not that colorful")                               , NULL}     ,
+        {"hidden"                  , 'r' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->ignore_hidden           , _("Find hidden files")                                  , NULL}     ,
+        {"followlinks"             , 'f' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(follow_symlinks)         , _("Follow symlinks")                                    , NULL}     ,
+        {"no-followlinks"          , 'F' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->follow_symlinks         , _("Ignore symlinks")                                    , NULL}     ,
+        {"crossdev"                , 'x' , 0        , G_OPTION_ARG_NONE     , &cfg->crossdev                , _("Do not cross mounpoints")                            , NULL}     ,
+        {"paranoid"                , 'p' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(paranoid)                , _("Use more paranoid hashing")                          , NULL}     ,
+        {"keep-all-tagged"         , 'k' , 0        , G_OPTION_ARG_NONE     , &cfg->keep_all_tagged         , _("Keep all tagged files")                              , NULL}     ,
+        {"keep-all-untagged"       , 'K' , 0        , G_OPTION_ARG_NONE     , &cfg->keep_all_untagged       , _("Keep all untagged files")                            , NULL}     ,
+        {"must-match-tagged"       , 'm' , 0        , G_OPTION_ARG_NONE     , &cfg->must_match_tagged       , _("Must have twin in tagged dir")                       , NULL}     ,
+        {"must-match-untagged"     , 'M' , 0        , G_OPTION_ARG_NONE     , &cfg->must_match_untagged     , _("Must have twin in untagged dir")                     , NULL}     ,
+        {"match-basename"          , 'b' , 0        , G_OPTION_ARG_NONE     , &cfg->match_basename          , _("Only find twins with same basename")                 , NULL}     ,
+        {"match-extension"         , 'e' , 0        , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , _("Only find twins with same extension")                , NULL}     ,
+        {"match-without-extension" , 'i' , 0        , G_OPTION_ARG_NONE     , &cfg->match_without_extension , _("Only find twins with same basename minus extension") , NULL}     ,
+        {"merge-directories"       , 'D' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(merge_directories)       , _("Find duplicate directories")                         , NULL}     ,
+        {"perms"                   , 'z' , OPTIONAL , G_OPTION_ARG_CALLBACK , FUNC(permissions)             , _("Only use files with certain permissions")            , "[RWX]+"} ,
+        {"no-hardlinked"           , 'L' , DISABLE  , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , _("Ignore hardlink twins")                              , NULL}     ,
+        {"partial-hidden"          , 0   , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(partial_hidden)          , _("Find hidden files in duplicate folders only")        , NULL}     ,
 
         /* Callback */
-        {"show-man", 'H', EMPTY, G_OPTION_ARG_CALLBACK, rm_cmd_show_manpage,
-         _("Show the manpage"), NULL},
-        {"version", 0, EMPTY, G_OPTION_ARG_CALLBACK, rm_cmd_show_version,
-         _("Show the version & features"), NULL},
+        {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
+        {"version"  , 0   , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_version , _("Show the version & features") , NULL} ,
         /* Dummy option for --help output only: */
-        {"gui", 0, 0, G_OPTION_ARG_NONE, NULL,
-         _("If installed, start the optional gui with all following args"), NULL},
+        {"gui" , 0 , 0 , G_OPTION_ARG_NONE , NULL , _("If installed , start the optional gui with all following args") , NULL} ,
 
         /* Special case: accumulate leftover args (paths) in &paths */
-        {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &paths, "", NULL},
-        {NULL, 0, 0, 0, NULL, NULL, NULL}};
+        {G_OPTION_REMAINING , 0 , 0 , G_OPTION_ARG_FILENAME_ARRAY , &paths , ""   , NULL}   ,
+        {NULL               , 0 , 0 , 0                           , NULL   , NULL , NULL}
+    };
 
     const GOptionEntry inversed_option_entries[] = {
-        {"no-hidden", 'R', 0 | HIDDEN, G_OPTION_ARG_NONE, &cfg->ignore_hidden,
-         "Ignore hidden files", NULL},
-        {"with-color", 'w', 0 | HIDDEN, G_OPTION_ARG_NONE, &cfg->with_color,
-         "Be colorful like a unicorn", NULL},
-        {"hardlinked", 'l', 0 | HIDDEN, G_OPTION_ARG_NONE, &cfg->find_hardlinked_dupes,
-         _("Report hardlinks as duplicates"), NULL},
-        {"no-crossdev", 'X', DISABLE | HIDDEN, G_OPTION_ARG_NONE, &cfg->crossdev,
-         "Cross mountpoints", NULL},
-        {"less-paranoid", 'P', EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(less_paranoid),
-         "Use less paranoid hashing algorithm", NULL},
-        {"see-symlinks", '@', EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(see_symlinks),
-         "Treat symlinks a regular files", NULL},
-        {"no-match-basename", 'B', DISABLE | HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->match_basename, "Disable --match-basename filter", NULL},
-        {"no-match-extension", 'E', DISABLE | HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->match_with_extension, "Disable --match-extension", NULL},
-        {"no-match-without-extension", 'I', DISABLE | HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->match_without_extension, "Disable --match-without-extension", NULL},
-        {"no-progress", 'G', EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(no_progress),
-         "Disable progressbar", NULL},
-        {"no-xattr-read", 0, DISABLE | HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->read_cksum_from_xattr, "Disable --xattr-read", NULL},
-        {"no-xattr-write", 0, DISABLE | HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->write_cksum_to_xattr, "Disable --xattr-write", NULL},
-        {"no-partial-hidden", 0, EMPTY | HIDDEN, G_OPTION_ARG_CALLBACK,
-         FUNC(no_partial_hidden), "Invert --partial-hidden", NULL},
-        {NULL, 0, 0, 0, NULL, NULL, NULL}};
+        {"no-hidden"                  , 'R' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->ignore_hidden           , "Ignore hidden files"                 , NULL} ,
+        {"with-color"                 , 'w' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->with_color              , "Be colorful like a unicorn"          , NULL} ,
+        {"hardlinked"                 , 'l' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , _("Report hardlinks as duplicates")   , NULL} ,
+        {"no-crossdev"                , 'X' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL} ,
+        {"less-paranoid"              , 'P' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(less_paranoid)           , "Use less paranoid hashing algorithm" , NULL} ,
+        {"see-symlinks"               , '@' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(see_symlinks)            , "Treat symlinks a regular files"      , NULL} ,
+        {"no-match-basename"          , 'B' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_basename          , "Disable --match-basename filter"     , NULL} ,
+        {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
+        {"no-match-without-extension" , 'I' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_without_extension , "Disable --match-without-extension"   , NULL} ,
+        {"no-progress"                , 'G' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_progress)             , "Disable progressbar"                 , NULL} ,
+        {"no-xattr-read"              , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr   , "Disable --xattr-read"                , NULL} ,
+        {"no-xattr-write"             , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr    , "Disable --xattr-write"               , NULL} ,
+        {"no-partial-hidden"          , 0   , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_partial_hidden)       , "Invert --partial-hidden"             , NULL} ,
+        {NULL                         , 0   , 0                , 0                     , NULL                          , NULL                                  , NULL}
+    };
 
     const GOptionEntry unusual_option_entries[] = {
-        {"clamp-low", 'q', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(clamp_low),
-         "Limit lower reading barrier", "P"},
-        {"clamp-top", 'Q', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(clamp_top),
-         "Limit upper reading barrier", "P"},
-        {"limit-mem", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(limit_mem),
-         "Specify max. memory usage target", "S"},
-        {"paranoid-mem", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(paranoid_mem),
-         "Specify min. memory to use for in-progress paranoid hashing", "S"},
-        {"read-buffer", 0, HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(read_buffer_mem),
-         "Specify min. memory to use for read buffer during hashing", "S"},
-        {"sweep-size", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_size),
-         "Specify max. bytes per pass when scanning disks", "S"},
-        {"sweep-files", 'u', HIDDEN, G_OPTION_ARG_CALLBACK, FUNC(sweep_count),
-         "Specify max. file count per pass when scanning disks", "S"},
-        {"threads", 't', HIDDEN, G_OPTION_ARG_INT64, &cfg->threads,
-         "Specify max. number of hasher threads", "N"},
-        {"write-unfinished", 'U', HIDDEN, G_OPTION_ARG_NONE, &cfg->write_unfinished,
-         "Output unfinished checksums", NULL},
-        {"xattr-write", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->write_cksum_to_xattr,
-         "Cache checksum in file attributes", NULL},
-        {"xattr-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->read_cksum_from_xattr,
-         "Read cached checksums from file attributes", NULL},
-        {"xattr-clear", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->clear_xattr_fields,
-         "Clear xattrs from all seen files", NULL},
-        {"with-metadata-cache", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_meta_cache,
-         "Swap certain metadata to disk to save RAM", NULL},
-        {"without-metadata-cache", 0, DISABLE | HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->use_meta_cache, "Store all metadata in RAM", NULL},
-        {"with-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->build_fiemap,
-         "Use fiemap(2) to optimize disk access patterns", NULL},
-        {"without-fiemap", 0, DISABLE | HIDDEN, G_OPTION_ARG_NONE, &cfg->build_fiemap,
-         "Do not use fiemap(2) in order to save memory", NULL},
-        {"shred-always-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_always_wait,
-         "Always waits for file increment to finish hashing", NULL},
-        {"fake-pathindex-as-disk", 0, HIDDEN, G_OPTION_ARG_NONE,
-         &cfg->fake_pathindex_as_disk,
-         "Pretends each input path is a separate physical disk", NULL},
-        {"fake-holdback", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->cache_file_structs,
-         "Hold back all files to the end before outputting.", NULL},
-        {"fake-fiemap", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->fake_fiemap,
-         "Create faked fiemap data for all files", NULL},
-        {"buffered-read", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->use_buffered_read,
-         "Default to buffered reading calls (fread) during reading.", NULL},
-        {"shred-never-wait", 0, HIDDEN, G_OPTION_ARG_NONE, &cfg->shred_never_wait,
-         "Never waits for file increment to finish hashing", NULL},
-        {NULL, 0, HIDDEN, 0, NULL, NULL, NULL}};
+        {"clamp-low"              , 'q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)              , "Limit lower reading barrier"                                 , "P"}    ,
+        {"clamp-top"              , 'Q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)              , "Limit upper reading barrier"                                 , "P"}    ,
+        {"limit-mem"              , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(limit_mem)              , "Specify max. memory usage target"                            , "S"}    ,
+        {"paranoid-mem"           , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(paranoid_mem)           , "Specify min. memory to use for in-progress paranoid hashing" , "S"}    ,
+        {"read-buffer"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(read_buffer_mem)        , "Specify min. memory to use for read buffer during hashing"   , "S"}    ,
+        {"sweep-size"             , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_size)             , "Specify max. bytes per pass when scanning disks"             , "S"}    ,
+        {"sweep-files"            , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
+        {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
+        {"write-unfinished"       , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished       , "Output unfinished checksums"                                 , NULL}   ,
+        {"xattr-write"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr   , "Cache checksum in file attributes"                           , NULL}   ,
+        {"xattr-read"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr  , "Read cached checksums from file attributes"                  , NULL}   ,
+        {"xattr-clear"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->clear_xattr_fields     , "Clear xattrs from all seen files"                            , NULL}   ,
+        {"with-metadata-cache"    , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_meta_cache         , "Swap certain metadata to disk to save RAM"                   , NULL}   ,
+        {"without-metadata-cache" , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->use_meta_cache         , "Store all metadata in RAM"                                   , NULL}   ,
+        {"with-fiemap"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->build_fiemap           , "Use fiemap(2) to optimize disk access patterns"              , NULL}   ,
+        {"without-fiemap"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->build_fiemap           , "Do not use fiemap(2) in order to save memory"                , NULL}   ,
+        {"shred-always-wait"      , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_always_wait      , "Always waits for file increment to finish hashing"           , NULL}   ,
+        {"fake-pathindex-as-disk" , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_pathindex_as_disk , "Pretends each input path is a separate physical disk"        , NULL}   ,
+        {"fake-holdback"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->cache_file_structs     , "Hold back all files to the end before outputting."           , NULL}   ,
+        {"fake-fiemap"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_fiemap            , "Create faked fiemap data for all files"                      , NULL}   ,
+        {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
+        {"shred-never-wait"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_never_wait       , "Never waits for file increment to finish hashing"            , NULL}   ,
+        {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
+    };
 
-    // clang-format on
+    /* clang-format on */
 
     /* Initialize default verbosity */
     rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
