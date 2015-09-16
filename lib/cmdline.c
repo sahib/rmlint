@@ -23,6 +23,8 @@
  *
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -37,9 +39,6 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-#include <sys/ioctl.h>
-#include <linux/btrfs.h>  //for rm_shred_btrfs_clone... TODO: make friendly for non-linux systems
-
 #include "cmdline.h"
 #include "treemerge.h"
 #include "traverse.h"
@@ -49,6 +48,12 @@
 #include "formats.h"
 #include "replay.h"
 #include "hash-utility.h"
+
+#if HAVE_BTRFS_H
+# include <sys/ioctl.h>
+# include <linux/btrfs.h>
+#endif
+
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
@@ -68,6 +73,7 @@ static void rm_cmd_show_version(void) {
                     {.name = "json-cache",     .enabled = HAVE_JSON_GLIB},
                     {.name = "xattr",          .enabled = HAVE_XATTR},
                     {.name = "metadata-cache", .enabled = HAVE_SQLITE3},
+                    {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
     /* clang-format on */
 
@@ -166,13 +172,17 @@ static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
             exit(rm_hasher_main(argc - i, &argv[i]));
         }
     }
+    
+    return EXIT_SUCCESS;
+}
 
 static void rm_cmd_btrfs_clone_usage(void) {
-    rm_log_error("Usage: rmlint --btrfs-clone source dest\n");
+    rm_log_error(_("Usage: rmlint --btrfs-clone source dest\n"));
 }
 
 static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
 
+#if HAVE_BTRFS_H
     struct {
         struct btrfs_ioctl_same_args args;
         struct btrfs_ioctl_same_extent_info info;
@@ -181,14 +191,14 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
 
     int source_fd = rm_sys_open(source, O_RDONLY);
     if (source_fd < 0) {
-        rm_log_error("btrfs clone: failed to open source file\n");
+        rm_log_error_line(_("btrfs clone: failed to open source file"));
         return;
     }
 
     extent_same.info.fd = rm_sys_open(dest, O_RDWR);
     if (extent_same.info.fd < 0) {
-        rm_log_error("btrfs clone: failed to open dest file\n");
-        close(source_fd);
+        rm_log_error_line(_("btrfs clone: failed to open dest file."));
+        rm_sys_close(source_fd);
         return;
     }
 
@@ -216,22 +226,34 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
         }
     }
 
-    close(source_fd);
-
-    close(extent_same.info.fd);
+    rm_sys_close(source_fd);
+    rm_sys_close(extent_same.info.fd);
 
     if (ret < 0) {
         ret = errno;
-        rm_log_error("BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s\n", ret,
-            strerror(ret));
+        rm_log_error_line(
+                _("BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"),
+                ret, strerror(ret)
+        );
     } else if (extent_same.info.status == -22) {
-        rm_log_error("BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - probably need kernel > 4.2\n");
+        rm_log_error_line(
+                _("BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > 4.2")
+        );
     } else if (extent_same.info.status < 0) {
-        rm_log_error("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s\n",
-            extent_same.info.status, dest);
+        rm_log_error_line(
+            _("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
+            extent_same.info.status, dest
+        );
     } else if (bytes_remaining > 0) {
-        rm_log_error("Files don't match - not cloned\n");
+        rm_log_info_line(_("Files don't match - not cloned"));
     }
+#else
+
+    (void) source;
+    (void) dest;
+    rm_log_error_line(_("rmlint was not compiled with btrfs support."))
+
+#endif
 }
 
 static int rm_cmd_maybe_btrfs_clone(int argc, const char **argv) {
@@ -1344,13 +1366,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
         {"version"  , 0   , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_version , _("Show the version & features") , NULL} ,
         /* Dummy option for --help output only: */
-<<<<<<< HEAD
-        {"gui"  , 0 , 0 , G_OPTION_ARG_NONE , NULL , _("If installed, start the optional gui with all following args") , NULL} ,
-        {"hash" , 0 , 0 , G_OPTION_ARG_NONE , NULL , _("Work like sha1sum for all supported hash algorithms (see also --hash --help)") , NULL}                                            ,
-=======
-        {"gui" , 0 , 0 , G_OPTION_ARG_NONE , NULL , _("If installed , start the optional gui with all following args") , NULL} ,
-        {"btrfs-clone"            , 0   , 0                , G_OPTION_ARG_NONE     , &clone                       , _("Clone extents from source to dest, if extents match")      , NULL}   ,
->>>>>>> 7d4cc22d92da22a1976234943fa6b3a9e1d30c12
+        {"gui"         , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("If installed, start the optional gui with all following args")                 , NULL},
+        {"hash"        , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("Work like sha1sum for all supported hash algorithms (see also --hash --help)") , NULL}                                            ,
+        {"btrfs-clone" , 0 , 0 , G_OPTION_ARG_NONE , &clone , _("Clone extents from source to dest, if extents match")                          , NULL} ,
 
         /* Special case: accumulate leftover args (paths) in &paths */
         {G_OPTION_REMAINING , 0 , 0 , G_OPTION_ARG_FILENAME_ARRAY , &paths , ""   , NULL}   ,
