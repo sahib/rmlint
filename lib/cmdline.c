@@ -156,9 +156,6 @@ static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
     return EXIT_SUCCESS;
 }
 
-<<<<<<< HEAD
-/* clang-format off */
-=======
 static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
     for(int i = 0; i < argc; i++) {
         if(g_strcmp0("--hash", argv[i]) == 0) {
@@ -170,7 +167,7 @@ static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
     return EXIT_SUCCESS;
 }
 
->>>>>>> feature/hashit
+/* clang-format off */
 static const struct FormatSpec {
     const char *id;
     unsigned base;
