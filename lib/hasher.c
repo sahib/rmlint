@@ -319,39 +319,11 @@ static void rm_hasher_hashpipe_free(GThreadPool *hashpipe) {
     g_thread_pool_free(hashpipe, FALSE, TRUE);
 }
 
-static int rm_hasher_hashpipe_sort(GThreadPool *a, GThreadPool *b) {
-    return g_thread_pool_unprocessed(a) - g_thread_pool_unprocessed(b);
-}
-
-/* finds and pops the least busy hashpipe in hashpipe_pool
- * */
-static GThreadPool *rm_hasher_hashpipe_get(GAsyncQueue *hashpipe_pool) {
-    GThreadPool *hashpipe = NULL;
-    g_async_queue_lock(hashpipe_pool);
-    {
-        g_async_queue_sort_unlocked (hashpipe_pool, (GCompareDataFunc)rm_hasher_hashpipe_sort, NULL);
-
-        /* for optimisation purposes only: print info message if we are ever blocked waiting for a hashpipe */
-        hashpipe = g_async_queue_try_pop_unlocked(hashpipe_pool);
-        if (!hashpipe) {
-            rm_log_info(YELLOW"Blocked waiting for hashpipe..."RESET);
-            hashpipe=g_async_queue_pop_unlocked(hashpipe_pool);
-            rm_log_info(GREEN"got\n"RESET);
-        }
-        if (g_thread_pool_unprocessed(hashpipe)>0) {
-            rm_log_debug(RED"Got hash pool with %d unprocessed\n"RESET, g_thread_pool_unprocessed(hashpipe));
-        }
-    }
-    g_async_queue_unlock(hashpipe_pool);
-    return hashpipe;
-}
-
 /* local joiner if user provides no joiner to rm_hasher_new() */
 static RmHasherCallback *rm_hasher_joiner(RmHasher *hasher, RmDigest *digest, _U gpointer session_user_data, _U gpointer task_user_data) {
     g_async_queue_push(hasher->return_queue, digest);
     return 0;
 }
-
 
 //////////////////////////////////////
 //     API
@@ -414,7 +386,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer ta
     self->hasher = hasher;
     self->digest = digest ? digest :
         rm_digest_new(hasher->digest_type, 0, 0, rm_digest_paranoia_bytes(), hasher->digest_type == RM_DIGEST_PARANOID); //TODO: tidy up
-    self->hashpipe = rm_hasher_hashpipe_get(hasher->hashpipe_pool);
+    self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
     self->task_user_data = task_user_data;
     return self;
 }
