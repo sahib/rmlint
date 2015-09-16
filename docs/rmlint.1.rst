@@ -120,7 +120,7 @@ General Options
     Choose the hash algorithm to use for finding duplicate files.
     The following well-known algorithms are available:
 
-    **spooky**, **city**, **murmur**, **md5**, **sha1**, **sha256**,
+    **spooky**, **city**, **murmur**, **xxhash**, **md5**, **sha1**, **sha256**,
     **sha512**.
 
     If not explicitly stated in the name the hash functions use a length of 128 bit.
