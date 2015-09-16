@@ -120,15 +120,11 @@ cp_symlink() {
     fi
 }
 
-cp_reflink() {
-    # reflink $1 to $2's data, preserving $1's  mtime
-    echo 'Reflinking to original:' "$1"
-    if original_check "$1" "$2"; then
-        if [ -z "$DO_DRY_RUN" ]; then
-            touch -mr "$1" "$0"
-            cp --reflink=always "$2" "$1"
-            touch -mr "$0" "$1"
-        fi
+clone() {
+    # clone $1 from $2's data
+    echo 'Cloning to: ' "$1"
+    if [ -z "$DO_DRY_RUN" ]; then
+        rmlint --btrfs-clone "$2" "$1"
     fi
 }
 
