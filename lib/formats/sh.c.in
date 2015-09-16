@@ -79,7 +79,7 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
     if ( rm_offsets_match(path, orig_path) ) {
         *out = g_strdup_printf("skip_reflink '%s' '%s'", path, orig_path);
     } else {
-        *out = g_strdup_printf("cp_reflink '%s' '%s'", path, orig_path);
+        *out = g_strdup_printf("clone '%s' '%s'", path, orig_path);
     }
     return true;
 }
