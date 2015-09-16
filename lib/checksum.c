@@ -363,7 +363,6 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
 }
 
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
-    /* TODO: @chris, not sure I understand this and how to make it work again*/
     g_assert(new_size < digest->bytes);
     g_assert(digest->type == RM_DIGEST_PARANOID);
 
@@ -651,7 +650,7 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     }
 }
 
-guint8 *rm_digest_steal_buffer(RmDigest *digest) {
+guint8 *rm_digest_steal(RmDigest *digest) {
     guint8 *result = g_slice_alloc0(digest->bytes);
     gsize buflen = digest->bytes;
 
@@ -673,11 +672,11 @@ guint rm_digest_hash(RmDigest *digest) {
 
     if(digest->type == RM_DIGEST_PARANOID) {
         if(digest->paranoid->shadow_hash) {
-            buf = rm_digest_steal_buffer(digest->paranoid->shadow_hash);
+            buf = rm_digest_steal(digest->paranoid->shadow_hash);
             bytes = digest->paranoid->shadow_hash->bytes;
         }
     } else {
-        buf = rm_digest_steal_buffer(digest);
+        buf = rm_digest_steal(digest);
         bytes = digest->bytes;
     }
 
@@ -714,7 +713,9 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         guint bytes = 0;
         while (a_iter && b_iter) {
             if (!rm_buffer_equal(a_iter->data, b_iter->data)) {
-                rm_log_error(RED"Paranoid digest compare found mismatch - must be hash collision in shadow hash\n"RESET);
+                rm_log_error_line(
+                        "Paranoid digest compare found mismatch - must be hash collision in shadow hash"
+                );
                 return false;
             }
             bytes += ((RmBuffer*)a_iter->data)->len;
@@ -724,26 +725,24 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
 
         return (!a_iter && !b_iter && bytes == a->bytes);
 
-    } else {
-        if (rm_digest_needs_steal(a->type)) {
-            guint8 *buf_a = rm_digest_steal_buffer(a);
-            guint8 *buf_b = rm_digest_steal_buffer(b);
+    } else if (rm_digest_needs_steal(a->type)) {
+        guint8 *buf_a = rm_digest_steal(a);
+        guint8 *buf_b = rm_digest_steal(b);
 
-            gboolean result;
+        gboolean result;
 
-            if(a->bytes != b->bytes) {
-                result = false;
-            } else {
-                result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
-            }
-
-            g_slice_free1(a->bytes, buf_a);
-            g_slice_free1(b->bytes, buf_b);
-
-            return result;
+        if(a->bytes != b->bytes) {
+            result = false;
         } else {
-            return !memcmp(a->checksum, b->checksum, MIN(a->bytes, b->bytes));
+            result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
         }
+
+        g_slice_free1(a->bytes, buf_a);
+        g_slice_free1(b->bytes, buf_b);
+
+        return result;
+    } else {
+        return !memcmp(a->checksum, b->checksum, MIN(a->bytes, b->bytes));
     }
 }
 
@@ -757,11 +756,11 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
 
     if(digest->type == RM_DIGEST_PARANOID) {
         if(digest->paranoid->shadow_hash) {
-            input = rm_digest_steal_buffer(digest->paranoid->shadow_hash);
+            input = rm_digest_steal(digest->paranoid->shadow_hash);
             bytes = digest->paranoid->shadow_hash->bytes;
         }
     } else {
-        input = rm_digest_steal_buffer(digest);
+        input = rm_digest_steal(digest);
         bytes = digest->bytes;
     }
 

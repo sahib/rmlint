@@ -231,7 +231,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
  *
  * @return pointer to result (note: result length will = digest->bytes)
  */
-guint8 *rm_digest_steal_buffer(RmDigest *digest); //TODO: rename to avoid confusion with read buffers
+guint8 *rm_digest_steal(RmDigest *digest);
 
 /**
  * @brief Hash a Digest, suitable for GHashTable.

@@ -1106,7 +1106,6 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const in
  * file offset to &file_offset_next.
  * */
 RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) {
-    /* TODO: add fake_fiemap option */
     RmOff result=0;
     bool done = FALSE;
 
@@ -1172,7 +1171,6 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
 }
 
 RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next) {
-    /* TODO: add fake_fiemap option */
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);

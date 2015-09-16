@@ -287,6 +287,11 @@
  * */
 #define SHRED_PREMATCH_THRESHOLD (SHRED_BALANCED_PAGES * SHRED_PAGE_SIZE)
 
+/* Minimum number of files that should be in a RmShredDevice so that it get's
+ * merged into the statistics counters.
+ */
+#define SHRED_MIN_FILE_STATS_PACK_SIZE (16)
+
 /* empirical estimate of mem usage per file (excluding read buffers and
  * paranoid digests) */
 #define RM_AVERAGE_MEM_PER_FILE (100)
@@ -690,7 +695,7 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
     }
     g_mutex_unlock(&(device->lock));
 
-    if (abs(device->cache_file_count) >= 16 /* TODO - #define */ ||
+    if (abs(device->cache_file_count) >= SHRED_MIN_FILE_STATS_PACK_SIZE ||
         device->remaining_bytes == 0 ||
         device->remaining_files == 0) {
         RmSession *session = device->main->session;
@@ -1097,11 +1102,6 @@ static gboolean rm_shred_sift(RmFile *file) {
 
         } else {
             g_assert(file->digest);
-            if(file->digest->type == RM_DIGEST_PARANOID && !(file->is_symlink && file->session->cfg->see_symlinks)) {
-                /* verify that correct number of bytes stored in file's paranoid digest - TODO remove? */
-                g_assert(file->digest->bytes ==
-                         current_group->next_offset - current_group->hash_offset);
-            }
 
             /* check is child group hashtable has been created yet (TODO: move this to rm_shred_group_new?) */
             if(!current_group->children) {

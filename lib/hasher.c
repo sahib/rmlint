@@ -401,7 +401,7 @@ gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offse
         bytes_read = rm_hasher_unbuffered_read(task->hasher, task->hashpipe, task->digest, path, start_offset, bytes_to_read);
     }
 
-    return ((is_symlink && bytes_read==0) || bytes_read == bytes_to_read); //TODO: is symlink case ok?
+    return ((is_symlink && bytes_read==0) || bytes_read == bytes_to_read);
 }
 
 RmDigest *rm_hasher_task_finish(RmHasherTask *task) {

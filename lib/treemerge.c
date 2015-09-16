@@ -391,10 +391,10 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     RmOff digest_bytes = 0;
 
     if(file->digest->type == RM_DIGEST_PARANOID) {
-        file_digest = rm_digest_steal_buffer(file->digest->paranoid->shadow_hash);
+        file_digest = rm_digest_steal(file->digest->paranoid->shadow_hash);
         digest_bytes = file->digest->paranoid->shadow_hash->bytes;
     } else {
-        file_digest = rm_digest_steal_buffer(file->digest);
+        file_digest = rm_digest_steal(file->digest);
         digest_bytes = file->digest->bytes;
     }
 
@@ -449,7 +449,7 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
     }
 
     /* Inherit the child's checksum */
-    unsigned char *subdir_cksum = rm_digest_steal_buffer(subdir->digest);
+    unsigned char *subdir_cksum = rm_digest_steal(subdir->digest);
     rm_digest_update(parent->digest, subdir_cksum, subdir->digest->bytes);
     g_slice_free1(subdir->digest->bytes, subdir_cksum);
 
