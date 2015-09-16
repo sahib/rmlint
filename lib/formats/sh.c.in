@@ -37,6 +37,7 @@ typedef struct RmFmtHandlerShScript {
     RmSession *session;
 
     bool allow_user_cmd : 1;
+    bool allow_clone : 1;
     bool allow_reflink : 1;
     bool allow_symlink : 1;
     bool allow_hardlink : 1;
@@ -71,15 +72,37 @@ static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _U R
     return true;
 }
 
+static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+    if(!self->allow_clone) {
+        return false;
+    }
+
+    bool offsets_match = rm_offsets_match(path, orig_path);
+    char *reflink_type = g_hash_table_lookup(
+            self->session->mounts->reflinkfs_table,
+            GUINT_TO_POINTER(file->dev)
+    );
+
+    if (offsets_match) {
+        *out = g_strdup_printf("skip_reflink '%s' '%s'", path, orig_path);
+    } else if(!g_strcmp0("btrfs", reflink_type)) {
+        *out = g_strdup_printf("clone '%s' '%s'", path, orig_path);
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
 static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
     if(!self->allow_reflink || !rm_mounts_can_reflink(self->session->mounts, self->last_original->dev, file->dev)) {
         return false;
     }
 
-    if ( rm_offsets_match(path, orig_path) ) {
+    if (rm_offsets_match(path, orig_path)) {
         *out = g_strdup_printf("skip_reflink '%s' '%s'", path, orig_path);
     } else {
-        *out = g_strdup_printf("clone '%s' '%s'", path, orig_path);
+        *out = g_strdup_printf("cp_reflink '%s' '%s'", path, orig_path);
     }
     return true;
 }
@@ -118,6 +141,7 @@ static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U
 typedef enum RmShHandler {
     RM_SH_HANDLER_UNKNOWN = 0,
     RM_SH_HANDLER_USER_COMMAND,
+    RM_SH_HANDLER_CLONE,
     RM_SH_HANDLER_REFLINK,
     RM_SH_HANDLER_SYMLINK,
     RM_SH_HANDLER_HARDLINK,
@@ -128,6 +152,7 @@ typedef enum RmShHandler {
 static const char *ORDER_TO_STRING[] = {
     [RM_SH_HANDLER_UNKNOWN] = NULL,
     [RM_SH_HANDLER_USER_COMMAND] = "cmd",
+    [RM_SH_HANDLER_CLONE] = "clone",
     [RM_SH_HANDLER_REFLINK] = "reflink",
     [RM_SH_HANDLER_SYMLINK] = "symlink",
     [RM_SH_HANDLER_HARDLINK] = "hardlink",
@@ -138,6 +163,7 @@ static const char *ORDER_TO_STRING[] = {
 static const RmShOrderEmitFunc ORDER_TO_FUNC[] = {
     [RM_SH_HANDLER_UNKNOWN] = NULL,
     [RM_SH_HANDLER_USER_COMMAND] = rm_sh_emit_handler_user,
+    [RM_SH_HANDLER_CLONE] = rm_sh_emit_handler_clone,
     [RM_SH_HANDLER_REFLINK] = rm_sh_emit_handler_reflink,
     [RM_SH_HANDLER_SYMLINK] = rm_sh_emit_handler_symlink,
     [RM_SH_HANDLER_HARDLINK] = rm_sh_emit_handler_hardlink,
@@ -159,6 +185,9 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
                 switch(n) {
                 case RM_SH_HANDLER_USER_COMMAND:
                     self->allow_user_cmd = true;
+                    break;
+                case RM_SH_HANDLER_CLONE:
+                    self->allow_clone = true;
                     break;
                 case RM_SH_HANDLER_REFLINK:
                     self->allow_reflink = true;
@@ -204,7 +233,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         rm_sh_parse_handlers(self, handler_cfg);
     } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
         /* Preset: try reflinks, then symlinks then hardlinks */
-        rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
+        rm_sh_parse_handlers(self, "clone,reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
         /* Preset: try symlinks before using hardlinks */
         rm_sh_parse_handlers(self, "hardlink,symlink");

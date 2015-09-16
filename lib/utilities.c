@@ -676,6 +676,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         for(int i = 0; reflinkfs_types[i] && !reflinkfs_found; ++i) {
             if(strcmp(reflinkfs_types[i], wrap_entry->type) == 0) {
                 reflinkfs_found = reflinkfs_types[i];
+                break;
             }
         }
 
@@ -705,7 +706,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
             rm_sys_stat(wrap_entry->dir, &dir_stat);
             g_hash_table_insert(table->reflinkfs_table,
                                 GUINT_TO_POINTER(dir_stat.st_dev),
-                                GUINT_TO_POINTER(1));
+                                (gpointer)reflinkfs_found);
         }
     }
 
