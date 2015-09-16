@@ -120,15 +120,16 @@ static void rm_fmt_prog(RmSession *session,
 
 static RmFmtHandlerSummary SUMMARY_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(SUMMARY_HANDLER_IMPL),
-        .name = "summary",
-        .head = NULL,
-        .elem = NULL,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {NULL},
-    },
+    .parent =
+        {
+         .size = sizeof(SUMMARY_HANDLER_IMPL),
+         .name = "summary",
+         .head = NULL,
+         .elem = NULL,
+         .prog = rm_fmt_prog,
+         .foot = NULL,
+         .valid_keys = {NULL},
+        },
 };
 
 RmFmtHandler *SUMMARY_HANDLER = (RmFmtHandler *)&SUMMARY_HANDLER_IMPL;

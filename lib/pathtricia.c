@@ -220,7 +220,7 @@ char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) 
     }
     char *result = NULL;
     g_mutex_lock(&self->lock);
-        {result = rm_trie_build_path_unlocked(node, buf, buf_len);}
+    { result = rm_trie_build_path_unlocked(node, buf, buf_len); }
     g_mutex_unlock(&self->lock);
     return result;
 }
@@ -302,7 +302,6 @@ static int rm_trie_print_callback(_U RmTrie *self,
 void rm_trie_print(RmTrie *self) {
     rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
 }
-
 
 int main(void) {
     RmTrie trie;

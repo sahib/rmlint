@@ -120,8 +120,6 @@ char *rm_util_path_extension(const char *basename) {
 bool rm_util_path_is_hidden(const char *path) {
     if(path == NULL) {
         return false;
-
-
     }
 
     if(*path == '.') {
@@ -956,13 +954,12 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-//static void rm_mounts_subvol_add(RmMountTable *self, dev_t subvol, dev_t parent) {
-    //if(g_hash_table_contains(self->subvol_table, GUINT_TO_POINTER(parent))) {
-        /* parent volume is a subvolume itself */
+// static void rm_mounts_subvol_add(RmMountTable *self, dev_t subvol, dev_t parent) {
+// if(g_hash_table_contains(self->subvol_table, GUINT_TO_POINTER(parent))) {
+/* parent volume is a subvolume itself */
 
-    //}
 //}
-
+//}
 
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {
     if(self == NULL) {
@@ -979,40 +976,39 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
          * a recognisable partition */
         char *prev = g_strdup(path);
         while(TRUE) {
-                char *temp = g_strdup(prev);
-                char *parent_path = g_strdup(dirname(temp));
-                g_free(temp);
+            char *temp = g_strdup(prev);
+            char *parent_path = g_strdup(dirname(temp));
+            g_free(temp);
 
-                RmStat stat_buf;
-                if(!rm_sys_stat(parent_path, &stat_buf)) {
-                    RmPartitionInfo *parent_part = g_hash_table_lookup(
-                        self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
-                    if(parent_part) {
-                        /* create new partition table entry */
-                        rm_log_debug("Adding partition info for " GREEN "%s" RESET
-                                     " - looks like subvolume %s on disk " GREEN
-                                     "%s" RESET "\n",
-                                     path, prev, parent_part->name);
-                        part = rm_part_info_new(prev, parent_part->fsname,
-                                                parent_part->disk);
-                        g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
-                                            part);
-                        if(g_hash_table_contains(self->reflinkfs_table,
-                                                 GUINT_TO_POINTER(stat_buf.st_dev))) {
-                            g_hash_table_insert(self->reflinkfs_table,
-                                                GUINT_TO_POINTER(partition),
-                                                GUINT_TO_POINTER(1));
-                        }
-                        g_free(prev);
-                        g_free(parent_path);
-                        return parent_part->disk;
+            RmStat stat_buf;
+            if(!rm_sys_stat(parent_path, &stat_buf)) {
+                RmPartitionInfo *parent_part = g_hash_table_lookup(
+                    self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
+                if(parent_part) {
+                    /* create new partition table entry */
+                    rm_log_debug("Adding partition info for " GREEN "%s" RESET
+                                 " - looks like subvolume %s on disk " GREEN "%s" RESET
+                                 "\n",
+                                 path, prev, parent_part->name);
+                    part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
+                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
+                                        part);
+                    if(g_hash_table_contains(self->reflinkfs_table,
+                                             GUINT_TO_POINTER(stat_buf.st_dev))) {
+                        g_hash_table_insert(self->reflinkfs_table,
+                                            GUINT_TO_POINTER(partition),
+                                            GUINT_TO_POINTER(1));
                     }
+                    g_free(prev);
+                    g_free(parent_path);
+                    return parent_part->disk;
                 }
-                g_free(prev);
-                prev = parent_path;
-                g_assert(strcmp(prev, "/") != 0);
-                g_assert(strcmp(prev, ".") != 0);
             }
+            g_free(prev);
+            prev = parent_path;
+            g_assert(strcmp(prev, "/") != 0);
+            g_assert(strcmp(prev, ".") != 0);
+        }
     }
 }
 
@@ -1074,14 +1070,14 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 //    FIEMAP IMPLEMENATION     //
 /////////////////////////////////
 
-
 #if HAVE_FIEMAP
 
 /* Return fiemap structure containing n_extents for file descriptor fd.
  * Return NULL if errors encountered.
  * Needs to be freed with g_free if not NULL.
  * */
-static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const int file_offset){
+static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
+                                           const int file_offset) {
     /* struct fiemap does not allocate any extents by default,
      * so we allocate the nominated number
      * */
@@ -1095,7 +1091,7 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const in
 
     if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fm) == -1) {
         g_free(fm);
-        fm=NULL;
+        fm = NULL;
     }
     return fm;
 }
@@ -1107,62 +1103,64 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const in
  * file offset to &file_offset_next.
  * */
 RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) {
-    RmOff result=0;
+    RmOff result = 0;
     bool done = FALSE;
 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
 
-    while (!done) {
+    while(!done) {
         /* read in one extent */
         struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);
-        if (!fm) {
+        if(!fm) {
             done = TRUE;
         } else {
-            if (!file_offset_next) {
+            if(!file_offset_next) {
                 /* no need to find end of fragment so one loop is enough*/
                 done = TRUE;
             }
-            if (fm->fm_mapped_extents > 0) {
+            if(fm->fm_mapped_extents > 0) {
                 /* retrieve data from fiemap */
                 struct fiemap_extent *fm_ext = fm->fm_extents;
                 file_offset += fm_ext[0].fe_length;
-                if (result == 0) {
+                if(result == 0) {
                     /* this is the first extent */
                     result = fm_ext[0].fe_physical;
-                    if (result==0) {
+                    if(result == 0) {
                         /* looks suspicious - let's get out of here */
                         done = TRUE;
                     }
-                } else if (fm_ext[0].fe_physical > expected ||
-                           fm_ext[0].fe_physical < result) {
+                } else if(fm_ext[0].fe_physical > expected ||
+                          fm_ext[0].fe_physical < result) {
                     /* current extent is not contiguous with previous, so we can stop*/
                     done = TRUE;
-                    if (file_offset_next) {
+                    if(file_offset_next) {
                         /* caller wants to know logical offset of next fragment */
                         *file_offset_next = fm_ext[0].fe_logical;
                     }
                 }
-                if (fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
-                    if (!done) {
+                if(fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
+                    if(!done) {
                         done = TRUE;
-                        if (file_offset_next) {
-                            /* caller wants to know logical offset of next fragment - signal
+                        if(file_offset_next) {
+                            /* caller wants to know logical offset of next fragment -
+                             * signal
                              * that it is EOF */
-                            *file_offset_next =  fm_ext[0].fe_logical + fm_ext[0].fe_length;
+                            *file_offset_next =
+                                fm_ext[0].fe_logical + fm_ext[0].fe_length;
                         }
                     }
                 }
-                if (!done) {
+                if(!done) {
                     expected = fm_ext[0].fe_physical + fm_ext[0].fe_length;
                 }
             } else {
                 /* got no extents from rm_offset_get_fiemap */
-                done=true;
-                if (file_offset_next) {
+                done = true;
+                if(file_offset_next) {
                     /* caller wants to know logical offset of next fragment but
                      * we have an error... */
-                    *file_offset_next =  0;
+                    *file_offset_next = 0;
                 }
             }
             g_free(fm);
@@ -1171,20 +1169,20 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
     return result;
 }
 
-RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next) {
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
+                              RmOff *file_offset_next) {
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result=rm_offset_get_from_fd(fd, file_offset, file_offset_next);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next);
     rm_sys_close(fd);
     return result;
 }
 
-
 bool rm_offsets_match(char *path1, char *path2) {
-    bool result=FALSE;
+    bool result = FALSE;
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 != -1) {
         int fd2 = rm_sys_open(path2, O_RDONLY);
@@ -1192,13 +1190,11 @@ bool rm_offsets_match(char *path1, char *path2) {
             RmOff file1_offset_next = 0;
             RmOff file2_offset_next = 0;
             RmOff file_offset_current = 0;
-            while ( !result &&
-                    (   rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
-                        rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)
-                    ) &&
-                    file1_offset_next != 0 &&
-                    file1_offset_next == file2_offset_next ) {
-                if (file1_offset_next == file_offset_current) {
+            while(!result &&
+                  (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
+                   rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
+                  file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
+                if(file1_offset_next == file_offset_current) {
                     /* phew, we got to the end */
                     result = TRUE;
                     break;
@@ -1222,7 +1218,8 @@ RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset, _U RmOff *file_offs
     return 0;
 }
 
-RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset, _U RmOff *file_offset_next) {
+RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset,
+                              _U RmOff *file_offset_next) {
     return 0;
 }
 

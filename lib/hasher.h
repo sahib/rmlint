@@ -49,7 +49,6 @@
  *
  **/
 
-
 /**
  * @struct RmHasher
  *
@@ -75,8 +74,10 @@ typedef struct _RmHasherTask RmHasherTask;
  * @param file_user_data User data passed to rm_hasher_task_new()
  * @retval (UNUSED)
  **/
-typedef int (*RmHasherCallback)(RmHasher *hasher, RmDigest *digest, gpointer session_user_data, gpointer task_user_data);
-
+typedef int (*RmHasherCallback)(RmHasher *hasher,
+                                RmDigest *digest,
+                                gpointer session_user_data,
+                                gpointer task_user_data);
 
 /**
  * @brief Allocate and initialise a new hashing object
@@ -87,27 +88,28 @@ typedef int (*RmHasherCallback)(RmHasher *hasher, RmDigest *digest, gpointer ses
  * @param buf_size Size of each read buffer size in bytes
  * @param cache_quota_bytes Total bytes to allocate for read buffers
  * @param target_kept_bytes Target number of bytes to be stored in paranoid digest buffers
- * @param joiner The callback function for completed digests, triggered by rm_hasher_task_finish()
- * If joiner is NULL then rm_hasher_task_finish() will wait for (background) hashing to finish
+ * @param joiner The callback function for completed digests, triggered by
+ *rm_hasher_task_finish()
+ * If joiner is NULL then rm_hasher_task_finish() will wait for (background) hashing to
+ *finish
  * and return the completed digest to the caller.
  *
- * @param session_user_data Pointer to user data associated with the session; will be passed to joiner.
+ * @param session_user_data Pointer to user data associated with the session; will be
+ *passed to joiner.
  *
  **/
-RmHasher *rm_hasher_new(
-            RmDigestType digest_type,
-            uint num_threads,
-            gboolean use_buffered_read,
-            gsize buf_size,
-            guint64 cache_quota_bytes,
-            guint64 target_kept_bytes,
-            RmHasherCallback joiner,
-            gpointer session_user_data);
-
+RmHasher *rm_hasher_new(RmDigestType digest_type,
+                        uint num_threads,
+                        gboolean use_buffered_read,
+                        gsize buf_size,
+                        guint64 cache_quota_bytes,
+                        guint64 target_kept_bytes,
+                        RmHasherCallback joiner,
+                        gpointer session_user_data);
 
 /**
  * @brief Free a hashing object
- * 
+ *
  * @param wait Wait for pending tasks to finish.
  **/
 void rm_hasher_free(RmHasher *hasher, gboolean wait);
@@ -116,10 +118,14 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait);
  * @brief Allocate and initialise a new hashing task.
  *
  * @param hasher The hashing object
- * @param digest An existing digest to update.  If NULL passed, will allocate a new digest.
- * @param task_user_data Pointer to user data associated with the task; will be passed to session->joiner by rm_hasher_task_finish().
+ * @param digest An existing digest to update.  If NULL passed, will allocate a new
+ *digest.
+ * @param task_user_data Pointer to user data associated with the task; will be passed to
+ *session->joiner by rm_hasher_task_finish().
  **/
-RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer task_user_data);
+RmHasherTask *rm_hasher_task_new(RmHasher *hasher,
+                                 RmDigest *digest,
+                                 gpointer task_user_data);
 
 /**
  * @brief Read data from a file and send it for hashing in separate thread
@@ -128,17 +134,23 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer ta
  * @param path  The file path to read from
  * @param start_offset  Where to start reading the file (number of bytes from start)
  * @param bytes_to_read  How many bytes to read (pass 0 to read whole file)
- * @param is_symlink  If path is a symlink, pass TRUE to read the symlink itself rather than the linked file
+ * @param is_symlink  If path is a symlink, pass TRUE to read the symlink itself rather
+ *than the linked file
  * @retval FALSE if read errors occurred
  **/
-gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink);
+gboolean rm_hasher_task_hash(RmHasherTask *task,
+                             char *path,
+                             guint64 start_offset,
+                             guint64 bytes_to_read,
+                             gboolean is_symlink);
 
 /**
  * @brief Finalise a hashing task
  *
  * @param task  An existing RmHasherTask
  *
- * If a NULL callback passed, will wait for the task to finish and return the finalised RmDigest to caller.
+ * If a NULL callback passed, will wait for the task to finish and return the finalised
+ *RmDigest to caller.
  **/
 RmDigest *rm_hasher_task_finish(RmHasherTask *task);
 

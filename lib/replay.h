@@ -33,7 +33,7 @@
  * @brief Load a json file from disk and output it to the output module.
  *
  * Most relevant options are supported as far as possible.
- * Options that alter the hashing/reading of duplicates will have no 
+ * Options that alter the hashing/reading of duplicates will have no
  * effect since almost no IO will be done except for some lstat/stat.
  *
  * Additionally, --followlinks, --crossdev, --hardlink (as well as their

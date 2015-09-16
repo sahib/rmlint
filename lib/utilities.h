@@ -74,9 +74,9 @@ static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {
 
 static inline int rm_sys_open(const char *path, int mode) {
 #if HAVE_STAT64
-# ifdef O_LARGEFILE
+#ifdef O_LARGEFILE
     mode |= O_LARGEFILE;
-# endif
+#endif
 #endif
 
     return open(path, mode, (S_IRUSR | S_IWUSR));
@@ -193,7 +193,7 @@ bool rm_util_path_is_hidden(const char *path);
 /**
  * @brief Get the depth of a path
  *
- * @param path 
+ * @param path
  *
  * @return depth of path or 0.
  */
@@ -327,7 +327,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next);
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next);
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
+                              RmOff *file_offset_next);
 
 /**
  * @brief Test if two files have identical fiemaps.

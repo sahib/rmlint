@@ -255,7 +255,8 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.                             \
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
-                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum, short depth);
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum,
+                    short depth);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.

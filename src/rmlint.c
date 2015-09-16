@@ -30,10 +30,9 @@
 #include "../lib/api.h"
 #include "../lib/config.h"
 
-#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0) 
-# include <glib-object.h>
+#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
+#include <glib-object.h>
 #endif
-
 
 static char *remove_color_escapes(char *message) {
     char *dst = message;
@@ -105,7 +104,6 @@ static void i18n_init(void) {
     textdomain(RM_GETTEXT_PACKAGE);
 #endif
 }
-
 
 int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;

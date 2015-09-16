@@ -30,7 +30,7 @@
 #include "file.h"
 #include "formats.h"
 
-/* A group of output files. 
+/* A group of output files.
  * These are only created when caching to the end of the run is requested.
  * Otherwise, files are directly outputed and not stored in groups.
  */
@@ -38,7 +38,6 @@ typedef struct RmFmtGroup {
     GQueue files;
     int index;
 } RmFmtGroup;
-
 
 static RmFmtGroup *rm_fmt_group_new(void) {
     RmFmtGroup *self = g_slice_new(RmFmtGroup);
@@ -238,11 +237,11 @@ static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
     /* Better do not compare big unsigneds via a - b... */
     if(sa < sb) {
         return -1;
-    } 
+    }
 
     if(sa > sb) {
         return +1;
-    } 
+    }
 
     return 0;
 }
@@ -253,40 +252,39 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
     RmFile *fa = ga->files.head->data;
     RmFile *fb = gb->files.head->data;
 
-    if(fa->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE
-    && fa->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+    if(fa->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
+       fa->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         return -1;
     }
 
-    if(fb->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE 
-    && fb->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+    if(fb->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
+       fb->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         return +1;
     }
 
     for(int i = 0; rank_order[i]; ++i) {
         gint64 r = 0;
         switch(tolower(rank_order[i])) {
-            case 's':
-                r = rm_fmt_rank_size(ga, gb);
-                break;
-            case 'a': {
-                    RM_DEFINE_BASENAME(fa)
-                    RM_DEFINE_BASENAME(fb)
-                    r = strcasecmp(fa_basename, fb_basename);
-                }
-                break;
-            case 'm':
-                r = ((gint64)fa->mtime) - ((gint64)fb->mtime);
-                break;
-            case 'p':
-                r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
-                break;
-            case 'n':
-                r = ((gint64)ga->files.length) - ((gint64)gb->files.length);
-                break;
-            case 'o':
-                r = ga->index - gb->index;
-                break;
+        case 's':
+            r = rm_fmt_rank_size(ga, gb);
+            break;
+        case 'a': {
+            RM_DEFINE_BASENAME(fa)
+            RM_DEFINE_BASENAME(fb)
+            r = strcasecmp(fa_basename, fb_basename);
+        } break;
+        case 'm':
+            r = ((gint64)fa->mtime) - ((gint64)fb->mtime);
+            break;
+        case 'p':
+            r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
+            break;
+        case 'n':
+            r = ((gint64)ga->files.length) - ((gint64)gb->files.length);
+            break;
+        case 'o':
+            r = ga->index - gb->index;
+            break;
         }
 
         if(r != 0) {
@@ -338,7 +336,7 @@ void rm_fmt_close(RmFmtTable *self) {
 
 void rm_fmt_write(RmFile *result, RmFmtTable *self, gint64 twin_count) {
     bool direct = !(self->session->cfg->cache_file_structs);
-    
+
     result->twin_count = twin_count;
 
     if(direct) {
@@ -408,13 +406,13 @@ bool rm_fmt_has_formatter(RmFmtTable *self, const char *name) {
     RmFmtHandler *handler = NULL;
 
     g_hash_table_iter_init(&iter, self->path_to_handler);
-    
+
     while(g_hash_table_iter_next(&iter, NULL, (gpointer *)&handler)) {
         if(!strcmp(handler->name, name)) {
             return true;
         }
     }
-    
+
     return false;
 }
 

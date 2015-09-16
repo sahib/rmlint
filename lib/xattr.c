@@ -53,7 +53,8 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
     return getxattr(path, name, value, size, 0, 0);
 }
 
-ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value, size_t size, int flags) {
+ssize_t rm_sys_setxattr(
+    const char *path, const char *name, const void *value, size_t size, int flags) {
     return setxattr(path, name, value, size, 0, flags);
 }
 
@@ -67,7 +68,8 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
     return getxattr(path, name, value, size);
 }
 
-ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value, size_t size, int flags) {
+ssize_t rm_sys_setxattr(
+    const char *path, const char *name, const void *value, size_t size, int flags) {
     return setxattr(path, name, value, size, flags);
 }
 
@@ -127,7 +129,8 @@ static int rm_xattr_set(RmFile *file,
                         const char *value,
                         size_t value_size) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("setxattr", rm_sys_setxattr(file_path, key, value, value_size, 0));
+    return rm_xattr_is_fail("setxattr",
+                            rm_sys_setxattr(file_path, key, value, value_size, 0));
 }
 
 static int rm_xattr_get(RmFile *file,
@@ -136,7 +139,8 @@ static int rm_xattr_get(RmFile *file,
                         size_t value_size) {
     RM_DEFINE_PATH(file);
 
-    return rm_xattr_is_fail("getxattr", rm_sys_getxattr(file_path, key, out_value, value_size));
+    return rm_xattr_is_fail("getxattr",
+                            rm_sys_getxattr(file_path, key, out_value, value_size));
 }
 
 static int rm_xattr_del(RmFile *file, const char *key) {

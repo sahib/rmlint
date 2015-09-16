@@ -38,7 +38,7 @@
 #include <glib/gstdio.h>
 
 #if HAVE_JSON_GLIB
-# include <json-glib/json-glib.h>
+#include <json-glib/json-glib.h>
 
 /////////////////////////////////////////////////
 //  POLLY THE PARROT REPEATS WHAT RMLINT SAID  //
@@ -47,7 +47,7 @@
 typedef struct RmParrot {
     /* Global session */
     RmSession *session;
-    
+
     /* Json parser instance */
     JsonParser *parser;
 
@@ -57,7 +57,7 @@ typedef struct RmParrot {
     /* Last original file that we encountered */
     RmFile *last_original;
 
-    /* Index inside the document 
+    /* Index inside the document
      * (0 is header, 1 first element, len(root) is footer)
      * */
     guint index;
@@ -75,7 +75,8 @@ static void rm_parrot_close(RmParrot *polly) {
     g_free(polly);
 }
 
-static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, GError **error) {
+static RmParrot *rm_parrot_open(RmSession *session, const char *json_path,
+                                GError **error) {
     RmParrot *polly = g_malloc0(sizeof(RmParrot));
     polly->session = session;
     polly->parser = json_parser_new();
@@ -88,7 +89,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, GErro
 
         if(rm_sys_stat(path, &stat_buf) != -1) {
             g_hash_table_add(polly->disk_ids, GUINT_TO_POINTER(stat_buf.st_dev));
-        }   
+        }
     }
 
     if(!json_parser_load_from_file(polly->parser, json_path, error)) {
@@ -142,15 +143,12 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     /* Check for the lint type */
-    RmLintType type = rm_file_string_to_lint_type(
-        json_object_get_string_member(object, "type")
-    );
+    RmLintType type =
+        rm_file_string_to_lint_type(json_object_get_string_member(object, "type"));
 
     if(type == RM_LINT_TYPE_UNKNOWN) {
-        rm_log_warning_line(
-            _("lint type '%s' not recognised"),
-            json_object_get_string_member(object, "type")
-        );
+        rm_log_warning_line(_("lint type '%s' not recognised"),
+                            json_object_get_string_member(object, "type"));
         return NULL;
     }
 
@@ -170,10 +168,9 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
     /* Check if we're late and issue an warning */
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
-    if(mtime_node && json_node_get_int(mtime_node) < rm_sys_stat_mtime_seconds(stat_info)) {
-        rm_log_warning_line(
-            _("modification time of `%s` changed. Ignoring."), path
-        );
+    if(mtime_node &&
+       json_node_get_int(mtime_node) < rm_sys_stat_mtime_seconds(stat_info)) {
+        rm_log_warning_line(_("modification time of `%s` changed. Ignoring."), path);
         return NULL;
     }
 
@@ -241,9 +238,8 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
         return true;
     }
 
-    return
-        ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->file_size) &&
-        (cfg->maxsize == (RmOff)-1 || file->file_size <= cfg->maxsize));
+    return ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->file_size) &&
+            (cfg->maxsize == (RmOff)-1 || file->file_size <= cfg->maxsize));
 }
 
 static bool rm_parrot_check_hidden(RmCfg *cfg, _U RmFile *file, const char *file_path) {
@@ -259,7 +255,8 @@ static bool rm_parrot_check_hidden(RmCfg *cfg, _U RmFile *file, const char *file
     return true;
 }
 
-static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file, const char *file_path) {
+static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file,
+                                        const char *file_path) {
     if(!cfg->permissions) {
         return true;
     }
@@ -271,7 +268,7 @@ static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file, const char 
 
     return true;
 }
- 
+
 static bool rm_parrot_check_crossdev(RmParrot *polly, _U RmFile *file) {
     if(polly->session->cfg->crossdev) {
         return true;
@@ -284,7 +281,7 @@ static bool rm_parrot_check_crossdev(RmParrot *polly, _U RmFile *file) {
 
     return true;
 }
- 
+
 static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file_path) {
     RmCfg *cfg = polly->session->cfg;
 
@@ -320,28 +317,28 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file
 
 static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
     switch(file->lint_type) {
-        case RM_LINT_TYPE_DUPE_CANDIDATE:
-            return cfg->find_duplicates;
-        case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
-            return cfg->merge_directories;
-        case RM_LINT_TYPE_BADLINK:
-            return cfg->find_badlinks;
-        case RM_LINT_TYPE_EMPTY_DIR:
-            return cfg->find_emptydirs;
-        case RM_LINT_TYPE_EMPTY_FILE:
-            return cfg->find_emptyfiles;
-        case RM_LINT_TYPE_NONSTRIPPED:
-            return cfg->find_nonstripped;
-        case RM_LINT_TYPE_BADUID:
-        case RM_LINT_TYPE_BADGID:
-        case RM_LINT_TYPE_BADUGID:
-            return cfg->find_badids;
-        case RM_LINT_TYPE_UNFINISHED_CKSUM:
-            return cfg->write_unfinished;
-        case RM_LINT_TYPE_UNKNOWN:
-        default:
-            FAIL_MSG("nope: invalid lint type.");
-            return false;
+    case RM_LINT_TYPE_DUPE_CANDIDATE:
+        return cfg->find_duplicates;
+    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+        return cfg->merge_directories;
+    case RM_LINT_TYPE_BADLINK:
+        return cfg->find_badlinks;
+    case RM_LINT_TYPE_EMPTY_DIR:
+        return cfg->find_emptydirs;
+    case RM_LINT_TYPE_EMPTY_FILE:
+        return cfg->find_emptyfiles;
+    case RM_LINT_TYPE_NONSTRIPPED:
+        return cfg->find_nonstripped;
+    case RM_LINT_TYPE_BADUID:
+    case RM_LINT_TYPE_BADGID:
+    case RM_LINT_TYPE_BADUGID:
+        return cfg->find_badids;
+    case RM_LINT_TYPE_UNFINISHED_CKSUM:
+        return cfg->write_unfinished;
+    case RM_LINT_TYPE_UNKNOWN:
+    default:
+        FAIL_MSG("nope: invalid lint type.");
+        return false;
     }
 }
 
@@ -351,9 +348,8 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
 
 static void rm_parrot_fix_match_opts(RmParrotCage *cage, GQueue *group) {
     RmCfg *cfg = cage->session->cfg;
-    if(!(cfg->match_with_extension 
-    || cfg->match_without_extension 
-    || cfg->match_basename)) {
+    if(!(cfg->match_with_extension || cfg->match_without_extension ||
+         cfg->match_basename)) {
         return;
     }
 
@@ -408,8 +404,8 @@ static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
         }
     }
 
-    if((!has_prefd && cfg->must_match_tagged) 
-    || (!has_non_prefd && cfg->must_match_untagged)) {
+    if((!has_prefd && cfg->must_match_tagged) ||
+       (!has_non_prefd && cfg->must_match_untagged)) {
         g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
         g_queue_clear(group);
     }
@@ -450,16 +446,13 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
     rm_parrot_fix_match_opts(cage, group);
     rm_parrot_fix_must_match_tagged(cage, group);
 
-    g_queue_sort(
-        group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, cage->session
-    );
+    g_queue_sort(group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, cage->session);
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
-        if(file == group->head->data 
-        || (cfg->keep_all_tagged && file->is_prefd)
-        || (cfg->keep_all_untagged && !file->is_prefd)) {
+        if(file == group->head->data || (cfg->keep_all_tagged && file->is_prefd) ||
+           (cfg->keep_all_untagged && !file->is_prefd)) {
             file->is_original = true;
         } else {
             file->is_original = false;
@@ -474,14 +467,15 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
 //  ENTRY POINT TO TRIGGER THE PARROT  //
 /////////////////////////////////////////
 
-static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref, bool is_last) {
+static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref,
+                                      bool is_last) {
     GQueue *group = *group_ref;
     if(group->length > 1) {
         g_queue_push_tail(cage->groups, group);
     } else {
         g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
     }
-        
+
     if(!is_last) {
         *group_ref = g_queue_new();
     }
@@ -496,7 +490,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {
     if(polly == NULL || error != NULL) {
         rm_log_warning_line("Error: %s", error->message);
         g_error_free(error);
-        return false; 
+        return false;
     }
 
     RmCfg *cfg = cage->session->cfg;
@@ -514,15 +508,11 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {
         rm_log_debug("Checking `%s`: ", file_path);
 
         /* Check --size, --perms, --hidden */
-        if(!(
-            rm_parrot_check_depth(cfg, file) &&
-            rm_parrot_check_size(cfg, file) &&
-            rm_parrot_check_hidden(cfg, file, file_path) &&
-            rm_parrot_check_permissions(cfg, file, file_path) &&
-            rm_parrot_check_types(cfg, file) && 
-            rm_parrot_check_crossdev(polly, file) && 
-            rm_parrot_check_path(polly, file, file_path)
-        )) {
+        if(!(rm_parrot_check_depth(cfg, file) && rm_parrot_check_size(cfg, file) &&
+             rm_parrot_check_hidden(cfg, file, file_path) &&
+             rm_parrot_check_permissions(cfg, file, file_path) &&
+             rm_parrot_check_types(cfg, file) && rm_parrot_check_crossdev(polly, file) &&
+             rm_parrot_check_path(polly, file, file_path))) {
             rm_file_destroy(file);
             continue;
         }
