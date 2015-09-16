@@ -210,6 +210,14 @@ General Options
     This will only work when ``Shredder`` and it's dependencies were installed
     in prior. See also: http://rmlint.readthedocs.org/en/latest/gui.html
 
+    The gui has it's own set of options, see ``--gui --help`` for a list.
+
+:``--hash``:
+
+    Make ``rmlint`` work like the popular ``md5sum`` or ``sha1sum`` utilities.
+    A set of paths given on the commandline or from *stdin* is hashed in
+    parallel using one of the available hash algorithms. See also 
+
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them. 

@@ -32,10 +32,6 @@
 #include "../lib/hasher.h"
 #include "../lib/utilities.h"
 
-#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
-#include <glib-object.h>
-#endif
-
 typedef struct RmHasherSession {
     /* Internal */
     char **paths;
@@ -72,7 +68,7 @@ static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) 
     rm_digest_hexstring(digest, checksum_str);
 
     if(print_multihash) {
-        g_print("%02x%02x", rm_digest_type_to_multihash_id(digest->type),
+        g_print("%02x%02x@", rm_digest_type_to_multihash_id(digest->type),
                 rm_digest_get_bytes(digest));
     }
 
@@ -121,6 +117,9 @@ int rm_hasher_main(int argc, const char **argv) {
     /* Print hashes in the same order as files in command line args */
     tag.print_in_order = TRUE;
 
+    /* Print a hash with builtin identifier */
+    tag.print_multihash = TRUE;
+
     /* Digest type (user option, default SHA1) */
     tag.digest_type = RM_DIGEST_SHA1;
     gint threads = 8;
@@ -132,15 +131,15 @@ int rm_hasher_main(int argc, const char **argv) {
         {"digest-type", 'd', 0, G_OPTION_ARG_CALLBACK,
          (GOptionArgFunc)rm_hasher_parse_type, "Digest type [SHA1]", "[TYPE]"},
         {"num-threads", 't', 0, G_OPTION_ARG_INT, &threads,
-         _("Number of hashing threads [8]"), NULL},
+         _("Number of hashing threads [8]"), "t"},
         {"multihash", 'm', 0, G_OPTION_ARG_NONE, &tag.print_multihash,
-         _("Print hash as self identifying multihash"), NULL},
+         _("Print hash as self identifying multihash"), "m"},
         {"buffer-mbytes", 'b', 0, G_OPTION_ARG_INT64, &buffer_mbytes,
-         _("Megabytes read buffer [256 MB]"), NULL},
+         _("Megabytes read buffer [256 MB]"), "m"},
         {"ignore-order", 'i', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE,
          &tag.print_in_order, _("Print hashes in order completed, not in order entered "
                                 "(reduces memory usage)"),
-         NULL},
+         "o"},
         {"", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths,
          "Space-separated list of files", "[FILE…]"},
         {NULL, 0, 0, 0, NULL, NULL, NULL}};
@@ -155,14 +154,14 @@ int rm_hasher_main(int argc, const char **argv) {
     g_option_context_set_summary(
         context,
         "Multi-threaded file digest (hash) calculator.\n"
-        "\n  Available digest types:"
+        "\n  Available digest types:\n"
         "\n    spooky32, spooky64, md5, murmur[128], spooky[128], "
         "city[128], sha1, sha256, sha512"
         "\n    Also: murmur256, city256, bastard, city512, "
         "murmur512, ext, cumulative, paranoid");
 
     if(!g_option_context_parse(context, &argc, (char ***)&argv, &error)) {
-        /* print g_option error message, followed by help */
+        /* print g_option error message */
         rm_log_error_line("%s", error->message);
         exit(EXIT_FAILURE);
     }
@@ -244,48 +243,4 @@ int rm_hasher_main(int argc, const char **argv) {
     g_strfreev(tag.paths);
 
     return EXIT_SUCCESS;
-}
-
-////////////////////////////////////////////
-// ACTUAL MAIN WHICH CALLS rm_hasher_main //
-////////////////////////////////////////////
-
-static void logging_callback(_U const gchar *log_domain,
-                             GLogLevelFlags log_level,
-                             const gchar *message,
-                             _U gpointer user_data) {
-    if(log_level < G_LOG_LEVEL_INFO) {
-        fputs(message, stderr);
-    }
-}
-
-static void i18n_init(void) {
-#if HAVE_LIBINTL
-    /* Tell gettext where to search for .mo files */
-    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX "/share/locale");
-    bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
-
-    /* Make printing umlauts work */
-    setlocale(LC_ALL, "");
-
-    /* Say we're the textdomain "rmlint"
-     * so gettext can find us in
-     * /usr/share/locale/de/LC_MESSAGEs/rmlint.mo
-     * */
-    textdomain(RM_GETTEXT_PACKAGE);
-#endif
-}
-
-int main(int argc, char const* argv[]) {
-    i18n_init();
-
-#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
-    /* Very old glib. Debian, Im looking at you. */
-    g_type_init();
-#endif
-
-    g_log_set_default_handler(logging_callback, NULL);
-
-    rm_hasher_main(argc, argv);
-    return 0;
 }
