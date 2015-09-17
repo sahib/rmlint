@@ -360,7 +360,7 @@ class OldRmlint(Program):
 
 
 class Dupd(Program):
-    website = 'http://rdfind.pauldreik.se'
+    website = 'https://github.com/jvirkki/dupd'
     script = 'dupd.sh'
     stats_file = '/tmp/rmlint-bench/.dupd.stats'
 
@@ -402,7 +402,7 @@ class Dupd(Program):
 
 
 class Rdfind(Program):
-    website = 'https://github.com/jvirkki/dupd'
+    website = 'http://rdfind.pauldreik.se'
     script = 'rdfind.sh'
     result_file = '/tmp/rmlint-bench/.rdfind.results'
 
