@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-09-17 16:34+0200\n"
+"POT-Creation-Date: 2015-09-17 18:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -152,7 +152,7 @@ msgstr "Dateien"
 msgid "Merging files into directories (stand by...)"
 msgstr "Führe doppelte Dateien in doppelte Verzeichnisse zusammen..."
 
-#: lib/formats/sh.c:455
+#: lib/formats/sh.c:452
 #, c-format
 msgid "%s is an invalid handler."
 msgstr "%s ist eine ungültiger Handler"
@@ -161,47 +161,6 @@ msgstr "%s ist eine ungültiger Handler"
 #, c-format
 msgid "Cannot close tmp cache: %s\n"
 msgstr "Kann temporären Cache nicht schließen: %s\n"
-
-#: lib/hash-utility.c:55 lib/cmdline.c:905
-#, c-format
-msgid "Unknown hash algorithm: '%s'"
-msgstr "Unbekannte Hashfunktion: \"%s\""
-
-#: lib/hash-utility.c:134
-msgid "Number of hashing threads [8]"
-msgstr "Anzahl der Hashing Threads [8]"
-
-#: lib/hash-utility.c:136
-msgid "Print hash as self identifying multihash"
-msgstr "Zeige Hash als selbstidentifizierenden Multihash an."
-
-#: lib/hash-utility.c:138
-msgid "Megabytes read buffer [256 MB]"
-msgstr "Größe des Lesepuffers [256 MB]"
-
-#: lib/hash-utility.c:140
-msgid ""
-"Print hashes in order completed, not in order entered (reduces memory usage)"
-msgstr "Zeige die Hashes in der Fertigstellungs-Reihenfolge, nicht in Eingabe-Reihenfolge (braucht weniger RAM)"
-
-#: lib/hash-utility.c:183 lib/cmdline.c:1520
-msgid "No valid paths given."
-msgstr "Keine validen Pfade gegeben."
-
-#: lib/hash-utility.c:215 lib/cmdline.c:433
-#, c-format
-msgid "Can't open directory or file \"%s\": %s"
-msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
-
-#: lib/hash-utility.c:218
-#, c-format
-msgid "Directories are not supported: %s"
-msgstr "Verzeichnisse werden nicht unterstützt: %s"
-
-#: lib/hash-utility.c:225
-#, c-format
-msgid "%s: Unknown file type"
-msgstr "%s: Unbekannter Dateityp"
 
 #: lib/formats.c:179
 #, c-format
@@ -339,7 +298,9 @@ msgstr "BTRFS_IOC_FILE_EXTENT_SAME gab Fehler zurück: (%d) %s"
 msgid ""
 "BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > "
 "4.2"
-msgstr "BTRFS_IOC_FILE_EXTENT_SAME gab Fehler -22 zurück - Sie brauchen wohl einen Kernel >= 4.2"
+msgstr ""
+"BTRFS_IOC_FILE_EXTENT_SAME gab Fehler -22 zurück - Sie brauchen wohl einen "
+"Kernel >= 4.2"
 
 #: lib/cmdline.c:240
 #, c-format
@@ -353,7 +314,7 @@ msgstr "Dateien sind nicht gleich - nichts geklont"
 #: lib/cmdline.c:249
 msgid "rmlint was not compiled with btrfs support."
 msgstr "rmlint wurde nicht mit `btrfs` Unterstützung kompiliert"
- 
+
 #: lib/cmdline.c:303
 msgid "Input size is empty"
 msgstr "Eingabegröße ist leer. Nicht gut."
@@ -391,6 +352,11 @@ msgstr "Kann Zeitangabe nicht parsen: \"%s\""
 #, fuzzy, c-format
 msgid "Unable to create cache attr `%s`: %s"
 msgstr "Kann Offset nicht parsen \"%s\": "
+
+#: lib/cmdline.c:433 lib/hash-utility.c:221
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
 
 #: lib/cmdline.c:500
 #, fuzzy, c-format
@@ -441,6 +407,11 @@ msgstr "-n %lu ist neuer als jetzt (%lu) - ist das korrekt?"
 #, fuzzy
 msgid "Only up to -pp or down to -PP flags allowed"
 msgstr "Maximal zwei -p flags oder zwei -P Flag erlaubt"
+
+#: lib/cmdline.c:905 lib/hash-utility.c:55
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr "Unbekannte Hashfunktion: \"%s\""
 
 #: lib/cmdline.c:934
 #, fuzzy, c-format
@@ -586,7 +557,7 @@ msgstr "Finde nur Duplikate mit Dateinamen minus der Endung"
 
 #: lib/cmdline.c:1355
 #, fuzzy
-msgid "I0  Find duplicate directories"
+msgid "Find duplicate directories"
 msgstr "Finde Doppelte Verzeichnisse"
 
 #: lib/cmdline.c:1356
@@ -617,7 +588,9 @@ msgstr "Falls installiert, starte die optionale grafische Oberfläche"
 #: lib/cmdline.c:1365
 msgid ""
 "Work like sha1sum for all supported hash algorithms (see also --hash --help)"
-msgstr "Funktioniere wie sha1sum für alle unterstützten Hashsummen (siehe auch --hash --help)"
+msgstr ""
+"Funktioniere wie sha1sum für alle unterstützten Hashsummen (siehe auch --"
+"hash --help)"
 
 #: lib/cmdline.c:1366
 msgid "Clone extents from source to dest, if extents match"
@@ -682,6 +655,10 @@ msgstr ""
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr "-q (--clamp-low) sollte kleiner sein als -Q (--clamp-top)!"
 
+#: lib/cmdline.c:1520 lib/hash-utility.c:189
+msgid "No valid paths given."
+msgstr "Keine validen Pfade gegeben."
+
 #: lib/utilities.c:220
 #, c-format
 msgid "cannot open file '%s' for nonstripped test: "
@@ -712,15 +689,81 @@ msgstr ""
 "`%s` Einhängepunkt gefunden (zeigt auf %s, #%u). Ignoriere alle Dateien "
 "darin."
 
-#: lib/config.h:97
+#: lib/hash-utility.c:133
+msgid "Digest type [SHA1]"
+msgstr "Prüfsummentyp [SHA1]"
+
+#: lib/hash-utility.c:134
+msgid "Number of hashing threads [8]"
+msgstr "Anzahl der Hashing Threads [8]"
+
+#: lib/hash-utility.c:135
+msgid "Print hash as self identifying multihash"
+msgstr "Zeige Hash als selbstidentifizierenden Multihash an."
+
+#: lib/hash-utility.c:136
+msgid "Megabytes read buffer [256 MB]"
+msgstr "Größe des Lesepuffers [256 MB]"
+
+#: lib/hash-utility.c:137
+msgid ""
+"Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr ""
+"Zeige die Hashes in der Fertigstellungs-Reihenfolge, nicht in Eingabe-"
+"Reihenfolge (braucht weniger RAM)"
+
+#: lib/hash-utility.c:138
+msgid "Space-separated list of files"
+msgstr "Leerzeichen-separierte Liste von Dateien"
+
+#: lib/hash-utility.c:144 lib/hash-utility.c:146
+msgid "Hash a list of files"
+msgstr "Hashe eine Liste von Dateien"
+
+#: lib/hash-utility.c:153
+#, c-format
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"    %s\n"
+"\n"
+"  Versions with different bit numbers:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
+msgstr ""
+"Paralleler Prüfsummen-Berechner für Dateien.\n"
+"\n"
+"  Verfügbare Hashsummentypen sind:\n"
+"    %s\n"
+"\n"
+"  Versionen mit unterschiedlicher Anzahl von Bits:\n"
+"    %s\n"
+"\n"
+"  Unterstützt aber ziemlich sinnfrei:\n"
+"    %s\n"
+
+#: lib/hash-utility.c:224
+#, c-format
+msgid "Directories are not supported: %s"
+msgstr "Verzeichnisse werden nicht unterstützt: %s"
+
+#: lib/hash-utility.c:231
+#, c-format
+msgid "%s: Unknown file type"
+msgstr "%s: Unbekannter Dateityp"
+
+#: lib/config.h:107
 msgid "ERROR"
 msgstr "FEHLER"
 
-#: lib/config.h:102
+#: lib/config.h:112
 msgid "WARNING"
 msgstr "WARNUNG"
 
-#: lib/config.h:107
+#: lib/config.h:117
 msgid "INFO"
 msgstr "INFO"
 

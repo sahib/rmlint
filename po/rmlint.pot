@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.3.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-09-17 17:51+0200\n"
+"POT-Creation-Date: 2015-09-17 18:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -160,47 +160,6 @@ msgstr ""
 #: lib/session.c:88
 #, c-format
 msgid "Cannot close tmp cache: %s\n"
-msgstr ""
-
-#: lib/hash-utility.c:55 lib/cmdline.c:905
-#, c-format
-msgid "Unknown hash algorithm: '%s'"
-msgstr ""
-
-#: lib/hash-utility.c:134
-msgid "Number of hashing threads [8]"
-msgstr ""
-
-#: lib/hash-utility.c:136
-msgid "Print hash as self identifying multihash"
-msgstr ""
-
-#: lib/hash-utility.c:138
-msgid "Megabytes read buffer [256 MB]"
-msgstr ""
-
-#: lib/hash-utility.c:140
-msgid ""
-"Print hashes in order completed, not in order entered (reduces memory usage)"
-msgstr ""
-
-#: lib/hash-utility.c:183 lib/cmdline.c:1520
-msgid "No valid paths given."
-msgstr ""
-
-#: lib/hash-utility.c:215 lib/cmdline.c:433
-#, c-format
-msgid "Can't open directory or file \"%s\": %s"
-msgstr ""
-
-#: lib/hash-utility.c:218
-#, c-format
-msgid "Directories are not supported: %s"
-msgstr ""
-
-#: lib/hash-utility.c:225
-#, c-format
-msgid "%s: Unknown file type"
 msgstr ""
 
 #: lib/formats.c:179
@@ -382,6 +341,11 @@ msgstr ""
 msgid "Unable to create cache attr `%s`: %s"
 msgstr ""
 
+#: lib/cmdline.c:433 lib/hash-utility.c:221
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr ""
+
 #: lib/cmdline.c:500
 #, c-format
 msgid "Adding -o %s as output failed"
@@ -429,6 +393,11 @@ msgstr ""
 
 #: lib/cmdline.c:882
 msgid "Only up to -pp or down to -PP flags allowed"
+msgstr ""
+
+#: lib/cmdline.c:905 lib/hash-utility.c:55
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
 msgstr ""
 
 #: lib/cmdline.c:934
@@ -652,16 +621,8 @@ msgstr ""
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr ""
 
-#: lib/config.h:107
-msgid "ERROR"
-msgstr ""
-
-#: lib/config.h:112
-msgid "WARNING"
-msgstr ""
-
-#: lib/config.h:117
-msgid "INFO"
+#: lib/cmdline.c:1520 lib/hash-utility.c:189
+msgid "No valid paths given."
 msgstr ""
 
 #: lib/utilities.c:220
@@ -690,4 +651,70 @@ msgstr ""
 #: lib/utilities.c:695
 #, c-format
 msgid "`%s` mount detected at %s (#%u); Ignoring all files in it."
+msgstr ""
+
+#: lib/hash-utility.c:133
+msgid "Digest type [SHA1]"
+msgstr ""
+
+#: lib/hash-utility.c:134
+msgid "Number of hashing threads [8]"
+msgstr ""
+
+#: lib/hash-utility.c:135
+msgid "Print hash as self identifying multihash"
+msgstr ""
+
+#: lib/hash-utility.c:136
+msgid "Megabytes read buffer [256 MB]"
+msgstr ""
+
+#: lib/hash-utility.c:137
+msgid ""
+"Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr ""
+
+#: lib/hash-utility.c:138
+msgid "Space-separated list of files"
+msgstr ""
+
+#: lib/hash-utility.c:144 lib/hash-utility.c:146
+msgid "Hash a list of files"
+msgstr ""
+
+#: lib/hash-utility.c:153
+#, c-format
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"    %s\n"
+"\n"
+"  Versions with different bit numbers:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
+msgstr ""
+
+#: lib/hash-utility.c:224
+#, c-format
+msgid "Directories are not supported: %s"
+msgstr ""
+
+#: lib/hash-utility.c:231
+#, c-format
+msgid "%s: Unknown file type"
+msgstr ""
+
+#: lib/config.h:107
+msgid "ERROR"
+msgstr ""
+
+#: lib/config.h:112
+msgid "WARNING"
+msgstr ""
+
+#: lib/config.h:117
+msgid "INFO"
 msgstr ""

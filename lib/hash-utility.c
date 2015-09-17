@@ -127,38 +127,44 @@ int rm_hasher_main(int argc, const char **argv) {
 
     ////////////// Option Parsing ///////////////
 
+    /* clang-format off */
+
     const GOptionEntry entries[] = {
-        {"digest-type", 'd', 0, G_OPTION_ARG_CALLBACK,
-         (GOptionArgFunc)rm_hasher_parse_type, "Digest type [SHA1]", "[TYPE]"},
-        {"num-threads", 't', 0, G_OPTION_ARG_INT, &threads,
-         _("Number of hashing threads [8]"), "t"},
-        {"multihash", 'm', 0, G_OPTION_ARG_NONE, &tag.print_multihash,
-         _("Print hash as self identifying multihash"), "m"},
-        {"buffer-mbytes", 'b', 0, G_OPTION_ARG_INT64, &buffer_mbytes,
-         _("Megabytes read buffer [256 MB]"), "m"},
-        {"ignore-order", 'i', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE,
-         &tag.print_in_order, _("Print hashes in order completed, not in order entered "
-                                "(reduces memory usage)"),
-         "o"},
-        {"", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &tag.paths,
-         "Space-separated list of files", "[FILE…]"},
-        {NULL, 0, 0, 0, NULL, NULL, NULL}};
+        {"digest-type"    , 'd'  , 0                      , G_OPTION_ARG_CALLBACK        , (GOptionArgFunc)rm_hasher_parse_type  , _("Digest type [SHA1]")                                                            , "[TYPE]"}   ,
+        {"num-threads"    , 't'  , 0                      , G_OPTION_ARG_INT             , &threads                              , _("Number of hashing threads [8]")                                                 , "N"}        ,
+        {"multihash"      , 'm'  , 0                      , G_OPTION_ARG_NONE            , &tag.print_multihash                  , _("Print hash as self identifying multihash")                                      , NULL}       ,
+        {"buffer-mbytes"  , 'b'  , 0                      , G_OPTION_ARG_INT64           , &buffer_mbytes                        , _("Megabytes read buffer [256 MB]")                                                , "MB"}       ,
+        {"ignore-order"   , 'i'  , G_OPTION_FLAG_REVERSE  , G_OPTION_ARG_NONE            , &tag.print_in_order                   , _("Print hashes in order completed, not in order entered (reduces memory usage)")  , NULL}       ,
+        {""               , 0    , 0                      , G_OPTION_ARG_FILENAME_ARRAY  , &tag.paths                            , _("Space-separated list of files")                                                 , "[FILE…]"}  ,
+        {NULL             , 0    , 0                      , 0                            , NULL                                  , NULL                                                                               , NULL}};
+
+    /* clang-format on */
 
     GError *error = NULL;
-    GOptionContext *context = g_option_context_new("      Hash a list of files");
+    GOptionContext *context = g_option_context_new(_("Hash a list of files"));
     GOptionGroup *main_group =
-        g_option_group_new(argv[0], "Hash a list of files", "", &tag, NULL);
+        g_option_group_new(argv[0], _("Hash a list of files"), "", &tag, NULL);
+
+    char summary[4096];
+    memset(summary, 0, sizeof(summary));
+
+    g_snprintf(
+        summary, sizeof(summary), 
+        _("Multi-threaded file digest (hash) calculator.\n"
+        "\n  Available digest types:"
+        "\n    %s\n"
+        "\n  Versions with different bit numbers:"
+        "\n    %s\n"
+        "\n  Supported, but not useful:"
+        "\n    %s\n"),
+        "spooky, city, xxhash, sha{1,256,512}, md5, murmur",
+        "spooky{32,64,128}, city{128,256,512}, murmur{512}",
+        "cumulative, paranoid, ext, bastard"
+    );
 
     g_option_group_add_entries(main_group, entries);
     g_option_context_set_main_group(context, main_group);
-    g_option_context_set_summary(
-        context,
-        "Multi-threaded file digest (hash) calculator.\n"
-        "\n  Available digest types:\n"
-        "\n    spooky32, spooky64, md5, murmur[128], spooky[128], "
-        "city[128], sha1, sha256, sha512"
-        "\n    Also: murmur256, city256, bastard, city512, "
-        "murmur512, ext, cumulative, paranoid");
+    g_option_context_set_summary(context, summary);
 
     if(!g_option_context_parse(context, &argc, (char ***)&argv, &error)) {
         /* print g_option error message */
