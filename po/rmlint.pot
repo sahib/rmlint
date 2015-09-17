@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.3.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-09-17 16:34+0200\n"
+"POT-Creation-Date: 2015-09-17 17:51+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -152,7 +152,7 @@ msgstr ""
 msgid "Merging files into directories (stand by...)"
 msgstr ""
 
-#: lib/formats/sh.c:455
+#: lib/formats/sh.c:452
 #, c-format
 msgid "%s is an invalid handler."
 msgstr ""
@@ -652,6 +652,18 @@ msgstr ""
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr ""
 
+#: lib/config.h:107
+msgid "ERROR"
+msgstr ""
+
+#: lib/config.h:112
+msgid "WARNING"
+msgstr ""
+
+#: lib/config.h:117
+msgid "INFO"
+msgstr ""
+
 #: lib/utilities.c:220
 #, c-format
 msgid "cannot open file '%s' for nonstripped test: "
@@ -678,16 +690,4 @@ msgstr ""
 #: lib/utilities.c:695
 #, c-format
 msgid "`%s` mount detected at %s (#%u); Ignoring all files in it."
-msgstr ""
-
-#: lib/config.h:97
-msgid "ERROR"
-msgstr ""
-
-#: lib/config.h:102
-msgid "WARNING"
-msgstr ""
-
-#: lib/config.h:107
-msgid "INFO"
 msgstr ""

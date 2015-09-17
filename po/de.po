@@ -339,8 +339,7 @@ msgstr "BTRFS_IOC_FILE_EXTENT_SAME gab Fehler zurück: (%d) %s"
 msgid ""
 "BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > "
 "4.2"
-msgstr "BTRFS_IOC_FILE_EXTENT_SAME gab Fehler -22 zurück - Sie brauchen wohl
-einen Kernel >= 4.2"
+msgstr "BTRFS_IOC_FILE_EXTENT_SAME gab Fehler -22 zurück - Sie brauchen wohl einen Kernel >= 4.2"
 
 #: lib/cmdline.c:240
 #, c-format
@@ -581,11 +580,10 @@ msgstr "Finde nur Duplikate mit selben Dateinamen"
 msgid "Only find twins with same extension"
 msgstr "Finde nur Duplikate mit selber Dateiendung"
 
-<t_ü><t_ü>#: lib/cmdline.c:1354
-wwwww<Down>w/xattr
-<t_ü><t_ü>msgid "Only find twins with same basename minus extension"
+#: lib/cmdline.c:1354
+msgid "Only find twins with same basename minus extension"
 msgstr "Finde nur Duplikate mit Dateinamen minus der Endung"
-x<Down>
+
 #: lib/cmdline.c:1355
 #, fuzzy
 msgid "I0  Find duplicate directories"
@@ -612,16 +610,11 @@ msgstr "Zeige das volle Manual"
 msgid "Show the version & features"
 msgstr "Zeige die Version & alle einkompilierten Features"
 
-dd:w
-<t_ý>b#: lib/cmdline.c:1364
-msgid "If installed, :w
-start the optional gui with all following args"
+#: lib/cmdline.c:1364
+msgid "If installed, start the optional gui with all following args"
 msgstr "Falls installiert, starte die optionale grafische Oberfläche"
 
-#: lidd:w
-n:tabe doc  rs  rm          
-/-FF
-<t_ü>b/cmdline.c:1365
+#: lib/cmdline.c:1365
 msgid ""
 "Work like sha1sum for all supported hash algorithms (see also --hash --help)"
 msgstr "Funktioniere wie sha1sum für alle unterstützten Hashsummen (siehe auch --hash --help)"

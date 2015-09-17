@@ -57,7 +57,7 @@ sphinx = env.Default(
     )
 )
 
-manpage = env.Default(
+manpage = env.AlwaysBuild(
     env.Command(
         'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
     )
@@ -67,7 +67,7 @@ env.Alias('man', env.Depends(manpage, sphinx))
 
 
 if 'install' in COMMAND_LINE_TARGETS:
-    manpage[0].build()
+    print(manpage)
     if os.access(str(manpage[0]), os.R_OK):
         man_install = env.Install('$PREFIX/share/man/man1', [manpage])
         env.Alias('install', [man_install])

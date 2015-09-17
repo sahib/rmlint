@@ -591,9 +591,9 @@ env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=['-lm'])
 
+conf.check_sysctl()
 conf.check_blkid()
 conf.check_sys_block()
-conf.check_sysctl()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_xattr()
