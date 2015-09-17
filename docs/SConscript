@@ -50,29 +50,25 @@ def gzip_file(target, source, env):
 def run_sphinx_binary_man(**kwargs):
     run_sphinx_binary('man', **kwargs)
 
-sphinx = env.Default(
-    env.Command(
-        '_build/man/rmlint.1', 'rmlint.1.rst',
-        Action(run_sphinx_binary_man, "Building manpage from rst...")
-    )
+
+sphinx = env.Command(
+    '_build/man/rmlint.1', 'rmlint.1.rst',
+    env.Action(run_sphinx_binary_man, "Building manpage from rst...")
 )
 
-manpage = env.AlwaysBuild(
-    env.Command(
-        'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
-    )
+manpage = env.Command(
+    'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
 )
+
+env.Default(sphinx)
+env.Default(manpage)
 
 env.Alias('man', env.Depends(manpage, sphinx))
 
 
 if 'install' in COMMAND_LINE_TARGETS:
-    print(manpage)
-    if os.access(str(manpage[0]), os.R_OK):
-        man_install = env.Install('$PREFIX/share/man/man1', [manpage])
-        env.Alias('install', [man_install])
-    else:
-        print('WARNING: No manpage will be installed!')
+    man_install = env.Install('$PREFIX/share/man/man1', [manpage])
+    target = env.Alias('install', [manpage, man_install])
 
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
