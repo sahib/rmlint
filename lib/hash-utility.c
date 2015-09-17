@@ -118,7 +118,7 @@ int rm_hasher_main(int argc, const char **argv) {
     tag.print_in_order = TRUE;
 
     /* Print a hash with builtin identifier */
-    tag.print_multihash = TRUE;
+    tag.print_multihash = FALSE;
 
     /* Digest type (user option, default SHA1) */
     tag.digest_type = RM_DIGEST_SHA1;
