@@ -12,7 +12,8 @@ import statistics
 # External:
 import pygal
 
-from pygal.style import LightSolarizedStyle
+from pygal.style import LightSolarizedStyle as Style
+# from pygal.style import DefaultStyle
 
 
 VALID_ATTRS = {
@@ -22,12 +23,12 @@ VALID_ATTRS = {
     'sets': 3
 }
 
-LightSolarizedStyle.background = '#FFFFFF'
+Style.background = '#FFFFFF'
 
 CONFIG = pygal.Config()
 CONFIG.human_readable = True
 CONFIG.tooltip_fancy_mode = True
-CONFIG.style = LightSolarizedStyle
+CONFIG.style = Style
 
 
 def unpack(chart, data, bench_name, add_x_labels=True):

@@ -345,7 +345,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
-        //rm_log_warning_line(_("Cannot figure out terminal width."));
+        // rm_log_warning_line(_("Cannot figure out terminal width."));
     }
 
     self->last_state = state;
@@ -371,15 +371,16 @@ static void rm_fmt_prog(RmSession *session,
 
 static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(PROGRESS_HANDLER_IMPL),
-        .name = "progressbar",
-        .head = NULL,
-        .elem = NULL,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {"update_interval", "ascii", "fancy", NULL},
-    },
+    .parent =
+        {
+         .size = sizeof(PROGRESS_HANDLER_IMPL),
+         .name = "progressbar",
+         .head = NULL,
+         .elem = NULL,
+         .prog = rm_fmt_prog,
+         .foot = NULL,
+         .valid_keys = {"update_interval", "ascii", "fancy", NULL},
+        },
 
     /* Initialize own stuff */
     .percent = 0.0f,

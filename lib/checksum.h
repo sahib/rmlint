@@ -122,7 +122,8 @@ typedef struct RmBufferPool {
 
 /* Represents one block of read data */
 typedef struct RmBuffer {
-    /* note that first (sizeof(pointer)) bytes of this structure get overwritten when it gets
+    /* note that first (sizeof(pointer)) bytes of this structure get overwritten when it
+     * gets
      * pushed to the RmBufferPool stack, so first couple of elements can't be reused */
 
     /* checksum the data belongs to */
@@ -141,7 +142,6 @@ typedef struct RmBuffer {
     unsigned char *data;
 } RmBuffer;
 
-
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
  *
@@ -151,12 +151,11 @@ typedef struct RmBuffer {
  */
 RmDigestType rm_string_to_digest_type(const char *string);
 
-
 /* Hash type to MultiHash ID.
  * Idea of Multihash to encode hash algorithm and size into
- * the first two bytes of the hash. 
+ * the first two bytes of the hash.
  *
- * There is no standard yet, I used this one and randomly assigned 
+ * There is no standard yet, I used this one and randomly assigned
  * the other numbers:
  *
  *   https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18
@@ -180,7 +179,8 @@ const char *rm_digest_type_to_string(RmDigestType type);
  * @param paranoid_size. Digest size in bytes for "paranoid" (exact copy) digest
  * @param use_shadow_hash.  Keep a shadow hash for lookup purposes.
  */
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size, bool use_shadow_hash);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size,
+                        bool use_shadow_hash);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
@@ -231,7 +231,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
  *
  * @return pointer to result (note: result length will = digest->bytes)
  */
-guint8 *rm_digest_steal_buffer(RmDigest *digest); //TODO: rename to avoid confusion with read buffers
+guint8 *rm_digest_steal(RmDigest *digest);
 
 /**
  * @brief Hash a Digest, suitable for GHashTable.
@@ -288,7 +288,6 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
  * Release any kept (paranoid) buffers.
  */
 void rm_digest_release_buffers(RmDigest *digest);
-
 
 RmOff rm_buffer_size(RmBufferPool *pool);
 RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_kept_mem);

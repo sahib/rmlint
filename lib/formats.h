@@ -130,7 +130,7 @@ RmFmtTable *rm_fmt_open(RmSession *session);
 void rm_fmt_close(RmFmtTable *self);
 
 /**
- * @brief If cfg->cache_file_structs is true, 
+ * @brief If cfg->cache_file_structs is true,
  *        all files written by rm_fmt_write can
  *        be flushed at once with this function.
  *
@@ -252,7 +252,7 @@ bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
 
 /**
  * @brief Check if there is at least one formatter with `name`.
- */ 
+ */
 bool rm_fmt_has_formatter(RmFmtTable *self, const char *name);
 
 /**

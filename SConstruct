@@ -308,6 +308,20 @@ def check_sqlite3(context):
     return rc
 
 
+def check_btrfs_h(context):
+    rc = 1
+    if tests.CheckHeader(
+        context, 'linux/btrfs.h',
+        header='#include <stdlib.h>\n#include <sys/ioctl.h>'
+    ):
+        rc = 0
+
+    conf.env['HAVE_BTRFS_H'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_linux_limits(context):
     rc = 1
     if tests.CheckHeader(context, 'linux/limits.h'):
@@ -482,7 +496,8 @@ conf = Configure(env, custom_tests={
     'check_c11': check_c11,
     'check_gettext': check_gettext,
     'check_sqlite3': check_sqlite3,
-    'check_linux_limits': check_linux_limits
+    'check_linux_limits': check_linux_limits,
+    'check_btrfs_h': check_btrfs_h
 })
 
 if not conf.CheckCC():
@@ -576,9 +591,9 @@ env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=['-lm'])
 
+conf.check_sysctl()
 conf.check_blkid()
 conf.check_sys_block()
-conf.check_sysctl()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_xattr()
@@ -588,6 +603,7 @@ conf.check_gettext()
 conf.check_sqlite3()
 conf.check_linux_limits()
 conf.check_posix_fadvise()
+conf.check_btrfs_h()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])

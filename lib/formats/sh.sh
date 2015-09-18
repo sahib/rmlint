@@ -132,6 +132,14 @@ cp_reflink() {
     fi
 }
 
+clone() {
+    # clone $1 from $2's data
+    echo 'Cloning to: ' "$1"
+    if [ -z "$DO_DRY_RUN" ]; then
+        rmlint --btrfs-clone "$2" "$1"
+    fi
+}
+
 skip_hardlink() {
     echo 'Leaving as-is (already hardlinked to original):' "$1"
 }

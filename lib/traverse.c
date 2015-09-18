@@ -165,8 +165,8 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
         }
     }
 
-    RmFile *file =
-        rm_file_new(session, path, path_len, statp, file_type, is_prefd, path_index, depth);
+    RmFile *file = rm_file_new(session, path, path_len, statp, file_type, is_prefd,
+                               path_index, depth);
 
     if(file != NULL) {
         file->is_symlink = is_symlink;
@@ -208,8 +208,7 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
         trav_session, (RmStat *)stat_buf, &file_queue, p->fts_path, p->fts_pathlen, \
         is_prefd, path_index, lint_type, is_symlink,                                \
         rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),       \
-        is_on_subvol_fs,                                                            \
-        p->fts_level);
+        is_on_subvol_fs, p->fts_level);
 
 #if RM_PLATFORM_32 && HAVE_STAT64
 
@@ -263,7 +262,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     RM_BUFFER_DEFINE_PATH(trav_session->session, buffer);
 
     bool is_on_subvol_fs = (buffer_path[0] == '/' && buffer_path[1] == '/');
-    if (is_on_subvol_fs) {
+    if(is_on_subvol_fs) {
         rm_log_debug("Treating files under %s as a single volume\n", buffer_path);
     }
 
@@ -384,8 +383,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                                      RM_LINT_TYPE_UNKNOWN, false,
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
-                                     is_on_subvol_fs,
-                                     p->fts_level);
+                                     is_on_subvol_fs, p->fts_level);
                     rm_log_warning_line(_("Added big file %s"), p->fts_path);
                 } else {
                     rm_log_warning(_("cannot stat file %s (skipping)"), p->fts_path);

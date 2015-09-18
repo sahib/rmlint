@@ -69,24 +69,24 @@
 #include "pathtricia.h"
 
 typedef struct RmDirectory {
-    char *dirname;         /* Path to this directory without trailing slash              */
-    GQueue known_files;    /* RmFiles in this directory                                  */
-    GQueue children;       /* Children for directories with subdirectories               */
-    gint64 prefd_files;    /* Files in this directory that are tagged as original        */
-    gint64 dupe_count;     /* Count of RmFiles actually in this directory                */
-    gint64 file_count;     /* Count of files actually in this directory (or -1 on error) */
-    gint64 mergeups;       /* number of times this directory was merged up               */
-    bool finished : 1;     /* Was this dir or one of his parents already printed?        */
-    bool was_merged : 1;   /* true if this directory was merged up already (only once)   */
-    bool was_inserted : 1; /* true if this directory was added to results (only once)    */
-    unsigned short depth;  /* path depth (i.e. count of / in path, no trailing /)        */
-    GHashTable *hash_set;  /* Set of hashes, used for equality check (to be sure)        */
-    RmDigest *digest;      /* Common digest of all RmFiles in this directory             */
+    char *dirname;       /* Path to this directory without trailing slash              */
+    GQueue known_files;  /* RmFiles in this directory                                  */
+    GQueue children;     /* Children for directories with subdirectories               */
+    gint64 prefd_files;  /* Files in this directory that are tagged as original        */
+    gint64 dupe_count;   /* Count of RmFiles actually in this directory                */
+    gint64 file_count;   /* Count of files actually in this directory (or -1 on error) */
+    gint64 mergeups;     /* number of times this directory was merged up               */
+    bool finished : 1;   /* Was this dir or one of his parents already printed?        */
+    bool was_merged : 1; /* true if this directory was merged up already (only once)   */
+    bool was_inserted : 1; /* true if this directory was added to results (only once) */
+    unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)        */
+    GHashTable *hash_set; /* Set of hashes, used for equality check (to be sure)        */
+    RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
 
     struct {
-        time_t dir_mtime;  /* Directory Metadata: Modification Time */
-        ino_t dir_inode;   /* Directory Metadata: Inode             */
-        dev_t dir_dev;     /* Directory Metadata: Device ID         */
+        time_t dir_mtime; /* Directory Metadata: Modification Time */
+        ino_t dir_inode;  /* Directory Metadata: Inode             */
+        dev_t dir_dev;    /* Directory Metadata: Device ID         */
     } metadata;
 } RmDirectory;
 
@@ -106,7 +106,8 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level, void *user_data) {
+int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
+                             void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
@@ -391,10 +392,10 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
     RmOff digest_bytes = 0;
 
     if(file->digest->type == RM_DIGEST_PARANOID) {
-        file_digest = rm_digest_steal_buffer(file->digest->paranoid->shadow_hash);
+        file_digest = rm_digest_steal(file->digest->paranoid->shadow_hash);
         digest_bytes = file->digest->paranoid->shadow_hash->bytes;
     } else {
-        file_digest = rm_digest_steal_buffer(file->digest);
+        file_digest = rm_digest_steal(file->digest);
         digest_bytes = file->digest->bytes;
     }
 
@@ -449,7 +450,7 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
     }
 
     /* Inherit the child's checksum */
-    unsigned char *subdir_cksum = rm_digest_steal_buffer(subdir->digest);
+    unsigned char *subdir_cksum = rm_digest_steal(subdir->digest);
     rm_digest_update(parent->digest, subdir_cksum, subdir->digest->bytes);
     g_slice_free1(subdir->digest->bytes, subdir_cksum);
 
@@ -566,10 +567,8 @@ void rm_tm_destroy(RmTreeMerger *self) {
     g_queue_clear(&self->valid_dirs);
 
     /* Kill all RmDirectories stored in the tree */
-    rm_trie_iter(
-        &self->dir_tree, NULL, true, false, 
-        (RmTrieIterCallback)rm_tm_destroy_iter, self
-    );
+    rm_trie_iter(&self->dir_tree, NULL, true, false,
+                 (RmTrieIterCallback)rm_tm_destroy_iter, self);
 
     rm_trie_destroy(&self->dir_tree);
     rm_trie_destroy(&self->count_tree);
@@ -710,8 +709,7 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
     return rm_pp_cmp_orig_criteria_impl(
         self->session, da->metadata.dir_mtime, db->metadata.dir_mtime,
         rm_util_basename(da->dirname), rm_util_basename(db->dirname), 0, 0,
-        rm_util_path_depth(da->dirname), rm_util_path_depth(db->dirname)
-    );
+        rm_util_path_depth(da->dirname), rm_util_path_depth(db->dirname));
 }
 
 static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {

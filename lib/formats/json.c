@@ -47,7 +47,8 @@ typedef struct RmFmtHandlerJSON {
 //          FILE ID GENERATOR           //
 //////////////////////////////////////////
 
-static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile * file, const char *file_path, char *cksum) {
+static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
+                                       const char *file_path, char *cksum) {
     guint32 hash = 0;
     hash = file->inode ^ file->dev;
     hash ^= file->file_size;
@@ -238,7 +239,6 @@ static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) 
     g_hash_table_unref(self->id_set);
 }
 
-
 static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
     memset(checksum_str, '0', size);
     checksum_str[size - 1] = 0;
@@ -255,15 +255,13 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
-
     /* Make it look like a json element */
     rm_fmt_json_open(self, out);
     {
         RM_DEFINE_PATH(file);
 
-        rm_fmt_json_key_int(out, "id", rm_fmt_json_generate_id(
-            self, file, file_path, checksum_str
-        ));
+        rm_fmt_json_key_int(out, "id",
+                            rm_fmt_json_generate_id(self, file, file_path, checksum_str));
 
         rm_fmt_json_sep(self, out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
@@ -304,13 +302,13 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
 
                 if(hardlink_head && hardlink_head != file) {
                     char orig_checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
-                    rm_fmt_json_cksum(hardlink_head, orig_checksum_str, sizeof(orig_checksum_str));
+                    rm_fmt_json_cksum(hardlink_head, orig_checksum_str,
+                                      sizeof(orig_checksum_str));
 
                     RM_DEFINE_PATH(hardlink_head);
 
                     guint32 orig_id = rm_fmt_json_generate_id(
-                        self, hardlink_head, hardlink_head_path, orig_checksum_str
-                    );
+                        self, hardlink_head, hardlink_head_path, orig_checksum_str);
 
                     rm_fmt_json_key_int(out, "hardlink_of", orig_id);
                     rm_fmt_json_sep(self, out);
@@ -324,15 +322,16 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
 
 static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(JSON_HANDLER_IMPL),
-        .name = "json",
-        .head = rm_fmt_head,
-        .elem = rm_fmt_elem,
-        .prog = NULL,
-        .foot = rm_fmt_foot,
-        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", NULL},
-    },
+    .parent =
+        {
+         .size = sizeof(JSON_HANDLER_IMPL),
+         .name = "json",
+         .head = rm_fmt_head,
+         .elem = rm_fmt_elem,
+         .prog = NULL,
+         .foot = rm_fmt_foot,
+         .valid_keys = {"no_header", "no_footer", "no_body", "oneline", NULL},
+        },
     .pretty = true};
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;

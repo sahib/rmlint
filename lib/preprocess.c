@@ -38,9 +38,11 @@ static guint rm_file_hash(RmFile *file) {
     if(cfg->match_basename || cfg->match_with_extension) {
         RM_DEFINE_BASENAME(file);
         char *extension = rm_util_path_extension(file_basename);
-        return (guint)(
-            file->file_size ^ (cfg->match_basename ? g_str_hash(file_basename) : 0) ^
-            ((cfg->match_with_extension && extension) ? g_str_hash(rm_util_path_extension(file_basename)) : 0));
+        return (guint)(file->file_size ^
+                       (cfg->match_basename ? g_str_hash(file_basename) : 0) ^
+                       ((cfg->match_with_extension && extension)
+                            ? g_str_hash(rm_util_path_extension(file_basename))
+                            : 0));
     } else {
         return (guint)(file->file_size);
     }
@@ -133,8 +135,8 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
     return rm_node_hash(key->file);
 }
 
-static bool rm_path_have_same_parent(
-    RmCfg *cfg, RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
+static bool rm_path_have_same_parent(RmCfg *cfg, RmPathDoubleKey *key_a,
+                                     RmPathDoubleKey *key_b) {
     RmFile *file_a = key_a->file, *file_b = key_b->file;
 
     if(cfg->use_meta_cache) {
@@ -239,8 +241,8 @@ void rm_file_tables_destroy(RmFileTables *tables) {
  */
 int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,
                                  const char *basename_a, const char *basename_b,
-                                 int path_index_a, int path_index_b,
-                                 guint8 path_depth_a, guint8 path_depth_b) {
+                                 int path_index_a, int path_index_b, guint8 path_depth_a,
+                                 guint8 path_depth_b) {
     RmCfg *sets = session->cfg;
 
     int sort_criteria_len = strlen(sets->sort_criteria);
@@ -290,7 +292,7 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         RM_DEFINE_BASENAME(a);
         RM_DEFINE_BASENAME(b);
         return rm_pp_cmp_orig_criteria_impl(session, a->mtime, b->mtime, a_basename,
-                                            b_basename, a->path_index, b->path_index, 
+                                            b_basename, a->path_index, b->path_index,
                                             a->path_depth, b->path_depth);
     }
 }

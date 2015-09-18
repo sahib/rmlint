@@ -33,7 +33,8 @@
 #include <string.h>
 
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
-                    RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index, short depth) {
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index,
+                    short depth) {
     RmCfg *cfg = session->cfg;
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;
@@ -131,7 +132,6 @@ void rm_file_destroy(RmFile *file) {
     g_slice_free(RmFile, file);
 }
 
-
 static const char *LINT_TYPES[] = {[RM_LINT_TYPE_UNKNOWN] = "",
                                    [RM_LINT_TYPE_EMPTY_DIR] = "emptydir",
                                    [RM_LINT_TYPE_NONSTRIPPED] = "nonstripped",
@@ -143,7 +143,6 @@ static const char *LINT_TYPES[] = {[RM_LINT_TYPE_UNKNOWN] = "",
                                    [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file",
                                    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir",
                                    [RM_LINT_TYPE_UNFINISHED_CKSUM] = "unfinished_cksum"};
-
 
 const char *rm_file_lint_type_to_string(RmLintType type) {
     return LINT_TYPES[MIN(type, sizeof(LINT_TYPES) / sizeof(const char *))];

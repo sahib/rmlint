@@ -106,7 +106,7 @@ typedef struct RmCfg {
 
     /* total number of bytes we are allowed to use (target only) */
     RmOff total_mem;
-    
+
     /* number of bytes to read before going back to start of disk
      * (too big a sweep risks metadata getting pushed out of ram)*/
     RmOff sweep_size;
@@ -116,7 +116,7 @@ typedef struct RmCfg {
     gboolean shred_never_wait;
     gboolean fake_pathindex_as_disk;
 
-    /* If true, files are hold back to 
+    /* If true, files are hold back to
      * the end of the program run and printed then.
      */
     gboolean cache_file_structs;

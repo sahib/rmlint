@@ -56,15 +56,16 @@ static void rm_fmt_prog(RmSession *session,
 
 static RmFmtHandlerSummary TIMESTAMP_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(TIMESTAMP_HANDLER_IMPL),
-        .name = "stamp",
-        .head = NULL,
-        .elem = NULL,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {"iso8601", NULL},
-    },
+    .parent =
+        {
+         .size = sizeof(TIMESTAMP_HANDLER_IMPL),
+         .name = "stamp",
+         .head = NULL,
+         .elem = NULL,
+         .prog = rm_fmt_prog,
+         .foot = NULL,
+         .valid_keys = {"iso8601", NULL},
+        },
 };
 
 RmFmtHandler *TIMESTAMP_HANDLER = (RmFmtHandler *)&TIMESTAMP_HANDLER_IMPL;

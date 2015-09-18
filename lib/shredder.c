@@ -107,7 +107,8 @@
  *         F1.1 F2.1 (F3.1,F3.2), (F4.1,F4.2), (F5.1,F5.2,F5.3)...
  *                        ^            ^            ^    ^
  *        (^ indicates where hashing could continue on to a second increment (avoiding a
- *           disk seek) because there was already a matching file after the first increment)
+ *           disk seek) because there was already a matching file after the first
+ *increment)
  *
  *    On a non-rotational device where there is no seek penalty, the hashing order is:
  *         F1.1 F2.1 F3.1 F4.1 F5.1...
@@ -228,18 +229,23 @@
  * increment.
  * (2) Matching time.  Unlike the conventional hashing strategy (CPU-intensive hashing
  * followed by simple matching), the paranoid method requires almost no CPU during
- * reading/hashing, but requires a large memcmp() at the end to find matching files/groups.
+ * reading/hashing, but requires a large memcmp() at the end to find matching
+ *files/groups.
  * That would not be a bottleneck as long as the reader thread still has other files
  * that it can go and read while the hasher/sorter does the memcmp in parallel... but
  * unfortunately the memory management issue means that's not always an option and so
  * reading gets delayed while waiting for the memcmp() to catch up.
  * Two strategies are used to speed this up:
- * (a) Pre-matching of candidate digests.  During reading/hashing, as each buffer (4096 bytes)
- * is read in, it can be checked against a "twin candidate".  We can send twin candidates to the
- * hash pipe at any time via rm_digest_send_match_candidate().  If the correct twin candidate
+ * (a) Pre-matching of candidate digests.  During reading/hashing, as each buffer (4096
+ *bytes)
+ * is read in, it can be checked against a "twin candidate".  We can send twin candidates
+ *to the
+ * hash pipe at any time via rm_digest_send_match_candidate().  If the correct twin
+ *candidate
  * has been sent, then when the increment is finished the matching has already been done,
  * and rm_digest_equal() is almost instantaneous.
- * (b) Shadow hash.  A lightweight hash (Murmor) is calculated and used for hashtable lookup
+ * (b) Shadow hash.  A lightweight hash (Murmor) is calculated and used for hashtable
+ *lookup
  * to quickly identify potential matches.  This saves time in the case of RmShredGroups
  * with large number of child groups and where the pre-matching strategy failed.
  * */
@@ -287,6 +293,11 @@
  * */
 #define SHRED_PREMATCH_THRESHOLD (SHRED_BALANCED_PAGES * SHRED_PAGE_SIZE)
 
+/* Minimum number of files that should be in a RmShredDevice so that it get's
+ * merged into the statistics counters.
+ */
+#define SHRED_MIN_FILE_STATS_PACK_SIZE (16)
+
 /* empirical estimate of mem usage per file (excluding read buffers and
  * paranoid digests) */
 #define RM_AVERAGE_MEM_PER_FILE (100)
@@ -300,7 +311,6 @@
 ///////////////////////////////////////////////////////////////////////
 //    INTERNAL STRUCTURES, WITH THEIR INITIALISERS AND DESTROYERS    //
 ///////////////////////////////////////////////////////////////////////
-
 
 /////////* The main extra data for the scheduler *///////////
 
@@ -387,11 +397,10 @@ typedef enum RmShredGroupStatus {
 #define HAS_CACHE(session) \
     (session->cfg->read_cksum_from_xattr || session->cache_list.length)
 
-#define NEEDS_SHADOW_HASH(cfg)  \
+#define NEEDS_SHADOW_HASH(cfg) \
     (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
-    /* @sahib - performance is faster with shadow hash, probably due to hash
-     * collisions in large RmShredGroups */
-
+/* @sahib - performance is faster with shadow hash, probably due to hash
+ * collisions in large RmShredGroups */
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
@@ -404,8 +413,9 @@ typedef struct RmShredGroup {
      * parent*/
     union {
         GHashTable *children;
-        struct RmShredGroup *child; /* TODO - implement this as a speed/mem saver (after first
-                                      generation, most RmShredGroups only have 1 child */
+        struct RmShredGroup *
+            child; /* TODO - implement this as a speed/mem saver (after first
+                     generation, most RmShredGroups only have 1 child */
     };
 
     /* RmShredGroup of the same size files but with lower RmFile->hash_offset;
@@ -476,7 +486,6 @@ typedef struct RmShredGroup {
     /* Reference to main */
     RmShredTag *main;
 } RmShredGroup;
-
 
 /////////// RmShredGroup ////////////////
 
@@ -575,7 +584,8 @@ static void rm_shred_mem_return(RmShredGroup *group) {
             group->is_active = FALSE;
             rm_log_debug("Mem avail %li, active groups %d. " YELLOW "Returned %" LLU
                          " bytes for paranoid hashing.\n" RESET,
-                         tag->paranoid_mem_alloc, tag->active_groups, group->mem_allocation);
+                         tag->paranoid_mem_alloc, tag->active_groups,
+                         group->mem_allocation);
             tag->mem_refusing = FALSE;
             if(group->digest) {
                 g_assert(group->digest->type == RM_DIGEST_PARANOID);
@@ -604,7 +614,7 @@ static gulong rm_shred_group_potential_file_count(RmShredGroup *group) {
  * NOTE: group_lock must be held before calling rm_shred_check_paranoid_mem_alloc
  */
 static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
-                                          int active_group_threshold) {
+                                              int active_group_threshold) {
     if(group->status >= RM_SHRED_GROUP_HASHING) {
         /* group already committed */
         return true;
@@ -631,7 +641,8 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
             }
 
             /* take the rest from bank */
-            gint64 borrowed = MIN(mem_required - inherited, (gint64)tag->paranoid_mem_alloc);
+            gint64 borrowed =
+                MIN(mem_required - inherited, (gint64)tag->paranoid_mem_alloc);
             tag->paranoid_mem_alloc -= borrowed;
             group->mem_allocation += borrowed;
 
@@ -680,19 +691,18 @@ static void rm_shred_adjust_counters(RmShredDevice *device, int files, gint64 by
         device->remaining_bytes += bytes;
         device->cache_byte_count += bytes;
 
-        if (bytes<0) {
+        if(bytes < 0) {
             device->bytes_read_this_pass = device->bytes_read_this_pass + (RmOff)(-bytes);
             device->files_read_this_pass++;
         }
-        if (files<0) {
-            device->cache_filtered_count +=files;
+        if(files < 0) {
+            device->cache_filtered_count += files;
         }
     }
     g_mutex_unlock(&(device->lock));
 
-    if (abs(device->cache_file_count) >= 16 /* TODO - #define */ ||
-        device->remaining_bytes == 0 ||
-        device->remaining_files == 0) {
+    if(abs(device->cache_file_count) >= SHRED_MIN_FILE_STATS_PACK_SIZE ||
+       device->remaining_bytes == 0 || device->remaining_files == 0) {
         RmSession *session = device->main->session;
         rm_fmt_lock_state(session->formats);
         {
@@ -723,7 +733,6 @@ static void rm_shred_write_cksum_to_xattr(RmSession *session, RmFile *file) {
         }
     }
 }
-
 
 static RmShredDevice *rm_shred_device_new(gboolean is_rotational, char *disk_name,
                                           RmShredTag *main) {
@@ -814,7 +823,7 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
      * regular basis) - use SIGN_DIFF instead
      */
 
-    if (a->is_on_subvol_fs && b->is_on_subvol_fs && a->path_index==b->path_index) {
+    if(a->is_on_subvol_fs && b->is_on_subvol_fs && a->path_index == b->path_index) {
         /* ignore dev because subvolumes on the same device have different dev numbers */
         return (2 * SIGN_DIFF(a->disk_offset, b->disk_offset) +
                 1 * SIGN_DIFF(a->inode, b->inode));
@@ -829,7 +838,6 @@ static int rm_shred_compare_file_order(const RmFile *a, const RmFile *b,
  * */
 static void rm_shred_file_get_start_offset(RmFile *file, RmSession *session) {
     if(file->device->is_rotational && session->cfg->build_fiemap) {
-
         RM_DEFINE_PATH(file);
         file->disk_offset = rm_offset_get_from_path(file_path, 0, NULL);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
@@ -909,7 +917,7 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
         g_hash_table_unref(self->children);
     }
 
-    g_assert (!self->in_progress_digests);
+    g_assert(!self->in_progress_digests);
 
     g_mutex_clear(&self->lock);
 
@@ -918,13 +926,13 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
 
 /* call unlocked; should be no contention issues since group is finished */
 static void rm_shred_group_finalise(RmShredGroup *self) {
-
     /* return any paranoid mem allocation */
     rm_shred_mem_return(self);
 
     switch(self->status) {
     case RM_SHRED_GROUP_DORMANT:
-        /* Dead-ended files; don't force free since we may want to write the partial checksums */
+        /* Dead-ended files; don't force free since we may want to write the partial
+         * checksums */
         rm_shred_group_free(self, FALSE);
         break;
     case RM_SHRED_GROUP_START_HASHING:
@@ -933,11 +941,13 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
         rm_shred_group_free(self, TRUE);
         break;
     case RM_SHRED_GROUP_FINISHING:
-        /* free any paranoid buffers held in group->digest (should not be needed for results processing */
-        if (self->digest_type == RM_DIGEST_PARANOID) {
+        /* free any paranoid buffers held in group->digest (should not be needed for
+         * results processing */
+        if(self->digest_type == RM_DIGEST_PARANOID) {
             rm_digest_release_buffers(self->digest);
         }
-        /* send it to finisher (which takes responsibility for calling rm_shred_group_free())*/
+        /* send it to finisher (which takes responsibility for calling
+         * rm_shred_group_free())*/
         rm_util_thread_pool_push(self->main->result_pool, self);
         break;
     case RM_SHRED_GROUP_FINISHED:
@@ -1038,7 +1048,7 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
             if(initial || !file->devlist_waiting) {
                 /* add file to device queue */
                 g_assert(file->device);
-                if (initial) {
+                if(initial) {
                     rm_shred_push_queue(file);
                 } else {
                     rm_shred_push_queue_sorted(file);
@@ -1065,7 +1075,6 @@ static gboolean rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file
     return result;
 }
 
-
 /* After partial hashing of RmFile, add it back into the sieve for further
  * hashing if required.  If waiting option is set, then try to return the
  * RmFile to the calling routine so it can continue with the next hashing
@@ -1083,11 +1092,11 @@ static gboolean rm_shred_sift(RmFile *file) {
 
     g_mutex_lock(&current_group->lock);
     {
-        current_group->num_pending --;
-        if (current_group->in_progress_digests) {
+        current_group->num_pending--;
+        if(current_group->in_progress_digests) {
             /* remove this file from current_group's pending digests list */
-            current_group->in_progress_digests = g_list_remove(
-                current_group->in_progress_digests, file->digest);
+            current_group->in_progress_digests =
+                g_list_remove(current_group->in_progress_digests, file->digest);
         }
 
         if(file->status == RM_FILE_STATE_IGNORE) {
@@ -1097,38 +1106,41 @@ static gboolean rm_shred_sift(RmFile *file) {
 
         } else {
             g_assert(file->digest);
-            if(file->digest->type == RM_DIGEST_PARANOID && !(file->is_symlink && file->session->cfg->see_symlinks)) {
-                /* verify that correct number of bytes stored in file's paranoid digest - TODO remove? */
-                g_assert(file->digest->bytes ==
-                         current_group->next_offset - current_group->hash_offset);
-            }
 
-            /* check is child group hashtable has been created yet (TODO: move this to rm_shred_group_new?) */
+            /* check is child group hashtable has been created yet (TODO: move this to
+             * rm_shred_group_new?) */
             if(!current_group->children) {
-                current_group->children = g_hash_table_new_full((GHashFunc)rm_digest_hash,
-                                                                (GEqualFunc)rm_digest_equal,
-                                                                NULL,
-                                                                (GDestroyNotify)rm_shred_group_make_orphan);
+                current_group->children =
+                    g_hash_table_new_full((GHashFunc)rm_digest_hash,
+                                          (GEqualFunc)rm_digest_equal,
+                                          NULL,
+                                          (GDestroyNotify)rm_shred_group_make_orphan);
             }
 
-            /* check if there is already a descendent of current_group which matches snap... if yes then
+            /* check if there is already a descendent of current_group which matches
+             * snap... if yes then
              * move this file into it; if not then create a new group ... */
-            RmShredGroup *child_group = g_hash_table_lookup(current_group->children, file->digest);
+            RmShredGroup *child_group =
+                g_hash_table_lookup(current_group->children, file->digest);
             if(!child_group) {
                 child_group = rm_shred_group_new(file);
                 g_hash_table_insert(current_group->children, child_group->digest,
                                     child_group);
                 child_group->has_only_ext_cksums = current_group->has_only_ext_cksums;
 
-                /* signal any pending (paranoid) digests that there is a new match candidate digest */
-                g_list_foreach(current_group->in_progress_digests, (GFunc)rm_digest_send_match_candidate, child_group->digest);
+                /* signal any pending (paranoid) digests that there is a new match
+                 * candidate digest */
+                g_list_foreach(current_group->in_progress_digests,
+                               (GFunc)rm_digest_send_match_candidate,
+                               child_group->digest);
             }
-            result = rm_shred_group_push_file(child_group, file, FALSE);  //TODO: ok locked?
+            result =
+                rm_shred_group_push_file(child_group, file, FALSE);  // TODO: ok locked?
         }
 
         /* is current shred group needed any longer? */
-        current_group_finished = !current_group->parent && current_group->num_pending==0;
-
+        current_group_finished =
+            !current_group->parent && current_group->num_pending == 0;
     }
     g_mutex_unlock(&current_group->lock);
 
@@ -1139,16 +1151,16 @@ static gboolean rm_shred_sift(RmFile *file) {
     return result;
 }
 
-/* Hasher callback file. Runs as threadpool in parallel / tandem with rm_shred_read_factory above
+/* Hasher callback file. Runs as threadpool in parallel / tandem with
+ * rm_shred_read_factory above
  * */
-static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShredTag *tag, RmFile *file) {
+static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShredTag *tag,
+                                   RmFile *file) {
     /* Report the progress to rm_shred_devlist_factory */
-    g_assert (file->digest == digest);
+    g_assert(file->digest == digest);
 
-    if (file->hash_offset == file->shred_group->next_offset ||
-             file->status == RM_FILE_STATE_FRAGMENT ||
-             file->status == RM_FILE_STATE_IGNORE) {
-
+    if(file->hash_offset == file->shred_group->next_offset ||
+       file->status == RM_FILE_STATE_FRAGMENT || file->status == RM_FILE_STATE_IGNORE) {
         if(file->status != RM_FILE_STATE_IGNORE) {
             /* remember that checksum */
             rm_shred_write_cksum_to_xattr(tag->session, file);
@@ -1159,7 +1171,8 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
             g_async_queue_push(file->device->hashed_file_return, file);
         } else {
             /* handle the file ourselves; devlist factory has moved on to the next file */
-            if(file->status == RM_FILE_STATE_FRAGMENT) { //TODO: RM_FILE_STATE_FRAGMENT deprecated
+            if(file->status ==
+               RM_FILE_STATE_FRAGMENT) {  // TODO: RM_FILE_STATE_FRAGMENT deprecated
                 rm_shred_push_queue_sorted(file);
             } else {
                 rm_shred_sift(file);
@@ -1167,11 +1180,11 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
         }
     } else {
         RM_DEFINE_PATH(file);
-        rm_log_error("Unexpected hash offset for %s, got %"LLU", expected %"LLU"\n", file_path, file->hash_offset, file->shred_group->next_offset);
+        rm_log_error("Unexpected hash offset for %s, got %" LLU ", expected %" LLU "\n",
+                     file_path, file->hash_offset, file->shred_group->next_offset);
         g_assert_not_reached();
     }
 }
-
 
 ////////////////////////////////////
 //  SHRED-SPECIFIC PREPROCESSING  //
@@ -1270,7 +1283,8 @@ static void rm_shred_device_preprocess(_U gpointer key, RmShredDevice *device,
     g_mutex_lock(&device->lock);
     {
         /* sort by inode number to speed up FIEMAP */
-        g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order, NULL);
+        g_queue_sort(device->file_queue, (GCompareDataFunc)rm_shred_compare_file_order,
+                     NULL);
         g_queue_foreach(device->file_queue, (GFunc)rm_shred_file_get_start_offset,
                         main->session);
     }
@@ -1351,7 +1365,8 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     /* Make sure to *never* make a symlink to be the original */
     if(a->is_symlink != b->is_symlink) {
         return a->is_symlink - b->is_symlink;
-    } else if((a->is_prefd != b->is_prefd) && (cfg->keep_all_untagged || cfg->must_match_untagged)) {
+    } else if((a->is_prefd != b->is_prefd) &&
+              (cfg->keep_all_untagged || cfg->must_match_untagged)) {
         return (a->is_prefd - b->is_prefd);
     } else {
         int comparasion = rm_pp_cmp_orig_criteria(a, b, session);
@@ -1528,28 +1543,28 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
             g_assert(group->hash_offset == file->hash_offset);
 
             if(file->is_symlink && cfg->see_symlinks) {
-                file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0, 0,
-                                             PATH_MAX + 1 /* max size of a symlink file */,
-                                             NEEDS_SHADOW_HASH(cfg)
-                                             );
-            } else {
                 file->digest =
                     rm_digest_new(RM_DIGEST_PARANOID, 0, 0,
-                                  group->next_offset - file->hash_offset,
-                                  NEEDS_SHADOW_HASH(cfg)
-                                  );
+                                  PATH_MAX + 1 /* max size of a symlink file */,
+                                  NEEDS_SHADOW_HASH(cfg));
+            } else {
+                file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0, 0,
+                                             group->next_offset - file->hash_offset,
+                                             NEEDS_SHADOW_HASH(cfg));
                 if(group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD) {
                     /* send candidate twin(s) */
-                    if (group->children) {
+                    if(group->children) {
                         GList *children = g_hash_table_get_values(group->children);
-                        while (children) {
+                        while(children) {
                             RmShredGroup *child = children->data;
                             rm_digest_send_match_candidate(file->digest, child->digest);
                             children = g_list_delete_link(children, children);
                         }
                     }
-                    /* store a reference so the shred group knows where to send any future twin candidate digests */
-                    group->in_progress_digests = g_list_prepend(group->in_progress_digests, file->digest);
+                    /* store a reference so the shred group knows where to send any future
+                     * twin candidate digests */
+                    group->in_progress_digests =
+                        g_list_prepend(group->in_progress_digests, file->digest);
                 }
             }
         }
@@ -1562,8 +1577,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                      main->session->hash_seed1,
                                      main->session->hash_seed2,
                                      0,
-                                     NEEDS_SHADOW_HASH(cfg)
-                                     );
+                                     NEEDS_SHADOW_HASH(cfg));
     }
 
     return can_process;
@@ -1584,22 +1598,21 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
     g_mutex_lock(&file->shred_group->lock);
     {
-        worth_waiting = (file->shred_group->next_offset != file->file_size)
-                        &&
-                        (cfg->shred_always_wait || (
-                                device->is_rotational &&
-                                rm_shred_get_read_size(file, device->main) < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
-                                (file->status == RM_FILE_STATE_NORMAL) &&
-                                !cfg->shred_never_wait
-                            )
-                        );
+        worth_waiting =
+            (file->shred_group->next_offset != file->file_size) &&
+            (cfg->shred_always_wait ||
+             (device->is_rotational &&
+              rm_shred_get_read_size(file, device->main) <
+                  RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
+              (file->status == RM_FILE_STATE_NORMAL) && !cfg->shred_never_wait));
     }
     g_mutex_unlock(&file->shred_group->lock);
 
     RM_DEFINE_PATH(file);
 
     RmHasherTask *task = rm_hasher_task_new(device->main->hasher, file->digest, file);
-    if (!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read, file->is_symlink)) {
+    if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
+                            file->is_symlink)) {
         /* rm_hasher_start_increment failed somewhere */
         file->status = RM_FILE_STATE_IGNORE;
         worth_waiting = FALSE;
@@ -1607,18 +1620,18 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
 
     /* Update totals for file, device and session*/
     file->hash_offset += bytes_to_read;
-    if (file->is_symlink) {
+    if(file->is_symlink) {
         rm_shred_adjust_counters(file->device, 0, -(gint64)file->file_size);
     } else {
         rm_shred_adjust_counters(file->device, 0, -(gint64)bytes_to_read);
     }
 
-    if (worth_waiting) {
+    if(worth_waiting) {
         /* some final checks if it's still worth waiting for the hash result */
         g_mutex_lock(&file->shred_group->lock);
         {
             worth_waiting = worth_waiting && (file->shred_group->children);
-            if (file->digest->type == RM_DIGEST_PARANOID) {
+            if(file->digest->type == RM_DIGEST_PARANOID) {
                 worth_waiting = worth_waiting && file->digest->paranoid->twin_candidate;
             }
         }
@@ -1631,7 +1644,8 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     rm_hasher_task_finish(task);
 
     if(worth_waiting) {
-        /* wait until the increment has finished hashing; assert that we get the expected file back */
+        /* wait until the increment has finished hashing; assert that we get the expected
+         * file back */
         g_assert(file == g_async_queue_pop(device->hashed_file_return));
     } else {
         file = NULL;
@@ -1658,10 +1672,10 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
 
 static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     GList *iter = NULL;
-    RmOff bytes_read_this_pass=0;
+    RmOff bytes_read_this_pass = 0;
     device->bytes_read_this_pass = 0;
-    RmOff files_read_this_pass=0;
-    device->files_read_this_pass=0;
+    RmOff files_read_this_pass = 0;
+    device->files_read_this_pass = 0;
 
     g_assert(device);
 
@@ -1686,10 +1700,9 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
     g_mutex_unlock(&device->lock);
 
     /* scheduler for one file at a time, optimised to minimise seeks */
-    while(iter
-            && !rm_session_was_aborted(main->session)
-            && bytes_read_this_pass <= device->bytes_per_pass
-            && files_read_this_pass <= device->files_per_pass) {
+    while(iter && !rm_session_was_aborted(main->session) &&
+          bytes_read_this_pass <= device->bytes_per_pass &&
+          files_read_this_pass <= device->files_per_pass) {
         RmFile *file = iter->data;
         gboolean can_process = rm_shred_can_process(file, main);
 
@@ -1710,7 +1723,6 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
             can_process = FALSE;
             file = rm_shred_process_file(device, file);
             if(file) {
-
                 if(rm_shred_sift(file)) {
 /* continue hashing same file, ie no change to iter */
 #if _RM_SHRED_DEBUG
@@ -1732,22 +1744,21 @@ static void rm_shred_devlist_factory(RmShredDevice *device, RmShredTag *main) {
             files_read_this_pass = device->files_read_this_pass;
         }
         g_mutex_unlock(&device->lock);
-
-
     }
 
     /* threadpool thread terminates but the device will be recycled via
      * the device_return queue
      */
-    rm_log_debug(BLUE "Pushing device back to main joiner %d after %"LLU" bytes and %"LLU" files\n" RESET, (int)device->disk, bytes_read_this_pass, files_read_this_pass);
+    rm_log_debug(BLUE "Pushing device back to main joiner %d after %" LLU
+                      " bytes and %" LLU " files\n" RESET,
+                 (int)device->disk, bytes_read_this_pass, files_read_this_pass);
     g_async_queue_push(main->device_return, device);
 }
 
 static void rm_shred_create_devpool(RmShredTag *tag, GHashTable *dev_table) {
     uint devices = g_hash_table_size(dev_table);
-    tag->device_pool = rm_util_thread_pool_new(
-        (GFunc)rm_shred_devlist_factory, tag,
-        devices);
+    tag->device_pool =
+        rm_util_thread_pool_new((GFunc)rm_shred_devlist_factory, tag, devices);
 
     GHashTableIter iter;
     gpointer key, value;
@@ -1785,23 +1796,23 @@ void rm_shred_run(RmSession *session) {
     rm_shred_preprocess_input(&tag);
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
-    /* estimate mem used for RmFiles and allocate any leftovers to read buffer and/or paranoid mem */
+    /* estimate mem used for RmFiles and allocate any leftovers to read buffer and/or
+     * paranoid mem */
     RmOff mem_used = RM_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
 
-
-    if (session->cfg->checksum_type == RM_DIGEST_PARANOID) {
+    if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
-        tag.paranoid_mem_alloc = MAX(
-            (gint64)session->cfg->paranoid_mem,
-            (gint64)session->cfg->total_mem - (gint64)mem_used - (gint64)session->cfg->read_buffer_mem);
-        rm_log_info(BLUE"Paranoid Mem: %"LLU"\n", tag.paranoid_mem_alloc);
+        tag.paranoid_mem_alloc = MAX((gint64)session->cfg->paranoid_mem,
+                                     (gint64)session->cfg->total_mem - (gint64)mem_used -
+                                         (gint64)session->cfg->read_buffer_mem);
+        rm_log_info(BLUE "Paranoid Mem: %" LLU "\n", tag.paranoid_mem_alloc);
     } else {
-        session->cfg->read_buffer_mem = MAX(
-            (gint64)session->cfg->read_buffer_mem,
-            (gint64)session->cfg->total_mem - (gint64)mem_used);
+        session->cfg->read_buffer_mem =
+            MAX((gint64)session->cfg->read_buffer_mem,
+                (gint64)session->cfg->total_mem - (gint64)mem_used);
         tag.paranoid_mem_alloc = 0;
     }
-    rm_log_info(BLUE"Read buffer Mem: %"LLU"\n", session->cfg->read_buffer_mem);
+    rm_log_info(BLUE "Read buffer Mem: %" LLU "\n", session->cfg->read_buffer_mem);
 
     /* Initialise hasher */
     /* Optimum buffer size based on /usr without dropping caches:
@@ -1813,13 +1824,13 @@ void rm_shred_run(RmSession *session) {
      * SHRED_PAGE_SIZE * 1 => 45.2 seconds
      * SHRED_PAGE_SIZE * 4 => 45.0 seconds*/
     tag.hasher = rm_hasher_new(session->cfg->checksum_type,
-            session->cfg->threads,
-            session->cfg->use_buffered_read,
-            SHRED_PAGE_SIZE * 4,
-            session->cfg->read_buffer_mem,
-            session->cfg->paranoid_mem,
-            (RmHasherCallback)rm_shred_hash_callback,
-            &tag);
+                               session->cfg->threads,
+                               session->cfg->use_buffered_read,
+                               SHRED_PAGE_SIZE * 4,
+                               session->cfg->read_buffer_mem,
+                               session->cfg->paranoid_mem,
+                               (RmHasherCallback)rm_shred_hash_callback,
+                               &tag);
 
     /* Remember how many devlists we had - so we know when to stop */
     int devices_left = g_hash_table_size(session->tables->dev_table);

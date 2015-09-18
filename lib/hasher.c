@@ -37,18 +37,17 @@
  */
 const int HASHER_FADVISE_FLAGS = 0
 #ifdef POSIX_FADV_SEQUENTIAL
-     | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */
+                                 | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */
 #endif
 #ifdef POSIX_FADV_WILLNEED
-     | POSIX_FADV_WILLNEED     /* Tell the kernel to readhead */
+                                 | POSIX_FADV_WILLNEED /* Tell the kernel to readhead */
 #endif
 #ifdef POSIX_FADV_NOREUSE
-     | POSIX_FADV_NOREUSE      /* We will not reuse old data  */
+                                 | POSIX_FADV_NOREUSE /* We will not reuse old data  */
 #endif
-     ;
+    ;
 
 #define DIVIDE_CEIL(n, m) ((n) / (m) + !!((n) % (m)))
-
 
 struct _RmHasher {
     RmDigestType digest_type;
@@ -63,7 +62,7 @@ struct _RmHasher {
     guint active_tasks;
 };
 
-struct _RmHasherTask{
+struct _RmHasherTask {
     RmHasher *hasher;
     GThreadPool *hashpipe;
     RmDigest *digest;
@@ -75,56 +74,52 @@ static void rm_hasher_task_free(RmHasherTask *self) {
     g_slice_free(RmHasherTask, self);
 }
 
-
 /* GThreadPool Worker for hashing */
 static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
-
     if(buffer->len > 0) {
         /* Update digest with buffer->data */
         rm_digest_buffered_update(buffer);
-        if (buffer->digest->type!=RM_DIGEST_PARANOID) {
-            rm_buffer_pool_release(buffer); //TODO: checksum.c should do this?
+        if(buffer->digest->type != RM_DIGEST_PARANOID) {
+            rm_buffer_pool_release(buffer);  // TODO: checksum.c should do this?
         }
     } else {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
-        hasher->callback(hasher, buffer->digest, hasher->session_user_data, task->task_user_data);
+        hasher->callback(hasher, buffer->digest, hasher->session_user_data,
+                         task->task_user_data);
 
         rm_buffer_pool_release(buffer);
 
         /* decrease active task count and signal same */
         g_atomic_int_dec_and_test(&hasher->active_tasks);
-        //TODO: GCond signal?
+        // TODO: GCond signal?
 
         rm_hasher_task_free(task);
     }
 }
-
 
 //////////////////////////////////////
 //  File Reading Utilities          //
 //////////////////////////////////////
 
 static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {
-    /* Give the kernel scheduler some hints */
+/* Give the kernel scheduler some hints */
 #if HAVE_POSIX_FADVISE
     RmOff readahead = bytes_to_read * 8;
     posix_fadvise(fd, seek_offset, readahead, HASHER_FADVISE_FLAGS);
 #else
-    (void) fd;
-    (void) seek_offset;
-    (void) bytes_to_read;
+    (void)fd;
+    (void)seek_offset;
+    (void)bytes_to_read;
 #endif
-    //TODO: avoid duplicate calls via file->fadvise_requested check before calling
+    // TODO: avoid duplicate calls via file->fadvise_requested check before calling
 }
 
-
 static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path) {
-
     /* Fake an IO operation on the symlink.
      */
     RmBuffer *buf = rm_buffer_pool_get(hasher->mem_pool);
-    buf->len=256;
+    buf->len = 256;
     memset(buf->data, 0, buf->len);
 
     RmStat stat_buf;
@@ -134,8 +129,9 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
         return -1;
     }
 
-    gint data_size = snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool), "%"LLU":%ld", (long)stat_buf.st_dev,
-                              (long)stat_buf.st_ino);
+    gint data_size =
+        snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool), "%" LLU ":%ld",
+                 (long)stat_buf.st_dev, (long)stat_buf.st_ino);
     buf->len = data_size;
     buf->digest = digest;
 
@@ -152,13 +148,14 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
     return 0;
 }
 
-
 /* Reads data from file and sends to hasher threadpool
  * returns number of bytes successfully read */
 
-static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe, RmDigest *digest, char *path, gsize start_offset, gsize bytes_to_read) {
+static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
+                                      RmDigest *digest, char *path, gsize start_offset,
+                                      gsize bytes_to_read) {
     FILE *fd = NULL;
-    if (bytes_to_read==0) {
+    if(bytes_to_read == 0) {
         bytes_to_read = G_MAXSIZE;
     }
 
@@ -180,7 +177,8 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe, R
 
     RmBuffer *buffer = rm_buffer_pool_get(hasher->mem_pool);
 
-    while((bytes_read = fread(buffer->data, 1, MIN(bytes_to_read, hasher->buf_size), fd)) > 0) {
+    while((bytes_read =
+               fread(buffer->data, 1, MIN(bytes_to_read, hasher->buf_size), fd)) > 0) {
         bytes_to_read -= bytes_read;
 
         buffer->len = bytes_read;
@@ -194,7 +192,7 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe, R
 
     if(ferror(fd) != 0) {
         rm_log_perror("fread(3) failed");
-        if ( total_bytes_read == bytes_to_read ) {
+        if(total_bytes_read == bytes_to_read) {
             /* signal error to caller */
             total_bytes_read++;
         }
@@ -205,19 +203,20 @@ finish:
         fclose(fd);
     }
     return total_bytes_read;
-
 }
 
 /* Reads data from file and sends to hasher threadpool
  * returns number of bytes successfully read */
 
-static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe, RmDigest *digest, char *path, gint64 start_offset, gint64 bytes_to_read) {
+static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
+                                        RmDigest *digest, char *path, gint64 start_offset,
+                                        gint64 bytes_to_read) {
     gint32 bytes_read = 0;
     gint64 total_bytes_read = 0;
     guint64 file_offset = start_offset;
-    if (bytes_to_read==0) {
+    if(bytes_to_read == 0) {
         RmStat stat_buf;
-        if (rm_sys_stat(path, &stat_buf) != -1) {
+        if(rm_sys_stat(path, &stat_buf) != -1) {
             bytes_to_read = MAX(stat_buf.st_size - start_offset, 0);
         }
     }
@@ -262,9 +261,10 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
         readvec[i].iov_len = hasher->buf_size;
     }
 
-    while((bytes_to_read==0 || total_bytes_read < bytes_to_read) &&
+    while((bytes_to_read == 0 || total_bytes_read < bytes_to_read) &&
           (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset)) > 0) {
-        bytes_read = MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */
+        bytes_read =
+            MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */
         int blocks = DIVIDE_CEIL(bytes_read, hasher->buf_size);
         g_assert(blocks <= N_BUFFERS);
 
@@ -308,11 +308,9 @@ finish:
     return total_bytes_read;
 }
 
-
 //////////////////////////////////////
 //  RmHasher                        //
 //////////////////////////////////////
-
 
 static void rm_hasher_hashpipe_free(GThreadPool *hashpipe) {
     /* free the GThreadPool; wait for any in-progress jobs to finish */
@@ -320,7 +318,9 @@ static void rm_hasher_hashpipe_free(GThreadPool *hashpipe) {
 }
 
 /* local joiner if user provides no joiner to rm_hasher_new() */
-static RmHasherCallback *rm_hasher_joiner(RmHasher *hasher, RmDigest *digest, _U gpointer session_user_data, _U gpointer task_user_data) {
+static RmHasherCallback *rm_hasher_joiner(RmHasher *hasher, RmDigest *digest,
+                                          _U gpointer session_user_data,
+                                          _U gpointer task_user_data) {
     g_async_queue_push(hasher->return_queue, digest);
     return 0;
 }
@@ -329,23 +329,21 @@ static RmHasherCallback *rm_hasher_joiner(RmHasher *hasher, RmDigest *digest, _U
 //     API
 //////////////////////////////////////
 
-RmHasher *rm_hasher_new(
-            RmDigestType digest_type,
-            guint num_threads,
-            gboolean use_buffered_read,
-            gsize buf_size,
-            guint64 cache_quota_bytes,
-            guint64 target_kept_bytes,
-            RmHasherCallback joiner,
-            gpointer session_user_data
-            ) {
+RmHasher *rm_hasher_new(RmDigestType digest_type,
+                        guint num_threads,
+                        gboolean use_buffered_read,
+                        gsize buf_size,
+                        guint64 cache_quota_bytes,
+                        guint64 target_kept_bytes,
+                        RmHasherCallback joiner,
+                        gpointer session_user_data) {
     RmHasher *self = g_slice_new0(RmHasher);
     self->digest_type = digest_type;
 
     self->use_buffered_read = use_buffered_read;
     self->buf_size = buf_size;
     self->cache_quota_bytes = cache_quota_bytes;
-    if (joiner) {
+    if(joiner) {
         self->callback = joiner;
     } else {
         self->callback = (RmHasherCallback)rm_hasher_joiner;
@@ -369,43 +367,51 @@ RmHasher *rm_hasher_new(
 }
 
 void rm_hasher_free(RmHasher *hasher, gboolean wait) {
-    if (wait) {
-        while (g_atomic_int_get(&hasher->active_tasks) > 0) {
+    if(wait) {
+        while(g_atomic_int_get(&hasher->active_tasks) > 0) {
             g_usleep(1000);
         }
-        //TODO: wait for pending tasks to finish
+        // TODO: wait for pending tasks to finish
     }
     g_async_queue_unref(hasher->hashpipe_pool);
     rm_buffer_pool_destroy(hasher->mem_pool);
     g_slice_free(RmHasher, hasher);
 }
 
-RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest, gpointer task_user_data) {
+RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
+                                 gpointer task_user_data) {
     g_atomic_int_inc(&hasher->active_tasks);
     RmHasherTask *self = g_slice_new0(RmHasherTask);
     self->hasher = hasher;
-    self->digest = digest ? digest :
-        rm_digest_new(hasher->digest_type, 0, 0, rm_digest_paranoia_bytes(), hasher->digest_type == RM_DIGEST_PARANOID); //TODO: tidy up
+    self->digest =
+        digest
+            ? digest
+            : rm_digest_new(hasher->digest_type, 0, 0, rm_digest_paranoia_bytes(),
+                            hasher->digest_type == RM_DIGEST_PARANOID);  // TODO: tidy up
     self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
     self->task_user_data = task_user_data;
     return self;
 }
 
-gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset, guint64 bytes_to_read, gboolean is_symlink) {
+gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset,
+                             guint64 bytes_to_read, gboolean is_symlink) {
     guint64 bytes_read = 0;
-    if (is_symlink) {
+    if(is_symlink) {
         bytes_read = rm_hasher_symlink_read(task->hasher, task->digest, path);
-    } else if (task->hasher->use_buffered_read) {
-        bytes_read = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest, path, start_offset, bytes_to_read);
+    } else if(task->hasher->use_buffered_read) {
+        bytes_read = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest,
+                                             path, start_offset, bytes_to_read);
     } else {
-        bytes_read = rm_hasher_unbuffered_read(task->hasher, task->hashpipe, task->digest, path, start_offset, bytes_to_read);
+        bytes_read = rm_hasher_unbuffered_read(task->hasher, task->hashpipe, task->digest,
+                                               path, start_offset, bytes_to_read);
     }
 
-    return ((is_symlink && bytes_read==0) || bytes_read == bytes_to_read); //TODO: is symlink case ok?
+    return ((is_symlink && bytes_read == 0) || bytes_read == bytes_to_read);
 }
 
 RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
-    /* get a dummy buffer to use to signal the hasher thread that this increment is finished */
+    /* get a dummy buffer to use to signal the hasher thread that this increment is
+     * finished */
     RmHasher *hasher = task->hasher;
     RmBuffer *finisher = rm_buffer_pool_get(task->hasher->mem_pool);
     finisher->digest = task->digest;
@@ -414,9 +420,9 @@ RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
     rm_util_thread_pool_push(task->hashpipe, finisher);
 
     /* return hashpipe to hashpipe_pool */
-    //g_async_queue_push(task->hasher->hashpipe_pool, task->hashpipe);
+    // g_async_queue_push(task->hasher->hashpipe_pool, task->hashpipe);
 
-    if (hasher->return_queue) {
+    if(hasher->return_queue) {
         return (g_async_queue_pop(hasher->return_queue));
     } else {
         return NULL;

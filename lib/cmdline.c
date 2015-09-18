@@ -23,6 +23,8 @@
  *
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -45,6 +47,12 @@
 #include "utilities.h"
 #include "formats.h"
 #include "replay.h"
+#include "hash-utility.h"
+
+#if HAVE_BTRFS_H
+#include <sys/ioctl.h>
+#include <linux/btrfs.h>
+#endif
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
@@ -64,6 +72,7 @@ static void rm_cmd_show_version(void) {
                     {.name = "json-cache",     .enabled = HAVE_JSON_GLIB},
                     {.name = "xattr",          .enabled = HAVE_XATTR},
                     {.name = "metadata-cache", .enabled = HAVE_SQLITE3},
+                    {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
     /* clang-format on */
 
@@ -144,6 +153,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
 static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
     for(int i = 0; i < argc; i++) {
         if(g_strcmp0("--gui", argv[i]) == 0) {
+            argv[i] = "shredder";
             rm_cmd_start_gui(argc - i - 1, &argv[i + 1]);
 
             /* We returned? Something's wrong */
@@ -151,6 +161,107 @@ static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
         }
     }
 
+    return EXIT_SUCCESS;
+}
+
+static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
+    for(int i = 0; i < argc; i++) {
+        if(g_strcmp0("--hash", argv[i]) == 0) {
+            argv[i] = argv[0];
+            exit(rm_hasher_main(argc - i, &argv[i]));
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+static void rm_cmd_btrfs_clone_usage(void) {
+    rm_log_error(_("Usage: rmlint --btrfs-clone source dest\n"));
+}
+
+static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
+#if HAVE_BTRFS_H
+    struct {
+        struct btrfs_ioctl_same_args args;
+        struct btrfs_ioctl_same_extent_info info;
+    } extent_same;
+    memset(&extent_same, 0, sizeof(extent_same));
+
+    int source_fd = rm_sys_open(source, O_RDONLY);
+    if(source_fd < 0) {
+        rm_log_error_line(_("btrfs clone: failed to open source file"));
+        return;
+    }
+
+    extent_same.info.fd = rm_sys_open(dest, O_RDWR);
+    if(extent_same.info.fd < 0) {
+        rm_log_error_line(_("btrfs clone: failed to open dest file."));
+        rm_sys_close(source_fd);
+        return;
+    }
+
+    struct stat source_stat;
+    fstat(source_fd, &source_stat);
+
+    guint64 bytes_deduped = 0;
+    gint64 bytes_remaining = source_stat.st_size;
+    int ret = 0;
+    while(bytes_deduped < (guint64)source_stat.st_size && ret == 0 &&
+          extent_same.info.status == 0 && bytes_remaining) {
+        extent_same.args.dest_count = 1;
+        extent_same.args.logical_offset = bytes_deduped;
+        extent_same.info.logical_offset = bytes_deduped;
+
+        /* BTRFS_IOC_FILE_EXTENT_SAME has an internal limit at 16MB */
+        extent_same.args.length = MIN(16 * 1024 * 1024, bytes_remaining);
+        if(extent_same.args.length == 0) {
+            extent_same.args.length = bytes_remaining;
+        }
+
+        ret = ioctl(source_fd, BTRFS_IOC_FILE_EXTENT_SAME, &extent_same);
+        if(ret == 0 && extent_same.info.status == 0) {
+            bytes_deduped += extent_same.info.bytes_deduped;
+            bytes_remaining -= extent_same.info.bytes_deduped;
+        }
+    }
+
+    rm_sys_close(source_fd);
+    rm_sys_close(extent_same.info.fd);
+
+    if(ret < 0) {
+        ret = errno;
+        rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"), ret,
+                          strerror(ret));
+    } else if(extent_same.info.status == -22) {
+        rm_log_error_line(
+            _("BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel "
+              "> 4.2"));
+    } else if(extent_same.info.status < 0) {
+        rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
+                          extent_same.info.status, dest);
+    } else if(bytes_remaining > 0) {
+        rm_log_info_line(_("Files don't match - not cloned"));
+    }
+#else
+
+    (void)source;
+    (void)dest;
+    rm_log_error_line(_("rmlint was not compiled with btrfs support."))
+
+#endif
+}
+
+static int rm_cmd_maybe_btrfs_clone(int argc, const char **argv) {
+    if(g_strcmp0("--btrfs-clone", argv[1]) == 0) {
+        if(argc != 4) {
+            rm_cmd_btrfs_clone_usage();
+            return EXIT_FAILURE;
+        } else {
+            rm_cmd_btrfs_clone(argv[2], argv[3]);
+            argc = 0;
+            return EXIT_FAILURE;
+        }
+    }
     return EXIT_SUCCESS;
 }
 
@@ -1170,6 +1281,7 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     RmCfg *cfg = session->cfg;
+    gboolean clone = FALSE;
 
     /* Handle --gui before all other processing,
      * since we need to pass other args to the python interpreter.
@@ -1177,6 +1289,14 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
      */
     if(rm_cmd_maybe_switch_to_gui(argc, (const char **)argv) == EXIT_FAILURE) {
         rm_log_error_line(_("Could not start graphical user interface."));
+        return false;
+    }
+
+    if(rm_cmd_maybe_switch_to_hasher(argc, (const char **)argv) == EXIT_FAILURE) {
+        return false;
+    }
+
+    if(rm_cmd_maybe_btrfs_clone(argc, (const char **)argv) == EXIT_FAILURE) {
         return false;
     }
 
@@ -1241,7 +1361,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
         {"version"  , 0   , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_version , _("Show the version & features") , NULL} ,
         /* Dummy option for --help output only: */
-        {"gui" , 0 , 0 , G_OPTION_ARG_NONE , NULL , _("If installed , start the optional gui with all following args") , NULL} ,
+        {"gui"         , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("If installed, start the optional gui with all following args")                 , NULL},
+        {"hash"        , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("Work like sha1sum for all supported hash algorithms (see also --hash --help)") , NULL}                                            ,
+        {"btrfs-clone" , 0 , 0 , G_OPTION_ARG_NONE , &clone , _("Clone extents from source to dest, if extents match")                          , NULL} ,
 
         /* Special case: accumulate leftover args (paths) in &paths */
         {G_OPTION_REMAINING , 0 , 0 , G_OPTION_ARG_FILENAME_ARRAY , &paths , ""   , NULL}   ,
@@ -1346,6 +1468,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(!g_option_context_parse(option_parser, &argc, &argv, &error)) {
         goto failure;
+    }
+
+    if(clone) {
+        /* should not get here */
+        rm_cmd_btrfs_clone_usage();
+        session->cmdline_parse_error = TRUE;
     }
 
     /* Silent fixes of invalid numberic input */

@@ -124,15 +124,16 @@ static void rm_fmt_prog(RmSession *session,
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(FDUPES_HANDLER_IMPL),
-        .name = "fdupes",
-        .head = NULL,
-        .elem = rm_fmt_elem,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {"omitfirst", "sameline", NULL},
-    },
+    .parent =
+        {
+         .size = sizeof(FDUPES_HANDLER_IMPL),
+         .name = "fdupes",
+         .head = NULL,
+         .elem = rm_fmt_elem,
+         .prog = rm_fmt_prog,
+         .foot = NULL,
+         .valid_keys = {"omitfirst", "sameline", NULL},
+        },
     .text_lines = NULL,
     .use_same_line = false,
     .omit_first_line = false
