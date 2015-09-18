@@ -118,18 +118,18 @@ def plot_cpu_usage(data):
 
 
 def plot_found_results(data):
-    chart = pygal.Pie(CONFIG, inner_radius=.4)
+    chart = pygal.Bar(CONFIG)
 
     results = []
-    unpacked = unpack(chart, data, 'Found results', add_x_labels=False)
+    unpacked = unpack(chart, data, 'Found results', add_x_labels=True)
     for program, metadata, points in unpacked:
         average = points[-1]
 
         results.append(([
             average[VALID_ATTRS['dupes']],
             average[VALID_ATTRS['sets']],
-            statistics.variance([p[2] for p in points[:-1]]),
-            statistics.variance([p[3] for p in points[:-1]])
+            #statistics.variance([p[2] for p in points[:-1]]),
+            #statistics.variance([p[3] for p in points[:-1]])
         ], program))
 
     labels = [
@@ -151,7 +151,8 @@ def plot_found_results(data):
             } for idx, value in enumerate(point)]
         )
 
-    return chart.render(is_unicode=True)
+    chart.x_labels = ['Duplicates', 'Originals']
+    return chart.render_table(style=True, total=False)
 
 
 def parse_arguments():
@@ -183,26 +184,27 @@ def main():
     os.makedirs(options.output_dir, exist_ok=True)
 
     PLOT_FUNCS = {
-        'timing': plot_timing,
-        'memory': plot_memory,
-        'cpu_usage': plot_cpu_usage,
-        'found_items': plot_found_results
+        'timing': (plot_timing, False),
+        'memory': (plot_memory, False),
+        'cpu_usage': (plot_cpu_usage, False),
+        'found_items': (plot_found_results, True)
     }
 
     for path in glob.glob(os.path.join(options.input_dir, '*.json')):
         with open(path, 'r') as handle:
             data = json.loads(handle.read())
-            for attr, plot_func in PLOT_FUNCS.items():
-                svg = plot_func(data)
+            for attr, (plot_func, is_table) in PLOT_FUNCS.items():
+                svg_or_table = plot_func(data)
+                suffix = '.html' if is_table else '.svg'
 
                 output_path = os.path.join(
                     options.output_dir,
-                    attr + '-' + os.path.basename(path) + '.svg'
+                    attr + '-' + os.path.basename(path) + suffix
                 )
 
                 print('Writing:', output_path)
                 with open(output_path, 'w') as handle:
-                    handle.write(svg)
+                    handle.write(svg_or_table)
 
 
 if __name__ == '__main__':
