@@ -181,10 +181,9 @@ class Program:
 
                     cpu_usage = read_cpu_usage()
 
-                    if run_benchmarks[run_idx][0] > time_diff:
+                    # select the fastest run to record stats:
+                    if run_benchmarks[run_idx][0] > time_diff or run_benchmarks[run_idx][0]==0:
                         run_benchmarks[run_idx][0] = time_diff
-
-                    if run_benchmarks[run_idx][1] > cpu_usage:
                         run_benchmarks[run_idx][1] = cpu_usage
 
                     if data_dump:
@@ -374,7 +373,7 @@ class Dupd(Program):
             pass
 
         args = ' '.join(['--path ' + path for path in paths])
-        return 'scan ' + args + '--nodb --stats-file ' + self.stats_file
+        return 'scan ' + args + ' --nodb --stats-file ' + self.stats_file
 
     def compute_version(self):
         return subprocess.check_output(
@@ -592,7 +591,7 @@ def parse_arguments():
 
 def main():
     datasets = [
-        ExistingDataset('usr', ['/usr']),
+        ExistingDataset('usr', ['/mnt/ext4raid1/temp/usr']),
         ExistingDataset('tmp', ['/tmp']),
         ExistingDataset('tmpvar', ['/tmp', '/var']),
         ExistingDataset('usrvar', ['/usr', '/var']),
