@@ -511,6 +511,9 @@ FORMATTERS
     files in that given order until one handler succeeds. Handlers are just the
     name of a way of getting rid of the file and can be any of the following:
 
+    * ``clone``: ``btrfs`` only. Try to clone both files with the
+      BTRFS_IOC_FILE_EXTENT_SAME ``ioctl(3p)``. This will physically delete
+      duplicate extents. Needs at least kernel 4.2.
     * ``reflink``: Try to reflink the duplicate file to the original. See also
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
       it.
@@ -525,7 +528,7 @@ FORMATTERS
 
     Default is ``remove``.
   
-  * *link*: Shortcut for ``-c sh:reflink,hardlink,symlink``.
+  * *link*: Shortcut for ``-c sh:clone,reflink,hardlink,symlink``.
   * *hardlink*: Shortcut for ``-c sh:hardlink,symlink``.
   * *symlink*: Shortcut for ``-c sh:symlink``.
 
