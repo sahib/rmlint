@@ -181,8 +181,8 @@ class Program:
 
                     cpu_usage = read_cpu_usage()
 
-                    # select the fastest run to record stats:
-                    if run_benchmarks[run_idx][0] > time_diff or run_benchmarks[run_idx][0]==0:
+                    # select the fastest run to record time and cpu stats:
+                    if run_benchmarks[run_idx][0] > time_diff or run_benchmarks[run_idx][0] == 0:
                         run_benchmarks[run_idx][0] = time_diff
                         run_benchmarks[run_idx][1] = cpu_usage
 
@@ -268,7 +268,7 @@ class Rmlint(Program):
         return 'rmlint/rmlint'
 
     def get_options(self, paths):
-        return '-o summary -o json:/tmp/rmlint.json -T df ' + ' '.join(paths)
+        return '--hidden -o summary -o json:/tmp/rmlint.json -T df ' + ' '.join(paths)
 
     def compute_version(self):
         version_text = subprocess.check_output(
@@ -295,12 +295,43 @@ class Rmlint(Program):
 
 
 class RmlintSpooky(Rmlint):
-
     def get_options(self, paths):
-        return '-PP ' + Rmlint.get_options(self, paths)
+        return '-a spooky ' + Rmlint.get_options(self, paths)
 
     def get_benchid(self):
         return 'rmlint-spooky'
+
+
+class RmlintXXHash(Rmlint):
+    def get_options(self, paths):
+        return '-a xxhash ' + Rmlint.get_options(self, paths)
+
+    def get_benchid(self):
+        return 'rmlint-xxhash'
+
+
+class RmlintCity(Rmlint):
+    def get_options(self, paths):
+        return '-a city ' + Rmlint.get_options(self, paths)
+
+    def get_benchid(self):
+        return 'rmlint-city'
+
+
+class RmlintMD5(Rmlint):
+    def get_options(self, paths):
+        return '-a md5 ' + Rmlint.get_options(self, paths)
+
+    def get_benchid(self):
+        return 'rmlint-md5'
+
+
+class RmlintMurmur(Rmlint):
+    def get_options(self, paths):
+        return '-a murmur ' + Rmlint.get_options(self, paths)
+
+    def get_benchid(self):
+        return 'rmlint-murmur'
 
 
 class RmlintParanoid(Rmlint):
@@ -619,8 +650,13 @@ def main():
         Baseline(),
         # Current:
         Rmlint(),
-        RmlintSpooky(),
+        Rmlint(),
         RmlintParanoid(),
+        RmlintXXHash(),
+        # RmlintSpooky(),
+        # RmlintCity(),
+        # RmlintMD5(),
+        # RmlintMurmur(),
         RmlintReplay(),
         # Old rmlint:
         OldRmlint(),

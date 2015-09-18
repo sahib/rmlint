@@ -325,7 +325,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         g_assert(use_shadow_hash);
         if(use_shadow_hash) {
             digest->paranoid->shadow_hash =
-                rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0, false);
+                rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
         } else {
             digest->paranoid->shadow_hash = NULL;
         }

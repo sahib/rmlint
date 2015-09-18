@@ -858,7 +858,7 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
-        cfg->checksum_type = RM_DIGEST_SPOOKY;
+        cfg->checksum_type = RM_DIGEST_XXHASH;
         break;
     case -1:
         cfg->checksum_type = RM_DIGEST_BASTARD;

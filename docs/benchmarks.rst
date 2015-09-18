@@ -36,6 +36,8 @@ filesystem. The amount of available memory was *8GB*.
     284075
     $ find /mnt/music -type f ! -empty | wc -l
     37370
+    $ uname -a
+    Linux werkstatt 3.14.51-1-lts #1 SMP Mon Aug 17 19:21:08 CEST 2015 x86_64 GNU/Linux
 
 .. image:: _static/benchmarks/timing.svg
    :width: 75%
@@ -83,9 +85,10 @@ There does not seem to be a way to limit it.
 .. _Trie: https://en.wikipedia.org/wiki/Radix_tree
 .. _`5M files`: https://github.com/sahib/rmlint/issues/109
 
-.. image:: _static/benchmarks/found_items.svg
-   :width: 75%
-   :align: center
+.. raw:: html
+   :file: _static/benchmarks/found_items.html
+
+|
 
 Surprisingly each tool found a different set of files. As stated above, direct
 comparison may not be possible here. For most tools except ``rdfind`` and
