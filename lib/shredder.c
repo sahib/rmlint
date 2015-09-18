@@ -1804,10 +1804,18 @@ void rm_shred_run(RmSession *session) {
     rm_log_info(BLUE"Read buffer Mem: %"LLU"\n", session->cfg->read_buffer_mem);
 
     /* Initialise hasher */
+    /* Optimum buffer size based on /usr without dropping caches:
+     * SHRED_PAGE_SIZE * 1 => 5.29 seconds
+     * SHRED_PAGE_SIZE * 2 => 5.11 seconds
+     * SHRED_PAGE_SIZE * 4 => 5.04 seconds
+     * SHRED_PAGE_SIZE * 8 => 5.08 seconds
+     * With dropped caches:
+     * SHRED_PAGE_SIZE * 1 => 45.2 seconds
+     * SHRED_PAGE_SIZE * 4 => 45.0 seconds*/
     tag.hasher = rm_hasher_new(session->cfg->checksum_type,
             session->cfg->threads,
             session->cfg->use_buffered_read,
-            SHRED_PAGE_SIZE,
+            SHRED_PAGE_SIZE * 4,
             session->cfg->read_buffer_mem,
             session->cfg->paranoid_mem,
             (RmHasherCallback)rm_shred_hash_callback,
