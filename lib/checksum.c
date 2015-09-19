@@ -83,9 +83,7 @@ void rm_buffer_pool_destroy(RmBufferPool *pool) {
     g_mutex_lock(&pool->lock);
 
     /* Free 'em */
-    while(pool->stack != NULL) {
-        rm_buffer_free(g_trash_stack_pop(&pool->stack));
-    }
+    g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
 
     g_mutex_unlock(&pool->lock);
 
@@ -100,7 +98,8 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     {
         while(!buffer) {
             if(pool->stack) {
-                buffer = g_trash_stack_pop(&pool->stack);
+                buffer = pool->stack->data;
+                pool->stack = g_slist_delete_link(pool->stack, pool->stack);
             } else if(pool->avail_buffers > 0) {
                 buffer = rm_buffer_new(pool);
             } else {
@@ -130,8 +129,8 @@ void rm_buffer_pool_release(RmBuffer *buf) {
     g_mutex_lock(&pool->lock);
     {
         pool->avail_buffers++;
-        g_trash_stack_push(&pool->stack, buf);
         g_cond_signal(&pool->change);
+        pool->stack = g_slist_prepend(pool->stack, buf);
     }
     g_mutex_unlock(&pool->lock);
 }
@@ -156,7 +155,7 @@ static void rm_buffer_pool_release_kept(RmBuffer *buf) {
         if(pool->kept_buffers > pool->max_kept_buffers) {
             rm_buffer_free(buf);
         } else {
-            g_trash_stack_push(&pool->stack, buf);
+            pool->stack = g_slist_prepend(pool->stack, buf);
         }
         pool->kept_buffers--;
         g_cond_signal(&pool->change);
