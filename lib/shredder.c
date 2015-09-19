@@ -291,7 +291,7 @@
  * matching file and do a progressive memcmp() on each buffer
  * rather than waiting until the whole increment has been read
  * */
-#define SHRED_PREMATCH_THRESHOLD (SHRED_BALANCED_PAGES * SHRED_PAGE_SIZE)
+#define SHRED_PREMATCH_THRESHOLD (0)
 
 /* Minimum number of files that should be in a RmShredDevice so that it get's
  * merged into the statistics counters.
