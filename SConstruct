@@ -89,7 +89,7 @@ def check_libelf(context):
     if GetOption('with_libelf') is False:
         rc = 0
 
-    if rc and tests.CheckHeader(context, 'libelf.h'):
+    if rc and tests.CheckHeader(context, 'libelf.h', header="#include <stdlib.h>"):
         rc = 0
 
     if rc and tests.CheckLib(context, ['libelf']):
