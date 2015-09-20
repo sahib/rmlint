@@ -115,7 +115,6 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
     (void)seek_offset;
     (void)bytes_to_read;
 #endif
-    // TODO: avoid duplicate calls via file->fadvise_requested check before calling
 }
 
 static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path) {
