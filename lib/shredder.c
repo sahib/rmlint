@@ -1646,7 +1646,8 @@ static RmFile *rm_shred_process_file(RmShredDevice *device, RmFile *file) {
     if(worth_waiting) {
         /* wait until the increment has finished hashing; assert that we get the expected
          * file back */
-        g_assert(file == g_async_queue_pop(device->hashed_file_return));
+        RmFile *returned_file = g_async_queue_pop(device->hashed_file_return);
+        g_assert(file == returned_file);
     } else {
         file = NULL;
     }
