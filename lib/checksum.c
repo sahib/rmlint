@@ -81,11 +81,6 @@ void rm_buffer_pool_destroy(RmBufferPool *pool) {
 
     /* Wait for all buffers to come back */
     g_mutex_lock(&pool->lock);
-    while(pool->kept_buffers) {
-        rm_log_debug_line("Waiting for buf releases.");
-        g_cond_wait(&pool->change, &pool->lock);
-    }
-    g_mutex_unlock(&pool->lock);
 
     /* Free 'em */
     while(pool->stack != NULL) {
