@@ -97,6 +97,15 @@ They show you the basic principles and most of the advanced options:
 If you have usage questions or find weird behaviour, you can also try to reach
 us via *IRC* in ``#rmlint`` on ``irc.freenode.net``.
 
+Since version ``2.4.0`` we also feature an optional graphical user interface:
+
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/139999878" width="780"
+    height="450"
+    frameborder="0" webkitallowfullscreen mozallowfullscreen
+    allowfullscreen></iframe>
+
 Informative reference
 ---------------------
 
