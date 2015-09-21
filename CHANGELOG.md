@@ -8,22 +8,39 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Fixed
 
+- ``rmlint`` should compile on Mac OSX now.
+- Bugfix: Broken ``chown`` calls in sh script (thanks Shukrat Mukimov)
 - Bugfix: memory corruption when specifying ``-T dd`` alone.
-- Bugfix: Make ``-D`` and ``-k / -K`` play together nicely.
+- Bugfix: Make ``-D`` and ``-k / -K`` play together nicely (thanks phiresky).
+- Smaller compile time troubles fixed.
 
 ### Added
 
 - A fully working graphical user interface which is installed as a python module
-  by default (can be disabled with ``--without-gui``).
-- Support for automatic deduplication on btrfs using
-  ``BTRFS_IOC_FILE_EXTENT_SAME``.
-- Benchmark suite that will track the performance of rmlint from time to time.
-  This is supposed to prevent speed decrease over time.
+  by default (can be disabled with ``--without-gui``). 
+  It can be started via  ``--gui``.
+- Support for automatic deduplication on btrfs using  ``BTRFS_IOC_FILE_EXTENT_SAME``.
+  The Shellscript now will contain calls to  ``rmlint  --btrfs $source $dest``
+  for duplicates on ``btrfs`` filesystems if  the user specified ``-c sh:clone``.
+- Benchmark suite that will track the performance of rmlint from release to release.
+  This is supposed to prevent speed decrease over time and give us a tool to
+  validate some of our optimization strategies.
+- Shell/Python-script now does sanity checks before removing and can be told to
+  byte-compare files again before removing them (``-p`` to ``.sh`` file).
+- Add a new ``--hash`` option that works like ``sha1sum``, but hashes files in
+  parallel and works for all hash algorithms ``rmlint`` supports.
+- ``--sort-by`` learned new keys: ``l`` (path length) and ``d`` (path depth)
+- Smaller performance and memory optimisations in shredder.
 
 ### Changed
 
 - ``-g`` now checks if there is already a ``sh`` and ``json`` formatter before
   it adds one.
+- ``-PP`` now defaults to ``xxhash`` as hashing algorithm.
+- ``-o / --output`` learned to guess the formatter you want to use from the file ending.
+  For example ``-o /tmp/test.json`` will work like ``-o json:/tmp/test.json``.
+- JSON output contains ``rmlint`` version and revision now.
+- ``--replay`` learned to merge several json files.
 
 ## [2.3.0 Ominous Oscar] -- 2015-06-15
 
