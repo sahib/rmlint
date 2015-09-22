@@ -411,12 +411,7 @@ typedef struct RmShredGroup {
 
     /* link(s) to next generation of RmShredGroups(s) which have this RmShredGroup as
      * parent*/
-    union {
-        GHashTable *children;
-        struct RmShredGroup *
-            child; /* TODO - implement this as a speed/mem saver (after first
-                     generation, most RmShredGroups only have 1 child */
-    };
+    GHashTable *children;
 
     /* RmShredGroup of the same size files but with lower RmFile->hash_offset;
      * getsset to null when parent dies
@@ -433,24 +428,25 @@ typedef struct RmShredGroup {
     GList *in_progress_digests;
 
     /* set if group has 1 or more files from "preferred" paths */
-    bool has_pref;
+    bool has_pref : 1;
 
     /* set if group has 1 or more files from "non-preferred" paths */
-    bool has_npref;
+    bool has_npref : 1;
 
     /* set if group has 1 or more files newer than cfg->min_mtime */
-    bool has_new;
+    bool has_new : 1;
 
     /* set if group has been greenlighted by paranoid mem manager */
-    bool is_active;
+    bool is_active : 1;
+
+    /* true if all files in the group have an external checksum */
+    bool has_only_ext_cksums : 1;
 
     /* incremented for each file in the group that obtained it's checksum from ext.
      * If all files came from there we do not even need to hash the group.
      */
     gulong num_ext_cksums;
 
-    /* true if all files in the group have an external checksum */
-    bool has_only_ext_cksums;
 
     /* initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files
      * and meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
@@ -489,8 +485,7 @@ typedef struct RmShredGroup {
 
 /////////// RmShredGroup ////////////////
 
-/* allocate and initialise new RmShredGroup
- */
+/* allocate and initialise new RmShredGroup */
 static RmShredGroup *rm_shred_group_new(RmFile *file) {
     RmShredGroup *self = g_slice_new0(RmShredGroup);
 
@@ -522,6 +517,9 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
     g_mutex_init(&self->lock);
 
     return self;
+}
+
+static RmShredGroup *rm_shred_group_get_child(RmShredGroup *group) {
 }
 
 //////////////////////////////////
@@ -1107,9 +1105,8 @@ static gboolean rm_shred_sift(RmFile *file) {
         } else {
             g_assert(file->digest);
 
-            /* check is child group hashtable has been created yet (TODO: move this to
-             * rm_shred_group_new?) */
-            if(!current_group->children) {
+            /* check is child group hashtable has been created yet */
+            if(current_group->children == NULL) {
                 current_group->children =
                     g_hash_table_new_full((GHashFunc)rm_digest_hash,
                                           (GEqualFunc)rm_digest_equal,
@@ -1117,9 +1114,9 @@ static gboolean rm_shred_sift(RmFile *file) {
                                           (GDestroyNotify)rm_shred_group_make_orphan);
             }
 
-            /* check if there is already a descendent of current_group which matches
-             * snap... if yes then
-             * move this file into it; if not then create a new group ... */
+            /* check if there is already a descendent of current_group which
+             * matches snap... if yes then move this file into it; if not then
+             * create a new group ... */
             RmShredGroup *child_group =
                 g_hash_table_lookup(current_group->children, file->digest);
             if(!child_group) {
