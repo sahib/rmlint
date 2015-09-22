@@ -519,9 +519,6 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
     return self;
 }
 
-static RmShredGroup *rm_shred_group_get_child(RmShredGroup *group) {
-}
-
 //////////////////////////////////
 // OPTIMISATION AND MEMORY      //
 // MANAGEMENT ALGORITHMS        //

@@ -375,7 +375,7 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
 
 void rm_hasher_free(RmHasher *hasher, gboolean wait) {
     if(wait) {
-        while(g_atomic_int_get(&hasher->active_tasks) > 0 && g_async_queue_length(hasher->finished_tasks) > 0) {
+        while(g_atomic_int_get(&hasher->active_tasks) > 0) {
             g_printerr("WAITING\n.");
             g_async_queue_pop(hasher->finished_tasks);
         }

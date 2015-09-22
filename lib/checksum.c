@@ -87,6 +87,8 @@ void rm_buffer_pool_destroy(RmBufferPool *pool) {
         rm_buffer_free(g_trash_stack_pop(&pool->stack));
     }
 
+    g_mutex_unlock(&pool->lock);
+
     g_mutex_clear(&pool->lock);
     g_cond_clear(&pool->change);
     g_slice_free(RmBufferPool, pool);
