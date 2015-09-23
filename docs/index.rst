@@ -101,10 +101,12 @@ Since version ``2.4.0`` we also feature an optional graphical user interface:
 
 .. raw:: html
 
+   <center>
     <iframe src="https://player.vimeo.com/video/139999878" width="780"
     height="450"
     frameborder="0" webkitallowfullscreen mozallowfullscreen
     allowfullscreen></iframe>
+   </center>
 
 Informative reference
 ---------------------
