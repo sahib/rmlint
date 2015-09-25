@@ -545,43 +545,47 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
             rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);
         }
 
-        if(!paranoid->twin_candidate) {
-            /* try to pop a candidate from the incoming queue */
-            if(paranoid->incoming_twin_candidates &&
+        if (paranoid->twin_candidate) {
+            /* do a running check that digest remains the same as its candidate twin */
+            if(rm_buffer_equal(buffer, paranoid->twin_candidate_buffer->data)) {
+                /* buffers match; move ptr to next one ready for next buffer */
+                paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
+            } else {
+                /* buffers don't match - delete candidate (new candidate might be added on
+                 * next
+                 * call to rm_digest_buffered_update) */
+                paranoid->twin_candidate = NULL;
+                paranoid->twin_candidate_buffer = NULL;
+                rm_log_debug(RED "Ejected candidate match at buffer #%u\n" RESET,
+                             paranoid->buffer_count);
+            }
+        }
+
+        while (!paranoid->twin_candidate &&
+                paranoid->incoming_twin_candidates &&
                (paranoid->twin_candidate =
                     g_async_queue_try_pop(paranoid->incoming_twin_candidates))) {
-                /* validate the new candidate by comparing the previous buffers (not
-                 * including current)*/
+            /* validate the new candidate by comparing the previous buffers (not
+             * including current)*/
+            paranoid->twin_candidate_buffer =
+                paranoid->twin_candidate->paranoid->buffers->head;
+            GList *iter_self = paranoid->buffers->head;
+            gboolean match = TRUE;
+            while(match && iter_self) {
+                match = (rm_buffer_equal(paranoid->twin_candidate_buffer->data,
+                                         iter_self->data));
+                iter_self = iter_self->next;
                 paranoid->twin_candidate_buffer =
-                    paranoid->twin_candidate->paranoid->buffers->head;
-                GList *iter_self = paranoid->buffers->head;
-                gboolean match = TRUE;
-                while(match && iter_self) {
-                    match = (rm_buffer_equal(paranoid->twin_candidate_buffer->data,
-                                             iter_self->data));
-                    iter_self = iter_self->next;
-                    paranoid->twin_candidate_buffer =
-                        paranoid->twin_candidate_buffer->next;
-                }
-                if(!match) {
-                    /* reject the twin candidate (new candidate might be added
-                     * on next call to rm_digest_buffered_update)*/
-                    paranoid->twin_candidate = NULL;
-                    paranoid->twin_candidate_buffer = NULL;
-                } else {
-                    rm_log_debug_line("Added twincandidate %p", paranoid->twin_candidate);
-                }
+                    paranoid->twin_candidate_buffer->next;
             }
-        /* do a running check that digest remains the same as its candidate twin */
-        } else if(rm_buffer_equal(buffer, paranoid->twin_candidate_buffer->data)) {
-            /* buffers match; move ptr to next one ready for next buffer */
-            paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
-        } else {
-            /* buffers don't match - delete candidate (new candidate might be
-             * added on next call to rm_digest_buffered_update) */
-            paranoid->twin_candidate = NULL;
-            paranoid->twin_candidate_buffer = NULL;
-            rm_log_debug_line("Ejected candidate match at buffer #%u", paranoid->buffer_count);
+            if(!match) {
+                /* reject the twin candidate */
+                paranoid->twin_candidate = NULL;
+                paranoid->twin_candidate_buffer = NULL;
+            } else {
+                rm_log_debug(BLUE "Added twin candidate %p\n" RESET,
+                             paranoid->twin_candidate);
+            }
         }
     }
 }
