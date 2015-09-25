@@ -422,7 +422,7 @@ class Dupd(Program):
                         key, value = line.split(' ', 1)
                         stats[key] = value
             return {
-                'dupes': int(stats['stats_duplicate_files']),
+                'dupes': int(stats['stats_duplicate_files']) - int(stats['stats_duplicate_sets']),
                 'sets': int(stats['stats_duplicate_sets'])
             }
         except OSError:
