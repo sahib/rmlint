@@ -520,6 +520,92 @@ class Baseline(Program):
 #    DATASET GENERATORS    #
 ############################
 
+# create synthetic test suite with "binary" number of specific tests to assist identification of differences between dupe finders.
+# the files are created to test the following gotchas:
+# 1. Large files > 4 GB (should find 1 original plus 1 duplicate; 1 potential false positive)
+# 2. Large files > 2 GB (should find 1 more original plus 1 more duplicate; 1 more potential false positive)
+# 3. Mount loops (shouldn't find anything, but has potential for 4 false positive originals and 4 false positive dupes)
+# 4. Files in hidden folder (depending on settings, may find 8 originals and 8 dupes)
+
+def mkdir(p):
+    if not os.path.exists(p):
+        os.mkdir(p)
+
+def generator1(paths):
+    for path in paths:
+        # create trio of (just over) 4GB and (just over) 2GB files wherein 2 match and one differs at the end
+        mkdir(path + '/big_files')
+        for fname in ['bigorig', 'bigdupe', 'bigfalse']:
+            for fsize in [2, 4]:
+                f=open(path + '/big_files/' + fname + str(fsize) + 'G', 'w')
+                f.truncate(1024*1024*1024*fsize)
+                f.write('b' if fname=='bigfalse' else 'a')
+                f.close
+
+        # create loop mounted duplicates
+        mkdir(path + '/bind_target')
+        mkdir(path + '/bind_mount')
+        import subprocess
+        bash_cmd = 'mount -o bind ' + path + '/bind_target ' + path + '/bind_mount'
+        subprocess.Popen(bash_cmd, shell=True)
+        for fname in range(0, 4):
+            f=open(path + '/bind_target/' + str(fname), 'w')
+            f.write('unique ' + str(fname))
+            f.close
+
+        # create hidden folder
+        mkdir(path + '/.hidden_folder')
+        for fname in range(0, 8):
+            f=open(path + '/.hidden_folder/orig' + str(fname), 'w')
+            f.write('hidden folder ' + str(fname))
+            f.close
+            f=open(path + '/.hidden_folder/dupe' + str(fname), 'w')
+            f.write('hidden folder ' + str(fname))
+            f.close
+
+        # create hidden files
+        mkdir(path + '/hidden_files')
+        for fname in range(0, 16):
+            f=open(path + '/hidden_files/.orig' + str(fname), 'w')
+            f.write('hidden file ' + str(fname))
+            f.close
+            f=open(path + '/hidden_files/.dupe' + str(fname), 'w')
+            f.write('hidden file ' + str(fname))
+            f.close
+
+        # create symlinked files
+        target_dir = '/tmp/rmlint-test-symlinks/'
+        mkdir(target_dir)
+        mkdir(path + '/symlinks')
+        for fname in range(0, 32):
+            f=open(target_dir + 'orig' + str(fname), 'w')
+            f.write('symlink target ' + str(fname))
+            f.close
+            os.symlink(target_dir + 'orig' + str(fname), path + '/symlinks/' + 'orig' + str(fname) )
+            f=open(target_dir + 'dupe' + str(fname), 'w')
+            f.write('symlink target ' + str(fname))
+            f.close
+            os.symlink(target_dir + 'dupe' + str(fname), path + '/symlinks/' + 'dupe' + str(fname) )
+
+        # create symlinked folder
+        target_dir = '/tmp/rmlint-test-symlink-folder/'
+        mkdir(target_dir)
+        for fname in range(0, 64):
+            f=open(target_dir + 'orig' + str(fname), 'w')
+            f.write('symlink target ' + str(fname))
+            f.close
+            f=open(target_dir + 'dupe' + str(fname), 'w')
+            f.write('symlink target ' + str(fname))
+            f.close
+        os.symlink(target_dir, path + '/symlink-dir' )
+
+
+
+def generator2(paths):
+    for path in paths:
+        print (path)
+
+
 
 class Dataset:
     __metaclass__ = ABCMeta
@@ -548,6 +634,19 @@ class ExistingDataset(Dataset):
 
     def generate(self):
         pass
+
+    def get_paths(self):
+        return self.paths
+
+class NewDataSet(Dataset):
+    def __init__(self, name, paths, generator):
+        Dataset.__init__(self, name)
+        self.paths = paths
+        self.generator = generator
+
+    def generate(self):
+        print("Generating...")
+        self.generator(self.paths)
 
     def get_paths(self):
         return self.paths
@@ -627,7 +726,9 @@ def main():
         ExistingDataset('tmpvar', ['/tmp', '/var']),
         ExistingDataset('usrvar', ['/usr', '/var']),
         ExistingDataset('usr_music', ['/usr', '/mnt/music']),
-        ExistingDataset('home', ['/home/sahib'])
+        ExistingDataset('home', ['/home/sahib']),
+        NewDataSet('synthetic1', ['/mnt/rmlint-test'], generator1),
+        NewDataSet('synthetic2', ['/mnt/rmlint-disk1', '/mnt/rmlint-disk2'], generator2)
     ]
 
     options = parse_arguments()
@@ -640,9 +741,9 @@ def main():
                 [dataset_name]
             ))
 
-    if options.do_generate or options.datasets:
+    if options.do_generate:
         for dataset in datasets:
-            if dataset in options.datasets or len(options.datasets) is 0:
+            if dataset.name in options.datasets or len(options.datasets) is 0:
                 dataset.generate()
 
     programs = [
