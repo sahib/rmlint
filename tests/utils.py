@@ -74,7 +74,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         }
         cmd = [which('valgrind'), '--show-possibly-lost=no', '-q']
     elif get_env_flag('RM_TS_USE_GDB'):
-        env, cmd = {}, ['/usr/bin/gdb', '-batch', '--silent', '-ex=run', '-ex=bt', '-ex=quit', '--args']
+        env, cmd = {}, ['/usr/bin/gdb', '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']
     else:
         env, cmd = {}, []
 

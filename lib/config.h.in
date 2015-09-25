@@ -117,6 +117,11 @@ typedef guint64 RmOff;
     rm_log_warning(_("INFO")); \
     rm_log_warning(": "RESET); \
 
+#define rm_log_debug_prefix() \
+    rm_log_debug(BLUE);       \
+    rm_log_debug(_("DEBUG")); \
+    rm_log_debug(": "RESET);  \
+
 ///////////////
 
 #define rm_log_error_line(...) \
@@ -133,6 +138,11 @@ typedef guint64 RmOff;
     rm_log_info_prefix()         \
     rm_log_warning(__VA_ARGS__); \
     rm_log_warning("\n");        \
+
+#define rm_log_debug_line(...) \
+    rm_log_debug_prefix()      \
+    rm_log_debug(__VA_ARGS__); \
+    rm_log_debug("\n");        \
 
 /* Domain for reporting errors. Needed by GOptions */
 #define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))

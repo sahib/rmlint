@@ -5,10 +5,19 @@ As of ``rmlint`` :math:`\geq 2.4.0` a GUI frontend called ``Shredder`` is
 shipped alongside of ``rmlint``. It is written in Python and uses no external 
 dependencies beside ``gtk+`` :math:`\geq` and ``PyGObject``.
 
-.. danger:: 
+.. raw:: html
+
+   <center>
+    <iframe src="https://player.vimeo.com/video/139999878" width="780"
+    height="450"
+    frameborder="0" webkitallowfullscreen mozallowfullscreen
+    allowfullscreen></iframe>
+   </center>
+
+
+.. warning::
 
     The user interface is still in developement. Use at your own risk!
-
     There is a safety net though: Every file will be re-checked before it's
     deletion.  
 

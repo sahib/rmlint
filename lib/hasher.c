@@ -55,9 +55,12 @@ struct _RmHasher {
     guint64 cache_quota_bytes;
     gpointer session_user_data;
     RmBufferPool *mem_pool;
-    GAsyncQueue *hashpipe_pool;
     RmHasherCallback callback;
+
+    GAsyncQueue *hashpipe_pool;
     GAsyncQueue *return_queue;
+    GAsyncQueue *finished_tasks;
+
     gsize buf_size;
     guint active_tasks;
 };
@@ -92,7 +95,7 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
 
         /* decrease active task count and signal same */
         g_atomic_int_dec_and_test(&hasher->active_tasks);
-        // TODO: GCond signal?
+        g_async_queue_push(hasher->finished_tasks, GUINT_TO_POINTER(1));
 
         rm_hasher_task_free(task);
     }
@@ -104,7 +107,7 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
 
 static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {
 /* Give the kernel scheduler some hints */
-#if HAVE_POSIX_FADVISE
+#if HAVE_POSIX_FADVISE && HASHER_FADVISE_FLAGS
     RmOff readahead = bytes_to_read * 8;
     posix_fadvise(fd, seek_offset, readahead, HASHER_FADVISE_FLAGS);
 #else
@@ -112,12 +115,10 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
     (void)seek_offset;
     (void)bytes_to_read;
 #endif
-    // TODO: avoid duplicate calls via file->fadvise_requested check before calling
 }
 
 static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path) {
-    /* Fake an IO operation on the symlink.
-     */
+    /* Fake an IO operation on the symlink.  */
     RmBuffer *buf = rm_buffer_pool_get(hasher->mem_pool);
     buf->len = 256;
     memset(buf->data, 0, buf->len);
@@ -214,6 +215,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
     gint32 bytes_read = 0;
     gint64 total_bytes_read = 0;
     guint64 file_offset = start_offset;
+
     if(bytes_to_read == 0) {
         RmStat stat_buf;
         if(rm_sys_stat(path, &stat_buf) != -1) {
@@ -265,6 +267,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
           (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset)) > 0) {
         bytes_read =
             MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */
+
         int blocks = DIVIDE_CEIL(bytes_read, hasher->buf_size);
         g_assert(blocks <= N_BUFFERS);
 
@@ -300,6 +303,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
         rm_buffer_pool_release(buffers[i]);
     }
     g_slice_free1(sizeof(*buffers) * N_BUFFERS, buffers);
+
 finish:
     if(fd > 0) {
         rm_sys_close(fd);
@@ -343,13 +347,16 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     self->use_buffered_read = use_buffered_read;
     self->buf_size = buf_size;
     self->cache_quota_bytes = cache_quota_bytes;
+
     if(joiner) {
         self->callback = joiner;
     } else {
         self->callback = (RmHasherCallback)rm_hasher_joiner;
         self->return_queue = g_async_queue_new();
     }
+
     self->session_user_data = session_user_data;
+    self->finished_tasks = g_async_queue_new();
 
     /* Create buffer mem pool */
     self->mem_pool = rm_buffer_pool_init(buf_size, cache_quota_bytes, target_kept_bytes);
@@ -369,10 +376,12 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
 void rm_hasher_free(RmHasher *hasher, gboolean wait) {
     if(wait) {
         while(g_atomic_int_get(&hasher->active_tasks) > 0) {
-            g_usleep(1000);
+            g_printerr("WAITING\n.");
+            g_async_queue_pop(hasher->finished_tasks);
         }
-        // TODO: wait for pending tasks to finish
     }
+
+    g_async_queue_unref(hasher->finished_tasks);
     g_async_queue_unref(hasher->hashpipe_pool);
     rm_buffer_pool_destroy(hasher->mem_pool);
     g_slice_free(RmHasher, hasher);
@@ -380,6 +389,7 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
 
 RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
                                  gpointer task_user_data) {
+
     g_atomic_int_inc(&hasher->active_tasks);
     RmHasherTask *self = g_slice_new0(RmHasherTask);
     self->hasher = hasher;
@@ -387,7 +397,8 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
         digest
             ? digest
             : rm_digest_new(hasher->digest_type, 0, 0, rm_digest_paranoia_bytes(),
-                            hasher->digest_type == RM_DIGEST_PARANOID);  // TODO: tidy up
+                            hasher->digest_type == RM_DIGEST_PARANOID);
+
     self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
     self->task_user_data = task_user_data;
     return self;
