@@ -123,6 +123,8 @@ typedef struct RmSession {
     /* List of path to json files that should be re-outputted. */
     GQueue replay_files;
 
+    /* Version of the linux kernel (0 on other operating systems) */
+    int kernel_version[2];
 } RmSession;
 
 /**
@@ -151,6 +153,18 @@ void rm_session_abort(RmSession *session);
  * Threadsafe.
  */
 bool rm_session_was_aborted(RmSession *session);
+
+
+/**
+ * @brief Check the kernel version of the Linux kernel.
+ *
+ * @param session Session to ask. Version is cached in the session.
+ * @param major The major version it should have at least.
+ * @param minor The minor version it should have at least.
+ *
+ * @return True if the kernel is recent enough.
+ */
+bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
 
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option

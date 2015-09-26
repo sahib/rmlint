@@ -251,14 +251,16 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
 #endif
 }
 
-static int rm_cmd_maybe_btrfs_clone(int argc, const char **argv) {
+static int rm_cmd_maybe_btrfs_clone(RmSession *session, int argc, const char **argv) {
     if(g_strcmp0("--btrfs-clone", argv[1]) == 0) {
         if(argc != 4) {
             rm_cmd_btrfs_clone_usage();
             return EXIT_FAILURE;
+        } else if(!rm_session_check_kernel_version(session, 4, 2)) {
+            rm_log_warning_line("This needs at least linux >= 4.2.");
+            return EXIT_FAILURE;
         } else {
             rm_cmd_btrfs_clone(argv[2], argv[3]);
-            argc = 0;
             return EXIT_FAILURE;
         }
     }
@@ -1296,7 +1298,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         return false;
     }
 
-    if(rm_cmd_maybe_btrfs_clone(argc, (const char **)argv) == EXIT_FAILURE) {
+    if(rm_cmd_maybe_btrfs_clone(session, argc, (const char **)argv) == EXIT_FAILURE) {
         return false;
     }
 

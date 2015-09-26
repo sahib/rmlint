@@ -77,6 +77,11 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
         return false;
     }
 
+    /* Needs to have at least kernel 4.2 */
+    if(!rm_session_check_kernel_version(self->session, 4, 2)) {
+        return false;
+    }
+
     bool offsets_match = rm_offsets_match(path, orig_path);
     char *reflink_type = g_hash_table_lookup(
             self->session->mounts->reflinkfs_table,

@@ -36,6 +36,7 @@ def build_config_template(target, source, env):
             HAVE_SQLITE3=env['HAVE_SQLITE3'],
             HAVE_LINUX_LIMITS=env['HAVE_LINUX_LIMITS'],
             HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
+            HAVE_UNAME=env['HAVE_UNAME'],
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,

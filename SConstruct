@@ -102,6 +102,19 @@ def check_libelf(context):
     return rc
 
 
+def check_uname(context):
+    rc = 1
+
+    if rc and tests.CheckHeader(context, 'sys/utsname.h', header=""):
+        rc = 0
+
+    conf.env['HAVE_UNAME'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_gettext(context):
     rc = 1
 
@@ -497,7 +510,8 @@ conf = Configure(env, custom_tests={
     'check_gettext': check_gettext,
     'check_sqlite3': check_sqlite3,
     'check_linux_limits': check_linux_limits,
-    'check_btrfs_h': check_btrfs_h
+    'check_btrfs_h': check_btrfs_h,
+    'check_uname': check_uname
 })
 
 if not conf.CheckCC():
@@ -604,6 +618,7 @@ conf.check_sqlite3()
 conf.check_linux_limits()
 conf.check_posix_fadvise()
 conf.check_btrfs_h()
+conf.check_uname()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])

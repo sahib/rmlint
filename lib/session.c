@@ -27,10 +27,57 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "session.h"
 #include "formats.h"
 #include "traverse.h"
 #include "preprocess.h"
+
+#if HAVE_UNAME
+# include "sys/utsname.h"
+
+void rm_session_read_kernel_version(RmSession *session) {
+    struct utsname buf;
+    if(uname(&buf) == -1) {
+        return;
+    }
+
+    if(sscanf(buf.release, "%d.%d.*", 
+            &session->kernel_version[0],
+            &session->kernel_version[1]
+    ) == EOF) {
+        session->kernel_version[0] = -1;
+        session->kernel_version[1] = -1;
+        return;
+    }
+
+    rm_log_debug_line("Linux kernel version is %d.%d.", 
+            session->kernel_version[0],
+            session->kernel_version[1]
+    );
+}
+#else
+void rm_session_read_kernel_version(RmSession *session) {
+    (void) session;
+}
+#endif
+
+bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {
+    int found_major = session->kernel_version[0];
+    int found_minor = session->kernel_version[1];
+
+    /* Could not read kernel version: Assume failure on our side. */
+    if(found_major <= 0 && found_minor <= 0) {
+        return true;
+    }
+
+    /* Lower is bad. */
+    if(found_major < major || found_minor < minor) {
+        return false;
+    }
+
+    return true;
+}
 
 void rm_session_init(RmSession *session, RmCfg *cfg) {
     memset(session, 0, sizeof(RmSession));
@@ -50,6 +97,8 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->offset_fragments = 0;
     session->offset_fails = 0;
     g_queue_init(&session->replay_files);
+
+    rm_session_read_kernel_version(session);
 }
 
 void rm_session_clear(RmSession *session) {
