@@ -1,7 +1,7 @@
 Benchmarks
 ==========
 
-This page contains the images that our benchmark suite renders for the current
+This page contains the images that our _`benchmark suite` renders for the current
 release. Inside the benchmark suite, ``rmlint`` is *challenged* against other
 popular and some less known duplicate finders. Apart from that a very dumb
 duplicate finder called ``baseline.py`` is used to see how slow a program would
@@ -15,9 +15,11 @@ It should be noted that it is very hard to compare these tools, since *each*
 tool investigated a slightly different amount of data and produces different
 results on the dataset below. This is partly due to the fact that some tools
 count empty files and hardlinks as duplicates, while ``rmlint`` does not. Partly
-it might also be false positives, missed files or `paths that contain a ','`_.
-For ``rmlint`` we verified that no false positives are in the set.
+it might also be false positives, missed files or, in some tools, `paths that
+contain a ','`_. For ``rmlint`` we verified that no false positives are in the
+set.
 
+.. _`benchmark suite`: https://github.com/sahib/rmlint/tree/develop/tests/test_speed
 .. _re-run: https://github.com/sahib/rmlint/issues/131
 .. _`paths that contain a ','`: https://github.com/jvirkki/dupd/blob/master/src/scan.c#L83
 
@@ -43,15 +45,17 @@ filesystem. The amount of available memory was *8GB*.
    :width: 75%
    :align: center
 
+*Note:* This plot uses logarithmic scaling for the time.
+
 It should be noted that the first run is the most important run. At least for a
 rather large amount of data (here 211 GB), it is unlikely that the file system
 has all relevant files in it's cache. You can see this with the second run of
-``baseline.py`` - when reading all files the cache won't be useful.
-The other tools read only a partial set of files and can thus benefit from
-caching on the second run. However ``rmlint`` (and also ``dupd``) support fast
-re-running (see ``rmlint-replay``) which makes repeated runs very fast.
-It is interesting to see ``rmlint-paranoid`` (no hash, incremental byte-by-byte
-comparison) to be mostly equally fast as the vanilla ``rmlint``. 
+``baseline.py`` - when reading all files the cache won't be useful at such large
+file quantities. The other tools read only a partial set of files and can thus
+benefit from caching on the second run. However ``rmlint`` (and also ``dupd``)
+support fast re-running (see ``rmlint-replay``) which makes repeated runs very
+fast. It is interesting to see ``rmlint-paranoid`` (no hash, incremental
+byte-by-byte comparison) to be mostly equally fast as the vanilla ``rmlint``. 
 
 .. image:: _static/benchmarks/cpu_usage.svg
    :width: 75%
@@ -72,15 +76,17 @@ The most memory efficient program here seems to be ``rdfind`` which uses even
 less than the bare bone ``baseline.py`` (which does not much more than holding a
 hashtable). The well known ``fdupes`` is also low on memory footprint.
 
-Before saying that ``rmlint`` is a memory hog, it should be noted that the
-memory consumption scales very well. Partly because ``rmlint`` saves all paths
-in a Trie_, making it usable for :math:`\geq` `5M files`_. Also it is able to
-control the amount of memory it uses in the paranoid mode
-(``--max-paranoid-mem``). Due to the high amount of internal data structures it
-however has a rather large base memory footprint.
+Before saying that the paranoid mode of ``rmlint`` is a memory hog, it should be
+noted (since this can't be seen on those plots) that the memory consumption
+scales very well. Partly because ``rmlint`` saves all paths in a Trie_, making
+it usable for :math:`\geq` `5M files`_. Also it is able to control the amount of
+memory it uses in the paranoid mode (``--max-paranoid-mem``). Due to the high
+amount of internal data structures it however has a rather large base memory
+footprint.
 
-``dupd`` uses direct file comparison too, but with a high memory footprint.
-There does not seem to be a way to limit it.
+``dupd`` uses direct file comparison for groups of two and three files and hash
+functions for the rest. It seems to have a rather high memory footprint in any
+case.
 
 .. _Trie: https://en.wikipedia.org/wiki/Radix_tree
 .. _`5M files`: https://github.com/sahib/rmlint/issues/109
@@ -92,8 +98,11 @@ There does not seem to be a way to limit it.
 
 Surprisingly each tool found a different set of files. As stated above, direct
 comparison may not be possible here. For most tools except ``rdfind`` and
-``baseline.py`` it's about in the same magnitude of files. The reasons for this
-are not clear yet. 
+``baseline.py`` it's about in the same magnitude of files. ``fdupes`` seems to
+find about the same amount as ``rmlint`` (with small differences).
+The reasons for this are not clear yet, but we're looking at it currently_.
+
+.. _currently: https://github.com/sahib/rmlint/issues/131#issuecomment-143387431
 
 User benchmarks
 ---------------

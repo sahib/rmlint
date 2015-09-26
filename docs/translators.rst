@@ -2,6 +2,10 @@ Translating ``rmlint``
 ======================
 
 Rudimentary support for internationalization is provided via ``gettext``. 
+Also see this Issue_ for a list of translators, current translations and a
+wish-list of new translations.
+
+.. _Issue: https://github.com/sahib/rmlint/issues/146
 
 Adding new languages
 --------------------
