@@ -380,7 +380,9 @@ static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) 
         return;
     }
 
-    fprintf(out, SH_SCRIPT_TEMPLATE_FOOT, "rm -f", parent->path);
+    char *escaped_path = rm_fmt_sh_escape_path(parent->path);
+    fprintf(out, SH_SCRIPT_TEMPLATE_FOOT, "rm -f", escaped_path);
+    g_free(escaped_path);
 }
 
 static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
