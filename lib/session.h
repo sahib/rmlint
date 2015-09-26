@@ -38,7 +38,6 @@
 #include "treemerge.h"
 
 typedef struct RmFileTables {
-    GHashTable *dev_table;
     GHashTable *size_groups;
     GHashTable *node_table;
     GHashTable *mtime_filter;
@@ -64,6 +63,12 @@ typedef struct RmSession {
 
     /* Treemerging for -D */
     struct RmTreeMerger *dir_merger;
+
+    /* Shredder session */
+    struct RmShredTag *shredder;
+
+    /* Disk Scheduler */
+    struct _RmMDS *mds;
 
     /* Support for swapping path memory to disk */
     RmSwapTable *meta_cache;
