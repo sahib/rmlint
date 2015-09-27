@@ -31,6 +31,7 @@ variables which are:
   starting the testcase and manually running `rmlint` on the priorly generated
   testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
+- ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
 
 Additionally slow tests can be omitted with by appending ``-a '!slow'`` to 
 the commandline. More information on this syntax can be found on the `nosetest
