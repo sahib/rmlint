@@ -565,8 +565,8 @@ static void rm_shred_mem_return(RmShredGroup *group) {
             tag->paranoid_mem_alloc += group->mem_allocation;
             tag->active_groups--;
             group->is_active = FALSE;
-            rm_log_debug("Mem avail %li, active groups %d. " YELLOW "Returned %" LLU
-                         " bytes for paranoid hashing.\n" RESET,
+            rm_log_debug_line("Mem avail %li, active groups %d. " YELLOW "Returned %" LLU
+                         " bytes for paranoid hashing.",
                          tag->paranoid_mem_alloc, tag->active_groups,
                          group->mem_allocation);
             tag->mem_refusing = FALSE;
@@ -630,16 +630,17 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
             group->mem_allocation += borrowed;
 
             if(tag->mem_refusing) {
-                rm_log_debug("Mem avail %li, active groups %d." GREEN " Borrowed %li",
-                             tag->paranoid_mem_alloc, tag->active_groups, borrowed);
-                if(inherited > 0) {
-                    rm_log_debug("and inherited %li", inherited);
-                }
-                rm_log_debug(" bytes for paranoid hashing");
+                rm_log_debug_line(
+                    "Mem avail %li, active groups %d. Borrowed %li. Inherited: %li bytes for paranoid hashing",
+                             tag->paranoid_mem_alloc,
+                             tag->active_groups, borrowed,
+                             inherited
+                    );
+
                 if(mem_required > borrowed + inherited) {
-                    rm_log_debug(" due to %i active group limit", active_group_threshold);
+                    rm_log_debug_line("...due to %i active group limit", active_group_threshold);
                 }
-                rm_log_debug("\n" RESET);
+
                 tag->mem_refusing = FALSE;
             }
 
@@ -649,9 +650,9 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
             result = TRUE;
         } else {
             if(!tag->mem_refusing) {
-                rm_log_debug("Mem avail %li, active groups %d. " RED
+                rm_log_debug_line("Mem avail %li, active groups %d. " RED
                              "Refused request for %" LLU
-                             " bytes for paranoid hashing.\n" RESET,
+                             " bytes for paranoid hashing.",
                              tag->paranoid_mem_alloc, tag->active_groups, mem_required);
                 tag->mem_refusing = TRUE;
             }
@@ -1055,7 +1056,7 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
         }
     } else {
         RM_DEFINE_PATH(file);
-        rm_log_error("Unexpected hash offset for %s, got %" LLU ", expected %" LLU "\n",
+        rm_log_error_line("Unexpected hash offset for %s, got %" LLU ", expected %" LLU,
                      file_path, file->hash_offset, file->shred_group->next_offset);
         g_assert_not_reached();
     }
@@ -1149,7 +1150,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
         rm_json_cache_read(&session->cfg->file_trie, cache_path);
     }
 
-    rm_log_debug("Moving files into size groups...\n");
+    rm_log_debug_line("Moving files into size groups...");
 
     /* move files from node tables into initial RmShredGroups */
     g_hash_table_foreach_remove(session->tables->node_table,
@@ -1171,17 +1172,17 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
         }
     }
 
-    rm_log_debug("move remaining files to size_groups finished at time %.3f\n",
+    rm_log_debug_line("move remaining files to size_groups finished at time %.3f",
                  g_timer_elapsed(session->timer, NULL));
 
-    rm_log_debug("Discarding unique sizes and read fiemap data for others...");
+    rm_log_debug_line("Discarding unique sizes and read fiemap data for others...");
     g_assert(session->tables->size_groups);
     removed = g_hash_table_foreach_remove(session->tables->size_groups,
                                           (GHRFunc)rm_shred_group_preprocess, main);
     g_hash_table_unref(session->tables->size_groups);
     session->tables->size_groups = NULL;
 
-    rm_log_debug("done at time %.3f; removed %u of %" LLU "\n",
+    rm_log_debug_line("...done at time %.3f; removed %u of %" LLU,
                  g_timer_elapsed(session->timer, NULL), removed,
                  session->total_filtered_files);
 }
@@ -1241,7 +1242,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
 
 #if _RM_SHRED_DEBUG
             RM_DEFINE_PATH(file);
-            rm_log_debug("tagging %s as original because %s\n",
+            rm_log_debug_line("tagging %s as original because %s",
                          file_path,
                          ((file->is_prefd) && (session->cfg->keep_all_tagged))
                              ? "tagged"
@@ -1258,7 +1259,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
         headfile->is_original = true;
 #if _RM_SHRED_DEBUG
         RM_DEFINE_PATH(headfile);
-        rm_log_debug("tagging %s as original because it is highest ranked\n",
+        rm_log_debug_line("tagging %s as original because it is highest ranked",
                      headfile_path);
 #endif
     }
@@ -1271,7 +1272,7 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 #if _RM_SHRED_DEBUG
     RmFile *head = group->head->data;
     RM_DEFINE_PATH(head);
-    rm_log_debug("Forwarding %s's group\n", head_path);
+    rm_log_debug_line("Forwarding %s's group", head_path);
 #endif
 
     /* Hand it over to the printing module */
@@ -1332,7 +1333,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 
     group->status = RM_SHRED_GROUP_FINISHED;
 #if _RM_SHRED_DEBUG
-    rm_log_debug("Free from rm_shred_result_factory\n");
+    rm_log_debug_line("Free from rm_shred_result_factory");
 #endif
 
     /* Do not force free files here, output module might need do that itself. */
@@ -1358,7 +1359,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
 
         if(hexstring != NULL) {
             rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
-            rm_log_debug("%s=%s was read from cache.\n", hexstring, file_path);
+            rm_log_debug_line("%s=%s was read from cache.", hexstring, file_path);
         } else {
             rm_log_warning_line(
                 "Unable to read external checksum from interal cache for %s", file_path);
@@ -1439,10 +1440,7 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
     return result;
 }
 
-/**
- * @brief  Callback for RmMDS
- **/
-
+/* Callback for RmMDS */
 static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
     if(!rm_shred_can_process(file, tag)) {
@@ -1556,7 +1554,7 @@ void rm_shred_run(RmSession *session) {
                      (RmMDSSortFunc)rm_mds_elevator_cmp);
 
     rm_shred_preprocess_input(&tag);
-    rm_log_debug("Done shred preprocessing\n");
+    rm_log_debug_line("Done shred preprocessing");
     tag.after_preprocess = TRUE;
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
@@ -1569,14 +1567,14 @@ void rm_shred_run(RmSession *session) {
         tag.paranoid_mem_alloc = MAX((gint64)session->cfg->paranoid_mem,
                                      (gint64)session->cfg->total_mem - (gint64)mem_used -
                                          (gint64)session->cfg->read_buffer_mem);
-        rm_log_info(BLUE "Paranoid Mem: %" LLU "\n", tag.paranoid_mem_alloc);
+        rm_log_debug_line("Paranoid Mem: %" LLU, tag.paranoid_mem_alloc);
     } else {
         session->cfg->read_buffer_mem =
             MAX((gint64)session->cfg->read_buffer_mem,
                 (gint64)session->cfg->total_mem - (gint64)mem_used);
         tag.paranoid_mem_alloc = 0;
     }
-    rm_log_info(BLUE "Read buffer Mem: %" LLU "\n", session->cfg->read_buffer_mem);
+    rm_log_debug_line("Read buffer Mem: %" LLU, session->cfg->read_buffer_mem);
 
     /* Initialise hasher */
     /* Optimum buffer size based on /usr without dropping caches:

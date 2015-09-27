@@ -453,7 +453,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
 
                 g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) >= 0);
 
-                rm_log_debug("Ignoring path double %p, keeping %p\n", iter_file,
+                rm_log_debug_line("Ignoring path double %p, keeping %p", iter_file,
                              match_double);
 
                 g_queue_delete_link(file->hardlinks.files, iter);
@@ -582,11 +582,11 @@ void rm_preprocess(RmSession *session) {
     guint removed = g_hash_table_foreach_remove(
         tables->node_table, (GHRFunc)rm_pp_handle_inode_clusters, session);
 
-    rm_log_debug("process hardlink groups finished at time %.3f; removed %u of %d\n",
+    rm_log_debug_line("process hardlink groups finished at time %.3f; removed %u of %d",
                  g_timer_elapsed(session->timer, NULL), removed, session->total_files);
 
     session->other_lint_cnt += rm_pp_handler_other_lint(session);
-    rm_log_debug("Other lint handling finished at time %.3f\n",
+    rm_log_debug_line("Other lint handling finished at time %.3f",
                  g_timer_elapsed(session->timer, NULL));
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);

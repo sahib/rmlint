@@ -555,7 +555,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                  * call to rm_digest_buffered_update) */
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
-                rm_log_debug(RED "Ejected candidate match at buffer #%u\n" RESET,
+                rm_log_debug_line("Ejected candidate match at buffer #%u",
                              paranoid->buffer_count);
             }
         }
@@ -580,7 +580,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
             } else {
-                rm_log_debug(BLUE "Added twin candidate %p\n" RESET,
+                rm_log_debug_line("Added twin candidate %p",
                              paranoid->twin_candidate);
             }
         }

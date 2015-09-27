@@ -773,7 +773,7 @@ static gboolean rm_cmd_parse_timestamp(_U const char *option_name, const gchar *
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
-            rm_log_debug("timestamp %s understood as %lu\n", time_buf, result);
+            rm_log_debug_line("timestamp %s understood as %lu", time_buf, result);
         }
     }
 
@@ -1572,7 +1572,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_traverse_tree(session);
 
-    rm_log_debug("List build finished at %.3f with %d files\n",
+    rm_log_debug_line("List build finished at %.3f with %d files",
                  g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(session->cfg->merge_directories) {
@@ -1587,7 +1587,7 @@ int rm_cmd_main(RmSession *session) {
         if(session->cfg->find_duplicates || session->cfg->merge_directories) {
             rm_shred_run(session);
 
-            rm_log_debug("Dupe search finished at time %.3f\n",
+            rm_log_debug_line("Dupe search finished at time %.3f",
                          g_timer_elapsed(session->timer, NULL));
         } else {
             /* Clear leftovers */

@@ -105,7 +105,7 @@ static RmTravSession *rm_traverse_session_new(RmSession *session) {
 }
 
 static void rm_traverse_session_free(RmTravSession *trav_session) {
-    rm_log_info("Found %d files, ignored %d hidden files and %d hidden folders\n",
+    rm_log_debug_line("Found %d files, ignored %d hidden files and %d hidden folders",
                 trav_session->session->total_files,
                 trav_session->session->ignored_files,
                 trav_session->session->ignored_folders);
@@ -263,7 +263,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     bool is_on_subvol_fs = (buffer_path[0] == '/' && buffer_path[1] == '/');
     if(is_on_subvol_fs) {
-        rm_log_debug("Treating files under %s as a single volume\n", buffer_path);
+        rm_log_debug_line("Treating files under %s as a single volume", buffer_path);
     }
 
     FTS *ftsp = fts_open((char * [2]){buffer_path, NULL}, fts_flags, NULL);
@@ -318,7 +318,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     /* continuing into folder would exceed maxdepth*/
                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
                     clear_emptydir_flags = true; /* flag current dir as not empty */
-                    rm_log_debug("Not descending into %s because max depth reached\n",
+                    rm_log_debug_line("Not descending into %s because max depth reached",
                                  p->fts_path);
                 } else if(cfg->crossdev && p->fts_dev != chp->fts_dev) {
                     /* continuing into folder would cross file systems*/
@@ -393,7 +393,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 clear_emptydir_flags = true; /* current dir not empty */
                 if(!cfg->follow_symlinks) {
                     if(p->fts_level != 0) {
-                        rm_log_debug("Not following symlink %s because of cfg\n",
+                        rm_log_debug_line("Not following symlink %s because of cfg",
                                      p->fts_path);
                     }
 
@@ -406,7 +406,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
-                    rm_log_debug("Following symlink %s\n", p->fts_path);
+                    rm_log_debug_line("Following symlink %s", p->fts_path);
                     next_is_symlink = true;
                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
                 }

@@ -400,7 +400,7 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
         if(!rm_trie_set_value(file_trie, path, cksum_copy)) {
             g_free(cksum_copy);
         }
-        rm_log_debug("* Adding cache entry %s (%s)\n", path, cksum);
+        rm_log_debug_line("* Adding cache entry %s (%s)", path, cksum);
     }
 }
 
@@ -686,17 +686,20 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                                 GUINT_TO_POINTER(1));
 
             GLogLevelFlags log_level = G_LOG_LEVEL_DEBUG;
+
             if(evilfs_found->unusual) {
                 log_level = G_LOG_LEVEL_WARNING;
                 rm_log_warning_prefix();
+            } else {
+                rm_log_debug_prefix();
             }
 
             g_log("rmlint", log_level,
-                  _("`%s` mount detected at %s (#%u); Ignoring all files in it."),
+                  _("`%s` mount detected at %s (#%u); Ignoring all files in it.\n"),
                   evilfs_found->name, wrap_entry->dir, (unsigned)dir_stat.st_dev);
         }
 
-        rm_log_debug("Filesystem %s: %s\n", wrap_entry->dir,
+        rm_log_debug_line("Filesystem %s: %s", wrap_entry->dir,
                      (reflinkfs_found) ? "reflink" : "normal");
 
         if(reflinkfs_found != NULL) {
@@ -838,7 +841,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                  * when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
-                rm_log_debug(RED "devno_to_wholedisk failed for %s\n" RESET,
+                rm_log_debug_line(RED "devno_to_wholedisk failed for %s" RESET,
                              entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
                 strncpy(diskname, entry->fsname, sizeof(diskname));
@@ -854,14 +857,14 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
             self->part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));
         if(!existing || (existing->disk == 0 && whole_disk != 0)) {
             if(existing) {
-                rm_log_debug("Replacing part_table entry %s for path %s with %s\n",
+                rm_log_debug_line("Replacing part_table entry %s for path %s with %s",
                              existing->fsname, entry->dir, entry->fsname);
             }
             g_hash_table_insert(self->part_table,
                                 GUINT_TO_POINTER(stat_buf_folder.st_dev),
                                 rm_part_info_new(entry->dir, entry->fsname, whole_disk));
         } else {
-            rm_log_debug("Skipping duplicate mount entry for dir %s dev %02u:%02u\n",
+            rm_log_debug_line("Skipping duplicate mount entry for dir %s dev %02u:%02u",
                          entry->dir, major(stat_buf_folder.st_dev),
                          minor(stat_buf_folder.st_dev));
             continue;
@@ -880,8 +883,8 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                                 rm_disk_info_new(diskname, is_rotational));
         }
 
-        rm_log_info(
-            "%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s)\n",
+        rm_log_debug_line(
+            "%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s)",
             major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev), entry->dir,
             major(whole_disk), minor(whole_disk), entry->fsname, diskname,
             is_rotational ? "yes" : "no");
@@ -986,9 +989,8 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
                     self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
                 if(parent_part) {
                     /* create new partition table entry */
-                    rm_log_debug("Adding partition info for " GREEN "%s" RESET
-                                 " - looks like subvolume %s on disk " GREEN "%s" RESET
-                                 "\n",
+                    rm_log_debug_line("Adding partition info for " GREEN "%s" RESET
+                                 " - looks like subvolume %s on disk " GREEN "%s" RESET,
                                  path, prev, parent_part->name);
                     part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
                     g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
