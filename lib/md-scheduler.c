@@ -163,10 +163,8 @@ static void rm_mds_device_finish(RmMDSDevice *self) {
 /** @brief  Free mem allocated to a RmMDSDevice
  **/
 static void rm_mds_device_free(RmMDSDevice *self) {
-    if(self->ref_count!=0) {
-        rm_log_error("Ref count %i\n", self->ref_count);
-    }
-    g_assert(self->ref_count==0);
+    rm_mds_device_finish(self);
+
     g_mutex_clear(&self->lock);
     g_cond_clear(&self->cond);
     g_slice_free(RmMDSDevice, self);
@@ -374,8 +372,8 @@ void rm_mds_free(RmMDS *mds, gboolean free_mount_table){
 
     rm_mds_finish(mds);
 
+    g_thread_pool_free(mds->pool, false, true);
     g_hash_table_destroy(mds->disks);
-    g_thread_pool_free(mds->pool, FALSE, TRUE);
 
     if (free_mount_table) {
         rm_mounts_table_destroy(mds->mount_table);
