@@ -62,6 +62,16 @@ def has_feature(feature):
     ).decode('utf-8')
 
 
+def get_last_rmlint_binary():
+    # Copy the binary, so we do not copy it over by chance.
+    # (e.g. by rebuilding with scons)
+    temp_binary = '/tmp/rmlint'
+    if not os.path.exists(temp_binary):
+        shutil.copy('./rmlint', temp_binary)
+
+    return temp_binary
+
+
 def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
     if use_default_dir:
         if dir_suffix:
@@ -83,7 +93,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         env, cmd = {}, []
 
     cmd += [
-        './rmlint', target_dir, '-V',
+        get_last_rmlint_binary(), target_dir, '-V',
         '-o', 'json:/tmp/out.json', '-c', 'json:oneline'
     ] + shlex.split(' '.join(args))
 
@@ -277,4 +287,4 @@ def usual_setup_func():
 def usual_teardown_func():
     if not keep_testdir():
         shutil.rmtree(path=TESTDIR_NAME)
-        
+
