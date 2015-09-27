@@ -166,24 +166,25 @@ msgstr "échec de fermer: %s\n"
 #: lib/hash-utility.c:55 lib/cmdline.c:905
 #, c-format
 msgid "Unknown hash algorithm: '%s'"
-msgstr "Fonction de hachage inconnue: '%s'"
+msgstr "Algorithme de fonction de hachage inconnue: '%s'"
 
 #: lib/hash-utility.c:134
 msgid "Number of hashing threads [8]"
-msgstr ""
+msgstr "Nombre de tâches de hachage [8]"
 
 #: lib/hash-utility.c:136
 msgid "Print hash as self identifying multihash"
-msgstr ""
+msgstr "Affichage du hachage identifié comme une fonction multiple de hachage"
 
 #: lib/hash-utility.c:138
 msgid "Megabytes read buffer [256 MB]"
-msgstr ""
+msgstr "Lecture du buffer en mégaoctets [256 MB]"
 
 #: lib/hash-utility.c:140
 msgid ""
 "Print hashes in order completed, not in order entered (reduces memory usage)"
 msgstr ""
+"Afficher les hachages par ordre d'achévement et non par ordre d'entrée (réduit l'utilisation de la mémoire)"
 
 #: lib/hash-utility.c:183 lib/cmdline.c:1520
 msgid "No valid paths given."
@@ -197,12 +198,12 @@ msgstr "Impossible d'ouvrir le répertoire ou le fichier \"%s\": %s\n"
 #: lib/hash-utility.c:218
 #, c-format
 msgid "Directories are not supported: %s"
-msgstr ""
+msgstr "Ces répertoires ne sont pas pris en charge: %s"
 
 #: lib/hash-utility.c:225
 #, c-format
 msgid "%s: Unknown file type"
-msgstr ""
+msgstr "%s: Type de fichier inconnu"
 
 #: lib/formats.c:179
 #, c-format
@@ -266,7 +267,7 @@ msgstr "doublon de type '%s' non reconnu"
 #: lib/replay.c:173
 #, c-format
 msgid "modification time of `%s` changed. Ignoring."
-msgstr ""
+msgstr "la date de modification de `%s` a changé. Ignoré."
 
 #: lib/replay.c:487
 #, fuzzy, c-format
@@ -275,11 +276,11 @@ msgstr "Chargement de JSON Cache `%s'"
 
 #: lib/replay.c:565
 msgid "json-glib is needed for using --replay."
-msgstr ""
+msgstr "json-lib est nécessaire pour utiliser l'argument --replay"
 
 #: lib/replay.c:566
 msgid "Please recompile `rmlint` with it installed."
-msgstr ""
+msgstr "Merci de recompiler `rmlint` une fois celui ci installé"
 
 #: lib/hasher.c:293
 #, fuzzy, c-format
@@ -314,39 +315,41 @@ msgstr "Aucune page de manuel disponible pour rmlint"
 
 #: lib/cmdline.c:179
 msgid "Usage: rmlint --btrfs-clone source dest\n"
-msgstr ""
+msgstr "Utilisation: rmlint --btrfs-clone source dest\n"
 
 #: lib/cmdline.c:192
 msgid "btrfs clone: failed to open source file"
-msgstr ""
+msgstr "btrfs clone: échec de l'ouverture du fichier source."
 
 #: lib/cmdline.c:198
 msgid "btrfs clone: failed to open dest file."
-msgstr ""
+msgstr "btrfs clone: échec de l'ouverture du fichier de destination."
 
 #: lib/cmdline.c:233
 #, c-format
 msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
-msgstr ""
+msgstr "BTRFS_IOC_FILE_EXTENT_SAME a retourné l'erreur: (%d) %s"
 
 #: lib/cmdline.c:237
 msgid ""
 "BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > "
 "4.2"
 msgstr ""
+"BTRFS_IOC_FILE_EXTENT_SAME a retourné le status -22 - vous avez probablement besoins d'un noyau > "
+"4.2"
 
 #: lib/cmdline.c:240
 #, c-format
 msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
-msgstr ""
+msgstr "BTRFS_IOC_FILE_EXTENT_SAME a retourné le status %d pour le fichier %s"
 
 #: lib/cmdline.c:243
 msgid "Files don't match - not cloned"
-msgstr ""
+msgstr "Les fichiers ne correspondent pas - aucun clonage"
 
 #: lib/cmdline.c:249
 msgid "rmlint was not compiled with btrfs support."
-msgstr ""
+msgstr "rmlint n'a pas été complié avec le support btrfs"
 
 #: lib/cmdline.c:303
 msgid "Input size is empty"
@@ -375,7 +378,7 @@ msgstr "impossible d'analyser --size: %s"
 
 #: lib/cmdline.c:395
 msgid "--replay given; --with-metadata-cache will be ignored."
-msgstr ""
+msgstr "--replay given; --with-metadata-cache seront ignorés"
 
 #: lib/cmdline.c:405
 #, fuzzy, c-format
@@ -458,7 +461,7 @@ msgstr "Utiliser simultanément -o et -O n'est pas autorisé"
 
 #: lib/cmdline.c:1291
 msgid "Could not start graphical user interface."
-msgstr ""
+msgstr "Impossible de démarer l'interface graphique."
 
 #: lib/cmdline.c:1322
 msgid "Specify max traversal depth"
@@ -503,7 +506,7 @@ msgstr "Plus récent que l'horodatage"
 
 #: lib/cmdline.c:1332
 msgid "Re-output a json file"
-msgstr ""
+msgstr "Resortir un fichier json"
 
 #: lib/cmdline.c:1333
 msgid "Configure a formatter"
@@ -608,16 +611,16 @@ msgstr "Afficher la version et les fonctionnalités"
 
 #: lib/cmdline.c:1364
 msgid "If installed, start the optional gui with all following args"
-msgstr ""
+msgstr "Si installé, démarrer l'interface graphique avec les arguments suivants"
 
 #: lib/cmdline.c:1365
 msgid ""
 "Work like sha1sum for all supported hash algorithms (see also --hash --help)"
-msgstr ""
+msgstr "Fonctionne comme sha1sum pour tous les algorithmes de hachage (voir --hash --help)"
 
 #: lib/cmdline.c:1366
 msgid "Clone extents from source to dest, if extents match"
-msgstr ""
+msgstr "Clonage d'extents de la source vers la destinations si les extents correspondent"
 
 #: lib/cmdline.c:1376
 msgid "Report hardlinks as duplicates"
