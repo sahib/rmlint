@@ -59,7 +59,8 @@ struct _RmHasher {
 
     GAsyncQueue *hashpipe_pool;
     GAsyncQueue *return_queue;
-    GAsyncQueue *finished_tasks;
+    GMutex lock;
+    GCond cond;
 
     gsize buf_size;
     guint active_tasks;
@@ -92,12 +93,17 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
                          task->task_user_data);
 
         rm_buffer_pool_release(buffer);
-
-        /* decrease active task count and signal same */
-        g_atomic_int_dec_and_test(&hasher->active_tasks);
-        g_async_queue_push(hasher->finished_tasks, GUINT_TO_POINTER(1));
-
         rm_hasher_task_free(task);
+
+        g_mutex_lock(&hasher->lock);
+        {
+            /* decrease active task count and signal same */
+            if ((hasher->active_tasks--) == 0) {
+                g_cond_signal(&hasher->cond);
+            }
+        }
+        g_mutex_unlock(&hasher->lock);
+
     }
 }
 
@@ -356,7 +362,10 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     }
 
     self->session_user_data = session_user_data;
-    self->finished_tasks = g_async_queue_new();
+
+    /* initialise mutex & cond */
+    g_mutex_init(&self->lock);
+    g_cond_init(&self->cond);
 
     /* Create buffer mem pool */
     self->mem_pool = rm_buffer_pool_init(buf_size, cache_quota_bytes, target_kept_bytes);
@@ -374,23 +383,37 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
 }
 
 void rm_hasher_free(RmHasher *hasher, gboolean wait) {
+    /* Note that hasher may be multi-threaded, both at the reader level and at
+     * the hashpipe level.  To ensure graceful exit, the hasher is reference counted
+     * via hasher->active_tasks.
+     */
     if(wait) {
-        while(g_atomic_int_get(&hasher->active_tasks) > 0) {
-            g_printerr("WAITING\n.");
-            g_async_queue_pop(hasher->finished_tasks);
+        g_mutex_lock(&hasher->lock);
+        {
+            while(hasher->active_tasks>0) {
+                g_printerr("WAITING\n.");
+                g_cond_wait(&hasher->cond, &hasher->lock);
+            }
         }
+        g_mutex_unlock(&hasher->lock);
     }
 
-    g_async_queue_unref(hasher->finished_tasks);
     g_async_queue_unref(hasher->hashpipe_pool);
+
     rm_buffer_pool_destroy(hasher->mem_pool);
+    g_cond_clear(&hasher->cond);
+    g_mutex_clear(&hasher->lock);
     g_slice_free(RmHasher, hasher);
 }
 
 RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
                                  gpointer task_user_data) {
+    g_mutex_lock(&hasher->lock);
+    {
+        hasher->active_tasks++;
+    }
+    g_mutex_unlock(&hasher->lock);
 
-    g_atomic_int_inc(&hasher->active_tasks);
     RmHasherTask *self = g_slice_new0(RmHasherTask);
     self->hasher = hasher;
     self->digest =
