@@ -114,7 +114,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
 
     read_outputs = []
     for idx, output in enumerate(outputs or []):
-        with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r') as handle:
+        with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r', encoding='utf8') as handle:
             read_outputs.append(handle.read())
     if outputs is None:
         return json_data
