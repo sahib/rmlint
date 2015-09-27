@@ -44,9 +44,6 @@ typedef enum RmFileState {
      */
     RM_FILE_STATE_IGNORE,
 
-    /* File hashed to end of (disk) fragment but not yet to target bytes hashed
-     */
-    RM_FILE_STATE_FRAGMENT,
 } RmFileState;
 
 /* types of lint */
@@ -184,21 +181,10 @@ typedef struct RmFile {
      */
     RmOff file_size;
 
-    /* Those are never used at the same time.
-     * hash_offset is used during computation,
-     * twin_count during output.
-     */
-    union {
-        /* How many bytes were already read.
-        * (lower or equal file_size)
-        */
-        RmOff hash_offset;
-
-        /* Count of twins of this file.
-         * (i.e. length of group of this file)
-         */
-        gint64 twin_count;
-    };
+    /* How many bytes were already read.
+    * (lower or equal file_size)
+    */
+    RmOff hash_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is
      * fragmented */
@@ -209,9 +195,20 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
-    /* Disk fiemap / physical offset at start of file (tests mapping subsequent
-     * file fragements did not deliver any significant additionl benefit) */
-    RmOff disk_offset;
+    /* Those are never used at the same time.
+     * disk_offset is used during computation,
+     * twin_count during output.
+     */
+    union {
+        /* Count of twins of this file.
+         * (i.e. length of group of this file)
+         */
+        gint64 twin_count;
+
+        /* Disk fiemap / physical offset at start of file (tests mapping subsequent
+         * file fragements did not deliver any significant additionl benefit) */
+        RmOff disk_offset;
+    };
 
     /* What kind of lint this file is.
      */
@@ -220,12 +217,11 @@ typedef struct RmFile {
     /* Link to the RmShredGroup that the file currently belongs to */
     struct RmShredGroup *shred_group;
 
-    /* Link to the RmShredDevice that the file is associated with */
-    struct RmShredDevice *device;
-
     /* Required for rm_file_equal for building initial match_table
      * and for RM_DEFINE_PATH and RM_DEFINE_BASENAME */
     const struct RmSession *session;
+
+    struct RmSignal *signal;
 } RmFile;
 
 /* Defines a path variable containing the file's path */

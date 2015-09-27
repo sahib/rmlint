@@ -1604,6 +1604,9 @@ int rm_cmd_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 
+    g_assert(session->shred_bytes_remaining==0);
+    g_assert(session->shred_files_remaining==0);
+
 failure:
     return exit_state;
 }
