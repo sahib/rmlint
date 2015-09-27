@@ -272,7 +272,7 @@ class Rmlint(Program):
 
     def compute_version(self):
         version_text = subprocess.check_output(
-            'rmlint/rmlint --version', shell=True, stderr=subprocess.STDOUT
+            self.get_binary() + ' --version', shell=True, stderr=subprocess.STDOUT
         )
 
         match = re.search('(\d.\d.\d) .*(rev [0-9a-f]{7})', str(version_text))
@@ -293,39 +293,12 @@ class Rmlint(Program):
         except OSError:
             pass
 
-class RmlintSpot(Program):
+class RmlintSpot(Rmlint):
     website = 'https://github.com/SeeSpotRun/rmlint'
     script = 'rmlint-spot.sh'
 
     def get_binary(self):
         return 'rmlint/rmlint-spot'
-
-
-    def get_options(self, paths):
-        return '--hidden -o summary -o json:/tmp/rmlint.json -T df ' + ' '.join(paths)
-
-    def compute_version(self):
-        version_text = subprocess.check_output(
-            'rmlint/rmlint-spot --version', shell=True, stderr=subprocess.STDOUT
-        )
-
-        match = re.search('(\d.\d.\d) .*(rev [0-9a-f]{7})', str(version_text))
-        if match is not None:
-            return ' '.join(match.groups())
-
-        return ""
-
-    def parse_statistics(self, _):
-        try:
-            with open('/tmp/rmlint.json', 'r') as fd:
-                stats = json.loads(fd.read())
-
-            return {
-                'sets': stats[-1]['duplicate_sets'],
-                'dupes': stats[-1]['duplicates']
-            }
-        except OSError:
-            pass
 
     def get_benchid(self):
         return 'rmlint-spot'
