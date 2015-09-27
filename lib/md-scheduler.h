@@ -31,7 +31,6 @@
 #include "utilities.h"
 #include "session.h"
 
-
 /**
  * @file md-scheduler.h
  * @brief Multi-disk scheduler/optimiser API for IO related tasks.
@@ -64,7 +63,6 @@
  *
  **/
 
-
 /**
  * @struct RmSheduler
  *
@@ -79,12 +77,11 @@ typedef struct _RmMDS RmMDS;
  * @struct RmTask
  *
  **/
- typedef struct RmMDSTask {
+typedef struct RmMDSTask {
     dev_t dev;
     guint64 offset;
     gpointer task_data;
 } RmMDSTask;
-
 
 /**
  * @brief RmMDSFunc function prototype, called for each task
@@ -101,7 +98,6 @@ typedef struct _RmMDS RmMDS;
  **/
 typedef gint (*RmMDSFunc)(RmMDSTask *task, gpointer session_user_data);
 
-
 /**
  * @brief RmMDSTask task prioritisation function prototype
  *
@@ -111,7 +107,8 @@ typedef gint (*RmMDSFunc)(RmMDSTask *task, gpointer session_user_data);
  * @param dev_a  Device offset bytes for task b
  * @param data_a User data for task a
  * @param data_b User data for task b
- * @retval negative value or zero if a should be processed before b, positive value if b should be processed before a
+ * @retval negative value or zero if a should be processed before b, positive value if b
+ *should be processed before a
  **/
 typedef gint (*RmMDSSortFunc)(const RmMDSTask *task_a, const RmMDSTask *task_b);
 
@@ -125,9 +122,7 @@ typedef gint (*RmMDSSortFunc)(const RmMDSTask *task_a, const RmMDSTask *task_b);
  * session_user_data will be passed to task callback.
  *
  **/
-RmMDS *rm_mds_new(
-            const gint max_threads,
-            RmMountTable *mount_table);
+RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table);
 
 /**
  * @brief Configure or reconfigure a MDS scheduler
@@ -138,12 +133,11 @@ RmMDS *rm_mds_new(
  * @param prioritiser  Compare function for prioritising
  *
  **/
-void rm_mds_configure(
-            RmMDS *self,
-            const RmMDSFunc func,
-            const gpointer user_data,
-            const gint pass_quota,
-            RmMDSSortFunc prioritiser);
+void rm_mds_configure(RmMDS *self,
+                      const RmMDSFunc func,
+                      const gpointer user_data,
+                      const gint pass_quota,
+                      RmMDSSortFunc prioritiser);
 
 /**
  * @brief start a paused MDS scheduler
@@ -206,7 +200,10 @@ void rm_mds_ref_dev(RmMDS *mds, const dev_t dev, const gint ref_count);
  * @param offset Physical offset of file on dev (-1 triggers lookup)
  * @param task_user_data Pointer to user data associated with the task.
  **/
-void rm_mds_push_task_by_path(RmMDS *mds, const char *path, gint64 offset, const gpointer task_data);
+void rm_mds_push_task_by_path(RmMDS *mds,
+                              const char *path,
+                              gint64 offset,
+                              const gpointer task_data);
 
 /**
  * @brief Push a new task to a RmMDS scheduler, based on disk or dev ID.
@@ -217,13 +214,17 @@ void rm_mds_push_task_by_path(RmMDS *mds, const char *path, gint64 offset, const
  * @param path Optional file path (required for lookup)
  * @param task_user_data Pointer to user data associated with the task.
  **/
-void rm_mds_push_task_by_dev(RmMDS *mds, const dev_t dev, gint64 offset, const char *path, const gpointer task_data);
+void rm_mds_push_task_by_dev(RmMDS *mds,
+                             const dev_t dev,
+                             gint64 offset,
+                             const char *path,
+                             const gpointer task_data);
 
 /**
  * @brief prioritiser function for basic elevator algorithm
  **/
 gint rm_mds_elevator_cmp(const RmMDSTask *task_a, const RmMDSTask *task_b);
 
-//TODO: sort function based on most recently accessed dev/inode??
+// TODO: sort function based on most recently accessed dev/inode??
 
 #endif /* end of include guard */

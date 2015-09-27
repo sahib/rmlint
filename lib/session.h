@@ -159,7 +159,6 @@ void rm_session_abort(RmSession *session);
  */
 bool rm_session_was_aborted(RmSession *session);
 
-
 /**
  * @brief Check the kernel version of the Linux kernel.
  *

@@ -98,12 +98,11 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         g_mutex_lock(&hasher->lock);
         {
             /* decrease active task count and signal same */
-            if ((hasher->active_tasks--) == 0) {
+            if((hasher->active_tasks--) == 0) {
                 g_cond_signal(&hasher->cond);
             }
         }
         g_mutex_unlock(&hasher->lock);
-
     }
 }
 
@@ -390,7 +389,7 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
     if(wait) {
         g_mutex_lock(&hasher->lock);
         {
-            while(hasher->active_tasks>0) {
+            while(hasher->active_tasks > 0) {
                 g_printerr("WAITING\n.");
                 g_cond_wait(&hasher->cond, &hasher->lock);
             }
@@ -409,18 +408,15 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
 RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
                                  gpointer task_user_data) {
     g_mutex_lock(&hasher->lock);
-    {
-        hasher->active_tasks++;
-    }
+    { hasher->active_tasks++; }
     g_mutex_unlock(&hasher->lock);
 
     RmHasherTask *self = g_slice_new0(RmHasherTask);
     self->hasher = hasher;
     self->digest =
-        digest
-            ? digest
-            : rm_digest_new(hasher->digest_type, 0, 0, rm_digest_paranoia_bytes(),
-                            hasher->digest_type == RM_DIGEST_PARANOID);
+        digest ? digest
+               : rm_digest_new(hasher->digest_type, 0, 0, rm_digest_paranoia_bytes(),
+                               hasher->digest_type == RM_DIGEST_PARANOID);
 
     self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
     self->task_user_data = task_user_data;

@@ -34,7 +34,7 @@
 #include "preprocess.h"
 
 #if HAVE_UNAME
-# include "sys/utsname.h"
+#include "sys/utsname.h"
 
 void rm_session_read_kernel_version(RmSession *session) {
     struct utsname buf;
@@ -42,23 +42,20 @@ void rm_session_read_kernel_version(RmSession *session) {
         return;
     }
 
-    if(sscanf(buf.release, "%d.%d.*", 
-            &session->kernel_version[0],
-            &session->kernel_version[1]
-    ) == EOF) {
+    if(sscanf(buf.release, "%d.%d.*", &session->kernel_version[0],
+              &session->kernel_version[1]) == EOF) {
         session->kernel_version[0] = -1;
         session->kernel_version[1] = -1;
         return;
     }
 
-    rm_log_debug_line("Linux kernel version is %d.%d.", 
-            session->kernel_version[0],
-            session->kernel_version[1]
-    );
+    rm_log_debug_line("Linux kernel version is %d.%d.",
+                      session->kernel_version[0],
+                      session->kernel_version[1]);
 }
 #else
 void rm_session_read_kernel_version(RmSession *session) {
-    (void) session;
+    (void)session;
 }
 #endif
 

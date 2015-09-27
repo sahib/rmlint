@@ -70,7 +70,7 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_ke
     self->max_kept_buffers = MAX(max_kept_mem / buffer_size, 1);
     self->kept_buffers = 0;
     rm_log_debug_line("rm_buffer_pool_init: allocated max %lu buffers of %lu bytes each",
-                 self->avail_buffers, self->buffer_size);
+                      self->avail_buffers, self->buffer_size);
     g_cond_init(&self->change);
     g_mutex_init(&self->lock);
     return self;
@@ -105,8 +105,8 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
             } else {
                 if(!pool->mem_warned) {
                     rm_log_warning_line(
-                                   "read buffer limit reached - waiting for "
-                                   "processing to catch up");
+                        "read buffer limit reached - waiting for "
+                        "processing to catch up");
                     pool->mem_warned = true;
                 }
                 g_cond_wait(&pool->change, &pool->lock);
@@ -544,7 +544,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
             rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);
         }
 
-        if (paranoid->twin_candidate) {
+        if(paranoid->twin_candidate) {
             /* do a running check that digest remains the same as its candidate twin */
             if(rm_buffer_equal(buffer, paranoid->twin_candidate_buffer->data)) {
                 /* buffers match; move ptr to next one ready for next buffer */
@@ -560,10 +560,9 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
             }
         }
 
-        while (!paranoid->twin_candidate &&
-                paranoid->incoming_twin_candidates &&
-               (paranoid->twin_candidate =
-                    g_async_queue_try_pop(paranoid->incoming_twin_candidates))) {
+        while(!paranoid->twin_candidate && paranoid->incoming_twin_candidates &&
+              (paranoid->twin_candidate =
+                   g_async_queue_try_pop(paranoid->incoming_twin_candidates))) {
             /* validate the new candidate by comparing the previous buffers (not
              * including current)*/
             paranoid->twin_candidate_buffer =
@@ -574,8 +573,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 match = (rm_buffer_equal(paranoid->twin_candidate_buffer->data,
                                          iter_self->data));
                 iter_self = iter_self->next;
-                paranoid->twin_candidate_buffer =
-                    paranoid->twin_candidate_buffer->next;
+                paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
             }
             if(!match) {
                 /* reject the twin candidate */
