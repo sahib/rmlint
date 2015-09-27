@@ -381,8 +381,8 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
         }
     }
 
-    g_async_queue_unref(hasher->finished_tasks);
     g_async_queue_unref(hasher->hashpipe_pool);
+    g_async_queue_unref(hasher->finished_tasks);
     rm_buffer_pool_destroy(hasher->mem_pool);
     g_slice_free(RmHasher, hasher);
 }

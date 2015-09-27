@@ -1616,8 +1616,5 @@ void rm_shred_run(RmSession *session) {
     g_async_queue_unref(tag.device_return);
 
     g_mutex_clear(&tag.hash_mem_mtx);
-    if (session->shred_bytes_remaining != 0 || session->shred_files_remaining != 0) {
-        rm_log_warning("Shredder finished with remnant %lu bytes in %lu files, cached %i\n",
-                session->shred_bytes_remaining, session->shred_files_remaining, tag.cache_filtered_count);
-    }
+    rm_log_error("Remaining %lu bytes in %lu files, cached %i\n", session->shred_bytes_remaining, session->shred_files_remaining, tag.cache_filtered_count);
 }
