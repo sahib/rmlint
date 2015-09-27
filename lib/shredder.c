@@ -684,13 +684,15 @@ static void rm_shred_adjust_counters(RmShredTag *tag, int files, gint64 bytes) {
         if (abs(tag->cache_file_count) >= SHRED_MIN_FILE_STATS_PACK_SIZE) {
             rm_fmt_lock_state(session->formats);
             {
-                if (session->shred_bytes_remaining + tag->cache_byte_count > 0) {
-                    session->shred_files_remaining += tag->cache_file_count;
-                    session->total_filtered_files += tag->cache_filtered_count;
-                    session->shred_bytes_remaining += tag->cache_byte_count;
-                } else {
-                    session->shred_bytes_remaining = 0;
-                }
+#if RM_SHRED_DEBUG
+                gint64 bytes_remaining = session->shred_bytes_remaining + tag->cache_byte_count;
+                gint64 files_remaining = session->shred_files_remaining + tag->cache_file_count;
+                g_assert(check_bytes>=0);
+                g_assert(check_files>=0);
+#endif
+                session->shred_files_remaining += tag->cache_file_count;
+                session->total_filtered_files += tag->cache_filtered_count;
+                session->shred_bytes_remaining += tag->cache_byte_count;
 
                 rm_fmt_set_state(session->formats, (tag->after_preprocess)
                                                        ? RM_PROGRESS_STATE_SHREDDER
@@ -1096,7 +1098,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
 
     /* add reference for this file to the MDS scheduler */
     rm_mds_ref_dev(session->mds, file->dev, 1);
-    rm_shred_adjust_counters(main, 1, (gint64)file->file_size);
+    rm_shred_adjust_counters(main, 1, (gint64)file->file_size - file->hash_offset);
 
     RmShredGroup *group = g_hash_table_lookup(session->tables->size_groups, file);
 
@@ -1603,7 +1605,7 @@ void rm_shred_run(RmSession *session) {
 
     /* should complete shred session and then free: */
     rm_mds_free(session->mds, FALSE);
-    rm_hasher_free(tag.hasher, FALSE);
+    rm_hasher_free(tag.hasher, TRUE);
 
     session->shredder_finished = TRUE;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
@@ -1614,4 +1616,8 @@ void rm_shred_run(RmSession *session) {
     g_async_queue_unref(tag.device_return);
 
     g_mutex_clear(&tag.hash_mem_mtx);
+    if (session->shred_bytes_remaining != 0 || session->shred_files_remaining != 0) {
+        rm_log_warning("Shredder finished with remnant %lu bytes in %lu files, cached %i\n",
+                session->shred_bytes_remaining, session->shred_files_remaining, tag.cache_filtered_count);
+    }
 }
