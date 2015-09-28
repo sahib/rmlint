@@ -348,7 +348,7 @@ void rm_mds_configure(RmMDS *self,
     g_assert(self->running == FALSE);
     self->func = func;
     self->user_data = user_data;
-    self->pass_quota = pass_quota;
+    self->pass_quota = (pass_quota>0) ? pass_quota : G_MAXINT;
     self->prioritiser = prioritiser;
 }
 
