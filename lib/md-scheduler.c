@@ -270,7 +270,7 @@ static void rm_mds_device_ref(RmMDSDevice *device, const gint ref_count) {
 
 /** @brief Push a RmMDSDevice to the threadpool
  **/
-void rm_mds_device_start(_U dev_t disk, RmMDSDevice *device, const RmMDS *mds) {
+void rm_mds_device_start(_U  gpointer disk, RmMDSDevice *device, RmMDS *mds) {
     rm_util_thread_pool_push(mds->pool, device);
 }
 
