@@ -67,7 +67,8 @@ def get_last_rmlint_binary():
     # Copy the binary, so we do not copy it over by chance.
     # (e.g. by rebuilding with scons)
     temp_binary = '/tmp/rmlint'
-    if not os.path.exists(temp_binary):
+    if os.path.exists('./rmlint'):
+        os.remove(temp_binary)
         shutil.copy('./rmlint', temp_binary)
 
     return temp_binary
