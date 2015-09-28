@@ -95,7 +95,8 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
 
     cmd += [
         get_last_rmlint_binary(), target_dir, '-V',
-        '-o', 'json:/tmp/out.json', '-c', 'json:oneline'
+        '-o', 'json:/tmp/out.json', '-c', 'json:oneline',
+        '--fail-on-shred-miscount'
     ] + shlex.split(' '.join(args))
 
     for idx, output in enumerate(outputs or []):
