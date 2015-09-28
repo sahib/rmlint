@@ -69,7 +69,8 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_ke
     self->max_buffers = self->avail_buffers;
     self->max_kept_buffers = MAX(max_kept_mem / buffer_size, 1);
     self->kept_buffers = 0;
-    rm_log_debug_line("rm_buffer_pool_init: allocated max %u buffers of %u bytes each",
+    rm_log_debug_line("rm_buffer_pool_init: allocated max %"G_GSIZE_FORMAT
+                      " buffers of %"G_GSIZE_FORMAT" bytes each",
                       self->avail_buffers, self->buffer_size);
     g_cond_init(&self->change);
     g_mutex_init(&self->lock);
@@ -77,7 +78,7 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_ke
 }
 
 void rm_buffer_pool_destroy(RmBufferPool *pool) {
-    rm_log_debug_line("had %u unused read buffers", pool->min_buffers);
+    rm_log_debug_line("had %"G_GSIZE_FORMAT" unused read buffers", pool->min_buffers);
 
     /* Wait for all buffers to come back */
     g_mutex_lock(&pool->lock);
