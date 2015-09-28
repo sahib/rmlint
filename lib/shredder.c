@@ -724,7 +724,7 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
     RmShredTag *tag = session->shredder;
     /* update device counters (unless this file was a bundled hardlink) */
     if(!file->hardlinks.hardlink_head) {
-        rm_mds_ref_dev(session->mds, file->dev, -1);
+        rm_mds_ref_dev(session->mds, file->disk, -1);
         rm_shred_adjust_counters(tag, -1, -(gint64)(file->file_size - file->hash_offset));
 
         /* ShredGroup that was going nowhere */
@@ -767,9 +767,7 @@ static void rm_shred_push_queue(RmFile *file) {
         }
     }
     rm_mds_push_task_by_dev(
-        session->mds,
-        file->session->cfg->fake_pathindex_as_disk ? file->path_index : file->dev,
-        file->disk_offset, NULL, file);
+        session->mds, file->disk, file->disk_offset, NULL, file);
 }
 
 //////////////////////////////////
@@ -1117,8 +1115,11 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
         }
     }
 
+    /* cfg->fake_pathindex_as_disk is for debugging/testing... */
+    file->disk = (session->cfg->fake_pathindex_as_disk) ? file->path_index : file->dev;
+
     /* add reference for this file to the MDS scheduler */
-    rm_mds_ref_dev(session->mds, file->dev, 1);
+    rm_mds_ref_dev(session->mds, file->disk, 1);
     rm_shred_adjust_counters(main, 1, (gint64)file->file_size - file->hash_offset);
 
     RmShredGroup *group = g_hash_table_lookup(session->tables->size_groups, file);
@@ -1579,9 +1580,9 @@ void rm_shred_run(RmSession *session) {
     g_mutex_init(&tag.hash_mem_mtx);
 
     g_mutex_init(&tag.lock);
-
+    gint threads = g_hash_table_size(session->mounts->disk_table);
     session->mds =
-        rm_mds_new(g_hash_table_size(session->mounts->disk_table), session->mounts);
+        rm_mds_new(threads, session->mounts, session->cfg->fake_pathindex_as_disk);
     rm_mds_configure(session->mds,
                      (RmMDSFunc)rm_shred_process_file,
                      session,

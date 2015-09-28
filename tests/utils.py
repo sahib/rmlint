@@ -1,3 +1,4 @@
+
 #############
 # UTILITIES #
 #############
@@ -184,7 +185,7 @@ def run_rmlint_pedantic(*args, **kwargs):
     options = [
         '--with-fiemap',
         '--without-fiemap',
-        #'--fake-pathindex-as-disk',
+        '--fake-pathindex-as-disk',
         '--fake-fiemap',
         '-P',
         '-PP',

@@ -55,8 +55,11 @@ struct _RmMDS {
     RmMDSSortFunc prioritiser;
 
     /* Mounts table for grouping dev's by physical devices
-     * and identifying rotaionality */
+     * and identifying rotationality */
     RmMountTable *mount_table;
+
+    /* If true then don't use mount table; interpret user-supplied dev as disk id */
+    bool fake_disk;
 
     /* Table of physical disk/devices */
     GHashTable *disks;
@@ -141,8 +144,15 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
     self->mds = mds;  // TODO: needed?
     self->ref_count = 0;
     self->disk = disk;
-    self->is_rotational = !rm_mounts_is_nonrotational(mds->mount_table, disk);
 
+    if (mds->fake_disk) {
+        self->is_rotational = (disk % 2 == 0);
+    } else {
+        self->is_rotational = !rm_mounts_is_nonrotational(mds->mount_table, disk);
+    }
+
+    rm_log_debug_line("Created new RmMDSDevice for %srotational disk #%lu",
+            self->is_rotational ? "" : "non-", disk);
     return self;
 }
 
@@ -294,12 +304,14 @@ static RmMDSDevice *rm_mds_device_get(RmMDS *mds, const dev_t disk) {
 }
 
 static RmMDSDevice *rm_mds_device_get_by_path(RmMDS *mds, const char *path) {
-    dev_t disk = rm_mounts_get_disk_id_by_path(mds->mount_table, path);
+    dev_t disk = (mds->fake_disk) ? 0 :
+            rm_mounts_get_disk_id_by_path(mds->mount_table, path);
     return rm_mds_device_get(mds, disk);
 }
 
 static RmMDSDevice *rm_mds_device_get_by_dev(RmMDS *mds, dev_t dev, const char *path) {
-    dev_t disk = rm_mounts_get_disk_id(mds->mount_table, dev, path);
+    dev_t disk = (mds->fake_disk) ? dev :
+            rm_mounts_get_disk_id(mds->mount_table, dev, path);
     return rm_mds_device_get(mds, disk);
 }
 
@@ -307,15 +319,20 @@ static RmMDSDevice *rm_mds_device_get_by_dev(RmMDS *mds, dev_t dev, const char *
 //  API Implementation  //
 //////////////////////////
 
-RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table) {
+RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_disk) {
     RmMDS *self = g_slice_new0(RmMDS);
 
     g_mutex_init(&self->lock);
 
     self->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, self, max_threads);
 
-    self->mount_table = mount_table ? mount_table : rm_mounts_table_new(FALSE);
+    if (!mount_table && !fake_disk) {
+        self->mount_table = rm_mounts_table_new(FALSE);
+    } else {
+        self->mount_table = mount_table;
+    }
 
+    self->fake_disk = fake_disk;
     self->disks = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
                                         (GDestroyNotify)rm_mds_device_free);
     self->running = FALSE;
@@ -359,7 +376,7 @@ void rm_mds_free(RmMDS *mds, gboolean free_mount_table) {
     g_thread_pool_free(mds->pool, false, true);
     g_hash_table_destroy(mds->disks);
 
-    if(free_mount_table) {
+    if(free_mount_table && mds->mount_table) {
         rm_mounts_table_destroy(mds->mount_table);
     }
     g_slice_free(RmMDS, mds);
@@ -403,7 +420,9 @@ dev_t rm_mds_dev(const char *path) {
 
 void rm_mds_push_task_by_dev(RmMDS *mds, const dev_t dev, gint64 offset, const char *path,
                              const gpointer task_user_data) {
-    if(offset == -1 && path && !rm_mounts_is_nonrotational(mds->mount_table, dev)) {
+    bool is_rotational = (mds->fake_disk) ? (dev %2 == 0) :
+            !rm_mounts_is_nonrotational(mds->mount_table, dev);
+    if(offset == -1 && path && is_rotational) {
         offset = rm_offset_get_from_path(path, 0, NULL);
     }
     RmMDSDevice *device = rm_mds_device_get_by_dev(mds, dev, path);
