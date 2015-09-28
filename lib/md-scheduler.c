@@ -152,7 +152,7 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
     }
 
     rm_log_debug_line("Created new RmMDSDevice for %srotational disk #%lu",
-            self->is_rotational ? "" : "non-", disk);
+            self->is_rotational ? "" : "non-", (long unsigned)disk);
     return self;
 }
 

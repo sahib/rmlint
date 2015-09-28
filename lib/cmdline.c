@@ -1606,14 +1606,14 @@ int rm_cmd_main(RmSession *session) {
 
     if(session->shred_bytes_remaining != 0) {
         rm_log_error_line(
-            "BUG: Number of remaining bytes is %ld (not 0). Please report this.",
+            "BUG: Number of remaining bytes is %"LLU" (not 0). Please report this.",
             session->shred_bytes_remaining);
         exit_state = EXIT_FAILURE;
     }
 
     if(session->shred_files_remaining != 0) {
         rm_log_error_line(
-            "BUG: Number of remaining files is %ld (not 0). Please report this.",
+            "BUG: Number of remaining files is %"LLU" (not 0). Please report this.",
             session->shred_files_remaining);
         exit_state = EXIT_FAILURE;
     }

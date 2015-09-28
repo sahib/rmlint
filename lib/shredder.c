@@ -421,7 +421,7 @@ typedef struct RmShredGroup {
     RmOff next_offset;
 
     /* Factor of SHRED_BALANCED_PAGES to read next time */
-    unsigned offset_factor;
+    gint64 offset_factor;
 
     /* allocated memory for paranoid hashing */
     RmOff mem_allocation;
@@ -568,9 +568,9 @@ static void rm_shred_mem_return(RmShredGroup *group) {
             tag->paranoid_mem_alloc += group->mem_allocation;
             tag->active_groups--;
             group->is_active = FALSE;
-            rm_log_debug_line("Mem avail %li, active groups %d. " YELLOW "Returned %" LLU
-                         " bytes for paranoid hashing.",
-                         tag->paranoid_mem_alloc, tag->active_groups,
+            rm_log_debug_line("Mem avail %" LLI ", active groups %d. " YELLOW "Returned %" LLU " bytes for paranoid hashing.",
+                         tag->paranoid_mem_alloc,
+                         tag->active_groups,
                          group->mem_allocation);
             tag->mem_refusing = FALSE;
             if(group->digest) {
@@ -634,7 +634,7 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
 
             if(tag->mem_refusing) {
                 rm_log_debug_line(
-                    "Mem avail %li, active groups %d. Borrowed %li. Inherited: %li bytes for paranoid hashing",
+                    "Mem avail %"LLI", active groups %d. Borrowed %"LLI". Inherited: %"LLI" bytes for paranoid hashing",
                              tag->paranoid_mem_alloc,
                              tag->active_groups, borrowed,
                              inherited
@@ -653,7 +653,7 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
             result = TRUE;
         } else {
             if(!tag->mem_refusing) {
-                rm_log_debug_line("Mem avail %li, active groups %d. " RED
+                rm_log_debug_line("Mem avail %"LLI", active groups %d. " RED
                              "Refused request for %" LLU
                              " bytes for paranoid hashing.",
                              tag->paranoid_mem_alloc, tag->active_groups, mem_required);
@@ -1648,7 +1648,7 @@ void rm_shred_run(RmSession *session) {
     g_async_queue_unref(tag.device_return);
 
     g_mutex_clear(&tag.hash_mem_mtx);
-    rm_log_debug_line("Remaining %lu bytes in %lu files, cached %i",
+    rm_log_debug_line("Remaining %"LLU" bytes in %"LLU" files, cached %i",
                       session->shred_bytes_remaining, session->shred_files_remaining,
                       tag.cache_filtered_count);
 }
