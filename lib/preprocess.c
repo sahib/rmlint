@@ -48,13 +48,6 @@ static guint rm_file_hash(RmFile *file) {
     }
 }
 
-static bool rm_file_check_basename(const RmFile *file_a, const RmFile *file_b) {
-    RM_DEFINE_BASENAME(file_a);
-    RM_DEFINE_BASENAME(file_b);
-
-    return g_ascii_strcasecmp(file_a_basename, file_b_basename) == 0;
-}
-
 static bool rm_file_check_with_extension(const RmFile *file_a, const RmFile *file_b) {
     RM_DEFINE_BASENAME(file_a);
     RM_DEFINE_BASENAME(file_b);
@@ -95,7 +88,7 @@ gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
     const RmCfg *cfg = file_a->session->cfg;
 
     return (1 && (file_a->file_size == file_b->file_size) &&
-            (0 || (!cfg->match_basename) || (rm_file_check_basename(file_a, file_b))) &&
+            (0 || (!cfg->match_basename) || (rm_file_basenames_match(file_a, file_b))) &&
             (0 || (!cfg->match_with_extension) ||
              (rm_file_check_with_extension(file_a, file_b))) &&
             (0 || (!cfg->match_without_extension) ||

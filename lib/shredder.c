@@ -401,6 +401,9 @@ typedef struct RmShredGroup {
      */
     gulong num_ext_cksums;
 
+    /* if whole group has same basename, pointer to first file, else null */
+    RmFile *unique_basename;
+
     /* initially RM_SHRED_GROUP_DORMANT; triggered as soon as we have >= 2 files
      * and meet preferred path and will go to either RM_SHRED_GROUP_HASHING or
      * RM_SHRED_GROUP_FINISHING.  When switching from dormant to hashing, all
@@ -862,6 +865,9 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
            &&
            (group->has_new || !NEEDS_NEW(group))
            /* we have at least one file newer than cfg->min_mtime, or we don't care */
+           &&
+           (!group->unique_basename || !group->session->cfg->unmatched_basenames)
+           /* we have more than one unique basename, or we don't care */
            ) {
             if(group->hash_offset < group->file_size &&
                group->has_only_ext_cksums == false) {
@@ -909,10 +915,25 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         shred_group->has_npref |= (!file->is_prefd) | file->hardlinks.has_non_prefd;
         shred_group->has_new |= file->is_new_or_has_new;
 
+        if (shred_group->num_files == 0 && shred_group->session->cfg->unmatched_basenames) {
+            shred_group->unique_basename = file;
+        } else if (shred_group->unique_basename &&
+                   !rm_file_basenames_match(file, shred_group->unique_basename)) {
+            shred_group->unique_basename = NULL;
+        }
+
         shred_group->num_files++;
         if(file->hardlinks.is_head) {
             g_assert(file->hardlinks.files);
             shred_group->num_files += file->hardlinks.files->length;
+            if (shred_group->unique_basename && shred_group->session->cfg->unmatched_basenames) {
+                for(GList *iter = file->hardlinks.files->head; iter; iter = iter->next) {
+                    if (!rm_file_basenames_match(iter->data, shred_group->unique_basename)) {
+                        shred_group->unique_basename = NULL;
+                        break;
+                    }
+                }
+            }
         }
 
         g_assert(file->hash_offset == shred_group->hash_offset);
@@ -1262,6 +1283,20 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
         rm_log_debug_line("tagging %s as original because it is highest ranked",
                      headfile_path);
 #endif
+    }
+    if (session->cfg->unmatched_basenames) {
+        /* remove files which match headfile's basename */
+        GList *iter = group->head->next;
+        while(iter) {
+            RmFile *iter_file = iter->data;
+            GList *temp = iter;
+            iter = iter->next;
+            if (rm_file_basenames_match(iter_file, headfile)) {
+                // TODO: check if we need cfg->cache_file_structs check:
+                rm_shred_discard_file(iter_file, TRUE || !(session->cfg->cache_file_structs));
+                g_queue_delete_link(group, temp);
+            }
+        }
     }
 }
 

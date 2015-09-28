@@ -292,4 +292,10 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
  */
 void rm_file_build_path(RmFile *file, char *buf);
 
+/**
+ * @brief Compare basenames of two files
+ * @retval true if basenames match.
+ */
+bool rm_file_basenames_match(const RmFile *file_a, const RmFile *file_b);
+
 #endif /* end of include guard */
