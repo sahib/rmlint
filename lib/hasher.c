@@ -98,9 +98,8 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         g_mutex_lock(&hasher->lock);
         {
             /* decrease active task count and signal same */
-            if((hasher->active_tasks--) == 0) {
-                g_cond_signal(&hasher->cond);
-            }
+            hasher->active_tasks--;
+            g_cond_signal(&hasher->cond);
         }
         g_mutex_unlock(&hasher->lock);
     }
@@ -390,7 +389,6 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
         g_mutex_lock(&hasher->lock);
         {
             while(hasher->active_tasks > 0) {
-                g_printerr("WAITING\n.");
                 g_cond_wait(&hasher->cond, &hasher->lock);
             }
         }
