@@ -569,10 +569,12 @@ static void rm_shred_mem_return(RmShredGroup *group) {
             tag->paranoid_mem_alloc += group->mem_allocation;
             tag->active_groups--;
             group->is_active = FALSE;
+#if _RM_SHRED_DEBUG
             rm_log_debug_line("Mem avail %li, active groups %d. " YELLOW "Returned %" LLU
                          " bytes for paranoid hashing.",
                          tag->paranoid_mem_alloc, tag->active_groups,
                          group->mem_allocation);
+#endif
             tag->mem_refusing = FALSE;
             if(group->digest) {
                 g_assert(group->digest->type == RM_DIGEST_PARANOID);
@@ -742,9 +744,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
                 file->digest = NULL;
             }
         }
-
-        /* update paranoid memory allocator */
-        // TODO???
     }
 
     if(free_file) {
@@ -1573,6 +1572,7 @@ void rm_shred_run(RmSession *session) {
     RmShredTag tag;
     tag.active_groups = 0;
     tag.session = session;
+    tag.mem_refusing = false;
     session->shredder = &tag;
 
     tag.device_return = g_async_queue_new();
@@ -1607,9 +1607,10 @@ void rm_shred_run(RmSession *session) {
 
     if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
-        tag.paranoid_mem_alloc = MAX((gint64)session->cfg->paranoid_mem,
+        tag.paranoid_mem_alloc = MIN((gint64)session->cfg->paranoid_mem,
                                      (gint64)session->cfg->total_mem - (gint64)mem_used -
                                          (gint64)session->cfg->read_buffer_mem);
+        tag.paranoid_mem_alloc = MAX(0, tag.paranoid_mem_alloc);
         rm_log_debug_line("Paranoid Mem: %" LLU, tag.paranoid_mem_alloc);
     } else {
         session->cfg->read_buffer_mem =
@@ -1642,6 +1643,7 @@ void rm_shred_run(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
     rm_mds_start(session->mds);
+
 
     /* should complete shred session and then free: */
     rm_mds_free(session->mds, FALSE);
