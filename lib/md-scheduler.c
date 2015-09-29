@@ -87,9 +87,9 @@ typedef struct RmMDSDevice {
     /* Structure containing data associated with one Device worker thread */
 
     /* The RmMDS session parent */
-    RmMDS *mds;  // TODO: needed?
+    RmMDS *mds;
 
-    /* Device's physical disk ID (TODO: unused?) */
+    /* Device's physical disk ID (only used for debug info) */
     dev_t disk;
 
     /* Sorted list of tasks queued for execution */
@@ -139,7 +139,7 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
     g_mutex_init(&self->lock);
     g_cond_init(&self->cond);
 
-    self->mds = mds;  // TODO: needed?
+    self->mds = mds;
     self->ref_count = 0;
     self->disk = disk;
 
