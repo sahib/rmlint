@@ -288,10 +288,11 @@
  * */
 #define SHRED_PREMATCH_THRESHOLD (0)
 
-/* Minimum number of files that should be in an update sent to
+/* Minimum number of files or bytes that should be in an update sent to
  * the statistics counters.
  */
-#define SHRED_MIN_FILE_STATS_PACK_SIZE (16)
+#define SHRED_MIN_FILE_STATS_PACK_FILES (16)
+#define SHRED_MIN_FILE_STATS_PACK_BYTES (1024 * 1024 * 16)
 
 /* empirical estimate of mem usage per file (excluding read buffers and
  * paranoid digests) */
@@ -681,7 +682,8 @@ static void rm_shred_adjust_counters(RmShredTag *tag, int files, gint64 bytes) {
             tag->cache_filtered_count += files;
         }
 
-        if(abs(tag->cache_file_count) >= SHRED_MIN_FILE_STATS_PACK_SIZE) {
+        if(abs(tag->cache_byte_count) >= SHRED_MIN_FILE_STATS_PACK_BYTES ||
+           abs(tag->cache_file_count) >= SHRED_MIN_FILE_STATS_PACK_FILES) {
             rm_fmt_lock_state(session->formats);
             {
 #if RM_SHRED_DEBUG
@@ -1633,6 +1635,7 @@ void rm_shred_run(RmSession *session) {
     /* Create a pool for results processing */
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);
 
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
     rm_mds_start(session->mds);
 
     /* should complete shred session and then free: */
