@@ -98,7 +98,7 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         g_mutex_lock(&hasher->lock);
         {
             /* decrease active task count and signal same */
-            if((hasher->active_tasks--) == 0) {
+            if((--hasher->active_tasks) == 0) {
                 g_cond_signal(&hasher->cond);
             }
         }
