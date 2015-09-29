@@ -146,11 +146,6 @@ void rm_mds_configure(RmMDS *self,
 void rm_mds_start(RmMDS *mds);
 
 /**
- * @brief abort a MDS session
- **/
-void rm_mds_abort(RmMDS *mds);
-
-/**
  * @brief Wait for all RmMDS scheduler tasks to finish
  *
  * @param mds Pointer to the MDS scheduler

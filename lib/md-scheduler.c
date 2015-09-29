@@ -81,8 +81,6 @@ struct _RmMDS {
     /* number of pending tasks */
     guint pending_tasks;
 
-    /* abort flag */
-    volatile guint aborted;
 };
 
 typedef struct RmMDSDevice {
@@ -268,11 +266,7 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
         }
     }
 
-    if(g_atomic_int_get(&mds->aborted)) {
-        g_atomic_int_set(&device->ref_count, 0);
-        /* signal to rm_mds_device_free() */
-        g_cond_signal(&device->cond);
-    } else if(g_atomic_int_get(&device->ref_count) > 0) {
+    if(g_atomic_int_get(&device->ref_count) > 0) {
         /* return self to pool for further processing */
         rm_util_thread_pool_push(mds->pool, device);
     } else {
@@ -384,6 +378,7 @@ void rm_mds_finish(RmMDS *mds) {
 
         while(devices) {
             RmMDSDevice *device = devices->data;
+            rm_log_debug_line("Finishing device %lu", device->disk);
             rm_mds_device_finish(device);
             devices = g_list_delete_link(devices, devices);
         }
@@ -401,10 +396,6 @@ void rm_mds_free(RmMDS *mds, gboolean free_mount_table) {
         rm_mounts_table_destroy(mds->mount_table);
     }
     g_slice_free(RmMDS, mds);
-}
-
-void rm_mds_abort(RmMDS *mds) {
-    g_atomic_int_set(&mds->aborted, 1);
 }
 
 void rm_mds_ref_path(RmMDS *mds, const char *path, const gint ref_count) {
