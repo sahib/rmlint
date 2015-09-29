@@ -231,23 +231,24 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
      * mds->pool threadpool. */
     gint quota = mds->pass_quota;
 
-    /* sort and merge task lists */
     g_mutex_lock(&device->lock);
     {
+        /* check for empty queues - if so then wait a little while before giving up */
         if(!device->sorted_tasks && !device->unsorted_tasks && device->ref_count > 0) {
-            /* wait for something to happen */
+            /* timed wait for signal from rm_mds_push_task() */
             gint64 end_time = g_get_monotonic_time() + MDS_EMPTYQUEUE_SLEEP_US;
             g_cond_wait_until(&device->cond, &device->lock, end_time);
         }
 
-        if(mds->prioritiser) {
-            device->unsorted_tasks = g_slist_sort_with_data(
-                device->unsorted_tasks, (GCompareDataFunc)rm_mds_compare,
-                (RmMDSSortFunc)mds->prioritiser);
-        }
+        /* merge and sort task lists */
         device->sorted_tasks =
             g_slist_concat(device->unsorted_tasks, device->sorted_tasks);
         device->unsorted_tasks = NULL;
+        if(mds->prioritiser) {
+            device->sorted_tasks = g_slist_sort_with_data(
+                device->sorted_tasks, (GCompareDataFunc)rm_mds_compare,
+                (RmMDSSortFunc)mds->prioritiser);
+        }
     }
     g_mutex_unlock(&device->lock);
 
