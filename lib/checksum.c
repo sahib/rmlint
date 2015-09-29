@@ -40,6 +40,10 @@
 #include "checksums/spooky-c.h"
 #include "checksums/xxhash/xxhash.h"
 
+#define _RM_CHECKSUM_DEBUG 0
+
+
+
 ///////////////////////////////////////
 //    BUFFER POOL IMPLEMENTATION     //
 ///////////////////////////////////////
@@ -555,8 +559,10 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                  * call to rm_digest_buffered_update) */
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
+#if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Ejected candidate match at buffer #%u",
                              paranoid->buffer_count);
+#endif
             }
         }
 
@@ -575,13 +581,19 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 iter_self = iter_self->next;
                 paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
             }
-            if(!match) {
+            if(paranoid->twin_candidate && !match) {
                 /* reject the twin candidate */
+#if _RM_CHECKSUM_DEBUG
+                rm_log_debug_line("Rejected twin candidate %p for %p",
+                             paranoid->twin_candidate, paranoid);
+#endif
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
+#if _RM_CHECKSUM_DEBUG
             } else {
-                rm_log_debug_line("Added twin candidate %p",
-                             paranoid->twin_candidate);
+                rm_log_debug_line("Added twin candidate %p for %p",
+                             paranoid->twin_candidate, paranoid);
+#endif
             }
         }
     }
