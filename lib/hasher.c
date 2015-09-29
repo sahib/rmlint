@@ -83,9 +83,6 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
     if(buffer->len > 0) {
         /* Update digest with buffer->data */
         rm_digest_buffered_update(buffer);
-        if(buffer->digest->type != RM_DIGEST_PARANOID) {
-            rm_buffer_pool_release(buffer);  // TODO: checksum.c should do this?
-        }
     } else {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;

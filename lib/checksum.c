@@ -537,6 +537,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
     RmDigest *digest = buffer->digest;
     if(digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
+        rm_buffer_pool_release(buffer);
     } else {
         RmParanoid *paranoid = digest->paranoid;
 
