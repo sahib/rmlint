@@ -144,8 +144,6 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
      * content */
     if(digest->type == RM_DIGEST_PARANOID) {
         rm_digest_paranoia_shrink(digest, data_size);
-    } else {
-        rm_buffer_pool_release(buf);
     }
     return 0;
 }
