@@ -1004,7 +1004,9 @@ static RmFile *rm_shred_sift(RmFile *file) {
 
         if(file->status == RM_FILE_STATE_IGNORE) {
             /* reading/hashing failed somewhere */
-            rm_digest_free(file->digest);
+            if(file->digest) {
+                rm_digest_free(file->digest);
+            }
             rm_shred_discard_file(file, true);
 
         } else {
@@ -1481,14 +1483,17 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
 /* Callback for RmMDS */
 static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
-    if(!rm_shred_can_process(file, tag)) {
-        return 0;
-    }
 
-    if(file->shred_group->has_only_ext_cksums) {
-        rm_shred_adjust_counters(tag, 0, -(gint64)file->file_size);
+    if(session->aborted || file->shred_group->has_only_ext_cksums) {
+        if (session->aborted) {
+            file->status = RM_FILE_STATE_IGNORE;
+        }
         rm_shred_sift(file);
         return 1;
+    }
+
+    if(!rm_shred_can_process(file, tag)) {
+        return 0;
     }
 
     RM_DEFINE_PATH(file);
