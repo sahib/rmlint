@@ -74,6 +74,7 @@
 
 #define _U G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT
+#define LLI G_GINT64_FORMAT
 
 
 #define RM_PLATFORM_32 (UINTPTR_MAX == 0xffffffff)

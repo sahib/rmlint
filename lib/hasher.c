@@ -98,9 +98,8 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         g_mutex_lock(&hasher->lock);
         {
             /* decrease active task count and signal same */
-            if((--hasher->active_tasks) == 0) {
-                g_cond_signal(&hasher->cond);
-            }
+            hasher->active_tasks--;
+            g_cond_signal(&hasher->cond);
         }
         g_mutex_unlock(&hasher->lock);
     }
@@ -136,7 +135,7 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
     }
 
     gint data_size =
-        snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool), "%" LLU ":%ld",
+        snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool), "%ld:%ld",
                  (long)stat_buf.st_dev, (long)stat_buf.st_ino);
     buf->len = data_size;
     buf->digest = digest;
@@ -300,7 +299,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
     } else if(total_bytes_read != bytes_to_read) {
         rm_log_error_line(_("Something went wrong reading %s; expected %li bytes, "
                             "got %li; ignoring"),
-                          path, bytes_to_read, total_bytes_read);
+                          path, (long int)bytes_to_read, (long int)total_bytes_read);
     }
 
     /* Release the rest of the buffers */
@@ -390,7 +389,6 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
         g_mutex_lock(&hasher->lock);
         {
             while(hasher->active_tasks > 0) {
-                g_printerr("WAITING\n.");
                 g_cond_wait(&hasher->cond, &hasher->lock);
             }
         }

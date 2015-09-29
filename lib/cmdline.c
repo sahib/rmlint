@@ -54,8 +54,6 @@
 #include <linux/btrfs.h>
 #endif
 
-#define RM_SHRED_MISCOUNT (1)  /* exit code for shredder miscount */
-
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
             __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);
@@ -1381,8 +1379,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-crossdev"                , 'X' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL} ,
         {"less-paranoid"              , 'P' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(less_paranoid)           , "Use less paranoid hashing algorithm" , NULL} ,
         {"see-symlinks"               , '@' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(see_symlinks)            , "Treat symlinks a regular files"      , NULL} ,
+        {"unmatched-basename"         , 'B',  HIDDEN           , G_OPTION_ARG_NONE     , &cfg->unmatched_basenames     , "Only find twins with differing names", NULL} ,       
         {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
-        {"no-match-basename"          , 'B',  HIDDEN           , G_OPTION_ARG_NONE     , &cfg->unmatched_basenames     , "Only find twins with differing names", NULL} ,        {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
+        {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
         {"no-match-without-extension" , 'I' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_without_extension , "Disable --match-without-extension"   , NULL} ,
         {"no-progress"                , 'G' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_progress)             , "Disable progressbar"                 , NULL} ,
         {"no-xattr-read"              , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr   , "Disable --xattr-read"                , NULL} ,
@@ -1414,7 +1413,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"fake-fiemap"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_fiemap            , "Create faked fiemap data for all files"                      , NULL}   ,
         {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
         {"shred-never-wait"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_never_wait       , "Never waits for file increment to finish hashing"            , NULL}   ,
-        {"fail-on-shred-miscount" , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fail_on_shred_miscount , "Give non-zero exit code if shredder totals don't go to zero" , NULL}   ,
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
 
@@ -1609,19 +1607,16 @@ int rm_cmd_main(RmSession *session) {
 
     if(session->shred_bytes_remaining != 0) {
         rm_log_error_line(
-            "BUG: Number of remaining bytes is %ld (not 0). Please report this.",
+            "BUG: Number of remaining bytes is %"LLU" (not 0). Please report this.",
             session->shred_bytes_remaining);
+        exit_state = EXIT_FAILURE;
     }
 
     if(session->shred_files_remaining != 0) {
         rm_log_error_line(
-            "BUG: Number of remaining files is %ld (not 0). Please report this.",
+            "BUG: Number of remaining files is %"LLU" (not 0). Please report this.",
             session->shred_files_remaining);
-    }
-    if (session->cfg->fail_on_shred_miscount &&
-            (session->shred_bytes_remaining != 0 ||
-             session->shred_files_remaining != 0)) {
-        exit_state = RM_SHRED_MISCOUNT;
+        exit_state = EXIT_FAILURE;
     }
 
 failure:

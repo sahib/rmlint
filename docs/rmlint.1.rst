@@ -282,10 +282,15 @@ Traversal Options
     directories. Normal regular duplicates are not shown. 
 
 
-:``-b --match-basename`` / ``-B --no-match-basename`` (**default**):
+:``-b --match-basename``:
 
     Only consider those files as dupes that have the same basename. See also
     ``man 1 basename``. The comparison of the basenames is case-insensitive.
+
+:``-B --unmatched-basename``:
+
+    Only consider those files as dupes that do not share the same basename.
+    See also ``man 1 basename``. The comparison of the basenames is case-insensitive.
 
 :``-e --match-with-extension`` / ``-E --no-match-with-extension`` (**default**):
 

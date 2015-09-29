@@ -150,7 +150,7 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
     }
 
     rm_log_debug_line("Created new RmMDSDevice for %srotational disk #%lu",
-            self->is_rotational ? "" : "non-", disk);
+            self->is_rotational ? "" : "non-", (long unsigned)disk);
     return self;
 }
 
@@ -285,7 +285,7 @@ static void rm_mds_device_ref(RmMDSDevice *device, const gint ref_count) {
 
 /** @brief Push a RmMDSDevice to the threadpool
  **/
-void rm_mds_device_start(_U dev_t disk, RmMDSDevice *device, const RmMDS *mds) {
+void rm_mds_device_start(_U  gpointer disk, RmMDSDevice *device, RmMDS *mds) {
     rm_util_thread_pool_push(mds->pool, device);
 }
 
