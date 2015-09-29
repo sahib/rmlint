@@ -1038,7 +1038,7 @@ static RmFile *rm_shred_sift(RmFile *file) {
                                child_group->digest);
             }
             result =
-                rm_shred_group_push_file(child_group, file, FALSE);  // TODO: ok locked?
+                rm_shred_group_push_file(child_group, file, FALSE);
         }
 
         /* is current shred group needed any longer? */
@@ -1296,8 +1296,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
             GList *temp = iter;
             iter = iter->next;
             if (rm_file_basenames_match(iter_file, headfile)) {
-                // TODO: check if we need cfg->cache_file_structs check:
-                rm_shred_discard_file(iter_file, TRUE || !(session->cfg->cache_file_structs));
+                rm_shred_discard_file(iter_file, TRUE);
                 g_queue_delete_link(group, temp);
             }
         }
@@ -1509,7 +1508,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
                 (file->shred_group->next_offset != file->file_size) &&
                 (cfg->shred_always_wait ||
                  (
-                     /* TODO: device->is_rotational && */
+                     !rm_mounts_is_nonrotational(session->mounts, file->dev) &&
                      rm_shred_get_read_size(file, tag) <
                          RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
                      (file->status == RM_FILE_STATE_NORMAL) && !cfg->shred_never_wait));
