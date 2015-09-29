@@ -40,39 +40,11 @@ def flush_fs_caches():
         sys.exit(-1)
 
 
-VALGRIND_MASSIF_PEAK_MEM = '''
-valgrind --tool=massif --log-file=0 --massif-out-file=/tmp/massif.out \
-    {interp} {command} >/dev/null 2>/dev/null && \
-    cat /tmp/massif.out | grep mem_heap_B  | cut -d= -f2 | sort -rn | head -n1
-'''
-
-
-def measure_peak_memory(shell_command):
-    try:
-        # Hack to get python scripts working:
-        # (normally a real binary is assumed)
-        interp = ''
-        if '.py' in shell_command:
-            interp = '/usr/bin/python'
-
-        peak_bytes_b = subprocess.check_output(
-            VALGRIND_MASSIF_PEAK_MEM.format(
-                interp=interp,
-                command=shell_command
-            ),
-            shell=True
-        )
-        return int(peak_bytes_b or '0')
-    except subprocess.CalledProcessError as err:
-        print('!! Unable to execute massif: {err}'.format(err=err))
-        return None
-
-
-def read_cpu_usage():
+def read_time_info():
     try:
         with open('/tmp/.cpu_usage', 'r') as handle:
-            percent = handle.read().strip()
-            return int(percent[:-1])
+            cpu_usage, peak_mem = handle.read().strip().split(' ', 1)
+            return int(cpu_usage[:-1]), int(peak_mem)
     except IOError:
         return 0
 
@@ -157,7 +129,7 @@ class Program:
 
         print('== Executing: {c}'.format(c=bin_cmd))
 
-        time_cmd = '/bin/time --format "%P" \
+        time_cmd = '/bin/time --format "%P %M" \
             --output /tmp/.cpu_usage -- ' + bin_cmd
 
         try:
@@ -177,33 +149,29 @@ class Program:
 
                     # Remember the time difference as result.
                     if run_idx not in run_benchmarks:
-                        run_benchmarks[run_idx] = [0] * 4
+                        run_benchmarks[run_idx] = [0] * 5
 
-                    cpu_usage = read_cpu_usage()
+                    cpu_usage, peak_mem = read_time_info()
 
                     # select the fastest run to record time and cpu stats:
                     if run_benchmarks[run_idx][0] > time_diff or run_benchmarks[run_idx][0] == 0:
                         run_benchmarks[run_idx][0] = time_diff
                         run_benchmarks[run_idx][1] = cpu_usage
+                        run_benchmarks[run_idx][2] = peak_mem / 1024  # Megabyte
 
                     if data_dump:
                         stats = self.parse_statistics(data_dump)
                         if stats:
-                            run_benchmarks[run_idx][2] = stats['dupes']
-                            run_benchmarks[run_idx][3] = stats['sets']
+                            run_benchmarks[run_idx][3] = stats['dupes']
+                            run_benchmarks[run_idx][4] = stats['sets']
 
-            # Make valgrind run a bit faster, profit from caches.
-            # Also known as 'the big ball of mud'
-            print('-- Measuring peak memory usage using massif. This may take ages.')
-            memory_usage = measure_peak_memory(bin_cmd) / 1024 ** 2
-            print('-- Memory usage was {b} MB'.format(b=memory_usage))
         except subprocess.CalledProcessError as err:
             print('!! Execution of {n} failed: {err}'.format(
                 n=self.binary_path, err=err
             ))
 
-        avg_point = [0] * 4
-        for idx in range(4):
+        avg_point = [0] * 5
+        for idx in range(5):
             avg_point[idx] = sum([v[idx] for v in run_benchmarks.values()])
             avg_point[idx] /= CFG.n_runs
 
@@ -293,6 +261,7 @@ class Rmlint(Program):
         except OSError:
             pass
 
+
 class RmlintSpot(Rmlint):
     website = 'https://github.com/SeeSpotRun/rmlint'
     script = 'rmlint-spot.sh'
@@ -302,6 +271,16 @@ class RmlintSpot(Rmlint):
 
     def get_benchid(self):
         return 'rmlint-spot'
+
+
+class RmlintMaster(Rmlint):
+    script = 'rmlint-master.sh'
+
+    def get_binary(self):
+        return 'rmlint/rmlint-master'
+
+    def get_benchid(self):
+        return 'rmlint-master'
 
 
 class RmlintSpooky(Rmlint):
