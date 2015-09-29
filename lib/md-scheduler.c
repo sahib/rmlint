@@ -201,6 +201,20 @@ static RmMDSTask *rm_mds_pop_task(RmMDSDevice *device) {
     return task;
 }
 
+/** @brief Mutex-protected task pusher
+ **/
+
+static void rm_mds_push_task(RmMDSDevice *device, RmMDSTask *task) {
+    g_mutex_lock(&device->lock);
+    {
+        device->unsorted_tasks =
+                g_slist_prepend(device->unsorted_tasks, task);
+        device->ref_count++;
+        g_cond_signal(&device->cond);
+    }
+    g_mutex_unlock(&device->lock);
+}
+
 /** @brief GCompareDataFunc wrapper for mds->prioritiser
  **/
 static gint rm_mds_compare(const RmMDSTask *a, const RmMDSTask *b,
@@ -237,14 +251,20 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
     }
     g_mutex_unlock(&device->lock);
 
-    /* process tasks in order */
+    /* process tasks from device->sorted_tasks */
     RmMDSTask *task = NULL;
-    while(!g_atomic_int_get(&mds->aborted) && quota > 0 &&
+    while(quota > 0 &&
           (task = rm_mds_pop_task(device))) {
-        quota -= mds->func(task->task_data, mds->user_data);
-        rm_mds_task_free(task);
-
-        g_atomic_int_dec_and_test(&device->mds->pending_tasks);
+        if ( mds->func(task->task_data, mds->user_data) ) {
+            /* task succeeded */
+            rm_mds_task_free(task);
+            /* decrement counters */
+            --quota;
+            g_atomic_int_dec_and_test(&device->mds->pending_tasks);
+        } else {
+            /* task failed; push it back to device->unsorted_tasks */
+            rm_mds_push_task(device, task);
+        }
     }
 
     if(g_atomic_int_get(&mds->aborted)) {
@@ -396,18 +416,12 @@ void rm_mds_ref_dev(RmMDS *mds, dev_t dev, const gint ref_count) {
     rm_mds_device_ref(device, ref_count);
 }
 
-static void rm_mds_push_task(RmMDSDevice *device, const dev_t dev, const guint64 offset,
+static void rm_mds_push_new_task(RmMDSDevice *device, const dev_t dev, const guint64 offset,
                              const gpointer task_user_data) {
     g_atomic_int_inc(&device->mds->pending_tasks);
 
     RmMDSTask *task = rm_mds_task_new(dev, offset, task_user_data);
-    g_mutex_lock(&device->lock);
-    {
-        device->unsorted_tasks = g_slist_prepend(device->unsorted_tasks, task);
-        g_cond_signal(&device->cond);
-        device->ref_count++;
-    }
-    g_mutex_unlock(&device->lock);
+    rm_mds_push_task(device, task);
 }
 
 dev_t rm_mds_dev(const char *path) {
@@ -426,7 +440,7 @@ void rm_mds_push_task_by_dev(RmMDS *mds, const dev_t dev, gint64 offset, const c
         offset = rm_offset_get_from_path(path, 0, NULL);
     }
     RmMDSDevice *device = rm_mds_device_get_by_dev(mds, dev, path);
-    rm_mds_push_task(device, dev, offset, task_user_data);
+    rm_mds_push_new_task(device, dev, offset, task_user_data);
 }
 
 void rm_mds_push_task_by_path(RmMDS *mds, const char *path, gint64 offset,
