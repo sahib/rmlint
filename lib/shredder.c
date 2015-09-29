@@ -1643,6 +1643,9 @@ void rm_shred_run(RmSession *session) {
     rm_hasher_free(tag.hasher, TRUE);
 
     session->shredder_finished = TRUE;
+    session->shred_files_remaining += tag.cache_file_count;
+    session->total_filtered_files += tag.cache_filtered_count;
+    session->shred_bytes_remaining += tag.cache_byte_count;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
 
     /* This should not block, or at least only very short. */
