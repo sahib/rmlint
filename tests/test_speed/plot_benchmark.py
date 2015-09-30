@@ -19,8 +19,9 @@ from pygal.style import LightSolarizedStyle as Style
 VALID_ATTRS = {
     'timing': 0,
     'cpu_usage': 1,
-    'dupes': 2,
-    'sets': 3
+    'peakmem': 2,
+    'dupes': 3,
+    'sets': 4
 }
 
 Style.background = '#FFFFFF'
@@ -58,11 +59,10 @@ def unpack(chart, data, bench_name, add_x_labels=True):
         yield program, result, points
 
 
-def format_tooltip(program, memory, version):
-    return '{name} ({ver}): Peakmem: {mem}M'.format(
+def format_tooltip(program, version):
+    return '{name} ({ver})'.format(
         name=program,
-        ver=version,
-        mem=round(memory, 2)
+        ver=version
     )
 
 
@@ -75,7 +75,6 @@ def _plot_generic(data, chart, name, key):
                 'value': round(key(point), 3),
                 'label': format_tooltip(
                     program,
-                    metadata['memory'],
                     metadata['version']
                 ),
                 'xlink': metadata.get('website')
@@ -85,16 +84,10 @@ def _plot_generic(data, chart, name, key):
 
 
 def plot_memory(data):
-    chart = pygal.Pie(CONFIG, inner_radius=.4)
-
-    points = []
-    unpacked = unpack(chart, data, 'memory', add_x_labels=False)
-    for program, metadata, _ in unpacked:
-        points.append((metadata['memory'], program))
-
-    points.sort()
-    for memory, program in points:
-        chart.add(program, memory)
+    chart = pygal.StackedBar(CONFIG)
+    _plot_generic(
+        data, chart, 'Peakmem', lambda p: p[VALID_ATTRS['peakmem']]
+    )
 
     return chart.render(is_unicode=True)
 
