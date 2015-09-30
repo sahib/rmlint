@@ -312,7 +312,6 @@
 
 typedef struct RmShredTag {
     RmSession *session;
-    GAsyncQueue *device_return;
     GMutex hash_mem_mtx;
     gint64 paranoid_mem_alloc; /* how much memory to allocate for paranoid checks */
     gint32 active_groups; /* how many shred groups active (only used with paranoid) */
@@ -668,7 +667,7 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
 }
 
 ///////////////////////////////////
-//    RmShredDevice UTILITIES    //
+//       Progress Reporting      //
 ///////////////////////////////////
 
 typedef struct RmCounterBuffer{
@@ -712,7 +711,7 @@ static void rm_shred_write_cksum_to_xattr(const RmSession *session, RmFile *file
     }
 }
 
-/* Unlink RmFile from device queue
+/* Unlink RmFile from Shredder
  */
 static void rm_shred_discard_file(RmFile *file, bool free_file) {
     const RmSession *session = file->session;
@@ -931,7 +930,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         rm_shred_group_update_status(shred_group);
         switch(shred_group->status) {
         case RM_SHRED_GROUP_START_HASHING:
-            /* clear the queue and push all its rmfiles to the appropriate device queue */
+            /* clear the queue and push all its rmfiles to the md-scheduler */
             if(shred_group->held_files) {
                 shred_group->num_pending += g_queue_get_length(shred_group->held_files);
                 g_queue_free_full(shred_group->held_files,
@@ -1050,7 +1049,6 @@ static RmFile *rm_shred_sift(RmFile *file) {
  * */
 static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShredTag *tag,
                                    RmFile *file) {
-    /* Report the progress to rm_shred_devlist_factory */
     g_assert(file->digest == digest);
 
     if(file->hash_offset == file->shred_group->next_offset ||
@@ -1562,7 +1560,6 @@ void rm_shred_run(RmSession *session) {
     tag.mem_refusing = false;
     session->shredder = &tag;
 
-    tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
 
     tag.after_preprocess = FALSE;
@@ -1658,8 +1655,6 @@ void rm_shred_run(RmSession *session) {
     rm_log_warning(BLUE"Waiting for progress counters to catch up..."RESET);
     g_thread_pool_free(tag.counter_pool, FALSE, TRUE);
     rm_log_warning(BLUE"Done\n"RESET);
-
-    g_async_queue_unref(tag.device_return);
 
     g_mutex_clear(&tag.hash_mem_mtx);
     rm_log_debug_line("Remaining %"LLU" bytes in %"LLU" files",
