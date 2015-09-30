@@ -636,10 +636,11 @@ def main():
 
     programs = [
         # (hopefully) slowest:
-        Baseline(),
+        # Baseline(),
         # Current:
         Rmlint(),
         RmlintSpot(),
+        RmlintMaster(),
         RmlintParanoid(),
         RmlintXXHash(),
         # RmlintSpooky(),
