@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - cfg.c<span style="font-size: 80%;"> (source / <a href="cfg.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - cfg.c<span style="font-size: 80%;"> (source / <a href="cfg.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,13 +31,13 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">30</td>
-            <td class="headerCovTableEntry">30</td>
+            <td class="headerCovTableEntry">34</td>
+            <td class="headerCovTableEntry">34</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">1</td>
@@ -92,48 +92,54 @@
 <span class="lineNum">      30 </span>            : 
 <a name="31"><span class="lineNum">      31 </span>            : /* Options not specified by commandline get a default option -</a>
 <span class="lineNum">      32 </span>            :  * this is usually called before rm_cmd_parse_args */
-<span class="lineNum">      33 </span><span class="lineCov">      14928 : void rm_cfg_set_default(RmCfg *cfg) {</span>
+<span class="lineNum">      33 </span><span class="lineCov">      54884 : void rm_cfg_set_default(RmCfg *cfg) {</span>
 <span class="lineNum">      34 </span>            :     /* Set everything to 0 at first,
 <span class="lineNum">      35 </span>            :      * only non-null options are listed below.
 <span class="lineNum">      36 </span>            :      */
-<span class="lineNum">      37 </span><span class="lineCov">      14928 :     memset(cfg, 0, sizeof(RmCfg));</span>
+<span class="lineNum">      37 </span><span class="lineCov">      54884 :     memset(cfg, 0, sizeof(RmCfg));</span>
 <span class="lineNum">      38 </span>            : 
 <span class="lineNum">      39 </span>            :     /* Traversal options */
-<span class="lineNum">      40 </span><span class="lineCov">      14928 :     cfg-&gt;depth = PATH_MAX / 2;</span>
-<span class="lineNum">      41 </span><span class="lineCov">      14928 :     cfg-&gt;minsize = 0;</span>
-<span class="lineNum">      42 </span><span class="lineCov">      14928 :     cfg-&gt;maxsize = G_MAXUINT64;</span>
+<span class="lineNum">      40 </span><span class="lineCov">      54884 :     cfg-&gt;depth = PATH_MAX / 2;</span>
+<span class="lineNum">      41 </span><span class="lineCov">      54884 :     cfg-&gt;minsize = 0;</span>
+<span class="lineNum">      42 </span><span class="lineCov">      54884 :     cfg-&gt;maxsize = G_MAXUINT64;</span>
 <span class="lineNum">      43 </span>            : 
 <span class="lineNum">      44 </span>            :     /* Lint Types */
-<span class="lineNum">      45 </span><span class="lineCov">      14928 :     cfg-&gt;ignore_hidden = true;</span>
-<span class="lineNum">      46 </span><span class="lineCov">      14928 :     cfg-&gt;find_emptydirs = true;</span>
-<span class="lineNum">      47 </span><span class="lineCov">      14928 :     cfg-&gt;find_emptyfiles = true;</span>
-<span class="lineNum">      48 </span><span class="lineCov">      14928 :     cfg-&gt;find_duplicates = true;</span>
-<span class="lineNum">      49 </span><span class="lineCov">      14928 :     cfg-&gt;find_badids = true;</span>
-<span class="lineNum">      50 </span><span class="lineCov">      14928 :     cfg-&gt;find_badlinks = true;</span>
-<span class="lineNum">      51 </span><span class="lineCov">      14928 :     cfg-&gt;find_hardlinked_dupes = true;</span>
-<span class="lineNum">      52 </span><span class="lineCov">      14928 :     cfg-&gt;build_fiemap = true;</span>
+<span class="lineNum">      45 </span><span class="lineCov">      54884 :     cfg-&gt;ignore_hidden = true;</span>
+<span class="lineNum">      46 </span><span class="lineCov">      54884 :     cfg-&gt;find_emptydirs = true;</span>
+<span class="lineNum">      47 </span><span class="lineCov">      54884 :     cfg-&gt;find_emptyfiles = true;</span>
+<span class="lineNum">      48 </span><span class="lineCov">      54884 :     cfg-&gt;find_duplicates = true;</span>
+<span class="lineNum">      49 </span><span class="lineCov">      54884 :     cfg-&gt;find_badids = true;</span>
+<span class="lineNum">      50 </span><span class="lineCov">      54884 :     cfg-&gt;find_badlinks = true;</span>
+<span class="lineNum">      51 </span><span class="lineCov">      54884 :     cfg-&gt;find_hardlinked_dupes = true;</span>
+<span class="lineNum">      52 </span><span class="lineCov">      54884 :     cfg-&gt;build_fiemap = true;</span>
 <span class="lineNum">      53 </span>            : 
 <span class="lineNum">      54 </span>            :     /* Misc options */
-<span class="lineNum">      55 </span><span class="lineCov">      14928 :     cfg-&gt;sort_criteria = &quot;pm&quot;;</span>
-<span class="lineNum">      56 </span><span class="lineCov">      14928 :     cfg-&gt;checksum_type = RM_DEFAULT_DIGEST;</span>
-<span class="lineNum">      57 </span><span class="lineCov">      14928 :     cfg-&gt;with_color = true;</span>
-<span class="lineNum">      58 </span><span class="lineCov">      14928 :     cfg-&gt;with_stdout_color = true;</span>
-<span class="lineNum">      59 </span><span class="lineCov">      14928 :     cfg-&gt;with_stderr_color = true;</span>
-<span class="lineNum">      60 </span><span class="lineCov">      14928 :     cfg-&gt;threads = 32;</span>
-<span class="lineNum">      61 </span><span class="lineCov">      14928 :     cfg-&gt;verbosity = G_LOG_LEVEL_INFO;</span>
-<span class="lineNum">      62 </span><span class="lineCov">      14928 :     cfg-&gt;paranoid_mem = 256 * 1024 * 1024;</span>
-<span class="lineNum">      63 </span><span class="lineCov">      14928 :     cfg-&gt;follow_symlinks = false;</span>
+<span class="lineNum">      55 </span><span class="lineCov">      54884 :     strcpy(cfg-&gt;sort_criteria, &quot;pm&quot;);</span>
+<span class="lineNum">      56 </span>            : 
+<span class="lineNum">      57 </span><span class="lineCov">      54884 :     cfg-&gt;checksum_type = RM_DEFAULT_DIGEST;</span>
+<span class="lineNum">      58 </span><span class="lineCov">      54884 :     cfg-&gt;with_color = true;</span>
+<span class="lineNum">      59 </span><span class="lineCov">      54884 :     cfg-&gt;with_stdout_color = true;</span>
+<span class="lineNum">      60 </span><span class="lineCov">      54884 :     cfg-&gt;with_stderr_color = true;</span>
+<span class="lineNum">      61 </span><span class="lineCov">      54884 :     cfg-&gt;threads = 32;</span>
+<span class="lineNum">      62 </span><span class="lineCov">      54884 :     cfg-&gt;verbosity = G_LOG_LEVEL_INFO;</span>
+<span class="lineNum">      63 </span><span class="lineCov">      54884 :     cfg-&gt;follow_symlinks = false;</span>
 <span class="lineNum">      64 </span>            : 
-<span class="lineNum">      65 </span><span class="lineCov">      14928 :     cfg-&gt;skip_start_factor = 0.0;</span>
-<span class="lineNum">      66 </span><span class="lineCov">      14928 :     cfg-&gt;skip_end_factor = 1.0;</span>
-<span class="lineNum">      67 </span>            : 
-<span class="lineNum">      68 </span><span class="lineCov">      14928 :     cfg-&gt;use_absolute_start_offset = false;</span>
-<span class="lineNum">      69 </span><span class="lineCov">      14928 :     cfg-&gt;use_absolute_end_offset = false;</span>
-<span class="lineNum">      70 </span><span class="lineCov">      14928 :     cfg-&gt;skip_start_offset = 0;</span>
-<span class="lineNum">      71 </span><span class="lineCov">      14928 :     cfg-&gt;skip_end_offset = 0;</span>
-<span class="lineNum">      72 </span>            : 
-<span class="lineNum">      73 </span><span class="lineCov">      14928 :     rm_trie_init(&amp;cfg-&gt;file_trie);</span>
-<span class="lineNum">      74 </span><span class="lineCov">      14928 : }</span>
+<span class="lineNum">      65 </span><span class="lineCov">      54884 :     cfg-&gt;read_buffer_mem = 16 * 1024 * 1024;</span>
+<span class="lineNum">      66 </span><span class="lineCov">      54884 :     cfg-&gt;paranoid_mem = 256 * 1024 * 1024;</span>
+<span class="lineNum">      67 </span><span class="lineCov">      54884 :     cfg-&gt;total_mem = (RmOff)2 * 1024 * 1024 * 1024;</span>
+<span class="lineNum">      68 </span><span class="lineCov">      54884 :     cfg-&gt;sweep_size = 1024 * 1024 * 1024;</span>
+<span class="lineNum">      69 </span><span class="lineCov">      54884 :     cfg-&gt;sweep_count = 1024 * 16;</span>
+<span class="lineNum">      70 </span>            : 
+<span class="lineNum">      71 </span><span class="lineCov">      54884 :     cfg-&gt;skip_start_factor = 0.0;</span>
+<span class="lineNum">      72 </span><span class="lineCov">      54884 :     cfg-&gt;skip_end_factor = 1.0;</span>
+<span class="lineNum">      73 </span>            : 
+<span class="lineNum">      74 </span><span class="lineCov">      54884 :     cfg-&gt;use_absolute_start_offset = false;</span>
+<span class="lineNum">      75 </span><span class="lineCov">      54884 :     cfg-&gt;use_absolute_end_offset = false;</span>
+<span class="lineNum">      76 </span><span class="lineCov">      54884 :     cfg-&gt;skip_start_offset = 0;</span>
+<span class="lineNum">      77 </span><span class="lineCov">      54884 :     cfg-&gt;skip_end_offset = 0;</span>
+<span class="lineNum">      78 </span>            : 
+<span class="lineNum">      79 </span><span class="lineCov">      54884 :     rm_trie_init(&amp;cfg-&gt;file_trie);</span>
+<span class="lineNum">      80 </span><span class="lineCov">      54884 : }</span>
 </pre>
       </td>
     </tr>
@@ -142,7 +148,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

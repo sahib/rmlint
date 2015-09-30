@@ -1,0 +1,529 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/hasher.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - hasher.c<span style="font-size: 80%;"> (source / <a href="hasher.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">156</td>
+            <td class="headerCovTableEntry">180</td>
+            <td class="headerCovTableEntryMed">86.7 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntry">13</td>
+            <td class="headerCovTableEntryHi">92.3 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      28 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      29 </span>            : 
+<span class="lineNum">      30 </span>            : #include &lt;fcntl.h&gt;
+<span class="lineNum">      31 </span>            : 
+<span class="lineNum">      32 </span>            : #include &quot;hasher.h&quot;
+<span class="lineNum">      33 </span>            : #include &quot;utilities.h&quot;
+<span class="lineNum">      34 </span>            : 
+<span class="lineNum">      35 </span>            : /* Flags for the fadvise() call that tells the kernel
+<span class="lineNum">      36 </span>            :  * what we want to do with the file.
+<span class="lineNum">      37 </span>            :  */
+<span class="lineNum">      38 </span>            : const int HASHER_FADVISE_FLAGS = 0
+<span class="lineNum">      39 </span>            : #ifdef POSIX_FADV_SEQUENTIAL
+<span class="lineNum">      40 </span>            :                                  | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */
+<span class="lineNum">      41 </span>            : #endif
+<span class="lineNum">      42 </span>            : #ifdef POSIX_FADV_WILLNEED
+<span class="lineNum">      43 </span>            :                                  | POSIX_FADV_WILLNEED /* Tell the kernel to readhead */
+<span class="lineNum">      44 </span>            : #endif
+<span class="lineNum">      45 </span>            : #ifdef POSIX_FADV_NOREUSE
+<span class="lineNum">      46 </span>            :                                  | POSIX_FADV_NOREUSE /* We will not reuse old data  */
+<span class="lineNum">      47 </span>            : #endif
+<span class="lineNum">      48 </span>            :     ;
+<span class="lineNum">      49 </span>            : 
+<span class="lineNum">      50 </span>            : #define DIVIDE_CEIL(n, m) ((n) / (m) + !!((n) % (m)))
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span>            : struct _RmHasher {
+<span class="lineNum">      53 </span>            :     RmDigestType digest_type;
+<span class="lineNum">      54 </span>            :     gboolean use_buffered_read;
+<span class="lineNum">      55 </span>            :     guint64 cache_quota_bytes;
+<span class="lineNum">      56 </span>            :     gpointer session_user_data;
+<span class="lineNum">      57 </span>            :     RmBufferPool *mem_pool;
+<span class="lineNum">      58 </span>            :     RmHasherCallback callback;
+<span class="lineNum">      59 </span>            : 
+<span class="lineNum">      60 </span>            :     GAsyncQueue *hashpipe_pool;
+<span class="lineNum">      61 </span>            :     GAsyncQueue *return_queue;
+<span class="lineNum">      62 </span>            :     GMutex lock;
+<span class="lineNum">      63 </span>            :     GCond cond;
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span>            :     gsize buf_size;
+<span class="lineNum">      66 </span>            :     guint active_tasks;
+<span class="lineNum">      67 </span>            : };
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span>            : struct _RmHasherTask {
+<span class="lineNum">      70 </span>            :     RmHasher *hasher;
+<span class="lineNum">      71 </span>            :     GThreadPool *hashpipe;
+<span class="lineNum">      72 </span>            :     RmDigest *digest;
+<span class="lineNum">      73 </span>            :     gpointer task_user_data;
+<a name="74"><span class="lineNum">      74 </span>            : };</a>
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span><span class="lineCov">     221824 : static void rm_hasher_task_free(RmHasherTask *self) {</span>
+<span class="lineNum">      77 </span><span class="lineCov">     221824 :     g_async_queue_push(self-&gt;hasher-&gt;hashpipe_pool, self-&gt;hashpipe);</span>
+<span class="lineNum">      78 </span><span class="lineCov">     221826 :     g_slice_free(RmHasherTask, self);</span>
+<span class="lineNum">      79 </span><span class="lineCov">     221815 : }</span>
+<a name="80"><span class="lineNum">      80 </span>            : </a>
+<span class="lineNum">      81 </span>            : /* GThreadPool Worker for hashing */
+<span class="lineNum">      82 </span><span class="lineCov">     495550 : static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {</span>
+<span class="lineNum">      83 </span><span class="lineCov">     495550 :     if(buffer-&gt;len &gt; 0) {</span>
+<span class="lineNum">      84 </span>            :         /* Update digest with buffer-&gt;data */
+<span class="lineNum">      85 </span><span class="lineCov">     273734 :         rm_digest_buffered_update(buffer);</span>
+<span class="lineNum">      86 </span>            :     } else {
+<span class="lineNum">      87 </span>            :         /* finalise via callback */
+<span class="lineNum">      88 </span><span class="lineCov">     221816 :         RmHasherTask *task = buffer-&gt;user_data;</span>
+<span class="lineNum">      89 </span><span class="lineCov">     221816 :         hasher-&gt;callback(hasher, buffer-&gt;digest, hasher-&gt;session_user_data,</span>
+<span class="lineNum">      90 </span>            :                          task-&gt;task_user_data);
+<span class="lineNum">      91 </span>            : 
+<span class="lineNum">      92 </span><span class="lineCov">     221810 :         rm_buffer_pool_release(buffer);</span>
+<span class="lineNum">      93 </span><span class="lineCov">     221827 :         rm_hasher_task_free(task);</span>
+<span class="lineNum">      94 </span>            : 
+<span class="lineNum">      95 </span><span class="lineCov">     221811 :         g_mutex_lock(&amp;hasher-&gt;lock);</span>
+<span class="lineNum">      96 </span>            :         {
+<span class="lineNum">      97 </span>            :             /* decrease active task count and signal same */
+<span class="lineNum">      98 </span><span class="lineCov">     221829 :             hasher-&gt;active_tasks--;</span>
+<span class="lineNum">      99 </span><span class="lineCov">     221829 :             g_cond_signal(&amp;hasher-&gt;cond);</span>
+<span class="lineNum">     100 </span>            :         }
+<span class="lineNum">     101 </span><span class="lineCov">     221829 :         g_mutex_unlock(&amp;hasher-&gt;lock);</span>
+<span class="lineNum">     102 </span>            :     }
+<span class="lineNum">     103 </span><span class="lineCov">     495567 : }</span>
+<span class="lineNum">     104 </span>            : 
+<span class="lineNum">     105 </span>            : //////////////////////////////////////
+<span class="lineNum">     106 </span>            : //  File Reading Utilities          //
+<a name="107"><span class="lineNum">     107 </span>            : //////////////////////////////////////</a>
+<span class="lineNum">     108 </span>            : 
+<span class="lineNum">     109 </span><span class="lineCov">     221682 : static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {</span>
+<span class="lineNum">     110 </span>            : /* Give the kernel scheduler some hints */
+<span class="lineNum">     111 </span>            : #if HAVE_POSIX_FADVISE &amp;&amp; HASHER_FADVISE_FLAGS
+<span class="lineNum">     112 </span>            :     RmOff readahead = bytes_to_read * 8;
+<span class="lineNum">     113 </span>            :     posix_fadvise(fd, seek_offset, readahead, HASHER_FADVISE_FLAGS);
+<span class="lineNum">     114 </span>            : #else
+<span class="lineNum">     115 </span>            :     (void)fd;
+<span class="lineNum">     116 </span>            :     (void)seek_offset;
+<span class="lineNum">     117 </span>            :     (void)bytes_to_read;
+<span class="lineNum">     118 </span>            : #endif
+<a name="119"><span class="lineNum">     119 </span><span class="lineCov">     221682 : }</span></a>
+<span class="lineNum">     120 </span>            : 
+<span class="lineNum">     121 </span><span class="lineCov">        140 : static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path) {</span>
+<span class="lineNum">     122 </span>            :     /* Fake an IO operation on the symlink.  */
+<span class="lineNum">     123 </span><span class="lineCov">        140 :     RmBuffer *buf = rm_buffer_pool_get(hasher-&gt;mem_pool);</span>
+<span class="lineNum">     124 </span><span class="lineCov">        140 :     buf-&gt;len = 256;</span>
+<span class="lineNum">     125 </span><span class="lineCov">        140 :     memset(buf-&gt;data, 0, buf-&gt;len);</span>
+<span class="lineNum">     126 </span>            : 
+<span class="lineNum">     127 </span>            :     RmStat stat_buf;
+<span class="lineNum">     128 </span><span class="lineCov">        140 :     if(rm_sys_stat(path, &amp;stat_buf) == -1) {</span>
+<span class="lineNum">     129 </span>            :         /* Oops, that did not work out, report as an error */
+<span class="lineNum">     130 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;Cannot stat symbolic link&quot;);</span>
+<span class="lineNum">     131 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     132 </span>            :     }
+<span class="lineNum">     133 </span>            : 
+<span class="lineNum">     134 </span><span class="lineCov">        140 :     gint data_size =</span>
+<span class="lineNum">     135 </span><span class="lineCov">        280 :         snprintf((char *)buf-&gt;data, rm_buffer_size(hasher-&gt;mem_pool), &quot;%ld:%ld&quot;,</span>
+<span class="lineNum">     136 </span><span class="lineCov">        280 :                  (long)stat_buf.st_dev, (long)stat_buf.st_ino);</span>
+<span class="lineNum">     137 </span><span class="lineCov">        140 :     buf-&gt;len = data_size;</span>
+<span class="lineNum">     138 </span><span class="lineCov">        140 :     buf-&gt;digest = digest;</span>
+<span class="lineNum">     139 </span>            : 
+<span class="lineNum">     140 </span><span class="lineCov">        140 :     rm_digest_buffered_update(buf);</span>
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span>            :     /* In case of paranoia: shrink the used data buffer, so comparasion works
+<span class="lineNum">     143 </span>            :      * as expected. Otherwise a full buffer is used with possibly different
+<span class="lineNum">     144 </span>            :      * content */
+<span class="lineNum">     145 </span><span class="lineCov">        140 :     if(digest-&gt;type == RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     146 </span><span class="lineCov">         28 :         rm_digest_paranoia_shrink(digest, data_size);</span>
+<span class="lineNum">     147 </span>            :     }
+<span class="lineNum">     148 </span><span class="lineCov">        140 :     return 0;</span>
+<span class="lineNum">     149 </span>            : }
+<span class="lineNum">     150 </span>            : 
+<span class="lineNum">     151 </span>            : /* Reads data from file and sends to hasher threadpool
+<a name="152"><span class="lineNum">     152 </span>            :  * returns number of bytes successfully read */</a>
+<span class="lineNum">     153 </span>            : 
+<span class="lineNum">     154 </span><span class="lineCov">       7888 : static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,</span>
+<span class="lineNum">     155 </span>            :                                       RmDigest *digest, char *path, gsize start_offset,
+<span class="lineNum">     156 </span>            :                                       gsize bytes_to_read) {
+<span class="lineNum">     157 </span><span class="lineCov">       7888 :     FILE *fd = NULL;</span>
+<span class="lineNum">     158 </span><span class="lineCov">       7888 :     if(bytes_to_read == 0) {</span>
+<span class="lineNum">     159 </span><span class="lineNoCov">          0 :         bytes_to_read = G_MAXSIZE;</span>
+<span class="lineNum">     160 </span>            :     }
+<span class="lineNum">     161 </span>            : 
+<span class="lineNum">     162 </span><span class="lineCov">       7888 :     gsize total_bytes_read = 0;</span>
+<span class="lineNum">     163 </span>            : 
+<span class="lineNum">     164 </span><span class="lineCov">       7888 :     if((fd = fopen(path, &quot;rb&quot;)) == NULL) {</span>
+<span class="lineNum">     165 </span><span class="lineNoCov">          0 :         rm_log_info(&quot;fopen(3) failed for %s: %s\n&quot;, path, g_strerror(errno));</span>
+<span class="lineNum">     166 </span><span class="lineNoCov">          0 :         goto finish;</span>
+<span class="lineNum">     167 </span>            :     }
+<span class="lineNum">     168 </span>            : 
+<span class="lineNum">     169 </span><span class="lineCov">       7888 :     gint32 bytes_read = 0;</span>
+<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     171 </span><span class="lineCov">       7888 :     rm_hasher_request_readahead(fileno(fd), start_offset, bytes_to_read);</span>
+<span class="lineNum">     172 </span>            : 
+<span class="lineNum">     173 </span><span class="lineCov">       7888 :     if(fseek(fd, start_offset, SEEK_SET) == -1) {</span>
+<span class="lineNum">     174 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;fseek(3) failed&quot;);</span>
+<span class="lineNum">     175 </span><span class="lineNoCov">          0 :         goto finish;</span>
+<span class="lineNum">     176 </span>            :     }
+<span class="lineNum">     177 </span>            : 
+<span class="lineNum">     178 </span><span class="lineCov">       7888 :     RmBuffer *buffer = rm_buffer_pool_get(hasher-&gt;mem_pool);</span>
+<span class="lineNum">     179 </span>            : 
+<span class="lineNum">     180 </span><span class="lineCov">      25524 :     while((bytes_read =</span>
+<span class="lineNum">     181 </span><span class="lineCov">      17636 :                fread(buffer-&gt;data, 1, MIN(bytes_to_read, hasher-&gt;buf_size), fd)) &gt; 0) {</span>
+<span class="lineNum">     182 </span><span class="lineCov">       9748 :         bytes_to_read -= bytes_read;</span>
+<span class="lineNum">     183 </span>            : 
+<span class="lineNum">     184 </span><span class="lineCov">       9748 :         buffer-&gt;len = bytes_read;</span>
+<span class="lineNum">     185 </span><span class="lineCov">       9748 :         buffer-&gt;digest = digest;</span>
+<span class="lineNum">     186 </span><span class="lineCov">       9748 :         rm_util_thread_pool_push(hashpipe, buffer);</span>
+<span class="lineNum">     187 </span>            : 
+<span class="lineNum">     188 </span><span class="lineCov">       9748 :         total_bytes_read += bytes_read;</span>
+<span class="lineNum">     189 </span><span class="lineCov">       9748 :         buffer = rm_buffer_pool_get(hasher-&gt;mem_pool);</span>
+<span class="lineNum">     190 </span>            :     }
+<span class="lineNum">     191 </span><span class="lineCov">       7888 :     rm_buffer_pool_release(buffer);</span>
+<span class="lineNum">     192 </span>            : 
+<span class="lineNum">     193 </span><span class="lineCov">       7888 :     if(ferror(fd) != 0) {</span>
+<span class="lineNum">     194 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;fread(3) failed&quot;);</span>
+<span class="lineNum">     195 </span><span class="lineNoCov">          0 :         if(total_bytes_read == bytes_to_read) {</span>
+<span class="lineNum">     196 </span>            :             /* signal error to caller */
+<span class="lineNum">     197 </span><span class="lineNoCov">          0 :             total_bytes_read++;</span>
+<span class="lineNum">     198 </span>            :         }
+<span class="lineNum">     199 </span>            :     }
+<span class="lineNum">     200 </span>            : 
+<span class="lineNum">     201 </span>            : finish:
+<span class="lineNum">     202 </span><span class="lineCov">       7888 :     if(fd != NULL) {</span>
+<span class="lineNum">     203 </span><span class="lineCov">       7888 :         fclose(fd);</span>
+<span class="lineNum">     204 </span>            :     }
+<span class="lineNum">     205 </span><span class="lineCov">       7888 :     return total_bytes_read;</span>
+<span class="lineNum">     206 </span>            : }
+<span class="lineNum">     207 </span>            : 
+<span class="lineNum">     208 </span>            : /* Reads data from file and sends to hasher threadpool
+<a name="209"><span class="lineNum">     209 </span>            :  * returns number of bytes successfully read */</a>
+<span class="lineNum">     210 </span>            : 
+<span class="lineNum">     211 </span><span class="lineCov">     213798 : static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,</span>
+<span class="lineNum">     212 </span>            :                                         RmDigest *digest, char *path, gint64 start_offset,
+<span class="lineNum">     213 </span><span class="lineCov">     213798 :                                         gint64 bytes_to_read) {</span>
+<span class="lineNum">     214 </span><span class="lineCov">     213798 :     gint32 bytes_read = 0;</span>
+<span class="lineNum">     215 </span><span class="lineCov">     213798 :     gint64 total_bytes_read = 0;</span>
+<span class="lineNum">     216 </span><span class="lineCov">     213798 :     guint64 file_offset = start_offset;</span>
+<span class="lineNum">     217 </span>            : 
+<span class="lineNum">     218 </span><span class="lineCov">     213798 :     if(bytes_to_read == 0) {</span>
+<span class="lineNum">     219 </span>            :         RmStat stat_buf;
+<span class="lineNum">     220 </span><span class="lineNoCov">          0 :         if(rm_sys_stat(path, &amp;stat_buf) != -1) {</span>
+<span class="lineNum">     221 </span><span class="lineNoCov">          0 :             bytes_to_read = MAX(stat_buf.st_size - start_offset, 0);</span>
+<span class="lineNum">     222 </span>            :         }
+<span class="lineNum">     223 </span>            :     }
+<span class="lineNum">     224 </span>            : 
+<span class="lineNum">     225 </span>            :     /* how many buffers to read? */
+<span class="lineNum">     226 </span><span class="lineCov">     213798 :     const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, hasher-&gt;buf_size));</span>
+<span class="lineNum">     227 </span><span class="lineCov">     427593 :     struct iovec readvec[N_BUFFERS + 1];</span>
+<span class="lineNum">     228 </span>            : 
+<span class="lineNum">     229 </span><span class="lineCov">     213798 :     int fd = 0;</span>
+<span class="lineNum">     230 </span>            : 
+<span class="lineNum">     231 </span><span class="lineCov">     213798 :     fd = rm_sys_open(path, O_RDONLY);</span>
+<span class="lineNum">     232 </span><span class="lineCov">     213798 :     if(fd == -1) {</span>
+<span class="lineNum">     233 </span><span class="lineNoCov">          0 :         rm_log_info(&quot;open(2) failed for %s: %s\n&quot;, path, g_strerror(errno));</span>
+<span class="lineNum">     234 </span><span class="lineNoCov">          0 :         goto finish;</span>
+<span class="lineNum">     235 </span>            :     }
+<span class="lineNum">     236 </span>            : 
+<span class="lineNum">     237 </span>            :     /* preadv() is beneficial for large files since it can cut the
+<span class="lineNum">     238 </span>            :      * number of syscall heavily.  I suggest N_BUFFERS=4 as good
+<span class="lineNum">     239 </span>            :      * compromise between memory and cpu.
+<span class="lineNum">     240 </span>            :      *
+<span class="lineNum">     241 </span>            :      * With 16 buffers: 43% cpu 33,871 total
+<span class="lineNum">     242 </span>            :      * With  8 buffers: 43% cpu 32,098 total
+<span class="lineNum">     243 </span>            :      * With  4 buffers: 42% cpu 32,091 total
+<span class="lineNum">     244 </span>            :      * With  2 buffers: 44% cpu 32,245 total
+<span class="lineNum">     245 </span>            :      * With  1 buffers: 45% cpu 34,491 total
+<span class="lineNum">     246 </span>            :      */
+<span class="lineNum">     247 </span>            : 
+<span class="lineNum">     248 </span>            :     /* Give the kernel scheduler some hints */
+<span class="lineNum">     249 </span><span class="lineCov">     213798 :     rm_hasher_request_readahead(fd, start_offset, bytes_to_read);</span>
+<span class="lineNum">     250 </span>            : 
+<span class="lineNum">     251 </span>            :     /* Initialize the buffers to begin with.
+<span class="lineNum">     252 </span>            :      * After a buffer is full, a new one is retrieved.
+<span class="lineNum">     253 </span>            :      */
+<span class="lineNum">     254 </span>            :     RmBuffer **buffers;
+<span class="lineNum">     255 </span><span class="lineCov">     213794 :     buffers = g_slice_alloc(sizeof(*buffers) * N_BUFFERS);</span>
+<span class="lineNum">     256 </span>            : 
+<span class="lineNum">     257 </span><span class="lineCov">     213795 :     memset(readvec, 0, sizeof(readvec));</span>
+<span class="lineNum">     258 </span><span class="lineCov">     428567 :     for(int i = 0; i &lt; N_BUFFERS; ++i) {</span>
+<span class="lineNum">     259 </span>            :         /* buffer is one contignous memory block */
+<span class="lineNum">     260 </span><span class="lineCov">     214767 :         buffers[i] = rm_buffer_pool_get(hasher-&gt;mem_pool);</span>
+<span class="lineNum">     261 </span><span class="lineCov">     214772 :         readvec[i].iov_base = buffers[i]-&gt;data;</span>
+<span class="lineNum">     262 </span><span class="lineCov">     214772 :         readvec[i].iov_len = hasher-&gt;buf_size;</span>
+<span class="lineNum">     263 </span>            :     }
+<span class="lineNum">     264 </span>            : 
+<span class="lineNum">     265 </span><span class="lineCov">     879820 :     while((bytes_to_read == 0 || total_bytes_read &lt; bytes_to_read) &amp;&amp;</span>
+<span class="lineNum">     266 </span><span class="lineCov">     226112 :           (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset)) &gt; 0) {</span>
+<span class="lineNum">     267 </span><span class="lineCov">     226107 :         bytes_read =</span>
+<span class="lineNum">     268 </span><span class="lineCov">     226107 :             MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */</span>
+<span class="lineNum">     269 </span>            : 
+<span class="lineNum">     270 </span><span class="lineCov">     226107 :         int blocks = DIVIDE_CEIL(bytes_read, hasher-&gt;buf_size);</span>
+<span class="lineNum">     271 </span><span class="lineCov">     226107 :         g_assert(blocks &lt;= N_BUFFERS);</span>
+<span class="lineNum">     272 </span>            : 
+<span class="lineNum">     273 </span><span class="lineCov">     226105 :         total_bytes_read += bytes_read;</span>
+<span class="lineNum">     274 </span><span class="lineCov">     226105 :         file_offset += bytes_read;</span>
+<span class="lineNum">     275 </span>            : 
+<span class="lineNum">     276 </span><span class="lineCov">     490126 :         for(int i = 0; i &lt; blocks; ++i) {</span>
+<span class="lineNum">     277 </span>            :             /* Get the RmBuffer from the datapointer */
+<span class="lineNum">     278 </span><span class="lineCov">     264013 :             RmBuffer *buffer = buffers[i];</span>
+<span class="lineNum">     279 </span><span class="lineCov">     264013 :             buffer-&gt;len = MIN(hasher-&gt;buf_size, bytes_read - i * hasher-&gt;buf_size);</span>
+<span class="lineNum">     280 </span><span class="lineCov">     264013 :             buffer-&gt;digest = digest;</span>
+<span class="lineNum">     281 </span>            : 
+<span class="lineNum">     282 </span>            :             /* Send it to the hasher */
+<span class="lineNum">     283 </span><span class="lineCov">     264013 :             rm_util_thread_pool_push(hashpipe, buffer);</span>
+<span class="lineNum">     284 </span>            : 
+<span class="lineNum">     285 </span>            :             /* Allocate a new buffer - hasher will release the old buffer */
+<span class="lineNum">     286 </span><span class="lineCov">     264021 :             buffers[i] = rm_buffer_pool_get(hasher-&gt;mem_pool);</span>
+<span class="lineNum">     287 </span><span class="lineCov">     264021 :             readvec[i].iov_base = buffers[i]-&gt;data;</span>
+<span class="lineNum">     288 </span><span class="lineCov">     264021 :             readvec[i].iov_len = hasher-&gt;buf_size;</span>
+<span class="lineNum">     289 </span>            :         }
+<span class="lineNum">     290 </span>            :     }
+<span class="lineNum">     291 </span>            : 
+<span class="lineNum">     292 </span><span class="lineCov">     213801 :     if(bytes_read == -1) {</span>
+<span class="lineNum">     293 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;preadv failed&quot;);</span>
+<span class="lineNum">     294 </span><span class="lineCov">     213801 :     } else if(total_bytes_read != bytes_to_read) {</span>
+<span class="lineNum">     295 </span><span class="lineNoCov">          0 :         rm_log_error_line(_(&quot;Something went wrong reading %s; expected %li bytes, &quot;</span>
+<span class="lineNum">     296 </span>            :                             &quot;got %li; ignoring&quot;),
+<span class="lineNum">     297 </span>            :                           path, (long int)bytes_to_read, (long int)total_bytes_read);
+<span class="lineNum">     298 </span>            :     }
+<span class="lineNum">     299 </span>            : 
+<span class="lineNum">     300 </span>            :     /* Release the rest of the buffers */
+<span class="lineNum">     301 </span><span class="lineCov">     428574 :     for(int i = 0; i &lt; N_BUFFERS; ++i) {</span>
+<span class="lineNum">     302 </span><span class="lineCov">     214773 :         rm_buffer_pool_release(buffers[i]);</span>
+<span class="lineNum">     303 </span>            :     }
+<span class="lineNum">     304 </span><span class="lineCov">     213801 :     g_slice_free1(sizeof(*buffers) * N_BUFFERS, buffers);</span>
+<span class="lineNum">     305 </span>            : 
+<span class="lineNum">     306 </span>            : finish:
+<span class="lineNum">     307 </span><span class="lineCov">     213801 :     if(fd &gt; 0) {</span>
+<span class="lineNum">     308 </span><span class="lineCov">     213801 :         rm_sys_close(fd);</span>
+<span class="lineNum">     309 </span>            :     }
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span><span class="lineCov">     213801 :     return total_bytes_read;</span>
+<span class="lineNum">     312 </span>            : }
+<span class="lineNum">     313 </span>            : 
+<span class="lineNum">     314 </span>            : //////////////////////////////////////
+<span class="lineNum">     315 </span>            : //  RmHasher                        //
+<a name="316"><span class="lineNum">     316 </span>            : //////////////////////////////////////</a>
+<span class="lineNum">     317 </span>            : 
+<span class="lineNum">     318 </span><span class="lineCov">    1126449 : static void rm_hasher_hashpipe_free(GThreadPool *hashpipe) {</span>
+<span class="lineNum">     319 </span>            :     /* free the GThreadPool; wait for any in-progress jobs to finish */
+<span class="lineNum">     320 </span><span class="lineCov">    1126449 :     g_thread_pool_free(hashpipe, FALSE, TRUE);</span>
+<span class="lineNum">     321 </span><span class="lineCov">    1126449 : }</span>
+<a name="322"><span class="lineNum">     322 </span>            : </a>
+<span class="lineNum">     323 </span>            : /* local joiner if user provides no joiner to rm_hasher_new() */
+<span class="lineNum">     324 </span><span class="lineNoCov">          0 : static RmHasherCallback *rm_hasher_joiner(RmHasher *hasher, RmDigest *digest,</span>
+<span class="lineNum">     325 </span>            :                                           _U gpointer session_user_data,
+<span class="lineNum">     326 </span>            :                                           _U gpointer task_user_data) {
+<span class="lineNum">     327 </span><span class="lineNoCov">          0 :     g_async_queue_push(hasher-&gt;return_queue, digest);</span>
+<span class="lineNum">     328 </span><span class="lineNoCov">          0 :     return 0;</span>
+<span class="lineNum">     329 </span>            : }
+<span class="lineNum">     330 </span>            : 
+<span class="lineNum">     331 </span>            : //////////////////////////////////////
+<span class="lineNum">     332 </span>            : //     API
+<a name="333"><span class="lineNum">     333 </span>            : //////////////////////////////////////</a>
+<span class="lineNum">     334 </span>            : 
+<span class="lineNum">     335 </span><span class="lineCov">      36458 : RmHasher *rm_hasher_new(RmDigestType digest_type,</span>
+<span class="lineNum">     336 </span>            :                         guint num_threads,
+<span class="lineNum">     337 </span>            :                         gboolean use_buffered_read,
+<span class="lineNum">     338 </span>            :                         gsize buf_size,
+<span class="lineNum">     339 </span>            :                         guint64 cache_quota_bytes,
+<span class="lineNum">     340 </span>            :                         guint64 target_kept_bytes,
+<span class="lineNum">     341 </span>            :                         RmHasherCallback joiner,
+<span class="lineNum">     342 </span>            :                         gpointer session_user_data) {
+<span class="lineNum">     343 </span><span class="lineCov">      36458 :     RmHasher *self = g_slice_new0(RmHasher);</span>
+<span class="lineNum">     344 </span><span class="lineCov">      36458 :     self-&gt;digest_type = digest_type;</span>
+<span class="lineNum">     345 </span>            : 
+<span class="lineNum">     346 </span><span class="lineCov">      36458 :     self-&gt;use_buffered_read = use_buffered_read;</span>
+<span class="lineNum">     347 </span><span class="lineCov">      36458 :     self-&gt;buf_size = buf_size;</span>
+<span class="lineNum">     348 </span><span class="lineCov">      36458 :     self-&gt;cache_quota_bytes = cache_quota_bytes;</span>
+<span class="lineNum">     349 </span>            : 
+<span class="lineNum">     350 </span><span class="lineCov">      36458 :     if(joiner) {</span>
+<span class="lineNum">     351 </span><span class="lineCov">      36458 :         self-&gt;callback = joiner;</span>
+<span class="lineNum">     352 </span>            :     } else {
+<span class="lineNum">     353 </span><span class="lineNoCov">          0 :         self-&gt;callback = (RmHasherCallback)rm_hasher_joiner;</span>
+<span class="lineNum">     354 </span><span class="lineNoCov">          0 :         self-&gt;return_queue = g_async_queue_new();</span>
+<span class="lineNum">     355 </span>            :     }
+<span class="lineNum">     356 </span>            : 
+<span class="lineNum">     357 </span><span class="lineCov">      36458 :     self-&gt;session_user_data = session_user_data;</span>
+<span class="lineNum">     358 </span>            : 
+<span class="lineNum">     359 </span>            :     /* initialise mutex &amp; cond */
+<span class="lineNum">     360 </span><span class="lineCov">      36458 :     g_mutex_init(&amp;self-&gt;lock);</span>
+<span class="lineNum">     361 </span><span class="lineCov">      36458 :     g_cond_init(&amp;self-&gt;cond);</span>
+<span class="lineNum">     362 </span>            : 
+<span class="lineNum">     363 </span>            :     /* Create buffer mem pool */
+<span class="lineNum">     364 </span><span class="lineCov">      36458 :     self-&gt;mem_pool = rm_buffer_pool_init(buf_size, cache_quota_bytes, target_kept_bytes);</span>
+<span class="lineNum">     365 </span>            : 
+<span class="lineNum">     366 </span>            :     /* Create a pool of hashing thread &quot;pools&quot; - each &quot;pool&quot; can only have
+<span class="lineNum">     367 </span>            :      * one thread because hashing must be done in order */
+<span class="lineNum">     368 </span><span class="lineCov">      36458 :     self-&gt;hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);</span>
+<span class="lineNum">     369 </span><span class="lineCov">      36458 :     g_assert(num_threads &gt; 0);</span>
+<span class="lineNum">     370 </span><span class="lineCov">    1162907 :     for(guint i = 0; i &lt; num_threads; i++) {</span>
+<span class="lineNum">     371 </span><span class="lineCov">    1126449 :         g_async_queue_push(</span>
+<span class="lineNum">     372 </span>            :             self-&gt;hashpipe_pool,
+<span class="lineNum">     373 </span><span class="lineCov">    1126449 :             rm_util_thread_pool_new((GFunc)rm_hasher_hashpipe_worker, self, 1));</span>
+<span class="lineNum">     374 </span>            :     }
+<span class="lineNum">     375 </span><span class="lineCov">      36458 :     return self;</span>
+<a name="376"><span class="lineNum">     376 </span>            : }</a>
+<span class="lineNum">     377 </span>            : 
+<span class="lineNum">     378 </span><span class="lineCov">      36458 : void rm_hasher_free(RmHasher *hasher, gboolean wait) {</span>
+<span class="lineNum">     379 </span>            :     /* Note that hasher may be multi-threaded, both at the reader level and at
+<span class="lineNum">     380 </span>            :      * the hashpipe level.  To ensure graceful exit, the hasher is reference counted
+<span class="lineNum">     381 </span>            :      * via hasher-&gt;active_tasks.
+<span class="lineNum">     382 </span>            :      */
+<span class="lineNum">     383 </span><span class="lineCov">      36458 :     if(wait) {</span>
+<span class="lineNum">     384 </span><span class="lineCov">      36458 :         g_mutex_lock(&amp;hasher-&gt;lock);</span>
+<span class="lineNum">     385 </span>            :         {
+<span class="lineNum">     386 </span><span class="lineCov">      72916 :             while(hasher-&gt;active_tasks &gt; 0) {</span>
+<span class="lineNum">     387 </span><span class="lineNoCov">          0 :                 g_cond_wait(&amp;hasher-&gt;cond, &amp;hasher-&gt;lock);</span>
+<span class="lineNum">     388 </span>            :             }
+<span class="lineNum">     389 </span>            :         }
+<span class="lineNum">     390 </span><span class="lineCov">      36458 :         g_mutex_unlock(&amp;hasher-&gt;lock);</span>
+<span class="lineNum">     391 </span>            :     }
+<span class="lineNum">     392 </span>            : 
+<span class="lineNum">     393 </span><span class="lineCov">      36458 :     g_async_queue_unref(hasher-&gt;hashpipe_pool);</span>
+<span class="lineNum">     394 </span>            : 
+<span class="lineNum">     395 </span><span class="lineCov">      36458 :     rm_buffer_pool_destroy(hasher-&gt;mem_pool);</span>
+<span class="lineNum">     396 </span><span class="lineCov">      36458 :     g_cond_clear(&amp;hasher-&gt;cond);</span>
+<span class="lineNum">     397 </span><span class="lineCov">      36458 :     g_mutex_clear(&amp;hasher-&gt;lock);</span>
+<span class="lineNum">     398 </span><span class="lineCov">      36458 :     g_slice_free(RmHasher, hasher);</span>
+<a name="399"><span class="lineNum">     399 </span><span class="lineCov">      36458 : }</span></a>
+<span class="lineNum">     400 </span>            : 
+<span class="lineNum">     401 </span><span class="lineCov">     221827 : RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,</span>
+<span class="lineNum">     402 </span>            :                                  gpointer task_user_data) {
+<span class="lineNum">     403 </span><span class="lineCov">     221827 :     g_mutex_lock(&amp;hasher-&gt;lock);</span>
+<span class="lineNum">     404 </span><span class="lineCov">     221829 :     { hasher-&gt;active_tasks++; }</span>
+<span class="lineNum">     405 </span><span class="lineCov">     221829 :     g_mutex_unlock(&amp;hasher-&gt;lock);</span>
+<span class="lineNum">     406 </span>            : 
+<span class="lineNum">     407 </span><span class="lineCov">     221829 :     RmHasherTask *self = g_slice_new0(RmHasherTask);</span>
+<span class="lineNum">     408 </span><span class="lineCov">     221824 :     self-&gt;hasher = hasher;</span>
+<span class="lineNum">     409 </span><span class="lineCov">     221824 :     self-&gt;digest =</span>
+<span class="lineNum">     410 </span>            :         digest ? digest
+<span class="lineNum">     411 </span><span class="lineCov">     221824 :                : rm_digest_new(hasher-&gt;digest_type, 0, 0, rm_digest_paranoia_bytes(),</span>
+<span class="lineNum">     412 </span><span class="lineNoCov">          0 :                                hasher-&gt;digest_type == RM_DIGEST_PARANOID);</span>
+<span class="lineNum">     413 </span>            : 
+<span class="lineNum">     414 </span><span class="lineCov">     221824 :     self-&gt;hashpipe = g_async_queue_pop(hasher-&gt;hashpipe_pool);</span>
+<span class="lineNum">     415 </span><span class="lineCov">     221828 :     self-&gt;task_user_data = task_user_data;</span>
+<span class="lineNum">     416 </span><span class="lineCov">     221828 :     return self;</span>
+<a name="417"><span class="lineNum">     417 </span>            : }</a>
+<span class="lineNum">     418 </span>            : 
+<span class="lineNum">     419 </span><span class="lineCov">     221829 : gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset,</span>
+<span class="lineNum">     420 </span>            :                              guint64 bytes_to_read, gboolean is_symlink) {
+<span class="lineNum">     421 </span><span class="lineCov">     221829 :     guint64 bytes_read = 0;</span>
+<span class="lineNum">     422 </span><span class="lineCov">     221829 :     if(is_symlink) {</span>
+<span class="lineNum">     423 </span><span class="lineCov">        140 :         bytes_read = rm_hasher_symlink_read(task-&gt;hasher, task-&gt;digest, path);</span>
+<span class="lineNum">     424 </span><span class="lineCov">     221689 :     } else if(task-&gt;hasher-&gt;use_buffered_read) {</span>
+<span class="lineNum">     425 </span><span class="lineCov">       7888 :         bytes_read = rm_hasher_buffered_read(task-&gt;hasher, task-&gt;hashpipe, task-&gt;digest,</span>
+<span class="lineNum">     426 </span>            :                                              path, start_offset, bytes_to_read);
+<span class="lineNum">     427 </span>            :     } else {
+<span class="lineNum">     428 </span><span class="lineCov">     213801 :         bytes_read = rm_hasher_unbuffered_read(task-&gt;hasher, task-&gt;hashpipe, task-&gt;digest,</span>
+<span class="lineNum">     429 </span>            :                                                path, start_offset, bytes_to_read);
+<span class="lineNum">     430 </span>            :     }
+<span class="lineNum">     431 </span>            : 
+<span class="lineNum">     432 </span><span class="lineCov">     221829 :     return ((is_symlink &amp;&amp; bytes_read == 0) || bytes_read == bytes_to_read);</span>
+<a name="433"><span class="lineNum">     433 </span>            : }</a>
+<span class="lineNum">     434 </span>            : 
+<span class="lineNum">     435 </span><span class="lineCov">     221829 : RmDigest *rm_hasher_task_finish(RmHasherTask *task) {</span>
+<span class="lineNum">     436 </span>            :     /* get a dummy buffer to use to signal the hasher thread that this increment is
+<span class="lineNum">     437 </span>            :      * finished */
+<span class="lineNum">     438 </span><span class="lineCov">     221829 :     RmHasher *hasher = task-&gt;hasher;</span>
+<span class="lineNum">     439 </span><span class="lineCov">     221829 :     RmBuffer *finisher = rm_buffer_pool_get(task-&gt;hasher-&gt;mem_pool);</span>
+<span class="lineNum">     440 </span><span class="lineCov">     221829 :     finisher-&gt;digest = task-&gt;digest;</span>
+<span class="lineNum">     441 </span><span class="lineCov">     221829 :     finisher-&gt;len = 0;</span>
+<span class="lineNum">     442 </span><span class="lineCov">     221829 :     finisher-&gt;user_data = task;</span>
+<span class="lineNum">     443 </span><span class="lineCov">     221829 :     rm_util_thread_pool_push(task-&gt;hashpipe, finisher);</span>
+<span class="lineNum">     444 </span>            : 
+<span class="lineNum">     445 </span>            :     /* return hashpipe to hashpipe_pool */
+<span class="lineNum">     446 </span>            :     // g_async_queue_push(task-&gt;hasher-&gt;hashpipe_pool, task-&gt;hashpipe);
+<span class="lineNum">     447 </span>            : 
+<span class="lineNum">     448 </span><span class="lineCov">     221827 :     if(hasher-&gt;return_queue) {</span>
+<span class="lineNum">     449 </span><span class="lineNoCov">          0 :         return (g_async_queue_pop(hasher-&gt;return_queue));</span>
+<span class="lineNum">     450 </span>            :     } else {
+<span class="lineNum">     451 </span><span class="lineCov">     221827 :         return NULL;</span>
+<span class="lineNum">     452 </span>            :     }
+<span class="lineNum">     453 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

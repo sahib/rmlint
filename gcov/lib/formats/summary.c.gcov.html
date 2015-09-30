@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - summary.c<span style="font-size: 80%;"> (source / <a href="summary.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - summary.c<span style="font-size: 80%;"> (source / <a href="summary.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,13 +31,13 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">37</td>
+            <td class="headerCovTableEntry">34</td>
             <td class="headerCovTableEntry">43</td>
-            <td class="headerCovTableEntryMed">86.0 %</td>
+            <td class="headerCovTableEntryMed">79.1 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">2</td>
@@ -100,100 +100,101 @@
 <span class="lineNum">      38 </span>            : #define ARROW \
 <a name="39"><span class="lineNum">      39 </span>            :     fprintf(out, &quot;%s==&gt;%s &quot;, MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));</a>
 <span class="lineNum">      40 </span>            : 
-<span class="lineNum">      41 </span><span class="lineCov">       3211 : static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {</span>
-<span class="lineNum">      42 </span><span class="lineCov">       3211 :     return strcmp((char *)key, *(char **)value);</span>
+<span class="lineNum">      41 </span><span class="lineCov">       2422 : static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {</span>
+<span class="lineNum">      42 </span><span class="lineCov">       2422 :     return strcmp((char *)key, *(char **)value);</span>
 <a name="43"><span class="lineNum">      43 </span>            : }</a>
 <span class="lineNum">      44 </span>            : 
-<span class="lineNum">      45 </span><span class="lineCov">     155544 : static void rm_fmt_prog(RmSession *session,</span>
+<span class="lineNum">      45 </span><span class="lineCov">       1830 : static void rm_fmt_prog(RmSession *session,</span>
 <span class="lineNum">      46 </span>            :                         _U RmFmtHandler *parent,
 <span class="lineNum">      47 </span>            :                         _U FILE *out,
 <span class="lineNum">      48 </span>            :                         RmFmtProgressState state) {
-<span class="lineNum">      49 </span><span class="lineCov">     155544 :     if(state != RM_PROGRESS_STATE_SUMMARY) {</span>
-<span class="lineNum">      50 </span><span class="lineCov">     310726 :         return;</span>
+<span class="lineNum">      49 </span><span class="lineCov">       1830 :     if(state != RM_PROGRESS_STATE_SUMMARY) {</span>
+<span class="lineNum">      50 </span><span class="lineCov">       3416 :         return;</span>
 <span class="lineNum">      51 </span>            :     }
 <span class="lineNum">      52 </span>            : 
-<span class="lineNum">      53 </span><span class="lineCov">        181 :     if(session-&gt;total_files &lt;= 1) {</span>
+<span class="lineNum">      53 </span><span class="lineCov">        122 :     if(session-&gt;total_files &lt;= 1) {</span>
 <span class="lineNum">      54 </span><span class="lineNoCov">          0 :         ARROW fprintf(out, &quot;%s%d%s&quot;, MAYBE_RED(out, session), session-&gt;total_files,</span>
 <span class="lineNum">      55 </span><span class="lineNoCov">          0 :                       MAYBE_RESET(out, session));</span>
 <span class="lineNum">      56 </span><span class="lineNoCov">          0 :         fprintf(out, _(&quot; file(s) after investigation, nothing to search through.\n&quot;));</span>
 <span class="lineNum">      57 </span><span class="lineNoCov">          0 :         return;</span>
 <span class="lineNum">      58 </span>            :     }
 <span class="lineNum">      59 </span>            : 
-<span class="lineNum">      60 </span><span class="lineCov">        181 :     if(rm_session_was_aborted(session)) {</span>
+<span class="lineNum">      60 </span><span class="lineCov">        122 :     if(rm_session_was_aborted(session)) {</span>
 <span class="lineNum">      61 </span><span class="lineNoCov">          0 :         ARROW fprintf(out, _(&quot;Early shutdown, probably not all lint was found.\n&quot;));</span>
 <span class="lineNum">      62 </span>            :     }
 <span class="lineNum">      63 </span>            : 
 <span class="lineNum">      64 </span>            :     char numbers[3][512];
-<span class="lineNum">      65 </span><span class="lineCov">        185 :     snprintf(numbers[0], sizeof(numbers[0]), &quot;%s%d%s&quot;, MAYBE_RED(out, session),</span>
-<span class="lineNum">      66 </span><span class="lineCov">        185 :              session-&gt;total_files, MAYBE_RESET(out, session));</span>
-<span class="lineNum">      67 </span><span class="lineCov">        185 :     snprintf(numbers[1], sizeof(numbers[1]), &quot;%s%&quot; LLU &quot;%s&quot;, MAYBE_RED(out, session),</span>
-<span class="lineNum">      68 </span><span class="lineCov">        185 :              session-&gt;dup_counter, MAYBE_RESET(out, session));</span>
-<span class="lineNum">      69 </span><span class="lineCov">        185 :     snprintf(numbers[2], sizeof(numbers[2]), &quot;%s%&quot; LLU &quot;%s&quot;, MAYBE_RED(out, session),</span>
-<span class="lineNum">      70 </span><span class="lineCov">        185 :              session-&gt;dup_group_counter, MAYBE_RESET(out, session));</span>
+<span class="lineNum">      65 </span><span class="lineCov">        122 :     snprintf(numbers[0], sizeof(numbers[0]), &quot;%s%d%s&quot;, MAYBE_RED(out, session),</span>
+<span class="lineNum">      66 </span><span class="lineCov">        122 :              session-&gt;total_files, MAYBE_RESET(out, session));</span>
+<span class="lineNum">      67 </span><span class="lineCov">        122 :     snprintf(numbers[1], sizeof(numbers[1]), &quot;%s%&quot; LLU &quot;%s&quot;, MAYBE_RED(out, session),</span>
+<span class="lineNum">      68 </span><span class="lineCov">        122 :              session-&gt;dup_counter, MAYBE_RESET(out, session));</span>
+<span class="lineNum">      69 </span><span class="lineCov">        122 :     snprintf(numbers[2], sizeof(numbers[2]), &quot;%s%&quot; LLU &quot;%s&quot;, MAYBE_RED(out, session),</span>
+<span class="lineNum">      70 </span><span class="lineCov">        122 :              session-&gt;dup_group_counter, MAYBE_RESET(out, session));</span>
 <span class="lineNum">      71 </span>            : 
-<span class="lineNum">      72 </span><span class="lineCov">        181 :     ARROW fprintf(out, _(&quot;In total %s files, whereof %s are duplicates in %s groups.\n&quot;),</span>
+<span class="lineNum">      72 </span><span class="lineCov">        122 :     ARROW fprintf(out, _(&quot;In total %s files, whereof %s are duplicates in %s groups.\n&quot;),</span>
 <span class="lineNum">      73 </span>            :                   numbers[0], numbers[1], numbers[2]);
 <span class="lineNum">      74 </span>            : 
 <span class="lineNum">      75 </span>            :     /* log10(2 ** 64) + 2 = 21; */
-<span class="lineNum">      76 </span><span class="lineCov">        181 :     char size_string_buf[22] = {0};</span>
-<span class="lineNum">      77 </span><span class="lineCov">        181 :     rm_util_size_to_human_readable(session-&gt;total_lint_size, size_string_buf,</span>
+<span class="lineNum">      76 </span><span class="lineCov">        122 :     char size_string_buf[22] = {0};</span>
+<span class="lineNum">      77 </span><span class="lineCov">        122 :     rm_util_size_to_human_readable(session-&gt;total_lint_size, size_string_buf,</span>
 <span class="lineNum">      78 </span>            :                                    sizeof(size_string_buf));
 <span class="lineNum">      79 </span>            : 
-<span class="lineNum">      80 </span><span class="lineCov">        551 :     ARROW fprintf(out, _(&quot;This equals %s%s%s of duplicates which could be removed.\n&quot;),</span>
-<span class="lineNum">      81 </span><span class="lineCov">        370 :                   MAYBE_RED(out, session), size_string_buf, MAYBE_RESET(out, session));</span>
+<span class="lineNum">      80 </span><span class="lineCov">        366 :     ARROW fprintf(out, _(&quot;This equals %s%s%s of duplicates which could be removed.\n&quot;),</span>
+<span class="lineNum">      81 </span><span class="lineCov">        244 :                   MAYBE_RED(out, session), size_string_buf, MAYBE_RESET(out, session));</span>
 <span class="lineNum">      82 </span>            : 
-<span class="lineNum">      83 </span><span class="lineCov">        181 :     if(session-&gt;other_lint_cnt &gt; 0) {</span>
-<span class="lineNum">      84 </span><span class="lineCov">         12 :         ARROW fprintf(out, &quot;%s%&quot; LLU &quot;%s &quot;, MAYBE_RED(out, session),</span>
-<span class="lineNum">      85 </span><span class="lineCov">          8 :                       session-&gt;other_lint_cnt, MAYBE_RESET(out, session));</span>
+<span class="lineNum">      83 </span><span class="lineCov">        122 :     if(session-&gt;other_lint_cnt &gt; 0) {</span>
+<span class="lineNum">      84 </span><span class="lineNoCov">          0 :         ARROW fprintf(out, &quot;%s%&quot; LLU &quot;%s &quot;, MAYBE_RED(out, session),</span>
+<span class="lineNum">      85 </span><span class="lineNoCov">          0 :                       session-&gt;other_lint_cnt, MAYBE_RESET(out, session));</span>
 <span class="lineNum">      86 </span>            : 
-<span class="lineNum">      87 </span><span class="lineCov">          4 :         fprintf(out, _(&quot;other suspicious item(s) found, which may vary in size.\n&quot;));</span>
+<span class="lineNum">      87 </span><span class="lineNoCov">          0 :         fprintf(out, _(&quot;other suspicious item(s) found, which may vary in size.\n&quot;));</span>
 <span class="lineNum">      88 </span>            :     }
 <span class="lineNum">      89 </span>            : 
-<span class="lineNum">      90 </span><span class="lineCov">        181 :     bool first_print_flag = true;</span>
+<span class="lineNum">      90 </span><span class="lineCov">        122 :     bool first_print_flag = true;</span>
 <span class="lineNum">      91 </span>            :     GHashTableIter iter;
-<span class="lineNum">      92 </span><span class="lineCov">        181 :     char *path = NULL;</span>
-<span class="lineNum">      93 </span><span class="lineCov">        181 :     RmFmtHandler *handler = NULL;</span>
-<span class="lineNum">      94 </span><span class="lineCov">        181 :     rm_fmt_get_pair_iter(session-&gt;formats, &amp;iter);</span>
+<span class="lineNum">      92 </span><span class="lineCov">        122 :     char *path = NULL;</span>
+<span class="lineNum">      93 </span><span class="lineCov">        122 :     RmFmtHandler *handler = NULL;</span>
+<span class="lineNum">      94 </span><span class="lineCov">        122 :     rm_fmt_get_pair_iter(session-&gt;formats, &amp;iter);</span>
 <span class="lineNum">      95 </span>            : 
-<span class="lineNum">      96 </span><span class="lineCov">       1553 :     while(g_hash_table_iter_next(&amp;iter, (gpointer *)&amp;path, (gpointer *)&amp;handler)) {</span>
+<span class="lineNum">      96 </span><span class="lineCov">       1058 :     while(g_hash_table_iter_next(&amp;iter, (gpointer *)&amp;path, (gpointer *)&amp;handler)) {</span>
 <span class="lineNum">      97 </span>            :         static const char *forbidden[] = {&quot;stdout&quot;, &quot;stderr&quot;, &quot;stdin&quot;};
-<span class="lineNum">      98 </span><span class="lineCov">       1191 :         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);</span>
+<span class="lineNum">      98 </span><span class="lineCov">        814 :         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);</span>
 <span class="lineNum">      99 </span>            : 
-<span class="lineNum">     100 </span><span class="lineCov">       1191 :         if(lfind(path, forbidden, &amp;forbidden_len, sizeof(const char *),</span>
+<span class="lineNum">     100 </span><span class="lineCov">        814 :         if(lfind(path, forbidden, &amp;forbidden_len, sizeof(const char *),</span>
 <span class="lineNum">     101 </span>            :                  rm_fmt_summary_cmp)) {
-<span class="lineNum">     102 </span><span class="lineCov">        362 :             continue;</span>
+<span class="lineNum">     102 </span><span class="lineCov">         20 :             continue;</span>
 <span class="lineNum">     103 </span>            :         }
 <span class="lineNum">     104 </span>            : 
 <span class="lineNum">     105 </span>            :         /* Check if the file really exists, so we can print it for sure */
-<span class="lineNum">     106 </span><span class="lineCov">       1010 :         if(access(path, R_OK) == -1) {</span>
+<span class="lineNum">     106 </span><span class="lineCov">        804 :         if(access(path, R_OK) == -1) {</span>
 <span class="lineNum">     107 </span><span class="lineNoCov">          0 :             continue;</span>
 <span class="lineNum">     108 </span>            :         }
 <span class="lineNum">     109 </span>            : 
-<span class="lineNum">     110 </span><span class="lineCov">       1010 :         if(first_print_flag) {</span>
-<span class="lineNum">     111 </span><span class="lineCov">        181 :             fprintf(out, &quot;\n&quot;);</span>
-<span class="lineNum">     112 </span><span class="lineCov">        181 :             first_print_flag = false;</span>
+<span class="lineNum">     110 </span><span class="lineCov">        804 :         if(first_print_flag) {</span>
+<span class="lineNum">     111 </span><span class="lineCov">        122 :             fprintf(out, &quot;\n&quot;);</span>
+<span class="lineNum">     112 </span><span class="lineCov">        122 :             first_print_flag = false;</span>
 <span class="lineNum">     113 </span>            :         }
 <span class="lineNum">     114 </span>            : 
-<span class="lineNum">     115 </span><span class="lineCov">       4064 :         fprintf(out, _(&quot;Wrote a %s%s%s file to: %s%s%s\n&quot;), MAYBE_BLUE(out, session),</span>
-<span class="lineNum">     116 </span><span class="lineCov">       3046 :                 handler-&gt;name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session), path,</span>
-<span class="lineNum">     117 </span><span class="lineCov">       1018 :                 MAYBE_RESET(out, session));</span>
+<span class="lineNum">     115 </span><span class="lineCov">       3216 :         fprintf(out, _(&quot;Wrote a %s%s%s file to: %s%s%s\n&quot;), MAYBE_BLUE(out, session),</span>
+<span class="lineNum">     116 </span><span class="lineCov">       2412 :                 handler-&gt;name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session), path,</span>
+<span class="lineNum">     117 </span><span class="lineCov">        804 :                 MAYBE_RESET(out, session));</span>
 <span class="lineNum">     118 </span>            :     }
 <span class="lineNum">     119 </span>            : }
 <span class="lineNum">     120 </span>            : 
 <span class="lineNum">     121 </span>            : static RmFmtHandlerSummary SUMMARY_HANDLER_IMPL = {
 <span class="lineNum">     122 </span>            :     /* Initialize parent */
-<span class="lineNum">     123 </span>            :     .parent = {
-<span class="lineNum">     124 </span>            :         .size = sizeof(SUMMARY_HANDLER_IMPL),
-<span class="lineNum">     125 </span>            :         .name = &quot;summary&quot;,
-<span class="lineNum">     126 </span>            :         .head = NULL,
-<span class="lineNum">     127 </span>            :         .elem = NULL,
-<span class="lineNum">     128 </span>            :         .prog = rm_fmt_prog,
-<span class="lineNum">     129 </span>            :         .foot = NULL,
-<span class="lineNum">     130 </span>            :         .valid_keys = {NULL},
-<span class="lineNum">     131 </span>            :     },
-<span class="lineNum">     132 </span>            : };
-<span class="lineNum">     133 </span>            : 
-<span class="lineNum">     134 </span>            : RmFmtHandler *SUMMARY_HANDLER = (RmFmtHandler *)&amp;SUMMARY_HANDLER_IMPL;
+<span class="lineNum">     123 </span>            :     .parent =
+<span class="lineNum">     124 </span>            :         {
+<span class="lineNum">     125 </span>            :          .size = sizeof(SUMMARY_HANDLER_IMPL),
+<span class="lineNum">     126 </span>            :          .name = &quot;summary&quot;,
+<span class="lineNum">     127 </span>            :          .head = NULL,
+<span class="lineNum">     128 </span>            :          .elem = NULL,
+<span class="lineNum">     129 </span>            :          .prog = rm_fmt_prog,
+<span class="lineNum">     130 </span>            :          .foot = NULL,
+<span class="lineNum">     131 </span>            :          .valid_keys = {NULL},
+<span class="lineNum">     132 </span>            :         },
+<span class="lineNum">     133 </span>            : };
+<span class="lineNum">     134 </span>            : 
+<span class="lineNum">     135 </span>            : RmFmtHandler *SUMMARY_HANDLER = (RmFmtHandler *)&amp;SUMMARY_HANDLER_IMPL;
 </pre>
       </td>
     </tr>
@@ -202,7 +203,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

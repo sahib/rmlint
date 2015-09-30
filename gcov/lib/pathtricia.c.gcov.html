@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - pathtricia.c<span style="font-size: 80%;"> (source / <a href="pathtricia.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - pathtricia.c<span style="font-size: 80%;"> (source / <a href="pathtricia.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,17 +31,17 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">120</td>
-            <td class="headerCovTableEntry">123</td>
-            <td class="headerCovTableEntryHi">97.6 %</td>
+            <td class="headerCovTableEntry">124</td>
+            <td class="headerCovTableEntry">129</td>
+            <td class="headerCovTableEntryHi">96.1 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">16</td>
-            <td class="headerCovTableEntry">16</td>
+            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntry">17</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
@@ -89,313 +89,319 @@
 <span class="lineNum">      27 </span>            : #include &lt;stdbool.h&gt;
 <span class="lineNum">      28 </span>            : #include &lt;string.h&gt;
 <span class="lineNum">      29 </span>            : #include &lt;glib.h&gt;
-<span class="lineNum">      30 </span>            : #include &lt;linux/limits.h&gt;
-<span class="lineNum">      31 </span>            : 
-<span class="lineNum">      32 </span>            : #include &quot;pathtricia.h&quot;
-<span class="lineNum">      33 </span>            : #include &quot;config.h&quot;
-<span class="lineNum">      34 </span>            : 
-<span class="lineNum">      35 </span>            : //////////////////////////
-<span class="lineNum">      36 </span>            : //  RmPathNode Methods  //
-<a name="37"><span class="lineNum">      37 </span>            : //////////////////////////</a>
-<span class="lineNum">      38 </span>            : 
-<span class="lineNum">      39 </span><span class="lineCov">     245701 : static RmNode *rm_node_new(RmTrie *trie, const char *elem) {</span>
-<span class="lineNum">      40 </span><span class="lineCov">     245701 :     RmNode *self = g_slice_alloc0(sizeof(RmNode));</span>
-<span class="lineNum">      41 </span>            : 
-<span class="lineNum">      42 </span><span class="lineCov">     245701 :     if(elem != NULL) {</span>
-<span class="lineNum">      43 </span>            :         /* Note: We could use g_string_chunk_insert_const here.
-<span class="lineNum">      44 </span>            :          * That would keep a hash table with all strings internally though,
-<span class="lineNum">      45 </span>            :          * but would sort out storing duplicate path elements. In normal
-<span class="lineNum">      46 </span>            :          * setups this will not happen that much though I guess.
-<span class="lineNum">      47 </span>            :          */
-<span class="lineNum">      48 </span><span class="lineCov">     220843 :         self-&gt;basename = g_string_chunk_insert(trie-&gt;chunks, elem);</span>
-<span class="lineNum">      49 </span>            :     }
-<span class="lineNum">      50 </span><span class="lineCov">     245701 :     return self;</span>
-<a name="51"><span class="lineNum">      51 </span>            : }</a>
-<span class="lineNum">      52 </span>            : 
-<span class="lineNum">      53 </span><span class="lineCov">     245143 : static void rm_node_free(RmNode *node) {</span>
-<span class="lineNum">      54 </span><span class="lineCov">     245143 :     if(node-&gt;children) {</span>
-<span class="lineNum">      55 </span><span class="lineCov">     105808 :         g_hash_table_unref(node-&gt;children);</span>
-<span class="lineNum">      56 </span>            :     }
-<span class="lineNum">      57 </span><span class="lineCov">     245143 :     memset(node, 0, sizeof(RmNode));</span>
-<span class="lineNum">      58 </span><span class="lineCov">     245143 :     g_slice_free(RmNode, node);</span>
-<a name="59"><span class="lineNum">      59 </span><span class="lineCov">     245143 : }</span></a>
-<span class="lineNum">      60 </span>            : 
-<span class="lineNum">      61 </span><span class="lineCov">    1459491 : static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {</span>
-<span class="lineNum">      62 </span><span class="lineCov">    1459491 :     if(parent-&gt;children == NULL) {</span>
-<span class="lineNum">      63 </span><span class="lineCov">     105808 :         parent-&gt;children = g_hash_table_new(g_str_hash, g_str_equal);</span>
-<span class="lineNum">      64 </span>            :     }
-<span class="lineNum">      65 </span>            : 
-<span class="lineNum">      66 </span><span class="lineCov">    1459491 :     RmNode *exists = g_hash_table_lookup(parent-&gt;children, elem);</span>
-<span class="lineNum">      67 </span><span class="lineCov">    1459491 :     if(exists == NULL) {</span>
-<span class="lineNum">      68 </span><span class="lineCov">     220843 :         RmNode *node = rm_node_new(trie, elem);</span>
-<span class="lineNum">      69 </span><span class="lineCov">     220843 :         node-&gt;parent = parent;</span>
-<span class="lineNum">      70 </span><span class="lineCov">     220843 :         g_hash_table_insert(parent-&gt;children, node-&gt;basename, node);</span>
-<span class="lineNum">      71 </span><span class="lineCov">     220843 :         return node;</span>
-<span class="lineNum">      72 </span>            :     }
-<span class="lineNum">      73 </span>            : 
-<span class="lineNum">      74 </span><span class="lineCov">    1238648 :     return exists;</span>
-<span class="lineNum">      75 </span>            : }
-<span class="lineNum">      76 </span>            : 
-<span class="lineNum">      77 </span>            : ///////////////////////////
-<span class="lineNum">      78 </span>            : //    RmTrie Methods     //
-<a name="79"><span class="lineNum">      79 </span>            : ///////////////////////////</a>
-<span class="lineNum">      80 </span>            : 
-<span class="lineNum">      81 </span><span class="lineCov">      24858 : void rm_trie_init(RmTrie *self) {</span>
-<span class="lineNum">      82 </span><span class="lineCov">      24858 :     g_assert(self);</span>
-<span class="lineNum">      83 </span><span class="lineCov">      24858 :     self-&gt;root = rm_node_new(self, NULL);</span>
-<span class="lineNum">      84 </span>            : 
-<span class="lineNum">      85 </span>            :     /* Average path len is 93.633236.
-<span class="lineNum">      86 </span>            :      * I did ze science! :-)
-<span class="lineNum">      87 </span>            :      */
-<span class="lineNum">      88 </span><span class="lineCov">      24858 :     self-&gt;chunks = g_string_chunk_new(100);</span>
-<span class="lineNum">      89 </span>            : 
-<span class="lineNum">      90 </span><span class="lineCov">      24858 :     g_rw_lock_init(&amp;self-&gt;lock);</span>
-<span class="lineNum">      91 </span><span class="lineCov">      24858 : }</span>
-<span class="lineNum">      92 </span>            : 
-<span class="lineNum">      93 </span>            : /* Path iterator that works with absolute paths.
-<span class="lineNum">      94 </span>            :  * Absolute paths are required to start with a /
-<span class="lineNum">      95 </span>            :  */
-<span class="lineNum">      96 </span>            : typedef struct RmPathIter {
-<span class="lineNum">      97 </span>            :     char *curr_elem;
-<span class="lineNum">      98 </span>            :     char path_buf[PATH_MAX];
-<a name="99"><span class="lineNum">      99 </span>            : } RmPathIter;</a>
-<span class="lineNum">     100 </span>            : 
-<span class="lineNum">     101 </span><span class="lineCov">     718789 : void rm_path_iter_init(RmPathIter *iter, const char *path) {</span>
-<span class="lineNum">     102 </span><span class="lineCov">     718789 :     if(*path == '/') {</span>
-<span class="lineNum">     103 </span><span class="lineCov">     718789 :         path++;</span>
-<span class="lineNum">     104 </span>            :     }
-<span class="lineNum">     105 </span>            : 
-<span class="lineNum">     106 </span><span class="lineCov">     718789 :     memset(iter-&gt;path_buf, 0, PATH_MAX);</span>
-<span class="lineNum">     107 </span><span class="lineCov">     718789 :     strncpy(iter-&gt;path_buf, path, PATH_MAX);</span>
-<span class="lineNum">     108 </span>            : 
-<span class="lineNum">     109 </span><span class="lineCov">     718789 :     iter-&gt;curr_elem = iter-&gt;path_buf;</span>
-<a name="110"><span class="lineNum">     110 </span><span class="lineCov">     718789 : }</span></a>
-<span class="lineNum">     111 </span>            : 
-<span class="lineNum">     112 </span><span class="lineCov">    3058643 : char *rm_path_iter_next(RmPathIter *iter) {</span>
-<span class="lineNum">     113 </span><span class="lineCov">    3058643 :     char *elem_begin = iter-&gt;curr_elem;</span>
-<span class="lineNum">     114 </span>            : 
-<span class="lineNum">     115 </span><span class="lineCov">    3058643 :     if(elem_begin &amp;&amp; (iter-&gt;curr_elem = strchr(elem_begin, '/'))) {</span>
-<span class="lineNum">     116 </span><span class="lineCov">    1649186 :         *(iter-&gt;curr_elem) = 0;</span>
-<span class="lineNum">     117 </span><span class="lineCov">    1649186 :         iter-&gt;curr_elem += 1;</span>
-<span class="lineNum">     118 </span>            :     }
-<span class="lineNum">     119 </span>            : 
-<span class="lineNum">     120 </span><span class="lineCov">    3058643 :     return elem_begin;</span>
-<a name="121"><span class="lineNum">     121 </span>            : }</a>
-<span class="lineNum">     122 </span>            : 
-<span class="lineNum">     123 </span><span class="lineCov">     406768 : RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {</span>
-<span class="lineNum">     124 </span><span class="lineCov">     406768 :     g_assert(self);</span>
-<span class="lineNum">     125 </span><span class="lineCov">     406768 :     g_assert(path);</span>
-<span class="lineNum">     126 </span>            : 
-<span class="lineNum">     127 </span>            :     RmPathIter iter;
-<span class="lineNum">     128 </span><span class="lineCov">     406768 :     rm_path_iter_init(&amp;iter, path);</span>
-<span class="lineNum">     129 </span>            : 
-<span class="lineNum">     130 </span><span class="lineCov">     406769 :     g_rw_lock_writer_lock(&amp;self-&gt;lock);</span>
-<span class="lineNum">     131 </span>            : 
-<span class="lineNum">     132 </span><span class="lineCov">     406769 :     char *path_elem = NULL;</span>
-<span class="lineNum">     133 </span><span class="lineCov">     406769 :     RmNode *curr_node = self-&gt;root;</span>
-<span class="lineNum">     134 </span>            : 
-<span class="lineNum">     135 </span><span class="lineCov">    2273029 :     while((path_elem = rm_path_iter_next(&amp;iter))) {</span>
-<span class="lineNum">     136 </span><span class="lineCov">    1459491 :         curr_node = rm_node_insert(self, curr_node, path_elem);</span>
-<span class="lineNum">     137 </span>            :     }
-<span class="lineNum">     138 </span>            : 
-<span class="lineNum">     139 </span><span class="lineCov">     406769 :     if(curr_node != NULL) {</span>
-<span class="lineNum">     140 </span><span class="lineCov">     406769 :         curr_node-&gt;has_value = true;</span>
-<span class="lineNum">     141 </span><span class="lineCov">     406769 :         curr_node-&gt;data = value;</span>
-<span class="lineNum">     142 </span><span class="lineCov">     406769 :         self-&gt;size++;</span>
-<span class="lineNum">     143 </span>            :     }
-<span class="lineNum">     144 </span>            : 
-<span class="lineNum">     145 </span><span class="lineCov">     406769 :     g_rw_lock_writer_unlock(&amp;self-&gt;lock);</span>
-<span class="lineNum">     146 </span>            : 
-<span class="lineNum">     147 </span><span class="lineCov">     406769 :     return curr_node;</span>
-<a name="148"><span class="lineNum">     148 </span>            : }</a>
-<span class="lineNum">     149 </span>            : 
-<span class="lineNum">     150 </span><span class="lineCov">     312021 : RmNode *rm_trie_search_node(RmTrie *self, const char *path) {</span>
-<span class="lineNum">     151 </span><span class="lineCov">     312021 :     g_assert(self);</span>
-<span class="lineNum">     152 </span><span class="lineCov">     312021 :     g_assert(path);</span>
-<span class="lineNum">     153 </span>            : 
-<span class="lineNum">     154 </span>            :     RmPathIter iter;
-<span class="lineNum">     155 </span><span class="lineCov">     312021 :     rm_path_iter_init(&amp;iter, path);</span>
-<span class="lineNum">     156 </span>            : 
-<span class="lineNum">     157 </span><span class="lineCov">     312021 :     g_rw_lock_reader_lock(&amp;self-&gt;lock);</span>
-<span class="lineNum">     158 </span>            : 
-<span class="lineNum">     159 </span><span class="lineCov">     312021 :     char *path_elem = NULL;</span>
-<span class="lineNum">     160 </span><span class="lineCov">     312021 :     RmNode *curr_node = self-&gt;root;</span>
-<span class="lineNum">     161 </span>            : 
-<span class="lineNum">     162 </span><span class="lineCov">    1515469 :     while(curr_node &amp;&amp; (path_elem = rm_path_iter_next(&amp;iter))) {</span>
-<span class="lineNum">     163 </span><span class="lineCov">     900530 :         if(curr_node-&gt;children == NULL) {</span>
-<span class="lineNum">     164 </span>            :             /* Can't go any further */
-<span class="lineNum">     165 </span><span class="lineCov">       9103 :             g_rw_lock_reader_unlock(&amp;self-&gt;lock);</span>
-<span class="lineNum">     166 </span><span class="lineCov">       9103 :             return NULL;</span>
-<span class="lineNum">     167 </span>            :         }
-<span class="lineNum">     168 </span>            : 
-<span class="lineNum">     169 </span><span class="lineCov">     891427 :         curr_node = g_hash_table_lookup(curr_node-&gt;children, path_elem);</span>
-<span class="lineNum">     170 </span>            :     }
-<span class="lineNum">     171 </span>            : 
-<span class="lineNum">     172 </span><span class="lineCov">     302918 :     g_rw_lock_reader_unlock(&amp;self-&gt;lock);</span>
-<span class="lineNum">     173 </span><span class="lineCov">     302918 :     return curr_node;</span>
-<a name="174"><span class="lineNum">     174 </span>            : }</a>
-<span class="lineNum">     175 </span>            : 
-<span class="lineNum">     176 </span><span class="lineCov">     307994 : void *rm_trie_search(RmTrie *self, const char *path) {</span>
-<span class="lineNum">     177 </span><span class="lineCov">     307994 :     RmNode *find = rm_trie_search_node(self, path);</span>
-<span class="lineNum">     178 </span><span class="lineCov">     307994 :     return (find) ? find-&gt;data : NULL;</span>
-<a name="179"><span class="lineNum">     179 </span>            : }</a>
-<span class="lineNum">     180 </span>            : 
-<span class="lineNum">     181 </span><span class="lineCov">        522 : bool rm_trie_set_value(RmTrie *self, const char *path, void *data) {</span>
-<span class="lineNum">     182 </span><span class="lineCov">        522 :     RmNode *find = rm_trie_search_node(self, path);</span>
-<span class="lineNum">     183 </span><span class="lineCov">        522 :     if(find == NULL) {</span>
-<span class="lineNum">     184 </span><span class="lineCov">         18 :         return false;</span>
-<span class="lineNum">     185 </span>            :     } else {
-<span class="lineNum">     186 </span><span class="lineCov">        504 :         find-&gt;data = data;</span>
-<span class="lineNum">     187 </span><span class="lineCov">        504 :         return true;</span>
-<span class="lineNum">     188 </span>            :     }
-<a name="189"><span class="lineNum">     189 </span>            : }</a>
-<span class="lineNum">     190 </span>            : 
-<span class="lineNum">     191 </span><span class="lineCov">     341612 : char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) {</span>
-<span class="lineNum">     192 </span><span class="lineCov">     341612 :     if(node == NULL) {</span>
-<span class="lineNum">     193 </span><span class="lineNoCov">          0 :         return NULL;</span>
-<span class="lineNum">     194 </span>            :     }
-<span class="lineNum">     195 </span>            : 
-<span class="lineNum">     196 </span><span class="lineCov">     341612 :     g_rw_lock_reader_lock(&amp;self-&gt;lock);</span>
+<span class="lineNum">      30 </span>            : 
+<span class="lineNum">      31 </span>            : #include &quot;pathtricia.h&quot;
+<span class="lineNum">      32 </span>            : #include &quot;config.h&quot;
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            : //////////////////////////
+<span class="lineNum">      35 </span>            : //  RmPathNode Methods  //
+<a name="36"><span class="lineNum">      36 </span>            : //////////////////////////</a>
+<span class="lineNum">      37 </span>            : 
+<span class="lineNum">      38 </span><span class="lineCov">     655418 : static RmNode *rm_node_new(RmTrie *trie, const char *elem) {</span>
+<span class="lineNum">      39 </span><span class="lineCov">     655418 :     RmNode *self = g_slice_alloc0(sizeof(RmNode));</span>
+<span class="lineNum">      40 </span>            : 
+<span class="lineNum">      41 </span><span class="lineCov">     655418 :     if(elem != NULL) {</span>
+<span class="lineNum">      42 </span>            :         /* Note: We could use g_string_chunk_insert_const here.
+<span class="lineNum">      43 </span>            :          * That would keep a hash table with all strings internally though,
+<span class="lineNum">      44 </span>            :          * but would sort out storing duplicate path elements. In normal
+<span class="lineNum">      45 </span>            :          * setups this will not happen that much though I guess.
+<span class="lineNum">      46 </span>            :          */
+<span class="lineNum">      47 </span><span class="lineCov">     597174 :         self-&gt;basename = g_string_chunk_insert(trie-&gt;chunks, elem);</span>
+<span class="lineNum">      48 </span>            :     }
+<span class="lineNum">      49 </span><span class="lineCov">     655418 :     return self;</span>
+<a name="50"><span class="lineNum">      50 </span>            : }</a>
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span><span class="lineCov">     653528 : static void rm_node_free(RmNode *node) {</span>
+<span class="lineNum">      53 </span><span class="lineCov">     653528 :     if(node-&gt;children) {</span>
+<span class="lineNum">      54 </span><span class="lineCov">     312821 :         g_hash_table_unref(node-&gt;children);</span>
+<span class="lineNum">      55 </span>            :     }
+<span class="lineNum">      56 </span><span class="lineCov">     653528 :     memset(node, 0, sizeof(RmNode));</span>
+<span class="lineNum">      57 </span><span class="lineCov">     653528 :     g_slice_free(RmNode, node);</span>
+<a name="58"><span class="lineNum">      58 </span><span class="lineCov">     653528 : }</span></a>
+<span class="lineNum">      59 </span>            : 
+<span class="lineNum">      60 </span><span class="lineCov">    1398128 : static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {</span>
+<span class="lineNum">      61 </span><span class="lineCov">    1398128 :     if(parent-&gt;children == NULL) {</span>
+<span class="lineNum">      62 </span><span class="lineCov">     312821 :         parent-&gt;children = g_hash_table_new(g_str_hash, g_str_equal);</span>
+<span class="lineNum">      63 </span>            :     }
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span><span class="lineCov">    1398128 :     RmNode *exists = g_hash_table_lookup(parent-&gt;children, elem);</span>
+<span class="lineNum">      66 </span><span class="lineCov">    1398128 :     if(exists == NULL) {</span>
+<span class="lineNum">      67 </span><span class="lineCov">     597174 :         RmNode *node = rm_node_new(trie, elem);</span>
+<span class="lineNum">      68 </span><span class="lineCov">     597174 :         node-&gt;parent = parent;</span>
+<span class="lineNum">      69 </span><span class="lineCov">     597174 :         g_hash_table_insert(parent-&gt;children, node-&gt;basename, node);</span>
+<span class="lineNum">      70 </span><span class="lineCov">     597174 :         return node;</span>
+<span class="lineNum">      71 </span>            :     }
+<span class="lineNum">      72 </span>            : 
+<span class="lineNum">      73 </span><span class="lineCov">     800954 :     return exists;</span>
+<span class="lineNum">      74 </span>            : }
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span>            : ///////////////////////////
+<span class="lineNum">      77 </span>            : //    RmTrie Methods     //
+<a name="78"><span class="lineNum">      78 </span>            : ///////////////////////////</a>
+<span class="lineNum">      79 </span>            : 
+<span class="lineNum">      80 </span><span class="lineCov">      58244 : void rm_trie_init(RmTrie *self) {</span>
+<span class="lineNum">      81 </span><span class="lineCov">      58244 :     g_assert(self);</span>
+<span class="lineNum">      82 </span><span class="lineCov">      58244 :     self-&gt;root = rm_node_new(self, NULL);</span>
+<span class="lineNum">      83 </span>            : 
+<span class="lineNum">      84 </span>            :     /* Average path len is 93.633236.
+<span class="lineNum">      85 </span>            :      * I did ze science! :-)
+<span class="lineNum">      86 </span>            :      */
+<span class="lineNum">      87 </span><span class="lineCov">      58244 :     self-&gt;chunks = g_string_chunk_new(100);</span>
+<span class="lineNum">      88 </span>            : 
+<span class="lineNum">      89 </span><span class="lineCov">      58244 :     g_mutex_init(&amp;self-&gt;lock);</span>
+<span class="lineNum">      90 </span><span class="lineCov">      58244 : }</span>
+<span class="lineNum">      91 </span>            : 
+<span class="lineNum">      92 </span>            : /* Path iterator that works with absolute paths.
+<span class="lineNum">      93 </span>            :  * Absolute paths are required to start with a /
+<span class="lineNum">      94 </span>            :  */
+<span class="lineNum">      95 </span>            : typedef struct RmPathIter {
+<span class="lineNum">      96 </span>            :     char *curr_elem;
+<span class="lineNum">      97 </span>            :     char path_buf[PATH_MAX];
+<a name="98"><span class="lineNum">      98 </span>            : } RmPathIter;</a>
+<span class="lineNum">      99 </span>            : 
+<span class="lineNum">     100 </span><span class="lineCov">     515658 : void rm_path_iter_init(RmPathIter *iter, const char *path) {</span>
+<span class="lineNum">     101 </span><span class="lineCov">     515658 :     if(*path == '/') {</span>
+<span class="lineNum">     102 </span><span class="lineCov">     515658 :         path++;</span>
+<span class="lineNum">     103 </span>            :     }
+<span class="lineNum">     104 </span>            : 
+<span class="lineNum">     105 </span><span class="lineCov">     515658 :     memset(iter-&gt;path_buf, 0, PATH_MAX);</span>
+<span class="lineNum">     106 </span><span class="lineCov">     515658 :     strncpy(iter-&gt;path_buf, path, PATH_MAX);</span>
+<span class="lineNum">     107 </span>            : 
+<span class="lineNum">     108 </span><span class="lineCov">     515658 :     iter-&gt;curr_elem = iter-&gt;path_buf;</span>
+<a name="109"><span class="lineNum">     109 </span><span class="lineCov">     515658 : }</span></a>
+<span class="lineNum">     110 </span>            : 
+<span class="lineNum">     111 </span><span class="lineCov">    2247069 : char *rm_path_iter_next(RmPathIter *iter) {</span>
+<span class="lineNum">     112 </span><span class="lineCov">    2247069 :     char *elem_begin = iter-&gt;curr_elem;</span>
+<span class="lineNum">     113 </span>            : 
+<span class="lineNum">     114 </span><span class="lineCov">    2247069 :     if(elem_begin &amp;&amp; (iter-&gt;curr_elem = strchr(elem_begin, '/'))) {</span>
+<span class="lineNum">     115 </span><span class="lineCov">    1385266 :         *(iter-&gt;curr_elem) = 0;</span>
+<span class="lineNum">     116 </span><span class="lineCov">    1385266 :         iter-&gt;curr_elem += 1;</span>
+<span class="lineNum">     117 </span>            :     }
+<span class="lineNum">     118 </span>            : 
+<span class="lineNum">     119 </span><span class="lineCov">    2247069 :     return elem_begin;</span>
+<a name="120"><span class="lineNum">     120 </span>            : }</a>
+<span class="lineNum">     121 </span>            : 
+<span class="lineNum">     122 </span><span class="lineCov">     365782 : RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {</span>
+<span class="lineNum">     123 </span><span class="lineCov">     365782 :     g_assert(self);</span>
+<span class="lineNum">     124 </span><span class="lineCov">     365782 :     g_assert(path);</span>
+<span class="lineNum">     125 </span>            : 
+<span class="lineNum">     126 </span>            :     RmPathIter iter;
+<span class="lineNum">     127 </span><span class="lineCov">     365782 :     rm_path_iter_init(&amp;iter, path);</span>
+<span class="lineNum">     128 </span>            : 
+<span class="lineNum">     129 </span><span class="lineCov">     365798 :     g_mutex_lock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span><span class="lineCov">     365802 :     char *path_elem = NULL;</span>
+<span class="lineNum">     132 </span><span class="lineCov">     365802 :     RmNode *curr_node = self-&gt;root;</span>
+<span class="lineNum">     133 </span>            : 
+<span class="lineNum">     134 </span><span class="lineCov">    2129732 :     while((path_elem = rm_path_iter_next(&amp;iter))) {</span>
+<span class="lineNum">     135 </span><span class="lineCov">    1398128 :         curr_node = rm_node_insert(self, curr_node, path_elem);</span>
+<span class="lineNum">     136 </span>            :     }
+<span class="lineNum">     137 </span>            : 
+<span class="lineNum">     138 </span><span class="lineCov">     365802 :     if(curr_node != NULL) {</span>
+<span class="lineNum">     139 </span><span class="lineCov">     365802 :         curr_node-&gt;has_value = true;</span>
+<span class="lineNum">     140 </span><span class="lineCov">     365802 :         curr_node-&gt;data = value;</span>
+<span class="lineNum">     141 </span><span class="lineCov">     365802 :         self-&gt;size++;</span>
+<span class="lineNum">     142 </span>            :     }
+<span class="lineNum">     143 </span>            : 
+<span class="lineNum">     144 </span><span class="lineCov">     365802 :     g_mutex_unlock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     145 </span>            : 
+<span class="lineNum">     146 </span><span class="lineCov">     365801 :     return curr_node;</span>
+<a name="147"><span class="lineNum">     147 </span>            : }</a>
+<span class="lineNum">     148 </span>            : 
+<span class="lineNum">     149 </span><span class="lineCov">     149882 : RmNode *rm_trie_search_node(RmTrie *self, const char *path) {</span>
+<span class="lineNum">     150 </span><span class="lineCov">     149882 :     g_assert(self);</span>
+<span class="lineNum">     151 </span><span class="lineCov">     149882 :     g_assert(path);</span>
+<span class="lineNum">     152 </span>            : 
+<span class="lineNum">     153 </span>            :     RmPathIter iter;
+<span class="lineNum">     154 </span><span class="lineCov">     149882 :     rm_path_iter_init(&amp;iter, path);</span>
+<span class="lineNum">     155 </span>            : 
+<span class="lineNum">     156 </span><span class="lineCov">     149882 :     g_mutex_lock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     157 </span>            : 
+<span class="lineNum">     158 </span><span class="lineCov">     149882 :     char *path_elem = NULL;</span>
+<span class="lineNum">     159 </span><span class="lineCov">     149882 :     RmNode *curr_node = self-&gt;root;</span>
+<span class="lineNum">     160 </span>            : 
+<span class="lineNum">     161 </span><span class="lineCov">     732468 :     while(curr_node &amp;&amp; (path_elem = rm_path_iter_next(&amp;iter))) {</span>
+<span class="lineNum">     162 </span><span class="lineCov">     451899 :         if(curr_node-&gt;children == NULL) {</span>
+<span class="lineNum">     163 </span>            :             /* Can't go any further */
+<span class="lineNum">     164 </span><span class="lineCov">      19195 :             g_mutex_unlock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     165 </span><span class="lineCov">      19195 :             return NULL;</span>
+<span class="lineNum">     166 </span>            :         }
+<span class="lineNum">     167 </span>            : 
+<span class="lineNum">     168 </span><span class="lineCov">     432704 :         curr_node = g_hash_table_lookup(curr_node-&gt;children, path_elem);</span>
+<span class="lineNum">     169 </span>            :     }
+<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     171 </span><span class="lineCov">     130687 :     g_mutex_unlock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     172 </span><span class="lineCov">     130687 :     return curr_node;</span>
+<a name="173"><span class="lineNum">     173 </span>            : }</a>
+<span class="lineNum">     174 </span>            : 
+<span class="lineNum">     175 </span><span class="lineCov">      35840 : void *rm_trie_search(RmTrie *self, const char *path) {</span>
+<span class="lineNum">     176 </span><span class="lineCov">      35840 :     RmNode *find = rm_trie_search_node(self, path);</span>
+<span class="lineNum">     177 </span><span class="lineCov">      35840 :     return (find) ? find-&gt;data : NULL;</span>
+<a name="178"><span class="lineNum">     178 </span>            : }</a>
+<span class="lineNum">     179 </span>            : 
+<span class="lineNum">     180 </span><span class="lineCov">        140 : bool rm_trie_set_value(RmTrie *self, const char *path, void *data) {</span>
+<span class="lineNum">     181 </span><span class="lineCov">        140 :     RmNode *find = rm_trie_search_node(self, path);</span>
+<span class="lineNum">     182 </span><span class="lineCov">        140 :     if(find == NULL) {</span>
+<span class="lineNum">     183 </span><span class="lineCov">          5 :         return false;</span>
+<span class="lineNum">     184 </span>            :     } else {
+<span class="lineNum">     185 </span><span class="lineCov">        135 :         find-&gt;data = data;</span>
+<span class="lineNum">     186 </span><span class="lineCov">        135 :         return true;</span>
+<span class="lineNum">     187 </span>            :     }
+<a name="188"><span class="lineNum">     188 </span>            : }</a>
+<span class="lineNum">     189 </span>            : 
+<span class="lineNum">     190 </span><span class="lineCov">     998935 : char *rm_trie_build_path_unlocked(RmNode *node, char *buf, size_t buf_len) {</span>
+<span class="lineNum">     191 </span><span class="lineCov">     998935 :     if(node == NULL) {</span>
+<span class="lineNum">     192 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     193 </span>            :     }
+<span class="lineNum">     194 </span>            : 
+<span class="lineNum">     195 </span><span class="lineCov">     998935 :     size_t n_elements = 1;</span>
+<span class="lineNum">     196 </span><span class="lineCov">     998935 :     char *elements[PATH_MAX / 2 + 1] = {node-&gt;basename, NULL};</span>
 <span class="lineNum">     197 </span>            : 
-<span class="lineNum">     198 </span><span class="lineCov">     341622 :     size_t n_elements = 1;</span>
-<span class="lineNum">     199 </span><span class="lineCov">     341622 :     char *elements[PATH_MAX / 2 + 1] = {node-&gt;basename, NULL};</span>
-<span class="lineNum">     200 </span>            : 
-<span class="lineNum">     201 </span>            :     /* walk up the folder tree, collecting path elements into a list */
-<span class="lineNum">     202 </span><span class="lineCov">    1983563 :     for(RmNode *folder = node-&gt;parent; folder &amp;&amp; folder-&gt;parent;</span>
-<span class="lineNum">     203 </span><span class="lineCov">    1300319 :         folder = folder-&gt;parent) {</span>
-<span class="lineNum">     204 </span><span class="lineCov">    1300321 :         elements[n_elements++] = folder-&gt;basename;</span>
-<span class="lineNum">     205 </span><span class="lineCov">    1300321 :         if(n_elements &gt;= sizeof(elements)) {</span>
-<span class="lineNum">     206 </span><span class="lineCov">          2 :             break;</span>
-<span class="lineNum">     207 </span>            :         }
-<span class="lineNum">     208 </span>            :     }
-<span class="lineNum">     209 </span>            : 
-<span class="lineNum">     210 </span>            :     /* copy collected elements into *buf */
-<span class="lineNum">     211 </span><span class="lineCov">     341622 :     char *buf_ptr = buf;</span>
-<span class="lineNum">     212 </span><span class="lineCov">    2325152 :     while(n_elements &amp;&amp; (size_t)(buf_ptr - buf) &lt; buf_len) {</span>
-<span class="lineNum">     213 </span><span class="lineCov">    1641910 :         *buf_ptr = '/';</span>
-<span class="lineNum">     214 </span><span class="lineCov">    1641910 :         buf_ptr = g_stpcpy(buf_ptr + 1, (char *)elements[--n_elements]);</span>
-<span class="lineNum">     215 </span>            :     }
+<span class="lineNum">     198 </span>            :     /* walk up the folder tree, collecting path elements into a list */
+<span class="lineNum">     199 </span><span class="lineCov">    4969018 :     for(RmNode *folder = node-&gt;parent; folder &amp;&amp; folder-&gt;parent;</span>
+<span class="lineNum">     200 </span><span class="lineCov">    2971148 :         folder = folder-&gt;parent) {</span>
+<span class="lineNum">     201 </span><span class="lineCov">    2971148 :         elements[n_elements++] = folder-&gt;basename;</span>
+<span class="lineNum">     202 </span><span class="lineCov">    2971148 :         if(n_elements &gt;= sizeof(elements)) {</span>
+<span class="lineNum">     203 </span><span class="lineNoCov">          0 :             break;</span>
+<span class="lineNum">     204 </span>            :         }
+<span class="lineNum">     205 </span>            :     }
+<span class="lineNum">     206 </span>            : 
+<span class="lineNum">     207 </span>            :     /* copy collected elements into *buf */
+<span class="lineNum">     208 </span><span class="lineCov">     998935 :     char *buf_ptr = buf;</span>
+<span class="lineNum">     209 </span><span class="lineCov">    5967953 :     while(n_elements &amp;&amp; (size_t)(buf_ptr - buf) &lt; buf_len) {</span>
+<span class="lineNum">     210 </span><span class="lineCov">    3970083 :         *buf_ptr = '/';</span>
+<span class="lineNum">     211 </span><span class="lineCov">    3970083 :         buf_ptr = g_stpcpy(buf_ptr + 1, (char *)elements[--n_elements]);</span>
+<span class="lineNum">     212 </span>            :     }
+<span class="lineNum">     213 </span>            : 
+<span class="lineNum">     214 </span><span class="lineCov">     998935 :     return buf;</span>
+<a name="215"><span class="lineNum">     215 </span>            : }</a>
 <span class="lineNum">     216 </span>            : 
-<span class="lineNum">     217 </span><span class="lineCov">     341620 :     g_rw_lock_reader_unlock(&amp;self-&gt;lock);</span>
-<span class="lineNum">     218 </span><span class="lineCov">     341622 :     return buf;</span>
-<a name="219"><span class="lineNum">     219 </span>            : }</a>
-<span class="lineNum">     220 </span>            : 
-<span class="lineNum">     221 </span><span class="lineCov">        180 : size_t rm_trie_size(RmTrie *self) {</span>
-<span class="lineNum">     222 </span><span class="lineCov">        180 :     return self-&gt;size;</span>
-<a name="223"><span class="lineNum">     223 </span>            : }</a>
-<span class="lineNum">     224 </span>            : 
-<span class="lineNum">     225 </span><span class="lineCov">     345971 : static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,</span>
-<span class="lineNum">     226 </span>            :                           RmTrieIterCallback callback, void *user_data, int level) {
-<span class="lineNum">     227 </span>            :     GHashTableIter iter;
-<span class="lineNum">     228 </span>            :     gpointer key, value;
-<span class="lineNum">     229 </span>            : 
-<span class="lineNum">     230 </span><span class="lineCov">     345971 :     if(root == NULL) {</span>
-<span class="lineNum">     231 </span><span class="lineCov">      34230 :         root = self-&gt;root;</span>
-<span class="lineNum">     232 </span>            :     }
-<span class="lineNum">     233 </span>            : 
-<span class="lineNum">     234 </span><span class="lineCov">     345971 :     if(pre_order &amp;&amp; (all_nodes || root-&gt;has_value)) {</span>
-<span class="lineNum">     235 </span><span class="lineCov">      71915 :         if(callback(self, root, level, user_data) != 0) {</span>
-<span class="lineNum">     236 </span><span class="lineNoCov">          0 :             return;</span>
-<span class="lineNum">     237 </span>            :         }
-<span class="lineNum">     238 </span>            :     }
-<span class="lineNum">     239 </span>            : 
-<span class="lineNum">     240 </span><span class="lineCov">     345971 :     if(root-&gt;children != NULL) {</span>
-<span class="lineNum">     241 </span><span class="lineCov">     150517 :         g_hash_table_iter_init(&amp;iter, root-&gt;children);</span>
-<span class="lineNum">     242 </span><span class="lineCov">     612775 :         while(g_hash_table_iter_next(&amp;iter, &amp;key, &amp;value)) {</span>
-<span class="lineNum">     243 </span><span class="lineCov">     311741 :             _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data,</span>
-<span class="lineNum">     244 </span>            :                           level + 1);
-<span class="lineNum">     245 </span>            :         }
-<span class="lineNum">     246 </span>            :     }
-<span class="lineNum">     247 </span>            : 
-<span class="lineNum">     248 </span><span class="lineCov">     345971 :     if(!pre_order &amp;&amp; (all_nodes || root-&gt;has_value)) {</span>
-<span class="lineNum">     249 </span><span class="lineCov">     245143 :         if(callback(self, root, level, user_data) != 0) {</span>
-<span class="lineNum">     250 </span><span class="lineNoCov">          0 :             return;</span>
-<span class="lineNum">     251 </span>            :         }
-<span class="lineNum">     252 </span>            :     }
-<a name="253"><span class="lineNum">     253 </span>            : }</a>
+<span class="lineNum">     217 </span><span class="lineCov">     992156 : char *rm_trie_build_path(RmTrie *self, RmNode *node, char *buf, size_t buf_len) {</span>
+<span class="lineNum">     218 </span><span class="lineCov">     992156 :     if(node == NULL) {</span>
+<span class="lineNum">     219 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     220 </span>            :     }
+<span class="lineNum">     221 </span><span class="lineCov">     992156 :     char *result = NULL;</span>
+<span class="lineNum">     222 </span><span class="lineCov">     992156 :     g_mutex_lock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     223 </span><span class="lineCov">     992159 :     { result = rm_trie_build_path_unlocked(node, buf, buf_len); }</span>
+<span class="lineNum">     224 </span><span class="lineCov">     992159 :     g_mutex_unlock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     225 </span><span class="lineCov">     992159 :     return result;</span>
+<a name="226"><span class="lineNum">     226 </span>            : }</a>
+<span class="lineNum">     227 </span>            : 
+<span class="lineNum">     228 </span><span class="lineCov">        112 : size_t rm_trie_size(RmTrie *self) {</span>
+<span class="lineNum">     229 </span><span class="lineCov">        112 :     return self-&gt;size;</span>
+<a name="230"><span class="lineNum">     230 </span>            : }</a>
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span><span class="lineCov">     676152 : static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,</span>
+<span class="lineNum">     233 </span>            :                           RmTrieIterCallback callback, void *user_data, int level) {
+<span class="lineNum">     234 </span>            :     GHashTableIter iter;
+<span class="lineNum">     235 </span>            :     gpointer key, value;
+<span class="lineNum">     236 </span>            : 
+<span class="lineNum">     237 </span><span class="lineCov">     676152 :     if(root == NULL) {</span>
+<span class="lineNum">     238 </span><span class="lineCov">      59714 :         root = self-&gt;root;</span>
+<span class="lineNum">     239 </span>            :     }
+<span class="lineNum">     240 </span>            : 
+<span class="lineNum">     241 </span><span class="lineCov">     676152 :     if(pre_order &amp;&amp; (all_nodes || root-&gt;has_value)) {</span>
+<span class="lineNum">     242 </span><span class="lineCov">      14000 :         if(callback(self, root, level, user_data) != 0) {</span>
+<span class="lineNum">     243 </span><span class="lineNoCov">          0 :             return;</span>
+<span class="lineNum">     244 </span>            :         }
+<span class="lineNum">     245 </span>            :     }
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span><span class="lineCov">     676152 :     if(root-&gt;children != NULL) {</span>
+<span class="lineNum">     248 </span><span class="lineCov">     325925 :         g_hash_table_iter_init(&amp;iter, root-&gt;children);</span>
+<span class="lineNum">     249 </span><span class="lineCov">    1268288 :         while(g_hash_table_iter_next(&amp;iter, &amp;key, &amp;value)) {</span>
+<span class="lineNum">     250 </span><span class="lineCov">     616438 :             _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data,</span>
+<span class="lineNum">     251 </span>            :                           level + 1);
+<span class="lineNum">     252 </span>            :         }
+<span class="lineNum">     253 </span>            :     }
 <span class="lineNum">     254 </span>            : 
-<span class="lineNum">     255 </span><span class="lineCov">      34230 : void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,</span>
-<span class="lineNum">     256 </span>            :                   RmTrieIterCallback callback, void *user_data) {
-<span class="lineNum">     257 </span><span class="lineCov">      34230 :     g_rw_lock_reader_lock(&amp;self-&gt;lock);</span>
-<span class="lineNum">     258 </span><span class="lineCov">      34230 :     _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);</span>
-<span class="lineNum">     259 </span><span class="lineCov">      34230 :     g_rw_lock_reader_unlock(&amp;self-&gt;lock);</span>
-<a name="260"><span class="lineNum">     260 </span><span class="lineCov">      34230 : }</span></a>
+<span class="lineNum">     255 </span><span class="lineCov">     676152 :     if(!pre_order &amp;&amp; (all_nodes || root-&gt;has_value)) {</span>
+<span class="lineNum">     256 </span><span class="lineCov">     653528 :         if(callback(self, root, level, user_data) != 0) {</span>
+<span class="lineNum">     257 </span><span class="lineNoCov">          0 :             return;</span>
+<span class="lineNum">     258 </span>            :         }
+<span class="lineNum">     259 </span>            :     }
+<a name="260"><span class="lineNum">     260 </span>            : }</a>
 <span class="lineNum">     261 </span>            : 
-<span class="lineNum">     262 </span><span class="lineCov">     245143 : static int rm_trie_destroy_callback(_U RmTrie *self,</span>
-<span class="lineNum">     263 </span>            :                                     RmNode *node,
-<span class="lineNum">     264 </span>            :                                     _U int level,
-<span class="lineNum">     265 </span>            :                                     _U void *user_data) {
-<span class="lineNum">     266 </span><span class="lineCov">     245143 :     rm_node_free(node);</span>
-<span class="lineNum">     267 </span><span class="lineCov">     245143 :     return 0;</span>
-<a name="268"><span class="lineNum">     268 </span>            : }</a>
-<span class="lineNum">     269 </span>            : 
-<span class="lineNum">     270 </span><span class="lineCov">      24300 : void rm_trie_destroy(RmTrie *self) {</span>
-<span class="lineNum">     271 </span><span class="lineCov">      24300 :     rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);</span>
-<span class="lineNum">     272 </span><span class="lineCov">      24300 :     g_string_chunk_free(self-&gt;chunks);</span>
-<span class="lineNum">     273 </span><span class="lineCov">      24300 :     g_rw_lock_clear(&amp;self-&gt;lock);</span>
-<span class="lineNum">     274 </span><span class="lineCov">      24300 : }</span>
-<span class="lineNum">     275 </span>            : 
-<span class="lineNum">     276 </span>            : #ifdef _RM_PATHTRICIA_BUILD_MAIN
-<span class="lineNum">     277 </span>            : 
-<span class="lineNum">     278 </span>            : #include &lt;stdio.h&gt;
-<span class="lineNum">     279 </span>            : 
-<span class="lineNum">     280 </span>            : static int rm_trie_print_callback(_U RmTrie *self,
-<span class="lineNum">     281 </span>            :                                   RmNode *node,
-<span class="lineNum">     282 </span>            :                                   int level,
-<span class="lineNum">     283 </span>            :                                   _U void *user_data) {
-<span class="lineNum">     284 </span>            :     for(int i = 0; i &lt; level; ++i) {
-<span class="lineNum">     285 </span>            :         g_printerr(&quot;    &quot;);
-<span class="lineNum">     286 </span>            :     }
-<span class="lineNum">     287 </span>            : 
-<span class="lineNum">     288 </span>            :     g_printerr(&quot;%s %s\n&quot;,
-<span class="lineNum">     289 </span>            :                (char *)((node-&gt;basename) ? node-&gt;basename : &quot;[root]&quot;),
-<span class="lineNum">     290 </span>            :                (node-&gt;data) ? &quot;[leaf]&quot; : &quot;&quot;);
-<span class="lineNum">     291 </span>            : 
-<span class="lineNum">     292 </span>            :     return 0;
-<span class="lineNum">     293 </span>            : }
+<span class="lineNum">     262 </span><span class="lineCov">      59714 : void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,</span>
+<span class="lineNum">     263 </span>            :                   RmTrieIterCallback callback, void *user_data) {
+<span class="lineNum">     264 </span><span class="lineCov">      59714 :     g_mutex_lock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     265 </span><span class="lineCov">      59714 :     _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);</span>
+<span class="lineNum">     266 </span><span class="lineCov">      59714 :     g_mutex_unlock(&amp;self-&gt;lock);</span>
+<a name="267"><span class="lineNum">     267 </span><span class="lineCov">      59714 : }</span></a>
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineCov">     653528 : static int rm_trie_destroy_callback(_U RmTrie *self,</span>
+<span class="lineNum">     270 </span>            :                                     RmNode *node,
+<span class="lineNum">     271 </span>            :                                     _U int level,
+<span class="lineNum">     272 </span>            :                                     _U void *user_data) {
+<span class="lineNum">     273 </span><span class="lineCov">     653528 :     rm_node_free(node);</span>
+<span class="lineNum">     274 </span><span class="lineCov">     653528 :     return 0;</span>
+<a name="275"><span class="lineNum">     275 </span>            : }</a>
+<span class="lineNum">     276 </span>            : 
+<span class="lineNum">     277 </span><span class="lineCov">      56354 : void rm_trie_destroy(RmTrie *self) {</span>
+<span class="lineNum">     278 </span><span class="lineCov">      56354 :     rm_trie_iter(self, NULL, false, true, rm_trie_destroy_callback, NULL);</span>
+<span class="lineNum">     279 </span><span class="lineCov">      56354 :     g_string_chunk_free(self-&gt;chunks);</span>
+<span class="lineNum">     280 </span><span class="lineCov">      56354 :     g_mutex_clear(&amp;self-&gt;lock);</span>
+<span class="lineNum">     281 </span><span class="lineCov">      56354 : }</span>
+<span class="lineNum">     282 </span>            : 
+<span class="lineNum">     283 </span>            : #ifdef _RM_PATHTRICIA_BUILD_MAIN
+<span class="lineNum">     284 </span>            : 
+<span class="lineNum">     285 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">     286 </span>            : 
+<span class="lineNum">     287 </span>            : static int rm_trie_print_callback(_U RmTrie *self,
+<span class="lineNum">     288 </span>            :                                   RmNode *node,
+<span class="lineNum">     289 </span>            :                                   int level,
+<span class="lineNum">     290 </span>            :                                   _U void *user_data) {
+<span class="lineNum">     291 </span>            :     for(int i = 0; i &lt; level; ++i) {
+<span class="lineNum">     292 </span>            :         g_printerr(&quot;    &quot;);
+<span class="lineNum">     293 </span>            :     }
 <span class="lineNum">     294 </span>            : 
-<span class="lineNum">     295 </span>            : void rm_trie_print(RmTrie *self) {
-<span class="lineNum">     296 </span>            :     rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
-<span class="lineNum">     297 </span>            : }
+<span class="lineNum">     295 </span>            :     g_printerr(&quot;%s %s\n&quot;,
+<span class="lineNum">     296 </span>            :                (char *)((node-&gt;basename) ? node-&gt;basename : &quot;[root]&quot;),
+<span class="lineNum">     297 </span>            :                (node-&gt;data) ? &quot;[leaf]&quot; : &quot;&quot;);
 <span class="lineNum">     298 </span>            : 
-<span class="lineNum">     299 </span>            : 
-<span class="lineNum">     300 </span>            : int main(void) {
-<span class="lineNum">     301 </span>            :     RmTrie trie;
-<span class="lineNum">     302 </span>            :     rm_trie_init(&amp;trie);
-<span class="lineNum">     303 </span>            :     GTimer *timer = g_timer_new();
-<span class="lineNum">     304 </span>            : 
-<span class="lineNum">     305 </span>            :     g_timer_start(timer);
-<span class="lineNum">     306 </span>            :     char buf[1024];
-<span class="lineNum">     307 </span>            :     int i = 0;
-<span class="lineNum">     308 </span>            : 
-<span class="lineNum">     309 </span>            :     while(fgets(buf, sizeof(buf), stdin)) {
-<span class="lineNum">     310 </span>            :         buf[strlen(buf) - 1] = 0;
-<span class="lineNum">     311 </span>            :         rm_trie_insert(&amp;trie, buf, GUINT_TO_POINTER(++i));
-<span class="lineNum">     312 </span>            :         memset(buf, 0, sizeof(buf));
-<span class="lineNum">     313 </span>            :     }
+<span class="lineNum">     299 </span>            :     return 0;
+<span class="lineNum">     300 </span>            : }
+<span class="lineNum">     301 </span>            : 
+<span class="lineNum">     302 </span>            : void rm_trie_print(RmTrie *self) {
+<span class="lineNum">     303 </span>            :     rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
+<span class="lineNum">     304 </span>            : }
+<span class="lineNum">     305 </span>            : 
+<span class="lineNum">     306 </span>            : int main(void) {
+<span class="lineNum">     307 </span>            :     RmTrie trie;
+<span class="lineNum">     308 </span>            :     rm_trie_init(&amp;trie);
+<span class="lineNum">     309 </span>            :     GTimer *timer = g_timer_new();
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span>            :     g_timer_start(timer);
+<span class="lineNum">     312 </span>            :     char buf[1024];
+<span class="lineNum">     313 </span>            :     int i = 0;
 <span class="lineNum">     314 </span>            : 
-<span class="lineNum">     315 </span>            :     g_printerr(&quot;Took %2.5f to insert %d items\n&quot;, g_timer_elapsed(timer, NULL), i);
-<span class="lineNum">     316 </span>            :     rm_trie_print(&amp;trie);
-<span class="lineNum">     317 </span>            :     memset(buf, 0, sizeof(buf));
-<span class="lineNum">     318 </span>            :     rm_trie_build_path(&amp;trie, rm_trie_search_node(&amp;trie, &quot;/usr/bin/rmlint&quot;), buf,
-<span class="lineNum">     319 </span>            :                        sizeof(buf));
-<span class="lineNum">     320 </span>            :     g_printerr(&quot;=&gt; %s\n&quot;, buf);
-<span class="lineNum">     321 </span>            : 
-<span class="lineNum">     322 </span>            :     g_timer_start(timer);
-<span class="lineNum">     323 </span>            :     const int N = 10000000;
-<span class="lineNum">     324 </span>            :     for(int x = 0; x &lt; N; x++) {
-<span class="lineNum">     325 </span>            :         rm_trie_search(&amp;trie, &quot;/usr/bin/rmlint&quot;);
-<span class="lineNum">     326 </span>            :     }
-<span class="lineNum">     327 </span>            :     g_printerr(&quot;Took %2.5f to search\n&quot;, g_timer_elapsed(timer, NULL));
-<span class="lineNum">     328 </span>            : 
-<span class="lineNum">     329 </span>            :     g_printerr(&quot;%u\n&quot;, GPOINTER_TO_UINT(rm_trie_search(&amp;trie, &quot;/usr/bin/rmlint&quot;)));
-<span class="lineNum">     330 </span>            :     g_printerr(&quot;%u\n&quot;, GPOINTER_TO_UINT(rm_trie_search(&amp;trie, &quot;/a/b/c&quot;)));
-<span class="lineNum">     331 </span>            :     rm_trie_destroy(&amp;trie);
-<span class="lineNum">     332 </span>            :     g_timer_destroy(timer);
-<span class="lineNum">     333 </span>            :     return 0;
-<span class="lineNum">     334 </span>            : }
-<span class="lineNum">     335 </span>            : 
-<span class="lineNum">     336 </span>            : #endif
+<span class="lineNum">     315 </span>            :     while(fgets(buf, sizeof(buf), stdin)) {
+<span class="lineNum">     316 </span>            :         buf[strlen(buf) - 1] = 0;
+<span class="lineNum">     317 </span>            :         rm_trie_insert(&amp;trie, buf, GUINT_TO_POINTER(++i));
+<span class="lineNum">     318 </span>            :         memset(buf, 0, sizeof(buf));
+<span class="lineNum">     319 </span>            :     }
+<span class="lineNum">     320 </span>            : 
+<span class="lineNum">     321 </span>            :     g_printerr(&quot;Took %2.5f to insert %d items\n&quot;, g_timer_elapsed(timer, NULL), i);
+<span class="lineNum">     322 </span>            :     rm_trie_print(&amp;trie);
+<span class="lineNum">     323 </span>            :     memset(buf, 0, sizeof(buf));
+<span class="lineNum">     324 </span>            :     rm_trie_build_path(&amp;trie, rm_trie_search_node(&amp;trie, &quot;/usr/bin/rmlint&quot;), buf,
+<span class="lineNum">     325 </span>            :                        sizeof(buf));
+<span class="lineNum">     326 </span>            :     g_printerr(&quot;=&gt; %s\n&quot;, buf);
+<span class="lineNum">     327 </span>            : 
+<span class="lineNum">     328 </span>            :     g_timer_start(timer);
+<span class="lineNum">     329 </span>            :     const int N = 10000000;
+<span class="lineNum">     330 </span>            :     for(int x = 0; x &lt; N; x++) {
+<span class="lineNum">     331 </span>            :         rm_trie_search(&amp;trie, &quot;/usr/bin/rmlint&quot;);
+<span class="lineNum">     332 </span>            :     }
+<span class="lineNum">     333 </span>            :     g_printerr(&quot;Took %2.5f to search\n&quot;, g_timer_elapsed(timer, NULL));
+<span class="lineNum">     334 </span>            : 
+<span class="lineNum">     335 </span>            :     g_printerr(&quot;%u\n&quot;, GPOINTER_TO_UINT(rm_trie_search(&amp;trie, &quot;/usr/bin/rmlint&quot;)));
+<span class="lineNum">     336 </span>            :     g_printerr(&quot;%u\n&quot;, GPOINTER_TO_UINT(rm_trie_search(&amp;trie, &quot;/a/b/c&quot;)));
+<span class="lineNum">     337 </span>            :     rm_trie_destroy(&amp;trie);
+<span class="lineNum">     338 </span>            :     g_timer_destroy(timer);
+<span class="lineNum">     339 </span>            :     return 0;
+<span class="lineNum">     340 </span>            : }
+<span class="lineNum">     341 </span>            : 
+<span class="lineNum">     342 </span>            : #endif
 </pre>
       </td>
     </tr>
@@ -404,7 +410,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - file.c<span style="font-size: 80%;"> (source / <a href="file.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - file.c<span style="font-size: 80%;"> (source / <a href="file.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,17 +31,17 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">56</td>
-            <td class="headerCovTableEntry">58</td>
-            <td class="headerCovTableEntryHi">96.6 %</td>
+            <td class="headerCovTableEntry">67</td>
+            <td class="headerCovTableEntry">70</td>
+            <td class="headerCovTableEntryHi">95.7 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">6</td>
-            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">8</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
@@ -94,116 +94,139 @@
 <span class="lineNum">      32 </span>            : #include &lt;sys/file.h&gt;
 <a name="33"><span class="lineNum">      33 </span>            : #include &lt;string.h&gt;</a>
 <span class="lineNum">      34 </span>            : 
-<span class="lineNum">      35 </span><span class="lineCov">      83046 : RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,</span>
-<span class="lineNum">      36 </span>            :                     RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index) {
-<span class="lineNum">      37 </span><span class="lineCov">      83046 :     RmCfg *cfg = session-&gt;cfg;</span>
-<span class="lineNum">      38 </span><span class="lineCov">      83046 :     RmOff actual_file_size = statp-&gt;st_size;</span>
-<span class="lineNum">      39 </span><span class="lineCov">      83046 :     RmOff start_seek = 0;</span>
-<span class="lineNum">      40 </span>            : 
-<span class="lineNum">      41 </span>            :     /* Allow an actual file size of 0 for empty files */
-<span class="lineNum">      42 </span><span class="lineCov">      83046 :     if(actual_file_size != 0) {</span>
-<span class="lineNum">      43 </span><span class="lineCov">      82579 :         if(cfg-&gt;use_absolute_start_offset) {</span>
-<span class="lineNum">      44 </span><span class="lineCov">        810 :             start_seek = cfg-&gt;skip_start_offset;</span>
-<span class="lineNum">      45 </span><span class="lineCov">        810 :             if(cfg-&gt;skip_start_offset &gt;= actual_file_size) {</span>
-<span class="lineNum">      46 </span><span class="lineCov">        162 :                 return NULL;</span>
-<span class="lineNum">      47 </span>            :             }
-<span class="lineNum">      48 </span>            :         } else {
-<span class="lineNum">      49 </span><span class="lineCov">      81769 :             start_seek = cfg-&gt;skip_start_factor * actual_file_size;</span>
-<span class="lineNum">      50 </span><span class="lineCov">      81769 :             if((int)(actual_file_size * cfg-&gt;skip_end_factor) == 0) {</span>
-<span class="lineNum">      51 </span><span class="lineCov">        162 :                 return NULL;</span>
-<span class="lineNum">      52 </span>            :             }
-<span class="lineNum">      53 </span>            : 
-<span class="lineNum">      54 </span><span class="lineCov">      81607 :             if(start_seek &gt;= actual_file_size) {</span>
-<span class="lineNum">      55 </span><span class="lineNoCov">          0 :                 return NULL;</span>
-<span class="lineNum">      56 </span>            :             }
-<span class="lineNum">      57 </span>            :         }
-<span class="lineNum">      58 </span>            :     }
-<span class="lineNum">      59 </span>            : 
-<span class="lineNum">      60 </span><span class="lineCov">      82722 :     RmFile *self = g_slice_new0(RmFile);</span>
-<span class="lineNum">      61 </span><span class="lineCov">      82722 :     self-&gt;session = session;</span>
-<span class="lineNum">      62 </span>            : 
-<span class="lineNum">      63 </span><span class="lineCov">      82722 :     rm_file_set_path(self, (char *)path, path_len);</span>
-<span class="lineNum">      64 </span>            : 
-<span class="lineNum">      65 </span><span class="lineCov">      82721 :     self-&gt;inode = statp-&gt;st_ino;</span>
-<span class="lineNum">      66 </span><span class="lineCov">      82721 :     self-&gt;dev = statp-&gt;st_dev;</span>
-<span class="lineNum">      67 </span><span class="lineCov">      82721 :     self-&gt;mtime = statp-&gt;st_mtim.tv_sec;</span>
+<span class="lineNum">      35 </span><span class="lineCov">     338024 : RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,</span>
+<span class="lineNum">      36 </span>            :                     RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index,
+<span class="lineNum">      37 </span>            :                     short depth) {
+<span class="lineNum">      38 </span><span class="lineCov">     338024 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">      39 </span><span class="lineCov">     338024 :     RmOff actual_file_size = statp-&gt;st_size;</span>
+<span class="lineNum">      40 </span><span class="lineCov">     338024 :     RmOff start_seek = 0;</span>
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span>            :     /* Allow an actual file size of 0 for empty files */
+<span class="lineNum">      43 </span><span class="lineCov">     338024 :     if(actual_file_size != 0) {</span>
+<span class="lineNum">      44 </span><span class="lineCov">     337660 :         if(cfg-&gt;use_absolute_start_offset) {</span>
+<span class="lineNum">      45 </span><span class="lineCov">        280 :             start_seek = cfg-&gt;skip_start_offset;</span>
+<span class="lineNum">      46 </span><span class="lineCov">        280 :             if(cfg-&gt;skip_start_offset &gt;= actual_file_size) {</span>
+<span class="lineNum">      47 </span><span class="lineCov">         56 :                 return NULL;</span>
+<span class="lineNum">      48 </span>            :             }
+<span class="lineNum">      49 </span>            :         } else {
+<span class="lineNum">      50 </span><span class="lineCov">     337380 :             start_seek = cfg-&gt;skip_start_factor * actual_file_size;</span>
+<span class="lineNum">      51 </span><span class="lineCov">     337380 :             if((int)(actual_file_size * cfg-&gt;skip_end_factor) == 0) {</span>
+<span class="lineNum">      52 </span><span class="lineCov">         56 :                 return NULL;</span>
+<span class="lineNum">      53 </span>            :             }
+<span class="lineNum">      54 </span>            : 
+<span class="lineNum">      55 </span><span class="lineCov">     337324 :             if(start_seek &gt;= actual_file_size) {</span>
+<span class="lineNum">      56 </span><span class="lineNoCov">          0 :                 return NULL;</span>
+<span class="lineNum">      57 </span>            :             }
+<span class="lineNum">      58 </span>            :         }
+<span class="lineNum">      59 </span>            :     }
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span><span class="lineCov">     337912 :     RmFile *self = g_slice_new0(RmFile);</span>
+<span class="lineNum">      62 </span><span class="lineCov">     337925 :     self-&gt;session = session;</span>
+<span class="lineNum">      63 </span>            : 
+<span class="lineNum">      64 </span><span class="lineCov">     337925 :     rm_file_set_path(self, (char *)path, path_len);</span>
+<span class="lineNum">      65 </span>            : 
+<span class="lineNum">      66 </span><span class="lineCov">     337925 :     self-&gt;depth = depth;</span>
+<span class="lineNum">      67 </span><span class="lineCov">     337925 :     self-&gt;path_depth = rm_util_path_depth(path);</span>
 <span class="lineNum">      68 </span>            : 
-<span class="lineNum">      69 </span><span class="lineCov">      82721 :     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {</span>
-<span class="lineNum">      70 </span><span class="lineCov">      80476 :         if(cfg-&gt;use_absolute_end_offset) {</span>
-<span class="lineNum">      71 </span><span class="lineCov">        162 :             self-&gt;file_size = CLAMP(actual_file_size, 1, cfg-&gt;skip_end_offset);</span>
-<span class="lineNum">      72 </span>            :         } else {
-<span class="lineNum">      73 </span><span class="lineCov">      80314 :             self-&gt;file_size = actual_file_size * cfg-&gt;skip_end_factor;</span>
-<span class="lineNum">      74 </span>            :         }
-<span class="lineNum">      75 </span>            :     }
-<span class="lineNum">      76 </span>            : 
-<span class="lineNum">      77 </span><span class="lineCov">      82721 :     self-&gt;seek_offset = self-&gt;hash_offset = start_seek;</span>
-<span class="lineNum">      78 </span>            : 
-<span class="lineNum">      79 </span><span class="lineCov">      82721 :     self-&gt;lint_type = type;</span>
-<span class="lineNum">      80 </span><span class="lineCov">      82721 :     self-&gt;is_prefd = is_ppath;</span>
-<span class="lineNum">      81 </span><span class="lineCov">      82721 :     self-&gt;is_original = false;</span>
-<span class="lineNum">      82 </span><span class="lineCov">      82721 :     self-&gt;is_symlink = false;</span>
-<span class="lineNum">      83 </span><span class="lineCov">      82721 :     self-&gt;path_index = path_index;</span>
-<span class="lineNum">      84 </span>            : 
-<span class="lineNum">      85 </span><span class="lineCov">      82721 :     return self;</span>
-<a name="86"><span class="lineNum">      86 </span>            : }</a>
-<span class="lineNum">      87 </span>            : 
-<span class="lineNum">      88 </span><span class="lineCov">      88098 : void rm_file_set_path(RmFile *file, char *path, size_t path_len) {</span>
-<span class="lineNum">      89 </span><span class="lineCov">      88098 :     if(file-&gt;session-&gt;cfg-&gt;use_meta_cache == false) {</span>
-<span class="lineNum">      90 </span><span class="lineCov">      85899 :         file-&gt;folder = rm_trie_insert(&amp;file-&gt;session-&gt;cfg-&gt;file_trie, path, NULL);</span>
-<span class="lineNum">      91 </span>            :     } else {
-<span class="lineNum">      92 </span><span class="lineCov">       4398 :         file-&gt;path_id = rm_swap_table_insert(file-&gt;session-&gt;meta_cache,</span>
-<span class="lineNum">      93 </span><span class="lineCov">       2199 :                                              file-&gt;session-&gt;meta_cache_path_id,</span>
-<span class="lineNum">      94 </span>            :                                              (char *)path, path_len + 1);
-<span class="lineNum">      95 </span>            :     }
-<a name="96"><span class="lineNum">      96 </span><span class="lineCov">      88099 : }</span></a>
-<span class="lineNum">      97 </span>            : 
-<span class="lineNum">      98 </span><span class="lineCov">      11563 : void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf) {</span>
-<span class="lineNum">      99 </span><span class="lineCov">      11563 :     g_assert(file);</span>
-<span class="lineNum">     100 </span>            : 
-<span class="lineNum">     101 </span><span class="lineCov">      11563 :     RmOff id = file-&gt;path_id;</span>
-<span class="lineNum">     102 </span>            : 
-<span class="lineNum">     103 </span><span class="lineCov">      11563 :     memset(buf, 0, PATH_MAX);</span>
-<span class="lineNum">     104 </span><span class="lineCov">      11563 :     rm_swap_table_lookup(session-&gt;meta_cache, session-&gt;meta_cache_path_id, id, buf,</span>
-<span class="lineNum">     105 </span>            :                          PATH_MAX);
-<a name="106"><span class="lineNum">     106 </span><span class="lineCov">      11563 : }</span></a>
-<span class="lineNum">     107 </span>            : 
-<span class="lineNum">     108 </span><span class="lineCov">     294879 : void rm_file_build_path(RmFile *file, char *buf) {</span>
-<span class="lineNum">     109 </span><span class="lineCov">     294879 :     g_assert(file);</span>
-<span class="lineNum">     110 </span>            : 
-<span class="lineNum">     111 </span><span class="lineCov">     294879 :     rm_trie_build_path(&amp;file-&gt;session-&gt;cfg-&gt;file_trie, file-&gt;folder, buf, PATH_MAX);</span>
-<a name="112"><span class="lineNum">     112 </span><span class="lineCov">     294884 : }</span></a>
-<span class="lineNum">     113 </span>            : 
-<span class="lineNum">     114 </span><span class="lineCov">      54295 : void rm_file_destroy(RmFile *file) {</span>
-<span class="lineNum">     115 </span><span class="lineCov">      54295 :     if(file-&gt;disk_offsets) {</span>
-<span class="lineNum">     116 </span><span class="lineCov">       3476 :         g_sequence_free(file-&gt;disk_offsets);</span>
-<span class="lineNum">     117 </span>            :     }
-<span class="lineNum">     118 </span><span class="lineCov">      54295 :     if(file-&gt;hardlinks.is_head &amp;&amp; file-&gt;hardlinks.files) {</span>
-<span class="lineNum">     119 </span><span class="lineNoCov">          0 :         g_queue_free_full(file-&gt;hardlinks.files, (GDestroyNotify)rm_file_destroy);</span>
-<span class="lineNum">     120 </span>            :     }
-<span class="lineNum">     121 </span>            : 
-<span class="lineNum">     122 </span>            :     /* --cache can write cksums in here */
-<span class="lineNum">     123 </span><span class="lineCov">      54295 :     if(file-&gt;folder &amp;&amp; file-&gt;folder-&gt;data) {</span>
-<span class="lineNum">     124 </span><span class="lineCov">        420 :         g_free(file-&gt;folder-&gt;data);</span>
-<span class="lineNum">     125 </span>            :     }
-<span class="lineNum">     126 </span>            : 
-<span class="lineNum">     127 </span><span class="lineCov">      54295 :     g_slice_free(RmFile, file);</span>
-<a name="128"><span class="lineNum">     128 </span><span class="lineCov">      54295 : }</span></a>
-<span class="lineNum">     129 </span>            : 
-<span class="lineNum">     130 </span><span class="lineCov">      36797 : const char *rm_file_lint_type_to_string(RmLintType type) {</span>
-<span class="lineNum">     131 </span>            :     static const char *TABLE[] = {[RM_LINT_TYPE_UNKNOWN] = &quot;&quot;,
-<span class="lineNum">     132 </span>            :                                   [RM_LINT_TYPE_EMPTY_DIR] = &quot;emptydir&quot;,
-<span class="lineNum">     133 </span>            :                                   [RM_LINT_TYPE_NONSTRIPPED] = &quot;nonstripped&quot;,
-<span class="lineNum">     134 </span>            :                                   [RM_LINT_TYPE_BADLINK] = &quot;badlink&quot;,
-<span class="lineNum">     135 </span>            :                                   [RM_LINT_TYPE_BADUID] = &quot;baduid&quot;,
-<span class="lineNum">     136 </span>            :                                   [RM_LINT_TYPE_BADGID] = &quot;badgid&quot;,
-<span class="lineNum">     137 </span>            :                                   [RM_LINT_TYPE_BADUGID] = &quot;badugid&quot;,
-<span class="lineNum">     138 </span>            :                                   [RM_LINT_TYPE_EMPTY_FILE] = &quot;emptyfile&quot;,
-<span class="lineNum">     139 </span>            :                                   [RM_LINT_TYPE_DUPE_CANDIDATE] = &quot;duplicate_file&quot;,
-<span class="lineNum">     140 </span>            :                                   [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = &quot;duplicate_dir&quot;,
-<span class="lineNum">     141 </span>            :                                   [RM_LINT_TYPE_UNFINISHED_CKSUM] = &quot;unfinished_cksum&quot;};
-<span class="lineNum">     142 </span>            : 
-<span class="lineNum">     143 </span><span class="lineCov">      36797 :     return TABLE[MIN(type, sizeof(TABLE) / sizeof(const char *))];</span>
-<span class="lineNum">     144 </span>            : }
+<span class="lineNum">      69 </span><span class="lineCov">     337925 :     self-&gt;inode = statp-&gt;st_ino;</span>
+<span class="lineNum">      70 </span><span class="lineCov">     337925 :     self-&gt;dev = statp-&gt;st_dev;</span>
+<span class="lineNum">      71 </span><span class="lineCov">     337925 :     self-&gt;mtime = rm_sys_stat_mtime_seconds(statp);</span>
+<span class="lineNum">      72 </span>            : 
+<span class="lineNum">      73 </span><span class="lineCov">     337924 :     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {</span>
+<span class="lineNum">      74 </span><span class="lineCov">     337046 :         if(cfg-&gt;use_absolute_end_offset) {</span>
+<span class="lineNum">      75 </span><span class="lineCov">         56 :             self-&gt;file_size = CLAMP(actual_file_size, 1, cfg-&gt;skip_end_offset);</span>
+<span class="lineNum">      76 </span>            :         } else {
+<span class="lineNum">      77 </span><span class="lineCov">     336990 :             self-&gt;file_size = actual_file_size * cfg-&gt;skip_end_factor;</span>
+<span class="lineNum">      78 </span>            :         }
+<span class="lineNum">      79 </span>            :     }
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">     337924 :     self-&gt;hash_offset = start_seek;</span>
+<span class="lineNum">      82 </span>            : 
+<span class="lineNum">      83 </span><span class="lineCov">     337924 :     self-&gt;lint_type = type;</span>
+<span class="lineNum">      84 </span><span class="lineCov">     337924 :     self-&gt;is_prefd = is_ppath;</span>
+<span class="lineNum">      85 </span><span class="lineCov">     337924 :     self-&gt;is_original = false;</span>
+<span class="lineNum">      86 </span><span class="lineCov">     337924 :     self-&gt;is_symlink = false;</span>
+<span class="lineNum">      87 </span><span class="lineCov">     337924 :     self-&gt;path_index = path_index;</span>
+<span class="lineNum">      88 </span>            : 
+<span class="lineNum">      89 </span><span class="lineCov">     337924 :     return self;</span>
+<a name="90"><span class="lineNum">      90 </span>            : }</a>
+<span class="lineNum">      91 </span>            : 
+<span class="lineNum">      92 </span><span class="lineCov">     339606 : void rm_file_set_path(RmFile *file, char *path, size_t path_len) {</span>
+<span class="lineNum">      93 </span><span class="lineCov">     339606 :     if(file-&gt;session-&gt;cfg-&gt;use_meta_cache == false) {</span>
+<span class="lineNum">      94 </span><span class="lineCov">     331530 :         file-&gt;folder = rm_trie_insert(&amp;file-&gt;session-&gt;cfg-&gt;file_trie, path, NULL);</span>
+<span class="lineNum">      95 </span>            :     } else {
+<span class="lineNum">      96 </span><span class="lineCov">      16152 :         file-&gt;path_id = rm_swap_table_insert(file-&gt;session-&gt;meta_cache,</span>
+<span class="lineNum">      97 </span><span class="lineCov">       8076 :                                              file-&gt;session-&gt;meta_cache_path_id,</span>
+<span class="lineNum">      98 </span>            :                                              (char *)path, path_len + 1);
+<span class="lineNum">      99 </span>            :     }
+<a name="100"><span class="lineNum">     100 </span><span class="lineCov">     339605 : }</span></a>
+<span class="lineNum">     101 </span>            : 
+<span class="lineNum">     102 </span><span class="lineCov">      47549 : void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf) {</span>
+<span class="lineNum">     103 </span><span class="lineCov">      47549 :     g_assert(file);</span>
+<span class="lineNum">     104 </span>            : 
+<span class="lineNum">     105 </span><span class="lineCov">      47549 :     RmOff id = file-&gt;path_id;</span>
+<span class="lineNum">     106 </span>            : 
+<span class="lineNum">     107 </span><span class="lineCov">      47549 :     memset(buf, 0, PATH_MAX);</span>
+<span class="lineNum">     108 </span><span class="lineCov">      47549 :     rm_swap_table_lookup(session-&gt;meta_cache, session-&gt;meta_cache_path_id, id, buf,</span>
+<span class="lineNum">     109 </span>            :                          PATH_MAX);
+<a name="110"><span class="lineNum">     110 </span><span class="lineCov">      47554 : }</span></a>
+<span class="lineNum">     111 </span>            : 
+<span class="lineNum">     112 </span><span class="lineCov">     992158 : void rm_file_build_path(RmFile *file, char *buf) {</span>
+<span class="lineNum">     113 </span><span class="lineCov">     992158 :     g_assert(file);</span>
+<span class="lineNum">     114 </span>            : 
+<span class="lineNum">     115 </span><span class="lineCov">     992158 :     rm_trie_build_path(&amp;file-&gt;session-&gt;cfg-&gt;file_trie, file-&gt;folder, buf, PATH_MAX);</span>
+<a name="116"><span class="lineNum">     116 </span><span class="lineCov">     992159 : }</span></a>
+<span class="lineNum">     117 </span>            : 
+<span class="lineNum">     118 </span><span class="lineCov">     338374 : void rm_file_destroy(RmFile *file) {</span>
+<span class="lineNum">     119 </span><span class="lineCov">     338374 :     if(file-&gt;hardlinks.is_head &amp;&amp; file-&gt;hardlinks.files) {</span>
+<span class="lineNum">     120 </span><span class="lineNoCov">          0 :         g_queue_free_full(file-&gt;hardlinks.files, (GDestroyNotify)rm_file_destroy);</span>
+<span class="lineNum">     121 </span>            :     }
+<span class="lineNum">     122 </span>            : 
+<span class="lineNum">     123 </span>            :     /* --cache can write cksums in here */
+<span class="lineNum">     124 </span><span class="lineCov">     338374 :     if(file-&gt;folder &amp;&amp; file-&gt;folder-&gt;data) {</span>
+<span class="lineNum">     125 </span><span class="lineCov">        108 :         g_free(file-&gt;folder-&gt;data);</span>
+<span class="lineNum">     126 </span>            :     }
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span><span class="lineCov">     338374 :     if(file-&gt;free_digest) {</span>
+<span class="lineNum">     129 </span><span class="lineCov">     112558 :         rm_digest_free(file-&gt;digest);</span>
+<span class="lineNum">     130 </span>            :     }
+<span class="lineNum">     131 </span>            : 
+<span class="lineNum">     132 </span><span class="lineCov">     338374 :     g_slice_free(RmFile, file);</span>
+<span class="lineNum">     133 </span><span class="lineCov">     338374 : }</span>
+<span class="lineNum">     134 </span>            : 
+<span class="lineNum">     135 </span>            : static const char *LINT_TYPES[] = {[RM_LINT_TYPE_UNKNOWN] = &quot;&quot;,
+<span class="lineNum">     136 </span>            :                                    [RM_LINT_TYPE_EMPTY_DIR] = &quot;emptydir&quot;,
+<span class="lineNum">     137 </span>            :                                    [RM_LINT_TYPE_NONSTRIPPED] = &quot;nonstripped&quot;,
+<span class="lineNum">     138 </span>            :                                    [RM_LINT_TYPE_BADLINK] = &quot;badlink&quot;,
+<span class="lineNum">     139 </span>            :                                    [RM_LINT_TYPE_BADUID] = &quot;baduid&quot;,
+<span class="lineNum">     140 </span>            :                                    [RM_LINT_TYPE_BADGID] = &quot;badgid&quot;,
+<span class="lineNum">     141 </span>            :                                    [RM_LINT_TYPE_BADUGID] = &quot;badugid&quot;,
+<span class="lineNum">     142 </span>            :                                    [RM_LINT_TYPE_EMPTY_FILE] = &quot;emptyfile&quot;,
+<span class="lineNum">     143 </span>            :                                    [RM_LINT_TYPE_DUPE_CANDIDATE] = &quot;duplicate_file&quot;,
+<span class="lineNum">     144 </span>            :                                    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = &quot;duplicate_dir&quot;,
+<a name="145"><span class="lineNum">     145 </span>            :                                    [RM_LINT_TYPE_UNFINISHED_CKSUM] = &quot;unfinished_cksum&quot;};</a>
+<span class="lineNum">     146 </span>            : 
+<span class="lineNum">     147 </span><span class="lineCov">     443387 : const char *rm_file_lint_type_to_string(RmLintType type) {</span>
+<span class="lineNum">     148 </span><span class="lineCov">     443387 :     return LINT_TYPES[MIN(type, sizeof(LINT_TYPES) / sizeof(const char *))];</span>
+<a name="149"><span class="lineNum">     149 </span>            : }</a>
+<span class="lineNum">     150 </span>            : 
+<span class="lineNum">     151 </span><span class="lineCov">     112558 : RmLintType rm_file_string_to_lint_type(const char *type) {</span>
+<span class="lineNum">     152 </span><span class="lineCov">     112558 :     const int N = sizeof(LINT_TYPES) / sizeof(const char *);</span>
+<span class="lineNum">     153 </span><span class="lineCov">    1013022 :     for(int i = 0; i &lt; N; ++i) {</span>
+<span class="lineNum">     154 </span><span class="lineCov">    1013022 :         if(g_strcmp0(type, LINT_TYPES[i]) == 0) {</span>
+<span class="lineNum">     155 </span><span class="lineCov">     112558 :             return (RmLintType)i;</span>
+<span class="lineNum">     156 </span>            :         }
+<span class="lineNum">     157 </span>            :     }
+<span class="lineNum">     158 </span>            : 
+<span class="lineNum">     159 </span><span class="lineNoCov">          0 :     return RM_LINT_TYPE_UNKNOWN;</span>
+<a name="160"><span class="lineNum">     160 </span>            : }</a>
+<span class="lineNum">     161 </span>            : 
+<span class="lineNum">     162 </span><span class="lineCov">        170 : bool rm_file_basenames_match(const RmFile *file_a, const RmFile *file_b) {</span>
+<span class="lineNum">     163 </span><span class="lineCov">        170 :     RM_DEFINE_BASENAME(file_a);</span>
+<span class="lineNum">     164 </span><span class="lineCov">        170 :     RM_DEFINE_BASENAME(file_b);</span>
+<span class="lineNum">     165 </span>            : 
+<span class="lineNum">     166 </span><span class="lineCov">        170 :     return g_ascii_strcasecmp(file_a_basename, file_b_basename) == 0;</span>
+<span class="lineNum">     167 </span>            : }
 </pre>
       </td>
     </tr>
@@ -212,7 +235,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

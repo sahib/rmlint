@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - formats.c<span style="font-size: 80%;"> (source / <a href="formats.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - formats.c<span style="font-size: 80%;"> (source / <a href="formats.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,17 +31,17 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">112</td>
-            <td class="headerCovTableEntry">125</td>
-            <td class="headerCovTableEntryMed">89.6 %</td>
+            <td class="headerCovTableEntry">189</td>
+            <td class="headerCovTableEntry">209</td>
+            <td class="headerCovTableEntryHi">90.4 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">17</td>
-            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntry">24</td>
+            <td class="headerCovTableEntry">24</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
@@ -85,254 +85,407 @@
 <span class="lineNum">      23 </span>            :  *
 <span class="lineNum">      24 </span>            :  */
 <span class="lineNum">      25 </span>            : 
-<span class="lineNum">      26 </span>            : #include &lt;stdlib.h&gt;
-<span class="lineNum">      27 </span>            : #include &lt;string.h&gt;
-<span class="lineNum">      28 </span>            : 
-<a name="29"><span class="lineNum">      29 </span>            : #include &quot;formats.h&quot;</a>
-<span class="lineNum">      30 </span>            : 
-<span class="lineNum">      31 </span><span class="lineCov">      15207 : static void rm_fmt_handler_free(RmFmtHandler *handler) {</span>
-<span class="lineNum">      32 </span><span class="lineCov">      15207 :     g_assert(handler);</span>
-<span class="lineNum">      33 </span>            : 
-<span class="lineNum">      34 </span><span class="lineCov">      15207 :     g_free(handler-&gt;path);</span>
-<span class="lineNum">      35 </span><span class="lineCov">      15207 :     g_free(handler);</span>
-<a name="36"><span class="lineNum">      36 </span><span class="lineCov">      15207 : }</span></a>
-<span class="lineNum">      37 </span>            : 
-<span class="lineNum">      38 </span><span class="lineCov">      14928 : RmFmtTable *rm_fmt_open(RmSession *session) {</span>
-<span class="lineNum">      39 </span><span class="lineCov">      14928 :     RmFmtTable *self = g_slice_new0(RmFmtTable);</span>
-<span class="lineNum">      40 </span>            : 
-<span class="lineNum">      41 </span><span class="lineCov">      14928 :     self-&gt;name_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);</span>
-<span class="lineNum">      42 </span>            : 
-<span class="lineNum">      43 </span><span class="lineCov">      14928 :     self-&gt;path_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);</span>
-<span class="lineNum">      44 </span>            : 
-<span class="lineNum">      45 </span><span class="lineCov">      14928 :     self-&gt;handler_to_file =</span>
-<span class="lineNum">      46 </span><span class="lineCov">      14928 :         g_hash_table_new_full(NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL);</span>
+<span class="lineNum">      26 </span>            : #include &lt;ctype.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      28 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      29 </span>            : 
+<span class="lineNum">      30 </span>            : #include &quot;file.h&quot;
+<span class="lineNum">      31 </span>            : #include &quot;formats.h&quot;
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : /* A group of output files.
+<span class="lineNum">      34 </span>            :  * These are only created when caching to the end of the run is requested.
+<span class="lineNum">      35 </span>            :  * Otherwise, files are directly outputed and not stored in groups.
+<span class="lineNum">      36 </span>            :  */
+<span class="lineNum">      37 </span>            : typedef struct RmFmtGroup {
+<span class="lineNum">      38 </span>            :     GQueue files;
+<span class="lineNum">      39 </span>            :     int index;
+<a name="40"><span class="lineNum">      40 </span>            : } RmFmtGroup;</a>
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span><span class="lineCov">      66292 : static RmFmtGroup *rm_fmt_group_new(void) {</span>
+<span class="lineNum">      43 </span><span class="lineCov">      66292 :     RmFmtGroup *self = g_slice_new(RmFmtGroup);</span>
+<span class="lineNum">      44 </span><span class="lineCov">      66292 :     g_queue_init(&amp;self-&gt;files);</span>
+<span class="lineNum">      45 </span><span class="lineCov">      66292 :     return self;</span>
+<a name="46"><span class="lineNum">      46 </span>            : }</a>
 <span class="lineNum">      47 </span>            : 
-<span class="lineNum">      48 </span><span class="lineCov">      14928 :     self-&gt;config = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,</span>
-<span class="lineNum">      49 </span>            :                                          (GDestroyNotify)g_hash_table_unref);
-<span class="lineNum">      50 </span>            : 
-<span class="lineNum">      51 </span><span class="lineCov">      14928 :     self-&gt;session = session;</span>
-<span class="lineNum">      52 </span><span class="lineCov">      14928 :     g_rec_mutex_init(&amp;self-&gt;state_mtx);</span>
+<span class="lineNum">      48 </span><span class="lineCov">      66292 : static void rm_fmt_group_destroy(RmFmtGroup *self) {</span>
+<span class="lineNum">      49 </span><span class="lineCov">     295532 :     for(GList *iter = self-&gt;files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">      50 </span><span class="lineCov">     229240 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">      51 </span><span class="lineCov">     229240 :         rm_file_destroy(file);</span>
+<span class="lineNum">      52 </span>            :     }
 <span class="lineNum">      53 </span>            : 
-<span class="lineNum">      54 </span>            :     extern RmFmtHandler *PROGRESS_HANDLER;
-<span class="lineNum">      55 </span><span class="lineCov">      14928 :     rm_fmt_register(self, PROGRESS_HANDLER);</span>
-<span class="lineNum">      56 </span>            : 
-<span class="lineNum">      57 </span>            :     extern RmFmtHandler *CSV_HANDLER;
-<span class="lineNum">      58 </span><span class="lineCov">      14928 :     rm_fmt_register(self, CSV_HANDLER);</span>
-<span class="lineNum">      59 </span>            : 
-<span class="lineNum">      60 </span>            :     extern RmFmtHandler *PRETTY_HANDLER;
-<span class="lineNum">      61 </span><span class="lineCov">      14928 :     rm_fmt_register(self, PRETTY_HANDLER);</span>
-<span class="lineNum">      62 </span>            : 
-<span class="lineNum">      63 </span>            :     extern RmFmtHandler *SH_SCRIPT_HANDLER;
-<span class="lineNum">      64 </span><span class="lineCov">      14928 :     rm_fmt_register(self, SH_SCRIPT_HANDLER);</span>
-<span class="lineNum">      65 </span>            : 
-<span class="lineNum">      66 </span>            :     extern RmFmtHandler *SUMMARY_HANDLER;
-<span class="lineNum">      67 </span><span class="lineCov">      14928 :     rm_fmt_register(self, SUMMARY_HANDLER);</span>
-<span class="lineNum">      68 </span>            : 
-<span class="lineNum">      69 </span>            :     extern RmFmtHandler *TIMESTAMP_HANDLER;
-<span class="lineNum">      70 </span><span class="lineCov">      14928 :     rm_fmt_register(self, TIMESTAMP_HANDLER);</span>
+<span class="lineNum">      54 </span><span class="lineCov">      66292 :     g_queue_clear(&amp;self-&gt;files);</span>
+<span class="lineNum">      55 </span><span class="lineCov">      66292 :     g_slice_free(RmFmtGroup, self);</span>
+<a name="56"><span class="lineNum">      56 </span><span class="lineCov">      66292 : }</span></a>
+<span class="lineNum">      57 </span>            : 
+<span class="lineNum">      58 </span><span class="lineCov">      69822 : static void rm_fmt_handler_free(RmFmtHandler *handler) {</span>
+<span class="lineNum">      59 </span><span class="lineCov">      69822 :     g_assert(handler);</span>
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span><span class="lineCov">      69822 :     g_free(handler-&gt;path);</span>
+<span class="lineNum">      62 </span><span class="lineCov">      69822 :     g_free(handler);</span>
+<a name="63"><span class="lineNum">      63 </span><span class="lineCov">      69822 : }</span></a>
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span><span class="lineCov">      54884 : RmFmtTable *rm_fmt_open(RmSession *session) {</span>
+<span class="lineNum">      66 </span><span class="lineCov">      54884 :     RmFmtTable *self = g_slice_new0(RmFmtTable);</span>
+<span class="lineNum">      67 </span>            : 
+<span class="lineNum">      68 </span><span class="lineCov">      54884 :     self-&gt;name_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);</span>
+<span class="lineNum">      69 </span>            : 
+<span class="lineNum">      70 </span><span class="lineCov">      54884 :     self-&gt;path_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);</span>
 <span class="lineNum">      71 </span>            : 
-<span class="lineNum">      72 </span>            :     extern RmFmtHandler *JSON_HANDLER;
-<span class="lineNum">      73 </span><span class="lineCov">      14928 :     rm_fmt_register(self, JSON_HANDLER);</span>
+<span class="lineNum">      72 </span><span class="lineCov">      54884 :     self-&gt;handler_to_file =</span>
+<span class="lineNum">      73 </span><span class="lineCov">      54884 :         g_hash_table_new_full(NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL);</span>
 <span class="lineNum">      74 </span>            : 
-<span class="lineNum">      75 </span>            :     extern RmFmtHandler *PY_HANDLER;
-<span class="lineNum">      76 </span><span class="lineCov">      14928 :     rm_fmt_register(self, PY_HANDLER);</span>
+<span class="lineNum">      75 </span><span class="lineCov">      54884 :     self-&gt;config = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,</span>
+<span class="lineNum">      76 </span>            :                                          (GDestroyNotify)g_hash_table_unref);
 <span class="lineNum">      77 </span>            : 
-<span class="lineNum">      78 </span>            :     extern RmFmtHandler *FDUPES_HANDLER;
-<span class="lineNum">      79 </span><span class="lineCov">      14928 :     rm_fmt_register(self, FDUPES_HANDLER);</span>
-<span class="lineNum">      80 </span>            : 
-<span class="lineNum">      81 </span>            :     extern RmFmtHandler *NULL_HANDLER;
-<span class="lineNum">      82 </span><span class="lineCov">      14928 :     rm_fmt_register(self, NULL_HANDLER);</span>
-<span class="lineNum">      83 </span>            : 
-<span class="lineNum">      84 </span><span class="lineCov">      14928 :     return self;</span>
-<a name="85"><span class="lineNum">      85 </span>            : }</a>
-<span class="lineNum">      86 </span>            : 
-<span class="lineNum">      87 </span><span class="lineCov">         36 : int rm_fmt_len(RmFmtTable *self) {</span>
-<span class="lineNum">      88 </span><span class="lineCov">         36 :     if(self == NULL) {</span>
-<span class="lineNum">      89 </span><span class="lineNoCov">          0 :         return -1;</span>
-<span class="lineNum">      90 </span>            :     } else {
-<span class="lineNum">      91 </span><span class="lineCov">         36 :         return g_hash_table_size(self-&gt;handler_to_file);</span>
-<span class="lineNum">      92 </span>            :     }
-<a name="93"><span class="lineNum">      93 </span>            : }</a>
-<span class="lineNum">      94 </span>            : 
-<span class="lineNum">      95 </span><span class="lineCov">          9 : bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *key) {</span>
-<span class="lineNum">      96 </span><span class="lineCov">          9 :     RmFmtHandler *handler = g_hash_table_lookup(self-&gt;name_to_handler, formatter);</span>
-<span class="lineNum">      97 </span><span class="lineCov">          9 :     if(handler == NULL || handler-&gt;valid_keys == NULL) {</span>
-<span class="lineNum">      98 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">      99 </span>            :     }
-<span class="lineNum">     100 </span>            : 
-<span class="lineNum">     101 </span><span class="lineCov">         18 :     for(int i = 0; handler-&gt;valid_keys[i]; ++i) {</span>
-<span class="lineNum">     102 </span><span class="lineCov">         18 :         if(g_strcmp0(handler-&gt;valid_keys[i], key) == 0) {</span>
-<span class="lineNum">     103 </span><span class="lineCov">          9 :             return true;</span>
-<span class="lineNum">     104 </span>            :         }
-<span class="lineNum">     105 </span>            :     }
-<span class="lineNum">     106 </span>            : 
-<span class="lineNum">     107 </span><span class="lineNoCov">          0 :     return false;</span>
-<a name="108"><span class="lineNum">     108 </span>            : }</a>
-<span class="lineNum">     109 </span>            : 
-<span class="lineNum">     110 </span><span class="lineCov">         12 : void rm_fmt_clear(RmFmtTable *self) {</span>
-<span class="lineNum">     111 </span><span class="lineCov">         12 :     if(rm_fmt_len(self) &lt;= 0) {</span>
-<span class="lineNum">     112 </span><span class="lineCov">         24 :         return;</span>
-<span class="lineNum">     113 </span>            :     }
+<span class="lineNum">      78 </span><span class="lineCov">      54884 :     self-&gt;session = session;</span>
+<span class="lineNum">      79 </span><span class="lineCov">      54884 :     g_queue_init(&amp;self-&gt;groups);</span>
+<span class="lineNum">      80 </span><span class="lineCov">      54884 :     g_rec_mutex_init(&amp;self-&gt;state_mtx);</span>
+<span class="lineNum">      81 </span>            : 
+<span class="lineNum">      82 </span>            :     extern RmFmtHandler *PROGRESS_HANDLER;
+<span class="lineNum">      83 </span><span class="lineCov">      54884 :     rm_fmt_register(self, PROGRESS_HANDLER);</span>
+<span class="lineNum">      84 </span>            : 
+<span class="lineNum">      85 </span>            :     extern RmFmtHandler *CSV_HANDLER;
+<span class="lineNum">      86 </span><span class="lineCov">      54884 :     rm_fmt_register(self, CSV_HANDLER);</span>
+<span class="lineNum">      87 </span>            : 
+<span class="lineNum">      88 </span>            :     extern RmFmtHandler *PRETTY_HANDLER;
+<span class="lineNum">      89 </span><span class="lineCov">      54884 :     rm_fmt_register(self, PRETTY_HANDLER);</span>
+<span class="lineNum">      90 </span>            : 
+<span class="lineNum">      91 </span>            :     extern RmFmtHandler *SH_SCRIPT_HANDLER;
+<span class="lineNum">      92 </span><span class="lineCov">      54884 :     rm_fmt_register(self, SH_SCRIPT_HANDLER);</span>
+<span class="lineNum">      93 </span>            : 
+<span class="lineNum">      94 </span>            :     extern RmFmtHandler *SUMMARY_HANDLER;
+<span class="lineNum">      95 </span><span class="lineCov">      54884 :     rm_fmt_register(self, SUMMARY_HANDLER);</span>
+<span class="lineNum">      96 </span>            : 
+<span class="lineNum">      97 </span>            :     extern RmFmtHandler *TIMESTAMP_HANDLER;
+<span class="lineNum">      98 </span><span class="lineCov">      54884 :     rm_fmt_register(self, TIMESTAMP_HANDLER);</span>
+<span class="lineNum">      99 </span>            : 
+<span class="lineNum">     100 </span>            :     extern RmFmtHandler *JSON_HANDLER;
+<span class="lineNum">     101 </span><span class="lineCov">      54884 :     rm_fmt_register(self, JSON_HANDLER);</span>
+<span class="lineNum">     102 </span>            : 
+<span class="lineNum">     103 </span>            :     extern RmFmtHandler *PY_HANDLER;
+<span class="lineNum">     104 </span><span class="lineCov">      54884 :     rm_fmt_register(self, PY_HANDLER);</span>
+<span class="lineNum">     105 </span>            : 
+<span class="lineNum">     106 </span>            :     extern RmFmtHandler *FDUPES_HANDLER;
+<span class="lineNum">     107 </span><span class="lineCov">      54884 :     rm_fmt_register(self, FDUPES_HANDLER);</span>
+<span class="lineNum">     108 </span>            : 
+<span class="lineNum">     109 </span>            :     extern RmFmtHandler *NULL_HANDLER;
+<span class="lineNum">     110 </span><span class="lineCov">      54884 :     rm_fmt_register(self, NULL_HANDLER);</span>
+<span class="lineNum">     111 </span>            : 
+<span class="lineNum">     112 </span><span class="lineCov">      54884 :     return self;</span>
+<a name="113"><span class="lineNum">     113 </span>            : }</a>
 <span class="lineNum">     114 </span>            : 
-<span class="lineNum">     115 </span><span class="lineNoCov">          0 :     g_hash_table_remove_all(self-&gt;handler_to_file);</span>
-<span class="lineNum">     116 </span><span class="lineNoCov">          0 :     g_hash_table_remove_all(self-&gt;path_to_handler);</span>
-<span class="lineNum">     117 </span><span class="lineNoCov">          0 :     g_hash_table_remove_all(self-&gt;config);</span>
-<a name="118"><span class="lineNum">     118 </span>            : }</a>
-<span class="lineNum">     119 </span>            : 
-<span class="lineNum">     120 </span><span class="lineCov">     149280 : void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {</span>
-<span class="lineNum">     121 </span><span class="lineCov">     149280 :     g_hash_table_insert(self-&gt;name_to_handler, (char *)handler-&gt;name, handler);</span>
-<span class="lineNum">     122 </span><span class="lineCov">     149280 :     g_mutex_init(&amp;handler-&gt;print_mtx);</span>
-<span class="lineNum">     123 </span><span class="lineCov">     149280 : }</span>
-<span class="lineNum">     124 </span>            : 
-<span class="lineNum">     125 </span>            : #define RM_FMT_FOR_EACH_HANDLER(self)                     \
-<span class="lineNum">     126 </span>            :     FILE *file = NULL;                                    \
-<span class="lineNum">     127 </span>            :     RmFmtHandler *handler = NULL;                         \
-<span class="lineNum">     128 </span>            :                                                           \
-<span class="lineNum">     129 </span>            :     GHashTableIter iter;                                  \
-<span class="lineNum">     130 </span>            :     g_hash_table_iter_init(&amp;iter, self-&gt;handler_to_file); \
-<span class="lineNum">     131 </span>            :     while(g_hash_table_iter_next(&amp;iter, (gpointer *)&amp;handler, (gpointer *)&amp;file))
-<span class="lineNum">     132 </span>            : 
-<span class="lineNum">     133 </span>            : #define RM_FMT_CALLBACK(func, ...)                               \
-<span class="lineNum">     134 </span>            :     if(func) {                                                   \
-<span class="lineNum">     135 </span>            :         g_mutex_lock(&amp;handler-&gt;print_mtx);                       \
-<span class="lineNum">     136 </span>            :         {                                                        \
-<span class="lineNum">     137 </span>            :             if(!handler-&gt;was_initialized &amp;&amp; handler-&gt;head) {     \
-<span class="lineNum">     138 </span>            :                 if(handler-&gt;head) {                              \
-<span class="lineNum">     139 </span>            :                     handler-&gt;head(self-&gt;session, handler, file); \
-<span class="lineNum">     140 </span>            :                 }                                                \
-<span class="lineNum">     141 </span>            :                 handler-&gt;was_initialized = true;                 \
-<span class="lineNum">     142 </span>            :             }                                                    \
-<span class="lineNum">     143 </span>            :             func(self-&gt;session, handler, file, ##__VA_ARGS__);   \
-<span class="lineNum">     144 </span>            :         }                                                        \
-<span class="lineNum">     145 </span>            :         g_mutex_unlock(&amp;handler-&gt;print_mtx);                     \
-<a name="146"><span class="lineNum">     146 </span>            :     }</a>
+<span class="lineNum">     115 </span><span class="lineCov">         18 : int rm_fmt_len(RmFmtTable *self) {</span>
+<span class="lineNum">     116 </span><span class="lineCov">         18 :     if(self == NULL) {</span>
+<span class="lineNum">     117 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     118 </span>            :     } else {
+<span class="lineNum">     119 </span><span class="lineCov">         18 :         return g_hash_table_size(self-&gt;handler_to_file);</span>
+<span class="lineNum">     120 </span>            :     }
+<a name="121"><span class="lineNum">     121 </span>            : }</a>
+<span class="lineNum">     122 </span>            : 
+<span class="lineNum">     123 </span><span class="lineCov">      52986 : bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *key) {</span>
+<span class="lineNum">     124 </span><span class="lineCov">      52986 :     RmFmtHandler *handler = g_hash_table_lookup(self-&gt;name_to_handler, formatter);</span>
+<span class="lineNum">     125 </span><span class="lineCov">      52986 :     if(handler == NULL) {</span>
+<span class="lineNum">     126 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     127 </span>            :     }
+<span class="lineNum">     128 </span>            : 
+<span class="lineNum">     129 </span><span class="lineCov">     211935 :     for(int i = 0; handler-&gt;valid_keys[i]; ++i) {</span>
+<span class="lineNum">     130 </span><span class="lineCov">     211935 :         if(g_strcmp0(handler-&gt;valid_keys[i], key) == 0) {</span>
+<span class="lineNum">     131 </span><span class="lineCov">      52986 :             return true;</span>
+<span class="lineNum">     132 </span>            :         }
+<span class="lineNum">     133 </span>            :     }
+<span class="lineNum">     134 </span>            : 
+<span class="lineNum">     135 </span><span class="lineNoCov">          0 :     return false;</span>
+<a name="136"><span class="lineNum">     136 </span>            : }</a>
+<span class="lineNum">     137 </span>            : 
+<span class="lineNum">     138 </span><span class="lineCov">          8 : void rm_fmt_clear(RmFmtTable *self) {</span>
+<span class="lineNum">     139 </span><span class="lineCov">          8 :     if(rm_fmt_len(self) &lt;= 0) {</span>
+<span class="lineNum">     140 </span><span class="lineCov">          8 :         return;</span>
+<span class="lineNum">     141 </span>            :     }
+<span class="lineNum">     142 </span>            : 
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :     g_hash_table_remove_all(self-&gt;handler_to_file);</span>
+<span class="lineNum">     144 </span><span class="lineNoCov">          0 :     g_hash_table_remove_all(self-&gt;path_to_handler);</span>
+<span class="lineNum">     145 </span><span class="lineNoCov">          0 :     g_hash_table_remove_all(self-&gt;config);</span>
+<a name="146"><span class="lineNum">     146 </span>            : }</a>
 <span class="lineNum">     147 </span>            : 
-<span class="lineNum">     148 </span><span class="lineCov">      15207 : bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {</span>
-<span class="lineNum">     149 </span><span class="lineCov">      15207 :     RmFmtHandler *new_handler = g_hash_table_lookup(self-&gt;name_to_handler, handler_name);</span>
-<span class="lineNum">     150 </span><span class="lineCov">      15207 :     if(new_handler == NULL) {</span>
-<span class="lineNum">     151 </span><span class="lineNoCov">          0 :         rm_log_warning_line(_(&quot;No such new_handler with this name: %s&quot;), handler_name);</span>
-<span class="lineNum">     152 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">     153 </span>            :     }
-<span class="lineNum">     154 </span>            : 
-<span class="lineNum">     155 </span><span class="lineCov">      15207 :     g_return_val_if_fail(path, false);</span>
-<span class="lineNum">     156 </span>            : 
-<span class="lineNum">     157 </span><span class="lineCov">      15207 :     FILE *file_handle = NULL;</span>
-<span class="lineNum">     158 </span><span class="lineCov">      15207 :     bool needs_full_path = false;</span>
-<span class="lineNum">     159 </span>            : 
-<span class="lineNum">     160 </span><span class="lineCov">      15207 :     if(g_strcmp0(path, &quot;stdout&quot;) == 0) {</span>
-<span class="lineNum">     161 </span><span class="lineCov">      14400 :         file_handle = stdout;</span>
-<span class="lineNum">     162 </span><span class="lineCov">        807 :     } else if(g_strcmp0(path, &quot;stderr&quot;) == 0) {</span>
-<span class="lineNum">     163 </span><span class="lineNoCov">          0 :         file_handle = stderr;</span>
-<span class="lineNum">     164 </span><span class="lineCov">        807 :     } else if(g_strcmp0(path, &quot;stdin&quot;) == 0) {</span>
-<span class="lineNum">     165 </span>            :         /* I bet someone finds a use for this :-) */
-<span class="lineNum">     166 </span><span class="lineNoCov">          0 :         file_handle = stdin;</span>
-<span class="lineNum">     167 </span>            :     } else {
-<span class="lineNum">     168 </span><span class="lineCov">        807 :         needs_full_path = true;</span>
-<span class="lineNum">     169 </span><span class="lineCov">        807 :         file_handle = fopen(path, &quot;w&quot;);</span>
-<span class="lineNum">     170 </span>            :     }
-<span class="lineNum">     171 </span>            : 
-<span class="lineNum">     172 </span><span class="lineCov">      15207 :     if(file_handle == NULL) {</span>
-<span class="lineNum">     173 </span><span class="lineNoCov">          0 :         rm_log_warning_line(_(&quot;Unable to open file for writing: %s&quot;), path);</span>
-<span class="lineNum">     174 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">     175 </span>            :     }
-<span class="lineNum">     176 </span>            : 
-<span class="lineNum">     177 </span>            :     /* Make a copy of the handler so we can more than one per handler type.
-<span class="lineNum">     178 </span>            :      * Plus we have to set the handler specific path.
-<span class="lineNum">     179 </span>            :      */
-<span class="lineNum">     180 </span><span class="lineCov">      15207 :     RmFmtHandler *new_handler_copy = g_malloc0(new_handler-&gt;size);</span>
-<span class="lineNum">     181 </span><span class="lineCov">      15207 :     memcpy(new_handler_copy, new_handler, new_handler-&gt;size);</span>
-<span class="lineNum">     182 </span><span class="lineCov">      15207 :     g_mutex_init(&amp;new_handler-&gt;print_mtx);</span>
-<span class="lineNum">     183 </span>            : 
-<span class="lineNum">     184 </span><span class="lineCov">      15207 :     if(needs_full_path == false) {</span>
-<span class="lineNum">     185 </span><span class="lineCov">      14400 :         new_handler_copy-&gt;path = g_strdup(path);</span>
-<span class="lineNum">     186 </span>            :     } else {
-<span class="lineNum">     187 </span><span class="lineCov">        807 :         new_handler_copy-&gt;path = realpath(path, NULL);</span>
-<span class="lineNum">     188 </span>            :     }
-<span class="lineNum">     189 </span>            : 
-<span class="lineNum">     190 </span><span class="lineCov">      15207 :     g_hash_table_insert(self-&gt;handler_to_file, new_handler_copy, file_handle);</span>
-<span class="lineNum">     191 </span>            : 
-<span class="lineNum">     192 </span><span class="lineCov">      15207 :     g_hash_table_insert(self-&gt;path_to_handler, new_handler_copy-&gt;path, new_handler);</span>
-<span class="lineNum">     193 </span>            : 
-<span class="lineNum">     194 </span><span class="lineCov">      15207 :     return true;</span>
-<a name="195"><span class="lineNum">     195 </span>            : }</a>
-<span class="lineNum">     196 </span>            : 
-<span class="lineNum">     197 </span><span class="lineCov">      14370 : void rm_fmt_close(RmFmtTable *self) {</span>
-<span class="lineNum">     198 </span><span class="lineCov">      43947 :     RM_FMT_FOR_EACH_HANDLER(self) {</span>
-<span class="lineNum">     199 </span><span class="lineCov">      15207 :         RM_FMT_CALLBACK(handler-&gt;foot);</span>
-<span class="lineNum">     200 </span><span class="lineCov">      15207 :         fclose(file);</span>
-<span class="lineNum">     201 </span><span class="lineCov">      15207 :         g_mutex_clear(&amp;handler-&gt;print_mtx);</span>
-<span class="lineNum">     202 </span>            :     }
-<span class="lineNum">     203 </span>            : 
-<span class="lineNum">     204 </span><span class="lineCov">      14370 :     g_hash_table_unref(self-&gt;name_to_handler);</span>
-<span class="lineNum">     205 </span><span class="lineCov">      14370 :     g_hash_table_unref(self-&gt;handler_to_file);</span>
-<span class="lineNum">     206 </span><span class="lineCov">      14370 :     g_hash_table_unref(self-&gt;path_to_handler);</span>
-<span class="lineNum">     207 </span><span class="lineCov">      14370 :     g_hash_table_unref(self-&gt;config);</span>
-<span class="lineNum">     208 </span><span class="lineCov">      14370 :     g_rec_mutex_clear(&amp;self-&gt;state_mtx);</span>
-<span class="lineNum">     209 </span><span class="lineCov">      14370 :     g_slice_free(RmFmtTable, self);</span>
-<a name="210"><span class="lineNum">     210 </span><span class="lineCov">      14370 : }</span></a>
+<span class="lineNum">     148 </span><span class="lineCov">     548840 : void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {</span>
+<span class="lineNum">     149 </span><span class="lineCov">     548840 :     g_hash_table_insert(self-&gt;name_to_handler, (char *)handler-&gt;name, handler);</span>
+<span class="lineNum">     150 </span><span class="lineCov">     548840 :     g_mutex_init(&amp;handler-&gt;print_mtx);</span>
+<span class="lineNum">     151 </span><span class="lineCov">     548840 : }</span>
+<span class="lineNum">     152 </span>            : 
+<span class="lineNum">     153 </span>            : #define RM_FMT_FOR_EACH_HANDLER(self)                     \
+<span class="lineNum">     154 </span>            :     FILE *file = NULL;                                    \
+<span class="lineNum">     155 </span>            :     RmFmtHandler *handler = NULL;                         \
+<span class="lineNum">     156 </span>            :                                                           \
+<span class="lineNum">     157 </span>            :     GHashTableIter iter;                                  \
+<span class="lineNum">     158 </span>            :     g_hash_table_iter_init(&amp;iter, self-&gt;handler_to_file); \
+<span class="lineNum">     159 </span>            :     while(g_hash_table_iter_next(&amp;iter, (gpointer *)&amp;handler, (gpointer *)&amp;file))
+<span class="lineNum">     160 </span>            : 
+<span class="lineNum">     161 </span>            : #define RM_FMT_CALLBACK(func, ...)                               \
+<span class="lineNum">     162 </span>            :     if(func) {                                                   \
+<span class="lineNum">     163 </span>            :         g_mutex_lock(&amp;handler-&gt;print_mtx);                       \
+<span class="lineNum">     164 </span>            :         {                                                        \
+<span class="lineNum">     165 </span>            :             if(!handler-&gt;was_initialized &amp;&amp; handler-&gt;head) {     \
+<span class="lineNum">     166 </span>            :                 if(handler-&gt;head) {                              \
+<span class="lineNum">     167 </span>            :                     handler-&gt;head(self-&gt;session, handler, file); \
+<span class="lineNum">     168 </span>            :                 }                                                \
+<span class="lineNum">     169 </span>            :                 handler-&gt;was_initialized = true;                 \
+<span class="lineNum">     170 </span>            :             }                                                    \
+<span class="lineNum">     171 </span>            :             func(self-&gt;session, handler, file, ##__VA_ARGS__);   \
+<span class="lineNum">     172 </span>            :         }                                                        \
+<span class="lineNum">     173 </span>            :         g_mutex_unlock(&amp;handler-&gt;print_mtx);                     \
+<a name="174"><span class="lineNum">     174 </span>            :     }</a>
+<span class="lineNum">     175 </span>            : 
+<span class="lineNum">     176 </span><span class="lineCov">      69822 : bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {</span>
+<span class="lineNum">     177 </span><span class="lineCov">      69822 :     RmFmtHandler *new_handler = g_hash_table_lookup(self-&gt;name_to_handler, handler_name);</span>
+<span class="lineNum">     178 </span><span class="lineCov">      69822 :     if(new_handler == NULL) {</span>
+<span class="lineNum">     179 </span><span class="lineNoCov">          0 :         rm_log_warning_line(_(&quot;No such new_handler with this name: %s&quot;), handler_name);</span>
+<span class="lineNum">     180 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     181 </span>            :     }
+<span class="lineNum">     182 </span>            : 
+<span class="lineNum">     183 </span><span class="lineCov">      69822 :     g_return_val_if_fail(path, false);</span>
+<span class="lineNum">     184 </span>            : 
+<span class="lineNum">     185 </span><span class="lineCov">      69822 :     FILE *file_handle = NULL;</span>
+<span class="lineNum">     186 </span><span class="lineCov">      69822 :     bool needs_full_path = false;</span>
+<span class="lineNum">     187 </span>            : 
+<span class="lineNum">     188 </span><span class="lineCov">      69822 :     if(g_strcmp0(path, &quot;stdout&quot;) == 0) {</span>
+<span class="lineNum">     189 </span><span class="lineCov">         27 :         file_handle = stdout;</span>
+<span class="lineNum">     190 </span><span class="lineCov">      69795 :     } else if(g_strcmp0(path, &quot;stderr&quot;) == 0) {</span>
+<span class="lineNum">     191 </span><span class="lineNoCov">          0 :         file_handle = stderr;</span>
+<span class="lineNum">     192 </span><span class="lineCov">      69795 :     } else if(g_strcmp0(path, &quot;stdin&quot;) == 0) {</span>
+<span class="lineNum">     193 </span>            :         /* I bet someone finds a use for this :-) */
+<span class="lineNum">     194 </span><span class="lineNoCov">          0 :         file_handle = stdin;</span>
+<span class="lineNum">     195 </span>            :     } else {
+<span class="lineNum">     196 </span><span class="lineCov">      69795 :         needs_full_path = true;</span>
+<span class="lineNum">     197 </span><span class="lineCov">      69795 :         file_handle = fopen(path, &quot;w&quot;);</span>
+<span class="lineNum">     198 </span>            :     }
+<span class="lineNum">     199 </span>            : 
+<span class="lineNum">     200 </span><span class="lineCov">      69822 :     if(file_handle == NULL) {</span>
+<span class="lineNum">     201 </span><span class="lineNoCov">          0 :         rm_log_warning_line(_(&quot;Unable to open file for writing: %s&quot;), path);</span>
+<span class="lineNum">     202 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     203 </span>            :     }
+<span class="lineNum">     204 </span>            : 
+<span class="lineNum">     205 </span>            :     /* Make a copy of the handler so we can more than one per handler type.
+<span class="lineNum">     206 </span>            :      * Plus we have to set the handler specific path.
+<span class="lineNum">     207 </span>            :      */
+<span class="lineNum">     208 </span><span class="lineCov">      69822 :     RmFmtHandler *new_handler_copy = g_malloc0(new_handler-&gt;size);</span>
+<span class="lineNum">     209 </span><span class="lineCov">      69822 :     memcpy(new_handler_copy, new_handler, new_handler-&gt;size);</span>
+<span class="lineNum">     210 </span><span class="lineCov">      69822 :     g_mutex_init(&amp;new_handler-&gt;print_mtx);</span>
 <span class="lineNum">     211 </span>            : 
-<span class="lineNum">     212 </span><span class="lineCov">      35696 : void rm_fmt_write(RmFile *result, RmFmtTable *self) {</span>
-<span class="lineNum">     213 </span><span class="lineCov">     112587 :     RM_FMT_FOR_EACH_HANDLER(self) {</span>
-<span class="lineNum">     214 </span><span class="lineCov">      41195 :         RM_FMT_CALLBACK(handler-&gt;elem, result);</span>
-<span class="lineNum">     215 </span>            :     }
-<a name="216"><span class="lineNum">     216 </span><span class="lineCov">      35696 : }</span></a>
+<span class="lineNum">     212 </span><span class="lineCov">      69822 :     if(needs_full_path == false) {</span>
+<span class="lineNum">     213 </span><span class="lineCov">         27 :         new_handler_copy-&gt;path = g_strdup(path);</span>
+<span class="lineNum">     214 </span>            :     } else {
+<span class="lineNum">     215 </span><span class="lineCov">      69795 :         new_handler_copy-&gt;path = realpath(path, NULL);</span>
+<span class="lineNum">     216 </span>            :     }
 <span class="lineNum">     217 </span>            : 
-<span class="lineNum">     218 </span><span class="lineCov">     808769 : void rm_fmt_lock_state(RmFmtTable *self) {</span>
-<span class="lineNum">     219 </span><span class="lineCov">     808769 :     g_rec_mutex_lock(&amp;self-&gt;state_mtx);</span>
-<a name="220"><span class="lineNum">     220 </span><span class="lineCov">     808936 : }</span></a>
-<span class="lineNum">     221 </span>            : 
-<span class="lineNum">     222 </span><span class="lineCov">     808936 : void rm_fmt_unlock_state(RmFmtTable *self) {</span>
-<span class="lineNum">     223 </span><span class="lineCov">     808936 :     g_rec_mutex_unlock(&amp;self-&gt;state_mtx);</span>
-<a name="224"><span class="lineNum">     224 </span><span class="lineCov">     808911 : }</span></a>
-<span class="lineNum">     225 </span>            : 
-<span class="lineNum">     226 </span><span class="lineCov">     581936 : void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {</span>
-<span class="lineNum">     227 </span><span class="lineCov">     581936 :     rm_fmt_lock_state(self);</span>
-<span class="lineNum">     228 </span>            :     {
-<span class="lineNum">     229 </span><span class="lineCov">    2223906 :         RM_FMT_FOR_EACH_HANDLER(self) {</span>
-<span class="lineNum">     230 </span><span class="lineCov">    1060034 :             RM_FMT_CALLBACK(handler-&gt;prog, state);</span>
-<span class="lineNum">     231 </span>            :         }
-<span class="lineNum">     232 </span>            :     }
-<span class="lineNum">     233 </span><span class="lineCov">     581936 :     rm_fmt_unlock_state(self);</span>
-<a name="234"><span class="lineNum">     234 </span><span class="lineCov">     581936 : }</span></a>
-<span class="lineNum">     235 </span>            : 
-<span class="lineNum">     236 </span><span class="lineCov">         12 : void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key,</span>
-<span class="lineNum">     237 </span>            :                              const char *value) {
-<span class="lineNum">     238 </span><span class="lineCov">         12 :     GHashTable *key_to_vals = g_hash_table_lookup(self-&gt;config, formatter);</span>
-<span class="lineNum">     239 </span>            : 
-<span class="lineNum">     240 </span><span class="lineCov">         12 :     if(key_to_vals == NULL) {</span>
-<span class="lineNum">     241 </span><span class="lineCov">         12 :         key_to_vals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);</span>
-<span class="lineNum">     242 </span><span class="lineCov">         12 :         g_hash_table_insert(self-&gt;config, (char *)g_strdup(formatter), key_to_vals);</span>
-<span class="lineNum">     243 </span>            :     }
-<span class="lineNum">     244 </span><span class="lineCov">         12 :     g_hash_table_insert(key_to_vals, (char *)key, (char *)value);</span>
-<a name="245"><span class="lineNum">     245 </span><span class="lineCov">         12 : }</span></a>
-<span class="lineNum">     246 </span>            : 
-<span class="lineNum">     247 </span><span class="lineCov">      45030 : const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter,</span>
-<span class="lineNum">     248 </span>            :                                     const char *key) {
-<span class="lineNum">     249 </span><span class="lineCov">      45030 :     GHashTable *key_to_vals = g_hash_table_lookup(self-&gt;config, formatter);</span>
-<span class="lineNum">     250 </span>            : 
-<span class="lineNum">     251 </span><span class="lineCov">      45030 :     if(key_to_vals == NULL) {</span>
-<span class="lineNum">     252 </span><span class="lineCov">      45006 :         return NULL;</span>
-<span class="lineNum">     253 </span>            :     }
+<span class="lineNum">     218 </span><span class="lineCov">      69822 :     g_hash_table_insert(self-&gt;handler_to_file, new_handler_copy, file_handle);</span>
+<span class="lineNum">     219 </span><span class="lineCov">      69822 :     g_hash_table_insert(self-&gt;path_to_handler, new_handler_copy-&gt;path, new_handler);</span>
+<span class="lineNum">     220 </span>            : 
+<span class="lineNum">     221 </span><span class="lineCov">      69822 :     return true;</span>
+<a name="222"><span class="lineNum">     222 </span>            : }</a>
+<span class="lineNum">     223 </span>            : 
+<span class="lineNum">     224 </span><span class="lineCov">     329871 : static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {</span>
+<span class="lineNum">     225 </span><span class="lineCov">    1104089 :     RM_FMT_FOR_EACH_HANDLER(self) {</span>
+<span class="lineNum">     226 </span><span class="lineCov">     444347 :         RM_FMT_CALLBACK(handler-&gt;elem, result);</span>
+<span class="lineNum">     227 </span>            :     }
+<a name="228"><span class="lineNum">     228 </span><span class="lineCov">     329871 : }</span></a>
+<span class="lineNum">     229 </span>            : 
+<span class="lineNum">     230 </span><span class="lineCov">      10654 : static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {</span>
+<span class="lineNum">     231 </span><span class="lineCov">      10654 :     RmFile *fa = ga-&gt;files.head-&gt;data;</span>
+<span class="lineNum">     232 </span><span class="lineCov">      10654 :     RmFile *fb = gb-&gt;files.head-&gt;data;</span>
+<span class="lineNum">     233 </span>            : 
+<span class="lineNum">     234 </span><span class="lineCov">      10654 :     RmOff sa = fa-&gt;file_size * (ga-&gt;files.length - 1);</span>
+<span class="lineNum">     235 </span><span class="lineCov">      10654 :     RmOff sb = fb-&gt;file_size * (gb-&gt;files.length - 1);</span>
+<span class="lineNum">     236 </span>            : 
+<span class="lineNum">     237 </span>            :     /* Better do not compare big unsigneds via a - b... */
+<span class="lineNum">     238 </span><span class="lineCov">      10654 :     if(sa &lt; sb) {</span>
+<span class="lineNum">     239 </span><span class="lineCov">       7661 :         return -1;</span>
+<span class="lineNum">     240 </span>            :     }
+<span class="lineNum">     241 </span>            : 
+<span class="lineNum">     242 </span><span class="lineCov">       2993 :     if(sa &gt; sb) {</span>
+<span class="lineNum">     243 </span><span class="lineCov">       2993 :         return +1;</span>
+<span class="lineNum">     244 </span>            :     }
+<span class="lineNum">     245 </span>            : 
+<span class="lineNum">     246 </span><span class="lineNoCov">          0 :     return 0;</span>
+<a name="247"><span class="lineNum">     247 </span>            : }</a>
+<span class="lineNum">     248 </span>            : 
+<span class="lineNum">     249 </span><span class="lineCov">      32314 : static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {</span>
+<span class="lineNum">     250 </span><span class="lineCov">      32314 :     const char *rank_order = self-&gt;session-&gt;cfg-&gt;rank_criteria;</span>
+<span class="lineNum">     251 </span>            : 
+<span class="lineNum">     252 </span><span class="lineCov">      32314 :     RmFile *fa = ga-&gt;files.head-&gt;data;</span>
+<span class="lineNum">     253 </span><span class="lineCov">      32314 :     RmFile *fb = gb-&gt;files.head-&gt;data;</span>
 <span class="lineNum">     254 </span>            : 
-<span class="lineNum">     255 </span><span class="lineCov">         24 :     return g_hash_table_lookup(key_to_vals, key);</span>
-<a name="256"><span class="lineNum">     256 </span>            : }</a>
-<span class="lineNum">     257 </span>            : 
-<span class="lineNum">     258 </span><span class="lineCov">      79772 : bool rm_fmt_is_a_output(RmFmtTable *self, const char *path) {</span>
-<span class="lineNum">     259 </span><span class="lineCov">      79772 :     return g_hash_table_contains(self-&gt;path_to_handler, path);</span>
-<a name="260"><span class="lineNum">     260 </span>            : }</a>
-<span class="lineNum">     261 </span>            : 
-<span class="lineNum">     262 </span><span class="lineCov">        181 : void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {</span>
-<span class="lineNum">     263 </span><span class="lineCov">        181 :     g_hash_table_iter_init(iter, self-&gt;path_to_handler);</span>
-<a name="264"><span class="lineNum">     264 </span><span class="lineCov">        181 : }</span></a>
-<span class="lineNum">     265 </span>            : 
-<span class="lineNum">     266 </span><span class="lineCov">        108 : bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {</span>
-<span class="lineNum">     267 </span><span class="lineCov">        216 :     if(0 || handler-&gt;path == NULL || strcmp(handler-&gt;path, &quot;stdout&quot;) == 0 ||</span>
-<span class="lineNum">     268 </span><span class="lineCov">        216 :        strcmp(handler-&gt;path, &quot;stderr&quot;) == 0 || strcmp(handler-&gt;path, &quot;stdin&quot;) == 0) {</span>
-<span class="lineNum">     269 </span><span class="lineNoCov">          0 :         return true;</span>
-<span class="lineNum">     270 </span>            :     }
-<span class="lineNum">     271 </span>            : 
-<span class="lineNum">     272 </span><span class="lineCov">        108 :     return (access(handler-&gt;path, W_OK) == -1);</span>
-<span class="lineNum">     273 </span>            : }
+<span class="lineNum">     255 </span><span class="lineCov">      32384 :     if(fa-&gt;lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &amp;&amp;</span>
+<span class="lineNum">     256 </span><span class="lineCov">         70 :        fa-&gt;lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {</span>
+<span class="lineNum">     257 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     258 </span>            :     }
+<span class="lineNum">     259 </span>            : 
+<span class="lineNum">     260 </span><span class="lineCov">      32314 :     if(fb-&gt;lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &amp;&amp;</span>
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :        fb-&gt;lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {</span>
+<span class="lineNum">     262 </span><span class="lineNoCov">          0 :         return +1;</span>
+<span class="lineNum">     263 </span>            :     }
+<span class="lineNum">     264 </span>            : 
+<span class="lineNum">     265 </span><span class="lineCov">      48306 :     for(int i = 0; rank_order[i]; ++i) {</span>
+<span class="lineNum">     266 </span><span class="lineCov">      47610 :         gint64 r = 0;</span>
+<span class="lineNum">     267 </span><span class="lineCov">      47610 :         switch(tolower(rank_order[i])) {</span>
+<span class="lineNum">     268 </span>            :         case 's':
+<span class="lineNum">     269 </span><span class="lineCov">      10654 :             r = rm_fmt_rank_size(ga, gb);</span>
+<span class="lineNum">     270 </span><span class="lineCov">      10654 :             break;</span>
+<span class="lineNum">     271 </span>            :         case 'a': {
+<span class="lineNum">     272 </span><span class="lineCov">       8024 :             RM_DEFINE_BASENAME(fa)</span>
+<span class="lineNum">     273 </span><span class="lineCov">       8024 :             RM_DEFINE_BASENAME(fb)</span>
+<span class="lineNum">     274 </span><span class="lineCov">       8024 :             r = strcasecmp(fa_basename, fb_basename);</span>
+<span class="lineNum">     275 </span><span class="lineCov">       8024 :         } break;</span>
+<span class="lineNum">     276 </span>            :         case 'm':
+<span class="lineNum">     277 </span><span class="lineCov">      10468 :             r = ((gint64)fa-&gt;mtime) - ((gint64)fb-&gt;mtime);</span>
+<span class="lineNum">     278 </span><span class="lineCov">      10468 :             break;</span>
+<span class="lineNum">     279 </span>            :         case 'p':
+<span class="lineNum">     280 </span><span class="lineCov">       7996 :             r = ((gint64)fa-&gt;path_index) - ((gint64)fb-&gt;path_index);</span>
+<span class="lineNum">     281 </span><span class="lineCov">       7996 :             break;</span>
+<span class="lineNum">     282 </span>            :         case 'n':
+<span class="lineNum">     283 </span><span class="lineCov">      10468 :             r = ((gint64)ga-&gt;files.length) - ((gint64)gb-&gt;files.length);</span>
+<span class="lineNum">     284 </span><span class="lineCov">      10468 :             break;</span>
+<span class="lineNum">     285 </span>            :         case 'o':
+<span class="lineNum">     286 </span><span class="lineNoCov">          0 :             r = ga-&gt;index - gb-&gt;index;</span>
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :             break;</span>
+<span class="lineNum">     288 </span>            :         }
+<span class="lineNum">     289 </span>            : 
+<span class="lineNum">     290 </span><span class="lineCov">      47610 :         if(r != 0) {</span>
+<span class="lineNum">     291 </span><span class="lineCov">      31618 :             r = CLAMP(r, -1, +1);</span>
+<span class="lineNum">     292 </span><span class="lineCov">      31618 :             return isupper(rank_order[i]) ? -r : r;</span>
+<span class="lineNum">     293 </span>            :         }
+<span class="lineNum">     294 </span>            :     }
+<span class="lineNum">     295 </span>            : 
+<span class="lineNum">     296 </span><span class="lineCov">        696 :     return 0;</span>
+<a name="297"><span class="lineNum">     297 </span>            : }</a>
+<span class="lineNum">     298 </span>            : 
+<span class="lineNum">     299 </span><span class="lineCov">      52985 : void rm_fmt_flush(RmFmtTable *self) {</span>
+<span class="lineNum">     300 </span><span class="lineCov">      52985 :     RmCfg *cfg = self-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     301 </span><span class="lineCov">      52985 :     if(!cfg-&gt;cache_file_structs) {</span>
+<span class="lineNum">     302 </span><span class="lineCov">      19636 :         return;</span>
+<span class="lineNum">     303 </span>            :     }
+<span class="lineNum">     304 </span>            : 
+<span class="lineNum">     305 </span><span class="lineCov">      33349 :     if(*(cfg-&gt;rank_criteria)) {</span>
+<span class="lineNum">     306 </span><span class="lineCov">      32216 :         g_queue_sort(&amp;self-&gt;groups, (GCompareDataFunc)rm_fmt_rank, self);</span>
+<span class="lineNum">     307 </span>            :     }
+<span class="lineNum">     308 </span>            : 
+<span class="lineNum">     309 </span><span class="lineCov">      99641 :     for(GList *iter = self-&gt;groups.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     310 </span><span class="lineCov">      66292 :         RmFmtGroup *group = iter-&gt;data;</span>
+<span class="lineNum">     311 </span><span class="lineCov">      66292 :         g_queue_foreach(&amp;group-&gt;files, (GFunc)rm_fmt_write_impl, self);</span>
+<span class="lineNum">     312 </span>            :     }
+<a name="313"><span class="lineNum">     313 </span>            : }</a>
+<span class="lineNum">     314 </span>            : 
+<span class="lineNum">     315 </span><span class="lineCov">      52994 : void rm_fmt_close(RmFmtTable *self) {</span>
+<span class="lineNum">     316 </span><span class="lineCov">     119286 :     for(GList *iter = self-&gt;groups.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     317 </span><span class="lineCov">      66292 :         RmFmtGroup *group = iter-&gt;data;</span>
+<span class="lineNum">     318 </span><span class="lineCov">      66292 :         rm_fmt_group_destroy(group);</span>
+<span class="lineNum">     319 </span>            :     }
+<span class="lineNum">     320 </span>            : 
+<span class="lineNum">     321 </span><span class="lineCov">      52994 :     g_queue_clear(&amp;self-&gt;groups);</span>
+<span class="lineNum">     322 </span>            : 
+<span class="lineNum">     323 </span><span class="lineCov">     175810 :     RM_FMT_FOR_EACH_HANDLER(self) {</span>
+<span class="lineNum">     324 </span><span class="lineCov">      69822 :         RM_FMT_CALLBACK(handler-&gt;foot);</span>
+<span class="lineNum">     325 </span><span class="lineCov">      69822 :         fclose(file);</span>
+<span class="lineNum">     326 </span><span class="lineCov">      69822 :         g_mutex_clear(&amp;handler-&gt;print_mtx);</span>
+<span class="lineNum">     327 </span>            :     }
+<span class="lineNum">     328 </span>            : 
+<span class="lineNum">     329 </span><span class="lineCov">      52994 :     g_hash_table_unref(self-&gt;name_to_handler);</span>
+<span class="lineNum">     330 </span><span class="lineCov">      52994 :     g_hash_table_unref(self-&gt;handler_to_file);</span>
+<span class="lineNum">     331 </span><span class="lineCov">      52994 :     g_hash_table_unref(self-&gt;path_to_handler);</span>
+<span class="lineNum">     332 </span><span class="lineCov">      52994 :     g_hash_table_unref(self-&gt;config);</span>
+<span class="lineNum">     333 </span><span class="lineCov">      52994 :     g_rec_mutex_clear(&amp;self-&gt;state_mtx);</span>
+<span class="lineNum">     334 </span><span class="lineCov">      52994 :     g_slice_free(RmFmtTable, self);</span>
+<a name="335"><span class="lineNum">     335 </span><span class="lineCov">      52994 : }</span></a>
+<span class="lineNum">     336 </span>            : 
+<span class="lineNum">     337 </span><span class="lineCov">     329871 : void rm_fmt_write(RmFile *result, RmFmtTable *self, gint64 twin_count) {</span>
+<span class="lineNum">     338 </span><span class="lineCov">     329871 :     bool direct = !(self-&gt;session-&gt;cfg-&gt;cache_file_structs);</span>
+<span class="lineNum">     339 </span>            : 
+<span class="lineNum">     340 </span><span class="lineCov">     329871 :     result-&gt;twin_count = twin_count;</span>
+<span class="lineNum">     341 </span>            : 
+<span class="lineNum">     342 </span><span class="lineCov">     329871 :     if(direct) {</span>
+<span class="lineNum">     343 </span><span class="lineCov">     100631 :         rm_fmt_write_impl(result, self);</span>
+<span class="lineNum">     344 </span>            :     } else {
+<span class="lineNum">     345 </span><span class="lineCov">     229240 :         if(result-&gt;is_original || self-&gt;groups.length == 0) {</span>
+<span class="lineNum">     346 </span><span class="lineCov">      66292 :             g_queue_push_tail(&amp;self-&gt;groups, rm_fmt_group_new());</span>
+<span class="lineNum">     347 </span>            :         }
+<span class="lineNum">     348 </span>            : 
+<span class="lineNum">     349 </span><span class="lineCov">     229240 :         RmFmtGroup *group = self-&gt;groups.tail-&gt;data;</span>
+<span class="lineNum">     350 </span><span class="lineCov">     229240 :         group-&gt;index = self-&gt;groups.length - 1;</span>
+<span class="lineNum">     351 </span>            : 
+<span class="lineNum">     352 </span><span class="lineCov">     229240 :         g_queue_push_tail(&amp;group-&gt;files, result);</span>
+<span class="lineNum">     353 </span>            :     }
+<a name="354"><span class="lineNum">     354 </span><span class="lineCov">     329871 : }</span></a>
+<span class="lineNum">     355 </span>            : 
+<span class="lineNum">     356 </span><span class="lineCov">    1106139 : void rm_fmt_lock_state(RmFmtTable *self) {</span>
+<span class="lineNum">     357 </span><span class="lineCov">    1106139 :     g_rec_mutex_lock(&amp;self-&gt;state_mtx);</span>
+<a name="358"><span class="lineNum">     358 </span><span class="lineCov">    1106155 : }</span></a>
+<span class="lineNum">     359 </span>            : 
+<span class="lineNum">     360 </span><span class="lineCov">    1106155 : void rm_fmt_unlock_state(RmFmtTable *self) {</span>
+<span class="lineNum">     361 </span><span class="lineCov">    1106155 :     g_rec_mutex_unlock(&amp;self-&gt;state_mtx);</span>
+<a name="362"><span class="lineNum">     362 </span><span class="lineCov">    1106151 : }</span></a>
+<span class="lineNum">     363 </span>            : 
+<span class="lineNum">     364 </span><span class="lineCov">    1054881 : void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {</span>
+<span class="lineNum">     365 </span><span class="lineCov">    1054881 :     rm_fmt_lock_state(self);</span>
+<span class="lineNum">     366 </span>            :     {
+<span class="lineNum">     367 </span><span class="lineCov">    3661118 :         RM_FMT_FOR_EACH_HANDLER(self) {</span>
+<span class="lineNum">     368 </span><span class="lineCov">    1551332 :             RM_FMT_CALLBACK(handler-&gt;prog, state);</span>
+<span class="lineNum">     369 </span>            :         }
+<span class="lineNum">     370 </span>            :     }
+<span class="lineNum">     371 </span><span class="lineCov">    1054893 :     rm_fmt_unlock_state(self);</span>
+<a name="372"><span class="lineNum">     372 </span><span class="lineCov">    1054889 : }</span></a>
+<span class="lineNum">     373 </span>            : 
+<span class="lineNum">     374 </span><span class="lineCov">      52987 : void rm_fmt_set_config_value(RmFmtTable *self, const char *formatter, const char *key,</span>
+<span class="lineNum">     375 </span>            :                              const char *value) {
+<span class="lineNum">     376 </span><span class="lineCov">      52987 :     GHashTable *key_to_vals = g_hash_table_lookup(self-&gt;config, formatter);</span>
+<span class="lineNum">     377 </span>            : 
+<span class="lineNum">     378 </span><span class="lineCov">      52987 :     if(key_to_vals == NULL) {</span>
+<span class="lineNum">     379 </span><span class="lineCov">      52987 :         key_to_vals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);</span>
+<span class="lineNum">     380 </span><span class="lineCov">      52987 :         g_hash_table_insert(self-&gt;config, (char *)g_strdup(formatter), key_to_vals);</span>
+<span class="lineNum">     381 </span>            :     }
+<span class="lineNum">     382 </span><span class="lineCov">      52987 :     g_hash_table_insert(key_to_vals, (char *)key, (char *)value);</span>
+<a name="383"><span class="lineNum">     383 </span><span class="lineCov">      52987 : }</span></a>
+<span class="lineNum">     384 </span>            : 
+<span class="lineNum">     385 </span><span class="lineCov">     652428 : const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter,</span>
+<span class="lineNum">     386 </span>            :                                     const char *key) {
+<span class="lineNum">     387 </span><span class="lineCov">     652428 :     GHashTable *key_to_vals = g_hash_table_lookup(self-&gt;config, formatter);</span>
+<span class="lineNum">     388 </span>            : 
+<span class="lineNum">     389 </span><span class="lineCov">     652428 :     if(key_to_vals == NULL) {</span>
+<span class="lineNum">     390 </span><span class="lineCov">       1263 :         return NULL;</span>
+<span class="lineNum">     391 </span>            :     }
+<span class="lineNum">     392 </span>            : 
+<span class="lineNum">     393 </span><span class="lineCov">     651165 :     return g_hash_table_lookup(key_to_vals, key);</span>
+<a name="394"><span class="lineNum">     394 </span>            : }</a>
+<span class="lineNum">     395 </span>            : 
+<span class="lineNum">     396 </span><span class="lineCov">     224077 : bool rm_fmt_is_a_output(RmFmtTable *self, const char *path) {</span>
+<span class="lineNum">     397 </span><span class="lineCov">     224077 :     return g_hash_table_contains(self-&gt;path_to_handler, path);</span>
+<a name="398"><span class="lineNum">     398 </span>            : }</a>
+<span class="lineNum">     399 </span>            : 
+<span class="lineNum">     400 </span><span class="lineCov">        122 : void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {</span>
+<span class="lineNum">     401 </span><span class="lineCov">        122 :     g_hash_table_iter_init(iter, self-&gt;path_to_handler);</span>
+<a name="402"><span class="lineNum">     402 </span><span class="lineCov">        122 : }</span></a>
+<span class="lineNum">     403 </span>            : 
+<span class="lineNum">     404 </span><span class="lineCov">         16 : bool rm_fmt_has_formatter(RmFmtTable *self, const char *name) {</span>
+<span class="lineNum">     405 </span>            :     GHashTableIter iter;
+<span class="lineNum">     406 </span><span class="lineCov">         16 :     RmFmtHandler *handler = NULL;</span>
+<span class="lineNum">     407 </span>            : 
+<span class="lineNum">     408 </span><span class="lineCov">         16 :     g_hash_table_iter_init(&amp;iter, self-&gt;path_to_handler);</span>
+<span class="lineNum">     409 </span>            : 
+<span class="lineNum">     410 </span><span class="lineCov">         16 :     while(g_hash_table_iter_next(&amp;iter, NULL, (gpointer *)&amp;handler)) {</span>
+<span class="lineNum">     411 </span><span class="lineCov">         24 :         if(!strcmp(handler-&gt;name, name)) {</span>
+<span class="lineNum">     412 </span><span class="lineNoCov">          0 :             return true;</span>
+<span class="lineNum">     413 </span>            :         }
+<span class="lineNum">     414 </span>            :     }
+<span class="lineNum">     415 </span>            : 
+<span class="lineNum">     416 </span><span class="lineCov">         16 :     return false;</span>
+<a name="417"><span class="lineNum">     417 </span>            : }</a>
+<span class="lineNum">     418 </span>            : 
+<span class="lineNum">     419 </span><span class="lineCov">        124 : bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {</span>
+<span class="lineNum">     420 </span><span class="lineCov">        248 :     if(0 || handler-&gt;path == NULL || strcmp(handler-&gt;path, &quot;stdout&quot;) == 0 ||</span>
+<span class="lineNum">     421 </span><span class="lineCov">        248 :        strcmp(handler-&gt;path, &quot;stderr&quot;) == 0 || strcmp(handler-&gt;path, &quot;stdin&quot;) == 0) {</span>
+<span class="lineNum">     422 </span><span class="lineNoCov">          0 :         return true;</span>
+<span class="lineNum">     423 </span>            :     }
+<span class="lineNum">     424 </span>            : 
+<span class="lineNum">     425 </span><span class="lineCov">        124 :     return (access(handler-&gt;path, W_OK) == -1);</span>
+<span class="lineNum">     426 </span>            : }
 </pre>
       </td>
     </tr>
@@ -341,7 +494,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

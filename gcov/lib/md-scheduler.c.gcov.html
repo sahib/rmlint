@@ -1,0 +1,525 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/md-scheduler.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - md-scheduler.c<span style="font-size: 80%;"> (source / <a href="md-scheduler.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">160</td>
+            <td class="headerCovTableEntry">181</td>
+            <td class="headerCovTableEntryMed">88.4 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">22</td>
+            <td class="headerCovTableEntry">27</td>
+            <td class="headerCovTableEntryMed">81.5 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &quot;md-scheduler.h&quot;
+<span class="lineNum">      27 </span>            : 
+<span class="lineNum">      28 </span>            : /* handy for comparing 64-bit integers and returning int */
+<span class="lineNum">      29 </span>            : #define SIGN_DIFF(X, Y) (((X) &gt; (Y)) - ((X) &lt; (Y)))
+<span class="lineNum">      30 </span>            : 
+<span class="lineNum">      31 </span>            : /* How many milliseconds to sleep if we encounter an empty file queue.
+<span class="lineNum">      32 </span>            :  * This prevents a &quot;starving&quot; RmShredDevice from hogging cpu and cluttering up
+<span class="lineNum">      33 </span>            :  * debug messages by continually recycling back to the joiner.
+<span class="lineNum">      34 </span>            :  */
+<span class="lineNum">      35 </span>            : #if _RM_MDS_DEBUG
+<span class="lineNum">      36 </span>            : #define MDS_EMPTYQUEUE_SLEEP_US (60 * 1000 * 1000) /* 60 seconds */
+<span class="lineNum">      37 </span>            : #else
+<span class="lineNum">      38 </span>            : #define MDS_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 0.05 second */
+<span class="lineNum">      39 </span>            : #endif
+<span class="lineNum">      40 </span>            : 
+<span class="lineNum">      41 </span>            : ///////////////////////////////////////
+<span class="lineNum">      42 </span>            : //            Structures             //
+<span class="lineNum">      43 </span>            : ///////////////////////////////////////
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span>            : struct _RmMDS {
+<span class="lineNum">      46 </span>            :     /* Structure for RmMDS object/session */
+<span class="lineNum">      47 </span>            : 
+<span class="lineNum">      48 </span>            :     /* The function called for each task */
+<span class="lineNum">      49 </span>            :     RmMDSFunc func;
+<span class="lineNum">      50 </span>            : 
+<span class="lineNum">      51 </span>            :     /* Threadpool for device workers */
+<span class="lineNum">      52 </span>            :     GThreadPool *pool;
+<span class="lineNum">      53 </span>            : 
+<span class="lineNum">      54 </span>            :     /* Sorting function for device task queues */
+<span class="lineNum">      55 </span>            :     RmMDSSortFunc prioritiser;
+<span class="lineNum">      56 </span>            : 
+<span class="lineNum">      57 </span>            :     /* Mounts table for grouping dev's by physical devices
+<span class="lineNum">      58 </span>            :      * and identifying rotationality */
+<span class="lineNum">      59 </span>            :     RmMountTable *mount_table;
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span>            :     /* If true then don't use mount table; interpret user-supplied dev as disk id */
+<span class="lineNum">      62 </span>            :     bool fake_disk;
+<span class="lineNum">      63 </span>            : 
+<span class="lineNum">      64 </span>            :     /* Table of physical disk/devices */
+<span class="lineNum">      65 </span>            :     GHashTable *disks;
+<span class="lineNum">      66 </span>            : 
+<span class="lineNum">      67 </span>            :     /* Lock for access to:
+<span class="lineNum">      68 </span>            :      *  self-&gt;disks
+<span class="lineNum">      69 </span>            :      */
+<span class="lineNum">      70 </span>            :     GMutex lock;
+<span class="lineNum">      71 </span>            : 
+<span class="lineNum">      72 </span>            :     /* flag for whether threadpool is running */
+<span class="lineNum">      73 </span>            :     gboolean running;
+<span class="lineNum">      74 </span>            : 
+<span class="lineNum">      75 </span>            :     /* quota to limit number of tasks per pass of each device */
+<span class="lineNum">      76 </span>            :     gint pass_quota;
+<span class="lineNum">      77 </span>            : 
+<span class="lineNum">      78 </span>            :     /* pointer to user data to be passed to func */
+<span class="lineNum">      79 </span>            :     gpointer user_data;
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span>            :     /* number of pending tasks */
+<span class="lineNum">      82 </span>            :     guint pending_tasks;
+<span class="lineNum">      83 </span>            : 
+<span class="lineNum">      84 </span>            : };
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span>            : typedef struct RmMDSDevice {
+<span class="lineNum">      87 </span>            :     /* Structure containing data associated with one Device worker thread */
+<span class="lineNum">      88 </span>            : 
+<span class="lineNum">      89 </span>            :     /* The RmMDS session parent */
+<span class="lineNum">      90 </span>            :     RmMDS *mds;
+<span class="lineNum">      91 </span>            : 
+<span class="lineNum">      92 </span>            :     /* Device's physical disk ID (only used for debug info) */
+<span class="lineNum">      93 </span>            :     dev_t disk;
+<span class="lineNum">      94 </span>            : 
+<span class="lineNum">      95 </span>            :     /* Sorted list of tasks queued for execution */
+<span class="lineNum">      96 </span>            :     GSList *sorted_tasks;
+<span class="lineNum">      97 </span>            : 
+<span class="lineNum">      98 </span>            :     /* Stack for tasks that will be sorted and carried out next pass */
+<span class="lineNum">      99 </span>            :     GSList *unsorted_tasks;
+<span class="lineNum">     100 </span>            : 
+<span class="lineNum">     101 </span>            :     /* Lock for access to:
+<span class="lineNum">     102 </span>            :      *  self-&gt;sorted_tasks
+<span class="lineNum">     103 </span>            :      *  self-&gt;unsorted_tasks
+<span class="lineNum">     104 </span>            :      *  self-&gt;ref_count
+<span class="lineNum">     105 </span>            :      */
+<span class="lineNum">     106 </span>            :     GMutex lock;
+<span class="lineNum">     107 </span>            :     GCond cond;
+<span class="lineNum">     108 </span>            : 
+<span class="lineNum">     109 </span>            :     /* Reference count for self */
+<span class="lineNum">     110 </span>            :     gint ref_count;
+<span class="lineNum">     111 </span>            : 
+<span class="lineNum">     112 </span>            :     /* is disk rotational? */
+<span class="lineNum">     113 </span>            :     gboolean is_rotational;
+<span class="lineNum">     114 </span>            : 
+<span class="lineNum">     115 </span>            : } RmMDSDevice;
+<span class="lineNum">     116 </span>            : 
+<span class="lineNum">     117 </span>            : //////////////////////////////////////////////
+<span class="lineNum">     118 </span>            : //  Internal Structure Init's &amp; Destroyers  //
+<span class="lineNum">     119 </span>            : //////////////////////////////////////////////
+<a name="120"><span class="lineNum">     120 </span>            : </a>
+<span class="lineNum">     121 </span>            : /* RmMDSTask */
+<span class="lineNum">     122 </span><span class="lineCov">     221829 : static RmMDSTask *rm_mds_task_new(const dev_t dev, const guint64 offset,</span>
+<span class="lineNum">     123 </span>            :                                   const gpointer task_data) {
+<span class="lineNum">     124 </span><span class="lineCov">     221829 :     RmMDSTask *self = g_slice_new0(RmMDSTask);</span>
+<span class="lineNum">     125 </span><span class="lineCov">     221829 :     self-&gt;dev = dev;</span>
+<span class="lineNum">     126 </span><span class="lineCov">     221829 :     self-&gt;offset = offset;</span>
+<span class="lineNum">     127 </span><span class="lineCov">     221829 :     self-&gt;task_data = task_data;</span>
+<span class="lineNum">     128 </span><span class="lineCov">     221829 :     return self;</span>
+<a name="129"><span class="lineNum">     129 </span>            : }</a>
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span><span class="lineCov">     221829 : static void rm_mds_task_free(RmMDSTask *task) {</span>
+<span class="lineNum">     132 </span><span class="lineCov">     221829 :     g_slice_free(RmMDSTask, task);</span>
+<span class="lineNum">     133 </span><span class="lineCov">     221825 : }</span>
+<a name="134"><span class="lineNum">     134 </span>            : </a>
+<span class="lineNum">     135 </span>            : /* RmMDSDevice */
+<span class="lineNum">     136 </span><span class="lineCov">      38638 : static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {</span>
+<span class="lineNum">     137 </span><span class="lineCov">      38638 :     RmMDSDevice *self = g_slice_new0(RmMDSDevice);</span>
+<span class="lineNum">     138 </span>            : 
+<span class="lineNum">     139 </span><span class="lineCov">      38638 :     g_mutex_init(&amp;self-&gt;lock);</span>
+<span class="lineNum">     140 </span><span class="lineCov">      38638 :     g_cond_init(&amp;self-&gt;cond);</span>
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span><span class="lineCov">      38638 :     self-&gt;mds = mds;</span>
+<span class="lineNum">     143 </span><span class="lineCov">      38638 :     self-&gt;ref_count = 0;</span>
+<span class="lineNum">     144 </span><span class="lineCov">      38638 :     self-&gt;disk = disk;</span>
+<span class="lineNum">     145 </span>            : 
+<span class="lineNum">     146 </span><span class="lineCov">      38638 :     if (mds-&gt;fake_disk) {</span>
+<span class="lineNum">     147 </span><span class="lineCov">       3585 :         self-&gt;is_rotational = (disk % 2 == 0);</span>
+<span class="lineNum">     148 </span>            :     } else {
+<span class="lineNum">     149 </span><span class="lineCov">      35053 :         self-&gt;is_rotational = !rm_mounts_is_nonrotational(mds-&gt;mount_table, disk);</span>
+<span class="lineNum">     150 </span>            :     }
+<span class="lineNum">     151 </span>            : 
+<span class="lineNum">     152 </span><span class="lineCov">      38638 :     rm_log_debug_line(&quot;Created new RmMDSDevice for %srotational disk #%lu&quot;,</span>
+<span class="lineNum">     153 </span>            :             self-&gt;is_rotational ? &quot;&quot; : &quot;non-&quot;, (long unsigned)disk);
+<span class="lineNum">     154 </span><span class="lineCov">      38638 :     return self;</span>
+<span class="lineNum">     155 </span>            : }
+<span class="lineNum">     156 </span>            : 
+<a name="157"><span class="lineNum">     157 </span>            : /** @brief  Wait for a RmMDSDevice to finish all tasks</a>
+<span class="lineNum">     158 </span>            :  **/
+<span class="lineNum">     159 </span><span class="lineCov">      77134 : static void rm_mds_device_finish(RmMDSDevice *self) {</span>
+<span class="lineNum">     160 </span><span class="lineCov">      77134 :     g_mutex_lock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     161 </span>            :     {
+<span class="lineNum">     162 </span><span class="lineCov">     199003 :         while(self-&gt;ref_count &gt; 0) {</span>
+<span class="lineNum">     163 </span><span class="lineCov">      44735 :             g_cond_wait(&amp;self-&gt;cond, &amp;self-&gt;lock);</span>
+<span class="lineNum">     164 </span>            :         }
+<span class="lineNum">     165 </span>            :     }
+<span class="lineNum">     166 </span><span class="lineCov">      77134 :     g_mutex_unlock(&amp;self-&gt;lock);</span>
+<span class="lineNum">     167 </span><span class="lineCov">      77134 : }</span>
+<span class="lineNum">     168 </span>            : 
+<a name="169"><span class="lineNum">     169 </span>            : /** @brief  Free mem allocated to a RmMDSDevice</a>
+<span class="lineNum">     170 </span>            :  **/
+<span class="lineNum">     171 </span><span class="lineCov">      38638 : static void rm_mds_device_free(RmMDSDevice *self) {</span>
+<span class="lineNum">     172 </span><span class="lineCov">      38638 :     rm_mds_device_finish(self);</span>
+<span class="lineNum">     173 </span>            : 
+<span class="lineNum">     174 </span><span class="lineCov">      38638 :     g_mutex_clear(&amp;self-&gt;lock);</span>
+<span class="lineNum">     175 </span><span class="lineCov">      38638 :     g_cond_clear(&amp;self-&gt;cond);</span>
+<span class="lineNum">     176 </span><span class="lineCov">      38638 :     g_slice_free(RmMDSDevice, self);</span>
+<span class="lineNum">     177 </span><span class="lineCov">      38638 : }</span>
+<span class="lineNum">     178 </span>            : 
+<span class="lineNum">     179 </span>            : ///////////////////////////////////////
+<span class="lineNum">     180 </span>            : //    RmMDSDevice Implementation   //
+<span class="lineNum">     181 </span>            : ///////////////////////////////////////
+<span class="lineNum">     182 </span>            : 
+<span class="lineNum">     183 </span>            : /** @brief Mutex-protected task popper
+<a name="184"><span class="lineNum">     184 </span>            :  **/</a>
+<span class="lineNum">     185 </span>            : 
+<span class="lineNum">     186 </span><span class="lineCov">     359540 : static RmMDSTask *rm_mds_pop_task(RmMDSDevice *device) {</span>
+<span class="lineNum">     187 </span><span class="lineCov">     359540 :     RmMDSTask *task = NULL;</span>
+<span class="lineNum">     188 </span>            : 
+<span class="lineNum">     189 </span><span class="lineCov">     359540 :     g_mutex_lock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     190 </span>            :     {
+<span class="lineNum">     191 </span><span class="lineCov">     359546 :         if(device-&gt;sorted_tasks) {</span>
+<span class="lineNum">     192 </span><span class="lineCov">     269809 :             task = device-&gt;sorted_tasks-&gt;data;</span>
+<span class="lineNum">     193 </span><span class="lineCov">     269805 :             device-&gt;sorted_tasks =</span>
+<span class="lineNum">     194 </span><span class="lineCov">     269809 :                 g_slist_delete_link(device-&gt;sorted_tasks, device-&gt;sorted_tasks);</span>
+<span class="lineNum">     195 </span><span class="lineCov">     269805 :             device-&gt;ref_count--;</span>
+<span class="lineNum">     196 </span>            :         }
+<span class="lineNum">     197 </span>            :     }
+<span class="lineNum">     198 </span><span class="lineCov">     359542 :     g_mutex_unlock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     199 </span><span class="lineCov">     359554 :     return task;</span>
+<span class="lineNum">     200 </span>            : }
+<span class="lineNum">     201 </span>            : 
+<span class="lineNum">     202 </span>            : /** @brief Mutex-protected task pusher
+<a name="203"><span class="lineNum">     203 </span>            :  **/</a>
+<span class="lineNum">     204 </span>            : 
+<span class="lineNum">     205 </span><span class="lineCov">     269818 : static void rm_mds_push_task(RmMDSDevice *device, RmMDSTask *task) {</span>
+<span class="lineNum">     206 </span><span class="lineCov">     269818 :     g_mutex_lock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     207 </span>            :     {
+<span class="lineNum">     208 </span><span class="lineCov">     269818 :         device-&gt;unsorted_tasks =</span>
+<span class="lineNum">     209 </span><span class="lineCov">     269818 :                 g_slist_prepend(device-&gt;unsorted_tasks, task);</span>
+<span class="lineNum">     210 </span><span class="lineCov">     269818 :         device-&gt;ref_count++;</span>
+<span class="lineNum">     211 </span><span class="lineCov">     269818 :         g_cond_signal(&amp;device-&gt;cond);</span>
+<span class="lineNum">     212 </span>            :     }
+<span class="lineNum">     213 </span><span class="lineCov">     269818 :     g_mutex_unlock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     214 </span><span class="lineCov">     269818 : }</span>
+<span class="lineNum">     215 </span>            : 
+<a name="216"><span class="lineNum">     216 </span>            : /** @brief GCompareDataFunc wrapper for mds-&gt;prioritiser</a>
+<span class="lineNum">     217 </span>            :  **/
+<span class="lineNum">     218 </span><span class="lineCov">     434703 : static gint rm_mds_compare(const RmMDSTask *a, const RmMDSTask *b,</span>
+<span class="lineNum">     219 </span>            :                            RmMDSSortFunc prioritiser) {
+<span class="lineNum">     220 </span><span class="lineCov">     434703 :     gint result = prioritiser(a, b);</span>
+<span class="lineNum">     221 </span><span class="lineCov">     434688 :     return result;</span>
+<span class="lineNum">     222 </span>            : }
+<span class="lineNum">     223 </span>            : 
+<a name="224"><span class="lineNum">     224 </span>            : /** @brief RmMDSDevice worker thread</a>
+<span class="lineNum">     225 </span>            :  **/
+<span class="lineNum">     226 </span><span class="lineCov">      89737 : static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {</span>
+<span class="lineNum">     227 </span>            :     /* rm_mds_factory processes tasks from device-&gt;task_list.
+<span class="lineNum">     228 </span>            :      * After completing one pass of the device, returns self to the
+<span class="lineNum">     229 </span>            :      * mds-&gt;pool threadpool. */
+<span class="lineNum">     230 </span><span class="lineCov">      89737 :     gint quota = mds-&gt;pass_quota;</span>
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span><span class="lineCov">      89737 :     g_mutex_lock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     233 </span>            :     {
+<span class="lineNum">     234 </span>            :         /* check for empty queues - if so then wait a little while before giving up */
+<span class="lineNum">     235 </span><span class="lineCov">      89735 :         if(!device-&gt;sorted_tasks &amp;&amp; !device-&gt;unsorted_tasks &amp;&amp; device-&gt;ref_count &gt; 0) {</span>
+<span class="lineNum">     236 </span>            :             /* timed wait for signal from rm_mds_push_task() */
+<span class="lineNum">     237 </span><span class="lineCov">      32924 :             gint64 end_time = g_get_monotonic_time() + MDS_EMPTYQUEUE_SLEEP_US;</span>
+<span class="lineNum">     238 </span><span class="lineCov">      32924 :             g_cond_wait_until(&amp;device-&gt;cond, &amp;device-&gt;lock, end_time);</span>
+<span class="lineNum">     239 </span>            :         }
+<span class="lineNum">     240 </span>            : 
+<span class="lineNum">     241 </span>            :         /* merge and sort task lists */
+<span class="lineNum">     242 </span><span class="lineCov">      89720 :         device-&gt;sorted_tasks =</span>
+<span class="lineNum">     243 </span><span class="lineCov">      89728 :             g_slist_concat(device-&gt;unsorted_tasks, device-&gt;sorted_tasks);</span>
+<span class="lineNum">     244 </span><span class="lineCov">      89720 :         device-&gt;unsorted_tasks = NULL;</span>
+<span class="lineNum">     245 </span><span class="lineCov">      89720 :         if(mds-&gt;prioritiser) {</span>
+<span class="lineNum">     246 </span><span class="lineCov">      89733 :             device-&gt;sorted_tasks = g_slist_sort_with_data(</span>
+<span class="lineNum">     247 </span>            :                 device-&gt;sorted_tasks, (GCompareDataFunc)rm_mds_compare,
+<span class="lineNum">     248 </span><span class="lineCov">      89733 :                 (RmMDSSortFunc)mds-&gt;prioritiser);</span>
+<span class="lineNum">     249 </span>            :         }
+<span class="lineNum">     250 </span>            :     }
+<span class="lineNum">     251 </span><span class="lineCov">      89699 :     g_mutex_unlock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     252 </span>            : 
+<span class="lineNum">     253 </span>            :     /* process tasks from device-&gt;sorted_tasks */
+<span class="lineNum">     254 </span><span class="lineCov">      89731 :     RmMDSTask *task = NULL;</span>
+<span class="lineNum">     255 </span><span class="lineCov">     449275 :     while(quota &gt; 0 &amp;&amp;</span>
+<span class="lineNum">     256 </span>            :           (task = rm_mds_pop_task(device))) {
+<span class="lineNum">     257 </span><span class="lineCov">     269813 :         if ( mds-&gt;func(task-&gt;task_data, mds-&gt;user_data) ) {</span>
+<span class="lineNum">     258 </span>            :             /* task succeeded */
+<span class="lineNum">     259 </span><span class="lineCov">     221828 :             rm_mds_task_free(task);</span>
+<span class="lineNum">     260 </span>            :             /* decrement counters */
+<span class="lineNum">     261 </span><span class="lineCov">     221829 :             --quota;</span>
+<span class="lineNum">     262 </span><span class="lineCov">     221829 :             g_atomic_int_dec_and_test(&amp;device-&gt;mds-&gt;pending_tasks);</span>
+<span class="lineNum">     263 </span>            :         } else {
+<span class="lineNum">     264 </span>            :             /* task failed; push it back to device-&gt;unsorted_tasks */
+<span class="lineNum">     265 </span><span class="lineCov">      47989 :             rm_mds_push_task(device, task);</span>
+<span class="lineNum">     266 </span>            :         }
+<span class="lineNum">     267 </span>            :     }
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineCov">      89737 :     if(g_atomic_int_get(&amp;device-&gt;ref_count) &gt; 0) {</span>
+<span class="lineNum">     270 </span>            :         /* return self to pool for further processing */
+<span class="lineNum">     271 </span><span class="lineCov">      51105 :         rm_util_thread_pool_push(mds-&gt;pool, device);</span>
+<span class="lineNum">     272 </span>            :     } else {
+<span class="lineNum">     273 </span>            :         /* signal to rm_mds_device_free() */
+<span class="lineNum">     274 </span><span class="lineCov">      38632 :         g_cond_signal(&amp;device-&gt;cond);</span>
+<span class="lineNum">     275 </span>            :     }
+<span class="lineNum">     276 </span><span class="lineCov">      89737 : }</span>
+<span class="lineNum">     277 </span>            : 
+<a name="278"><span class="lineNum">     278 </span>            : /** @brief Increase or decrease RmMDSDevice reference count</a>
+<span class="lineNum">     279 </span>            :  **/
+<span class="lineNum">     280 </span><span class="lineCov">     444978 : static void rm_mds_device_ref(RmMDSDevice *device, const gint ref_count) {</span>
+<span class="lineNum">     281 </span><span class="lineCov">     444978 :     g_mutex_lock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     282 </span><span class="lineCov">     444978 :     { device-&gt;ref_count += ref_count; }</span>
+<span class="lineNum">     283 </span><span class="lineCov">     444978 :     g_mutex_unlock(&amp;device-&gt;lock);</span>
+<span class="lineNum">     284 </span><span class="lineCov">     444978 : }</span>
+<span class="lineNum">     285 </span>            : 
+<a name="286"><span class="lineNum">     286 </span>            : /** @brief Push a RmMDSDevice to the threadpool</a>
+<span class="lineNum">     287 </span>            :  **/
+<span class="lineNum">     288 </span><span class="lineCov">      38638 : void rm_mds_device_start(_U  gpointer disk, RmMDSDevice *device, RmMDS *mds) {</span>
+<span class="lineNum">     289 </span><span class="lineCov">      38638 :     rm_util_thread_pool_push(mds-&gt;pool, device);</span>
+<span class="lineNum">     290 </span><span class="lineCov">      38638 : }</span>
+<span class="lineNum">     291 </span>            : 
+<a name="292"><span class="lineNum">     292 </span>            : /** @brief Push a RmMDSDevice to the threadpool</a>
+<span class="lineNum">     293 </span>            :  **/
+<span class="lineNum">     294 </span><span class="lineCov">      36458 : void rm_mds_start(RmMDS *mds) {</span>
+<span class="lineNum">     295 </span><span class="lineCov">      36458 :     mds-&gt;running = TRUE;</span>
+<span class="lineNum">     296 </span><span class="lineCov">      36458 :     g_hash_table_foreach(mds-&gt;disks, (GHFunc)rm_mds_device_start, mds);</span>
+<a name="297"><span class="lineNum">     297 </span><span class="lineCov">      36458 : }</span></a>
+<span class="lineNum">     298 </span>            : 
+<span class="lineNum">     299 </span><span class="lineNoCov">          0 : RmMountTable *rm_mds_get_mount_table(const RmMDS *mds) {</span>
+<span class="lineNum">     300 </span><span class="lineNoCov">          0 :     return mds-&gt;mount_table;</span>
+<a name="301"><span class="lineNum">     301 </span>            : }</a>
+<span class="lineNum">     302 </span>            : 
+<span class="lineNum">     303 </span><span class="lineCov">     666807 : static RmMDSDevice *rm_mds_device_get(RmMDS *mds, const dev_t disk) {</span>
+<span class="lineNum">     304 </span><span class="lineCov">     666807 :     RmMDSDevice *result = NULL;</span>
+<span class="lineNum">     305 </span><span class="lineCov">     666807 :     g_mutex_lock(&amp;mds-&gt;lock);</span>
+<span class="lineNum">     306 </span>            :     {
+<span class="lineNum">     307 </span><span class="lineCov">     666807 :         g_assert(mds-&gt;disks);</span>
+<span class="lineNum">     308 </span><span class="lineCov">     666807 :         result = g_hash_table_lookup(mds-&gt;disks, GINT_TO_POINTER(disk));</span>
+<span class="lineNum">     309 </span><span class="lineCov">     666807 :         if(!result) {</span>
+<span class="lineNum">     310 </span><span class="lineCov">      38638 :             result = rm_mds_device_new(mds, disk);</span>
+<span class="lineNum">     311 </span><span class="lineCov">      38638 :             g_hash_table_insert(mds-&gt;disks, GINT_TO_POINTER(disk), result);</span>
+<span class="lineNum">     312 </span><span class="lineCov">      38638 :             if(g_atomic_int_get(&amp;mds-&gt;running) == TRUE) {</span>
+<span class="lineNum">     313 </span><span class="lineNoCov">          0 :                 rm_util_thread_pool_push(mds-&gt;pool, result);</span>
+<span class="lineNum">     314 </span>            :             }
+<span class="lineNum">     315 </span>            :         }
+<span class="lineNum">     316 </span>            :     }
+<span class="lineNum">     317 </span><span class="lineCov">     666807 :     g_mutex_unlock(&amp;mds-&gt;lock);</span>
+<span class="lineNum">     318 </span><span class="lineCov">     666807 :     return result;</span>
+<a name="319"><span class="lineNum">     319 </span>            : }</a>
+<span class="lineNum">     320 </span>            : 
+<span class="lineNum">     321 </span><span class="lineNoCov">          0 : static RmMDSDevice *rm_mds_device_get_by_path(RmMDS *mds, const char *path) {</span>
+<span class="lineNum">     322 </span><span class="lineNoCov">          0 :     dev_t disk = (mds-&gt;fake_disk) ? 0 :</span>
+<span class="lineNum">     323 </span><span class="lineNoCov">          0 :             rm_mounts_get_disk_id_by_path(mds-&gt;mount_table, path);</span>
+<span class="lineNum">     324 </span><span class="lineNoCov">          0 :     return rm_mds_device_get(mds, disk);</span>
+<a name="325"><span class="lineNum">     325 </span>            : }</a>
+<span class="lineNum">     326 </span>            : 
+<span class="lineNum">     327 </span><span class="lineCov">     666807 : static RmMDSDevice *rm_mds_device_get_by_dev(RmMDS *mds, dev_t dev, const char *path) {</span>
+<span class="lineNum">     328 </span><span class="lineCov">    1309887 :     dev_t disk = (mds-&gt;fake_disk) ? dev :</span>
+<span class="lineNum">     329 </span><span class="lineCov">     643080 :             rm_mounts_get_disk_id(mds-&gt;mount_table, dev, path);</span>
+<span class="lineNum">     330 </span><span class="lineCov">     666807 :     return rm_mds_device_get(mds, disk);</span>
+<span class="lineNum">     331 </span>            : }
+<span class="lineNum">     332 </span>            : 
+<span class="lineNum">     333 </span>            : //////////////////////////
+<span class="lineNum">     334 </span>            : //  API Implementation  //
+<a name="335"><span class="lineNum">     335 </span>            : //////////////////////////</a>
+<span class="lineNum">     336 </span>            : 
+<span class="lineNum">     337 </span><span class="lineCov">      36458 : RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_disk) {</span>
+<span class="lineNum">     338 </span><span class="lineCov">      36458 :     RmMDS *self = g_slice_new0(RmMDS);</span>
+<span class="lineNum">     339 </span>            : 
+<span class="lineNum">     340 </span><span class="lineCov">      36458 :     g_mutex_init(&amp;self-&gt;lock);</span>
+<span class="lineNum">     341 </span>            : 
+<span class="lineNum">     342 </span><span class="lineCov">      36458 :     self-&gt;pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, self, max_threads);</span>
+<span class="lineNum">     343 </span>            : 
+<span class="lineNum">     344 </span><span class="lineCov">      36458 :     if (!mount_table &amp;&amp; !fake_disk) {</span>
+<span class="lineNum">     345 </span><span class="lineNoCov">          0 :         self-&gt;mount_table = rm_mounts_table_new(FALSE);</span>
+<span class="lineNum">     346 </span>            :     } else {
+<span class="lineNum">     347 </span><span class="lineCov">      36458 :         self-&gt;mount_table = mount_table;</span>
+<span class="lineNum">     348 </span>            :     }
+<span class="lineNum">     349 </span>            : 
+<span class="lineNum">     350 </span><span class="lineCov">      36458 :     self-&gt;fake_disk = fake_disk;</span>
+<span class="lineNum">     351 </span><span class="lineCov">      36458 :     self-&gt;disks = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,</span>
+<span class="lineNum">     352 </span>            :                                         (GDestroyNotify)rm_mds_device_free);
+<span class="lineNum">     353 </span><span class="lineCov">      36458 :     self-&gt;running = FALSE;</span>
+<span class="lineNum">     354 </span>            : 
+<span class="lineNum">     355 </span><span class="lineCov">      36458 :     return self;</span>
+<a name="356"><span class="lineNum">     356 </span>            : }</a>
+<span class="lineNum">     357 </span>            : 
+<span class="lineNum">     358 </span><span class="lineCov">      36458 : void rm_mds_configure(RmMDS *self,</span>
+<span class="lineNum">     359 </span>            :                       const RmMDSFunc func,
+<span class="lineNum">     360 </span>            :                       const gpointer user_data,
+<span class="lineNum">     361 </span>            :                       const gint pass_quota,
+<span class="lineNum">     362 </span>            :                       RmMDSSortFunc prioritiser) {
+<span class="lineNum">     363 </span><span class="lineCov">      36458 :     g_assert(self-&gt;running == FALSE);</span>
+<span class="lineNum">     364 </span><span class="lineCov">      36458 :     self-&gt;func = func;</span>
+<span class="lineNum">     365 </span><span class="lineCov">      36458 :     self-&gt;user_data = user_data;</span>
+<span class="lineNum">     366 </span><span class="lineCov">      36458 :     self-&gt;pass_quota = (pass_quota&gt;0) ? pass_quota : G_MAXINT;</span>
+<span class="lineNum">     367 </span><span class="lineCov">      36458 :     self-&gt;prioritiser = prioritiser;</span>
+<a name="368"><span class="lineNum">     368 </span><span class="lineCov">      36458 : }</span></a>
+<span class="lineNum">     369 </span>            : 
+<span class="lineNum">     370 </span><span class="lineCov">      36458 : void rm_mds_finish(RmMDS *mds) {</span>
+<span class="lineNum">     371 </span>            :     /* wait for any pending threads to finish */
+<span class="lineNum">     372 </span><span class="lineCov">     109120 :     while(g_atomic_int_get(&amp;mds-&gt;pending_tasks)) {</span>
+<span class="lineNum">     373 </span>            :         /* make this threadsafe for rare cases where new disks may
+<span class="lineNum">     374 </span>            :          * be encountered and spawned on-the-fly via rm_mds_factory*/
+<span class="lineNum">     375 </span><span class="lineCov">      36204 :         g_mutex_lock(&amp;mds-&gt;lock);</span>
+<span class="lineNum">     376 </span><span class="lineCov">      36204 :         GList *devices = g_hash_table_get_values(mds-&gt;disks);</span>
+<span class="lineNum">     377 </span><span class="lineCov">      36204 :         g_mutex_unlock(&amp;mds-&gt;lock);</span>
+<span class="lineNum">     378 </span>            : 
+<span class="lineNum">     379 </span><span class="lineCov">     110904 :         while(devices) {</span>
+<span class="lineNum">     380 </span><span class="lineCov">      38496 :             RmMDSDevice *device = devices-&gt;data;</span>
+<span class="lineNum">     381 </span><span class="lineCov">      38496 :             rm_log_debug_line(&quot;Finishing device %lu&quot;, device-&gt;disk);</span>
+<span class="lineNum">     382 </span><span class="lineCov">      38496 :             rm_mds_device_finish(device);</span>
+<span class="lineNum">     383 </span><span class="lineCov">      38496 :             devices = g_list_delete_link(devices, devices);</span>
+<span class="lineNum">     384 </span>            :         }
+<span class="lineNum">     385 </span>            :     }
+<span class="lineNum">     386 </span><span class="lineCov">      36458 :     mds-&gt;running = FALSE;</span>
+<a name="387"><span class="lineNum">     387 </span><span class="lineCov">      36458 : }</span></a>
+<span class="lineNum">     388 </span>            : 
+<span class="lineNum">     389 </span><span class="lineCov">      36458 : void rm_mds_free(RmMDS *mds, gboolean free_mount_table) {</span>
+<span class="lineNum">     390 </span><span class="lineCov">      36458 :     rm_mds_finish(mds);</span>
+<span class="lineNum">     391 </span>            : 
+<span class="lineNum">     392 </span><span class="lineCov">      36458 :     g_thread_pool_free(mds-&gt;pool, false, true);</span>
+<span class="lineNum">     393 </span><span class="lineCov">      36458 :     g_hash_table_destroy(mds-&gt;disks);</span>
+<span class="lineNum">     394 </span>            : 
+<span class="lineNum">     395 </span><span class="lineCov">      36458 :     if(free_mount_table &amp;&amp; mds-&gt;mount_table) {</span>
+<span class="lineNum">     396 </span><span class="lineNoCov">          0 :         rm_mounts_table_destroy(mds-&gt;mount_table);</span>
+<span class="lineNum">     397 </span>            :     }
+<span class="lineNum">     398 </span><span class="lineCov">      36458 :     g_slice_free(RmMDS, mds);</span>
+<a name="399"><span class="lineNum">     399 </span><span class="lineCov">      36458 : }</span></a>
+<span class="lineNum">     400 </span>            : 
+<span class="lineNum">     401 </span><span class="lineNoCov">          0 : void rm_mds_ref_path(RmMDS *mds, const char *path, const gint ref_count) {</span>
+<span class="lineNum">     402 </span><span class="lineNoCov">          0 :     RmMDSDevice *device = rm_mds_device_get_by_path(mds, path);</span>
+<span class="lineNum">     403 </span><span class="lineNoCov">          0 :     rm_mds_device_ref(device, ref_count);</span>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 : }</span></a>
+<span class="lineNum">     405 </span>            : 
+<span class="lineNum">     406 </span><span class="lineCov">     444978 : void rm_mds_ref_dev(RmMDS *mds, dev_t dev, const gint ref_count) {</span>
+<span class="lineNum">     407 </span><span class="lineCov">     444978 :     RmMDSDevice *device = rm_mds_device_get_by_dev(mds, dev, NULL);</span>
+<span class="lineNum">     408 </span><span class="lineCov">     444978 :     rm_mds_device_ref(device, ref_count);</span>
+<a name="409"><span class="lineNum">     409 </span><span class="lineCov">     444978 : }</span></a>
+<span class="lineNum">     410 </span>            : 
+<span class="lineNum">     411 </span><span class="lineCov">     221829 : static void rm_mds_push_new_task(RmMDSDevice *device, const dev_t dev, const guint64 offset,</span>
+<span class="lineNum">     412 </span>            :                              const gpointer task_user_data) {
+<span class="lineNum">     413 </span><span class="lineCov">     221829 :     g_atomic_int_inc(&amp;device-&gt;mds-&gt;pending_tasks);</span>
+<span class="lineNum">     414 </span>            : 
+<span class="lineNum">     415 </span><span class="lineCov">     221829 :     RmMDSTask *task = rm_mds_task_new(dev, offset, task_user_data);</span>
+<span class="lineNum">     416 </span><span class="lineCov">     221829 :     rm_mds_push_task(device, task);</span>
+<a name="417"><span class="lineNum">     417 </span><span class="lineCov">     221829 : }</span></a>
+<span class="lineNum">     418 </span>            : 
+<span class="lineNum">     419 </span><span class="lineNoCov">          0 : dev_t rm_mds_dev(const char *path) {</span>
+<span class="lineNum">     420 </span>            :     RmStat stat_buf;
+<span class="lineNum">     421 </span><span class="lineNoCov">          0 :     if(rm_sys_stat(path, &amp;stat_buf) == -1) {</span>
+<span class="lineNum">     422 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">     423 </span>            :     }
+<span class="lineNum">     424 </span><span class="lineNoCov">          0 :     return stat_buf.st_dev;</span>
+<a name="425"><span class="lineNum">     425 </span>            : }</a>
+<span class="lineNum">     426 </span>            : 
+<span class="lineNum">     427 </span><span class="lineCov">     221829 : void rm_mds_push_task_by_dev(RmMDS *mds, const dev_t dev, gint64 offset, const char *path,</span>
+<span class="lineNum">     428 </span>            :                              const gpointer task_user_data) {
+<span class="lineNum">     429 </span><span class="lineCov">     435765 :     bool is_rotational = (mds-&gt;fake_disk) ? (dev %2 == 0) :</span>
+<span class="lineNum">     430 </span><span class="lineCov">     213936 :             !rm_mounts_is_nonrotational(mds-&gt;mount_table, dev);</span>
+<span class="lineNum">     431 </span><span class="lineCov">     221829 :     if(offset == -1 &amp;&amp; path &amp;&amp; is_rotational) {</span>
+<span class="lineNum">     432 </span><span class="lineNoCov">          0 :         offset = rm_offset_get_from_path(path, 0, NULL);</span>
+<span class="lineNum">     433 </span>            :     }
+<span class="lineNum">     434 </span><span class="lineCov">     221829 :     RmMDSDevice *device = rm_mds_device_get_by_dev(mds, dev, path);</span>
+<span class="lineNum">     435 </span><span class="lineCov">     221829 :     rm_mds_push_new_task(device, dev, offset, task_user_data);</span>
+<a name="436"><span class="lineNum">     436 </span><span class="lineCov">     221829 : }</span></a>
+<span class="lineNum">     437 </span>            : 
+<span class="lineNum">     438 </span><span class="lineNoCov">          0 : void rm_mds_push_task_by_path(RmMDS *mds, const char *path, gint64 offset,</span>
+<span class="lineNum">     439 </span>            :                               const gpointer task_user_data) {
+<span class="lineNum">     440 </span><span class="lineNoCov">          0 :     rm_mds_push_task_by_dev(mds, rm_mds_dev(path), offset, path, task_user_data);</span>
+<span class="lineNum">     441 </span><span class="lineNoCov">          0 : }</span>
+<span class="lineNum">     442 </span>            : 
+<span class="lineNum">     443 </span>            : /**
+<a name="444"><span class="lineNum">     444 </span>            :  * @brief prioritiser function for basic elevator algorithm</a>
+<span class="lineNum">     445 </span>            :  **/
+<span class="lineNum">     446 </span><span class="lineCov">     434694 : gint rm_mds_elevator_cmp(const RmMDSTask *task_a, const RmMDSTask *task_b) {</span>
+<span class="lineNum">     447 </span><span class="lineCov">     869388 :     return (2 * SIGN_DIFF(task_a-&gt;dev, task_b-&gt;dev) +</span>
+<span class="lineNum">     448 </span><span class="lineCov">     434694 :             1 * SIGN_DIFF(task_a-&gt;offset, task_b-&gt;offset));</span>
+<span class="lineNum">     449 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

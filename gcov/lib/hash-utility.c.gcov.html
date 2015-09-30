@@ -1,0 +1,326 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/hash-utility.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - hash-utility.c<span style="font-size: 80%;"> (source / <a href="hash-utility.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">99</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /**</a>
+<span class="lineNum">       2 </span>            : *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            : *
+<span class="lineNum">       4 </span>            : *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            : *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            : *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            : *  (at your option) any later version.
+<span class="lineNum">       8 </span>            : *
+<span class="lineNum">       9 </span>            : *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            : *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            : *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            : *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            : *
+<span class="lineNum">      14 </span>            : *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            : *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            : *
+<span class="lineNum">      17 </span>            : ** Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2014 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2014 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            : ** Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            : *
+<span class="lineNum">      24 </span>            : **/
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      28 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      29 </span>            : #include &lt;locale.h&gt;
+<span class="lineNum">      30 </span>            : 
+<span class="lineNum">      31 </span>            : #include &quot;../lib/config.h&quot;
+<span class="lineNum">      32 </span>            : #include &quot;../lib/hasher.h&quot;
+<span class="lineNum">      33 </span>            : #include &quot;../lib/utilities.h&quot;
+<span class="lineNum">      34 </span>            : 
+<span class="lineNum">      35 </span>            : typedef struct RmHasherSession {
+<span class="lineNum">      36 </span>            :     /* Internal */
+<span class="lineNum">      37 </span>            :     char **paths;
+<span class="lineNum">      38 </span>            :     gint path_index;
+<span class="lineNum">      39 </span>            :     GMutex lock;
+<span class="lineNum">      40 </span>            :     RmDigest **completed_digests_buffer;
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span>            :     /* Options */
+<span class="lineNum">      43 </span>            :     RmDigestType digest_type;
+<span class="lineNum">      44 </span>            :     gboolean print_in_order;
+<span class="lineNum">      45 </span>            :     gboolean print_multihash;
+<a name="46"><span class="lineNum">      46 </span>            : } RmHasherSession;</a>
+<span class="lineNum">      47 </span>            : 
+<span class="lineNum">      48 </span><span class="lineNoCov">          0 : static gboolean rm_hasher_parse_type(_U const char *option_name,</span>
+<span class="lineNum">      49 </span>            :                                      const gchar *value,
+<span class="lineNum">      50 </span>            :                                      RmHasherSession *session,
+<span class="lineNum">      51 </span>            :                                      GError **error) {
+<span class="lineNum">      52 </span><span class="lineNoCov">          0 :     session-&gt;digest_type = rm_string_to_digest_type(value);</span>
+<span class="lineNum">      53 </span>            : 
+<span class="lineNum">      54 </span><span class="lineNoCov">          0 :     if(session-&gt;digest_type == RM_DIGEST_UNKNOWN) {</span>
+<span class="lineNum">      55 </span><span class="lineNoCov">          0 :         g_set_error(error, RM_ERROR_QUARK, 0, _(&quot;Unknown hash algorithm: '%s'&quot;), value);</span>
+<span class="lineNum">      56 </span><span class="lineNoCov">          0 :         return FALSE;</span>
+<span class="lineNum">      57 </span>            :     }
+<span class="lineNum">      58 </span><span class="lineNoCov">          0 :     return TRUE;</span>
+<a name="59"><span class="lineNum">      59 </span>            : }</a>
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span><span class="lineNoCov">          0 : static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) {</span>
+<span class="lineNum">      62 </span><span class="lineNoCov">          0 :     gsize size = rm_digest_get_bytes(digest) * 2 + 1;</span>
+<span class="lineNum">      63 </span>            : 
+<span class="lineNum">      64 </span><span class="lineNoCov">          0 :     char checksum_str[size];</span>
+<span class="lineNum">      65 </span><span class="lineNoCov">          0 :     memset(checksum_str, '0', size);</span>
+<span class="lineNum">      66 </span><span class="lineNoCov">          0 :     checksum_str[size - 1] = 0;</span>
+<span class="lineNum">      67 </span>            : 
+<span class="lineNum">      68 </span><span class="lineNoCov">          0 :     rm_digest_hexstring(digest, checksum_str);</span>
+<span class="lineNum">      69 </span>            : 
+<span class="lineNum">      70 </span><span class="lineNoCov">          0 :     if(print_multihash) {</span>
+<span class="lineNum">      71 </span><span class="lineNoCov">          0 :         g_print(&quot;%02x%02x@&quot;, rm_digest_type_to_multihash_id(digest-&gt;type),</span>
+<span class="lineNum">      72 </span>            :                 rm_digest_get_bytes(digest));
+<span class="lineNum">      73 </span>            :     }
+<span class="lineNum">      74 </span>            : 
+<span class="lineNum">      75 </span><span class="lineNoCov">          0 :     g_print(&quot;%s  %s\n&quot;, checksum_str, path);</span>
+<a name="76"><span class="lineNum">      76 </span><span class="lineNoCov">          0 : }</span></a>
+<span class="lineNum">      77 </span>            : 
+<span class="lineNum">      78 </span><span class="lineNoCov">          0 : static int rm_hasher_callback(_U RmHasher *hasher,</span>
+<span class="lineNum">      79 </span>            :                               RmDigest *digest,
+<span class="lineNum">      80 </span>            :                               RmHasherSession *session,
+<span class="lineNum">      81 </span>            :                               gpointer index_ptr) {
+<span class="lineNum">      82 </span><span class="lineNoCov">          0 :     gint index = GPOINTER_TO_INT(index_ptr);</span>
+<span class="lineNum">      83 </span>            : 
+<span class="lineNum">      84 </span><span class="lineNoCov">          0 :     g_mutex_lock(&amp;session-&gt;lock);</span>
+<span class="lineNum">      85 </span>            :     {
+<span class="lineNum">      86 </span><span class="lineNoCov">          0 :         if(session-&gt;print_in_order &amp;&amp; digest) {</span>
+<span class="lineNum">      87 </span>            :             /* add digest in buffer array */
+<span class="lineNum">      88 </span><span class="lineNoCov">          0 :             session-&gt;completed_digests_buffer[index] = digest;</span>
+<span class="lineNum">      89 </span>            :             /* check if the next due digest has been completed; if yes then print
+<span class="lineNum">      90 </span>            :              * it (and possibly any following digests) */
+<span class="lineNum">      91 </span><span class="lineNoCov">          0 :             while(session-&gt;completed_digests_buffer[session-&gt;path_index]) {</span>
+<span class="lineNum">      92 </span><span class="lineNoCov">          0 :                 if(session-&gt;paths[session-&gt;path_index]) {</span>
+<span class="lineNum">      93 </span><span class="lineNoCov">          0 :                     rm_hasher_print(</span>
+<span class="lineNum">      94 </span><span class="lineNoCov">          0 :                         session-&gt;completed_digests_buffer[session-&gt;path_index],</span>
+<span class="lineNum">      95 </span><span class="lineNoCov">          0 :                         session-&gt;paths[session-&gt;path_index],</span>
+<span class="lineNum">      96 </span><span class="lineNoCov">          0 :                         session-&gt;print_multihash);</span>
+<span class="lineNum">      97 </span><span class="lineNoCov">          0 :                     rm_digest_free(</span>
+<span class="lineNum">      98 </span><span class="lineNoCov">          0 :                         session-&gt;completed_digests_buffer[session-&gt;path_index]);</span>
+<span class="lineNum">      99 </span>            :                 }
+<span class="lineNum">     100 </span><span class="lineNoCov">          0 :                 session-&gt;completed_digests_buffer[session-&gt;path_index] = NULL;</span>
+<span class="lineNum">     101 </span><span class="lineNoCov">          0 :                 session-&gt;path_index++;</span>
+<span class="lineNum">     102 </span>            :             }
+<span class="lineNum">     103 </span><span class="lineNoCov">          0 :         } else if(digest) {</span>
+<span class="lineNum">     104 </span><span class="lineNoCov">          0 :             rm_hasher_print(digest, session-&gt;paths[index], session-&gt;print_multihash);</span>
+<span class="lineNum">     105 </span>            :         }
+<span class="lineNum">     106 </span>            :     }
+<span class="lineNum">     107 </span><span class="lineNoCov">          0 :     g_mutex_unlock(&amp;session-&gt;lock);</span>
+<span class="lineNum">     108 </span><span class="lineNoCov">          0 :     return 0;</span>
+<a name="109"><span class="lineNum">     109 </span>            : }</a>
+<span class="lineNum">     110 </span>            : 
+<span class="lineNum">     111 </span><span class="lineNoCov">          0 : int rm_hasher_main(int argc, const char **argv) {</span>
+<span class="lineNum">     112 </span>            :     RmHasherSession tag;
+<span class="lineNum">     113 </span>            : 
+<span class="lineNum">     114 </span>            :     /* List of paths we got passed (or NULL)   */
+<span class="lineNum">     115 </span><span class="lineNoCov">          0 :     tag.paths = NULL;</span>
+<span class="lineNum">     116 </span>            : 
+<span class="lineNum">     117 </span>            :     /* Print hashes in the same order as files in command line args */
+<span class="lineNum">     118 </span><span class="lineNoCov">          0 :     tag.print_in_order = TRUE;</span>
+<span class="lineNum">     119 </span>            : 
+<span class="lineNum">     120 </span>            :     /* Print a hash with builtin identifier */
+<span class="lineNum">     121 </span><span class="lineNoCov">          0 :     tag.print_multihash = FALSE;</span>
+<span class="lineNum">     122 </span>            : 
+<span class="lineNum">     123 </span>            :     /* Digest type (user option, default SHA1) */
+<span class="lineNum">     124 </span><span class="lineNoCov">          0 :     tag.digest_type = RM_DIGEST_SHA1;</span>
+<span class="lineNum">     125 </span><span class="lineNoCov">          0 :     gint threads = 8;</span>
+<span class="lineNum">     126 </span><span class="lineNoCov">          0 :     gint64 buffer_mbytes = 256;</span>
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span>            :     ////////////// Option Parsing ///////////////
+<span class="lineNum">     129 </span>            : 
+<span class="lineNum">     130 </span>            :     /* clang-format off */
+<span class="lineNum">     131 </span>            : 
+<span class="lineNum">     132 </span><span class="lineNoCov">          0 :     const GOptionEntry entries[] = {</span>
+<span class="lineNum">     133 </span><span class="lineNoCov">          0 :         {&quot;digest-type&quot;    , 'd'  , 0                      , G_OPTION_ARG_CALLBACK        , (GOptionArgFunc)rm_hasher_parse_type  , _(&quot;Digest type [SHA1]&quot;)                                                            , &quot;[TYPE]&quot;}   ,</span>
+<span class="lineNum">     134 </span><span class="lineNoCov">          0 :         {&quot;num-threads&quot;    , 't'  , 0                      , G_OPTION_ARG_INT             , &amp;threads                              , _(&quot;Number of hashing threads [8]&quot;)                                                 , &quot;N&quot;}        ,</span>
+<span class="lineNum">     135 </span><span class="lineNoCov">          0 :         {&quot;multihash&quot;      , 'm'  , 0                      , G_OPTION_ARG_NONE            , &amp;tag.print_multihash                  , _(&quot;Print hash as self identifying multihash&quot;)                                      , NULL}       ,</span>
+<span class="lineNum">     136 </span><span class="lineNoCov">          0 :         {&quot;buffer-mbytes&quot;  , 'b'  , 0                      , G_OPTION_ARG_INT64           , &amp;buffer_mbytes                        , _(&quot;Megabytes read buffer [256 MB]&quot;)                                                , &quot;MB&quot;}       ,</span>
+<span class="lineNum">     137 </span><span class="lineNoCov">          0 :         {&quot;ignore-order&quot;   , 'i'  , G_OPTION_FLAG_REVERSE  , G_OPTION_ARG_NONE            , &amp;tag.print_in_order                   , _(&quot;Print hashes in order completed, not in order entered (reduces memory usage)&quot;)  , NULL}       ,</span>
+<span class="lineNum">     138 </span><span class="lineNoCov">          0 :         {&quot;&quot;               , 0    , 0                      , G_OPTION_ARG_FILENAME_ARRAY  , &amp;tag.paths                            , _(&quot;Space-separated list of files&quot;)                                                 , &quot;[FILE…]&quot;}  ,</span>
+<span class="lineNum">     139 </span>            :         {NULL             , 0    , 0                      , 0                            , NULL                                  , NULL                                                                               , NULL}};
+<span class="lineNum">     140 </span>            : 
+<span class="lineNum">     141 </span>            :     /* clang-format on */
+<span class="lineNum">     142 </span>            : 
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :     GError *error = NULL;</span>
+<span class="lineNum">     144 </span><span class="lineNoCov">          0 :     GOptionContext *context = g_option_context_new(_(&quot;Hash a list of files&quot;));</span>
+<span class="lineNum">     145 </span><span class="lineNoCov">          0 :     GOptionGroup *main_group =</span>
+<span class="lineNum">     146 </span><span class="lineNoCov">          0 :         g_option_group_new(argv[0], _(&quot;Hash a list of files&quot;), &quot;&quot;, &amp;tag, NULL);</span>
+<span class="lineNum">     147 </span>            : 
+<span class="lineNum">     148 </span>            :     char summary[4096];
+<span class="lineNum">     149 </span><span class="lineNoCov">          0 :     memset(summary, 0, sizeof(summary));</span>
+<span class="lineNum">     150 </span>            : 
+<span class="lineNum">     151 </span><span class="lineNoCov">          0 :     g_snprintf(summary, sizeof(summary),</span>
+<span class="lineNum">     152 </span><span class="lineNoCov">          0 :                _(&quot;Multi-threaded file digest (hash) calculator.\n&quot;</span>
+<span class="lineNum">     153 </span>            :                  &quot;\n  Available digest types:&quot;
+<span class="lineNum">     154 </span>            :                  &quot;\n    %s\n&quot;
+<span class="lineNum">     155 </span>            :                  &quot;\n  Versions with different bit numbers:&quot;
+<span class="lineNum">     156 </span>            :                  &quot;\n    %s\n&quot;
+<span class="lineNum">     157 </span>            :                  &quot;\n  Supported, but not useful:&quot;
+<span class="lineNum">     158 </span>            :                  &quot;\n    %s\n&quot;),
+<span class="lineNum">     159 </span>            :                &quot;spooky, city, xxhash, sha{1,256,512}, md5, murmur&quot;,
+<span class="lineNum">     160 </span>            :                &quot;spooky{32,64,128}, city{128,256,512}, murmur{512}&quot;,
+<span class="lineNum">     161 </span>            :                &quot;cumulative, paranoid, ext, bastard&quot;);
+<span class="lineNum">     162 </span>            : 
+<span class="lineNum">     163 </span><span class="lineNoCov">          0 :     g_option_group_add_entries(main_group, entries);</span>
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :     g_option_context_set_main_group(context, main_group);</span>
+<span class="lineNum">     165 </span><span class="lineNoCov">          0 :     g_option_context_set_summary(context, summary);</span>
+<span class="lineNum">     166 </span>            : 
+<span class="lineNum">     167 </span><span class="lineNoCov">          0 :     if(!g_option_context_parse(context, &amp;argc, (char ***)&amp;argv, &amp;error)) {</span>
+<span class="lineNum">     168 </span>            :         /* print g_option error message */
+<span class="lineNum">     169 </span><span class="lineNoCov">          0 :         rm_log_error_line(&quot;%s&quot;, error-&gt;message);</span>
+<span class="lineNum">     170 </span><span class="lineNoCov">          0 :         exit(EXIT_FAILURE);</span>
+<span class="lineNum">     171 </span>            :     }
+<span class="lineNum">     172 </span>            : 
+<span class="lineNum">     173 </span><span class="lineNoCov">          0 :     if(tag.paths == NULL) {</span>
+<span class="lineNum">     174 </span>            :         /* read paths from stdin */
+<span class="lineNum">     175 </span>            :         char path_buf[PATH_MAX];
+<span class="lineNum">     176 </span><span class="lineNoCov">          0 :         GPtrArray *paths = g_ptr_array_new();</span>
+<span class="lineNum">     177 </span>            : 
+<span class="lineNum">     178 </span><span class="lineNoCov">          0 :         while(fgets(path_buf, PATH_MAX, stdin)) {</span>
+<span class="lineNum">     179 </span><span class="lineNoCov">          0 :             char *abs_path = realpath(strtok(path_buf, &quot;\n&quot;), NULL);</span>
+<span class="lineNum">     180 </span><span class="lineNoCov">          0 :             g_ptr_array_add(paths, abs_path);</span>
+<span class="lineNum">     181 </span>            :         }
+<span class="lineNum">     182 </span>            : 
+<span class="lineNum">     183 </span><span class="lineNoCov">          0 :         tag.paths = (char **)g_ptr_array_free(paths, FALSE);</span>
+<span class="lineNum">     184 </span>            :     }
+<span class="lineNum">     185 </span>            : 
+<span class="lineNum">     186 </span><span class="lineNoCov">          0 :     if(tag.paths == NULL || tag.paths[0] == NULL) {</span>
+<span class="lineNum">     187 </span><span class="lineNoCov">          0 :         rm_log_error_line(_(&quot;No valid paths given.&quot;));</span>
+<span class="lineNum">     188 </span><span class="lineNoCov">          0 :         exit(EXIT_FAILURE);</span>
+<span class="lineNum">     189 </span>            :     }
+<span class="lineNum">     190 </span>            : 
+<span class="lineNum">     191 </span><span class="lineNoCov">          0 :     g_option_context_free(context);</span>
+<span class="lineNum">     192 </span>            : 
+<span class="lineNum">     193 </span>            :     ////////// Implementation //////
+<span class="lineNum">     194 </span>            : 
+<span class="lineNum">     195 </span><span class="lineNoCov">          0 :     if(tag.print_in_order) {</span>
+<span class="lineNum">     196 </span>            :         /* allocate buffer to collect results */
+<span class="lineNum">     197 </span><span class="lineNoCov">          0 :         tag.completed_digests_buffer =</span>
+<span class="lineNum">     198 </span><span class="lineNoCov">          0 :             g_slice_alloc0((g_strv_length(tag.paths) + 1) * sizeof(RmDigest *));</span>
+<span class="lineNum">     199 </span><span class="lineNoCov">          0 :         tag.path_index = 0;</span>
+<span class="lineNum">     200 </span>            :     }
+<span class="lineNum">     201 </span>            : 
+<span class="lineNum">     202 </span>            :     /* initialise structures */
+<span class="lineNum">     203 </span><span class="lineNoCov">          0 :     g_mutex_init(&amp;tag.lock);</span>
+<span class="lineNum">     204 </span><span class="lineNoCov">          0 :     RmHasher *hasher = rm_hasher_new(tag.digest_type,</span>
+<span class="lineNum">     205 </span>            :                                      threads,
+<span class="lineNum">     206 </span>            :                                      FALSE,
+<span class="lineNum">     207 </span>            :                                      4096,
+<span class="lineNum">     208 </span><span class="lineNoCov">          0 :                                      1024 * 1024 * buffer_mbytes,</span>
+<span class="lineNum">     209 </span>            :                                      0,
+<span class="lineNum">     210 </span>            :                                      (RmHasherCallback)rm_hasher_callback,
+<span class="lineNum">     211 </span>            :                                      &amp;tag);
+<span class="lineNum">     212 </span>            : 
+<span class="lineNum">     213 </span>            :     /* Iterate over paths, pushing to hasher threads */
+<span class="lineNum">     214 </span><span class="lineNoCov">          0 :     for(int i = 0; tag.paths &amp;&amp; tag.paths[i]; ++i) {</span>
+<span class="lineNum">     215 </span>            :         /* check it is a regular file */
+<span class="lineNum">     216 </span>            : 
+<span class="lineNum">     217 </span>            :         RmStat stat_buf;
+<span class="lineNum">     218 </span><span class="lineNoCov">          0 :         if(rm_sys_stat(tag.paths[i], &amp;stat_buf) == -1) {</span>
+<span class="lineNum">     219 </span><span class="lineNoCov">          0 :             rm_log_warning_line(_(&quot;Can't open directory or file \&quot;%s\&quot;: %s&quot;),</span>
+<span class="lineNum">     220 </span>            :                                 tag.paths[i], strerror(errno));
+<span class="lineNum">     221 </span><span class="lineNoCov">          0 :         } else if(S_ISDIR(stat_buf.st_mode)) {</span>
+<span class="lineNum">     222 </span><span class="lineNoCov">          0 :             rm_log_warning_line(_(&quot;Directories are not supported: %s&quot;), tag.paths[i]);</span>
+<span class="lineNum">     223 </span><span class="lineNoCov">          0 :         } else if(S_ISREG(stat_buf.st_mode)) {</span>
+<span class="lineNum">     224 </span><span class="lineNoCov">          0 :             RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));</span>
+<span class="lineNum">     225 </span><span class="lineNoCov">          0 :             rm_hasher_task_hash(task, tag.paths[i], 0, 0, FALSE);</span>
+<span class="lineNum">     226 </span><span class="lineNoCov">          0 :             rm_hasher_task_finish(task);</span>
+<span class="lineNum">     227 </span><span class="lineNoCov">          0 :             continue;</span>
+<span class="lineNum">     228 </span>            :         } else {
+<span class="lineNum">     229 </span><span class="lineNoCov">          0 :             rm_log_warning_line(_(&quot;%s: Unknown file type&quot;), tag.paths[i]);</span>
+<span class="lineNum">     230 </span>            :         }
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span>            :         /* dummy callback for failed paths */
+<span class="lineNum">     233 </span><span class="lineNoCov">          0 :         g_free(tag.paths[i]);</span>
+<span class="lineNum">     234 </span><span class="lineNoCov">          0 :         tag.paths[i] = NULL;</span>
+<span class="lineNum">     235 </span><span class="lineNoCov">          0 :         rm_hasher_callback(hasher, NULL, &amp;tag, GINT_TO_POINTER(i));</span>
+<span class="lineNum">     236 </span>            :     }
+<span class="lineNum">     237 </span>            : 
+<span class="lineNum">     238 </span>            :     /* wait for all hasher threads to finish... */
+<span class="lineNum">     239 </span><span class="lineNoCov">          0 :     rm_hasher_free(hasher, TRUE);</span>
+<span class="lineNum">     240 </span>            : 
+<span class="lineNum">     241 </span>            :     /* tidy up */
+<span class="lineNum">     242 </span><span class="lineNoCov">          0 :     if(tag.print_in_order) {</span>
+<span class="lineNum">     243 </span><span class="lineNoCov">          0 :         g_slice_free1((g_strv_length(tag.paths) + 1) * sizeof(RmDigest *),</span>
+<span class="lineNum">     244 </span><span class="lineNoCov">          0 :                       tag.completed_digests_buffer);</span>
+<span class="lineNum">     245 </span>            :     }
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span><span class="lineNoCov">          0 :     g_strfreev(tag.paths);</span>
+<span class="lineNum">     248 </span>            : 
+<span class="lineNum">     249 </span><span class="lineNoCov">          0 :     return EXIT_SUCCESS;</span>
+<span class="lineNum">     250 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

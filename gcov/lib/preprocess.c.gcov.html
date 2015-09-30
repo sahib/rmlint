@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - preprocess.c<span style="font-size: 80%;"> (source / <a href="preprocess.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - preprocess.c<span style="font-size: 80%;"> (source / <a href="preprocess.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,17 +31,17 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">222</td>
-            <td class="headerCovTableEntry">240</td>
-            <td class="headerCovTableEntryHi">92.5 %</td>
+            <td class="headerCovTableEntry">239</td>
+            <td class="headerCovTableEntry">266</td>
+            <td class="headerCovTableEntryMed">89.8 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">22</td>
-            <td class="headerCovTableEntry">22</td>
+            <td class="headerCovTableEntry">23</td>
+            <td class="headerCovTableEntry">23</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
@@ -95,510 +95,557 @@
 <span class="lineNum">      33 </span>            : #include &quot;cmdline.h&quot;
 <a name="34"><span class="lineNum">      34 </span>            : #include &quot;shredder.h&quot;</a>
 <span class="lineNum">      35 </span>            : 
-<span class="lineNum">      36 </span><span class="lineCov">     102001 : static guint rm_file_hash(RmFile *file) {</span>
-<span class="lineNum">      37 </span><span class="lineCov">     102001 :     RmCfg *cfg = file-&gt;session-&gt;cfg;</span>
-<span class="lineNum">      38 </span><span class="lineCov">     102001 :     if(cfg-&gt;match_basename || cfg-&gt;match_with_extension) {</span>
-<span class="lineNum">      39 </span><span class="lineCov">       1134 :         RM_DEFINE_BASENAME(file);</span>
-<span class="lineNum">      40 </span><span class="lineCov">       3969 :         return (guint)(</span>
-<span class="lineNum">      41 </span><span class="lineCov">       2268 :             file-&gt;file_size ^ (cfg-&gt;match_basename ? g_str_hash(file_basename) : 0) ^</span>
-<span class="lineNum">      42 </span><span class="lineCov">       1701 :             (cfg-&gt;match_with_extension ? g_str_hash(rm_util_path_extension(file_basename))</span>
-<span class="lineNum">      43 </span>            :                                        : 0));
-<span class="lineNum">      44 </span>            :     } else {
-<span class="lineNum">      45 </span><span class="lineCov">     100867 :         return (guint)(file-&gt;file_size);</span>
-<span class="lineNum">      46 </span>            :     }
-<a name="47"><span class="lineNum">      47 </span>            : }</a>
-<span class="lineNum">      48 </span>            : 
-<span class="lineNum">      49 </span><span class="lineCov">         81 : static bool rm_file_check_basename(const RmFile *file_a, const RmFile *file_b) {</span>
-<span class="lineNum">      50 </span><span class="lineCov">         81 :     RM_DEFINE_BASENAME(file_a);</span>
-<span class="lineNum">      51 </span><span class="lineCov">         81 :     RM_DEFINE_BASENAME(file_b);</span>
-<span class="lineNum">      52 </span>            : 
-<span class="lineNum">      53 </span><span class="lineCov">         81 :     return g_ascii_strcasecmp(file_a_basename, file_b_basename) == 0;</span>
-<a name="54"><span class="lineNum">      54 </span>            : }</a>
-<span class="lineNum">      55 </span>            : 
-<span class="lineNum">      56 </span><span class="lineCov">         81 : static bool rm_file_check_with_extension(const RmFile *file_a, const RmFile *file_b) {</span>
-<span class="lineNum">      57 </span><span class="lineCov">         81 :     RM_DEFINE_BASENAME(file_a);</span>
-<span class="lineNum">      58 </span><span class="lineCov">         81 :     RM_DEFINE_BASENAME(file_b);</span>
-<span class="lineNum">      59 </span>            : 
-<span class="lineNum">      60 </span><span class="lineCov">         81 :     char *ext_a = rm_util_path_extension(file_a_basename);</span>
-<span class="lineNum">      61 </span><span class="lineCov">         81 :     char *ext_b = rm_util_path_extension(file_b_basename);</span>
-<span class="lineNum">      62 </span>            : 
-<span class="lineNum">      63 </span><span class="lineCov">         81 :     if(ext_a &amp;&amp; ext_b &amp;&amp; g_ascii_strcasecmp(ext_a, ext_b) == 0) {</span>
-<span class="lineNum">      64 </span><span class="lineCov">         81 :         return true;</span>
-<span class="lineNum">      65 </span>            :     } else {
-<span class="lineNum">      66 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">      67 </span>            :     }
-<a name="68"><span class="lineNum">      68 </span>            : }</a>
-<span class="lineNum">      69 </span>            : 
-<span class="lineNum">      70 </span><span class="lineCov">        567 : static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *file_b) {</span>
-<span class="lineNum">      71 </span><span class="lineCov">        567 :     RM_DEFINE_BASENAME(file_a);</span>
-<span class="lineNum">      72 </span><span class="lineCov">        567 :     RM_DEFINE_BASENAME(file_b);</span>
-<span class="lineNum">      73 </span>            : 
-<span class="lineNum">      74 </span><span class="lineCov">        567 :     char *ext_a = rm_util_path_extension(file_a_basename);</span>
-<span class="lineNum">      75 </span><span class="lineCov">        567 :     char *ext_b = rm_util_path_extension(file_b_basename);</span>
-<span class="lineNum">      76 </span>            : 
-<span class="lineNum">      77 </span>            :     /* Check length till extension, or full length if none present */
-<span class="lineNum">      78 </span><span class="lineCov">        567 :     size_t a_len = (ext_a) ? (ext_a - file_a_basename) : (int)strlen(file_a_basename);</span>
-<span class="lineNum">      79 </span><span class="lineCov">        567 :     size_t b_len = (ext_b) ? (ext_b - file_b_basename) : (int)strlen(file_b_basename);</span>
-<span class="lineNum">      80 </span>            : 
-<span class="lineNum">      81 </span><span class="lineCov">        567 :     if(a_len != b_len) {</span>
-<span class="lineNum">      82 </span><span class="lineCov">        324 :         return false;</span>
-<span class="lineNum">      83 </span>            :     }
-<span class="lineNum">      84 </span>            : 
-<span class="lineNum">      85 </span><span class="lineCov">        243 :     if(g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len) == 0) {</span>
-<span class="lineNum">      86 </span><span class="lineCov">         81 :         return true;</span>
-<span class="lineNum">      87 </span>            :     }
-<span class="lineNum">      88 </span>            : 
-<span class="lineNum">      89 </span><span class="lineCov">        162 :     return false;</span>
-<a name="90"><span class="lineNum">      90 </span>            : }</a>
-<span class="lineNum">      91 </span>            : 
-<span class="lineNum">      92 </span><span class="lineCov">      50455 : static gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {</span>
-<span class="lineNum">      93 </span><span class="lineCov">      50455 :     const RmCfg *cfg = file_a-&gt;session-&gt;cfg;</span>
-<span class="lineNum">      94 </span>            : 
-<span class="lineNum">      95 </span><span class="lineCov">     151313 :     return (1 &amp;&amp; (file_a-&gt;file_size == file_b-&gt;file_size) &amp;&amp;</span>
-<span class="lineNum">      96 </span><span class="lineCov">     100887 :             (0 || (!cfg-&gt;match_basename) || (rm_file_check_basename(file_a, file_b))) &amp;&amp;</span>
-<span class="lineNum">      97 </span><span class="lineCov">      50484 :             (0 || (!cfg-&gt;match_with_extension) ||</span>
-<span class="lineNum">      98 </span><span class="lineCov">     150856 :              (rm_file_check_with_extension(file_a, file_b))) &amp;&amp;</span>
-<span class="lineNum">      99 </span><span class="lineCov">      50970 :             (0 || (!cfg-&gt;match_without_extension) ||</span>
-<span class="lineNum">     100 </span><span class="lineCov">        567 :              (rm_file_check_without_extension(file_a, file_b))));</span>
-<a name="101"><span class="lineNum">     101 </span>            : }</a>
-<span class="lineNum">     102 </span>            : 
-<span class="lineNum">     103 </span><span class="lineCov">     177699 : static guint rm_node_hash(const RmFile *file) {</span>
-<span class="lineNum">     104 </span><span class="lineCov">     177699 :     return file-&gt;inode ^ file-&gt;dev;</span>
-<a name="105"><span class="lineNum">     105 </span>            : }</a>
-<span class="lineNum">     106 </span>            : 
-<span class="lineNum">     107 </span><span class="lineCov">       7893 : static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {</span>
-<span class="lineNum">     108 </span><span class="lineCov">       7893 :     return (1 &amp;&amp; (file_a-&gt;inode == file_b-&gt;inode) &amp;&amp; (file_a-&gt;dev == file_b-&gt;dev));</span>
-<span class="lineNum">     109 </span>            : }
-<span class="lineNum">     110 </span>            : 
-<span class="lineNum">     111 </span>            : /* GHashTable key tuned to recognize duplicate paths.
-<span class="lineNum">     112 </span>            :  * i.e. RmFiles that are not only hardlinks but
-<span class="lineNum">     113 </span>            :  * also point to the real path
-<span class="lineNum">     114 </span>            :  */
-<span class="lineNum">     115 </span>            : typedef struct RmPathDoubleKey {
-<span class="lineNum">     116 </span>            :     /* parent_inode and basename are initialized lazily,
-<span class="lineNum">     117 </span>            :      * since often, they are not needed.
-<span class="lineNum">     118 </span>            :      */
-<span class="lineNum">     119 </span>            :     bool parent_inode_set : 1;
-<span class="lineNum">     120 </span>            :     bool basename_set : 1;
-<span class="lineNum">     121 </span>            : 
-<span class="lineNum">     122 </span>            :     /* stat(dirname(file-&gt;path)).st_ino */
-<span class="lineNum">     123 </span>            :     ino_t parent_inode;
-<span class="lineNum">     124 </span>            :     char *basename;
+<span class="lineNum">      36 </span><span class="lineCov">     276031 : static guint rm_file_hash(RmFile *file) {</span>
+<span class="lineNum">      37 </span><span class="lineCov">     276031 :     RmCfg *cfg = file-&gt;session-&gt;cfg;</span>
+<span class="lineNum">      38 </span><span class="lineCov">     276031 :     if(cfg-&gt;match_basename || cfg-&gt;match_with_extension) {</span>
+<span class="lineNum">      39 </span><span class="lineCov">        448 :         RM_DEFINE_BASENAME(file);</span>
+<span class="lineNum">      40 </span><span class="lineCov">        448 :         char *extension = rm_util_path_extension(file_basename);</span>
+<span class="lineNum">      41 </span><span class="lineCov">       1540 :         return (guint)(file-&gt;file_size ^</span>
+<span class="lineNum">      42 </span><span class="lineCov">        448 :                        (cfg-&gt;match_basename ? g_str_hash(file_basename) : 0) ^</span>
+<span class="lineNum">      43 </span><span class="lineCov">        700 :                        ((cfg-&gt;match_with_extension &amp;&amp; extension)</span>
+<span class="lineNum">      44 </span><span class="lineCov">        196 :                             ? g_str_hash(rm_util_path_extension(file_basename))</span>
+<span class="lineNum">      45 </span>            :                             : 0));
+<span class="lineNum">      46 </span>            :     } else {
+<span class="lineNum">      47 </span><span class="lineCov">     275583 :         return (guint)(file-&gt;file_size);</span>
+<span class="lineNum">      48 </span>            :     }
+<a name="49"><span class="lineNum">      49 </span>            : }</a>
+<span class="lineNum">      50 </span>            : 
+<span class="lineNum">      51 </span><span class="lineCov">         28 : static bool rm_file_check_with_extension(const RmFile *file_a, const RmFile *file_b) {</span>
+<span class="lineNum">      52 </span><span class="lineCov">         28 :     RM_DEFINE_BASENAME(file_a);</span>
+<span class="lineNum">      53 </span><span class="lineCov">         28 :     RM_DEFINE_BASENAME(file_b);</span>
+<span class="lineNum">      54 </span>            : 
+<span class="lineNum">      55 </span><span class="lineCov">         28 :     char *ext_a = rm_util_path_extension(file_a_basename);</span>
+<span class="lineNum">      56 </span><span class="lineCov">         28 :     char *ext_b = rm_util_path_extension(file_b_basename);</span>
+<span class="lineNum">      57 </span>            : 
+<span class="lineNum">      58 </span><span class="lineCov">         28 :     if(ext_a &amp;&amp; ext_b &amp;&amp; g_ascii_strcasecmp(ext_a, ext_b) == 0) {</span>
+<span class="lineNum">      59 </span><span class="lineCov">         28 :         return true;</span>
+<span class="lineNum">      60 </span>            :     } else {
+<span class="lineNum">      61 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">      62 </span>            :     }
+<a name="63"><span class="lineNum">      63 </span>            : }</a>
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span><span class="lineCov">        196 : static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *file_b) {</span>
+<span class="lineNum">      66 </span><span class="lineCov">        196 :     RM_DEFINE_BASENAME(file_a);</span>
+<span class="lineNum">      67 </span><span class="lineCov">        196 :     RM_DEFINE_BASENAME(file_b);</span>
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span><span class="lineCov">        196 :     char *ext_a = rm_util_path_extension(file_a_basename);</span>
+<span class="lineNum">      70 </span><span class="lineCov">        196 :     char *ext_b = rm_util_path_extension(file_b_basename);</span>
+<span class="lineNum">      71 </span>            : 
+<span class="lineNum">      72 </span>            :     /* Check length till extension, or full length if none present */
+<span class="lineNum">      73 </span><span class="lineCov">        196 :     size_t a_len = (ext_a) ? (ext_a - file_a_basename) : (int)strlen(file_a_basename);</span>
+<span class="lineNum">      74 </span><span class="lineCov">        196 :     size_t b_len = (ext_b) ? (ext_b - file_b_basename) : (int)strlen(file_b_basename);</span>
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span><span class="lineCov">        196 :     if(a_len != b_len) {</span>
+<span class="lineNum">      77 </span><span class="lineCov">        112 :         return false;</span>
+<span class="lineNum">      78 </span>            :     }
+<span class="lineNum">      79 </span>            : 
+<span class="lineNum">      80 </span><span class="lineCov">         84 :     if(g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len) == 0) {</span>
+<span class="lineNum">      81 </span><span class="lineCov">         28 :         return true;</span>
+<span class="lineNum">      82 </span>            :     }
+<span class="lineNum">      83 </span>            : 
+<span class="lineNum">      84 </span><span class="lineCov">         56 :     return false;</span>
+<a name="85"><span class="lineNum">      85 </span>            : }</a>
+<span class="lineNum">      86 </span>            : 
+<span class="lineNum">      87 </span><span class="lineCov">     169145 : gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {</span>
+<span class="lineNum">      88 </span><span class="lineCov">     169145 :     const RmCfg *cfg = file_a-&gt;session-&gt;cfg;</span>
+<span class="lineNum">      89 </span>            : 
+<span class="lineNum">      90 </span><span class="lineCov">     507435 :     return (1 &amp;&amp; (file_a-&gt;file_size == file_b-&gt;file_size) &amp;&amp;</span>
+<span class="lineNum">      91 </span><span class="lineCov">     338330 :             (0 || (!cfg-&gt;match_basename) || (rm_file_basenames_match(file_a, file_b))) &amp;&amp;</span>
+<span class="lineNum">      92 </span><span class="lineCov">     169155 :             (0 || (!cfg-&gt;match_with_extension) ||</span>
+<span class="lineNum">      93 </span><span class="lineCov">     507259 :              (rm_file_check_with_extension(file_a, file_b))) &amp;&amp;</span>
+<span class="lineNum">      94 </span><span class="lineCov">     169323 :             (0 || (!cfg-&gt;match_without_extension) ||</span>
+<span class="lineNum">      95 </span><span class="lineCov">        196 :              (rm_file_check_without_extension(file_a, file_b))));</span>
+<a name="96"><span class="lineNum">      96 </span>            : }</a>
+<span class="lineNum">      97 </span>            : 
+<span class="lineNum">      98 </span><span class="lineCov">     456283 : static guint rm_node_hash(const RmFile *file) {</span>
+<span class="lineNum">      99 </span><span class="lineCov">     456283 :     return file-&gt;inode ^ file-&gt;dev;</span>
+<a name="100"><span class="lineNum">     100 </span>            : }</a>
+<span class="lineNum">     101 </span>            : 
+<span class="lineNum">     102 </span><span class="lineCov">       3452 : static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {</span>
+<span class="lineNum">     103 </span><span class="lineCov">       3452 :     return (1 &amp;&amp; (file_a-&gt;inode == file_b-&gt;inode) &amp;&amp; (file_a-&gt;dev == file_b-&gt;dev));</span>
+<span class="lineNum">     104 </span>            : }
+<span class="lineNum">     105 </span>            : 
+<span class="lineNum">     106 </span>            : /* GHashTable key tuned to recognize duplicate paths.
+<span class="lineNum">     107 </span>            :  * i.e. RmFiles that are not only hardlinks but
+<span class="lineNum">     108 </span>            :  * also point to the real path
+<span class="lineNum">     109 </span>            :  */
+<span class="lineNum">     110 </span>            : typedef struct RmPathDoubleKey {
+<span class="lineNum">     111 </span>            :     /* parent_inode and basename are initialized lazily,
+<span class="lineNum">     112 </span>            :      * since often, they are not needed.
+<span class="lineNum">     113 </span>            :      */
+<span class="lineNum">     114 </span>            :     bool parent_inode_set : 1;
+<span class="lineNum">     115 </span>            :     bool basename_set : 1;
+<span class="lineNum">     116 </span>            : 
+<span class="lineNum">     117 </span>            :     /* stat(dirname(file-&gt;path)).st_ino */
+<span class="lineNum">     118 </span>            :     ino_t parent_inode;
+<span class="lineNum">     119 </span>            :     char *basename;
+<span class="lineNum">     120 </span>            : 
+<span class="lineNum">     121 </span>            :     /* File the key points to */
+<span class="lineNum">     122 </span>            :     RmFile *file;
+<span class="lineNum">     123 </span>            : 
+<a name="124"><span class="lineNum">     124 </span>            : } RmPathDoubleKey;</a>
 <span class="lineNum">     125 </span>            : 
-<span class="lineNum">     126 </span>            :     /* File the key points to */
-<span class="lineNum">     127 </span>            :     RmFile *file;
-<span class="lineNum">     128 </span>            : 
-<a name="129"><span class="lineNum">     129 </span>            : } RmPathDoubleKey;</a>
+<span class="lineNum">     126 </span><span class="lineCov">       5761 : static guint rm_path_double_hash(const RmPathDoubleKey *key) {</span>
+<span class="lineNum">     127 </span>            :     /* depend only on the always set components, never change the hash duringthe run */
+<span class="lineNum">     128 </span><span class="lineCov">       5761 :     return rm_node_hash(key-&gt;file);</span>
+<a name="129"><span class="lineNum">     129 </span>            : }</a>
 <span class="lineNum">     130 </span>            : 
-<span class="lineNum">     131 </span><span class="lineCov">      12750 : static guint rm_path_double_hash(const RmPathDoubleKey *key) {</span>
-<span class="lineNum">     132 </span>            :     /* depend only on the always set components, never change the hash duringthe run */
-<span class="lineNum">     133 </span><span class="lineCov">      12750 :     return rm_node_hash(key-&gt;file);</span>
-<a name="134"><span class="lineNum">     134 </span>            : }</a>
-<span class="lineNum">     135 </span>            : 
-<span class="lineNum">     136 </span><span class="lineCov">       7354 : static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {</span>
-<span class="lineNum">     137 </span><span class="lineCov">       7354 :     if(key_a-&gt;file-&gt;inode != key_b-&gt;file-&gt;inode) {</span>
-<span class="lineNum">     138 </span><span class="lineNoCov">          0 :         return FALSE;</span>
-<span class="lineNum">     139 </span>            :     }
-<span class="lineNum">     140 </span>            : 
-<span class="lineNum">     141 </span><span class="lineCov">       7354 :     if(key_a-&gt;file-&gt;dev != key_b-&gt;file-&gt;dev) {</span>
-<span class="lineNum">     142 </span><span class="lineNoCov">          0 :         return FALSE;</span>
-<span class="lineNum">     143 </span>            :     }
-<span class="lineNum">     144 </span>            : 
-<span class="lineNum">     145 </span><span class="lineCov">       7354 :     RmFile *file_a = key_a-&gt;file;</span>
-<span class="lineNum">     146 </span><span class="lineCov">       7354 :     RmFile *file_b = key_b-&gt;file;</span>
-<span class="lineNum">     147 </span>            : 
-<span class="lineNum">     148 </span><span class="lineCov">       7354 :     if(key_a-&gt;parent_inode_set == false) {</span>
-<span class="lineNum">     149 </span><span class="lineCov">       3656 :         RM_DEFINE_PATH(file_a);</span>
-<span class="lineNum">     150 </span>            : 
-<span class="lineNum">     151 </span><span class="lineCov">       3656 :         key_a-&gt;parent_inode = rm_util_parent_node(file_a_path);</span>
-<span class="lineNum">     152 </span><span class="lineCov">       3656 :         key_a-&gt;parent_inode_set = TRUE;</span>
-<span class="lineNum">     153 </span>            :     }
-<span class="lineNum">     154 </span>            : 
-<span class="lineNum">     155 </span><span class="lineCov">       7354 :     if(key_b-&gt;parent_inode_set == false) {</span>
-<span class="lineNum">     156 </span><span class="lineCov">       4194 :         RM_DEFINE_PATH(file_b);</span>
+<span class="lineNum">     131 </span><span class="lineCov">       2655 : static bool rm_path_have_same_parent(RmCfg *cfg, RmPathDoubleKey *key_a,</span>
+<span class="lineNum">     132 </span>            :                                      RmPathDoubleKey *key_b) {
+<span class="lineNum">     133 </span><span class="lineCov">       2655 :     RmFile *file_a = key_a-&gt;file, *file_b = key_b-&gt;file;</span>
+<span class="lineNum">     134 </span>            : 
+<span class="lineNum">     135 </span><span class="lineCov">       2655 :     if(cfg-&gt;use_meta_cache) {</span>
+<span class="lineNum">     136 </span><span class="lineCov">         94 :         if(key_a-&gt;parent_inode_set &amp;&amp; key_b-&gt;parent_inode_set) {</span>
+<span class="lineNum">     137 </span><span class="lineNoCov">          0 :             RM_DEFINE_PATH(file_a);</span>
+<span class="lineNum">     138 </span><span class="lineNoCov">          0 :             RM_DEFINE_PATH(file_b);</span>
+<span class="lineNum">     139 </span>            : 
+<span class="lineNum">     140 </span><span class="lineNoCov">          0 :             key_a-&gt;parent_inode = rm_util_parent_node(file_a_path);</span>
+<span class="lineNum">     141 </span><span class="lineNoCov">          0 :             key_a-&gt;parent_inode_set = TRUE;</span>
+<span class="lineNum">     142 </span>            : 
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :             key_b-&gt;parent_inode = rm_util_parent_node(file_b_path);</span>
+<span class="lineNum">     144 </span><span class="lineNoCov">          0 :             key_b-&gt;parent_inode_set = TRUE;</span>
+<span class="lineNum">     145 </span>            :         }
+<span class="lineNum">     146 </span>            : 
+<span class="lineNum">     147 </span><span class="lineCov">         94 :         return key_a-&gt;parent_inode == key_b-&gt;parent_inode;</span>
+<span class="lineNum">     148 </span>            :     } else {
+<span class="lineNum">     149 </span><span class="lineCov">       2561 :         return file_a-&gt;folder-&gt;parent == file_b-&gt;folder-&gt;parent;</span>
+<span class="lineNum">     150 </span>            :     }
+<a name="151"><span class="lineNum">     151 </span>            : }</a>
+<span class="lineNum">     152 </span>            : 
+<span class="lineNum">     153 </span><span class="lineCov">       2655 : static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {</span>
+<span class="lineNum">     154 </span><span class="lineCov">       2655 :     if(key_a-&gt;file-&gt;inode != key_b-&gt;file-&gt;inode) {</span>
+<span class="lineNum">     155 </span><span class="lineNoCov">          0 :         return FALSE;</span>
+<span class="lineNum">     156 </span>            :     }
 <span class="lineNum">     157 </span>            : 
-<span class="lineNum">     158 </span><span class="lineCov">       4194 :         key_b-&gt;parent_inode = rm_util_parent_node(file_b_path);</span>
-<span class="lineNum">     159 </span><span class="lineCov">       4194 :         key_b-&gt;parent_inode_set = TRUE;</span>
+<span class="lineNum">     158 </span><span class="lineCov">       2655 :     if(key_a-&gt;file-&gt;dev != key_b-&gt;file-&gt;dev) {</span>
+<span class="lineNum">     159 </span><span class="lineNoCov">          0 :         return FALSE;</span>
 <span class="lineNum">     160 </span>            :     }
 <span class="lineNum">     161 </span>            : 
-<span class="lineNum">     162 </span><span class="lineCov">       7354 :     if(key_a-&gt;parent_inode != key_b-&gt;parent_inode) {</span>
-<span class="lineNum">     163 </span><span class="lineCov">       1088 :         return FALSE;</span>
-<span class="lineNum">     164 </span>            :     }
-<span class="lineNum">     165 </span>            : 
-<span class="lineNum">     166 </span><span class="lineCov">       6266 :     if(!file_a-&gt;session-&gt;cfg-&gt;use_meta_cache) {</span>
-<span class="lineNum">     167 </span><span class="lineCov">       6046 :         return g_strcmp0(file_a-&gt;folder-&gt;basename, file_b-&gt;folder-&gt;basename) == 0;</span>
-<span class="lineNum">     168 </span>            :     }
-<span class="lineNum">     169 </span>            : 
-<span class="lineNum">     170 </span>            :     /* If using --with-metadata-cache, save the basename for later use
-<span class="lineNum">     171 </span>            :      * so it doesn't trigger SELECTs very often.  Basenames are
-<span class="lineNum">     172 </span>            :      * generally much shorter than the path, so that should be
-<span class="lineNum">     173 </span>            :      * okay.
-<span class="lineNum">     174 </span>            :      */
-<span class="lineNum">     175 </span><span class="lineCov">        220 :     if(key_a-&gt;basename == NULL) {</span>
-<span class="lineNum">     176 </span><span class="lineCov">        132 :         RM_DEFINE_BASENAME(file_a);</span>
-<span class="lineNum">     177 </span><span class="lineCov">        132 :         key_a-&gt;basename = g_strdup(file_a_basename);</span>
-<span class="lineNum">     178 </span>            :     }
-<span class="lineNum">     179 </span>            : 
-<span class="lineNum">     180 </span><span class="lineCov">        220 :     if(key_b-&gt;basename == NULL) {</span>
-<span class="lineNum">     181 </span><span class="lineCov">        148 :         RM_DEFINE_BASENAME(file_b);</span>
-<span class="lineNum">     182 </span><span class="lineCov">        148 :         key_b-&gt;basename = g_strdup(file_b_basename);</span>
-<span class="lineNum">     183 </span>            :     }
-<span class="lineNum">     184 </span>            : 
-<span class="lineNum">     185 </span><span class="lineCov">        220 :     return g_strcmp0(key_a-&gt;basename, key_b-&gt;basename) == 0;</span>
-<a name="186"><span class="lineNum">     186 </span>            : }</a>
+<span class="lineNum">     162 </span><span class="lineCov">       2655 :     RmFile *file_a = key_a-&gt;file;</span>
+<span class="lineNum">     163 </span><span class="lineCov">       2655 :     RmFile *file_b = key_b-&gt;file;</span>
+<span class="lineNum">     164 </span>            : 
+<span class="lineNum">     165 </span><span class="lineCov">       2655 :     if(!rm_path_have_same_parent(file_a-&gt;session-&gt;cfg, key_a, key_b)) {</span>
+<span class="lineNum">     166 </span><span class="lineNoCov">          0 :         return FALSE;</span>
+<span class="lineNum">     167 </span>            :     }
+<span class="lineNum">     168 </span>            : 
+<span class="lineNum">     169 </span><span class="lineCov">       2655 :     if(!file_a-&gt;session-&gt;cfg-&gt;use_meta_cache) {</span>
+<span class="lineNum">     170 </span><span class="lineCov">       2561 :         return g_strcmp0(file_a-&gt;folder-&gt;basename, file_b-&gt;folder-&gt;basename) == 0;</span>
+<span class="lineNum">     171 </span>            :     }
+<span class="lineNum">     172 </span>            : 
+<span class="lineNum">     173 </span>            :     /* If using --with-metadata-cache, save the basename for later use
+<span class="lineNum">     174 </span>            :      * so it doesn't trigger SELECTs very often.  Basenames are
+<span class="lineNum">     175 </span>            :      * generally much shorter than the path, so that should be
+<span class="lineNum">     176 </span>            :      * okay.
+<span class="lineNum">     177 </span>            :      */
+<span class="lineNum">     178 </span><span class="lineCov">         94 :     if(key_a-&gt;basename == NULL) {</span>
+<span class="lineNum">     179 </span><span class="lineCov">         60 :         RM_DEFINE_BASENAME(file_a);</span>
+<span class="lineNum">     180 </span><span class="lineCov">         60 :         key_a-&gt;basename = g_strdup(file_a_basename);</span>
+<span class="lineNum">     181 </span>            :     }
+<span class="lineNum">     182 </span>            : 
+<span class="lineNum">     183 </span><span class="lineCov">         94 :     if(key_b-&gt;basename == NULL) {</span>
+<span class="lineNum">     184 </span><span class="lineCov">         65 :         RM_DEFINE_BASENAME(file_b);</span>
+<span class="lineNum">     185 </span><span class="lineCov">         65 :         key_b-&gt;basename = g_strdup(file_b_basename);</span>
+<span class="lineNum">     186 </span>            :     }
 <span class="lineNum">     187 </span>            : 
-<span class="lineNum">     188 </span><span class="lineCov">       7850 : static RmPathDoubleKey *rm_path_double_new(RmFile *file) {</span>
-<span class="lineNum">     189 </span><span class="lineCov">       7850 :     RmPathDoubleKey *key = g_malloc0(sizeof(RmPathDoubleKey));</span>
-<span class="lineNum">     190 </span><span class="lineCov">       7850 :     key-&gt;file = file;</span>
-<span class="lineNum">     191 </span><span class="lineCov">       7850 :     return key;</span>
-<a name="192"><span class="lineNum">     192 </span>            : }</a>
-<span class="lineNum">     193 </span>            : 
-<span class="lineNum">     194 </span><span class="lineCov">       4900 : static void rm_path_double_free(RmPathDoubleKey *key) {</span>
-<span class="lineNum">     195 </span><span class="lineCov">       4900 :     if(key-&gt;basename != NULL) {</span>
-<span class="lineNum">     196 </span><span class="lineCov">        172 :         g_free(key-&gt;basename);</span>
-<span class="lineNum">     197 </span>            :     }
-<span class="lineNum">     198 </span><span class="lineCov">       4900 :     g_free(key);</span>
-<a name="199"><span class="lineNum">     199 </span><span class="lineCov">       4900 : }</span></a>
-<span class="lineNum">     200 </span>            : 
-<span class="lineNum">     201 </span><span class="lineCov">      14928 : RmFileTables *rm_file_tables_new(_U RmSession *session) {</span>
-<span class="lineNum">     202 </span><span class="lineCov">      14928 :     RmFileTables *tables = g_slice_new0(RmFileTables);</span>
+<span class="lineNum">     188 </span><span class="lineCov">         94 :     return g_strcmp0(key_a-&gt;basename, key_b-&gt;basename) == 0;</span>
+<a name="189"><span class="lineNum">     189 </span>            : }</a>
+<span class="lineNum">     190 </span>            : 
+<span class="lineNum">     191 </span><span class="lineCov">       3526 : static RmPathDoubleKey *rm_path_double_new(RmFile *file) {</span>
+<span class="lineNum">     192 </span><span class="lineCov">       3526 :     RmPathDoubleKey *key = g_malloc0(sizeof(RmPathDoubleKey));</span>
+<span class="lineNum">     193 </span><span class="lineCov">       3526 :     key-&gt;file = file;</span>
+<span class="lineNum">     194 </span><span class="lineCov">       3526 :     return key;</span>
+<a name="195"><span class="lineNum">     195 </span>            : }</a>
+<span class="lineNum">     196 </span>            : 
+<span class="lineNum">     197 </span><span class="lineCov">       2235 : static void rm_path_double_free(RmPathDoubleKey *key) {</span>
+<span class="lineNum">     198 </span><span class="lineCov">       2235 :     if(key-&gt;basename != NULL) {</span>
+<span class="lineNum">     199 </span><span class="lineCov">         79 :         g_free(key-&gt;basename);</span>
+<span class="lineNum">     200 </span>            :     }
+<span class="lineNum">     201 </span><span class="lineCov">       2235 :     g_free(key);</span>
+<a name="202"><span class="lineNum">     202 </span><span class="lineCov">       2235 : }</span></a>
 <span class="lineNum">     203 </span>            : 
-<span class="lineNum">     204 </span><span class="lineCov">      14928 :     tables-&gt;size_groups = g_hash_table_new_full((GHashFunc)rm_file_hash,</span>
-<span class="lineNum">     205 </span>            :                                                 (GEqualFunc)rm_file_equal, NULL, NULL);
+<span class="lineNum">     204 </span><span class="lineCov">      54884 : RmFileTables *rm_file_tables_new(_U RmSession *session) {</span>
+<span class="lineNum">     205 </span><span class="lineCov">      54884 :     RmFileTables *tables = g_slice_new0(RmFileTables);</span>
 <span class="lineNum">     206 </span>            : 
-<span class="lineNum">     207 </span><span class="lineCov">      14928 :     tables-&gt;node_table = g_hash_table_new_full((GHashFunc)rm_node_hash,</span>
-<span class="lineNum">     208 </span>            :                                                (GEqualFunc)rm_node_equal, NULL, NULL);
+<span class="lineNum">     207 </span><span class="lineCov">      54884 :     tables-&gt;size_groups = g_hash_table_new_full((GHashFunc)rm_file_hash,</span>
+<span class="lineNum">     208 </span>            :                                                 (GEqualFunc)rm_file_equal, NULL, NULL);
 <span class="lineNum">     209 </span>            : 
-<span class="lineNum">     210 </span><span class="lineCov">      14928 :     g_rec_mutex_init(&amp;tables-&gt;lock);</span>
-<span class="lineNum">     211 </span><span class="lineCov">      14928 :     return tables;</span>
-<a name="212"><span class="lineNum">     212 </span>            : }</a>
-<span class="lineNum">     213 </span>            : 
-<span class="lineNum">     214 </span><span class="lineCov">      14370 : void rm_file_tables_destroy(RmFileTables *tables) {</span>
-<span class="lineNum">     215 </span><span class="lineCov">      14370 :     g_rec_mutex_clear(&amp;tables-&gt;lock);</span>
-<span class="lineNum">     216 </span><span class="lineCov">      14370 :     g_slice_free(RmFileTables, tables);</span>
-<span class="lineNum">     217 </span><span class="lineCov">      14370 : }</span>
-<span class="lineNum">     218 </span>            : 
-<span class="lineNum">     219 </span>            : /*  compare two files. return:
-<span class="lineNum">     220 </span>            :  *    - a negative integer file 'a' outranks 'b',
-<span class="lineNum">     221 </span>            :  *    - 0 if they are equal,
-<a name="222"><span class="lineNum">     222 </span>            :  *    - a positive integer if file 'b' outranks 'a'</a>
-<span class="lineNum">     223 </span>            :  */
-<span class="lineNum">     224 </span><span class="lineCov">      50960 : int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,</span>
-<span class="lineNum">     225 </span>            :                                  const char *basename_a, const char *basename_b,
-<span class="lineNum">     226 </span>            :                                  int path_index_a, int path_index_b) {
-<span class="lineNum">     227 </span><span class="lineCov">      50960 :     RmCfg *sets = session-&gt;cfg;</span>
-<span class="lineNum">     228 </span>            : 
-<span class="lineNum">     229 </span><span class="lineCov">      50960 :     int sort_criteria_len = strlen(sets-&gt;sort_criteria);</span>
-<span class="lineNum">     230 </span><span class="lineCov">      91979 :     for(int i = 0; i &lt; sort_criteria_len; i++) {</span>
-<span class="lineNum">     231 </span><span class="lineCov">      72930 :         long cmp = 0;</span>
-<span class="lineNum">     232 </span><span class="lineCov">      72930 :         switch(tolower(sets-&gt;sort_criteria[i])) {</span>
-<span class="lineNum">     233 </span>            :         case 'm':
-<span class="lineNum">     234 </span><span class="lineCov">      16446 :             cmp = (long)(mtime_a) - (long)(mtime_b);</span>
-<span class="lineNum">     235 </span><span class="lineCov">      16446 :             break;</span>
-<span class="lineNum">     236 </span>            :         case 'a':
-<span class="lineNum">     237 </span><span class="lineCov">      33780 :             cmp = g_ascii_strcasecmp(basename_a, basename_b);</span>
-<span class="lineNum">     238 </span><span class="lineCov">      33780 :             break;</span>
-<span class="lineNum">     239 </span>            :         case 'p':
-<span class="lineNum">     240 </span><span class="lineCov">      22704 :             cmp = (long)path_index_a - (long)path_index_b;</span>
-<span class="lineNum">     241 </span><span class="lineCov">      22704 :             break;</span>
-<span class="lineNum">     242 </span>            :         }
-<span class="lineNum">     243 </span><span class="lineCov">      72930 :         if(cmp) {</span>
-<span class="lineNum">     244 </span>            :             /* reverse order if uppercase option (M|A|P) */
-<span class="lineNum">     245 </span><span class="lineCov">      31911 :             cmp = cmp * (isupper(sets-&gt;sort_criteria[i]) ? -1 : +1);</span>
-<span class="lineNum">     246 </span><span class="lineCov">      31911 :             return cmp;</span>
-<span class="lineNum">     247 </span>            :         }
-<span class="lineNum">     248 </span>            :     }
-<span class="lineNum">     249 </span><span class="lineCov">      19049 :     return 0;</span>
-<span class="lineNum">     250 </span>            : }
-<span class="lineNum">     251 </span>            : 
-<span class="lineNum">     252 </span>            : /* Sort criteria for sorting by preferred path (first) then user-input criteria */
-<span class="lineNum">     253 </span>            : /* Return:
-<span class="lineNum">     254 </span>            :  *      a negative integer file 'a' outranks 'b',
-<span class="lineNum">     255 </span>            :  *      0 if they are equal,
-<a name="256"><span class="lineNum">     256 </span>            :  *      a positive integer if file 'b' outranks 'a'</a>
-<span class="lineNum">     257 </span>            :  */
-<span class="lineNum">     258 </span><span class="lineCov">      55108 : int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {</span>
-<span class="lineNum">     259 </span><span class="lineCov">      55108 :     if(a-&gt;lint_type != b-&gt;lint_type) {</span>
-<span class="lineNum">     260 </span>            :         /* &quot;other&quot; lint outranks duplicates and has lower ENUM */
-<span class="lineNum">     261 </span><span class="lineNoCov">          0 :         return a-&gt;lint_type - b-&gt;lint_type;</span>
-<span class="lineNum">     262 </span><span class="lineCov">      55108 :     } else if(a-&gt;is_prefd != b-&gt;is_prefd) {</span>
-<span class="lineNum">     263 </span><span class="lineCov">       6428 :         return (b-&gt;is_prefd - a-&gt;is_prefd);</span>
-<span class="lineNum">     264 </span>            :     } else {
-<span class="lineNum">     265 </span><span class="lineCov">      48680 :         RM_DEFINE_BASENAME(a);</span>
-<span class="lineNum">     266 </span><span class="lineCov">      48680 :         RM_DEFINE_BASENAME(b);</span>
-<span class="lineNum">     267 </span><span class="lineCov">      97360 :         return rm_pp_cmp_orig_criteria_impl(session, a-&gt;mtime, b-&gt;mtime, a_basename,</span>
-<span class="lineNum">     268 </span><span class="lineCov">      97360 :                                             b_basename, a-&gt;path_index, b-&gt;path_index);</span>
-<span class="lineNum">     269 </span>            :     }
-<span class="lineNum">     270 </span>            : }
-<a name="271"><span class="lineNum">     271 </span>            : </a>
-<span class="lineNum">     272 </span>            : /* initial list build, including kicking out path doubles and grouping of hardlinks */
-<span class="lineNum">     273 </span><span class="lineCov">      82722 : bool rm_file_tables_insert(RmSession *session, RmFile *file) {</span>
-<span class="lineNum">     274 </span><span class="lineCov">      82722 :     RmFileTables *tables = session-&gt;tables;</span>
-<span class="lineNum">     275 </span><span class="lineCov">      82722 :     GHashTable *node_table = tables-&gt;node_table;</span>
-<span class="lineNum">     276 </span><span class="lineCov">      82722 :     bool is_hardlink = true;</span>
-<span class="lineNum">     277 </span>            : 
-<span class="lineNum">     278 </span><span class="lineCov">      82722 :     if(rm_session_was_aborted(session)) {</span>
-<span class="lineNum">     279 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">     280 </span>            :     }
-<span class="lineNum">     281 </span>            : 
-<span class="lineNum">     282 </span><span class="lineCov">      82722 :     g_rec_mutex_lock(&amp;tables-&gt;lock);</span>
-<span class="lineNum">     283 </span>            :     {
-<span class="lineNum">     284 </span><span class="lineCov">      82722 :         RmFile *inode_match = g_hash_table_lookup(node_table, file);</span>
-<span class="lineNum">     285 </span><span class="lineCov">      82722 :         if(inode_match == NULL) {</span>
-<span class="lineNum">     286 </span><span class="lineCov">      78528 :             g_hash_table_insert(node_table, file, file);</span>
-<span class="lineNum">     287 </span>            :         } else {
-<span class="lineNum">     288 </span>            :             /* file(s) with matching dev, inode(, basename) already in table...
-<span class="lineNum">     289 </span>            :              * fails if the hardlinked file has been written to during traversal; so
-<span class="lineNum">     290 </span>            :              * instead we just print a warning
-<span class="lineNum">     291 </span>            :              * */
-<span class="lineNum">     292 </span><span class="lineCov">       4194 :             if(inode_match-&gt;file_size != file-&gt;file_size) {</span>
-<span class="lineNum">     293 </span><span class="lineNoCov">          0 :                 RM_DEFINE_PATH(file);</span>
-<span class="lineNum">     294 </span><span class="lineNoCov">          0 :                 rm_log_warning_line(_(&quot;Hardlink file size changed during traversal: %s&quot;),</span>
-<span class="lineNum">     295 </span>            :                                     file_path);
-<span class="lineNum">     296 </span>            :             }
-<span class="lineNum">     297 </span>            : 
-<span class="lineNum">     298 </span>            :             /* if this is the first time, set up the hardlinks.files queue */
-<span class="lineNum">     299 </span><span class="lineCov">       4194 :             if(!inode_match-&gt;hardlinks.files) {</span>
-<span class="lineNum">     300 </span><span class="lineCov">       3656 :                 inode_match-&gt;hardlinks.files = g_queue_new();</span>
-<span class="lineNum">     301 </span>            : 
-<span class="lineNum">     302 </span>            :                 /* NOTE: during list build, the hardlinks.files queue includes the file
-<span class="lineNum">     303 </span>            :                  * itself, as well as its hardlinks.  This makes operations
-<span class="lineNum">     304 </span>            :                  * in rm_file_tables_insert much simpler but complicates things later on,
-<span class="lineNum">     305 </span>            :                  * so the head file gets removed from the hardlinks.files queue
-<span class="lineNum">     306 </span>            :                  * in rm_pp_handle_hardlinks() during preprocessing */
-<span class="lineNum">     307 </span><span class="lineCov">       3656 :                 g_queue_push_head(inode_match-&gt;hardlinks.files, inode_match);</span>
-<span class="lineNum">     308 </span>            :             }
-<span class="lineNum">     309 </span>            : 
-<span class="lineNum">     310 </span>            :             /* make sure the highest-ranked hardlink is &quot;boss&quot; */
-<span class="lineNum">     311 </span><span class="lineCov">       4194 :             if(rm_pp_cmp_orig_criteria(file, inode_match, session) &lt; 0) {</span>
-<span class="lineNum">     312 </span>            :                 /* this file outranks existing existing boss; swap.
-<span class="lineNum">     313 </span>            :                  * NOTE: it's important that rm_file_list_insert selects a
-<span class="lineNum">     314 </span>            :                  * RM_LINT_TYPE_DUPE_CANDIDATE as head file, unless all the
-<span class="lineNum">     315 </span>            :                  * files are &quot;other lint&quot;.  This is achieved via
-<span class="lineNum">     316 </span>            :                  * rm_pp_cmp_orig_criteria */
-<span class="lineNum">     317 </span><span class="lineCov">       3699 :                 file-&gt;hardlinks.files = inode_match-&gt;hardlinks.files;</span>
-<span class="lineNum">     318 </span><span class="lineCov">       3699 :                 inode_match-&gt;hardlinks.files = NULL;</span>
-<span class="lineNum">     319 </span><span class="lineCov">       3699 :                 g_hash_table_add(node_table, file); /* replaces key and data*/</span>
-<span class="lineNum">     320 </span><span class="lineCov">       3699 :                 g_queue_push_head(file-&gt;hardlinks.files, file);</span>
-<span class="lineNum">     321 </span>            :             } else {
-<span class="lineNum">     322 </span>            :                 /* Find the right place to insert sorted */
-<span class="lineNum">     323 </span><span class="lineCov">        495 :                 GList *iter = inode_match-&gt;hardlinks.files-&gt;head;</span>
-<span class="lineNum">     324 </span><span class="lineCov">       1973 :                 while(iter &amp;&amp; rm_pp_cmp_orig_criteria(iter-&gt;data, file, session) &lt;= 0) {</span>
-<span class="lineNum">     325 </span>            :                     /* iter outranks file - keep moving down the queue */
-<span class="lineNum">     326 </span><span class="lineCov">        983 :                     iter = iter-&gt;next;</span>
-<span class="lineNum">     327 </span>            :                 }
-<span class="lineNum">     328 </span>            : 
-<span class="lineNum">     329 </span>            :                 /* Store the iter to this file, so we can swap it if needed */
-<span class="lineNum">     330 </span><span class="lineCov">        495 :                 if(iter) {</span>
-<span class="lineNum">     331 </span>            :                     /* file outranks iter (or is equal), so should be inserted before iter
-<span class="lineNum">     332 </span>            :                      */
-<span class="lineNum">     333 </span><span class="lineNoCov">          0 :                     g_queue_insert_before(inode_match-&gt;hardlinks.files, iter, file);</span>
-<span class="lineNum">     334 </span>            :                 } else {
-<span class="lineNum">     335 </span><span class="lineCov">        495 :                     g_queue_push_tail(inode_match-&gt;hardlinks.files, file);</span>
-<span class="lineNum">     336 </span>            :                 }
-<span class="lineNum">     337 </span>            :             }
-<span class="lineNum">     338 </span>            :         }
-<span class="lineNum">     339 </span>            :     }
-<span class="lineNum">     340 </span>            : 
-<span class="lineNum">     341 </span><span class="lineCov">      82722 :     g_rec_mutex_unlock(&amp;tables-&gt;lock);</span>
-<span class="lineNum">     342 </span><span class="lineCov">      82722 :     return is_hardlink;</span>
-<span class="lineNum">     343 </span>            : }
-<span class="lineNum">     344 </span>            : 
-<a name="345"><span class="lineNum">     345 </span>            : /* if file is not DUPE_CANDIDATE then send it to session-&gt;tables-&gt;other_lint</a>
-<span class="lineNum">     346 </span>            :  * and return true; else return false */
-<span class="lineNum">     347 </span><span class="lineCov">      79596 : static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {</span>
-<span class="lineNum">     348 </span><span class="lineCov">      79596 :     if(file-&gt;lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {</span>
-<span class="lineNum">     349 </span><span class="lineCov">       2069 :         if(session-&gt;cfg-&gt;filter_mtime &amp;&amp; file-&gt;mtime &lt; session-&gt;cfg-&gt;min_mtime) {</span>
-<span class="lineNum">     350 </span><span class="lineNoCov">          0 :             rm_file_destroy(file);</span>
-<span class="lineNum">     351 </span><span class="lineNoCov">          0 :             return true;</span>
-<span class="lineNum">     352 </span>            :         }
-<span class="lineNum">     353 </span>            : 
-<span class="lineNum">     354 </span><span class="lineCov">       4138 :         session-&gt;tables-&gt;other_lint[file-&gt;lint_type] =</span>
-<span class="lineNum">     355 </span><span class="lineCov">       2069 :             g_list_prepend(session-&gt;tables-&gt;other_lint[file-&gt;lint_type], file);</span>
-<span class="lineNum">     356 </span><span class="lineCov">       2069 :         return true;</span>
-<span class="lineNum">     357 </span>            :     } else {
-<span class="lineNum">     358 </span><span class="lineCov">      77527 :         return false;</span>
-<span class="lineNum">     359 </span>            :     }
-<a name="360"><span class="lineNum">     360 </span>            : }</a>
+<span class="lineNum">     210 </span><span class="lineCov">      54884 :     tables-&gt;node_table = g_hash_table_new_full((GHashFunc)rm_node_hash,</span>
+<span class="lineNum">     211 </span>            :                                                (GEqualFunc)rm_node_equal, NULL, NULL);
+<span class="lineNum">     212 </span>            : 
+<span class="lineNum">     213 </span><span class="lineCov">      54884 :     g_rec_mutex_init(&amp;tables-&gt;lock);</span>
+<span class="lineNum">     214 </span><span class="lineCov">      54884 :     return tables;</span>
+<a name="215"><span class="lineNum">     215 </span>            : }</a>
+<span class="lineNum">     216 </span>            : 
+<span class="lineNum">     217 </span><span class="lineCov">      52994 : void rm_file_tables_destroy(RmFileTables *tables) {</span>
+<span class="lineNum">     218 </span><span class="lineCov">      52994 :     if(tables-&gt;size_groups) {</span>
+<span class="lineNum">     219 </span><span class="lineCov">      16536 :         g_hash_table_unref(tables-&gt;size_groups);</span>
+<span class="lineNum">     220 </span>            :     }
+<span class="lineNum">     221 </span>            : 
+<span class="lineNum">     222 </span><span class="lineCov">      52994 :     if(tables-&gt;node_table) {</span>
+<span class="lineNum">     223 </span><span class="lineCov">      16536 :         g_hash_table_unref(tables-&gt;node_table);</span>
+<span class="lineNum">     224 </span>            :     }
+<span class="lineNum">     225 </span>            : 
+<span class="lineNum">     226 </span><span class="lineCov">      52994 :     g_rec_mutex_clear(&amp;tables-&gt;lock);</span>
+<span class="lineNum">     227 </span><span class="lineCov">      52994 :     g_slice_free(RmFileTables, tables);</span>
+<span class="lineNum">     228 </span><span class="lineCov">      52994 : }</span>
+<span class="lineNum">     229 </span>            : 
+<span class="lineNum">     230 </span>            : /*  compare two files. return:
+<span class="lineNum">     231 </span>            :  *    - a negative integer file 'a' outranks 'b',
+<span class="lineNum">     232 </span>            :  *    - 0 if they are equal,
+<a name="233"><span class="lineNum">     233 </span>            :  *    - a positive integer if file 'b' outranks 'a'</a>
+<span class="lineNum">     234 </span>            :  */
+<span class="lineNum">     235 </span><span class="lineCov">     367054 : int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,</span>
+<span class="lineNum">     236 </span>            :                                  const char *basename_a, const char *basename_b,
+<span class="lineNum">     237 </span>            :                                  int path_index_a, int path_index_b, guint8 path_depth_a,
+<span class="lineNum">     238 </span>            :                                  guint8 path_depth_b) {
+<span class="lineNum">     239 </span><span class="lineCov">     367054 :     RmCfg *sets = session-&gt;cfg;</span>
+<span class="lineNum">     240 </span>            : 
+<span class="lineNum">     241 </span><span class="lineCov">     367054 :     int sort_criteria_len = strlen(sets-&gt;sort_criteria);</span>
+<span class="lineNum">     242 </span><span class="lineCov">     617773 :     for(int i = 0; i &lt; sort_criteria_len; i++) {</span>
+<span class="lineNum">     243 </span><span class="lineCov">     547518 :         long cmp = 0;</span>
+<span class="lineNum">     244 </span><span class="lineCov">     547518 :         switch(tolower(sets-&gt;sort_criteria[i])) {</span>
+<span class="lineNum">     245 </span>            :         case 'm':
+<span class="lineNum">     246 </span><span class="lineCov">      87886 :             cmp = (long)(mtime_a) - (long)(mtime_b);</span>
+<span class="lineNum">     247 </span><span class="lineCov">      87886 :             break;</span>
+<span class="lineNum">     248 </span>            :         case 'a':
+<span class="lineNum">     249 </span><span class="lineCov">      76258 :             cmp = g_ascii_strcasecmp(basename_a, basename_b);</span>
+<span class="lineNum">     250 </span><span class="lineCov">      76258 :             break;</span>
+<span class="lineNum">     251 </span>            :         case 'l':
+<span class="lineNum">     252 </span><span class="lineCov">      51810 :             cmp = strlen(basename_a) - strlen(basename_b);</span>
+<span class="lineNum">     253 </span><span class="lineCov">      51810 :             break;</span>
+<span class="lineNum">     254 </span>            :         case 'd':
+<span class="lineNum">     255 </span><span class="lineCov">      51800 :             cmp = (short)path_depth_a - (short)path_depth_b;</span>
+<span class="lineNum">     256 </span><span class="lineCov">      51800 :             break;</span>
+<span class="lineNum">     257 </span>            :         case 'p':
+<span class="lineNum">     258 </span><span class="lineCov">     279764 :             cmp = (long)path_index_a - (long)path_index_b;</span>
+<span class="lineNum">     259 </span><span class="lineCov">     279764 :             break;</span>
+<span class="lineNum">     260 </span>            :         }
+<span class="lineNum">     261 </span><span class="lineCov">     547518 :         if(cmp) {</span>
+<span class="lineNum">     262 </span>            :             /* reverse order if uppercase option (M|A|P) */
+<span class="lineNum">     263 </span><span class="lineCov">     296799 :             cmp = cmp * (isupper(sets-&gt;sort_criteria[i]) ? -1 : +1);</span>
+<span class="lineNum">     264 </span><span class="lineCov">     296799 :             return cmp;</span>
+<span class="lineNum">     265 </span>            :         }
+<span class="lineNum">     266 </span>            :     }
+<span class="lineNum">     267 </span><span class="lineCov">      70255 :     return 0;</span>
+<span class="lineNum">     268 </span>            : }
+<span class="lineNum">     269 </span>            : 
+<span class="lineNum">     270 </span>            : /* Sort criteria for sorting by preferred path (first) then user-input criteria */
+<span class="lineNum">     271 </span>            : /* Return:
+<span class="lineNum">     272 </span>            :  *      a negative integer file 'a' outranks 'b',
+<span class="lineNum">     273 </span>            :  *      0 if they are equal,
+<a name="274"><span class="lineNum">     274 </span>            :  *      a positive integer if file 'b' outranks 'a'</a>
+<span class="lineNum">     275 </span>            :  */
+<span class="lineNum">     276 </span><span class="lineCov">     369010 : int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {</span>
+<span class="lineNum">     277 </span><span class="lineCov">     369010 :     if(a-&gt;lint_type != b-&gt;lint_type) {</span>
+<span class="lineNum">     278 </span>            :         /* &quot;other&quot; lint outranks duplicates and has lower ENUM */
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :         return a-&gt;lint_type - b-&gt;lint_type;</span>
+<span class="lineNum">     280 </span><span class="lineCov">     369010 :     } else if(a-&gt;is_symlink != b-&gt;is_symlink) {</span>
+<span class="lineNum">     281 </span><span class="lineCov">        112 :         return a-&gt;is_symlink - b-&gt;is_symlink;</span>
+<span class="lineNum">     282 </span><span class="lineCov">     368898 :     } else if(a-&gt;is_prefd != b-&gt;is_prefd) {</span>
+<span class="lineNum">     283 </span><span class="lineCov">       2516 :         return (b-&gt;is_prefd - a-&gt;is_prefd);</span>
+<span class="lineNum">     284 </span>            :     } else {
+<span class="lineNum">     285 </span><span class="lineCov">     366382 :         RM_DEFINE_BASENAME(a);</span>
+<span class="lineNum">     286 </span><span class="lineCov">     366382 :         RM_DEFINE_BASENAME(b);</span>
+<span class="lineNum">     287 </span><span class="lineCov">    1465528 :         return rm_pp_cmp_orig_criteria_impl(session, a-&gt;mtime, b-&gt;mtime, a_basename,</span>
+<span class="lineNum">     288 </span><span class="lineCov">     732764 :                                             b_basename, a-&gt;path_index, b-&gt;path_index,</span>
+<span class="lineNum">     289 </span><span class="lineCov">     732764 :                                             a-&gt;path_depth, b-&gt;path_depth);</span>
+<span class="lineNum">     290 </span>            :     }
+<span class="lineNum">     291 </span>            : }
+<a name="292"><span class="lineNum">     292 </span>            : </a>
+<span class="lineNum">     293 </span>            : /* initial list build, including kicking out path doubles and grouping of hardlinks */
+<span class="lineNum">     294 </span><span class="lineCov">     225352 : bool rm_file_tables_insert(RmSession *session, RmFile *file) {</span>
+<span class="lineNum">     295 </span><span class="lineCov">     225352 :     RmFileTables *tables = session-&gt;tables;</span>
+<span class="lineNum">     296 </span><span class="lineCov">     225352 :     GHashTable *node_table = tables-&gt;node_table;</span>
+<span class="lineNum">     297 </span><span class="lineCov">     225352 :     bool is_hardlink = true;</span>
+<span class="lineNum">     298 </span>            : 
+<span class="lineNum">     299 </span><span class="lineCov">     225352 :     if(rm_session_was_aborted(session)) {</span>
+<span class="lineNum">     300 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     301 </span>            :     }
+<span class="lineNum">     302 </span>            : 
+<span class="lineNum">     303 </span><span class="lineCov">     225340 :     g_rec_mutex_lock(&amp;tables-&gt;lock);</span>
+<span class="lineNum">     304 </span>            :     {
+<span class="lineNum">     305 </span><span class="lineCov">     225368 :         RmFile *inode_match = g_hash_table_lookup(node_table, file);</span>
+<span class="lineNum">     306 </span><span class="lineCov">     225368 :         if(inode_match == NULL) {</span>
+<span class="lineNum">     307 </span><span class="lineCov">     223535 :             g_hash_table_insert(node_table, file, file);</span>
+<span class="lineNum">     308 </span>            :         } else {
+<span class="lineNum">     309 </span>            :             /* file(s) with matching dev, inode(, basename) already in table...
+<span class="lineNum">     310 </span>            :              * fails if the hardlinked file has been written to during traversal; so
+<span class="lineNum">     311 </span>            :              * instead we just print a warning
+<span class="lineNum">     312 </span>            :              * */
+<span class="lineNum">     313 </span><span class="lineCov">       1833 :             if(inode_match-&gt;file_size != file-&gt;file_size) {</span>
+<span class="lineNum">     314 </span><span class="lineNoCov">          0 :                 RM_DEFINE_PATH(file);</span>
+<span class="lineNum">     315 </span><span class="lineNoCov">          0 :                 rm_log_warning_line(_(&quot;Hardlink file size changed during traversal: %s&quot;),</span>
+<span class="lineNum">     316 </span>            :                                     file_path);
+<span class="lineNum">     317 </span>            :             }
+<span class="lineNum">     318 </span>            : 
+<span class="lineNum">     319 </span>            :             /* if this is the first time, set up the hardlinks.files queue */
+<span class="lineNum">     320 </span><span class="lineCov">       1833 :             if(!inode_match-&gt;hardlinks.files) {</span>
+<span class="lineNum">     321 </span><span class="lineCov">       1693 :                 inode_match-&gt;hardlinks.files = g_queue_new();</span>
+<span class="lineNum">     322 </span>            : 
+<span class="lineNum">     323 </span>            :                 /* NOTE: during list build, the hardlinks.files queue includes the file
+<span class="lineNum">     324 </span>            :                  * itself, as well as its hardlinks.  This makes operations
+<span class="lineNum">     325 </span>            :                  * in rm_file_tables_insert much simpler but complicates things later on,
+<span class="lineNum">     326 </span>            :                  * so the head file gets removed from the hardlinks.files queue
+<span class="lineNum">     327 </span>            :                  * in rm_pp_handle_hardlinks() during preprocessing */
+<span class="lineNum">     328 </span><span class="lineCov">       1693 :                 g_queue_push_head(inode_match-&gt;hardlinks.files, inode_match);</span>
+<span class="lineNum">     329 </span>            :             }
+<span class="lineNum">     330 </span>            : 
+<span class="lineNum">     331 </span>            :             /* make sure the highest-ranked hardlink is &quot;boss&quot; */
+<span class="lineNum">     332 </span><span class="lineCov">       1833 :             if(rm_pp_cmp_orig_criteria(file, inode_match, session) &lt; 0) {</span>
+<span class="lineNum">     333 </span>            :                 /* this file outranks existing existing boss; swap.
+<span class="lineNum">     334 </span>            :                  * NOTE: it's important that rm_file_list_insert selects a
+<span class="lineNum">     335 </span>            :                  * RM_LINT_TYPE_DUPE_CANDIDATE as head file, unless all the
+<span class="lineNum">     336 </span>            :                  * files are &quot;other lint&quot;.  This is achieved via
+<span class="lineNum">     337 </span>            :                  * rm_pp_cmp_orig_criteria */
+<span class="lineNum">     338 </span><span class="lineCov">       1619 :                 file-&gt;hardlinks.files = inode_match-&gt;hardlinks.files;</span>
+<span class="lineNum">     339 </span><span class="lineCov">       1619 :                 inode_match-&gt;hardlinks.files = NULL;</span>
+<span class="lineNum">     340 </span><span class="lineCov">       1619 :                 g_hash_table_add(node_table, file); /* replaces key and data*/</span>
+<span class="lineNum">     341 </span><span class="lineCov">       1619 :                 g_queue_push_head(file-&gt;hardlinks.files, file);</span>
+<span class="lineNum">     342 </span>            :             } else {
+<span class="lineNum">     343 </span>            :                 /* Find the right place to insert sorted */
+<span class="lineNum">     344 </span><span class="lineCov">        214 :                 GList *iter = inode_match-&gt;hardlinks.files-&gt;head;</span>
+<span class="lineNum">     345 </span><span class="lineCov">        642 :                 while(iter &amp;&amp; rm_pp_cmp_orig_criteria(iter-&gt;data, file, session) &lt;= 0) {</span>
+<span class="lineNum">     346 </span>            :                     /* iter outranks file - keep moving down the queue */
+<span class="lineNum">     347 </span><span class="lineCov">        214 :                     iter = iter-&gt;next;</span>
+<span class="lineNum">     348 </span>            :                 }
+<span class="lineNum">     349 </span>            : 
+<span class="lineNum">     350 </span>            :                 /* Store the iter to this file, so we can swap it if needed */
+<span class="lineNum">     351 </span><span class="lineCov">        214 :                 if(iter) {</span>
+<span class="lineNum">     352 </span>            :                     /* file outranks iter (or is equal), so should be inserted before iter
+<span class="lineNum">     353 </span>            :                      */
+<span class="lineNum">     354 </span><span class="lineNoCov">          0 :                     g_queue_insert_before(inode_match-&gt;hardlinks.files, iter, file);</span>
+<span class="lineNum">     355 </span>            :                 } else {
+<span class="lineNum">     356 </span><span class="lineCov">        214 :                     g_queue_push_tail(inode_match-&gt;hardlinks.files, file);</span>
+<span class="lineNum">     357 </span>            :                 }
+<span class="lineNum">     358 </span>            :             }
+<span class="lineNum">     359 </span>            :         }
+<span class="lineNum">     360 </span>            :     }
 <span class="lineNum">     361 </span>            : 
-<span class="lineNum">     362 </span><span class="lineCov">      79772 : static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {</span>
-<span class="lineNum">     363 </span><span class="lineCov">      79772 :     RM_DEFINE_PATH(file);</span>
-<span class="lineNum">     364 </span><span class="lineCov">      79772 :     return rm_fmt_is_a_output(session-&gt;formats, file_path);</span>
-<span class="lineNum">     365 </span>            : }
-<span class="lineNum">     366 </span>            : 
-<span class="lineNum">     367 </span>            : /* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
-<span class="lineNum">     368 </span>            :  * that are &quot;other lint&quot; types are sent to rm_pp_handle_other_lint.  If the
-<span class="lineNum">     369 </span>            :  * file itself is &quot;other lint&quot; types it is likewise sent to rm_pp_handle_other_lint.
-<span class="lineNum">     370 </span>            :  * If there are no files left after this then return TRUE so that the
-<span class="lineNum">     371 </span>            :  * cluster can be deleted from the node_table hash table.
-<a name="372"><span class="lineNum">     372 </span>            :  * NOTE: we rely on rm_file_list_insert to select a RM_LINT_TYPE_DUPE_CANDIDATE as head</a>
-<span class="lineNum">     373 </span>            :  * file (unless ALL the files are &quot;other lint&quot;). */
-<span class="lineNum">     374 </span><span class="lineCov">      79772 : static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,</span>
-<span class="lineNum">     375 </span>            :                                             RmSession *session) {
-<span class="lineNum">     376 </span><span class="lineCov">      79772 :     g_assert(file);</span>
-<span class="lineNum">     377 </span><span class="lineCov">      79772 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">     362 </span><span class="lineCov">     225368 :     g_rec_mutex_unlock(&amp;tables-&gt;lock);</span>
+<span class="lineNum">     363 </span><span class="lineCov">     225367 :     return is_hardlink;</span>
+<a name="364"><span class="lineNum">     364 </span>            : }</a>
+<span class="lineNum">     365 </span>            : 
+<span class="lineNum">     366 </span><span class="lineCov">        196 : void rm_file_tables_clear(RmSession *session) {</span>
+<span class="lineNum">     367 </span>            :     GHashTableIter iter;
+<span class="lineNum">     368 </span>            :     gpointer key;
+<span class="lineNum">     369 </span>            : 
+<span class="lineNum">     370 </span><span class="lineCov">        196 :     g_hash_table_iter_init(&amp;iter, session-&gt;tables-&gt;node_table);</span>
+<span class="lineNum">     371 </span><span class="lineCov">        560 :     while(g_hash_table_iter_next(&amp;iter, &amp;key, NULL)) {</span>
+<span class="lineNum">     372 </span><span class="lineCov">        168 :         RmFile *file = key;</span>
+<span class="lineNum">     373 </span><span class="lineCov">        168 :         if(file) {</span>
+<span class="lineNum">     374 </span><span class="lineCov">        168 :             rm_file_destroy(file);</span>
+<span class="lineNum">     375 </span>            :         }
+<span class="lineNum">     376 </span>            :     }
+<span class="lineNum">     377 </span><span class="lineCov">        196 : }</span>
 <span class="lineNum">     378 </span>            : 
-<span class="lineNum">     379 </span><span class="lineCov">      79772 :     if(file-&gt;hardlinks.files &amp;&amp; file-&gt;hardlinks.files-&gt;head) {</span>
-<span class="lineNum">     380 </span>            :         /* there is a cluster of inode matches - unpack them and check for path doubles */
-<span class="lineNum">     381 </span>            : 
-<span class="lineNum">     382 </span><span class="lineCov">       3656 :         GHashTable *unique_paths_table =</span>
-<span class="lineNum">     383 </span>            :             g_hash_table_new_full((GHashFunc)rm_path_double_hash,
-<span class="lineNum">     384 </span>            :                                   (GEqualFunc)rm_path_double_equal,
-<span class="lineNum">     385 </span>            :                                   (GDestroyNotify)rm_path_double_free,
-<span class="lineNum">     386 </span>            :                                   NULL);
+<a name="379"><span class="lineNum">     379 </span>            : /* if file is not DUPE_CANDIDATE then send it to session-&gt;tables-&gt;other_lint</a>
+<span class="lineNum">     380 </span>            :  * and return true; else return false */
+<span class="lineNum">     381 </span><span class="lineCov">     223787 : static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {</span>
+<span class="lineNum">     382 </span><span class="lineCov">     223787 :     if(file-&gt;lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {</span>
+<span class="lineNum">     383 </span><span class="lineCov">        588 :         if(session-&gt;cfg-&gt;filter_mtime &amp;&amp; file-&gt;mtime &lt; session-&gt;cfg-&gt;min_mtime) {</span>
+<span class="lineNum">     384 </span><span class="lineNoCov">          0 :             rm_file_destroy(file);</span>
+<span class="lineNum">     385 </span><span class="lineNoCov">          0 :             return true;</span>
+<span class="lineNum">     386 </span>            :         }
 <span class="lineNum">     387 </span>            : 
-<span class="lineNum">     388 </span><span class="lineCov">       3656 :         GList *next = NULL;</span>
-<span class="lineNum">     389 </span>            : 
-<span class="lineNum">     390 </span><span class="lineCov">      11506 :         for(GList *iter = file-&gt;hardlinks.files-&gt;head; iter; iter = next) {</span>
-<span class="lineNum">     391 </span><span class="lineCov">       7850 :             next = iter-&gt;next;</span>
-<span class="lineNum">     392 </span><span class="lineCov">       7850 :             RmFile *iter_file = iter-&gt;data;</span>
-<span class="lineNum">     393 </span>            : 
-<span class="lineNum">     394 </span><span class="lineCov">       7850 :             RmPathDoubleKey *key = rm_path_double_new(iter_file);</span>
-<span class="lineNum">     395 </span>            : 
-<span class="lineNum">     396 </span>            :             /* Lookup if there is a file with the same path */
-<span class="lineNum">     397 </span><span class="lineCov">       7850 :             RmPathDoubleKey *match_double_key =</span>
-<span class="lineNum">     398 </span>            :                 g_hash_table_lookup(unique_paths_table, key);
-<span class="lineNum">     399 </span>            : 
-<span class="lineNum">     400 </span><span class="lineCov">       7850 :             if(match_double_key == NULL) {</span>
-<span class="lineNum">     401 </span><span class="lineCov">       4900 :                 g_hash_table_add(unique_paths_table, key);</span>
-<span class="lineNum">     402 </span>            :             } else {
-<span class="lineNum">     403 </span><span class="lineCov">       2950 :                 g_assert(match_double_key-&gt;file != iter_file);</span>
-<span class="lineNum">     404 </span><span class="lineCov">       2950 :                 RmFile *match_double = match_double_key-&gt;file;</span>
-<span class="lineNum">     405 </span>            : 
-<span class="lineNum">     406 </span><span class="lineCov">       2950 :                 g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) &gt;= 0);</span>
+<span class="lineNum">     388 </span>            :         /* Also protect other lint by --keep-all-{un,}tagged */
+<span class="lineNum">     389 </span><span class="lineCov">       1176 :         if((session-&gt;cfg-&gt;keep_all_tagged &amp;&amp; file-&gt;is_prefd) ||</span>
+<span class="lineNum">     390 </span><span class="lineCov">        588 :            (session-&gt;cfg-&gt;keep_all_untagged &amp;&amp; !file-&gt;is_prefd)) {</span>
+<span class="lineNum">     391 </span><span class="lineNoCov">          0 :             rm_file_destroy(file);</span>
+<span class="lineNum">     392 </span><span class="lineNoCov">          0 :             return true;</span>
+<span class="lineNum">     393 </span>            :         }
+<span class="lineNum">     394 </span>            : 
+<span class="lineNum">     395 </span><span class="lineCov">       1176 :         session-&gt;tables-&gt;other_lint[file-&gt;lint_type] =</span>
+<span class="lineNum">     396 </span><span class="lineCov">        588 :             g_list_prepend(session-&gt;tables-&gt;other_lint[file-&gt;lint_type], file);</span>
+<span class="lineNum">     397 </span><span class="lineCov">        588 :         return true;</span>
+<span class="lineNum">     398 </span>            :     } else {
+<span class="lineNum">     399 </span><span class="lineCov">     223199 :         return false;</span>
+<span class="lineNum">     400 </span>            :     }
+<a name="401"><span class="lineNum">     401 </span>            : }</a>
+<span class="lineNum">     402 </span>            : 
+<span class="lineNum">     403 </span><span class="lineCov">     224077 : static bool rm_pp_handle_own_files(RmSession *session, RmFile *file) {</span>
+<span class="lineNum">     404 </span><span class="lineCov">     224077 :     RM_DEFINE_PATH(file);</span>
+<span class="lineNum">     405 </span><span class="lineCov">     224077 :     return rm_fmt_is_a_output(session-&gt;formats, file_path);</span>
+<span class="lineNum">     406 </span>            : }
 <span class="lineNum">     407 </span>            : 
-<span class="lineNum">     408 </span><span class="lineCov">       2950 :                 rm_log_debug(&quot;Ignoring path double %p, keeping %p\n&quot;, iter_file,</span>
-<span class="lineNum">     409 </span>            :                              match_double);
-<span class="lineNum">     410 </span>            : 
-<span class="lineNum">     411 </span><span class="lineCov">       2950 :                 g_queue_delete_link(file-&gt;hardlinks.files, iter);</span>
-<span class="lineNum">     412 </span><span class="lineCov">       2950 :                 rm_file_destroy(iter_file);</span>
-<span class="lineNum">     413 </span>            :             }
-<span class="lineNum">     414 </span>            :         }
-<span class="lineNum">     415 </span>            : 
-<span class="lineNum">     416 </span><span class="lineCov">       3656 :         g_hash_table_unref(unique_paths_table);</span>
-<span class="lineNum">     417 </span>            : 
-<span class="lineNum">     418 </span>            :         /* remove self from hardlink queue */
-<span class="lineNum">     419 </span><span class="lineCov">       3656 :         g_queue_remove(file-&gt;hardlinks.files, file);</span>
-<span class="lineNum">     420 </span>            : 
-<span class="lineNum">     421 </span><span class="lineCov">       4900 :         for(GList *iter = file-&gt;hardlinks.files-&gt;head, *next = NULL; iter; iter = next) {</span>
-<span class="lineNum">     422 </span>            :             /* Remember next element early */
-<span class="lineNum">     423 </span><span class="lineCov">       1244 :             next = iter-&gt;next;</span>
-<span class="lineNum">     424 </span>            : 
-<span class="lineNum">     425 </span>            :             /* call self to handle each embedded hardlink */
-<span class="lineNum">     426 </span><span class="lineCov">       1244 :             RmFile *embedded = iter-&gt;data;</span>
-<span class="lineNum">     427 </span><span class="lineCov">       1244 :             g_assert(embedded != file);</span>
-<span class="lineNum">     428 </span><span class="lineCov">       1244 :             if(embedded-&gt;hardlinks.files != NULL) {</span>
-<span class="lineNum">     429 </span><span class="lineNoCov">          0 :                 rm_log_error(&quot;Warning: embedded file %p has hardlinks&quot;, embedded);</span>
-<span class="lineNum">     430 </span><span class="lineNoCov">          0 :                 GQueue *hardlinks = embedded-&gt;hardlinks.files;</span>
-<span class="lineNum">     431 </span><span class="lineNoCov">          0 :                 g_assert(hardlinks-&gt;length &lt; 2);</span>
-<span class="lineNum">     432 </span><span class="lineNoCov">          0 :                 if(hardlinks-&gt;head) {</span>
-<span class="lineNum">     433 </span><span class="lineNoCov">          0 :                     g_assert(hardlinks-&gt;head-&gt;data == embedded);</span>
-<span class="lineNum">     434 </span>            :                 }
-<span class="lineNum">     435 </span>            : 
-<span class="lineNum">     436 </span><span class="lineNoCov">          0 :                 g_queue_free(hardlinks);</span>
-<span class="lineNum">     437 </span><span class="lineNoCov">          0 :                 embedded-&gt;hardlinks.files = NULL;</span>
-<span class="lineNum">     438 </span>            :             }
-<span class="lineNum">     439 </span>            : 
-<span class="lineNum">     440 </span><span class="lineCov">       1244 :             if(rm_pp_handle_inode_clusters(NULL, embedded, session)) {</span>
-<span class="lineNum">     441 </span><span class="lineNoCov">          0 :                 g_queue_delete_link(file-&gt;hardlinks.files, iter);</span>
-<span class="lineNum">     442 </span><span class="lineCov">       1244 :             } else if(!cfg-&gt;find_hardlinked_dupes) {</span>
-<span class="lineNum">     443 </span><span class="lineCov">        432 :                 rm_file_destroy(embedded);</span>
-<span class="lineNum">     444 </span><span class="lineCov">        432 :                 g_queue_delete_link(file-&gt;hardlinks.files, iter);</span>
-<span class="lineNum">     445 </span>            :             } else {
-<span class="lineNum">     446 </span><span class="lineCov">        812 :                 embedded-&gt;hardlinks.hardlink_head = file;</span>
-<span class="lineNum">     447 </span><span class="lineCov">        812 :                 g_assert(!embedded-&gt;hardlinks.is_head);</span>
-<span class="lineNum">     448 </span>            :             }
-<span class="lineNum">     449 </span>            :         }
-<span class="lineNum">     450 </span>            : 
-<span class="lineNum">     451 </span><span class="lineCov">       3656 :         if(g_queue_is_empty(file-&gt;hardlinks.files)) {</span>
-<span class="lineNum">     452 </span><span class="lineCov">       3166 :             g_queue_free(file-&gt;hardlinks.files);</span>
-<span class="lineNum">     453 </span><span class="lineCov">       3166 :             file-&gt;hardlinks.files = NULL;</span>
-<span class="lineNum">     454 </span>            :         } else {
-<span class="lineNum">     455 </span><span class="lineCov">        490 :             file-&gt;hardlinks.is_head = TRUE;</span>
-<span class="lineNum">     456 </span>            :         }
-<span class="lineNum">     457 </span>            :     }
+<span class="lineNum">     408 </span>            : /* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
+<span class="lineNum">     409 </span>            :  * that are &quot;other lint&quot; types are sent to rm_pp_handle_other_lint.  If the
+<span class="lineNum">     410 </span>            :  * file itself is &quot;other lint&quot; types it is likewise sent to rm_pp_handle_other_lint.
+<span class="lineNum">     411 </span>            :  * If there are no files left after this then return TRUE so that the
+<span class="lineNum">     412 </span>            :  * cluster can be deleted from the node_table hash table.
+<a name="413"><span class="lineNum">     413 </span>            :  * NOTE: we rely on rm_file_list_insert to select a RM_LINT_TYPE_DUPE_CANDIDATE as head</a>
+<span class="lineNum">     414 </span>            :  * file (unless ALL the files are &quot;other lint&quot;). */
+<span class="lineNum">     415 </span><span class="lineCov">     224077 : static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,</span>
+<span class="lineNum">     416 </span>            :                                             RmSession *session) {
+<span class="lineNum">     417 </span><span class="lineCov">     224077 :     g_assert(file);</span>
+<span class="lineNum">     418 </span><span class="lineCov">     224077 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">     419 </span>            : 
+<span class="lineNum">     420 </span><span class="lineCov">     224077 :     if(file-&gt;hardlinks.files &amp;&amp; file-&gt;hardlinks.files-&gt;head) {</span>
+<span class="lineNum">     421 </span>            :         /* there is a cluster of inode matches - unpack them and check for path doubles */
+<span class="lineNum">     422 </span>            : 
+<span class="lineNum">     423 </span><span class="lineCov">       1693 :         GHashTable *unique_paths_table =</span>
+<span class="lineNum">     424 </span>            :             g_hash_table_new_full((GHashFunc)rm_path_double_hash,
+<span class="lineNum">     425 </span>            :                                   (GEqualFunc)rm_path_double_equal,
+<span class="lineNum">     426 </span>            :                                   (GDestroyNotify)rm_path_double_free,
+<span class="lineNum">     427 </span>            :                                   NULL);
+<span class="lineNum">     428 </span>            : 
+<span class="lineNum">     429 </span><span class="lineCov">       1693 :         GList *next = NULL;</span>
+<span class="lineNum">     430 </span>            : 
+<span class="lineNum">     431 </span><span class="lineCov">       5219 :         for(GList *iter = file-&gt;hardlinks.files-&gt;head; iter; iter = next) {</span>
+<span class="lineNum">     432 </span><span class="lineCov">       3526 :             next = iter-&gt;next;</span>
+<span class="lineNum">     433 </span><span class="lineCov">       3526 :             RmFile *iter_file = iter-&gt;data;</span>
+<span class="lineNum">     434 </span>            : 
+<span class="lineNum">     435 </span><span class="lineCov">       3526 :             RmPathDoubleKey *key = rm_path_double_new(iter_file);</span>
+<span class="lineNum">     436 </span>            : 
+<span class="lineNum">     437 </span>            :             /* Lookup if there is a file with the same path */
+<span class="lineNum">     438 </span><span class="lineCov">       3526 :             RmPathDoubleKey *match_double_key =</span>
+<span class="lineNum">     439 </span>            :                 g_hash_table_lookup(unique_paths_table, key);
+<span class="lineNum">     440 </span>            : 
+<span class="lineNum">     441 </span><span class="lineCov">       3526 :             if(match_double_key == NULL) {</span>
+<span class="lineNum">     442 </span><span class="lineCov">       2235 :                 g_hash_table_add(unique_paths_table, key);</span>
+<span class="lineNum">     443 </span>            :             } else {
+<span class="lineNum">     444 </span><span class="lineCov">       1291 :                 g_assert(match_double_key-&gt;file != iter_file);</span>
+<span class="lineNum">     445 </span><span class="lineCov">       1291 :                 RmFile *match_double = match_double_key-&gt;file;</span>
+<span class="lineNum">     446 </span>            : 
+<span class="lineNum">     447 </span><span class="lineCov">       1291 :                 g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) &gt;= 0);</span>
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span><span class="lineCov">       1291 :                 rm_log_debug_line(&quot;Ignoring path double %p, keeping %p&quot;, iter_file,</span>
+<span class="lineNum">     450 </span>            :                              match_double);
+<span class="lineNum">     451 </span>            : 
+<span class="lineNum">     452 </span><span class="lineCov">       1291 :                 g_queue_delete_link(file-&gt;hardlinks.files, iter);</span>
+<span class="lineNum">     453 </span><span class="lineCov">       1291 :                 rm_file_destroy(iter_file);</span>
+<span class="lineNum">     454 </span>            :             }
+<span class="lineNum">     455 </span>            :         }
+<span class="lineNum">     456 </span>            : 
+<span class="lineNum">     457 </span><span class="lineCov">       1693 :         g_hash_table_unref(unique_paths_table);</span>
 <span class="lineNum">     458 </span>            : 
-<span class="lineNum">     459 </span><span class="lineCov">      79772 :     if(file-&gt;hardlinks.is_head) {</span>
-<span class="lineNum">     460 </span>            :         /* Hardlinks are processed on the fly by shredder later,
-<span class="lineNum">     461 </span>            :          * so we do not really need to process them.
-<span class="lineNum">     462 </span>            :          */
-<span class="lineNum">     463 </span><span class="lineCov">        490 :         session-&gt;total_filtered_files -= file-&gt;hardlinks.files-&gt;length;</span>
-<span class="lineNum">     464 </span>            :     }
+<span class="lineNum">     459 </span>            :         /* remove self from hardlink queue */
+<span class="lineNum">     460 </span><span class="lineCov">       1693 :         g_queue_remove(file-&gt;hardlinks.files, file);</span>
+<span class="lineNum">     461 </span>            : 
+<span class="lineNum">     462 </span><span class="lineCov">       2235 :         for(GList *iter = file-&gt;hardlinks.files-&gt;head, *next = NULL; iter; iter = next) {</span>
+<span class="lineNum">     463 </span>            :             /* Remember next element early */
+<span class="lineNum">     464 </span><span class="lineCov">        542 :             next = iter-&gt;next;</span>
 <span class="lineNum">     465 </span>            : 
-<span class="lineNum">     466 </span>            :     /*
-<span class="lineNum">     467 </span>            :     * Check if the file is a output of rmlint itself. Which we definitely
-<span class="lineNum">     468 </span>            :     * not want to handle. Creating a script that deletes itself is fun but useless.
-<span class="lineNum">     469 </span>            :     * */
-<span class="lineNum">     470 </span><span class="lineCov">      79772 :     bool remove = rm_pp_handle_own_files(session, file);</span>
-<span class="lineNum">     471 </span>            : 
-<span class="lineNum">     472 </span>            :     /* handle the head file; if it's &quot;other lint&quot; then process it via
-<span class="lineNum">     473 </span>            :      * rm_pp_handle_other_lint
-<span class="lineNum">     474 </span>            :      * and return TRUE, else keep it
-<span class="lineNum">     475 </span>            :      */
-<span class="lineNum">     476 </span><span class="lineCov">      79772 :     if(remove == false &amp;&amp; rm_pp_handle_other_lint(session, file)) {</span>
-<span class="lineNum">     477 </span><span class="lineCov">       2069 :         remove = true;</span>
-<span class="lineNum">     478 </span><span class="lineCov">      77703 :     } else if(remove == true) {</span>
-<span class="lineNum">     479 </span><span class="lineCov">        176 :         rm_file_destroy(file);</span>
-<span class="lineNum">     480 </span>            :     }
-<span class="lineNum">     481 </span>            : 
-<span class="lineNum">     482 </span><span class="lineCov">      79772 :     session-&gt;total_filtered_files -= remove;</span>
-<span class="lineNum">     483 </span><span class="lineCov">      79772 :     rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_PREPROCESS);</span>
-<span class="lineNum">     484 </span>            : 
-<span class="lineNum">     485 </span><span class="lineCov">      79772 :     return remove;</span>
-<a name="486"><span class="lineNum">     486 </span>            : }</a>
-<span class="lineNum">     487 </span>            : 
-<span class="lineNum">     488 </span><span class="lineCov">       2418 : static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {</span>
-<span class="lineNum">     489 </span><span class="lineCov">       2418 :     RM_DEFINE_PATH(a);</span>
-<span class="lineNum">     490 </span><span class="lineCov">       2418 :     RM_DEFINE_PATH(b);</span>
-<span class="lineNum">     491 </span><span class="lineCov">       2418 :     return g_strcmp0(b_path, a_path);</span>
-<a name="492"><span class="lineNum">     492 </span>            : }</a>
-<span class="lineNum">     493 </span>            : 
-<span class="lineNum">     494 </span><span class="lineCov">      13674 : static RmOff rm_pp_handler_other_lint(RmSession *session) {</span>
-<span class="lineNum">     495 </span><span class="lineCov">      13674 :     RmOff num_handled = 0;</span>
-<span class="lineNum">     496 </span><span class="lineCov">      13674 :     RmFileTables *tables = session-&gt;tables;</span>
-<span class="lineNum">     497 </span>            : 
-<span class="lineNum">     498 </span><span class="lineCov">     123066 :     for(RmOff type = 0; type &lt; RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {</span>
-<span class="lineNum">     499 </span><span class="lineCov">     109392 :         if(type == RM_LINT_TYPE_EMPTY_DIR) {</span>
-<span class="lineNum">     500 </span><span class="lineCov">      13674 :             tables-&gt;other_lint[type] = g_list_sort(</span>
-<span class="lineNum">     501 </span>            :                 tables-&gt;other_lint[type], (GCompareFunc)rm_pp_cmp_reverse_alphabetical);
-<span class="lineNum">     502 </span>            :         }
-<span class="lineNum">     503 </span>            : 
-<span class="lineNum">     504 </span><span class="lineCov">     109392 :         GList *list = tables-&gt;other_lint[type];</span>
-<span class="lineNum">     505 </span><span class="lineCov">     111461 :         for(GList *iter = list; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     506 </span><span class="lineCov">       2069 :             RmFile *file = iter-&gt;data;</span>
-<span class="lineNum">     507 </span>            : 
-<span class="lineNum">     508 </span><span class="lineCov">       2069 :             g_assert(file);</span>
-<span class="lineNum">     509 </span><span class="lineCov">       2069 :             g_assert(type == file-&gt;lint_type);</span>
-<span class="lineNum">     510 </span>            : 
-<span class="lineNum">     511 </span><span class="lineCov">       2069 :             num_handled++;</span>
-<span class="lineNum">     512 </span><span class="lineCov">       2069 :             rm_fmt_write(file, session-&gt;formats);</span>
-<span class="lineNum">     513 </span>            :         }
-<span class="lineNum">     514 </span><span class="lineCov">     109392 :         g_list_free_full(list, (GDestroyNotify)rm_file_destroy);</span>
-<span class="lineNum">     515 </span>            :     }
-<span class="lineNum">     516 </span>            : 
-<span class="lineNum">     517 </span><span class="lineCov">      13674 :     return num_handled;</span>
-<span class="lineNum">     518 </span>            : }
-<a name="519"><span class="lineNum">     519 </span>            : </a>
-<span class="lineNum">     520 </span>            : /* This does preprocessing including handling of &quot;other lint&quot; (non-dupes) */
-<span class="lineNum">     521 </span><span class="lineCov">      13674 : void rm_preprocess(RmSession *session) {</span>
-<span class="lineNum">     522 </span><span class="lineCov">      13674 :     RmFileTables *tables = session-&gt;tables;</span>
-<span class="lineNum">     523 </span><span class="lineCov">      13674 :     g_assert(tables-&gt;node_table);</span>
-<span class="lineNum">     524 </span>            : 
-<span class="lineNum">     525 </span><span class="lineCov">      13674 :     session-&gt;total_filtered_files = session-&gt;total_files;</span>
-<span class="lineNum">     526 </span>            : 
-<span class="lineNum">     527 </span>            :     /* process hardlink groups, and move other_lint into tables- */
-<span class="lineNum">     528 </span><span class="lineCov">      13674 :     guint removed = g_hash_table_foreach_remove(</span>
-<span class="lineNum">     529 </span>            :         tables-&gt;node_table, (GHRFunc)rm_pp_handle_inode_clusters, session);
-<span class="lineNum">     530 </span>            : 
-<span class="lineNum">     531 </span><span class="lineCov">      13674 :     rm_log_debug(&quot;process hardlink groups finished at time %.3f; removed %u of %d\n&quot;,</span>
-<span class="lineNum">     532 </span>            :                  g_timer_elapsed(session-&gt;timer, NULL), removed, session-&gt;total_files);
-<span class="lineNum">     533 </span>            : 
-<span class="lineNum">     534 </span><span class="lineCov">      13674 :     session-&gt;other_lint_cnt += rm_pp_handler_other_lint(session);</span>
-<span class="lineNum">     535 </span><span class="lineCov">      13674 :     rm_log_debug(&quot;Other lint handling finished at time %.3f\n&quot;,</span>
-<span class="lineNum">     536 </span>            :                  g_timer_elapsed(session-&gt;timer, NULL));
-<span class="lineNum">     537 </span>            : 
-<span class="lineNum">     538 </span><span class="lineCov">      13674 :     rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_PREPROCESS);</span>
-<span class="lineNum">     539 </span><span class="lineCov">      13674 : }</span>
+<span class="lineNum">     466 </span>            :             /* call self to handle each embedded hardlink */
+<span class="lineNum">     467 </span><span class="lineCov">        542 :             RmFile *embedded = iter-&gt;data;</span>
+<span class="lineNum">     468 </span><span class="lineCov">        542 :             g_assert(embedded != file);</span>
+<span class="lineNum">     469 </span><span class="lineCov">        542 :             if(embedded-&gt;hardlinks.files != NULL) {</span>
+<span class="lineNum">     470 </span><span class="lineNoCov">          0 :                 rm_log_error(&quot;Warning: embedded file %p has hardlinks&quot;, embedded);</span>
+<span class="lineNum">     471 </span><span class="lineNoCov">          0 :                 GQueue *hardlinks = embedded-&gt;hardlinks.files;</span>
+<span class="lineNum">     472 </span><span class="lineNoCov">          0 :                 g_assert(hardlinks-&gt;length &lt; 2);</span>
+<span class="lineNum">     473 </span><span class="lineNoCov">          0 :                 if(hardlinks-&gt;head) {</span>
+<span class="lineNum">     474 </span><span class="lineNoCov">          0 :                     g_assert(hardlinks-&gt;head-&gt;data == embedded);</span>
+<span class="lineNum">     475 </span>            :                 }
+<span class="lineNum">     476 </span>            : 
+<span class="lineNum">     477 </span><span class="lineNoCov">          0 :                 g_queue_free(hardlinks);</span>
+<span class="lineNum">     478 </span><span class="lineNoCov">          0 :                 embedded-&gt;hardlinks.files = NULL;</span>
+<span class="lineNum">     479 </span>            :             }
+<span class="lineNum">     480 </span>            : 
+<span class="lineNum">     481 </span><span class="lineCov">        542 :             if(rm_pp_handle_inode_clusters(NULL, embedded, session)) {</span>
+<span class="lineNum">     482 </span><span class="lineNoCov">          0 :                 g_queue_delete_link(file-&gt;hardlinks.files, iter);</span>
+<span class="lineNum">     483 </span><span class="lineCov">        542 :             } else if(!cfg-&gt;find_hardlinked_dupes) {</span>
+<span class="lineNum">     484 </span><span class="lineCov">        112 :                 rm_file_destroy(embedded);</span>
+<span class="lineNum">     485 </span><span class="lineCov">        112 :                 g_queue_delete_link(file-&gt;hardlinks.files, iter);</span>
+<span class="lineNum">     486 </span>            :             } else {
+<span class="lineNum">     487 </span><span class="lineCov">        430 :                 embedded-&gt;hardlinks.hardlink_head = file;</span>
+<span class="lineNum">     488 </span><span class="lineCov">        430 :                 g_assert(!embedded-&gt;hardlinks.is_head);</span>
+<span class="lineNum">     489 </span>            :             }
+<span class="lineNum">     490 </span>            :         }
+<span class="lineNum">     491 </span>            : 
+<span class="lineNum">     492 </span><span class="lineCov">       1693 :         if(g_queue_is_empty(file-&gt;hardlinks.files)) {</span>
+<span class="lineNum">     493 </span><span class="lineCov">       1347 :             g_queue_free(file-&gt;hardlinks.files);</span>
+<span class="lineNum">     494 </span><span class="lineCov">       1347 :             file-&gt;hardlinks.files = NULL;</span>
+<span class="lineNum">     495 </span>            :         } else {
+<span class="lineNum">     496 </span><span class="lineCov">        346 :             file-&gt;hardlinks.is_head = TRUE;</span>
+<span class="lineNum">     497 </span>            :         }
+<span class="lineNum">     498 </span>            :     }
+<span class="lineNum">     499 </span>            : 
+<span class="lineNum">     500 </span><span class="lineCov">     224077 :     if(file-&gt;hardlinks.is_head &amp;&amp; file-&gt;hardlinks.files) {</span>
+<span class="lineNum">     501 </span>            :         /* Hardlinks are processed on the fly by shredder later,
+<span class="lineNum">     502 </span>            :          * so we do not really need to process them.
+<span class="lineNum">     503 </span>            :          */
+<span class="lineNum">     504 </span><span class="lineCov">        346 :         session-&gt;total_filtered_files -= file-&gt;hardlinks.files-&gt;length;</span>
+<span class="lineNum">     505 </span>            :     }
+<span class="lineNum">     506 </span>            : 
+<span class="lineNum">     507 </span>            :     /*
+<span class="lineNum">     508 </span>            :     * Check if the file is a output of rmlint itself. Which we definitely
+<span class="lineNum">     509 </span>            :     * not want to handle. Creating a script that deletes itself is fun but useless.
+<span class="lineNum">     510 </span>            :     * */
+<span class="lineNum">     511 </span><span class="lineCov">     224077 :     bool remove = rm_pp_handle_own_files(session, file);</span>
+<span class="lineNum">     512 </span>            : 
+<span class="lineNum">     513 </span>            :     /* handle the head file; if it's &quot;other lint&quot; then process it via
+<span class="lineNum">     514 </span>            :      * rm_pp_handle_other_lint
+<span class="lineNum">     515 </span>            :      * and return TRUE, else keep it
+<span class="lineNum">     516 </span>            :      */
+<span class="lineNum">     517 </span><span class="lineCov">     224077 :     if(remove == false &amp;&amp; rm_pp_handle_other_lint(session, file)) {</span>
+<span class="lineNum">     518 </span><span class="lineCov">        588 :         remove = true;</span>
+<span class="lineNum">     519 </span><span class="lineCov">     223489 :     } else if(remove == true) {</span>
+<span class="lineNum">     520 </span><span class="lineCov">        290 :         rm_file_destroy(file);</span>
+<span class="lineNum">     521 </span>            :     }
+<span class="lineNum">     522 </span>            : 
+<span class="lineNum">     523 </span><span class="lineCov">     224077 :     session-&gt;total_filtered_files -= remove;</span>
+<span class="lineNum">     524 </span><span class="lineCov">     224077 :     rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_PREPROCESS);</span>
+<span class="lineNum">     525 </span>            : 
+<span class="lineNum">     526 </span><span class="lineCov">     224077 :     return remove;</span>
+<a name="527"><span class="lineNum">     527 </span>            : }</a>
+<span class="lineNum">     528 </span>            : 
+<span class="lineNum">     529 </span><span class="lineCov">        308 : static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {</span>
+<span class="lineNum">     530 </span><span class="lineCov">        308 :     RM_DEFINE_PATH(a);</span>
+<span class="lineNum">     531 </span><span class="lineCov">        308 :     RM_DEFINE_PATH(b);</span>
+<span class="lineNum">     532 </span><span class="lineCov">        308 :     return g_strcmp0(b_path, a_path);</span>
+<a name="533"><span class="lineNum">     533 </span>            : }</a>
+<span class="lineNum">     534 </span>            : 
+<span class="lineNum">     535 </span><span class="lineCov">      36654 : static RmOff rm_pp_handler_other_lint(RmSession *session) {</span>
+<span class="lineNum">     536 </span><span class="lineCov">      36654 :     RmOff num_handled = 0;</span>
+<span class="lineNum">     537 </span><span class="lineCov">      36654 :     RmFileTables *tables = session-&gt;tables;</span>
+<span class="lineNum">     538 </span>            : 
+<span class="lineNum">     539 </span><span class="lineCov">     329886 :     for(RmOff type = 0; type &lt; RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {</span>
+<span class="lineNum">     540 </span><span class="lineCov">     293232 :         if(type == RM_LINT_TYPE_EMPTY_DIR) {</span>
+<span class="lineNum">     541 </span><span class="lineCov">      36654 :             tables-&gt;other_lint[type] = g_list_sort(</span>
+<span class="lineNum">     542 </span>            :                 tables-&gt;other_lint[type], (GCompareFunc)rm_pp_cmp_reverse_alphabetical);
+<span class="lineNum">     543 </span>            :         }
+<span class="lineNum">     544 </span>            : 
+<span class="lineNum">     545 </span><span class="lineCov">     293232 :         GList *list = tables-&gt;other_lint[type];</span>
+<span class="lineNum">     546 </span><span class="lineCov">     293820 :         for(GList *iter = list; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     547 </span><span class="lineCov">        588 :             RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     548 </span>            : 
+<span class="lineNum">     549 </span><span class="lineCov">        588 :             g_assert(file);</span>
+<span class="lineNum">     550 </span><span class="lineCov">        588 :             g_assert(type == file-&gt;lint_type);</span>
+<span class="lineNum">     551 </span>            : 
+<span class="lineNum">     552 </span><span class="lineCov">        588 :             num_handled++;</span>
+<span class="lineNum">     553 </span>            : 
+<span class="lineNum">     554 </span><span class="lineCov">        588 :             rm_fmt_write(file, session-&gt;formats, -1);</span>
+<span class="lineNum">     555 </span>            :         }
+<span class="lineNum">     556 </span>            : 
+<span class="lineNum">     557 </span><span class="lineCov">     293232 :         if(!session-&gt;cfg-&gt;cache_file_structs) {</span>
+<span class="lineNum">     558 </span><span class="lineCov">     155968 :             g_list_free_full(list, (GDestroyNotify)rm_file_destroy);</span>
+<span class="lineNum">     559 </span>            :         } else {
+<span class="lineNum">     560 </span><span class="lineCov">     137264 :             g_list_free(list);</span>
+<span class="lineNum">     561 </span>            :         }
+<span class="lineNum">     562 </span>            :     }
+<span class="lineNum">     563 </span>            : 
+<span class="lineNum">     564 </span><span class="lineCov">      36654 :     return num_handled;</span>
+<span class="lineNum">     565 </span>            : }
+<a name="566"><span class="lineNum">     566 </span>            : </a>
+<span class="lineNum">     567 </span>            : /* This does preprocessing including handling of &quot;other lint&quot; (non-dupes) */
+<span class="lineNum">     568 </span><span class="lineCov">      36654 : void rm_preprocess(RmSession *session) {</span>
+<span class="lineNum">     569 </span><span class="lineCov">      36654 :     RmFileTables *tables = session-&gt;tables;</span>
+<span class="lineNum">     570 </span><span class="lineCov">      36654 :     g_assert(tables-&gt;node_table);</span>
+<span class="lineNum">     571 </span>            : 
+<span class="lineNum">     572 </span><span class="lineCov">      36654 :     session-&gt;total_filtered_files = session-&gt;total_files;</span>
+<span class="lineNum">     573 </span>            : 
+<span class="lineNum">     574 </span>            :     /* process hardlink groups, and move other_lint into tables- */
+<span class="lineNum">     575 </span><span class="lineCov">      36654 :     guint removed = g_hash_table_foreach_remove(</span>
+<span class="lineNum">     576 </span>            :         tables-&gt;node_table, (GHRFunc)rm_pp_handle_inode_clusters, session);
+<span class="lineNum">     577 </span>            : 
+<span class="lineNum">     578 </span><span class="lineCov">      36654 :     rm_log_debug_line(&quot;process hardlink groups finished at time %.3f; removed %u of %d&quot;,</span>
+<span class="lineNum">     579 </span>            :                  g_timer_elapsed(session-&gt;timer, NULL), removed, session-&gt;total_files);
+<span class="lineNum">     580 </span>            : 
+<span class="lineNum">     581 </span><span class="lineCov">      36654 :     session-&gt;other_lint_cnt += rm_pp_handler_other_lint(session);</span>
+<span class="lineNum">     582 </span><span class="lineCov">      36654 :     rm_log_debug_line(&quot;Other lint handling finished at time %.3f&quot;,</span>
+<span class="lineNum">     583 </span>            :                  g_timer_elapsed(session-&gt;timer, NULL));
+<span class="lineNum">     584 </span>            : 
+<span class="lineNum">     585 </span><span class="lineCov">      36654 :     rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_PREPROCESS);</span>
+<span class="lineNum">     586 </span><span class="lineCov">      36654 : }</span>
 </pre>
       </td>
     </tr>
@@ -607,7 +654,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

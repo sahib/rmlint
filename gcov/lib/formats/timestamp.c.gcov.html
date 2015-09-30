@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - timestamp.c<span style="font-size: 80%;"> (source / <a href="timestamp.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - timestamp.c<span style="font-size: 80%;"> (source / <a href="timestamp.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">1</td>
@@ -97,39 +97,40 @@
 <span class="lineNum">      35 </span>            :     RmFmtHandler parent;
 <a name="36"><span class="lineNum">      36 </span>            : } RmFmtHandlerSummary;</a>
 <span class="lineNum">      37 </span>            : 
-<span class="lineNum">      38 </span><span class="lineCov">       1977 : static void rm_fmt_prog(RmSession *session,</span>
+<span class="lineNum">      38 </span><span class="lineCov">        924 : static void rm_fmt_prog(RmSession *session,</span>
 <span class="lineNum">      39 </span>            :                         _U RmFmtHandler *parent,
 <span class="lineNum">      40 </span>            :                         _U FILE *out,
 <span class="lineNum">      41 </span>            :                         RmFmtProgressState state) {
-<span class="lineNum">      42 </span><span class="lineCov">       1977 :     if(state != RM_PROGRESS_STATE_INIT) {</span>
-<span class="lineNum">      43 </span><span class="lineCov">       3858 :         return;</span>
+<span class="lineNum">      42 </span><span class="lineCov">        924 :     if(state != RM_PROGRESS_STATE_INIT) {</span>
+<span class="lineNum">      43 </span><span class="lineCov">        863 :         return;</span>
 <span class="lineNum">      44 </span>            :     }
 <span class="lineNum">      45 </span>            : 
-<span class="lineNum">      46 </span><span class="lineCov">         96 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;stamp&quot;, &quot;iso8601&quot;)) {</span>
+<span class="lineNum">      46 </span><span class="lineCov">         61 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;stamp&quot;, &quot;iso8601&quot;)) {</span>
 <span class="lineNum">      47 </span>            :         char time_buf[256];
-<span class="lineNum">      48 </span><span class="lineCov">          6 :         memset(time_buf, 0, sizeof(time_buf));</span>
-<span class="lineNum">      49 </span><span class="lineCov">          6 :         rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));</span>
-<span class="lineNum">      50 </span><span class="lineCov">          6 :         fprintf(out, &quot;%s&quot;, time_buf);</span>
+<span class="lineNum">      48 </span><span class="lineCov">          2 :         memset(time_buf, 0, sizeof(time_buf));</span>
+<span class="lineNum">      49 </span><span class="lineCov">          2 :         rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));</span>
+<span class="lineNum">      50 </span><span class="lineCov">          2 :         fprintf(out, &quot;%s&quot;, time_buf);</span>
 <span class="lineNum">      51 </span>            :     } else {
 <span class="lineNum">      52 </span>            :         /* Just write out current time */
-<span class="lineNum">      53 </span><span class="lineCov">         90 :         fprintf(out, &quot;%&quot; LLU &quot;&quot;, (guint64)time(NULL));</span>
+<span class="lineNum">      53 </span><span class="lineCov">         59 :         fprintf(out, &quot;%&quot; LLU &quot;&quot;, (guint64)time(NULL));</span>
 <span class="lineNum">      54 </span>            :     }
 <span class="lineNum">      55 </span>            : }
 <span class="lineNum">      56 </span>            : 
 <span class="lineNum">      57 </span>            : static RmFmtHandlerSummary TIMESTAMP_HANDLER_IMPL = {
 <span class="lineNum">      58 </span>            :     /* Initialize parent */
-<span class="lineNum">      59 </span>            :     .parent = {
-<span class="lineNum">      60 </span>            :         .size = sizeof(TIMESTAMP_HANDLER_IMPL),
-<span class="lineNum">      61 </span>            :         .name = &quot;stamp&quot;,
-<span class="lineNum">      62 </span>            :         .head = NULL,
-<span class="lineNum">      63 </span>            :         .elem = NULL,
-<span class="lineNum">      64 </span>            :         .prog = rm_fmt_prog,
-<span class="lineNum">      65 </span>            :         .foot = NULL,
-<span class="lineNum">      66 </span>            :         .valid_keys = {&quot;iso8601&quot;, NULL},
-<span class="lineNum">      67 </span>            :     },
-<span class="lineNum">      68 </span>            : };
-<span class="lineNum">      69 </span>            : 
-<span class="lineNum">      70 </span>            : RmFmtHandler *TIMESTAMP_HANDLER = (RmFmtHandler *)&amp;TIMESTAMP_HANDLER_IMPL;
+<span class="lineNum">      59 </span>            :     .parent =
+<span class="lineNum">      60 </span>            :         {
+<span class="lineNum">      61 </span>            :          .size = sizeof(TIMESTAMP_HANDLER_IMPL),
+<span class="lineNum">      62 </span>            :          .name = &quot;stamp&quot;,
+<span class="lineNum">      63 </span>            :          .head = NULL,
+<span class="lineNum">      64 </span>            :          .elem = NULL,
+<span class="lineNum">      65 </span>            :          .prog = rm_fmt_prog,
+<span class="lineNum">      66 </span>            :          .foot = NULL,
+<span class="lineNum">      67 </span>            :          .valid_keys = {&quot;iso8601&quot;, NULL},
+<span class="lineNum">      68 </span>            :         },
+<span class="lineNum">      69 </span>            : };
+<span class="lineNum">      70 </span>            : 
+<span class="lineNum">      71 </span>            : RmFmtHandler *TIMESTAMP_HANDLER = (RmFmtHandler *)&amp;TIMESTAMP_HANDLER_IMPL;
 </pre>
       </td>
     </tr>
@@ -138,7 +139,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

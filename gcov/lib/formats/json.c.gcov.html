@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - json.c<span style="font-size: 80%;"> (source / <a href="json.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/formats</a> - json.c<span style="font-size: 80%;"> (source / <a href="json.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,17 +31,17 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">135</td>
-            <td class="headerCovTableEntry">140</td>
-            <td class="headerCovTableEntryHi">96.4 %</td>
+            <td class="headerCovTableEntry">168</td>
+            <td class="headerCovTableEntry">173</td>
+            <td class="headerCovTableEntryHi">97.1 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">11</td>
-            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">13</td>
+            <td class="headerCovTableEntry">13</td>
             <td class="headerCovTableEntryHi">100.0 %</td>
           </tr>
           <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -88,256 +88,315 @@
 <span class="lineNum">      26 </span>            : #include &quot;../formats.h&quot;
 <span class="lineNum">      27 </span>            : #include &quot;../utilities.h&quot;
 <span class="lineNum">      28 </span>            : #include &quot;../preprocess.h&quot;
-<span class="lineNum">      29 </span>            : 
-<span class="lineNum">      30 </span>            : #include &lt;glib.h&gt;
-<span class="lineNum">      31 </span>            : #include &lt;stdio.h&gt;
-<span class="lineNum">      32 </span>            : #include &lt;string.h&gt;
-<span class="lineNum">      33 </span>            : 
-<span class="lineNum">      34 </span>            : typedef struct RmFmtHandlerJSON {
-<span class="lineNum">      35 </span>            :     /* must be first */
-<span class="lineNum">      36 </span>            :     RmFmtHandler parent;
-<span class="lineNum">      37 </span>            : 
-<span class="lineNum">      38 </span>            :     /* More human readable output? */
-<span class="lineNum">      39 </span>            :     bool pretty;
-<span class="lineNum">      40 </span>            : } RmFmtHandlerJSON;
+<span class="lineNum">      29 </span>            : #include &quot;../checksums/spooky-c.h&quot;
+<span class="lineNum">      30 </span>            : 
+<span class="lineNum">      31 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      32 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      33 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      34 </span>            : 
+<span class="lineNum">      35 </span>            : typedef struct RmFmtHandlerJSON {
+<span class="lineNum">      36 </span>            :     /* must be first */
+<span class="lineNum">      37 </span>            :     RmFmtHandler parent;
+<span class="lineNum">      38 </span>            : 
+<span class="lineNum">      39 </span>            :     /* More human readable output? */
+<span class="lineNum">      40 </span>            :     bool pretty;
 <span class="lineNum">      41 </span>            : 
-<span class="lineNum">      42 </span>            : //////////////////////////////////////////
-<span class="lineNum">      43 </span>            : //  POOR MAN'S JSON FORMATTING TOOLBOX  //
-<a name="44"><span class="lineNum">      44 </span>            : //////////////////////////////////////////</a>
+<span class="lineNum">      42 </span>            :     /* set of already existing ids */
+<span class="lineNum">      43 </span>            :     GHashTable *id_set;
+<span class="lineNum">      44 </span>            : } RmFmtHandlerJSON;
 <span class="lineNum">      45 </span>            : 
-<span class="lineNum">      46 </span><span class="lineCov">     129191 : static void rm_fmt_json_key(FILE *out, const char *key, const char *value) {</span>
-<span class="lineNum">      47 </span><span class="lineCov">     129191 :     fprintf(out, &quot;\&quot;%s\&quot;: \&quot;%s\&quot;&quot;, key, value);</span>
-<a name="48"><span class="lineNum">      48 </span><span class="lineCov">     129191 : }</span></a>
+<span class="lineNum">      46 </span>            : //////////////////////////////////////////
+<span class="lineNum">      47 </span>            : //          FILE ID GENERATOR           //
+<a name="48"><span class="lineNum">      48 </span>            : //////////////////////////////////////////</a>
 <span class="lineNum">      49 </span>            : 
-<span class="lineNum">      50 </span><span class="lineCov">      50048 : static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {</span>
-<span class="lineNum">      51 </span><span class="lineCov">      50048 :     fprintf(out, &quot;\&quot;%s\&quot;: %s&quot;, key, value ? &quot;true&quot; : &quot;false&quot;);</span>
-<a name="52"><span class="lineNum">      52 </span><span class="lineCov">      50048 : }</span></a>
-<span class="lineNum">      53 </span>            : 
-<span class="lineNum">      54 </span><span class="lineCov">     333936 : static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {</span>
-<span class="lineNum">      55 </span><span class="lineCov">     333936 :     fprintf(out, &quot;\&quot;%s\&quot;: %&quot; LLU &quot;&quot;, key, value);</span>
-<a name="56"><span class="lineNum">      56 </span><span class="lineCov">     333936 : }</span></a>
-<span class="lineNum">      57 </span>            : 
-<span class="lineNum">      58 </span><span class="lineCov">      36554 : static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {</span>
-<span class="lineNum">      59 </span>            :     /* More information here:
-<span class="lineNum">      60 </span>            :      *
-<span class="lineNum">      61 </span>            :      * http://stackoverflow.com/questions/4901133/json-and-escaping-characters/4908960#4908960
-<span class="lineNum">      62 </span>            :      */
-<span class="lineNum">      63 </span>            : 
-<span class="lineNum">      64 </span><span class="lineCov">      36554 :     int n = strlen(string);</span>
-<span class="lineNum">      65 </span><span class="lineCov">      36554 :     char *safe_iter = fixed;</span>
-<span class="lineNum">      66 </span>            : 
-<span class="lineNum">      67 </span><span class="lineCov">    1205627 :     for(int i = 0; i &lt; n &amp;&amp; (size_t)(safe_iter - fixed) &lt; fixed_len; ++i) {</span>
-<span class="lineNum">      68 </span><span class="lineCov">    1169073 :         unsigned char *curr = (unsigned char *)&amp;string[i];</span>
-<span class="lineNum">      69 </span>            : 
-<span class="lineNum">      70 </span>            :         char text[20];
-<span class="lineNum">      71 </span><span class="lineCov">    1169073 :         memset(text, 0, sizeof(text));</span>
+<span class="lineNum">      50 </span><span class="lineCov">     443715 : static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,</span>
+<span class="lineNum">      51 </span>            :                                        const char *file_path, char *cksum) {
+<span class="lineNum">      52 </span><span class="lineCov">     443715 :     guint32 hash = 0;</span>
+<span class="lineNum">      53 </span><span class="lineCov">     443715 :     hash = file-&gt;inode ^ file-&gt;dev;</span>
+<span class="lineNum">      54 </span><span class="lineCov">     443715 :     hash ^= file-&gt;file_size;</span>
+<span class="lineNum">      55 </span>            : 
+<span class="lineNum">      56 </span><span class="lineCov">     444267 :     for(int i = 0; i &lt; 8192; ++i) {</span>
+<span class="lineNum">      57 </span><span class="lineCov">     444267 :         hash ^= spooky_hash32(file_path, strlen(file_path), i);</span>
+<span class="lineNum">      58 </span><span class="lineCov">     444267 :         hash ^= spooky_hash32(cksum, strlen(cksum), i);</span>
+<span class="lineNum">      59 </span>            : 
+<span class="lineNum">      60 </span><span class="lineCov">     444267 :         if(!g_hash_table_contains(self-&gt;id_set, GUINT_TO_POINTER(hash))) {</span>
+<span class="lineNum">      61 </span><span class="lineCov">     443715 :             break;</span>
+<span class="lineNum">      62 </span>            :         }
+<span class="lineNum">      63 </span>            :     }
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span><span class="lineCov">     443715 :     g_hash_table_add(self-&gt;id_set, GUINT_TO_POINTER(hash));</span>
+<span class="lineNum">      66 </span><span class="lineCov">     443715 :     return hash;</span>
+<span class="lineNum">      67 </span>            : }
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span>            : //////////////////////////////////////////
+<span class="lineNum">      70 </span>            : //  POOR MAN'S JSON FORMATTING TOOLBOX  //
+<a name="71"><span class="lineNum">      71 </span>            : //////////////////////////////////////////</a>
 <span class="lineNum">      72 </span>            : 
-<span class="lineNum">      73 </span><span class="lineCov">    1169073 :         if(*curr == '&quot;' || *curr == '\\') {</span>
-<span class="lineNum">      74 </span>            :             /* Printable, but needs to be escaped */
-<span class="lineNum">      75 </span><span class="lineCov">        243 :             text[0] = '\\';</span>
-<span class="lineNum">      76 </span><span class="lineCov">        243 :             text[1] = *curr;</span>
-<span class="lineNum">      77 </span><span class="lineCov">    1168830 :         } else if((*curr &gt; 0 &amp;&amp; *curr &lt; 0x1f) || *curr &gt;= 0x7f) {</span>
-<span class="lineNum">      78 </span>            :             /* Something unprintable */
-<span class="lineNum">      79 </span><span class="lineCov">        486 :             switch(*curr) {</span>
-<span class="lineNum">      80 </span>            :             case '\b':
-<span class="lineNum">      81 </span><span class="lineCov">         81 :                 g_snprintf(text, sizeof(text), &quot;\\b&quot;);</span>
-<span class="lineNum">      82 </span><span class="lineCov">         81 :                 break;</span>
-<span class="lineNum">      83 </span>            :             case '\f':
-<span class="lineNum">      84 </span><span class="lineCov">         81 :                 g_snprintf(text, sizeof(text), &quot;\\f&quot;);</span>
-<span class="lineNum">      85 </span><span class="lineCov">         81 :                 break;</span>
-<span class="lineNum">      86 </span>            :             case '\n':
-<span class="lineNum">      87 </span><span class="lineCov">         81 :                 g_snprintf(text, sizeof(text), &quot;\\n&quot;);</span>
-<span class="lineNum">      88 </span><span class="lineCov">         81 :                 break;</span>
-<span class="lineNum">      89 </span>            :             case '\r':
-<span class="lineNum">      90 </span><span class="lineCov">         81 :                 g_snprintf(text, sizeof(text), &quot;\\r&quot;);</span>
-<span class="lineNum">      91 </span><span class="lineCov">         81 :                 break;</span>
-<span class="lineNum">      92 </span>            :             case '\t':
-<span class="lineNum">      93 </span><span class="lineCov">        162 :                 g_snprintf(text, sizeof(text), &quot;\\t&quot;);</span>
-<span class="lineNum">      94 </span><span class="lineCov">        162 :                 break;</span>
-<span class="lineNum">      95 </span>            :             default:
-<span class="lineNum">      96 </span><span class="lineNoCov">          0 :                 g_snprintf(text, sizeof(text), &quot;\\u00%02x&quot;, (guint)*curr);</span>
-<span class="lineNum">      97 </span><span class="lineNoCov">          0 :                 break;</span>
-<span class="lineNum">      98 </span>            :             }
-<span class="lineNum">      99 </span><span class="lineCov">        486 :         } else {</span>
-<span class="lineNum">     100 </span>            :             /* Take it unmodified */
-<span class="lineNum">     101 </span><span class="lineCov">    1168344 :             text[0] = *curr;</span>
-<span class="lineNum">     102 </span>            :         }
-<span class="lineNum">     103 </span>            : 
-<span class="lineNum">     104 </span><span class="lineCov">    1169073 :         safe_iter = g_stpcpy(safe_iter, text);</span>
-<span class="lineNum">     105 </span>            :     }
-<span class="lineNum">     106 </span>            : 
-<span class="lineNum">     107 </span><span class="lineCov">      36554 :     return (size_t)(safe_iter - fixed) &lt; fixed_len;</span>
-<a name="108"><span class="lineNum">     108 </span>            : }</a>
-<span class="lineNum">     109 </span>            : 
-<span class="lineNum">     110 </span><span class="lineCov">      36554 : static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {</span>
-<span class="lineNum">     111 </span>            :     char safe_value[PATH_MAX + 4 + 1];
-<span class="lineNum">     112 </span><span class="lineCov">      36554 :     memset(safe_value, 0, sizeof(safe_value));</span>
-<span class="lineNum">     113 </span>            : 
-<span class="lineNum">     114 </span><span class="lineCov">      36554 :     if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value))) {</span>
-<span class="lineNum">     115 </span><span class="lineCov">      36554 :         fprintf(out, &quot;\&quot;%s\&quot;: \&quot;%s\&quot;&quot;, key, safe_value);</span>
-<span class="lineNum">     116 </span>            :     } else {
-<span class="lineNum">     117 </span>            :         /* This should never happen but give at least means of debugging */
-<span class="lineNum">     118 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;\&quot;%s\&quot;: \&quot;&lt;BROKEN PATH&gt;\&quot;&quot;, key);</span>
-<span class="lineNum">     119 </span>            :     }
-<a name="120"><span class="lineNum">     120 </span><span class="lineCov">      36554 : }</span></a>
-<span class="lineNum">     121 </span>            : 
-<span class="lineNum">     122 </span><span class="lineCov">      65630 : static void rm_fmt_json_open(RmFmtHandlerJSON *self, FILE *out) {</span>
-<span class="lineNum">     123 </span><span class="lineCov">      65630 :     fprintf(out, &quot;{%s&quot;, self-&gt;pretty ? &quot;\n  &quot; : &quot;&quot;);</span>
-<a name="124"><span class="lineNum">     124 </span><span class="lineCov">      65630 : }</span></a>
-<span class="lineNum">     125 </span>            : 
-<span class="lineNum">     126 </span><span class="lineCov">      51092 : static void rm_fmt_json_close(RmFmtHandlerJSON *self, FILE *out) {</span>
-<span class="lineNum">     127 </span><span class="lineCov">      51092 :     if(self-&gt;pretty) {</span>
-<span class="lineNum">     128 </span><span class="lineCov">      50912 :         fprintf(out, &quot;\n}, &quot;);</span>
-<span class="lineNum">     129 </span>            :     } else {
-<span class="lineNum">     130 </span><span class="lineCov">        180 :         fprintf(out, &quot;},\n&quot;);</span>
-<span class="lineNum">     131 </span>            :     }
-<a name="132"><span class="lineNum">     132 </span><span class="lineCov">      51092 : }</span></a>
+<span class="lineNum">      73 </span><span class="lineCov">    1301718 : static void rm_fmt_json_key(FILE *out, const char *key, const char *value) {</span>
+<span class="lineNum">      74 </span><span class="lineCov">    1301718 :     fprintf(out, &quot;\&quot;%s\&quot;: \&quot;%s\&quot;&quot;, key, value);</span>
+<a name="75"><span class="lineNum">      75 </span><span class="lineCov">    1301718 : }</span></a>
+<span class="lineNum">      76 </span>            : 
+<span class="lineNum">      77 </span><span class="lineCov">     512213 : static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {</span>
+<span class="lineNum">      78 </span><span class="lineCov">     512213 :     fprintf(out, &quot;\&quot;%s\&quot;: %s&quot;, key, value ? &quot;true&quot; : &quot;false&quot;);</span>
+<a name="79"><span class="lineNum">      79 </span><span class="lineCov">     512213 : }</span></a>
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">    4103538 : static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {</span>
+<span class="lineNum">      82 </span><span class="lineCov">    4103538 :     fprintf(out, &quot;\&quot;%s\&quot;: %&quot; LLU &quot;&quot;, key, value);</span>
+<a name="83"><span class="lineNum">      83 </span><span class="lineCov">    4103538 : }</span></a>
+<span class="lineNum">      84 </span>            : 
+<span class="lineNum">      85 </span><span class="lineCov">     443219 : static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {</span>
+<span class="lineNum">      86 </span>            :     /* More information here:
+<span class="lineNum">      87 </span>            :      *
+<span class="lineNum">      88 </span>            :      * http://stackoverflow.com/questions/4901133/json-and-escaping-characters/4908960#4908960
+<span class="lineNum">      89 </span>            :      */
+<span class="lineNum">      90 </span>            : 
+<span class="lineNum">      91 </span><span class="lineCov">     443219 :     int n = strlen(string);</span>
+<span class="lineNum">      92 </span><span class="lineCov">     443219 :     char *safe_iter = fixed;</span>
+<span class="lineNum">      93 </span>            : 
+<span class="lineNum">      94 </span><span class="lineCov">   14756723 :     for(int i = 0; i &lt; n &amp;&amp; (size_t)(safe_iter - fixed) &lt; fixed_len; ++i) {</span>
+<span class="lineNum">      95 </span><span class="lineCov">   14313504 :         unsigned char *curr = (unsigned char *)&amp;string[i];</span>
+<span class="lineNum">      96 </span>            : 
+<span class="lineNum">      97 </span>            :         char text[20];
+<span class="lineNum">      98 </span><span class="lineCov">   14313504 :         memset(text, 0, sizeof(text));</span>
+<span class="lineNum">      99 </span>            : 
+<span class="lineNum">     100 </span><span class="lineCov">   14313504 :         if(*curr == '&quot;' || *curr == '\\') {</span>
+<span class="lineNum">     101 </span>            :             /* Printable, but needs to be escaped */
+<span class="lineNum">     102 </span><span class="lineCov">        168 :             text[0] = '\\';</span>
+<span class="lineNum">     103 </span><span class="lineCov">        168 :             text[1] = *curr;</span>
+<span class="lineNum">     104 </span><span class="lineCov">   14313336 :         } else if((*curr &gt; 0 &amp;&amp; *curr &lt; 0x1f) || *curr &gt;= 0x7f) {</span>
+<span class="lineNum">     105 </span>            :             /* Something unprintable */
+<span class="lineNum">     106 </span><span class="lineCov">        336 :             switch(*curr) {</span>
+<span class="lineNum">     107 </span>            :             case '\b':
+<span class="lineNum">     108 </span><span class="lineCov">         56 :                 g_snprintf(text, sizeof(text), &quot;\\b&quot;);</span>
+<span class="lineNum">     109 </span><span class="lineCov">         56 :                 break;</span>
+<span class="lineNum">     110 </span>            :             case '\f':
+<span class="lineNum">     111 </span><span class="lineCov">         56 :                 g_snprintf(text, sizeof(text), &quot;\\f&quot;);</span>
+<span class="lineNum">     112 </span><span class="lineCov">         56 :                 break;</span>
+<span class="lineNum">     113 </span>            :             case '\n':
+<span class="lineNum">     114 </span><span class="lineCov">         56 :                 g_snprintf(text, sizeof(text), &quot;\\n&quot;);</span>
+<span class="lineNum">     115 </span><span class="lineCov">         56 :                 break;</span>
+<span class="lineNum">     116 </span>            :             case '\r':
+<span class="lineNum">     117 </span><span class="lineCov">         56 :                 g_snprintf(text, sizeof(text), &quot;\\r&quot;);</span>
+<span class="lineNum">     118 </span><span class="lineCov">         56 :                 break;</span>
+<span class="lineNum">     119 </span>            :             case '\t':
+<span class="lineNum">     120 </span><span class="lineCov">        112 :                 g_snprintf(text, sizeof(text), &quot;\\t&quot;);</span>
+<span class="lineNum">     121 </span><span class="lineCov">        112 :                 break;</span>
+<span class="lineNum">     122 </span>            :             default:
+<span class="lineNum">     123 </span><span class="lineNoCov">          0 :                 g_snprintf(text, sizeof(text), &quot;\\u00%02x&quot;, (guint)*curr);</span>
+<span class="lineNum">     124 </span><span class="lineNoCov">          0 :                 break;</span>
+<span class="lineNum">     125 </span>            :             }
+<span class="lineNum">     126 </span><span class="lineCov">        336 :         } else {</span>
+<span class="lineNum">     127 </span>            :             /* Take it unmodified */
+<span class="lineNum">     128 </span><span class="lineCov">   14313000 :             text[0] = *curr;</span>
+<span class="lineNum">     129 </span>            :         }
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span><span class="lineCov">   14313504 :         safe_iter = g_stpcpy(safe_iter, text);</span>
+<span class="lineNum">     132 </span>            :     }
 <span class="lineNum">     133 </span>            : 
-<span class="lineNum">     134 </span><span class="lineCov">     484099 : static void rm_fmt_json_sep(RmFmtHandlerJSON *self, FILE *out) {</span>
-<span class="lineNum">     135 </span><span class="lineCov">     484099 :     fprintf(out, &quot;, %s&quot;, self-&gt;pretty ? &quot;\n  &quot; : &quot;&quot;);</span>
-<span class="lineNum">     136 </span><span class="lineCov">     484099 : }</span>
-<span class="lineNum">     137 </span>            : 
-<span class="lineNum">     138 </span>            : /////////////////////////
-<span class="lineNum">     139 </span>            : //  ACTUAL CALLBACKS   //
-<a name="140"><span class="lineNum">     140 </span>            : /////////////////////////</a>
-<span class="lineNum">     141 </span>            : 
-<span class="lineNum">     142 </span><span class="lineCov">      14538 : static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) {</span>
-<span class="lineNum">     143 </span><span class="lineCov">      14538 :     fprintf(out, &quot;[\n&quot;);</span>
-<span class="lineNum">     144 </span>            : 
-<span class="lineNum">     145 </span><span class="lineCov">      14538 :     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;</span>
-<span class="lineNum">     146 </span><span class="lineCov">      14538 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;json&quot;, &quot;oneline&quot;)) {</span>
-<span class="lineNum">     147 </span><span class="lineNoCov">          0 :         self-&gt;pretty = false;</span>
-<span class="lineNum">     148 </span>            :     }
-<span class="lineNum">     149 </span>            : 
-<span class="lineNum">     150 </span><span class="lineCov">      14538 :     if(!rm_fmt_get_config_value(session-&gt;formats, &quot;json&quot;, &quot;no_header&quot;)) {</span>
-<span class="lineNum">     151 </span><span class="lineCov">      14538 :         rm_fmt_json_open(self, out);</span>
-<span class="lineNum">     152 </span>            :         {
-<span class="lineNum">     153 </span><span class="lineCov">      14538 :             rm_fmt_json_key(out, &quot;description&quot;, &quot;rmlint json-dump of lint files&quot;);</span>
-<span class="lineNum">     154 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     155 </span><span class="lineCov">      14538 :             rm_fmt_json_key(out, &quot;cwd&quot;, session-&gt;cfg-&gt;iwd);</span>
-<span class="lineNum">     156 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     157 </span><span class="lineCov">      14538 :             rm_fmt_json_key(out, &quot;args&quot;, session-&gt;cfg-&gt;joined_argv);</span>
-<span class="lineNum">     158 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     159 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;progress&quot;, 0); /* Header is always first. */</span>
-<span class="lineNum">     160 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     161 </span><span class="lineCov">      14538 :             rm_fmt_json_key(out, &quot;checksum_type&quot;,</span>
-<span class="lineNum">     162 </span><span class="lineCov">      14538 :                             rm_digest_type_to_string(session-&gt;cfg-&gt;checksum_type));</span>
-<span class="lineNum">     163 </span><span class="lineCov">      14538 :             if(session-&gt;hash_seed1 &amp;&amp; session-&gt;hash_seed2) {</span>
-<span class="lineNum">     164 </span><span class="lineCov">        527 :                 rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     165 </span><span class="lineCov">        527 :                 rm_fmt_json_key_int(out, &quot;hash_seed1&quot;, session-&gt;hash_seed1);</span>
-<span class="lineNum">     166 </span><span class="lineCov">        527 :                 rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     167 </span><span class="lineCov">        527 :                 rm_fmt_json_key_int(out, &quot;hash_seed2&quot;, session-&gt;hash_seed2);</span>
-<span class="lineNum">     168 </span>            :             }
-<span class="lineNum">     169 </span>            :         }
-<span class="lineNum">     170 </span><span class="lineCov">      14538 :         rm_fmt_json_close(self, out);</span>
-<span class="lineNum">     171 </span>            :     }
-<a name="172"><span class="lineNum">     172 </span><span class="lineCov">      14538 : }</span></a>
-<span class="lineNum">     173 </span>            : 
-<span class="lineNum">     174 </span><span class="lineCov">      14538 : static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {</span>
-<span class="lineNum">     175 </span><span class="lineCov">      14538 :     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;</span>
-<span class="lineNum">     176 </span>            : 
-<span class="lineNum">     177 </span><span class="lineCov">      14538 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;json&quot;, &quot;no_footer&quot;)) {</span>
-<span class="lineNum">     178 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;{}&quot;);</span>
-<span class="lineNum">     179 </span>            :     } else {
-<span class="lineNum">     180 </span><span class="lineCov">      14538 :         rm_fmt_json_open(self, out);</span>
+<span class="lineNum">     134 </span><span class="lineCov">     443219 :     return (size_t)(safe_iter - fixed) &lt; fixed_len;</span>
+<a name="135"><span class="lineNum">     135 </span>            : }</a>
+<span class="lineNum">     136 </span>            : 
+<span class="lineNum">     137 </span><span class="lineCov">     443219 : static void rm_fmt_json_key_unsafe(FILE *out, const char *key, const char *value) {</span>
+<span class="lineNum">     138 </span>            :     char safe_value[PATH_MAX + 4 + 1];
+<span class="lineNum">     139 </span><span class="lineCov">     443219 :     memset(safe_value, 0, sizeof(safe_value));</span>
+<span class="lineNum">     140 </span>            : 
+<span class="lineNum">     141 </span><span class="lineCov">     443219 :     if(rm_fmt_json_fix(value, safe_value, sizeof(safe_value))) {</span>
+<span class="lineNum">     142 </span><span class="lineCov">     443219 :         fprintf(out, &quot;\&quot;%s\&quot;: \&quot;%s\&quot;&quot;, key, safe_value);</span>
+<span class="lineNum">     143 </span>            :     } else {
+<span class="lineNum">     144 </span>            :         /* This should never happen but give at least means of debugging */
+<span class="lineNum">     145 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;\&quot;%s\&quot;: \&quot;&lt;BROKEN PATH&gt;\&quot;&quot;, key);</span>
+<span class="lineNum">     146 </span>            :     }
+<a name="147"><span class="lineNum">     147 </span><span class="lineCov">     443219 : }</span></a>
+<span class="lineNum">     148 </span>            : 
+<span class="lineNum">     149 </span><span class="lineCov">     581879 : static void rm_fmt_json_open(RmFmtHandlerJSON *self, FILE *out) {</span>
+<span class="lineNum">     150 </span><span class="lineCov">     581879 :     fprintf(out, &quot;{%s&quot;, self-&gt;pretty ? &quot;\n  &quot; : &quot;&quot;);</span>
+<a name="151"><span class="lineNum">     151 </span><span class="lineCov">     581879 : }</span></a>
+<span class="lineNum">     152 </span>            : 
+<span class="lineNum">     153 </span><span class="lineCov">     512549 : static void rm_fmt_json_close(RmFmtHandlerJSON *self, FILE *out) {</span>
+<span class="lineNum">     154 </span><span class="lineCov">     512549 :     if(self-&gt;pretty) {</span>
+<span class="lineNum">     155 </span><span class="lineCov">         32 :         fprintf(out, &quot;\n}, &quot;);</span>
+<span class="lineNum">     156 </span>            :     } else {
+<span class="lineNum">     157 </span><span class="lineCov">     512517 :         fprintf(out, &quot;},\n&quot;);</span>
+<span class="lineNum">     158 </span>            :     }
+<a name="159"><span class="lineNum">     159 </span><span class="lineCov">     512549 : }</span></a>
+<span class="lineNum">     160 </span>            : 
+<span class="lineNum">     161 </span><span class="lineCov">    5778809 : static void rm_fmt_json_sep(RmFmtHandlerJSON *self, FILE *out) {</span>
+<span class="lineNum">     162 </span><span class="lineCov">    5778809 :     fprintf(out, &quot;, %s&quot;, self-&gt;pretty ? &quot;\n  &quot; : &quot;&quot;);</span>
+<span class="lineNum">     163 </span><span class="lineCov">    5778809 : }</span>
+<span class="lineNum">     164 </span>            : 
+<span class="lineNum">     165 </span>            : /////////////////////////
+<span class="lineNum">     166 </span>            : //  ACTUAL CALLBACKS   //
+<a name="167"><span class="lineNum">     167 </span>            : /////////////////////////</a>
+<span class="lineNum">     168 </span>            : 
+<span class="lineNum">     169 </span><span class="lineCov">      69330 : static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) {</span>
+<span class="lineNum">     170 </span><span class="lineCov">      69330 :     fprintf(out, &quot;[\n&quot;);</span>
+<span class="lineNum">     171 </span>            : 
+<span class="lineNum">     172 </span><span class="lineCov">      69330 :     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;</span>
+<span class="lineNum">     173 </span><span class="lineCov">      69330 :     self-&gt;id_set = g_hash_table_new(NULL, NULL);</span>
+<span class="lineNum">     174 </span>            : 
+<span class="lineNum">     175 </span><span class="lineCov">      69330 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;json&quot;, &quot;oneline&quot;)) {</span>
+<span class="lineNum">     176 </span><span class="lineCov">      69317 :         self-&gt;pretty = false;</span>
+<span class="lineNum">     177 </span>            :     }
+<span class="lineNum">     178 </span>            : 
+<span class="lineNum">     179 </span><span class="lineCov">      69330 :     if(!rm_fmt_get_config_value(session-&gt;formats, &quot;json&quot;, &quot;no_header&quot;)) {</span>
+<span class="lineNum">     180 </span><span class="lineCov">      69330 :         rm_fmt_json_open(self, out);</span>
 <span class="lineNum">     181 </span>            :         {
-<span class="lineNum">     182 </span><span class="lineCov">      14538 :             rm_fmt_json_key_bool(out, &quot;aborted&quot;, rm_session_was_aborted(session));</span>
-<span class="lineNum">     183 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     184 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;progress&quot;, 100); /* Footer is always last. */</span>
-<span class="lineNum">     185 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     186 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;total_files&quot;, session-&gt;total_files);</span>
-<span class="lineNum">     187 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     188 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;ignored_files&quot;, session-&gt;ignored_files);</span>
-<span class="lineNum">     189 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     190 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;ignored_folders&quot;, session-&gt;ignored_folders);</span>
-<span class="lineNum">     191 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     192 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;duplicates&quot;, session-&gt;dup_counter);</span>
-<span class="lineNum">     193 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     194 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;duplicate_sets&quot;, session-&gt;dup_group_counter);</span>
-<span class="lineNum">     195 </span><span class="lineCov">      14538 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     196 </span><span class="lineCov">      14538 :             rm_fmt_json_key_int(out, &quot;total_lint_size&quot;, session-&gt;total_lint_size);</span>
-<span class="lineNum">     197 </span>            :         }
-<span class="lineNum">     198 </span><span class="lineCov">      14538 :         if(self-&gt;pretty) {</span>
-<span class="lineNum">     199 </span><span class="lineCov">      14478 :             fprintf(out, &quot;\n}&quot;);</span>
-<span class="lineNum">     200 </span>            :         } else {
-<span class="lineNum">     201 </span><span class="lineCov">         60 :             fprintf(out, &quot;}\n&quot;);</span>
+<span class="lineNum">     182 </span><span class="lineCov">      69330 :             rm_fmt_json_key(out, &quot;description&quot;, &quot;rmlint json-dump of lint files&quot;);</span>
+<span class="lineNum">     183 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     184 </span><span class="lineCov">      69330 :             rm_fmt_json_key(out, &quot;cwd&quot;, session-&gt;cfg-&gt;iwd);</span>
+<span class="lineNum">     185 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     186 </span><span class="lineCov">      69330 :             rm_fmt_json_key(out, &quot;args&quot;, session-&gt;cfg-&gt;joined_argv);</span>
+<span class="lineNum">     187 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     188 </span><span class="lineCov">      69330 :             rm_fmt_json_key(out, &quot;version&quot;, RM_VERSION);</span>
+<span class="lineNum">     189 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     190 </span><span class="lineCov">      69330 :             rm_fmt_json_key(out, &quot;rev&quot;, RM_VERSION_GIT_REVISION);</span>
+<span class="lineNum">     191 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     192 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;progress&quot;, 0); /* Header is always first. */</span>
+<span class="lineNum">     193 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     194 </span><span class="lineCov">      69330 :             rm_fmt_json_key(out, &quot;checksum_type&quot;,</span>
+<span class="lineNum">     195 </span><span class="lineCov">      69330 :                             rm_digest_type_to_string(session-&gt;cfg-&gt;checksum_type));</span>
+<span class="lineNum">     196 </span><span class="lineCov">      69330 :             if(session-&gt;hash_seed1 &amp;&amp; session-&gt;hash_seed2) {</span>
+<span class="lineNum">     197 </span><span class="lineCov">       2459 :                 rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     198 </span><span class="lineCov">       2459 :                 rm_fmt_json_key_int(out, &quot;hash_seed1&quot;, session-&gt;hash_seed1);</span>
+<span class="lineNum">     199 </span><span class="lineCov">       2459 :                 rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     200 </span><span class="lineCov">       2459 :                 rm_fmt_json_key_int(out, &quot;hash_seed2&quot;, session-&gt;hash_seed2);</span>
+<span class="lineNum">     201 </span>            :             }
 <span class="lineNum">     202 </span>            :         }
-<span class="lineNum">     203 </span>            :     }
-<span class="lineNum">     204 </span>            : 
-<span class="lineNum">     205 </span><span class="lineCov">      14538 :     fprintf(out, &quot;]\n&quot;);</span>
-<a name="206"><span class="lineNum">     206 </span><span class="lineCov">      14538 : }</span></a>
-<span class="lineNum">     207 </span>            : 
-<span class="lineNum">     208 </span><span class="lineCov">      36554 : static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,</span>
-<span class="lineNum">     209 </span>            :                         RmFile *file) {
-<span class="lineNum">     210 </span><span class="lineCov">      36554 :     char checksum_str[rm_digest_get_bytes(file-&gt;digest) * 2 + 1];</span>
-<span class="lineNum">     211 </span><span class="lineCov">      36554 :     memset(checksum_str, '0', sizeof(checksum_str));</span>
-<span class="lineNum">     212 </span><span class="lineCov">      36554 :     checksum_str[sizeof(checksum_str) - 1] = 0;</span>
-<span class="lineNum">     213 </span><span class="lineCov">      36554 :     rm_digest_hexstring(file-&gt;digest, checksum_str);</span>
-<span class="lineNum">     214 </span>            : 
-<span class="lineNum">     215 </span><span class="lineCov">      36554 :     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;</span>
-<span class="lineNum">     216 </span>            : 
-<span class="lineNum">     217 </span>            :     /* Make it look like a json element */
-<span class="lineNum">     218 </span><span class="lineCov">      36554 :     rm_fmt_json_open(self, out);</span>
-<span class="lineNum">     219 </span>            :     {
-<span class="lineNum">     220 </span><span class="lineCov">      36554 :         rm_fmt_json_key_int(out, &quot;id&quot;, GPOINTER_TO_UINT(file));</span>
-<span class="lineNum">     221 </span><span class="lineCov">      36554 :         rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     222 </span><span class="lineCov">      36554 :         rm_fmt_json_key(out, &quot;type&quot;, rm_file_lint_type_to_string(file-&gt;lint_type));</span>
-<span class="lineNum">     223 </span><span class="lineCov">      36554 :         rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     224 </span><span class="lineCov">     109242 :         rm_fmt_json_key_int(</span>
-<span class="lineNum">     225 </span>            :             out, &quot;progress&quot;,
-<span class="lineNum">     226 </span><span class="lineCov">     109242 :             CLAMP(100 -</span>
-<span class="lineNum">     227 </span>            :                       100 * ((gdouble)session-&gt;shred_bytes_remaining /
-<span class="lineNum">     228 </span>            :                              (gdouble)session-&gt;shred_bytes_after_preprocess),
-<span class="lineNum">     229 </span>            :                   0, 100));
-<span class="lineNum">     230 </span><span class="lineCov">      36554 :         rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     231 </span>            : 
-<span class="lineNum">     232 </span><span class="lineCov">      36554 :         if(file-&gt;digest) {</span>
-<span class="lineNum">     233 </span><span class="lineCov">      34485 :             rm_fmt_json_key(out, &quot;checksum&quot;, checksum_str);</span>
-<span class="lineNum">     234 </span><span class="lineCov">      34485 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     203 </span><span class="lineCov">      69330 :         rm_fmt_json_close(self, out);</span>
+<span class="lineNum">     204 </span>            :     }
+<a name="205"><span class="lineNum">     205 </span><span class="lineCov">      69330 : }</span></a>
+<span class="lineNum">     206 </span>            : 
+<span class="lineNum">     207 </span><span class="lineCov">      69330 : static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {</span>
+<span class="lineNum">     208 </span><span class="lineCov">      69330 :     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;</span>
+<span class="lineNum">     209 </span>            : 
+<span class="lineNum">     210 </span><span class="lineCov">      69330 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;json&quot;, &quot;no_footer&quot;)) {</span>
+<span class="lineNum">     211 </span><span class="lineNoCov">          0 :         fprintf(out, &quot;{}&quot;);</span>
+<span class="lineNum">     212 </span>            :     } else {
+<span class="lineNum">     213 </span><span class="lineCov">      69330 :         rm_fmt_json_open(self, out);</span>
+<span class="lineNum">     214 </span>            :         {
+<span class="lineNum">     215 </span><span class="lineCov">      69330 :             rm_fmt_json_key_bool(out, &quot;aborted&quot;, rm_session_was_aborted(session));</span>
+<span class="lineNum">     216 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     217 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;progress&quot;, 100); /* Footer is always last. */</span>
+<span class="lineNum">     218 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     219 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;total_files&quot;, session-&gt;total_files);</span>
+<span class="lineNum">     220 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     221 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;ignored_files&quot;, session-&gt;ignored_files);</span>
+<span class="lineNum">     222 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     223 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;ignored_folders&quot;, session-&gt;ignored_folders);</span>
+<span class="lineNum">     224 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     225 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;duplicates&quot;, session-&gt;dup_counter);</span>
+<span class="lineNum">     226 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     227 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;duplicate_sets&quot;, session-&gt;dup_group_counter);</span>
+<span class="lineNum">     228 </span><span class="lineCov">      69330 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     229 </span><span class="lineCov">      69330 :             rm_fmt_json_key_int(out, &quot;total_lint_size&quot;, session-&gt;total_lint_size);</span>
+<span class="lineNum">     230 </span>            :         }
+<span class="lineNum">     231 </span><span class="lineCov">      69330 :         if(self-&gt;pretty) {</span>
+<span class="lineNum">     232 </span><span class="lineCov">         13 :             fprintf(out, &quot;\n}&quot;);</span>
+<span class="lineNum">     233 </span>            :         } else {
+<span class="lineNum">     234 </span><span class="lineCov">      69317 :             fprintf(out, &quot;}\n&quot;);</span>
 <span class="lineNum">     235 </span>            :         }
-<span class="lineNum">     236 </span>            : 
-<span class="lineNum">     237 </span><span class="lineCov">      36554 :         RM_DEFINE_PATH(file);</span>
-<span class="lineNum">     238 </span><span class="lineCov">      36554 :         rm_fmt_json_key_unsafe(out, &quot;path&quot;, file_path);</span>
-<span class="lineNum">     239 </span><span class="lineCov">      36554 :         rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     240 </span><span class="lineCov">      36554 :         if(file-&gt;lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {</span>
-<span class="lineNum">     241 </span><span class="lineCov">      35510 :             rm_fmt_json_key_int(out, &quot;size&quot;, file-&gt;file_size);</span>
-<span class="lineNum">     242 </span><span class="lineCov">      35510 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     243 </span><span class="lineCov">      35510 :             rm_fmt_json_key_int(out, &quot;inode&quot;, file-&gt;inode);</span>
-<span class="lineNum">     244 </span><span class="lineCov">      35510 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     245 </span><span class="lineCov">      35510 :             rm_fmt_json_key_int(out, &quot;disk_id&quot;, file-&gt;dev);</span>
-<span class="lineNum">     246 </span><span class="lineCov">      35510 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     247 </span><span class="lineCov">      35510 :             rm_fmt_json_key_bool(out, &quot;is_original&quot;, file-&gt;is_original);</span>
-<span class="lineNum">     248 </span><span class="lineCov">      35510 :             rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     249 </span>            : 
-<span class="lineNum">     250 </span><span class="lineCov">      35510 :             if(session-&gt;cfg-&gt;find_hardlinked_dupes) {</span>
-<span class="lineNum">     251 </span><span class="lineCov">      35294 :                 RmFile *hardlink_head = file-&gt;hardlinks.hardlink_head;</span>
-<span class="lineNum">     252 </span>            : 
-<span class="lineNum">     253 </span><span class="lineCov">      35294 :                 if(hardlink_head &amp;&amp; hardlink_head != file) {</span>
-<span class="lineNum">     254 </span><span class="lineCov">        386 :                     rm_fmt_json_key_int(out, &quot;hardlink_of&quot;,</span>
-<span class="lineNum">     255 </span><span class="lineCov">        386 :                                         GPOINTER_TO_UINT(hardlink_head));</span>
-<span class="lineNum">     256 </span><span class="lineCov">        386 :                     rm_fmt_json_sep(self, out);</span>
-<span class="lineNum">     257 </span>            :                 }
-<span class="lineNum">     258 </span>            :             }
-<span class="lineNum">     259 </span>            :         }
-<span class="lineNum">     260 </span><span class="lineCov">      36554 :         rm_fmt_json_key_int(out, &quot;mtime&quot;, file-&gt;mtime);</span>
-<span class="lineNum">     261 </span>            :     }
-<span class="lineNum">     262 </span><span class="lineCov">      36554 :     rm_fmt_json_close(self, out);</span>
-<span class="lineNum">     263 </span><span class="lineCov">      36554 : }</span>
-<span class="lineNum">     264 </span>            : 
-<span class="lineNum">     265 </span>            : static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
-<span class="lineNum">     266 </span>            :     /* Initialize parent */
-<span class="lineNum">     267 </span>            :     .parent = {
-<span class="lineNum">     268 </span>            :         .size = sizeof(JSON_HANDLER_IMPL),
-<span class="lineNum">     269 </span>            :         .name = &quot;json&quot;,
-<span class="lineNum">     270 </span>            :         .head = rm_fmt_head,
-<span class="lineNum">     271 </span>            :         .elem = rm_fmt_elem,
-<span class="lineNum">     272 </span>            :         .prog = NULL,
-<span class="lineNum">     273 </span>            :         .foot = rm_fmt_foot,
-<span class="lineNum">     274 </span>            :         .valid_keys = {&quot;no_header&quot;, &quot;no_footer&quot;, &quot;oneline&quot;, NULL},
-<span class="lineNum">     275 </span>            :     },
-<span class="lineNum">     276 </span>            :     .pretty = true};
-<span class="lineNum">     277 </span>            : 
-<span class="lineNum">     278 </span>            : RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&amp;JSON_HANDLER_IMPL;
+<span class="lineNum">     236 </span>            :     }
+<span class="lineNum">     237 </span>            : 
+<span class="lineNum">     238 </span><span class="lineCov">      69330 :     fprintf(out, &quot;]\n&quot;);</span>
+<span class="lineNum">     239 </span><span class="lineCov">      69330 :     g_hash_table_unref(self-&gt;id_set);</span>
+<a name="240"><span class="lineNum">     240 </span><span class="lineCov">      69330 : }</span></a>
+<span class="lineNum">     241 </span>            : 
+<span class="lineNum">     242 </span><span class="lineCov">     443715 : static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {</span>
+<span class="lineNum">     243 </span><span class="lineCov">     443715 :     memset(checksum_str, '0', size);</span>
+<span class="lineNum">     244 </span><span class="lineCov">     443715 :     checksum_str[size - 1] = 0;</span>
+<span class="lineNum">     245 </span><span class="lineCov">     443715 :     rm_digest_hexstring(file-&gt;digest, checksum_str);</span>
+<a name="246"><span class="lineNum">     246 </span><span class="lineCov">     443715 : }</span></a>
+<span class="lineNum">     247 </span>            : 
+<span class="lineNum">     248 </span><span class="lineCov">     443219 : static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,</span>
+<span class="lineNum">     249 </span><span class="lineCov">     443219 :                         RmFile *file) {</span>
+<span class="lineNum">     250 </span><span class="lineCov">     443219 :     if(rm_fmt_get_config_value(session-&gt;formats, &quot;json&quot;, &quot;no_body&quot;)) {</span>
+<span class="lineNum">     251 </span><span class="lineNoCov">          0 :         return;</span>
+<span class="lineNum">     252 </span>            :     }
+<span class="lineNum">     253 </span><span class="lineCov">     443219 :     char checksum_str[rm_digest_get_bytes(file-&gt;digest) * 2 + 1];</span>
+<span class="lineNum">     254 </span><span class="lineCov">     443219 :     rm_fmt_json_cksum(file, checksum_str, sizeof(checksum_str));</span>
+<span class="lineNum">     255 </span>            : 
+<span class="lineNum">     256 </span><span class="lineCov">     443219 :     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;</span>
+<span class="lineNum">     257 </span>            : 
+<span class="lineNum">     258 </span>            :     /* Make it look like a json element */
+<span class="lineNum">     259 </span><span class="lineCov">     443219 :     rm_fmt_json_open(self, out);</span>
+<span class="lineNum">     260 </span>            :     {
+<span class="lineNum">     261 </span><span class="lineCov">     443219 :         RM_DEFINE_PATH(file);</span>
+<span class="lineNum">     262 </span>            : 
+<span class="lineNum">     263 </span><span class="lineCov">     443219 :         rm_fmt_json_key_int(out, &quot;id&quot;,</span>
+<span class="lineNum">     264 </span><span class="lineCov">     443219 :                             rm_fmt_json_generate_id(self, file, file_path, checksum_str));</span>
+<span class="lineNum">     265 </span>            : 
+<span class="lineNum">     266 </span><span class="lineCov">     443219 :         rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     267 </span><span class="lineCov">     443219 :         rm_fmt_json_key(out, &quot;type&quot;, rm_file_lint_type_to_string(file-&gt;lint_type));</span>
+<span class="lineNum">     268 </span><span class="lineCov">     443219 :         rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     269 </span><span class="lineCov">    1329657 :         rm_fmt_json_key_int(</span>
+<span class="lineNum">     270 </span>            :             out, &quot;progress&quot;,
+<span class="lineNum">     271 </span><span class="lineCov">    1329657 :             CLAMP(100 -</span>
+<span class="lineNum">     272 </span>            :                       100 * ((gdouble)session-&gt;shred_bytes_remaining /
+<span class="lineNum">     273 </span>            :                              (gdouble)session-&gt;shred_bytes_after_preprocess),
+<span class="lineNum">     274 </span>            :                   0, 100));
+<span class="lineNum">     275 </span><span class="lineCov">     443219 :         rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     276 </span>            : 
+<span class="lineNum">     277 </span><span class="lineCov">     443219 :         if(file-&gt;digest) {</span>
+<span class="lineNum">     278 </span><span class="lineCov">     442519 :             rm_fmt_json_key(out, &quot;checksum&quot;, checksum_str);</span>
+<span class="lineNum">     279 </span><span class="lineCov">     442519 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     280 </span>            :         }
+<span class="lineNum">     281 </span>            : 
+<span class="lineNum">     282 </span><span class="lineCov">     443219 :         rm_fmt_json_key_unsafe(out, &quot;path&quot;, file_path);</span>
+<span class="lineNum">     283 </span><span class="lineCov">     443219 :         rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     284 </span><span class="lineCov">     443219 :         if(file-&gt;lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {</span>
+<span class="lineNum">     285 </span><span class="lineCov">     442883 :             rm_fmt_json_key_int(out, &quot;size&quot;, file-&gt;file_size);</span>
+<span class="lineNum">     286 </span><span class="lineCov">     442883 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     287 </span><span class="lineCov">     442883 :             if(file-&gt;twin_count &gt;= 0) {</span>
+<span class="lineNum">     288 </span><span class="lineCov">     442295 :                 rm_fmt_json_key_int(out, &quot;twins&quot;, file-&gt;twin_count);</span>
+<span class="lineNum">     289 </span><span class="lineCov">     442295 :                 rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     290 </span>            :             }
+<span class="lineNum">     291 </span><span class="lineCov">     442883 :             rm_fmt_json_key_int(out, &quot;depth&quot;, file-&gt;depth);</span>
+<span class="lineNum">     292 </span><span class="lineCov">     442883 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     293 </span><span class="lineCov">     442883 :             rm_fmt_json_key_int(out, &quot;inode&quot;, file-&gt;inode);</span>
+<span class="lineNum">     294 </span><span class="lineCov">     442883 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     295 </span><span class="lineCov">     442883 :             rm_fmt_json_key_int(out, &quot;disk_id&quot;, file-&gt;dev);</span>
+<span class="lineNum">     296 </span><span class="lineCov">     442883 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     297 </span><span class="lineCov">     442883 :             rm_fmt_json_key_bool(out, &quot;is_original&quot;, file-&gt;is_original);</span>
+<span class="lineNum">     298 </span><span class="lineCov">     442883 :             rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     299 </span>            : 
+<span class="lineNum">     300 </span><span class="lineCov">     442883 :             if(session-&gt;cfg-&gt;find_hardlinked_dupes) {</span>
+<span class="lineNum">     301 </span><span class="lineCov">     442827 :                 RmFile *hardlink_head = file-&gt;hardlinks.hardlink_head;</span>
+<span class="lineNum">     302 </span>            : 
+<span class="lineNum">     303 </span><span class="lineCov">     442827 :                 if(hardlink_head &amp;&amp; hardlink_head != file) {</span>
+<span class="lineNum">     304 </span><span class="lineCov">        496 :                     char orig_checksum_str[rm_digest_get_bytes(file-&gt;digest) * 2 + 1];</span>
+<span class="lineNum">     305 </span><span class="lineCov">        496 :                     rm_fmt_json_cksum(hardlink_head, orig_checksum_str,</span>
+<span class="lineNum">     306 </span><span class="lineCov">        496 :                                       sizeof(orig_checksum_str));</span>
+<span class="lineNum">     307 </span>            : 
+<span class="lineNum">     308 </span><span class="lineCov">        496 :                     RM_DEFINE_PATH(hardlink_head);</span>
+<span class="lineNum">     309 </span>            : 
+<span class="lineNum">     310 </span><span class="lineCov">        496 :                     guint32 orig_id = rm_fmt_json_generate_id(</span>
+<span class="lineNum">     311 </span><span class="lineCov">        496 :                         self, hardlink_head, hardlink_head_path, orig_checksum_str);</span>
+<span class="lineNum">     312 </span>            : 
+<span class="lineNum">     313 </span><span class="lineCov">        496 :                     rm_fmt_json_key_int(out, &quot;hardlink_of&quot;, orig_id);</span>
+<span class="lineNum">     314 </span><span class="lineCov">        496 :                     rm_fmt_json_sep(self, out);</span>
+<span class="lineNum">     315 </span>            :                 }
+<span class="lineNum">     316 </span>            :             }
+<span class="lineNum">     317 </span>            :         }
+<span class="lineNum">     318 </span><span class="lineCov">     443219 :         rm_fmt_json_key_int(out, &quot;mtime&quot;, file-&gt;mtime);</span>
+<span class="lineNum">     319 </span>            :     }
+<span class="lineNum">     320 </span><span class="lineCov">     443219 :     rm_fmt_json_close(self, out);</span>
+<span class="lineNum">     321 </span>            : }
+<span class="lineNum">     322 </span>            : 
+<span class="lineNum">     323 </span>            : static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
+<span class="lineNum">     324 </span>            :     /* Initialize parent */
+<span class="lineNum">     325 </span>            :     .parent =
+<span class="lineNum">     326 </span>            :         {
+<span class="lineNum">     327 </span>            :          .size = sizeof(JSON_HANDLER_IMPL),
+<span class="lineNum">     328 </span>            :          .name = &quot;json&quot;,
+<span class="lineNum">     329 </span>            :          .head = rm_fmt_head,
+<span class="lineNum">     330 </span>            :          .elem = rm_fmt_elem,
+<span class="lineNum">     331 </span>            :          .prog = NULL,
+<span class="lineNum">     332 </span>            :          .foot = rm_fmt_foot,
+<span class="lineNum">     333 </span>            :          .valid_keys = {&quot;no_header&quot;, &quot;no_footer&quot;, &quot;no_body&quot;, &quot;oneline&quot;, NULL},
+<span class="lineNum">     334 </span>            :         },
+<span class="lineNum">     335 </span>            :     .pretty = true};
+<span class="lineNum">     336 </span>            : 
+<span class="lineNum">     337 </span>            : RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&amp;JSON_HANDLER_IMPL;
 </pre>
       </td>
     </tr>
@@ -346,7 +405,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/checksums</a> - spooky-c.c<span style="font-size: 80%;"> (source / <a href="spooky-c.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/checksums</a> - spooky-c.c<span style="font-size: 80%;"> (source / <a href="spooky-c.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">10</td>
@@ -90,8 +90,8 @@
 <span class="lineNum">      28 </span>            : //  * does not need any other special mathematical properties
 <a name="29"><span class="lineNum">      29 </span>            : #define SC_CONST 0xdeadbeefdeadbeefLL</a>
 <span class="lineNum">      30 </span>            : 
-<span class="lineNum">      31 </span><span class="lineCov">    3819839 : static inline uint64_t rot64(uint64_t x, int k) {</span>
-<span class="lineNum">      32 </span><span class="lineCov">    3819839 :     return (x &lt;&lt; k) | (x &gt;&gt; (64 - k));</span>
+<span class="lineNum">      31 </span><span class="lineCov">   32756372 : static inline uint64_t rot64(uint64_t x, int k) {</span>
+<span class="lineNum">      32 </span><span class="lineCov">   32756372 :     return (x &lt;&lt; k) | (x &gt;&gt; (64 - k));</span>
 <span class="lineNum">      33 </span>            : }
 <span class="lineNum">      34 </span>            : 
 <span class="lineNum">      35 </span>            : //
@@ -107,71 +107,71 @@
 <span class="lineNum">      45 </span>            : //   When run forward or backwards one Mix
 <a name="46"><span class="lineNum">      46 </span>            : // I tried 3 pairs of each; they all differed by at least 212 bits.</a>
 <span class="lineNum">      47 </span>            : //
-<span class="lineNum">      48 </span><span class="lineCov">     258525 : static inline void mix(const uint64_t *data, uint64_t *s0, uint64_t *s1, uint64_t *s2,</span>
+<span class="lineNum">      48 </span><span class="lineCov">     868261 : static inline void mix(const uint64_t *data, uint64_t *s0, uint64_t *s1, uint64_t *s2,</span>
 <span class="lineNum">      49 </span>            :                        uint64_t *s3, uint64_t *s4, uint64_t *s5, uint64_t *s6,
 <span class="lineNum">      50 </span>            :                        uint64_t *s7, uint64_t *s8, uint64_t *s9, uint64_t *s10,
 <span class="lineNum">      51 </span>            :                        uint64_t *s11) {
-<span class="lineNum">      52 </span><span class="lineCov">     258525 :     *s0 += data[0];</span>
-<span class="lineNum">      53 </span><span class="lineCov">     258525 :     *s2 ^= *s10;</span>
-<span class="lineNum">      54 </span><span class="lineCov">     258525 :     *s11 ^= *s0;</span>
-<span class="lineNum">      55 </span><span class="lineCov">     258525 :     *s0 = rot64(*s0, 11);</span>
-<span class="lineNum">      56 </span><span class="lineCov">     258050 :     *s11 += *s1;</span>
-<span class="lineNum">      57 </span><span class="lineCov">     258050 :     *s1 += data[1];</span>
-<span class="lineNum">      58 </span><span class="lineCov">     258050 :     *s3 ^= *s11;</span>
-<span class="lineNum">      59 </span><span class="lineCov">     258050 :     *s0 ^= *s1;</span>
-<span class="lineNum">      60 </span><span class="lineCov">     258050 :     *s1 = rot64(*s1, 32);</span>
-<span class="lineNum">      61 </span><span class="lineCov">     256375 :     *s0 += *s2;</span>
-<span class="lineNum">      62 </span><span class="lineCov">     256375 :     *s2 += data[2];</span>
-<span class="lineNum">      63 </span><span class="lineCov">     256375 :     *s4 ^= *s0;</span>
-<span class="lineNum">      64 </span><span class="lineCov">     256375 :     *s1 ^= *s2;</span>
-<span class="lineNum">      65 </span><span class="lineCov">     256375 :     *s2 = rot64(*s2, 43);</span>
-<span class="lineNum">      66 </span><span class="lineCov">     256880 :     *s1 += *s3;</span>
-<span class="lineNum">      67 </span><span class="lineCov">     256880 :     *s3 += data[3];</span>
-<span class="lineNum">      68 </span><span class="lineCov">     256880 :     *s5 ^= *s1;</span>
-<span class="lineNum">      69 </span><span class="lineCov">     256880 :     *s2 ^= *s3;</span>
-<span class="lineNum">      70 </span><span class="lineCov">     256880 :     *s3 = rot64(*s3, 31);</span>
-<span class="lineNum">      71 </span><span class="lineCov">     256920 :     *s2 += *s4;</span>
-<span class="lineNum">      72 </span><span class="lineCov">     256920 :     *s4 += data[4];</span>
-<span class="lineNum">      73 </span><span class="lineCov">     256920 :     *s6 ^= *s2;</span>
-<span class="lineNum">      74 </span><span class="lineCov">     256920 :     *s3 ^= *s4;</span>
-<span class="lineNum">      75 </span><span class="lineCov">     256920 :     *s4 = rot64(*s4, 17);</span>
-<span class="lineNum">      76 </span><span class="lineCov">     256889 :     *s3 += *s5;</span>
-<span class="lineNum">      77 </span><span class="lineCov">     256889 :     *s5 += data[5];</span>
-<span class="lineNum">      78 </span><span class="lineCov">     256889 :     *s7 ^= *s3;</span>
-<span class="lineNum">      79 </span><span class="lineCov">     256889 :     *s4 ^= *s5;</span>
-<span class="lineNum">      80 </span><span class="lineCov">     256889 :     *s5 = rot64(*s5, 28);</span>
-<span class="lineNum">      81 </span><span class="lineCov">     257008 :     *s4 += *s6;</span>
-<span class="lineNum">      82 </span><span class="lineCov">     257008 :     *s6 += data[6];</span>
-<span class="lineNum">      83 </span><span class="lineCov">     257008 :     *s8 ^= *s4;</span>
-<span class="lineNum">      84 </span><span class="lineCov">     257008 :     *s5 ^= *s6;</span>
-<span class="lineNum">      85 </span><span class="lineCov">     257008 :     *s6 = rot64(*s6, 39);</span>
-<span class="lineNum">      86 </span><span class="lineCov">     256946 :     *s5 += *s7;</span>
-<span class="lineNum">      87 </span><span class="lineCov">     256946 :     *s7 += data[7];</span>
-<span class="lineNum">      88 </span><span class="lineCov">     256946 :     *s9 ^= *s5;</span>
-<span class="lineNum">      89 </span><span class="lineCov">     256946 :     *s6 ^= *s7;</span>
-<span class="lineNum">      90 </span><span class="lineCov">     256946 :     *s7 = rot64(*s7, 57);</span>
-<span class="lineNum">      91 </span><span class="lineCov">     257644 :     *s6 += *s8;</span>
-<span class="lineNum">      92 </span><span class="lineCov">     257644 :     *s8 += data[8];</span>
-<span class="lineNum">      93 </span><span class="lineCov">     257644 :     *s10 ^= *s6;</span>
-<span class="lineNum">      94 </span><span class="lineCov">     257644 :     *s7 ^= *s8;</span>
-<span class="lineNum">      95 </span><span class="lineCov">     257644 :     *s8 = rot64(*s8, 55);</span>
-<span class="lineNum">      96 </span><span class="lineCov">     261041 :     *s7 += *s9;</span>
-<span class="lineNum">      97 </span><span class="lineCov">     261041 :     *s9 += data[9];</span>
-<span class="lineNum">      98 </span><span class="lineCov">     261041 :     *s11 ^= *s7;</span>
-<span class="lineNum">      99 </span><span class="lineCov">     261041 :     *s8 ^= *s9;</span>
-<span class="lineNum">     100 </span><span class="lineCov">     261041 :     *s9 = rot64(*s9, 54);</span>
-<span class="lineNum">     101 </span><span class="lineCov">     259308 :     *s8 += *s10;</span>
-<span class="lineNum">     102 </span><span class="lineCov">     259308 :     *s10 += data[10];</span>
-<span class="lineNum">     103 </span><span class="lineCov">     259308 :     *s0 ^= *s8;</span>
-<span class="lineNum">     104 </span><span class="lineCov">     259308 :     *s9 ^= *s10;</span>
-<span class="lineNum">     105 </span><span class="lineCov">     259308 :     *s10 = rot64(*s10, 22);</span>
-<span class="lineNum">     106 </span><span class="lineCov">     259235 :     *s9 += *s11;</span>
-<span class="lineNum">     107 </span><span class="lineCov">     259235 :     *s11 += data[11];</span>
-<span class="lineNum">     108 </span><span class="lineCov">     259235 :     *s1 ^= *s9;</span>
-<span class="lineNum">     109 </span><span class="lineCov">     259235 :     *s10 ^= *s11;</span>
-<span class="lineNum">     110 </span><span class="lineCov">     259235 :     *s11 = rot64(*s11, 46);</span>
-<span class="lineNum">     111 </span><span class="lineCov">     259578 :     *s10 += *s0;</span>
-<span class="lineNum">     112 </span><span class="lineCov">     259578 : }</span>
+<span class="lineNum">      52 </span><span class="lineCov">     868261 :     *s0 += data[0];</span>
+<span class="lineNum">      53 </span><span class="lineCov">     868261 :     *s2 ^= *s10;</span>
+<span class="lineNum">      54 </span><span class="lineCov">     868261 :     *s11 ^= *s0;</span>
+<span class="lineNum">      55 </span><span class="lineCov">     868261 :     *s0 = rot64(*s0, 11);</span>
+<span class="lineNum">      56 </span><span class="lineCov">     845893 :     *s11 += *s1;</span>
+<span class="lineNum">      57 </span><span class="lineCov">     845893 :     *s1 += data[1];</span>
+<span class="lineNum">      58 </span><span class="lineCov">     845893 :     *s3 ^= *s11;</span>
+<span class="lineNum">      59 </span><span class="lineCov">     845893 :     *s0 ^= *s1;</span>
+<span class="lineNum">      60 </span><span class="lineCov">     845893 :     *s1 = rot64(*s1, 32);</span>
+<span class="lineNum">      61 </span><span class="lineCov">     800856 :     *s0 += *s2;</span>
+<span class="lineNum">      62 </span><span class="lineCov">     800856 :     *s2 += data[2];</span>
+<span class="lineNum">      63 </span><span class="lineCov">     800856 :     *s4 ^= *s0;</span>
+<span class="lineNum">      64 </span><span class="lineCov">     800856 :     *s1 ^= *s2;</span>
+<span class="lineNum">      65 </span><span class="lineCov">     800856 :     *s2 = rot64(*s2, 43);</span>
+<span class="lineNum">      66 </span><span class="lineCov">     817091 :     *s1 += *s3;</span>
+<span class="lineNum">      67 </span><span class="lineCov">     817091 :     *s3 += data[3];</span>
+<span class="lineNum">      68 </span><span class="lineCov">     817091 :     *s5 ^= *s1;</span>
+<span class="lineNum">      69 </span><span class="lineCov">     817091 :     *s2 ^= *s3;</span>
+<span class="lineNum">      70 </span><span class="lineCov">     817091 :     *s3 = rot64(*s3, 31);</span>
+<span class="lineNum">      71 </span><span class="lineCov">     817389 :     *s2 += *s4;</span>
+<span class="lineNum">      72 </span><span class="lineCov">     817389 :     *s4 += data[4];</span>
+<span class="lineNum">      73 </span><span class="lineCov">     817389 :     *s6 ^= *s2;</span>
+<span class="lineNum">      74 </span><span class="lineCov">     817389 :     *s3 ^= *s4;</span>
+<span class="lineNum">      75 </span><span class="lineCov">     817389 :     *s4 = rot64(*s4, 17);</span>
+<span class="lineNum">      76 </span><span class="lineCov">     815455 :     *s3 += *s5;</span>
+<span class="lineNum">      77 </span><span class="lineCov">     815455 :     *s5 += data[5];</span>
+<span class="lineNum">      78 </span><span class="lineCov">     815455 :     *s7 ^= *s3;</span>
+<span class="lineNum">      79 </span><span class="lineCov">     815455 :     *s4 ^= *s5;</span>
+<span class="lineNum">      80 </span><span class="lineCov">     815455 :     *s5 = rot64(*s5, 28);</span>
+<span class="lineNum">      81 </span><span class="lineCov">     816605 :     *s4 += *s6;</span>
+<span class="lineNum">      82 </span><span class="lineCov">     816605 :     *s6 += data[6];</span>
+<span class="lineNum">      83 </span><span class="lineCov">     816605 :     *s8 ^= *s4;</span>
+<span class="lineNum">      84 </span><span class="lineCov">     816605 :     *s5 ^= *s6;</span>
+<span class="lineNum">      85 </span><span class="lineCov">     816605 :     *s6 = rot64(*s6, 39);</span>
+<span class="lineNum">      86 </span><span class="lineCov">     817152 :     *s5 += *s7;</span>
+<span class="lineNum">      87 </span><span class="lineCov">     817152 :     *s7 += data[7];</span>
+<span class="lineNum">      88 </span><span class="lineCov">     817152 :     *s9 ^= *s5;</span>
+<span class="lineNum">      89 </span><span class="lineCov">     817152 :     *s6 ^= *s7;</span>
+<span class="lineNum">      90 </span><span class="lineCov">     817152 :     *s7 = rot64(*s7, 57);</span>
+<span class="lineNum">      91 </span><span class="lineCov">     832620 :     *s6 += *s8;</span>
+<span class="lineNum">      92 </span><span class="lineCov">     832620 :     *s8 += data[8];</span>
+<span class="lineNum">      93 </span><span class="lineCov">     832620 :     *s10 ^= *s6;</span>
+<span class="lineNum">      94 </span><span class="lineCov">     832620 :     *s7 ^= *s8;</span>
+<span class="lineNum">      95 </span><span class="lineCov">     832620 :     *s8 = rot64(*s8, 55);</span>
+<span class="lineNum">      96 </span><span class="lineCov">     932927 :     *s7 += *s9;</span>
+<span class="lineNum">      97 </span><span class="lineCov">     932927 :     *s9 += data[9];</span>
+<span class="lineNum">      98 </span><span class="lineCov">     932927 :     *s11 ^= *s7;</span>
+<span class="lineNum">      99 </span><span class="lineCov">     932927 :     *s8 ^= *s9;</span>
+<span class="lineNum">     100 </span><span class="lineCov">     932927 :     *s9 = rot64(*s9, 54);</span>
+<span class="lineNum">     101 </span><span class="lineCov">     892302 :     *s8 += *s10;</span>
+<span class="lineNum">     102 </span><span class="lineCov">     892302 :     *s10 += data[10];</span>
+<span class="lineNum">     103 </span><span class="lineCov">     892302 :     *s0 ^= *s8;</span>
+<span class="lineNum">     104 </span><span class="lineCov">     892302 :     *s9 ^= *s10;</span>
+<span class="lineNum">     105 </span><span class="lineCov">     892302 :     *s10 = rot64(*s10, 22);</span>
+<span class="lineNum">     106 </span><span class="lineCov">     896683 :     *s9 += *s11;</span>
+<span class="lineNum">     107 </span><span class="lineCov">     896683 :     *s11 += data[11];</span>
+<span class="lineNum">     108 </span><span class="lineCov">     896683 :     *s1 ^= *s9;</span>
+<span class="lineNum">     109 </span><span class="lineCov">     896683 :     *s10 ^= *s11;</span>
+<span class="lineNum">     110 </span><span class="lineCov">     896683 :     *s11 = rot64(*s11, 46);</span>
+<span class="lineNum">     111 </span><span class="lineCov">     907415 :     *s10 += *s0;</span>
+<span class="lineNum">     112 </span><span class="lineCov">     907415 : }</span>
 <span class="lineNum">     113 </span>            : 
 <span class="lineNum">     114 </span>            : //
 <span class="lineNum">     115 </span>            : // Mix all 12 inputs together so that h0, h1 are a hash of them all.
@@ -189,54 +189,54 @@
 <span class="lineNum">     127 </span>            : // Two iterations was almost good enough for a 64-bit result, but a
 <a name="128"><span class="lineNum">     128 </span>            : // 128-bit result is reported, so End() does three iterations.</a>
 <span class="lineNum">     129 </span>            : //
-<span class="lineNum">     130 </span><span class="lineCov">      44907 : static inline void endPartial(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3,</span>
+<span class="lineNum">     130 </span><span class="lineCov">      17261 : static inline void endPartial(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3,</span>
 <span class="lineNum">     131 </span>            :                               uint64_t *h4, uint64_t *h5, uint64_t *h6, uint64_t *h7,
 <span class="lineNum">     132 </span>            :                               uint64_t *h8, uint64_t *h9, uint64_t *h10, uint64_t *h11) {
-<span class="lineNum">     133 </span><span class="lineCov">      44907 :     *h11 += *h1;</span>
-<span class="lineNum">     134 </span><span class="lineCov">      44907 :     *h2 ^= *h11;</span>
-<span class="lineNum">     135 </span><span class="lineCov">      44907 :     *h1 = rot64(*h1, 44);</span>
-<span class="lineNum">     136 </span><span class="lineCov">      44913 :     *h0 += *h2;</span>
-<span class="lineNum">     137 </span><span class="lineCov">      44913 :     *h3 ^= *h0;</span>
-<span class="lineNum">     138 </span><span class="lineCov">      44913 :     *h2 = rot64(*h2, 15);</span>
-<span class="lineNum">     139 </span><span class="lineCov">      44895 :     *h1 += *h3;</span>
-<span class="lineNum">     140 </span><span class="lineCov">      44895 :     *h4 ^= *h1;</span>
-<span class="lineNum">     141 </span><span class="lineCov">      44895 :     *h3 = rot64(*h3, 34);</span>
-<span class="lineNum">     142 </span><span class="lineCov">      44883 :     *h2 += *h4;</span>
-<span class="lineNum">     143 </span><span class="lineCov">      44883 :     *h5 ^= *h2;</span>
-<span class="lineNum">     144 </span><span class="lineCov">      44883 :     *h4 = rot64(*h4, 21);</span>
-<span class="lineNum">     145 </span><span class="lineCov">      44889 :     *h3 += *h5;</span>
-<span class="lineNum">     146 </span><span class="lineCov">      44889 :     *h6 ^= *h3;</span>
-<span class="lineNum">     147 </span><span class="lineCov">      44889 :     *h5 = rot64(*h5, 38);</span>
-<span class="lineNum">     148 </span><span class="lineCov">      44898 :     *h4 += *h6;</span>
-<span class="lineNum">     149 </span><span class="lineCov">      44898 :     *h7 ^= *h4;</span>
-<span class="lineNum">     150 </span><span class="lineCov">      44898 :     *h6 = rot64(*h6, 33);</span>
-<span class="lineNum">     151 </span><span class="lineCov">      44902 :     *h5 += *h7;</span>
-<span class="lineNum">     152 </span><span class="lineCov">      44902 :     *h8 ^= *h5;</span>
-<span class="lineNum">     153 </span><span class="lineCov">      44902 :     *h7 = rot64(*h7, 10);</span>
-<span class="lineNum">     154 </span><span class="lineCov">      44905 :     *h6 += *h8;</span>
-<span class="lineNum">     155 </span><span class="lineCov">      44905 :     *h9 ^= *h6;</span>
-<span class="lineNum">     156 </span><span class="lineCov">      44905 :     *h8 = rot64(*h8, 13);</span>
-<span class="lineNum">     157 </span><span class="lineCov">      44907 :     *h7 += *h9;</span>
-<span class="lineNum">     158 </span><span class="lineCov">      44907 :     *h10 ^= *h7;</span>
-<span class="lineNum">     159 </span><span class="lineCov">      44907 :     *h9 = rot64(*h9, 38);</span>
-<span class="lineNum">     160 </span><span class="lineCov">      44910 :     *h8 += *h10;</span>
-<span class="lineNum">     161 </span><span class="lineCov">      44910 :     *h11 ^= *h8;</span>
-<span class="lineNum">     162 </span><span class="lineCov">      44910 :     *h10 = rot64(*h10, 53);</span>
-<span class="lineNum">     163 </span><span class="lineCov">      44902 :     *h9 += *h11;</span>
-<span class="lineNum">     164 </span><span class="lineCov">      44902 :     *h0 ^= *h9;</span>
-<span class="lineNum">     165 </span><span class="lineCov">      44902 :     *h11 = rot64(*h11, 42);</span>
-<span class="lineNum">     166 </span><span class="lineCov">      44904 :     *h10 += *h0;</span>
-<span class="lineNum">     167 </span><span class="lineCov">      44904 :     *h1 ^= *h10;</span>
-<span class="lineNum">     168 </span><span class="lineCov">      44904 :     *h0 = rot64(*h0, 54);</span>
-<a name="169"><span class="lineNum">     169 </span><span class="lineCov">      44907 : }</span></a>
+<span class="lineNum">     133 </span><span class="lineCov">      17261 :     *h11 += *h1;</span>
+<span class="lineNum">     134 </span><span class="lineCov">      17261 :     *h2 ^= *h11;</span>
+<span class="lineNum">     135 </span><span class="lineCov">      17261 :     *h1 = rot64(*h1, 44);</span>
+<span class="lineNum">     136 </span><span class="lineCov">      17262 :     *h0 += *h2;</span>
+<span class="lineNum">     137 </span><span class="lineCov">      17262 :     *h3 ^= *h0;</span>
+<span class="lineNum">     138 </span><span class="lineCov">      17262 :     *h2 = rot64(*h2, 15);</span>
+<span class="lineNum">     139 </span><span class="lineCov">      17259 :     *h1 += *h3;</span>
+<span class="lineNum">     140 </span><span class="lineCov">      17259 :     *h4 ^= *h1;</span>
+<span class="lineNum">     141 </span><span class="lineCov">      17259 :     *h3 = rot64(*h3, 34);</span>
+<span class="lineNum">     142 </span><span class="lineCov">      17257 :     *h2 += *h4;</span>
+<span class="lineNum">     143 </span><span class="lineCov">      17257 :     *h5 ^= *h2;</span>
+<span class="lineNum">     144 </span><span class="lineCov">      17257 :     *h4 = rot64(*h4, 21);</span>
+<span class="lineNum">     145 </span><span class="lineCov">      17253 :     *h3 += *h5;</span>
+<span class="lineNum">     146 </span><span class="lineCov">      17253 :     *h6 ^= *h3;</span>
+<span class="lineNum">     147 </span><span class="lineCov">      17253 :     *h5 = rot64(*h5, 38);</span>
+<span class="lineNum">     148 </span><span class="lineCov">      17254 :     *h4 += *h6;</span>
+<span class="lineNum">     149 </span><span class="lineCov">      17254 :     *h7 ^= *h4;</span>
+<span class="lineNum">     150 </span><span class="lineCov">      17254 :     *h6 = rot64(*h6, 33);</span>
+<span class="lineNum">     151 </span><span class="lineCov">      17255 :     *h5 += *h7;</span>
+<span class="lineNum">     152 </span><span class="lineCov">      17255 :     *h8 ^= *h5;</span>
+<span class="lineNum">     153 </span><span class="lineCov">      17255 :     *h7 = rot64(*h7, 10);</span>
+<span class="lineNum">     154 </span><span class="lineCov">      17256 :     *h6 += *h8;</span>
+<span class="lineNum">     155 </span><span class="lineCov">      17256 :     *h9 ^= *h6;</span>
+<span class="lineNum">     156 </span><span class="lineCov">      17256 :     *h8 = rot64(*h8, 13);</span>
+<span class="lineNum">     157 </span><span class="lineCov">      17261 :     *h7 += *h9;</span>
+<span class="lineNum">     158 </span><span class="lineCov">      17261 :     *h10 ^= *h7;</span>
+<span class="lineNum">     159 </span><span class="lineCov">      17261 :     *h9 = rot64(*h9, 38);</span>
+<span class="lineNum">     160 </span><span class="lineCov">      17255 :     *h8 += *h10;</span>
+<span class="lineNum">     161 </span><span class="lineCov">      17255 :     *h11 ^= *h8;</span>
+<span class="lineNum">     162 </span><span class="lineCov">      17255 :     *h10 = rot64(*h10, 53);</span>
+<span class="lineNum">     163 </span><span class="lineCov">      17256 :     *h9 += *h11;</span>
+<span class="lineNum">     164 </span><span class="lineCov">      17256 :     *h0 ^= *h9;</span>
+<span class="lineNum">     165 </span><span class="lineCov">      17256 :     *h11 = rot64(*h11, 42);</span>
+<span class="lineNum">     166 </span><span class="lineCov">      17259 :     *h10 += *h0;</span>
+<span class="lineNum">     167 </span><span class="lineCov">      17259 :     *h1 ^= *h10;</span>
+<span class="lineNum">     168 </span><span class="lineCov">      17259 :     *h0 = rot64(*h0, 54);</span>
+<a name="169"><span class="lineNum">     169 </span><span class="lineCov">      17257 : }</span></a>
 <span class="lineNum">     170 </span>            : 
-<span class="lineNum">     171 </span><span class="lineCov">      14979 : static inline void end(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3,</span>
+<span class="lineNum">     171 </span><span class="lineCov">       5757 : static inline void end(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3,</span>
 <span class="lineNum">     172 </span>            :                        uint64_t *h4, uint64_t *h5, uint64_t *h6, uint64_t *h7,
 <span class="lineNum">     173 </span>            :                        uint64_t *h8, uint64_t *h9, uint64_t *h10, uint64_t *h11) {
-<span class="lineNum">     174 </span><span class="lineCov">      14979 :     endPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);</span>
-<span class="lineNum">     175 </span><span class="lineCov">      14978 :     endPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);</span>
-<span class="lineNum">     176 </span><span class="lineCov">      14979 :     endPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);</span>
-<span class="lineNum">     177 </span><span class="lineCov">      14980 : }</span>
+<span class="lineNum">     174 </span><span class="lineCov">       5757 :     endPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);</span>
+<span class="lineNum">     175 </span><span class="lineCov">       5756 :     endPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);</span>
+<span class="lineNum">     176 </span><span class="lineCov">       5755 :     endPartial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);</span>
+<span class="lineNum">     177 </span><span class="lineCov">       5755 : }</span>
 <span class="lineNum">     178 </span>            : 
 <span class="lineNum">     179 </span>            : //
 <span class="lineNum">     180 </span>            : // The goal is for each bit of the input to expand into 128 bits of
@@ -253,44 +253,44 @@
 <span class="lineNum">     191 </span>            : // with diffs defined by either xor or subtraction
 <a name="192"><span class="lineNum">     192 </span>            : // with a base of all zeros plus a counter, or plus another bit, or random</a>
 <span class="lineNum">     193 </span>            : //
-<span class="lineNum">     194 </span><span class="lineCov">      25559 : static inline void short_mix(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3) {</span>
-<span class="lineNum">     195 </span><span class="lineCov">      25559 :     *h2 = rot64(*h2, 50);</span>
-<span class="lineNum">     196 </span><span class="lineCov">      25551 :     *h2 += *h3;</span>
-<span class="lineNum">     197 </span><span class="lineCov">      25551 :     *h0 ^= *h2;</span>
-<span class="lineNum">     198 </span><span class="lineCov">      25551 :     *h3 = rot64(*h3, 52);</span>
-<span class="lineNum">     199 </span><span class="lineCov">      25548 :     *h3 += *h0;</span>
-<span class="lineNum">     200 </span><span class="lineCov">      25548 :     *h1 ^= *h3;</span>
-<span class="lineNum">     201 </span><span class="lineCov">      25548 :     *h0 = rot64(*h0, 30);</span>
-<span class="lineNum">     202 </span><span class="lineCov">      25549 :     *h0 += *h1;</span>
-<span class="lineNum">     203 </span><span class="lineCov">      25549 :     *h2 ^= *h0;</span>
-<span class="lineNum">     204 </span><span class="lineCov">      25549 :     *h1 = rot64(*h1, 41);</span>
-<span class="lineNum">     205 </span><span class="lineCov">      25553 :     *h1 += *h2;</span>
-<span class="lineNum">     206 </span><span class="lineCov">      25553 :     *h3 ^= *h1;</span>
-<span class="lineNum">     207 </span><span class="lineCov">      25553 :     *h2 = rot64(*h2, 54);</span>
-<span class="lineNum">     208 </span><span class="lineCov">      25552 :     *h2 += *h3;</span>
-<span class="lineNum">     209 </span><span class="lineCov">      25552 :     *h0 ^= *h2;</span>
-<span class="lineNum">     210 </span><span class="lineCov">      25552 :     *h3 = rot64(*h3, 48);</span>
-<span class="lineNum">     211 </span><span class="lineCov">      25557 :     *h3 += *h0;</span>
-<span class="lineNum">     212 </span><span class="lineCov">      25557 :     *h1 ^= *h3;</span>
-<span class="lineNum">     213 </span><span class="lineCov">      25557 :     *h0 = rot64(*h0, 38);</span>
-<span class="lineNum">     214 </span><span class="lineCov">      25565 :     *h0 += *h1;</span>
-<span class="lineNum">     215 </span><span class="lineCov">      25565 :     *h2 ^= *h0;</span>
-<span class="lineNum">     216 </span><span class="lineCov">      25565 :     *h1 = rot64(*h1, 37);</span>
-<span class="lineNum">     217 </span><span class="lineCov">      25565 :     *h1 += *h2;</span>
-<span class="lineNum">     218 </span><span class="lineCov">      25565 :     *h3 ^= *h1;</span>
-<span class="lineNum">     219 </span><span class="lineCov">      25565 :     *h2 = rot64(*h2, 62);</span>
-<span class="lineNum">     220 </span><span class="lineCov">      25561 :     *h2 += *h3;</span>
-<span class="lineNum">     221 </span><span class="lineCov">      25561 :     *h0 ^= *h2;</span>
-<span class="lineNum">     222 </span><span class="lineCov">      25561 :     *h3 = rot64(*h3, 34);</span>
-<span class="lineNum">     223 </span><span class="lineCov">      25561 :     *h3 += *h0;</span>
-<span class="lineNum">     224 </span><span class="lineCov">      25561 :     *h1 ^= *h3;</span>
-<span class="lineNum">     225 </span><span class="lineCov">      25561 :     *h0 = rot64(*h0, 5);</span>
-<span class="lineNum">     226 </span><span class="lineCov">      25556 :     *h0 += *h1;</span>
-<span class="lineNum">     227 </span><span class="lineCov">      25556 :     *h2 ^= *h0;</span>
-<span class="lineNum">     228 </span><span class="lineCov">      25556 :     *h1 = rot64(*h1, 36);</span>
-<span class="lineNum">     229 </span><span class="lineCov">      25560 :     *h1 += *h2;</span>
-<span class="lineNum">     230 </span><span class="lineCov">      25560 :     *h3 ^= *h1;</span>
-<span class="lineNum">     231 </span><span class="lineCov">      25560 : }</span>
+<span class="lineNum">     194 </span><span class="lineCov">    1388615 : static inline void short_mix(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3) {</span>
+<span class="lineNum">     195 </span><span class="lineCov">    1388615 :     *h2 = rot64(*h2, 50);</span>
+<span class="lineNum">     196 </span><span class="lineCov">    1388615 :     *h2 += *h3;</span>
+<span class="lineNum">     197 </span><span class="lineCov">    1388615 :     *h0 ^= *h2;</span>
+<span class="lineNum">     198 </span><span class="lineCov">    1388615 :     *h3 = rot64(*h3, 52);</span>
+<span class="lineNum">     199 </span><span class="lineCov">    1388616 :     *h3 += *h0;</span>
+<span class="lineNum">     200 </span><span class="lineCov">    1388616 :     *h1 ^= *h3;</span>
+<span class="lineNum">     201 </span><span class="lineCov">    1388616 :     *h0 = rot64(*h0, 30);</span>
+<span class="lineNum">     202 </span><span class="lineCov">    1388616 :     *h0 += *h1;</span>
+<span class="lineNum">     203 </span><span class="lineCov">    1388616 :     *h2 ^= *h0;</span>
+<span class="lineNum">     204 </span><span class="lineCov">    1388616 :     *h1 = rot64(*h1, 41);</span>
+<span class="lineNum">     205 </span><span class="lineCov">    1388617 :     *h1 += *h2;</span>
+<span class="lineNum">     206 </span><span class="lineCov">    1388617 :     *h3 ^= *h1;</span>
+<span class="lineNum">     207 </span><span class="lineCov">    1388617 :     *h2 = rot64(*h2, 54);</span>
+<span class="lineNum">     208 </span><span class="lineCov">    1388617 :     *h2 += *h3;</span>
+<span class="lineNum">     209 </span><span class="lineCov">    1388617 :     *h0 ^= *h2;</span>
+<span class="lineNum">     210 </span><span class="lineCov">    1388617 :     *h3 = rot64(*h3, 48);</span>
+<span class="lineNum">     211 </span><span class="lineCov">    1388617 :     *h3 += *h0;</span>
+<span class="lineNum">     212 </span><span class="lineCov">    1388617 :     *h1 ^= *h3;</span>
+<span class="lineNum">     213 </span><span class="lineCov">    1388617 :     *h0 = rot64(*h0, 38);</span>
+<span class="lineNum">     214 </span><span class="lineCov">    1388616 :     *h0 += *h1;</span>
+<span class="lineNum">     215 </span><span class="lineCov">    1388616 :     *h2 ^= *h0;</span>
+<span class="lineNum">     216 </span><span class="lineCov">    1388616 :     *h1 = rot64(*h1, 37);</span>
+<span class="lineNum">     217 </span><span class="lineCov">    1388615 :     *h1 += *h2;</span>
+<span class="lineNum">     218 </span><span class="lineCov">    1388615 :     *h3 ^= *h1;</span>
+<span class="lineNum">     219 </span><span class="lineCov">    1388615 :     *h2 = rot64(*h2, 62);</span>
+<span class="lineNum">     220 </span><span class="lineCov">    1388615 :     *h2 += *h3;</span>
+<span class="lineNum">     221 </span><span class="lineCov">    1388615 :     *h0 ^= *h2;</span>
+<span class="lineNum">     222 </span><span class="lineCov">    1388615 :     *h3 = rot64(*h3, 34);</span>
+<span class="lineNum">     223 </span><span class="lineCov">    1388615 :     *h3 += *h0;</span>
+<span class="lineNum">     224 </span><span class="lineCov">    1388615 :     *h1 ^= *h3;</span>
+<span class="lineNum">     225 </span><span class="lineCov">    1388615 :     *h0 = rot64(*h0, 5);</span>
+<span class="lineNum">     226 </span><span class="lineCov">    1388616 :     *h0 += *h1;</span>
+<span class="lineNum">     227 </span><span class="lineCov">    1388616 :     *h2 ^= *h0;</span>
+<span class="lineNum">     228 </span><span class="lineCov">    1388616 :     *h1 = rot64(*h1, 36);</span>
+<span class="lineNum">     229 </span><span class="lineCov">    1388616 :     *h1 += *h2;</span>
+<span class="lineNum">     230 </span><span class="lineCov">    1388616 :     *h3 ^= *h1;</span>
+<span class="lineNum">     231 </span><span class="lineCov">    1388616 : }</span>
 <span class="lineNum">     232 </span>            : 
 <span class="lineNum">     233 </span>            : //
 <span class="lineNum">     234 </span>            : // Mix all 4 inputs together so that h0, h1 are a hash of them all.
@@ -304,43 +304,43 @@
 <span class="lineNum">     242 </span>            : // For every pair of input bits,
 <a name="243"><span class="lineNum">     243 </span>            : // with probability 50 +- .75% (the worst case is approximately that)</a>
 <span class="lineNum">     244 </span>            : //
-<span class="lineNum">     245 </span><span class="lineCov">      16110 : static inline void short_end(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3) {</span>
-<span class="lineNum">     246 </span><span class="lineCov">      16110 :     *h3 ^= *h2;</span>
-<span class="lineNum">     247 </span><span class="lineCov">      16110 :     *h2 = rot64(*h2, 15);</span>
-<span class="lineNum">     248 </span><span class="lineCov">      16110 :     *h3 += *h2;</span>
-<span class="lineNum">     249 </span><span class="lineCov">      16110 :     *h0 ^= *h3;</span>
-<span class="lineNum">     250 </span><span class="lineCov">      16110 :     *h3 = rot64(*h3, 52);</span>
-<span class="lineNum">     251 </span><span class="lineCov">      16110 :     *h0 += *h3;</span>
-<span class="lineNum">     252 </span><span class="lineCov">      16110 :     *h1 ^= *h0;</span>
-<span class="lineNum">     253 </span><span class="lineCov">      16110 :     *h0 = rot64(*h0, 26);</span>
-<span class="lineNum">     254 </span><span class="lineCov">      16109 :     *h1 += *h0;</span>
-<span class="lineNum">     255 </span><span class="lineCov">      16109 :     *h2 ^= *h1;</span>
-<span class="lineNum">     256 </span><span class="lineCov">      16109 :     *h1 = rot64(*h1, 51);</span>
-<span class="lineNum">     257 </span><span class="lineCov">      16107 :     *h2 += *h1;</span>
-<span class="lineNum">     258 </span><span class="lineCov">      16107 :     *h3 ^= *h2;</span>
-<span class="lineNum">     259 </span><span class="lineCov">      16107 :     *h2 = rot64(*h2, 28);</span>
-<span class="lineNum">     260 </span><span class="lineCov">      16109 :     *h3 += *h2;</span>
-<span class="lineNum">     261 </span><span class="lineCov">      16109 :     *h0 ^= *h3;</span>
-<span class="lineNum">     262 </span><span class="lineCov">      16109 :     *h3 = rot64(*h3, 9);</span>
-<span class="lineNum">     263 </span><span class="lineCov">      16109 :     *h0 += *h3;</span>
-<span class="lineNum">     264 </span><span class="lineCov">      16109 :     *h1 ^= *h0;</span>
-<span class="lineNum">     265 </span><span class="lineCov">      16109 :     *h0 = rot64(*h0, 47);</span>
-<span class="lineNum">     266 </span><span class="lineCov">      16112 :     *h1 += *h0;</span>
-<span class="lineNum">     267 </span><span class="lineCov">      16112 :     *h2 ^= *h1;</span>
-<span class="lineNum">     268 </span><span class="lineCov">      16112 :     *h1 = rot64(*h1, 54);</span>
-<span class="lineNum">     269 </span><span class="lineCov">      16113 :     *h2 += *h1;</span>
-<span class="lineNum">     270 </span><span class="lineCov">      16113 :     *h3 ^= *h2;</span>
-<span class="lineNum">     271 </span><span class="lineCov">      16113 :     *h2 = rot64(*h2, 32);</span>
-<span class="lineNum">     272 </span><span class="lineCov">      16111 :     *h3 += *h2;</span>
-<span class="lineNum">     273 </span><span class="lineCov">      16111 :     *h0 ^= *h3;</span>
-<span class="lineNum">     274 </span><span class="lineCov">      16111 :     *h3 = rot64(*h3, 25);</span>
-<span class="lineNum">     275 </span><span class="lineCov">      16111 :     *h0 += *h3;</span>
-<span class="lineNum">     276 </span><span class="lineCov">      16111 :     *h1 ^= *h0;</span>
-<span class="lineNum">     277 </span><span class="lineCov">      16111 :     *h0 = rot64(*h0, 63);</span>
-<span class="lineNum">     278 </span><span class="lineCov">      16108 :     *h1 += *h0;</span>
-<a name="279"><span class="lineNum">     279 </span><span class="lineCov">      16108 : }</span></a>
+<span class="lineNum">     245 </span><span class="lineCov">     912022 : static inline void short_end(uint64_t *h0, uint64_t *h1, uint64_t *h2, uint64_t *h3) {</span>
+<span class="lineNum">     246 </span><span class="lineCov">     912022 :     *h3 ^= *h2;</span>
+<span class="lineNum">     247 </span><span class="lineCov">     912022 :     *h2 = rot64(*h2, 15);</span>
+<span class="lineNum">     248 </span><span class="lineCov">     912021 :     *h3 += *h2;</span>
+<span class="lineNum">     249 </span><span class="lineCov">     912021 :     *h0 ^= *h3;</span>
+<span class="lineNum">     250 </span><span class="lineCov">     912021 :     *h3 = rot64(*h3, 52);</span>
+<span class="lineNum">     251 </span><span class="lineCov">     912020 :     *h0 += *h3;</span>
+<span class="lineNum">     252 </span><span class="lineCov">     912020 :     *h1 ^= *h0;</span>
+<span class="lineNum">     253 </span><span class="lineCov">     912020 :     *h0 = rot64(*h0, 26);</span>
+<span class="lineNum">     254 </span><span class="lineCov">     912021 :     *h1 += *h0;</span>
+<span class="lineNum">     255 </span><span class="lineCov">     912021 :     *h2 ^= *h1;</span>
+<span class="lineNum">     256 </span><span class="lineCov">     912021 :     *h1 = rot64(*h1, 51);</span>
+<span class="lineNum">     257 </span><span class="lineCov">     912021 :     *h2 += *h1;</span>
+<span class="lineNum">     258 </span><span class="lineCov">     912021 :     *h3 ^= *h2;</span>
+<span class="lineNum">     259 </span><span class="lineCov">     912021 :     *h2 = rot64(*h2, 28);</span>
+<span class="lineNum">     260 </span><span class="lineCov">     912022 :     *h3 += *h2;</span>
+<span class="lineNum">     261 </span><span class="lineCov">     912022 :     *h0 ^= *h3;</span>
+<span class="lineNum">     262 </span><span class="lineCov">     912022 :     *h3 = rot64(*h3, 9);</span>
+<span class="lineNum">     263 </span><span class="lineCov">     912022 :     *h0 += *h3;</span>
+<span class="lineNum">     264 </span><span class="lineCov">     912022 :     *h1 ^= *h0;</span>
+<span class="lineNum">     265 </span><span class="lineCov">     912022 :     *h0 = rot64(*h0, 47);</span>
+<span class="lineNum">     266 </span><span class="lineCov">     912025 :     *h1 += *h0;</span>
+<span class="lineNum">     267 </span><span class="lineCov">     912025 :     *h2 ^= *h1;</span>
+<span class="lineNum">     268 </span><span class="lineCov">     912025 :     *h1 = rot64(*h1, 54);</span>
+<span class="lineNum">     269 </span><span class="lineCov">     912026 :     *h2 += *h1;</span>
+<span class="lineNum">     270 </span><span class="lineCov">     912026 :     *h3 ^= *h2;</span>
+<span class="lineNum">     271 </span><span class="lineCov">     912026 :     *h2 = rot64(*h2, 32);</span>
+<span class="lineNum">     272 </span><span class="lineCov">     912026 :     *h3 += *h2;</span>
+<span class="lineNum">     273 </span><span class="lineCov">     912026 :     *h0 ^= *h3;</span>
+<span class="lineNum">     274 </span><span class="lineCov">     912026 :     *h3 = rot64(*h3, 25);</span>
+<span class="lineNum">     275 </span><span class="lineCov">     912025 :     *h0 += *h3;</span>
+<span class="lineNum">     276 </span><span class="lineCov">     912025 :     *h1 ^= *h0;</span>
+<span class="lineNum">     277 </span><span class="lineCov">     912025 :     *h0 = rot64(*h0, 63);</span>
+<span class="lineNum">     278 </span><span class="lineCov">     912024 :     *h1 += *h0;</span>
+<a name="279"><span class="lineNum">     279 </span><span class="lineCov">     912024 : }</span></a>
 <span class="lineNum">     280 </span>            : 
-<span class="lineNum">     281 </span><span class="lineCov">      16109 : void spooky_shorthash(const void *message,</span>
+<span class="lineNum">     281 </span><span class="lineCov">     912008 : void spooky_shorthash(const void *message,</span>
 <span class="lineNum">     282 </span>            :                       size_t length,
 <span class="lineNum">     283 </span>            :                       uint64_t *hash1,
 <span class="lineNum">     284 </span>            :                       uint64_t *hash2) {
@@ -353,89 +353,89 @@
 <span class="lineNum">     291 </span>            :     } u;
 <span class="lineNum">     292 </span>            :     size_t remainder;
 <span class="lineNum">     293 </span>            :     uint64_t a, b, c, d;
-<span class="lineNum">     294 </span><span class="lineCov">      16109 :     u.p8 = (const uint8_t *)message;</span>
+<span class="lineNum">     294 </span><span class="lineCov">     912008 :     u.p8 = (const uint8_t *)message;</span>
 <span class="lineNum">     295 </span>            : 
 <span class="lineNum">     296 </span>            :     if(!ALLOW_UNALIGNED_READS &amp;&amp; (u.i &amp; 0x7)) {
 <span class="lineNum">     297 </span>            :         memcpy(buf, message, length);
 <span class="lineNum">     298 </span>            :         u.p64 = buf;
 <span class="lineNum">     299 </span>            :     }
 <span class="lineNum">     300 </span>            : 
-<span class="lineNum">     301 </span><span class="lineCov">      16109 :     remainder = length % 32;</span>
-<span class="lineNum">     302 </span><span class="lineCov">      16109 :     a = *hash1;</span>
-<span class="lineNum">     303 </span><span class="lineCov">      16109 :     b = *hash2;</span>
-<span class="lineNum">     304 </span><span class="lineCov">      16109 :     c = SC_CONST;</span>
-<span class="lineNum">     305 </span><span class="lineCov">      16109 :     d = SC_CONST;</span>
+<span class="lineNum">     301 </span><span class="lineCov">     912008 :     remainder = length % 32;</span>
+<span class="lineNum">     302 </span><span class="lineCov">     912008 :     a = *hash1;</span>
+<span class="lineNum">     303 </span><span class="lineCov">     912008 :     b = *hash2;</span>
+<span class="lineNum">     304 </span><span class="lineCov">     912008 :     c = SC_CONST;</span>
+<span class="lineNum">     305 </span><span class="lineCov">     912008 :     d = SC_CONST;</span>
 <span class="lineNum">     306 </span>            : 
-<span class="lineNum">     307 </span><span class="lineCov">      16109 :     if(length &gt; 15) {</span>
-<span class="lineNum">     308 </span><span class="lineCov">       5977 :         const uint64_t *endp = u.p64 + (length / 32) * 4;</span>
+<span class="lineNum">     307 </span><span class="lineCov">     912008 :     if(length &gt; 15) {</span>
+<span class="lineNum">     308 </span><span class="lineCov">     888242 :         const uint64_t *endp = u.p64 + (length / 32) * 4;</span>
 <span class="lineNum">     309 </span>            : 
 <span class="lineNum">     310 </span>            :         // handle all complete sets of 32 bytes
-<span class="lineNum">     311 </span><span class="lineCov">      29662 :         for(; u.p64 &lt; endp; u.p64 += 4) {</span>
-<span class="lineNum">     312 </span><span class="lineCov">      23676 :             c += u.p64[0];</span>
-<span class="lineNum">     313 </span><span class="lineCov">      23676 :             d += u.p64[1];</span>
-<span class="lineNum">     314 </span><span class="lineCov">      23676 :             short_mix(&amp;a, &amp;b, &amp;c, &amp;d);</span>
-<span class="lineNum">     315 </span><span class="lineCov">      23685 :             a += u.p64[2];</span>
-<span class="lineNum">     316 </span><span class="lineCov">      23685 :             b += u.p64[3];</span>
+<span class="lineNum">     311 </span><span class="lineCov">    2198673 :         for(; u.p64 &lt; endp; u.p64 += 4) {</span>
+<span class="lineNum">     312 </span><span class="lineCov">    1310431 :             c += u.p64[0];</span>
+<span class="lineNum">     313 </span><span class="lineCov">    1310431 :             d += u.p64[1];</span>
+<span class="lineNum">     314 </span><span class="lineCov">    1310431 :             short_mix(&amp;a, &amp;b, &amp;c, &amp;d);</span>
+<span class="lineNum">     315 </span><span class="lineCov">    1310431 :             a += u.p64[2];</span>
+<span class="lineNum">     316 </span><span class="lineCov">    1310431 :             b += u.p64[3];</span>
 <span class="lineNum">     317 </span>            :         }
 <span class="lineNum">     318 </span>            : 
 <span class="lineNum">     319 </span>            :         // Handle the case of 16+ remaining bytes.
-<span class="lineNum">     320 </span><span class="lineCov">       5986 :         if(remainder &gt;= 16) {</span>
-<span class="lineNum">     321 </span><span class="lineCov">       1878 :             c += u.p64[0];</span>
-<span class="lineNum">     322 </span><span class="lineCov">       1878 :             d += u.p64[1];</span>
-<span class="lineNum">     323 </span><span class="lineCov">       1878 :             short_mix(&amp;a, &amp;b, &amp;c, &amp;d);</span>
-<span class="lineNum">     324 </span><span class="lineCov">       1878 :             u.p64 += 2;</span>
-<span class="lineNum">     325 </span><span class="lineCov">       1878 :             remainder -= 16;</span>
+<span class="lineNum">     320 </span><span class="lineCov">     888242 :         if(remainder &gt;= 16) {</span>
+<span class="lineNum">     321 </span><span class="lineCov">      78186 :             c += u.p64[0];</span>
+<span class="lineNum">     322 </span><span class="lineCov">      78186 :             d += u.p64[1];</span>
+<span class="lineNum">     323 </span><span class="lineCov">      78186 :             short_mix(&amp;a, &amp;b, &amp;c, &amp;d);</span>
+<span class="lineNum">     324 </span><span class="lineCov">      78186 :             u.p64 += 2;</span>
+<span class="lineNum">     325 </span><span class="lineCov">      78186 :             remainder -= 16;</span>
 <span class="lineNum">     326 </span>            :         }
 <span class="lineNum">     327 </span>            :     }
 <span class="lineNum">     328 </span>            : 
 <span class="lineNum">     329 </span>            :     // Handle the last 0..15 bytes, and its length
-<span class="lineNum">     330 </span><span class="lineCov">      16118 :     d = ((uint64_t)length) &lt;&lt; 56;</span>
-<span class="lineNum">     331 </span><span class="lineCov">      16118 :     switch(remainder) {</span>
+<span class="lineNum">     330 </span><span class="lineCov">     912008 :     d = ((uint64_t)length) &lt;&lt; 56;</span>
+<span class="lineNum">     331 </span><span class="lineCov">     912008 :     switch(remainder) {</span>
 <span class="lineNum">     332 </span>            :     case 15:
-<span class="lineNum">     333 </span><span class="lineCov">        204 :         d += ((uint64_t)u.p8[14]) &lt;&lt; 48;</span>
+<span class="lineNum">     333 </span><span class="lineCov">        392 :         d += ((uint64_t)u.p8[14]) &lt;&lt; 48;</span>
 <span class="lineNum">     334 </span>            :     case 14:
-<span class="lineNum">     335 </span><span class="lineCov">        408 :         d += ((uint64_t)u.p8[13]) &lt;&lt; 40;</span>
+<span class="lineNum">     335 </span><span class="lineCov">       1512 :         d += ((uint64_t)u.p8[13]) &lt;&lt; 40;</span>
 <span class="lineNum">     336 </span>            :     case 13:
-<span class="lineNum">     337 </span><span class="lineCov">        648 :         d += ((uint64_t)u.p8[12]) &lt;&lt; 32;</span>
+<span class="lineNum">     337 </span><span class="lineCov">       2716 :         d += ((uint64_t)u.p8[12]) &lt;&lt; 32;</span>
 <span class="lineNum">     338 </span>            :     case 12:
-<span class="lineNum">     339 </span><span class="lineCov">        822 :         d += u.p32[2];</span>
-<span class="lineNum">     340 </span><span class="lineCov">        822 :         c += u.p64[0];</span>
-<span class="lineNum">     341 </span><span class="lineCov">        822 :         break;</span>
+<span class="lineNum">     339 </span><span class="lineCov">       4984 :         d += u.p32[2];</span>
+<span class="lineNum">     340 </span><span class="lineCov">       4984 :         c += u.p64[0];</span>
+<span class="lineNum">     341 </span><span class="lineCov">       4984 :         break;</span>
 <span class="lineNum">     342 </span>            :     case 11:
-<span class="lineNum">     343 </span><span class="lineCov">        234 :         d += ((uint64_t)u.p8[10]) &lt;&lt; 16;</span>
+<span class="lineNum">     343 </span><span class="lineCov">        364 :         d += ((uint64_t)u.p8[10]) &lt;&lt; 16;</span>
 <span class="lineNum">     344 </span>            :     case 10:
-<span class="lineNum">     345 </span><span class="lineCov">        658 :         d += ((uint64_t)u.p8[9]) &lt;&lt; 8;</span>
+<span class="lineNum">     345 </span><span class="lineCov">       3001 :         d += ((uint64_t)u.p8[9]) &lt;&lt; 8;</span>
 <span class="lineNum">     346 </span>            :     case 9:
-<span class="lineNum">     347 </span><span class="lineCov">        940 :         d += (uint64_t)u.p8[8];</span>
+<span class="lineNum">     347 </span><span class="lineCov">       3393 :         d += (uint64_t)u.p8[8];</span>
 <span class="lineNum">     348 </span>            :     case 8:
-<span class="lineNum">     349 </span><span class="lineCov">       1286 :         c += u.p64[0];</span>
-<span class="lineNum">     350 </span><span class="lineCov">       1286 :         break;</span>
+<span class="lineNum">     349 </span><span class="lineCov">     123065 :         c += u.p64[0];</span>
+<span class="lineNum">     350 </span><span class="lineCov">     123065 :         break;</span>
 <span class="lineNum">     351 </span>            :     case 7:
-<span class="lineNum">     352 </span><span class="lineCov">        183 :         c += ((uint64_t)u.p8[6]) &lt;&lt; 48;</span>
+<span class="lineNum">     352 </span><span class="lineCov">         56 :         c += ((uint64_t)u.p8[6]) &lt;&lt; 48;</span>
 <span class="lineNum">     353 </span>            :     case 6:
-<span class="lineNum">     354 </span><span class="lineCov">        387 :         c += ((uint64_t)u.p8[5]) &lt;&lt; 40;</span>
+<span class="lineNum">     354 </span><span class="lineCov">        140 :         c += ((uint64_t)u.p8[5]) &lt;&lt; 40;</span>
 <span class="lineNum">     355 </span>            :     case 5:
-<span class="lineNum">     356 </span><span class="lineCov">        552 :         c += ((uint64_t)u.p8[4]) &lt;&lt; 32;</span>
+<span class="lineNum">     356 </span><span class="lineCov">        336 :         c += ((uint64_t)u.p8[4]) &lt;&lt; 32;</span>
 <span class="lineNum">     357 </span>            :     case 4:
-<span class="lineNum">     358 </span><span class="lineCov">        924 :         c += u.p32[0];</span>
-<span class="lineNum">     359 </span><span class="lineCov">        924 :         break;</span>
+<span class="lineNum">     358 </span><span class="lineCov">       7265 :         c += u.p32[0];</span>
+<span class="lineNum">     359 </span><span class="lineCov">       7265 :         break;</span>
 <span class="lineNum">     360 </span>            :     case 3:
-<span class="lineNum">     361 </span><span class="lineCov">       8053 :         c += ((uint64_t)u.p8[2]) &lt;&lt; 16;</span>
+<span class="lineNum">     361 </span><span class="lineCov">      16363 :         c += ((uint64_t)u.p8[2]) &lt;&lt; 16;</span>
 <span class="lineNum">     362 </span>            :     case 2:
-<span class="lineNum">     363 </span><span class="lineCov">       8383 :         c += ((uint64_t)u.p8[1]) &lt;&lt; 8;</span>
+<span class="lineNum">     363 </span><span class="lineCov">      64730 :         c += ((uint64_t)u.p8[1]) &lt;&lt; 8;</span>
 <span class="lineNum">     364 </span>            :     case 1:
-<span class="lineNum">     365 </span><span class="lineCov">       9902 :         c += (uint64_t)u.p8[0];</span>
-<span class="lineNum">     366 </span><span class="lineCov">       9902 :         break;</span>
+<span class="lineNum">     365 </span><span class="lineCov">     113542 :         c += (uint64_t)u.p8[0];</span>
+<span class="lineNum">     366 </span><span class="lineCov">     113542 :         break;</span>
 <span class="lineNum">     367 </span>            :     case 0:
-<span class="lineNum">     368 </span><span class="lineCov">       3177 :         c += SC_CONST;</span>
-<span class="lineNum">     369 </span><span class="lineCov">       3177 :         d += SC_CONST;</span>
+<span class="lineNum">     368 </span><span class="lineCov">     663168 :         c += SC_CONST;</span>
+<span class="lineNum">     369 </span><span class="lineCov">     663168 :         d += SC_CONST;</span>
 <span class="lineNum">     370 </span>            :     }
-<span class="lineNum">     371 </span><span class="lineCov">      16118 :     short_end(&amp;a, &amp;b, &amp;c, &amp;d);</span>
-<span class="lineNum">     372 </span><span class="lineCov">      16109 :     *hash1 = a;</span>
-<span class="lineNum">     373 </span><span class="lineCov">      16109 :     *hash2 = b;</span>
-<a name="374"><span class="lineNum">     374 </span><span class="lineCov">      16109 : }</span></a>
+<span class="lineNum">     371 </span><span class="lineCov">     912008 :     short_end(&amp;a, &amp;b, &amp;c, &amp;d);</span>
+<span class="lineNum">     372 </span><span class="lineCov">     912027 :     *hash1 = a;</span>
+<span class="lineNum">     373 </span><span class="lineCov">     912027 :     *hash2 = b;</span>
+<a name="374"><span class="lineNum">     374 </span><span class="lineCov">     912027 : }</span></a>
 <span class="lineNum">     375 </span>            : 
-<span class="lineNum">     376 </span><span class="lineCov">      32421 : void spooky_hash128(const void *message,</span>
+<span class="lineNum">     376 </span><span class="lineCov">     918755 : void spooky_hash128(const void *message,</span>
 <span class="lineNum">     377 </span>            :                     size_t length,
 <span class="lineNum">     378 </span>            :                     uint64_t *hash1,
 <span class="lineNum">     379 </span>            :                     uint64_t *hash2) {
@@ -449,23 +449,23 @@
 <span class="lineNum">     387 </span>            :     } u;
 <span class="lineNum">     388 </span>            :     size_t remainder;
 <span class="lineNum">     389 </span>            : 
-<span class="lineNum">     390 </span><span class="lineCov">      32421 :     if(length &lt; SC_BUFSIZE) {</span>
-<span class="lineNum">     391 </span><span class="lineCov">      16109 :         spooky_shorthash(message, length, hash1, hash2);</span>
-<span class="lineNum">     392 </span><span class="lineCov">      47199 :         return;</span>
+<span class="lineNum">     390 </span><span class="lineCov">     918755 :     if(length &lt; SC_BUFSIZE) {</span>
+<span class="lineNum">     391 </span><span class="lineCov">     912008 :         spooky_shorthash(message, length, hash1, hash2);</span>
+<span class="lineNum">     392 </span><span class="lineCov">     912027 :         return;</span>
 <span class="lineNum">     393 </span>            :     }
 <span class="lineNum">     394 </span>            : 
-<span class="lineNum">     395 </span><span class="lineCov">      16312 :     h0 = h3 = h6 = h9 = *hash1;</span>
-<span class="lineNum">     396 </span><span class="lineCov">      16312 :     h1 = h4 = h7 = h10 = *hash2;</span>
-<span class="lineNum">     397 </span><span class="lineCov">      16312 :     h2 = h5 = h8 = h11 = SC_CONST;</span>
+<span class="lineNum">     395 </span><span class="lineCov">       6747 :     h0 = h3 = h6 = h9 = *hash1;</span>
+<span class="lineNum">     396 </span><span class="lineCov">       6747 :     h1 = h4 = h7 = h10 = *hash2;</span>
+<span class="lineNum">     397 </span><span class="lineCov">       6747 :     h2 = h5 = h8 = h11 = SC_CONST;</span>
 <span class="lineNum">     398 </span>            : 
-<span class="lineNum">     399 </span><span class="lineCov">      16312 :     u.p8 = (const uint8_t *)message;</span>
-<span class="lineNum">     400 </span><span class="lineCov">      16312 :     endp = u.p64 + (length / SC_BLOCKSIZE) * SC_NUMVARS;</span>
+<span class="lineNum">     399 </span><span class="lineCov">       6747 :     u.p8 = (const uint8_t *)message;</span>
+<span class="lineNum">     400 </span><span class="lineCov">       6747 :     endp = u.p64 + (length / SC_BLOCKSIZE) * SC_NUMVARS;</span>
 <span class="lineNum">     401 </span>            : 
 <span class="lineNum">     402 </span>            :     // handle all whole blocks of SC_BLOCKSIZE bytes
 <span class="lineNum">     403 </span>            :     if(ALLOW_UNALIGNED_READS || (u.i &amp; 0x7) == 0) {
-<span class="lineNum">     404 </span><span class="lineCov">     275844 :         while(u.p64 &lt; endp) {</span>
-<span class="lineNum">     405 </span><span class="lineCov">     244559 :             mix(u.p64, &amp;h0, &amp;h1, &amp;h2, &amp;h3, &amp;h4, &amp;h5, &amp;h6, &amp;h7, &amp;h8, &amp;h9, &amp;h10, &amp;h11);</span>
-<span class="lineNum">     406 </span><span class="lineCov">     243220 :             u.p64 += SC_NUMVARS;</span>
+<span class="lineNum">     404 </span><span class="lineCov">     906192 :         while(u.p64 &lt; endp) {</span>
+<span class="lineNum">     405 </span><span class="lineCov">     893694 :             mix(u.p64, &amp;h0, &amp;h1, &amp;h2, &amp;h3, &amp;h4, &amp;h5, &amp;h6, &amp;h7, &amp;h8, &amp;h9, &amp;h10, &amp;h11);</span>
+<span class="lineNum">     406 </span><span class="lineCov">     892698 :             u.p64 += SC_NUMVARS;</span>
 <span class="lineNum">     407 </span>            :         }
 <span class="lineNum">     408 </span>            :     } else {
 <span class="lineNum">     409 </span>            :         while(u.p64 &lt; endp) {
@@ -476,28 +476,28 @@
 <span class="lineNum">     414 </span>            :     }
 <span class="lineNum">     415 </span>            : 
 <span class="lineNum">     416 </span>            :     // handle the last partial block of SC_BLOCKSIZE bytes
-<span class="lineNum">     417 </span><span class="lineCov">      14973 :     remainder = (length - ((const uint8_t *)endp - (const uint8_t *)message));</span>
-<span class="lineNum">     418 </span><span class="lineCov">      14973 :     memcpy(buf, endp, remainder);</span>
-<span class="lineNum">     419 </span><span class="lineCov">      14973 :     memset(((uint8_t *)buf) + remainder, 0, SC_BLOCKSIZE - remainder);</span>
-<span class="lineNum">     420 </span><span class="lineCov">      14973 :     ((uint8_t *)buf)[SC_BLOCKSIZE - 1] = remainder;</span>
-<span class="lineNum">     421 </span><span class="lineCov">      14973 :     mix(buf, &amp;h0, &amp;h1, &amp;h2, &amp;h3, &amp;h4, &amp;h5, &amp;h6, &amp;h7, &amp;h8, &amp;h9, &amp;h10, &amp;h11);</span>
+<span class="lineNum">     417 </span><span class="lineCov">       5751 :     remainder = (length - ((const uint8_t *)endp - (const uint8_t *)message));</span>
+<span class="lineNum">     418 </span><span class="lineCov">       5751 :     memcpy(buf, endp, remainder);</span>
+<span class="lineNum">     419 </span><span class="lineCov">       5751 :     memset(((uint8_t *)buf) + remainder, 0, SC_BLOCKSIZE - remainder);</span>
+<span class="lineNum">     420 </span><span class="lineCov">       5751 :     ((uint8_t *)buf)[SC_BLOCKSIZE - 1] = remainder;</span>
+<span class="lineNum">     421 </span><span class="lineCov">       5751 :     mix(buf, &amp;h0, &amp;h1, &amp;h2, &amp;h3, &amp;h4, &amp;h5, &amp;h6, &amp;h7, &amp;h8, &amp;h9, &amp;h10, &amp;h11);</span>
 <span class="lineNum">     422 </span>            : 
 <span class="lineNum">     423 </span>            :     // do some final mixing
-<span class="lineNum">     424 </span><span class="lineCov">      14980 :     end(&amp;h0, &amp;h1, &amp;h2, &amp;h3, &amp;h4, &amp;h5, &amp;h6, &amp;h7, &amp;h8, &amp;h9, &amp;h10, &amp;h11);</span>
-<span class="lineNum">     425 </span><span class="lineCov">      14981 :     *hash1 = h0;</span>
-<span class="lineNum">     426 </span><span class="lineCov">      14981 :     *hash2 = h1;</span>
+<span class="lineNum">     424 </span><span class="lineCov">       5757 :     end(&amp;h0, &amp;h1, &amp;h2, &amp;h3, &amp;h4, &amp;h5, &amp;h6, &amp;h7, &amp;h8, &amp;h9, &amp;h10, &amp;h11);</span>
+<span class="lineNum">     425 </span><span class="lineCov">       5755 :     *hash1 = h0;</span>
+<span class="lineNum">     426 </span><span class="lineCov">       5755 :     *hash2 = h1;</span>
 <a name="427"><span class="lineNum">     427 </span>            : }</a>
 <span class="lineNum">     428 </span>            : 
-<span class="lineNum">     429 </span><span class="lineCov">       2116 : uint64_t spooky_hash64(const void *message, size_t length, uint64_t seed) {</span>
-<span class="lineNum">     430 </span><span class="lineCov">       2116 :     uint64_t hash1 = seed;</span>
-<span class="lineNum">     431 </span><span class="lineCov">       2116 :     spooky_hash128(message, length, &amp;hash1, &amp;seed);</span>
-<span class="lineNum">     432 </span><span class="lineCov">       2117 :     return hash1;</span>
+<span class="lineNum">     429 </span><span class="lineCov">       9745 : uint64_t spooky_hash64(const void *message, size_t length, uint64_t seed) {</span>
+<span class="lineNum">     430 </span><span class="lineCov">       9745 :     uint64_t hash1 = seed;</span>
+<span class="lineNum">     431 </span><span class="lineCov">       9745 :     spooky_hash128(message, length, &amp;hash1, &amp;seed);</span>
+<span class="lineNum">     432 </span><span class="lineCov">       9750 :     return hash1;</span>
 <a name="433"><span class="lineNum">     433 </span>            : }</a>
 <span class="lineNum">     434 </span>            : 
-<span class="lineNum">     435 </span><span class="lineCov">       2116 : uint32_t spooky_hash32(const void *message, size_t length, uint32_t seed) {</span>
-<span class="lineNum">     436 </span><span class="lineCov">       2116 :     uint64_t hash1 = seed, hash2 = seed;</span>
-<span class="lineNum">     437 </span><span class="lineCov">       2116 :     spooky_hash128(message, length, &amp;hash1, &amp;hash2);</span>
-<span class="lineNum">     438 </span><span class="lineCov">       2118 :     return (uint32_t)hash1;</span>
+<span class="lineNum">     435 </span><span class="lineCov">     898281 : uint32_t spooky_hash32(const void *message, size_t length, uint32_t seed) {</span>
+<span class="lineNum">     436 </span><span class="lineCov">     898281 :     uint64_t hash1 = seed, hash2 = seed;</span>
+<span class="lineNum">     437 </span><span class="lineCov">     898281 :     spooky_hash128(message, length, &amp;hash1, &amp;hash2);</span>
+<span class="lineNum">     438 </span><span class="lineCov">     898283 :     return (uint32_t)hash1;</span>
 <span class="lineNum">     439 </span>            : }
 </pre>
       </td>
@@ -507,7 +507,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

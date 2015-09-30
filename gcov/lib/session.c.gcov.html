@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - session.c<span style="font-size: 80%;"> (source / <a href="session.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - session.c<span style="font-size: 80%;"> (source / <a href="session.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,18 +31,18 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">42</td>
-            <td class="headerCovTableEntry">47</td>
-            <td class="headerCovTableEntryMed">89.4 %</td>
+            <td class="headerCovTableEntry">51</td>
+            <td class="headerCovTableEntry">68</td>
+            <td class="headerCovTableEntryMed">75.0 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">3</td>
             <td class="headerCovTableEntry">4</td>
-            <td class="headerCovTableEntryMed">75.0 %</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntryLo">66.7 %</td>
           </tr>
           <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
         </table>
@@ -89,84 +89,136 @@
 <span class="lineNum">      27 </span>            : #include &lt;stdbool.h&gt;
 <span class="lineNum">      28 </span>            : #include &lt;unistd.h&gt;
 <span class="lineNum">      29 </span>            : 
-<span class="lineNum">      30 </span>            : #include &quot;session.h&quot;
-<span class="lineNum">      31 </span>            : #include &quot;formats.h&quot;
-<span class="lineNum">      32 </span>            : #include &quot;traverse.h&quot;
-<a name="33"><span class="lineNum">      33 </span>            : #include &quot;preprocess.h&quot;</a>
-<span class="lineNum">      34 </span>            : 
-<span class="lineNum">      35 </span><span class="lineCov">      14928 : void rm_session_init(RmSession *session, RmCfg *cfg) {</span>
-<span class="lineNum">      36 </span><span class="lineCov">      14928 :     memset(session, 0, sizeof(RmSession));</span>
-<span class="lineNum">      37 </span><span class="lineCov">      14928 :     session-&gt;timer = g_timer_new();</span>
-<span class="lineNum">      38 </span><span class="lineCov">      14928 :     g_queue_init(&amp;session-&gt;cache_list);</span>
-<span class="lineNum">      39 </span>            : 
-<span class="lineNum">      40 </span><span class="lineCov">      14928 :     session-&gt;cfg = cfg;</span>
-<span class="lineNum">      41 </span><span class="lineCov">      14928 :     session-&gt;tables = rm_file_tables_new(session);</span>
-<span class="lineNum">      42 </span><span class="lineCov">      14928 :     session-&gt;formats = rm_fmt_open(session);</span>
-<span class="lineNum">      43 </span>            : 
-<span class="lineNum">      44 </span><span class="lineCov">      14928 :     session-&gt;verbosity_count = 2;</span>
-<span class="lineNum">      45 </span><span class="lineCov">      14928 :     session-&gt;paranoia_count = 0;</span>
-<span class="lineNum">      46 </span><span class="lineCov">      14928 :     session-&gt;output_cnt[0] = -1;</span>
-<span class="lineNum">      47 </span><span class="lineCov">      14928 :     session-&gt;output_cnt[1] = -1;</span>
-<span class="lineNum">      48 </span>            : 
-<span class="lineNum">      49 </span><span class="lineCov">      14928 :     session-&gt;offsets_read = 0;</span>
-<span class="lineNum">      50 </span><span class="lineCov">      14928 :     session-&gt;offset_fragments = 0;</span>
-<span class="lineNum">      51 </span><span class="lineCov">      14928 :     session-&gt;offset_fails = 0;</span>
-<a name="52"><span class="lineNum">      52 </span><span class="lineCov">      14928 : }</span></a>
-<span class="lineNum">      53 </span>            : 
-<span class="lineNum">      54 </span><span class="lineCov">      14370 : void rm_session_clear(RmSession *session) {</span>
-<span class="lineNum">      55 </span><span class="lineCov">      14370 :     RmCfg *cfg = session-&gt;cfg;</span>
-<span class="lineNum">      56 </span>            : 
-<span class="lineNum">      57 </span>            :     /* Free mem */
-<span class="lineNum">      58 </span><span class="lineCov">      14370 :     if(cfg-&gt;paths) {</span>
-<span class="lineNum">      59 </span><span class="lineCov">      14357 :         if(cfg-&gt;use_meta_cache) {</span>
-<span class="lineNum">      60 </span><span class="lineCov">        521 :             g_free(cfg-&gt;paths);</span>
-<span class="lineNum">      61 </span>            :         } else {
-<span class="lineNum">      62 </span><span class="lineCov">      13836 :             g_strfreev(cfg-&gt;paths);</span>
-<span class="lineNum">      63 </span>            :         }
-<span class="lineNum">      64 </span>            :     }
+<span class="lineNum">      30 </span>            : #include &quot;config.h&quot;
+<span class="lineNum">      31 </span>            : #include &quot;session.h&quot;
+<span class="lineNum">      32 </span>            : #include &quot;formats.h&quot;
+<span class="lineNum">      33 </span>            : #include &quot;traverse.h&quot;
+<span class="lineNum">      34 </span>            : #include &quot;preprocess.h&quot;
+<span class="lineNum">      35 </span>            : 
+<span class="lineNum">      36 </span>            : #if HAVE_UNAME
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;sys/utsname.h&quot;</a>
+<span class="lineNum">      38 </span>            : 
+<span class="lineNum">      39 </span><span class="lineCov">      54884 : void rm_session_read_kernel_version(RmSession *session) {</span>
+<span class="lineNum">      40 </span>            :     struct utsname buf;
+<span class="lineNum">      41 </span><span class="lineCov">      54884 :     if(uname(&amp;buf) == -1) {</span>
+<span class="lineNum">      42 </span><span class="lineNoCov">          0 :         return;</span>
+<span class="lineNum">      43 </span>            :     }
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span><span class="lineCov">      54884 :     if(sscanf(buf.release, &quot;%d.%d.*&quot;, &amp;session-&gt;kernel_version[0],</span>
+<span class="lineNum">      46 </span>            :               &amp;session-&gt;kernel_version[1]) == EOF) {
+<span class="lineNum">      47 </span><span class="lineNoCov">          0 :         session-&gt;kernel_version[0] = -1;</span>
+<span class="lineNum">      48 </span><span class="lineNoCov">          0 :         session-&gt;kernel_version[1] = -1;</span>
+<span class="lineNum">      49 </span><span class="lineNoCov">          0 :         return;</span>
+<span class="lineNum">      50 </span>            :     }
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span><span class="lineCov">      54884 :     rm_log_debug_line(&quot;Linux kernel version is %d.%d.&quot;,</span>
+<span class="lineNum">      53 </span>            :                       session-&gt;kernel_version[0],
+<span class="lineNum">      54 </span>            :                       session-&gt;kernel_version[1]);
+<span class="lineNum">      55 </span>            : }
+<span class="lineNum">      56 </span>            : #else
+<span class="lineNum">      57 </span>            : void rm_session_read_kernel_version(RmSession *session) {
+<span class="lineNum">      58 </span>            :     (void)session;
+<span class="lineNum">      59 </span>            : }
+<a name="60"><span class="lineNum">      60 </span>            : #endif</a>
+<span class="lineNum">      61 </span>            : 
+<span class="lineNum">      62 </span><span class="lineNoCov">          0 : bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {</span>
+<span class="lineNum">      63 </span><span class="lineNoCov">          0 :     int found_major = session-&gt;kernel_version[0];</span>
+<span class="lineNum">      64 </span><span class="lineNoCov">          0 :     int found_minor = session-&gt;kernel_version[1];</span>
 <span class="lineNum">      65 </span>            : 
-<span class="lineNum">      66 </span><span class="lineCov">      14370 :     g_timer_destroy(session-&gt;timer);</span>
-<span class="lineNum">      67 </span><span class="lineCov">      14370 :     rm_file_tables_destroy(session-&gt;tables);</span>
-<span class="lineNum">      68 </span><span class="lineCov">      14370 :     rm_fmt_close(session-&gt;formats);</span>
-<span class="lineNum">      69 </span>            : 
-<span class="lineNum">      70 </span><span class="lineCov">      14370 :     if(session-&gt;mounts) {</span>
-<span class="lineNum">      71 </span><span class="lineCov">      14322 :         rm_mounts_table_destroy(session-&gt;mounts);</span>
-<span class="lineNum">      72 </span>            :     }
-<span class="lineNum">      73 </span>            : 
-<span class="lineNum">      74 </span><span class="lineCov">      14370 :     if(session-&gt;dir_merger) {</span>
-<span class="lineNum">      75 </span><span class="lineCov">       3310 :         rm_tm_destroy(session-&gt;dir_merger);</span>
-<span class="lineNum">      76 </span>            :     }
-<span class="lineNum">      77 </span>            : 
-<span class="lineNum">      78 </span><span class="lineCov">      14463 :     for(GList *iter = session-&gt;cache_list.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">      79 </span><span class="lineCov">         93 :         g_free((char *)iter-&gt;data);</span>
-<span class="lineNum">      80 </span>            :     }
-<span class="lineNum">      81 </span>            : 
-<span class="lineNum">      82 </span><span class="lineCov">      14370 :     if(session-&gt;meta_cache) {</span>
-<span class="lineNum">      83 </span><span class="lineCov">        521 :         GError *error = NULL;</span>
-<span class="lineNum">      84 </span><span class="lineCov">        521 :         rm_swap_table_close(session-&gt;meta_cache, &amp;error);</span>
-<span class="lineNum">      85 </span>            : 
-<span class="lineNum">      86 </span><span class="lineCov">        521 :         if(error != NULL) {</span>
-<span class="lineNum">      87 </span><span class="lineNoCov">          0 :             rm_log_error_line(_(&quot;Cannot close tmp cache: %s\n&quot;), error-&gt;message);</span>
-<span class="lineNum">      88 </span><span class="lineNoCov">          0 :             g_error_free(error);</span>
-<span class="lineNum">      89 </span>            :         }
-<span class="lineNum">      90 </span>            :     }
-<span class="lineNum">      91 </span>            : 
-<span class="lineNum">      92 </span><span class="lineCov">      14370 :     g_queue_clear(&amp;session-&gt;cache_list);</span>
-<span class="lineNum">      93 </span>            : 
-<span class="lineNum">      94 </span><span class="lineCov">      14370 :     g_free(cfg-&gt;joined_argv);</span>
-<span class="lineNum">      95 </span><span class="lineCov">      14370 :     g_free(cfg-&gt;is_prefd);</span>
-<span class="lineNum">      96 </span><span class="lineCov">      14370 :     g_free(cfg-&gt;iwd);</span>
+<span class="lineNum">      66 </span>            :     /* Could not read kernel version: Assume failure on our side. */
+<span class="lineNum">      67 </span><span class="lineNoCov">          0 :     if(found_major &lt;= 0 &amp;&amp; found_minor &lt;= 0) {</span>
+<span class="lineNum">      68 </span><span class="lineNoCov">          0 :         return true;</span>
+<span class="lineNum">      69 </span>            :     }
+<span class="lineNum">      70 </span>            : 
+<span class="lineNum">      71 </span>            :     /* Lower is bad. */
+<span class="lineNum">      72 </span><span class="lineNoCov">          0 :     if(found_major &lt; major || found_minor &lt; minor) {</span>
+<span class="lineNum">      73 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">      74 </span>            :     }
+<span class="lineNum">      75 </span>            : 
+<span class="lineNum">      76 </span><span class="lineNoCov">          0 :     return true;</span>
+<a name="77"><span class="lineNum">      77 </span>            : }</a>
+<span class="lineNum">      78 </span>            : 
+<span class="lineNum">      79 </span><span class="lineCov">      54884 : void rm_session_init(RmSession *session, RmCfg *cfg) {</span>
+<span class="lineNum">      80 </span><span class="lineCov">      54884 :     memset(session, 0, sizeof(RmSession));</span>
+<span class="lineNum">      81 </span><span class="lineCov">      54884 :     session-&gt;timer = g_timer_new();</span>
+<span class="lineNum">      82 </span><span class="lineCov">      54884 :     g_queue_init(&amp;session-&gt;cache_list);</span>
+<span class="lineNum">      83 </span>            : 
+<span class="lineNum">      84 </span><span class="lineCov">      54884 :     session-&gt;cfg = cfg;</span>
+<span class="lineNum">      85 </span><span class="lineCov">      54884 :     session-&gt;tables = rm_file_tables_new(session);</span>
+<span class="lineNum">      86 </span><span class="lineCov">      54884 :     session-&gt;formats = rm_fmt_open(session);</span>
+<span class="lineNum">      87 </span>            : 
+<span class="lineNum">      88 </span><span class="lineCov">      54884 :     session-&gt;verbosity_count = 2;</span>
+<span class="lineNum">      89 </span><span class="lineCov">      54884 :     session-&gt;paranoia_count = 0;</span>
+<span class="lineNum">      90 </span><span class="lineCov">      54884 :     session-&gt;output_cnt[0] = -1;</span>
+<span class="lineNum">      91 </span><span class="lineCov">      54884 :     session-&gt;output_cnt[1] = -1;</span>
+<span class="lineNum">      92 </span>            : 
+<span class="lineNum">      93 </span><span class="lineCov">      54884 :     session-&gt;offsets_read = 0;</span>
+<span class="lineNum">      94 </span><span class="lineCov">      54884 :     session-&gt;offset_fragments = 0;</span>
+<span class="lineNum">      95 </span><span class="lineCov">      54884 :     session-&gt;offset_fails = 0;</span>
+<span class="lineNum">      96 </span><span class="lineCov">      54884 :     g_queue_init(&amp;session-&gt;replay_files);</span>
 <span class="lineNum">      97 </span>            : 
-<span class="lineNum">      98 </span><span class="lineCov">      14370 :     rm_trie_destroy(&amp;cfg-&gt;file_trie);</span>
-<a name="99"><span class="lineNum">      99 </span><span class="lineCov">      14370 : }</span></a>
+<span class="lineNum">      98 </span><span class="lineCov">      54884 :     rm_session_read_kernel_version(session);</span>
+<a name="99"><span class="lineNum">      99 </span><span class="lineCov">      54884 : }</span></a>
 <span class="lineNum">     100 </span>            : 
-<span class="lineNum">     101 </span><span class="lineNoCov">          0 : void rm_session_abort(RmSession *session) {</span>
-<span class="lineNum">     102 </span><span class="lineNoCov">          0 :     g_atomic_int_set(&amp;session-&gt;aborted, 1);</span>
-<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 : }</span></a>
-<span class="lineNum">     104 </span>            : 
-<span class="lineNum">     105 </span><span class="lineCov">     400593 : bool rm_session_was_aborted(RmSession *session) {</span>
-<span class="lineNum">     106 </span><span class="lineCov">     400593 :     return g_atomic_int_get(&amp;session-&gt;aborted);</span>
-<span class="lineNum">     107 </span>            : }
+<span class="lineNum">     101 </span><span class="lineCov">      52994 : void rm_session_clear(RmSession *session) {</span>
+<span class="lineNum">     102 </span><span class="lineCov">      52994 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">     103 </span>            : 
+<span class="lineNum">     104 </span>            :     /* Free mem */
+<span class="lineNum">     105 </span><span class="lineCov">      52994 :     if(cfg-&gt;paths) {</span>
+<span class="lineNum">     106 </span><span class="lineCov">      52989 :         if(cfg-&gt;use_meta_cache) {</span>
+<span class="lineNum">     107 </span><span class="lineCov">       1311 :             g_free(cfg-&gt;paths);</span>
+<span class="lineNum">     108 </span>            :         } else {
+<span class="lineNum">     109 </span><span class="lineCov">      51678 :             g_strfreev(cfg-&gt;paths);</span>
+<span class="lineNum">     110 </span>            :         }
+<span class="lineNum">     111 </span>            :     }
+<span class="lineNum">     112 </span>            : 
+<span class="lineNum">     113 </span><span class="lineCov">      52994 :     g_timer_destroy(session-&gt;timer);</span>
+<span class="lineNum">     114 </span><span class="lineCov">      52994 :     rm_file_tables_destroy(session-&gt;tables);</span>
+<span class="lineNum">     115 </span><span class="lineCov">      52994 :     rm_fmt_close(session-&gt;formats);</span>
+<span class="lineNum">     116 </span>            : 
+<span class="lineNum">     117 </span><span class="lineCov">      52994 :     if(session-&gt;mounts) {</span>
+<span class="lineNum">     118 </span><span class="lineCov">      36878 :         rm_mounts_table_destroy(session-&gt;mounts);</span>
+<span class="lineNum">     119 </span>            :     }
+<span class="lineNum">     120 </span>            : 
+<span class="lineNum">     121 </span><span class="lineCov">      52994 :     if(session-&gt;dir_merger) {</span>
+<span class="lineNum">     122 </span><span class="lineCov">       1120 :         rm_tm_destroy(session-&gt;dir_merger);</span>
+<span class="lineNum">     123 </span>            :     }
+<span class="lineNum">     124 </span>            : 
+<span class="lineNum">     125 </span><span class="lineCov">      53078 :     for(GList *iter = session-&gt;cache_list.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     126 </span><span class="lineCov">         84 :         g_free((char *)iter-&gt;data);</span>
+<span class="lineNum">     127 </span>            :     }
+<span class="lineNum">     128 </span>            : 
+<span class="lineNum">     129 </span><span class="lineCov">      52994 :     if(session-&gt;meta_cache) {</span>
+<span class="lineNum">     130 </span><span class="lineCov">       1311 :         GError *error = NULL;</span>
+<span class="lineNum">     131 </span><span class="lineCov">       1311 :         rm_swap_table_close(session-&gt;meta_cache, &amp;error);</span>
+<span class="lineNum">     132 </span>            : 
+<span class="lineNum">     133 </span><span class="lineCov">       1311 :         if(error != NULL) {</span>
+<span class="lineNum">     134 </span><span class="lineNoCov">          0 :             rm_log_error_line(_(&quot;Cannot close tmp cache: %s\n&quot;), error-&gt;message);</span>
+<span class="lineNum">     135 </span><span class="lineNoCov">          0 :             g_error_free(error);</span>
+<span class="lineNum">     136 </span>            :         }
+<span class="lineNum">     137 </span>            :     }
+<span class="lineNum">     138 </span>            : 
+<span class="lineNum">     139 </span><span class="lineCov">      52994 :     g_queue_clear(&amp;session-&gt;cache_list);</span>
+<span class="lineNum">     140 </span>            : 
+<span class="lineNum">     141 </span><span class="lineCov">      52994 :     g_free(cfg-&gt;joined_argv);</span>
+<span class="lineNum">     142 </span><span class="lineCov">      52994 :     g_free(cfg-&gt;is_prefd);</span>
+<span class="lineNum">     143 </span><span class="lineCov">      52994 :     g_free(cfg-&gt;iwd);</span>
+<span class="lineNum">     144 </span>            : 
+<span class="lineNum">     145 </span><span class="lineCov">      69101 :     for(GList *iter = session-&gt;replay_files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     146 </span><span class="lineCov">      16107 :         g_free(iter-&gt;data);</span>
+<span class="lineNum">     147 </span>            :     }
+<span class="lineNum">     148 </span>            : 
+<span class="lineNum">     149 </span><span class="lineCov">      52994 :     g_queue_clear(&amp;session-&gt;replay_files);</span>
+<span class="lineNum">     150 </span><span class="lineCov">      52994 :     rm_trie_destroy(&amp;cfg-&gt;file_trie);</span>
+<a name="151"><span class="lineNum">     151 </span><span class="lineCov">      52994 : }</span></a>
+<span class="lineNum">     152 </span>            : 
+<span class="lineNum">     153 </span><span class="lineNoCov">          0 : void rm_session_abort(RmSession *session) {</span>
+<span class="lineNum">     154 </span><span class="lineNoCov">          0 :     g_atomic_int_set(&amp;session-&gt;aborted, 1);</span>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 : }</span></a>
+<span class="lineNum">     156 </span>            : 
+<span class="lineNum">     157 </span><span class="lineCov">     839090 : bool rm_session_was_aborted(RmSession *session) {</span>
+<span class="lineNum">     158 </span><span class="lineCov">     839090 :     return g_atomic_int_get(&amp;session-&gt;aborted);</span>
+<span class="lineNum">     159 </span>            : }
 </pre>
       </td>
     </tr>
@@ -175,7 +227,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

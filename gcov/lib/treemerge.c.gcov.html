@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - treemerge.c<span style="font-size: 80%;"> (source / <a href="treemerge.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - treemerge.c<span style="font-size: 80%;"> (source / <a href="treemerge.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,13 +31,13 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">355</td>
-            <td class="headerCovTableEntry">387</td>
-            <td class="headerCovTableEntryHi">91.7 %</td>
+            <td class="headerCovTableEntry">359</td>
+            <td class="headerCovTableEntry">388</td>
+            <td class="headerCovTableEntryHi">92.5 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">30</td>
@@ -119,889 +119,890 @@
 <span class="lineNum">      57 </span>            : 
 <span class="lineNum">      58 </span>            : #include &lt;glib.h&gt;
 <span class="lineNum">      59 </span>            : #include &lt;string.h&gt;
-<span class="lineNum">      60 </span>            : #include &lt;fts.h&gt;
-<span class="lineNum">      61 </span>            : 
-<span class="lineNum">      62 </span>            : #include &quot;treemerge.h&quot;
-<span class="lineNum">      63 </span>            : #include &quot;shredder.h&quot;
-<span class="lineNum">      64 </span>            : #include &quot;preprocess.h&quot;
-<span class="lineNum">      65 </span>            : #include &quot;formats.h&quot;
-<span class="lineNum">      66 </span>            : #include &quot;pathtricia.h&quot;
-<span class="lineNum">      67 </span>            : 
-<span class="lineNum">      68 </span>            : typedef struct RmDirectory {
-<span class="lineNum">      69 </span>            :     char *dirname;        /* Path to this directory without trailing slash              */
-<span class="lineNum">      70 </span>            :     GQueue known_files;   /* RmFiles in this directory                                  */
-<span class="lineNum">      71 </span>            :     GQueue children;      /* Children for directories with subdirectories               */
-<span class="lineNum">      72 </span>            :     gint64 prefd_files;   /* Files in this directory that are tagged as original        */
-<span class="lineNum">      73 </span>            :     gint64 dupe_count;    /* Count of RmFiles actually in this directory                */
-<span class="lineNum">      74 </span>            :     gint64 file_count;    /* Count of files actually in this directory (or -1 on error) */
-<span class="lineNum">      75 </span>            :     gint64 mergeups;      /* number of times this directory was merged up               */
-<span class="lineNum">      76 </span>            :     bool finished;        /* Was this dir or one of his parents already printed?        */
-<span class="lineNum">      77 </span>            :     bool was_merged;      /* true if this directory was merged up already (only once)   */
-<span class="lineNum">      78 </span>            :     bool was_inserted;    /* true if this directory was added to results (only once)    */
-<span class="lineNum">      79 </span>            :     unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)        */
-<span class="lineNum">      80 </span>            :     GHashTable *hash_set; /* Set of hashes, used for equality check (to be sure)        */
-<span class="lineNum">      81 </span>            :     RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
-<span class="lineNum">      82 </span>            : 
-<span class="lineNum">      83 </span>            :     struct {
-<span class="lineNum">      84 </span>            :         bool has_metadata; /* stat(2) called already                */
-<span class="lineNum">      85 </span>            :         time_t dir_mtime;  /* Directory Metadata: Modification Time */
-<span class="lineNum">      86 </span>            :         ino_t dir_inode;   /* Directory Metadata: Inode             */
-<span class="lineNum">      87 </span>            :         dev_t dir_dev;     /* Directory Metadata: Device ID         */
-<span class="lineNum">      88 </span>            :     } metadata;
-<span class="lineNum">      89 </span>            : } RmDirectory;
-<span class="lineNum">      90 </span>            : 
-<span class="lineNum">      91 </span>            : struct RmTreeMerger {
-<span class="lineNum">      92 </span>            :     RmSession *session;       /* Session state variables / Settings          */
-<span class="lineNum">      93 </span>            :     RmTrie dir_tree;          /* Path-Trie with all RmFiles as value         */
-<span class="lineNum">      94 </span>            :     RmTrie count_tree;        /* Path-Trie with all file's count as value    */
-<span class="lineNum">      95 </span>            :     GHashTable *result_table; /* {hash =&gt; [RmDirectory]} mapping             */
-<span class="lineNum">      96 </span>            :     GHashTable *file_groups;  /* Group files by hash                         */
-<span class="lineNum">      97 </span>            :     GHashTable *file_checks;  /* Set of files that were handled already.     */
-<span class="lineNum">      98 </span>            :     GHashTable *known_hashs;  /* Set of known hashes, only used for cleanup. */
-<span class="lineNum">      99 </span>            :     GQueue valid_dirs;        /* Directories consisting of RmFiles only      */
-<span class="lineNum">     100 </span>            : };
-<span class="lineNum">     101 </span>            : 
-<span class="lineNum">     102 </span>            : //////////////////////////
-<span class="lineNum">     103 </span>            : // ACTUAL FILE COUNTING //
-<a name="104"><span class="lineNum">     104 </span>            : //////////////////////////</a>
-<span class="lineNum">     105 </span>            : 
-<span class="lineNum">     106 </span><span class="lineCov">      46738 : int rm_tm_count_art_callback(RmTrie *self, RmNode *node, _U int level, void *user_data) {</span>
-<span class="lineNum">     107 </span>            :     /* Note: this method has a time complexity of O(log(n) * m) which may
-<span class="lineNum">     108 </span>            :        result in a few seconds buildup time for large sets of directories.  Since this
-<span class="lineNum">     109 </span>            :        will only happen when rmlint ran for long anyways and since we can keep the
-<span class="lineNum">     110 </span>            :        code easy and memory efficient this way, Im against more clever but longer
-<span class="lineNum">     111 </span>            :        solutions. (Good way of saying &quot;Im just too stupid&quot;, eh?)
-<span class="lineNum">     112 </span>            :     */
-<span class="lineNum">     113 </span>            : 
-<span class="lineNum">     114 </span><span class="lineCov">      46738 :     RmTrie *count_tree = user_data;</span>
-<span class="lineNum">     115 </span><span class="lineCov">      46738 :     bool error_flag = GPOINTER_TO_INT(node-&gt;data);</span>
-<span class="lineNum">     116 </span>            : 
-<span class="lineNum">     117 </span>            :     char path[PATH_MAX];
-<span class="lineNum">     118 </span><span class="lineCov">      46738 :     memset(path, 0, sizeof(path));</span>
-<span class="lineNum">     119 </span><span class="lineCov">      46738 :     rm_trie_build_path(self, node, path, sizeof(path));</span>
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span>            : #include &lt;sys/types.h&gt;
+<span class="lineNum">      62 </span>            : #include &lt;sys/stat.h&gt;
+<span class="lineNum">      63 </span>            : #include &lt;fts.h&gt;
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span>            : #include &quot;treemerge.h&quot;
+<span class="lineNum">      66 </span>            : #include &quot;shredder.h&quot;
+<span class="lineNum">      67 </span>            : #include &quot;preprocess.h&quot;
+<span class="lineNum">      68 </span>            : #include &quot;formats.h&quot;
+<span class="lineNum">      69 </span>            : #include &quot;pathtricia.h&quot;
+<span class="lineNum">      70 </span>            : 
+<span class="lineNum">      71 </span>            : typedef struct RmDirectory {
+<span class="lineNum">      72 </span>            :     char *dirname;       /* Path to this directory without trailing slash              */
+<span class="lineNum">      73 </span>            :     GQueue known_files;  /* RmFiles in this directory                                  */
+<span class="lineNum">      74 </span>            :     GQueue children;     /* Children for directories with subdirectories               */
+<span class="lineNum">      75 </span>            :     gint64 prefd_files;  /* Files in this directory that are tagged as original        */
+<span class="lineNum">      76 </span>            :     gint64 dupe_count;   /* Count of RmFiles actually in this directory                */
+<span class="lineNum">      77 </span>            :     gint64 file_count;   /* Count of files actually in this directory (or -1 on error) */
+<span class="lineNum">      78 </span>            :     gint64 mergeups;     /* number of times this directory was merged up               */
+<span class="lineNum">      79 </span>            :     bool finished : 1;   /* Was this dir or one of his parents already printed?        */
+<span class="lineNum">      80 </span>            :     bool was_merged : 1; /* true if this directory was merged up already (only once)   */
+<span class="lineNum">      81 </span>            :     bool was_inserted : 1; /* true if this directory was added to results (only once) */
+<span class="lineNum">      82 </span>            :     unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)        */
+<span class="lineNum">      83 </span>            :     GHashTable *hash_set; /* Set of hashes, used for equality check (to be sure)        */
+<span class="lineNum">      84 </span>            :     RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span>            :     struct {
+<span class="lineNum">      87 </span>            :         time_t dir_mtime; /* Directory Metadata: Modification Time */
+<span class="lineNum">      88 </span>            :         ino_t dir_inode;  /* Directory Metadata: Inode             */
+<span class="lineNum">      89 </span>            :         dev_t dir_dev;    /* Directory Metadata: Device ID         */
+<span class="lineNum">      90 </span>            :     } metadata;
+<span class="lineNum">      91 </span>            : } RmDirectory;
+<span class="lineNum">      92 </span>            : 
+<span class="lineNum">      93 </span>            : struct RmTreeMerger {
+<span class="lineNum">      94 </span>            :     RmSession *session;       /* Session state variables / Settings                  */
+<span class="lineNum">      95 </span>            :     RmTrie dir_tree;          /* Path-Trie with all RmFiles as value                 */
+<span class="lineNum">      96 </span>            :     RmTrie count_tree;        /* Path-Trie with all file's count as value            */
+<span class="lineNum">      97 </span>            :     GHashTable *result_table; /* {hash =&gt; [RmDirectory]} mapping                     */
+<span class="lineNum">      98 </span>            :     GHashTable *file_groups;  /* Group files by hash                                 */
+<span class="lineNum">      99 </span>            :     GHashTable *file_checks;  /* Set of files that were handled already.             */
+<span class="lineNum">     100 </span>            :     GHashTable *known_hashs;  /* Set of known hashes, only used for cleanup.         */
+<span class="lineNum">     101 </span>            :     GHashTable *was_printed;  /* Set of files that were handed to rm_fmt_write()     */
+<span class="lineNum">     102 </span>            :     GQueue valid_dirs;        /* Directories consisting of RmFiles only              */
+<span class="lineNum">     103 </span>            : };
+<span class="lineNum">     104 </span>            : 
+<span class="lineNum">     105 </span>            : //////////////////////////
+<span class="lineNum">     106 </span>            : // ACTUAL FILE COUNTING //
+<a name="107"><span class="lineNum">     107 </span>            : //////////////////////////</a>
+<span class="lineNum">     108 </span>            : 
+<span class="lineNum">     109 </span><span class="lineCov">       6776 : int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,</span>
+<span class="lineNum">     110 </span>            :                              void *user_data) {
+<span class="lineNum">     111 </span>            :     /* Note: this method has a time complexity of O(log(n) * m) which may
+<span class="lineNum">     112 </span>            :        result in a few seconds buildup time for large sets of directories.  Since this
+<span class="lineNum">     113 </span>            :        will only happen when rmlint ran for long anyways and since we can keep the
+<span class="lineNum">     114 </span>            :        code easy and memory efficient this way, Im against more clever but longer
+<span class="lineNum">     115 </span>            :        solutions. (Good way of saying &quot;Im just too stupid&quot;, eh?)
+<span class="lineNum">     116 </span>            :     */
+<span class="lineNum">     117 </span>            : 
+<span class="lineNum">     118 </span><span class="lineCov">       6776 :     RmTrie *count_tree = user_data;</span>
+<span class="lineNum">     119 </span><span class="lineCov">       6776 :     bool error_flag = GPOINTER_TO_INT(node-&gt;data);</span>
 <span class="lineNum">     120 </span>            : 
-<span class="lineNum">     121 </span>            :     /* Ascend the path parts up, add one for each part we meet.
-<span class="lineNum">     122 </span>            :        If a part was never found before, add it.
-<span class="lineNum">     123 </span>            :        This is the 'm' above: The count of separators in the path.
+<span class="lineNum">     121 </span>            :     char path[PATH_MAX];
+<span class="lineNum">     122 </span><span class="lineCov">       6776 :     memset(path, 0, sizeof(path));</span>
+<span class="lineNum">     123 </span><span class="lineCov">       6776 :     rm_trie_build_path_unlocked(node, path, sizeof(path));</span>
 <span class="lineNum">     124 </span>            : 
-<span class="lineNum">     125 </span>            :        Hack: path[key_len] is nul, at key_len it must be either an
-<span class="lineNum">     126 </span>            :              extra slash (bad) or the beginning of a file name.
-<span class="lineNum">     127 </span>            :              Therefore start at -2.
-<span class="lineNum">     128 </span>            :      */
-<span class="lineNum">     129 </span><span class="lineCov">    2495583 :     for(int i = strlen(path) - 1; i &gt;= 0; --i) {</span>
-<span class="lineNum">     130 </span><span class="lineCov">    2448845 :         if(path[i] == G_DIR_SEPARATOR) {</span>
-<span class="lineNum">     131 </span>            :             /* Do not use an empty path, use a slash for root */
-<span class="lineNum">     132 </span><span class="lineCov">     263289 :             if(i == 0) {</span>
-<span class="lineNum">     133 </span><span class="lineCov">      46738 :                 path[0] = G_DIR_SEPARATOR;</span>
-<span class="lineNum">     134 </span><span class="lineCov">      46738 :                 path[1] = 0;</span>
-<span class="lineNum">     135 </span>            :             } else {
-<span class="lineNum">     136 </span><span class="lineCov">     216551 :                 path[i] = 0;</span>
-<span class="lineNum">     137 </span>            :             }
-<span class="lineNum">     138 </span>            : 
-<span class="lineNum">     139 </span>            :             /* Include the nulbyte */
-<span class="lineNum">     140 </span><span class="lineCov">     263289 :             int new_count = -1;</span>
-<span class="lineNum">     141 </span>            : 
-<span class="lineNum">     142 </span><span class="lineCov">     263289 :             if(error_flag == false) {</span>
-<span class="lineNum">     143 </span>            :                 /* Lookup the count on this level */
-<span class="lineNum">     144 </span><span class="lineCov">     255891 :                 int old_count = GPOINTER_TO_INT(rm_trie_search(count_tree, path));</span>
+<span class="lineNum">     125 </span>            :     /* Ascend the path parts up, add one for each part we meet.
+<span class="lineNum">     126 </span>            :        If a part was never found before, add it.
+<span class="lineNum">     127 </span>            :        This is the 'm' above: The count of separators in the path.
+<span class="lineNum">     128 </span>            : 
+<span class="lineNum">     129 </span>            :        Hack: path[key_len] is nul, at key_len it must be either an
+<span class="lineNum">     130 </span>            :              extra slash (bad) or the beginning of a file name.
+<span class="lineNum">     131 </span>            :              Therefore start at -2.
+<span class="lineNum">     132 </span>            :      */
+<span class="lineNum">     133 </span><span class="lineCov">     210028 :     for(int i = strlen(path) - 1; i &gt;= 0; --i) {</span>
+<span class="lineNum">     134 </span><span class="lineCov">     203252 :         if(path[i] == G_DIR_SEPARATOR) {</span>
+<span class="lineNum">     135 </span>            :             /* Do not use an empty path, use a slash for root */
+<span class="lineNum">     136 </span><span class="lineCov">      24248 :             if(i == 0) {</span>
+<span class="lineNum">     137 </span><span class="lineCov">       6776 :                 path[0] = G_DIR_SEPARATOR;</span>
+<span class="lineNum">     138 </span><span class="lineCov">       6776 :                 path[1] = 0;</span>
+<span class="lineNum">     139 </span>            :             } else {
+<span class="lineNum">     140 </span><span class="lineCov">      17472 :                 path[i] = 0;</span>
+<span class="lineNum">     141 </span>            :             }
+<span class="lineNum">     142 </span>            : 
+<span class="lineNum">     143 </span>            :             /* Include the nulbyte */
+<span class="lineNum">     144 </span><span class="lineCov">      24248 :             int new_count = -1;</span>
 <span class="lineNum">     145 </span>            : 
-<span class="lineNum">     146 </span>            :                 /* Propagate old error up or just increment the count */
-<span class="lineNum">     147 </span><span class="lineCov">     255891 :                 new_count = (old_count == -1) ? -1 : old_count + 1;</span>
-<span class="lineNum">     148 </span>            :             }
+<span class="lineNum">     146 </span><span class="lineCov">      24248 :             if(error_flag == false) {</span>
+<span class="lineNum">     147 </span>            :                 /* Lookup the count on this level */
+<span class="lineNum">     148 </span><span class="lineCov">      21308 :                 int old_count = GPOINTER_TO_INT(rm_trie_search(count_tree, path));</span>
 <span class="lineNum">     149 </span>            : 
-<span class="lineNum">     150 </span>            :             /* Accumulate the count ('n' above is the height of the trie)  */
-<span class="lineNum">     151 </span><span class="lineCov">     263289 :             rm_trie_insert(count_tree, path, GINT_TO_POINTER(new_count));</span>
-<span class="lineNum">     152 </span>            :         }
-<span class="lineNum">     153 </span>            :     }
-<span class="lineNum">     154 </span>            : 
-<span class="lineNum">     155 </span><span class="lineCov">      46738 :     return 0;</span>
-<a name="156"><span class="lineNum">     156 </span>            : }</a>
-<span class="lineNum">     157 </span>            : 
-<span class="lineNum">     158 </span><span class="lineCov">       3310 : static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *session) {</span>
-<span class="lineNum">     159 </span><span class="lineCov">       3310 :     if(*paths == NULL) {</span>
-<span class="lineNum">     160 </span><span class="lineNoCov">          0 :         rm_log_error(&quot;No paths passed to rm_tm_count_files\n&quot;);</span>
-<span class="lineNum">     161 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">     162 </span>            :     }
-<span class="lineNum">     163 </span>            : 
-<span class="lineNum">     164 </span><span class="lineCov">       3310 :     int fts_flags = FTS_COMFOLLOW;</span>
-<span class="lineNum">     165 </span><span class="lineCov">       3310 :     if(session-&gt;cfg-&gt;follow_symlinks) {</span>
-<span class="lineNum">     166 </span><span class="lineCov">        108 :         fts_flags |= FTS_LOGICAL;</span>
-<span class="lineNum">     167 </span>            :     } else {
-<span class="lineNum">     168 </span><span class="lineCov">       3202 :         fts_flags |= FTS_PHYSICAL;</span>
-<span class="lineNum">     169 </span>            :     }
-<span class="lineNum">     170 </span>            : 
-<span class="lineNum">     171 </span>            :     /* This tree stores the full file paths.
-<span class="lineNum">     172 </span>            :        It is joined into a full directory tree later.
-<span class="lineNum">     173 </span>            :      */
-<span class="lineNum">     174 </span>            :     RmTrie file_tree;
-<span class="lineNum">     175 </span><span class="lineCov">       3310 :     rm_trie_init(&amp;file_tree);</span>
-<span class="lineNum">     176 </span>            : 
-<span class="lineNum">     177 </span><span class="lineCov">       3310 :     FTS *fts = fts_open(paths, fts_flags, NULL);</span>
-<span class="lineNum">     178 </span><span class="lineCov">       3310 :     if(fts == NULL) {</span>
-<span class="lineNum">     179 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;fts_open failed&quot;);</span>
-<span class="lineNum">     180 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">     181 </span>            :     }
-<span class="lineNum">     182 </span>            : 
-<span class="lineNum">     183 </span><span class="lineCov">       3310 :     FTSENT *ent = NULL;</span>
-<span class="lineNum">     184 </span><span class="lineCov">      79537 :     while((ent = fts_read(fts))) {</span>
-<span class="lineNum">     185 </span>            :         /* Handle large files (where fts fails with FTS_NS) */
-<span class="lineNum">     186 </span><span class="lineCov">      72917 :         if(ent-&gt;fts_info == FTS_NS) {</span>
-<span class="lineNum">     187 </span>            :             RmStat stat_buf;
-<span class="lineNum">     188 </span><span class="lineNoCov">          0 :             if(rm_sys_stat(ent-&gt;fts_path, &amp;stat_buf) == -1) {</span>
-<span class="lineNum">     189 </span><span class="lineNoCov">          0 :                 rm_log_perror(&quot;stat(2) failed&quot;);</span>
-<span class="lineNum">     190 </span><span class="lineNoCov">          0 :                 continue;</span>
-<span class="lineNum">     191 </span>            :             } else {
-<span class="lineNum">     192 </span>            :                 /* Must be a large file (or followed link to it) */
-<span class="lineNum">     193 </span><span class="lineNoCov">          0 :                 ent-&gt;fts_info = FTS_F;</span>
-<span class="lineNum">     194 </span>            :             }
-<span class="lineNum">     195 </span>            :         }
-<span class="lineNum">     196 </span>            : 
-<span class="lineNum">     197 </span><span class="lineCov">      72917 :         switch(ent-&gt;fts_info) {</span>
-<span class="lineNum">     198 </span>            :         case FTS_ERR:
-<span class="lineNum">     199 </span>            :         case FTS_DC:
-<span class="lineNum">     200 </span>            :             /* Save this path as an error */
-<span class="lineNum">     201 </span><span class="lineNoCov">          0 :             rm_trie_insert(&amp;file_tree, ent-&gt;fts_path, GINT_TO_POINTER(true));</span>
-<span class="lineNum">     202 </span><span class="lineNoCov">          0 :             break;</span>
-<span class="lineNum">     203 </span>            :         case FTS_F:
-<span class="lineNum">     204 </span>            :         case FTS_SL:
-<span class="lineNum">     205 </span>            :         case FTS_NS:
-<span class="lineNum">     206 </span>            :         case FTS_SLNONE:
-<span class="lineNum">     207 </span>            :         case FTS_DEFAULT:
-<span class="lineNum">     208 </span>            :             /* Save this path as countable file */
-<span class="lineNum">     209 </span><span class="lineCov">      43625 :             if(ent-&gt;fts_statp-&gt;st_size &gt; 0) {</span>
-<span class="lineNum">     210 </span><span class="lineCov">      43239 :                 rm_trie_insert(&amp;file_tree, ent-&gt;fts_path, GINT_TO_POINTER(false));</span>
-<span class="lineNum">     211 </span>            :             }
-<span class="lineNum">     212 </span>            :         case FTS_D:
-<span class="lineNum">     213 </span>            :         case FTS_DNR:
-<span class="lineNum">     214 </span>            :         case FTS_DOT:
-<span class="lineNum">     215 </span>            :         case FTS_DP:
-<span class="lineNum">     216 </span>            :         case FTS_NSOK:
-<span class="lineNum">     217 </span>            :         default:
-<span class="lineNum">     218 </span>            :             /* other fts states, that do not count as errors or files */
-<span class="lineNum">     219 </span><span class="lineCov">      72917 :             break;</span>
-<span class="lineNum">     220 </span>            :         }
-<span class="lineNum">     221 </span>            :     }
-<span class="lineNum">     222 </span>            : 
-<span class="lineNum">     223 </span><span class="lineCov">       3310 :     if(fts_close(fts) != 0) {</span>
-<span class="lineNum">     224 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;fts_close failed&quot;);</span>
-<span class="lineNum">     225 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">     226 </span>            :     }
-<span class="lineNum">     227 </span>            : 
-<span class="lineNum">     228 </span><span class="lineCov">       3310 :     rm_trie_iter(&amp;file_tree, NULL, true, false, rm_tm_count_art_callback, count_tree);</span>
-<span class="lineNum">     229 </span>            : 
-<span class="lineNum">     230 </span>            :     /* Now flag everything as a no-go over the given paths,
-<span class="lineNum">     231 </span>            :      * otherwise we would continue merging till / with fatal consequences,
-<span class="lineNum">     232 </span>            :      * since / does not have more files as paths[0]
-<span class="lineNum">     233 </span>            :      */
-<span class="lineNum">     234 </span><span class="lineCov">       6815 :     for(int i = 0; paths[i]; ++i) {</span>
-<span class="lineNum">     235 </span>            :         /* Just call the callback directly */
-<span class="lineNum">     236 </span><span class="lineCov">       3505 :         RmNode *node = rm_trie_search_node(&amp;file_tree, paths[i]);</span>
-<span class="lineNum">     237 </span><span class="lineCov">       3505 :         if(node != NULL) {</span>
-<span class="lineNum">     238 </span><span class="lineCov">       3505 :             node-&gt;data = GINT_TO_POINTER(true);</span>
-<span class="lineNum">     239 </span><span class="lineCov">       3505 :             rm_tm_count_art_callback(&amp;file_tree, node, 0, count_tree);</span>
-<span class="lineNum">     240 </span>            :         }
-<span class="lineNum">     241 </span>            :     }
-<span class="lineNum">     242 </span>            : 
-<span class="lineNum">     243 </span>            : #ifdef _RM_TREEMERGE_DEBUG
-<span class="lineNum">     244 </span>            :     rm_trie_print(count_tree);
-<span class="lineNum">     245 </span>            : #endif
+<span class="lineNum">     150 </span>            :                 /* Propagate old error up or just increment the count */
+<span class="lineNum">     151 </span><span class="lineCov">      21308 :                 new_count = (old_count == -1) ? -1 : old_count + 1;</span>
+<span class="lineNum">     152 </span>            :             }
+<span class="lineNum">     153 </span>            : 
+<span class="lineNum">     154 </span>            :             /* Accumulate the count ('n' above is the height of the trie)  */
+<span class="lineNum">     155 </span><span class="lineCov">      24248 :             rm_trie_insert(count_tree, path, GINT_TO_POINTER(new_count));</span>
+<span class="lineNum">     156 </span>            :         }
+<span class="lineNum">     157 </span>            :     }
+<span class="lineNum">     158 </span>            : 
+<span class="lineNum">     159 </span><span class="lineCov">       6776 :     return 0;</span>
+<a name="160"><span class="lineNum">     160 </span>            : }</a>
+<span class="lineNum">     161 </span>            : 
+<span class="lineNum">     162 </span><span class="lineCov">       1120 : static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *session) {</span>
+<span class="lineNum">     163 </span><span class="lineCov">       1120 :     if(*paths == NULL) {</span>
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :         rm_log_error(&quot;No paths passed to rm_tm_count_files\n&quot;);</span>
+<span class="lineNum">     165 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     166 </span>            :     }
+<span class="lineNum">     167 </span>            : 
+<span class="lineNum">     168 </span><span class="lineCov">       1120 :     int fts_flags = FTS_COMFOLLOW;</span>
+<span class="lineNum">     169 </span><span class="lineCov">       1120 :     if(session-&gt;cfg-&gt;follow_symlinks) {</span>
+<span class="lineNum">     170 </span><span class="lineCov">         28 :         fts_flags |= FTS_LOGICAL;</span>
+<span class="lineNum">     171 </span>            :     } else {
+<span class="lineNum">     172 </span><span class="lineCov">       1092 :         fts_flags |= FTS_PHYSICAL;</span>
+<span class="lineNum">     173 </span>            :     }
+<span class="lineNum">     174 </span>            : 
+<span class="lineNum">     175 </span>            :     /* This tree stores the full file paths.
+<span class="lineNum">     176 </span>            :        It is joined into a full directory tree later.
+<span class="lineNum">     177 </span>            :      */
+<span class="lineNum">     178 </span>            :     RmTrie file_tree;
+<span class="lineNum">     179 </span><span class="lineCov">       1120 :     rm_trie_init(&amp;file_tree);</span>
+<span class="lineNum">     180 </span>            : 
+<span class="lineNum">     181 </span><span class="lineCov">       1120 :     FTS *fts = fts_open(paths, fts_flags, NULL);</span>
+<span class="lineNum">     182 </span><span class="lineCov">       1120 :     if(fts == NULL) {</span>
+<span class="lineNum">     183 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;fts_open failed&quot;);</span>
+<span class="lineNum">     184 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     185 </span>            :     }
+<span class="lineNum">     186 </span>            : 
+<span class="lineNum">     187 </span><span class="lineCov">       1120 :     FTSENT *ent = NULL;</span>
+<span class="lineNum">     188 </span><span class="lineCov">      16772 :     while((ent = fts_read(fts))) {</span>
+<span class="lineNum">     189 </span>            :         /* Handle large files (where fts fails with FTS_NS) */
+<span class="lineNum">     190 </span><span class="lineCov">      14532 :         if(ent-&gt;fts_info == FTS_NS) {</span>
+<span class="lineNum">     191 </span>            :             RmStat stat_buf;
+<span class="lineNum">     192 </span><span class="lineNoCov">          0 :             if(rm_sys_stat(ent-&gt;fts_path, &amp;stat_buf) == -1) {</span>
+<span class="lineNum">     193 </span><span class="lineNoCov">          0 :                 rm_log_perror(&quot;stat(2) failed&quot;);</span>
+<span class="lineNum">     194 </span><span class="lineNoCov">          0 :                 continue;</span>
+<span class="lineNum">     195 </span>            :             } else {
+<span class="lineNum">     196 </span>            :                 /* Must be a large file (or followed link to it) */
+<span class="lineNum">     197 </span><span class="lineNoCov">          0 :                 ent-&gt;fts_info = FTS_F;</span>
+<span class="lineNum">     198 </span>            :             }
+<span class="lineNum">     199 </span>            :         }
+<span class="lineNum">     200 </span>            : 
+<span class="lineNum">     201 </span><span class="lineCov">      14532 :         switch(ent-&gt;fts_info) {</span>
+<span class="lineNum">     202 </span>            :         case FTS_ERR:
+<span class="lineNum">     203 </span>            :         case FTS_DC:
+<span class="lineNum">     204 </span>            :             /* Save this path as an error */
+<span class="lineNum">     205 </span><span class="lineNoCov">          0 :             rm_trie_insert(&amp;file_tree, ent-&gt;fts_path, GINT_TO_POINTER(true));</span>
+<span class="lineNum">     206 </span><span class="lineNoCov">          0 :             break;</span>
+<span class="lineNum">     207 </span>            :         case FTS_F:
+<span class="lineNum">     208 </span>            :         case FTS_SL:
+<span class="lineNum">     209 </span>            :         case FTS_NS:
+<span class="lineNum">     210 </span>            :         case FTS_SLNONE:
+<span class="lineNum">     211 </span>            :         case FTS_DEFAULT:
+<span class="lineNum">     212 </span>            :             /* Save this path as countable file */
+<span class="lineNum">     213 </span><span class="lineCov">       5852 :             if(ent-&gt;fts_statp-&gt;st_size &gt; 0) {</span>
+<span class="lineNum">     214 </span><span class="lineCov">       5740 :                 rm_trie_insert(&amp;file_tree, ent-&gt;fts_path, GINT_TO_POINTER(false));</span>
+<span class="lineNum">     215 </span>            :             }
+<span class="lineNum">     216 </span>            :         case FTS_D:
+<span class="lineNum">     217 </span>            :         case FTS_DNR:
+<span class="lineNum">     218 </span>            :         case FTS_DOT:
+<span class="lineNum">     219 </span>            :         case FTS_DP:
+<span class="lineNum">     220 </span>            :         case FTS_NSOK:
+<span class="lineNum">     221 </span>            :         default:
+<span class="lineNum">     222 </span>            :             /* other fts states, that do not count as errors or files */
+<span class="lineNum">     223 </span><span class="lineCov">      14532 :             break;</span>
+<span class="lineNum">     224 </span>            :         }
+<span class="lineNum">     225 </span>            :     }
+<span class="lineNum">     226 </span>            : 
+<span class="lineNum">     227 </span><span class="lineCov">       1120 :     if(fts_close(fts) != 0) {</span>
+<span class="lineNum">     228 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;fts_close failed&quot;);</span>
+<span class="lineNum">     229 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     230 </span>            :     }
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span><span class="lineCov">       1120 :     rm_trie_iter(&amp;file_tree, NULL, true, false, rm_tm_count_art_callback, count_tree);</span>
+<span class="lineNum">     233 </span>            : 
+<span class="lineNum">     234 </span>            :     /* Now flag everything as a no-go over the given paths,
+<span class="lineNum">     235 </span>            :      * otherwise we would continue merging till / with fatal consequences,
+<span class="lineNum">     236 </span>            :      * since / does not have more files as paths[0]
+<span class="lineNum">     237 </span>            :      */
+<span class="lineNum">     238 </span><span class="lineCov">       2464 :     for(int i = 0; paths[i]; ++i) {</span>
+<span class="lineNum">     239 </span>            :         /* Just call the callback directly */
+<span class="lineNum">     240 </span><span class="lineCov">       1344 :         RmNode *node = rm_trie_search_node(&amp;file_tree, paths[i]);</span>
+<span class="lineNum">     241 </span><span class="lineCov">       1344 :         if(node != NULL) {</span>
+<span class="lineNum">     242 </span><span class="lineCov">       1344 :             node-&gt;data = GINT_TO_POINTER(true);</span>
+<span class="lineNum">     243 </span><span class="lineCov">       1344 :             rm_tm_count_art_callback(&amp;file_tree, node, 0, count_tree);</span>
+<span class="lineNum">     244 </span>            :         }
+<span class="lineNum">     245 </span>            :     }
 <span class="lineNum">     246 </span>            : 
-<span class="lineNum">     247 </span><span class="lineCov">       3310 :     rm_trie_destroy(&amp;file_tree);</span>
-<span class="lineNum">     248 </span><span class="lineCov">       3310 :     return true;</span>
+<span class="lineNum">     247 </span><span class="lineCov">       1120 :     rm_trie_destroy(&amp;file_tree);</span>
+<span class="lineNum">     248 </span><span class="lineCov">       1120 :     return true;</span>
 <span class="lineNum">     249 </span>            : }
 <span class="lineNum">     250 </span>            : 
 <span class="lineNum">     251 </span>            : ///////////////////////////////
 <span class="lineNum">     252 </span>            : // DIRECTORY STRUCT HANDLING //
 <a name="253"><span class="lineNum">     253 </span>            : ///////////////////////////////</a>
 <span class="lineNum">     254 </span>            : 
-<span class="lineNum">     255 </span><span class="lineCov">      14341 : static RmDirectory *rm_directory_new(char *dirname) {</span>
-<span class="lineNum">     256 </span><span class="lineCov">      14341 :     RmDirectory *self = g_new0(RmDirectory, 1);</span>
+<span class="lineNum">     255 </span><span class="lineCov">       4284 : static RmDirectory *rm_directory_new(char *dirname) {</span>
+<span class="lineNum">     256 </span><span class="lineCov">       4284 :     RmDirectory *self = g_new0(RmDirectory, 1);</span>
 <span class="lineNum">     257 </span>            : 
-<span class="lineNum">     258 </span><span class="lineCov">      14341 :     self-&gt;file_count = 0;</span>
-<span class="lineNum">     259 </span><span class="lineCov">      14341 :     self-&gt;dupe_count = 0;</span>
-<span class="lineNum">     260 </span><span class="lineCov">      14341 :     self-&gt;prefd_files = 0;</span>
-<span class="lineNum">     261 </span><span class="lineCov">      14341 :     self-&gt;was_merged = false;</span>
-<span class="lineNum">     262 </span><span class="lineCov">      14341 :     self-&gt;was_inserted = false;</span>
-<span class="lineNum">     263 </span><span class="lineCov">      14341 :     self-&gt;mergeups = 0;</span>
+<span class="lineNum">     258 </span><span class="lineCov">       4284 :     self-&gt;file_count = 0;</span>
+<span class="lineNum">     259 </span><span class="lineCov">       4284 :     self-&gt;dupe_count = 0;</span>
+<span class="lineNum">     260 </span><span class="lineCov">       4284 :     self-&gt;prefd_files = 0;</span>
+<span class="lineNum">     261 </span><span class="lineCov">       4284 :     self-&gt;was_merged = false;</span>
+<span class="lineNum">     262 </span><span class="lineCov">       4284 :     self-&gt;was_inserted = false;</span>
+<span class="lineNum">     263 </span><span class="lineCov">       4284 :     self-&gt;mergeups = 0;</span>
 <span class="lineNum">     264 </span>            : 
-<span class="lineNum">     265 </span><span class="lineCov">      14341 :     self-&gt;dirname = dirname;</span>
-<span class="lineNum">     266 </span><span class="lineCov">      14341 :     self-&gt;finished = false;</span>
+<span class="lineNum">     265 </span><span class="lineCov">       4284 :     self-&gt;dirname = dirname;</span>
+<span class="lineNum">     266 </span><span class="lineCov">       4284 :     self-&gt;finished = false;</span>
 <span class="lineNum">     267 </span>            : 
-<span class="lineNum">     268 </span><span class="lineCov">      14341 :     self-&gt;depth = 0;</span>
-<span class="lineNum">     269 </span><span class="lineCov">     397317 :     for(char *s = dirname; *s; s++) {</span>
-<span class="lineNum">     270 </span><span class="lineCov">     382976 :         self-&gt;depth += (*s == G_DIR_SEPARATOR);</span>
+<span class="lineNum">     268 </span><span class="lineCov">       4284 :     self-&gt;depth = 0;</span>
+<span class="lineNum">     269 </span><span class="lineCov">     114856 :     for(char *s = dirname; *s; s++) {</span>
+<span class="lineNum">     270 </span><span class="lineCov">     110572 :         self-&gt;depth += (*s == G_DIR_SEPARATOR);</span>
 <span class="lineNum">     271 </span>            :     }
 <span class="lineNum">     272 </span>            : 
 <span class="lineNum">     273 </span>            :     RmStat dir_stat;
-<span class="lineNum">     274 </span><span class="lineCov">      14341 :     if(rm_sys_stat(self-&gt;dirname, &amp;dir_stat) == -1) {</span>
+<span class="lineNum">     274 </span><span class="lineCov">       4284 :     if(rm_sys_stat(self-&gt;dirname, &amp;dir_stat) == -1) {</span>
 <span class="lineNum">     275 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;stat(2) failed during sort&quot;);</span>
 <span class="lineNum">     276 </span>            :     } else {
-<span class="lineNum">     277 </span><span class="lineCov">      14341 :         self-&gt;metadata.dir_mtime = dir_stat.st_mtime;</span>
-<span class="lineNum">     278 </span><span class="lineCov">      14341 :         self-&gt;metadata.dir_inode = dir_stat.st_ino;</span>
-<span class="lineNum">     279 </span><span class="lineCov">      14341 :         self-&gt;metadata.dir_dev = dir_stat.st_dev;</span>
+<span class="lineNum">     277 </span><span class="lineCov">       4284 :         self-&gt;metadata.dir_mtime = dir_stat.st_mtime;</span>
+<span class="lineNum">     278 </span><span class="lineCov">       4284 :         self-&gt;metadata.dir_inode = dir_stat.st_ino;</span>
+<span class="lineNum">     279 </span><span class="lineCov">       4284 :         self-&gt;metadata.dir_dev = dir_stat.st_dev;</span>
 <span class="lineNum">     280 </span>            :     }
 <span class="lineNum">     281 </span>            : 
 <span class="lineNum">     282 </span>            :     /* Special cumulative hashsum, that is not dependent on the
 <span class="lineNum">     283 </span>            :      * order in which the file hashes were added.
 <span class="lineNum">     284 </span>            :      * It is not used as full hash, but as sorting speedup.
 <span class="lineNum">     285 </span>            :      */
-<span class="lineNum">     286 </span><span class="lineCov">      14341 :     self-&gt;digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0);</span>
+<span class="lineNum">     286 </span><span class="lineCov">       4284 :     self-&gt;digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0, false);</span>
 <span class="lineNum">     287 </span>            : 
-<span class="lineNum">     288 </span><span class="lineCov">      14341 :     g_queue_init(&amp;self-&gt;known_files);</span>
-<span class="lineNum">     289 </span><span class="lineCov">      14341 :     g_queue_init(&amp;self-&gt;children);</span>
+<span class="lineNum">     288 </span><span class="lineCov">       4284 :     g_queue_init(&amp;self-&gt;known_files);</span>
+<span class="lineNum">     289 </span><span class="lineCov">       4284 :     g_queue_init(&amp;self-&gt;children);</span>
 <span class="lineNum">     290 </span>            : 
-<span class="lineNum">     291 </span><span class="lineCov">      14341 :     self-&gt;hash_set =</span>
-<span class="lineNum">     292 </span><span class="lineCov">      14341 :         g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);</span>
+<span class="lineNum">     291 </span><span class="lineCov">       4284 :     self-&gt;hash_set =</span>
+<span class="lineNum">     292 </span><span class="lineCov">       4284 :         g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);</span>
 <span class="lineNum">     293 </span>            : 
-<span class="lineNum">     294 </span><span class="lineCov">      14341 :     return self;</span>
+<span class="lineNum">     294 </span><span class="lineCov">       4284 :     return self;</span>
 <a name="295"><span class="lineNum">     295 </span>            : }</a>
 <span class="lineNum">     296 </span>            : 
-<span class="lineNum">     297 </span><span class="lineCov">      14341 : static void rm_directory_free(RmDirectory *self) {</span>
-<span class="lineNum">     298 </span><span class="lineCov">      14341 :     rm_digest_free(self-&gt;digest);</span>
-<span class="lineNum">     299 </span><span class="lineCov">      14341 :     g_hash_table_unref(self-&gt;hash_set);</span>
-<span class="lineNum">     300 </span><span class="lineCov">      14341 :     g_queue_clear(&amp;self-&gt;known_files);</span>
-<span class="lineNum">     301 </span><span class="lineCov">      14341 :     g_queue_clear(&amp;self-&gt;children);</span>
-<span class="lineNum">     302 </span><span class="lineCov">      14341 :     g_free(self-&gt;dirname);</span>
-<span class="lineNum">     303 </span><span class="lineCov">      14341 :     g_free(self);</span>
-<a name="304"><span class="lineNum">     304 </span><span class="lineCov">      14341 : }</span></a>
+<span class="lineNum">     297 </span><span class="lineCov">       4284 : static void rm_directory_free(RmDirectory *self) {</span>
+<span class="lineNum">     298 </span><span class="lineCov">       4284 :     rm_digest_free(self-&gt;digest);</span>
+<span class="lineNum">     299 </span><span class="lineCov">       4284 :     g_hash_table_unref(self-&gt;hash_set);</span>
+<span class="lineNum">     300 </span><span class="lineCov">       4284 :     g_queue_clear(&amp;self-&gt;known_files);</span>
+<span class="lineNum">     301 </span><span class="lineCov">       4284 :     g_queue_clear(&amp;self-&gt;children);</span>
+<span class="lineNum">     302 </span><span class="lineCov">       4284 :     g_free(self-&gt;dirname);</span>
+<span class="lineNum">     303 </span><span class="lineCov">       4284 :     g_free(self);</span>
+<a name="304"><span class="lineNum">     304 </span><span class="lineCov">       4284 : }</span></a>
 <span class="lineNum">     305 </span>            : 
-<span class="lineNum">     306 </span><span class="lineCov">      11464 : static RmOff rm_tm_calc_file_size(RmDirectory *directory) {</span>
-<span class="lineNum">     307 </span><span class="lineCov">      11464 :     RmOff acc = 0;</span>
+<span class="lineNum">     306 </span><span class="lineCov">       3192 : static RmOff rm_tm_calc_file_size(RmDirectory *directory) {</span>
+<span class="lineNum">     307 </span><span class="lineCov">       3192 :     RmOff acc = 0;</span>
 <span class="lineNum">     308 </span>            : 
-<span class="lineNum">     309 </span><span class="lineCov">      23846 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     310 </span><span class="lineCov">      12382 :         RmFile *file = iter-&gt;data;</span>
-<span class="lineNum">     311 </span><span class="lineCov">      12382 :         acc += file-&gt;file_size;</span>
+<span class="lineNum">     309 </span><span class="lineCov">       6216 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     310 </span><span class="lineCov">       3024 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     311 </span><span class="lineCov">       3024 :         acc += file-&gt;file_size;</span>
 <span class="lineNum">     312 </span>            :     }
 <span class="lineNum">     313 </span>            : 
 <span class="lineNum">     314 </span>            :     /* Recursively propagate to children */
-<span class="lineNum">     315 </span><span class="lineCov">      17551 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     316 </span><span class="lineCov">       6087 :         acc += rm_tm_calc_file_size((RmDirectory *)iter-&gt;data);</span>
+<span class="lineNum">     315 </span><span class="lineCov">       4704 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     316 </span><span class="lineCov">       1512 :         acc += rm_tm_calc_file_size((RmDirectory *)iter-&gt;data);</span>
 <span class="lineNum">     317 </span>            :     }
 <span class="lineNum">     318 </span>            : 
-<span class="lineNum">     319 </span><span class="lineCov">      11464 :     return acc;</span>
+<span class="lineNum">     319 </span><span class="lineCov">       3192 :     return acc;</span>
 <a name="320"><span class="lineNum">     320 </span>            : }</a>
 <span class="lineNum">     321 </span>            : 
-<span class="lineNum">     322 </span><span class="lineCov">       5377 : static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {</span>
+<span class="lineNum">     322 </span><span class="lineCov">       1680 : static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {</span>
 <span class="lineNum">     323 </span>            :     /* Masquerades a RmDirectory as RmFile for purpose of output */
-<span class="lineNum">     324 </span><span class="lineCov">       5377 :     RmFile *file = g_malloc0(sizeof(RmFile));</span>
+<span class="lineNum">     324 </span><span class="lineCov">       1680 :     RmFile *file = g_malloc0(sizeof(RmFile));</span>
 <span class="lineNum">     325 </span>            : 
 <span class="lineNum">     326 </span>            :     /* Need to set session first, since set_path expects that */
-<span class="lineNum">     327 </span><span class="lineCov">       5377 :     file-&gt;session = merger-&gt;session;</span>
-<span class="lineNum">     328 </span><span class="lineCov">       5377 :     rm_file_set_path(file, self-&gt;dirname, strlen(self-&gt;dirname));</span>
+<span class="lineNum">     327 </span><span class="lineCov">       1680 :     file-&gt;session = merger-&gt;session;</span>
+<span class="lineNum">     328 </span><span class="lineCov">       1680 :     rm_file_set_path(file, self-&gt;dirname, strlen(self-&gt;dirname));</span>
 <span class="lineNum">     329 </span>            : 
-<span class="lineNum">     330 </span><span class="lineCov">       5377 :     file-&gt;lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;</span>
-<span class="lineNum">     331 </span><span class="lineCov">       5377 :     file-&gt;digest = self-&gt;digest;</span>
+<span class="lineNum">     330 </span><span class="lineCov">       1680 :     file-&gt;lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;</span>
+<span class="lineNum">     331 </span><span class="lineCov">       1680 :     file-&gt;digest = self-&gt;digest;</span>
 <span class="lineNum">     332 </span>            : 
 <span class="lineNum">     333 </span>            :     /* Set these to invalid for now */
-<span class="lineNum">     334 </span><span class="lineCov">       5377 :     file-&gt;mtime = self-&gt;metadata.dir_mtime;</span>
-<span class="lineNum">     335 </span><span class="lineCov">       5377 :     file-&gt;inode = self-&gt;metadata.dir_inode;</span>
-<span class="lineNum">     336 </span><span class="lineCov">       5377 :     file-&gt;dev = self-&gt;metadata.dir_dev;</span>
+<span class="lineNum">     334 </span><span class="lineCov">       1680 :     file-&gt;mtime = self-&gt;metadata.dir_mtime;</span>
+<span class="lineNum">     335 </span><span class="lineCov">       1680 :     file-&gt;inode = self-&gt;metadata.dir_inode;</span>
+<span class="lineNum">     336 </span><span class="lineCov">       1680 :     file-&gt;dev = self-&gt;metadata.dir_dev;</span>
 <span class="lineNum">     337 </span>            : 
 <span class="lineNum">     338 </span>            :     /* Recursively calculate the file size */
-<span class="lineNum">     339 </span><span class="lineCov">       5377 :     file-&gt;file_size = rm_tm_calc_file_size(self);</span>
-<span class="lineNum">     340 </span><span class="lineCov">       5377 :     file-&gt;is_prefd = (self-&gt;prefd_files &gt;= self-&gt;dupe_count);</span>
+<span class="lineNum">     339 </span><span class="lineCov">       1680 :     file-&gt;file_size = rm_tm_calc_file_size(self);</span>
+<span class="lineNum">     340 </span><span class="lineCov">       1680 :     file-&gt;is_prefd = (self-&gt;prefd_files &gt;= self-&gt;dupe_count);</span>
 <span class="lineNum">     341 </span>            : 
-<span class="lineNum">     342 </span><span class="lineCov">       5377 :     return file;</span>
+<span class="lineNum">     342 </span><span class="lineCov">       1680 :     return file;</span>
 <a name="343"><span class="lineNum">     343 </span>            : }</a>
 <span class="lineNum">     344 </span>            : 
-<span class="lineNum">     345 </span><span class="lineCov">       4783 : static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {</span>
-<span class="lineNum">     346 </span>            :     /* Will this work with paranoid cfg? Probably, but in a weird way.
-<span class="lineNum">     347 </span>            :      * Also it might not be very secure when the last block of the file is
-<span class="lineNum">     348 </span>            :      * compared...
-<span class="lineNum">     349 </span>            :      * */
-<span class="lineNum">     350 </span><span class="lineCov">       4783 :     if(d1-&gt;mergeups != d2-&gt;mergeups) {</span>
+<span class="lineNum">     345 </span><span class="lineCov">       1400 : static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {</span>
+<span class="lineNum">     346 </span><span class="lineCov">       1400 :     if(d1-&gt;mergeups != d2-&gt;mergeups) {</span>
+<span class="lineNum">     347 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     348 </span>            :     }
+<span class="lineNum">     349 </span>            : 
+<span class="lineNum">     350 </span><span class="lineCov">       1400 :     if(rm_digest_equal(d1-&gt;digest, d2-&gt;digest) == false) {</span>
 <span class="lineNum">     351 </span><span class="lineNoCov">          0 :         return false;</span>
 <span class="lineNum">     352 </span>            :     }
 <span class="lineNum">     353 </span>            : 
-<span class="lineNum">     354 </span><span class="lineCov">       4783 :     if(rm_digest_equal(d1-&gt;digest, d2-&gt;digest) == false) {</span>
+<span class="lineNum">     354 </span><span class="lineCov">       1400 :     if(g_hash_table_size(d1-&gt;hash_set) != g_hash_table_size(d2-&gt;hash_set)) {</span>
 <span class="lineNum">     355 </span><span class="lineNoCov">          0 :         return false;</span>
 <span class="lineNum">     356 </span>            :     }
 <span class="lineNum">     357 </span>            : 
-<span class="lineNum">     358 </span><span class="lineCov">       4783 :     if(g_hash_table_size(d1-&gt;hash_set) != g_hash_table_size(d2-&gt;hash_set)) {</span>
-<span class="lineNum">     359 </span><span class="lineNoCov">          0 :         return false;</span>
-<span class="lineNum">     360 </span>            :     }
-<span class="lineNum">     361 </span>            : 
-<span class="lineNum">     362 </span>            :     gpointer digest_key;
-<span class="lineNum">     363 </span>            :     GHashTableIter iter;
-<span class="lineNum">     364 </span>            : 
-<span class="lineNum">     365 </span><span class="lineCov">       4783 :     g_hash_table_iter_init(&amp;iter, d1-&gt;hash_set);</span>
-<span class="lineNum">     366 </span><span class="lineCov">       4783 :     while(g_hash_table_iter_next(&amp;iter, &amp;digest_key, NULL)) {</span>
-<span class="lineNum">     367 </span><span class="lineCov">       5113 :         if(g_hash_table_contains(d2-&gt;hash_set, digest_key) == false) {</span>
-<span class="lineNum">     368 </span><span class="lineNoCov">          0 :             return false;</span>
-<span class="lineNum">     369 </span>            :         }
-<span class="lineNum">     370 </span>            :     }
-<span class="lineNum">     371 </span>            : 
-<span class="lineNum">     372 </span><span class="lineCov">       4783 :     return true;</span>
-<a name="373"><span class="lineNum">     373 </span>            : }</a>
-<span class="lineNum">     374 </span>            : 
-<span class="lineNum">     375 </span><span class="lineCov">      14977 : static guint rm_directory_hash(const RmDirectory *d) {</span>
-<span class="lineNum">     376 </span>            :     /* This hash is used to quickly compare directories with each other.
-<span class="lineNum">     377 </span>            :      * Different directories might yield the same hash of course.
-<span class="lineNum">     378 </span>            :      * To prevent this case, rm_directory_equal really compares
-<span class="lineNum">     379 </span>            :      * all the file's hashes with each other.
-<span class="lineNum">     380 </span>            :      */
-<span class="lineNum">     381 </span><span class="lineCov">      14977 :     return rm_digest_hash(d-&gt;digest) ^ d-&gt;mergeups;</span>
-<a name="382"><span class="lineNum">     382 </span>            : }</a>
-<span class="lineNum">     383 </span>            : 
-<span class="lineNum">     384 </span><span class="lineCov">      27906 : static int rm_directory_add(RmDirectory *directory, RmFile *file) {</span>
-<span class="lineNum">     385 </span>            :     /* Update the directorie's hash with the file's hash
-<span class="lineNum">     386 </span>            :        Since we cannot be sure in which order the files come in
-<span class="lineNum">     387 </span>            :        we have to add the hash cummulatively.
-<span class="lineNum">     388 </span>            :      */
-<span class="lineNum">     389 </span><span class="lineCov">      27906 :     int new_dupes = 0;</span>
+<span class="lineNum">     358 </span>            :     gpointer digest_key;
+<span class="lineNum">     359 </span>            :     GHashTableIter iter;
+<span class="lineNum">     360 </span>            : 
+<span class="lineNum">     361 </span><span class="lineCov">       1400 :     g_hash_table_iter_init(&amp;iter, d1-&gt;hash_set);</span>
+<span class="lineNum">     362 </span><span class="lineCov">       1400 :     while(g_hash_table_iter_next(&amp;iter, &amp;digest_key, NULL)) {</span>
+<span class="lineNum">     363 </span><span class="lineCov">       1400 :         if(g_hash_table_contains(d2-&gt;hash_set, digest_key) == false) {</span>
+<span class="lineNum">     364 </span><span class="lineNoCov">          0 :             return false;</span>
+<span class="lineNum">     365 </span>            :         }
+<span class="lineNum">     366 </span>            :     }
+<span class="lineNum">     367 </span>            : 
+<span class="lineNum">     368 </span><span class="lineCov">       1400 :     return true;</span>
+<a name="369"><span class="lineNum">     369 </span>            : }</a>
+<span class="lineNum">     370 </span>            : 
+<span class="lineNum">     371 </span><span class="lineCov">       4312 : static guint rm_directory_hash(const RmDirectory *d) {</span>
+<span class="lineNum">     372 </span>            :     /* This hash is used to quickly compare directories with each other.
+<span class="lineNum">     373 </span>            :      * Different directories might yield the same hash of course.
+<span class="lineNum">     374 </span>            :      * To prevent this case, rm_directory_equal really compares
+<span class="lineNum">     375 </span>            :      * all the file's hashes with each other.
+<span class="lineNum">     376 </span>            :      */
+<span class="lineNum">     377 </span><span class="lineCov">       4312 :     return rm_digest_hash(d-&gt;digest) ^ d-&gt;mergeups;</span>
+<a name="378"><span class="lineNum">     378 </span>            : }</a>
+<span class="lineNum">     379 </span>            : 
+<span class="lineNum">     380 </span><span class="lineCov">       8120 : static int rm_directory_add(RmDirectory *directory, RmFile *file) {</span>
+<span class="lineNum">     381 </span>            :     /* Update the directorie's hash with the file's hash
+<span class="lineNum">     382 </span>            :        Since we cannot be sure in which order the files come in
+<span class="lineNum">     383 </span>            :        we have to add the hash cummulatively.
+<span class="lineNum">     384 </span>            :      */
+<span class="lineNum">     385 </span><span class="lineCov">       8120 :     int new_dupes = 0;</span>
+<span class="lineNum">     386 </span>            : 
+<span class="lineNum">     387 </span><span class="lineCov">       8120 :     g_assert(file);</span>
+<span class="lineNum">     388 </span><span class="lineCov">       8120 :     g_assert(file-&gt;digest);</span>
+<span class="lineNum">     389 </span><span class="lineCov">       8120 :     g_assert(directory);</span>
 <span class="lineNum">     390 </span>            : 
-<span class="lineNum">     391 </span><span class="lineCov">      27906 :     g_assert(file);</span>
-<span class="lineNum">     392 </span><span class="lineCov">      27906 :     g_assert(file-&gt;digest);</span>
-<span class="lineNum">     393 </span><span class="lineCov">      27906 :     g_assert(directory);</span>
-<span class="lineNum">     394 </span>            : 
-<span class="lineNum">     395 </span><span class="lineCov">      27906 :     guint8 *file_digest = NULL;</span>
-<span class="lineNum">     396 </span><span class="lineCov">      27906 :     RmOff digest_bytes = 0;</span>
-<span class="lineNum">     397 </span>            : 
-<span class="lineNum">     398 </span><span class="lineCov">      27906 :     if(file-&gt;digest-&gt;type == RM_DIGEST_PARANOID) {</span>
-<span class="lineNum">     399 </span><span class="lineCov">       6322 :         file_digest = rm_digest_steal_buffer(file-&gt;digest-&gt;shadow_hash);</span>
-<span class="lineNum">     400 </span><span class="lineCov">       6322 :         digest_bytes = file-&gt;digest-&gt;shadow_hash-&gt;bytes;</span>
-<span class="lineNum">     401 </span>            :     } else {
-<span class="lineNum">     402 </span><span class="lineCov">      21584 :         file_digest = rm_digest_steal_buffer(file-&gt;digest);</span>
-<span class="lineNum">     403 </span><span class="lineCov">      21584 :         digest_bytes = file-&gt;digest-&gt;bytes;</span>
-<span class="lineNum">     404 </span>            :     }
-<span class="lineNum">     405 </span>            : 
-<span class="lineNum">     406 </span>            :     /* + and not XOR, since ^ would yield 0 for same hashes always. No matter
-<span class="lineNum">     407 </span>            :      * which hashes. Also this would be confusing. For me and for debuggers.
-<span class="lineNum">     408 </span>            :      */
-<span class="lineNum">     409 </span><span class="lineCov">      27906 :     rm_digest_update(directory-&gt;digest, file_digest, digest_bytes);</span>
-<span class="lineNum">     410 </span>            : 
-<span class="lineNum">     411 </span>            :     /* The file value is not really used, but we need some non-null value */
-<span class="lineNum">     412 </span><span class="lineCov">      27906 :     g_hash_table_add(directory-&gt;hash_set, file-&gt;digest);</span>
-<span class="lineNum">     413 </span>            : 
-<span class="lineNum">     414 </span><span class="lineCov">      27906 :     g_slice_free1(digest_bytes, file_digest);</span>
-<span class="lineNum">     415 </span>            : 
-<span class="lineNum">     416 </span><span class="lineCov">      27906 :     if(file-&gt;hardlinks.is_head &amp;&amp; file-&gt;hardlinks.files) {</span>
-<span class="lineNum">     417 </span><span class="lineNoCov">          0 :         new_dupes = 1 + g_queue_get_length(file-&gt;hardlinks.files);</span>
-<span class="lineNum">     418 </span>            :     } else {
-<span class="lineNum">     419 </span><span class="lineCov">      27906 :         new_dupes = 1;</span>
-<span class="lineNum">     420 </span>            :     }
-<span class="lineNum">     421 </span>            : 
-<span class="lineNum">     422 </span><span class="lineCov">      27906 :     directory-&gt;dupe_count += new_dupes;</span>
-<span class="lineNum">     423 </span><span class="lineCov">      27906 :     directory-&gt;prefd_files += file-&gt;is_prefd;</span>
-<span class="lineNum">     424 </span>            : 
-<span class="lineNum">     425 </span><span class="lineCov">      27906 :     return new_dupes;</span>
-<a name="426"><span class="lineNum">     426 </span>            : }</a>
-<span class="lineNum">     427 </span>            : 
-<span class="lineNum">     428 </span><span class="lineCov">      21847 : static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {</span>
-<span class="lineNum">     429 </span><span class="lineCov">      21847 :     if(subdir-&gt;was_merged) {</span>
-<span class="lineNum">     430 </span><span class="lineCov">      32188 :         return;</span>
-<span class="lineNum">     431 </span>            :     }
-<span class="lineNum">     432 </span>            : 
-<span class="lineNum">     433 </span><span class="lineCov">      11506 :     parent-&gt;mergeups = subdir-&gt;mergeups + parent-&gt;mergeups + 1;</span>
-<span class="lineNum">     434 </span><span class="lineCov">      11506 :     parent-&gt;dupe_count += subdir-&gt;dupe_count;</span>
-<span class="lineNum">     435 </span><span class="lineCov">      11506 :     g_queue_push_head(&amp;parent-&gt;children, subdir);</span>
-<span class="lineNum">     436 </span><span class="lineCov">      11506 :     parent-&gt;prefd_files += subdir-&gt;prefd_files;</span>
-<span class="lineNum">     437 </span>            : 
-<span class="lineNum">     438 </span>            : #ifdef _RM_TREEMERGE_DEBUG
-<span class="lineNum">     439 </span>            :     g_printerr(&quot;%55s (%3ld/%3ld) &lt;- %s (%3ld/%3ld)\n&quot;, parent-&gt;dirname,
-<span class="lineNum">     440 </span>            :                parent-&gt;dupe_count, parent-&gt;file_count, subdir-&gt;dirname,
-<span class="lineNum">     441 </span>            :                subdir-&gt;dupe_count, subdir-&gt;file_count);
-<span class="lineNum">     442 </span>            : #endif
-<span class="lineNum">     443 </span>            : 
-<span class="lineNum">     444 </span>            :     /**
-<span class="lineNum">     445 </span>            :      * Here's something weird:
-<span class="lineNum">     446 </span>            :      * - a counter is used and substraced at once from parent-&gt;dupe_count.
-<span class="lineNum">     447 </span>            :      * - it would ofc. be nicer to substract it step by step.
-<span class="lineNum">     448 </span>            :      * - but for some weird reasons this only works on clang, not gcc.
-<span class="lineNum">     449 </span>            :      * - yes, what. But I tested this, I promise!
-<span class="lineNum">     450 </span>            :      */
-<span class="lineNum">     451 </span><span class="lineCov">      25459 :     for(GList *iter = subdir-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     452 </span><span class="lineCov">      13953 :         int c = rm_directory_add(parent, (RmFile *)iter-&gt;data);</span>
-<span class="lineNum">     453 </span><span class="lineCov">      13953 :         parent-&gt;dupe_count -= c;</span>
-<span class="lineNum">     454 </span>            :     }
-<span class="lineNum">     455 </span>            : 
-<span class="lineNum">     456 </span>            :     /* Inherit the child's checksum */
-<span class="lineNum">     457 </span><span class="lineCov">      11506 :     unsigned char *subdir_cksum = rm_digest_steal_buffer(subdir-&gt;digest);</span>
-<span class="lineNum">     458 </span><span class="lineCov">      11506 :     rm_digest_update(parent-&gt;digest, subdir_cksum, subdir-&gt;digest-&gt;bytes);</span>
-<span class="lineNum">     459 </span><span class="lineCov">      11506 :     g_slice_free1(subdir-&gt;digest-&gt;bytes, subdir_cksum);</span>
-<span class="lineNum">     460 </span>            : 
-<span class="lineNum">     461 </span><span class="lineCov">      11506 :     subdir-&gt;was_merged = true;</span>
-<span class="lineNum">     462 </span>            : }
+<span class="lineNum">     391 </span><span class="lineCov">       8120 :     guint8 *file_digest = NULL;</span>
+<span class="lineNum">     392 </span><span class="lineCov">       8120 :     RmOff digest_bytes = 0;</span>
+<span class="lineNum">     393 </span>            : 
+<span class="lineNum">     394 </span><span class="lineCov">       8120 :     if(file-&gt;digest-&gt;type == RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     395 </span><span class="lineCov">       1138 :         file_digest = rm_digest_steal(file-&gt;digest-&gt;paranoid-&gt;shadow_hash);</span>
+<span class="lineNum">     396 </span><span class="lineCov">       1138 :         digest_bytes = file-&gt;digest-&gt;paranoid-&gt;shadow_hash-&gt;bytes;</span>
+<span class="lineNum">     397 </span>            :     } else {
+<span class="lineNum">     398 </span><span class="lineCov">       6982 :         file_digest = rm_digest_steal(file-&gt;digest);</span>
+<span class="lineNum">     399 </span><span class="lineCov">       6982 :         digest_bytes = file-&gt;digest-&gt;bytes;</span>
+<span class="lineNum">     400 </span>            :     }
+<span class="lineNum">     401 </span>            : 
+<span class="lineNum">     402 </span>            :     /* + and not XOR, since ^ would yield 0 for same hashes always. No matter
+<span class="lineNum">     403 </span>            :      * which hashes. Also this would be confusing. For me and for debuggers.
+<span class="lineNum">     404 </span>            :      */
+<span class="lineNum">     405 </span><span class="lineCov">       8120 :     rm_digest_update(directory-&gt;digest, file_digest, digest_bytes);</span>
+<span class="lineNum">     406 </span>            : 
+<span class="lineNum">     407 </span>            :     /* The file value is not really used, but we need some non-null value */
+<span class="lineNum">     408 </span><span class="lineCov">       8120 :     g_hash_table_add(directory-&gt;hash_set, file-&gt;digest);</span>
+<span class="lineNum">     409 </span>            : 
+<span class="lineNum">     410 </span><span class="lineCov">       8120 :     g_slice_free1(digest_bytes, file_digest);</span>
+<span class="lineNum">     411 </span>            : 
+<span class="lineNum">     412 </span><span class="lineCov">       8120 :     if(file-&gt;hardlinks.is_head &amp;&amp; file-&gt;hardlinks.files) {</span>
+<span class="lineNum">     413 </span><span class="lineNoCov">          0 :         new_dupes = 1 + g_queue_get_length(file-&gt;hardlinks.files);</span>
+<span class="lineNum">     414 </span>            :     } else {
+<span class="lineNum">     415 </span><span class="lineCov">       8120 :         new_dupes = 1;</span>
+<span class="lineNum">     416 </span>            :     }
+<span class="lineNum">     417 </span>            : 
+<span class="lineNum">     418 </span><span class="lineCov">       8120 :     directory-&gt;dupe_count += new_dupes;</span>
+<span class="lineNum">     419 </span><span class="lineCov">       8120 :     directory-&gt;prefd_files += file-&gt;is_prefd;</span>
+<span class="lineNum">     420 </span>            : 
+<span class="lineNum">     421 </span><span class="lineCov">       8120 :     return new_dupes;</span>
+<a name="422"><span class="lineNum">     422 </span>            : }</a>
+<span class="lineNum">     423 </span>            : 
+<span class="lineNum">     424 </span><span class="lineCov">       5124 : static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {</span>
+<span class="lineNum">     425 </span><span class="lineCov">       5124 :     if(subdir-&gt;was_merged) {</span>
+<span class="lineNum">     426 </span><span class="lineCov">       1764 :         return;</span>
+<span class="lineNum">     427 </span>            :     }
+<span class="lineNum">     428 </span>            : 
+<span class="lineNum">     429 </span><span class="lineCov">       3360 :     parent-&gt;mergeups = subdir-&gt;mergeups + parent-&gt;mergeups + 1;</span>
+<span class="lineNum">     430 </span><span class="lineCov">       3360 :     parent-&gt;dupe_count += subdir-&gt;dupe_count;</span>
+<span class="lineNum">     431 </span><span class="lineCov">       3360 :     g_queue_push_head(&amp;parent-&gt;children, subdir);</span>
+<span class="lineNum">     432 </span><span class="lineCov">       3360 :     parent-&gt;prefd_files += subdir-&gt;prefd_files;</span>
+<span class="lineNum">     433 </span>            : 
+<span class="lineNum">     434 </span>            : #ifdef _RM_TREEMERGE_DEBUG
+<span class="lineNum">     435 </span>            :     g_printerr(&quot;%55s (%3ld/%3ld) &lt;- %s (%3ld/%3ld)\n&quot;, parent-&gt;dirname,
+<span class="lineNum">     436 </span>            :                parent-&gt;dupe_count, parent-&gt;file_count, subdir-&gt;dirname,
+<span class="lineNum">     437 </span>            :                subdir-&gt;dupe_count, subdir-&gt;file_count);
+<span class="lineNum">     438 </span>            : #endif
+<span class="lineNum">     439 </span>            : 
+<span class="lineNum">     440 </span>            :     /**
+<span class="lineNum">     441 </span>            :      * Here's something weird:
+<span class="lineNum">     442 </span>            :      * - a counter is used and substraced at once from parent-&gt;dupe_count.
+<span class="lineNum">     443 </span>            :      * - it would ofc. be nicer to substract it step by step.
+<span class="lineNum">     444 </span>            :      * - but for some weird reasons this only works on clang, not gcc.
+<span class="lineNum">     445 </span>            :      * - yes, what. But I tested this, I promise!
+<span class="lineNum">     446 </span>            :      */
+<span class="lineNum">     447 </span><span class="lineCov">       7420 :     for(GList *iter = subdir-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     448 </span><span class="lineCov">       4060 :         int c = rm_directory_add(parent, (RmFile *)iter-&gt;data);</span>
+<span class="lineNum">     449 </span><span class="lineCov">       4060 :         parent-&gt;dupe_count -= c;</span>
+<span class="lineNum">     450 </span>            :     }
+<span class="lineNum">     451 </span>            : 
+<span class="lineNum">     452 </span>            :     /* Inherit the child's checksum */
+<span class="lineNum">     453 </span><span class="lineCov">       3360 :     unsigned char *subdir_cksum = rm_digest_steal(subdir-&gt;digest);</span>
+<span class="lineNum">     454 </span><span class="lineCov">       3360 :     rm_digest_update(parent-&gt;digest, subdir_cksum, subdir-&gt;digest-&gt;bytes);</span>
+<span class="lineNum">     455 </span><span class="lineCov">       3360 :     g_slice_free1(subdir-&gt;digest-&gt;bytes, subdir_cksum);</span>
+<span class="lineNum">     456 </span>            : 
+<span class="lineNum">     457 </span><span class="lineCov">       3360 :     subdir-&gt;was_merged = true;</span>
+<span class="lineNum">     458 </span>            : }
+<span class="lineNum">     459 </span>            : 
+<span class="lineNum">     460 </span>            : ///////////////////////////
+<span class="lineNum">     461 </span>            : // TREE MERGER ALGORITHM //
+<a name="462"><span class="lineNum">     462 </span>            : ///////////////////////////</a>
 <span class="lineNum">     463 </span>            : 
-<span class="lineNum">     464 </span>            : ///////////////////////////
-<span class="lineNum">     465 </span>            : // TREE MERGER ALGORITHM //
-<a name="466"><span class="lineNum">     466 </span>            : ///////////////////////////</a>
-<span class="lineNum">     467 </span>            : 
-<span class="lineNum">     468 </span><span class="lineCov">       3310 : static void rm_tm_chunk_flush(RmTreeMerger *self, char **out_paths, int n_paths) {</span>
-<span class="lineNum">     469 </span><span class="lineCov">       3310 :     rm_tm_count_files(&amp;self-&gt;count_tree, out_paths, self-&gt;session);</span>
-<span class="lineNum">     470 </span>            : 
-<span class="lineNum">     471 </span><span class="lineCov">       3310 :     if(self-&gt;session-&gt;cfg-&gt;use_meta_cache) {</span>
-<span class="lineNum">     472 </span><span class="lineCov">        237 :         for(int i = 0; i &lt; n_paths; ++i) {</span>
-<span class="lineNum">     473 </span><span class="lineCov">        122 :             g_free(out_paths[i]);</span>
-<span class="lineNum">     474 </span>            :         }
-<span class="lineNum">     475 </span>            :     }
-<a name="476"><span class="lineNum">     476 </span><span class="lineCov">       3310 : }</span></a>
-<span class="lineNum">     477 </span>            : 
-<span class="lineNum">     478 </span><span class="lineCov">       3310 : static void rm_tm_chunk_paths(RmTreeMerger *self, char **paths) {</span>
-<span class="lineNum">     479 </span>            :     /* Count only up to 512 paths at the same time. High numbers like this can
-<span class="lineNum">     480 </span>            :      * happen if find is piped inside rmlint via the special &quot;-&quot; file.
-<span class="lineNum">     481 </span>            :      * Sadly, this would need to have all paths in memory at the same time.
-<span class="lineNum">     482 </span>            :      * With session-&gt;cfg-&gt;use_meta_cache, there is only an ID in the path
-<span class="lineNum">     483 </span>            :      * pointer.
-<span class="lineNum">     484 </span>            :      * */
+<span class="lineNum">     464 </span><span class="lineCov">       1120 : static void rm_tm_chunk_flush(RmTreeMerger *self, char **out_paths, int n_paths) {</span>
+<span class="lineNum">     465 </span><span class="lineCov">       1120 :     rm_tm_count_files(&amp;self-&gt;count_tree, out_paths, self-&gt;session);</span>
+<span class="lineNum">     466 </span>            : 
+<span class="lineNum">     467 </span><span class="lineCov">       1120 :     if(self-&gt;session-&gt;cfg-&gt;use_meta_cache) {</span>
+<span class="lineNum">     468 </span><span class="lineCov">         88 :         for(int i = 0; i &lt; n_paths; ++i) {</span>
+<span class="lineNum">     469 </span><span class="lineCov">         48 :             g_free(out_paths[i]);</span>
+<span class="lineNum">     470 </span>            :         }
+<span class="lineNum">     471 </span>            :     }
+<a name="472"><span class="lineNum">     472 </span><span class="lineCov">       1120 : }</span></a>
+<span class="lineNum">     473 </span>            : 
+<span class="lineNum">     474 </span><span class="lineCov">       1120 : static void rm_tm_chunk_paths(RmTreeMerger *self, char **paths) {</span>
+<span class="lineNum">     475 </span>            :     /* Count only up to 512 paths at the same time. High numbers like this can
+<span class="lineNum">     476 </span>            :      * happen if find is piped inside rmlint via the special &quot;-&quot; file.
+<span class="lineNum">     477 </span>            :      * Sadly, this would need to have all paths in memory at the same time.
+<span class="lineNum">     478 </span>            :      * With session-&gt;cfg-&gt;use_meta_cache, there is only an ID in the path
+<span class="lineNum">     479 </span>            :      * pointer.
+<span class="lineNum">     480 </span>            :      * */
+<span class="lineNum">     481 </span>            : 
+<span class="lineNum">     482 </span><span class="lineCov">       1120 :     RmCfg *cfg = self-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     483 </span>            : 
+<span class="lineNum">     484 </span><span class="lineCov">       1120 :     const int N = 512;</span>
 <span class="lineNum">     485 </span>            : 
-<span class="lineNum">     486 </span><span class="lineCov">       3310 :     RmCfg *cfg = self-&gt;session-&gt;cfg;</span>
-<span class="lineNum">     487 </span>            : 
-<span class="lineNum">     488 </span><span class="lineCov">       3310 :     const int N = 512;</span>
-<span class="lineNum">     489 </span>            : 
-<span class="lineNum">     490 </span><span class="lineCov">       3310 :     int n_paths = 0;</span>
-<span class="lineNum">     491 </span><span class="lineCov">       3310 :     char **out_paths = g_malloc0((N + 1) * sizeof(char *));</span>
+<span class="lineNum">     486 </span><span class="lineCov">       1120 :     int n_paths = 0;</span>
+<span class="lineNum">     487 </span><span class="lineCov">       1120 :     char **out_paths = g_malloc0((N + 1) * sizeof(char *));</span>
+<span class="lineNum">     488 </span>            : 
+<span class="lineNum">     489 </span><span class="lineCov">       2464 :     for(int i = 0; paths[i]; ++i) {</span>
+<span class="lineNum">     490 </span><span class="lineCov">       1344 :         if(cfg-&gt;use_meta_cache) {</span>
+<span class="lineNum">     491 </span>            :             char buf[PATH_MAX];
 <span class="lineNum">     492 </span>            : 
-<span class="lineNum">     493 </span><span class="lineCov">       6815 :     for(int i = 0; paths[i]; ++i) {</span>
-<span class="lineNum">     494 </span><span class="lineCov">       3505 :         if(cfg-&gt;use_meta_cache) {</span>
-<span class="lineNum">     495 </span>            :             char buf[PATH_MAX];
+<span class="lineNum">     493 </span><span class="lineCov">         96 :             rm_swap_table_lookup(self-&gt;session-&gt;meta_cache,</span>
+<span class="lineNum">     494 </span><span class="lineCov">         48 :                                  self-&gt;session-&gt;meta_cache_dir_id,</span>
+<span class="lineNum">     495 </span><span class="lineCov">         48 :                                  GPOINTER_TO_UINT(paths[i]), buf, sizeof(buf));</span>
 <span class="lineNum">     496 </span>            : 
-<span class="lineNum">     497 </span><span class="lineCov">        244 :             rm_swap_table_lookup(self-&gt;session-&gt;meta_cache,</span>
-<span class="lineNum">     498 </span><span class="lineCov">        122 :                                  self-&gt;session-&gt;meta_cache_dir_id,</span>
-<span class="lineNum">     499 </span><span class="lineCov">        122 :                                  GPOINTER_TO_UINT(paths[i]), buf, sizeof(buf));</span>
-<span class="lineNum">     500 </span>            : 
-<span class="lineNum">     501 </span><span class="lineCov">        122 :             out_paths[n_paths] = g_strdup(buf);</span>
-<span class="lineNum">     502 </span>            :         } else {
-<span class="lineNum">     503 </span><span class="lineCov">       3383 :             out_paths[n_paths] = paths[i];</span>
-<span class="lineNum">     504 </span>            :         }
-<span class="lineNum">     505 </span>            : 
-<span class="lineNum">     506 </span>            :         /* Terminate the vector by a guarding NULL */
-<span class="lineNum">     507 </span><span class="lineCov">       3505 :         out_paths[++n_paths] = NULL;</span>
-<span class="lineNum">     508 </span>            : 
-<span class="lineNum">     509 </span>            :         /* We reached the size of one chunk, flush and wrap around */
-<span class="lineNum">     510 </span><span class="lineCov">       3505 :         if(n_paths == N) {</span>
-<span class="lineNum">     511 </span><span class="lineNoCov">          0 :             rm_tm_chunk_flush(self, out_paths, n_paths);</span>
-<span class="lineNum">     512 </span><span class="lineNoCov">          0 :             n_paths = 0;</span>
-<span class="lineNum">     513 </span>            :         }
-<span class="lineNum">     514 </span>            :     }
-<span class="lineNum">     515 </span>            : 
-<span class="lineNum">     516 </span>            :     /* Flush the rest of it */
-<span class="lineNum">     517 </span><span class="lineCov">       3310 :     if(n_paths) {</span>
-<span class="lineNum">     518 </span><span class="lineCov">       3310 :         rm_tm_chunk_flush(self, out_paths, n_paths);</span>
-<span class="lineNum">     519 </span>            :     }
-<span class="lineNum">     520 </span>            : 
-<span class="lineNum">     521 </span><span class="lineCov">       3310 :     g_free(out_paths);</span>
-<a name="522"><span class="lineNum">     522 </span><span class="lineCov">       3310 : }</span></a>
-<span class="lineNum">     523 </span>            : 
-<span class="lineNum">     524 </span><span class="lineCov">       3310 : RmTreeMerger *rm_tm_new(RmSession *session) {</span>
-<span class="lineNum">     525 </span><span class="lineCov">       3310 :     RmTreeMerger *self = g_slice_new(RmTreeMerger);</span>
-<span class="lineNum">     526 </span><span class="lineCov">       3310 :     self-&gt;session = session;</span>
-<span class="lineNum">     527 </span><span class="lineCov">       3310 :     g_queue_init(&amp;self-&gt;valid_dirs);</span>
+<span class="lineNum">     497 </span><span class="lineCov">         48 :             out_paths[n_paths] = g_strdup(buf);</span>
+<span class="lineNum">     498 </span>            :         } else {
+<span class="lineNum">     499 </span><span class="lineCov">       1296 :             out_paths[n_paths] = paths[i];</span>
+<span class="lineNum">     500 </span>            :         }
+<span class="lineNum">     501 </span>            : 
+<span class="lineNum">     502 </span>            :         /* Terminate the vector by a guarding NULL */
+<span class="lineNum">     503 </span><span class="lineCov">       1344 :         out_paths[++n_paths] = NULL;</span>
+<span class="lineNum">     504 </span>            : 
+<span class="lineNum">     505 </span>            :         /* We reached the size of one chunk, flush and wrap around */
+<span class="lineNum">     506 </span><span class="lineCov">       1344 :         if(n_paths == N) {</span>
+<span class="lineNum">     507 </span><span class="lineNoCov">          0 :             rm_tm_chunk_flush(self, out_paths, n_paths);</span>
+<span class="lineNum">     508 </span><span class="lineNoCov">          0 :             n_paths = 0;</span>
+<span class="lineNum">     509 </span>            :         }
+<span class="lineNum">     510 </span>            :     }
+<span class="lineNum">     511 </span>            : 
+<span class="lineNum">     512 </span>            :     /* Flush the rest of it */
+<span class="lineNum">     513 </span><span class="lineCov">       1120 :     if(n_paths) {</span>
+<span class="lineNum">     514 </span><span class="lineCov">       1120 :         rm_tm_chunk_flush(self, out_paths, n_paths);</span>
+<span class="lineNum">     515 </span>            :     }
+<span class="lineNum">     516 </span>            : 
+<span class="lineNum">     517 </span><span class="lineCov">       1120 :     g_free(out_paths);</span>
+<a name="518"><span class="lineNum">     518 </span><span class="lineCov">       1120 : }</span></a>
+<span class="lineNum">     519 </span>            : 
+<span class="lineNum">     520 </span><span class="lineCov">       1120 : RmTreeMerger *rm_tm_new(RmSession *session) {</span>
+<span class="lineNum">     521 </span><span class="lineCov">       1120 :     RmTreeMerger *self = g_slice_new(RmTreeMerger);</span>
+<span class="lineNum">     522 </span><span class="lineCov">       1120 :     self-&gt;session = session;</span>
+<span class="lineNum">     523 </span><span class="lineCov">       1120 :     g_queue_init(&amp;self-&gt;valid_dirs);</span>
+<span class="lineNum">     524 </span>            : 
+<span class="lineNum">     525 </span><span class="lineCov">       1120 :     self-&gt;result_table = g_hash_table_new_full((GHashFunc)rm_directory_hash,</span>
+<span class="lineNum">     526 </span>            :                                                (GEqualFunc)rm_directory_equal, NULL,
+<span class="lineNum">     527 </span>            :                                                (GDestroyNotify)g_queue_free);
 <span class="lineNum">     528 </span>            : 
-<span class="lineNum">     529 </span><span class="lineCov">       3310 :     self-&gt;result_table = g_hash_table_new_full((GHashFunc)rm_directory_hash,</span>
-<span class="lineNum">     530 </span>            :                                                (GEqualFunc)rm_directory_equal, NULL,
-<span class="lineNum">     531 </span>            :                                                (GDestroyNotify)g_queue_free);
+<span class="lineNum">     529 </span><span class="lineCov">       1120 :     self-&gt;file_groups =</span>
+<span class="lineNum">     530 </span><span class="lineCov">       1120 :         g_hash_table_new_full((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,</span>
+<span class="lineNum">     531 </span>            :                               NULL, (GDestroyNotify)g_queue_free);
 <span class="lineNum">     532 </span>            : 
-<span class="lineNum">     533 </span><span class="lineCov">       3310 :     self-&gt;file_groups =</span>
-<span class="lineNum">     534 </span><span class="lineCov">       3310 :         g_hash_table_new_full((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal,</span>
-<span class="lineNum">     535 </span>            :                               NULL, (GDestroyNotify)g_queue_free);
-<span class="lineNum">     536 </span>            : 
-<span class="lineNum">     537 </span><span class="lineCov">       3310 :     self-&gt;file_checks = g_hash_table_new_full((GHashFunc)rm_digest_hash,</span>
-<span class="lineNum">     538 </span>            :                                               (GEqualFunc)rm_digest_equal, NULL, NULL);
-<span class="lineNum">     539 </span>            : 
-<span class="lineNum">     540 </span><span class="lineCov">       3310 :     self-&gt;known_hashs = g_hash_table_new_full(NULL, NULL, NULL, NULL);</span>
-<span class="lineNum">     541 </span>            : 
-<span class="lineNum">     542 </span><span class="lineCov">       3310 :     rm_trie_init(&amp;self-&gt;dir_tree);</span>
-<span class="lineNum">     543 </span><span class="lineCov">       3310 :     rm_trie_init(&amp;self-&gt;count_tree);</span>
-<span class="lineNum">     544 </span>            : 
-<span class="lineNum">     545 </span><span class="lineCov">       3310 :     rm_tm_chunk_paths(self, session-&gt;cfg-&gt;paths);</span>
+<span class="lineNum">     533 </span><span class="lineCov">       1120 :     self-&gt;known_hashs = g_hash_table_new_full(NULL, NULL, NULL, NULL);</span>
+<span class="lineNum">     534 </span><span class="lineCov">       1120 :     self-&gt;was_printed = g_hash_table_new_full(NULL, NULL, NULL, NULL);</span>
+<span class="lineNum">     535 </span>            : 
+<span class="lineNum">     536 </span><span class="lineCov">       1120 :     rm_trie_init(&amp;self-&gt;dir_tree);</span>
+<span class="lineNum">     537 </span><span class="lineCov">       1120 :     rm_trie_init(&amp;self-&gt;count_tree);</span>
+<span class="lineNum">     538 </span>            : 
+<span class="lineNum">     539 </span><span class="lineCov">       1120 :     rm_tm_chunk_paths(self, session-&gt;cfg-&gt;paths);</span>
+<span class="lineNum">     540 </span>            : 
+<span class="lineNum">     541 </span><span class="lineCov">       1120 :     return self;</span>
+<a name="542"><span class="lineNum">     542 </span>            : }</a>
+<span class="lineNum">     543 </span>            : 
+<span class="lineNum">     544 </span><span class="lineCov">       4284 : int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, RmTreeMerger *tm) {</span>
+<span class="lineNum">     545 </span><span class="lineCov">       4284 :     RmDirectory *directory = node-&gt;data;</span>
 <span class="lineNum">     546 </span>            : 
-<span class="lineNum">     547 </span><span class="lineCov">       3310 :     return self;</span>
-<a name="548"><span class="lineNum">     548 </span>            : }</a>
-<span class="lineNum">     549 </span>            : 
-<span class="lineNum">     550 </span><span class="lineCov">      14341 : int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, _U void *user_data) {</span>
-<span class="lineNum">     551 </span><span class="lineCov">      14341 :     RmDirectory *directory = node-&gt;data;</span>
-<span class="lineNum">     552 </span>            : 
-<span class="lineNum">     553 </span><span class="lineCov">      28294 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     554 </span><span class="lineCov">      13953 :         rm_file_destroy((RmFile *)iter-&gt;data);</span>
-<span class="lineNum">     555 </span>            :     }
-<span class="lineNum">     556 </span>            : 
-<span class="lineNum">     557 </span><span class="lineCov">      14341 :     rm_directory_free(directory);</span>
-<span class="lineNum">     558 </span><span class="lineCov">      14341 :     return 0;</span>
-<a name="559"><span class="lineNum">     559 </span>            : }</a>
-<span class="lineNum">     560 </span>            : 
-<span class="lineNum">     561 </span><span class="lineCov">       3310 : void rm_tm_destroy(RmTreeMerger *self) {</span>
-<span class="lineNum">     562 </span><span class="lineCov">       3310 :     g_hash_table_unref(self-&gt;result_table);</span>
-<span class="lineNum">     563 </span><span class="lineCov">       3310 :     g_hash_table_unref(self-&gt;file_groups);</span>
-<span class="lineNum">     564 </span><span class="lineCov">       3310 :     g_hash_table_unref(self-&gt;file_checks);</span>
-<span class="lineNum">     565 </span>            : 
-<span class="lineNum">     566 </span><span class="lineCov">       3310 :     GList *digest_keys = g_hash_table_get_keys(self-&gt;known_hashs);</span>
-<span class="lineNum">     567 </span><span class="lineCov">       3310 :     g_list_free_full(digest_keys, (GDestroyNotify)rm_digest_free);</span>
-<span class="lineNum">     568 </span><span class="lineCov">       3310 :     g_hash_table_unref(self-&gt;known_hashs);</span>
-<span class="lineNum">     569 </span>            : 
-<span class="lineNum">     570 </span><span class="lineCov">       3310 :     g_queue_clear(&amp;self-&gt;valid_dirs);</span>
-<span class="lineNum">     571 </span>            : 
-<span class="lineNum">     572 </span>            :     /* Kill all RmDirectories stored in the tree */
-<span class="lineNum">     573 </span><span class="lineCov">       3310 :     rm_trie_iter(&amp;self-&gt;dir_tree, NULL, true, false, rm_tm_destroy_iter, NULL);</span>
-<span class="lineNum">     574 </span><span class="lineCov">       3310 :     rm_trie_destroy(&amp;self-&gt;dir_tree);</span>
-<span class="lineNum">     575 </span><span class="lineCov">       3310 :     rm_trie_destroy(&amp;self-&gt;count_tree);</span>
-<span class="lineNum">     576 </span><span class="lineCov">       3310 :     g_slice_free(RmTreeMerger, self);</span>
-<a name="577"><span class="lineNum">     577 </span><span class="lineCov">       3310 : }</span></a>
-<span class="lineNum">     578 </span>            : 
-<span class="lineNum">     579 </span><span class="lineCov">      16868 : static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {</span>
-<span class="lineNum">     580 </span><span class="lineCov">      16868 :     if(directory-&gt;was_inserted) {</span>
-<span class="lineNum">     581 </span><span class="lineCov">      23856 :         return;</span>
-<span class="lineNum">     582 </span>            :     }
-<span class="lineNum">     583 </span>            : 
-<span class="lineNum">     584 </span><span class="lineCov">       9880 :     GQueue *dir_queue =</span>
-<span class="lineNum">     585 </span><span class="lineCov">       9880 :         rm_hash_table_setdefault(self-&gt;result_table, directory, (RmNewFunc)g_queue_new);</span>
-<span class="lineNum">     586 </span><span class="lineCov">       9880 :     g_queue_push_head(dir_queue, directory);</span>
-<span class="lineNum">     587 </span><span class="lineCov">       9880 :     directory-&gt;was_inserted = true;</span>
-<a name="588"><span class="lineNum">     588 </span>            : }</a>
-<span class="lineNum">     589 </span>            : 
-<span class="lineNum">     590 </span><span class="lineCov">      13953 : void rm_tm_feed(RmTreeMerger *self, RmFile *file) {</span>
-<span class="lineNum">     591 </span><span class="lineCov">      13953 :     RM_DEFINE_PATH(file);</span>
-<span class="lineNum">     592 </span><span class="lineCov">      13953 :     char *dirname = g_path_get_dirname(file_path);</span>
-<span class="lineNum">     593 </span>            : 
-<span class="lineNum">     594 </span>            :     /* See if we know that directory already */
-<span class="lineNum">     595 </span><span class="lineCov">      13953 :     RmDirectory *directory = rm_trie_search(&amp;self-&gt;dir_tree, dirname);</span>
-<span class="lineNum">     596 </span>            : 
-<span class="lineNum">     597 </span><span class="lineCov">      13953 :     if(directory == NULL) {</span>
-<span class="lineNum">     598 </span>            :         /* Get the actual file count */
-<span class="lineNum">     599 </span><span class="lineCov">      10149 :         int file_count = GPOINTER_TO_INT(rm_trie_search(&amp;self-&gt;count_tree, dirname));</span>
-<span class="lineNum">     600 </span><span class="lineCov">      10149 :         if(file_count == 0) {</span>
-<span class="lineNum">     601 </span><span class="lineNoCov">          0 :             rm_log_error(</span>
-<span class="lineNum">     602 </span>            :                 RED &quot;Empty directory or weird RmFile encountered; rejecting.\n&quot; RESET);
-<span class="lineNum">     603 </span><span class="lineNoCov">          0 :             file_count = -1;</span>
-<span class="lineNum">     604 </span>            :         }
-<span class="lineNum">     605 </span>            : 
-<span class="lineNum">     606 </span><span class="lineCov">      10149 :         directory = rm_directory_new(dirname);</span>
-<span class="lineNum">     607 </span><span class="lineCov">      10149 :         directory-&gt;file_count = file_count;</span>
-<span class="lineNum">     608 </span>            : 
-<span class="lineNum">     609 </span>            :         /* Make the new directory known */
-<span class="lineNum">     610 </span><span class="lineCov">      10149 :         rm_trie_insert(&amp;self-&gt;dir_tree, dirname, directory);</span>
-<span class="lineNum">     611 </span>            : 
-<span class="lineNum">     612 </span><span class="lineCov">      10149 :         g_queue_push_head(&amp;self-&gt;valid_dirs, directory);</span>
-<span class="lineNum">     613 </span>            :     } else {
-<span class="lineNum">     614 </span><span class="lineCov">       3804 :         g_free(dirname);</span>
-<span class="lineNum">     615 </span>            :     }
-<span class="lineNum">     616 </span>            : 
-<span class="lineNum">     617 </span><span class="lineCov">      13953 :     rm_directory_add(directory, file);</span>
-<span class="lineNum">     618 </span>            : 
-<span class="lineNum">     619 </span>            :     /* Add the file to this directory */
-<span class="lineNum">     620 </span><span class="lineCov">      13953 :     g_queue_push_head(&amp;directory-&gt;known_files, file);</span>
-<span class="lineNum">     621 </span>            : 
-<span class="lineNum">     622 </span>            :     /* Remember the digest (if only to free it later...) */
-<span class="lineNum">     623 </span><span class="lineCov">      13953 :     g_hash_table_replace(self-&gt;known_hashs, file-&gt;digest, NULL);</span>
-<span class="lineNum">     624 </span>            : 
-<span class="lineNum">     625 </span>            :     /* Check if the directory reached the number of actual files in it */
-<span class="lineNum">     626 </span><span class="lineCov">      13953 :     if(directory-&gt;dupe_count == directory-&gt;file_count &amp;&amp; directory-&gt;file_count &gt; 0) {</span>
-<span class="lineNum">     627 </span><span class="lineCov">       5170 :         rm_tm_insert_dir(self, directory);</span>
-<span class="lineNum">     628 </span>            :     }
-<a name="629"><span class="lineNum">     629 </span><span class="lineCov">      13953 : }</span></a>
-<span class="lineNum">     630 </span>            : 
-<span class="lineNum">     631 </span><span class="lineCov">      11464 : static void rm_tm_mark_finished(RmTreeMerger *self, RmDirectory *directory) {</span>
-<span class="lineNum">     632 </span><span class="lineCov">      11464 :     if(directory-&gt;finished) {</span>
-<span class="lineNum">     633 </span><span class="lineCov">      11464 :         return;</span>
-<span class="lineNum">     634 </span>            :     }
-<span class="lineNum">     635 </span>            : 
-<span class="lineNum">     636 </span><span class="lineCov">      11464 :     directory-&gt;finished = true;</span>
-<span class="lineNum">     637 </span>            : 
-<span class="lineNum">     638 </span>            :     /* Recursively propagate to children */
-<span class="lineNum">     639 </span><span class="lineCov">      17551 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     640 </span><span class="lineCov">       6087 :         rm_tm_mark_finished(self, (RmDirectory *)iter-&gt;data);</span>
-<span class="lineNum">     641 </span>            :     }
-<a name="642"><span class="lineNum">     642 </span>            : }</a>
-<span class="lineNum">     643 </span>            : 
-<span class="lineNum">     644 </span><span class="lineCov">       6681 : static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory) {</span>
-<span class="lineNum">     645 </span><span class="lineCov">       6681 :     directory-&gt;finished = false;</span>
-<span class="lineNum">     646 </span>            : 
-<span class="lineNum">     647 </span>            :     /* Recursively propagate to children */
-<span class="lineNum">     648 </span><span class="lineCov">      10215 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     649 </span><span class="lineCov">       3534 :         RmDirectory *child = iter-&gt;data;</span>
-<span class="lineNum">     650 </span><span class="lineCov">       3534 :         rm_tm_mark_original_files(self, child);</span>
-<span class="lineNum">     651 </span>            :     }
-<a name="652"><span class="lineNum">     652 </span><span class="lineCov">       6681 : }</span></a>
-<span class="lineNum">     653 </span>            : 
-<span class="lineNum">     654 </span><span class="lineCov">       4783 : static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory,</span>
-<span class="lineNum">     655 </span>            :                                          gint64 acc) {
-<span class="lineNum">     656 </span><span class="lineCov">      10057 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     657 </span><span class="lineCov">       5274 :         RmFile *file = iter-&gt;data;</span>
-<span class="lineNum">     658 </span><span class="lineCov">       5274 :         acc += file-&gt;is_prefd;</span>
-<span class="lineNum">     659 </span><span class="lineCov">       5274 :         g_hash_table_insert(self-&gt;file_checks, file-&gt;digest, file);</span>
-<span class="lineNum">     660 </span>            :     }
-<span class="lineNum">     661 </span>            : 
-<span class="lineNum">     662 </span>            :     /* Recursively propagate to children */
-<span class="lineNum">     663 </span><span class="lineCov">       7336 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     664 </span><span class="lineCov">       2553 :         RmDirectory *child = iter-&gt;data;</span>
-<span class="lineNum">     665 </span><span class="lineCov">       2553 :         rm_tm_mark_duplicate_files(self, child, acc);</span>
-<span class="lineNum">     666 </span>            :     }
-<span class="lineNum">     667 </span>            : 
-<span class="lineNum">     668 </span><span class="lineCov">       4783 :     return acc;</span>
-<a name="669"><span class="lineNum">     669 </span>            : }</a>
-<span class="lineNum">     670 </span>            : 
-<span class="lineNum">     671 </span><span class="lineCov">        522 : static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {</span>
-<span class="lineNum">     672 </span><span class="lineCov">       1044 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     673 </span><span class="lineCov">        522 :         RmFile *file = iter-&gt;data;</span>
-<span class="lineNum">     674 </span><span class="lineCov">        522 :         RmLintType actual_type = file-&gt;lint_type;</span>
-<span class="lineNum">     675 </span>            : 
-<span class="lineNum">     676 </span><span class="lineCov">        522 :         file-&gt;lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;</span>
-<span class="lineNum">     677 </span><span class="lineCov">        522 :         rm_fmt_write(file, self-&gt;session-&gt;formats);</span>
-<span class="lineNum">     678 </span><span class="lineCov">        522 :         file-&gt;lint_type = actual_type;</span>
-<span class="lineNum">     679 </span>            :     }
-<span class="lineNum">     680 </span>            : 
-<span class="lineNum">     681 </span>            :     /* Recursively propagate to children */
-<span class="lineNum">     682 </span><span class="lineCov">        522 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     683 </span><span class="lineNoCov">          0 :         RmDirectory *child = iter-&gt;data;</span>
-<span class="lineNum">     684 </span><span class="lineNoCov">          0 :         rm_tm_write_unfinished_cksums(self, child);</span>
-<span class="lineNum">     685 </span>            :     }
-<a name="686"><span class="lineNum">     686 </span><span class="lineCov">        522 : }</span></a>
-<span class="lineNum">     687 </span>            : 
-<span class="lineNum">     688 </span><span class="lineCov">      22854 : static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db,</span>
-<span class="lineNum">     689 </span>            :                             _U RmTreeMerger *self) {
-<a name="690"><span class="lineNum">     690 </span><span class="lineCov">      22854 :     return da-&gt;depth - db-&gt;depth;</span></a>
-<span class="lineNum">     691 </span>            : }
-<span class="lineNum">     692 </span><span class="lineCov">      17201 : static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db,</span>
+<span class="lineNum">     547 </span><span class="lineCov">       8344 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     548 </span><span class="lineCov">       4060 :         if(g_hash_table_contains(tm-&gt;was_printed, iter-&gt;data)) {</span>
+<span class="lineNum">     549 </span><span class="lineCov">       2744 :             continue;</span>
+<span class="lineNum">     550 </span>            :         }
+<span class="lineNum">     551 </span>            : 
+<span class="lineNum">     552 </span><span class="lineCov">       1316 :         rm_file_destroy((RmFile *)iter-&gt;data);</span>
+<span class="lineNum">     553 </span>            :     }
+<span class="lineNum">     554 </span>            : 
+<span class="lineNum">     555 </span><span class="lineCov">       4284 :     rm_directory_free(directory);</span>
+<span class="lineNum">     556 </span><span class="lineCov">       4284 :     return 0;</span>
+<a name="557"><span class="lineNum">     557 </span>            : }</a>
+<span class="lineNum">     558 </span>            : 
+<span class="lineNum">     559 </span><span class="lineCov">       1120 : void rm_tm_destroy(RmTreeMerger *self) {</span>
+<span class="lineNum">     560 </span><span class="lineCov">       1120 :     g_hash_table_unref(self-&gt;result_table);</span>
+<span class="lineNum">     561 </span><span class="lineCov">       1120 :     g_hash_table_unref(self-&gt;file_groups);</span>
+<span class="lineNum">     562 </span>            : 
+<span class="lineNum">     563 </span><span class="lineCov">       1120 :     GList *digest_keys = g_hash_table_get_keys(self-&gt;known_hashs);</span>
+<span class="lineNum">     564 </span><span class="lineCov">       1120 :     g_list_free_full(digest_keys, (GDestroyNotify)rm_digest_free);</span>
+<span class="lineNum">     565 </span><span class="lineCov">       1120 :     g_hash_table_unref(self-&gt;known_hashs);</span>
+<span class="lineNum">     566 </span>            : 
+<span class="lineNum">     567 </span><span class="lineCov">       1120 :     g_queue_clear(&amp;self-&gt;valid_dirs);</span>
+<span class="lineNum">     568 </span>            : 
+<span class="lineNum">     569 </span>            :     /* Kill all RmDirectories stored in the tree */
+<span class="lineNum">     570 </span><span class="lineCov">       1120 :     rm_trie_iter(&amp;self-&gt;dir_tree, NULL, true, false,</span>
+<span class="lineNum">     571 </span>            :                  (RmTrieIterCallback)rm_tm_destroy_iter, self);
+<span class="lineNum">     572 </span>            : 
+<span class="lineNum">     573 </span><span class="lineCov">       1120 :     rm_trie_destroy(&amp;self-&gt;dir_tree);</span>
+<span class="lineNum">     574 </span><span class="lineCov">       1120 :     rm_trie_destroy(&amp;self-&gt;count_tree);</span>
+<span class="lineNum">     575 </span><span class="lineCov">       1120 :     g_hash_table_unref(self-&gt;was_printed);</span>
+<span class="lineNum">     576 </span>            : 
+<span class="lineNum">     577 </span><span class="lineCov">       1120 :     g_slice_free(RmTreeMerger, self);</span>
+<a name="578"><span class="lineNum">     578 </span><span class="lineCov">       1120 : }</span></a>
+<span class="lineNum">     579 </span>            : 
+<span class="lineNum">     580 </span><span class="lineCov">       4032 : static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {</span>
+<span class="lineNum">     581 </span><span class="lineCov">       4032 :     if(directory-&gt;was_inserted) {</span>
+<span class="lineNum">     582 </span><span class="lineCov">       1176 :         return;</span>
+<span class="lineNum">     583 </span>            :     }
+<span class="lineNum">     584 </span>            : 
+<span class="lineNum">     585 </span><span class="lineCov">       2856 :     GQueue *dir_queue =</span>
+<span class="lineNum">     586 </span><span class="lineCov">       2856 :         rm_hash_table_setdefault(self-&gt;result_table, directory, (RmNewFunc)g_queue_new);</span>
+<span class="lineNum">     587 </span><span class="lineCov">       2856 :     g_queue_push_head(dir_queue, directory);</span>
+<span class="lineNum">     588 </span><span class="lineCov">       2856 :     directory-&gt;was_inserted = true;</span>
+<a name="589"><span class="lineNum">     589 </span>            : }</a>
+<span class="lineNum">     590 </span>            : 
+<span class="lineNum">     591 </span><span class="lineCov">       4060 : void rm_tm_feed(RmTreeMerger *self, RmFile *file) {</span>
+<span class="lineNum">     592 </span><span class="lineCov">       4060 :     RM_DEFINE_PATH(file);</span>
+<span class="lineNum">     593 </span><span class="lineCov">       4060 :     char *dirname = g_path_get_dirname(file_path);</span>
+<span class="lineNum">     594 </span>            : 
+<span class="lineNum">     595 </span>            :     /* See if we know that directory already */
+<span class="lineNum">     596 </span><span class="lineCov">       4060 :     RmDirectory *directory = rm_trie_search(&amp;self-&gt;dir_tree, dirname);</span>
+<span class="lineNum">     597 </span>            : 
+<span class="lineNum">     598 </span><span class="lineCov">       4060 :     if(directory == NULL) {</span>
+<span class="lineNum">     599 </span>            :         /* Get the actual file count */
+<span class="lineNum">     600 </span><span class="lineCov">       2772 :         int file_count = GPOINTER_TO_INT(rm_trie_search(&amp;self-&gt;count_tree, dirname));</span>
+<span class="lineNum">     601 </span><span class="lineCov">       2772 :         if(file_count == 0) {</span>
+<span class="lineNum">     602 </span><span class="lineNoCov">          0 :             rm_log_error(</span>
+<span class="lineNum">     603 </span>            :                 RED &quot;Empty directory or weird RmFile encountered; rejecting.\n&quot; RESET);
+<span class="lineNum">     604 </span><span class="lineNoCov">          0 :             file_count = -1;</span>
+<span class="lineNum">     605 </span>            :         }
+<span class="lineNum">     606 </span>            : 
+<span class="lineNum">     607 </span><span class="lineCov">       2772 :         directory = rm_directory_new(dirname);</span>
+<span class="lineNum">     608 </span><span class="lineCov">       2772 :         directory-&gt;file_count = file_count;</span>
+<span class="lineNum">     609 </span>            : 
+<span class="lineNum">     610 </span>            :         /* Make the new directory known */
+<span class="lineNum">     611 </span><span class="lineCov">       2772 :         rm_trie_insert(&amp;self-&gt;dir_tree, dirname, directory);</span>
+<span class="lineNum">     612 </span>            : 
+<span class="lineNum">     613 </span><span class="lineCov">       2772 :         g_queue_push_head(&amp;self-&gt;valid_dirs, directory);</span>
+<span class="lineNum">     614 </span>            :     } else {
+<span class="lineNum">     615 </span><span class="lineCov">       1288 :         g_free(dirname);</span>
+<span class="lineNum">     616 </span>            :     }
+<span class="lineNum">     617 </span>            : 
+<span class="lineNum">     618 </span><span class="lineCov">       4060 :     rm_directory_add(directory, file);</span>
+<span class="lineNum">     619 </span>            : 
+<span class="lineNum">     620 </span>            :     /* Add the file to this directory */
+<span class="lineNum">     621 </span><span class="lineCov">       4060 :     g_queue_push_head(&amp;directory-&gt;known_files, file);</span>
+<span class="lineNum">     622 </span>            : 
+<span class="lineNum">     623 </span>            :     /* Remember the digest (if only to free it later...) */
+<span class="lineNum">     624 </span><span class="lineCov">       4060 :     g_hash_table_replace(self-&gt;known_hashs, file-&gt;digest, NULL);</span>
+<span class="lineNum">     625 </span>            : 
+<span class="lineNum">     626 </span>            :     /* Check if the directory reached the number of actual files in it */
+<span class="lineNum">     627 </span><span class="lineCov">       4060 :     if(directory-&gt;dupe_count == directory-&gt;file_count &amp;&amp; directory-&gt;file_count &gt; 0) {</span>
+<span class="lineNum">     628 </span><span class="lineCov">       1680 :         rm_tm_insert_dir(self, directory);</span>
+<span class="lineNum">     629 </span>            :     }
+<a name="630"><span class="lineNum">     630 </span><span class="lineCov">       4060 : }</span></a>
+<span class="lineNum">     631 </span>            : 
+<span class="lineNum">     632 </span><span class="lineCov">       3192 : static void rm_tm_mark_finished(RmTreeMerger *self, RmDirectory *directory) {</span>
+<span class="lineNum">     633 </span><span class="lineCov">       3192 :     if(directory-&gt;finished) {</span>
+<span class="lineNum">     634 </span><span class="lineNoCov">          0 :         return;</span>
+<span class="lineNum">     635 </span>            :     }
+<span class="lineNum">     636 </span>            : 
+<span class="lineNum">     637 </span><span class="lineCov">       3192 :     directory-&gt;finished = true;</span>
+<span class="lineNum">     638 </span>            : 
+<span class="lineNum">     639 </span>            :     /* Recursively propagate to children */
+<span class="lineNum">     640 </span><span class="lineCov">       4704 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     641 </span><span class="lineCov">       1512 :         rm_tm_mark_finished(self, (RmDirectory *)iter-&gt;data);</span>
+<span class="lineNum">     642 </span>            :     }
+<a name="643"><span class="lineNum">     643 </span>            : }</a>
+<span class="lineNum">     644 </span>            : 
+<span class="lineNum">     645 </span><span class="lineCov">       1792 : static void rm_tm_mark_original_files(RmTreeMerger *self, RmDirectory *directory) {</span>
+<span class="lineNum">     646 </span><span class="lineCov">       1792 :     directory-&gt;finished = false;</span>
+<span class="lineNum">     647 </span>            : 
+<span class="lineNum">     648 </span>            :     /* Recursively propagate to children */
+<span class="lineNum">     649 </span><span class="lineCov">       2632 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     650 </span><span class="lineCov">        840 :         RmDirectory *child = iter-&gt;data;</span>
+<span class="lineNum">     651 </span><span class="lineCov">        840 :         rm_tm_mark_original_files(self, child);</span>
+<span class="lineNum">     652 </span>            :     }
+<a name="653"><span class="lineNum">     653 </span><span class="lineCov">       1792 : }</span></a>
+<span class="lineNum">     654 </span>            : 
+<span class="lineNum">     655 </span><span class="lineCov">       1400 : static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *directory) {</span>
+<span class="lineNum">     656 </span><span class="lineCov">       1400 :     gint64 acc = 0;</span>
+<span class="lineNum">     657 </span>            : 
+<span class="lineNum">     658 </span><span class="lineCov">       2716 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     659 </span><span class="lineCov">       1316 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     660 </span><span class="lineCov">       1316 :         acc += file-&gt;is_prefd;</span>
+<span class="lineNum">     661 </span>            :     }
+<span class="lineNum">     662 </span>            : 
+<span class="lineNum">     663 </span>            :     /* Recursively propagate to children */
+<span class="lineNum">     664 </span><span class="lineCov">       2072 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     665 </span><span class="lineCov">        672 :         RmDirectory *child = iter-&gt;data;</span>
+<span class="lineNum">     666 </span><span class="lineCov">        672 :         acc += rm_tm_mark_duplicate_files(self, child);</span>
+<span class="lineNum">     667 </span>            :     }
+<span class="lineNum">     668 </span>            : 
+<span class="lineNum">     669 </span><span class="lineCov">       1400 :     return acc;</span>
+<a name="670"><span class="lineNum">     670 </span>            : }</a>
+<span class="lineNum">     671 </span>            : 
+<span class="lineNum">     672 </span><span class="lineCov">        168 : static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {</span>
+<span class="lineNum">     673 </span><span class="lineCov">        336 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     674 </span><span class="lineCov">        168 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     675 </span><span class="lineCov">        168 :         file-&gt;lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;</span>
+<span class="lineNum">     676 </span><span class="lineCov">        168 :         rm_fmt_write(file, self-&gt;session-&gt;formats, -1);</span>
+<span class="lineNum">     677 </span><span class="lineCov">        168 :         g_hash_table_add(self-&gt;was_printed, file);</span>
+<span class="lineNum">     678 </span>            :     }
+<span class="lineNum">     679 </span>            : 
+<span class="lineNum">     680 </span>            :     /* Recursively propagate to children */
+<span class="lineNum">     681 </span><span class="lineCov">        168 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     682 </span><span class="lineNoCov">          0 :         RmDirectory *child = iter-&gt;data;</span>
+<span class="lineNum">     683 </span><span class="lineNoCov">          0 :         rm_tm_write_unfinished_cksums(self, child);</span>
+<span class="lineNum">     684 </span>            :     }
+<a name="685"><span class="lineNum">     685 </span><span class="lineCov">        168 : }</span></a>
+<span class="lineNum">     686 </span>            : 
+<span class="lineNum">     687 </span><span class="lineCov">       4684 : static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db,</span>
+<span class="lineNum">     688 </span>            :                             _U RmTreeMerger *self) {
+<span class="lineNum">     689 </span><span class="lineCov">       4684 :     return da-&gt;depth - db-&gt;depth;</span>
+<a name="690"><span class="lineNum">     690 </span>            : }</a>
+<span class="lineNum">     691 </span>            : 
+<span class="lineNum">     692 </span><span class="lineCov">       3060 : static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db,</span>
 <span class="lineNum">     693 </span>            :                                     _U RmTreeMerger *self) {
-<span class="lineNum">     694 </span><span class="lineCov">      17201 :     return -rm_tm_sort_paths(da, db, self);</span>
+<span class="lineNum">     694 </span><span class="lineCov">       3060 :     return -rm_tm_sort_paths(da, db, self);</span>
 <a name="695"><span class="lineNum">     695 </span>            : }</a>
 <span class="lineNum">     696 </span>            : 
-<span class="lineNum">     697 </span><span class="lineCov">       2280 : static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db,</span>
+<span class="lineNum">     697 </span><span class="lineCov">        728 : static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db,</span>
 <span class="lineNum">     698 </span>            :                                     RmTreeMerger *self) {
-<span class="lineNum">     699 </span><span class="lineCov">       2280 :     if(db-&gt;prefd_files - da-&gt;prefd_files) {</span>
-<span class="lineNum">     700 </span><span class="lineNoCov">          0 :         return db-&gt;prefd_files - da-&gt;prefd_files;</span>
-<span class="lineNum">     701 </span>            :     }
-<span class="lineNum">     702 </span>            : 
-<span class="lineNum">     703 </span><span class="lineCov">       2280 :     return rm_pp_cmp_orig_criteria_impl(</span>
-<span class="lineNum">     704 </span>            :         self-&gt;session, da-&gt;metadata.dir_mtime, db-&gt;metadata.dir_mtime,
-<span class="lineNum">     705 </span><span class="lineCov">       2280 :         rm_util_basename(da-&gt;dirname), rm_util_basename(db-&gt;dirname), 0, 0);</span>
-<a name="706"><span class="lineNum">     706 </span>            : }</a>
-<span class="lineNum">     707 </span>            : 
-<span class="lineNum">     708 </span><span class="lineCov">      23294 : static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {</span>
-<span class="lineNum">     709 </span><span class="lineCov">      23294 :     if(directory-&gt;finished == true) {</span>
-<span class="lineNum">     710 </span><span class="lineCov">      37030 :         return;</span>
-<span class="lineNum">     711 </span>            :     } else {
-<span class="lineNum">     712 </span><span class="lineCov">       9558 :         directory-&gt;finished = true;</span>
-<span class="lineNum">     713 </span>            :     }
+<span class="lineNum">     699 </span><span class="lineCov">        728 :     RmCfg *cfg = self-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     700 </span>            : 
+<span class="lineNum">     701 </span><span class="lineCov">        728 :     if(da-&gt;prefd_files - db-&gt;prefd_files) {</span>
+<span class="lineNum">     702 </span><span class="lineCov">         56 :         if(cfg-&gt;keep_all_tagged) {</span>
+<span class="lineNum">     703 </span><span class="lineCov">         28 :             return db-&gt;prefd_files - da-&gt;prefd_files;</span>
+<span class="lineNum">     704 </span>            :         } else {
+<span class="lineNum">     705 </span><span class="lineCov">         28 :             return da-&gt;prefd_files - db-&gt;prefd_files;</span>
+<span class="lineNum">     706 </span>            :         }
+<span class="lineNum">     707 </span>            :     }
+<span class="lineNum">     708 </span>            : 
+<span class="lineNum">     709 </span><span class="lineCov">       2016 :     return rm_pp_cmp_orig_criteria_impl(</span>
+<span class="lineNum">     710 </span>            :         self-&gt;session, da-&gt;metadata.dir_mtime, db-&gt;metadata.dir_mtime,
+<span class="lineNum">     711 </span><span class="lineCov">        672 :         rm_util_basename(da-&gt;dirname), rm_util_basename(db-&gt;dirname), 0, 0,</span>
+<span class="lineNum">     712 </span><span class="lineCov">       1344 :         rm_util_path_depth(da-&gt;dirname), rm_util_path_depth(db-&gt;dirname));</span>
+<a name="713"><span class="lineNum">     713 </span>            : }</a>
 <span class="lineNum">     714 </span>            : 
-<span class="lineNum">     715 </span><span class="lineCov">      18237 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     716 </span><span class="lineCov">       8679 :         RmFile *file = iter-&gt;data;</span>
-<span class="lineNum">     717 </span>            : 
-<span class="lineNum">     718 </span><span class="lineCov">       8679 :         GQueue *file_list = rm_hash_table_setdefault(self-&gt;file_groups, file-&gt;digest,</span>
-<span class="lineNum">     719 </span>            :                                                      (RmNewFunc)g_queue_new);
-<span class="lineNum">     720 </span><span class="lineCov">       8679 :         g_queue_push_head(file_list, file);</span>
-<span class="lineNum">     721 </span>            :     }
-<span class="lineNum">     722 </span>            : 
-<span class="lineNum">     723 </span>            :     /* Recursively propagate to children */
-<span class="lineNum">     724 </span><span class="lineCov">      18511 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     725 </span><span class="lineCov">       8953 :         rm_tm_forward_unresolved(self, (RmDirectory *)iter-&gt;data);</span>
-<span class="lineNum">     726 </span>            :     }
-<a name="727"><span class="lineNum">     727 </span>            : }</a>
-<span class="lineNum">     728 </span>            : 
-<span class="lineNum">     729 </span><span class="lineCov">      14341 : static int rm_tm_iter_unfinished_files(_U RmTrie *trie, RmNode *node, _U int level,</span>
-<span class="lineNum">     730 </span>            :                                        _U void *user_data) {
-<span class="lineNum">     731 </span><span class="lineCov">      14341 :     RmTreeMerger *self = user_data;</span>
-<span class="lineNum">     732 </span><span class="lineCov">      14341 :     rm_tm_forward_unresolved(self, node-&gt;data);</span>
-<span class="lineNum">     733 </span><span class="lineCov">      14341 :     return 0;</span>
+<span class="lineNum">     715 </span><span class="lineCov">       6972 : static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {</span>
+<span class="lineNum">     716 </span><span class="lineCov">       6972 :     if(directory-&gt;finished == true) {</span>
+<span class="lineNum">     717 </span><span class="lineCov">       4088 :         return;</span>
+<span class="lineNum">     718 </span>            :     } else {
+<span class="lineNum">     719 </span><span class="lineCov">       2884 :         directory-&gt;finished = true;</span>
+<span class="lineNum">     720 </span>            :     }
+<span class="lineNum">     721 </span>            : 
+<span class="lineNum">     722 </span><span class="lineCov">       5628 :     for(GList *iter = directory-&gt;known_files.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     723 </span><span class="lineCov">       2744 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     724 </span>            : 
+<span class="lineNum">     725 </span><span class="lineCov">       2744 :         GQueue *file_list = rm_hash_table_setdefault(self-&gt;file_groups, file-&gt;digest,</span>
+<span class="lineNum">     726 </span>            :                                                      (RmNewFunc)g_queue_new);
+<span class="lineNum">     727 </span><span class="lineCov">       2744 :         g_queue_push_head(file_list, file);</span>
+<span class="lineNum">     728 </span>            :     }
+<span class="lineNum">     729 </span>            : 
+<span class="lineNum">     730 </span>            :     /* Recursively propagate to children */
+<span class="lineNum">     731 </span><span class="lineCov">       5572 :     for(GList *iter = directory-&gt;children.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     732 </span><span class="lineCov">       2688 :         rm_tm_forward_unresolved(self, (RmDirectory *)iter-&gt;data);</span>
+<span class="lineNum">     733 </span>            :     }
 <a name="734"><span class="lineNum">     734 </span>            : }</a>
 <span class="lineNum">     735 </span>            : 
-<span class="lineNum">     736 </span><span class="lineCov">       4874 : static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {</span>
-<span class="lineNum">     737 </span><span class="lineCov">       4874 :     if(a-&gt;length == 0 || b-&gt;length == 0) {</span>
-<span class="lineNum">     738 </span><span class="lineNoCov">          0 :         return b-&gt;length - a-&gt;length;</span>
-<span class="lineNum">     739 </span>            :     }
-<span class="lineNum">     740 </span>            : 
-<span class="lineNum">     741 </span><span class="lineCov">       4874 :     RmDirectory *first_a = a-&gt;head-&gt;data;</span>
-<span class="lineNum">     742 </span><span class="lineCov">       4874 :     RmDirectory *first_b = b-&gt;head-&gt;data;</span>
-<span class="lineNum">     743 </span><span class="lineCov">       4874 :     return first_b-&gt;mergeups - first_a-&gt;mergeups;</span>
-<a name="744"><span class="lineNum">     744 </span>            : }</a>
-<span class="lineNum">     745 </span>            : 
-<span class="lineNum">     746 </span><span class="lineCov">       3310 : static void rm_tm_extract(RmTreeMerger *self) {</span>
-<span class="lineNum">     747 </span>            :     /* Iterate over all directories per hash (which are same therefore) */
-<span class="lineNum">     748 </span><span class="lineCov">       3310 :     GList *result_table_values = g_hash_table_get_values(self-&gt;result_table);</span>
-<span class="lineNum">     749 </span><span class="lineCov">       3310 :     result_table_values =</span>
-<span class="lineNum">     750 </span>            :         g_list_sort(result_table_values, (GCompareFunc)rm_tm_cmp_directory_groups);
-<span class="lineNum">     751 </span>            : 
-<span class="lineNum">     752 </span><span class="lineCov">       8407 :     for(GList *iter = result_table_values; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     753 </span>            :         /* Needs at least two directories to be duplicate... */
-<span class="lineNum">     754 </span><span class="lineCov">       5097 :         GQueue *dir_list = iter-&gt;data;</span>
-<span class="lineNum">     755 </span>            : 
-<span class="lineNum">     756 </span>            : #ifdef _RM_TREEMERGE_DEBUG
-<span class="lineNum">     757 </span>            :         for(GList *i = dir_list-&gt;head; i; i = i-&gt;next) {
-<span class="lineNum">     758 </span>            :             RmDirectory *d = i-&gt;data;
-<span class="lineNum">     759 </span>            :             char buf[512];
-<span class="lineNum">     760 </span>            :             memset(buf, 0, sizeof(buf));
-<span class="lineNum">     761 </span>            :             rm_digest_hexstring(d-&gt;digest, buf);
-<span class="lineNum">     762 </span>            :             g_printerr(&quot;    mergeups=%&quot; LLU &quot;: %s - %s\n&quot;, d-&gt;mergeups, d-&gt;dirname, buf);
-<span class="lineNum">     763 </span>            :         }
-<span class="lineNum">     764 </span>            :         g_printerr(&quot;---\n&quot;);
-<span class="lineNum">     765 </span>            : #endif
-<span class="lineNum">     766 </span><span class="lineCov">       5097 :         if(dir_list-&gt;length &lt; 2) {</span>
-<span class="lineNum">     767 </span><span class="lineCov">       1950 :             continue;</span>
-<span class="lineNum">     768 </span>            :         }
-<span class="lineNum">     769 </span>            : 
-<span class="lineNum">     770 </span><span class="lineCov">       3147 :         if(rm_session_was_aborted(self-&gt;session)) {</span>
-<span class="lineNum">     771 </span><span class="lineNoCov">          0 :             break;</span>
-<span class="lineNum">     772 </span>            :         }
-<span class="lineNum">     773 </span>            : 
-<span class="lineNum">     774 </span>            :         /* List of result directories */
-<span class="lineNum">     775 </span><span class="lineCov">       3147 :         GQueue result_dirs = G_QUEUE_INIT;</span>
-<span class="lineNum">     776 </span>            : 
-<span class="lineNum">     777 </span>            :         /* Sort the RmDirectory list by their path depth, lowest depth first */
-<span class="lineNum">     778 </span><span class="lineCov">       3147 :         g_queue_sort(dir_list, (GCompareDataFunc)rm_tm_sort_paths, self);</span>
-<span class="lineNum">     779 </span>            : 
-<span class="lineNum">     780 </span>            :         /* Output the directories and mark their children to prevent
-<span class="lineNum">     781 </span>            :          * duplicate directory reports in lower levels.
-<span class="lineNum">     782 </span>            :          */
-<span class="lineNum">     783 </span><span class="lineCov">      11077 :         for(GList *iter = dir_list-&gt;head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     784 </span><span class="lineCov">       7930 :             RmDirectory *directory = iter-&gt;data;</span>
-<span class="lineNum">     785 </span><span class="lineCov">       7930 :             if(directory-&gt;finished == false) {</span>
-<span class="lineNum">     786 </span><span class="lineCov">       5377 :                 rm_tm_mark_finished(self, directory);</span>
-<span class="lineNum">     787 </span><span class="lineCov">       5377 :                 g_queue_push_head(&amp;result_dirs, directory);</span>
-<span class="lineNum">     788 </span>            :             }
-<span class="lineNum">     789 </span>            :         }
-<span class="lineNum">     790 </span>            : 
-<span class="lineNum">     791 </span>            :         /* Make sure the original directory lands as first
-<span class="lineNum">     792 </span>            :          * in the result_dirs queue.
-<span class="lineNum">     793 </span>            :          */
-<span class="lineNum">     794 </span><span class="lineCov">       3147 :         g_queue_sort(&amp;result_dirs, (GCompareDataFunc)rm_tm_sort_orig_criteria, self);</span>
-<span class="lineNum">     795 </span>            : 
-<span class="lineNum">     796 </span><span class="lineCov">       3147 :         GQueue file_adaptor_group = G_QUEUE_INIT;</span>
-<span class="lineNum">     797 </span>            : 
-<span class="lineNum">     798 </span><span class="lineCov">       8524 :         for(GList *iter = result_dirs.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     799 </span><span class="lineCov">       5377 :             RmDirectory *directory = iter-&gt;data;</span>
-<span class="lineNum">     800 </span><span class="lineCov">       5377 :             RmFile *mask = rm_directory_as_file(self, directory);</span>
-<span class="lineNum">     801 </span><span class="lineCov">       5377 :             g_queue_push_tail(&amp;file_adaptor_group, mask);</span>
-<span class="lineNum">     802 </span>            : 
-<span class="lineNum">     803 </span><span class="lineCov">       5377 :             if(iter == result_dirs.head) {</span>
-<span class="lineNum">     804 </span>            :                 /* First one in the group -&gt; It's the original */
-<span class="lineNum">     805 </span><span class="lineCov">       3147 :                 mask-&gt;is_original = true;</span>
-<span class="lineNum">     806 </span><span class="lineCov">       3147 :                 rm_tm_mark_original_files(self, directory);</span>
-<span class="lineNum">     807 </span>            :             } else {
-<span class="lineNum">     808 </span><span class="lineCov">       4460 :                 if(rm_tm_mark_duplicate_files(self, directory, 0) ==</span>
-<span class="lineNum">     809 </span><span class="lineCov">       2230 :                    directory-&gt;dupe_count) {</span>
-<span class="lineNum">     810 </span>            :                     /* Mark the file as original when all files in it are preferred. */
-<span class="lineNum">     811 </span><span class="lineNoCov">          0 :                     mask-&gt;is_original = true;</span>
-<span class="lineNum">     812 </span><span class="lineNoCov">          0 :                     rm_tm_mark_original_files(self, directory);</span>
-<span class="lineNum">     813 </span>            :                 }
-<span class="lineNum">     814 </span>            :             }
-<span class="lineNum">     815 </span>            : 
-<span class="lineNum">     816 </span><span class="lineCov">       5377 :             if(self-&gt;session-&gt;cfg-&gt;write_unfinished) {</span>
-<span class="lineNum">     817 </span><span class="lineCov">        522 :                 rm_tm_write_unfinished_cksums(self, directory);</span>
-<span class="lineNum">     818 </span>            :             }
-<span class="lineNum">     819 </span>            :         }
-<span class="lineNum">     820 </span>            : 
-<span class="lineNum">     821 </span><span class="lineCov">       3147 :         if(result_dirs.length &gt;= 2) {</span>
-<span class="lineNum">     822 </span><span class="lineCov">       2170 :             rm_shred_forward_to_output(self-&gt;session, &amp;file_adaptor_group);</span>
-<span class="lineNum">     823 </span>            :         }
+<span class="lineNum">     736 </span><span class="lineCov">       4284 : static int rm_tm_iter_unfinished_files(_U RmTrie *trie, RmNode *node, _U int level,</span>
+<span class="lineNum">     737 </span>            :                                        _U void *user_data) {
+<span class="lineNum">     738 </span><span class="lineCov">       4284 :     RmTreeMerger *self = user_data;</span>
+<span class="lineNum">     739 </span><span class="lineCov">       4284 :     rm_tm_forward_unresolved(self, node-&gt;data);</span>
+<span class="lineNum">     740 </span><span class="lineCov">       4284 :     return 0;</span>
+<a name="741"><span class="lineNum">     741 </span>            : }</a>
+<span class="lineNum">     742 </span>            : 
+<span class="lineNum">     743 </span><span class="lineCov">        923 : static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {</span>
+<span class="lineNum">     744 </span><span class="lineCov">        923 :     if(a-&gt;length == 0 || b-&gt;length == 0) {</span>
+<span class="lineNum">     745 </span><span class="lineNoCov">          0 :         return b-&gt;length - a-&gt;length;</span>
+<span class="lineNum">     746 </span>            :     }
+<span class="lineNum">     747 </span>            : 
+<span class="lineNum">     748 </span><span class="lineCov">        923 :     RmDirectory *first_a = a-&gt;head-&gt;data;</span>
+<span class="lineNum">     749 </span><span class="lineCov">        923 :     RmDirectory *first_b = b-&gt;head-&gt;data;</span>
+<span class="lineNum">     750 </span><span class="lineCov">        923 :     return first_b-&gt;mergeups - first_a-&gt;mergeups;</span>
+<a name="751"><span class="lineNum">     751 </span>            : }</a>
+<span class="lineNum">     752 </span>            : 
+<span class="lineNum">     753 </span><span class="lineCov">       1120 : static void rm_tm_extract(RmTreeMerger *self) {</span>
+<span class="lineNum">     754 </span>            :     /* Iterate over all directories per hash (which are same therefore) */
+<span class="lineNum">     755 </span><span class="lineCov">       1120 :     RmCfg *cfg = self-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     756 </span><span class="lineCov">       1120 :     GList *result_table_values = g_hash_table_get_values(self-&gt;result_table);</span>
+<span class="lineNum">     757 </span><span class="lineCov">       1120 :     result_table_values =</span>
+<span class="lineNum">     758 </span>            :         g_list_sort(result_table_values, (GCompareFunc)rm_tm_cmp_directory_groups);
+<span class="lineNum">     759 </span>            : 
+<span class="lineNum">     760 </span><span class="lineCov">       2576 :     for(GList *iter = result_table_values; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     761 </span>            :         /* Needs at least two directories to be duplicate... */
+<span class="lineNum">     762 </span><span class="lineCov">       1456 :         GQueue *dir_list = iter-&gt;data;</span>
+<span class="lineNum">     763 </span>            : 
+<span class="lineNum">     764 </span>            : #ifdef _RM_TREEMERGE_DEBUG
+<span class="lineNum">     765 </span>            :         for(GList *i = dir_list-&gt;head; i; i = i-&gt;next) {
+<span class="lineNum">     766 </span>            :             RmDirectory *d = i-&gt;data;
+<span class="lineNum">     767 </span>            :             char buf[512];
+<span class="lineNum">     768 </span>            :             memset(buf, 0, sizeof(buf));
+<span class="lineNum">     769 </span>            :             rm_digest_hexstring(d-&gt;digest, buf);
+<span class="lineNum">     770 </span>            :             g_printerr(&quot;    mergeups=%&quot; LLU &quot;: %s - %s\n&quot;, d-&gt;mergeups, d-&gt;dirname, buf);
+<span class="lineNum">     771 </span>            :         }
+<span class="lineNum">     772 </span>            :         g_printerr(&quot;---\n&quot;);
+<span class="lineNum">     773 </span>            : #endif
+<span class="lineNum">     774 </span><span class="lineCov">       1456 :         if(dir_list-&gt;length &lt; 2) {</span>
+<span class="lineNum">     775 </span><span class="lineCov">        504 :             continue;</span>
+<span class="lineNum">     776 </span>            :         }
+<span class="lineNum">     777 </span>            : 
+<span class="lineNum">     778 </span><span class="lineCov">        952 :         if(rm_session_was_aborted(self-&gt;session)) {</span>
+<span class="lineNum">     779 </span><span class="lineNoCov">          0 :             break;</span>
+<span class="lineNum">     780 </span>            :         }
+<span class="lineNum">     781 </span>            : 
+<span class="lineNum">     782 </span>            :         /* List of result directories */
+<span class="lineNum">     783 </span><span class="lineCov">        952 :         GQueue result_dirs = G_QUEUE_INIT;</span>
+<span class="lineNum">     784 </span>            : 
+<span class="lineNum">     785 </span>            :         /* Sort the RmDirectory list by their path depth, lowest depth first */
+<span class="lineNum">     786 </span><span class="lineCov">        952 :         g_queue_sort(dir_list, (GCompareDataFunc)rm_tm_sort_paths, self);</span>
+<span class="lineNum">     787 </span>            : 
+<span class="lineNum">     788 </span>            :         /* Output the directories and mark their children to prevent
+<span class="lineNum">     789 </span>            :          * duplicate directory reports in lower levels.
+<span class="lineNum">     790 </span>            :          */
+<span class="lineNum">     791 </span><span class="lineCov">       3304 :         for(GList *iter = dir_list-&gt;head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     792 </span><span class="lineCov">       2352 :             RmDirectory *directory = iter-&gt;data;</span>
+<span class="lineNum">     793 </span><span class="lineCov">       2352 :             if(directory-&gt;finished == false) {</span>
+<span class="lineNum">     794 </span><span class="lineCov">       1680 :                 rm_tm_mark_finished(self, directory);</span>
+<span class="lineNum">     795 </span><span class="lineCov">       1680 :                 g_queue_push_head(&amp;result_dirs, directory);</span>
+<span class="lineNum">     796 </span>            :             }
+<span class="lineNum">     797 </span>            :         }
+<span class="lineNum">     798 </span>            : 
+<span class="lineNum">     799 </span>            :         /* Make sure the original directory lands as first
+<span class="lineNum">     800 </span>            :          * in the result_dirs queue.
+<span class="lineNum">     801 </span>            :          */
+<span class="lineNum">     802 </span><span class="lineCov">        952 :         g_queue_sort(&amp;result_dirs, (GCompareDataFunc)rm_tm_sort_orig_criteria, self);</span>
+<span class="lineNum">     803 </span>            : 
+<span class="lineNum">     804 </span><span class="lineCov">        952 :         GQueue file_adaptor_group = G_QUEUE_INIT;</span>
+<span class="lineNum">     805 </span>            : 
+<span class="lineNum">     806 </span><span class="lineCov">       2632 :         for(GList *iter = result_dirs.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     807 </span><span class="lineCov">       1680 :             RmDirectory *directory = iter-&gt;data;</span>
+<span class="lineNum">     808 </span><span class="lineCov">       1680 :             RmFile *mask = rm_directory_as_file(self, directory);</span>
+<span class="lineNum">     809 </span><span class="lineCov">       1680 :             g_queue_push_tail(&amp;file_adaptor_group, mask);</span>
+<span class="lineNum">     810 </span>            : 
+<span class="lineNum">     811 </span><span class="lineCov">       1680 :             if(iter == result_dirs.head) {</span>
+<span class="lineNum">     812 </span>            :                 /* First one in the group -&gt; It's the original */
+<span class="lineNum">     813 </span><span class="lineCov">        952 :                 mask-&gt;is_original = true;</span>
+<span class="lineNum">     814 </span><span class="lineCov">        952 :                 rm_tm_mark_original_files(self, directory);</span>
+<span class="lineNum">     815 </span>            :             } else {
+<span class="lineNum">     816 </span><span class="lineCov">        728 :                 gint64 prefd = rm_tm_mark_duplicate_files(self, directory);</span>
+<span class="lineNum">     817 </span><span class="lineCov">        728 :                 if(prefd == directory-&gt;dupe_count &amp;&amp; cfg-&gt;keep_all_tagged) {</span>
+<span class="lineNum">     818 </span>            :                     /* Mark the file as original when all files in it are preferred. */
+<span class="lineNum">     819 </span><span class="lineCov">         28 :                     mask-&gt;is_original = true;</span>
+<span class="lineNum">     820 </span><span class="lineCov">        700 :                 } else if(prefd == 0 &amp;&amp; cfg-&gt;keep_all_untagged) {</span>
+<span class="lineNum">     821 </span><span class="lineCov">         28 :                     mask-&gt;is_original = true;</span>
+<span class="lineNum">     822 </span>            :                 }
+<span class="lineNum">     823 </span>            :             }
 <span class="lineNum">     824 </span>            : 
-<span class="lineNum">     825 </span><span class="lineCov">       3147 :         g_queue_foreach(&amp;file_adaptor_group, (GFunc)g_free, NULL);</span>
-<span class="lineNum">     826 </span><span class="lineCov">       3147 :         g_queue_clear(&amp;file_adaptor_group);</span>
-<span class="lineNum">     827 </span><span class="lineCov">       3147 :         g_queue_clear(&amp;result_dirs);</span>
-<span class="lineNum">     828 </span>            :     }
+<span class="lineNum">     825 </span><span class="lineCov">       1680 :             if(self-&gt;session-&gt;cfg-&gt;write_unfinished) {</span>
+<span class="lineNum">     826 </span><span class="lineCov">        168 :                 rm_tm_write_unfinished_cksums(self, directory);</span>
+<span class="lineNum">     827 </span>            :             }
+<span class="lineNum">     828 </span>            :         }
 <span class="lineNum">     829 </span>            : 
-<span class="lineNum">     830 </span><span class="lineCov">       3310 :     g_list_free(result_table_values);</span>
-<span class="lineNum">     831 </span>            : 
-<span class="lineNum">     832 </span>            :     /* Iterate over all non-finished dirs in the tree,
-<span class="lineNum">     833 </span>            :      * and grab unfinished files that must be dupes elsewhise.
-<span class="lineNum">     834 </span>            :      */
-<span class="lineNum">     835 </span><span class="lineCov">       3310 :     rm_trie_iter(&amp;self-&gt;dir_tree, NULL, true, false, rm_tm_iter_unfinished_files, self);</span>
-<span class="lineNum">     836 </span>            : 
-<span class="lineNum">     837 </span>            :     /* Now here's a problem. Consider an input like this:
-<span class="lineNum">     838 </span>            :      *  /root
-<span class="lineNum">     839 </span>            :      *  ├── a
-<span class="lineNum">     840 </span>            :      *  ├── sub1
-<span class="lineNum">     841 </span>            :      *  │   ├── a
-<span class="lineNum">     842 </span>            :      *  │   └── b
-<span class="lineNum">     843 </span>            :      *  └── sub2
-<span class="lineNum">     844 </span>            :      *      ├── a
-<span class="lineNum">     845 </span>            :      *      └── b
-<span class="lineNum">     846 </span>            :      *
-<span class="lineNum">     847 </span>            :      *  This yields two duplicate dirs (sub1, sub2)
-<span class="lineNum">     848 </span>            :      *  and one duplicate, unmatched file (a).
-<span class="lineNum">     849 </span>            :      *
-<span class="lineNum">     850 </span>            :      *  For outputting files we need groups, which consist of at least 2 files.
-<span class="lineNum">     851 </span>            :      *  So how to group that, so we don't end up deleting a file many times?
-<span class="lineNum">     852 </span>            :      *  We always choose which directories are originals first, so we flag all
-<span class="lineNum">     853 </span>            :      *  files in it as originals.
-<span class="lineNum">     854 </span>            :      */
-<span class="lineNum">     855 </span>            :     GHashTableIter iter;
-<span class="lineNum">     856 </span><span class="lineCov">       3310 :     g_hash_table_iter_init(&amp;iter, self-&gt;file_groups);</span>
-<span class="lineNum">     857 </span>            : 
-<span class="lineNum">     858 </span><span class="lineCov">       3310 :     GQueue *file_list = NULL;</span>
-<span class="lineNum">     859 </span><span class="lineCov">      10685 :     while(g_hash_table_iter_next(&amp;iter, NULL, (void **)&amp;file_list)) {</span>
-<span class="lineNum">     860 </span><span class="lineCov">       4065 :         bool has_one_dupe = false;</span>
-<span class="lineNum">     861 </span><span class="lineCov">       4065 :         RmOff file_size_acc = 0;</span>
-<span class="lineNum">     862 </span>            : 
-<span class="lineNum">     863 </span><span class="lineCov">       4065 :         GList *next = NULL;</span>
-<span class="lineNum">     864 </span><span class="lineCov">      12744 :         for(GList *iter = file_list-&gt;head; iter; iter = next) {</span>
-<span class="lineNum">     865 </span><span class="lineCov">       8679 :             RmFile *file = iter-&gt;data;</span>
-<span class="lineNum">     866 </span><span class="lineCov">       8679 :             next = iter-&gt;next;</span>
+<span class="lineNum">     830 </span><span class="lineCov">        952 :         if(result_dirs.length &gt;= 2) {</span>
+<span class="lineNum">     831 </span><span class="lineCov">        728 :             rm_shred_forward_to_output(self-&gt;session, &amp;file_adaptor_group);</span>
+<span class="lineNum">     832 </span>            :         } else {
+<span class="lineNum">     833 </span><span class="lineCov">        224 :             g_queue_foreach(&amp;file_adaptor_group, (GFunc)g_free, NULL);</span>
+<span class="lineNum">     834 </span>            :         }
+<span class="lineNum">     835 </span>            : 
+<span class="lineNum">     836 </span><span class="lineCov">        952 :         g_queue_clear(&amp;file_adaptor_group);</span>
+<span class="lineNum">     837 </span><span class="lineCov">        952 :         g_queue_clear(&amp;result_dirs);</span>
+<span class="lineNum">     838 </span>            :     }
+<span class="lineNum">     839 </span>            : 
+<span class="lineNum">     840 </span><span class="lineCov">       1120 :     g_list_free(result_table_values);</span>
+<span class="lineNum">     841 </span>            : 
+<span class="lineNum">     842 </span>            :     /* Iterate over all non-finished dirs in the tree,
+<span class="lineNum">     843 </span>            :      * and grab unfinished files that must be dupes elsewhise.
+<span class="lineNum">     844 </span>            :      */
+<span class="lineNum">     845 </span><span class="lineCov">       1120 :     rm_trie_iter(&amp;self-&gt;dir_tree, NULL, true, false, rm_tm_iter_unfinished_files, self);</span>
+<span class="lineNum">     846 </span>            : 
+<span class="lineNum">     847 </span>            :     /* Now here's a problem. Consider an input like this:
+<span class="lineNum">     848 </span>            :      *  /root
+<span class="lineNum">     849 </span>            :      *  ├── a
+<span class="lineNum">     850 </span>            :      *  ├── sub1
+<span class="lineNum">     851 </span>            :      *  │   ├── a
+<span class="lineNum">     852 </span>            :      *  │   └── b
+<span class="lineNum">     853 </span>            :      *  └── sub2
+<span class="lineNum">     854 </span>            :      *      ├── a
+<span class="lineNum">     855 </span>            :      *      └── b
+<span class="lineNum">     856 </span>            :      *
+<span class="lineNum">     857 </span>            :      *  This yields two duplicate dirs (sub1, sub2)
+<span class="lineNum">     858 </span>            :      *  and one duplicate, unmatched file (a).
+<span class="lineNum">     859 </span>            :      *
+<span class="lineNum">     860 </span>            :      *  For outputting files we need groups, which consist of at least 2 files.
+<span class="lineNum">     861 </span>            :      *  So how to group that, so we don't end up deleting a file many times?
+<span class="lineNum">     862 </span>            :      *  We always choose which directories are originals first, so we flag all
+<span class="lineNum">     863 </span>            :      *  files in it as originals.
+<span class="lineNum">     864 </span>            :      */
+<span class="lineNum">     865 </span>            :     GHashTableIter iter;
+<span class="lineNum">     866 </span><span class="lineCov">       1120 :     g_hash_table_iter_init(&amp;iter, self-&gt;file_groups);</span>
 <span class="lineNum">     867 </span>            : 
-<span class="lineNum">     868 </span><span class="lineCov">       8679 :             bool is_duplicate = g_hash_table_contains(self-&gt;file_checks, file-&gt;digest);</span>
-<span class="lineNum">     869 </span><span class="lineCov">       8679 :             has_one_dupe |= is_duplicate;</span>
-<span class="lineNum">     870 </span>            : 
-<span class="lineNum">     871 </span>            :             /* with --partial-hidden we do not want to output */
-<span class="lineNum">     872 </span><span class="lineCov">       8679 :             if(self-&gt;session-&gt;cfg-&gt;partial_hidden &amp;&amp; file-&gt;is_hidden) {</span>
-<span class="lineNum">     873 </span><span class="lineCov">        420 :                 g_queue_delete_link(file_list, iter);</span>
-<span class="lineNum">     874 </span><span class="lineCov">        420 :                 continue;</span>
-<span class="lineNum">     875 </span>            :             }
-<span class="lineNum">     876 </span>            : 
-<span class="lineNum">     877 </span><span class="lineCov">       8259 :             if(iter != file_list-&gt;head &amp;&amp; !is_duplicate) {</span>
-<span class="lineNum">     878 </span><span class="lineCov">       2652 :                 file_size_acc += file-&gt;file_size;</span>
+<span class="lineNum">     868 </span><span class="lineCov">       1120 :     GQueue *file_list = NULL;</span>
+<span class="lineNum">     869 </span><span class="lineCov">       3612 :     while(g_hash_table_iter_next(&amp;iter, NULL, (void **)&amp;file_list)) {</span>
+<span class="lineNum">     870 </span><span class="lineCov">       1372 :         GList *next = NULL;</span>
+<span class="lineNum">     871 </span><span class="lineCov">       4116 :         for(GList *iter = file_list-&gt;head; iter; iter = next) {</span>
+<span class="lineNum">     872 </span><span class="lineCov">       2744 :             RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     873 </span><span class="lineCov">       2744 :             next = iter-&gt;next;</span>
+<span class="lineNum">     874 </span>            : 
+<span class="lineNum">     875 </span>            :             /* with --partial-hidden we do not want to output */
+<span class="lineNum">     876 </span><span class="lineCov">       2744 :             if(self-&gt;session-&gt;cfg-&gt;partial_hidden &amp;&amp; file-&gt;is_hidden) {</span>
+<span class="lineNum">     877 </span><span class="lineCov">         84 :                 g_queue_delete_link(file_list, iter);</span>
+<span class="lineNum">     878 </span><span class="lineCov">         84 :                 continue;</span>
 <span class="lineNum">     879 </span>            :             }
-<span class="lineNum">     880 </span>            :         }
-<span class="lineNum">     881 </span>            : 
-<span class="lineNum">     882 </span><span class="lineCov">       4065 :         if(file_list-&gt;length &gt;= 2) {</span>
-<span class="lineNum">     883 </span>            :             /* If no separate duplicate files are requested, we can stop here */
-<span class="lineNum">     884 </span><span class="lineCov">       2644 :             if(self-&gt;session-&gt;cfg-&gt;find_duplicates == false) {</span>
-<span class="lineNum">     885 </span><span class="lineNoCov">          0 :                 self-&gt;session-&gt;total_lint_size -= file_size_acc;</span>
-<span class="lineNum">     886 </span><span class="lineNoCov">          0 :                 self-&gt;session-&gt;dup_group_counter -= 1;</span>
-<span class="lineNum">     887 </span><span class="lineNoCov">          0 :                 self-&gt;session-&gt;dup_counter -= file_list-&gt;length - 1;</span>
-<span class="lineNum">     888 </span>            :             } else {
-<span class="lineNum">     889 </span><span class="lineCov">       2644 :                 rm_shred_group_find_original(self-&gt;session, file_list);</span>
-<span class="lineNum">     890 </span><span class="lineCov">       2644 :                 rm_shred_forward_to_output(self-&gt;session, file_list);</span>
-<span class="lineNum">     891 </span>            :             }
-<span class="lineNum">     892 </span>            :         }
-<span class="lineNum">     893 </span>            :     }
-<a name="894"><span class="lineNum">     894 </span><span class="lineCov">       3310 : }</span></a>
-<span class="lineNum">     895 </span>            : 
-<span class="lineNum">     896 </span><span class="lineCov">      21847 : static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {</span>
-<span class="lineNum">     897 </span><span class="lineCov">      21847 :     char *parent_dir = g_path_get_dirname(directory-&gt;dirname);</span>
-<span class="lineNum">     898 </span><span class="lineCov">      21847 :     bool is_root = strcmp(parent_dir, &quot;/&quot;) == 0;</span>
-<span class="lineNum">     899 </span>            : 
-<span class="lineNum">     900 </span>            :     /* Lookup if we already found this parent before (if yes, merge with it) */
-<span class="lineNum">     901 </span><span class="lineCov">      21847 :     RmDirectory *parent = rm_trie_search(&amp;self-&gt;dir_tree, parent_dir);</span>
-<span class="lineNum">     902 </span>            : 
-<span class="lineNum">     903 </span><span class="lineCov">      21847 :     if(parent == NULL) {</span>
-<span class="lineNum">     904 </span>            :         /* none yet, basically copy child */
-<span class="lineNum">     905 </span><span class="lineCov">       4192 :         parent = rm_directory_new(parent_dir);</span>
-<span class="lineNum">     906 </span><span class="lineCov">       4192 :         rm_trie_insert(&amp;self-&gt;dir_tree, parent_dir, parent);</span>
-<span class="lineNum">     907 </span>            : 
-<span class="lineNum">     908 </span>            :         /* Get the actual file count */
-<span class="lineNum">     909 </span><span class="lineCov">       4192 :         parent-&gt;file_count =</span>
-<span class="lineNum">     910 </span><span class="lineCov">       4192 :             GPOINTER_TO_UINT(rm_trie_search(&amp;self-&gt;count_tree, parent_dir));</span>
-<span class="lineNum">     911 </span>            : 
-<span class="lineNum">     912 </span>            :     } else {
-<span class="lineNum">     913 </span><span class="lineCov">      17655 :         g_free(parent_dir);</span>
-<span class="lineNum">     914 </span>            :     }
-<span class="lineNum">     915 </span>            : 
-<span class="lineNum">     916 </span><span class="lineCov">      21847 :     rm_directory_add_subdir(parent, directory);</span>
-<span class="lineNum">     917 </span>            : 
-<span class="lineNum">     918 </span><span class="lineCov">      21847 :     if(parent-&gt;dupe_count == parent-&gt;file_count &amp;&amp; parent-&gt;file_count &gt; 0) {</span>
-<span class="lineNum">     919 </span><span class="lineCov">      11698 :         rm_tm_insert_dir(self, parent);</span>
-<span class="lineNum">     920 </span><span class="lineCov">      11698 :         if(!is_root) {</span>
-<span class="lineNum">     921 </span><span class="lineCov">      11698 :             rm_tm_cluster_up(self, parent);</span>
-<span class="lineNum">     922 </span>            :         }
-<span class="lineNum">     923 </span>            :     }
-<a name="924"><span class="lineNum">     924 </span><span class="lineCov">      21847 : }</span></a>
-<span class="lineNum">     925 </span>            : 
-<span class="lineNum">     926 </span><span class="lineCov">       3310 : void rm_tm_finish(RmTreeMerger *self) {</span>
-<span class="lineNum">     927 </span>            :     /* Iterate over all valid directories and try to level them all layers up.
-<span class="lineNum">     928 </span>            :      */
-<span class="lineNum">     929 </span><span class="lineCov">       3310 :     g_queue_sort(&amp;self-&gt;valid_dirs, (GCompareDataFunc)rm_tm_sort_paths_reverse, self);</span>
-<span class="lineNum">     930 </span><span class="lineCov">      13459 :     for(GList *iter = self-&gt;valid_dirs.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     931 </span><span class="lineCov">      10149 :         RmDirectory *directory = iter-&gt;data;</span>
-<span class="lineNum">     932 </span><span class="lineCov">      10149 :         rm_tm_cluster_up(self, directory);</span>
-<span class="lineNum">     933 </span>            : #ifdef _RM_TREEMERGE_DEBUG
-<span class="lineNum">     934 </span>            :         g_printerr(&quot;###\n&quot;);
-<span class="lineNum">     935 </span>            : #endif
-<span class="lineNum">     936 </span>            :     }
-<span class="lineNum">     937 </span>            : 
-<span class="lineNum">     938 </span><span class="lineCov">       3310 :     if(!rm_session_was_aborted(self-&gt;session)) {</span>
-<span class="lineNum">     939 </span>            :         /* Recursively call self to march on */
-<span class="lineNum">     940 </span><span class="lineCov">       3310 :         rm_tm_extract(self);</span>
-<span class="lineNum">     941 </span>            :     }
-<span class="lineNum">     942 </span><span class="lineCov">       3310 : }</span>
+<span class="lineNum">     880 </span>            : 
+<span class="lineNum">     881 </span><span class="lineCov">       2660 :             g_hash_table_add(self-&gt;was_printed, file);</span>
+<span class="lineNum">     882 </span>            :         }
+<span class="lineNum">     883 </span>            : 
+<span class="lineNum">     884 </span><span class="lineCov">       1372 :         if(file_list-&gt;length &gt;= 2) {</span>
+<span class="lineNum">     885 </span>            :             /* If no separate duplicate files are requested, we can stop here */
+<span class="lineNum">     886 </span><span class="lineCov">        868 :             if(self-&gt;session-&gt;cfg-&gt;find_duplicates == false) {</span>
+<span class="lineNum">     887 </span><span class="lineNoCov">          0 :                 self-&gt;session-&gt;dup_group_counter -= 1;</span>
+<span class="lineNum">     888 </span><span class="lineNoCov">          0 :                 self-&gt;session-&gt;dup_counter -= file_list-&gt;length - 1;</span>
+<span class="lineNum">     889 </span>            :             } else {
+<span class="lineNum">     890 </span><span class="lineCov">        868 :                 rm_shred_group_find_original(self-&gt;session, file_list);</span>
+<span class="lineNum">     891 </span><span class="lineCov">        868 :                 rm_shred_forward_to_output(self-&gt;session, file_list);</span>
+<span class="lineNum">     892 </span>            :             }
+<span class="lineNum">     893 </span>            :         }
+<span class="lineNum">     894 </span>            :     }
+<a name="895"><span class="lineNum">     895 </span><span class="lineCov">       1120 : }</span></a>
+<span class="lineNum">     896 </span>            : 
+<span class="lineNum">     897 </span><span class="lineCov">       5124 : static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {</span>
+<span class="lineNum">     898 </span><span class="lineCov">       5124 :     char *parent_dir = g_path_get_dirname(directory-&gt;dirname);</span>
+<span class="lineNum">     899 </span><span class="lineCov">       5124 :     bool is_root = strcmp(parent_dir, &quot;/&quot;) == 0;</span>
+<span class="lineNum">     900 </span>            : 
+<span class="lineNum">     901 </span>            :     /* Lookup if we already found this parent before (if yes, merge with it) */
+<span class="lineNum">     902 </span><span class="lineCov">       5124 :     RmDirectory *parent = rm_trie_search(&amp;self-&gt;dir_tree, parent_dir);</span>
+<span class="lineNum">     903 </span>            : 
+<span class="lineNum">     904 </span><span class="lineCov">       5124 :     if(parent == NULL) {</span>
+<span class="lineNum">     905 </span>            :         /* none yet, basically copy child */
+<span class="lineNum">     906 </span><span class="lineCov">       1512 :         parent = rm_directory_new(parent_dir);</span>
+<span class="lineNum">     907 </span><span class="lineCov">       1512 :         rm_trie_insert(&amp;self-&gt;dir_tree, parent_dir, parent);</span>
+<span class="lineNum">     908 </span>            : 
+<span class="lineNum">     909 </span>            :         /* Get the actual file count */
+<span class="lineNum">     910 </span><span class="lineCov">       1512 :         parent-&gt;file_count =</span>
+<span class="lineNum">     911 </span><span class="lineCov">       1512 :             GPOINTER_TO_UINT(rm_trie_search(&amp;self-&gt;count_tree, parent_dir));</span>
+<span class="lineNum">     912 </span>            : 
+<span class="lineNum">     913 </span>            :     } else {
+<span class="lineNum">     914 </span><span class="lineCov">       3612 :         g_free(parent_dir);</span>
+<span class="lineNum">     915 </span>            :     }
+<span class="lineNum">     916 </span>            : 
+<span class="lineNum">     917 </span><span class="lineCov">       5124 :     rm_directory_add_subdir(parent, directory);</span>
+<span class="lineNum">     918 </span>            : 
+<span class="lineNum">     919 </span><span class="lineCov">       5124 :     if(parent-&gt;dupe_count == parent-&gt;file_count &amp;&amp; parent-&gt;file_count &gt; 0) {</span>
+<span class="lineNum">     920 </span><span class="lineCov">       2352 :         rm_tm_insert_dir(self, parent);</span>
+<span class="lineNum">     921 </span><span class="lineCov">       2352 :         if(!is_root) {</span>
+<span class="lineNum">     922 </span><span class="lineCov">       2352 :             rm_tm_cluster_up(self, parent);</span>
+<span class="lineNum">     923 </span>            :         }
+<span class="lineNum">     924 </span>            :     }
+<a name="925"><span class="lineNum">     925 </span><span class="lineCov">       5124 : }</span></a>
+<span class="lineNum">     926 </span>            : 
+<span class="lineNum">     927 </span><span class="lineCov">       1120 : void rm_tm_finish(RmTreeMerger *self) {</span>
+<span class="lineNum">     928 </span>            :     /* Iterate over all valid directories and try to level them all layers up.
+<span class="lineNum">     929 </span>            :      */
+<span class="lineNum">     930 </span><span class="lineCov">       1120 :     g_queue_sort(&amp;self-&gt;valid_dirs, (GCompareDataFunc)rm_tm_sort_paths_reverse, self);</span>
+<span class="lineNum">     931 </span><span class="lineCov">       3892 :     for(GList *iter = self-&gt;valid_dirs.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     932 </span><span class="lineCov">       2772 :         RmDirectory *directory = iter-&gt;data;</span>
+<span class="lineNum">     933 </span><span class="lineCov">       2772 :         rm_tm_cluster_up(self, directory);</span>
+<span class="lineNum">     934 </span>            : #ifdef _RM_TREEMERGE_DEBUG
+<span class="lineNum">     935 </span>            :         g_printerr(&quot;###\n&quot;);
+<span class="lineNum">     936 </span>            : #endif
+<span class="lineNum">     937 </span>            :     }
+<span class="lineNum">     938 </span>            : 
+<span class="lineNum">     939 </span><span class="lineCov">       1120 :     if(!rm_session_was_aborted(self-&gt;session)) {</span>
+<span class="lineNum">     940 </span>            :         /* Recursively call self to march on */
+<span class="lineNum">     941 </span><span class="lineCov">       1120 :         rm_tm_extract(self);</span>
+<span class="lineNum">     942 </span>            :     }
+<span class="lineNum">     943 </span><span class="lineCov">       1120 : }</span>
 </pre>
       </td>
     </tr>
@@ -1010,7 +1011,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

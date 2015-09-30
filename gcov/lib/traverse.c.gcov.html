@@ -19,7 +19,7 @@
         <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - traverse.c<span style="font-size: 80%;"> (source / <a href="traverse.c.func.html">functions</a>)</span></td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - traverse.c<span style="font-size: 80%;"> (source / <a href="traverse.c.func-sort-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="15%"></td>
             <td width="10%" class="headerCovTableHead">Hit</td>
@@ -31,13 +31,13 @@
             <td class="headerValue">coverage.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">173</td>
-            <td class="headerCovTableEntry">212</td>
-            <td class="headerCovTableEntryMed">81.6 %</td>
+            <td class="headerCovTableEntry">178</td>
+            <td class="headerCovTableEntry">219</td>
+            <td class="headerCovTableEntryMed">81.3 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2015-05-07</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">9</td>
@@ -88,502 +88,514 @@
 <span class="lineNum">      26 </span>            : #include &lt;stdlib.h&gt;
 <span class="lineNum">      27 </span>            : #include &lt;string.h&gt;
 <span class="lineNum">      28 </span>            : 
-<span class="lineNum">      29 </span>            : #include &lt;fts.h&gt;
-<span class="lineNum">      30 </span>            : #include &lt;errno.h&gt;
-<span class="lineNum">      31 </span>            : #include &lt;sys/stat.h&gt;
-<span class="lineNum">      32 </span>            : 
-<span class="lineNum">      33 </span>            : #include &lt;glib.h&gt;
-<span class="lineNum">      34 </span>            : 
-<span class="lineNum">      35 </span>            : #include &quot;preprocess.h&quot;
-<span class="lineNum">      36 </span>            : #include &quot;formats.h&quot;
-<span class="lineNum">      37 </span>            : #include &quot;utilities.h&quot;
-<span class="lineNum">      38 </span>            : #include &quot;file.h&quot;
-<span class="lineNum">      39 </span>            : #include &quot;xattr.h&quot;
-<span class="lineNum">      40 </span>            : 
-<span class="lineNum">      41 </span>            : ///////////////////////////////////////////
-<span class="lineNum">      42 </span>            : // BUFFER FOR STARTING TRAVERSAL THREADS //
-<span class="lineNum">      43 </span>            : ///////////////////////////////////////////
-<span class="lineNum">      44 </span>            : 
-<span class="lineNum">      45 </span>            : /* Defines a path variable containing the buffer's path */
-<span class="lineNum">      46 </span>            : #define RM_BUFFER_DEFINE_PATH(session, buff)                                      \
-<span class="lineNum">      47 </span>            :     char *buff##_path = NULL;                                                     \
-<span class="lineNum">      48 </span>            :     char buff##_buf[PATH_MAX];                                                    \
-<span class="lineNum">      49 </span>            :     if(session-&gt;cfg-&gt;use_meta_cache) {                                            \
-<span class="lineNum">      50 </span>            :         rm_swap_table_lookup(session-&gt;meta_cache, session-&gt;meta_cache_dir_id,     \
-<span class="lineNum">      51 </span>            :                              GPOINTER_TO_UINT(buff-&gt;path), buff##_buf, PATH_MAX); \
-<span class="lineNum">      52 </span>            :         buff##_path = buff##_buf;                                                 \
-<span class="lineNum">      53 </span>            :     } else {                                                                      \
-<span class="lineNum">      54 </span>            :         buff##_path = buff-&gt;path;                                                 \
-<span class="lineNum">      55 </span>            :     }
-<span class="lineNum">      56 </span>            : 
-<span class="lineNum">      57 </span>            : typedef struct RmTravBuffer {
-<span class="lineNum">      58 </span>            :     RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
-<span class="lineNum">      59 </span>            :     char *path;       /* The path of the directory, as passed on command line. */
-<span class="lineNum">      60 </span>            :     bool is_prefd;    /* Was this file in a preferred path? */
-<span class="lineNum">      61 </span>            :     RmOff path_index; /* Index of path, as passed on the commadline */
-<a name="62"><span class="lineNum">      62 </span>            : } RmTravBuffer;</a>
-<span class="lineNum">      63 </span>            : 
-<span class="lineNum">      64 </span><span class="lineCov">      19408 : static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd,</span>
-<span class="lineNum">      65 </span>            :                                         unsigned long path_index) {
-<span class="lineNum">      66 </span><span class="lineCov">      19408 :     RmTravBuffer *self = g_new0(RmTravBuffer, 1);</span>
-<span class="lineNum">      67 </span><span class="lineCov">      19408 :     self-&gt;path = path;</span>
-<span class="lineNum">      68 </span><span class="lineCov">      19408 :     self-&gt;is_prefd = is_prefd;</span>
-<span class="lineNum">      69 </span><span class="lineCov">      19408 :     self-&gt;path_index = path_index;</span>
-<span class="lineNum">      70 </span>            : 
-<span class="lineNum">      71 </span><span class="lineCov">      19408 :     RM_BUFFER_DEFINE_PATH(session, self);</span>
-<span class="lineNum">      72 </span>            : 
-<span class="lineNum">      73 </span>            :     int stat_state;
-<span class="lineNum">      74 </span><span class="lineCov">      19408 :     if(session-&gt;cfg-&gt;follow_symlinks) {</span>
-<span class="lineNum">      75 </span><span class="lineCov">        189 :         stat_state = rm_sys_stat(self_path, &amp;self-&gt;stat_buf);</span>
-<span class="lineNum">      76 </span>            :     } else {
-<span class="lineNum">      77 </span><span class="lineCov">      19219 :         stat_state = rm_sys_lstat(self_path, &amp;self-&gt;stat_buf);</span>
-<span class="lineNum">      78 </span>            :     }
-<span class="lineNum">      79 </span>            : 
-<span class="lineNum">      80 </span><span class="lineCov">      19408 :     if(stat_state == -1) {</span>
-<span class="lineNum">      81 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;Unable to stat file&quot;);</span>
-<span class="lineNum">      82 </span>            :     }
-<span class="lineNum">      83 </span><span class="lineCov">      19408 :     return self;</span>
-<a name="84"><span class="lineNum">      84 </span>            : }</a>
-<span class="lineNum">      85 </span>            : 
-<span class="lineNum">      86 </span><span class="lineCov">      19408 : static void rm_trav_buffer_free(RmTravBuffer *self) {</span>
-<span class="lineNum">      87 </span><span class="lineCov">      19408 :     g_free(self);</span>
-<span class="lineNum">      88 </span><span class="lineCov">      19408 : }</span>
-<span class="lineNum">      89 </span>            : 
-<span class="lineNum">      90 </span>            : //////////////////////
-<span class="lineNum">      91 </span>            : // TRAVERSE SESSION //
-<span class="lineNum">      92 </span>            : //////////////////////
-<span class="lineNum">      93 </span>            : 
-<span class="lineNum">      94 </span>            : typedef struct RmTravSession {
-<span class="lineNum">      95 </span>            :     RmUserList *userlist;
-<span class="lineNum">      96 </span>            :     RmSession *session;
-<a name="97"><span class="lineNum">      97 </span>            : } RmTravSession;</a>
-<span class="lineNum">      98 </span>            : 
-<span class="lineNum">      99 </span><span class="lineCov">      14322 : static RmTravSession *rm_traverse_session_new(RmSession *session) {</span>
-<span class="lineNum">     100 </span><span class="lineCov">      14322 :     RmTravSession *self = g_new0(RmTravSession, 1);</span>
-<span class="lineNum">     101 </span><span class="lineCov">      14322 :     self-&gt;session = session;</span>
-<span class="lineNum">     102 </span><span class="lineCov">      14322 :     self-&gt;userlist = rm_userlist_new();</span>
-<span class="lineNum">     103 </span><span class="lineCov">      14322 :     return self;</span>
-<a name="104"><span class="lineNum">     104 </span>            : }</a>
-<span class="lineNum">     105 </span>            : 
-<span class="lineNum">     106 </span><span class="lineCov">      14322 : static void rm_traverse_session_free(RmTravSession *trav_session) {</span>
-<span class="lineNum">     107 </span><span class="lineCov">      14322 :     rm_log_info(&quot;Found %d files, ignored %d hidden files and %d hidden folders\n&quot;,</span>
-<span class="lineNum">     108 </span>            :                 trav_session-&gt;session-&gt;total_files,
-<span class="lineNum">     109 </span>            :                 trav_session-&gt;session-&gt;ignored_files,
-<span class="lineNum">     110 </span>            :                 trav_session-&gt;session-&gt;ignored_folders);
-<span class="lineNum">     111 </span>            : 
-<span class="lineNum">     112 </span><span class="lineCov">      14322 :     rm_userlist_destroy(trav_session-&gt;userlist);</span>
-<span class="lineNum">     113 </span>            : 
-<span class="lineNum">     114 </span><span class="lineCov">      14322 :     g_free(trav_session);</span>
-<span class="lineNum">     115 </span><span class="lineCov">      14322 : }</span>
-<span class="lineNum">     116 </span>            : 
-<span class="lineNum">     117 </span>            : //////////////////////
-<span class="lineNum">     118 </span>            : // ACTUAL WORK HERE //
-<a name="119"><span class="lineNum">     119 </span>            : //////////////////////</a>
-<span class="lineNum">     120 </span>            : 
-<span class="lineNum">     121 </span><span class="lineCov">      86123 : static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,</span>
-<span class="lineNum">     122 </span>            :                              GQueue *file_queue, char *path, size_t path_len,
-<span class="lineNum">     123 </span>            :                              bool is_prefd, unsigned long path_index,
-<span class="lineNum">     124 </span>            :                              RmLintType file_type, bool is_symlink, bool is_hidden) {
-<span class="lineNum">     125 </span><span class="lineCov">      86123 :     RmSession *session = trav_session-&gt;session;</span>
-<span class="lineNum">     126 </span><span class="lineCov">      86123 :     RmCfg *cfg = session-&gt;cfg;</span>
-<span class="lineNum">     127 </span>            : 
-<span class="lineNum">     128 </span>            :     /* Try to autodetect the type of the lint */
-<span class="lineNum">     129 </span><span class="lineCov">      86123 :     if(file_type == RM_LINT_TYPE_UNKNOWN) {</span>
-<span class="lineNum">     130 </span>            :         RmLintType gid_check;
-<span class="lineNum">     131 </span>            :         /* see if we can find a lint type */
-<span class="lineNum">     132 </span><span class="lineCov">      84670 :         if(statp-&gt;st_size == 0) {</span>
-<span class="lineNum">     133 </span><span class="lineCov">        629 :             if(!cfg-&gt;find_emptyfiles) {</span>
-<span class="lineNum">     134 </span><span class="lineCov">        162 :                 return;</span>
-<span class="lineNum">     135 </span>            :             } else {
-<span class="lineNum">     136 </span><span class="lineCov">        467 :                 file_type = RM_LINT_TYPE_EMPTY_FILE;</span>
-<span class="lineNum">     137 </span>            :             }
-<span class="lineNum">     138 </span><span class="lineCov">      84041 :         } else if(cfg-&gt;permissions &amp;&amp; access(path, cfg-&gt;permissions) == -1) {</span>
-<span class="lineNum">     139 </span>            :             /* bad permissions; ignore file */
-<span class="lineNum">     140 </span><span class="lineNoCov">          0 :             trav_session-&gt;session-&gt;ignored_files++;</span>
-<span class="lineNum">     141 </span><span class="lineNoCov">          0 :             return;</span>
-<span class="lineNum">     142 </span><span class="lineCov">     167677 :         } else if(cfg-&gt;find_badids &amp;&amp;</span>
-<span class="lineNum">     143 </span><span class="lineCov">      83636 :                   (gid_check = rm_util_uid_gid_check(statp, trav_session-&gt;userlist))) {</span>
-<span class="lineNum">     144 </span><span class="lineCov">        243 :             file_type = gid_check;</span>
-<span class="lineNum">     145 </span><span class="lineCov">      83798 :         } else if(cfg-&gt;find_nonstripped &amp;&amp; rm_util_is_nonstripped(path, statp)) {</span>
-<span class="lineNum">     146 </span><span class="lineCov">         81 :             file_type = RM_LINT_TYPE_NONSTRIPPED;</span>
-<span class="lineNum">     147 </span>            :         } else {
-<span class="lineNum">     148 </span><span class="lineCov">      83717 :             RmOff file_size = statp-&gt;st_size;</span>
-<span class="lineNum">     149 </span><span class="lineCov">      89549 :             if(!cfg-&gt;limits_specified ||</span>
-<span class="lineNum">     150 </span><span class="lineCov">      14823 :                ((cfg-&gt;minsize == (RmOff)-1 || cfg-&gt;minsize &lt;= file_size) &amp;&amp;</span>
-<span class="lineNum">     151 </span><span class="lineCov">       4860 :                 (cfg-&gt;maxsize == (RmOff)-1 || file_size &lt;= cfg-&gt;maxsize))) {</span>
-<span class="lineNum">     152 </span><span class="lineCov">     161602 :                 if(rm_mounts_is_evil(trav_session-&gt;session-&gt;mounts, statp-&gt;st_dev) ==</span>
-<span class="lineNum">     153 </span>            :                    false) {
-<span class="lineNum">     154 </span><span class="lineCov">      80801 :                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;</span>
-<span class="lineNum">     155 </span>            :                 } else {
-<span class="lineNum">     156 </span>            :                     /* A file in a evil fs. Ignore. */
-<span class="lineNum">     157 </span><span class="lineNoCov">          0 :                     trav_session-&gt;session-&gt;ignored_files++;</span>
-<span class="lineNum">     158 </span><span class="lineNoCov">          0 :                     return;</span>
-<span class="lineNum">     159 </span>            :                 }
-<span class="lineNum">     160 </span>            :             } else {
-<span class="lineNum">     161 </span><span class="lineCov">       2916 :                 return;</span>
-<span class="lineNum">     162 </span>            :             }
-<span class="lineNum">     163 </span>            :         }
-<span class="lineNum">     164 </span>            :     }
-<span class="lineNum">     165 </span>            : 
-<span class="lineNum">     166 </span><span class="lineCov">      83045 :     RmFile *file =</span>
-<span class="lineNum">     167 </span><span class="lineCov">      83045 :         rm_file_new(session, path, path_len, statp, file_type, is_prefd, path_index);</span>
-<span class="lineNum">     168 </span>            : 
-<span class="lineNum">     169 </span><span class="lineCov">      83045 :     if(file != NULL) {</span>
-<span class="lineNum">     170 </span><span class="lineCov">      82721 :         file-&gt;is_symlink = is_symlink;</span>
-<span class="lineNum">     171 </span><span class="lineCov">      82721 :         file-&gt;is_hidden = is_hidden;</span>
-<span class="lineNum">     172 </span>            : 
-<span class="lineNum">     173 </span><span class="lineCov">      82721 :         int added = 0;</span>
-<span class="lineNum">     174 </span><span class="lineCov">      82721 :         if(file_queue != NULL) {</span>
-<span class="lineNum">     175 </span><span class="lineCov">      82602 :             g_queue_push_tail(file_queue, file);</span>
-<span class="lineNum">     176 </span><span class="lineCov">      82602 :             added = 1;</span>
-<span class="lineNum">     177 </span>            :         } else {
-<span class="lineNum">     178 </span><span class="lineCov">        119 :             added = rm_file_tables_insert(session, file);</span>
-<span class="lineNum">     179 </span>            :         }
-<span class="lineNum">     180 </span>            : 
-<span class="lineNum">     181 </span><span class="lineCov">      82721 :         g_atomic_int_add(&amp;trav_session-&gt;session-&gt;total_files, added);</span>
-<span class="lineNum">     182 </span><span class="lineCov">      82721 :         rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_TRAVERSE);</span>
+<span class="lineNum">      29 </span>            : #include &lt;sys/types.h&gt;
+<span class="lineNum">      30 </span>            : #include &lt;sys/stat.h&gt;
+<span class="lineNum">      31 </span>            : #include &lt;fts.h&gt;
+<span class="lineNum">      32 </span>            : #include &lt;errno.h&gt;
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      35 </span>            : 
+<span class="lineNum">      36 </span>            : #include &quot;preprocess.h&quot;
+<span class="lineNum">      37 </span>            : #include &quot;formats.h&quot;
+<span class="lineNum">      38 </span>            : #include &quot;utilities.h&quot;
+<span class="lineNum">      39 </span>            : #include &quot;file.h&quot;
+<span class="lineNum">      40 </span>            : #include &quot;xattr.h&quot;
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span>            : ///////////////////////////////////////////
+<span class="lineNum">      43 </span>            : // BUFFER FOR STARTING TRAVERSAL THREADS //
+<span class="lineNum">      44 </span>            : ///////////////////////////////////////////
+<span class="lineNum">      45 </span>            : 
+<span class="lineNum">      46 </span>            : /* Defines a path variable containing the buffer's path */
+<span class="lineNum">      47 </span>            : #define RM_BUFFER_DEFINE_PATH(session, buff)                                      \
+<span class="lineNum">      48 </span>            :     char *buff##_path = NULL;                                                     \
+<span class="lineNum">      49 </span>            :     char buff##_buf[PATH_MAX];                                                    \
+<span class="lineNum">      50 </span>            :     if(session-&gt;cfg-&gt;use_meta_cache) {                                            \
+<span class="lineNum">      51 </span>            :         rm_swap_table_lookup(session-&gt;meta_cache, session-&gt;meta_cache_dir_id,     \
+<span class="lineNum">      52 </span>            :                              GPOINTER_TO_UINT(buff-&gt;path), buff##_buf, PATH_MAX); \
+<span class="lineNum">      53 </span>            :         buff##_path = buff##_buf;                                                 \
+<span class="lineNum">      54 </span>            :     } else {                                                                      \
+<span class="lineNum">      55 </span>            :         buff##_path = buff-&gt;path;                                                 \
+<span class="lineNum">      56 </span>            :     }
+<span class="lineNum">      57 </span>            : 
+<span class="lineNum">      58 </span>            : typedef struct RmTravBuffer {
+<span class="lineNum">      59 </span>            :     RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
+<span class="lineNum">      60 </span>            :     char *path;       /* The path of the directory, as passed on command line. */
+<span class="lineNum">      61 </span>            :     bool is_prefd;    /* Was this file in a preferred path? */
+<span class="lineNum">      62 </span>            :     RmOff path_index; /* Index of path, as passed on the commadline */
+<a name="63"><span class="lineNum">      63 </span>            : } RmTravBuffer;</a>
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span><span class="lineCov">     101353 : static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd,</span>
+<span class="lineNum">      66 </span>            :                                         unsigned long path_index) {
+<span class="lineNum">      67 </span><span class="lineCov">     101353 :     RmTravBuffer *self = g_new0(RmTravBuffer, 1);</span>
+<span class="lineNum">      68 </span><span class="lineCov">     101353 :     self-&gt;path = path;</span>
+<span class="lineNum">      69 </span><span class="lineCov">     101353 :     self-&gt;is_prefd = is_prefd;</span>
+<span class="lineNum">      70 </span><span class="lineCov">     101353 :     self-&gt;path_index = path_index;</span>
+<span class="lineNum">      71 </span>            : 
+<span class="lineNum">      72 </span><span class="lineCov">     101353 :     RM_BUFFER_DEFINE_PATH(session, self);</span>
+<span class="lineNum">      73 </span>            : 
+<span class="lineNum">      74 </span>            :     int stat_state;
+<span class="lineNum">      75 </span><span class="lineCov">     101353 :     if(session-&gt;cfg-&gt;follow_symlinks) {</span>
+<span class="lineNum">      76 </span><span class="lineCov">         84 :         stat_state = rm_sys_stat(self_path, &amp;self-&gt;stat_buf);</span>
+<span class="lineNum">      77 </span>            :     } else {
+<span class="lineNum">      78 </span><span class="lineCov">     101269 :         stat_state = rm_sys_lstat(self_path, &amp;self-&gt;stat_buf);</span>
+<span class="lineNum">      79 </span>            :     }
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">     101353 :     if(stat_state == -1) {</span>
+<span class="lineNum">      82 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;Unable to stat file&quot;);</span>
+<span class="lineNum">      83 </span>            :     }
+<span class="lineNum">      84 </span><span class="lineCov">     101353 :     return self;</span>
+<a name="85"><span class="lineNum">      85 </span>            : }</a>
+<span class="lineNum">      86 </span>            : 
+<span class="lineNum">      87 </span><span class="lineCov">     101348 : static void rm_trav_buffer_free(RmTravBuffer *self) {</span>
+<span class="lineNum">      88 </span><span class="lineCov">     101348 :     g_free(self);</span>
+<span class="lineNum">      89 </span><span class="lineCov">     101353 : }</span>
+<span class="lineNum">      90 </span>            : 
+<span class="lineNum">      91 </span>            : //////////////////////
+<span class="lineNum">      92 </span>            : // TRAVERSE SESSION //
+<span class="lineNum">      93 </span>            : //////////////////////
+<span class="lineNum">      94 </span>            : 
+<span class="lineNum">      95 </span>            : typedef struct RmTravSession {
+<span class="lineNum">      96 </span>            :     RmUserList *userlist;
+<span class="lineNum">      97 </span>            :     RmSession *session;
+<a name="98"><span class="lineNum">      98 </span>            : } RmTravSession;</a>
+<span class="lineNum">      99 </span>            : 
+<span class="lineNum">     100 </span><span class="lineCov">      36878 : static RmTravSession *rm_traverse_session_new(RmSession *session) {</span>
+<span class="lineNum">     101 </span><span class="lineCov">      36878 :     RmTravSession *self = g_new0(RmTravSession, 1);</span>
+<span class="lineNum">     102 </span><span class="lineCov">      36878 :     self-&gt;session = session;</span>
+<span class="lineNum">     103 </span><span class="lineCov">      36878 :     self-&gt;userlist = rm_userlist_new();</span>
+<span class="lineNum">     104 </span><span class="lineCov">      36878 :     return self;</span>
+<a name="105"><span class="lineNum">     105 </span>            : }</a>
+<span class="lineNum">     106 </span>            : 
+<span class="lineNum">     107 </span><span class="lineCov">      36878 : static void rm_traverse_session_free(RmTravSession *trav_session) {</span>
+<span class="lineNum">     108 </span><span class="lineCov">      36878 :     rm_log_debug_line(&quot;Found %d files, ignored %d hidden files and %d hidden folders&quot;,</span>
+<span class="lineNum">     109 </span>            :                 trav_session-&gt;session-&gt;total_files,
+<span class="lineNum">     110 </span>            :                 trav_session-&gt;session-&gt;ignored_files,
+<span class="lineNum">     111 </span>            :                 trav_session-&gt;session-&gt;ignored_folders);
+<span class="lineNum">     112 </span>            : 
+<span class="lineNum">     113 </span><span class="lineCov">      36878 :     rm_userlist_destroy(trav_session-&gt;userlist);</span>
+<span class="lineNum">     114 </span>            : 
+<span class="lineNum">     115 </span><span class="lineCov">      36878 :     g_free(trav_session);</span>
+<span class="lineNum">     116 </span><span class="lineCov">      36878 : }</span>
+<span class="lineNum">     117 </span>            : 
+<span class="lineNum">     118 </span>            : //////////////////////
+<span class="lineNum">     119 </span>            : // ACTUAL WORK HERE //
+<a name="120"><span class="lineNum">     120 </span>            : //////////////////////</a>
+<span class="lineNum">     121 </span>            : 
+<span class="lineNum">     122 </span><span class="lineCov">     226530 : static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,</span>
+<span class="lineNum">     123 </span>            :                              GQueue *file_queue, char *path, size_t path_len,
+<span class="lineNum">     124 </span>            :                              bool is_prefd, unsigned long path_index,
+<span class="lineNum">     125 </span>            :                              RmLintType file_type, bool is_symlink, bool is_hidden,
+<span class="lineNum">     126 </span>            :                              bool is_on_subvol_fs, short depth) {
+<span class="lineNum">     127 </span><span class="lineCov">     226530 :     RmSession *session = trav_session-&gt;session;</span>
+<span class="lineNum">     128 </span><span class="lineCov">     226530 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">     129 </span>            : 
+<span class="lineNum">     130 </span>            :     /* Try to autodetect the type of the lint */
+<span class="lineNum">     131 </span><span class="lineCov">     226530 :     if(file_type == RM_LINT_TYPE_UNKNOWN) {</span>
+<span class="lineNum">     132 </span>            :         RmLintType gid_check;
+<span class="lineNum">     133 </span>            :         /* see if we can find a lint type */
+<span class="lineNum">     134 </span><span class="lineCov">     226144 :         if(statp-&gt;st_size == 0) {</span>
+<span class="lineNum">     135 </span><span class="lineCov">        430 :             if(!cfg-&gt;find_emptyfiles) {</span>
+<span class="lineNum">     136 </span><span class="lineCov">         56 :                 return;</span>
+<span class="lineNum">     137 </span>            :             } else {
+<span class="lineNum">     138 </span><span class="lineCov">        374 :                 file_type = RM_LINT_TYPE_EMPTY_FILE;</span>
+<span class="lineNum">     139 </span>            :             }
+<span class="lineNum">     140 </span><span class="lineCov">     225714 :         } else if(cfg-&gt;permissions &amp;&amp; access(path, cfg-&gt;permissions) == -1) {</span>
+<span class="lineNum">     141 </span>            :             /* bad permissions; ignore file */
+<span class="lineNum">     142 </span><span class="lineNoCov">          0 :             trav_session-&gt;session-&gt;ignored_files++;</span>
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :             return;</span>
+<span class="lineNum">     144 </span><span class="lineCov">     451240 :         } else if(cfg-&gt;find_badids &amp;&amp;</span>
+<span class="lineNum">     145 </span><span class="lineCov">     225518 :                   (gid_check = rm_util_uid_gid_check(statp, trav_session-&gt;userlist))) {</span>
+<span class="lineNum">     146 </span><span class="lineCov">         84 :             file_type = gid_check;</span>
+<span class="lineNum">     147 </span><span class="lineCov">     225638 :         } else if(cfg-&gt;find_nonstripped &amp;&amp; rm_util_is_nonstripped(path, statp)) {</span>
+<span class="lineNum">     148 </span><span class="lineCov">         28 :             file_type = RM_LINT_TYPE_NONSTRIPPED;</span>
+<span class="lineNum">     149 </span>            :         } else {
+<span class="lineNum">     150 </span><span class="lineCov">     225610 :             RmOff file_size = statp-&gt;st_size;</span>
+<span class="lineNum">     151 </span><span class="lineCov">     227626 :             if(!cfg-&gt;limits_specified ||</span>
+<span class="lineNum">     152 </span><span class="lineCov">       5124 :                ((cfg-&gt;minsize == (RmOff)-1 || cfg-&gt;minsize &lt;= file_size) &amp;&amp;</span>
+<span class="lineNum">     153 </span><span class="lineCov">       1680 :                 (cfg-&gt;maxsize == (RmOff)-1 || file_size &lt;= cfg-&gt;maxsize))) {</span>
+<span class="lineNum">     154 </span><span class="lineCov">     449204 :                 if(rm_mounts_is_evil(trav_session-&gt;session-&gt;mounts, statp-&gt;st_dev) ==</span>
+<span class="lineNum">     155 </span>            :                    false) {
+<span class="lineNum">     156 </span><span class="lineCov">     224602 :                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;</span>
+<span class="lineNum">     157 </span>            :                 } else {
+<span class="lineNum">     158 </span>            :                     /* A file in a evil fs. Ignore. */
+<span class="lineNum">     159 </span><span class="lineNoCov">          0 :                     trav_session-&gt;session-&gt;ignored_files++;</span>
+<span class="lineNum">     160 </span><span class="lineNoCov">          0 :                     return;</span>
+<span class="lineNum">     161 </span>            :                 }
+<span class="lineNum">     162 </span>            :             } else {
+<span class="lineNum">     163 </span><span class="lineCov">       1008 :                 return;</span>
+<span class="lineNum">     164 </span>            :             }
+<span class="lineNum">     165 </span>            :         }
+<span class="lineNum">     166 </span>            :     }
+<span class="lineNum">     167 </span>            : 
+<span class="lineNum">     168 </span><span class="lineCov">     225474 :     RmFile *file = rm_file_new(session, path, path_len, statp, file_type, is_prefd,</span>
+<span class="lineNum">     169 </span>            :                                path_index, depth);
+<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     171 </span><span class="lineCov">     225478 :     if(file != NULL) {</span>
+<span class="lineNum">     172 </span><span class="lineCov">     225367 :         file-&gt;is_symlink = is_symlink;</span>
+<span class="lineNum">     173 </span><span class="lineCov">     225367 :         file-&gt;is_hidden = is_hidden;</span>
+<span class="lineNum">     174 </span><span class="lineCov">     225367 :         file-&gt;is_on_subvol_fs = is_on_subvol_fs;</span>
+<span class="lineNum">     175 </span>            : 
+<span class="lineNum">     176 </span><span class="lineCov">     225367 :         int added = 0;</span>
+<span class="lineNum">     177 </span><span class="lineCov">     225367 :         if(file_queue != NULL) {</span>
+<span class="lineNum">     178 </span><span class="lineCov">     225280 :             g_queue_push_tail(file_queue, file);</span>
+<span class="lineNum">     179 </span><span class="lineCov">     225280 :             added = 1;</span>
+<span class="lineNum">     180 </span>            :         } else {
+<span class="lineNum">     181 </span><span class="lineCov">         87 :             added = rm_file_tables_insert(session, file);</span>
+<span class="lineNum">     182 </span>            :         }
 <span class="lineNum">     183 </span>            : 
-<span class="lineNum">     184 </span><span class="lineCov">      83940 :         if(trav_session-&gt;session-&gt;cfg-&gt;clear_xattr_fields &amp;&amp;</span>
-<span class="lineNum">     185 </span><span class="lineCov">       1218 :            file-&gt;lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {</span>
-<span class="lineNum">     186 </span><span class="lineCov">       1218 :             rm_xattr_clear_hash(session, file);</span>
-<span class="lineNum">     187 </span>            :         }
-<span class="lineNum">     188 </span>            :     }
-<a name="189"><span class="lineNum">     189 </span>            : }</a>
-<span class="lineNum">     190 </span>            : 
-<span class="lineNum">     191 </span><span class="lineCov">      86005 : static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierarchy,</span>
-<span class="lineNum">     192 </span>            :                                   size_t hierarchy_len) {
-<span class="lineNum">     193 </span><span class="lineCov">      86005 :     if(cfg-&gt;partial_hidden == false) {</span>
-<span class="lineNum">     194 </span><span class="lineCov">      42325 :         return false;</span>
-<span class="lineNum">     195 </span><span class="lineCov">      43680 :     } else if(*basename == '.') {</span>
-<span class="lineNum">     196 </span><span class="lineCov">        317 :         return true;</span>
-<span class="lineNum">     197 </span>            :     } else {
-<span class="lineNum">     198 </span><span class="lineCov">      43363 :         return !!memchr(hierarchy, 1, hierarchy_len);</span>
-<span class="lineNum">     199 </span>            :     }
-<span class="lineNum">     200 </span>            : }
-<span class="lineNum">     201 </span>            : 
-<span class="lineNum">     202 </span>            : /* Macro for rm_traverse_directory() for easy file adding */
-<span class="lineNum">     203 </span>            : #define _ADD_FILE(lint_type, is_symlink, stat_buf)                                  \
-<span class="lineNum">     204 </span>            :     rm_traverse_file(                                                               \
-<span class="lineNum">     205 </span>            :         trav_session, (RmStat *)stat_buf, &amp;file_queue, p-&gt;fts_path, p-&gt;fts_pathlen, \
-<span class="lineNum">     206 </span>            :         is_prefd, path_index, lint_type, is_symlink,                                \
-<span class="lineNum">     207 </span>            :         rm_traverse_is_hidden(cfg, p-&gt;fts_name, is_hidden, p-&gt;fts_level + 1));
-<span class="lineNum">     208 </span>            : 
-<span class="lineNum">     209 </span>            : #if RM_PLATFORM_32 &amp;&amp; HAVE_STAT64
-<span class="lineNum">     210 </span>            : 
-<span class="lineNum">     211 </span>            : static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *buf) {
-<span class="lineNum">     212 </span>            :     /* Break a leg for supporting large files on 32 bit,
-<span class="lineNum">     213 </span>            :      * and convert the needed fields to the large version.
-<span class="lineNum">     214 </span>            :      *
-<span class="lineNum">     215 </span>            :      * We can't use memcpy here, since the layout might be (fatally) different.
-<span class="lineNum">     216 </span>            :      * Yes, this is stupid. *Sigh*
-<span class="lineNum">     217 </span>            :      * */
-<span class="lineNum">     218 </span>            :     memset(buf, 0, sizeof(RmStat));
-<span class="lineNum">     219 </span>            :     buf-&gt;st_dev = fts_statp-&gt;st_dev;
-<span class="lineNum">     220 </span>            :     buf-&gt;st_ino = fts_statp-&gt;st_ino;
-<span class="lineNum">     221 </span>            :     buf-&gt;st_mode = fts_statp-&gt;st_mode;
-<span class="lineNum">     222 </span>            :     buf-&gt;st_nlink = fts_statp-&gt;st_nlink;
-<span class="lineNum">     223 </span>            :     buf-&gt;st_uid = fts_statp-&gt;st_uid;
-<span class="lineNum">     224 </span>            :     buf-&gt;st_gid = fts_statp-&gt;st_gid;
-<span class="lineNum">     225 </span>            :     buf-&gt;st_rdev = fts_statp-&gt;st_rdev;
-<span class="lineNum">     226 </span>            :     buf-&gt;st_size = fts_statp-&gt;st_size;
-<span class="lineNum">     227 </span>            :     buf-&gt;st_blksize = fts_statp-&gt;st_blksize;
-<span class="lineNum">     228 </span>            :     buf-&gt;st_blocks = fts_statp-&gt;st_blocks;
-<span class="lineNum">     229 </span>            :     buf-&gt;st_atim = fts_statp-&gt;st_atim;
-<span class="lineNum">     230 </span>            :     buf-&gt;st_mtim = fts_statp-&gt;st_mtim;
-<span class="lineNum">     231 </span>            :     buf-&gt;st_ctim = fts_statp-&gt;st_ctim;
-<span class="lineNum">     232 </span>            : }
-<span class="lineNum">     233 </span>            : 
-<span class="lineNum">     234 </span>            : #define ADD_FILE(lint_type, is_symlink)                         \
-<span class="lineNum">     235 </span>            :     {                                                           \
-<span class="lineNum">     236 </span>            :         RmStat buf;                                             \
-<span class="lineNum">     237 </span>            :         rm_traverse_convert_small_stat_buf(p-&gt;fts_statp, &amp;buf); \
-<span class="lineNum">     238 </span>            :         _ADD_FILE(lint_type, is_symlink, &amp;buf)                  \
-<span class="lineNum">     239 </span>            :     }
-<span class="lineNum">     240 </span>            : 
-<span class="lineNum">     241 </span>            : #else
-<span class="lineNum">     242 </span>            : 
-<span class="lineNum">     243 </span>            : #define ADD_FILE(lint_type, is_symlink) \
-<span class="lineNum">     244 </span>            :     _ADD_FILE(lint_type, is_symlink, (RmStat *)p-&gt;fts_statp)
-<span class="lineNum">     245 </span>            : 
-<a name="246"><span class="lineNum">     246 </span>            : #endif</a>
-<span class="lineNum">     247 </span>            : 
-<span class="lineNum">     248 </span><span class="lineCov">      19289 : static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_session) {</span>
-<span class="lineNum">     249 </span><span class="lineCov">      19289 :     RmSession *session = trav_session-&gt;session;</span>
-<span class="lineNum">     250 </span><span class="lineCov">      19289 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">     184 </span><span class="lineCov">     225367 :         g_atomic_int_add(&amp;trav_session-&gt;session-&gt;total_files, added);</span>
+<span class="lineNum">     185 </span><span class="lineCov">     225367 :         rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_TRAVERSE);</span>
+<span class="lineNum">     186 </span>            : 
+<span class="lineNum">     187 </span><span class="lineCov">     225759 :         if(trav_session-&gt;session-&gt;cfg-&gt;clear_xattr_fields &amp;&amp;</span>
+<span class="lineNum">     188 </span><span class="lineCov">        392 :            file-&gt;lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {</span>
+<span class="lineNum">     189 </span><span class="lineCov">        392 :             rm_xattr_clear_hash(session, file);</span>
+<span class="lineNum">     190 </span>            :         }
+<span class="lineNum">     191 </span>            :     }
+<a name="192"><span class="lineNum">     192 </span>            : }</a>
+<span class="lineNum">     193 </span>            : 
+<span class="lineNum">     194 </span><span class="lineCov">     226445 : static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierarchy,</span>
+<span class="lineNum">     195 </span>            :                                   size_t hierarchy_len) {
+<span class="lineNum">     196 </span><span class="lineCov">     226445 :     if(cfg-&gt;partial_hidden == false) {</span>
+<span class="lineNum">     197 </span><span class="lineCov">     220761 :         return false;</span>
+<span class="lineNum">     198 </span><span class="lineCov">       5684 :     } else if(*basename == '.') {</span>
+<span class="lineNum">     199 </span><span class="lineCov">        112 :         return true;</span>
+<span class="lineNum">     200 </span>            :     } else {
+<span class="lineNum">     201 </span><span class="lineCov">       5572 :         return !!memchr(hierarchy, 1, hierarchy_len);</span>
+<span class="lineNum">     202 </span>            :     }
+<span class="lineNum">     203 </span>            : }
+<span class="lineNum">     204 </span>            : 
+<span class="lineNum">     205 </span>            : /* Macro for rm_traverse_directory() for easy file adding */
+<span class="lineNum">     206 </span>            : #define _ADD_FILE(lint_type, is_symlink, stat_buf)                                  \
+<span class="lineNum">     207 </span>            :     rm_traverse_file(                                                               \
+<span class="lineNum">     208 </span>            :         trav_session, (RmStat *)stat_buf, &amp;file_queue, p-&gt;fts_path, p-&gt;fts_pathlen, \
+<span class="lineNum">     209 </span>            :         is_prefd, path_index, lint_type, is_symlink,                                \
+<span class="lineNum">     210 </span>            :         rm_traverse_is_hidden(cfg, p-&gt;fts_name, is_hidden, p-&gt;fts_level + 1),       \
+<span class="lineNum">     211 </span>            :         is_on_subvol_fs, p-&gt;fts_level);
+<span class="lineNum">     212 </span>            : 
+<span class="lineNum">     213 </span>            : #if RM_PLATFORM_32 &amp;&amp; HAVE_STAT64
+<span class="lineNum">     214 </span>            : 
+<span class="lineNum">     215 </span>            : static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *buf) {
+<span class="lineNum">     216 </span>            :     /* Break a leg for supporting large files on 32 bit,
+<span class="lineNum">     217 </span>            :      * and convert the needed fields to the large version.
+<span class="lineNum">     218 </span>            :      *
+<span class="lineNum">     219 </span>            :      * We can't use memcpy here, since the layout might be (fatally) different.
+<span class="lineNum">     220 </span>            :      * Yes, this is stupid. *Sigh*
+<span class="lineNum">     221 </span>            :      * */
+<span class="lineNum">     222 </span>            :     memset(buf, 0, sizeof(RmStat));
+<span class="lineNum">     223 </span>            :     buf-&gt;st_dev = fts_statp-&gt;st_dev;
+<span class="lineNum">     224 </span>            :     buf-&gt;st_ino = fts_statp-&gt;st_ino;
+<span class="lineNum">     225 </span>            :     buf-&gt;st_mode = fts_statp-&gt;st_mode;
+<span class="lineNum">     226 </span>            :     buf-&gt;st_nlink = fts_statp-&gt;st_nlink;
+<span class="lineNum">     227 </span>            :     buf-&gt;st_uid = fts_statp-&gt;st_uid;
+<span class="lineNum">     228 </span>            :     buf-&gt;st_gid = fts_statp-&gt;st_gid;
+<span class="lineNum">     229 </span>            :     buf-&gt;st_rdev = fts_statp-&gt;st_rdev;
+<span class="lineNum">     230 </span>            :     buf-&gt;st_size = fts_statp-&gt;st_size;
+<span class="lineNum">     231 </span>            :     buf-&gt;st_blksize = fts_statp-&gt;st_blksize;
+<span class="lineNum">     232 </span>            :     buf-&gt;st_blocks = fts_statp-&gt;st_blocks;
+<span class="lineNum">     233 </span>            :     buf-&gt;st_atim = fts_statp-&gt;st_atim;
+<span class="lineNum">     234 </span>            :     buf-&gt;st_mtim = fts_statp-&gt;st_mtim;
+<span class="lineNum">     235 </span>            :     buf-&gt;st_ctim = fts_statp-&gt;st_ctim;
+<span class="lineNum">     236 </span>            : }
+<span class="lineNum">     237 </span>            : 
+<span class="lineNum">     238 </span>            : #define ADD_FILE(lint_type, is_symlink)                         \
+<span class="lineNum">     239 </span>            :     {                                                           \
+<span class="lineNum">     240 </span>            :         RmStat buf;                                             \
+<span class="lineNum">     241 </span>            :         rm_traverse_convert_small_stat_buf(p-&gt;fts_statp, &amp;buf); \
+<span class="lineNum">     242 </span>            :         _ADD_FILE(lint_type, is_symlink, &amp;buf)                  \
+<span class="lineNum">     243 </span>            :     }
+<span class="lineNum">     244 </span>            : 
+<span class="lineNum">     245 </span>            : #else
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span>            : #define ADD_FILE(lint_type, is_symlink) \
+<span class="lineNum">     248 </span>            :     _ADD_FILE(lint_type, is_symlink, (RmStat *)p-&gt;fts_statp)
+<span class="lineNum">     249 </span>            : 
+<a name="250"><span class="lineNum">     250 </span>            : #endif</a>
 <span class="lineNum">     251 </span>            : 
-<span class="lineNum">     252 </span><span class="lineCov">      19289 :     char is_prefd = buffer-&gt;is_prefd;</span>
-<span class="lineNum">     253 </span><span class="lineCov">      19289 :     RmOff path_index = buffer-&gt;path_index;</span>
-<span class="lineNum">     254 </span>            : 
-<span class="lineNum">     255 </span>            :     /* Initialize ftsp */
-<span class="lineNum">     256 </span><span class="lineCov">      19289 :     int fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;</span>
-<span class="lineNum">     257 </span>            : 
-<span class="lineNum">     258 </span><span class="lineCov">      19289 :     RM_BUFFER_DEFINE_PATH(trav_session-&gt;session, buffer);</span>
-<span class="lineNum">     259 </span>            : 
-<span class="lineNum">     260 </span><span class="lineCov">      19289 :     FTS *ftsp = fts_open((char * [2]){buffer_path, NULL}, fts_flags, NULL);</span>
+<span class="lineNum">     252 </span><span class="lineCov">     101266 : static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_session) {</span>
+<span class="lineNum">     253 </span><span class="lineCov">     101266 :     RmSession *session = trav_session-&gt;session;</span>
+<span class="lineNum">     254 </span><span class="lineCov">     101266 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">     255 </span>            : 
+<span class="lineNum">     256 </span><span class="lineCov">     101266 :     char is_prefd = buffer-&gt;is_prefd;</span>
+<span class="lineNum">     257 </span><span class="lineCov">     101266 :     RmOff path_index = buffer-&gt;path_index;</span>
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span>            :     /* Initialize ftsp */
+<span class="lineNum">     260 </span><span class="lineCov">     101266 :     int fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;</span>
 <span class="lineNum">     261 </span>            : 
-<span class="lineNum">     262 </span><span class="lineCov">      19289 :     if(ftsp == NULL) {</span>
-<span class="lineNum">     263 </span><span class="lineNoCov">          0 :         rm_log_error_line(&quot;fts_open() == NULL&quot;);</span>
-<span class="lineNum">     264 </span><span class="lineNoCov">          0 :         return;</span>
-<span class="lineNum">     265 </span>            :     }
-<span class="lineNum">     266 </span>            : 
-<span class="lineNum">     267 </span>            :     FTSENT *p, *chp;
-<span class="lineNum">     268 </span><span class="lineCov">      19289 :     chp = fts_children(ftsp, 0);</span>
-<span class="lineNum">     269 </span><span class="lineCov">      19289 :     if(chp == NULL) {</span>
-<span class="lineNum">     270 </span><span class="lineNoCov">          0 :         rm_log_warning_line(&quot;fts_children() == NULL&quot;);</span>
-<span class="lineNum">     271 </span><span class="lineNoCov">          0 :         return;</span>
-<span class="lineNum">     272 </span>            :     }
-<span class="lineNum">     273 </span>            : 
-<span class="lineNum">     274 </span>            :     /* start main processing */
-<span class="lineNum">     275 </span>            :     char is_emptydir[PATH_MAX / 2 + 1];
-<span class="lineNum">     276 </span>            :     char is_hidden[PATH_MAX / 2 + 1];
-<span class="lineNum">     277 </span><span class="lineCov">      19289 :     bool have_open_emptydirs = false;</span>
-<span class="lineNum">     278 </span><span class="lineCov">      19289 :     bool clear_emptydir_flags = false;</span>
-<span class="lineNum">     279 </span>            : 
-<span class="lineNum">     280 </span><span class="lineCov">      19289 :     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);</span>
-<span class="lineNum">     281 </span><span class="lineCov">      19289 :     memset(is_hidden, 0, sizeof(is_hidden) - 1);</span>
+<span class="lineNum">     262 </span><span class="lineCov">     101266 :     RM_BUFFER_DEFINE_PATH(trav_session-&gt;session, buffer);</span>
+<span class="lineNum">     263 </span>            : 
+<span class="lineNum">     264 </span><span class="lineCov">     101266 :     bool is_on_subvol_fs = (buffer_path[0] == '/' &amp;&amp; buffer_path[1] == '/');</span>
+<span class="lineNum">     265 </span><span class="lineCov">     101266 :     if(is_on_subvol_fs) {</span>
+<span class="lineNum">     266 </span><span class="lineNoCov">          0 :         rm_log_debug_line(&quot;Treating files under %s as a single volume&quot;, buffer_path);</span>
+<span class="lineNum">     267 </span>            :     }
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineCov">     101266 :     FTS *ftsp = fts_open((char * [2]){buffer_path, NULL}, fts_flags, NULL);</span>
+<span class="lineNum">     270 </span>            : 
+<span class="lineNum">     271 </span><span class="lineCov">     101261 :     if(ftsp == NULL) {</span>
+<span class="lineNum">     272 </span><span class="lineNoCov">          0 :         rm_log_error_line(&quot;fts_open() == NULL&quot;);</span>
+<span class="lineNum">     273 </span><span class="lineNoCov">          0 :         return;</span>
+<span class="lineNum">     274 </span>            :     }
+<span class="lineNum">     275 </span>            : 
+<span class="lineNum">     276 </span>            :     FTSENT *p, *chp;
+<span class="lineNum">     277 </span><span class="lineCov">     101261 :     chp = fts_children(ftsp, 0);</span>
+<span class="lineNum">     278 </span><span class="lineCov">     101259 :     if(chp == NULL) {</span>
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :         rm_log_warning_line(&quot;fts_children() == NULL&quot;);</span>
+<span class="lineNum">     280 </span><span class="lineNoCov">          0 :         return;</span>
+<span class="lineNum">     281 </span>            :     }
 <span class="lineNum">     282 </span>            : 
-<span class="lineNum">     283 </span>            :     /* rm_traverse_file add the finished file (if any) to this queue.  They are
-<span class="lineNum">     284 </span>            :      * added to the preprocessing module in batch so there isn't many jumping
-<span class="lineNum">     285 </span>            :      * between BEGIN; INSERT[...]; COMMIT and SELECT with --with-metadata-cache.
-<span class="lineNum">     286 </span>            :      */
-<span class="lineNum">     287 </span><span class="lineCov">      19289 :     GQueue file_queue = G_QUEUE_INIT;</span>
-<span class="lineNum">     288 </span>            : 
-<span class="lineNum">     289 </span><span class="lineCov">     194457 :     while(!rm_session_was_aborted(trav_session-&gt;session) &amp;&amp;</span>
-<span class="lineNum">     290 </span>            :           (p = fts_read(ftsp)) != NULL) {
-<span class="lineNum">     291 </span>            :         /* check for hidden file or folder */
-<span class="lineNum">     292 </span><span class="lineCov">     155877 :         if(cfg-&gt;ignore_hidden &amp;&amp; p-&gt;fts_level &gt; 0 &amp;&amp; p-&gt;fts_name[0] == '.') {</span>
-<span class="lineNum">     293 </span>            :             /* ignoring hidden folders*/
-<span class="lineNum">     294 </span>            : 
-<span class="lineNum">     295 </span><span class="lineCov">       1880 :             if(p-&gt;fts_info == FTS_D) {</span>
-<span class="lineNum">     296 </span><span class="lineCov">        160 :                 fts_set(ftsp, p, FTS_SKIP); /* do not recurse */</span>
-<span class="lineNum">     297 </span><span class="lineCov">        162 :                 g_atomic_int_inc(&amp;trav_session-&gt;session-&gt;ignored_folders);</span>
-<span class="lineNum">     298 </span>            :             } else {
-<span class="lineNum">     299 </span><span class="lineCov">       1720 :                 g_atomic_int_inc(&amp;trav_session-&gt;session-&gt;ignored_files);</span>
-<span class="lineNum">     300 </span>            :             }
-<span class="lineNum">     301 </span>            : 
-<span class="lineNum">     302 </span><span class="lineCov">       1882 :             clear_emptydir_flags = true; /* flag current dir as not empty */</span>
-<span class="lineNum">     303 </span><span class="lineCov">       1882 :             is_emptydir[p-&gt;fts_level] = 0;</span>
-<span class="lineNum">     304 </span>            :         } else {
-<span class="lineNum">     305 </span><span class="lineCov">     153997 :             switch(p-&gt;fts_info) {</span>
-<span class="lineNum">     306 </span>            :             case FTS_D: /* preorder directory */
-<span class="lineNum">     307 </span><span class="lineCov">      34323 :                 if(cfg-&gt;depth != 0 &amp;&amp; p-&gt;fts_level &gt;= cfg-&gt;depth) {</span>
-<span class="lineNum">     308 </span>            :                     /* continuing into folder would exceed maxdepth*/
-<span class="lineNum">     309 </span><span class="lineNoCov">          0 :                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */</span>
-<span class="lineNum">     310 </span><span class="lineNoCov">          0 :                     clear_emptydir_flags = true; /* flag current dir as not empty */</span>
-<span class="lineNum">     311 </span><span class="lineNoCov">          0 :                     rm_log_debug(&quot;Not descending into %s because max depth reached\n&quot;,</span>
-<span class="lineNum">     312 </span>            :                                  p-&gt;fts_path);
-<span class="lineNum">     313 </span><span class="lineCov">      34323 :                 } else if(cfg-&gt;crossdev &amp;&amp; p-&gt;fts_dev != chp-&gt;fts_dev) {</span>
-<span class="lineNum">     314 </span>            :                     /* continuing into folder would cross file systems*/
-<span class="lineNum">     315 </span><span class="lineNoCov">          0 :                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */</span>
-<span class="lineNum">     316 </span><span class="lineNoCov">          0 :                     clear_emptydir_flags = true; /*flag current dir as not empty*/</span>
-<span class="lineNum">     317 </span><span class="lineNoCov">          0 :                     rm_log_info(</span>
-<span class="lineNum">     318 </span>            :                         &quot;Not descending into %s because it is a different filesystem\n&quot;,
-<span class="lineNum">     319 </span>            :                         p-&gt;fts_path);
-<span class="lineNum">     320 </span>            :                 } else {
-<span class="lineNum">     321 </span>            :                     /* recurse dir; assume empty until proven otherwise */
-<span class="lineNum">     322 </span><span class="lineCov">      34323 :                     is_emptydir[p-&gt;fts_level + 1] = 1;</span>
-<span class="lineNum">     323 </span><span class="lineCov">      68646 :                     is_hidden[p-&gt;fts_level + 1] =</span>
-<span class="lineNum">     324 </span><span class="lineCov">      34323 :                         is_hidden[p-&gt;fts_level] | (p-&gt;fts_name[0] == '.');</span>
-<span class="lineNum">     325 </span><span class="lineCov">      34323 :                     have_open_emptydirs = true;</span>
-<span class="lineNum">     326 </span>            :                 }
-<span class="lineNum">     327 </span><span class="lineCov">      34323 :                 break;</span>
-<span class="lineNum">     328 </span>            :             case FTS_DC: /* directory that causes cycles */
-<span class="lineNum">     329 </span><span class="lineCov">         81 :                 rm_log_warning_line(_(&quot;filesystem loop detected at %s (skipping)&quot;),</span>
-<span class="lineNum">     330 </span>            :                                     p-&gt;fts_path);
-<span class="lineNum">     331 </span><span class="lineCov">         81 :                 clear_emptydir_flags = true; /* current dir not empty */</span>
-<span class="lineNum">     332 </span><span class="lineCov">         81 :                 break;</span>
-<span class="lineNum">     333 </span>            :             case FTS_DNR: /* unreadable directory */
-<span class="lineNum">     334 </span><span class="lineNoCov">          0 :                 rm_log_warning_line(_(&quot;cannot read directory %s: %s&quot;), p-&gt;fts_path,</span>
-<span class="lineNum">     335 </span>            :                                     g_strerror(p-&gt;fts_errno));
-<span class="lineNum">     336 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /* current dir not empty */</span>
-<span class="lineNum">     337 </span><span class="lineNoCov">          0 :                 break;</span>
-<span class="lineNum">     338 </span>            :             case FTS_DOT: /* dot or dot-dot */
-<span class="lineNum">     339 </span><span class="lineNoCov">          0 :                 break;</span>
-<span class="lineNum">     340 </span>            :             case FTS_DP: /* postorder directory */
-<span class="lineNum">     341 </span><span class="lineCov">      34324 :                 if(is_emptydir[p-&gt;fts_level + 1] &amp;&amp; cfg-&gt;find_emptydirs) {</span>
-<span class="lineNum">     342 </span><span class="lineCov">       1033 :                     ADD_FILE(RM_LINT_TYPE_EMPTY_DIR, false);</span>
-<span class="lineNum">     343 </span>            :                 }
-<span class="lineNum">     344 </span><span class="lineCov">      34324 :                 is_hidden[p-&gt;fts_level + 1] = 0;</span>
-<span class="lineNum">     345 </span><span class="lineCov">      34324 :                 break;</span>
-<span class="lineNum">     346 </span>            :             case FTS_ERR: /* error; errno is set */
-<span class="lineNum">     347 </span><span class="lineNoCov">          0 :                 rm_log_warning_line(_(&quot;error %d in fts_read for %s (skipping)&quot;), errno,</span>
-<span class="lineNum">     348 </span>            :                                     p-&gt;fts_path);
-<span class="lineNum">     349 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
-<span class="lineNum">     350 </span><span class="lineNoCov">          0 :                 break;</span>
-<span class="lineNum">     351 </span>            :             case FTS_INIT: /* initialized only */
-<span class="lineNum">     352 </span><span class="lineNoCov">          0 :                 break;</span>
-<span class="lineNum">     353 </span>            :             case FTS_SLNONE: /* symbolic link without target */
-<span class="lineNum">     354 </span><span class="lineCov">         81 :                 if(cfg-&gt;find_badlinks) {</span>
-<span class="lineNum">     355 </span><span class="lineCov">         81 :                     ADD_FILE(RM_LINT_TYPE_BADLINK, false);</span>
-<span class="lineNum">     356 </span>            :                 }
-<span class="lineNum">     357 </span><span class="lineCov">         81 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
-<span class="lineNum">     358 </span><span class="lineCov">         81 :                 break;</span>
-<span class="lineNum">     359 </span>            :             case FTS_W:                      /* whiteout object */
-<span class="lineNum">     360 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
-<span class="lineNum">     361 </span><span class="lineNoCov">          0 :                 break;</span>
-<span class="lineNum">     362 </span>            :             case FTS_NS: {                   /* rm_sys_stat(2) failed */
-<span class="lineNum">     363 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
-<span class="lineNum">     364 </span>            :                 RmStat stat_buf;
-<span class="lineNum">     365 </span>            : 
-<span class="lineNum">     366 </span>            :                 /* See if your stat can do better. */
-<span class="lineNum">     367 </span><span class="lineNoCov">          0 :                 if(rm_sys_stat(p-&gt;fts_path, &amp;stat_buf) != -1) {</span>
-<span class="lineNum">     368 </span>            :                     /* normal stat failed but 64-bit stat worked
-<span class="lineNum">     369 </span>            :                      * -&gt; must be a big file on 32 bit.
-<span class="lineNum">     370 </span>            :                      */
-<span class="lineNum">     371 </span><span class="lineNoCov">          0 :                     rm_traverse_file(trav_session, &amp;stat_buf, &amp;file_queue, p-&gt;fts_path,</span>
-<span class="lineNum">     372 </span><span class="lineNoCov">          0 :                                      p-&gt;fts_pathlen, is_prefd, path_index,</span>
-<span class="lineNum">     373 </span>            :                                      RM_LINT_TYPE_UNKNOWN, false,
-<span class="lineNum">     374 </span><span class="lineNoCov">          0 :                                      rm_traverse_is_hidden(cfg, p-&gt;fts_name, is_hidden,</span>
-<span class="lineNum">     375 </span><span class="lineNoCov">          0 :                                                            p-&gt;fts_level + 1));</span>
-<span class="lineNum">     376 </span><span class="lineNoCov">          0 :                     rm_log_warning_line(_(&quot;Added big file %s&quot;), p-&gt;fts_path);</span>
-<span class="lineNum">     377 </span>            :                 } else {
-<span class="lineNum">     378 </span><span class="lineNoCov">          0 :                     rm_log_warning(_(&quot;cannot stat file %s (skipping)&quot;), p-&gt;fts_path);</span>
-<span class="lineNum">     379 </span>            :                 }
-<span class="lineNum">     380 </span><span class="lineNoCov">          0 :             } break;</span>
-<span class="lineNum">     381 </span>            :             case FTS_SL:                     /* symbolic link */
-<span class="lineNum">     382 </span><span class="lineCov">        901 :                 clear_emptydir_flags = true; /* current dir not empty */</span>
-<span class="lineNum">     383 </span><span class="lineCov">        901 :                 if(!cfg-&gt;follow_symlinks) {</span>
-<span class="lineNum">     384 </span><span class="lineCov">        604 :                     if(p-&gt;fts_level != 0) {</span>
-<span class="lineNum">     385 </span><span class="lineCov">        604 :                         rm_log_debug(&quot;Not following symlink %s because of cfg\n&quot;,</span>
-<span class="lineNum">     386 </span>            :                                      p-&gt;fts_path);
-<span class="lineNum">     387 </span>            :                     }
-<span class="lineNum">     388 </span>            : 
-<span class="lineNum">     389 </span>            :                     RmStat dummy_buf;
-<span class="lineNum">     390 </span><span class="lineCov">        604 :                     if(rm_sys_stat(p-&gt;fts_path, &amp;dummy_buf) == -1 &amp;&amp; errno == ENOENT) {</span>
-<span class="lineNum">     391 </span>            :                         /* Oops, that's a badlink. */
-<span class="lineNum">     392 </span><span class="lineCov">        680 :                         if(cfg-&gt;find_badlinks) {</span>
-<span class="lineNum">     393 </span><span class="lineCov">        340 :                             ADD_FILE(RM_LINT_TYPE_BADLINK, false);</span>
-<span class="lineNum">     394 </span>            :                         }
-<span class="lineNum">     395 </span><span class="lineCov">        264 :                     } else if(cfg-&gt;see_symlinks) {</span>
-<span class="lineNum">     396 </span><span class="lineCov">        264 :                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);</span>
-<span class="lineNum">     397 </span>            :                     }
-<span class="lineNum">     398 </span>            :                 } else {
-<span class="lineNum">     399 </span><span class="lineCov">        297 :                     rm_log_debug(&quot;Following symlink %s\n&quot;, p-&gt;fts_path);</span>
-<span class="lineNum">     400 </span><span class="lineCov">        297 :                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */</span>
-<span class="lineNum">     401 </span>            :                 }
-<span class="lineNum">     402 </span><span class="lineCov">        901 :                 break;</span>
-<span class="lineNum">     403 </span>            :             case FTS_NSOK:    /* no rm_sys_stat(2) requested */
-<span class="lineNum">     404 </span>            :             case FTS_F:       /* regular file */
-<span class="lineNum">     405 </span>            :             case FTS_DEFAULT: /* any file type not explicitly described by one of the
-<span class="lineNum">     406 </span>            :                                  above*/
-<span class="lineNum">     407 </span><span class="lineCov">      84287 :                 clear_emptydir_flags = true; /* current dir not empty*/</span>
-<span class="lineNum">     408 </span><span class="lineCov">      84287 :                 ADD_FILE(RM_LINT_TYPE_UNKNOWN, false);</span>
-<span class="lineNum">     409 </span><span class="lineCov">      84287 :                 break;</span>
-<span class="lineNum">     410 </span>            :             default:
-<span class="lineNum">     411 </span>            :                 /* unknown case; assume current dir not empty but otherwise do nothing */
-<span class="lineNum">     412 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true;</span>
-<span class="lineNum">     413 </span><span class="lineNoCov">          0 :                 rm_log_error_line(_(&quot;Unknown fts_info flag %d for file %s&quot;), p-&gt;fts_info,</span>
-<span class="lineNum">     414 </span>            :                                   p-&gt;fts_path);
-<span class="lineNum">     415 </span><span class="lineNoCov">          0 :                 break;</span>
-<span class="lineNum">     416 </span>            :             }
-<span class="lineNum">     417 </span>            : 
-<span class="lineNum">     418 </span><span class="lineCov">     153997 :             if(clear_emptydir_flags) {</span>
-<span class="lineNum">     419 </span>            :                 /* non-empty dir found above; need to clear emptydir flags for all open
-<span class="lineNum">     420 </span>            :                  * levels */
-<span class="lineNum">     421 </span><span class="lineCov">      86241 :                 if(have_open_emptydirs) {</span>
-<span class="lineNum">     422 </span><span class="lineCov">      26287 :                     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);</span>
-<span class="lineNum">     423 </span><span class="lineCov">      26287 :                     have_open_emptydirs = false;</span>
-<span class="lineNum">     424 </span>            :                 }
-<span class="lineNum">     425 </span><span class="lineCov">      86241 :                 clear_emptydir_flags = false;</span>
-<span class="lineNum">     426 </span>            :             }
-<span class="lineNum">     427 </span>            :             /* current dir may not be empty; by association, all open dirs are non-empty
-<span class="lineNum">     428 </span>            :              */
-<span class="lineNum">     429 </span>            :         }
-<span class="lineNum">     430 </span>            :     }
-<span class="lineNum">     431 </span>            : 
-<span class="lineNum">     432 </span><span class="lineCov">      19289 :     if(errno != 0 &amp;&amp; !rm_session_was_aborted(session)) {</span>
-<span class="lineNum">     433 </span><span class="lineNoCov">          0 :         rm_log_error_line(_(&quot;'%s': fts_read failed on %s&quot;), g_strerror(errno),</span>
-<span class="lineNum">     434 </span>            :                           ftsp-&gt;fts_path);
-<span class="lineNum">     435 </span>            :     }
-<span class="lineNum">     436 </span>            : 
-<span class="lineNum">     437 </span>            : #undef ADD_FILE
-<span class="lineNum">     438 </span>            : 
-<span class="lineNum">     439 </span><span class="lineCov">      19288 :     fts_close(ftsp);</span>
-<span class="lineNum">     440 </span><span class="lineCov">      19288 :     rm_trav_buffer_free(buffer);</span>
-<span class="lineNum">     441 </span>            : 
-<span class="lineNum">     442 </span>            :     /* Pass the files to the preprocessing machinery. We collect the files first
-<span class="lineNum">     443 </span>            :      * in order to make -with-metadata-cache work: Without, too many
-<span class="lineNum">     444 </span>            :      * insert/selects would crossfire.
-<span class="lineNum">     445 </span>            :      */
-<span class="lineNum">     446 </span><span class="lineCov">     101891 :     for(GList *iter = file_queue.head; iter; iter = iter-&gt;next) {</span>
-<span class="lineNum">     447 </span><span class="lineCov">      82602 :         RmFile *file = iter-&gt;data;</span>
-<span class="lineNum">     448 </span><span class="lineCov">      82602 :         g_atomic_int_add(&amp;trav_session-&gt;session-&gt;total_files,</span>
-<span class="lineNum">     449 </span>            :                          -(rm_file_tables_insert(session, file) == 0));
-<span class="lineNum">     450 </span><span class="lineCov">      82603 :         rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_TRAVERSE);</span>
-<span class="lineNum">     451 </span>            :     }
-<span class="lineNum">     452 </span><span class="lineCov">      19289 :     g_queue_clear(&amp;file_queue);</span>
-<a name="453"><span class="lineNum">     453 </span>            : }</a>
-<span class="lineNum">     454 </span>            : 
-<span class="lineNum">     455 </span><span class="lineCov">      14505 : static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_session) {</span>
-<span class="lineNum">     456 </span><span class="lineCov">      14505 :     g_queue_foreach(path_queue, (GFunc)rm_traverse_directory, trav_session);</span>
-<span class="lineNum">     457 </span><span class="lineCov">      14505 : }</span>
-<span class="lineNum">     458 </span>            : 
-<span class="lineNum">     459 </span>            : ////////////////
-<span class="lineNum">     460 </span>            : // PUBLIC API //
-<a name="461"><span class="lineNum">     461 </span>            : ////////////////</a>
-<span class="lineNum">     462 </span>            : 
-<span class="lineNum">     463 </span><span class="lineCov">      14322 : void rm_traverse_tree(RmSession *session) {</span>
-<span class="lineNum">     464 </span><span class="lineCov">      14322 :     RmCfg *cfg = session-&gt;cfg;</span>
-<span class="lineNum">     465 </span><span class="lineCov">      14322 :     RmTravSession *trav_session = rm_traverse_session_new(session);</span>
+<span class="lineNum">     283 </span>            :     /* start main processing */
+<span class="lineNum">     284 </span>            :     char is_emptydir[PATH_MAX / 2 + 1];
+<span class="lineNum">     285 </span>            :     char is_hidden[PATH_MAX / 2 + 1];
+<span class="lineNum">     286 </span><span class="lineCov">     101259 :     bool have_open_emptydirs = false;</span>
+<span class="lineNum">     287 </span><span class="lineCov">     101259 :     bool clear_emptydir_flags = false;</span>
+<span class="lineNum">     288 </span><span class="lineCov">     101259 :     bool next_is_symlink = false;</span>
+<span class="lineNum">     289 </span>            : 
+<span class="lineNum">     290 </span><span class="lineCov">     101259 :     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);</span>
+<span class="lineNum">     291 </span><span class="lineCov">     101259 :     memset(is_hidden, 0, sizeof(is_hidden) - 1);</span>
+<span class="lineNum">     292 </span>            : 
+<span class="lineNum">     293 </span>            :     /* rm_traverse_file add the finished file (if any) to this queue.  They are
+<span class="lineNum">     294 </span>            :      * added to the preprocessing module in batch so there isn't many jumping
+<span class="lineNum">     295 </span>            :      * between BEGIN; INSERT[...]; COMMIT and SELECT with --with-metadata-cache.
+<span class="lineNum">     296 </span>            :      */
+<span class="lineNum">     297 </span><span class="lineCov">     101259 :     GQueue file_queue = G_QUEUE_INIT;</span>
+<span class="lineNum">     298 </span>            : 
+<span class="lineNum">     299 </span><span class="lineCov">     641951 :     while(!rm_session_was_aborted(trav_session-&gt;session) &amp;&amp;</span>
+<span class="lineNum">     300 </span>            :           (p = fts_read(ftsp)) != NULL) {
+<span class="lineNum">     301 </span>            :         /* check for hidden file or folder */
+<span class="lineNum">     302 </span><span class="lineCov">     439422 :         if(cfg-&gt;ignore_hidden &amp;&amp; p-&gt;fts_level &gt; 0 &amp;&amp; p-&gt;fts_name[0] == '.') {</span>
+<span class="lineNum">     303 </span>            :             /* ignoring hidden folders*/
+<span class="lineNum">     304 </span>            : 
+<span class="lineNum">     305 </span><span class="lineCov">        864 :             if(p-&gt;fts_info == FTS_D) {</span>
+<span class="lineNum">     306 </span><span class="lineCov">         51 :                 fts_set(ftsp, p, FTS_SKIP); /* do not recurse */</span>
+<span class="lineNum">     307 </span><span class="lineCov">         56 :                 g_atomic_int_inc(&amp;trav_session-&gt;session-&gt;ignored_folders);</span>
+<span class="lineNum">     308 </span>            :             } else {
+<span class="lineNum">     309 </span><span class="lineCov">        813 :                 g_atomic_int_inc(&amp;trav_session-&gt;session-&gt;ignored_files);</span>
+<span class="lineNum">     310 </span>            :             }
+<span class="lineNum">     311 </span>            : 
+<span class="lineNum">     312 </span><span class="lineCov">        869 :             clear_emptydir_flags = true; /* flag current dir as not empty */</span>
+<span class="lineNum">     313 </span><span class="lineCov">        869 :             is_emptydir[p-&gt;fts_level] = 0;</span>
+<span class="lineNum">     314 </span>            :         } else {
+<span class="lineNum">     315 </span><span class="lineCov">     438558 :             switch(p-&gt;fts_info) {</span>
+<span class="lineNum">     316 </span>            :             case FTS_D: /* preorder directory */
+<span class="lineNum">     317 </span><span class="lineCov">     106039 :                 if(cfg-&gt;depth != 0 &amp;&amp; p-&gt;fts_level &gt;= cfg-&gt;depth) {</span>
+<span class="lineNum">     318 </span>            :                     /* continuing into folder would exceed maxdepth*/
+<span class="lineNum">     319 </span><span class="lineNoCov">          0 :                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */</span>
+<span class="lineNum">     320 </span><span class="lineNoCov">          0 :                     clear_emptydir_flags = true; /* flag current dir as not empty */</span>
+<span class="lineNum">     321 </span><span class="lineNoCov">          0 :                     rm_log_debug_line(&quot;Not descending into %s because max depth reached&quot;,</span>
+<span class="lineNum">     322 </span>            :                                  p-&gt;fts_path);
+<span class="lineNum">     323 </span><span class="lineCov">     106039 :                 } else if(cfg-&gt;crossdev &amp;&amp; p-&gt;fts_dev != chp-&gt;fts_dev) {</span>
+<span class="lineNum">     324 </span>            :                     /* continuing into folder would cross file systems*/
+<span class="lineNum">     325 </span><span class="lineNoCov">          0 :                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */</span>
+<span class="lineNum">     326 </span><span class="lineNoCov">          0 :                     clear_emptydir_flags = true; /*flag current dir as not empty*/</span>
+<span class="lineNum">     327 </span><span class="lineNoCov">          0 :                     rm_log_info(</span>
+<span class="lineNum">     328 </span>            :                         &quot;Not descending into %s because it is a different filesystem\n&quot;,
+<span class="lineNum">     329 </span>            :                         p-&gt;fts_path);
+<span class="lineNum">     330 </span>            :                 } else {
+<span class="lineNum">     331 </span>            :                     /* recurse dir; assume empty until proven otherwise */
+<span class="lineNum">     332 </span><span class="lineCov">     106039 :                     is_emptydir[p-&gt;fts_level + 1] = 1;</span>
+<span class="lineNum">     333 </span><span class="lineCov">     212078 :                     is_hidden[p-&gt;fts_level + 1] =</span>
+<span class="lineNum">     334 </span><span class="lineCov">     106039 :                         is_hidden[p-&gt;fts_level] | (p-&gt;fts_name[0] == '.');</span>
+<span class="lineNum">     335 </span><span class="lineCov">     106039 :                     have_open_emptydirs = true;</span>
+<span class="lineNum">     336 </span>            :                 }
+<span class="lineNum">     337 </span><span class="lineCov">     106039 :                 break;</span>
+<span class="lineNum">     338 </span>            :             case FTS_DC: /* directory that causes cycles */
+<span class="lineNum">     339 </span><span class="lineCov">         28 :                 rm_log_warning_line(_(&quot;filesystem loop detected at %s (skipping)&quot;),</span>
+<span class="lineNum">     340 </span>            :                                     p-&gt;fts_path);
+<span class="lineNum">     341 </span><span class="lineCov">         28 :                 clear_emptydir_flags = true; /* current dir not empty */</span>
+<span class="lineNum">     342 </span><span class="lineCov">         28 :                 break;</span>
+<span class="lineNum">     343 </span>            :             case FTS_DNR: /* unreadable directory */
+<span class="lineNum">     344 </span><span class="lineNoCov">          0 :                 rm_log_warning_line(_(&quot;cannot read directory %s: %s&quot;), p-&gt;fts_path,</span>
+<span class="lineNum">     345 </span>            :                                     g_strerror(p-&gt;fts_errno));
+<span class="lineNum">     346 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /* current dir not empty */</span>
+<span class="lineNum">     347 </span><span class="lineNoCov">          0 :                 break;</span>
+<span class="lineNum">     348 </span>            :             case FTS_DOT: /* dot or dot-dot */
+<span class="lineNum">     349 </span><span class="lineNoCov">          0 :                 break;</span>
+<span class="lineNum">     350 </span>            :             case FTS_DP: /* postorder directory */
+<span class="lineNum">     351 </span><span class="lineCov">     106040 :                 if(is_emptydir[p-&gt;fts_level + 1] &amp;&amp; cfg-&gt;find_emptydirs) {</span>
+<span class="lineNum">     352 </span><span class="lineCov">        252 :                     ADD_FILE(RM_LINT_TYPE_EMPTY_DIR, false);</span>
+<span class="lineNum">     353 </span>            :                 }
+<span class="lineNum">     354 </span><span class="lineCov">     106040 :                 is_hidden[p-&gt;fts_level + 1] = 0;</span>
+<span class="lineNum">     355 </span><span class="lineCov">     106040 :                 break;</span>
+<span class="lineNum">     356 </span>            :             case FTS_ERR: /* error; errno is set */
+<span class="lineNum">     357 </span><span class="lineNoCov">          0 :                 rm_log_warning_line(_(&quot;error %d in fts_read for %s (skipping)&quot;), errno,</span>
+<span class="lineNum">     358 </span>            :                                     p-&gt;fts_path);
+<span class="lineNum">     359 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
+<span class="lineNum">     360 </span><span class="lineNoCov">          0 :                 break;</span>
+<span class="lineNum">     361 </span>            :             case FTS_INIT: /* initialized only */
+<span class="lineNum">     362 </span><span class="lineNoCov">          0 :                 break;</span>
+<span class="lineNum">     363 </span>            :             case FTS_SLNONE: /* symbolic link without target */
+<span class="lineNum">     364 </span><span class="lineCov">         28 :                 if(cfg-&gt;find_badlinks) {</span>
+<span class="lineNum">     365 </span><span class="lineCov">         28 :                     ADD_FILE(RM_LINT_TYPE_BADLINK, false);</span>
+<span class="lineNum">     366 </span>            :                 }
+<span class="lineNum">     367 </span><span class="lineCov">         28 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
+<span class="lineNum">     368 </span><span class="lineCov">         28 :                 break;</span>
+<span class="lineNum">     369 </span>            :             case FTS_W:                      /* whiteout object */
+<span class="lineNum">     370 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
+<span class="lineNum">     371 </span><span class="lineNoCov">          0 :                 break;</span>
+<span class="lineNum">     372 </span>            :             case FTS_NS: {                   /* rm_sys_stat(2) failed */
+<span class="lineNum">     373 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true; /*current dir not empty*/</span>
+<span class="lineNum">     374 </span>            :                 RmStat stat_buf;
+<span class="lineNum">     375 </span>            : 
+<span class="lineNum">     376 </span>            :                 /* See if your stat can do better. */
+<span class="lineNum">     377 </span><span class="lineNoCov">          0 :                 if(rm_sys_stat(p-&gt;fts_path, &amp;stat_buf) != -1) {</span>
+<span class="lineNum">     378 </span>            :                     /* normal stat failed but 64-bit stat worked
+<span class="lineNum">     379 </span>            :                      * -&gt; must be a big file on 32 bit.
+<span class="lineNum">     380 </span>            :                      */
+<span class="lineNum">     381 </span><span class="lineNoCov">          0 :                     rm_traverse_file(trav_session, &amp;stat_buf, &amp;file_queue, p-&gt;fts_path,</span>
+<span class="lineNum">     382 </span><span class="lineNoCov">          0 :                                      p-&gt;fts_pathlen, is_prefd, path_index,</span>
+<span class="lineNum">     383 </span>            :                                      RM_LINT_TYPE_UNKNOWN, false,
+<span class="lineNum">     384 </span><span class="lineNoCov">          0 :                                      rm_traverse_is_hidden(cfg, p-&gt;fts_name, is_hidden,</span>
+<span class="lineNum">     385 </span><span class="lineNoCov">          0 :                                                            p-&gt;fts_level + 1),</span>
+<span class="lineNum">     386 </span><span class="lineNoCov">          0 :                                      is_on_subvol_fs, p-&gt;fts_level);</span>
+<span class="lineNum">     387 </span><span class="lineNoCov">          0 :                     rm_log_warning_line(_(&quot;Added big file %s&quot;), p-&gt;fts_path);</span>
+<span class="lineNum">     388 </span>            :                 } else {
+<span class="lineNum">     389 </span><span class="lineNoCov">          0 :                     rm_log_warning(_(&quot;cannot stat file %s (skipping)&quot;), p-&gt;fts_path);</span>
+<span class="lineNum">     390 </span>            :                 }
+<span class="lineNum">     391 </span><span class="lineNoCov">          0 :             } break;</span>
+<span class="lineNum">     392 </span>            :             case FTS_SL:                     /* symbolic link */
+<span class="lineNum">     393 </span><span class="lineCov">        504 :                 clear_emptydir_flags = true; /* current dir not empty */</span>
+<span class="lineNum">     394 </span><span class="lineCov">        504 :                 if(!cfg-&gt;follow_symlinks) {</span>
+<span class="lineNum">     395 </span><span class="lineCov">        336 :                     if(p-&gt;fts_level != 0) {</span>
+<span class="lineNum">     396 </span><span class="lineCov">        336 :                         rm_log_debug_line(&quot;Not following symlink %s because of cfg&quot;,</span>
+<span class="lineNum">     397 </span>            :                                      p-&gt;fts_path);
+<span class="lineNum">     398 </span>            :                     }
+<span class="lineNum">     399 </span>            : 
+<span class="lineNum">     400 </span><span class="lineCov">        336 :                     if(access(p-&gt;fts_path, R_OK) == -1 &amp;&amp; errno == ENOENT) {</span>
+<span class="lineNum">     401 </span>            :                         /* Oops, that's a badlink. */
+<span class="lineNum">     402 </span><span class="lineCov">        224 :                         if(cfg-&gt;find_badlinks) {</span>
+<span class="lineNum">     403 </span><span class="lineCov">        112 :                             ADD_FILE(RM_LINT_TYPE_BADLINK, false);</span>
+<span class="lineNum">     404 </span>            :                         }
+<span class="lineNum">     405 </span><span class="lineCov">        224 :                     } else if(cfg-&gt;see_symlinks) {</span>
+<span class="lineNum">     406 </span><span class="lineCov">        140 :                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);</span>
+<span class="lineNum">     407 </span>            :                     }
+<span class="lineNum">     408 </span>            :                 } else {
+<span class="lineNum">     409 </span><span class="lineCov">        168 :                     rm_log_debug_line(&quot;Following symlink %s&quot;, p-&gt;fts_path);</span>
+<span class="lineNum">     410 </span><span class="lineCov">        168 :                     next_is_symlink = true;</span>
+<span class="lineNum">     411 </span><span class="lineCov">        168 :                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */</span>
+<span class="lineNum">     412 </span>            :                 }
+<span class="lineNum">     413 </span><span class="lineCov">        504 :                 break;</span>
+<span class="lineNum">     414 </span>            :             case FTS_NSOK:    /* no rm_sys_stat(2) requested */
+<span class="lineNum">     415 </span>            :             case FTS_F:       /* regular file */
+<span class="lineNum">     416 </span>            :             case FTS_DEFAULT: /* any file type not explicitly described by one of the
+<span class="lineNum">     417 </span>            :                                  above*/
+<span class="lineNum">     418 </span><span class="lineCov">     225919 :                 clear_emptydir_flags = true; /* current dir not empty*/</span>
+<span class="lineNum">     419 </span><span class="lineCov">     225919 :                 ADD_FILE(RM_LINT_TYPE_UNKNOWN, next_is_symlink);</span>
+<span class="lineNum">     420 </span><span class="lineCov">     225925 :                 next_is_symlink = false;</span>
+<span class="lineNum">     421 </span><span class="lineCov">     225925 :                 break;</span>
+<span class="lineNum">     422 </span>            :             default:
+<span class="lineNum">     423 </span>            :                 /* unknown case; assume current dir not empty but otherwise do nothing */
+<span class="lineNum">     424 </span><span class="lineNoCov">          0 :                 clear_emptydir_flags = true;</span>
+<span class="lineNum">     425 </span><span class="lineNoCov">          0 :                 rm_log_error_line(_(&quot;Unknown fts_info flag %d for file %s&quot;), p-&gt;fts_info,</span>
+<span class="lineNum">     426 </span>            :                                   p-&gt;fts_path);
+<span class="lineNum">     427 </span><span class="lineNoCov">          0 :                 break;</span>
+<span class="lineNum">     428 </span>            :             }
+<span class="lineNum">     429 </span>            : 
+<span class="lineNum">     430 </span><span class="lineCov">     438564 :             if(clear_emptydir_flags) {</span>
+<span class="lineNum">     431 </span>            :                 /* non-empty dir found above; need to clear emptydir flags for all open
+<span class="lineNum">     432 </span>            :                  * levels */
+<span class="lineNum">     433 </span><span class="lineCov">     226787 :                 if(have_open_emptydirs) {</span>
+<span class="lineNum">     434 </span><span class="lineCov">     103345 :                     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);</span>
+<span class="lineNum">     435 </span><span class="lineCov">     103345 :                     have_open_emptydirs = false;</span>
+<span class="lineNum">     436 </span>            :                 }
+<span class="lineNum">     437 </span><span class="lineCov">     226787 :                 clear_emptydir_flags = false;</span>
+<span class="lineNum">     438 </span>            :             }
+<span class="lineNum">     439 </span>            :             /* current dir may not be empty; by association, all open dirs are non-empty
+<span class="lineNum">     440 </span>            :              */
+<span class="lineNum">     441 </span>            :         }
+<span class="lineNum">     442 </span>            :     }
+<span class="lineNum">     443 </span>            : 
+<span class="lineNum">     444 </span><span class="lineCov">     101260 :     if(errno != 0 &amp;&amp; !rm_session_was_aborted(session)) {</span>
+<span class="lineNum">     445 </span><span class="lineNoCov">          0 :         rm_log_error_line(_(&quot;'%s': fts_read failed on %s&quot;), g_strerror(errno),</span>
+<span class="lineNum">     446 </span>            :                           ftsp-&gt;fts_path);
+<span class="lineNum">     447 </span>            :     }
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span>            : #undef ADD_FILE
+<span class="lineNum">     450 </span>            : 
+<span class="lineNum">     451 </span><span class="lineCov">     101265 :     fts_close(ftsp);</span>
+<span class="lineNum">     452 </span><span class="lineCov">     101261 :     rm_trav_buffer_free(buffer);</span>
+<span class="lineNum">     453 </span>            : 
+<span class="lineNum">     454 </span>            :     /* Pass the files to the preprocessing machinery. We collect the files first
+<span class="lineNum">     455 </span>            :      * in order to make -with-metadata-cache work: Without, too many
+<span class="lineNum">     456 </span>            :      * insert/selects would crossfire.
+<span class="lineNum">     457 </span>            :      */
+<span class="lineNum">     458 </span><span class="lineCov">     326541 :     for(GList *iter = file_queue.head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     459 </span><span class="lineCov">     225275 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     460 </span><span class="lineCov">     225275 :         g_atomic_int_add(&amp;trav_session-&gt;session-&gt;total_files,</span>
+<span class="lineNum">     461 </span>            :                          -(rm_file_tables_insert(session, file) == 0));
+<span class="lineNum">     462 </span><span class="lineCov">     225279 :         rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_TRAVERSE);</span>
+<span class="lineNum">     463 </span>            :     }
+<span class="lineNum">     464 </span><span class="lineCov">     101266 :     g_queue_clear(&amp;file_queue);</span>
+<a name="465"><span class="lineNum">     465 </span>            : }</a>
 <span class="lineNum">     466 </span>            : 
-<span class="lineNum">     467 </span><span class="lineCov">      14322 :     GHashTable *paths_per_disk =</span>
-<span class="lineNum">     468 </span>            :         g_hash_table_new_full(NULL, NULL, NULL, (GDestroyNotify)g_queue_free);
-<span class="lineNum">     469 </span>            : 
-<span class="lineNum">     470 </span><span class="lineCov">      33730 :     for(RmOff idx = 0; cfg-&gt;paths[idx] != NULL; ++idx) {</span>
-<span class="lineNum">     471 </span><span class="lineCov">      19408 :         char *path = cfg-&gt;paths[idx];</span>
-<span class="lineNum">     472 </span><span class="lineCov">      19408 :         bool is_prefd = cfg-&gt;is_prefd[idx];</span>
-<span class="lineNum">     473 </span>            : 
-<span class="lineNum">     474 </span><span class="lineCov">      19408 :         RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);</span>
-<span class="lineNum">     475 </span>            : 
-<span class="lineNum">     476 </span><span class="lineCov">      19408 :         RM_BUFFER_DEFINE_PATH(session, buffer);</span>
-<span class="lineNum">     477 </span>            : 
-<span class="lineNum">     478 </span><span class="lineCov">      19408 :         if(S_ISREG(buffer-&gt;stat_buf.st_mode)) {</span>
-<span class="lineNum">     479 </span>            :             /* Append normal paths directly */
-<span class="lineNum">     480 </span><span class="lineCov">        119 :             bool is_hidden = false;</span>
+<span class="lineNum">     467 </span><span class="lineCov">      39170 : static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_session) {</span>
+<span class="lineNum">     468 </span><span class="lineCov">      39170 :     g_queue_foreach(path_queue, (GFunc)rm_traverse_directory, trav_session);</span>
+<span class="lineNum">     469 </span><span class="lineCov">      39169 : }</span>
+<span class="lineNum">     470 </span>            : 
+<span class="lineNum">     471 </span>            : ////////////////
+<span class="lineNum">     472 </span>            : // PUBLIC API //
+<a name="473"><span class="lineNum">     473 </span>            : ////////////////</a>
+<span class="lineNum">     474 </span>            : 
+<span class="lineNum">     475 </span><span class="lineCov">      36878 : void rm_traverse_tree(RmSession *session) {</span>
+<span class="lineNum">     476 </span><span class="lineCov">      36878 :     RmCfg *cfg = session-&gt;cfg;</span>
+<span class="lineNum">     477 </span><span class="lineCov">      36878 :     RmTravSession *trav_session = rm_traverse_session_new(session);</span>
+<span class="lineNum">     478 </span>            : 
+<span class="lineNum">     479 </span><span class="lineCov">      36878 :     GHashTable *paths_per_disk =</span>
+<span class="lineNum">     480 </span>            :         g_hash_table_new_full(NULL, NULL, NULL, (GDestroyNotify)g_queue_free);
 <span class="lineNum">     481 </span>            : 
-<span class="lineNum">     482 </span>            :             /* The is_hidden information is only needed for --partial-hidden */
-<span class="lineNum">     483 </span><span class="lineCov">        119 :             if(cfg-&gt;partial_hidden) {</span>
-<span class="lineNum">     484 </span><span class="lineCov">          6 :                 is_hidden = rm_util_path_is_hidden(buffer_path);</span>
-<span class="lineNum">     485 </span>            :             }
-<span class="lineNum">     486 </span>            : 
-<span class="lineNum">     487 </span><span class="lineCov">        119 :             rm_traverse_file(trav_session, &amp;buffer-&gt;stat_buf, NULL, buffer_path,</span>
-<span class="lineNum">     488 </span>            :                              strlen(buffer_path), is_prefd, idx, RM_LINT_TYPE_UNKNOWN,
-<span class="lineNum">     489 </span>            :                              false, is_hidden);
-<span class="lineNum">     490 </span>            : 
-<span class="lineNum">     491 </span><span class="lineCov">        119 :             rm_trav_buffer_free(buffer);</span>
-<span class="lineNum">     492 </span><span class="lineCov">      19289 :         } else if(S_ISDIR(buffer-&gt;stat_buf.st_mode)) {</span>
-<span class="lineNum">     493 </span>            :             /* It's a directory, traverse it. */
-<span class="lineNum">     494 </span><span class="lineCov">      38578 :             dev_t disk = (!cfg-&gt;fake_pathindex_as_disk ? rm_mounts_get_disk_id_by_path(</span>
-<span class="lineNum">     495 </span><span class="lineCov">      18560 :                                                              session-&gt;mounts, buffer_path)</span>
-<span class="lineNum">     496 </span><span class="lineCov">      37849 :                                                        : (dev_t)idx);</span>
-<span class="lineNum">     497 </span>            : 
-<span class="lineNum">     498 </span><span class="lineCov">      19289 :             GQueue *path_queue = rm_hash_table_setdefault(</span>
-<span class="lineNum">     499 </span>            :                 paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new);
-<span class="lineNum">     500 </span><span class="lineCov">      19289 :             g_queue_push_tail(path_queue, buffer);</span>
-<span class="lineNum">     501 </span>            :         } else {
-<span class="lineNum">     502 </span>            :             /* Probably a block device, fifo or something weird. */
-<span class="lineNum">     503 </span><span class="lineNoCov">          0 :             rm_trav_buffer_free(buffer);</span>
-<span class="lineNum">     504 </span>            :         }
-<span class="lineNum">     505 </span>            :     }
-<span class="lineNum">     506 </span>            : 
-<span class="lineNum">     507 </span><span class="lineCov">      14322 :     GThreadPool *traverse_pool = rm_util_thread_pool_new(</span>
-<span class="lineNum">     508 </span><span class="lineCov">      14322 :         (GFunc)rm_traverse_directories, trav_session, session-&gt;cfg-&gt;threads);</span>
+<span class="lineNum">     482 </span><span class="lineCov">     138231 :     for(RmOff idx = 0; cfg-&gt;paths[idx] != NULL; ++idx) {</span>
+<span class="lineNum">     483 </span><span class="lineCov">     101353 :         char *path = cfg-&gt;paths[idx];</span>
+<span class="lineNum">     484 </span><span class="lineCov">     101353 :         bool is_prefd = cfg-&gt;is_prefd[idx];</span>
+<span class="lineNum">     485 </span>            : 
+<span class="lineNum">     486 </span><span class="lineCov">     101353 :         RmTravBuffer *buffer = rm_trav_buffer_new(session, path, is_prefd, idx);</span>
+<span class="lineNum">     487 </span>            : 
+<span class="lineNum">     488 </span><span class="lineCov">     101353 :         RM_BUFFER_DEFINE_PATH(session, buffer);</span>
+<span class="lineNum">     489 </span>            : 
+<span class="lineNum">     490 </span><span class="lineCov">     101353 :         if(S_ISREG(buffer-&gt;stat_buf.st_mode)) {</span>
+<span class="lineNum">     491 </span>            :             /* Append normal paths directly */
+<span class="lineNum">     492 </span><span class="lineCov">         87 :             bool is_hidden = false;</span>
+<span class="lineNum">     493 </span>            : 
+<span class="lineNum">     494 </span>            :             /* The is_hidden information is only needed for --partial-hidden */
+<span class="lineNum">     495 </span><span class="lineCov">         87 :             if(cfg-&gt;partial_hidden) {</span>
+<span class="lineNum">     496 </span><span class="lineCov">         84 :                 is_hidden = rm_util_path_is_hidden(buffer_path);</span>
+<span class="lineNum">     497 </span>            :             }
+<span class="lineNum">     498 </span>            : 
+<span class="lineNum">     499 </span><span class="lineCov">         87 :             rm_traverse_file(trav_session, &amp;buffer-&gt;stat_buf, NULL, buffer_path,</span>
+<span class="lineNum">     500 </span>            :                              strlen(buffer_path), is_prefd, idx, RM_LINT_TYPE_UNKNOWN,
+<span class="lineNum">     501 </span>            :                              false, is_hidden, FALSE, 0);
+<span class="lineNum">     502 </span>            : 
+<span class="lineNum">     503 </span><span class="lineCov">         87 :             rm_trav_buffer_free(buffer);</span>
+<span class="lineNum">     504 </span><span class="lineCov">     101266 :         } else if(S_ISDIR(buffer-&gt;stat_buf.st_mode)) {</span>
+<span class="lineNum">     505 </span>            :             /* It's a directory, traverse it. */
+<span class="lineNum">     506 </span><span class="lineCov">     202532 :             dev_t disk = (!cfg-&gt;fake_pathindex_as_disk ? rm_mounts_get_disk_id_by_path(</span>
+<span class="lineNum">     507 </span><span class="lineCov">      97662 :                                                              session-&gt;mounts, buffer_path)</span>
+<span class="lineNum">     508 </span><span class="lineCov">     198928 :                                                        : (dev_t)idx);</span>
 <span class="lineNum">     509 </span>            : 
-<span class="lineNum">     510 </span>            :     GHashTableIter iter;
-<span class="lineNum">     511 </span><span class="lineCov">      14322 :     GQueue *path_queue = NULL;</span>
-<span class="lineNum">     512 </span>            : 
-<span class="lineNum">     513 </span><span class="lineCov">      14322 :     g_hash_table_iter_init(&amp;iter, paths_per_disk);</span>
-<span class="lineNum">     514 </span><span class="lineCov">      43149 :     while(g_hash_table_iter_next(&amp;iter, NULL, (gpointer *)&amp;path_queue)) {</span>
-<span class="lineNum">     515 </span><span class="lineCov">      14505 :         rm_util_thread_pool_push(traverse_pool, path_queue);</span>
-<span class="lineNum">     516 </span>            :     }
-<span class="lineNum">     517 </span>            : 
-<span class="lineNum">     518 </span><span class="lineCov">      14322 :     g_thread_pool_free(traverse_pool, false, true);</span>
-<span class="lineNum">     519 </span><span class="lineCov">      14322 :     g_hash_table_unref(paths_per_disk);</span>
-<span class="lineNum">     520 </span><span class="lineCov">      14322 :     rm_traverse_session_free(trav_session);</span>
+<span class="lineNum">     510 </span><span class="lineCov">     101266 :             GQueue *path_queue = rm_hash_table_setdefault(</span>
+<span class="lineNum">     511 </span>            :                 paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new);
+<span class="lineNum">     512 </span><span class="lineCov">     101266 :             g_queue_push_tail(path_queue, buffer);</span>
+<span class="lineNum">     513 </span>            :         } else {
+<span class="lineNum">     514 </span>            :             /* Probably a block device, fifo or something weird. */
+<span class="lineNum">     515 </span><span class="lineNoCov">          0 :             rm_trav_buffer_free(buffer);</span>
+<span class="lineNum">     516 </span>            :         }
+<span class="lineNum">     517 </span>            :     }
+<span class="lineNum">     518 </span>            : 
+<span class="lineNum">     519 </span><span class="lineCov">      36878 :     GThreadPool *traverse_pool = rm_util_thread_pool_new(</span>
+<span class="lineNum">     520 </span><span class="lineCov">      36878 :         (GFunc)rm_traverse_directories, trav_session, session-&gt;cfg-&gt;threads);</span>
 <span class="lineNum">     521 </span>            : 
-<span class="lineNum">     522 </span><span class="lineCov">      14322 :     session-&gt;traverse_finished = TRUE;</span>
-<span class="lineNum">     523 </span><span class="lineCov">      14322 :     rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_TRAVERSE);</span>
-<span class="lineNum">     524 </span><span class="lineCov">      14322 : }</span>
+<span class="lineNum">     522 </span>            :     GHashTableIter iter;
+<span class="lineNum">     523 </span><span class="lineCov">      36878 :     GQueue *path_queue = NULL;</span>
+<span class="lineNum">     524 </span>            : 
+<span class="lineNum">     525 </span><span class="lineCov">      36878 :     g_hash_table_iter_init(&amp;iter, paths_per_disk);</span>
+<span class="lineNum">     526 </span><span class="lineCov">     112926 :     while(g_hash_table_iter_next(&amp;iter, NULL, (gpointer *)&amp;path_queue)) {</span>
+<span class="lineNum">     527 </span><span class="lineCov">      39170 :         rm_util_thread_pool_push(traverse_pool, path_queue);</span>
+<span class="lineNum">     528 </span>            :     }
+<span class="lineNum">     529 </span>            : 
+<span class="lineNum">     530 </span><span class="lineCov">      36878 :     g_thread_pool_free(traverse_pool, false, true);</span>
+<span class="lineNum">     531 </span><span class="lineCov">      36878 :     g_hash_table_unref(paths_per_disk);</span>
+<span class="lineNum">     532 </span><span class="lineCov">      36878 :     rm_traverse_session_free(trav_session);</span>
+<span class="lineNum">     533 </span>            : 
+<span class="lineNum">     534 </span><span class="lineCov">      36878 :     session-&gt;traverse_finished = TRUE;</span>
+<span class="lineNum">     535 </span><span class="lineCov">      36878 :     rm_fmt_set_state(session-&gt;formats, RM_PROGRESS_STATE_TRAVERSE);</span>
+<span class="lineNum">     536 </span><span class="lineCov">      36878 : }</span>
 </pre>
       </td>
     </tr>
@@ -592,7 +604,7 @@
 
   <table width="100%" border=0 cellspacing=0 cellpadding=0>
     <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
-    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
   </table>
   <br>
 

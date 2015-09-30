@@ -1,0 +1,937 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/checksums/xxhash/xxhash.c</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">lib/checksums/xxhash</a> - xxhash.c<span style="font-size: 80%;"> (source / <a href="xxhash.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">85</td>
+            <td class="headerCovTableEntry">393</td>
+            <td class="headerCovTableEntryLo">21.6 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-09-30 14:09:30</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntryLo">17.6 %</td>
+          </tr>
+          <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            : xxHash - Fast Hash algorithm
+<span class="lineNum">       3 </span>            : Copyright (C) 2012-2015, Yann Collet
+<span class="lineNum">       4 </span>            : 
+<span class="lineNum">       5 </span>            : BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+<span class="lineNum">       6 </span>            : 
+<span class="lineNum">       7 </span>            : Redistribution and use in source and binary forms, with or without
+<span class="lineNum">       8 </span>            : modification, are permitted provided that the following conditions are
+<span class="lineNum">       9 </span>            : met:
+<span class="lineNum">      10 </span>            : 
+<span class="lineNum">      11 </span>            : * Redistributions of source code must retain the above copyright
+<span class="lineNum">      12 </span>            : notice, this list of conditions and the following disclaimer.
+<span class="lineNum">      13 </span>            : * Redistributions in binary form must reproduce the above
+<span class="lineNum">      14 </span>            : copyright notice, this list of conditions and the following disclaimer
+<span class="lineNum">      15 </span>            : in the documentation and/or other materials provided with the
+<span class="lineNum">      16 </span>            : distribution.
+<span class="lineNum">      17 </span>            : 
+<span class="lineNum">      18 </span>            : THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+<span class="lineNum">      19 </span>            : &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+<span class="lineNum">      20 </span>            : LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+<span class="lineNum">      21 </span>            : A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+<span class="lineNum">      22 </span>            : OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+<span class="lineNum">      23 </span>            : SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+<span class="lineNum">      24 </span>            : LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+<span class="lineNum">      25 </span>            : DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+<span class="lineNum">      26 </span>            : THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+<span class="lineNum">      27 </span>            : (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+<span class="lineNum">      28 </span>            : OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+<span class="lineNum">      29 </span>            : 
+<span class="lineNum">      30 </span>            : You can contact the author at :
+<span class="lineNum">      31 </span>            : - xxHash source repository : https://github.com/Cyan4973/xxHash
+<span class="lineNum">      32 </span>            : */
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            : /**************************************
+<span class="lineNum">      35 </span>            : *  Tuning parameters
+<span class="lineNum">      36 </span>            : **************************************/
+<span class="lineNum">      37 </span>            : /* Unaligned memory access is automatically enabled for &quot;common&quot; CPU, such as x86.
+<span class="lineNum">      38 </span>            :  * For others CPU, the compiler will be more cautious, and insert extra code to ensure
+<span class="lineNum">      39 </span>            :  * aligned access is respected.
+<span class="lineNum">      40 </span>            :  * If you know your target CPU supports unaligned memory access, you want to force this
+<span class="lineNum">      41 </span>            :  * option manually to improve performance.
+<span class="lineNum">      42 </span>            :  * You can also enable this parameter if you know your input data will always be aligned
+<span class="lineNum">      43 </span>            :  * (boundaries of 4, for U32).
+<span class="lineNum">      44 </span>            :  */
+<span class="lineNum">      45 </span>            : #if defined(__ARM_FEATURE_UNALIGNED) || defined(__i386) || defined(_M_IX86) || \
+<span class="lineNum">      46 </span>            :     defined(__x86_64__) || defined(_M_X64)
+<span class="lineNum">      47 </span>            : #define XXH_USE_UNALIGNED_ACCESS 1
+<span class="lineNum">      48 </span>            : #endif
+<span class="lineNum">      49 </span>            : 
+<span class="lineNum">      50 </span>            : /* XXH_ACCEPT_NULL_INPUT_POINTER :
+<span class="lineNum">      51 </span>            :  * If the input pointer is a null pointer, xxHash default behavior is to trigger a memory
+<span class="lineNum">      52 </span>            :  * access error, since it is a bad pointer.
+<span class="lineNum">      53 </span>            :  * When this option is enabled, xxHash output for null input pointers will be the same as
+<span class="lineNum">      54 </span>            :  * a null-length input.
+<span class="lineNum">      55 </span>            :  * By default, this option is disabled. To enable it, uncomment below define :
+<span class="lineNum">      56 </span>            :  */
+<span class="lineNum">      57 </span>            : /* #define XXH_ACCEPT_NULL_INPUT_POINTER 1 */
+<span class="lineNum">      58 </span>            : 
+<span class="lineNum">      59 </span>            : /* XXH_FORCE_NATIVE_FORMAT :
+<span class="lineNum">      60 </span>            :  * By default, xxHash library provides endian-independant Hash values, based on
+<span class="lineNum">      61 </span>            :  * little-endian convention.
+<span class="lineNum">      62 </span>            :  * Results are therefore identical for little-endian and big-endian CPU.
+<span class="lineNum">      63 </span>            :  * This comes at a performance cost for big-endian CPU, since some swapping is required to
+<span class="lineNum">      64 </span>            :  * emulate little-endian format.
+<span class="lineNum">      65 </span>            :  * Should endian-independance be of no importance for your application, you may set the
+<span class="lineNum">      66 </span>            :  * #define below to 1.
+<span class="lineNum">      67 </span>            :  * It will improve speed for Big-endian CPU.
+<span class="lineNum">      68 </span>            :  * This option has no impact on Little_Endian CPU.
+<span class="lineNum">      69 </span>            :  */
+<span class="lineNum">      70 </span>            : #define XXH_FORCE_NATIVE_FORMAT 0
+<span class="lineNum">      71 </span>            : 
+<span class="lineNum">      72 </span>            : /**************************************
+<span class="lineNum">      73 </span>            : *  Compiler Specific Options
+<span class="lineNum">      74 </span>            : ***************************************/
+<span class="lineNum">      75 </span>            : #ifdef _MSC_VER                 /* Visual Studio */
+<span class="lineNum">      76 </span>            : #pragma warning(disable : 4127) /* disable: C4127: conditional expression is constant */
+<span class="lineNum">      77 </span>            : #define FORCE_INLINE static __forceinline
+<span class="lineNum">      78 </span>            : #else
+<span class="lineNum">      79 </span>            : #if defined(__STDC_VERSION__) &amp;&amp; __STDC_VERSION__ &gt;= 199901L /* C99 */
+<span class="lineNum">      80 </span>            : #ifdef __GNUC__
+<span class="lineNum">      81 </span>            : #define FORCE_INLINE static inline __attribute__((always_inline))
+<span class="lineNum">      82 </span>            : #else
+<span class="lineNum">      83 </span>            : #define FORCE_INLINE static inline
+<span class="lineNum">      84 </span>            : #endif
+<span class="lineNum">      85 </span>            : #else
+<span class="lineNum">      86 </span>            : #define FORCE_INLINE static
+<span class="lineNum">      87 </span>            : #endif /* __STDC_VERSION__ */
+<span class="lineNum">      88 </span>            : #endif
+<span class="lineNum">      89 </span>            : 
+<span class="lineNum">      90 </span>            : /**************************************
+<span class="lineNum">      91 </span>            : *  Includes &amp; Memory related functions
+<span class="lineNum">      92 </span>            : ***************************************/
+<span class="lineNum">      93 </span>            : #include &quot;xxhash.h&quot;
+<span class="lineNum">      94 </span>            : /* Modify the local functions below should you wish to use some other memory routines */
+<a name="95"><span class="lineNum">      95 </span>            : /* for malloc(), free() */</a>
+<span class="lineNum">      96 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      97 </span><span class="lineNoCov">          0 : static void* XXH_malloc(size_t s) {</span>
+<a name="98"><span class="lineNum">      98 </span><span class="lineNoCov">          0 :     return malloc(s);</span></a>
+<span class="lineNum">      99 </span>            : }
+<span class="lineNum">     100 </span><span class="lineNoCov">          0 : static void XXH_free(void* p) {</span>
+<span class="lineNum">     101 </span><span class="lineNoCov">          0 :     free(p);</span>
+<span class="lineNum">     102 </span><span class="lineNoCov">          0 : }</span>
+<a name="103"><span class="lineNum">     103 </span>            : /* for memcpy() */</a>
+<span class="lineNum">     104 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">     105 </span><span class="lineNoCov">          0 : static void* XXH_memcpy(void* dest, const void* src, size_t size) {</span>
+<span class="lineNum">     106 </span><span class="lineNoCov">          0 :     return memcpy(dest, src, size);</span>
+<span class="lineNum">     107 </span>            : }
+<span class="lineNum">     108 </span>            : 
+<span class="lineNum">     109 </span>            : /**************************************
+<span class="lineNum">     110 </span>            : *  Basic Types
+<span class="lineNum">     111 </span>            : ***************************************/
+<span class="lineNum">     112 </span>            : #if defined(__STDC_VERSION__) &amp;&amp; __STDC_VERSION__ &gt;= 199901L /* C99 */
+<span class="lineNum">     113 </span>            : #include &lt;stdint.h&gt;
+<span class="lineNum">     114 </span>            : typedef uint8_t BYTE;
+<span class="lineNum">     115 </span>            : typedef uint16_t U16;
+<span class="lineNum">     116 </span>            : typedef uint32_t U32;
+<span class="lineNum">     117 </span>            : typedef int32_t S32;
+<span class="lineNum">     118 </span>            : typedef uint64_t U64;
+<span class="lineNum">     119 </span>            : #else
+<span class="lineNum">     120 </span>            : typedef unsigned char BYTE;
+<span class="lineNum">     121 </span>            : typedef unsigned short U16;
+<span class="lineNum">     122 </span>            : typedef unsigned int U32;
+<span class="lineNum">     123 </span>            : typedef signed int S32;
+<span class="lineNum">     124 </span>            : typedef unsigned long long U64;
+<a name="125"><span class="lineNum">     125 </span>            : #endif</a>
+<span class="lineNum">     126 </span>            : 
+<span class="lineNum">     127 </span><span class="lineCov">       9204 : static U32 XXH_read32(const void* memPtr) {</span>
+<span class="lineNum">     128 </span>            :     U32 val32;
+<span class="lineNum">     129 </span><span class="lineCov">       9204 :     memcpy(&amp;val32, memPtr, 4);</span>
+<span class="lineNum">     130 </span><span class="lineCov">       9204 :     return val32;</span>
+<a name="131"><span class="lineNum">     131 </span>            : }</a>
+<span class="lineNum">     132 </span>            : 
+<span class="lineNum">     133 </span><span class="lineCov">    9473567 : static U64 XXH_read64(const void* memPtr) {</span>
+<span class="lineNum">     134 </span>            :     U64 val64;
+<span class="lineNum">     135 </span><span class="lineCov">    9473567 :     memcpy(&amp;val64, memPtr, 8);</span>
+<span class="lineNum">     136 </span><span class="lineCov">    9473567 :     return val64;</span>
+<span class="lineNum">     137 </span>            : }
+<span class="lineNum">     138 </span>            : 
+<span class="lineNum">     139 </span>            : /******************************************
+<span class="lineNum">     140 </span>            : *  Compiler-specific Functions and Macros
+<span class="lineNum">     141 </span>            : ******************************************/
+<span class="lineNum">     142 </span>            : #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+<span class="lineNum">     143 </span>            : 
+<span class="lineNum">     144 </span>            : /* Note : although _rotl exists for minGW (GCC under windows), performance seems poor */
+<span class="lineNum">     145 </span>            : #if defined(_MSC_VER)
+<span class="lineNum">     146 </span>            : #define XXH_rotl32(x, r) _rotl(x, r)
+<span class="lineNum">     147 </span>            : #define XXH_rotl64(x, r) _rotl64(x, r)
+<span class="lineNum">     148 </span>            : #else
+<span class="lineNum">     149 </span>            : #define XXH_rotl32(x, r) ((x &lt;&lt; r) | (x &gt;&gt; (32 - r)))
+<span class="lineNum">     150 </span>            : #define XXH_rotl64(x, r) ((x &lt;&lt; r) | (x &gt;&gt; (64 - r)))
+<span class="lineNum">     151 </span>            : #endif
+<span class="lineNum">     152 </span>            : 
+<span class="lineNum">     153 </span>            : #if defined(_MSC_VER) /* Visual Studio */
+<span class="lineNum">     154 </span>            : #define XXH_swap32 _byteswap_ulong
+<span class="lineNum">     155 </span>            : #define XXH_swap64 _byteswap_uint64
+<span class="lineNum">     156 </span>            : #elif GCC_VERSION &gt;= 403
+<span class="lineNum">     157 </span>            : #define XXH_swap32 __builtin_bswap32
+<span class="lineNum">     158 </span>            : #define XXH_swap64 __builtin_bswap64
+<span class="lineNum">     159 </span>            : #else
+<span class="lineNum">     160 </span>            : static U32 XXH_swap32(U32 x) {
+<span class="lineNum">     161 </span>            :     return ((x &lt;&lt; 24) &amp; 0xff000000) | ((x &lt;&lt; 8) &amp; 0x00ff0000) | ((x &gt;&gt; 8) &amp; 0x0000ff00) |
+<span class="lineNum">     162 </span>            :            ((x &gt;&gt; 24) &amp; 0x000000ff);
+<span class="lineNum">     163 </span>            : }
+<span class="lineNum">     164 </span>            : static U64 XXH_swap64(U64 x) {
+<span class="lineNum">     165 </span>            :     return ((x &lt;&lt; 56) &amp; 0xff00000000000000ULL) | ((x &lt;&lt; 40) &amp; 0x00ff000000000000ULL) |
+<span class="lineNum">     166 </span>            :            ((x &lt;&lt; 24) &amp; 0x0000ff0000000000ULL) | ((x &lt;&lt; 8) &amp; 0x000000ff00000000ULL) |
+<span class="lineNum">     167 </span>            :            ((x &gt;&gt; 8) &amp; 0x00000000ff000000ULL) | ((x &gt;&gt; 24) &amp; 0x0000000000ff0000ULL) |
+<span class="lineNum">     168 </span>            :            ((x &gt;&gt; 40) &amp; 0x000000000000ff00ULL) | ((x &gt;&gt; 56) &amp; 0x00000000000000ffULL);
+<span class="lineNum">     169 </span>            : }
+<span class="lineNum">     170 </span>            : #endif
+<span class="lineNum">     171 </span>            : 
+<span class="lineNum">     172 </span>            : /***************************************
+<span class="lineNum">     173 </span>            : *  Architecture Macros
+<span class="lineNum">     174 </span>            : ***************************************/
+<span class="lineNum">     175 </span>            : typedef enum { XXH_bigEndian = 0, XXH_littleEndian = 1 } XXH_endianess;
+<span class="lineNum">     176 </span>            : #ifndef XXH_CPU_LITTLE_ENDIAN /* XXH_CPU_LITTLE_ENDIAN can be defined externally, for \
+<span class="lineNum">     177 </span>            :                                  example using a compiler switch */
+<span class="lineNum">     178 </span>            : static const int one = 1;
+<span class="lineNum">     179 </span>            : #define XXH_CPU_LITTLE_ENDIAN (*(const char*)(&amp;one))
+<span class="lineNum">     180 </span>            : #endif
+<span class="lineNum">     181 </span>            : 
+<span class="lineNum">     182 </span>            : /*****************************
+<span class="lineNum">     183 </span>            : *  Memory reads
+<span class="lineNum">     184 </span>            : *****************************/
+<span class="lineNum">     185 </span>            : typedef enum { XXH_aligned, XXH_unaligned } XXH_alignment;
+<span class="lineNum">     186 </span>            : 
+<span class="lineNum">     187 </span>            : FORCE_INLINE U32
+<span class="lineNum">     188 </span>            : XXH_readLE32_align(const void* ptr, XXH_endianess endian, XXH_alignment align) {
+<span class="lineNum">     189 </span><span class="lineCov">       9203 :     if(align == XXH_unaligned)</span>
+<span class="lineNum">     190 </span><span class="lineCov">       9203 :         return endian == XXH_littleEndian ? XXH_read32(ptr) : XXH_swap32(XXH_read32(ptr));</span>
+<span class="lineNum">     191 </span>            :     else
+<span class="lineNum">     192 </span><span class="lineNoCov">          0 :         return endian == XXH_littleEndian ? *(const U32*)ptr</span>
+<span class="lineNum">     193 </span><span class="lineNoCov">          0 :                                           : XXH_swap32(*(const U32*)ptr);</span>
+<span class="lineNum">     194 </span>            : }
+<span class="lineNum">     195 </span>            : 
+<span class="lineNum">     196 </span>            : FORCE_INLINE U32 XXH_readLE32(const void* ptr, XXH_endianess endian) {
+<span class="lineNum">     197 </span><span class="lineNoCov">          0 :     return XXH_readLE32_align(ptr, endian, XXH_unaligned);</span>
+<span class="lineNum">     198 </span>            : }
+<span class="lineNum">     199 </span>            : 
+<span class="lineNum">     200 </span>            : FORCE_INLINE U64
+<span class="lineNum">     201 </span>            : XXH_readLE64_align(const void* ptr, XXH_endianess endian, XXH_alignment align) {
+<span class="lineNum">     202 </span><span class="lineCov">   13959602 :     if(align == XXH_unaligned)</span>
+<span class="lineNum">     203 </span><span class="lineCov">   13959602 :         return endian == XXH_littleEndian ? XXH_read64(ptr) : XXH_swap64(XXH_read64(ptr));</span>
+<span class="lineNum">     204 </span>            :     else
+<span class="lineNum">     205 </span><span class="lineNoCov">          0 :         return endian == XXH_littleEndian ? *(const U64*)ptr</span>
+<span class="lineNum">     206 </span><span class="lineNoCov">          0 :                                           : XXH_swap64(*(const U64*)ptr);</span>
+<span class="lineNum">     207 </span>            : }
+<span class="lineNum">     208 </span>            : 
+<span class="lineNum">     209 </span>            : FORCE_INLINE U64 XXH_readLE64(const void* ptr, XXH_endianess endian) {
+<span class="lineNum">     210 </span><span class="lineNoCov">          0 :     return XXH_readLE64_align(ptr, endian, XXH_unaligned);</span>
+<span class="lineNum">     211 </span>            : }
+<span class="lineNum">     212 </span>            : 
+<span class="lineNum">     213 </span>            : /***************************************
+<span class="lineNum">     214 </span>            : *  Macros
+<span class="lineNum">     215 </span>            : ***************************************/
+<span class="lineNum">     216 </span>            : #define XXH_STATIC_ASSERT(c)                      \
+<span class="lineNum">     217 </span>            :     {                                             \
+<span class="lineNum">     218 </span>            :         enum { XXH_static_assert = 1 / (!!(c)) }; \
+<span class="lineNum">     219 </span>            :     } /* use only *after* variable declarations */
+<span class="lineNum">     220 </span>            : 
+<span class="lineNum">     221 </span>            : /***************************************
+<span class="lineNum">     222 </span>            : *  Constants
+<span class="lineNum">     223 </span>            : ***************************************/
+<span class="lineNum">     224 </span>            : #define PRIME32_1 2654435761U
+<span class="lineNum">     225 </span>            : #define PRIME32_2 2246822519U
+<span class="lineNum">     226 </span>            : #define PRIME32_3 3266489917U
+<span class="lineNum">     227 </span>            : #define PRIME32_4 668265263U
+<span class="lineNum">     228 </span>            : #define PRIME32_5 374761393U
+<span class="lineNum">     229 </span>            : 
+<span class="lineNum">     230 </span>            : #define PRIME64_1 11400714785074694791ULL
+<span class="lineNum">     231 </span>            : #define PRIME64_2 14029467366897019727ULL
+<span class="lineNum">     232 </span>            : #define PRIME64_3 1609587929392839161ULL
+<span class="lineNum">     233 </span>            : #define PRIME64_4 9650029242287828579ULL
+<span class="lineNum">     234 </span>            : #define PRIME64_5 2870177450012600261ULL
+<span class="lineNum">     235 </span>            : 
+<span class="lineNum">     236 </span>            : /*****************************
+<span class="lineNum">     237 </span>            : *  Simple Hash Functions
+<span class="lineNum">     238 </span>            : *****************************/
+<span class="lineNum">     239 </span>            : FORCE_INLINE U32 XXH32_endian_align(const void* input, size_t len, U32 seed,
+<span class="lineNum">     240 </span>            :                                     XXH_endianess endian, XXH_alignment align) {
+<span class="lineNum">     241 </span><span class="lineNoCov">          0 :     const BYTE* p = (const BYTE*)input;</span>
+<span class="lineNum">     242 </span><span class="lineNoCov">          0 :     const BYTE* bEnd = p + len;</span>
+<span class="lineNum">     243 </span>            :     U32 h32;
+<span class="lineNum">     244 </span>            : #define XXH_get32bits(p) XXH_readLE32_align(p, endian, align)
+<span class="lineNum">     245 </span>            : 
+<span class="lineNum">     246 </span>            : #ifdef XXH_ACCEPT_NULL_INPUT_POINTER
+<span class="lineNum">     247 </span>            :     if(p == NULL) {
+<span class="lineNum">     248 </span>            :         len = 0;
+<span class="lineNum">     249 </span>            :         bEnd = p = (const BYTE*)(size_t)16;
+<span class="lineNum">     250 </span>            :     }
+<span class="lineNum">     251 </span>            : #endif
+<span class="lineNum">     252 </span>            : 
+<span class="lineNum">     253 </span><span class="lineNoCov">          0 :     if(len &gt;= 16) {</span>
+<span class="lineNum">     254 </span><span class="lineNoCov">          0 :         const BYTE* const limit = bEnd - 16;</span>
+<span class="lineNum">     255 </span><span class="lineNoCov">          0 :         U32 v1 = seed + PRIME32_1 + PRIME32_2;</span>
+<span class="lineNum">     256 </span><span class="lineNoCov">          0 :         U32 v2 = seed + PRIME32_2;</span>
+<span class="lineNum">     257 </span><span class="lineNoCov">          0 :         U32 v3 = seed + 0;</span>
+<span class="lineNum">     258 </span><span class="lineNoCov">          0 :         U32 v4 = seed - PRIME32_1;</span>
+<span class="lineNum">     259 </span>            : 
+<span class="lineNum">     260 </span>            :         do {
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :             v1 += XXH_get32bits(p) * PRIME32_2;</span>
+<span class="lineNum">     262 </span><span class="lineNoCov">          0 :             v1 = XXH_rotl32(v1, 13);</span>
+<span class="lineNum">     263 </span><span class="lineNoCov">          0 :             v1 *= PRIME32_1;</span>
+<span class="lineNum">     264 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     265 </span><span class="lineNoCov">          0 :             v2 += XXH_get32bits(p) * PRIME32_2;</span>
+<span class="lineNum">     266 </span><span class="lineNoCov">          0 :             v2 = XXH_rotl32(v2, 13);</span>
+<span class="lineNum">     267 </span><span class="lineNoCov">          0 :             v2 *= PRIME32_1;</span>
+<span class="lineNum">     268 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     269 </span><span class="lineNoCov">          0 :             v3 += XXH_get32bits(p) * PRIME32_2;</span>
+<span class="lineNum">     270 </span><span class="lineNoCov">          0 :             v3 = XXH_rotl32(v3, 13);</span>
+<span class="lineNum">     271 </span><span class="lineNoCov">          0 :             v3 *= PRIME32_1;</span>
+<span class="lineNum">     272 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     273 </span><span class="lineNoCov">          0 :             v4 += XXH_get32bits(p) * PRIME32_2;</span>
+<span class="lineNum">     274 </span><span class="lineNoCov">          0 :             v4 = XXH_rotl32(v4, 13);</span>
+<span class="lineNum">     275 </span><span class="lineNoCov">          0 :             v4 *= PRIME32_1;</span>
+<span class="lineNum">     276 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     277 </span><span class="lineNoCov">          0 :         } while(p &lt;= limit);</span>
+<span class="lineNum">     278 </span>            : 
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :         h32 = XXH_rotl32(v1, 1) + XXH_rotl32(v2, 7) + XXH_rotl32(v3, 12) +</span>
+<span class="lineNum">     280 </span><span class="lineNoCov">          0 :               XXH_rotl32(v4, 18);</span>
+<span class="lineNum">     281 </span>            :     } else {
+<span class="lineNum">     282 </span><span class="lineNoCov">          0 :         h32 = seed + PRIME32_5;</span>
+<span class="lineNum">     283 </span>            :     }
+<span class="lineNum">     284 </span>            : 
+<span class="lineNum">     285 </span><span class="lineNoCov">          0 :     h32 += (U32)len;</span>
+<span class="lineNum">     286 </span>            : 
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :     while(p + 4 &lt;= bEnd) {</span>
+<span class="lineNum">     288 </span><span class="lineNoCov">          0 :         h32 += XXH_get32bits(p) * PRIME32_3;</span>
+<span class="lineNum">     289 </span><span class="lineNoCov">          0 :         h32 = XXH_rotl32(h32, 17) * PRIME32_4;</span>
+<span class="lineNum">     290 </span><span class="lineNoCov">          0 :         p += 4;</span>
+<span class="lineNum">     291 </span>            :     }
+<span class="lineNum">     292 </span>            : 
+<span class="lineNum">     293 </span><span class="lineNoCov">          0 :     while(p &lt; bEnd) {</span>
+<span class="lineNum">     294 </span><span class="lineNoCov">          0 :         h32 += (*p) * PRIME32_5;</span>
+<span class="lineNum">     295 </span><span class="lineNoCov">          0 :         h32 = XXH_rotl32(h32, 11) * PRIME32_1;</span>
+<span class="lineNum">     296 </span><span class="lineNoCov">          0 :         p++;</span>
+<span class="lineNum">     297 </span>            :     }
+<span class="lineNum">     298 </span>            : 
+<span class="lineNum">     299 </span><span class="lineNoCov">          0 :     h32 ^= h32 &gt;&gt; 15;</span>
+<span class="lineNum">     300 </span><span class="lineNoCov">          0 :     h32 *= PRIME32_2;</span>
+<span class="lineNum">     301 </span><span class="lineNoCov">          0 :     h32 ^= h32 &gt;&gt; 13;</span>
+<span class="lineNum">     302 </span><span class="lineNoCov">          0 :     h32 *= PRIME32_3;</span>
+<span class="lineNum">     303 </span><span class="lineNoCov">          0 :     h32 ^= h32 &gt;&gt; 16;</span>
+<span class="lineNum">     304 </span>            : 
+<span class="lineNum">     305 </span><span class="lineNoCov">          0 :     return h32;</span>
+<a name="306"><span class="lineNum">     306 </span>            : }</a>
+<span class="lineNum">     307 </span>            : 
+<span class="lineNum">     308 </span><span class="lineNoCov">          0 : unsigned XXH32(const void* input, size_t len, unsigned seed) {</span>
+<span class="lineNum">     309 </span>            : #if 0
+<span class="lineNum">     310 </span>            :     /* Simple version, good for code maintenance, but unfortunately slow for small inputs */
+<span class="lineNum">     311 </span>            :     XXH32_state_t state;
+<span class="lineNum">     312 </span>            :     XXH32_reset(&amp;state, seed);
+<span class="lineNum">     313 </span>            :     XXH32_update(&amp;state, input, len);
+<span class="lineNum">     314 </span>            :     return XXH32_digest(&amp;state);
+<span class="lineNum">     315 </span>            : #else
+<span class="lineNum">     316 </span><span class="lineNoCov">          0 :     XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;</span>
+<span class="lineNum">     317 </span>            : 
+<span class="lineNum">     318 </span>            : #if !defined(XXH_USE_UNALIGNED_ACCESS)
+<span class="lineNum">     319 </span>            :     if((((size_t)input) &amp; 3) ==
+<span class="lineNum">     320 </span>            :        0) /* Input is 4-bytes aligned, leverage the speed benefit */
+<span class="lineNum">     321 </span>            :     {
+<span class="lineNum">     322 </span>            :         if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)
+<span class="lineNum">     323 </span>            :             return XXH32_endian_align(input, len, seed, XXH_littleEndian, XXH_aligned);
+<span class="lineNum">     324 </span>            :         else
+<span class="lineNum">     325 </span>            :             return XXH32_endian_align(input, len, seed, XXH_bigEndian, XXH_aligned);
+<span class="lineNum">     326 </span>            :     }
+<span class="lineNum">     327 </span>            : #endif
+<span class="lineNum">     328 </span>            : 
+<span class="lineNum">     329 </span><span class="lineNoCov">          0 :     if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)</span>
+<span class="lineNum">     330 </span><span class="lineNoCov">          0 :         return XXH32_endian_align(input, len, seed, XXH_littleEndian, XXH_unaligned);</span>
+<span class="lineNum">     331 </span>            :     else
+<span class="lineNum">     332 </span><span class="lineNoCov">          0 :         return XXH32_endian_align(input, len, seed, XXH_bigEndian, XXH_unaligned);</span>
+<span class="lineNum">     333 </span>            : #endif
+<span class="lineNum">     334 </span>            : }
+<span class="lineNum">     335 </span>            : 
+<span class="lineNum">     336 </span>            : FORCE_INLINE U64 XXH64_endian_align(const void* input, size_t len, U64 seed,
+<span class="lineNum">     337 </span>            :                                     XXH_endianess endian, XXH_alignment align) {
+<span class="lineNum">     338 </span><span class="lineCov">     361933 :     const BYTE* p = (const BYTE*)input;</span>
+<span class="lineNum">     339 </span><span class="lineCov">     361933 :     const BYTE* bEnd = p + len;</span>
+<span class="lineNum">     340 </span>            :     U64 h64;
+<span class="lineNum">     341 </span>            : #define XXH_get64bits(p) XXH_readLE64_align(p, endian, align)
+<span class="lineNum">     342 </span>            : 
+<span class="lineNum">     343 </span>            : #ifdef XXH_ACCEPT_NULL_INPUT_POINTER
+<span class="lineNum">     344 </span>            :     if(p == NULL) {
+<span class="lineNum">     345 </span>            :         len = 0;
+<span class="lineNum">     346 </span>            :         bEnd = p = (const BYTE*)(size_t)32;
+<span class="lineNum">     347 </span>            :     }
+<span class="lineNum">     348 </span>            : #endif
+<span class="lineNum">     349 </span>            : 
+<span class="lineNum">     350 </span><span class="lineCov">     361933 :     if(len &gt;= 32) {</span>
+<span class="lineNum">     351 </span><span class="lineCov">     331257 :         const BYTE* const limit = bEnd - 32;</span>
+<span class="lineNum">     352 </span><span class="lineCov">     331257 :         U64 v1 = seed + PRIME64_1 + PRIME64_2;</span>
+<span class="lineNum">     353 </span><span class="lineCov">     331257 :         U64 v2 = seed + PRIME64_2;</span>
+<span class="lineNum">     354 </span><span class="lineCov">     331257 :         U64 v3 = seed + 0;</span>
+<span class="lineNum">     355 </span><span class="lineCov">     331257 :         U64 v4 = seed - PRIME64_1;</span>
+<span class="lineNum">     356 </span>            : 
+<span class="lineNum">     357 </span>            :         do {
+<span class="lineNum">     358 </span><span class="lineCov">    3517709 :             v1 += XXH_get64bits(p) * PRIME64_2;</span>
+<span class="lineNum">     359 </span><span class="lineCov">    3517709 :             p += 8;</span>
+<span class="lineNum">     360 </span><span class="lineCov">    3517709 :             v1 = XXH_rotl64(v1, 31);</span>
+<span class="lineNum">     361 </span><span class="lineCov">    3517709 :             v1 *= PRIME64_1;</span>
+<span class="lineNum">     362 </span><span class="lineCov">    3450585 :             v2 += XXH_get64bits(p) * PRIME64_2;</span>
+<span class="lineNum">     363 </span><span class="lineCov">    3450585 :             p += 8;</span>
+<span class="lineNum">     364 </span><span class="lineCov">    3450585 :             v2 = XXH_rotl64(v2, 31);</span>
+<span class="lineNum">     365 </span><span class="lineCov">    3450585 :             v2 *= PRIME64_1;</span>
+<span class="lineNum">     366 </span><span class="lineCov">    3557311 :             v3 += XXH_get64bits(p) * PRIME64_2;</span>
+<span class="lineNum">     367 </span><span class="lineCov">    3557311 :             p += 8;</span>
+<span class="lineNum">     368 </span><span class="lineCov">    3557311 :             v3 = XXH_rotl64(v3, 31);</span>
+<span class="lineNum">     369 </span><span class="lineCov">    3557311 :             v3 *= PRIME64_1;</span>
+<span class="lineNum">     370 </span><span class="lineCov">    3111215 :             v4 += XXH_get64bits(p) * PRIME64_2;</span>
+<span class="lineNum">     371 </span><span class="lineCov">    3111215 :             p += 8;</span>
+<span class="lineNum">     372 </span><span class="lineCov">    3111215 :             v4 = XXH_rotl64(v4, 31);</span>
+<span class="lineNum">     373 </span><span class="lineCov">    3111215 :             v4 *= PRIME64_1;</span>
+<span class="lineNum">     374 </span><span class="lineCov">    3111215 :         } while(p &lt;= limit);</span>
+<span class="lineNum">     375 </span>            : 
+<span class="lineNum">     376 </span><span class="lineCov">      17102 :         h64 = XXH_rotl64(v1, 1) + XXH_rotl64(v2, 7) + XXH_rotl64(v3, 12) +</span>
+<span class="lineNum">     377 </span><span class="lineCov">       8551 :               XXH_rotl64(v4, 18);</span>
+<span class="lineNum">     378 </span>            : 
+<span class="lineNum">     379 </span><span class="lineCov">       8551 :         v1 *= PRIME64_2;</span>
+<span class="lineNum">     380 </span><span class="lineCov">       8551 :         v1 = XXH_rotl64(v1, 31);</span>
+<span class="lineNum">     381 </span><span class="lineCov">       8551 :         v1 *= PRIME64_1;</span>
+<span class="lineNum">     382 </span><span class="lineCov">       8551 :         h64 ^= v1;</span>
+<span class="lineNum">     383 </span><span class="lineCov">       8551 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     384 </span>            : 
+<span class="lineNum">     385 </span><span class="lineCov">       8551 :         v2 *= PRIME64_2;</span>
+<span class="lineNum">     386 </span><span class="lineCov">       8551 :         v2 = XXH_rotl64(v2, 31);</span>
+<span class="lineNum">     387 </span><span class="lineCov">       8551 :         v2 *= PRIME64_1;</span>
+<span class="lineNum">     388 </span><span class="lineCov">       8551 :         h64 ^= v2;</span>
+<span class="lineNum">     389 </span><span class="lineCov">       8551 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     390 </span>            : 
+<span class="lineNum">     391 </span><span class="lineCov">       8551 :         v3 *= PRIME64_2;</span>
+<span class="lineNum">     392 </span><span class="lineCov">       8551 :         v3 = XXH_rotl64(v3, 31);</span>
+<span class="lineNum">     393 </span><span class="lineCov">       8551 :         v3 *= PRIME64_1;</span>
+<span class="lineNum">     394 </span><span class="lineCov">       8551 :         h64 ^= v3;</span>
+<span class="lineNum">     395 </span><span class="lineCov">       8551 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     396 </span>            : 
+<span class="lineNum">     397 </span><span class="lineCov">       8551 :         v4 *= PRIME64_2;</span>
+<span class="lineNum">     398 </span><span class="lineCov">       8551 :         v4 = XXH_rotl64(v4, 31);</span>
+<span class="lineNum">     399 </span><span class="lineCov">       8551 :         v4 *= PRIME64_1;</span>
+<span class="lineNum">     400 </span><span class="lineCov">       8551 :         h64 ^= v4;</span>
+<span class="lineNum">     401 </span><span class="lineCov">       8551 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     402 </span>            :     } else {
+<span class="lineNum">     403 </span><span class="lineCov">      30676 :         h64 = seed + PRIME64_5;</span>
+<span class="lineNum">     404 </span>            :     }
+<span class="lineNum">     405 </span>            : 
+<span class="lineNum">     406 </span><span class="lineCov">      39227 :     h64 += (U64)len;</span>
+<span class="lineNum">     407 </span>            : 
+<span class="lineNum">     408 </span><span class="lineCov">      39303 :     while(p + 8 &lt;= bEnd) {</span>
+<span class="lineNum">     409 </span><span class="lineCov">         76 :         U64 k1 = XXH_get64bits(p);</span>
+<span class="lineNum">     410 </span><span class="lineCov">         76 :         k1 *= PRIME64_2;</span>
+<span class="lineNum">     411 </span><span class="lineCov">         76 :         k1 = XXH_rotl64(k1, 31);</span>
+<span class="lineNum">     412 </span><span class="lineCov">         76 :         k1 *= PRIME64_1;</span>
+<span class="lineNum">     413 </span><span class="lineCov">         76 :         h64 ^= k1;</span>
+<span class="lineNum">     414 </span><span class="lineCov">         76 :         h64 = XXH_rotl64(h64, 27) * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     415 </span><span class="lineCov">         76 :         p += 8;</span>
+<span class="lineNum">     416 </span>            :     }
+<span class="lineNum">     417 </span>            : 
+<span class="lineNum">     418 </span><span class="lineCov">      39227 :     if(p + 4 &lt;= bEnd) {</span>
+<span class="lineNum">     419 </span><span class="lineCov">       9204 :         h64 ^= (U64)(XXH_get32bits(p)) * PRIME64_1;</span>
+<span class="lineNum">     420 </span><span class="lineCov">       9204 :         h64 = XXH_rotl64(h64, 23) * PRIME64_2 + PRIME64_3;</span>
+<span class="lineNum">     421 </span><span class="lineCov">       9204 :         p += 4;</span>
+<span class="lineNum">     422 </span>            :     }
+<span class="lineNum">     423 </span>            : 
+<span class="lineNum">     424 </span><span class="lineCov">     103846 :     while(p &lt; bEnd) {</span>
+<span class="lineNum">     425 </span><span class="lineCov">      64618 :         h64 ^= (*p) * PRIME64_5;</span>
+<span class="lineNum">     426 </span><span class="lineCov">      64618 :         h64 = XXH_rotl64(h64, 11) * PRIME64_1;</span>
+<span class="lineNum">     427 </span><span class="lineCov">      64618 :         p++;</span>
+<span class="lineNum">     428 </span>            :     }
+<span class="lineNum">     429 </span>            : 
+<span class="lineNum">     430 </span><span class="lineCov">      39228 :     h64 ^= h64 &gt;&gt; 33;</span>
+<span class="lineNum">     431 </span><span class="lineCov">      39228 :     h64 *= PRIME64_2;</span>
+<span class="lineNum">     432 </span><span class="lineCov">      39228 :     h64 ^= h64 &gt;&gt; 29;</span>
+<span class="lineNum">     433 </span><span class="lineCov">      39228 :     h64 *= PRIME64_3;</span>
+<span class="lineNum">     434 </span><span class="lineCov">      39228 :     h64 ^= h64 &gt;&gt; 32;</span>
+<span class="lineNum">     435 </span>            : 
+<span class="lineNum">     436 </span><span class="lineCov">      39228 :     return h64;</span>
+<a name="437"><span class="lineNum">     437 </span>            : }</a>
+<span class="lineNum">     438 </span>            : 
+<span class="lineNum">     439 </span><span class="lineCov">     361933 : unsigned long long XXH64(const void* input, size_t len, unsigned long long seed) {</span>
+<span class="lineNum">     440 </span>            : #if 0
+<span class="lineNum">     441 </span>            :     /* Simple version, good for code maintenance, but unfortunately slow for small inputs */
+<span class="lineNum">     442 </span>            :     XXH64_state_t state;
+<span class="lineNum">     443 </span>            :     XXH64_reset(&amp;state, seed);
+<span class="lineNum">     444 </span>            :     XXH64_update(&amp;state, input, len);
+<span class="lineNum">     445 </span>            :     return XXH64_digest(&amp;state);
+<span class="lineNum">     446 </span>            : #else
+<span class="lineNum">     447 </span><span class="lineCov">     361933 :     XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;</span>
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span>            : #if !defined(XXH_USE_UNALIGNED_ACCESS)
+<span class="lineNum">     450 </span>            :     if((((size_t)input) &amp; 7) ==
+<span class="lineNum">     451 </span>            :        0) /* Input is aligned, let's leverage the speed advantage */
+<span class="lineNum">     452 </span>            :     {
+<span class="lineNum">     453 </span>            :         if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)
+<span class="lineNum">     454 </span>            :             return XXH64_endian_align(input, len, seed, XXH_littleEndian, XXH_aligned);
+<span class="lineNum">     455 </span>            :         else
+<span class="lineNum">     456 </span>            :             return XXH64_endian_align(input, len, seed, XXH_bigEndian, XXH_aligned);
+<span class="lineNum">     457 </span>            :     }
+<span class="lineNum">     458 </span>            : #endif
+<span class="lineNum">     459 </span>            : 
+<span class="lineNum">     460 </span><span class="lineCov">     361933 :     if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)</span>
+<span class="lineNum">     461 </span><span class="lineCov">      39228 :         return XXH64_endian_align(input, len, seed, XXH_littleEndian, XXH_unaligned);</span>
+<span class="lineNum">     462 </span>            :     else
+<span class="lineNum">     463 </span><span class="lineNoCov">          0 :         return XXH64_endian_align(input, len, seed, XXH_bigEndian, XXH_unaligned);</span>
+<span class="lineNum">     464 </span>            : #endif
+<span class="lineNum">     465 </span>            : }
+<span class="lineNum">     466 </span>            : 
+<span class="lineNum">     467 </span>            : /****************************************************
+<span class="lineNum">     468 </span>            : *  Advanced Hash Functions
+<span class="lineNum">     469 </span>            : ****************************************************/
+<span class="lineNum">     470 </span>            : 
+<span class="lineNum">     471 </span>            : /*** Allocation ***/
+<span class="lineNum">     472 </span>            : typedef struct {
+<span class="lineNum">     473 </span>            :     U64 total_len;
+<span class="lineNum">     474 </span>            :     U32 seed;
+<span class="lineNum">     475 </span>            :     U32 v1;
+<span class="lineNum">     476 </span>            :     U32 v2;
+<span class="lineNum">     477 </span>            :     U32 v3;
+<span class="lineNum">     478 </span>            :     U32 v4;
+<span class="lineNum">     479 </span>            :     U32 mem32[4]; /* defined as U32 for alignment */
+<span class="lineNum">     480 </span>            :     U32 memsize;
+<span class="lineNum">     481 </span>            : } XXH_istate32_t;
+<span class="lineNum">     482 </span>            : 
+<span class="lineNum">     483 </span>            : typedef struct {
+<span class="lineNum">     484 </span>            :     U64 total_len;
+<span class="lineNum">     485 </span>            :     U64 seed;
+<span class="lineNum">     486 </span>            :     U64 v1;
+<span class="lineNum">     487 </span>            :     U64 v2;
+<span class="lineNum">     488 </span>            :     U64 v3;
+<span class="lineNum">     489 </span>            :     U64 v4;
+<span class="lineNum">     490 </span>            :     U64 mem64[4]; /* defined as U64 for alignment */
+<span class="lineNum">     491 </span>            :     U32 memsize;
+<a name="492"><span class="lineNum">     492 </span>            : } XXH_istate64_t;</a>
+<span class="lineNum">     493 </span>            : 
+<span class="lineNum">     494 </span><span class="lineNoCov">          0 : XXH32_state_t* XXH32_createState(void) {</span>
+<span class="lineNum">     495 </span>            :     XXH_STATIC_ASSERT(sizeof(XXH32_state_t) &gt;=
+<span class="lineNum">     496 </span>            :                       sizeof(XXH_istate32_t)); /* A compilation error here means
+<span class="lineNum">     497 </span>            :                                                   XXH32_state_t is not large enough */
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :     return (XXH32_state_t*)XXH_malloc(sizeof(XXH32_state_t));</span></a>
+<span class="lineNum">     499 </span>            : }
+<span class="lineNum">     500 </span><span class="lineNoCov">          0 : XXH_errorcode XXH32_freeState(XXH32_state_t* statePtr) {</span>
+<span class="lineNum">     501 </span><span class="lineNoCov">          0 :     XXH_free(statePtr);</span>
+<span class="lineNum">     502 </span><span class="lineNoCov">          0 :     return XXH_OK;</span>
+<a name="503"><span class="lineNum">     503 </span>            : }</a>
+<span class="lineNum">     504 </span>            : 
+<span class="lineNum">     505 </span><span class="lineNoCov">          0 : XXH64_state_t* XXH64_createState(void) {</span>
+<span class="lineNum">     506 </span>            :     XXH_STATIC_ASSERT(sizeof(XXH64_state_t) &gt;=
+<span class="lineNum">     507 </span>            :                       sizeof(XXH_istate64_t)); /* A compilation error here means
+<span class="lineNum">     508 </span>            :                                                   XXH64_state_t is not large enough */
+<a name="509"><span class="lineNum">     509 </span><span class="lineNoCov">          0 :     return (XXH64_state_t*)XXH_malloc(sizeof(XXH64_state_t));</span></a>
+<span class="lineNum">     510 </span>            : }
+<span class="lineNum">     511 </span><span class="lineNoCov">          0 : XXH_errorcode XXH64_freeState(XXH64_state_t* statePtr) {</span>
+<span class="lineNum">     512 </span><span class="lineNoCov">          0 :     XXH_free(statePtr);</span>
+<span class="lineNum">     513 </span><span class="lineNoCov">          0 :     return XXH_OK;</span>
+<span class="lineNum">     514 </span>            : }
+<span class="lineNum">     515 </span>            : 
+<a name="516"><span class="lineNum">     516 </span>            : /*** Hash feed ***/</a>
+<span class="lineNum">     517 </span>            : 
+<span class="lineNum">     518 </span><span class="lineNoCov">          0 : XXH_errorcode XXH32_reset(XXH32_state_t* state_in, U32 seed) {</span>
+<span class="lineNum">     519 </span><span class="lineNoCov">          0 :     XXH_istate32_t* state = (XXH_istate32_t*)state_in;</span>
+<span class="lineNum">     520 </span><span class="lineNoCov">          0 :     state-&gt;seed = seed;</span>
+<span class="lineNum">     521 </span><span class="lineNoCov">          0 :     state-&gt;v1 = seed + PRIME32_1 + PRIME32_2;</span>
+<span class="lineNum">     522 </span><span class="lineNoCov">          0 :     state-&gt;v2 = seed + PRIME32_2;</span>
+<span class="lineNum">     523 </span><span class="lineNoCov">          0 :     state-&gt;v3 = seed + 0;</span>
+<span class="lineNum">     524 </span><span class="lineNoCov">          0 :     state-&gt;v4 = seed - PRIME32_1;</span>
+<span class="lineNum">     525 </span><span class="lineNoCov">          0 :     state-&gt;total_len = 0;</span>
+<span class="lineNum">     526 </span><span class="lineNoCov">          0 :     state-&gt;memsize = 0;</span>
+<span class="lineNum">     527 </span><span class="lineNoCov">          0 :     return XXH_OK;</span>
+<a name="528"><span class="lineNum">     528 </span>            : }</a>
+<span class="lineNum">     529 </span>            : 
+<span class="lineNum">     530 </span><span class="lineNoCov">          0 : XXH_errorcode XXH64_reset(XXH64_state_t* state_in, unsigned long long seed) {</span>
+<span class="lineNum">     531 </span><span class="lineNoCov">          0 :     XXH_istate64_t* state = (XXH_istate64_t*)state_in;</span>
+<span class="lineNum">     532 </span><span class="lineNoCov">          0 :     state-&gt;seed = seed;</span>
+<span class="lineNum">     533 </span><span class="lineNoCov">          0 :     state-&gt;v1 = seed + PRIME64_1 + PRIME64_2;</span>
+<span class="lineNum">     534 </span><span class="lineNoCov">          0 :     state-&gt;v2 = seed + PRIME64_2;</span>
+<span class="lineNum">     535 </span><span class="lineNoCov">          0 :     state-&gt;v3 = seed + 0;</span>
+<span class="lineNum">     536 </span><span class="lineNoCov">          0 :     state-&gt;v4 = seed - PRIME64_1;</span>
+<span class="lineNum">     537 </span><span class="lineNoCov">          0 :     state-&gt;total_len = 0;</span>
+<span class="lineNum">     538 </span><span class="lineNoCov">          0 :     state-&gt;memsize = 0;</span>
+<span class="lineNum">     539 </span><span class="lineNoCov">          0 :     return XXH_OK;</span>
+<span class="lineNum">     540 </span>            : }
+<span class="lineNum">     541 </span>            : 
+<span class="lineNum">     542 </span>            : FORCE_INLINE XXH_errorcode XXH32_update_endian(XXH32_state_t* state_in, const void* input,
+<span class="lineNum">     543 </span>            :                                                size_t len, XXH_endianess endian) {
+<span class="lineNum">     544 </span><span class="lineNoCov">          0 :     XXH_istate32_t* state = (XXH_istate32_t*)state_in;</span>
+<span class="lineNum">     545 </span><span class="lineNoCov">          0 :     const BYTE* p = (const BYTE*)input;</span>
+<span class="lineNum">     546 </span><span class="lineNoCov">          0 :     const BYTE* const bEnd = p + len;</span>
+<span class="lineNum">     547 </span>            : 
+<span class="lineNum">     548 </span>            : #ifdef XXH_ACCEPT_NULL_INPUT_POINTER
+<span class="lineNum">     549 </span>            :     if(input == NULL)
+<span class="lineNum">     550 </span>            :         return XXH_ERROR;
+<span class="lineNum">     551 </span>            : #endif
+<span class="lineNum">     552 </span>            : 
+<span class="lineNum">     553 </span><span class="lineNoCov">          0 :     state-&gt;total_len += len;</span>
+<span class="lineNum">     554 </span>            : 
+<span class="lineNum">     555 </span><span class="lineNoCov">          0 :     if(state-&gt;memsize + len &lt; 16) /* fill in tmp buffer */</span>
+<span class="lineNum">     556 </span>            :     {
+<span class="lineNum">     557 </span><span class="lineNoCov">          0 :         XXH_memcpy((BYTE*)(state-&gt;mem32) + state-&gt;memsize, input, len);</span>
+<span class="lineNum">     558 </span><span class="lineNoCov">          0 :         state-&gt;memsize += (U32)len;</span>
+<span class="lineNum">     559 </span><span class="lineNoCov">          0 :         return XXH_OK;</span>
+<span class="lineNum">     560 </span>            :     }
+<span class="lineNum">     561 </span>            : 
+<span class="lineNum">     562 </span><span class="lineNoCov">          0 :     if(state-&gt;memsize) /* some data left from previous update */</span>
+<span class="lineNum">     563 </span>            :     {
+<span class="lineNum">     564 </span><span class="lineNoCov">          0 :         XXH_memcpy((BYTE*)(state-&gt;mem32) + state-&gt;memsize, input, 16 - state-&gt;memsize);</span>
+<span class="lineNum">     565 </span>            :         {
+<span class="lineNum">     566 </span><span class="lineNoCov">          0 :             const U32* p32 = state-&gt;mem32;</span>
+<span class="lineNum">     567 </span><span class="lineNoCov">          0 :             state-&gt;v1 += XXH_readLE32(p32, endian) * PRIME32_2;</span>
+<span class="lineNum">     568 </span><span class="lineNoCov">          0 :             state-&gt;v1 = XXH_rotl32(state-&gt;v1, 13);</span>
+<span class="lineNum">     569 </span><span class="lineNoCov">          0 :             state-&gt;v1 *= PRIME32_1;</span>
+<span class="lineNum">     570 </span><span class="lineNoCov">          0 :             p32++;</span>
+<span class="lineNum">     571 </span><span class="lineNoCov">          0 :             state-&gt;v2 += XXH_readLE32(p32, endian) * PRIME32_2;</span>
+<span class="lineNum">     572 </span><span class="lineNoCov">          0 :             state-&gt;v2 = XXH_rotl32(state-&gt;v2, 13);</span>
+<span class="lineNum">     573 </span><span class="lineNoCov">          0 :             state-&gt;v2 *= PRIME32_1;</span>
+<span class="lineNum">     574 </span><span class="lineNoCov">          0 :             p32++;</span>
+<span class="lineNum">     575 </span><span class="lineNoCov">          0 :             state-&gt;v3 += XXH_readLE32(p32, endian) * PRIME32_2;</span>
+<span class="lineNum">     576 </span><span class="lineNoCov">          0 :             state-&gt;v3 = XXH_rotl32(state-&gt;v3, 13);</span>
+<span class="lineNum">     577 </span><span class="lineNoCov">          0 :             state-&gt;v3 *= PRIME32_1;</span>
+<span class="lineNum">     578 </span><span class="lineNoCov">          0 :             p32++;</span>
+<span class="lineNum">     579 </span><span class="lineNoCov">          0 :             state-&gt;v4 += XXH_readLE32(p32, endian) * PRIME32_2;</span>
+<span class="lineNum">     580 </span><span class="lineNoCov">          0 :             state-&gt;v4 = XXH_rotl32(state-&gt;v4, 13);</span>
+<span class="lineNum">     581 </span><span class="lineNoCov">          0 :             state-&gt;v4 *= PRIME32_1;</span>
+<span class="lineNum">     582 </span><span class="lineNoCov">          0 :             p32++;</span>
+<span class="lineNum">     583 </span>            :         }
+<span class="lineNum">     584 </span><span class="lineNoCov">          0 :         p += 16 - state-&gt;memsize;</span>
+<span class="lineNum">     585 </span><span class="lineNoCov">          0 :         state-&gt;memsize = 0;</span>
+<span class="lineNum">     586 </span>            :     }
+<span class="lineNum">     587 </span>            : 
+<span class="lineNum">     588 </span><span class="lineNoCov">          0 :     if(p &lt;= bEnd - 16) {</span>
+<span class="lineNum">     589 </span><span class="lineNoCov">          0 :         const BYTE* const limit = bEnd - 16;</span>
+<span class="lineNum">     590 </span><span class="lineNoCov">          0 :         U32 v1 = state-&gt;v1;</span>
+<span class="lineNum">     591 </span><span class="lineNoCov">          0 :         U32 v2 = state-&gt;v2;</span>
+<span class="lineNum">     592 </span><span class="lineNoCov">          0 :         U32 v3 = state-&gt;v3;</span>
+<span class="lineNum">     593 </span><span class="lineNoCov">          0 :         U32 v4 = state-&gt;v4;</span>
+<span class="lineNum">     594 </span>            : 
+<span class="lineNum">     595 </span>            :         do {
+<span class="lineNum">     596 </span><span class="lineNoCov">          0 :             v1 += XXH_readLE32(p, endian) * PRIME32_2;</span>
+<span class="lineNum">     597 </span><span class="lineNoCov">          0 :             v1 = XXH_rotl32(v1, 13);</span>
+<span class="lineNum">     598 </span><span class="lineNoCov">          0 :             v1 *= PRIME32_1;</span>
+<span class="lineNum">     599 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     600 </span><span class="lineNoCov">          0 :             v2 += XXH_readLE32(p, endian) * PRIME32_2;</span>
+<span class="lineNum">     601 </span><span class="lineNoCov">          0 :             v2 = XXH_rotl32(v2, 13);</span>
+<span class="lineNum">     602 </span><span class="lineNoCov">          0 :             v2 *= PRIME32_1;</span>
+<span class="lineNum">     603 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     604 </span><span class="lineNoCov">          0 :             v3 += XXH_readLE32(p, endian) * PRIME32_2;</span>
+<span class="lineNum">     605 </span><span class="lineNoCov">          0 :             v3 = XXH_rotl32(v3, 13);</span>
+<span class="lineNum">     606 </span><span class="lineNoCov">          0 :             v3 *= PRIME32_1;</span>
+<span class="lineNum">     607 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     608 </span><span class="lineNoCov">          0 :             v4 += XXH_readLE32(p, endian) * PRIME32_2;</span>
+<span class="lineNum">     609 </span><span class="lineNoCov">          0 :             v4 = XXH_rotl32(v4, 13);</span>
+<span class="lineNum">     610 </span><span class="lineNoCov">          0 :             v4 *= PRIME32_1;</span>
+<span class="lineNum">     611 </span><span class="lineNoCov">          0 :             p += 4;</span>
+<span class="lineNum">     612 </span><span class="lineNoCov">          0 :         } while(p &lt;= limit);</span>
+<span class="lineNum">     613 </span>            : 
+<span class="lineNum">     614 </span><span class="lineNoCov">          0 :         state-&gt;v1 = v1;</span>
+<span class="lineNum">     615 </span><span class="lineNoCov">          0 :         state-&gt;v2 = v2;</span>
+<span class="lineNum">     616 </span><span class="lineNoCov">          0 :         state-&gt;v3 = v3;</span>
+<span class="lineNum">     617 </span><span class="lineNoCov">          0 :         state-&gt;v4 = v4;</span>
+<span class="lineNum">     618 </span>            :     }
+<span class="lineNum">     619 </span>            : 
+<span class="lineNum">     620 </span><span class="lineNoCov">          0 :     if(p &lt; bEnd) {</span>
+<span class="lineNum">     621 </span><span class="lineNoCov">          0 :         XXH_memcpy(state-&gt;mem32, p, bEnd - p);</span>
+<span class="lineNum">     622 </span><span class="lineNoCov">          0 :         state-&gt;memsize = (int)(bEnd - p);</span>
+<span class="lineNum">     623 </span>            :     }
+<span class="lineNum">     624 </span>            : 
+<span class="lineNum">     625 </span><span class="lineNoCov">          0 :     return XXH_OK;</span>
+<a name="626"><span class="lineNum">     626 </span>            : }</a>
+<span class="lineNum">     627 </span>            : 
+<span class="lineNum">     628 </span><span class="lineNoCov">          0 : XXH_errorcode XXH32_update(XXH32_state_t* state_in, const void* input, size_t len) {</span>
+<span class="lineNum">     629 </span><span class="lineNoCov">          0 :     XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;</span>
+<span class="lineNum">     630 </span>            : 
+<span class="lineNum">     631 </span><span class="lineNoCov">          0 :     if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)</span>
+<span class="lineNum">     632 </span><span class="lineNoCov">          0 :         return XXH32_update_endian(state_in, input, len, XXH_littleEndian);</span>
+<span class="lineNum">     633 </span>            :     else
+<span class="lineNum">     634 </span><span class="lineNoCov">          0 :         return XXH32_update_endian(state_in, input, len, XXH_bigEndian);</span>
+<span class="lineNum">     635 </span>            : }
+<span class="lineNum">     636 </span>            : 
+<span class="lineNum">     637 </span>            : FORCE_INLINE U32
+<span class="lineNum">     638 </span>            : XXH32_digest_endian(const XXH32_state_t* state_in, XXH_endianess endian) {
+<span class="lineNum">     639 </span><span class="lineNoCov">          0 :     const XXH_istate32_t* state = (const XXH_istate32_t*)state_in;</span>
+<span class="lineNum">     640 </span><span class="lineNoCov">          0 :     const BYTE* p = (const BYTE*)state-&gt;mem32;</span>
+<span class="lineNum">     641 </span><span class="lineNoCov">          0 :     const BYTE* bEnd = (const BYTE*)(state-&gt;mem32) + state-&gt;memsize;</span>
+<span class="lineNum">     642 </span>            :     U32 h32;
+<span class="lineNum">     643 </span>            : 
+<span class="lineNum">     644 </span><span class="lineNoCov">          0 :     if(state-&gt;total_len &gt;= 16) {</span>
+<span class="lineNum">     645 </span><span class="lineNoCov">          0 :         h32 = XXH_rotl32(state-&gt;v1, 1) + XXH_rotl32(state-&gt;v2, 7) +</span>
+<span class="lineNum">     646 </span><span class="lineNoCov">          0 :               XXH_rotl32(state-&gt;v3, 12) + XXH_rotl32(state-&gt;v4, 18);</span>
+<span class="lineNum">     647 </span>            :     } else {
+<span class="lineNum">     648 </span><span class="lineNoCov">          0 :         h32 = state-&gt;seed + PRIME32_5;</span>
+<span class="lineNum">     649 </span>            :     }
+<span class="lineNum">     650 </span>            : 
+<span class="lineNum">     651 </span><span class="lineNoCov">          0 :     h32 += (U32)state-&gt;total_len;</span>
+<span class="lineNum">     652 </span>            : 
+<span class="lineNum">     653 </span><span class="lineNoCov">          0 :     while(p + 4 &lt;= bEnd) {</span>
+<span class="lineNum">     654 </span><span class="lineNoCov">          0 :         h32 += XXH_readLE32(p, endian) * PRIME32_3;</span>
+<span class="lineNum">     655 </span><span class="lineNoCov">          0 :         h32 = XXH_rotl32(h32, 17) * PRIME32_4;</span>
+<span class="lineNum">     656 </span><span class="lineNoCov">          0 :         p += 4;</span>
+<span class="lineNum">     657 </span>            :     }
+<span class="lineNum">     658 </span>            : 
+<span class="lineNum">     659 </span><span class="lineNoCov">          0 :     while(p &lt; bEnd) {</span>
+<span class="lineNum">     660 </span><span class="lineNoCov">          0 :         h32 += (*p) * PRIME32_5;</span>
+<span class="lineNum">     661 </span><span class="lineNoCov">          0 :         h32 = XXH_rotl32(h32, 11) * PRIME32_1;</span>
+<span class="lineNum">     662 </span><span class="lineNoCov">          0 :         p++;</span>
+<span class="lineNum">     663 </span>            :     }
+<span class="lineNum">     664 </span>            : 
+<span class="lineNum">     665 </span><span class="lineNoCov">          0 :     h32 ^= h32 &gt;&gt; 15;</span>
+<span class="lineNum">     666 </span><span class="lineNoCov">          0 :     h32 *= PRIME32_2;</span>
+<span class="lineNum">     667 </span><span class="lineNoCov">          0 :     h32 ^= h32 &gt;&gt; 13;</span>
+<span class="lineNum">     668 </span><span class="lineNoCov">          0 :     h32 *= PRIME32_3;</span>
+<span class="lineNum">     669 </span><span class="lineNoCov">          0 :     h32 ^= h32 &gt;&gt; 16;</span>
+<span class="lineNum">     670 </span>            : 
+<span class="lineNum">     671 </span><span class="lineNoCov">          0 :     return h32;</span>
+<a name="672"><span class="lineNum">     672 </span>            : }</a>
+<span class="lineNum">     673 </span>            : 
+<span class="lineNum">     674 </span><span class="lineNoCov">          0 : U32 XXH32_digest(const XXH32_state_t* state_in) {</span>
+<span class="lineNum">     675 </span><span class="lineNoCov">          0 :     XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;</span>
+<span class="lineNum">     676 </span>            : 
+<span class="lineNum">     677 </span><span class="lineNoCov">          0 :     if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)</span>
+<span class="lineNum">     678 </span><span class="lineNoCov">          0 :         return XXH32_digest_endian(state_in, XXH_littleEndian);</span>
+<span class="lineNum">     679 </span>            :     else
+<span class="lineNum">     680 </span><span class="lineNoCov">          0 :         return XXH32_digest_endian(state_in, XXH_bigEndian);</span>
+<span class="lineNum">     681 </span>            : }
+<span class="lineNum">     682 </span>            : 
+<span class="lineNum">     683 </span>            : FORCE_INLINE XXH_errorcode XXH64_update_endian(XXH64_state_t* state_in, const void* input,
+<span class="lineNum">     684 </span>            :                                                size_t len, XXH_endianess endian) {
+<span class="lineNum">     685 </span><span class="lineNoCov">          0 :     XXH_istate64_t* state = (XXH_istate64_t*)state_in;</span>
+<span class="lineNum">     686 </span><span class="lineNoCov">          0 :     const BYTE* p = (const BYTE*)input;</span>
+<span class="lineNum">     687 </span><span class="lineNoCov">          0 :     const BYTE* const bEnd = p + len;</span>
+<span class="lineNum">     688 </span>            : 
+<span class="lineNum">     689 </span>            : #ifdef XXH_ACCEPT_NULL_INPUT_POINTER
+<span class="lineNum">     690 </span>            :     if(input == NULL)
+<span class="lineNum">     691 </span>            :         return XXH_ERROR;
+<span class="lineNum">     692 </span>            : #endif
+<span class="lineNum">     693 </span>            : 
+<span class="lineNum">     694 </span><span class="lineNoCov">          0 :     state-&gt;total_len += len;</span>
+<span class="lineNum">     695 </span>            : 
+<span class="lineNum">     696 </span><span class="lineNoCov">          0 :     if(state-&gt;memsize + len &lt; 32) /* fill in tmp buffer */</span>
+<span class="lineNum">     697 </span>            :     {
+<span class="lineNum">     698 </span><span class="lineNoCov">          0 :         XXH_memcpy(((BYTE*)state-&gt;mem64) + state-&gt;memsize, input, len);</span>
+<span class="lineNum">     699 </span><span class="lineNoCov">          0 :         state-&gt;memsize += (U32)len;</span>
+<span class="lineNum">     700 </span><span class="lineNoCov">          0 :         return XXH_OK;</span>
+<span class="lineNum">     701 </span>            :     }
+<span class="lineNum">     702 </span>            : 
+<span class="lineNum">     703 </span><span class="lineNoCov">          0 :     if(state-&gt;memsize) /* some data left from previous update */</span>
+<span class="lineNum">     704 </span>            :     {
+<span class="lineNum">     705 </span><span class="lineNoCov">          0 :         XXH_memcpy(((BYTE*)state-&gt;mem64) + state-&gt;memsize, input, 32 - state-&gt;memsize);</span>
+<span class="lineNum">     706 </span>            :         {
+<span class="lineNum">     707 </span><span class="lineNoCov">          0 :             const U64* p64 = state-&gt;mem64;</span>
+<span class="lineNum">     708 </span><span class="lineNoCov">          0 :             state-&gt;v1 += XXH_readLE64(p64, endian) * PRIME64_2;</span>
+<span class="lineNum">     709 </span><span class="lineNoCov">          0 :             state-&gt;v1 = XXH_rotl64(state-&gt;v1, 31);</span>
+<span class="lineNum">     710 </span><span class="lineNoCov">          0 :             state-&gt;v1 *= PRIME64_1;</span>
+<span class="lineNum">     711 </span><span class="lineNoCov">          0 :             p64++;</span>
+<span class="lineNum">     712 </span><span class="lineNoCov">          0 :             state-&gt;v2 += XXH_readLE64(p64, endian) * PRIME64_2;</span>
+<span class="lineNum">     713 </span><span class="lineNoCov">          0 :             state-&gt;v2 = XXH_rotl64(state-&gt;v2, 31);</span>
+<span class="lineNum">     714 </span><span class="lineNoCov">          0 :             state-&gt;v2 *= PRIME64_1;</span>
+<span class="lineNum">     715 </span><span class="lineNoCov">          0 :             p64++;</span>
+<span class="lineNum">     716 </span><span class="lineNoCov">          0 :             state-&gt;v3 += XXH_readLE64(p64, endian) * PRIME64_2;</span>
+<span class="lineNum">     717 </span><span class="lineNoCov">          0 :             state-&gt;v3 = XXH_rotl64(state-&gt;v3, 31);</span>
+<span class="lineNum">     718 </span><span class="lineNoCov">          0 :             state-&gt;v3 *= PRIME64_1;</span>
+<span class="lineNum">     719 </span><span class="lineNoCov">          0 :             p64++;</span>
+<span class="lineNum">     720 </span><span class="lineNoCov">          0 :             state-&gt;v4 += XXH_readLE64(p64, endian) * PRIME64_2;</span>
+<span class="lineNum">     721 </span><span class="lineNoCov">          0 :             state-&gt;v4 = XXH_rotl64(state-&gt;v4, 31);</span>
+<span class="lineNum">     722 </span><span class="lineNoCov">          0 :             state-&gt;v4 *= PRIME64_1;</span>
+<span class="lineNum">     723 </span><span class="lineNoCov">          0 :             p64++;</span>
+<span class="lineNum">     724 </span>            :         }
+<span class="lineNum">     725 </span><span class="lineNoCov">          0 :         p += 32 - state-&gt;memsize;</span>
+<span class="lineNum">     726 </span><span class="lineNoCov">          0 :         state-&gt;memsize = 0;</span>
+<span class="lineNum">     727 </span>            :     }
+<span class="lineNum">     728 </span>            : 
+<span class="lineNum">     729 </span><span class="lineNoCov">          0 :     if(p + 32 &lt;= bEnd) {</span>
+<span class="lineNum">     730 </span><span class="lineNoCov">          0 :         const BYTE* const limit = bEnd - 32;</span>
+<span class="lineNum">     731 </span><span class="lineNoCov">          0 :         U64 v1 = state-&gt;v1;</span>
+<span class="lineNum">     732 </span><span class="lineNoCov">          0 :         U64 v2 = state-&gt;v2;</span>
+<span class="lineNum">     733 </span><span class="lineNoCov">          0 :         U64 v3 = state-&gt;v3;</span>
+<span class="lineNum">     734 </span><span class="lineNoCov">          0 :         U64 v4 = state-&gt;v4;</span>
+<span class="lineNum">     735 </span>            : 
+<span class="lineNum">     736 </span>            :         do {
+<span class="lineNum">     737 </span><span class="lineNoCov">          0 :             v1 += XXH_readLE64(p, endian) * PRIME64_2;</span>
+<span class="lineNum">     738 </span><span class="lineNoCov">          0 :             v1 = XXH_rotl64(v1, 31);</span>
+<span class="lineNum">     739 </span><span class="lineNoCov">          0 :             v1 *= PRIME64_1;</span>
+<span class="lineNum">     740 </span><span class="lineNoCov">          0 :             p += 8;</span>
+<span class="lineNum">     741 </span><span class="lineNoCov">          0 :             v2 += XXH_readLE64(p, endian) * PRIME64_2;</span>
+<span class="lineNum">     742 </span><span class="lineNoCov">          0 :             v2 = XXH_rotl64(v2, 31);</span>
+<span class="lineNum">     743 </span><span class="lineNoCov">          0 :             v2 *= PRIME64_1;</span>
+<span class="lineNum">     744 </span><span class="lineNoCov">          0 :             p += 8;</span>
+<span class="lineNum">     745 </span><span class="lineNoCov">          0 :             v3 += XXH_readLE64(p, endian) * PRIME64_2;</span>
+<span class="lineNum">     746 </span><span class="lineNoCov">          0 :             v3 = XXH_rotl64(v3, 31);</span>
+<span class="lineNum">     747 </span><span class="lineNoCov">          0 :             v3 *= PRIME64_1;</span>
+<span class="lineNum">     748 </span><span class="lineNoCov">          0 :             p += 8;</span>
+<span class="lineNum">     749 </span><span class="lineNoCov">          0 :             v4 += XXH_readLE64(p, endian) * PRIME64_2;</span>
+<span class="lineNum">     750 </span><span class="lineNoCov">          0 :             v4 = XXH_rotl64(v4, 31);</span>
+<span class="lineNum">     751 </span><span class="lineNoCov">          0 :             v4 *= PRIME64_1;</span>
+<span class="lineNum">     752 </span><span class="lineNoCov">          0 :             p += 8;</span>
+<span class="lineNum">     753 </span><span class="lineNoCov">          0 :         } while(p &lt;= limit);</span>
+<span class="lineNum">     754 </span>            : 
+<span class="lineNum">     755 </span><span class="lineNoCov">          0 :         state-&gt;v1 = v1;</span>
+<span class="lineNum">     756 </span><span class="lineNoCov">          0 :         state-&gt;v2 = v2;</span>
+<span class="lineNum">     757 </span><span class="lineNoCov">          0 :         state-&gt;v3 = v3;</span>
+<span class="lineNum">     758 </span><span class="lineNoCov">          0 :         state-&gt;v4 = v4;</span>
+<span class="lineNum">     759 </span>            :     }
+<span class="lineNum">     760 </span>            : 
+<span class="lineNum">     761 </span><span class="lineNoCov">          0 :     if(p &lt; bEnd) {</span>
+<span class="lineNum">     762 </span><span class="lineNoCov">          0 :         XXH_memcpy(state-&gt;mem64, p, bEnd - p);</span>
+<span class="lineNum">     763 </span><span class="lineNoCov">          0 :         state-&gt;memsize = (int)(bEnd - p);</span>
+<span class="lineNum">     764 </span>            :     }
+<span class="lineNum">     765 </span>            : 
+<span class="lineNum">     766 </span><span class="lineNoCov">          0 :     return XXH_OK;</span>
+<a name="767"><span class="lineNum">     767 </span>            : }</a>
+<span class="lineNum">     768 </span>            : 
+<span class="lineNum">     769 </span><span class="lineNoCov">          0 : XXH_errorcode XXH64_update(XXH64_state_t* state_in, const void* input, size_t len) {</span>
+<span class="lineNum">     770 </span><span class="lineNoCov">          0 :     XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;</span>
+<span class="lineNum">     771 </span>            : 
+<span class="lineNum">     772 </span><span class="lineNoCov">          0 :     if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)</span>
+<span class="lineNum">     773 </span><span class="lineNoCov">          0 :         return XXH64_update_endian(state_in, input, len, XXH_littleEndian);</span>
+<span class="lineNum">     774 </span>            :     else
+<span class="lineNum">     775 </span><span class="lineNoCov">          0 :         return XXH64_update_endian(state_in, input, len, XXH_bigEndian);</span>
+<span class="lineNum">     776 </span>            : }
+<span class="lineNum">     777 </span>            : 
+<span class="lineNum">     778 </span>            : FORCE_INLINE U64
+<span class="lineNum">     779 </span>            : XXH64_digest_endian(const XXH64_state_t* state_in, XXH_endianess endian) {
+<span class="lineNum">     780 </span><span class="lineNoCov">          0 :     const XXH_istate64_t* state = (const XXH_istate64_t*)state_in;</span>
+<span class="lineNum">     781 </span><span class="lineNoCov">          0 :     const BYTE* p = (const BYTE*)state-&gt;mem64;</span>
+<span class="lineNum">     782 </span><span class="lineNoCov">          0 :     const BYTE* bEnd = (const BYTE*)state-&gt;mem64 + state-&gt;memsize;</span>
+<span class="lineNum">     783 </span>            :     U64 h64;
+<span class="lineNum">     784 </span>            : 
+<span class="lineNum">     785 </span><span class="lineNoCov">          0 :     if(state-&gt;total_len &gt;= 32) {</span>
+<span class="lineNum">     786 </span><span class="lineNoCov">          0 :         U64 v1 = state-&gt;v1;</span>
+<span class="lineNum">     787 </span><span class="lineNoCov">          0 :         U64 v2 = state-&gt;v2;</span>
+<span class="lineNum">     788 </span><span class="lineNoCov">          0 :         U64 v3 = state-&gt;v3;</span>
+<span class="lineNum">     789 </span><span class="lineNoCov">          0 :         U64 v4 = state-&gt;v4;</span>
+<span class="lineNum">     790 </span>            : 
+<span class="lineNum">     791 </span><span class="lineNoCov">          0 :         h64 = XXH_rotl64(v1, 1) + XXH_rotl64(v2, 7) + XXH_rotl64(v3, 12) +</span>
+<span class="lineNum">     792 </span><span class="lineNoCov">          0 :               XXH_rotl64(v4, 18);</span>
+<span class="lineNum">     793 </span>            : 
+<span class="lineNum">     794 </span><span class="lineNoCov">          0 :         v1 *= PRIME64_2;</span>
+<span class="lineNum">     795 </span><span class="lineNoCov">          0 :         v1 = XXH_rotl64(v1, 31);</span>
+<span class="lineNum">     796 </span><span class="lineNoCov">          0 :         v1 *= PRIME64_1;</span>
+<span class="lineNum">     797 </span><span class="lineNoCov">          0 :         h64 ^= v1;</span>
+<span class="lineNum">     798 </span><span class="lineNoCov">          0 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     799 </span>            : 
+<span class="lineNum">     800 </span><span class="lineNoCov">          0 :         v2 *= PRIME64_2;</span>
+<span class="lineNum">     801 </span><span class="lineNoCov">          0 :         v2 = XXH_rotl64(v2, 31);</span>
+<span class="lineNum">     802 </span><span class="lineNoCov">          0 :         v2 *= PRIME64_1;</span>
+<span class="lineNum">     803 </span><span class="lineNoCov">          0 :         h64 ^= v2;</span>
+<span class="lineNum">     804 </span><span class="lineNoCov">          0 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     805 </span>            : 
+<span class="lineNum">     806 </span><span class="lineNoCov">          0 :         v3 *= PRIME64_2;</span>
+<span class="lineNum">     807 </span><span class="lineNoCov">          0 :         v3 = XXH_rotl64(v3, 31);</span>
+<span class="lineNum">     808 </span><span class="lineNoCov">          0 :         v3 *= PRIME64_1;</span>
+<span class="lineNum">     809 </span><span class="lineNoCov">          0 :         h64 ^= v3;</span>
+<span class="lineNum">     810 </span><span class="lineNoCov">          0 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     811 </span>            : 
+<span class="lineNum">     812 </span><span class="lineNoCov">          0 :         v4 *= PRIME64_2;</span>
+<span class="lineNum">     813 </span><span class="lineNoCov">          0 :         v4 = XXH_rotl64(v4, 31);</span>
+<span class="lineNum">     814 </span><span class="lineNoCov">          0 :         v4 *= PRIME64_1;</span>
+<span class="lineNum">     815 </span><span class="lineNoCov">          0 :         h64 ^= v4;</span>
+<span class="lineNum">     816 </span><span class="lineNoCov">          0 :         h64 = h64 * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     817 </span>            :     } else {
+<span class="lineNum">     818 </span><span class="lineNoCov">          0 :         h64 = state-&gt;seed + PRIME64_5;</span>
+<span class="lineNum">     819 </span>            :     }
+<span class="lineNum">     820 </span>            : 
+<span class="lineNum">     821 </span><span class="lineNoCov">          0 :     h64 += (U64)state-&gt;total_len;</span>
+<span class="lineNum">     822 </span>            : 
+<span class="lineNum">     823 </span><span class="lineNoCov">          0 :     while(p + 8 &lt;= bEnd) {</span>
+<span class="lineNum">     824 </span><span class="lineNoCov">          0 :         U64 k1 = XXH_readLE64(p, endian);</span>
+<span class="lineNum">     825 </span><span class="lineNoCov">          0 :         k1 *= PRIME64_2;</span>
+<span class="lineNum">     826 </span><span class="lineNoCov">          0 :         k1 = XXH_rotl64(k1, 31);</span>
+<span class="lineNum">     827 </span><span class="lineNoCov">          0 :         k1 *= PRIME64_1;</span>
+<span class="lineNum">     828 </span><span class="lineNoCov">          0 :         h64 ^= k1;</span>
+<span class="lineNum">     829 </span><span class="lineNoCov">          0 :         h64 = XXH_rotl64(h64, 27) * PRIME64_1 + PRIME64_4;</span>
+<span class="lineNum">     830 </span><span class="lineNoCov">          0 :         p += 8;</span>
+<span class="lineNum">     831 </span>            :     }
+<span class="lineNum">     832 </span>            : 
+<span class="lineNum">     833 </span><span class="lineNoCov">          0 :     if(p + 4 &lt;= bEnd) {</span>
+<span class="lineNum">     834 </span><span class="lineNoCov">          0 :         h64 ^= (U64)(XXH_readLE32(p, endian)) * PRIME64_1;</span>
+<span class="lineNum">     835 </span><span class="lineNoCov">          0 :         h64 = XXH_rotl64(h64, 23) * PRIME64_2 + PRIME64_3;</span>
+<span class="lineNum">     836 </span><span class="lineNoCov">          0 :         p += 4;</span>
+<span class="lineNum">     837 </span>            :     }
+<span class="lineNum">     838 </span>            : 
+<span class="lineNum">     839 </span><span class="lineNoCov">          0 :     while(p &lt; bEnd) {</span>
+<span class="lineNum">     840 </span><span class="lineNoCov">          0 :         h64 ^= (*p) * PRIME64_5;</span>
+<span class="lineNum">     841 </span><span class="lineNoCov">          0 :         h64 = XXH_rotl64(h64, 11) * PRIME64_1;</span>
+<span class="lineNum">     842 </span><span class="lineNoCov">          0 :         p++;</span>
+<span class="lineNum">     843 </span>            :     }
+<span class="lineNum">     844 </span>            : 
+<span class="lineNum">     845 </span><span class="lineNoCov">          0 :     h64 ^= h64 &gt;&gt; 33;</span>
+<span class="lineNum">     846 </span><span class="lineNoCov">          0 :     h64 *= PRIME64_2;</span>
+<span class="lineNum">     847 </span><span class="lineNoCov">          0 :     h64 ^= h64 &gt;&gt; 29;</span>
+<span class="lineNum">     848 </span><span class="lineNoCov">          0 :     h64 *= PRIME64_3;</span>
+<span class="lineNum">     849 </span><span class="lineNoCov">          0 :     h64 ^= h64 &gt;&gt; 32;</span>
+<span class="lineNum">     850 </span>            : 
+<span class="lineNum">     851 </span><span class="lineNoCov">          0 :     return h64;</span>
+<a name="852"><span class="lineNum">     852 </span>            : }</a>
+<span class="lineNum">     853 </span>            : 
+<span class="lineNum">     854 </span><span class="lineNoCov">          0 : unsigned long long XXH64_digest(const XXH64_state_t* state_in) {</span>
+<span class="lineNum">     855 </span><span class="lineNoCov">          0 :     XXH_endianess endian_detected = (XXH_endianess)XXH_CPU_LITTLE_ENDIAN;</span>
+<span class="lineNum">     856 </span>            : 
+<span class="lineNum">     857 </span><span class="lineNoCov">          0 :     if((endian_detected == XXH_littleEndian) || XXH_FORCE_NATIVE_FORMAT)</span>
+<span class="lineNum">     858 </span><span class="lineNoCov">          0 :         return XXH64_digest_endian(state_in, XXH_littleEndian);</span>
+<span class="lineNum">     859 </span>            :     else
+<span class="lineNum">     860 </span><span class="lineNoCov">          0 :         return XXH64_digest_endian(state_in, XXH_bigEndian);</span>
+<span class="lineNum">     861 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
