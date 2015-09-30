@@ -291,8 +291,8 @@
 /* Minimum number of files or bytes that should be in an update sent to
  * the statistics counters.
  */
-#define SHRED_MIN_FILE_STATS_PACK_FILES (16)
-#define SHRED_MIN_FILE_STATS_PACK_BYTES (1024 * 1024 * 16)
+#define SHRED_MIN_FILE_STATS_PACK_FILES (0) //(16)
+#define SHRED_MIN_FILE_STATS_PACK_BYTES (0) //(1024 * 1024 * 16)
 
 /* empirical estimate of mem usage per file (excluding read buffers and
  * paranoid digests) */
@@ -318,6 +318,8 @@ typedef struct RmShredTag {
     gint32 active_groups; /* how many shred groups active (only used with paranoid) */
     RmHasher *hasher;
     GThreadPool *result_pool;
+    /* threadpool for progress counters to avoid blocking delays in rm_shred_adjust_counters */
+    GThreadPool *counter_pool;
     gint32 page_size;
     bool mem_refusing;
 
@@ -327,11 +329,6 @@ typedef struct RmShredTag {
     gint64 remaining_bytes;
 
     bool after_preprocess : 1;
-
-    /* cached counters to avoid blocking delays in rm_shred_adjust_counters */
-    gint cache_file_count;
-    gint cache_filtered_count;
-    gint64 cache_byte_count;
 
 } RmShredTag;
 
@@ -674,43 +671,37 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
 //    RmShredDevice UTILITIES    //
 ///////////////////////////////////
 
+typedef struct RmCounterBuffer{
+    int files;
+    gint64 bytes;
+} RmCounterBuffer;
+
+static RmCounterBuffer *rm_counter_buffer_new(int files, gint64 bytes) {
+    RmCounterBuffer *self = g_slice_new(RmCounterBuffer);
+    self->files = files;
+    self->bytes = bytes;
+    return self;
+}
+
 static void rm_shred_adjust_counters(RmShredTag *tag, int files, gint64 bytes) {
-    g_mutex_lock(&tag->lock);
+    g_thread_pool_push(tag->counter_pool, rm_counter_buffer_new(files, bytes), NULL);
+}
+
+static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
+    RmSession *session = tag->session;
+    rm_fmt_lock_state(session->formats);
     {
-        RmSession *session = tag->session;
-        tag->cache_byte_count += bytes;
-        tag->cache_file_count += files;
-        if(files < 0) {
-            tag->cache_filtered_count += files;
+        session->shred_files_remaining += buffer->files;
+        if (buffer->files < 0) {
+            session->total_filtered_files += buffer->files;
         }
-
-        if(abs(tag->cache_byte_count) >= SHRED_MIN_FILE_STATS_PACK_BYTES ||
-           abs(tag->cache_file_count) >= SHRED_MIN_FILE_STATS_PACK_FILES) {
-            rm_fmt_lock_state(session->formats);
-            {
-#if RM_SHRED_DEBUG
-                gint64 bytes_remaining =
-                    session->shred_bytes_remaining + tag->cache_byte_count;
-                gint64 files_remaining =
-                    session->shred_files_remaining + tag->cache_file_count;
-                g_assert(check_bytes >= 0);
-                g_assert(check_files >= 0);
-#endif
-                session->shred_files_remaining += tag->cache_file_count;
-                session->total_filtered_files += tag->cache_filtered_count;
-                session->shred_bytes_remaining += tag->cache_byte_count;
-
-                rm_fmt_set_state(session->formats, (tag->after_preprocess)
-                                                       ? RM_PROGRESS_STATE_SHREDDER
-                                                       : RM_PROGRESS_STATE_PREPROCESS);
-                tag->cache_file_count = 0;
-                tag->cache_filtered_count = 0;
-                tag->cache_byte_count = 0;
-            }
-            rm_fmt_unlock_state(session->formats);
-        }
+        session->shred_bytes_remaining += buffer->bytes;
+        rm_fmt_set_state(session->formats, (tag->after_preprocess)
+                                               ? RM_PROGRESS_STATE_SHREDDER
+                                               : RM_PROGRESS_STATE_PREPROCESS);
     }
-    g_mutex_unlock(&tag->lock);
+    rm_fmt_unlock_state(session->formats);
+    g_slice_free(RmCounterBuffer, buffer);
 }
 
 static void rm_shred_write_cksum_to_xattr(const RmSession *session, RmFile *file) {
@@ -1574,9 +1565,6 @@ void rm_shred_run(RmSession *session) {
     tag.device_return = g_async_queue_new();
     tag.page_size = SHRED_PAGE_SIZE;
 
-    tag.cache_file_count = 0;
-    tag.cache_byte_count = 0;
-    tag.cache_filtered_count = 0;
     tag.after_preprocess = FALSE;
 
     /* would use g_atomic, but helgrind does not like that */
@@ -1592,8 +1580,18 @@ void rm_shred_run(RmSession *session) {
                      session->cfg->sweep_count,
                      (RmMDSSortFunc)rm_mds_elevator_cmp);
 
+    /* Create a pool for progress counting */
+    tag.counter_pool = rm_util_thread_pool_new((GFunc)rm_shred_counter_factory, &tag, 1);
+
     rm_shred_preprocess_input(&tag);
     rm_log_debug_line("Done shred preprocessing");
+
+    /* wait for counters to catch up */
+    while (g_thread_pool_unprocessed(tag.counter_pool) > 0) {
+        g_usleep(10);
+    }
+    rm_log_debug_line("Byte and file counters up to date");
+
     tag.after_preprocess = TRUE;
     session->shred_bytes_after_preprocess = session->shred_bytes_remaining;
 
@@ -1652,18 +1650,18 @@ void rm_shred_run(RmSession *session) {
     rm_hasher_free(tag.hasher, TRUE);
 
     session->shredder_finished = TRUE;
-    session->shred_files_remaining += tag.cache_file_count;
-    session->total_filtered_files += tag.cache_filtered_count;
-    session->shred_bytes_remaining += tag.cache_byte_count;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
 
     /* This should not block, or at least only very short. */
     g_thread_pool_free(tag.result_pool, FALSE, TRUE);
 
+    rm_log_warning(BLUE"Waiting for progress counters to catch up..."RESET);
+    g_thread_pool_free(tag.counter_pool, FALSE, TRUE);
+    rm_log_warning(BLUE"Done\n"RESET);
+
     g_async_queue_unref(tag.device_return);
 
     g_mutex_clear(&tag.hash_mem_mtx);
-    rm_log_debug_line("Remaining %"LLU" bytes in %"LLU" files, cached %i",
-                      session->shred_bytes_remaining, session->shred_files_remaining,
-                      tag.cache_filtered_count);
+    rm_log_debug_line("Remaining %"LLU" bytes in %"LLU" files",
+                      session->shred_bytes_remaining, session->shred_files_remaining);
 }
