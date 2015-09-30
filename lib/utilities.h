@@ -272,18 +272,6 @@ void rm_mounts_table_destroy(RmMountTable *self);
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
 
 /**
- * @brief Return name of device/disk.
- *
- * This operation has constant time.
- *
- * @param self the table to lookup from.
- * @param device the dev_t of a disk
- *
- * @return pointer to disk name.
- */
-char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device);
-
-/**
  * @brief Get the disk behind the partition.
  *
  * @param self the table to lookup from.

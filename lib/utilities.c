@@ -957,13 +957,6 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-// static void rm_mounts_subvol_add(RmMountTable *self, dev_t subvol, dev_t parent) {
-// if(g_hash_table_contains(self->subvol_table, GUINT_TO_POINTER(parent))) {
-/* parent volume is a subvolume itself */
-
-//}
-//}
-
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {
     if(self == NULL) {
         return 0;
@@ -1025,22 +1018,6 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
     }
 
     return rm_mounts_get_disk_id(self, stat_buf.st_dev, path);
-}
-
-char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
-    if(self == NULL) {
-        return NULL;
-    }
-
-    RmPartitionInfo *part =
-        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    if(part) {
-        RmDiskInfo *disk =
-            g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
-        return disk->name;
-    } else {
-        return NULL;
-    }
 }
 
 bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
