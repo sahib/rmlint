@@ -1186,31 +1186,35 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 bool rm_offsets_match(char *path1, char *path2) {
     bool result = FALSE;
     int fd1 = rm_sys_open(path1, O_RDONLY);
-    if(fd1 != -1) {
-        int fd2 = rm_sys_open(path2, O_RDONLY);
-        if(fd2 != -1) {
-            RmOff file1_offset_next = 0;
-            RmOff file2_offset_next = 0;
-            RmOff file_offset_current = 0;
-            while(!result &&
-                  (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
-                   rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
-                  file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
-                if(file1_offset_next == file_offset_current) {
-                    /* phew, we got to the end */
-                    result = TRUE;
-                    break;
-                }
-                file_offset_current = file1_offset_next;
-            }
-            rm_sys_close(fd2);
-        } else {
-            rm_log_info("Error opening %s in rm_offsets_match\n", path2);
-        }
-        rm_sys_close(fd1);
-    } else {
-        rm_log_info("Error opening %s in rm_offsets_match\n", path1);
+    if(fd1 == -1) {
+        rm_log_info_line("Error opening %s in rm_offsets_match", path1);
+        return FALSE;
     }
+
+    int fd2 = rm_sys_open(path2, O_RDONLY);
+    if(fd2 == -1) {
+        rm_log_info_line("Error opening %s in rm_offsets_match", path2);
+        rm_sys_close(fd1);
+        return FALSE;
+    }
+
+    RmOff file1_offset_next = 0;
+    RmOff file2_offset_next = 0;
+    RmOff file_offset_current = 0;
+    while(!result &&
+            (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
+            rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
+            file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
+        if(file1_offset_next == file_offset_current) {
+            /* phew, we got to the end */
+            result = TRUE;
+            break;
+        }
+        file_offset_current = file1_offset_next;
+    }
+
+    rm_sys_close(fd2);
+    rm_sys_close(fd1);
     return result;
 }
 
