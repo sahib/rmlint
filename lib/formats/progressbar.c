@@ -302,7 +302,7 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 50;
+            self->update_interval = 10;
         }
 
         self->last_unknown_pos = 0;
