@@ -362,9 +362,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, bool use_sh
 }
 
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
-    g_assert(new_size < digest->bytes);
     g_assert(digest->type == RM_DIGEST_PARANOID);
-
     digest->bytes = new_size;
 }
 

@@ -1654,9 +1654,9 @@ void rm_shred_run(RmSession *session) {
     /* This should not block, or at least only very short. */
     g_thread_pool_free(tag.result_pool, FALSE, TRUE);
 
-    rm_log_warning(BLUE"Waiting for progress counters to catch up..."RESET);
+    rm_log_debug(BLUE"Waiting for progress counters to catch up..."RESET);
     g_thread_pool_free(tag.counter_pool, FALSE, TRUE);
-    rm_log_warning(BLUE"Done\n"RESET);
+    rm_log_debug(BLUE"Done\n"RESET);
 
     g_mutex_clear(&tag.hash_mem_mtx);
     rm_log_debug_line("Remaining %"LLU" bytes in %"LLU" files",
