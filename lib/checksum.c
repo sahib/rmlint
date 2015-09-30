@@ -260,7 +260,7 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
         }                                                                   \
     }
 
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, bool use_shadow_hash) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -306,7 +306,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, bool use_sh
         break;
     case RM_DIGEST_EXT:
         /* gets allocated on rm_digest_update() */
-        digest->bytes = 0;
+        digest->bytes = ext_size;
         break;
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
@@ -327,7 +327,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, bool use_sh
         g_assert(use_shadow_hash);
         if(use_shadow_hash) {
             digest->paranoid->shadow_hash =
-                rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, false);
+                rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
         } else {
             digest->paranoid->shadow_hash = NULL;
         }
@@ -618,7 +618,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
-        self = rm_digest_new(digest->type, 0, 0, FALSE);
+        self = rm_digest_new(digest->type, 0, 0, digest->bytes, FALSE);
 
         if(self->checksum && digest->checksum) {
             memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);

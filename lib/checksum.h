@@ -179,7 +179,7 @@ const char *rm_digest_type_to_string(RmDigestType type);
  * @param paranoid_size. Digest size in bytes for "paranoid" (exact copy) digest
  * @param use_shadow_hash.  Keep a shadow hash for lookup purposes.
  */
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, bool use_shadow_hash);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
