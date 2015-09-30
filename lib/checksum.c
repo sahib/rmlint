@@ -252,13 +252,6 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
 }
 
-RmOff rm_digest_paranoia_bytes(void) {
-    return 16 * 1024 * 1024;
-    /* this is big enough buffer size to make seek time fairly insignificant relative to
-     * sequential read time,
-     * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
-}
-
 #define ADD_SEED(digest, seed)                                              \
     {                                                                       \
         if(seed) {                                                          \
@@ -267,8 +260,7 @@ RmOff rm_digest_paranoia_bytes(void) {
         }                                                                   \
     }
 
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size,
-                        bool use_shadow_hash) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, bool use_shadow_hash) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -314,7 +306,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         break;
     case RM_DIGEST_EXT:
         /* gets allocated on rm_digest_update() */
-        digest->bytes = paranoid_size;
+        digest->bytes = 0;
         break;
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
@@ -328,16 +320,14 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         digest->bytes = 128 / 8;
         break;
     case RM_DIGEST_PARANOID:
-        g_assert(paranoid_size <= rm_digest_paranoia_bytes());
-        g_assert(paranoid_size > 0);
-        digest->bytes = paranoid_size;
+        digest->bytes = 0;
         digest->paranoid = g_slice_new0(RmParanoid);
         digest->paranoid->buffers = g_queue_new();
         digest->paranoid->incoming_twin_candidates = g_async_queue_new();
         g_assert(use_shadow_hash);
         if(use_shadow_hash) {
             digest->paranoid->shadow_hash =
-                rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
+                rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, false);
         } else {
             digest->paranoid->shadow_hash = NULL;
         }
@@ -542,6 +532,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
         RmParanoid *paranoid = digest->paranoid;
 
         g_queue_push_tail(paranoid->buffers, buffer);
+        digest->bytes += buffer->len;
         paranoid->buffer_count++;
         rm_buffer_pool_signal_keeping(buffer);
 
@@ -629,7 +620,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
-        self = rm_digest_new(digest->type, 0, 0, digest->bytes, FALSE);
+        self = rm_digest_new(digest->type, 0, 0, FALSE);
 
         if(self->checksum && digest->checksum) {
             memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);

@@ -283,7 +283,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
      * order in which the file hashes were added.
      * It is not used as full hash, but as sorting speedup.
      */
-    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0, false);
+    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, false);
 
     g_queue_init(&self->known_files);
     g_queue_init(&self->children);

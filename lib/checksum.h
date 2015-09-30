@@ -179,8 +179,7 @@ const char *rm_digest_type_to_string(RmDigestType type);
  * @param paranoid_size. Digest size in bytes for "paranoid" (exact copy) digest
  * @param use_shadow_hash.  Keep a shadow hash for lookup purposes.
  */
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size,
-                        bool use_shadow_hash);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, bool use_shadow_hash);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
@@ -262,12 +261,6 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b);
  * @return copy of digest
  */
 RmDigest *rm_digest_copy(RmDigest *digest);
-
-/**
- * @brief Return the number of bytes RM_DIGEST_PARANOID allocates for
- * it's checksum.
- */
-RmOff rm_digest_paranoia_bytes(void);
 
 /**
  * For RM_DIGEST_PARANOID this is  the number of bytes in the

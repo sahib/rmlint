@@ -408,7 +408,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
     self->hasher = hasher;
     self->digest =
         digest ? digest
-               : rm_digest_new(hasher->digest_type, 0, 0, rm_digest_paranoia_bytes(),
+               : rm_digest_new(hasher->digest_type, 0, 0,
                                hasher->digest_type == RM_DIGEST_PARANOID);
 
     self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);

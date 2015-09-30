@@ -1389,7 +1389,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
 
     if(group->has_only_ext_cksums) {
         /* Cool, we were able to read the checksum from disk */
-        file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
+        file->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, NEEDS_SHADOW_HASH(cfg));
 
         RM_DEFINE_PATH(file);
 
@@ -1419,11 +1419,9 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
             if(file->is_symlink && cfg->see_symlinks) {
                 file->digest =
                     rm_digest_new(RM_DIGEST_PARANOID, 0, 0,
-                                  PATH_MAX + 1 /* max size of a symlink file */,
                                   NEEDS_SHADOW_HASH(cfg));
             } else {
                 file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0, 0,
-                                             group->next_offset - file->hash_offset,
                                              NEEDS_SHADOW_HASH(cfg));
                 if(group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD) {
                     /* send candidate twin(s) */
@@ -1450,7 +1448,6 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
         file->digest = rm_digest_new(cfg->checksum_type,
                                      main->session->hash_seed1,
                                      main->session->hash_seed2,
-                                     0,
                                      NEEDS_SHADOW_HASH(cfg));
     }
 
