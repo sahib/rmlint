@@ -238,15 +238,44 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
             g_cond_wait_until(&device->cond, &device->lock, end_time);
         }
 
-        /* merge and sort task lists */
-        device->sorted_tasks =
-            g_slist_concat(device->unsorted_tasks, device->sorted_tasks);
-        device->unsorted_tasks = NULL;
-        if(mds->prioritiser) {
-            device->sorted_tasks = g_slist_sort_with_data(
-                device->sorted_tasks, (GCompareDataFunc)rm_mds_compare,
+        /* sort and merge task lists */
+        device->unsorted_tasks = g_slist_sort_with_data(
+                device->unsorted_tasks, (GCompareDataFunc)rm_mds_compare,
                 (RmMDSSortFunc)mds->prioritiser);
+        GSList *head = NULL;
+        GSList *tail = NULL;
+        GSList *u = device->unsorted_tasks;
+        GSList *s = device->sorted_tasks;
+
+        if (u && s) {
+            if (rm_mds_compare(u->data, s->data, (RmMDSSortFunc)mds->prioritiser) < 1) {
+                head = u;
+                u = u->next;
+            } else {
+                head = s;
+                s = s->next;
+            }
+            tail = head;
+            while (u && s) {
+                if (rm_mds_compare(u->data, s->data, (RmMDSSortFunc)mds->prioritiser) < 1) {
+                    tail->next = u;
+                    tail = u;
+                    u = u->next;
+                } else {
+                    tail->next = s;
+                    tail = s;
+                    s = s->next;
+                }
+            }
+            if (tail) {
+                tail->next = s ? s : u;
+            }
+        } else {
+            head = u ? u : s;
         }
+
+        device->sorted_tasks = head;
+        device->unsorted_tasks = NULL;
     }
     g_mutex_unlock(&device->lock);
 
