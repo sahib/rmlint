@@ -688,18 +688,14 @@ static void rm_shred_adjust_counters(RmShredTag *tag, int files, gint64 bytes) {
 
 static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
     RmSession *session = tag->session;
-    rm_fmt_lock_state(session->formats);
-    {
-        session->shred_files_remaining += buffer->files;
-        if (buffer->files < 0) {
-            session->total_filtered_files += buffer->files;
-        }
-        session->shred_bytes_remaining += buffer->bytes;
-        rm_fmt_set_state(session->formats, (tag->after_preprocess)
-                                               ? RM_PROGRESS_STATE_SHREDDER
-                                               : RM_PROGRESS_STATE_PREPROCESS);
+    session->shred_files_remaining += buffer->files;
+    if (buffer->files < 0) {
+        session->total_filtered_files += buffer->files;
     }
-    rm_fmt_unlock_state(session->formats);
+    session->shred_bytes_remaining += buffer->bytes;
+    rm_fmt_set_state(session->formats, (tag->after_preprocess)
+                                           ? RM_PROGRESS_STATE_SHREDDER
+                                           : RM_PROGRESS_STATE_PREPROCESS);
     g_slice_free(RmCounterBuffer, buffer);
 }
 
