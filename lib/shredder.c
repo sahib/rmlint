@@ -1087,6 +1087,10 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
  * 3. Use g_hash_table_foreach to do the FIEMAP lookup for all remaining
  * 	  files via rm_shred_device_preprocess.
  * */
+
+/* Called for each file; find appropriate RmShredGroup (ie files with same size) and
+ * push the file to it.
+ * */
 static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *main) {
     /* initial population of RmShredDevice's and first level RmShredGroup's */
     RmSession *session = main->session;
@@ -1140,6 +1144,9 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
     }
 }
 
+/* Called for each group after all initial files have been pushed to groups.
+ * If the group failed to launch, then free it and its files
+ * */
 static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group,
                                           _U RmShredTag *tag) {
     g_assert(group);
@@ -1155,28 +1162,28 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     RmSession *session = main->session;
     guint removed = 0;
 
-    /* move remaining files to RmShredGroups */
-    g_assert(session->tables->node_table);
-
     /* Read any cache files */
     for(GList *iter = main->session->cache_list.head; iter; iter = iter->next) {
         char *cache_path = iter->data;
         rm_json_cache_read(&session->cfg->file_trie, cache_path);
     }
 
-    rm_log_debug_line("Moving files into size groups...");
-
     /* move files from node tables into initial RmShredGroups */
+    rm_log_debug_line("Moving files into size groups...");
     g_hash_table_foreach_remove(session->tables->node_table,
                                 (GHRFunc)rm_shred_file_preprocess, main);
     g_hash_table_unref(session->tables->node_table);
     session->tables->node_table = NULL;
+    rm_log_debug_line("move remaining files to size_groups finished at time %.3f",
+                 g_timer_elapsed(session->timer, NULL));
 
-    GHashTableIter iter;
-    gpointer size, p_group;
-
+    /* iterate over groups, looking for any that already have external
+     * checksums for all files */
     if(HAS_CACHE(main->session)) {
+        rm_log_debug_line("Checking for external checksums");
         g_assert(session->tables->size_groups);
+        GHashTableIter iter;
+        gpointer size, p_group;
         g_hash_table_iter_init(&iter, session->tables->size_groups);
         while(g_hash_table_iter_next(&iter, &size, &p_group)) {
             RmShredGroup *group = p_group;
@@ -1184,18 +1191,17 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
                 group->has_only_ext_cksums = true;
             }
         }
+        rm_log_debug_line("External checksum check finished at time %.3f",
+                    g_timer_elapsed(session->timer, NULL));
     }
 
-    rm_log_debug_line("move remaining files to size_groups finished at time %.3f",
-                 g_timer_elapsed(session->timer, NULL));
 
-    rm_log_debug_line("Discarding unique sizes and read fiemap data for others...");
+    rm_log_debug_line("Discarding unique sizes...");
     g_assert(session->tables->size_groups);
     removed = g_hash_table_foreach_remove(session->tables->size_groups,
                                           (GHRFunc)rm_shred_group_preprocess, main);
     g_hash_table_unref(session->tables->size_groups);
     session->tables->size_groups = NULL;
-
     rm_log_debug_line("...done at time %.3f; removed %u of %" LLU,
                  g_timer_elapsed(session->timer, NULL), removed,
                  session->total_filtered_files);
