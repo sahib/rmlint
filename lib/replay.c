@@ -349,7 +349,7 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
 static void rm_parrot_fix_match_opts(RmParrotCage *cage, GQueue *group) {
     RmCfg *cfg = cage->session->cfg;
     if(!(cfg->match_with_extension || cfg->match_without_extension ||
-         cfg->match_basename)) {
+         cfg->match_basename || cfg->unmatched_basenames)) {
         return;
     }
 

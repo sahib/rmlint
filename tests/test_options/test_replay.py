@@ -61,6 +61,92 @@ def validate_order(data, tests):
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_match_basename():
+    create_file('xxx', 'test1/a')
+    create_file('xxx', 'test1/b')
+    create_file('xxx', 'test2/a')
+
+    replay_path = '/tmp/replay.json'
+
+    head, *data, footer = run_rmlint('-o json:{p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 3
+
+    head, *data, footer = run_rmlint('--replay {p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 3
+
+    head, *data, footer = run_rmlint('--replay {p} --match-basename'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 2
+    paths = set([p['path'] for p in data])
+    assert os.path.join(TESTDIR_NAME, 'test1/a') in paths
+    assert os.path.join(TESTDIR_NAME, 'test2/a') in paths
+
+    head, *data, footer = run_rmlint('--replay {p} --unmatched-basename'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 3
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_hidden():
+    create_file('xxx', 'test/.a')
+    create_file('xxx', 'test/.b')
+
+    replay_path = '/tmp/replay.json'
+
+    head, *data, footer = run_rmlint('--hidden -o json:{p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 2
+
+    head, *data, footer = run_rmlint('--replay {p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 0
+
+    head, *data, footer = run_rmlint('--replay {p} --hidden'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 2
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_must_match_tagged():
+    create_file('xxx', 'test_a/a')
+    create_file('xxx', 'test_b/a')
+
+    replay_path = '/tmp/replay.json'
+
+    head, *data, footer = run_rmlint('-o json:{p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 2
+
+    head, *data, footer = run_rmlint('--replay {p} {b} // {a} -m'.format(
+        p=replay_path,
+        a=os.path.join(TESTDIR_NAME, 'test_a'),
+        b=os.path.join(TESTDIR_NAME, 'test_b')
+    ))
+
+    paths = set([(p['path'], p['is_original']) for p in data])
+    assert (os.path.join(TESTDIR_NAME, 'test_b/a'), False) in paths
+    assert (os.path.join(TESTDIR_NAME, 'test_a/a'), True) in paths
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
 def test_sorting():
     # create some dupes with different PATHS, names and mtimes:
     create_file('xxx', PATHS[0] + 'a')
