@@ -322,7 +322,6 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
     case RM_DIGEST_PARANOID:
         digest->bytes = 0;
         digest->paranoid = g_slice_new0(RmParanoid);
-        digest->paranoid->buffers = g_queue_new();
         digest->paranoid->incoming_twin_candidates = g_async_queue_new();
         g_assert(use_shadow_hash);
         if(use_shadow_hash) {
@@ -368,7 +367,7 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
 
 void rm_digest_release_buffers(RmDigest *digest) {
     if(digest->paranoid && digest->paranoid->buffers) {
-        g_queue_free_full(digest->paranoid->buffers,
+        g_slist_free_full(digest->paranoid->buffers,
                           (GDestroyNotify)rm_buffer_pool_release_kept);
         digest->paranoid->buffers = NULL;
     }
@@ -529,9 +528,16 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
     } else {
         RmParanoid *paranoid = digest->paranoid;
 
-        g_queue_push_tail(paranoid->buffers, buffer);
+        /* efficiently append buffer to buffers GSList */
+        if (!paranoid->buffers) {
+            /* first buffer */
+            paranoid->buffers = g_slist_prepend(NULL, buffer);
+            paranoid->buffer_tail = paranoid->buffers;
+        } else {
+            paranoid->buffer_tail = g_slist_append(paranoid->buffer_tail, buffer)->next;
+        }
+
         digest->bytes += buffer->len;
-        paranoid->buffer_count++;
         rm_buffer_pool_signal_keeping(buffer);
 
         g_assert(paranoid->shadow_hash);
@@ -552,7 +558,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 paranoid->twin_candidate_buffer = NULL;
 #if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Ejected candidate match at buffer #%u",
-                             paranoid->buffer_count);
+                             g_slist_length(paranoid->buffers));
 #endif
             }
         }
@@ -563,8 +569,8 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
             /* validate the new candidate by comparing the previous buffers (not
              * including current)*/
             paranoid->twin_candidate_buffer =
-                paranoid->twin_candidate->paranoid->buffers->head;
-            GList *iter_self = paranoid->buffers->head;
+                paranoid->twin_candidate->paranoid->buffers;
+            GSList *iter_self = paranoid->buffers;
             gboolean match = TRUE;
             while(match && iter_self) {
                 match = (rm_buffer_equal(paranoid->twin_candidate_buffer->data,
@@ -720,8 +726,8 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             return true;
         }
 
-        GList *a_iter = a->paranoid->buffers->head;
-        GList *b_iter = b->paranoid->buffers->head;
+        GSList *a_iter = a->paranoid->buffers;
+        GSList *b_iter = b->paranoid->buffers;
         guint bytes = 0;
         while(a_iter && b_iter) {
             if(!rm_buffer_equal(a_iter->data, b_iter->data)) {

@@ -61,8 +61,9 @@ typedef struct RmUint128 {
 
 typedef struct RmParanoid {
     /* the buffers containing file data byte-by-byte */
-    GQueue *buffers;
-    guint buffer_count;
+    GSList *buffers;
+    /* pointer to the last buffer (for efficient appends) */
+    GSList *buffer_tail;
 
     /* A SPOOKY hash is built for every paranoid digest.
      * So we can make rm_digest_hash() and rm_digest_hexstring() work.
@@ -76,7 +77,7 @@ typedef struct RmParanoid {
      */
     struct RmDigest *twin_candidate;
     /* Pointer to current buffer in twin_candidate->paranoid->buffers */
-    GList *twin_candidate_buffer;
+    GSList *twin_candidate_buffer;
 
     /* Optional: incoming queue for additional twin candidate RmDigest's */
     GAsyncQueue *incoming_twin_candidates;
