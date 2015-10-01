@@ -78,6 +78,7 @@ typedef struct RmParanoid {
     struct RmDigest *twin_candidate;
     /* Pointer to current buffer in twin_candidate->paranoid->buffers */
     GSList *twin_candidate_buffer;
+    GSList *rejects;
 
     /* Optional: incoming queue for additional twin candidate RmDigest's */
     GAsyncQueue *incoming_twin_candidates;

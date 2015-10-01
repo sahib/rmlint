@@ -387,6 +387,7 @@ void rm_digest_free(RmDigest *digest) {
         if(digest->paranoid->incoming_twin_candidates) {
             g_async_queue_unref(digest->paranoid->incoming_twin_candidates);
         }
+        g_slist_free(digest->paranoid->rejects);
         g_slice_free(RmParanoid, digest->paranoid);
         break;
     case RM_DIGEST_EXT:
@@ -575,11 +576,15 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
             }
             if(paranoid->twin_candidate && !match) {
-                /* reject the twin candidate */
+                /* reject the twin candidate, also add to rejects list to speed up rm_digest_equal() */
 #if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Rejected twin candidate %p for %p",
                              paranoid->twin_candidate, paranoid);
 #endif
+                if(!paranoid->shadow_hash) {
+                    /* we use the rejects file to speed up rm_digest_equal */
+                    paranoid->rejects = g_slist_prepend(paranoid->rejects, paranoid->twin_candidate);
+                }
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
 #if _RM_CHECKSUM_DEBUG
@@ -732,7 +737,12 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         if(a->paranoid->twin_candidate == b || b->paranoid->twin_candidate == a) {
             return true;
         }
-
+        /* check if already rejected */
+        if( g_slist_find(a->paranoid->rejects, b) || g_slist_find(b->paranoid->rejects, a) ) {
+            //rm_log_error_line("Optimisation sufficiently optimised");
+            return false;
+        }
+        /* all the "easy" ways failed... do manual check of all buffers */
         GSList *a_iter = a->paranoid->buffers;
         GSList *b_iter = b->paranoid->buffers;
         guint bytes = 0;
