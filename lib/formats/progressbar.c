@@ -43,7 +43,7 @@ typedef struct RmFmtHandlerProgress {
 
     char text_buf[1024];
     guint32 text_len;
-    guint32 update_counter;
+    GTimer *timer;
     guint32 update_interval;
     guint8 use_unicode_glyphs;
 
@@ -273,6 +273,10 @@ static void rm_fmt_prog(RmSession *session,
                         FILE *out,
                         RmFmtProgressState state) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
+    if (!self->timer) {
+        self->timer = g_timer_new();
+    }
+
     if(state == RM_PROGRESS_STATE_SUMMARY) {
         return;
     }
@@ -302,7 +306,7 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 10;
+            self->update_interval = 100; /* milliseconds */
         }
 
         self->last_unknown_pos = 0;
@@ -333,15 +337,15 @@ static void rm_fmt_prog(RmSession *session,
             rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
             fprintf(out, "\n");
         }
-        self->update_counter = 0;
+        g_timer_start(self->timer);
     }
 
     if(state == RM_PROGRESS_STATE_TRAVERSE && session->traverse_finished) {
-        self->update_counter = 0;
+        g_timer_start(self->timer);
     }
 
     if(state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished) {
-        self->update_counter = 0;
+        g_timer_start(self->timer);
     }
 
     if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
@@ -350,7 +354,8 @@ static void rm_fmt_prog(RmSession *session,
 
     self->last_state = state;
 
-    if(self->update_counter++ % self->update_interval == 0) {
+    if(g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+        g_timer_start(self->timer);
         int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
         rm_fmt_progress_format_text(session, self, text_width, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
@@ -386,7 +391,7 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .percent = 0.0f,
     .text_len = 0,
     .text_buf = {0},
-    .update_counter = 0,
+    .timer = NULL,
     .use_unicode_glyphs = true,
     .plain = true,
     .last_state = RM_PROGRESS_STATE_INIT};
