@@ -68,6 +68,7 @@ struct _RmMDS {
      *  self->disks
      */
     GMutex lock;
+    GCond cond;
 
     /* flag for whether threadpool is running */
     gboolean running;
@@ -154,31 +155,31 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
     return self;
 }
 
-/** @brief  Wait for a RmMDSDevice to finish all tasks
- **/
-static void rm_mds_device_finish(RmMDSDevice *self) {
-    g_mutex_lock(&self->lock);
-    {
-        while(self->ref_count > 0) {
-            g_cond_wait(&self->cond, &self->lock);
-        }
-    }
-    g_mutex_unlock(&self->lock);
-}
-
 /** @brief  Free mem allocated to a RmMDSDevice
  **/
 static void rm_mds_device_free(RmMDSDevice *self) {
-    rm_mds_device_finish(self);
-
     g_mutex_clear(&self->lock);
     g_cond_clear(&self->cond);
     g_slice_free(RmMDSDevice, self);
 }
 
+
 ///////////////////////////////////////
 //    RmMDSDevice Implementation   //
 ///////////////////////////////////////
+
+/** @brief Increase or decrease RmMDSDevice reference count; return resulting ref_count.
+ **/
+static gint rm_mds_device_ref(RmMDSDevice *device, const gint ref_count) {
+    gint result = 0;
+    g_mutex_lock(&device->lock);
+    {
+        device->ref_count += ref_count;
+        result = device->ref_count;
+    }
+    g_mutex_unlock(&device->lock);
+    return result;
+}
 
 
 /** @brief Mutex-protected task pusher
@@ -189,7 +190,6 @@ static void rm_mds_push_task(RmMDSDevice *device, RmMDSTask *task) {
     {
         device->unsorted_tasks =
                 g_slist_prepend(device->unsorted_tasks, task);
-        device->ref_count++;
         g_cond_signal(&device->cond);
     }
     g_mutex_unlock(&device->lock);
@@ -203,6 +203,7 @@ static gint rm_mds_compare(const RmMDSTask *a, const RmMDSTask *b,
     return result;
 }
 
+
 /** @brief RmMDSDevice worker thread
  **/
 static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
@@ -210,7 +211,6 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
      * After completing one pass of the device, returns self to the
      * mds->pool threadpool. */
     gint quota = mds->pass_quota;
-
     g_mutex_lock(&device->lock);
     {
         /* check for empty queues - if so then wait a little while before giving up */
@@ -265,9 +265,6 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
     while(quota > 0 && device->sorted_tasks) {
         RmMDSTask *task = device->sorted_tasks->data;
         device->sorted_tasks = g_slist_delete_link(device->sorted_tasks, device->sorted_tasks);
-        g_mutex_lock(&device->lock);
-        device->ref_count--;
-        g_mutex_unlock(&device->lock);
         if ( mds->func(task->task_data, mds->user_data) ) {
             /* task succeeded */
             rm_mds_task_free(task);
@@ -280,21 +277,14 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
         }
     }
 
-    if(g_atomic_int_get(&device->ref_count) > 0) {
+    if(rm_mds_device_ref(device, 0) > 0) {
         /* return self to pool for further processing */
         rm_util_thread_pool_push(mds->pool, device);
     } else {
-        /* signal to rm_mds_device_free() */
-        g_cond_signal(&device->cond);
+        /* free self and signal to rm_mds_free() */
+        rm_mds_device_free(device);
+        g_cond_signal(&mds->cond);
     }
-}
-
-/** @brief Increase or decrease RmMDSDevice reference count
- **/
-static void rm_mds_device_ref(RmMDSDevice *device, const gint ref_count) {
-    g_mutex_lock(&device->lock);
-    { device->ref_count += ref_count; }
-    g_mutex_unlock(&device->lock);
 }
 
 /** @brief Push a RmMDSDevice to the threadpool
@@ -352,6 +342,7 @@ RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_d
     RmMDS *self = g_slice_new0(RmMDS);
 
     g_mutex_init(&self->lock);
+    g_cond_init(&self->cond);
 
     self->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, self, max_threads);
 
@@ -362,8 +353,7 @@ RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_d
     }
 
     self->fake_disk = fake_disk;
-    self->disks = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL,
-                                        (GDestroyNotify)rm_mds_device_free);
+    self->disks = g_hash_table_new(g_direct_hash, g_direct_equal);
     self->running = FALSE;
 
     return self;
@@ -384,18 +374,12 @@ void rm_mds_configure(RmMDS *self,
 void rm_mds_finish(RmMDS *mds) {
     /* wait for any pending threads to finish */
     while(g_atomic_int_get(&mds->pending_tasks)) {
-        /* make this threadsafe for rare cases where new disks may
-         * be encountered and spawned on-the-fly via rm_mds_factory*/
+        /* wait for a device to finish */
         g_mutex_lock(&mds->lock);
-        GList *devices = g_hash_table_get_values(mds->disks);
-        g_mutex_unlock(&mds->lock);
-
-        while(devices) {
-            RmMDSDevice *device = devices->data;
-            rm_log_debug_line("Finishing device %lu", device->disk);
-            rm_mds_device_finish(device);
-            devices = g_list_delete_link(devices, devices);
+        {
+            g_cond_wait(&mds->cond, &mds->lock);
         }
+        g_mutex_unlock(&mds->lock);
     }
     mds->running = FALSE;
 }
@@ -409,6 +393,8 @@ void rm_mds_free(RmMDS *mds, gboolean free_mount_table) {
     if(free_mount_table && mds->mount_table) {
         rm_mounts_table_destroy(mds->mount_table);
     }
+    g_mutex_clear(&mds->lock);
+    g_cond_clear(&mds->cond);
     g_slice_free(RmMDS, mds);
 }
 
