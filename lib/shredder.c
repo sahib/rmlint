@@ -896,8 +896,8 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
 
     g_mutex_lock(&shred_group->lock);
     {
-        shred_group->has_pref |= file->is_prefd | file->hardlinks.has_prefd;
-        shred_group->has_npref |= (!file->is_prefd) | file->hardlinks.has_non_prefd;
+        shred_group->has_pref |= file->is_prefd || file->hardlinks.has_prefd;
+        shred_group->has_npref |= (!file->is_prefd) || file->hardlinks.has_non_prefd;
         shred_group->has_new |= file->is_new_or_has_new;
 
         if (shred_group->num_files == 0 && shred_group->session->cfg->unmatched_basenames) {

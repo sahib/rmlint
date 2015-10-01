@@ -957,13 +957,6 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-// static void rm_mounts_subvol_add(RmMountTable *self, dev_t subvol, dev_t parent) {
-// if(g_hash_table_contains(self->subvol_table, GUINT_TO_POINTER(parent))) {
-/* parent volume is a subvolume itself */
-
-//}
-//}
-
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {
     if(self == NULL) {
         return 0;
@@ -1025,22 +1018,6 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
     }
 
     return rm_mounts_get_disk_id(self, stat_buf.st_dev, path);
-}
-
-char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
-    if(self == NULL) {
-        return NULL;
-    }
-
-    RmPartitionInfo *part =
-        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    if(part) {
-        RmDiskInfo *disk =
-            g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
-        return disk->name;
-    } else {
-        return NULL;
-    }
 }
 
 bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
@@ -1186,31 +1163,35 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 bool rm_offsets_match(char *path1, char *path2) {
     bool result = FALSE;
     int fd1 = rm_sys_open(path1, O_RDONLY);
-    if(fd1 != -1) {
-        int fd2 = rm_sys_open(path2, O_RDONLY);
-        if(fd2 != -1) {
-            RmOff file1_offset_next = 0;
-            RmOff file2_offset_next = 0;
-            RmOff file_offset_current = 0;
-            while(!result &&
-                  (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
-                   rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
-                  file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
-                if(file1_offset_next == file_offset_current) {
-                    /* phew, we got to the end */
-                    result = TRUE;
-                    break;
-                }
-                file_offset_current = file1_offset_next;
-            }
-            rm_sys_close(fd2);
-        } else {
-            rm_log_info("Error opening %s in rm_offsets_match\n", path2);
-        }
-        rm_sys_close(fd1);
-    } else {
-        rm_log_info("Error opening %s in rm_offsets_match\n", path1);
+    if(fd1 == -1) {
+        rm_log_info_line("Error opening %s in rm_offsets_match", path1);
+        return FALSE;
     }
+
+    int fd2 = rm_sys_open(path2, O_RDONLY);
+    if(fd2 == -1) {
+        rm_log_info_line("Error opening %s in rm_offsets_match", path2);
+        rm_sys_close(fd1);
+        return FALSE;
+    }
+
+    RmOff file1_offset_next = 0;
+    RmOff file2_offset_next = 0;
+    RmOff file_offset_current = 0;
+    while(!result &&
+            (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
+            rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
+            file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
+        if(file1_offset_next == file_offset_current) {
+            /* phew, we got to the end */
+            result = TRUE;
+            break;
+        }
+        file_offset_current = file1_offset_next;
+    }
+
+    rm_sys_close(fd2);
+    rm_sys_close(fd1);
     return result;
 }
 
