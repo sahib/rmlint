@@ -323,12 +323,9 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         digest->bytes = 0;
         digest->paranoid = g_slice_new0(RmParanoid);
         digest->paranoid->incoming_twin_candidates = g_async_queue_new();
-        g_assert(use_shadow_hash);
         if(use_shadow_hash) {
             digest->paranoid->shadow_hash =
                 rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
-        } else {
-            digest->paranoid->shadow_hash = NULL;
         }
         break;
     default:
@@ -540,7 +537,6 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
         digest->bytes += buffer->len;
         rm_buffer_pool_signal_keeping(buffer);
 
-        g_assert(paranoid->shadow_hash);
         if(paranoid->shadow_hash) {
             rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);
         }
@@ -687,20 +683,30 @@ guint8 *rm_digest_steal(RmDigest *digest) {
 guint rm_digest_hash(RmDigest *digest) {
     guint8 *buf = NULL;
     gsize bytes = 0;
+    guint hash = 0;
 
     if(digest->type == RM_DIGEST_PARANOID) {
         if(digest->paranoid->shadow_hash) {
             buf = rm_digest_steal(digest->paranoid->shadow_hash);
             bytes = digest->paranoid->shadow_hash->bytes;
+        } else {
+            /* steal the first few bytes of the first buffer */
+            if (digest->paranoid->buffers) {
+                RmBuffer *buffer = digest->paranoid->buffers->data;
+                if(buffer->len >= sizeof(guint)) {
+                    hash = *(guint *)buffer->data;
+                    return hash;
+                }
+            }
         }
     } else {
         buf = rm_digest_steal(digest);
         bytes = digest->bytes;
     }
 
-    guint hash = 0;
     if(buf != NULL) {
-        hash = *(RmOff *)buf;
+        g_assert(bytes >= sizeof(guint));
+        hash = *(guint *)buf;
         g_slice_free1(bytes, buf);
     }
     return hash;
@@ -722,6 +728,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             /* buffers have been freed so we need to rely on shadow hash */
             return rm_digest_equal(a->paranoid->shadow_hash, b->paranoid->shadow_hash);
         }
+        /* check if pre-matched twins */
         if(a->paranoid->twin_candidate == b || b->paranoid->twin_candidate == a) {
             return true;
         }
