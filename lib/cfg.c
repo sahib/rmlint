@@ -50,6 +50,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->find_badlinks = true;
     cfg->find_hardlinked_dupes = true;
     cfg->build_fiemap = true;
+    cfg->crossdev = true;
 
     /* Misc options */
     strcpy(cfg->sort_criteria, "pm");

@@ -320,7 +320,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     clear_emptydir_flags = true; /* flag current dir as not empty */
                     rm_log_debug_line("Not descending into %s because max depth reached",
                                  p->fts_path);
-                } else if(cfg->crossdev && p->fts_dev != chp->fts_dev) {
+                } else if(!(cfg->crossdev) && p->fts_dev != chp->fts_dev) {
                     /* continuing into folder would cross file systems*/
                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
                     clear_emptydir_flags = true; /*flag current dir as not empty*/
