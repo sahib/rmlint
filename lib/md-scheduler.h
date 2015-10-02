@@ -149,6 +149,7 @@ void rm_mds_configure(RmMDS *self,
                       const RmMDSFunc func,
                       const gpointer user_data,
                       const gint pass_quota,
+                      const gint threads_per_disk,
                       RmMDSSortFunc prioritiser);
 
 /**

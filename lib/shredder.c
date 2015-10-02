@@ -1578,6 +1578,7 @@ void rm_shred_run(RmSession *session) {
                      (RmMDSFunc)rm_shred_process_file,
                      session,
                      session->cfg->sweep_count,
+                     session->cfg->threads_per_disk,
                      (RmMDSSortFunc)rm_mds_elevator_cmp);
 
     /* Create a pool for progress counting */

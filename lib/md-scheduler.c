@@ -76,8 +76,9 @@ struct _RmMDS {
     /* quota to limit number of tasks per pass of each device */
     gint pass_quota;
 
-    /* maximum number of threads */
+    /* maximum number of threads and threads per disk */
     gint max_threads;
+    gint threads_per_disk;
 
     /* pointer to user data to be passed to func */
     gpointer user_data;
@@ -113,6 +114,9 @@ typedef struct _RmMDSDevice {
     /* Reference count for self */
     gint ref_count;
 
+    /* Number of running threads for self */
+    gint threads;
+
     /* is disk rotational? */
     gboolean is_rotational;
 
@@ -145,6 +149,7 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
 
     self->mds = mds;
     self->ref_count = 0;
+    self->threads = 0;
     self->disk = disk;
 
     if (mds->fake_disk) {
@@ -184,6 +189,22 @@ static void rm_mds_push_task_impl(RmMDSDevice *device, RmMDSTask *task) {
     }
     g_mutex_unlock(&device->lock);
 }
+
+/** @brief Mutex-protected task popper
+ **/
+
+static RmMDSTask *rm_mds_pop_task(RmMDSDevice *device) {
+    RmMDSTask *task = NULL;
+    g_mutex_lock(&device->lock);
+    {
+        task = device->sorted_tasks->data;
+        device->sorted_tasks = g_slist_delete_link(device->sorted_tasks, device->sorted_tasks);
+    }
+    g_mutex_unlock(&device->lock);
+    return task;
+}
+
+
 
 /** @brief GCompareDataFunc wrapper for mds->prioritiser
  **/
@@ -253,8 +274,7 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
 
     /* process tasks from device->sorted_tasks */
     while(quota > 0 && device->sorted_tasks) {
-        RmMDSTask *task = device->sorted_tasks->data;
-        device->sorted_tasks = g_slist_delete_link(device->sorted_tasks, device->sorted_tasks);
+        RmMDSTask *task = rm_mds_pop_task(device);
         if ( mds->func(task->task_data, mds->user_data) ) {
             /* task succeeded */
             rm_mds_task_free(task);
@@ -272,24 +292,29 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
         rm_util_thread_pool_push(mds->pool, device);
     } else {
         /* free self and signal to rm_mds_free() */
-        rm_mds_device_free(device);
-        g_cond_signal(&mds->cond);
+        if (g_atomic_int_dec_and_test(&device->threads)) {
+            rm_mds_device_free(device);
+            g_cond_signal(&mds->cond);
+        }
     }
 }
 
 /** @brief Push a RmMDSDevice to the threadpool
  **/
 void rm_mds_device_start(_U  gpointer disk, RmMDSDevice *device, RmMDS *mds) {
-    rm_util_thread_pool_push(mds->pool, device);
+    g_assert(device->threads==0);
+    device->threads = mds->threads_per_disk;
+    for (int i=0; i < mds->threads_per_disk; ++i) {
+        rm_util_thread_pool_push(mds->pool, device);
+    }
 }
 
 /** @brief Push a RmMDSDevice to the threadpool
  **/
 void rm_mds_start(RmMDS *mds) {
-
-    mds->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, mds,
-            MIN((guint)mds->max_threads, g_hash_table_size(mds->disks)));
-
+    guint threads = MIN((guint)mds->max_threads, mds->threads_per_disk * g_hash_table_size(mds->disks));
+    g_assert(threads > 0);
+    mds->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, mds, threads);
 
     mds->running = TRUE;
     g_hash_table_foreach(mds->disks, (GHFunc)rm_mds_device_start, mds);
@@ -309,7 +334,7 @@ static RmMDSDevice *rm_mds_device_get_by_disk(RmMDS *mds, const dev_t disk) {
             result = rm_mds_device_new(mds, disk);
             g_hash_table_insert(mds->disks, GINT_TO_POINTER(disk), result);
             if(g_atomic_int_get(&mds->running) == TRUE) {
-                rm_util_thread_pool_push(mds->pool, result);
+                rm_mds_device_start(NULL, result, mds);
             }
         }
     }
@@ -346,10 +371,12 @@ void rm_mds_configure(RmMDS *self,
                       const RmMDSFunc func,
                       const gpointer user_data,
                       const gint pass_quota,
+                      const gint threads_per_disk,
                       RmMDSSortFunc prioritiser) {
     g_assert(self->running == FALSE);
     self->func = func;
     self->user_data = user_data;
+    self->threads_per_disk = threads_per_disk;
     self->pass_quota = (pass_quota>0) ? pass_quota : G_MAXINT;
     self->prioritiser = prioritiser;
 }

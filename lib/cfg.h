@@ -97,6 +97,7 @@ typedef struct RmCfg {
     RmOff minsize;
     RmOff maxsize;
     RmOff threads;
+    guint threads_per_disk;
     RmDigestType checksum_type;
 
     /* number of bytes to allocate to reading buffer during shredding */
