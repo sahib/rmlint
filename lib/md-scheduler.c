@@ -197,8 +197,10 @@ static RmMDSTask *rm_mds_pop_task(RmMDSDevice *device) {
     RmMDSTask *task = NULL;
     g_mutex_lock(&device->lock);
     {
-        task = device->sorted_tasks->data;
-        device->sorted_tasks = g_slist_delete_link(device->sorted_tasks, device->sorted_tasks);
+        if(device->sorted_tasks) {
+            task = device->sorted_tasks->data;
+            device->sorted_tasks = g_slist_delete_link(device->sorted_tasks, device->sorted_tasks);
+        }
     }
     g_mutex_unlock(&device->lock);
     return task;
@@ -256,8 +258,8 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
     g_mutex_unlock(&device->lock);
 
     /* process tasks from device->sorted_tasks */
-    while(quota > 0 && device->sorted_tasks) {
-        RmMDSTask *task = rm_mds_pop_task(device);
+    RmMDSTask *task = NULL;
+    while(quota > 0 && (task = rm_mds_pop_task(device)) ) {
         if ( mds->func(task->task_data, mds->user_data) ) {
             /* task succeeded */
             rm_mds_task_free(task);
