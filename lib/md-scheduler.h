@@ -64,14 +64,25 @@
  **/
 
 /**
- * @struct RmSheduler
+ * @struct RmMDS
  *
- * RmSheduler is an opaque data structure to represent a scheduling engine.
+ * RmMDS is an opaque data structure to represent a scheduling engine.
  * It should be created and destroyed via rm_mds_new() and
  * rm_mds_free().
  *
  **/
 typedef struct _RmMDS RmMDS;
+
+/**
+ * @struct RmMDSDevice
+ *
+ * RmMDSDevice is an opaque data structure to represent a disk/device
+ * on the scheduling engine.  The device carries on reference count for
+ * each file associated with it; it will destroy itself once it has
+ * no more references.
+ *
+ **/
+typedef struct _RmMDSDevice RmMDSDevice;
 
 /**
  * @struct RmTask
@@ -168,22 +179,22 @@ void rm_mds_free(RmMDS *mds, const gboolean free_mount_table);
 RmMountTable *rm_mds_get_mount_table(const RmMDS *mds);
 
 /**
- * @brief increase or decrease MDS reference count for the disk associated with a path
+ * @brief get pointer to the appropriate RmMDSDevice for a file
  *
  * @param mds Pointer to the MDS scheduler
  * @param path The file of folder path
- * @param ref_count The amount to increase/decrease reference count
+ * @param dev If known, the stat(1) device of the path;
  **/
-void rm_mds_ref_path(RmMDS *mds, const char *path, const gint ref_count);
+RmMDSDevice *rm_mds_device_get(RmMDS *mds, const char *path, dev_t dev);
 
 /**
- * @brief increase or decrease MDS reference count for a disk or dev
+ * @brief increase or decrease MDS reference count for a RmMDSDevice
  *
- * @param mds Pointer to the scheduler object
- * @param dev The dev or disk ID
+ * @param device Pointer to the RmMDSDevice
  * @param ref_count The amount to increase/decrease reference count
+ * @retval the resultant reference count for the device
  **/
-void rm_mds_ref_dev(RmMDS *mds, const dev_t dev, const gint ref_count);
+gint rm_mds_device_ref(RmMDSDevice *device, const gint ref_count);
 
 /**
  * @brief Push a new task to a RmMDS scheduler, based on file/folder path.
@@ -191,30 +202,16 @@ void rm_mds_ref_dev(RmMDS *mds, const dev_t dev, const gint ref_count);
  * The scheduler will look up the path's dev and disk.  If these are already known, it
  * is more efficient to use rm_mds_push_dev().
  *
- * @param mds Pointer to the MDS scheduler
- * @param path  The file of folder path
+ * @param device Pointer to the RmMDSDevice
  * @param offset Physical offset of file on dev (-1 triggers lookup)
+ * @param path Path to the file (used for offset lookup)
  * @param task_user_data Pointer to user data associated with the task.
  **/
-void rm_mds_push_task_by_path(RmMDS *mds,
-                              const char *path,
-                              gint64 offset,
-                              const gpointer task_data);
-
-/**
- * @brief Push a new task to a RmMDS scheduler, based on disk or dev ID.
- *
- * @param mds Pointer to the RmMDS scheduler object
- * @param dev The dev or disk ID
- * @param offset Physical offset of file on dev (-1 triggers lookup)
- * @param path Optional file path (required for lookup)
- * @param task_user_data Pointer to user data associated with the task.
- **/
-void rm_mds_push_task_by_dev(RmMDS *mds,
-                             const dev_t dev,
-                             gint64 offset,
-                             const char *path,
-                             const gpointer task_data);
+void rm_mds_push_task(RmMDSDevice *device,
+                      dev_t dev,
+                      gint64 offset,
+                      const char *path,
+                      const gpointer task_data);
 
 /**
  * @brief prioritiser function for basic elevator algorithm

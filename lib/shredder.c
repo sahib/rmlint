@@ -714,7 +714,9 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
     RmShredTag *tag = session->shredder;
     /* update device counters (unless this file was a bundled hardlink) */
     if(!file->hardlinks.hardlink_head) {
-        rm_mds_ref_dev(session->mds, file->disk, -1);
+        g_assert(file->disk);
+        rm_mds_device_ref(file->disk, -1);
+        file->disk = NULL;
         rm_shred_adjust_counters(tag, -1, -(gint64)(file->file_size - file->hash_offset));
 
         /* ShredGroup that was going nowhere */
@@ -741,7 +743,6 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
 /* Push file to scheduler queue.
  * */
 static void rm_shred_push_queue(RmFile *file) {
-    const RmSession *session = file->session;
     if(file->hash_offset == 0) {
         /* first-timer; lookup disk offset */
         if(file->session->cfg->build_fiemap &&
@@ -753,8 +754,7 @@ static void rm_shred_push_queue(RmFile *file) {
             file->disk_offset = file->inode;
         }
     }
-    rm_mds_push_task_by_dev(
-        session->mds, file->disk, file->disk_offset, NULL, file);
+    rm_mds_push_task(file->disk, file->dev, file->disk_offset, NULL, file);
 }
 
 //////////////////////////////////
@@ -1107,11 +1107,12 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
         }
     }
 
-    /* cfg->fake_pathindex_as_disk is for debugging/testing... */
-    file->disk = (session->cfg->fake_pathindex_as_disk) ? file->path_index : file->dev;
+    RM_DEFINE_PATH(file);
 
-    /* add reference for this file to the MDS scheduler */
-    rm_mds_ref_dev(session->mds, file->disk, 1);
+    /* add reference for this file to the MDS scheduler, and get pointer to its device */
+    file->disk = rm_mds_device_get(session->mds, file_path,
+                (session->cfg->fake_pathindex_as_disk) ? file->path_index : file->dev);
+    rm_mds_device_ref(file->disk, 1);
     rm_shred_adjust_counters(main, 1, (gint64)file->file_size - file->hash_offset);
 
     RmShredGroup *group = g_hash_table_lookup(session->tables->size_groups, file);
@@ -1132,7 +1133,6 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
     }
 
     if(HAS_CACHE(session)) {
-        RM_DEFINE_PATH(file);
         if(rm_trie_search(&session->cfg->file_trie, file_path)) {
             group->num_ext_cksums += 1;
             file->has_ext_cksum = 1;

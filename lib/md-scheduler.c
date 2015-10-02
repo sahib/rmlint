@@ -84,7 +84,7 @@ struct _RmMDS {
 
 };
 
-typedef struct RmMDSDevice {
+typedef struct _RmMDSDevice {
     /* Structure containing data associated with one Device worker thread */
 
     /* The RmMDS session parent */
@@ -168,24 +168,11 @@ static void rm_mds_device_free(RmMDSDevice *self) {
 //    RmMDSDevice Implementation   //
 ///////////////////////////////////////
 
-/** @brief Increase or decrease RmMDSDevice reference count; return resulting ref_count.
- **/
-static gint rm_mds_device_ref(RmMDSDevice *device, const gint ref_count) {
-    gint result = 0;
-    g_mutex_lock(&device->lock);
-    {
-        device->ref_count += ref_count;
-        result = device->ref_count;
-    }
-    g_mutex_unlock(&device->lock);
-    return result;
-}
-
 
 /** @brief Mutex-protected task pusher
  **/
 
-static void rm_mds_push_task(RmMDSDevice *device, RmMDSTask *task) {
+static void rm_mds_push_task_impl(RmMDSDevice *device, RmMDSTask *task) {
     g_mutex_lock(&device->lock);
     {
         device->unsorted_tasks =
@@ -215,7 +202,7 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
     {
         /* check for empty queues - if so then wait a little while before giving up */
         if(!device->sorted_tasks && !device->unsorted_tasks && device->ref_count > 0) {
-            /* timed wait for signal from rm_mds_push_task() */
+            /* timed wait for signal from rm_mds_push_task_impl() */
             gint64 end_time = g_get_monotonic_time() + MDS_EMPTYQUEUE_SLEEP_US;
             g_cond_wait_until(&device->cond, &device->lock, end_time);
         }
@@ -273,7 +260,7 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
             g_atomic_int_dec_and_test(&device->mds->pending_tasks);
         } else {
             /* task failed; push it back to device->unsorted_tasks */
-            rm_mds_push_task(device, task);
+            rm_mds_push_task_impl(device, task);
         }
     }
 
@@ -304,7 +291,7 @@ RmMountTable *rm_mds_get_mount_table(const RmMDS *mds) {
     return mds->mount_table;
 }
 
-static RmMDSDevice *rm_mds_device_get(RmMDS *mds, const dev_t disk) {
+static RmMDSDevice *rm_mds_device_get_by_disk(RmMDS *mds, const dev_t disk) {
     RmMDSDevice *result = NULL;
     g_mutex_lock(&mds->lock);
     {
@@ -320,18 +307,6 @@ static RmMDSDevice *rm_mds_device_get(RmMDS *mds, const dev_t disk) {
     }
     g_mutex_unlock(&mds->lock);
     return result;
-}
-
-static RmMDSDevice *rm_mds_device_get_by_path(RmMDS *mds, const char *path) {
-    dev_t disk = (mds->fake_disk) ? 0 :
-            rm_mounts_get_disk_id_by_path(mds->mount_table, path);
-    return rm_mds_device_get(mds, disk);
-}
-
-static RmMDSDevice *rm_mds_device_get_by_dev(RmMDS *mds, dev_t dev, const char *path) {
-    dev_t disk = (mds->fake_disk) ? dev :
-            rm_mounts_get_disk_id(mds->mount_table, dev, path);
-    return rm_mds_device_get(mds, disk);
 }
 
 //////////////////////////
@@ -398,46 +373,37 @@ void rm_mds_free(RmMDS *mds, gboolean free_mount_table) {
     g_slice_free(RmMDS, mds);
 }
 
-void rm_mds_ref_path(RmMDS *mds, const char *path, const gint ref_count) {
-    RmMDSDevice *device = rm_mds_device_get_by_path(mds, path);
-    rm_mds_device_ref(device, ref_count);
-}
-
-void rm_mds_ref_dev(RmMDS *mds, dev_t dev, const gint ref_count) {
-    RmMDSDevice *device = rm_mds_device_get_by_dev(mds, dev, NULL);
-    rm_mds_device_ref(device, ref_count);
-}
-
-static void rm_mds_push_new_task(RmMDSDevice *device, const dev_t dev, const guint64 offset,
-                             const gpointer task_user_data) {
-    g_atomic_int_inc(&device->mds->pending_tasks);
-
-    RmMDSTask *task = rm_mds_task_new(dev, offset, task_user_data);
-    rm_mds_push_task(device, task);
-}
-
-dev_t rm_mds_dev(const char *path) {
-    RmStat stat_buf;
-    if(rm_sys_stat(path, &stat_buf) == -1) {
-        return 0;
+gint rm_mds_device_ref(RmMDSDevice *device, const gint ref_count) {
+    gint result = 0;
+    g_mutex_lock(&device->lock);
+    {
+        device->ref_count += ref_count;
+        result = device->ref_count;
     }
-    return stat_buf.st_dev;
+    g_mutex_unlock(&device->lock);
+    return result;
 }
 
-void rm_mds_push_task_by_dev(RmMDS *mds, const dev_t dev, gint64 offset, const char *path,
-                             const gpointer task_user_data) {
-    bool is_rotational = (mds->fake_disk) ? (dev %2 == 0) :
-            !rm_mounts_is_nonrotational(mds->mount_table, dev);
-    if(offset == -1 && path && is_rotational) {
+RmMDSDevice *rm_mds_device_get(RmMDS *mds, const char *path, dev_t dev){
+    dev_t disk = 0;
+    if (dev == 0) {
+        dev = rm_mounts_get_disk_id_by_path(mds->mount_table, path);
+    }
+    if(mds->fake_disk) {
+        disk = dev;
+    } else {
+        disk = rm_mounts_get_disk_id(mds->mount_table, dev, path);
+    }
+    return rm_mds_device_get_by_disk(mds, disk);
+}
+
+void rm_mds_push_task(RmMDSDevice *device, dev_t dev, gint64 offset, const char *path, const gpointer task_data) {
+    g_atomic_int_inc(&device->mds->pending_tasks);
+    if(device->is_rotational && offset==-1) {
         offset = rm_offset_get_from_path(path, 0, NULL);
     }
-    RmMDSDevice *device = rm_mds_device_get_by_dev(mds, dev, path);
-    rm_mds_push_new_task(device, dev, offset, task_user_data);
-}
-
-void rm_mds_push_task_by_path(RmMDS *mds, const char *path, gint64 offset,
-                              const gpointer task_user_data) {
-    rm_mds_push_task_by_dev(mds, rm_mds_dev(path), offset, path, task_user_data);
+    RmMDSTask *task = rm_mds_task_new(dev, offset, task_data);
+    rm_mds_push_task_impl(device, task);
 }
 
 /**
