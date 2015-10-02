@@ -223,7 +223,7 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
     /* rm_mds_factory processes tasks from device->task_list.
      * After completing one pass of the device, returns self to the
      * mds->pool threadpool. */
-    gint quota = mds->pass_quota;
+    gint processed = 0;
     g_mutex_lock(&device->lock);
     {
         /* check for empty queues - if so then wait a little while before giving up */
@@ -259,12 +259,12 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
 
     /* process tasks from device->sorted_tasks */
     RmMDSTask *task = NULL;
-    while(quota > 0 && (task = rm_mds_pop_task(device)) ) {
+    while(processed < mds->pass_quota && (task = rm_mds_pop_task(device)) ) {
         if ( mds->func(task->task_data, mds->user_data) ) {
             /* task succeeded */
             rm_mds_task_free(task);
             /* decrement counters */
-            --quota;
+            ++processed;
             g_atomic_int_dec_and_test(&device->mds->pending_tasks);
         } else {
             /* task failed; push it back to device->unsorted_tasks */
@@ -274,6 +274,10 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
 
     if(rm_mds_device_ref(device, 0) > 0) {
         /* return self to pool for further processing */
+        if (processed == 0) {
+            /* stalled queue; chill for a bit */
+            g_usleep(10000);
+        }
         rm_util_thread_pool_push(mds->pool, device);
     } else {
         /* free self and signal to rm_mds_free() */
