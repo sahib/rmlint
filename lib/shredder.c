@@ -1571,9 +1571,9 @@ void rm_shred_run(RmSession *session) {
     g_mutex_init(&tag.hash_mem_mtx);
 
     g_mutex_init(&tag.lock);
-    gint threads = g_hash_table_size(session->mounts->disk_table);
     session->mds =
-        rm_mds_new(threads, session->mounts, session->cfg->fake_pathindex_as_disk);
+        rm_mds_new(session->cfg->threads, session->mounts,
+                   session->cfg->fake_pathindex_as_disk);
     rm_mds_configure(session->mds,
                      (RmMDSFunc)rm_shred_process_file,
                      session,

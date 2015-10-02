@@ -76,6 +76,9 @@ struct _RmMDS {
     /* quota to limit number of tasks per pass of each device */
     gint pass_quota;
 
+    /* maximum number of threads */
+    gint max_threads;
+
     /* pointer to user data to be passed to func */
     gpointer user_data;
 
@@ -283,6 +286,11 @@ void rm_mds_device_start(_U  gpointer disk, RmMDSDevice *device, RmMDS *mds) {
 /** @brief Push a RmMDSDevice to the threadpool
  **/
 void rm_mds_start(RmMDS *mds) {
+
+    mds->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, mds,
+            MIN((guint)mds->max_threads, g_hash_table_size(mds->disks)));
+
+
     mds->running = TRUE;
     g_hash_table_foreach(mds->disks, (GHFunc)rm_mds_device_start, mds);
 }
@@ -319,7 +327,7 @@ RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_d
     g_mutex_init(&self->lock);
     g_cond_init(&self->cond);
 
-    self->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, self, max_threads);
+    self->max_threads = max_threads;
 
     if (!mount_table && !fake_disk) {
         self->mount_table = rm_mounts_table_new(FALSE);
