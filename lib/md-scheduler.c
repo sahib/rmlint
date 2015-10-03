@@ -421,6 +421,11 @@ RmMDSDevice *rm_mds_device_get(RmMDS *mds, const char *path, dev_t dev){
     return rm_mds_device_get_by_disk(mds, disk);
 }
 
+gboolean rm_mds_device_is_rotational(RmMDSDevice *device) {
+    return device->is_rotational;
+}
+
+
 void rm_mds_push_task(RmMDSDevice *device, dev_t dev, gint64 offset, const char *path, const gpointer task_data) {
     g_atomic_int_inc(&device->mds->pending_tasks);
     if(device->is_rotational && offset==-1) {

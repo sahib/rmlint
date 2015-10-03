@@ -189,6 +189,11 @@ RmMountTable *rm_mds_get_mount_table(const RmMDS *mds);
 RmMDSDevice *rm_mds_device_get(RmMDS *mds, const char *path, dev_t dev);
 
 /**
+ * @brief return rotationality of device
+ * */
+gboolean rm_mds_device_is_rotational(RmMDSDevice *device);
+
+/**
  * @brief increase or decrease MDS reference count for a RmMDSDevice
  *
  * @param device Pointer to the RmMDSDevice

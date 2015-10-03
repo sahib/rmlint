@@ -1476,30 +1476,23 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         return 1;
     }
 
-    if(!rm_shred_can_process(file, tag)) {
-        return 0;
-    }
+    gint result=0;
 
     RM_DEFINE_PATH(file);
-
     while(file && rm_shred_can_process(file, tag)) {
         /* hash the next increment of the file */
+        result = 1;
         bool worth_waiting = FALSE;
         RmCfg *cfg = session->cfg;
         RmOff bytes_to_read = rm_shred_get_read_size(file, tag);
 
-        g_mutex_lock(&file->shred_group->lock);
-        {
-            worth_waiting =
-                (file->shred_group->next_offset != file->file_size) &&
-                (cfg->shred_always_wait ||
-                 (
-                     !rm_mounts_is_nonrotational(session->mounts, file->dev) &&
-                     rm_shred_get_read_size(file, tag) <
-                         RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
-                     (file->status == RM_FILE_STATE_NORMAL) && !cfg->shred_never_wait));
-        }
-        g_mutex_unlock(&file->shred_group->lock);
+        worth_waiting =
+            (file->shred_group->next_offset != file->file_size) &&
+            (cfg->shred_always_wait ||
+                ( !cfg->shred_never_wait &&
+                 rm_mds_device_is_rotational(file->disk) &&
+                 bytes_to_read < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
+                 (file->status == RM_FILE_STATE_NORMAL)));
 
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
@@ -1519,15 +1512,10 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
 
         if(worth_waiting) {
             /* some final checks if it's still worth waiting for the hash result */
-            g_mutex_lock(&file->shred_group->lock);
-            {
-                worth_waiting = worth_waiting && (file->shred_group->children);
-                if(file->digest->type == RM_DIGEST_PARANOID) {
-                    worth_waiting =
-                        worth_waiting && file->digest->paranoid->twin_candidate;
-                }
+            worth_waiting = worth_waiting && (file->shred_group->children);
+            if(file->digest->type == RM_DIGEST_PARANOID) {
+                worth_waiting = worth_waiting && file->digest->paranoid->twin_candidate;
             }
-            g_mutex_unlock(&file->shred_group->lock);
         }
 
         file->signal = worth_waiting ? rm_signal_new() : NULL;
@@ -1546,7 +1534,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             file = NULL;
         }
     }
-    return 1;
+    return result;
 }
 
 void rm_shred_run(RmSession *session) {
