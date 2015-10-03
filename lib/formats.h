@@ -263,7 +263,7 @@ bool rm_fmt_has_formatter(RmFmtTable *self, const char *name);
 typedef struct RmFmtHandlerProgress {
     RmFmtHandler parent;
 
-    char percent;
+    guint8 percent;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {

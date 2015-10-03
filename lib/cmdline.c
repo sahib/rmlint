@@ -1525,8 +1525,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
         rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks.");
-        ;
-        ;
         g_assert_not_reached();
     }
 failure:
