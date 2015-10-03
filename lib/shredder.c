@@ -1540,7 +1540,8 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
 void rm_shred_run(RmSession *session) {
     g_assert(session);
     g_assert(session->tables);
-    g_assert(session->mounts);
+
+    RmCfg *cfg = session->cfg;
 
     RmShredTag tag;
     tag.active_groups = 0;
@@ -1556,9 +1557,10 @@ void rm_shred_run(RmSession *session) {
     g_mutex_init(&tag.hash_mem_mtx);
 
     g_mutex_init(&tag.lock);
+
     session->mds =
         rm_mds_new(session->cfg->threads, session->mounts,
-                   session->cfg->fake_pathindex_as_disk);
+                   session->cfg->fake_pathindex_as_disk || !(cfg->list_mounts) );
     rm_mds_configure(session->mds,
                      (RmMDSFunc)rm_shred_process_file,
                      session,
@@ -1585,20 +1587,20 @@ void rm_shred_run(RmSession *session) {
      * paranoid mem */
     RmOff mem_used = RM_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
 
-    if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
+    if(cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
-        tag.paranoid_mem_alloc = MIN((gint64)session->cfg->paranoid_mem,
-                                     (gint64)session->cfg->total_mem - (gint64)mem_used -
-                                         (gint64)session->cfg->read_buffer_mem);
+        tag.paranoid_mem_alloc = MIN((gint64)cfg->paranoid_mem,
+                                     (gint64)cfg->total_mem - (gint64)mem_used -
+                                         (gint64)cfg->read_buffer_mem);
         tag.paranoid_mem_alloc = MAX(0, tag.paranoid_mem_alloc);
         rm_log_debug_line("Paranoid Mem: %" LLU, tag.paranoid_mem_alloc);
     } else {
-        session->cfg->read_buffer_mem =
-            MAX((gint64)session->cfg->read_buffer_mem,
-                (gint64)session->cfg->total_mem - (gint64)mem_used);
+        cfg->read_buffer_mem =
+            MAX((gint64)cfg->read_buffer_mem,
+                (gint64)cfg->total_mem - (gint64)mem_used);
         tag.paranoid_mem_alloc = 0;
     }
-    rm_log_debug_line("Read buffer Mem: %" LLU, session->cfg->read_buffer_mem);
+    rm_log_debug_line("Read buffer Mem: %" LLU, cfg->read_buffer_mem);
 
     /* Initialise hasher */
     /* Optimum buffer size based on /usr without dropping caches:
@@ -1615,12 +1617,12 @@ void rm_shred_run(RmSession *session) {
      * SHRED_PAGE_SIZE * 4 => 15.9 seconds
      * SHRED_PAGE_SIZE * 8 => 15.8 seconds */
 
-    tag.hasher = rm_hasher_new(session->cfg->checksum_type,
-                               session->cfg->threads,
-                               session->cfg->use_buffered_read,
+    tag.hasher = rm_hasher_new(cfg->checksum_type,
+                               cfg->threads,
+                               cfg->use_buffered_read,
                                SHRED_PAGE_SIZE * 4,
-                               session->cfg->read_buffer_mem,
-                               session->cfg->paranoid_mem,
+                               cfg->read_buffer_mem,
+                               cfg->paranoid_mem,
                                (RmHasherCallback)rm_shred_hash_callback,
                                &tag);
 
