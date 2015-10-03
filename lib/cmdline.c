@@ -707,7 +707,7 @@ static gboolean rm_cmd_parse_lint_types(_U const char *option_name,
     /* iterate over the separated option strings */
     for(int index = 0; lint_types[index]; index++) {
         char *lint_type = lint_types[index];
-        char sign = 0;
+        int sign = 0;
 
         if(*lint_type == '+') {
             sign = +1;

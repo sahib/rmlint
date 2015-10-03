@@ -378,7 +378,7 @@ void rm_mds_finish(RmMDS *mds) {
 
         while(devices) {
             RmMDSDevice *device = devices->data;
-            rm_log_debug_line("Finishing device %lu", device->disk);
+            rm_log_debug_line("Finishing device %lu", (long unsigned)device->disk);
             rm_mds_device_finish(device);
             devices = g_list_delete_link(devices, devices);
         }

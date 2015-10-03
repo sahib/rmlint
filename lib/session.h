@@ -114,7 +114,7 @@ typedef struct RmSession {
     int paranoia_count;
 
     /* count for -o and -O; initialized to -1 */
-    gint8 output_cnt[2];
+    int output_cnt[2];
 
     /* true if a cmdline parse error happened */
     bool cmdline_parse_error;
