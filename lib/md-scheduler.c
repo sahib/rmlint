@@ -234,25 +234,15 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
         }
 
         /* sort and merge task lists */
-        if (device->unsorted_tasks) {
-            device->unsorted_tasks = g_slist_sort_with_data(
-                    device->unsorted_tasks, (GCompareDataFunc)rm_mds_compare,
-                    (RmMDSSortFunc)mds->prioritiser);
-            if( !device->sorted_tasks ) {
-                device->sorted_tasks = device->unsorted_tasks;
-            } else if( rm_mds_compare(g_slist_last(device->unsorted_tasks)->data,
-                                      device->sorted_tasks->data,
-                                      (RmMDSSortFunc)mds->prioritiser) <= 0 ) {
-                /* lists are sorted and don't overlap; just join them */
-                device->sorted_tasks = g_slist_concat(device->unsorted_tasks, device->sorted_tasks);
-            } else {
-                /* join the lists and re-sort */
-                device->sorted_tasks = g_slist_concat(device->unsorted_tasks, device->sorted_tasks);
-                device->sorted_tasks = g_slist_sort_with_data(
-                        device->sorted_tasks, (GCompareDataFunc)rm_mds_compare,
-                        (RmMDSSortFunc)mds->prioritiser);
-            }
-            device->unsorted_tasks = NULL;
+        if(device->unsorted_tasks) {
+            device->sorted_tasks = g_slist_concat(
+                    g_slist_sort_with_data(
+                        device->unsorted_tasks,
+                        (GCompareDataFunc)rm_mds_compare,
+                        (RmMDSSortFunc)mds->prioritiser),
+                    device->sorted_tasks);
+
+                device->unsorted_tasks = NULL;
         }
     }
     g_mutex_unlock(&device->lock);
@@ -373,7 +363,6 @@ void rm_mds_finish(RmMDS *mds) {
     /* wait for any pending threads to finish */
     while(g_atomic_int_get(&mds->pending_tasks) > 0) {
         /* wait for a device to finish */
-        g_usleep(1000);
         g_mutex_lock(&mds->lock);
         {
             g_cond_wait(&mds->cond, &mds->lock);
