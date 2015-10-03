@@ -298,10 +298,6 @@ void rm_mds_start(RmMDS *mds) {
     g_hash_table_foreach(mds->disks, (GHFunc)rm_mds_device_start, mds);
 }
 
-RmMountTable *rm_mds_get_mount_table(const RmMDS *mds) {
-    return mds->mount_table;
-}
-
 static RmMDSDevice *rm_mds_device_get_by_disk(RmMDS *mds, const dev_t disk) {
     RmMDSDevice *result = NULL;
     g_mutex_lock(&mds->lock);

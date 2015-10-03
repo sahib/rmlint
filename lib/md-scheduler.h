@@ -173,13 +173,6 @@ void rm_mds_finish(RmMDS *mds);
 void rm_mds_free(RmMDS *mds, const gboolean free_mount_table);
 
 /**
- * @brief Return pointer to the RmMountTable of a MDS scheduler
- *
- * @param mds Pointer to the MDS scheduler
- **/
-RmMountTable *rm_mds_get_mount_table(const RmMDS *mds);
-
-/**
  * @brief get pointer to the appropriate RmMDSDevice for a file
  *
  * @param mds Pointer to the MDS scheduler
