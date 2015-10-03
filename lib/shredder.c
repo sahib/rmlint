@@ -1402,10 +1402,14 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
         } else {
             /* get the required target offset into group->next_offset, so
                 * that we can make the paranoid RmDigest the right size*/
-            if(group->next_offset == 0) {
-                (void)rm_shred_get_read_size(file, main);
+            g_mutex_lock(&group->lock);
+            {
+                if(group->next_offset == 0) {
+                    (void)rm_shred_get_read_size(file, main);
+                }
+                g_assert(group->hash_offset == file->hash_offset);
             }
-            g_assert(group->hash_offset == file->hash_offset);
+            g_mutex_unlock(&group->lock);
 
             if(file->is_symlink && cfg->see_symlinks) {
                 file->digest =
@@ -1416,18 +1420,22 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                              NEEDS_SHADOW_HASH(cfg));
                 if(group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD) {
                     /* send candidate twin(s) */
-                    if(group->children) {
-                        GList *children = g_hash_table_get_values(group->children);
-                        while(children) {
-                            RmShredGroup *child = children->data;
-                            rm_digest_send_match_candidate(file->digest, child->digest);
-                            children = g_list_delete_link(children, children);
+                    g_mutex_lock(&group->lock);
+                    {
+                        if(group->children) {
+                            GList *children = g_hash_table_get_values(group->children);
+                            while(children) {
+                                RmShredGroup *child = children->data;
+                                rm_digest_send_match_candidate(file->digest, child->digest);
+                                children = g_list_delete_link(children, children);
+                            }
                         }
-                    }
                     /* store a reference so the shred group knows where to send any future
                      * twin candidate digests */
                     group->in_progress_digests =
                         g_list_prepend(group->in_progress_digests, file->digest);
+                    }
+                    g_mutex_unlock(&group->lock);
                 }
             }
         }
@@ -1442,7 +1450,6 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                      0,
                                      NEEDS_SHADOW_HASH(cfg));
     }
-
     return can_process;
 }
 
@@ -1450,21 +1457,11 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
 
 /* call with device unlocked */
 static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
-    /* initialise hash (or recover progressive hash so far) */
-    if(!file->shred_group) {
-        return FALSE;
+    if (file->digest) {
+        return TRUE;
+    } else {
+        return rm_shred_reassign_checksum(main, file);
     }
-
-    bool result = TRUE;
-    g_mutex_lock(&file->shred_group->lock);
-    {
-        if(file->digest == NULL) {
-            g_assert(file->shred_group);
-            result = rm_shred_reassign_checksum(main, file);
-        }
-    }
-    g_mutex_unlock(&file->shred_group->lock);
-    return result;
 }
 
 /* Callback for RmMDS */
