@@ -58,6 +58,7 @@ struct _RmHasher {
     RmHasherCallback callback;
 
     GAsyncQueue *hashpipe_pool;
+    gint unalloc_hashpipes;
     GAsyncQueue *return_queue;
     GMutex lock;
     GCond cond;
@@ -86,6 +87,11 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
     } else {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
+        g_assert(hasher);
+        g_assert(hasher->callback);
+        g_assert(buffer->digest);
+        g_assert(hasher->session_user_data);
+        g_assert(task->task_user_data);
         hasher->callback(hasher, buffer->digest, hasher->session_user_data,
                          task->task_user_data);
 
@@ -367,11 +373,7 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
      * one thread because hashing must be done in order */
     self->hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);
     g_assert(num_threads > 0);
-    for(guint i = 0; i < num_threads; i++) {
-        g_async_queue_push(
-            self->hashpipe_pool,
-            rm_util_thread_pool_new((GFunc)rm_hasher_hashpipe_worker, self, 1));
-    }
+    self->unalloc_hashpipes = num_threads;
     return self;
 }
 
@@ -411,7 +413,22 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
                : rm_digest_new(hasher->digest_type, 0, 0, 0,
                                hasher->digest_type == RM_DIGEST_PARANOID);
 
-    self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
+    /* get a recycled hashpipe if available */
+    self->hashpipe = g_async_queue_try_pop(hasher->hashpipe_pool);
+    if (!self->hashpipe) {
+        if (g_atomic_int_get(&hasher->unalloc_hashpipes) > 0) {
+            /* create a new hashpipe */
+            g_atomic_int_dec_and_test(&hasher->unalloc_hashpipes);
+            self->hashpipe = rm_util_thread_pool_new(
+                    (GFunc)rm_hasher_hashpipe_worker, hasher, 1);
+
+        } else {
+            /* already at thread limit - wait for a hashpipe to come available */
+            self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
+        }
+    }
+    g_assert(self->hashpipe);
+
     self->task_user_data = task_user_data;
     return self;
 }
