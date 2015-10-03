@@ -301,8 +301,7 @@ void rm_mds_device_start(_U  gpointer disk, RmMDSDevice *device, RmMDS *mds) {
 /** @brief Push a RmMDSDevice to the threadpool
  **/
 void rm_mds_start(RmMDS *mds) {
-    guint threads = MIN((guint)mds->max_threads, mds->threads_per_disk * g_hash_table_size(mds->disks));
-    g_assert(threads > 0);
+    guint threads = MAX(1, MIN((guint)mds->max_threads, mds->threads_per_disk * g_hash_table_size(mds->disks)));
     mds->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, mds, threads);
 
     mds->running = TRUE;
