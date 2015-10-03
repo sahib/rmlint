@@ -38,7 +38,6 @@ typedef struct RmFmtHandlerProgress {
 
     /* user data */
     gdouble percent;
-    gdouble last_unknown_pos;
     RmOff total_lint_bytes;
 
     char text_buf[1024];
@@ -233,23 +232,32 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     /* true when we do not know when 100% is reached.
      * Show a moving something in this case.
      * */
-    bool is_unknown = self->percent > 1.1;
 
     rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_LEFT_BRACKET, RED);
+
+    bool is_unknown = self->percent > 1.1;
+    int time_offset = (int)(g_timer_elapsed(self->timer, NULL) * 100000) % 3;
 
     for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
             if(is_unknown) {
-                if((int)self->last_unknown_pos % 4 == i % 4) {
-                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_LOW,
-                                                   BLUE);
-                } else if((int)self->last_unknown_pos % 2 == i % 2) {
-                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_HIGH,
-                                                   YELLOW);
-                } else {
-                    rm_fmt_progressbar_print_glyph(out, session, self,
-                                                   PROGRESS_TICK_SPACE, GREEN);
-                }
+                static const int glyphs[3] = {
+                    PROGRESS_TICK_LOW,
+                    PROGRESS_TICK_HIGH,
+                    PROGRESS_TICK_SPACE
+                };
+                static const char *colors[3] = {
+                    BLUE,
+                    BLUE,
+                    YELLOW
+                };
+
+                int index = (i + time_offset) % 3;
+                rm_fmt_progressbar_print_glyph(
+                        out, session, self,
+                        glyphs[index],
+                        colors[index]
+                );
             } else {
                 const char *color = (self->percent > 1.01) ? BLUE : GREEN;
                 RmProgressBarGlyph glyph =
@@ -264,8 +272,6 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     }
 
     rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_RIGHT_BRACKET, RED);
-
-    self->last_unknown_pos = fmod(self->last_unknown_pos + 0.005, width - 2);
 }
 
 static void rm_fmt_prog(RmSession *session,
@@ -273,8 +279,12 @@ static void rm_fmt_prog(RmSession *session,
                         FILE *out,
                         RmFmtProgressState state) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
-    if (!self->timer) {
+
+    bool force_draw = false;
+
+    if (self->timer == NULL) {
         self->timer = g_timer_new();
+        force_draw = true;
     }
 
     if(state == RM_PROGRESS_STATE_SUMMARY) {
@@ -306,10 +316,9 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 100; /* milliseconds */
+            self->update_interval = 50; /* milliseconds */
         }
 
-        self->last_unknown_pos = 0;
         self->total_lint_bytes = 1;
 
         fprintf(out, "\e[?25l"); /* Hide the cursor */
@@ -338,14 +347,17 @@ static void rm_fmt_prog(RmSession *session,
             fprintf(out, "\n");
         }
         g_timer_start(self->timer);
+        force_draw = true;
     }
 
     if(state == RM_PROGRESS_STATE_TRAVERSE && session->traverse_finished) {
         g_timer_start(self->timer);
+        force_draw = true;
     }
 
     if(state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished) {
         g_timer_start(self->timer);
+        force_draw = true;
     }
 
     if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
@@ -354,9 +366,10 @@ static void rm_fmt_prog(RmSession *session,
 
     self->last_state = state;
 
-    if(g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+    if(force_draw || g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
         g_timer_start(self->timer);
         int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
+
         rm_fmt_progress_format_text(session, self, text_width, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
