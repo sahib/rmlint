@@ -69,6 +69,7 @@ typedef struct RmCfg {
     gboolean use_buffered_read;
     gboolean fake_fiemap;
     gboolean progress_enabled;
+    gboolean list_mounts;
 
     int permissions;
 

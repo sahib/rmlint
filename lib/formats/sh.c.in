@@ -73,7 +73,7 @@ static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _U R
 }
 
 static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
-    if(!self->allow_clone) {
+    if(!self->allow_clone || self->session->mounts == NULL) {
         return false;
     }
 
@@ -100,7 +100,11 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
 }
 
 static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
-    if(!self->allow_reflink || !rm_mounts_can_reflink(self->session->mounts, self->last_original->dev, file->dev)) {
+    if(!self->allow_reflink || self->session->mounts == NULL) {
+        return false;
+    }
+
+    if(!rm_mounts_can_reflink(self->session->mounts, self->last_original->dev, file->dev)) {
         return false;
     }
 
