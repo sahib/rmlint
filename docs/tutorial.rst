@@ -262,7 +262,8 @@ formatters and their config options:
     The script can be executed (it is already ``chmod +x``'d by ``rmlint``).
     By default it will ask you if you really want to proceed. If you 
     do not want that you can pass the ``-d``. Addionally it will 
-    delete itself after it ran, except you passed the ``-x`` switch.
+    delete itself after it ran, except you pass the ``-x`` switch to
+    the generated ``sh`` script file.
 
     It is enabled by default and writes to ``rmlint.sh``. 
 

@@ -371,7 +371,7 @@ void rm_mds_configure(RmMDS *self,
 
 void rm_mds_finish(RmMDS *mds) {
     /* wait for any pending threads to finish */
-    while(g_atomic_int_get(&mds->pending_tasks)) {
+    while(g_atomic_int_get(&mds->pending_tasks) > 0) {
         /* wait for a device to finish */
         g_usleep(1000);
         g_mutex_lock(&mds->lock);
