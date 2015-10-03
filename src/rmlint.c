@@ -132,7 +132,7 @@ int main(int argc, const char **argv) {
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
 
-#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     /* Very old glib. Debian, Im looking at you. */
     g_type_init();
 #endif
