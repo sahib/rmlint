@@ -14,6 +14,8 @@ makedepends=('git' 'scons' 'python-sphinx')
 conflicts=("${_pkgname}")
 provides=("$_pkgname")
 source=("$pkgname"::"git+https://github.com/sahib/${_pkgname}.git")
+optdepends=('pygobject-devel: for the graphical user interface'
+            'gtk3: for the graphical user interface')
 md5sums=('SKIP')
  
 pkgver() {
