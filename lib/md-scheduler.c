@@ -235,25 +235,15 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
         }
 
         /* sort and merge task lists */
-        if (device->unsorted_tasks) {
-            device->unsorted_tasks = g_slist_sort_with_data(
-                    device->unsorted_tasks, (GCompareDataFunc)rm_mds_compare,
-                    (RmMDSSortFunc)mds->prioritiser);
-            if( !device->sorted_tasks ) {
-                device->sorted_tasks = device->unsorted_tasks;
-            } else if( rm_mds_compare(g_slist_last(device->unsorted_tasks)->data,
-                                      device->sorted_tasks->data,
-                                      (RmMDSSortFunc)mds->prioritiser) <= 0 ) {
-                /* lists are sorted and don't overlap; just join them */
-                device->sorted_tasks = g_slist_concat(device->unsorted_tasks, device->sorted_tasks);
-            } else {
-                /* join the lists and re-sort */
-                device->sorted_tasks = g_slist_concat(device->unsorted_tasks, device->sorted_tasks);
-                device->sorted_tasks = g_slist_sort_with_data(
-                        device->sorted_tasks, (GCompareDataFunc)rm_mds_compare,
-                        (RmMDSSortFunc)mds->prioritiser);
-            }
-            device->unsorted_tasks = NULL;
+        if(device->unsorted_tasks) {
+            device->sorted_tasks = g_slist_concat(
+                    g_slist_sort_with_data(
+                        device->unsorted_tasks,
+                        (GCompareDataFunc)rm_mds_compare,
+                        (RmMDSSortFunc)mds->prioritiser),
+                    device->sorted_tasks);
+
+                device->unsorted_tasks = NULL;
         }
     }
     g_mutex_unlock(&device->lock);
@@ -307,10 +297,6 @@ void rm_mds_start(RmMDS *mds) {
 
     mds->running = TRUE;
     g_hash_table_foreach(mds->disks, (GHFunc)rm_mds_device_start, mds);
-}
-
-RmMountTable *rm_mds_get_mount_table(const RmMDS *mds) {
-    return mds->mount_table;
 }
 
 static RmMDSDevice *rm_mds_device_get_by_disk(RmMDS *mds, const dev_t disk) {
@@ -429,6 +415,11 @@ RmMDSDevice *rm_mds_device_get(RmMDS *mds, const char *path, dev_t dev){
     }
     return rm_mds_device_get_by_disk(mds, disk);
 }
+
+gboolean rm_mds_device_is_rotational(RmMDSDevice *device) {
+    return device->is_rotational;
+}
+
 
 void rm_mds_push_task(RmMDSDevice *device, dev_t dev, gint64 offset, const char *path, const gpointer task_data) {
     g_atomic_int_inc(&device->mds->pending_tasks);

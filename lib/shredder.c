@@ -1477,30 +1477,23 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         return 1;
     }
 
-    if(!rm_shred_can_process(file, tag)) {
-        return 0;
-    }
+    gint result=0;
 
     RM_DEFINE_PATH(file);
-
     while(file && rm_shred_can_process(file, tag)) {
         /* hash the next increment of the file */
+        result = 1;
         bool worth_waiting = FALSE;
         RmCfg *cfg = session->cfg;
         RmOff bytes_to_read = rm_shred_get_read_size(file, tag);
 
-        g_mutex_lock(&file->shred_group->lock);
-        {
-            worth_waiting =
-                (file->shred_group->next_offset != file->file_size) &&
-                (cfg->shred_always_wait ||
-                 (
-                     !rm_mounts_is_nonrotational(session->mounts, file->dev) &&
-                     rm_shred_get_read_size(file, tag) <
-                         RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
-                     (file->status == RM_FILE_STATE_NORMAL) && !cfg->shred_never_wait));
-        }
-        g_mutex_unlock(&file->shred_group->lock);
+        worth_waiting =
+            (file->shred_group->next_offset != file->file_size) &&
+            (cfg->shred_always_wait ||
+                ( !cfg->shred_never_wait &&
+                 rm_mds_device_is_rotational(file->disk) &&
+                 bytes_to_read < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
+                 (file->status == RM_FILE_STATE_NORMAL)));
 
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
@@ -1520,15 +1513,10 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
 
         if(worth_waiting) {
             /* some final checks if it's still worth waiting for the hash result */
-            g_mutex_lock(&file->shred_group->lock);
-            {
-                worth_waiting = worth_waiting && (file->shred_group->children);
-                if(file->digest->type == RM_DIGEST_PARANOID) {
-                    worth_waiting =
-                        worth_waiting && file->digest->paranoid->twin_candidate;
-                }
+            worth_waiting = worth_waiting && (file->shred_group->children);
+            if(file->digest->type == RM_DIGEST_PARANOID) {
+                worth_waiting = worth_waiting && file->digest->paranoid->twin_candidate;
             }
-            g_mutex_unlock(&file->shred_group->lock);
         }
 
         file->signal = worth_waiting ? rm_signal_new() : NULL;
@@ -1547,13 +1535,14 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             file = NULL;
         }
     }
-    return 1;
+    return result;
 }
 
 void rm_shred_run(RmSession *session) {
     g_assert(session);
     g_assert(session->tables);
-    g_assert(session->mounts);
+
+    RmCfg *cfg = session->cfg;
 
     RmShredTag tag;
     tag.active_groups = 0;
@@ -1569,9 +1558,10 @@ void rm_shred_run(RmSession *session) {
     g_mutex_init(&tag.hash_mem_mtx);
 
     g_mutex_init(&tag.lock);
+
     session->mds =
         rm_mds_new(session->cfg->threads, session->mounts,
-                   session->cfg->fake_pathindex_as_disk);
+                   session->cfg->fake_pathindex_as_disk || !(cfg->list_mounts) );
     rm_mds_configure(session->mds,
                      (RmMDSFunc)rm_shred_process_file,
                      session,
@@ -1598,20 +1588,20 @@ void rm_shred_run(RmSession *session) {
      * paranoid mem */
     RmOff mem_used = RM_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
 
-    if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
+    if(cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
-        tag.paranoid_mem_alloc = MIN((gint64)session->cfg->paranoid_mem,
-                                     (gint64)session->cfg->total_mem - (gint64)mem_used -
-                                         (gint64)session->cfg->read_buffer_mem);
+        tag.paranoid_mem_alloc = MIN((gint64)cfg->paranoid_mem,
+                                     (gint64)cfg->total_mem - (gint64)mem_used -
+                                         (gint64)cfg->read_buffer_mem);
         tag.paranoid_mem_alloc = MAX(0, tag.paranoid_mem_alloc);
         rm_log_debug_line("Paranoid Mem: %" LLU, tag.paranoid_mem_alloc);
     } else {
-        session->cfg->read_buffer_mem =
-            MAX((gint64)session->cfg->read_buffer_mem,
-                (gint64)session->cfg->total_mem - (gint64)mem_used);
+        cfg->read_buffer_mem =
+            MAX((gint64)cfg->read_buffer_mem,
+                (gint64)cfg->total_mem - (gint64)mem_used);
         tag.paranoid_mem_alloc = 0;
     }
-    rm_log_debug_line("Read buffer Mem: %" LLU, session->cfg->read_buffer_mem);
+    rm_log_debug_line("Read buffer Mem: %" LLU, cfg->read_buffer_mem);
 
     /* Initialise hasher */
     /* Optimum buffer size based on /usr without dropping caches:
@@ -1628,12 +1618,12 @@ void rm_shred_run(RmSession *session) {
      * SHRED_PAGE_SIZE * 4 => 15.9 seconds
      * SHRED_PAGE_SIZE * 8 => 15.8 seconds */
 
-    tag.hasher = rm_hasher_new(session->cfg->checksum_type,
-                               session->cfg->threads,
-                               session->cfg->use_buffered_read,
+    tag.hasher = rm_hasher_new(cfg->checksum_type,
+                               cfg->threads,
+                               cfg->use_buffered_read,
                                SHRED_PAGE_SIZE * 4,
-                               session->cfg->read_buffer_mem,
-                               session->cfg->paranoid_mem,
+                               cfg->read_buffer_mem,
+                               cfg->paranoid_mem,
                                (RmHasherCallback)rm_shred_hash_callback,
                                &tag);
 

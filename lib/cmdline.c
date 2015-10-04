@@ -1414,6 +1414,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"fake-fiemap"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_fiemap            , "Create faked fiemap data for all files"                      , NULL}   ,
         {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
         {"shred-never-wait"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_never_wait       , "Never waits for file increment to finish hashing"            , NULL}   ,
+        {"no-mount-table"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->list_mounts            , "Do not try to optimize by listing mounted volumes"           , NULL}   ,
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
 
@@ -1564,10 +1565,13 @@ int rm_cmd_main(RmSession *session) {
     }
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
-    session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
+
+    if(session->cfg->list_mounts) {
+        session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
+    }
+
     if(session->mounts == NULL) {
-        exit_state = EXIT_FAILURE;
-        goto failure;
+        rm_log_debug_line("No mount table created.");
     }
 
     rm_traverse_tree(session);
@@ -1618,6 +1622,5 @@ int rm_cmd_main(RmSession *session) {
         exit_state = EXIT_FAILURE;
     }
 
-failure:
     return exit_state;
 }

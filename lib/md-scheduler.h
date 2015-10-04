@@ -181,13 +181,6 @@ void rm_mds_finish(RmMDS *mds);
 void rm_mds_free(RmMDS *mds, const gboolean free_mount_table);
 
 /**
- * @brief Return pointer to the RmMountTable of a MDS scheduler
- *
- * @param mds Pointer to the MDS scheduler
- **/
-RmMountTable *rm_mds_get_mount_table(const RmMDS *mds);
-
-/**
  * @brief get pointer to the appropriate RmMDSDevice for a file
  *
  * @param mds Pointer to the MDS scheduler
@@ -195,6 +188,11 @@ RmMountTable *rm_mds_get_mount_table(const RmMDS *mds);
  * @param dev If known, the stat(1) device of the path;
  **/
 RmMDSDevice *rm_mds_device_get(RmMDS *mds, const char *path, dev_t dev);
+
+/**
+ * @brief return rotationality of device
+ * */
+gboolean rm_mds_device_is_rotational(RmMDSDevice *device);
 
 /**
  * @brief increase or decrease MDS reference count for a RmMDSDevice

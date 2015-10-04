@@ -1021,7 +1021,9 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
 }
 
 bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
-    g_assert(self);
+    if(self == NULL) {
+        return false;
+    }
 
     return g_hash_table_contains(self->evilfs_table, GUINT_TO_POINTER(to_check));
 }
