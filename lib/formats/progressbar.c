@@ -40,6 +40,9 @@ typedef struct RmFmtHandlerProgress {
     gdouble percent;
     RmOff total_lint_bytes;
 
+    /* Colorstripe offset of the progressbar */
+    int stripe_offset;
+
     char text_buf[1024];
     guint32 text_len;
     GTimer *timer;
@@ -236,7 +239,9 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_LEFT_BRACKET, RED);
 
     bool is_unknown = self->percent > 1.1;
-    int time_offset = (int)(g_timer_elapsed(self->timer, NULL) * 100000) % 3;
+    if(g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+        self->stripe_offset++;
+    }
 
     for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
@@ -249,10 +254,10 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
                 static const char *colors[3] = {
                     BLUE,
                     BLUE,
-                    YELLOW
+                    GREEN,
                 };
 
-                int index = (i + time_offset) % 3;
+                int index = (i + self->stripe_offset) % 3;
                 rm_fmt_progressbar_print_glyph(
                         out, session, self,
                         glyphs[index],
@@ -367,7 +372,6 @@ static void rm_fmt_prog(RmSession *session,
     self->last_state = state;
 
     if(force_draw || g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
-        g_timer_start(self->timer);
         int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
 
         rm_fmt_progress_format_text(session, self, text_width, out);
@@ -380,6 +384,7 @@ static void rm_fmt_prog(RmSession *session,
         rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
         rm_fmt_progress_print_text(self, text_width, out);
         fprintf(out, "%s\r", MAYBE_RESET(out, session));
+        g_timer_start(self->timer);
     }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
@@ -407,6 +412,7 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .timer = NULL,
     .use_unicode_glyphs = true,
     .plain = true,
+    .stripe_offset = 0,
     .last_state = RM_PROGRESS_STATE_INIT};
 
 RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *)&PROGRESS_HANDLER_IMPL;
