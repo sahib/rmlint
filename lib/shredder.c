@@ -1468,9 +1468,10 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
 static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
 
-    if(session->aborted || file->shred_group->has_only_ext_cksums) {
-        if (session->aborted) {
+    if(rm_session_was_aborted(session) || file->shred_group->has_only_ext_cksums) {
+        if(rm_session_was_aborted(session)) {
             file->status = RM_FILE_STATE_IGNORE;
+            rm_mds_abort(session->mds);
         }
         rm_shred_sift(file);
         return 1;
@@ -1641,7 +1642,6 @@ void rm_shred_run(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
     rm_mds_start(session->mds);
-
 
     /* should complete shred session and then free: */
     rm_mds_free(session->mds, FALSE);

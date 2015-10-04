@@ -86,6 +86,7 @@ struct _RmMDS {
     /* number of pending tasks */
     guint pending_tasks;
 
+    volatile int aborted;
 };
 
 typedef struct _RmMDSDevice {
@@ -355,6 +356,16 @@ RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_d
     return self;
 }
 
+void rm_mds_abort(RmMDS *mds) {
+    g_mutex_lock(&mds->lock); {
+        g_atomic_int_set(&mds->aborted, 1);
+
+        /* Make sure rm_mds_finish() wakes up */
+        g_cond_signal(&mds->cond);
+    }
+    g_mutex_unlock(&mds->lock);
+}
+
 void rm_mds_configure(RmMDS *self,
                       const RmMDSFunc func,
                       const gpointer user_data,
@@ -371,11 +382,9 @@ void rm_mds_configure(RmMDS *self,
 
 void rm_mds_finish(RmMDS *mds) {
     /* wait for any pending threads to finish */
-    while(g_atomic_int_get(&mds->pending_tasks) > 0) {
+    while(g_atomic_int_get(&mds->pending_tasks) > 0 && g_atomic_int_get(&mds->aborted) == 0) {
         /* wait for a device to finish */
-        g_usleep(1000);
-        g_mutex_lock(&mds->lock);
-        {
+        g_mutex_lock(&mds->lock); {
             g_cond_wait(&mds->cond, &mds->lock);
         }
         g_mutex_unlock(&mds->lock);
