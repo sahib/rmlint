@@ -36,23 +36,25 @@ typedef struct RmFmtHandlerProgress {
     /* must be first */
     RmFmtHandler parent;
 
-    /* user data */
+    /* Current progress value */
     gdouble percent;
-    RmOff total_lint_bytes;
 
     /* Colorstripe offset of the progressbar */
     int stripe_offset;
 
+    /* Text printed on the right side */
     char text_buf[1024];
     guint32 text_len;
-    GTimer *timer;
+
+    /* Config keys: */
     guint32 update_interval;
     guint8 use_unicode_glyphs;
-
     bool plain;
 
+    /* Bookkeeping */
     RmFmtProgressState last_state;
     struct winsize terminal;
+    GTimer *timer;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
@@ -73,6 +75,11 @@ static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
 
 static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self,
                                         int max_len, FILE *out) {
+
+    /* This is very ugly, but more or less required since we need to translate
+     * the text to different languages and still determine the right textlength.
+     */
+
     char num_buf[32] = {0};
     char preproc_buf[128] = {0};
     memset(num_buf, 0, sizeof(num_buf));
@@ -129,7 +136,9 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
     /* Support unicode messages - tranlsated text might contain some. */
     self->text_len = g_utf8_strlen(self->text_buf, self->text_len);
 
-    /* Get rid of colors */
+    /* Get rid of colors to get the correct length of the text. This is
+     * necessary to correctly guess the length of the displayed text in cells.
+     */
     int text_iter = 0;
     for(char *iter = &self->text_buf[0]; *iter; iter++) {
         if(*iter == '\x1b') {
@@ -324,8 +333,6 @@ static void rm_fmt_prog(RmSession *session,
             self->update_interval = 50; /* milliseconds */
         }
 
-        self->total_lint_bytes = 1;
-
         fprintf(out, "\e[?25l"); /* Hide the cursor */
         fflush(out);
         return;
@@ -338,11 +345,6 @@ static void rm_fmt_prog(RmSession *session,
         if(rm_session_was_aborted(session)) {
             return;
         }
-    }
-
-    if(state == RM_PROGRESS_STATE_SHREDDER) {
-        self->total_lint_bytes =
-            MAX(self->total_lint_bytes, session->shred_bytes_remaining);
     }
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
@@ -365,13 +367,12 @@ static void rm_fmt_prog(RmSession *session,
         force_draw = true;
     }
 
-    if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
-        // rm_log_warning_line(_("Cannot figure out terminal width."));
-    }
-
+    /* Try to get terminal width, might fail on some terminals. */
+    ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
     self->last_state = state;
 
     if(force_draw || g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+        /* Max. 70% (-1 char) are allowed for the text */
         int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
 
         rm_fmt_progress_format_text(session, self, text_width, out);
