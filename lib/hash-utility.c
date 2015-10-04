@@ -173,10 +173,11 @@ int rm_hasher_main(int argc, const char **argv) {
     if(tag.paths == NULL) {
         /* read paths from stdin */
         char path_buf[PATH_MAX];
+        char *tokbuf = NULL;
         GPtrArray *paths = g_ptr_array_new();
 
         while(fgets(path_buf, PATH_MAX, stdin)) {
-            char *abs_path = realpath(strtok(path_buf, "\n"), NULL);
+            char *abs_path = realpath(strtok_r(path_buf, "\n", &tokbuf), NULL);
             g_ptr_array_add(paths, abs_path);
         }
 

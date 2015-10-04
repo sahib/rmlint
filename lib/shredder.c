@@ -1483,11 +1483,10 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     while(file && rm_shred_can_process(file, tag)) {
         /* hash the next increment of the file */
         result = 1;
-        bool worth_waiting = FALSE;
         RmCfg *cfg = session->cfg;
         RmOff bytes_to_read = rm_shred_get_read_size(file, tag);
 
-        worth_waiting =
+        bool worth_waiting =
             (file->shred_group->next_offset != file->file_size) &&
             (cfg->shred_always_wait ||
                 ( !cfg->shred_never_wait &&

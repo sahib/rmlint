@@ -463,10 +463,11 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
 static int rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd, int index) {
     int paths_added = 0;
     char path_buf[PATH_MAX];
+    char *tokbuf = NULL;
 
     while(fgets(path_buf, PATH_MAX, stdin)) {
         paths_added += rm_cmd_add_path(session, is_prefd, index + paths_added,
-                                       strtok(path_buf, "\n"));
+                                       strtok_r(path_buf, "\n", &tokbuf));
     }
 
     return paths_added;
