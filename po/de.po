@@ -27,7 +27,7 @@ msgstr "Wurde nochmal unterbrochen, mache sofort Schluss."
 #: src/rmlint.c:82
 #, c-format
 msgid "Aborting due to a fatal error. (signal received: %s)"
-msgstr "Abbruch aufgrund eines fatalen Fehlers (exaktes signal: %s)"
+msgstr "Abbruch aufgrund eines fatalen Fehlers (exaktes Signal: %s)"
 
 #: src/rmlint.c:84
 msgid "Please file a bug report (See rmlint -h)"
@@ -65,7 +65,7 @@ msgstr "Eine %s%s%s Datei wurde nach %s%s%s geschrieben.\n"
 
 #: lib/formats/pretty.c:33
 msgid "Bad symlink(s)"
-msgstr "Falsche symlink(s)"
+msgstr "Falsche Symlink(s)"
 
 #: lib/formats/pretty.c:34
 msgid "Empty dir(s)"
@@ -126,7 +126,7 @@ msgstr "fand"
 
 #: lib/formats/progressbar.c:96
 msgid "other lint"
-msgstr "mal andereren Unsinn"
+msgstr "mal anderen Unsinn"
 
 #: lib/formats/progressbar.c:106
 msgid "Matching"
@@ -142,7 +142,7 @@ msgstr "Originalen"
 
 #: lib/formats/progressbar.c:110
 msgid "to scan in"
-msgstr "zum scannen in"
+msgstr "zum Scannen in"
 
 #: lib/formats/progressbar.c:111
 msgid "files"
@@ -192,7 +192,7 @@ msgstr "Kann Verzeichnis %s nicht lesen: %s"
 #: lib/traverse.c:357
 #, c-format
 msgid "error %d in fts_read for %s (skipping)"
-msgstr "Fehler #%d in fts_read für %s (überspringe)"
+msgstr "Fehler #%d in fts_read für %s (Überspringe...)"
 
 #: lib/traverse.c:387
 #, c-format
@@ -223,7 +223,7 @@ msgstr "Kein valider JSON Cache. (u.a. weil kein [] vorhanden)"
 #: lib/replay.c:150 lib/cmdline.c:731
 #, c-format
 msgid "lint type '%s' not recognised"
-msgstr "lint type \"%s\" nicht erkannt"
+msgstr "Typ \"%s\" nicht erkannt"
 
 #: lib/replay.c:173
 #, c-format
@@ -247,7 +247,7 @@ msgstr "Bitte kompilieren Sie `rmlint` entsprechend neu."
 #, fuzzy, c-format
 msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
 msgstr ""
-"Irgendwas lief falsch beim lesen von %s; habe %d bytes erwartet, bekam %d. "
+"Irgendwas lief falsch beim Lesen von %s; habe %d Bytes erwartet, bekam %d. "
 "Datei wird ignoriert."
 
 #: lib/cmdline.c:79
@@ -371,12 +371,12 @@ msgstr "Kein Format (format:key[=val]) gegeben in '%s'"
 #: lib/cmdline.c:522
 #, fuzzy, c-format
 msgid "Missing key (format:key[=val]) in '%s'"
-msgstr "Fehlender key (format:key[=val]) in '%s'"
+msgstr "Fehlender Key (format:key[=val]) in '%s'"
 
 #: lib/cmdline.c:537
 #, fuzzy, c-format
 msgid "Invalid key `%s' for formatter `%s'"
-msgstr "Ungültiger Configschlüssel `%s` für den Formatter `%s`"
+msgstr "Ungültiger Konfigschlüssel `%s` für den Formatter `%s`"
 
 #: lib/cmdline.c:564
 #, c-format
@@ -558,7 +558,7 @@ msgstr "Finde nur Duplikate mit Dateinamen minus der Endung"
 #: lib/cmdline.c:1355
 #, fuzzy
 msgid "Find duplicate directories"
-msgstr "Finde Doppelte Verzeichnisse"
+msgstr "Finde doppelte Verzeichnisse"
 
 #: lib/cmdline.c:1356
 msgid "Only use files with certain permissions"
@@ -575,7 +575,7 @@ msgstr "Finde versteckte Dateien nur in doppelten Verzeichnissen"
 
 #: lib/cmdline.c:1361
 msgid "Show the manpage"
-msgstr "Zeige das volle Manual"
+msgstr "Zeige das volle Handbuch"
 
 #: lib/cmdline.c:1362
 msgid "Show the version & features"
@@ -606,7 +606,7 @@ msgstr "Kann aktuelles Arbeitsverzeichnis nicht setzen"
 
 #: lib/cmdline.c:1427
 msgid "Cannot join commandline"
-msgstr "Kann Kommandozeile nicht auslesen. (huh?)"
+msgstr "Kann Kommandozeilenargumente nicht auslesen. (huh?)"
 
 #: lib/cmdline.c:1436
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
@@ -620,7 +620,7 @@ msgid ""
 "options to handle them."
 msgstr ""
 "rmlint findet unnütz verschwendeten Platz und andere eigenartige Dateien "
-"aufdem Dateisystem und bietet an sie zu entfernen.\n"
+"auf dem Dateisystem und bietet an sie zu entfernen.\n"
 "Es ist besonders gut darin Duplikate zu erkennen und bietet eine große "
 "Palette an Möglichkeiten an, um sie loszuwerden."
 
@@ -642,13 +642,13 @@ msgstr ""
 
 #: lib/cmdline.c:1511
 msgid "cannot create metadata cache (see above)"
-msgstr "Cann Metadatacache nicht erstellen (siehe oben)"
+msgstr "Kann Metadatacache nicht erstellen (siehe oben)"
 
 #: lib/cmdline.c:1515
 #, fuzzy
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
 msgstr ""
-"Kann nicht gleichzeitig --keep-all-tagged und --keep-all-untagged nehmen"
+"Kann nicht gleichzeitig --keep-all-tagged und --keep-all-untagged annehmen"
 
 #: lib/cmdline.c:1518
 #, fuzzy
@@ -670,7 +670,7 @@ msgstr "ELF Bibliothek ist extrem veraltet!"
 
 #: lib/utilities.c:414
 msgid "caching is not supported due to missing json-glib library."
-msgstr "Caching ist nicht mögliche, da rmlint ohne json-glib kompiliert wurde."
+msgstr "Caching ist nicht möglich, da rmlint ohne json-glib kompiliert wurde."
 
 #: lib/utilities.c:425
 #, c-format
