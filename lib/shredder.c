@@ -87,9 +87,9 @@
  * 1. One worker thread is established for each physical device
  * 2. The device thread picks a file from its queue, reads the next increment of that
  *    file, and sends it to a hashing thread.
- * 3. Depending on some logic ("worth_waiting"), the device thread may wait for the
+ * 3. Depending on some logic ("shredder_waiting"), the device thread may wait for the
  *    file increment to finish hashing, or may move straight on to the next file in
- *    the queue.  The "worth_waiting" logic aims to reduce disk seeks on rotational
+ *    the queue.  The "shredder_waiting" logic aims to reduce disk seeks on rotational
  *    devices.
  * 4. The hashed fragment result is "sifted" into a child RmShredGroup of its parent
  *    group, and unlinked it from its parent.
@@ -103,7 +103,7 @@
  *    until its parent and all ancestors have finished processing, whereupon the file
  *    is sent to the "result factory" (if >= 2 files in the group) or discarded.
  *
- * In the above example, the hashing order will depend on the "worth_waiting" logic.
+ * In the above example, the hashing order will depend on the "shredder_waiting" logic.
  *    On a rotational device the hashing order should end up being something like:
  *         F1.1 F2.1 (F3.1,F3.2), (F4.1,F4.2), (F5.1,F5.2,F5.3)...
  *                        ^            ^            ^    ^
@@ -198,7 +198,7 @@
  * pipe allocation, etc.  Once the hasher is done, the result is sent back
  * via callback to rm_shred_hash_callback.
  *
- * If "worth_waiting" has been flagged then the callback sends the file
+ * If "shredder_waiting" has been flagged then the callback sends the file
  * back to the Device Worker thread via a GAsyncQueue, whereupon the Device
  * Manager does a quick check to see if it can continue with the same file;
  * if not then a new file is taken from the device queue.
@@ -941,7 +941,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         /* FALLTHROUGH */
         case RM_SHRED_GROUP_HASHING:
             shred_group->num_pending++;
-            if(initial || !file->devlist_waiting) {
+            if(!file->shredder_waiting) {
                 /* add file to device queue */
                 rm_shred_push_queue(file);
             } else {
@@ -1040,32 +1040,27 @@ static RmFile *rm_shred_sift(RmFile *file) {
     return result;
 }
 
-/* Hasher callback file. Runs as threadpool in parallel / tandem with
- * rm_shred_read_factory above
+/* Hasher callback when file increment hashing is completed.
  * */
 static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShredTag *tag,
                                    RmFile *file) {
+    if (!file->digest) {
+        file->digest = digest;
+    }
     g_assert(file->digest == digest);
+    g_assert(file->hash_offset == file->shred_group->next_offset);
 
-    if(file->hash_offset == file->shred_group->next_offset ||
-       file->status == RM_FILE_STATE_IGNORE) {
-        if(file->status != RM_FILE_STATE_IGNORE) {
-            /* remember that checksum */
-            rm_shred_write_cksum_to_xattr(tag->session, file);
-        }
+    if(file->status != RM_FILE_STATE_IGNORE) {
+        /* remember that checksum */
+        rm_shred_write_cksum_to_xattr(tag->session, file);
+    }
 
-        if(file->signal) {
-            /* MDS scheduler is waiting for result */
-            rm_signal_done(file->signal);
-        } else {
-            /* handle the file ourselves; MDS scheduler has moved on to the next file */
-            rm_shred_sift(file);
-        }
+    if(file->shredder_waiting) {
+        /* MDS scheduler is waiting for result */
+        rm_signal_done(file->signal);
     } else {
-        RM_DEFINE_PATH(file);
-        rm_log_error_line("Unexpected hash offset for %s, got %" LLU ", expected %" LLU,
-                          file_path, file->hash_offset, file->shred_group->next_offset);
-        g_assert_not_reached();
+        /* handle the file ourselves; MDS scheduler has moved on to the next file */
+        rm_shred_sift(file);
     }
 }
 
@@ -1455,46 +1450,49 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
     }
 }
 
-/* Callback for RmMDS */
+/* Callback for RmMDS
+ * Return value of 1 tells md-scheduler that we have processed the file and either
+ * disposed of it or pushed it back to the scheduler queue.
+ * Return value of 0 tells md-scheduler we can't process the file right now, and 
+ * have pushed it back to the queue.
+ * */
 static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
 
     if(rm_session_was_aborted(session) || file->shred_group->has_only_ext_cksums) {
         if(rm_session_was_aborted(session)) {
             file->status = RM_FILE_STATE_IGNORE;
-            rm_mds_abort(session->mds);
         }
 
         if(file->shred_group->has_only_ext_cksums) {
             rm_shred_reassign_checksum(tag, file);
         }
-
+        file->shredder_waiting = FALSE;
         rm_shred_sift(file);
         return 1;
     }
 
     gint result = 0;
-
     RM_DEFINE_PATH(file);
+
     while(file && rm_shred_can_process(file, tag)) {
-        /* hash the next increment of the file */
         result = 1;
+        /* hash the next increment of the file */
         RmCfg *cfg = session->cfg;
         RmOff bytes_to_read = rm_shred_get_read_size(file, tag);
 
-        bool worth_waiting =
+        gboolean shredder_waiting =
             (file->shred_group->next_offset != file->file_size) &&
             (cfg->shred_always_wait ||
-             (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
-              bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT &&
-              (file->status == RM_FILE_STATE_NORMAL)));
-
+                ( !cfg->shred_never_wait &&
+                 rm_mds_device_is_rotational(file->disk) &&
+                 bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
                                 file->is_symlink)) {
             /* rm_hasher_start_increment failed somewhere */
             file->status = RM_FILE_STATE_IGNORE;
-            worth_waiting = FALSE;
+            shredder_waiting = FALSE;
         }
 
         /* Update totals for file, device and session*/
@@ -1505,20 +1503,21 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             rm_shred_adjust_counters(tag, 0, -(gint64)bytes_to_read);
         }
 
-        if(worth_waiting) {
+        if(shredder_waiting) {
             /* some final checks if it's still worth waiting for the hash result */
-            worth_waiting = worth_waiting && (file->shred_group->children);
-            if(file->digest->type == RM_DIGEST_PARANOID) {
-                worth_waiting = worth_waiting && file->digest->paranoid->twin_candidate;
-            }
+            shredder_waiting = shredder_waiting &&
+                    /* no point waiting if we have no siblings */
+                    file->shred_group->children &&
+                    /* no point waiting if paranoid digest with no twin candidates */
+                    (file->digest->type != RM_DIGEST_PARANOID || file->digest->paranoid->twin_candidate);
         }
-
-        file->signal = worth_waiting ? rm_signal_new() : NULL;
+        file->signal = shredder_waiting ? rm_signal_new() : NULL;
+        file->shredder_waiting = shredder_waiting;
 
         /* tell the hasher we have finished */
         rm_hasher_task_finish(task);
 
-        if(worth_waiting) {
+        if(shredder_waiting) {
             /* wait until the increment has finished hashing; assert that we get the
              * expected file back */
             rm_signal_wait(file->signal);
@@ -1526,8 +1525,13 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             /* sift file; if returned then continue processing it */
             file = rm_shred_sift(file);
         } else {
+            /* rm_shred_hash_callback will take care of the file */
             file = NULL;
         }
+    }
+    if (file) {
+        /* file was not handled by rm_shred_sift so we need to add it back to the queue */
+        rm_mds_push_task(file->disk, file->dev, file->disk_offset, NULL, file);
     }
     return result;
 }

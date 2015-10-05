@@ -156,8 +156,8 @@ typedef struct RmFile {
     /* If true, the file will be request to be pre-cached on the next read */
     bool fadvise_requested : 1;
 
-    /* Set to true if rm_shred_devlist_factory is waiting for hash increment */
-    bool devlist_waiting : 1;
+    /* Set to true if rm_shred_process_file() for hash increment */
+    bool shredder_waiting : 1;
 
     /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
     bool is_on_subvol_fs : 1;
