@@ -518,6 +518,7 @@ class EditorView(View):
 
         def on_save_button_clicked(_):
             """Switch to the save dialog in the stack."""
+            self.set_search_mode(False)
             self.left_stack.set_visible_child_name('chooser')
             self.save_chooser.show_controls()
             self.set_info_help_text()
@@ -678,6 +679,7 @@ Or you can replay the output later with:
 
     def on_run_script_clicked(self, _):
         """The critical function callback that is run when action is done."""
+        self.set_search_mode(False)
         self.sub_title = 'Shreddering. Cross fingers!'
         self.stack.set_visible_child_name('progressing')
         self.left_stack.set_visible_child_name('list')
