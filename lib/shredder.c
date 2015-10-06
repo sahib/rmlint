@@ -1463,6 +1463,11 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             file->status = RM_FILE_STATE_IGNORE;
             rm_mds_abort(session->mds);
         }
+
+        if(file->shred_group->has_only_ext_cksums) {
+            rm_shred_reassign_checksum(tag, file);
+        }
+
         rm_shred_sift(file);
         return 1;
     }
