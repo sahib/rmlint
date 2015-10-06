@@ -459,11 +459,8 @@ RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
     finisher->user_data = task;
     rm_util_thread_pool_push(task->hashpipe, finisher);
 
-    /* return hashpipe to hashpipe_pool */
-    // g_async_queue_push(task->hasher->hashpipe_pool, task->hashpipe);
-
     if(hasher->return_queue) {
-        return (g_async_queue_pop(hasher->return_queue));
+        return g_async_queue_pop(hasher->return_queue);
     } else {
         return NULL;
     }

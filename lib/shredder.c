@@ -284,12 +284,6 @@
  * rate = 160ms read vs typical seek time 10ms*/
 #define SHRED_PARANOID_BYTES (16 * 1024 * 1024)
 
-/* Whether to use buffered fread() or direct preadv()
- * The latter is preferred, since it's slightly faster on linux.
- * Other platforms may have different results though or not even have preadv.
- * */
-#define SHRED_USE_BUFFERED_READ (0)
-
 /* When paranoid hashing, if a file increments is larger
  * than SHRED_PREMATCH_THRESHOLD, we take a guess at the likely
  * matching file and do a progressive memcmp() on each buffer
@@ -299,7 +293,10 @@
 
 /* empirical estimate of mem usage per file (excluding read buffers and
  * paranoid digests) */
-#define RM_AVERAGE_MEM_PER_FILE (100)
+#define SHRED_AVERAGE_MEM_PER_FILE (100)
+
+/* Maximum number of bytes before worth_waiting becomes false */
+#define SHRED_TOO_MANY_BYTES_TO_WAIT (64 * 1024 * 1024)
 
 ////////////////////////
 //  MATHS SHORTCUTS   //
@@ -353,8 +350,8 @@ typedef enum RmShredGroupStatus {
 
 #define NEEDS_SHADOW_HASH(cfg) \
     (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
-/* @sahib - performance is faster with shadow hash, probably due to hash
- * collisions in large RmShredGroups */
+/* Performance is faster with shadow hash, probably due to hash collisions in
+ * large RmShredGroups */
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
@@ -515,9 +512,7 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
 // MANAGEMENT ALGORITHMS        //
 //////////////////////////////////
 
-/* Compute optimal size for next hash increment
- * call this with group locked
- * */
+/* Compute optimal size for next hash increment call this with group locked */
 static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
     RmShredGroup *group = file->shred_group;
     g_assert(group);
@@ -618,7 +613,7 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
     {
         gint64 inherited = group->parent ? group->parent->mem_allocation : 0;
 
-        if(0 || mem_required <= tag->paranoid_mem_alloc + inherited ||
+        if(mem_required <= tag->paranoid_mem_alloc + inherited ||
            (tag->active_groups <= active_group_threshold)) {
             /* ok to proceed */
             /* only take what we need from parent */
@@ -885,8 +880,7 @@ static void rm_shred_group_make_orphan(RmShredGroup *self) {
     }
 }
 
-/* Call with shred_group->lock unlocked.
- * */
+/* Call with shred_group->lock unlocked. */
 static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
                                         gboolean initial) {
     RmFile *result = NULL;
@@ -1176,8 +1170,8 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     rm_log_debug_line("move remaining files to size_groups finished at time %.3f",
                  g_timer_elapsed(session->timer, NULL));
 
-    /* iterate over groups, looking for any that already have external
-     * checksums for all files */
+    /* iterate over groups, looking for any that already have external checksums
+     * for all files */
     if(HAS_CACHE(main->session)) {
         rm_log_debug_line("Checking for external checksums");
         g_assert(session->tables->size_groups);
@@ -1210,9 +1204,9 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
 //       POST PROCESSING       //
 /////////////////////////////////
 
-/* post-processing sorting of files by criteria (-S and -[kmKM])
- * this is slightly different to rm_shred_cmp_orig_criteria in the case of
- * either -K or -M options
+/* post-processing sorting of files by criteria (-S and -[kmKM]) this is
+ * slightly different to rm_shred_cmp_orig_criteria in the case of either -K or
+ * -M options
  */
 int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     RmCfg *cfg = session->cfg;
@@ -1276,6 +1270,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     RmFile *headfile = group->head->data;
     if(!headfile->is_original) {
         headfile->is_original = true;
+
 #if _RM_SHRED_DEBUG
         RM_DEFINE_PATH(headfile);
         rm_log_debug_line("tagging %s as original because it is highest ranked",
@@ -1318,10 +1313,9 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     if(!file->is_original) {
         session->dup_counter++;
 
-        /* Only check file size if it's not a hardlink.
-         * Since deleting hardlinks does not free any space
-         * they should not be counted unless all of them would
-         * be removed.
+        /* Only check file size if it's not a hardlink.  Since deleting
+         * hardlinks does not free any space they should not be counted unless
+         * all of them would be removed.
          */
         if(file->hardlinks.is_head || file->hardlinks.hardlink_head == NULL) {
             session->total_lint_size += file->file_size;
@@ -1333,9 +1327,8 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
     RmCfg *cfg = tag->session->cfg;
 
     if(g_queue_get_length(group->held_files) > 0) {
-        /* find the original(s)
-         * (note this also unbundles hardlinks and sorts the group from
-         *  highest ranked to lowest ranked
+        /* find the original(s) (note this also unbundles hardlinks and sorts
+         * the group from highest ranked to lowest ranked
          */
         rm_shred_group_find_original(tag->session, group->held_files);
 
@@ -1377,7 +1370,6 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 /////////////////////////////////
 
 static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
-    bool can_process = true;
     RmCfg *cfg = main->session->cfg;
     RmShredGroup *group = file->shred_group;
 
@@ -1401,46 +1393,43 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
     } else if(group->digest_type == RM_DIGEST_PARANOID) {
         /* check if memory allocation is ok */
         if(!rm_shred_check_paranoid_mem_alloc(group, 0)) {
-            can_process = false;
-        } else {
-            /* get the required target offset into group->next_offset, so
-                * that we can make the paranoid RmDigest the right size*/
+            return false;
+        }
+
+        /* get the required target offset into group->next_offset, so that
+         * we can make the paranoid RmDigest the right size*/
+        g_mutex_lock(&group->lock);
+        {
+            if(group->next_offset == 0) {
+                (void)rm_shred_get_read_size(file, main);
+            }
+            g_assert(group->hash_offset == file->hash_offset);
+        }
+        g_mutex_unlock(&group->lock);
+
+        file->digest =
+            rm_digest_new(RM_DIGEST_PARANOID, 0, 0, 0,
+                          NEEDS_SHADOW_HASH(cfg));
+
+        if((file->is_symlink == false || cfg->see_symlinks == false) &&
+                (group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD)) {
+            /* send candidate twin(s) */
             g_mutex_lock(&group->lock);
             {
-                if(group->next_offset == 0) {
-                    (void)rm_shred_get_read_size(file, main);
+                if(group->children) {
+                    GList *children = g_hash_table_get_values(group->children);
+                    while(children) {
+                        RmShredGroup *child = children->data;
+                        rm_digest_send_match_candidate(file->digest, child->digest);
+                        children = g_list_delete_link(children, children);
+                    }
                 }
-                g_assert(group->hash_offset == file->hash_offset);
+                /* store a reference so the shred group knows where to send any future
+                 * twin candidate digests */
+                group->in_progress_digests =
+                    g_list_prepend(group->in_progress_digests, file->digest);
             }
             g_mutex_unlock(&group->lock);
-
-            if(file->is_symlink && cfg->see_symlinks) {
-                file->digest =
-                    rm_digest_new(RM_DIGEST_PARANOID, 0, 0, 0,
-                                  NEEDS_SHADOW_HASH(cfg));
-            } else {
-                file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0, 0, 0,
-                                             NEEDS_SHADOW_HASH(cfg));
-                if(group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD) {
-                    /* send candidate twin(s) */
-                    g_mutex_lock(&group->lock);
-                    {
-                        if(group->children) {
-                            GList *children = g_hash_table_get_values(group->children);
-                            while(children) {
-                                RmShredGroup *child = children->data;
-                                rm_digest_send_match_candidate(file->digest, child->digest);
-                                children = g_list_delete_link(children, children);
-                            }
-                        }
-                        /* store a reference so the shred group knows where to send any future
-                         * twin candidate digests */
-                        group->in_progress_digests =
-                            g_list_prepend(group->in_progress_digests, file->digest);
-                    }
-                    g_mutex_unlock(&group->lock);
-                }
-            }
         }
     } else if(group->digest) {
         /* pick up the digest-so-far from the RmShredGroup */
@@ -1453,10 +1442,8 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                      0,
                                      NEEDS_SHADOW_HASH(cfg));
     }
-    return can_process;
+    return true;
 }
-
-#define RM_SHRED_TOO_MANY_BYTES_TO_WAIT (64 * 1024 * 1024)
 
 /* call with device unlocked */
 static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
@@ -1494,7 +1481,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             (cfg->shred_always_wait ||
                 ( !cfg->shred_never_wait &&
                  rm_mds_device_is_rotational(file->disk) &&
-                 bytes_to_read < RM_SHRED_TOO_MANY_BYTES_TO_WAIT &&
+                 bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT &&
                  (file->status == RM_FILE_STATE_NORMAL)));
 
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
@@ -1588,7 +1575,7 @@ void rm_shred_run(RmSession *session) {
 
     /* estimate mem used for RmFiles and allocate any leftovers to read buffer and/or
      * paranoid mem */
-    RmOff mem_used = RM_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
+    RmOff mem_used = SHRED_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
 
     if(cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
