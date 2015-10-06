@@ -282,20 +282,21 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
 /** @brief Push a RmMDSDevice to the threadpool
  **/
 void rm_mds_device_start(_U  gpointer disk, RmMDSDevice *device, RmMDS *mds) {
-    g_assert(device->threads==0);
+    g_assert(device->threads == 0);
+
     device->threads = mds->threads_per_disk;
     for (int i=0; i < mds->threads_per_disk; ++i) {
         rm_util_thread_pool_push(mds->pool, device);
     }
 }
 
-/** @brief Push a RmMDSDevice to the threadpool
- **/
 void rm_mds_start(RmMDS *mds) {
-    guint threads = MAX(1, MIN((guint)mds->max_threads, mds->threads_per_disk * g_hash_table_size(mds->disks)));
-    mds->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, mds, threads);
+    guint disks = g_hash_table_size(mds->disks);
+    guint threads = CLAMP(mds->threads_per_disk * disks, 1, (guint)mds->max_threads);
 
+    mds->pool = rm_util_thread_pool_new((GFunc)rm_mds_factory, mds, threads);
     mds->running = TRUE;
+
     g_hash_table_foreach(mds->disks, (GHFunc)rm_mds_device_start, mds);
 }
 
@@ -304,6 +305,7 @@ static RmMDSDevice *rm_mds_device_get_by_disk(RmMDS *mds, const dev_t disk) {
     g_mutex_lock(&mds->lock);
     {
         g_assert(mds->disks);
+
         result = g_hash_table_lookup(mds->disks, GINT_TO_POINTER(disk));
         if(!result) {
             result = rm_mds_device_new(mds, disk);
@@ -423,9 +425,10 @@ gboolean rm_mds_device_is_rotational(RmMDSDevice *device) {
 
 void rm_mds_push_task(RmMDSDevice *device, dev_t dev, gint64 offset, const char *path, const gpointer task_data) {
     g_atomic_int_inc(&device->mds->pending_tasks);
-    if(device->is_rotational && offset==-1) {
+    if(device->is_rotational && offset < 0) {
         offset = rm_offset_get_from_path(path, 0, NULL);
     }
+
     RmMDSTask *task = rm_mds_task_new(dev, offset, task_data);
     rm_mds_push_task_impl(device, task);
 }

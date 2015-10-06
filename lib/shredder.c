@@ -216,36 +216,45 @@
  *
  *
  * Additional notes regarding "paranoid" hashing:
- *   The default file matching method uses the SHA1 cryptographic hash; there are
+ *
+ * The default file matching method uses the SHA1 cryptographic hash; there are
  * several other hash functions available as well.  The data hashing is somewhat
- * cpu-intensive but this is handled by separate threads (the hash pipes) so generally
- * doesn't bottleneck rmlint (as long as CPU exceeds disk reading speed).  The subsequent
- * hash matching is very fast because we only need to compare 20 bytes (in the case of
- * SHA1) to find matching files.
- *   The "paranoid" method uses byte-by-byte comparison.  In the implementation, this is
- * masqueraded as a hash function, but there is no hashing involved.  Instead, the whole
- * data increment is kept in memory.  This introduces 2 new challenges:
- * (1) Memory management.  In order to avoid overflowing mem availability, we limit the
- * number of concurrent active RmShredGroups and also limit the size of each file
- * increment.
- * (2) Matching time.  Unlike the conventional hashing strategy (CPU-intensive hashing
- * followed by simple matching), the paranoid method requires almost no CPU during
- * reading/hashing, but requires a large memcmp() at the end to find matching
- *files/groups.
- * That would not be a bottleneck as long as the reader thread still has other files
- * that it can go and read while the hasher/sorter does the memcmp in parallel... but
- * unfortunately the memory management issue means that's not always an option and so
- * reading gets delayed while waiting for the memcmp() to catch up.
- * Two strategies are used to speed this up:
- * (a) Pre-matching of candidate digests.  During reading/hashing, as each buffer (4096
- * bytes) is read in, it can be checked against a "twin candidate".  We can send twin
- * candidates to the hash pipe at any time via rm_digest_send_match_candidate().  If the
- * correct twin candidate has been sent, then when the increment is finished the
- * matching has already been done, and rm_digest_equal() is almost instantaneous.
- * (b) Shadow hash.  A lightweight hash (Murmor) is calculated and used for hashtable
- * lookup to quickly identify potential matches.  This saves time in the case of
- * RmShredGroups with large number of child groups and where the pre-matching strategy
- * failed.
+ * cpu-intensive but this is handled by separate threads (the hash pipes) so
+ * generally doesn't bottleneck rmlint (as long as CPU exceeds disk reading
+ * speed).  The subsequent hash matching is very fast because we only
+ * need to compare 20 bytes (in the case of SHA1) to find matching files.
+ *
+ * The "paranoid" method uses byte-by-byte comparison.  In the implementation,
+ * this is masqueraded as a hash function, but there is no hashing involved.
+ * Instead, the whole data increment is kept in memory.  This introduces 2 new
+ * challenges:
+ *
+ * (1) Memory management.  In order to avoid overflowing mem availability, we
+ * limit the number of concurrent active RmShredGroups and also limit the size
+ * of each file increment.
+ *
+ * (2) Matching time.  Unlike the conventional hashing strategy (CPU-intensive
+ * hashing followed by simple matching), the paranoid method requires
+ * almost no CPU during reading/hashing, but requires a large memcmp() at the
+ * end to find matching files/groups.
+ * 
+ * That would not be a bottleneck as long as the reader thread still has other
+ * files that it can go and read while the hasher/sorter does the memcmp in
+ * parallel... but unfortunately the memory management issue means that's not
+ * always an option and so reading gets delayed while waiting for the memcmp()
+ * to catch up.  Two strategies are used to speed this up:
+ *
+ * (a) Pre-matching of candidate digests.  During reading/hashing, as each
+ * buffer (4096 bytes) is read in, it can be checked against a "twin candidate".
+ * We can send twin candidates to the hash pipe at any time via
+ * rm_digest_send_match_candidate().  If the correct twin candidate has been
+ * sent, then when the increment is finished the matching has already been done,
+ * and rm_digest_equal() is almost instantaneous.
+ *
+ * (b) Shadow hash.  A lightweight hash (Murmor) is calculated and used for
+ * hashtable lookup to quickly identify potential matches.  This saves time in
+ * the case of RmShredGroups with large number of child groups and where the
+ * pre-matching strategy failed.
  * */
 
 /*
@@ -287,12 +296,6 @@
  * rather than waiting until the whole increment has been read
  * */
 #define SHRED_PREMATCH_THRESHOLD (0)
-
-/* Minimum number of files or bytes that should be in an update sent to
- * the statistics counters.
- */
-#define SHRED_MIN_FILE_STATS_PACK_FILES (0) //(16)
-#define SHRED_MIN_FILE_STATS_PACK_BYTES (0) //(1024 * 1024 * 16)
 
 /* empirical estimate of mem usage per file (excluding read buffers and
  * paranoid digests) */
@@ -1430,10 +1433,10 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
                                 children = g_list_delete_link(children, children);
                             }
                         }
-                    /* store a reference so the shred group knows where to send any future
-                     * twin candidate digests */
-                    group->in_progress_digests =
-                        g_list_prepend(group->in_progress_digests, file->digest);
+                        /* store a reference so the shred group knows where to send any future
+                         * twin candidate digests */
+                        group->in_progress_digests =
+                            g_list_prepend(group->in_progress_digests, file->digest);
                     }
                     g_mutex_unlock(&group->lock);
                 }
