@@ -87,12 +87,10 @@ static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *
 gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
     const RmCfg *cfg = file_a->session->cfg;
 
-    return (1 && (file_a->file_size == file_b->file_size) &&
-            (0 || (!cfg->match_basename) || (rm_file_basenames_match(file_a, file_b))) &&
-            (0 || (!cfg->match_with_extension) ||
-             (rm_file_check_with_extension(file_a, file_b))) &&
-            (0 || (!cfg->match_without_extension) ||
-             (rm_file_check_without_extension(file_a, file_b))));
+    return ((file_a->file_size == file_b->file_size) &&
+            (!cfg->match_basename || rm_file_basenames_match(file_a, file_b)) &&
+            (!cfg->match_with_extension || rm_file_check_with_extension(file_a, file_b)) &&
+            (!cfg->match_without_extension || rm_file_check_without_extension(file_a, file_b)));
 }
 
 static guint rm_node_hash(const RmFile *file) {
@@ -100,7 +98,7 @@ static guint rm_node_hash(const RmFile *file) {
 }
 
 static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
-    return (1 && (file_a->inode == file_b->inode) && (file_a->dev == file_b->dev));
+    return (file_a->inode == file_b->inode) && (file_a->dev == file_b->dev);
 }
 
 /* GHashTable key tuned to recognize duplicate paths.
@@ -376,8 +374,8 @@ void rm_file_tables_clear(RmSession *session) {
     }
 }
 
-/* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint
- * and return true; else return false */
+/* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint and
+ * return true; else return false */
 static bool rm_pp_handle_other_lint(RmSession *session, RmFile *file) {
     if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE) {
         if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {

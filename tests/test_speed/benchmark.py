@@ -25,7 +25,7 @@ CFG = namedtuple('Config', [
 
     # Output directory
     'output'
-])(3, 2, 'bench-output-{stamp}'.format(
+])(1, 1, 'bench-output-{stamp}'.format(
     stamp=time.strftime('%FT%T%z', time.localtime())
 ))
 
@@ -271,6 +271,30 @@ class RmlintSpot(Rmlint):
 
     def get_benchid(self):
         return 'rmlint-spot'
+
+class RmlintSpotParanoid(RmlintSpot):
+    def get_options(self, paths):
+        return '-pp ' + RmlintSpot.get_options(self, paths)
+
+    def get_benchid(self):
+        return 'rmlint-spot-paranoid'
+
+
+class RmlintMaster(Rmlint):
+    script = 'rmlint-master.sh'
+
+    def get_binary(self):
+        return 'rmlint/rmlint-master'
+
+    def get_benchid(self):
+        return 'rmlint-master'
+
+class RmlintMasterParanoid(RmlintMaster):
+    def get_options(self, paths):
+        return '-pp ' + RmlintMaster.get_options(self, paths)
+
+    def get_benchid(self):
+        return 'rmlint-master-paranoid'
 
 
 class RmlintMaster(Rmlint):
@@ -640,6 +664,9 @@ def main():
         # Current:
         Rmlint(),
         RmlintSpot(),
+        RmlintSpotParanoid(),
+        RmlintMaster(),
+        RmlintMasterParanoid(),
         RmlintMaster(),
         RmlintParanoid(),
         RmlintXXHash(),

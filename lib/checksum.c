@@ -42,8 +42,6 @@
 
 #define _RM_CHECKSUM_DEBUG 0
 
-
-
 ///////////////////////////////////////
 //    BUFFER POOL IMPLEMENTATION     //
 ///////////////////////////////////////
@@ -69,10 +67,10 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_ke
     self->stack = NULL;
     self->buffer_size = buffer_size;
     self->avail_buffers = MAX(max_mem / buffer_size, 1);
-    self->min_buffers = self->avail_buffers;
-    self->max_buffers = self->avail_buffers;
+    self->min_kept_buffers = self->avail_buffers;
     self->max_kept_buffers = MAX(max_kept_mem / buffer_size, 1);
     self->kept_buffers = 0;
+
     rm_log_debug_line("rm_buffer_pool_init: allocated max %"G_GSIZE_FORMAT
                       " buffers of %"G_GSIZE_FORMAT" bytes each",
                       self->avail_buffers, self->buffer_size);
@@ -82,14 +80,13 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_ke
 }
 
 void rm_buffer_pool_destroy(RmBufferPool *pool) {
-    rm_log_debug_line("had %"G_GSIZE_FORMAT" unused read buffers", pool->min_buffers);
+    rm_log_debug_line("had %"G_GSIZE_FORMAT" unused read buffers", pool->min_kept_buffers);
 
     /* Wait for all buffers to come back */
-    g_mutex_lock(&pool->lock);
-
-    /* Free 'em */
-    g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
-
+    g_mutex_lock(&pool->lock); {
+        /* Free 'em */
+        g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
+    }
     g_mutex_unlock(&pool->lock);
 
     g_mutex_clear(&pool->lock);
@@ -119,8 +116,8 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
         }
         pool->avail_buffers--;
 
-        if(pool->avail_buffers < pool->min_buffers) {
-            pool->min_buffers = pool->avail_buffers;
+        if(pool->avail_buffers < pool->min_kept_buffers) {
+            pool->min_kept_buffers = pool->avail_buffers;
         }
     }
     g_mutex_unlock(&pool->lock);
@@ -252,13 +249,6 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
 }
 
-RmOff rm_digest_paranoia_bytes(void) {
-    return 16 * 1024 * 1024;
-    /* this is big enough buffer size to make seek time fairly insignificant relative to
-     * sequential read time,
-     * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
-}
-
 #define ADD_SEED(digest, seed)                                              \
     {                                                                       \
         if(seed) {                                                          \
@@ -267,8 +257,7 @@ RmOff rm_digest_paranoia_bytes(void) {
         }                                                                   \
     }
 
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size,
-                        bool use_shadow_hash) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
@@ -314,7 +303,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         break;
     case RM_DIGEST_EXT:
         /* gets allocated on rm_digest_update() */
-        digest->bytes = paranoid_size;
+        digest->bytes = ext_size;
         break;
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
@@ -328,18 +317,12 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
         digest->bytes = 128 / 8;
         break;
     case RM_DIGEST_PARANOID:
-        g_assert(paranoid_size <= rm_digest_paranoia_bytes());
-        g_assert(paranoid_size > 0);
-        digest->bytes = paranoid_size;
+        digest->bytes = 0;
         digest->paranoid = g_slice_new0(RmParanoid);
-        digest->paranoid->buffers = g_queue_new();
         digest->paranoid->incoming_twin_candidates = g_async_queue_new();
-        g_assert(use_shadow_hash);
         if(use_shadow_hash) {
             digest->paranoid->shadow_hash =
                 rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
-        } else {
-            digest->paranoid->shadow_hash = NULL;
         }
         break;
     default:
@@ -372,15 +355,13 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paran
 }
 
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
-    g_assert(new_size < digest->bytes);
     g_assert(digest->type == RM_DIGEST_PARANOID);
-
     digest->bytes = new_size;
 }
 
 void rm_digest_release_buffers(RmDigest *digest) {
     if(digest->paranoid && digest->paranoid->buffers) {
-        g_queue_free_full(digest->paranoid->buffers,
+        g_slist_free_full(digest->paranoid->buffers,
                           (GDestroyNotify)rm_buffer_pool_release_kept);
         digest->paranoid->buffers = NULL;
     }
@@ -403,6 +384,7 @@ void rm_digest_free(RmDigest *digest) {
         if(digest->paranoid->incoming_twin_candidates) {
             g_async_queue_unref(digest->paranoid->incoming_twin_candidates);
         }
+        g_slist_free(digest->paranoid->rejects);
         g_slice_free(RmParanoid, digest->paranoid);
         break;
     case RM_DIGEST_EXT:
@@ -541,11 +523,18 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
     } else {
         RmParanoid *paranoid = digest->paranoid;
 
-        g_queue_push_tail(paranoid->buffers, buffer);
-        paranoid->buffer_count++;
+        /* efficiently append buffer to buffers GSList */
+        if (!paranoid->buffers) {
+            /* first buffer */
+            paranoid->buffers = g_slist_prepend(NULL, buffer);
+            paranoid->buffer_tail = paranoid->buffers;
+        } else {
+            paranoid->buffer_tail = g_slist_append(paranoid->buffer_tail, buffer)->next;
+        }
+
+        digest->bytes += buffer->len;
         rm_buffer_pool_signal_keeping(buffer);
 
-        g_assert(paranoid->shadow_hash);
         if(paranoid->shadow_hash) {
             rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);
         }
@@ -563,7 +552,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 paranoid->twin_candidate_buffer = NULL;
 #if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Ejected candidate match at buffer #%u",
-                             paranoid->buffer_count);
+                             g_slist_length(paranoid->buffers));
 #endif
             }
         }
@@ -574,8 +563,8 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
             /* validate the new candidate by comparing the previous buffers (not
              * including current)*/
             paranoid->twin_candidate_buffer =
-                paranoid->twin_candidate->paranoid->buffers->head;
-            GList *iter_self = paranoid->buffers->head;
+                paranoid->twin_candidate->paranoid->buffers;
+            GSList *iter_self = paranoid->buffers;
             gboolean match = TRUE;
             while(match && iter_self) {
                 match = (rm_buffer_equal(paranoid->twin_candidate_buffer->data,
@@ -584,11 +573,15 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
             }
             if(paranoid->twin_candidate && !match) {
-                /* reject the twin candidate */
+                /* reject the twin candidate, also add to rejects list to speed up rm_digest_equal() */
 #if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Rejected twin candidate %p for %p",
                              paranoid->twin_candidate, paranoid);
 #endif
+                if(!paranoid->shadow_hash) {
+                    /* we use the rejects file to speed up rm_digest_equal */
+                    paranoid->rejects = g_slist_prepend(paranoid->rejects, paranoid->twin_candidate);
+                }
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
 #if _RM_CHECKSUM_DEBUG
@@ -692,20 +685,30 @@ guint8 *rm_digest_steal(RmDigest *digest) {
 guint rm_digest_hash(RmDigest *digest) {
     guint8 *buf = NULL;
     gsize bytes = 0;
+    guint hash = 0;
 
     if(digest->type == RM_DIGEST_PARANOID) {
         if(digest->paranoid->shadow_hash) {
             buf = rm_digest_steal(digest->paranoid->shadow_hash);
             bytes = digest->paranoid->shadow_hash->bytes;
+        } else {
+            /* steal the first few bytes of the first buffer */
+            if (digest->paranoid->buffers) {
+                RmBuffer *buffer = digest->paranoid->buffers->data;
+                if(buffer->len >= sizeof(guint)) {
+                    hash = *(guint *)buffer->data;
+                    return hash;
+                }
+            }
         }
     } else {
         buf = rm_digest_steal(digest);
         bytes = digest->bytes;
     }
 
-    guint hash = 0;
     if(buf != NULL) {
-        hash = *(RmOff *)buf;
+        g_assert(bytes >= sizeof(guint));
+        hash = *(guint *)buf;
         g_slice_free1(bytes, buf);
     }
     return hash;
@@ -727,12 +730,18 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             /* buffers have been freed so we need to rely on shadow hash */
             return rm_digest_equal(a->paranoid->shadow_hash, b->paranoid->shadow_hash);
         }
+        /* check if pre-matched twins */
         if(a->paranoid->twin_candidate == b || b->paranoid->twin_candidate == a) {
             return true;
         }
-
-        GList *a_iter = a->paranoid->buffers->head;
-        GList *b_iter = b->paranoid->buffers->head;
+        /* check if already rejected */
+        if( g_slist_find(a->paranoid->rejects, b) || g_slist_find(b->paranoid->rejects, a) ) {
+            //rm_log_error_line("Optimisation sufficiently optimised");
+            return false;
+        }
+        /* all the "easy" ways failed... do manual check of all buffers */
+        GSList *a_iter = a->paranoid->buffers;
+        GSList *b_iter = b->paranoid->buffers;
         guint bytes = 0;
         while(a_iter && b_iter) {
             if(!rm_buffer_equal(a_iter->data, b_iter->data)) {

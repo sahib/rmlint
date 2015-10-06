@@ -13,6 +13,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 - Bugfix: memory corruption when specifying ``-T dd`` alone.
 - Bugfix: Make ``-D`` and ``-k / -K`` play together nicely (thanks phiresky).
 - Smaller compile time troubles fixed.
+- Progressbar uses timeout-based redraws which leads to much smoother drawing
+  and less cpu footprint.
 
 ### Added
 
@@ -41,6 +43,8 @@ The format follows [keepachangelog.com]. Please stick to it.
   For example ``-o /tmp/test.json`` will work like ``-o json:/tmp/test.json``.
 - JSON output contains ``rmlint`` version and revision now.
 - ``--replay`` learned to merge several json files.
+- Internal refactoring (credits go to Daniel) of the scheduler and hashing
+  library. The duplicate finding process has be split in separate modules.
 
 ## [2.3.0 Ominous Oscar] -- 2015-06-15
 

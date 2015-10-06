@@ -2,7 +2,7 @@
 
 git clone https://github.com/SeeSpotRun/rmlint
 cd rmlint
-git checkout scheduler-clean
+git checkout develop
 scons -j4 DEBUG=0
 
 # Make sure new and old binary does

@@ -60,7 +60,8 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->with_color = true;
     cfg->with_stdout_color = true;
     cfg->with_stderr_color = true;
-    cfg->threads = 32;
+    cfg->threads = 16;
+    cfg->threads_per_disk = 2;
     cfg->verbosity = G_LOG_LEVEL_INFO;
     cfg->follow_symlinks = false;
 

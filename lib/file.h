@@ -110,7 +110,7 @@ typedef struct RmFile {
      */
     ino_t inode;
     dev_t dev;
-    dev_t disk;
+    struct _RmMDSDevice *disk;
 
     /* True if the file is a symlink
      * shredder needs to know this, since the metadata might be about the
