@@ -184,8 +184,8 @@ static const int one = 1;
 *****************************/
 typedef enum { XXH_aligned, XXH_unaligned } XXH_alignment;
 
-FORCE_INLINE U32
-XXH_readLE32_align(const void* ptr, XXH_endianess endian, XXH_alignment align) {
+FORCE_INLINE U32 XXH_readLE32_align(const void* ptr, XXH_endianess endian,
+                                    XXH_alignment align) {
     if(align == XXH_unaligned)
         return endian == XXH_littleEndian ? XXH_read32(ptr) : XXH_swap32(XXH_read32(ptr));
     else
@@ -197,8 +197,8 @@ FORCE_INLINE U32 XXH_readLE32(const void* ptr, XXH_endianess endian) {
     return XXH_readLE32_align(ptr, endian, XXH_unaligned);
 }
 
-FORCE_INLINE U64
-XXH_readLE64_align(const void* ptr, XXH_endianess endian, XXH_alignment align) {
+FORCE_INLINE U64 XXH_readLE64_align(const void* ptr, XXH_endianess endian,
+                                    XXH_alignment align) {
     if(align == XXH_unaligned)
         return endian == XXH_littleEndian ? XXH_read64(ptr) : XXH_swap64(XXH_read64(ptr));
     else
@@ -634,8 +634,8 @@ XXH_errorcode XXH32_update(XXH32_state_t* state_in, const void* input, size_t le
         return XXH32_update_endian(state_in, input, len, XXH_bigEndian);
 }
 
-FORCE_INLINE U32
-XXH32_digest_endian(const XXH32_state_t* state_in, XXH_endianess endian) {
+FORCE_INLINE U32 XXH32_digest_endian(const XXH32_state_t* state_in,
+                                     XXH_endianess endian) {
     const XXH_istate32_t* state = (const XXH_istate32_t*)state_in;
     const BYTE* p = (const BYTE*)state->mem32;
     const BYTE* bEnd = (const BYTE*)(state->mem32) + state->memsize;
@@ -775,8 +775,8 @@ XXH_errorcode XXH64_update(XXH64_state_t* state_in, const void* input, size_t le
         return XXH64_update_endian(state_in, input, len, XXH_bigEndian);
 }
 
-FORCE_INLINE U64
-XXH64_digest_endian(const XXH64_state_t* state_in, XXH_endianess endian) {
+FORCE_INLINE U64 XXH64_digest_endian(const XXH64_state_t* state_in,
+                                     XXH_endianess endian) {
     const XXH_istate64_t* state = (const XXH_istate64_t*)state_in;
     const BYTE* p = (const BYTE*)state->mem64;
     const BYTE* bEnd = (const BYTE*)state->mem64 + state->memsize;

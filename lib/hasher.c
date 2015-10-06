@@ -137,9 +137,8 @@ static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *p
         return -1;
     }
 
-    gint data_size =
-        snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool), "%ld:%ld",
-                 (long)stat_buf.st_dev, (long)stat_buf.st_ino);
+    gint data_size = snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool),
+                              "%ld:%ld", (long)stat_buf.st_dev, (long)stat_buf.st_ino);
     buf->len = data_size;
     buf->digest = digest;
 
@@ -409,18 +408,17 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
     RmHasherTask *self = g_slice_new0(RmHasherTask);
     self->hasher = hasher;
     self->digest =
-        digest ? digest
-               : rm_digest_new(hasher->digest_type, 0, 0, 0,
-                               hasher->digest_type == RM_DIGEST_PARANOID);
+        digest ? digest : rm_digest_new(hasher->digest_type, 0, 0, 0,
+                                        hasher->digest_type == RM_DIGEST_PARANOID);
 
     /* get a recycled hashpipe if available */
     self->hashpipe = g_async_queue_try_pop(hasher->hashpipe_pool);
-    if (!self->hashpipe) {
-        if (g_atomic_int_get(&hasher->unalloc_hashpipes) > 0) {
+    if(!self->hashpipe) {
+        if(g_atomic_int_get(&hasher->unalloc_hashpipes) > 0) {
             /* create a new hashpipe */
             g_atomic_int_dec_and_test(&hasher->unalloc_hashpipes);
-            self->hashpipe = rm_util_thread_pool_new(
-                    (GFunc)rm_hasher_hashpipe_worker, hasher, 1);
+            self->hashpipe =
+                rm_util_thread_pool_new((GFunc)rm_hasher_hashpipe_worker, hasher, 1);
 
         } else {
             /* already at thread limit - wait for a hashpipe to come available */

@@ -696,7 +696,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         }
 
         rm_log_debug_line("Filesystem %s: %s", wrap_entry->dir,
-                     (reflinkfs_found) ? "reflink" : "normal");
+                          (reflinkfs_found) ? "reflink" : "normal");
 
         if(reflinkfs_found != NULL) {
             RmStat dir_stat;
@@ -838,7 +838,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
                 rm_log_debug_line(RED "devno_to_wholedisk failed for %s" RESET,
-                             entry->fsname);
+                                  entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
                 strncpy(diskname, entry->fsname, sizeof(diskname));
                 is_rotational = false;
@@ -854,15 +854,15 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
         if(!existing || (existing->disk == 0 && whole_disk != 0)) {
             if(existing) {
                 rm_log_debug_line("Replacing part_table entry %s for path %s with %s",
-                             existing->fsname, entry->dir, entry->fsname);
+                                  existing->fsname, entry->dir, entry->fsname);
             }
             g_hash_table_insert(self->part_table,
                                 GUINT_TO_POINTER(stat_buf_folder.st_dev),
                                 rm_part_info_new(entry->dir, entry->fsname, whole_disk));
         } else {
             rm_log_debug_line("Skipping duplicate mount entry for dir %s dev %02u:%02u",
-                         entry->dir, major(stat_buf_folder.st_dev),
-                         minor(stat_buf_folder.st_dev));
+                              entry->dir, major(stat_buf_folder.st_dev),
+                              minor(stat_buf_folder.st_dev));
             continue;
         }
 
@@ -979,8 +979,9 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
                 if(parent_part) {
                     /* create new partition table entry */
                     rm_log_debug_line("Adding partition info for " GREEN "%s" RESET
-                                 " - looks like subvolume %s on disk " GREEN "%s" RESET,
-                                 path, prev, parent_part->name);
+                                      " - looks like subvolume %s on disk " GREEN
+                                      "%s" RESET,
+                                      path, prev, parent_part->name);
                     part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
                     g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
                                         part);
@@ -1177,9 +1178,9 @@ bool rm_offsets_match(char *path1, char *path2) {
     RmOff file2_offset_next = 0;
     RmOff file_offset_current = 0;
     while(!result &&
-            (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
-            rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
-            file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
+          (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
+           rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
+          file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
         if(file1_offset_next == file_offset_current) {
             /* phew, we got to the end */
             result = TRUE;

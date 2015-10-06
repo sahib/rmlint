@@ -87,10 +87,12 @@ static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *
 gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
     const RmCfg *cfg = file_a->session->cfg;
 
-    return ((file_a->file_size == file_b->file_size) &&
-            (!cfg->match_basename || rm_file_basenames_match(file_a, file_b)) &&
-            (!cfg->match_with_extension || rm_file_check_with_extension(file_a, file_b)) &&
-            (!cfg->match_without_extension || rm_file_check_without_extension(file_a, file_b)));
+    return (
+        (file_a->file_size == file_b->file_size) &&
+        (!cfg->match_basename || rm_file_basenames_match(file_a, file_b)) &&
+        (!cfg->match_with_extension || rm_file_check_with_extension(file_a, file_b)) &&
+        (!cfg->match_without_extension ||
+         rm_file_check_without_extension(file_a, file_b)));
 }
 
 static guint rm_node_hash(const RmFile *file) {
@@ -445,7 +447,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, RmFile *file,
                 g_assert(rm_pp_cmp_orig_criteria(iter_file, match_double, session) >= 0);
 
                 rm_log_debug_line("Ignoring path double %p, keeping %p", iter_file,
-                             match_double);
+                                  match_double);
 
                 g_queue_delete_link(file->hardlinks.files, iter);
                 rm_file_destroy(iter_file);
@@ -574,11 +576,12 @@ void rm_preprocess(RmSession *session) {
         tables->node_table, (GHRFunc)rm_pp_handle_inode_clusters, session);
 
     rm_log_debug_line("process hardlink groups finished at time %.3f; removed %u of %d",
-                 g_timer_elapsed(session->timer, NULL), removed, session->total_files);
+                      g_timer_elapsed(session->timer, NULL), removed,
+                      session->total_files);
 
     session->other_lint_cnt += rm_pp_handler_other_lint(session);
     rm_log_debug_line("Other lint handling finished at time %.3f",
-                 g_timer_elapsed(session->timer, NULL));
+                      g_timer_elapsed(session->timer, NULL));
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 }

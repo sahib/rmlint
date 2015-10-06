@@ -75,7 +75,6 @@ static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
 
 static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self,
                                         int max_len, FILE *out) {
-
     /* This is very ugly, but more or less required since we need to translate
      * the text to different languages and still determine the right textlength.
      */
@@ -255,23 +254,15 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
             if(is_unknown) {
-                static const int glyphs[3] = {
-                    PROGRESS_TICK_LOW,
-                    PROGRESS_TICK_HIGH,
-                    PROGRESS_TICK_SPACE
-                };
+                static const int glyphs[3] = {PROGRESS_TICK_LOW, PROGRESS_TICK_HIGH,
+                                              PROGRESS_TICK_SPACE};
                 static const char *colors[3] = {
-                    BLUE,
-                    BLUE,
-                    GREEN,
+                    BLUE, BLUE, GREEN,
                 };
 
                 int index = (i + self->stripe_offset) % 3;
-                rm_fmt_progressbar_print_glyph(
-                        out, session, self,
-                        glyphs[index],
-                        colors[index]
-                );
+                rm_fmt_progressbar_print_glyph(out, session, self, glyphs[index],
+                                               colors[index]);
             } else {
                 const char *color = (self->percent > 1.01) ? BLUE : GREEN;
                 RmProgressBarGlyph glyph =
@@ -296,7 +287,7 @@ static void rm_fmt_prog(RmSession *session,
 
     bool force_draw = false;
 
-    if (self->timer == NULL) {
+    if(self->timer == NULL) {
         self->timer = g_timer_new();
         force_draw = true;
     }
@@ -371,7 +362,8 @@ static void rm_fmt_prog(RmSession *session,
     ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
     self->last_state = state;
 
-    if(force_draw || g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+    if(force_draw ||
+       g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
         /* Max. 70% (-1 char) are allowed for the text */
         int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
 
@@ -397,13 +389,13 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     /* Initialize parent */
     .parent =
         {
-         .size = sizeof(PROGRESS_HANDLER_IMPL),
-         .name = "progressbar",
-         .head = NULL,
-         .elem = NULL,
-         .prog = rm_fmt_prog,
-         .foot = NULL,
-         .valid_keys = {"update_interval", "ascii", "fancy", NULL},
+            .size = sizeof(PROGRESS_HANDLER_IMPL),
+            .name = "progressbar",
+            .head = NULL,
+            .elem = NULL,
+            .prog = rm_fmt_prog,
+            .foot = NULL,
+            .valid_keys = {"update_interval", "ascii", "fancy", NULL},
         },
 
     /* Initialize own stuff */

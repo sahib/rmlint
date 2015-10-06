@@ -662,21 +662,22 @@ static gboolean rm_cmd_parse_lint_types(_U const char *option_name,
                         &cfg->find_emptyfiles, &cfg->find_nonstripped,
                         &cfg->find_duplicates, &cfg->merge_directories, 0}},
         {
-         .names = NAMES{"minimal", 0},
-         .enable = OPTS{&cfg->find_badids, &cfg->find_badlinks, &cfg->find_duplicates, 0},
+            .names = NAMES{"minimal", 0},
+            .enable =
+                OPTS{&cfg->find_badids, &cfg->find_badlinks, &cfg->find_duplicates, 0},
         },
         {
-         .names = NAMES{"minimaldirs", 0},
-         .enable =
-             OPTS{&cfg->find_badids, &cfg->find_badlinks, &cfg->merge_directories, 0},
+            .names = NAMES{"minimaldirs", 0},
+            .enable =
+                OPTS{&cfg->find_badids, &cfg->find_badlinks, &cfg->merge_directories, 0},
         },
         {
-         .names = NAMES{"defaults", 0},
-         .enable = OPTS{&cfg->find_badids, &cfg->find_badlinks, &cfg->find_emptydirs,
-                        &cfg->find_emptyfiles, &cfg->find_duplicates, 0},
+            .names = NAMES{"defaults", 0},
+            .enable = OPTS{&cfg->find_badids, &cfg->find_badlinks, &cfg->find_emptydirs,
+                           &cfg->find_emptyfiles, &cfg->find_duplicates, 0},
         },
         {
-         .names = NAMES{"none", 0}, .enable = OPTS{0},
+            .names = NAMES{"none", 0}, .enable = OPTS{0},
         },
         {.names = NAMES{"badids", "bi", 0}, .enable = OPTS{&cfg->find_badids, 0}},
         {.names = NAMES{"badlinks", "bl", 0}, .enable = OPTS{&cfg->find_badlinks, 0}},
@@ -1578,7 +1579,7 @@ int rm_cmd_main(RmSession *session) {
     rm_traverse_tree(session);
 
     rm_log_debug_line("List build finished at %.3f with %d files",
-                 g_timer_elapsed(session->timer, NULL), session->total_files);
+                      g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(session->cfg->merge_directories) {
         g_assert(session->cfg->cache_file_structs);
@@ -1593,7 +1594,7 @@ int rm_cmd_main(RmSession *session) {
             rm_shred_run(session);
 
             rm_log_debug_line("Dupe search finished at time %.3f",
-                         g_timer_elapsed(session->timer, NULL));
+                              g_timer_elapsed(session->timer, NULL));
         } else {
             /* Clear leftovers */
             rm_file_tables_clear(session);
@@ -1610,16 +1611,16 @@ int rm_cmd_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 
     if(session->shred_bytes_remaining != 0) {
-        rm_log_error_line(
-            "BUG: Number of remaining bytes is %"LLU" (not 0). Please report this.",
-            session->shred_bytes_remaining);
+        rm_log_error_line("BUG: Number of remaining bytes is %" LLU
+                          " (not 0). Please report this.",
+                          session->shred_bytes_remaining);
         exit_state = EXIT_FAILURE;
     }
 
     if(session->shred_files_remaining != 0) {
-        rm_log_error_line(
-            "BUG: Number of remaining files is %"LLU" (not 0). Please report this.",
-            session->shred_files_remaining);
+        rm_log_error_line("BUG: Number of remaining files is %" LLU
+                          " (not 0). Please report this.",
+                          session->shred_files_remaining);
         exit_state = EXIT_FAILURE;
     }
 

@@ -324,13 +324,13 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
     /* Initialize parent */
     .parent =
         {
-         .size = sizeof(JSON_HANDLER_IMPL),
-         .name = "json",
-         .head = rm_fmt_head,
-         .elem = rm_fmt_elem,
-         .prog = NULL,
-         .foot = rm_fmt_foot,
-         .valid_keys = {"no_header", "no_footer", "no_body", "oneline", NULL},
+            .size = sizeof(JSON_HANDLER_IMPL),
+            .name = "json",
+            .head = rm_fmt_head,
+            .elem = rm_fmt_elem,
+            .prog = NULL,
+            .foot = rm_fmt_foot,
+            .valid_keys = {"no_header", "no_footer", "no_body", "oneline", NULL},
         },
     .pretty = true};
 

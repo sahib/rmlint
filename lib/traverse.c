@@ -106,9 +106,9 @@ static RmTravSession *rm_traverse_session_new(RmSession *session) {
 
 static void rm_traverse_session_free(RmTravSession *trav_session) {
     rm_log_debug_line("Found %d files, ignored %d hidden files and %d hidden folders",
-                trav_session->session->total_files,
-                trav_session->session->ignored_files,
-                trav_session->session->ignored_folders);
+                      trav_session->session->total_files,
+                      trav_session->session->ignored_files,
+                      trav_session->session->ignored_folders);
 
     rm_userlist_destroy(trav_session->userlist);
 
@@ -319,7 +319,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
                     clear_emptydir_flags = true; /* flag current dir as not empty */
                     rm_log_debug_line("Not descending into %s because max depth reached",
-                                 p->fts_path);
+                                      p->fts_path);
                 } else if(!(cfg->crossdev) && p->fts_dev != chp->fts_dev) {
                     /* continuing into folder would cross file systems*/
                     fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
@@ -394,7 +394,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 if(!cfg->follow_symlinks) {
                     if(p->fts_level != 0) {
                         rm_log_debug_line("Not following symlink %s because of cfg",
-                                     p->fts_path);
+                                          p->fts_path);
                     }
 
                     if(access(p->fts_path, R_OK) == -1 && errno == ENOENT) {

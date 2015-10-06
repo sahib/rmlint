@@ -237,7 +237,7 @@
  * hashing followed by simple matching), the paranoid method requires
  * almost no CPU during reading/hashing, but requires a large memcmp() at the
  * end to find matching files/groups.
- * 
+ *
  * That would not be a bottleneck as long as the reader thread still has other
  * files that it can go and read while the hasher/sorter does the memcmp in
  * parallel... but unfortunately the memory management issue means that's not
@@ -317,7 +317,8 @@ typedef struct RmShredTag {
     gint32 active_groups; /* how many shred groups active (only used with paranoid) */
     RmHasher *hasher;
     GThreadPool *result_pool;
-    /* threadpool for progress counters to avoid blocking delays in rm_shred_adjust_counters */
+    /* threadpool for progress counters to avoid blocking delays in
+     * rm_shred_adjust_counters */
     GThreadPool *counter_pool;
     gint32 page_size;
     bool mem_refusing;
@@ -564,10 +565,11 @@ static void rm_shred_mem_return(RmShredGroup *group) {
             tag->active_groups--;
             group->is_active = FALSE;
 #if _RM_SHRED_DEBUG
-            rm_log_debug_line("Mem avail %" LLI ", active groups %d. " YELLOW "Returned %" LLU " bytes for paranoid hashing.",
-                         tag->paranoid_mem_alloc,
-                         tag->active_groups,
-                         group->mem_allocation);
+            rm_log_debug_line("Mem avail %" LLI ", active groups %d. " YELLOW
+                              "Returned %" LLU " bytes for paranoid hashing.",
+                              tag->paranoid_mem_alloc,
+                              tag->active_groups,
+                              group->mem_allocation);
 #endif
             tag->mem_refusing = FALSE;
             if(group->digest) {
@@ -630,15 +632,14 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
             group->mem_allocation += borrowed;
 
             if(tag->mem_refusing) {
-                rm_log_debug_line(
-                    "Mem avail %"LLI", active groups %d. Borrowed %"LLI". Inherited: %"LLI" bytes for paranoid hashing",
-                             tag->paranoid_mem_alloc,
-                             tag->active_groups, borrowed,
-                             inherited
-                    );
+                rm_log_debug_line("Mem avail %" LLI ", active groups %d. Borrowed %" LLI
+                                  ". Inherited: %" LLI " bytes for paranoid hashing",
+                                  tag->paranoid_mem_alloc, tag->active_groups, borrowed,
+                                  inherited);
 
                 if(mem_required > borrowed + inherited) {
-                    rm_log_debug_line("...due to %i active group limit", active_group_threshold);
+                    rm_log_debug_line("...due to %i active group limit",
+                                      active_group_threshold);
                 }
 
                 tag->mem_refusing = FALSE;
@@ -650,10 +651,10 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
             result = TRUE;
         } else {
             if(!tag->mem_refusing) {
-                rm_log_debug_line("Mem avail %"LLI", active groups %d. " RED
-                             "Refused request for %" LLU
-                             " bytes for paranoid hashing.",
-                             tag->paranoid_mem_alloc, tag->active_groups, mem_required);
+                rm_log_debug_line(
+                    "Mem avail %" LLI ", active groups %d. " RED
+                    "Refused request for %" LLU " bytes for paranoid hashing.",
+                    tag->paranoid_mem_alloc, tag->active_groups, mem_required);
                 tag->mem_refusing = TRUE;
             }
             result = FALSE;
@@ -668,7 +669,7 @@ static bool rm_shred_check_paranoid_mem_alloc(RmShredGroup *group,
 //       Progress Reporting      //
 ///////////////////////////////////
 
-typedef struct RmCounterBuffer{
+typedef struct RmCounterBuffer {
     int files;
     gint64 bytes;
 } RmCounterBuffer;
@@ -687,7 +688,7 @@ static void rm_shred_adjust_counters(RmShredTag *tag, int files, gint64 bytes) {
 static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
     RmSession *session = tag->session;
     session->shred_files_remaining += buffer->files;
-    if (buffer->files < 0) {
+    if(buffer->files < 0) {
         session->total_filtered_files += buffer->files;
     }
     session->shred_bytes_remaining += buffer->bytes;
@@ -897,10 +898,11 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         shred_group->has_npref |= (!file->is_prefd) || file->hardlinks.has_non_prefd;
         shred_group->has_new |= file->is_new_or_has_new;
 
-        if (shred_group->num_files == 0 && shred_group->session->cfg->unmatched_basenames) {
+        if(shred_group->num_files == 0 &&
+           shred_group->session->cfg->unmatched_basenames) {
             shred_group->unique_basename = file;
-        } else if (shred_group->unique_basename &&
-                   !rm_file_basenames_match(file, shred_group->unique_basename)) {
+        } else if(shred_group->unique_basename &&
+                  !rm_file_basenames_match(file, shred_group->unique_basename)) {
             shred_group->unique_basename = NULL;
         }
 
@@ -908,9 +910,11 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         if(file->hardlinks.is_head) {
             g_assert(file->hardlinks.files);
             shred_group->num_files += file->hardlinks.files->length;
-            if (shred_group->unique_basename && shred_group->session->cfg->unmatched_basenames) {
+            if(shred_group->unique_basename &&
+               shred_group->session->cfg->unmatched_basenames) {
                 for(GList *iter = file->hardlinks.files->head; iter; iter = iter->next) {
-                    if (!rm_file_basenames_match(iter->data, shred_group->unique_basename)) {
+                    if(!rm_file_basenames_match(iter->data,
+                                                shred_group->unique_basename)) {
                         shred_group->unique_basename = NULL;
                         break;
                     }
@@ -1020,8 +1024,7 @@ static RmFile *rm_shred_sift(RmFile *file) {
                                (GFunc)rm_digest_send_match_candidate,
                                child_group->digest);
             }
-            result =
-                rm_shred_group_push_file(child_group, file, FALSE);
+            result = rm_shred_group_push_file(child_group, file, FALSE);
         }
 
         /* is current shred group needed any longer? */
@@ -1061,7 +1064,7 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
     } else {
         RM_DEFINE_PATH(file);
         rm_log_error_line("Unexpected hash offset for %s, got %" LLU ", expected %" LLU,
-                     file_path, file->hash_offset, file->shred_group->next_offset);
+                          file_path, file->hash_offset, file->shred_group->next_offset);
         g_assert_not_reached();
     }
 }
@@ -1107,8 +1110,9 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
     RM_DEFINE_PATH(file);
 
     /* add reference for this file to the MDS scheduler, and get pointer to its device */
-    file->disk = rm_mds_device_get(session->mds, file_path,
-                (session->cfg->fake_pathindex_as_disk) ? file->path_index : file->dev);
+    file->disk = rm_mds_device_get(
+        session->mds, file_path,
+        (session->cfg->fake_pathindex_as_disk) ? file->path_index : file->dev);
     rm_mds_device_ref(file->disk, 1);
     rm_shred_adjust_counters(main, 1, (gint64)file->file_size - file->hash_offset);
 
@@ -1168,7 +1172,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     g_hash_table_unref(session->tables->node_table);
     session->tables->node_table = NULL;
     rm_log_debug_line("move remaining files to size_groups finished at time %.3f",
-                 g_timer_elapsed(session->timer, NULL));
+                      g_timer_elapsed(session->timer, NULL));
 
     /* iterate over groups, looking for any that already have external checksums
      * for all files */
@@ -1185,9 +1189,8 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
             }
         }
         rm_log_debug_line("External checksum check finished at time %.3f",
-                    g_timer_elapsed(session->timer, NULL));
+                          g_timer_elapsed(session->timer, NULL));
     }
-
 
     rm_log_debug_line("Discarding unique sizes...");
     g_assert(session->tables->size_groups);
@@ -1196,8 +1199,8 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     g_hash_table_unref(session->tables->size_groups);
     session->tables->size_groups = NULL;
     rm_log_debug_line("...done at time %.3f; removed %u of %" LLU,
-                 g_timer_elapsed(session->timer, NULL), removed,
-                 session->total_filtered_files);
+                      g_timer_elapsed(session->timer, NULL), removed,
+                      session->total_filtered_files);
 }
 
 /////////////////////////////////
@@ -1256,10 +1259,10 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
 #if _RM_SHRED_DEBUG
             RM_DEFINE_PATH(file);
             rm_log_debug_line("tagging %s as original because %s",
-                         file_path,
-                         ((file->is_prefd) && (session->cfg->keep_all_tagged))
-                             ? "tagged"
-                             : "untagged");
+                              file_path,
+                              ((file->is_prefd) && (session->cfg->keep_all_tagged))
+                                  ? "tagged"
+                                  : "untagged");
 #endif
         }
     }
@@ -1274,17 +1277,17 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
 #if _RM_SHRED_DEBUG
         RM_DEFINE_PATH(headfile);
         rm_log_debug_line("tagging %s as original because it is highest ranked",
-                     headfile_path);
+                          headfile_path);
 #endif
     }
-    if (session->cfg->unmatched_basenames) {
+    if(session->cfg->unmatched_basenames) {
         /* remove files which match headfile's basename */
         GList *iter = group->head->next;
         while(iter) {
             RmFile *iter_file = iter->data;
             GList *temp = iter;
             iter = iter->next;
-            if (rm_file_basenames_match(iter_file, headfile)) {
+            if(rm_file_basenames_match(iter_file, headfile)) {
                 rm_shred_discard_file(iter_file, TRUE);
                 g_queue_delete_link(group, temp);
             }
@@ -1407,12 +1410,10 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
         }
         g_mutex_unlock(&group->lock);
 
-        file->digest =
-            rm_digest_new(RM_DIGEST_PARANOID, 0, 0, 0,
-                          NEEDS_SHADOW_HASH(cfg));
+        file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
 
         if((file->is_symlink == false || cfg->see_symlinks == false) &&
-                (group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD)) {
+           (group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD)) {
             /* send candidate twin(s) */
             g_mutex_lock(&group->lock);
             {
@@ -1447,7 +1448,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
 
 /* call with device unlocked */
 static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
-    if (file->digest) {
+    if(file->digest) {
         return TRUE;
     } else {
         return rm_shred_reassign_checksum(main, file);
@@ -1472,7 +1473,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         return 1;
     }
 
-    gint result=0;
+    gint result = 0;
 
     RM_DEFINE_PATH(file);
     while(file && rm_shred_can_process(file, tag)) {
@@ -1484,10 +1485,9 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         bool worth_waiting =
             (file->shred_group->next_offset != file->file_size) &&
             (cfg->shred_always_wait ||
-                ( !cfg->shred_never_wait &&
-                 rm_mds_device_is_rotational(file->disk) &&
-                 bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT &&
-                 (file->status == RM_FILE_STATE_NORMAL)));
+             (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
+              bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT &&
+              (file->status == RM_FILE_STATE_NORMAL)));
 
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
@@ -1555,7 +1555,7 @@ void rm_shred_run(RmSession *session) {
 
     session->mds =
         rm_mds_new(session->cfg->threads, session->mounts,
-                   session->cfg->fake_pathindex_as_disk || !(cfg->list_mounts) );
+                   session->cfg->fake_pathindex_as_disk || !(cfg->list_mounts));
     rm_mds_configure(session->mds,
                      (RmMDSFunc)rm_shred_process_file,
                      session,
@@ -1570,7 +1570,7 @@ void rm_shred_run(RmSession *session) {
     rm_log_debug_line("Done shred preprocessing");
 
     /* wait for counters to catch up */
-    while (g_thread_pool_unprocessed(tag.counter_pool) > 0) {
+    while(g_thread_pool_unprocessed(tag.counter_pool) > 0) {
         g_usleep(10);
     }
     rm_log_debug_line("Byte and file counters up to date");
@@ -1584,15 +1584,14 @@ void rm_shred_run(RmSession *session) {
 
     if(cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
-        tag.paranoid_mem_alloc = MIN((gint64)cfg->paranoid_mem,
-                                     (gint64)cfg->total_mem - (gint64)mem_used -
-                                         (gint64)cfg->read_buffer_mem);
+        tag.paranoid_mem_alloc =
+            MIN((gint64)cfg->paranoid_mem,
+                (gint64)cfg->total_mem - (gint64)mem_used - (gint64)cfg->read_buffer_mem);
         tag.paranoid_mem_alloc = MAX(0, tag.paranoid_mem_alloc);
         rm_log_debug_line("Paranoid Mem: %" LLU, tag.paranoid_mem_alloc);
     } else {
         cfg->read_buffer_mem =
-            MAX((gint64)cfg->read_buffer_mem,
-                (gint64)cfg->total_mem - (gint64)mem_used);
+            MAX((gint64)cfg->read_buffer_mem, (gint64)cfg->total_mem - (gint64)mem_used);
         tag.paranoid_mem_alloc = 0;
     }
     rm_log_debug_line("Read buffer Mem: %" LLU, cfg->read_buffer_mem);
@@ -1637,11 +1636,11 @@ void rm_shred_run(RmSession *session) {
     /* This should not block, or at least only very short. */
     g_thread_pool_free(tag.result_pool, FALSE, TRUE);
 
-    rm_log_debug(BLUE"Waiting for progress counters to catch up..."RESET);
+    rm_log_debug(BLUE "Waiting for progress counters to catch up..." RESET);
     g_thread_pool_free(tag.counter_pool, FALSE, TRUE);
-    rm_log_debug(BLUE"Done\n"RESET);
+    rm_log_debug(BLUE "Done\n" RESET);
 
     g_mutex_clear(&tag.hash_mem_mtx);
-    rm_log_debug_line("Remaining %"LLU" bytes in %"LLU" files",
+    rm_log_debug_line("Remaining %" LLU " bytes in %" LLU " files",
                       session->shred_bytes_remaining, session->shred_files_remaining);
 }

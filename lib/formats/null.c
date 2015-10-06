@@ -33,13 +33,13 @@ static RmFmtHandlerNull NULL_HANDLER_IMPL = {
     /* Initialize parent */
     .parent =
         {
-         .size = sizeof(NULL_HANDLER_IMPL),
-         .name = "null",
-         .head = NULL,
-         .elem = NULL,
-         .prog = NULL,
-         .foot = NULL,
-         .valid_keys = {NULL},
+            .size = sizeof(NULL_HANDLER_IMPL),
+            .name = "null",
+            .head = NULL,
+            .elem = NULL,
+            .prog = NULL,
+            .foot = NULL,
+            .valid_keys = {NULL},
         },
 };
 

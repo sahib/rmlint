@@ -119,7 +119,7 @@ typedef struct RmBufferPool {
     gsize max_kept_buffers;
 
     /* Flag to prevent double warnings. */
-    bool mem_warned; 
+    bool mem_warned;
 
     /* concurrent accesses may happen */
     GMutex lock;
@@ -185,7 +185,8 @@ const char *rm_digest_type_to_string(RmDigestType type);
  * @param ext_size Size of the digest in case on RM_DIGEST_EXT
  * @param use_shadow_hash.  Keep a shadow hash for lookup purposes.
  */
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
+                        bool use_shadow_hash);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
