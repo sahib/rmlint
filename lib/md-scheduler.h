@@ -137,14 +137,6 @@ typedef gint (*RmMDSSortFunc)(const RmMDSTask *task_a, const RmMDSTask *task_b);
 RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_disk);
 
 /**
- * @brief Make the MDS scheduler stop waiting in rm_mds_finish()
- *
- * This might leave back an inconsistent state. The scheduler shall
- * not be used after this.
- */
-void rm_mds_abort(RmMDS *mds);
-
-/**
  * @brief Configure or reconfigure a MDS scheduler
  *
  * @param func The callback function called for each task
