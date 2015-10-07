@@ -68,10 +68,20 @@ struct _RmHasher {
 };
 
 struct _RmHasherTask {
+    /* pointer back to hasher main */
     RmHasher *hasher;
+
+    /* single-thread threadpool to send buffers to */
     GThreadPool *hashpipe;
+
+    /* checksum to update with read data */
     RmDigest *digest;
+
+    /* user data associated with this specific task */
     gpointer task_user_data;
+
+    /* if true then hasher->callback will be called by rm_hashpipe_worker() */
+    gboolean finalise;
 };
 
 static void rm_hasher_task_free(RmHasherTask *self) {
@@ -83,20 +93,16 @@ static void rm_hasher_task_free(RmHasherTask *self) {
 static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
     if(buffer->len > 0) {
         /* Update digest with buffer->data */
+        g_assert(buffer->user_data == NULL);
         rm_digest_buffered_update(buffer);
-    } else {
+    } else if (buffer->user_data) {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
-        g_assert(hasher);
-        g_assert(hasher->callback);
-        g_assert(buffer->digest);
-        g_assert(hasher->session_user_data);
-        g_assert(task->task_user_data);
-        hasher->callback(hasher, buffer->digest, hasher->session_user_data,
+        g_assert(task->digest == buffer->digest); /* TODO: do we need both? */
+        hasher->callback(hasher, task->digest, hasher->session_user_data,
                          task->task_user_data);
-
-        rm_buffer_pool_release(buffer);
         rm_hasher_task_free(task);
+        rm_buffer_pool_release(buffer);
 
         g_mutex_lock(&hasher->lock);
         {
@@ -283,6 +289,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
             RmBuffer *buffer = buffers[i];
             buffer->len = MIN(hasher->buf_size, bytes_read - i * hasher->buf_size);
             buffer->digest = digest;
+            buffer->user_data = NULL;
 
             /* Send it to the hasher */
             rm_util_thread_pool_push(hashpipe, buffer);
@@ -407,9 +414,12 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
 
     RmHasherTask *self = g_slice_new0(RmHasherTask);
     self->hasher = hasher;
-    self->digest =
-        digest ? digest : rm_digest_new(hasher->digest_type, 0, 0, 0,
-                                        hasher->digest_type == RM_DIGEST_PARANOID);
+    if (digest) {
+        self->digest = digest;
+    } else {
+        self->digest = rm_digest_new(hasher->digest_type, 0, 0, 0,
+                               hasher->digest_type == RM_DIGEST_PARANOID);
+    }
 
     /* get a recycled hashpipe if available */
     self->hashpipe = g_async_queue_try_pop(hasher->hashpipe_pool);
