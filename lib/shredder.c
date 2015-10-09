@@ -695,6 +695,15 @@ static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
     rm_fmt_set_state(session->formats, (tag->after_preprocess)
                                            ? RM_PROGRESS_STATE_SHREDDER
                                            : RM_PROGRESS_STATE_PREPROCESS);
+
+    /* fake interrupt option for debugging/testing: */
+    if (tag->after_preprocess &&
+            session->cfg->fake_abort &&
+            session->shred_bytes_remaining * 10 < session->shred_bytes_total * 9) {
+        rm_session_abort(session);
+        /* prevent multiple aborts */
+        session->shred_bytes_total = 0;
+    }
     g_slice_free(RmCounterBuffer, buffer);
 }
 
@@ -1628,6 +1637,8 @@ void rm_shred_run(RmSession *session) {
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
+
+    session->shred_bytes_total = session->shred_bytes_remaining;
     rm_mds_start(session->mds);
 
     /* should complete shred session and then free: */
