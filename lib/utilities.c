@@ -319,18 +319,25 @@ RmUserList *rm_userlist_new(void) {
     }
 
     endgrent();
+    g_mutex_init(&self->lock);
     return self;
 }
 
 bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
                           bool *valid_uid, bool *valid_gid) {
     g_assert(self);
+    bool gid_found = FALSE;
+    bool uid_found = FALSE;
 
-    bool gid_found =
-        g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
-    bool uid_found =
-        g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
-
+    g_mutex_lock(&self->lock);
+    {
+        gid_found =
+                g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
+        uid_found =
+                g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
+    }
+    g_mutex_unlock(&self->lock);
+    
     if(valid_uid != NULL) {
         *valid_uid = uid_found;
     }
@@ -347,6 +354,7 @@ void rm_userlist_destroy(RmUserList *self) {
 
     g_sequence_free(self->users);
     g_sequence_free(self->groups);
+    g_mutex_clear(&self->lock);
     g_free(self);
 }
 
