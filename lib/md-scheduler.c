@@ -83,7 +83,6 @@ struct _RmMDS {
     /* pointer to user data to be passed to func */
     gpointer user_data;
 
-    volatile gint aborted;
 };
 
 typedef struct _RmMDSDevice {
@@ -117,6 +116,7 @@ typedef struct _RmMDSDevice {
 
     /* is disk rotational? */
     gboolean is_rotational;
+
 } RmMDSDevice;
 
 //////////////////////////////////////////////
@@ -328,7 +328,6 @@ RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_d
     self->fake_disk = fake_disk;
     self->disks = g_hash_table_new(g_direct_hash, g_direct_equal);
     self->running = FALSE;
-    self->aborted = FALSE;
 
     return self;
 }
@@ -339,32 +338,12 @@ void rm_mds_configure(RmMDS *self,
                       const gint pass_quota,
                       const gint threads_per_disk,
                       RmMDSSortFunc prioritiser) {
-    if(self->running != FALSE) {
-        rm_log_error_line("Cannot configure during run");
-        return;
-    }
-
+    g_assert(self->running == FALSE);
     self->func = func;
     self->user_data = user_data;
     self->threads_per_disk = threads_per_disk;
     self->pass_quota = (pass_quota > 0) ? pass_quota : G_MAXINT;
     self->prioritiser = prioritiser;
-}
-
-void rm_mds_abort(RmMDS *mds) {
-    if(g_atomic_int_get(&mds->aborted)) {
-        /* Already aborted */
-        return;
-    }
-
-    g_mutex_lock(&mds->lock);
-    {
-        g_atomic_int_set(&mds->aborted, 1);
-
-        /* Make sure rm_mds_finish() wakes up */
-        g_cond_signal(&mds->cond);
-    }
-    g_mutex_unlock(&mds->lock);
 }
 
 static gint rm_mds_disk_count(RmMDS *mds) {
@@ -380,7 +359,7 @@ static gint rm_mds_disk_count(RmMDS *mds) {
 
 void rm_mds_finish(RmMDS *mds) {
     /* wait for any pending threads to finish */
-    while(rm_mds_disk_count(mds) > 0 && g_atomic_int_get(&mds->aborted) == FALSE) {
+    while(rm_mds_disk_count(mds) > 0) {
         /* wait for a device to finish */
         g_mutex_lock(&mds->lock);
         { g_cond_wait(&mds->cond, &mds->lock); }
