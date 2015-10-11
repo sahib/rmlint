@@ -58,7 +58,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(rm_session_was_aborted(session)) {
-        ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
+        ARROW fprintf(out, _("\nEarly shutdown, probably not all lint was found.\n"));
     }
 
     char numbers[3][512];
