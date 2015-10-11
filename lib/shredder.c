@@ -298,12 +298,6 @@
 /* Maximum number of bytes before worth_waiting becomes false */
 #define SHRED_TOO_MANY_BYTES_TO_WAIT (64 * 1024 * 1024)
 
-////////////////////////
-//  MATHS SHORTCUTS   //
-////////////////////////
-
-#define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing unit64's */
-
 ///////////////////////////////////////////////////////////////////////
 //    INTERNAL STRUCTURES, WITH THEIR INITIALISERS AND DESTROYERS    //
 ///////////////////////////////////////////////////////////////////////

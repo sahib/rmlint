@@ -44,6 +44,13 @@ typedef struct stat64 RmStat;
 typedef struct stat RmStat;
 #endif
 
+////////////////////////
+//  MATHS SHORTCUTS   //
+////////////////////////
+
+#define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing unit64's */
+
+
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
