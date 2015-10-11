@@ -38,6 +38,7 @@
 #include "utilities.h"
 #include "file.h"
 #include "xattr.h"
+#include "md-scheduler.h"
 
 ///////////////////////////////////////////
 // BUFFER FOR STARTING TRAVERSAL THREADS //
@@ -56,10 +57,11 @@
     }
 
 typedef struct RmTravBuffer {
-    RmStat stat_buf;  /* rm_sys_stat(2) information about the directory */
-    char *path;       /* The path of the directory, as passed on command line. */
-    bool is_prefd;    /* Was this file in a preferred path? */
-    RmOff path_index; /* Index of path, as passed on the commadline */
+    RmStat stat_buf;   /* rm_sys_stat(2) information about the directory */
+    char *path;        /* The path of the directory, as passed on command line. */
+    bool is_prefd;     /* Was this file in a preferred path? */
+    RmOff path_index;  /* Index of path, as passed on the commadline */
+    RmMDSDevice *disk; /* md-scheduler device the buffer was pushed to */
 } RmTravBuffer;
 
 static RmTravBuffer *rm_trav_buffer_new(RmSession *session, char *path, bool is_prefd,
@@ -270,14 +272,14 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     if(ftsp == NULL) {
         rm_log_error_line("fts_open() == NULL");
-        return;
+        goto done;
     }
 
     FTSENT *p, *chp;
     chp = fts_children(ftsp, 0);
     if(chp == NULL) {
         rm_log_warning_line("fts_children() == NULL");
-        return;
+        goto done;
     }
 
     /* start main processing */
@@ -449,7 +451,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 #undef ADD_FILE
 
     fts_close(ftsp);
-    rm_trav_buffer_free(buffer);
 
     /* Pass the files to the preprocessing machinery. We collect the files first
      * in order to make -with-metadata-cache work: Without, too many
@@ -462,10 +463,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
     }
     g_queue_clear(&file_queue);
-}
 
-static void rm_traverse_directories(GQueue *path_queue, RmTravSession *trav_session) {
-    g_queue_foreach(path_queue, (GFunc)rm_traverse_directory, trav_session);
+done:
+    rm_mds_device_ref(buffer->disk, -1);
+    rm_trav_buffer_free(buffer);
 }
 
 ////////////////
@@ -476,8 +477,13 @@ void rm_traverse_tree(RmSession *session) {
     RmCfg *cfg = session->cfg;
     RmTravSession *trav_session = rm_traverse_session_new(session);
 
-    GHashTable *paths_per_disk =
-        g_hash_table_new_full(NULL, NULL, NULL, (GDestroyNotify)g_queue_free);
+    RmMDS *mds = session->mds;
+    rm_mds_configure(mds,
+                 (RmMDSFunc)rm_traverse_directory,
+                 trav_session,
+                 0,
+                 session->cfg->threads_per_disk,
+                 NULL);
 
     for(RmOff idx = 0; cfg->paths[idx] != NULL; ++idx) {
         char *path = cfg->paths[idx];
@@ -503,33 +509,20 @@ void rm_traverse_tree(RmSession *session) {
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
-            dev_t disk = (dev_t)idx;
-            if(cfg->fake_pathindex_as_disk == false && session->mounts) {
-                disk = rm_mounts_get_disk_id_by_path(session->mounts, buffer_path);
-            }
+            buffer->disk = rm_mds_device_get(
+                    mds, buffer_path,
+                    (cfg->fake_pathindex_as_disk) ? idx + 1 : buffer->stat_buf.st_dev);
+            rm_mds_device_ref(buffer->disk, 1);
+            rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, buffer_path, buffer);
 
-            GQueue *path_queue = rm_hash_table_setdefault(
-                paths_per_disk, GUINT_TO_POINTER(disk), (RmNewFunc)g_queue_new);
-            g_queue_push_tail(path_queue, buffer);
         } else {
             /* Probably a block device, fifo or something weird. */
             rm_trav_buffer_free(buffer);
         }
     }
-
-    GThreadPool *traverse_pool = rm_util_thread_pool_new(
-        (GFunc)rm_traverse_directories, trav_session, session->cfg->threads);
-
-    GHashTableIter iter;
-    GQueue *path_queue = NULL;
-
-    g_hash_table_iter_init(&iter, paths_per_disk);
-    while(g_hash_table_iter_next(&iter, NULL, (gpointer *)&path_queue)) {
-        rm_util_thread_pool_push(traverse_pool, path_queue);
-    }
-
-    g_thread_pool_free(traverse_pool, false, true);
-    g_hash_table_unref(paths_per_disk);
+    rm_mds_start(mds);
+    rm_mds_finish(mds);
+    
     rm_traverse_session_free(trav_session);
 
     session->traverse_finished = TRUE;

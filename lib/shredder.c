@@ -1131,7 +1131,7 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
     /* add reference for this file to the MDS scheduler, and get pointer to its device */
     file->disk = rm_mds_device_get(
         session->mds, file_path,
-        (session->cfg->fake_pathindex_as_disk) ? file->path_index : file->dev);
+        (session->cfg->fake_pathindex_as_disk) ? file->path_index + 1 : file->dev);
     rm_mds_device_ref(file->disk, 1);
     rm_shred_adjust_counters(main, 1, (gint64)file->file_size - file->hash_offset);
 
@@ -1583,9 +1583,6 @@ void rm_shred_run(RmSession *session) {
 
     g_mutex_init(&tag.lock);
 
-    session->mds =
-        rm_mds_new(session->cfg->threads, session->mounts,
-                   session->cfg->fake_pathindex_as_disk || !(cfg->list_mounts));
     rm_mds_configure(session->mds,
                      (RmMDSFunc)rm_shred_process_file,
                      session,

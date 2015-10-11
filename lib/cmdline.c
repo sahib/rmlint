@@ -48,6 +48,7 @@
 #include "formats.h"
 #include "replay.h"
 #include "hash-utility.h"
+#include "md-scheduler.h"
 
 #if HAVE_BTRFS_H
 #include <sys/ioctl.h>
@@ -1381,7 +1382,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"crossdev"                   , 'x' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL} ,
         {"less-paranoid"              , 'P' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(less_paranoid)           , "Use less paranoid hashing algorithm" , NULL} ,
         {"see-symlinks"               , '@' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(see_symlinks)            , "Treat symlinks a regular files"      , NULL} ,
-        {"unmatched-basename"         , 'B',  HIDDEN           , G_OPTION_ARG_NONE     , &cfg->unmatched_basenames     , "Only find twins with differing names", NULL} ,       
+        {"unmatched-basename"         , 'B',  HIDDEN           , G_OPTION_ARG_NONE     , &cfg->unmatched_basenames     , "Only find twins with differing names", NULL} ,
         {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
         {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
         {"no-match-without-extension" , 'I' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_without_extension , "Disable --match-without-extension"   , NULL} ,
@@ -1560,6 +1561,7 @@ static int rm_cmd_replay_main(RmSession *session) {
 
 int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
+    RmCfg *cfg = session->cfg;
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
 
@@ -1569,21 +1571,25 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
-    if(session->cfg->list_mounts) {
-        session->mounts = rm_mounts_table_new(session->cfg->fake_fiemap);
+    if(cfg->list_mounts) {
+        session->mounts = rm_mounts_table_new(cfg->fake_fiemap);
     }
 
     if(session->mounts == NULL) {
         rm_log_debug_line("No mount table created.");
     }
 
+    session->mds =
+        rm_mds_new(cfg->threads, session->mounts,
+                   cfg->fake_pathindex_as_disk || !(cfg->list_mounts));
+
     rm_traverse_tree(session);
 
     rm_log_debug_line("List build finished at %.3f with %d files",
                       g_timer_elapsed(session->timer, NULL), session->total_files);
 
-    if(session->cfg->merge_directories) {
-        g_assert(session->cfg->cache_file_structs);
+    if(cfg->merge_directories) {
+        g_assert(cfg->cache_file_structs);
         session->dir_merger = rm_tm_new(session);
     }
 
@@ -1591,7 +1597,7 @@ int rm_cmd_main(RmSession *session) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
-        if(session->cfg->find_duplicates || session->cfg->merge_directories) {
+        if(cfg->find_duplicates || cfg->merge_directories) {
             rm_shred_run(session);
 
             rm_log_debug_line("Dupe search finished at time %.3f",
@@ -1602,7 +1608,7 @@ int rm_cmd_main(RmSession *session) {
         }
     }
 
-    if(session->cfg->merge_directories) {
+    if(cfg->merge_directories) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
         rm_tm_finish(session->dir_merger);
     }
