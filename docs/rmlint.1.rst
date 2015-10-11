@@ -269,10 +269,10 @@ Traversal Options
     latter is the default behaviour, since it is a sensible default for
     ``--merge-directories``.
 
-:``-x --crossdev`` (**default**) / ``-X --no-crossdev``:
+:``-x --no-crossdev`` / ``-X --crossdev`` (**default**):
 
-    Do cross over mount points (``-x``)? 
-    Or stay always on the same device (``-X``)?
+    Stay always on the same device (``-x``),
+    or allow crossing mountpoints (``-X``)?
 
 :``-r --hidden`` / ``-R --no-hidden`` (**default**) / ``--partial-hidden``:
 
