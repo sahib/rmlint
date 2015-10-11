@@ -286,6 +286,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     bool have_open_emptydirs = false;
     bool clear_emptydir_flags = false;
     bool next_is_symlink = false;
+    bool symlink_message_delivered = false;
 
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
@@ -392,9 +393,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_SL:                     /* symbolic link */
                 clear_emptydir_flags = true; /* current dir not empty */
                 if(!cfg->follow_symlinks) {
-                    if(p->fts_level != 0) {
-                        rm_log_debug_line("Not following symlink %s because of cfg",
+                    if(p->fts_level != 0 && !symlink_message_delivered) {
+                        rm_log_debug_line("Not following symlink %s because of cfg\n"
+                                          "\t(further symlink messages suppressed for this cmdline path)",
                                           p->fts_path);
+                        symlink_message_delivered = TRUE;
                     }
 
                     if(access(p->fts_path, R_OK) == -1 && errno == ENOENT) {
@@ -406,7 +409,12 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
-                    rm_log_debug_line("Following symlink %s", p->fts_path);
+                    if (!symlink_message_delivered) {
+                        rm_log_debug_line("Following symlink %s\n"
+                                    "\t(further symlink messages suppressed for this cmdline path)",
+                                    p->fts_path);
+                        symlink_message_delivered = TRUE;
+                    }
                     next_is_symlink = true;
                     fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
                 }
