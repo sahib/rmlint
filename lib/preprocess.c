@@ -33,36 +33,21 @@
 #include "cmdline.h"
 #include "shredder.h"
 
-static guint rm_file_hash(RmFile *file) {
-    RmCfg *cfg = file->session->cfg;
-    if(cfg->match_basename || cfg->match_with_extension) {
-        RM_DEFINE_BASENAME(file);
-        char *extension = rm_util_path_extension(file_basename);
-        return (guint)(file->file_size ^
-                       (cfg->match_basename ? g_str_hash(file_basename) : 0) ^
-                       ((cfg->match_with_extension && extension)
-                            ? g_str_hash(rm_util_path_extension(file_basename))
-                            : 0));
-    } else {
-        return (guint)(file->file_size);
-    }
-}
-
-static bool rm_file_check_with_extension(const RmFile *file_a, const RmFile *file_b) {
+static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
     RM_DEFINE_BASENAME(file_a);
     RM_DEFINE_BASENAME(file_b);
 
     char *ext_a = rm_util_path_extension(file_a_basename);
     char *ext_b = rm_util_path_extension(file_b_basename);
 
-    if(ext_a && ext_b && g_ascii_strcasecmp(ext_a, ext_b) == 0) {
-        return true;
+    if(ext_a && ext_b) {
+        return g_ascii_strcasecmp(ext_a, ext_b);
     } else {
-        return false;
+        return (!!ext_a - !!ext_b);
     }
 }
 
-static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *file_b) {
+static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *file_b) {
     RM_DEFINE_BASENAME(file_a);
     RM_DEFINE_BASENAME(file_b);
 
@@ -74,25 +59,44 @@ static bool rm_file_check_without_extension(const RmFile *file_a, const RmFile *
     size_t b_len = (ext_b) ? (ext_b - file_b_basename) : (int)strlen(file_b_basename);
 
     if(a_len != b_len) {
-        return false;
+        return a_len - b_len;
     }
 
-    if(g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len) == 0) {
-        return true;
-    }
-
-    return false;
+    return g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len);
 }
 
-gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b) {
-    const RmCfg *cfg = file_a->session->cfg;
+//gboolean rm_file_equalx(const RmFile *file_a, const RmFile *file_b) {
+//    const RmCfg *cfg = file_a->session->cfg;
 
-    return (
-        (file_a->file_size == file_b->file_size) &&
-        (!cfg->match_basename || rm_file_basenames_match(file_a, file_b)) &&
-        (!cfg->match_with_extension || rm_file_check_with_extension(file_a, file_b)) &&
-        (!cfg->match_without_extension ||
-         rm_file_check_without_extension(file_a, file_b)));
+//    return (
+//        (file_a->file_size == file_b->file_size) &&
+//        (!cfg->match_basename || rm_file_basenames_match(file_a, file_b)) &&
+//        (!cfg->match_with_extension || rm_file_check_with_extension(file_a, file_b)) &&
+//        (!cfg->match_without_extension ||
+//         rm_file_check_without_extension(file_a, file_b)));
+//}
+
+gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b, _U gpointer user_data) {
+    gint result = SIGN_DIFF(file_a->file_size, file_b->file_size);
+
+    RmCfg *cfg = file_a->session->cfg;
+    
+    if (result==0) {
+        result = (cfg->match_basename) ?
+                rm_file_basenames_cmp(file_a, file_b) : 0;
+    }
+
+    if (result == 0) {
+        result = (cfg->match_with_extension) ?
+                rm_file_cmp_with_extension(file_a, file_b) : 0;
+    }
+
+    if (result==0) {
+        result = (cfg->match_without_extension) ?
+                rm_file_cmp_without_extension(file_a, file_b) : 0;
+    }
+
+    return result;
 }
 
 static guint rm_node_hash(const RmFile *file) {
@@ -204,26 +208,27 @@ static void rm_path_double_free(RmPathDoubleKey *key) {
 RmFileTables *rm_file_tables_new(_U RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
-    tables->size_groups = g_hash_table_new_full((GHashFunc)rm_file_hash,
-                                                (GEqualFunc)rm_file_equal, NULL, NULL);
-
+    tables->all_files = g_queue_new();
     tables->node_table = g_hash_table_new_full((GHashFunc)rm_node_hash,
                                                (GEqualFunc)rm_node_equal, NULL, NULL);
-
-    g_rec_mutex_init(&tables->lock);
+    g_mutex_init(&tables->lock);
     return tables;
 }
 
 void rm_file_tables_destroy(RmFileTables *tables) {
+
+    g_queue_free(tables->all_files);
+
     if(tables->size_groups) {
-        g_hash_table_unref(tables->size_groups);
+        g_slist_free(tables->size_groups);
+        tables->size_groups=NULL;
     }
 
     if(tables->node_table) {
         g_hash_table_unref(tables->node_table);
     }
 
-    g_rec_mutex_clear(&tables->lock);
+    g_mutex_clear(&tables->lock);
     g_slice_free(RmFileTables, tables);
 }
 
@@ -290,8 +295,68 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     }
 }
 
-/* initial list build, including kicking out path doubles and grouping of hardlinks */
-bool rm_file_tables_insert(RmSession *session, RmFile *file) {
+/* moves all of entries from src GQueue into dest
+ * (maybe GLib should include this?)
+ * TODO: move to utilities.[ch] */
+void rm_util_gqueue_push_head_queue(GQueue *dest, GQueue *src) {
+    g_assert(dest);
+    g_assert(src);
+    if (src->length == 0) {
+        return;
+    }
+
+    src->tail->next = dest->head;
+    if (dest->head) {
+        dest->head->prev = src->tail;
+    } else {
+        dest->tail = src->tail;
+    }
+    dest->head = src->head;
+    dest->length += src->length;
+    src->length = 0;
+    src->head = NULL;
+    src->tail = NULL;
+}
+
+void rm_util_gqueue_push_tail_queue(GQueue *dest, GQueue *src) {
+    g_assert(dest);
+    g_assert(src);
+    if (src->length == 0) {
+        return;
+    }
+
+    src->head->prev = dest->tail;
+    if (dest->tail) {
+        dest->tail->next = src->head;
+    } else {
+        dest->head = src->head;
+    }
+    dest->tail = src->tail;
+    dest->length += src->length;
+    src->length = 0;
+    src->head = NULL;
+    src->tail = NULL;
+}
+
+void rm_file_list_insert_queue(GQueue *files, RmSession *session) {
+    g_mutex_lock(&session->tables->lock);
+    {
+        rm_util_gqueue_push_tail_queue(session->tables->all_files, files);
+    }
+    g_mutex_unlock(&session->tables->lock);
+}
+
+void rm_file_list_insert_file(RmFile *file, RmSession *session) {
+    g_mutex_lock(&session->tables->lock);
+    {
+        g_queue_push_tail(session->tables->all_files, file);
+    }
+    g_mutex_unlock(&session->tables->lock);
+}
+
+
+/* list build for each file size group, including kicking out path doubles and grouping of hardlinks */
+bool rm_node_tables_insert(RmFile *file, RmSession *session) {
     RmFileTables *tables = session->tables;
     GHashTable *node_table = tables->node_table;
     bool is_hardlink = true;
@@ -300,66 +365,61 @@ bool rm_file_tables_insert(RmSession *session, RmFile *file) {
         return false;
     }
 
-    g_rec_mutex_lock(&tables->lock);
-    {
-        RmFile *inode_match = g_hash_table_lookup(node_table, file);
-        if(inode_match == NULL) {
-            g_hash_table_insert(node_table, file, file);
+    RmFile *inode_match = g_hash_table_lookup(node_table, file);
+    if(inode_match == NULL) {
+        g_hash_table_insert(node_table, file, file);
+    } else {
+        /* file(s) with matching dev, inode(, basename) already in table...
+         * fails if the hardlinked file has been written to during traversal; so
+         * instead we just print a warning
+         * */
+        if(inode_match->file_size != file->file_size) {
+            RM_DEFINE_PATH(file);
+            rm_log_warning_line(_("Hardlink file size changed during traversal: %s"),
+                                file_path);
+        }
+
+        /* if this is the first time, set up the hardlinks.files queue */
+        if(!inode_match->hardlinks.files) {
+            inode_match->hardlinks.files = g_queue_new();
+
+            /* NOTE: during list build, the hardlinks.files queue includes the file
+             * itself, as well as its hardlinks.  This makes operations
+             * in rm_file_tables_insert much simpler but complicates things later on,
+             * so the head file gets removed from the hardlinks.files queue
+             * in rm_pp_handle_hardlinks() during preprocessing */
+            g_queue_push_head(inode_match->hardlinks.files, inode_match);
+        }
+
+        /* make sure the highest-ranked hardlink is "boss" */
+        if(rm_pp_cmp_orig_criteria(file, inode_match, session) < 0) {
+            /* this file outranks existing existing boss; swap.
+             * NOTE: it's important that rm_file_list_insert selects a
+             * RM_LINT_TYPE_DUPE_CANDIDATE as head file, unless all the
+             * files are "other lint".  This is achieved via
+             * rm_pp_cmp_orig_criteria */
+            file->hardlinks.files = inode_match->hardlinks.files;
+            inode_match->hardlinks.files = NULL;
+            g_hash_table_add(node_table, file); /* replaces key and data*/
+            g_queue_push_head(file->hardlinks.files, file);
         } else {
-            /* file(s) with matching dev, inode(, basename) already in table...
-             * fails if the hardlinked file has been written to during traversal; so
-             * instead we just print a warning
-             * */
-            if(inode_match->file_size != file->file_size) {
-                RM_DEFINE_PATH(file);
-                rm_log_warning_line(_("Hardlink file size changed during traversal: %s"),
-                                    file_path);
+            /* Find the right place to insert sorted */
+            GList *iter = inode_match->hardlinks.files->head;
+            while(iter && rm_pp_cmp_orig_criteria(iter->data, file, session) <= 0) {
+                /* iter outranks file - keep moving down the queue */
+                iter = iter->next;
             }
 
-            /* if this is the first time, set up the hardlinks.files queue */
-            if(!inode_match->hardlinks.files) {
-                inode_match->hardlinks.files = g_queue_new();
-
-                /* NOTE: during list build, the hardlinks.files queue includes the file
-                 * itself, as well as its hardlinks.  This makes operations
-                 * in rm_file_tables_insert much simpler but complicates things later on,
-                 * so the head file gets removed from the hardlinks.files queue
-                 * in rm_pp_handle_hardlinks() during preprocessing */
-                g_queue_push_head(inode_match->hardlinks.files, inode_match);
-            }
-
-            /* make sure the highest-ranked hardlink is "boss" */
-            if(rm_pp_cmp_orig_criteria(file, inode_match, session) < 0) {
-                /* this file outranks existing existing boss; swap.
-                 * NOTE: it's important that rm_file_list_insert selects a
-                 * RM_LINT_TYPE_DUPE_CANDIDATE as head file, unless all the
-                 * files are "other lint".  This is achieved via
-                 * rm_pp_cmp_orig_criteria */
-                file->hardlinks.files = inode_match->hardlinks.files;
-                inode_match->hardlinks.files = NULL;
-                g_hash_table_add(node_table, file); /* replaces key and data*/
-                g_queue_push_head(file->hardlinks.files, file);
+            /* Store the iter to this file, so we can swap it if needed */
+            if(iter) {
+                /* file outranks iter (or is equal), so should be inserted before iter
+                 */
+                g_queue_insert_before(inode_match->hardlinks.files, iter, file);
             } else {
-                /* Find the right place to insert sorted */
-                GList *iter = inode_match->hardlinks.files->head;
-                while(iter && rm_pp_cmp_orig_criteria(iter->data, file, session) <= 0) {
-                    /* iter outranks file - keep moving down the queue */
-                    iter = iter->next;
-                }
-
-                /* Store the iter to this file, so we can swap it if needed */
-                if(iter) {
-                    /* file outranks iter (or is equal), so should be inserted before iter
-                     */
-                    g_queue_insert_before(inode_match->hardlinks.files, iter, file);
-                } else {
-                    g_queue_push_tail(inode_match->hardlinks.files, file);
-                }
+                g_queue_push_tail(inode_match->hardlinks.files, file);
             }
         }
     }
-
-    g_rec_mutex_unlock(&tables->lock);
     return is_hardlink;
 }
 
@@ -564,20 +624,46 @@ static RmOff rm_pp_handler_other_lint(RmSession *session) {
     return num_handled;
 }
 
+
 /* This does preprocessing including handling of "other lint" (non-dupes) */
 void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
-    g_assert(tables->node_table);
+    GQueue *all_files = tables->all_files;
 
     session->total_filtered_files = session->total_files;
 
-    /* process hardlink groups, and move other_lint into tables- */
-    guint removed = g_hash_table_foreach_remove(
-        tables->node_table, (GHRFunc)rm_pp_handle_inode_clusters, session);
+    /* initial sort by size */
+    g_queue_sort(all_files, (GCompareDataFunc)rm_file_cmp, NULL);
+    rm_log_debug_line("initial size sort finished at time %.3f; sorted %d files",
+                      g_timer_elapsed(session->timer, NULL),
+                      session->total_files);
 
-    rm_log_debug_line("process hardlink groups finished at time %.3f; removed %u of %d",
+    /* split into file size groups; for each size, remove path doubles and bundle hardlinks */
+    g_assert(all_files->head);
+    RmFile *file = g_queue_pop_head(all_files);
+    RmFile *current_size_file = file;
+    guint removed = 0;
+    GHashTable *node_table = tables->node_table;
+    while(file) {
+        removed += rm_node_tables_insert(file, session);
+        file = g_queue_pop_head(all_files);
+        if (!file || rm_file_cmp(file, current_size_file, NULL) != 0) {
+            /* process completed size group */
+            /* remove path doubles and handle "other" lint */
+            removed += g_hash_table_foreach_remove(
+                    node_table, (GHRFunc)rm_pp_handle_inode_clusters, session);
+            /* move remaining files to size_groups list-of-lists */
+            tables->size_groups = g_slist_prepend(
+                    tables->size_groups, g_hash_table_get_values(node_table));
+            g_hash_table_remove_all(node_table);
+            current_size_file = file;
+        }
+    }
+
+    rm_log_debug_line("path doubles removal and hardlink bundling finished at time %.3f; removed %u of %d",
                       g_timer_elapsed(session->timer, NULL), removed,
                       session->total_files);
+
 
     session->other_lint_cnt += rm_pp_handler_other_lint(session);
     rm_log_debug_line("Other lint handling finished at time %.3f",

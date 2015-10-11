@@ -49,15 +49,18 @@ RmFileTables *rm_file_tables_new(RmSession *session);
 void rm_file_tables_destroy(RmFileTables *list);
 
 /**
- * @brief Insert a file in RmFileTables->node_table.
- *
- * Checks for path doubles and kicks accordingly; groups hardlinks.
- *
+ * @brief Appends a file in RmFileTables->all_files.
  * @param file The file to insert; ownership is taken.
- *
- * @return 1 if successful insertion, 0 if path double.
  */
-bool rm_file_tables_insert(RmSession *session, RmFile *file);
+
+void rm_file_list_insert_file(RmFile *file, RmSession *session);
+
+/**
+ * @brief Moves a GQueue of files into RmFileTables->all_files.
+ * @param files The files to insert; ownership is taken and *files is cleared.
+ */
+
+void rm_file_list_insert_queue(GQueue *files, RmSession *session);
 
 /**
  * @brief Clear potential leftover files when shredder was not used.
@@ -86,6 +89,6 @@ int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session);
 /**
  * @brief: Check if two files are equal in terms of size, and match_* options.
  */
-gboolean rm_file_equal(const RmFile *file_a, const RmFile *file_b);
+gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b, _U gpointer user_data);
 
 #endif

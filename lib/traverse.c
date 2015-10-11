@@ -175,15 +175,13 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
         file->is_hidden = is_hidden;
         file->is_on_subvol_fs = is_on_subvol_fs;
 
-        int added = 0;
         if(file_queue != NULL) {
             g_queue_push_tail(file_queue, file);
-            added = 1;
         } else {
-            added = rm_file_tables_insert(session, file);
+            rm_file_list_insert_file(file, session);
         }
 
-        g_atomic_int_add(&trav_session->session->total_files, added);
+        g_atomic_int_add(&trav_session->session->total_files, 1);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
         if(trav_session->session->cfg->clear_xattr_fields &&
@@ -456,13 +454,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
      * in order to make -with-metadata-cache work: Without, too many
      * insert/selects would crossfire.
      */
-    for(GList *iter = file_queue.head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        g_atomic_int_add(&trav_session->session->total_files,
-                         -(rm_file_tables_insert(session, file) == 0));
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
-    }
-    g_queue_clear(&file_queue);
+    rm_file_list_insert_queue(&file_queue, session);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
 done:
     rm_mds_device_ref(buffer->disk, -1);
@@ -485,7 +478,7 @@ void rm_traverse_tree(RmSession *session) {
                  session->cfg->threads_per_disk,
                  NULL);
 
-    for(RmOff idx = 0; cfg->paths[idx] != NULL; ++idx) {
+    for(RmOff idx = 0; cfg->paths[idx] != NULL  && !rm_session_was_aborted(session); ++idx) {
         char *path = cfg->paths[idx];
         bool is_prefd = cfg->is_prefd[idx];
 

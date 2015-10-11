@@ -924,7 +924,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
            shred_group->session->cfg->unmatched_basenames) {
             shred_group->unique_basename = file;
         } else if(shred_group->unique_basename &&
-                  !rm_file_basenames_match(file, shred_group->unique_basename)) {
+                  rm_file_basenames_cmp(file, shred_group->unique_basename) != 0) {
             shred_group->unique_basename = NULL;
         }
         shred_group->num_files += rm_shred_num_files(file);
@@ -932,8 +932,8 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
                 shred_group->unique_basename &&
                 shred_group->session->cfg->unmatched_basenames) {
             for(GList *iter = file->hardlinks.files->head; iter; iter = iter->next) {
-                if(!rm_file_basenames_match(iter->data,
-                                            shred_group->unique_basename)) {
+                if(rm_file_basenames_cmp(iter->data,
+                                shred_group->unique_basename) != 0) {
                     shred_group->unique_basename = NULL;
                     break;
                 }
@@ -1100,7 +1100,7 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
 /* Called for each file; find appropriate RmShredGroup (ie files with same size) and
  * push the file to it.
  * */
-static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *main) {
+static void rm_shred_file_preprocess(RmShredGroup *group, RmFile *file, RmShredTag *main) {
     /* initial population of RmShredDevice's and first level RmShredGroup's */
     RmSession *session = main->session;
 
@@ -1129,14 +1129,6 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
     rm_mds_device_ref(file->disk, 1);
     rm_shred_adjust_counters(main, 1, (gint64)file->file_size - file->hash_offset);
 
-    RmShredGroup *group = g_hash_table_lookup(session->tables->size_groups, file);
-
-    if(group == NULL) {
-        group = rm_shred_group_new(file);
-        group->digest_type = session->cfg->checksum_type;
-        g_hash_table_insert(session->tables->size_groups, file, group);
-    }
-
     rm_shred_group_push_file(group, file, true);
 
     if(main->session->cfg->read_cksum_from_xattr) {
@@ -1157,14 +1149,14 @@ static void rm_shred_file_preprocess(_U gpointer key, RmFile *file, RmShredTag *
 /* Called for each group after all initial files have been pushed to groups.
  * If the group failed to launch, then free it and its files
  * */
-static gboolean rm_shred_group_preprocess(_U gpointer key, RmShredGroup *group,
-                                          _U RmShredTag *tag) {
+static gint rm_shred_group_preprocess(RmShredGroup *group) {
     g_assert(group);
     if(group->status == RM_SHRED_GROUP_DORMANT) {
+        gint num_files = group->num_files;
         rm_shred_group_free(group, true);
-        return true;
+        return num_files;
     } else {
-        return false;
+        return 0;
     }
 }
 
@@ -1179,38 +1171,36 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     }
 
     /* move files from node tables into initial RmShredGroups */
-    rm_log_debug_line("Moving files into size groups...");
-    g_hash_table_foreach_remove(session->tables->node_table,
-                                (GHRFunc)rm_shred_file_preprocess, main);
-    g_hash_table_unref(session->tables->node_table);
-    session->tables->node_table = NULL;
-    rm_log_debug_line("move remaining files to size_groups finished at time %.3f",
-                      g_timer_elapsed(session->timer, NULL));
+    rm_log_debug_line("preparing size groups for shredding (dupe finding)...");
+    RmFileTables *tables = session->tables;
+    while (tables->size_groups) {
+        GList *files = tables->size_groups->data;
+        RmShredGroup *group = NULL;
+        /* push files to shred group */
+        while (files) {
+            RmFile *file = files->data;
+            if (!group) {
+                /* create RmShredGroup using first file in size group as template*/
+                group = rm_shred_group_new(file);
+                group->digest_type = session->cfg->checksum_type;
+            }
+            rm_shred_file_preprocess(group, file, main);
+            files = g_list_delete_link(files, files);
+        }
 
-    /* iterate over groups, looking for any that already have external checksums
-     * for all files */
-    if(HAS_CACHE(main->session)) {
-        rm_log_debug_line("Checking for external checksums");
-        g_assert(session->tables->size_groups);
-        GHashTableIter iter;
-        gpointer size, p_group;
-        g_hash_table_iter_init(&iter, session->tables->size_groups);
-        while(g_hash_table_iter_next(&iter, &size, &p_group)) {
-            RmShredGroup *group = p_group;
-            if(group->num_files == group->num_ext_cksums) {
+        if (group) {
+            /* check if group has external checksums for all files */
+            if(HAS_CACHE(main->session) && group->num_files == group->num_ext_cksums) {
                 group->has_only_ext_cksums = true;
             }
-        }
-        rm_log_debug_line("External checksum check finished at time %.3f",
-                          g_timer_elapsed(session->timer, NULL));
-    }
 
-    rm_log_debug_line("Discarding unique sizes...");
-    g_assert(session->tables->size_groups);
-    removed = g_hash_table_foreach_remove(session->tables->size_groups,
-                                          (GHRFunc)rm_shred_group_preprocess, main);
-    g_hash_table_unref(session->tables->size_groups);
-    session->tables->size_groups = NULL;
+            /* remove group if it failed to launch (eg if only 1 file) */
+            removed += rm_shred_group_preprocess(group);
+        }
+
+        /* move to next size group */
+        tables->size_groups = g_slist_delete_link(tables->size_groups, tables->size_groups);
+    }
     rm_log_debug_line("...done at time %.3f; removed %u of %" LLU,
                       g_timer_elapsed(session->timer, NULL), removed,
                       session->total_filtered_files);
@@ -1300,7 +1290,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
             RmFile *iter_file = iter->data;
             GList *temp = iter;
             iter = iter->next;
-            if(rm_file_basenames_match(iter_file, headfile)) {
+            if(rm_file_basenames_cmp(iter_file, headfile) == 0) {
                 rm_shred_discard_file(iter_file, TRUE);
                 g_queue_delete_link(group, temp);
             }

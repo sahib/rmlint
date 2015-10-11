@@ -278,7 +278,7 @@ void rm_mds_device_start(RmMDSDevice *device, RmMDS *mds) {
     g_mutex_lock(&device->lock);
     {
         for(int i = 0; i < mds->threads_per_disk; ++i) {
-            rm_log_debug_line("Starting disk %lu (pointer %p) with %i threads", device->disk, device, device->threads + 1);
+            rm_log_debug_line("Starting disk %lu (pointer %p) thread #%i", device->disk, device, i + 1);
             rm_util_thread_pool_push(mds->pool, device);
         }
     }
