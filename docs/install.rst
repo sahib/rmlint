@@ -51,8 +51,16 @@ Here's a list of readily prepared commands for known distributions:
   Those packages are built from master snapshots and might be slightly outdated.
 
 .. _`Fedora Copr`: https://copr.fedoraproject.org/coprs/sahib/rmlint/
-
+:t
 * **ArchLinux:**
+
+There is an official package in ``[community]`` here_:
+
+  .. code-block:: bash
+
+    $ pacman -S rmlint
+
+Alternatively you can use ``rmlint-git`` in the AUR: 
 
   .. code-block:: bash
 
@@ -69,6 +77,7 @@ Here's a list of readily prepared commands for known distributions:
 
   It is built from git master.
 
+.. _here: https://www.archlinux.org/packages/?name=rmlint
 .. _`PKGBUILD`: https://aur.archlinux.org/packages/rm/rmlint-git/PKGBUILD
 .. _`ArchLinux AUR`: https://aur.archlinux.org/packages/rmlint-git
 
