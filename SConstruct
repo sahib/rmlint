@@ -294,11 +294,15 @@ def check_c11(context):
 
 
 def check_sse42(context):
-    rc = 1
-    if tests.CheckDeclaration(context, '__SSE4_2__'):
+    if GetOption('with_sse') is False:
         rc = 0
     else:
-        conf.env.Prepend(CFLAGS=['-msse4.2'])
+        rc = 1
+
+        if tests.CheckDeclaration(context, '__SSE4_2__'):
+            rc = 0
+        else:
+            conf.env.Prepend(CFLAGS=['-msse4.2'])
 
     conf.env['HAVE_SSE42'] = rc
 
@@ -461,6 +465,14 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
         '--with-' + suffix, action='store_const', default=True, const=True,
         dest='with_' + suffix
     )
+
+AddOption(
+    '--with-sse', action='store_const', default=False, const=False, dest='with_sse'
+)
+
+AddOption(
+    '--without-sse', action='store_const', default=True, const=False, dest='with_sse'
+)
 
 # General Environment
 options = dict(
