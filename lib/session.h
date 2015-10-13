@@ -83,6 +83,7 @@ typedef struct RmSession {
     RmOff total_filtered_files;
     RmOff total_lint_size;
     RmOff shred_bytes_remaining;
+    RmOff shred_bytes_total;
     RmOff shred_files_remaining;
     RmOff shred_bytes_after_preprocess;
     RmOff dup_counter;

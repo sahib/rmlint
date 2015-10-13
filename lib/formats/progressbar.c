@@ -382,6 +382,7 @@ static void rm_fmt_prog(RmSession *session,
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n\n");
+        g_timer_destroy(self->timer);
     }
 }
 

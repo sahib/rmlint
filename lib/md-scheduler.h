@@ -165,14 +165,6 @@ void rm_mds_start(RmMDS *mds);
 void rm_mds_finish(RmMDS *mds);
 
 /**
- * @brief Make the MDS scheduler stop waiting in rm_mds_finish()
- *
- * This might leave back an inconsistent state. The scheduler shall
- * not be used after this.
- */
-void rm_mds_abort(RmMDS *mds);
-
-/**
  * @brief Wait for all tasks to finish then free the RmMDS scheduler
  *
  * @param mds Pointer to the MDS scheduler

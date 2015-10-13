@@ -118,6 +118,7 @@ typedef struct RmCfg {
     gboolean shred_always_wait;
     gboolean shred_never_wait;
     gboolean fake_pathindex_as_disk;
+    gboolean fake_abort;
 
     /* If true, files are hold back to
      * the end of the program run and printed then.

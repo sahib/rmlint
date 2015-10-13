@@ -340,6 +340,9 @@ typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_FINISHED
 } RmShredGroupStatus;
 
+#define IS_BUNDLED_HARDLINK(file) \
+    (file->hardlinks.hardlink_head && !file->hardlinks.is_head)
+
 #define NEEDS_PREF(group) \
     (group->session->cfg->must_match_tagged || group->session->cfg->keep_all_untagged)
 #define NEEDS_NPREF(group) \
@@ -370,10 +373,11 @@ typedef struct RmShredGroup {
      * */
     struct RmShredGroup *parent;
 
-    /* total number of files that have passed through this group*/
+    /* total number of files that have passed through this group (including
+     * bundled hardlinked files) */
     gulong num_files;
 
-    /* number of pending digests */
+    /* number of pending digests (ignores bundled hardlink files)*/
     gulong num_pending;
 
     /* list of in-progress paranoid digests, used for pre-matching */
@@ -695,6 +699,15 @@ static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
     rm_fmt_set_state(session->formats, (tag->after_preprocess)
                                            ? RM_PROGRESS_STATE_SHREDDER
                                            : RM_PROGRESS_STATE_PREPROCESS);
+
+    /* fake interrupt option for debugging/testing: */
+    if (tag->after_preprocess &&
+            session->cfg->fake_abort &&
+            session->shred_bytes_remaining * 10 < session->shred_bytes_total * 9) {
+        rm_session_abort(session);
+        /* prevent multiple aborts */
+        session->shred_bytes_total = 0;
+    }
     g_slice_free(RmCounterBuffer, buffer);
 }
 
@@ -712,7 +725,7 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
     const RmSession *session = file->session;
     RmShredTag *tag = session->shredder;
     /* update device counters (unless this file was a bundled hardlink) */
-    if(!file->hardlinks.hardlink_head) {
+    if(!IS_BUNDLED_HARDLINK(file)) {
         g_assert(file->disk);
         rm_mds_device_ref(file->disk, -1);
         file->disk = NULL;
@@ -765,6 +778,7 @@ static void rm_shred_push_queue(RmFile *file) {
  */
 static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     g_assert(self->parent == NULL); /* children should outlive their parents! */
+    g_assert(self->num_pending == 0);
 
     RmCfg *cfg = self->session->cfg;
 
@@ -790,6 +804,8 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     }
 
     if(self->children) {
+        /* note: calls GDestroyNotify function rm_shred_group_make_orphan()
+         * for each RmShredGroup member of self->children: */
         g_hash_table_unref(self->children);
     }
 
@@ -881,6 +897,18 @@ static void rm_shred_group_make_orphan(RmShredGroup *self) {
     }
 }
 
+/* returns the number of actual files (including bundled
+ * hardlinks) associated with a RmFile */
+
+static gint rm_shred_num_files(RmFile *file) {
+    if(file->hardlinks.is_head) {
+        g_assert(file->hardlinks.files);
+        return 1 + file->hardlinks.files->length;
+    } else {
+        return 1;
+    }
+}
+
 /* Call with shred_group->lock unlocked. */
 static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
                                         gboolean initial) {
@@ -905,19 +933,15 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
                   !rm_file_basenames_match(file, shred_group->unique_basename)) {
             shred_group->unique_basename = NULL;
         }
-
-        shred_group->num_files++;
-        if(file->hardlinks.is_head) {
-            g_assert(file->hardlinks.files);
-            shred_group->num_files += file->hardlinks.files->length;
-            if(shred_group->unique_basename &&
-               shred_group->session->cfg->unmatched_basenames) {
-                for(GList *iter = file->hardlinks.files->head; iter; iter = iter->next) {
-                    if(!rm_file_basenames_match(iter->data,
-                                                shred_group->unique_basename)) {
-                        shred_group->unique_basename = NULL;
-                        break;
-                    }
+        shred_group->num_files += rm_shred_num_files(file);
+        if(file->hardlinks.is_head &&
+                shred_group->unique_basename &&
+                shred_group->session->cfg->unmatched_basenames) {
+            for(GList *iter = file->hardlinks.files->head; iter; iter = iter->next) {
+                if(!rm_file_basenames_match(iter->data,
+                                            shred_group->unique_basename)) {
+                    shred_group->unique_basename = NULL;
+                    break;
                 }
             }
         }
@@ -1307,6 +1331,8 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     }
 }
 
+/* only called by rm_shred_result_factory() which is single-thread threadpool
+ * so no lock required for session->dup_counter or session->total_lint_size */
 static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     if(!file->is_original) {
         session->dup_counter++;
@@ -1315,7 +1341,7 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
          * hardlinks does not free any space they should not be counted unless
          * all of them would be removed.
          */
-        if(file->hardlinks.is_head || file->hardlinks.hardlink_head == NULL) {
+        if(!IS_BUNDLED_HARDLINK(file)) {
             session->total_lint_size += file->file_size;
         }
     }
@@ -1462,7 +1488,6 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     if(rm_session_was_aborted(session) || file->shred_group->has_only_ext_cksums) {
         if(rm_session_was_aborted(session)) {
             file->status = RM_FILE_STATE_IGNORE;
-            rm_mds_abort(session->mds);
         }
 
         if(file->shred_group->has_only_ext_cksums) {
@@ -1629,6 +1654,8 @@ void rm_shred_run(RmSession *session) {
     tag.result_pool = rm_util_thread_pool_new((GFunc)rm_shred_result_factory, &tag, 1);
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
+
+    session->shred_bytes_total = session->shred_bytes_remaining;
     rm_mds_start(session->mds);
 
     /* should complete shred session and then free: */
