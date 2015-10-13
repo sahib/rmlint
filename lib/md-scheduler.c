@@ -261,9 +261,9 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
         {
             g_hash_table_remove(mds->disks, GINT_TO_POINTER(device->disk));
             rm_mds_device_free(device);
+            g_cond_signal(&mds->cond);
         }
         g_mutex_unlock(&mds->lock);
-        g_cond_signal(&mds->cond);
     }
 }
 
@@ -348,23 +348,19 @@ void rm_mds_configure(RmMDS *self,
 
 static gint rm_mds_disk_count(RmMDS *mds) {
     gint result = 0;
-    g_mutex_lock(&mds->lock);
-    {
-        result = g_hash_table_size(mds->disks);
-        rm_log_debug_line("rm_mds_disk_count: %i active disks", result);
-    }
-    g_mutex_unlock(&mds->lock);
+    result = g_hash_table_size(mds->disks);
+    rm_log_debug_line("rm_mds_disk_count: %i active disks", result);
     return result;
 }
 
 void rm_mds_finish(RmMDS *mds) {
     /* wait for any pending threads to finish */
+    g_mutex_lock(&mds->lock);
     while(rm_mds_disk_count(mds) > 0) {
         /* wait for a device to finish */
-        g_mutex_lock(&mds->lock);
-        { g_cond_wait(&mds->cond, &mds->lock); }
-        g_mutex_unlock(&mds->lock);
+        g_cond_wait(&mds->cond, &mds->lock);
     }
+    g_mutex_unlock(&mds->lock);
     mds->running = FALSE;
 }
 
