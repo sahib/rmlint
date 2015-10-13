@@ -368,7 +368,7 @@ static void rm_parrot_fix_match_opts(RmParrotCage *cage, GQueue *group) {
                 continue;
             }
 
-            if(rm_file_cmp(file_a, file_b, NULL) == 0) {
+            if(rm_file_cmp(file_a, file_b) == 0) {
                 delete = false;
                 break;
             }

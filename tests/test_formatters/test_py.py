@@ -17,7 +17,7 @@ def test_paranoia():
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 9
-    assert footer['total_files'] == 5 + 1
+    assert footer['total_files'] == 5 # 1 is ignored as own output
     assert footer['duplicates'] == 4
 
     with open(os.path.join(TESTDIR_NAME, 'b'), 'w') as handle:
@@ -34,7 +34,7 @@ def test_paranoia():
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 0
-    assert footer['total_files'] == 4 + 1
+    assert footer['total_files'] == 4 # + 1
     assert footer['duplicates'] == 1
 
     assert 'Content differs' in text
@@ -47,5 +47,5 @@ def test_paranoia():
     # Nothing should change.
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 0
-    assert footer['total_files'] == 4 + 1
+    assert footer['total_files'] == 4 # + 1
     assert footer['duplicates'] == 1

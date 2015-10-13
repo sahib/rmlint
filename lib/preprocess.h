@@ -41,7 +41,7 @@ void rm_preprocess(RmSession *session);
  *
  * @return A newly allocated RmFileTable.
  */
-RmFileTables *rm_file_tables_new(RmSession *session);
+RmFileTables *rm_file_tables_new(const RmSession *session);
 
 /**
 * @brief Free a previous RmFileTable
@@ -53,19 +53,19 @@ void rm_file_tables_destroy(RmFileTables *list);
  * @param file The file to insert; ownership is taken.
  */
 
-void rm_file_list_insert_file(RmFile *file, RmSession *session);
+void rm_file_list_insert_file(RmFile *file, const RmSession *session);
 
 /**
  * @brief Moves a GQueue of files into RmFileTables->all_files.
  * @param files The files to insert; ownership is taken and *files is cleared.
  */
 
-void rm_file_list_insert_queue(GQueue *files, RmSession *session);
+void rm_file_list_insert_queue(GQueue *files, const RmSession *session);
 
 /**
  * @brief Clear potential leftover files when shredder was not used.
  */
-void rm_file_tables_clear(RmSession *session);
+void rm_file_tables_clear(const RmSession *session);
 
 /**
  * @brief Compare certain attributes (listed below) of files
@@ -73,7 +73,7 @@ void rm_file_tables_clear(RmSession *session);
  *
  * Returns:
  */
-int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtime_b,
+int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_t mtime_b,
                                  const char *basename_a, const char *basename_b,
                                  int path_index_a, int path_index_b, guint8 path_depth_a,
                                  guint8 path_depth_b);
@@ -84,11 +84,11 @@ int rm_pp_cmp_orig_criteria_impl(RmSession *session, time_t mtime_a, time_t mtim
  *
  * Returns:
  */
-int rm_pp_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session);
+int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *session);
 
 /**
  * @brief: Check if two files are equal in terms of size, and match_* options.
  */
-gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b, _U gpointer user_data);
+gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b);
 
 #endif

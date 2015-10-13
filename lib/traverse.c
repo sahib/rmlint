@@ -129,6 +129,11 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
 
+    if (rm_fmt_is_a_output(session->formats, path)) {
+        /* ignore files which are rmlint outputs */
+        return;
+    }
+
     /* Try to autodetect the type of the lint */
     if(file_type == RM_LINT_TYPE_UNKNOWN) {
         RmLintType gid_check;
@@ -523,7 +528,7 @@ void rm_traverse_tree(RmSession *session) {
     }
     rm_mds_start(mds);
     rm_mds_finish(mds);
-    
+
     rm_traverse_session_free(trav_session);
 
     session->traverse_finished = TRUE;

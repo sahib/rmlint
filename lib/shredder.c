@@ -1174,7 +1174,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     rm_log_debug_line("preparing size groups for shredding (dupe finding)...");
     RmFileTables *tables = session->tables;
     while (tables->size_groups) {
-        GList *files = tables->size_groups->data;
+        GSList *files = tables->size_groups->data;
         RmShredGroup *group = NULL;
         /* push files to shred group */
         while (files) {
@@ -1185,7 +1185,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
                 group->digest_type = session->cfg->checksum_type;
             }
             rm_shred_file_preprocess(group, file, main);
-            files = g_list_delete_link(files, files);
+            files = g_slist_delete_link(files, files);
         }
 
         if (group) {
@@ -1463,7 +1463,7 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
 /* Callback for RmMDS
  * Return value of 1 tells md-scheduler that we have processed the file and either
  * disposed of it or pushed it back to the scheduler queue.
- * Return value of 0 tells md-scheduler we can't process the file right now, and 
+ * Return value of 0 tells md-scheduler we can't process the file right now, and
  * have pushed it back to the queue.
  * */
 static gint rm_shred_process_file(RmFile *file, RmSession *session) {

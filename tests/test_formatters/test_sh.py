@@ -26,7 +26,7 @@ def test_basic():
 
     assert footer['duplicate_sets'] == 3
     assert footer['total_lint_size'] == 9
-    assert footer['total_files'] == 9
+    assert footer['total_files'] == 8 # + 1
     assert footer['duplicates'] == 3
 
     # Dry run first; check if it did not accidentally delete something.
@@ -61,7 +61,7 @@ def test_paranoia():
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 6
-    assert footer['total_files'] == 4 + 1
+    assert footer['total_files'] == 4 # + 1
     assert footer['duplicates'] == 3
 
     # Modify c after running rmlint:
@@ -79,7 +79,7 @@ def test_paranoia():
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3
-    assert footer['total_files'] == 3
+    assert footer['total_files'] == 2 # +1
     assert footer['duplicates'] == 1
 
     assert 'files no longer identical' in text
@@ -95,5 +95,5 @@ def test_paranoia():
 
     assert footer['duplicate_sets'] == 0
     assert footer['total_lint_size'] == 0
-    assert footer['total_files'] == 2
+    assert footer['total_files'] == 1 # + 1
     assert footer['duplicates'] == 0

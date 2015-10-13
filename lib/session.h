@@ -44,8 +44,11 @@ typedef struct RmFileTables {
     /* GSList of GList's, one for each file size */
     GSList *size_groups;
 
-    /* Used for finding path doubles and hardlinks */
+    /* Used for finding inode matches */
     GHashTable *node_table;
+
+    /* Used for finding path doubles */
+    GHashTable *unique_paths_table;
 
     //GHashTable *mtime_filter;
     //GHashTable *basename_filter;
