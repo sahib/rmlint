@@ -194,6 +194,7 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
 
         buffer->len = bytes_read;
         buffer->digest = digest;
+        buffer->user_data = NULL;
         rm_util_thread_pool_push(hashpipe, buffer);
 
         total_bytes_read += bytes_read;
