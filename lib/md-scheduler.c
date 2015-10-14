@@ -152,8 +152,8 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
         self->is_rotational = !rm_mounts_is_nonrotational(mds->mount_table, disk);
     }
 
-    rm_log_debug_line("Created new RmMDSDevice for %srotational disk #%lu",
-                      self->is_rotational ? "" : "non-", (long unsigned)disk);
+    rm_log_debug_line("Created new RmMDSDevice for %srotational disk #%"LLU,
+                      self->is_rotational ? "" : "non-", (RmOff)disk);
     return self;
 }
 
@@ -278,7 +278,7 @@ void rm_mds_device_start(RmMDSDevice *device, RmMDS *mds) {
     g_mutex_lock(&device->lock);
     {
         for(int i = 0; i < mds->threads_per_disk; ++i) {
-            rm_log_debug_line("Starting disk %lu (pointer %p) thread #%i", device->disk, device, i + 1);
+            rm_log_debug_line("Starting disk %"LLU" (pointer %p) thread #%i", (RmOff)device->disk, device, i + 1);
             rm_util_thread_pool_push(mds->pool, device);
         }
     }
