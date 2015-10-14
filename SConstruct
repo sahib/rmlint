@@ -424,7 +424,7 @@ AddOption(
 )
 
 AddOption(
-    '--without-sse', action='store_const', default=True, const=False, dest='with_sse'
+    '--without-sse', action='store_const', default=False, const=False, dest='with_sse'
 )
 
 # General Environment
