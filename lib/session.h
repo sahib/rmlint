@@ -38,13 +38,26 @@
 #include "treemerge.h"
 
 typedef struct RmFileTables {
-    GHashTable *size_groups;
+    /* List of all files found during traversal */
+    GQueue *all_files;
+
+    /* GSList of GList's, one for each file size */
+    GSList *size_groups;
+
+    /* Used for finding inode matches */
     GHashTable *node_table;
-    GHashTable *mtime_filter;
-    GHashTable *basename_filter;
-    GQueue *file_queue;
+
+    /* Used for finding path doubles */
+    GHashTable *unique_paths_table;
+
+    // GHashTable *mtime_filter;
+    // GHashTable *basename_filter;
+    // GQueue *file_queue;
+    /*array of lists, one for each "other lint" type */
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
-    GRecMutex lock;
+
+    /* lock for access to *list during traversal */
+    GMutex lock;
 } RmFileTables;
 
 struct RmFmtTable;

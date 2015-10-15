@@ -30,6 +30,8 @@
 #include <string.h>
 #include <search.h>
 
+#include <sys/ioctl.h>
+
 typedef struct RmFmtHandlerSummary {
     /* must be first */
     RmFmtHandler parent;
@@ -58,6 +60,16 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(rm_session_was_aborted(session)) {
+        /* Clear the whole terminal line.
+         * Progressbar might leave some junk.
+         */
+        struct winsize terminal;
+        ioctl(fileno(out), TIOCGWINSZ, &terminal);
+        for(int i = 0; i < terminal.ws_col; ++i) {
+            fprintf(out, " ");
+        }
+
+        fprintf(out, "\n");
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
 

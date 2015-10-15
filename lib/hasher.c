@@ -95,7 +95,7 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         /* Update digest with buffer->data */
         g_assert(buffer->user_data == NULL);
         rm_digest_buffered_update(buffer);
-    } else if (buffer->user_data) {
+    } else if(buffer->user_data) {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
         g_assert(task->digest == buffer->digest); /* TODO: do we need both? */
@@ -416,11 +416,11 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
 
     RmHasherTask *self = g_slice_new0(RmHasherTask);
     self->hasher = hasher;
-    if (digest) {
+    if(digest) {
         self->digest = digest;
     } else {
         self->digest = rm_digest_new(hasher->digest_type, 0, 0, 0,
-                               hasher->digest_type == RM_DIGEST_PARANOID);
+                                     hasher->digest_type == RM_DIGEST_PARANOID);
     }
 
     /* get a recycled hashpipe if available */

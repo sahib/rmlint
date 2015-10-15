@@ -44,6 +44,12 @@ typedef struct stat64 RmStat;
 typedef struct stat RmStat;
 #endif
 
+////////////////////////
+//  MATHS SHORTCUTS   //
+////////////////////////
+
+#define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing unit64's */
+
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
@@ -214,6 +220,37 @@ typedef gpointer (*RmNewFunc)(void);
  * @return value, which may be default_func() if key does not exist.
  */
 GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key, RmNewFunc default_func);
+
+/**
+ * @brief Push all elements in `src` at the tail of `dst`
+ *
+ * @param dest The queue to append to.
+ * @param src The queue to append from. Will be empty afterwards.
+ */
+void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src);
+
+/**
+ * @brief Function prototype for remove-iterating over a GQueue.
+ *
+ * @param data current element
+ * @param user_data optional user_data
+ *
+ * @return True if the element should be removed.
+ */
+typedef gboolean (*RmQRFunc)(gpointer data, gpointer user_data);
+
+/**
+ * @brief Iterate over a GQueue and call `func` on each element.
+ *
+ * If func returns true, the element is removed from the queue.
+ *
+ * @param queue GQueue to iterate
+ * @param func Function that evaluates the removal of the item
+ * @param user_data optional user data
+ *
+ * @return Number of removed items.
+ */
+gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data);
 
 /**
  * @brief Return a pointer to the extension part of the file or NULL if none.
