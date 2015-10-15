@@ -50,7 +50,6 @@ typedef struct stat RmStat;
 
 #define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing unit64's */
 
-
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
@@ -238,7 +237,7 @@ void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src);
  *
  * @return True if the element should be removed.
  */
-typedef gboolean (*RmQRFunc) (gpointer data, gpointer  user_data);
+typedef gboolean (*RmQRFunc)(gpointer data, gpointer user_data);
 
 /**
  * @brief Iterate over a GQueue and call `func` on each element.

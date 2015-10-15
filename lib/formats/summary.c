@@ -60,7 +60,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(rm_session_was_aborted(session)) {
-        /* Clear the whole terminal line. 
+        /* Clear the whole terminal line.
          * Progressbar might leave some junk.
          */
         struct winsize terminal;

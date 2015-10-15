@@ -129,7 +129,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
 
-    if (rm_fmt_is_a_output(session->formats, path)) {
+    if(rm_fmt_is_a_output(session->formats, path)) {
         /* ignore files which are rmlint outputs */
         return;
     }
@@ -399,9 +399,11 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                 clear_emptydir_flags = true; /* current dir not empty */
                 if(!cfg->follow_symlinks) {
                     if(p->fts_level != 0 && !symlink_message_delivered) {
-                        rm_log_debug_line("Not following symlink %s because of cfg\n"
-                                          "\t(further symlink messages suppressed for this cmdline path)",
-                                          p->fts_path);
+                        rm_log_debug_line(
+                            "Not following symlink %s because of cfg\n"
+                            "\t(further symlink messages suppressed for this cmdline "
+                            "path)",
+                            p->fts_path);
                         symlink_message_delivered = TRUE;
                     }
 
@@ -414,10 +416,12 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
-                    if (!symlink_message_delivered) {
-                        rm_log_debug_line("Following symlink %s\n"
-                                    "\t(further symlink messages suppressed for this cmdline path)",
-                                    p->fts_path);
+                    if(!symlink_message_delivered) {
+                        rm_log_debug_line(
+                            "Following symlink %s\n"
+                            "\t(further symlink messages suppressed for this cmdline "
+                            "path)",
+                            p->fts_path);
                         symlink_message_delivered = TRUE;
                     }
                     next_is_symlink = true;
@@ -485,13 +489,14 @@ void rm_traverse_tree(RmSession *session) {
 
     RmMDS *mds = session->mds;
     rm_mds_configure(mds,
-                 (RmMDSFunc)rm_traverse_directory,
-                 trav_session,
-                 0,
-                 session->cfg->threads_per_disk,
-                 NULL);
+                     (RmMDSFunc)rm_traverse_directory,
+                     trav_session,
+                     0,
+                     session->cfg->threads_per_disk,
+                     NULL);
 
-    for(RmOff idx = 0; cfg->paths[idx] != NULL  && !rm_session_was_aborted(session); ++idx) {
+    for(RmOff idx = 0; cfg->paths[idx] != NULL && !rm_session_was_aborted(session);
+        ++idx) {
         char *path = cfg->paths[idx];
         bool is_prefd = cfg->is_prefd[idx];
 
@@ -516,10 +521,11 @@ void rm_traverse_tree(RmSession *session) {
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
             buffer->disk = rm_mds_device_get(
-                    mds, buffer_path,
-                    (cfg->fake_pathindex_as_disk) ? idx + 1 : buffer->stat_buf.st_dev);
+                mds, buffer_path,
+                (cfg->fake_pathindex_as_disk) ? idx + 1 : buffer->stat_buf.st_dev);
             rm_mds_device_ref(buffer->disk, 1);
-            rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, buffer_path, buffer);
+            rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, buffer_path,
+                             buffer);
 
         } else {
             /* Probably a block device, fifo or something weird. */

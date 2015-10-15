@@ -178,12 +178,12 @@ void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src) {
     g_return_if_fail(dest);
     g_return_if_fail(src);
 
-    if (src->length == 0) {
+    if(src->length == 0) {
         return;
     }
 
     src->head->prev = dest->tail;
-    if (dest->tail) {
+    if(dest->tail) {
         dest->tail->next = src->head;
     } else {
         dest->head = src->head;
@@ -199,7 +199,7 @@ gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_da
 
     for(GList *iter = queue->head, *next = NULL; iter; iter = next) {
         next = iter->next;
-        if (func(iter->data, user_data)) {
+        if(func(iter->data, user_data)) {
             g_queue_delete_link(queue, iter);
             ++removed;
         }
@@ -364,13 +364,13 @@ bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
 
     g_mutex_lock(&self->lock);
     {
-        gid_found =
-                g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
-        uid_found =
-                g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
+        gid_found = g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid),
+                                      rm_userlist_cmp_ids, NULL);
+        uid_found = g_sequence_lookup(self->users, GUINT_TO_POINTER(uid),
+                                      rm_userlist_cmp_ids, NULL);
     }
     g_mutex_unlock(&self->lock);
-    
+
     if(valid_uid != NULL) {
         *valid_uid = uid_found;
     }

@@ -695,9 +695,8 @@ static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
                                            : RM_PROGRESS_STATE_PREPROCESS);
 
     /* fake interrupt option for debugging/testing: */
-    if (tag->after_preprocess &&
-            session->cfg->fake_abort &&
-            session->shred_bytes_remaining * 10 < session->shred_bytes_total * 9) {
+    if(tag->after_preprocess && session->cfg->fake_abort &&
+       session->shred_bytes_remaining * 10 < session->shred_bytes_total * 9) {
         rm_session_abort(session);
         /* prevent multiple aborts */
         session->shred_bytes_total = 0;
@@ -928,12 +927,10 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             shred_group->unique_basename = NULL;
         }
         shred_group->num_files += rm_shred_num_files(file);
-        if(file->hardlinks.is_head &&
-                shred_group->unique_basename &&
-                shred_group->session->cfg->unmatched_basenames) {
+        if(file->hardlinks.is_head && shred_group->unique_basename &&
+           shred_group->session->cfg->unmatched_basenames) {
             for(GList *iter = file->hardlinks.files->head; iter; iter = iter->next) {
-                if(rm_file_basenames_cmp(iter->data,
-                                shred_group->unique_basename) != 0) {
+                if(rm_file_basenames_cmp(iter->data, shred_group->unique_basename) != 0) {
                     shred_group->unique_basename = NULL;
                     break;
                 }
@@ -1062,7 +1059,7 @@ static RmFile *rm_shred_sift(RmFile *file) {
  * */
 static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShredTag *tag,
                                    RmFile *file) {
-    if (!file->digest) {
+    if(!file->digest) {
         file->digest = digest;
     }
     g_assert(file->digest == digest);
@@ -1100,7 +1097,8 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
 /* Called for each file; find appropriate RmShredGroup (ie files with same size) and
  * push the file to it.
  * */
-static void rm_shred_file_preprocess(RmShredGroup *group, RmFile *file, RmShredTag *main) {
+static void rm_shred_file_preprocess(RmShredGroup *group, RmFile *file,
+                                     RmShredTag *main) {
     /* initial population of RmShredDevice's and first level RmShredGroup's */
     RmSession *session = main->session;
 
@@ -1173,13 +1171,13 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     /* move files from node tables into initial RmShredGroups */
     rm_log_debug_line("preparing size groups for shredding (dupe finding)...");
     RmFileTables *tables = session->tables;
-    while (tables->size_groups) {
+    while(tables->size_groups) {
         GSList *files = tables->size_groups->data;
         RmShredGroup *group = NULL;
         /* push files to shred group */
-        while (files) {
+        while(files) {
             RmFile *file = files->data;
-            if (!group) {
+            if(!group) {
                 /* create RmShredGroup using first file in size group as template*/
                 group = rm_shred_group_new(file);
                 group->digest_type = session->cfg->checksum_type;
@@ -1188,7 +1186,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
             files = g_slist_delete_link(files, files);
         }
 
-        if (group) {
+        if(group) {
             /* check if group has external checksums for all files */
             if(HAS_CACHE(main->session) && group->num_files == group->num_ext_cksums) {
                 group->has_only_ext_cksums = true;
@@ -1199,7 +1197,8 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
         }
 
         /* move to next size group */
-        tables->size_groups = g_slist_delete_link(tables->size_groups, tables->size_groups);
+        tables->size_groups =
+            g_slist_delete_link(tables->size_groups, tables->size_groups);
     }
     rm_log_debug_line("...done at time %.3f; removed %u of %" LLU,
                       g_timer_elapsed(session->timer, NULL), removed,
@@ -1494,9 +1493,8 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         gboolean shredder_waiting =
             (file->shred_group->next_offset != file->file_size) &&
             (cfg->shred_always_wait ||
-                ( !cfg->shred_never_wait &&
-                 rm_mds_device_is_rotational(file->disk) &&
-                 bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
+             (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
+              bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
                                 file->is_symlink)) {
@@ -1515,11 +1513,13 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
 
         if(shredder_waiting) {
             /* some final checks if it's still worth waiting for the hash result */
-            shredder_waiting = shredder_waiting &&
-                    /* no point waiting if we have no siblings */
-                    file->shred_group->children &&
-                    /* no point waiting if paranoid digest with no twin candidates */
-                    (file->digest->type != RM_DIGEST_PARANOID || file->digest->paranoid->twin_candidate);
+            shredder_waiting =
+                shredder_waiting &&
+                /* no point waiting if we have no siblings */
+                file->shred_group->children &&
+                /* no point waiting if paranoid digest with no twin candidates */
+                (file->digest->type != RM_DIGEST_PARANOID ||
+                 file->digest->paranoid->twin_candidate);
         }
         file->signal = shredder_waiting ? rm_signal_new() : NULL;
         file->shredder_waiting = shredder_waiting;
@@ -1539,7 +1539,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             file = NULL;
         }
     }
-    if (file) {
+    if(file) {
         /* file was not handled by rm_shred_sift so we need to add it back to the queue */
         rm_mds_push_task(file->disk, file->dev, file->disk_offset, NULL, file);
     }

@@ -50,9 +50,9 @@ typedef struct RmFileTables {
     /* Used for finding path doubles */
     GHashTable *unique_paths_table;
 
-    //GHashTable *mtime_filter;
-    //GHashTable *basename_filter;
-    //GQueue *file_queue;
+    // GHashTable *mtime_filter;
+    // GHashTable *basename_filter;
+    // GQueue *file_queue;
     /*array of lists, one for each "other lint" type */
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
 
