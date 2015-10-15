@@ -121,7 +121,7 @@ General Options
     The following well-known algorithms are available:
 
     **spooky**, **city**, **murmur**, **xxhash**, **md5**, **sha1**, **sha256**,
-    **sha512**.
+    **sha512**, **farmhash**.
 
     If not explicitly stated in the name the hash functions use a length of 128 bit.
     There are variations of the above functions:

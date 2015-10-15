@@ -47,6 +47,7 @@ typedef enum RmDigestType {
     RM_DIGEST_MURMUR512,
     RM_DIGEST_CITY512,
     RM_DIGEST_XXHASH,
+    RM_DIGEST_FARMHASH,
 
     /* special kids in town */
     RM_DIGEST_CUMULATIVE, /* hash([a, b]) = hash([b, a]) */
