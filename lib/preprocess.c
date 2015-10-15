@@ -65,25 +65,14 @@ static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *fi
     return g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len);
 }
 
-//gboolean rm_file_equalx(const RmFile *file_a, const RmFile *file_b) {
-//    const RmCfg *cfg = file_a->session->cfg;
-
-//    return (
-//        (file_a->file_size == file_b->file_size) &&
-//        (!cfg->match_basename || rm_file_basenames_match(file_a, file_b)) &&
-//        (!cfg->match_with_extension || rm_file_check_with_extension(file_a, file_b)) &&
-//        (!cfg->match_without_extension ||
-//         rm_file_check_without_extension(file_a, file_b)));
-//}
-
 /* test if two files qualify for the same "group"; if not then rank them by
  * size and then other factors depending on settings */
 gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
     gint result = SIGN_DIFF(file_a->file_size, file_b->file_size);
 
     RmCfg *cfg = file_a->session->cfg;
-
-    if (result==0) {
+    
+    if (result == 0) {
         result = (cfg->match_basename) ?
                 rm_file_basenames_cmp(file_a, file_b) : 0;
     }
@@ -314,53 +303,10 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
     }
 }
 
-/* moves all of entries from src GQueue into dest
- * (maybe GLib should include this?)
- * TODO: move to utilities.[ch] */
-void rm_util_gqueue_push_head_queue(GQueue *dest, GQueue *src) {
-    g_assert(dest);
-    g_assert(src);
-    if (src->length == 0) {
-        return;
-    }
-
-    src->tail->next = dest->head;
-    if (dest->head) {
-        dest->head->prev = src->tail;
-    } else {
-        dest->tail = src->tail;
-    }
-    dest->head = src->head;
-    dest->length += src->length;
-    src->length = 0;
-    src->head = NULL;
-    src->tail = NULL;
-}
-
-void rm_util_gqueue_push_tail_queue(GQueue *dest, GQueue *src) {
-    g_assert(dest);
-    g_assert(src);
-    if (src->length == 0) {
-        return;
-    }
-
-    src->head->prev = dest->tail;
-    if (dest->tail) {
-        dest->tail->next = src->head;
-    } else {
-        dest->head = src->head;
-    }
-    dest->tail = src->tail;
-    dest->length += src->length;
-    src->length = 0;
-    src->head = NULL;
-    src->tail = NULL;
-}
-
 void rm_file_list_insert_queue(GQueue *files, const RmSession *session) {
     g_mutex_lock(&session->tables->lock);
     {
-        rm_util_gqueue_push_tail_queue(session->tables->all_files, files);
+        rm_util_queue_push_tail_queue(session->tables->all_files, files);
     }
     g_mutex_unlock(&session->tables->lock);
 }
@@ -443,21 +389,6 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
     return TRUE;
 }
 
-typedef gboolean (*GQRFunc) (gpointer data, gpointer  user_data);
-
-static gint rm_g_queue_foreach_remove(GQueue *queue, GQRFunc func, gpointer user_data) {
-    gint removed = 0;
-    GList *next = NULL;
-    for(GList *iter = queue->head; iter; iter = next) {
-        next = iter->next;
-        if (func(iter->data, user_data)) {
-            g_queue_delete_link(queue, iter);
-            ++removed;
-        }
-    }
-    return removed;
-}
-
 /* Preprocess files, including embedded hardlinks.  Any embedded hardlinks
  * that are "other lint" types are sent to rm_pp_handle_other_lint.  If the
  * file itself is "other lint" types it is likewise sent to rm_pp_handle_other_lint.
@@ -473,16 +404,16 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
         /* there is a cluster of inode matches */
 
         /* remove path doubles */
-        session->total_filtered_files -= rm_g_queue_foreach_remove(
-                inode_cluster, (GQRFunc)rm_pp_check_path_double,
+        session->total_filtered_files -= rm_util_queue_foreach_remove(
+                inode_cluster, (RmQRFunc)rm_pp_check_path_double,
                 session->tables->unique_paths_table);
         /* clear the hashtable ready for the next cluster */
         g_hash_table_remove_all(session->tables->unique_paths_table);
     }
 
-    /* process and remove other lint (@sahib: should this affect total_filtered_files?)*/
-    rm_g_queue_foreach_remove(
-            inode_cluster, (GQRFunc)rm_pp_handle_other_lint, (RmSession*)session);
+    /* process and remove other lint */
+    session->total_filtered_files -= rm_util_queue_foreach_remove(
+            inode_cluster, (RmQRFunc)rm_pp_handle_other_lint, (RmSession*)session);
 
     if(inode_cluster->length > 1) {
         /* bundle or free the non-head files */
@@ -492,14 +423,16 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
             headfile->hardlinks.files = g_queue_new();
             headfile->hardlinks.is_head = TRUE;
         }
+
         /* hardlink cluster are counted as filtered files since they are either
          * ignored or treated as automatic duplicates depending on settings (so
          * no effort eaither way); rm_pp_handle_hardlink will either free or bundle
          * the hardlinks depending on value of headfile->hardlinks.is_head.
          */
-         session->total_filtered_files -= rm_g_queue_foreach_remove(
-                    inode_cluster, (GQRFunc)rm_pp_handle_hardlink, headfile);
+         session->total_filtered_files -= rm_util_queue_foreach_remove(
+                    inode_cluster, (RmQRFunc)rm_pp_handle_hardlink, headfile);
     }
+
     /* update counters */
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
@@ -508,6 +441,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
         session->tables->size_groups->data = g_slist_prepend(
                 session->tables->size_groups->data, inode_cluster->head->data);
     }
+
     return TRUE;
 }
 
@@ -570,10 +504,9 @@ void rm_preprocess(RmSession *session) {
     GHashTable *node_table = tables->node_table;
     while(file && !rm_session_was_aborted(session)) {
         /* group files into inode clusters */
-        GQueue *inode_cluster = g_hash_table_lookup(node_table, file);
-        if(inode_cluster == NULL) {
-            g_hash_table_insert(node_table, file, (inode_cluster = g_queue_new()));
-        }
+        GQueue *inode_cluster = rm_hash_table_setdefault(
+                node_table, file, (RmNewFunc)g_queue_new);
+
         g_queue_push_tail(inode_cluster, file);
 
         /* get next file and check if it is part of the same group */
@@ -588,6 +521,7 @@ void rm_preprocess(RmSession *session) {
 
             removed += g_hash_table_foreach_remove(
                     node_table, (GHRFunc)rm_pp_handle_inode_clusters, session);
+
             /* free up the node table for the next group */
             g_hash_table_steal_all(node_table);
             if (tables->size_groups->data == NULL) {
@@ -597,14 +531,12 @@ void rm_preprocess(RmSession *session) {
         }
     }
 
-    rm_log_debug_line("path doubles removal and hardlink bundling finished at time %.3f; removed %u of %d",
-                      g_timer_elapsed(session->timer, NULL), removed,
-                      session->total_files);
-
-
     session->other_lint_cnt += rm_pp_handler_other_lint(session);
-    rm_log_debug_line("Other lint handling finished at time %.3f",
-                      g_timer_elapsed(session->timer, NULL));
+
+    rm_log_debug_line(
+            "path doubles removal/hardlink bundling/other lint finished at %.3f; removed %u of %d",
+                  g_timer_elapsed(session->timer, NULL), removed,
+                  session->total_files);
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 }

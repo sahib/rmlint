@@ -174,6 +174,39 @@ ino_t rm_util_parent_node(const char *path) {
     }
 }
 
+void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src) {
+    g_return_if_fail(dest);
+    g_return_if_fail(src);
+
+    if (src->length == 0) {
+        return;
+    }
+
+    src->head->prev = dest->tail;
+    if (dest->tail) {
+        dest->tail->next = src->head;
+    } else {
+        dest->head = src->head;
+    }
+    dest->tail = src->tail;
+    dest->length += src->length;
+    src->length = 0;
+    src->head = src->tail = NULL;
+}
+
+gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data) {
+    gint removed = 0;
+
+    for(GList *iter = queue->head, *next = NULL; iter; iter = next) {
+        next = iter->next;
+        if (func(iter->data, user_data)) {
+            g_queue_delete_link(queue, iter);
+            ++removed;
+        }
+    }
+    return removed;
+}
+
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
 int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {
