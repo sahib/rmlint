@@ -38,6 +38,7 @@
 #include "checksums/citycrc.h"
 #include "checksums/murmur3.h"
 #include "checksums/spooky-c.h"
+#include "checksums/cfarmhash.h"
 #include "checksums/xxhash/xxhash.h"
 
 #define _RM_CHECKSUM_DEBUG 0
@@ -188,6 +189,8 @@ RmDigestType rm_string_to_digest_type(const char *string) {
         return RM_DIGEST_CITY512;
     } else if(!strcasecmp(string, "xxhash")) {
         return RM_DIGEST_XXHASH;
+    } else if(!strcasecmp(string, "farmhash")) {
+        return RM_DIGEST_XXHASH;
     } else if(!strcasecmp(string, "murmur512")) {
         return RM_DIGEST_MURMUR512;
     } else if(!strcasecmp(string, "sha256")) {
@@ -240,6 +243,7 @@ const char *rm_digest_type_to_string(RmDigestType type) {
                                   [RM_DIGEST_EXT] = "ext",
                                   [RM_DIGEST_CUMULATIVE] = "cumulative",
                                   [RM_DIGEST_PARANOID] = "paranoid",
+                                  [RM_DIGEST_FARMHASH] = "farmhash",
                                   [RM_DIGEST_XXHASH] = "xxhash"};
 
     return names[MIN(type, sizeof(names) / sizeof(names[0]))];
@@ -254,6 +258,7 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
                         [RM_DIGEST_MURMUR256] = 7,   [RM_DIGEST_CITY256] = 8,
                         [RM_DIGEST_BASTARD] = 9,     [RM_DIGEST_MURMUR512] = 10,
                         [RM_DIGEST_CITY512] = 11,    [RM_DIGEST_EXT] = 12,
+                        [RM_DIGEST_FARMHASH] = 19,
                         [RM_DIGEST_CUMULATIVE] = 13, [RM_DIGEST_PARANOID] = 14};
 
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
@@ -283,6 +288,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         digest->bytes = 64 / 8;
         break;
     case RM_DIGEST_XXHASH:
+    case RM_DIGEST_FARMHASH:
     case RM_DIGEST_SPOOKY64:
         digest->bytes = 64 / 8;
         break;
@@ -409,6 +415,7 @@ void rm_digest_free(RmDigest *digest) {
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
+    case RM_DIGEST_FARMHASH:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
         if(digest->checksum) {
@@ -461,6 +468,9 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         break;
     case RM_DIGEST_XXHASH:
         digest->checksum[0].first = XXH64(data, size, digest->checksum[0].first);
+        break;
+    case RM_DIGEST_FARMHASH:
+        digest->checksum[0].first = cfarmhash((const char *)data, size);
         break;
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_MURMUR256:
@@ -630,6 +640,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_XXHASH:
+    case RM_DIGEST_FARMHASH:
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
@@ -665,6 +676,7 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     case RM_DIGEST_CITY256:
     case RM_DIGEST_CITY512:
     case RM_DIGEST_XXHASH:
+    case RM_DIGEST_FARMHASH:
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_BASTARD:

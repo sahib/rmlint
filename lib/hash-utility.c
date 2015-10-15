@@ -158,7 +158,7 @@ int rm_hasher_main(int argc, const char **argv) {
                  "\n    %s\n"),
                "spooky, city, xxhash, sha{1,256,512}, md5, murmur",
                "spooky{32,64,128}, city{128,256,512}, murmur{512}",
-               "cumulative, paranoid, ext, bastard");
+               "farmhash, cumulative, paranoid, ext, bastard");
 
     g_option_group_add_entries(main_group, entries);
     g_option_context_set_main_group(context, main_group);
