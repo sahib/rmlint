@@ -302,6 +302,19 @@ def check_linux_limits(context):
     context.Result(rc)
     return rc
 
+def check_musl_fts(context):
+    rc = 1
+    if tests.CheckHeader(context, 'fts.h'):
+        rc = 0
+
+    if tests.CheckLib(context, ['fts']):
+        rc = 0
+
+    conf.env['HAVE_FTS_H'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
 
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
@@ -473,7 +486,8 @@ conf = Configure(env, custom_tests={
     'check_c11': check_c11,
     'check_gettext': check_gettext,
     'check_sqlite3': check_sqlite3,
-    'check_linux_limits': check_linux_limits
+    'check_linux_limits': check_linux_limits,
+    'check_musl_fts': check_musl_fts
 })
 
 if not conf.CheckCC():
@@ -577,6 +591,7 @@ conf.check_bigfiles()
 conf.check_sha512()
 conf.check_gettext()
 conf.check_sqlite3()
+conf.check_musl_fts()
 conf.check_linux_limits()
 
 if conf.env['HAVE_LIBELF']:
