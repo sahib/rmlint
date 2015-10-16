@@ -28,7 +28,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h>
 #include <errno.h>
 
 #include <glib.h>
@@ -39,6 +38,8 @@
 #include "file.h"
 #include "xattr.h"
 #include "md-scheduler.h"
+
+#include "fts/fts.h"
 
 ///////////////////////////////////////////
 // BUFFER FOR STARTING TRAVERSAL THREADS //

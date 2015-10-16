@@ -94,7 +94,8 @@ library = env.Library(
     Glob('*.c')           +
     Glob('checksums/*.c') +
     Glob('checksums/xxhash/*.c') +
-    Glob('formats/*.c')
+    Glob('formats/*.c') +
+    Glob('fts/*.c')
 )
 
 headers = Glob('*.h')

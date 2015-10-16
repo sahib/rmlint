@@ -60,13 +60,14 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h>
 
 #include "treemerge.h"
 #include "shredder.h"
 #include "preprocess.h"
 #include "formats.h"
 #include "pathtricia.h"
+
+#include "fts/fts.h"
 
 typedef struct RmDirectory {
     char *dirname;       /* Path to this directory without trailing slash              */
