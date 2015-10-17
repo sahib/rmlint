@@ -697,7 +697,6 @@ if 'config' in COMMAND_LINE_TARGETS:
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
     Support for SHA512 (needs glib >= 2.31)               : {sha512}
-    Support for SSE4.2 instructions for fast CityHash     : {sse42}
     Support for swapping metadata to disk (needs SQLite3) : {sqlite3}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
@@ -737,7 +736,6 @@ Type 'scons' to actually compile rmlint now. Good luck.
             blkid=yesno(env['HAVE_BLKID']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
-            sse42=yesno(env['HAVE_SSE42']),
             sqlite3=yesno(env['HAVE_SQLITE3']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),
