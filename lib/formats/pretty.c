@@ -41,17 +41,19 @@ static const char *RM_LINT_TYPE_TO_DESCRIPTION[] =
      [RM_LINT_TYPE_DUPE_CANDIDATE] = N_("Duplicate(s)"),
      [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = N_("Duplicate Directorie(s)")};
 
-static const char *RM_LINT_TYPE_TO_COMMAND[] =
+static const char *RM_ORIGINAL_PREFIX = "original ";
+
+static const char *RM_LINT_TYPE_TO_PREFIX[] =
     {[RM_LINT_TYPE_UNKNOWN] = "",
-     [RM_LINT_TYPE_BADLINK] = "rm",
-     [RM_LINT_TYPE_EMPTY_DIR] = "rmdir",
-     [RM_LINT_TYPE_NONSTRIPPED] = "strip --strip-debug",
-     [RM_LINT_TYPE_BADUID] = "chown %s",
+     [RM_LINT_TYPE_BADLINK] = "remove",
+     [RM_LINT_TYPE_EMPTY_DIR] = "remove",
+     [RM_LINT_TYPE_NONSTRIPPED] = "strip",
+     [RM_LINT_TYPE_BADUID] = "hown %s",
      [RM_LINT_TYPE_BADGID] = "chgrp %s",
      [RM_LINT_TYPE_BADUGID] = "chown %s:%s",
-     [RM_LINT_TYPE_EMPTY_FILE] = "rm",
-     [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
-     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "rm -rf"};
+     [RM_LINT_TYPE_EMPTY_FILE] = "remove",
+     [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate",
+     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "sametree"};
 
 static const char *rm_fmt_command_color(RmSession *session, RmFile *file, FILE *out) {
     switch(file->lint_type) {
@@ -111,7 +113,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out,
 
     fprintf(out, "    %s", rm_fmt_command_color(session, file, out));
 
-    const char *format = RM_LINT_TYPE_TO_COMMAND[file->lint_type];
+    const char *format = RM_LINT_TYPE_TO_PREFIX[file->lint_type];
     switch(file->lint_type) {
     case RM_LINT_TYPE_BADUID:
         fprintf(out, format, self->user);
@@ -124,14 +126,14 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out,
         break;
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         if(file->is_original) {
-            fprintf(out, "ls");
+            fprintf(out, RM_ORIGINAL_PREFIX);
         } else {
             fprintf(out, "%s", format);
         }
         break;
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
         if(file->is_original) {
-            fprintf(out, "ls -la");
+            fprintf(out, RM_ORIGINAL_PREFIX);
         } else {
             fprintf(out, "%s", format);
         }
