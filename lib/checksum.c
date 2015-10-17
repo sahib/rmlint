@@ -496,11 +496,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
             */
             uint128 old = {digest->checksum[block].first, digest->checksum[block].second};
-#if RM_PLATFORM_64 && HAVE_SSE42
-            old = CityHashCrc128WithSeed((const char *)data, size, old);
-#else
             old = CityHash128WithSeed((const char *)data, size, old);
-#endif
             memcpy(&digest->checksum[block], &old, sizeof(uint128));
         }
         break;
@@ -509,11 +505,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
                             &digest->checksum[0]);
 
         uint128 old = {digest->checksum[1].first, digest->checksum[1].second};
-#if RM_PLATFORM_64 && HAVE_SSE42
-        old = CityHashCrc128WithSeed((const char *)data, size, old);
-#else
         old = CityHash128WithSeed((const char *)data, size, old);
-#endif
         memcpy(&digest->checksum[1], &old, sizeof(uint128));
         break;
     case RM_DIGEST_CUMULATIVE: {

@@ -293,24 +293,6 @@ def check_c11(context):
     return rc
 
 
-def check_sse42(context):
-    if GetOption('with_sse') is False:
-        rc = 0
-    else:
-        rc = 1
-
-        if tests.CheckDeclaration(context, '__SSE4_2__'):
-            rc = 0
-        else:
-            conf.env.Prepend(CFLAGS=['-msse4.2'])
-
-    conf.env['HAVE_SSE42'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
 def check_sqlite3(context):
     rc = 1
     if tests.CheckHeader(context, 'sqlite3.h'):
@@ -466,13 +448,6 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
         dest='with_' + suffix
     )
 
-AddOption(
-    '--with-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
-AddOption(
-    '--without-sse', action='store_const', default=True, const=False, dest='with_sse'
-)
 
 # General Environment
 options = dict(
@@ -511,7 +486,6 @@ conf = Configure(env, custom_tests={
     'check_libelf': check_libelf,
     'check_fiemap': check_fiemap,
     'check_xattr': check_xattr,
-    'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
     'check_sysctl': check_sysctl,
@@ -598,9 +572,6 @@ else:
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
-
-conf.env.Append(CCFLAGS=['-march=native'])
-conf.check_sse42()
 
 # Optional flags:
 conf.env.Append(CFLAGS=[

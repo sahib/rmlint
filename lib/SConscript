@@ -25,7 +25,6 @@ def build_config_template(target, source, env):
             HAVE_FIEMAP=env['HAVE_FIEMAP'],
             HAVE_XATTR=env['HAVE_XATTR'],
             HAVE_SHA512=env['HAVE_SHA512'],
-            HAVE_SSE42=env['HAVE_SSE42'],
             HAVE_BIGFILES=env['HAVE_BIGFILES'],
             HAVE_STAT64=env['HAVE_BIG_STAT'],
             HAVE_POSIX_FADVISE=env['HAVE_POSIX_FADVISE'],

@@ -14,7 +14,6 @@
 #define HAVE_BIGFILES      ({HAVE_BIGFILES})
 #define HAVE_STAT64        ({HAVE_STAT64})
 #define HAVE_BIG_OFF_T     ({HAVE_BIG_OFF_T})
-#define HAVE_SSE42         ({HAVE_SSE42})
 #define HAVE_SYSBLOCK      ({HAVE_SYSBLOCK})
 #define HAVE_SYSCTL        ({HAVE_SYSCTL})
 #define HAVE_SQLITE3       ({HAVE_SQLITE3})
