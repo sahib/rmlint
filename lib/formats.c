@@ -56,7 +56,7 @@ static void rm_fmt_group_destroy(RmFmtGroup *self) {
 }
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
-    g_assert(handler);
+    rm_assert_gentle(handler);
 
     g_free(handler->path);
     g_free(handler);

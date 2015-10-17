@@ -357,7 +357,7 @@ RmUserList *rm_userlist_new(void) {
 
 bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
                           bool *valid_uid, bool *valid_gid) {
-    g_assert(self);
+    rm_assert_gentle(self);
     bool gid_found = FALSE;
     bool uid_found = FALSE;
 
@@ -382,7 +382,7 @@ bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
 }
 
 void rm_userlist_destroy(RmUserList *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     g_sequence_free(self->users);
     g_sequence_free(self->groups);
@@ -450,8 +450,8 @@ int rm_json_cache_read(RmTrie *file_trie, const char *json_path) {
     rm_log_info_line(_("caching is not supported due to missing json-glib library."));
     return EXIT_FAILURE;
 #else
-    g_assert(file_trie);
-    g_assert(json_path);
+    rm_assert_gentle(file_trie);
+    rm_assert_gentle(json_path);
 
     int result = EXIT_FAILURE;
     GError *error = NULL;
@@ -619,7 +619,7 @@ typedef struct RmMountEntries {
 } RmMountEntries;
 
 static void rm_mount_list_close(RmMountEntries *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     for(GList *iter = self->entries; iter; iter = iter->next) {
         RmMountEntry *entry = iter->data;
@@ -635,7 +635,7 @@ static void rm_mount_list_close(RmMountEntries *self) {
 }
 
 static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     if(self->current) {
         self->current = self->current->next;
@@ -1038,8 +1038,8 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
             }
             g_free(prev);
             prev = parent_path;
-            g_assert(strcmp(prev, "/") != 0);
-            g_assert(strcmp(prev, ".") != 0);
+            rm_assert_gentle(strcmp(prev, "/") != 0);
+            rm_assert_gentle(strcmp(prev, ".") != 0);
         }
     }
 }
@@ -1066,7 +1066,7 @@ bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
 }
 
 bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
-    g_assert(self);
+    rm_assert_gentle(self);
     if(g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(source))) {
         if(source == dest) {
             return true;
@@ -1075,8 +1075,8 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
                 g_hash_table_lookup(self->part_table, GINT_TO_POINTER(source));
             RmPartitionInfo *dest_part =
                 g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dest));
-            g_assert(source_part);
-            g_assert(dest_part);
+            rm_assert_gentle(source_part);
+            rm_assert_gentle(dest_part);
             return (strcmp(source_part->fsname, dest_part->fsname) == 0);
         }
     } else {

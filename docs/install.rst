@@ -51,7 +51,7 @@ Here's a list of readily prepared commands for known distributions:
   Those packages are built from master snapshots and might be slightly outdated.
 
 .. _`Fedora Copr`: https://copr.fedoraproject.org/coprs/sahib/rmlint/
-:t
+
 * **ArchLinux:**
 
 There is an official package in ``[community]`` here_:
