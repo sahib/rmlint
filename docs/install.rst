@@ -54,13 +54,13 @@ Here's a list of readily prepared commands for known distributions:
 
 * **ArchLinux:**
 
-There is an official package in ``[community]`` here_:
+  There is an official package in ``[community]`` here_:
 
   .. code-block:: bash
 
     $ pacman -S rmlint
 
-Alternatively you can use ``rmlint-git`` in the AUR: 
+  Alternatively you can use ``rmlint-git`` in the AUR: 
 
   .. code-block:: bash
 
