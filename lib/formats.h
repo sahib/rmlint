@@ -54,6 +54,7 @@ typedef struct RmFmtTable {
     GHashTable *name_to_handler;
     GHashTable *path_to_handler;
     GHashTable *handler_to_file;
+    GHashTable *handler_set;
     GHashTable *config;
     GRecMutex state_mtx;
     RmSession *session;
