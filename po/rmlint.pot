@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
+# This file is distributed under the same license as the rmlint package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: rmlint 2.3.0\n"
+"Project-Id-Version: rmlint 2.4.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-09-17 18:48+0200\n"
+"POT-Creation-Date: 2015-10-18 15:09+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,623 +34,138 @@ msgstr ""
 msgid "Please file a bug report (See rmlint -h)"
 msgstr ""
 
-#: lib/formats/summary.c:56
-#, c-format
-msgid " file(s) after investigation, nothing to search through.\n"
-msgstr ""
-
-#: lib/formats/summary.c:61
-#, c-format
-msgid "Early shutdown, probably not all lint was found.\n"
-msgstr ""
-
-#: lib/formats/summary.c:72
-#, c-format
-msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
-msgstr ""
-
-#: lib/formats/summary.c:80
-#, c-format
-msgid "This equals %s%s%s of duplicates which could be removed.\n"
-msgstr ""
-
-#: lib/formats/summary.c:87
-#, c-format
-msgid "other suspicious item(s) found, which may vary in size.\n"
-msgstr ""
-
-#: lib/formats/summary.c:115
-#, c-format
-msgid "Wrote a %s%s%s file to: %s%s%s\n"
-msgstr ""
-
-#: lib/formats/pretty.c:33
-msgid "Bad symlink(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:34
-msgid "Empty dir(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:35
-msgid "Non stripped binarie(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:36
-msgid "Bad UID(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:36
-msgid "Bad GID(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:37
-msgid "Bad UID and GID(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:38
-msgid "Empty file(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:39
-msgid "Duplicate(s)"
-msgstr ""
-
-#: lib/formats/pretty.c:40
-msgid "Duplicate Directorie(s)"
-msgstr ""
-
-#: lib/formats/progressbar.c:66
+#: lib/formats/progressbar.c:70
 msgid "reduces files to"
 msgstr ""
 
-#: lib/formats/progressbar.c:84
+#: lib/formats/progressbar.c:92
 msgid "Traversing"
 msgstr ""
 
-#: lib/formats/progressbar.c:85
+#: lib/formats/progressbar.c:93
 msgid "usable files"
 msgstr ""
 
-#: lib/formats/progressbar.c:88
+#: lib/formats/progressbar.c:96
 msgid "ignored files / folders"
 msgstr ""
 
-#: lib/formats/progressbar.c:95
+#: lib/formats/progressbar.c:103
 msgid "Preprocessing"
 msgstr ""
 
-#: lib/formats/progressbar.c:95
+#: lib/formats/progressbar.c:103
 msgid "found"
 msgstr ""
 
-#: lib/formats/progressbar.c:96
+#: lib/formats/progressbar.c:104
 msgid "other lint"
 msgstr ""
 
-#: lib/formats/progressbar.c:106
+#: lib/formats/progressbar.c:114
 msgid "Matching"
 msgstr ""
 
-#: lib/formats/progressbar.c:107
+#: lib/formats/progressbar.c:115
 msgid "dupes of"
 msgstr ""
 
-#: lib/formats/progressbar.c:108
+#: lib/formats/progressbar.c:116
 msgid "originals"
 msgstr ""
 
-#: lib/formats/progressbar.c:110
+#: lib/formats/progressbar.c:118
 msgid "to scan in"
 msgstr ""
 
-#: lib/formats/progressbar.c:111
+#: lib/formats/progressbar.c:119
 msgid "files"
 msgstr ""
 
-#: lib/formats/progressbar.c:116
+#: lib/formats/progressbar.c:124
 msgid "Merging files into directories (stand by...)"
 msgstr ""
 
-#: lib/formats/sh.c:452
+#: lib/formats/pretty.c:34
+msgid "Bad symlink(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:35
+msgid "Empty dir(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:36
+msgid "Non stripped binarie(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:37
+msgid "Bad UID(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:38
+msgid "Bad GID(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:39
+msgid "Bad UID and GID(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:40
+msgid "Empty file(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:41
+msgid "Duplicate(s)"
+msgstr ""
+
+#: lib/formats/pretty.c:42
+msgid "Duplicate Directorie(s)"
+msgstr ""
+
+#: lib/formats/sh.c:461
 #, c-format
 msgid "%s is an invalid handler."
 msgstr ""
 
-#: lib/session.c:88
+#: lib/formats/summary.c:58
 #, c-format
-msgid "Cannot close tmp cache: %s\n"
+msgid " file(s) after investigation, nothing to search through.\n"
 msgstr ""
 
-#: lib/formats.c:179
+#: lib/formats/summary.c:73
 #, c-format
-msgid "No such new_handler with this name: %s"
+msgid "Early shutdown, probably not all lint was found.\n"
 msgstr ""
 
-#: lib/formats.c:201
-#, c-format
-msgid "Unable to open file for writing: %s"
-msgstr ""
-
-#: lib/preprocess.c:322
-#, c-format
-msgid "Hardlink file size changed during traversal: %s"
-msgstr ""
-
-#: lib/traverse.c:339
-#, c-format
-msgid "filesystem loop detected at %s (skipping)"
-msgstr ""
-
-#: lib/traverse.c:344
-#, c-format
-msgid "cannot read directory %s: %s"
-msgstr ""
-
-#: lib/traverse.c:357
-#, c-format
-msgid "error %d in fts_read for %s (skipping)"
-msgstr ""
-
-#: lib/traverse.c:387
-#, c-format
-msgid "Added big file %s"
-msgstr ""
-
-#: lib/traverse.c:389
-#, c-format
-msgid "cannot stat file %s (skipping)"
-msgstr ""
-
-#: lib/traverse.c:425
-#, c-format
-msgid "Unknown fts_info flag %d for file %s"
-msgstr ""
-
-#: lib/traverse.c:445
-#, c-format
-msgid "'%s': fts_read failed on %s"
-msgstr ""
-
-#: lib/replay.c:101 lib/utilities.c:435
-msgid "No valid json cache (no array in /)"
-msgstr ""
-
-#: lib/replay.c:150 lib/cmdline.c:731
-#, c-format
-msgid "lint type '%s' not recognised"
-msgstr ""
-
-#: lib/replay.c:173
-#, c-format
-msgid "modification time of `%s` changed. Ignoring."
-msgstr ""
-
-#: lib/replay.c:487
-#, c-format
-msgid "Loading json-results `%s'"
-msgstr ""
-
-#: lib/replay.c:565
-msgid "json-glib is needed for using --replay."
-msgstr ""
-
-#: lib/replay.c:566
-msgid "Please recompile `rmlint` with it installed."
-msgstr ""
-
-#: lib/hasher.c:293
-#, c-format
-msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
-msgstr ""
-
-#: lib/cmdline.c:79
-#, c-format
-msgid "compiled with:"
-msgstr ""
-
-#: lib/cmdline.c:85
+#: lib/formats/summary.c:77
 #, c-format
 msgid ""
-"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> "
-"Thomas."
+"Note: Please use the saved script below for removal, not the above output."
 msgstr ""
 
-#: lib/cmdline.c:88
+#: lib/formats/summary.c:89
 #, c-format
-msgid ""
-"The code at https://github.com/sahib/rmlint is licensed under the terms of "
-"the GPLv3."
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
 msgstr ""
 
-#: lib/cmdline.c:113
-msgid "You seem to have no manpage for rmlint."
-msgstr ""
-
-#: lib/cmdline.c:179
-msgid "Usage: rmlint --btrfs-clone source dest\n"
-msgstr ""
-
-#: lib/cmdline.c:192
-msgid "btrfs clone: failed to open source file"
-msgstr ""
-
-#: lib/cmdline.c:198
-msgid "btrfs clone: failed to open dest file."
-msgstr ""
-
-#: lib/cmdline.c:233
+#: lib/formats/summary.c:97
 #, c-format
-msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
 msgstr ""
 
-#: lib/cmdline.c:237
-msgid ""
-"BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > "
-"4.2"
-msgstr ""
-
-#: lib/cmdline.c:240
+#: lib/formats/summary.c:104
 #, c-format
-msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
+msgid "other suspicious item(s) found, which may vary in size.\n"
 msgstr ""
 
-#: lib/cmdline.c:243
-msgid "Files don't match - not cloned"
-msgstr ""
-
-#: lib/cmdline.c:249
-msgid "rmlint was not compiled with btrfs support."
-msgstr ""
-
-#: lib/cmdline.c:303
-msgid "Input size is empty"
-msgstr ""
-
-#: lib/cmdline.c:311
-msgid "This does not look like a number"
-msgstr ""
-
-#: lib/cmdline.c:314
-msgid "Negativ sizes are no good idea"
-msgstr ""
-
-#: lib/cmdline.c:330
-msgid "Given format specifier not found"
-msgstr ""
-
-#: lib/cmdline.c:362
-msgid "Max is smaller than min"
-msgstr ""
-
-#: lib/cmdline.c:374
-msgid "cannot parse --size: "
-msgstr ""
-
-#: lib/cmdline.c:395
-msgid "--replay given; --with-metadata-cache will be ignored."
-msgstr ""
-
-#: lib/cmdline.c:405
+#: lib/formats/summary.c:132
 #, c-format
-msgid "Unable to open tmp cache: %s"
+msgid "Wrote a %s%s%s file to: %s%s%s\n"
 msgstr ""
 
-#: lib/cmdline.c:418
-#, c-format
-msgid "Unable to create cache attr `%s`: %s"
-msgstr ""
-
-#: lib/cmdline.c:433 lib/hash-utility.c:221
-#, c-format
-msgid "Can't open directory or file \"%s\": %s"
-msgstr ""
-
-#: lib/cmdline.c:500
-#, c-format
-msgid "Adding -o %s as output failed"
-msgstr ""
-
-#: lib/cmdline.c:512
-#, c-format
-msgid "No format (format:key[=val]) specified in '%s'"
-msgstr ""
-
-#: lib/cmdline.c:522
-#, c-format
-msgid "Missing key (format:key[=val]) in '%s'"
-msgstr ""
-
-#: lib/cmdline.c:537
-#, c-format
-msgid "Invalid key `%s' for formatter `%s'"
-msgstr ""
-
-#: lib/cmdline.c:564
-#, c-format
-msgid "Unable to parse factor \"%s\": error begins at %s"
-msgstr ""
-
-#: lib/cmdline.c:574
-#, c-format
-msgid "factor value is not in range [0-1]: %f"
-msgstr ""
-
-#: lib/cmdline.c:586
-#, c-format
-msgid "Unable to parse offset \"%s\": "
-msgstr ""
-
-#: lib/cmdline.c:779
-#, c-format
-msgid "Unable to parse time spec \"%s\""
-msgstr ""
-
-#: lib/cmdline.c:793
-#, c-format
-msgid "-n %lu is newer than current time (%lu)."
-msgstr ""
-
-#: lib/cmdline.c:882
-msgid "Only up to -pp or down to -PP flags allowed"
-msgstr ""
-
-#: lib/cmdline.c:905 lib/hash-utility.c:55
+#: lib/hash-utility.c:55 lib/cmdline.c:910
 #, c-format
 msgid "Unknown hash algorithm: '%s'"
-msgstr ""
-
-#: lib/cmdline.c:934
-#, c-format
-msgid "Invalid size description \"%s\": "
-msgstr ""
-
-#: lib/cmdline.c:1135
-msgid "Permissions string needs to be one or many of [rwx]"
-msgstr ""
-
-#: lib/cmdline.c:1148
-#, c-format
-msgid "%s may only contain [%s], not `%c`"
-msgstr ""
-
-#: lib/cmdline.c:1271
-msgid "Specifiyng both -o and -O is not allowed"
-msgstr ""
-
-#: lib/cmdline.c:1291
-msgid "Could not start graphical user interface."
-msgstr ""
-
-#: lib/cmdline.c:1322
-msgid "Specify max traversal depth"
-msgstr ""
-
-#: lib/cmdline.c:1323
-msgid "Original criteria"
-msgstr ""
-
-#: lib/cmdline.c:1324
-msgid "Rank lint groups by certain criteria"
-msgstr ""
-
-#: lib/cmdline.c:1325
-msgid "Specify lint types"
-msgstr ""
-
-#: lib/cmdline.c:1326
-msgid "Specify size limits"
-msgstr ""
-
-#: lib/cmdline.c:1327
-msgid "Choose hash algorithm"
-msgstr ""
-
-#: lib/cmdline.c:1328
-msgid "Add output (override default)"
-msgstr ""
-
-#: lib/cmdline.c:1329
-msgid "Add output (add to defaults)"
-msgstr ""
-
-#: lib/cmdline.c:1330
-msgid "Newer than stamp file"
-msgstr ""
-
-#: lib/cmdline.c:1331
-msgid "Newer than timestamp"
-msgstr ""
-
-#: lib/cmdline.c:1332
-msgid "Re-output a json file"
-msgstr ""
-
-#: lib/cmdline.c:1333
-msgid "Configure a formatter"
-msgstr ""
-
-#: lib/cmdline.c:1334
-msgid "Add json cache file"
-msgstr ""
-
-#: lib/cmdline.c:1337
-msgid "Enable progressbar"
-msgstr ""
-
-#: lib/cmdline.c:1338
-msgid "Be more verbose (-vvv for much more)"
-msgstr ""
-
-#: lib/cmdline.c:1339
-msgid "Be less verbose (-VVV for much less)"
-msgstr ""
-
-#: lib/cmdline.c:1342
-msgid "Be not that colorful"
-msgstr ""
-
-#: lib/cmdline.c:1343
-msgid "Find hidden files"
-msgstr ""
-
-#: lib/cmdline.c:1344
-msgid "Follow symlinks"
-msgstr ""
-
-#: lib/cmdline.c:1345
-msgid "Ignore symlinks"
-msgstr ""
-
-#: lib/cmdline.c:1346
-msgid "Do not cross mounpoints"
-msgstr ""
-
-#: lib/cmdline.c:1347
-msgid "Use more paranoid hashing"
-msgstr ""
-
-#: lib/cmdline.c:1348
-msgid "Keep all tagged files"
-msgstr ""
-
-#: lib/cmdline.c:1349
-msgid "Keep all untagged files"
-msgstr ""
-
-#: lib/cmdline.c:1350
-msgid "Must have twin in tagged dir"
-msgstr ""
-
-#: lib/cmdline.c:1351
-msgid "Must have twin in untagged dir"
-msgstr ""
-
-#: lib/cmdline.c:1352
-msgid "Only find twins with same basename"
-msgstr ""
-
-#: lib/cmdline.c:1353
-msgid "Only find twins with same extension"
-msgstr ""
-
-#: lib/cmdline.c:1354
-msgid "Only find twins with same basename minus extension"
-msgstr ""
-
-#: lib/cmdline.c:1355
-msgid "Find duplicate directories"
-msgstr ""
-
-#: lib/cmdline.c:1356
-msgid "Only use files with certain permissions"
-msgstr ""
-
-#: lib/cmdline.c:1357
-msgid "Ignore hardlink twins"
-msgstr ""
-
-#: lib/cmdline.c:1358
-msgid "Find hidden files in duplicate folders only"
-msgstr ""
-
-#: lib/cmdline.c:1361
-msgid "Show the manpage"
-msgstr ""
-
-#: lib/cmdline.c:1362
-msgid "Show the version & features"
-msgstr ""
-
-#: lib/cmdline.c:1364
-msgid "If installed, start the optional gui with all following args"
-msgstr ""
-
-#: lib/cmdline.c:1365
-msgid ""
-"Work like sha1sum for all supported hash algorithms (see also --hash --help)"
-msgstr ""
-
-#: lib/cmdline.c:1366
-msgid "Clone extents from source to dest, if extents match"
-msgstr ""
-
-#: lib/cmdline.c:1376
-msgid "Report hardlinks as duplicates"
-msgstr ""
-
-#: lib/cmdline.c:1422
-msgid "Cannot set current working directory"
-msgstr ""
-
-#: lib/cmdline.c:1427
-msgid "Cannot join commandline"
-msgstr ""
-
-#: lib/cmdline.c:1436
-msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
-msgstr ""
-
-#: lib/cmdline.c:1454
-msgid ""
-"rmlint finds space waste and other broken things on your filesystem and "
-"offers to remove it.\n"
-"It is especially good at finding duplicates and offers a big variety of "
-"options to handle them."
-msgstr ""
-
-#: lib/cmdline.c:1460
-msgid ""
-"Only the most important options and options that alter the defaults are "
-"shown above.\n"
-"See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed "
-"usage information,\n"
-"or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
-"Complementary tutorials can be found at: http://rmlint.rtfd.org"
-msgstr ""
-
-#: lib/cmdline.c:1511
-msgid "cannot create metadata cache (see above)"
-msgstr ""
-
-#: lib/cmdline.c:1515
-msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
-msgstr ""
-
-#: lib/cmdline.c:1518
-msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
-msgstr ""
-
-#: lib/cmdline.c:1520 lib/hash-utility.c:189
-msgid "No valid paths given."
-msgstr ""
-
-#: lib/utilities.c:220
-#, c-format
-msgid "cannot open file '%s' for nonstripped test: "
-msgstr ""
-
-#: lib/utilities.c:227
-msgid "ELF Library is out of date!"
-msgstr ""
-
-#: lib/utilities.c:414
-msgid "caching is not supported due to missing json-glib library."
-msgstr ""
-
-#: lib/utilities.c:425
-#, c-format
-msgid "Loading json-cache `%s'"
-msgstr ""
-
-#: lib/utilities.c:428
-#, c-format
-msgid "FAILED: %s\n"
-msgstr ""
-
-#: lib/utilities.c:695
-#, c-format
-msgid "`%s` mount detected at %s (#%u); Ignoring all files in it."
 msgstr ""
 
 #: lib/hash-utility.c:133
@@ -682,7 +197,7 @@ msgstr ""
 msgid "Hash a list of files"
 msgstr ""
 
-#: lib/hash-utility.c:153
+#: lib/hash-utility.c:152
 #, c-format
 msgid ""
 "Multi-threaded file digest (hash) calculator.\n"
@@ -697,24 +212,514 @@ msgid ""
 "    %s\n"
 msgstr ""
 
-#: lib/hash-utility.c:224
+#: lib/hash-utility.c:188 lib/cmdline.c:1529
+msgid "No valid paths given."
+msgstr ""
+
+#: lib/hash-utility.c:220 lib/cmdline.c:436
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr ""
+
+#: lib/hash-utility.c:223
 #, c-format
 msgid "Directories are not supported: %s"
 msgstr ""
 
-#: lib/hash-utility.c:231
+#: lib/hash-utility.c:230
 #, c-format
 msgid "%s: Unknown file type"
 msgstr ""
 
-#: lib/config.h:107
+#: lib/hasher.c:309
+#, c-format
+msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
+msgstr ""
+
+#: lib/replay.c:101 lib/utilities.c:471
+msgid "No valid json cache (no array in /)"
+msgstr ""
+
+#: lib/replay.c:150 lib/cmdline.c:736
+#, c-format
+msgid "lint type '%s' not recognised"
+msgstr ""
+
+#: lib/replay.c:173
+#, c-format
+msgid "modification time of `%s` changed. Ignoring."
+msgstr ""
+
+#: lib/replay.c:487
+#, c-format
+msgid "Loading json-results `%s'"
+msgstr ""
+
+#: lib/replay.c:565
+msgid "json-glib is needed for using --replay."
+msgstr ""
+
+#: lib/replay.c:566
+msgid "Please recompile `rmlint` with it installed."
+msgstr ""
+
+#: lib/session.c:134
+#, c-format
+msgid "Cannot close tmp cache: %s\n"
+msgstr ""
+
+#: lib/traverse.c:346
+#, c-format
+msgid "filesystem loop detected at %s (skipping)"
+msgstr ""
+
+#: lib/traverse.c:351
+#, c-format
+msgid "cannot read directory %s: %s"
+msgstr ""
+
+#: lib/traverse.c:364
+#, c-format
+msgid "error %d in fts_read for %s (skipping)"
+msgstr ""
+
+#: lib/traverse.c:394
+#, c-format
+msgid "Added big file %s"
+msgstr ""
+
+#: lib/traverse.c:396
+#, c-format
+msgid "cannot stat file %s (skipping)"
+msgstr ""
+
+#: lib/traverse.c:443
+#, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr ""
+
+#: lib/traverse.c:463
+#, c-format
+msgid "'%s': fts_read failed on %s"
+msgstr ""
+
+#: lib/utilities.c:252
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr ""
+
+#: lib/utilities.c:259
+msgid "ELF Library is out of date!"
+msgstr ""
+
+#: lib/utilities.c:450
+msgid "caching is not supported due to missing json-glib library."
+msgstr ""
+
+#: lib/utilities.c:461
+#, c-format
+msgid "Loading json-cache `%s'"
+msgstr ""
+
+#: lib/utilities.c:464
+#, c-format
+msgid "FAILED: %s\n"
+msgstr ""
+
+#: lib/utilities.c:734
+#, c-format
+msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
+msgstr ""
+
+#: lib/cmdline.c:80
+#, c-format
+msgid "compiled with:"
+msgstr ""
+
+#: lib/cmdline.c:86
+#, c-format
+msgid ""
+"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> "
+"Thomas."
+msgstr ""
+
+#: lib/cmdline.c:89
+#, c-format
+msgid ""
+"The code at https://github.com/sahib/rmlint is licensed under the terms of "
+"the GPLv3."
+msgstr ""
+
+#: lib/cmdline.c:114
+msgid "You seem to have no manpage for rmlint."
+msgstr ""
+
+#: lib/cmdline.c:180
+msgid "Usage: rmlint --btrfs-clone source dest\n"
+msgstr ""
+
+#: lib/cmdline.c:193
+msgid "btrfs clone: failed to open source file"
+msgstr ""
+
+#: lib/cmdline.c:199
+msgid "btrfs clone: failed to open dest file."
+msgstr ""
+
+#: lib/cmdline.c:234
+#, c-format
+msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
+msgstr ""
+
+#: lib/cmdline.c:238
+msgid ""
+"BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > "
+"4.2"
+msgstr ""
+
+#: lib/cmdline.c:241
+#, c-format
+msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
+msgstr ""
+
+#: lib/cmdline.c:244
+msgid "Files don't match - not cloned"
+msgstr ""
+
+#: lib/cmdline.c:250
+msgid "rmlint was not compiled with btrfs support."
+msgstr ""
+
+#: lib/cmdline.c:306
+msgid "Input size is empty"
+msgstr ""
+
+#: lib/cmdline.c:314
+msgid "This does not look like a number"
+msgstr ""
+
+#: lib/cmdline.c:317
+msgid "Negativ sizes are no good idea"
+msgstr ""
+
+#: lib/cmdline.c:333
+msgid "Given format specifier not found"
+msgstr ""
+
+#: lib/cmdline.c:365
+msgid "Max is smaller than min"
+msgstr ""
+
+#: lib/cmdline.c:377
+msgid "cannot parse --size: "
+msgstr ""
+
+#: lib/cmdline.c:398
+msgid "--replay given; --with-metadata-cache will be ignored."
+msgstr ""
+
+#: lib/cmdline.c:408
+#, c-format
+msgid "Unable to open tmp cache: %s"
+msgstr ""
+
+#: lib/cmdline.c:421
+#, c-format
+msgid "Unable to create cache attr `%s`: %s"
+msgstr ""
+
+#: lib/cmdline.c:504
+#, c-format
+msgid "Adding -o %s as output failed"
+msgstr ""
+
+#: lib/cmdline.c:516
+#, c-format
+msgid "No format (format:key[=val]) specified in '%s'"
+msgstr ""
+
+#: lib/cmdline.c:526
+#, c-format
+msgid "Missing key (format:key[=val]) in '%s'"
+msgstr ""
+
+#: lib/cmdline.c:541
+#, c-format
+msgid "Invalid key `%s' for formatter `%s'"
+msgstr ""
+
+#: lib/cmdline.c:568
+#, c-format
+msgid "Unable to parse factor \"%s\": error begins at %s"
+msgstr ""
+
+#: lib/cmdline.c:578
+#, c-format
+msgid "factor value is not in range [0-1]: %f"
+msgstr ""
+
+#: lib/cmdline.c:590
+#, c-format
+msgid "Unable to parse offset \"%s\": "
+msgstr ""
+
+#: lib/cmdline.c:784
+#, c-format
+msgid "Unable to parse time spec \"%s\""
+msgstr ""
+
+#: lib/cmdline.c:798
+#, c-format
+msgid "-n %lu is newer than current time (%lu)."
+msgstr ""
+
+#: lib/cmdline.c:887
+msgid "Only up to -pp or down to -PP flags allowed"
+msgstr ""
+
+#: lib/cmdline.c:939
+#, c-format
+msgid "Invalid size description \"%s\": "
+msgstr ""
+
+#: lib/cmdline.c:1140
+msgid "Permissions string needs to be one or many of [rwx]"
+msgstr ""
+
+#: lib/cmdline.c:1153
+#, c-format
+msgid "%s may only contain [%s], not `%c`"
+msgstr ""
+
+#: lib/cmdline.c:1276
+msgid "Specifiyng both -o and -O is not allowed"
+msgstr ""
+
+#: lib/cmdline.c:1296
+msgid "Could not start graphical user interface."
+msgstr ""
+
+#: lib/cmdline.c:1327
+msgid "Specify max traversal depth"
+msgstr ""
+
+#: lib/cmdline.c:1328
+msgid "Original criteria"
+msgstr ""
+
+#: lib/cmdline.c:1329
+msgid "Rank lint groups by certain criteria"
+msgstr ""
+
+#: lib/cmdline.c:1330
+msgid "Specify lint types"
+msgstr ""
+
+#: lib/cmdline.c:1331
+msgid "Specify size limits"
+msgstr ""
+
+#: lib/cmdline.c:1332
+msgid "Choose hash algorithm"
+msgstr ""
+
+#: lib/cmdline.c:1333
+msgid "Add output (override default)"
+msgstr ""
+
+#: lib/cmdline.c:1334
+msgid "Add output (add to defaults)"
+msgstr ""
+
+#: lib/cmdline.c:1335
+msgid "Newer than stamp file"
+msgstr ""
+
+#: lib/cmdline.c:1336
+msgid "Newer than timestamp"
+msgstr ""
+
+#: lib/cmdline.c:1337
+msgid "Re-output a json file"
+msgstr ""
+
+#: lib/cmdline.c:1338
+msgid "Configure a formatter"
+msgstr ""
+
+#: lib/cmdline.c:1339
+msgid "Add json cache file"
+msgstr ""
+
+#: lib/cmdline.c:1342
+msgid "Enable progressbar"
+msgstr ""
+
+#: lib/cmdline.c:1343
+msgid "Be more verbose (-vvv for much more)"
+msgstr ""
+
+#: lib/cmdline.c:1344
+msgid "Be less verbose (-VVV for much less)"
+msgstr ""
+
+#: lib/cmdline.c:1347
+msgid "Be not that colorful"
+msgstr ""
+
+#: lib/cmdline.c:1348
+msgid "Find hidden files"
+msgstr ""
+
+#: lib/cmdline.c:1349
+msgid "Follow symlinks"
+msgstr ""
+
+#: lib/cmdline.c:1350
+msgid "Ignore symlinks"
+msgstr ""
+
+#: lib/cmdline.c:1351
+msgid "Use more paranoid hashing"
+msgstr ""
+
+#: lib/cmdline.c:1352
+msgid "Do not cross mounpoints"
+msgstr ""
+
+#: lib/cmdline.c:1353
+msgid "Keep all tagged files"
+msgstr ""
+
+#: lib/cmdline.c:1354
+msgid "Keep all untagged files"
+msgstr ""
+
+#: lib/cmdline.c:1355
+msgid "Must have twin in tagged dir"
+msgstr ""
+
+#: lib/cmdline.c:1356
+msgid "Must have twin in untagged dir"
+msgstr ""
+
+#: lib/cmdline.c:1357
+msgid "Only find twins with same basename"
+msgstr ""
+
+#: lib/cmdline.c:1358
+msgid "Only find twins with same extension"
+msgstr ""
+
+#: lib/cmdline.c:1359
+msgid "Only find twins with same basename minus extension"
+msgstr ""
+
+#: lib/cmdline.c:1360
+msgid "Find duplicate directories"
+msgstr ""
+
+#: lib/cmdline.c:1361
+msgid "Only use files with certain permissions"
+msgstr ""
+
+#: lib/cmdline.c:1362
+msgid "Ignore hardlink twins"
+msgstr ""
+
+#: lib/cmdline.c:1363
+msgid "Find hidden files in duplicate folders only"
+msgstr ""
+
+#: lib/cmdline.c:1366
+msgid "Show the manpage"
+msgstr ""
+
+#: lib/cmdline.c:1367
+msgid "Show the version & features"
+msgstr ""
+
+#: lib/cmdline.c:1369
+msgid "If installed, start the optional gui with all following args"
+msgstr ""
+
+#: lib/cmdline.c:1370
+msgid ""
+"Work like sha1sum for all supported hash algorithms (see also --hash --help)"
+msgstr ""
+
+#: lib/cmdline.c:1371
+msgid "Clone extents from source to dest, if extents match"
+msgstr ""
+
+#: lib/cmdline.c:1381
+msgid "Report hardlinks as duplicates"
+msgstr ""
+
+#: lib/cmdline.c:1431
+msgid "Cannot set current working directory"
+msgstr ""
+
+#: lib/cmdline.c:1436
+msgid "Cannot join commandline"
+msgstr ""
+
+#: lib/cmdline.c:1445
+msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
+msgstr ""
+
+#: lib/cmdline.c:1463
+msgid ""
+"rmlint finds space waste and other broken things on your filesystem and "
+"offers to remove it.\n"
+"It is especially good at finding duplicates and offers a big variety of "
+"options to handle them."
+msgstr ""
+
+#: lib/cmdline.c:1469
+msgid ""
+"Only the most important options and options that alter the defaults are "
+"shown above.\n"
+"See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed "
+"usage information,\n"
+"or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
+"Complementary tutorials can be found at: http://rmlint.rtfd.org"
+msgstr ""
+
+#: lib/cmdline.c:1520
+msgid "cannot create metadata cache (see above)"
+msgstr ""
+
+#: lib/cmdline.c:1524
+msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
+msgstr ""
+
+#: lib/cmdline.c:1527
+msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
+msgstr ""
+
+#: lib/formats.c:183
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr ""
+
+#: lib/formats.c:205
+#, c-format
+msgid "Unable to open file for writing: %s"
+msgstr ""
+
+#: lib/config.h:108
 msgid "ERROR"
 msgstr ""
 
-#: lib/config.h:112
+#: lib/config.h:113
 msgid "WARNING"
 msgstr ""
 
-#: lib/config.h:117
+#: lib/config.h:118
 msgid "INFO"
+msgstr ""
+
+#: lib/config.h:123
+msgid "DEBUG"
 msgstr ""

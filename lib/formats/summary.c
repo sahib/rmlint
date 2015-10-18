@@ -74,7 +74,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(rm_fmt_has_formatter(session->formats, "pretty") && rm_fmt_has_formatter(session->formats, "sh")) {
-        ARROW fprintf(out, _("Please use the saved script below, not the above output."));
+        ARROW fprintf(out, _("Note: Please use the saved script below for removal, not the above output."));
         fprintf(out, "\n");
     } 
 
