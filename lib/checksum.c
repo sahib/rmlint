@@ -125,7 +125,7 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     }
     g_mutex_unlock(&pool->lock);
 
-    g_assert(buffer);
+    rm_assert_gentle(buffer);
     return buffer;
 }
 
@@ -343,7 +343,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         }
         break;
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
 
     /* starting values to let us generate up to 4 different hashes in parallel with
@@ -372,7 +372,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
 }
 
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
-    g_assert(digest->type == RM_DIGEST_PARANOID);
+    rm_assert_gentle(digest->type == RM_DIGEST_PARANOID);
     digest->bytes = new_size;
 }
 
@@ -424,7 +424,7 @@ void rm_digest_free(RmDigest *digest) {
         }
         break;
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
     g_slice_free(RmDigest, digest);
 }
@@ -439,7 +439,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
  * */
 #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
-        g_assert(data);
+        rm_assert_gentle(data);
 
         digest->bytes = size / 2;
         digest->checksum = g_slice_alloc0(digest->bytes);
@@ -496,11 +496,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
             */
             uint128 old = {digest->checksum[block].first, digest->checksum[block].second};
-#if RM_PLATFORM_64 && HAVE_SSE42
-            old = CityHashCrc128WithSeed((const char *)data, size, old);
-#else
             old = CityHash128WithSeed((const char *)data, size, old);
-#endif
             memcpy(&digest->checksum[block], &old, sizeof(uint128));
         }
         break;
@@ -509,11 +505,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
                             &digest->checksum[0]);
 
         uint128 old = {digest->checksum[1].first, digest->checksum[1].second};
-#if RM_PLATFORM_64 && HAVE_SSE42
-        old = CityHashCrc128WithSeed((const char *)data, size, old);
-#else
         old = CityHash128WithSeed((const char *)data, size, old);
-#endif
         memcpy(&digest->checksum[1], &old, sizeof(uint128));
         break;
     case RM_DIGEST_CUMULATIVE: {
@@ -532,7 +524,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     } break;
     case RM_DIGEST_PARANOID:
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
 }
 
@@ -616,7 +608,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
 }
 
 RmDigest *rm_digest_copy(RmDigest *digest) {
-    g_assert(digest);
+    rm_assert_gentle(digest);
 
     RmDigest *self = NULL;
 
@@ -653,7 +645,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         break;
     case RM_DIGEST_PARANOID:
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
 
     return self;
@@ -685,7 +677,8 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     case RM_DIGEST_PARANOID:
         return FALSE;
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
+        return FALSE;
     }
 }
 
@@ -697,7 +690,7 @@ guint8 *rm_digest_steal(RmDigest *digest) {
         /* reading the digest is destructive, so we need to take a copy */
         RmDigest *copy = rm_digest_copy(digest);
         g_checksum_get_digest(copy->glib_checksum, result, &buflen);
-        g_assert(buflen == digest->bytes);
+        rm_assert_gentle(buflen == digest->bytes);
         rm_digest_free(copy);
     } else {
         memcpy(result, digest->checksum, digest->bytes);
@@ -730,7 +723,7 @@ guint rm_digest_hash(RmDigest *digest) {
     }
 
     if(buf != NULL) {
-        g_assert(bytes >= sizeof(guint));
+        rm_assert_gentle(bytes >= sizeof(guint));
         hash = *(guint *)buf;
         g_slice_free1(bytes, buf);
     }
@@ -738,7 +731,7 @@ guint rm_digest_hash(RmDigest *digest) {
 }
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
-    g_assert(a && b);
+    rm_assert_gentle(a && b);
 
     if(a->type != b->type) {
         return false;

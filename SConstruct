@@ -293,24 +293,6 @@ def check_c11(context):
     return rc
 
 
-def check_sse42(context):
-    if GetOption('with_sse') is False:
-        rc = 0
-    else:
-        rc = 1
-
-        if tests.CheckDeclaration(context, '__SSE4_2__'):
-            rc = 0
-        else:
-            conf.env.Prepend(CFLAGS=['-msse4.2'])
-
-    conf.env['HAVE_SSE42'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
 def check_sqlite3(context):
     rc = 1
     if tests.CheckHeader(context, 'sqlite3.h'):
@@ -466,13 +448,6 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
         dest='with_' + suffix
     )
 
-AddOption(
-    '--with-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
-AddOption(
-    '--without-sse', action='store_const', default=True, const=False, dest='with_sse'
-)
 
 # General Environment
 options = dict(
@@ -511,7 +486,6 @@ conf = Configure(env, custom_tests={
     'check_libelf': check_libelf,
     'check_fiemap': check_fiemap,
     'check_xattr': check_xattr,
-    'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
     'check_sysctl': check_sysctl,
@@ -598,9 +572,6 @@ else:
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
-
-conf.env.Append(CCFLAGS=['-march=native'])
-conf.check_sse42()
 
 # Optional flags:
 conf.env.Append(CFLAGS=[
@@ -726,7 +697,6 @@ if 'config' in COMMAND_LINE_TARGETS:
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
     Support for SHA512 (needs glib >= 2.31)               : {sha512}
-    Support for SSE4.2 instructions for fast CityHash     : {sse42}
     Support for swapping metadata to disk (needs SQLite3) : {sqlite3}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
@@ -766,7 +736,6 @@ Type 'scons' to actually compile rmlint now. Good luck.
             blkid=yesno(env['HAVE_BLKID']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
-            sse42=yesno(env['HAVE_SSE42']),
             sqlite3=yesno(env['HAVE_SQLITE3']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),

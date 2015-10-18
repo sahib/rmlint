@@ -93,12 +93,12 @@ static void rm_hasher_task_free(RmHasherTask *self) {
 static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
     if(buffer->len > 0) {
         /* Update digest with buffer->data */
-        g_assert(buffer->user_data == NULL);
+        rm_assert_gentle(buffer->user_data == NULL);
         rm_digest_buffered_update(buffer);
     } else if(buffer->user_data) {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
-        g_assert(task->digest == buffer->digest); /* TODO: do we need both? */
+        rm_assert_gentle(task->digest == buffer->digest); /* TODO: do we need both? */
         hasher->callback(hasher, task->digest, hasher->session_user_data,
                          task->task_user_data);
         rm_hasher_task_free(task);
@@ -281,7 +281,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
             MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */
 
         int blocks = DIVIDE_CEIL(bytes_read, hasher->buf_size);
-        g_assert(blocks <= N_BUFFERS);
+        rm_assert_gentle(blocks <= N_BUFFERS);
 
         total_bytes_read += bytes_read;
         file_offset += bytes_read;
@@ -380,7 +380,7 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     /* Create a pool of hashing thread "pools" - each "pool" can only have
      * one thread because hashing must be done in order */
     self->hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);
-    g_assert(num_threads > 0);
+    rm_assert_gentle(num_threads > 0);
     self->unalloc_hashpipes = num_threads;
     return self;
 }
@@ -437,7 +437,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
             self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
         }
     }
-    g_assert(self->hashpipe);
+    rm_assert_gentle(self->hashpipe);
 
     self->task_user_data = task_user_data;
     return self;

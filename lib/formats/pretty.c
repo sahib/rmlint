@@ -141,7 +141,9 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out,
     }
 
     RM_DEFINE_PATH(file);
-    fprintf(out, "%s %s\n", MAYBE_RESET(out, session), file_path);
+    char *esc_path = rm_util_strsub(file_path, "'", "'\"'\"'");
+    fprintf(out, "%s '%s'\n", MAYBE_RESET(out, session), esc_path);
+    g_free(esc_path);
 }
 
 static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out,

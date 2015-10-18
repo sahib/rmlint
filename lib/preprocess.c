@@ -359,7 +359,7 @@ static gboolean rm_pp_check_path_double(RmFile *file, GHashTable *unique_paths_t
         return FALSE;
     }
     RmFile *match_double = match_double_key->file;
-    g_assert(match_double != file);
+    rm_assert_gentle(match_double != file);
 
     rm_path_double_free(key);
     rm_file_destroy(file);
@@ -428,7 +428,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
     /* update counters */
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
 
-    g_assert(inode_cluster->length <= 1);
+    rm_assert_gentle(inode_cluster->length <= 1);
     if(inode_cluster->length == 1) {
         session->tables->size_groups->data = g_slist_prepend(
             session->tables->size_groups->data, inode_cluster->head->data);
@@ -457,8 +457,8 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
         for(GList *iter = list; iter; iter = iter->next) {
             RmFile *file = iter->data;
 
-            g_assert(file);
-            g_assert(type == file->lint_type);
+            rm_assert_gentle(file);
+            rm_assert_gentle(type == file->lint_type);
 
             num_handled++;
 
@@ -490,7 +490,7 @@ void rm_preprocess(RmSession *session) {
 
     /* split into file size groups; for each size, remove path doubles and bundle
      * hardlinks */
-    g_assert(all_files->head);
+    rm_assert_gentle(all_files->head);
     RmFile *file = g_queue_pop_head(all_files);
     RmFile *current_size_file = file;
     guint removed = 0;

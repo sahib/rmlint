@@ -101,7 +101,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     extern RmFmtHandler *PROGRESS_HANDLER;
-    g_assert(PROGRESS_HANDLER->prog);
+    rm_assert_gentle(PROGRESS_HANDLER->prog);
     PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, out, state);
 
     /* Print all cached lines on shutdown. */
@@ -118,7 +118,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     extern RmFmtHandler *SUMMARY_HANDLER;
-    g_assert(SUMMARY_HANDLER->prog);
+    rm_assert_gentle(SUMMARY_HANDLER->prog);
     SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, out, state);
 }
 

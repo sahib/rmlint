@@ -476,8 +476,8 @@ static int rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd, int i
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
                                      GError **error) {
-    g_assert(session);
-    g_assert(pair);
+    rm_assert_gentle(session);
+    rm_assert_gentle(pair);
 
     char *separator = strchr(pair, ':');
     char *full_path = NULL;
@@ -1531,7 +1531,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
         rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks.");
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
 failure:
     if(error != NULL) {
@@ -1588,7 +1588,7 @@ int rm_cmd_main(RmSession *session) {
                       g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(cfg->merge_directories) {
-        g_assert(cfg->cache_file_structs);
+        rm_assert_gentle(cfg->cache_file_structs);
         session->dir_merger = rm_tm_new(session);
     }
 

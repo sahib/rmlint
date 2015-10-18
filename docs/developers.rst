@@ -156,12 +156,6 @@ Arguments
 
     Do not link with ``libintl`` and do not compile any message catalogs.
 
-:--with-sse:
-
-    Allow the usage of ``SSE 4.2`` for CityHash if it is present. Binary
-    packagers should not enable this to prevent crashes on hosts that do not
-    support ``SSE4.2``.
-    
 All ``--without-*`` options come with a ``--with-*`` option that inverses its
 effect.  By default ``rmlint`` is built with all features available on the
 system, so you do not need to specify any ``--with-*`` option normally.

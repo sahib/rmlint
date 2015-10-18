@@ -56,7 +56,7 @@ static void rm_fmt_group_destroy(RmFmtGroup *self) {
 }
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
-    g_assert(handler);
+    rm_assert_gentle(handler);
 
     g_free(handler->path);
     g_free(handler);
@@ -68,6 +68,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     self->name_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 
     self->path_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
+    
+    /* Set of registered handler names */
+    self->handler_set = g_hash_table_new(g_str_hash, g_str_equal);
 
     self->handler_to_file =
         g_hash_table_new_full(NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL);
@@ -140,6 +143,7 @@ void rm_fmt_clear(RmFmtTable *self) {
         return;
     }
 
+    g_hash_table_remove_all(self->handler_set);
     g_hash_table_remove_all(self->handler_to_file);
     g_hash_table_remove_all(self->path_to_handler);
     g_hash_table_remove_all(self->config);
@@ -215,8 +219,10 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         new_handler_copy->path = realpath(path, NULL);
     }
 
+
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
     g_hash_table_insert(self->path_to_handler, new_handler_copy->path, new_handler);
+    g_hash_table_add(self->handler_set, (char *)new_handler_copy->name);
 
     return true;
 }
@@ -403,12 +409,12 @@ void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
 
 bool rm_fmt_has_formatter(RmFmtTable *self, const char *name) {
     GHashTableIter iter;
-    RmFmtHandler *handler = NULL;
+    char *handler_name = NULL;
 
-    g_hash_table_iter_init(&iter, self->path_to_handler);
+    g_hash_table_iter_init(&iter, self->handler_set);
 
-    while(g_hash_table_iter_next(&iter, NULL, (gpointer *)&handler)) {
-        if(!strcmp(handler->name, name)) {
+    while(g_hash_table_iter_next(&iter, (gpointer *)&handler_name, NULL)) {
+        if(!g_strcmp0(handler_name, name)) {
             return true;
         }
     }

@@ -100,7 +100,7 @@ void rm_file_set_path(RmFile *file, char *path, size_t path_len) {
 }
 
 void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf) {
-    g_assert(file);
+    rm_assert_gentle(file);
 
     RmOff id = file->path_id;
 
@@ -110,7 +110,7 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
 }
 
 void rm_file_build_path(RmFile *file, char *buf) {
-    g_assert(file);
+    rm_assert_gentle(file);
 
     rm_trie_build_path(&file->session->cfg->file_trie, file->folder, buf, PATH_MAX);
 }

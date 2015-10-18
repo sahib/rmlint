@@ -60,13 +60,14 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h>
 
 #include "treemerge.h"
 #include "shredder.h"
 #include "preprocess.h"
 #include "formats.h"
 #include "pathtricia.h"
+
+#include "fts/fts.h"
 
 typedef struct RmDirectory {
     char *dirname;       /* Path to this directory without trailing slash              */
@@ -384,9 +385,9 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
      */
     int new_dupes = 0;
 
-    g_assert(file);
-    g_assert(file->digest);
-    g_assert(directory);
+    rm_assert_gentle(file);
+    rm_assert_gentle(file->digest);
+    rm_assert_gentle(directory);
 
     guint8 *file_digest = NULL;
     RmOff digest_bytes = 0;
