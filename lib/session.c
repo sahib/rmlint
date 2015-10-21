@@ -84,6 +84,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->cfg = cfg;
     session->tables = rm_file_tables_new(session);
     session->formats = rm_fmt_open(session);
+    session->pattern_cache = g_hash_table_new(g_str_hash, g_str_equal);
 
     session->verbosity_count = 2;
     session->paranoia_count = 0;
@@ -113,6 +114,7 @@ void rm_session_clear(RmSession *session) {
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
+    g_hash_table_unref(session->pattern_cache);
 
     if(session->mounts) {
         rm_mounts_table_destroy(session->mounts);

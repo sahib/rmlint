@@ -1179,9 +1179,10 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
                                     RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
-    if(!rm_cmd_check_lettervec(option_name, criteria, "dlampDLAMP", error)) {
-        return false;
-    }
+    // TODO: Re-enable
+    // if(!rm_cmd_check_lettervec(option_name, criteria, "dlamprDLAMPR", error)) {
+    //     return false;
+    // }
 
     strncpy(cfg->sort_criteria, criteria, sizeof(cfg->sort_criteria));
     return true;
