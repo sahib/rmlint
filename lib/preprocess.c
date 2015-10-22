@@ -262,6 +262,10 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
         } else if(iter) {
             --balance; last = iter;
         }
+
+        if(balance == 0) {
+            break;
+        }
     }
 
     if(balance != 0) {
@@ -278,9 +282,10 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
 
     GString *part = g_string_new_len(&pattern[1], src_len);
 
+    rm_log_debug_line("Compiled pattern: %s\n", part->str);
+
     /* Actually compile the pattern: */
     *regex = g_regex_new(part->str, G_REGEX_RAW | G_REGEX_OPTIMIZE, 0, error);
-    g_printerr("Correct: %s\n", part->str);
 
     g_string_free(part, TRUE);
     return src_len + 2;
@@ -316,13 +321,13 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
     return minified_sortcrit;
 }
 
-static int rm_pp_cmp_by_regex(GRegex *regex, const char *basename_a, const char *basename_b) {
-    if(g_regex_match(regex, basename_a, 0, NULL)) {
-        return +1;
+static int rm_pp_cmp_by_regex(GRegex *regex, const char *path_a, const char *path_b) {
+    if(g_regex_match(regex, path_a, 0, NULL)) {
+        return -1;
     }
 
-    if(g_regex_match(regex, basename_b, 0, NULL)) {
-        return -1;
+    if(g_regex_match(regex, path_b, 0, NULL)) {
+        return +1;
     }
 
     return 0;
@@ -335,6 +340,7 @@ static int rm_pp_cmp_by_regex(GRegex *regex, const char *basename_a, const char 
  */
 int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_t mtime_b,
                                  const char *basename_a, const char *basename_b,
+                                 const char *path_a, const char *path_b,
                                  int path_index_a, int path_index_b, guint8 path_depth_a,
                                  guint8 path_depth_b) {
     RmCfg *sets = session->cfg;
@@ -358,11 +364,14 @@ int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_
             cmp = (long)path_index_a - (long)path_index_b;
             break;
         case 'r':
-            cmp = rm_pp_cmp_by_regex(g_ptr_array_index(session->pattern_cache, regex_cursor++), basename_a, basename_b);
+            cmp = rm_pp_cmp_by_regex(
+                g_ptr_array_index(session->pattern_cache, regex_cursor++),
+                path_a, path_b 
+            );
             break;
         }
         if(cmp) {
-            /* reverse order if uppercase option (M|A|P) */
+            /* reverse order if uppercase option */
             cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
             return cmp;
         }
@@ -385,10 +394,16 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
     } else if(a->is_prefd != b->is_prefd) {
         return (b->is_prefd - a->is_prefd);
     } else {
-        RM_DEFINE_BASENAME(a);
-        RM_DEFINE_BASENAME(b);
-        return rm_pp_cmp_orig_criteria_impl(session, a->mtime, b->mtime, a_basename,
-                                            b_basename, a->path_index, b->path_index,
+        /* Only fill in path if we have a pattern in sort_criteria */
+        bool path_needed = (session->pattern_cache->len > 0);
+
+        RM_DEFINE_BOTH(a, path_needed);
+        RM_DEFINE_BOTH(b, path_needed);
+
+        return rm_pp_cmp_orig_criteria_impl(session, a->mtime, b->mtime,
+                                            a_basename, b_basename,
+                                            a_path, b_path,
+                                            a->path_index, b->path_index,
                                             a->path_depth, b->path_depth);
     }
 }

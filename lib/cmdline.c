@@ -1179,6 +1179,8 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
                                     RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
+    g_free(cfg->sort_criteria);
+
     cfg->sort_criteria = rm_pp_compile_patterns(session, criteria, error);
     if(error && *error != NULL) {
         return false;

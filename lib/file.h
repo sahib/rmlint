@@ -240,16 +240,22 @@ typedef struct RmFile {
 /* Defines <file>_basename.
  * Also defines <file>_path, but do not rely on it being filled!
  */
-#define RM_DEFINE_BASENAME(file)                                  \
+#define _RM_DEFINE_BASENAME(file, inherited)                      \
     char *file##_basename = NULL;                                 \
-    _RM_DEFINE_PATH(file, true);                                  \
+    _RM_DEFINE_PATH(file, inherited);                             \
     if(file->session->cfg->use_meta_cache) {                      \
         file##_basename = rm_util_basename((char *)&file##_path); \
     } else {                                                      \
         file##_basename = file->folder->basename;                 \
     }                                                             \
-/**                                                               \
- * @brief Create a new RmFile handle.                             \
+
+
+#define RM_DEFINE_BASENAME(file) _RM_DEFINE_BASENAME(file, true)
+
+#define RM_DEFINE_BOTH(file, do_both) _RM_DEFINE_BASENAME(file, !(do_both))
+
+/**                                                               
+ * @brief Create a new RmFile handle.                             
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum,

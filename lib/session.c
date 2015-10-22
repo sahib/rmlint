@@ -111,6 +111,8 @@ void rm_session_clear(RmSession *session) {
         }
     }
 
+    g_free(cfg->sort_criteria);
+
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
