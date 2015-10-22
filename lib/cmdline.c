@@ -1187,7 +1187,8 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
         return false;
     }
 
-    if(!rm_cmd_check_lettervec(option_name, cfg->sort_criteria, "dlamprxDLAMPRX", error)) {
+    if(!rm_cmd_check_lettervec(option_name, cfg->sort_criteria, "dlamprxDLAMPRX",
+                               error)) {
         return false;
     }
 

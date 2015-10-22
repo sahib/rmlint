@@ -69,10 +69,12 @@ static void rm_fmt_prog(RmSession *session,
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
 
-    if(rm_fmt_has_formatter(session->formats, "pretty") && rm_fmt_has_formatter(session->formats, "sh")) {
-        ARROW fprintf(out, _("Note: Please use the saved script below for removal, not the above output."));
+    if(rm_fmt_has_formatter(session->formats, "pretty") &&
+       rm_fmt_has_formatter(session->formats, "sh")) {
+        ARROW fprintf(out, _("Note: Please use the saved script below for removal, not "
+                             "the above output."));
         fprintf(out, "\n");
-    } 
+    }
 
     char numbers[3][512];
     snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(out, session),

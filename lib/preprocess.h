@@ -75,8 +75,8 @@ void rm_file_tables_clear(const RmSession *session);
  */
 int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_t mtime_b,
                                  const char *basename_a, const char *basename_b,
-                                 const char *path_a, const char *path_b,
-                                 int path_index_a, int path_index_b, guint8 path_depth_a,
+                                 const char *path_a, const char *path_b, int path_index_a,
+                                 int path_index_b, guint8 path_depth_a,
                                  guint8 path_depth_b);
 
 /**

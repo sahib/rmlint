@@ -247,15 +247,14 @@ typedef struct RmFile {
         file##_basename = rm_util_basename((char *)&file##_path); \
     } else {                                                      \
         file##_basename = file->folder->basename;                 \
-    }                                                             \
-
+    }
 
 #define RM_DEFINE_BASENAME(file) _RM_DEFINE_BASENAME(file, true)
 
 #define RM_DEFINE_BOTH(file, do_both) _RM_DEFINE_BASENAME(file, !(do_both))
 
-/**                                                               
- * @brief Create a new RmFile handle.                             
+/**
+ * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum,

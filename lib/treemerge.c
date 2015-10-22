@@ -709,10 +709,9 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
 
     return rm_pp_cmp_orig_criteria_impl(
         self->session, da->metadata.dir_mtime, db->metadata.dir_mtime,
-        rm_util_basename(da->dirname), rm_util_basename(db->dirname), 
-        da->dirname, db->dirname,
-        0, 0,
-        rm_util_path_depth(da->dirname), rm_util_path_depth(db->dirname));
+        rm_util_basename(da->dirname), rm_util_basename(db->dirname), da->dirname,
+        db->dirname, 0, 0, rm_util_path_depth(da->dirname),
+        rm_util_path_depth(db->dirname));
 }
 
 static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {
