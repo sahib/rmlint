@@ -91,4 +91,10 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
  */
 gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b);
 
+/**
+ * @brief: Compile all r<PATTERN> constructs in `sortcrit` to a GRegex
+ *         and store them into session->pattern_cache.
+ */
+char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error);
+
 #endif
