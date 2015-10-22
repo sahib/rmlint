@@ -12,8 +12,9 @@ import statistics
 # External:
 import pygal
 
-from pygal.style import LightSolarizedStyle as Style
-# from pygal.style import DefaultStyle
+
+# from pygal.style import LightSolarizedStyle as Style
+from pygal.style import DefaultStyle as Style
 
 
 VALID_ATTRS = {
