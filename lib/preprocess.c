@@ -304,9 +304,9 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
     for(size_t i = 0; sortcrit[i]; i++) {
         /* Copy everything that is not a regex pattern */
         minified_sortcrit[minified_cursor++] = sortcrit[i];
+        char curr_crit = tolower(sortcrit[i]);
 
-        if(tolower((sortcrit[i]) == 'r' || sortcrit[i] == 'x') &&
-           sortcrit[i + 1] == '<') {
+        if((curr_crit == 'r' || curr_crit =='x') && sortcrit[i + 1] == '<') {
             GRegex *regex = NULL;
 
             /* Jump over the regex pattern part */
