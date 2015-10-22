@@ -92,6 +92,7 @@ They show you the basic principles and most of the advanced options:
    install
    tutorial
    gui
+   cautions
    faq
 
 If you have usage questions or find weird behaviour, you can also try to reach

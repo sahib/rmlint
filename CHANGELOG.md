@@ -22,19 +22,23 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Added
 
 - A fully working graphical user interface which is installed as a python module
-  by default (can be disabled with ``--without-gui``). 
-  It can be started via  ``--gui``.
+  by default (can be disabled via compile option ie ``scons --without-gui``). 
+  It can be started via  ``rmlint --gui``.
 - Support for automatic deduplication on btrfs using  ``BTRFS_IOC_FILE_EXTENT_SAME``.
   The Shellscript now will contain calls to  ``rmlint  --btrfs $source $dest``
   for duplicates on ``btrfs`` filesystems if  the user specified ``-c sh:clone``.
 - Benchmark suite that will track the performance of rmlint from release to release.
-  This is supposed to prevent speed decrease over time and give us a tool to
-  validate some of our optimization strategies.
-- Shell/Python-script now does sanity checks before removing and can be told to
-  byte-compare files again before removing them (``-p`` to ``.sh`` file).
-- Add a new ``--hash`` option that works like ``sha1sum``, but hashes files in
-  parallel and works for all hash algorithms ``rmlint`` supports.
-- ``--sort-by`` learned new keys: ``l`` (path length) and ``d`` (path depth)
+  This helps developers detect any speed regressions or improvements and is a tool
+  to help develop and validate optimization strategies.
+- Shell/Python-script now does more sanity checks before removing and can be told to
+  re-compare files byte-by-byte before removing them (``-p`` option when running
+  the ``.sh`` file).
+- Add a new ``--hash`` option so rmlint can be used as a very fast file hashing
+  utility, eg ``rmlint --hash`` works like ``sha1sum``, or ``rmlint --hash -d md5``
+  works like ``md5sum``.  Also does sha256, sha512, murmur{128}, spooky{32,64,128},
+  city{128}.
+- ``--sort-by`` learned new keys: ``l`` (path length) and ``d`` (path depth).
+- New ``--unmatched-basename`` option only finds twins with differing basenames.
 - Smaller performance and memory optimisations in shredder.
 
 ### Changed
