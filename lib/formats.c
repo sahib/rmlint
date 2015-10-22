@@ -336,6 +336,7 @@ void rm_fmt_close(RmFmtTable *self) {
     g_hash_table_unref(self->handler_to_file);
     g_hash_table_unref(self->path_to_handler);
     g_hash_table_unref(self->config);
+    g_hash_table_unref(self->handler_set);
     g_rec_mutex_clear(&self->state_mtx);
     g_slice_free(RmFmtTable, self);
 }
