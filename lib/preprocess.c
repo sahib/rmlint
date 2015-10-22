@@ -304,7 +304,7 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
         /* Copy everything that is not a regex pattern */
         minified_sortcrit[minified_cursor++] = sortcrit[i];
 
-        if(tolower(sortcrit[i]) == 'r' && sortcrit[i + 1] == '<') {
+        if(tolower((sortcrit[i]) == 'r' || sortcrit[i] == 'x') && sortcrit[i + 1] == '<') {
             GRegex *regex = NULL;
             
             /* Jump over the regex pattern part */
@@ -362,6 +362,12 @@ int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_
             break;
         case 'p':
             cmp = (long)path_index_a - (long)path_index_b;
+            break;
+        case 'x':
+            cmp = rm_pp_cmp_by_regex(
+                g_ptr_array_index(session->pattern_cache, regex_cursor++),
+                basename_a, basename_b
+            );
             break;
         case 'r':
             cmp = rm_pp_cmp_by_regex(

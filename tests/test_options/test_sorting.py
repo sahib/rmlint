@@ -97,13 +97,14 @@ def test_sort_by_regex():
     create_file('xxx', '1/c')
     create_file('xxx', 'd')
 
-    head, *data, footer = run_rmlint("-S 'r<1/c>R<d>Ar<.*b>a'")
+    head, *data, footer = run_rmlint("-S 'r<1/c>x<d>a'")
 
     paths = [p['path'] for p in data]
+    print(paths)
 
     assert paths[0].endswith('1/c')
-    assert paths[0].endswith('aaab')
-    assert paths[0].endswith('aaaa')
-    assert paths[0].endswith('b')
-    assert paths[0].endswith('d')
-    assert paths[0].endswith('c')
+    assert paths[1].endswith('d')
+    assert paths[2].endswith('aaaa')
+    assert paths[3].endswith('aaab')
+    assert paths[4].endswith('b')
+    assert paths[5].endswith('c')
