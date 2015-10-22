@@ -317,7 +317,7 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_ke
  *
  * This will wait for the currently pending action to finish.
  *
- * TODO: For a generic api, shouldn't this wait for all or have a wait param?
+ * This can only be safely called when no parallel access to the pool is done. 
  */
 void rm_buffer_pool_destroy(RmBufferPool *pool);
 
