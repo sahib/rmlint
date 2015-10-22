@@ -250,16 +250,16 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 }
 
 int rm_digest_type_to_multihash_id(RmDigestType type) {
-    static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,    [RM_DIGEST_MURMUR] = 17,
-                        [RM_DIGEST_SPOOKY] = 14,     [RM_DIGEST_SPOOKY32] = 16,
-                        [RM_DIGEST_SPOOKY64] = 18,   [RM_DIGEST_CITY] = 15,
-                        [RM_DIGEST_MD5] = 1,         [RM_DIGEST_SHA1] = 2,
-                        [RM_DIGEST_SHA256] = 4,      [RM_DIGEST_SHA512] = 6,
-                        [RM_DIGEST_MURMUR256] = 7,   [RM_DIGEST_CITY256] = 8,
-                        [RM_DIGEST_BASTARD] = 9,     [RM_DIGEST_MURMUR512] = 10,
-                        [RM_DIGEST_CITY512] = 11,    [RM_DIGEST_EXT] = 12,
-                        [RM_DIGEST_FARMHASH] = 19,
-                        [RM_DIGEST_CUMULATIVE] = 13, [RM_DIGEST_PARANOID] = 14};
+    static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,  [RM_DIGEST_MURMUR] = 17,
+                        [RM_DIGEST_SPOOKY] = 14,   [RM_DIGEST_SPOOKY32] = 16,
+                        [RM_DIGEST_SPOOKY64] = 18, [RM_DIGEST_CITY] = 15,
+                        [RM_DIGEST_MD5] = 1,       [RM_DIGEST_SHA1] = 2,
+                        [RM_DIGEST_SHA256] = 4,    [RM_DIGEST_SHA512] = 6,
+                        [RM_DIGEST_MURMUR256] = 7, [RM_DIGEST_CITY256] = 8,
+                        [RM_DIGEST_BASTARD] = 9,   [RM_DIGEST_MURMUR512] = 10,
+                        [RM_DIGEST_CITY512] = 11,  [RM_DIGEST_EXT] = 12,
+                        [RM_DIGEST_FARMHASH] = 19, [RM_DIGEST_CUMULATIVE] = 13,
+                        [RM_DIGEST_PARANOID] = 14};
 
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
 }

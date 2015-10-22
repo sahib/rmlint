@@ -68,7 +68,7 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     self->name_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 
     self->path_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
-    
+
     /* Set of registered handler names */
     self->handler_set = g_hash_table_new(g_str_hash, g_str_equal);
 
@@ -218,7 +218,6 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     } else {
         new_handler_copy->path = realpath(path, NULL);
     }
-
 
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
     g_hash_table_insert(self->path_to_handler, new_handler_copy->path, new_handler);
