@@ -1179,12 +1179,15 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
                                     RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
-    // TODO: Re-enable
-    // if(!rm_cmd_check_lettervec(option_name, criteria, "dlamprDLAMPR", error)) {
-    //     return false;
-    // }
+    cfg->sort_criteria = rm_pp_compile_patterns(session, criteria, error);
+    if(error && *error != NULL) {
+        return false;
+    }
 
-    strncpy(cfg->sort_criteria, criteria, sizeof(cfg->sort_criteria));
+    if(!rm_cmd_check_lettervec(option_name, cfg->sort_criteria, "dlamprDLAMPR", error)) {
+        return false;
+    }
+
     return true;
 }
 

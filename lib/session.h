@@ -80,8 +80,8 @@ typedef struct RmSession {
     /* Disk Scheduler */
     struct _RmMDS *mds;
 
-    /* Cache of already compiled GRegex patterns (pattern:GRegex) */
-    GHashTable *pattern_cache;
+    /* Cache of already compiled GRegex patterns */
+    GPtrArray *pattern_cache;
 
     /* Support for swapping path memory to disk */
     RmSwapTable *meta_cache;

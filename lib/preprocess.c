@@ -240,10 +240,10 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
-static bool parse_pattern(const char *pattern, char *dest, size_t dest_len, GError **error) {
+static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **error) {
     if(*pattern != '<') {
         g_set_error(error, RM_ERROR_QUARK, 0, "Pattern has to start with `<`");
-        return false;
+        return 0;
     }
 
     /* Balance of start and end markers */
@@ -266,69 +266,57 @@ static bool parse_pattern(const char *pattern, char *dest, size_t dest_len, GErr
 
     if(balance != 0) {
         g_set_error(error, RM_ERROR_QUARK, 0, "`<` or `>` imbalance: %d", balance);
-        return false;
+        return 0;
     }
 
     size_t src_len = (last - pattern - 1);
 
     if(src_len == 0) {
         g_set_error(error, RM_ERROR_QUARK, 0, "empty pattern");
-        return false;
-    }
-
-    memcpy(dest, &pattern[1], MIN(dest_len, src_len));
-    return true;
-}
-
-static GRegex *compile_pattern(const char *pattern_begin, GHashTable *pattern_cache, size_t *pattern_len, GError **error) {
-    char pattern_part[2048];
-    memset(pattern_part, 0, sizeof(pattern_part));
-
-    if(!parse_pattern(pattern_begin, pattern_part, sizeof(pattern_part), error)) {
-        return NULL;
-    }
-
-    if(pattern_len) {
-        *pattern_len = strlen(pattern_part);
-    }
-
-    GRegex *regex = NULL;
-    if(pattern_cache) {
-        regex = g_hash_table_lookup(pattern_cache, pattern_part);
-    }
-
-    if((gpointer)regex == (gpointer)pattern_cache) {
-        return NULL;
-    }
-
-    if(regex == NULL) {
-        regex = g_regex_new(pattern_part, G_REGEX_RAW | G_REGEX_OPTIMIZE, 0, error);
-
-        if(error && *error != NULL) {
-            g_hash_table_insert(pattern_cache, pattern_part, pattern_cache);
-            return NULL;   
-        }
-
-        if(pattern_cache) {
-            g_hash_table_insert(pattern_cache, pattern_part, regex);
-        }
-    }
-
-    return regex;
-}
-
-static int rm_pp_cmp_by_regex(GHashTable *pattern_cache, int *cursor, const char *pattern_begin, const char *basename_a, const char *basename_b) {
-    size_t pattern_len = 0;
-    GError *error = NULL;
-    GRegex *regex = compile_pattern(pattern_begin, pattern_cache, &pattern_len, &error);
-
-    *cursor += pattern_len;
-
-    if(error != NULL) {
-        rm_log_error_line("... %s\n", error->message);
         return 0;
     }
 
+    GString *part = g_string_new_len(&pattern[1], src_len);
+
+    /* Actually compile the pattern: */
+    *regex = g_regex_new(part->str, G_REGEX_RAW | G_REGEX_OPTIMIZE, 0, error);
+    g_printerr("Correct: %s\n", part->str);
+
+    g_string_free(part, TRUE);
+    return src_len + 2;
+}
+
+/* Compile all regexes inside a sortcriteria string.
+ * Every regex (enclosed in <>)  will be removed from the
+ * sortcriteria spec, so that the returned string will 
+ * consist only of single letters.
+ */ 
+char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
+    size_t minified_cursor = 0;
+    char * minified_sortcrit = g_strdup(sortcrit);
+
+    for(size_t i = 0; sortcrit[i]; i++) {
+        /* Copy everything that is not a regex pattern */
+        minified_sortcrit[minified_cursor++] = sortcrit[i];
+
+        if(tolower(sortcrit[i]) == 'r' && sortcrit[i + 1] == '<') {
+            GRegex *regex = NULL;
+            
+            /* Jump over the regex pattern part */
+            i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
+
+            if(regex != NULL) {
+                /* Append to already compiled patterns */
+                g_ptr_array_add(session->pattern_cache, regex);
+            }
+        }
+    }
+
+    minified_sortcrit[minified_cursor] = 0;
+    return minified_sortcrit;
+}
+
+static int rm_pp_cmp_by_regex(GRegex *regex, const char *basename_a, const char *basename_b) {
     if(g_regex_match(regex, basename_a, 0, NULL)) {
         return +1;
     }
@@ -351,8 +339,7 @@ int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_
                                  guint8 path_depth_b) {
     RmCfg *sets = session->cfg;
 
-    int sort_criteria_len = strlen(sets->sort_criteria);
-    for(int i = 0; i < sort_criteria_len; i++) {
+    for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
         long cmp = 0;
         switch(tolower(sets->sort_criteria[i])) {
         case 'm':
@@ -371,7 +358,7 @@ int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_
             cmp = (long)path_index_a - (long)path_index_b;
             break;
         case 'r':
-            cmp = rm_pp_cmp_by_regex(session->pattern_cache, &i, &sets->sort_criteria[i + 1], basename_a, basename_b);
+            cmp = rm_pp_cmp_by_regex(g_ptr_array_index(session->pattern_cache, regex_cursor++), basename_a, basename_b);
             break;
         }
         if(cmp) {
