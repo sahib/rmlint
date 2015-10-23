@@ -304,7 +304,7 @@ static void rm_directory_free(RmDirectory *self) {
     g_free(self);
 }
 
-static RmOff rm_tm_calc_file_size(RmDirectory *directory) {
+static RmOff rm_tm_calc_file_size(const RmDirectory *directory) {
     RmOff acc = 0;
 
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
@@ -320,9 +320,8 @@ static RmOff rm_tm_calc_file_size(RmDirectory *directory) {
     return acc;
 }
 
-static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
-    /* Masquerades a RmDirectory as RmFile for purpose of output */
-    RmFile *file = g_malloc0(sizeof(RmFile));
+static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self, RmFile *file) {
+    memset(file, 0, sizeof(RmFile));
 
     /* Need to set session first, since set_path expects that */
     file->session = merger->session;
@@ -335,11 +334,17 @@ static RmFile *rm_directory_as_file(RmTreeMerger *merger, RmDirectory *self) {
     file->mtime = self->metadata.dir_mtime;
     file->inode = self->metadata.dir_inode;
     file->dev = self->metadata.dir_dev;
+    file->depth = rm_util_path_depth(self->dirname);
 
     /* Recursively calculate the file size */
     file->file_size = rm_tm_calc_file_size(self);
     file->is_prefd = (self->prefd_files >= self->dupe_count);
+}
 
+static RmFile *rm_directory_as_new_file(RmTreeMerger *merger, const RmDirectory *self) {
+    /* Masquerades a RmDirectory as RmFile for purpose of output */
+    RmFile *file = g_malloc0(sizeof(RmFile));
+    rm_directory_to_file(merger, self, file);
     return file;
 }
 
@@ -707,11 +712,11 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
         }
     }
 
-    return rm_pp_cmp_orig_criteria_impl(
-        self->session, da->metadata.dir_mtime, db->metadata.dir_mtime,
-        rm_util_basename(da->dirname), rm_util_basename(db->dirname), da->dirname,
-        db->dirname, 0, 0, rm_util_path_depth(da->dirname),
-        rm_util_path_depth(db->dirname));
+    RmFile file_a, file_b;
+    rm_directory_to_file(self, da, &file_a);
+    rm_directory_to_file(self, da, &file_b);
+
+    return rm_pp_cmp_orig_criteria(&file_a, &file_b, self->session);
 }
 
 static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {
@@ -807,7 +812,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
-            RmFile *mask = rm_directory_as_file(self, directory);
+            RmFile *mask = rm_directory_as_new_file(self, directory);
             g_queue_push_tail(&file_adaptor_group, mask);
 
             if(iter == result_dirs.head) {

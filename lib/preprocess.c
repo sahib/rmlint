@@ -324,6 +324,7 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
 }
 
 static int rm_pp_cmp_by_regex(GRegex *regex, const char *path_a, const char *path_b) {
+    // TODO: Cache matches.
     if(g_regex_match(regex, path_a, 0, NULL)) {
         return -1;
     }
@@ -332,56 +333,6 @@ static int rm_pp_cmp_by_regex(GRegex *regex, const char *path_a, const char *pat
         return +1;
     }
 
-    return 0;
-}
-
-/*  compare two files. return:
- *    - a negative integer file 'a' outranks 'b',
- *    - 0 if they are equal,
- *    - a positive integer if file 'b' outranks 'a'
- */
-int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_t mtime_b,
-                                 const char *basename_a, const char *basename_b,
-                                 const char *path_a, const char *path_b, int path_index_a,
-                                 int path_index_b, guint8 path_depth_a,
-                                 guint8 path_depth_b) {
-    RmCfg *sets = session->cfg;
-
-    for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
-        long cmp = 0;
-        switch(tolower(sets->sort_criteria[i])) {
-        case 'm':
-            cmp = (long)(mtime_a) - (long)(mtime_b);
-            break;
-        case 'a':
-            cmp = g_ascii_strcasecmp(basename_a, basename_b);
-            break;
-        case 'l':
-            cmp = strlen(basename_a) - strlen(basename_b);
-            break;
-        case 'd':
-            cmp = (short)path_depth_a - (short)path_depth_b;
-            break;
-        case 'p':
-            cmp = (long)path_index_a - (long)path_index_b;
-            break;
-        case 'x':
-            cmp = rm_pp_cmp_by_regex(
-                g_ptr_array_index(session->pattern_cache, regex_cursor++), basename_a,
-                basename_b);
-            break;
-        case 'r':
-            cmp = rm_pp_cmp_by_regex(
-                g_ptr_array_index(session->pattern_cache, regex_cursor++), path_a,
-                path_b);
-            break;
-        }
-        if(cmp) {
-            /* reverse order if uppercase option */
-            cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
-            return cmp;
-        }
-    }
     return 0;
 }
 
@@ -406,9 +357,47 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
         RM_DEFINE_BOTH(a, path_needed);
         RM_DEFINE_BOTH(b, path_needed);
 
-        return rm_pp_cmp_orig_criteria_impl(session, a->mtime, b->mtime, a_basename,
-                                            b_basename, a_path, b_path, a->path_index,
-                                            b->path_index, a->path_depth, b->path_depth);
+        RmCfg *sets = session->cfg;
+
+        for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
+            long cmp = 0;
+            switch(tolower(sets->sort_criteria[i])) {
+            case 'm':
+                cmp = (long)(a->mtime) - (long)(b->mtime);
+                break;
+            case 'a':
+                cmp = g_ascii_strcasecmp(a_basename, b_basename);
+                break;
+            case 'l':
+                cmp = strlen(a_basename) - strlen(b_basename);
+                break;
+            case 'd':
+                cmp = (short)a->depth- (short)b->depth;
+                break;
+            case 'p':
+                cmp = (long)a->path_index - (long)b->path_index;
+                break;
+            case 'x': {
+                cmp = rm_pp_cmp_by_regex(
+                    g_ptr_array_index(session->pattern_cache, regex_cursor++), 
+                    a_basename, b_basename
+                );
+                break;
+            }
+            case 'r':
+                cmp = rm_pp_cmp_by_regex(
+                    g_ptr_array_index(session->pattern_cache, regex_cursor++), 
+                    a_path, b_path
+                );
+                break;
+            }
+            if(cmp) {
+                /* reverse order if uppercase option */
+                cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
+                return cmp;
+            }
+        }
+        return 0;
     }
 }
 
