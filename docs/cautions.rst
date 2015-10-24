@@ -40,20 +40,39 @@ Consider safe removal options
 -----------------------------
 
 Rather than deleting duplicates, consider moving them to a holding area or trash folder.  The
-trash-cli utility (http://github.com/andreafrancia/trash-cli) is one option for this.
-
-Another safe alternative, if your files are on a btrfs filesystem and you have linux
-kernel 4.2 or higher, is to reflink the duplicate to the original.  You can do this via
-``cp`` or using ``rmlint``:
+trash-cli utility (http://github.com/andreafrancia/trash-cli) is one option for this.  Alternatively
+if using the ``rmlint`` shell script you can replace the ``remove_cmd`` section as follows to move
+the files to /tmp:
 
 .. code-block:: bash
 
-   $ cp --reflink=always original duplicate
-   $ rmlint --btrfs-clone original duplicate
+   remove_cmd() {
+       echo 'Deleting:' "$1"
+       if original_check "$1" "$2"; then
+           if [ -z "$DO_DRY_RUN" ]; then
+               # was: rm -rf "$1"
+               mv -p "$1" "/tmp$1"
+           fi
+       fi
+   }
+
+Another safe alternative, if your files are on a btrfs filesystem and you have linux
+kernel 4.2 or higher, is to reflink the duplicate to the original.  You can do this via
+``cp --reflink`` or using ``rmlint --btrfs-clone``:
+
+.. code-block:: bash
+
+   $ cp --reflink=always original duplicate  # deletes dupicate and replaces it with reflink copy of original
+   $ rmlint --btrfs-clone original duplicate  # does and in-place clone
 
 The second option is actually safer because it verifies (via the kernel) that the files
 are identical before creating the reflink.  Also it does not change the mtime or other
-metadata of the duplicate, it only replaces the data with a link to original's data.
+metadata of the duplicate.
+
+You might think hardlinking as a safe alternative to deletion, but in fact hardlinking
+first deletes the duplicate and then creates a hardlink to the original in its place.
+If your duplicate finder has found a false positive, it is possible that you may lose
+your data.
 
 
 2. Attributes of a Robust Duplicate Finder
@@ -65,8 +84,10 @@ Traversal Robustness
 (Path doubles, symlinks, and filesystem loops)
 
 One simple trap for a dupe finder is to not realise that it has reached the same file
-via two different paths.  Here's a simple "path double" example trying to trick a
-duplicate file finder by "accidentally" feeding it the same path twice.  We'll use
+via two different paths.  This can happen due to user inputting overlapping paths to
+traverse, or due to symlinks or other filesystem loops such as bind mounts.
+Here's a simple "path double" example trying to trick a duplicate file finder
+by "accidentally" feeding it the same path twice.  We'll use
 fdupes (https://github.com/adrianlopezroche/fdupes) for this example:
 
 .. code-block:: bash
@@ -117,7 +138,7 @@ Dupe finders rdfind and dupd can also be tricked with the right combination of s
      /home/foo/a/data
      /home/foo/a/data
 
-"Ah but I'm not silly enough to enter the wrong path twice" you say.  Well maybe so, but
+"Ah but I'm not silly enough to enter the same path twice" you say.  Well maybe so, but
 there are other ways that folder traversal can reach the same path twice, for example
 via symlinks:
 
@@ -130,46 +151,85 @@ via symlinks:
    $ ls -l dir/
    total 0
 
-The filter used by rmlint to detect path doubles is:
-matching device and inode and basename, and their parent directories also have matching device and inode.
+For a duplicate finder to be able to find hardlinked duplicates, without also inadvertently
+identifying a file as a duplicate or itself, a more sophisticated test is required.  Path
+doubles will always have:
 
-That **seems** pretty fool-proof (see below) but please file an issue at https://github.com/sahib/rmlint/issues if you find
-an exception.
+- matching device and inode
+- matching basename
+- parent directories also have matching device and inode.
+
+That **seems** pretty fool-proof (see rmlint example below) but please file an issue
+at https://github.com/sahib/rmlint/issues if you find an exception.
 
 .. code-block:: bash
 
-   $ # default settings:
-   $  rmlint a a
+   $ echo "data" > dir/file
+   $ # rmlint with default settings:
+   $  rmlint dir dir
    ==> In total 2 files, whereof 0 are duplicates in 0 groups.
    ==> This equals 0 B of duplicates which could be removed.
    $
-   $ # with hardlink duplicate detection enabled:   
-   $  rmlint --hardlinked a a
+   $ # rmlint with hardlink duplicate detection enabled:
+   $  rmlint --hardlinked dir dir
    ==> In total 2 files, whereof 0 are duplicates in 0 groups.
    ==> This equals 0 B of duplicates which could be removed.
+   $ ls dir
+   file
 
-   
-What if you're not deleting duplicates, just replacing them with hardlinks to the
-original?  For example, ``rdfind`` has the ``-makehardlinks`` option to do this
-for you.  Well surprisingly even this can end badly:
+Also as noted above, replacing duplicates with hardlinks can still end badly if there are
+false positives.  For example, using ``rdfind``'s  the ``-makehardlinks`` option:
 
 .. code-block:: bash
 
-   $ echo data > file
-   $ rdfind -makehardlinks true -removeidentinode false file file
+   $ echo "data" > dir/file
+   $ rdfind -removeidentinode false -makehardlinks true dir dir
    [snip]
    It seems like you have 2 files that are not unique
    Totally, 5 b can be reduced.
    Now making results file results.txt
    Now making hard links.
-   failed to make hardlink file to file
-   $ ls -l
+   failed to make hardlink dir/file to dir/file
+   $ ls -l dir
    total 0
 
 
-Checksum Collisions
--------------------
+Collision Robustness
+--------------------
 
+If a duplicate finder uses file hashes to identify duplicates, there is a very small
+risk that two different files have the same hash value.  This is called a "hash collision"
+and can result in the two files being falsely flagged as duplicates.
+
+Several duplicate finders use the popular md5 hash, which is 128 bits
+long.  With a 128-bit hash, if you have a million different files of the same file
+size, the chance of a hash collision is about 0.000 000 000
+
+If someone had access to your files, and wanted to create a malicious duplicate, they
+could do this (based on http://web.archive.org/web/20071226014140/http://www.cits.rub.de/MD5Collisions/):
+
+.. code-block:: bash
+
+   $ # get two different files with same md5 hash:
+   $ wget http://web.archive.org/web/20071226014140/http://www.cits.rub.de/imperia/md/content/magnus/order.ps
+   $ wget http://web.archive.org/web/20071226014140/http://www.cits.rub.de/imperia/md/content/magnus/letter_of_rec.ps
+   $ # verify that they have the same md5sum
+   $ md5sum *
+   XXXX  order.ps
+   XXXX  letter_of_rec.ps
+   $ rmlint .
+   ==> In total 6 files, whereof 0 are duplicates in 0 groups.
+   [daniel@johnny fdupes]$ rmlint -a md5 .
+   # Duplicate(s):
+       ls /home/foo/order.ps
+       rm /home/foo/letter_of_rec.ps
+
+If your intention was to free up space by hardlinking the duplicate to the original, you would end up with two
+hardlinked copies of order.ps
+
+``fdupes`` eliminates this risk by
+
+The default
 
 Unusual characters in file name
 --------------------------------
