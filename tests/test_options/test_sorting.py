@@ -97,10 +97,10 @@ def test_sort_by_regex():
     create_file('xxx', '1/c')
     create_file('xxx', 'd')
 
-    head, *data, footer = run_rmlint("-S 'r<1/c>x<d>a'")
+    head, *data, footer = run_rmlint("-S 'r<1/c>x<d$>a'")
+    import time
 
     paths = [p['path'] for p in data]
-    print(paths)
 
     assert paths[0].endswith('1/c')
     assert paths[1].endswith('d')

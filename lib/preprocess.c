@@ -312,26 +312,32 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
         minified_sortcrit[minified_cursor++] = sortcrit[i];
         char curr_crit = tolower(sortcrit[i]);
 
-        if((curr_crit == 'r' || curr_crit == 'x') && sortcrit[i + 1] == '<') {
-            GRegex *regex = NULL;
+        /* Check if it's a non-regex sortcriteria */
+        if(!((curr_crit == 'r' || curr_crit == 'x') && sortcrit[i + 1] == '<')) {
+            continue;
+        }
 
-            /* Jump over the regex pattern part */
-            i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
+        GRegex *regex = NULL;
 
-            if(regex != NULL) {
-                if(pattern_count < (int)RM_PATTERN_N_MAX && pattern_count != -1) {
-                    /* Append to already compiled patterns */
-                    g_ptr_array_add(session->pattern_cache, regex);
-                    pattern_count++;
-                } else if(pattern_count != -1) {
-                    rm_log_warning_line(
-                            _("Cannot add more than %ld regex patterns."),
-                            RM_PATTERN_N_MAX
-                    );
+        /* Jump over the regex pattern part */
+        i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
 
-                    /* Make sure to print the warning only once */
-                    pattern_count = -1;
-                }
+        if(regex != NULL) {
+            if(pattern_count < (int)RM_PATTERN_N_MAX && pattern_count != -1) {
+                /* Append to already compiled patterns */
+                g_ptr_array_add(session->pattern_cache, regex);
+                pattern_count++;
+            } else if(pattern_count != -1) {
+                rm_log_warning_line(
+                        _("Cannot add more than %ld regex patterns."),
+                        RM_PATTERN_N_MAX
+                );
+
+                /* Make sure to print the warning only once */
+                pattern_count = -1;
+                g_regex_unref(regex);
+            } else {
+                g_regex_unref(regex);
             }
         }
     }

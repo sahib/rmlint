@@ -714,7 +714,7 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
 
     RmFile file_a, file_b;
     rm_directory_to_file(self, da, &file_a);
-    rm_directory_to_file(self, da, &file_b);
+    rm_directory_to_file(self, db, &file_b);
 
     return rm_pp_cmp_orig_criteria(&file_a, &file_b, self->session);
 }

@@ -91,7 +91,7 @@ typedef guint16 RmPatternBitmask;
 
 /* If the field was set, this will retrieve the previous result */
 #define RM_PATTERN_GET_CACHED(mask, idx) \
-    (((*mask) & (1 << idx)))
+    (!!((*mask) & (1 << idx)))
 
 /* Set a field and remember that it was set. */
 #define RM_PATTERN_SET_CACHED(mask, idx, match) \
