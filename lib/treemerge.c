@@ -320,7 +320,8 @@ static RmOff rm_tm_calc_file_size(const RmDirectory *directory) {
     return acc;
 }
 
-static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self, RmFile *file) {
+static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
+                                 RmFile *file) {
     memset(file, 0, sizeof(RmFile));
 
     /* Need to set session first, since set_path expects that */

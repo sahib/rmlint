@@ -302,7 +302,7 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
 char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
     /* Total of encountered patterns */
     int pattern_count = 0;
-    
+
     /* Copy of the sortcriteria without pattern specs in <> */
     size_t minified_cursor = 0;
     char *minified_sortcrit = g_strdup(sortcrit);
@@ -328,10 +328,9 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
                 g_ptr_array_add(session->pattern_cache, regex);
                 pattern_count++;
             } else if(pattern_count != -1) {
-                g_set_error(
-                        error, RM_ERROR_QUARK, 0,
-                        _("Cannot add more than %ld regex patterns."), RM_PATTERN_N_MAX
-                );
+                g_set_error(error, RM_ERROR_QUARK, 0,
+                            _("Cannot add more than %ld regex patterns."),
+                            RM_PATTERN_N_MAX);
 
                 /* Make sure to set the warning only once */
                 pattern_count = -1;
@@ -348,12 +347,10 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
     return minified_sortcrit;
 }
 
-static int rm_pp_cmp_by_regex(
-        GRegex *regex, int idx,
-        RmPatternBitmask *mask_a, const char *path_a,
-        RmPatternBitmask *mask_b, const char *path_b) {
+static int rm_pp_cmp_by_regex(GRegex *regex, int idx, RmPatternBitmask *mask_a,
+                              const char *path_a, RmPatternBitmask *mask_b,
+                              const char *path_b) {
     int result = 0;
-
 
     if(RM_PATTERN_IS_CACHED(mask_a, idx)) {
         /* Get the previous match result */
@@ -421,28 +418,24 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 cmp = strlen(a_basename) - strlen(b_basename);
                 break;
             case 'd':
-                cmp = (short)a->depth- (short)b->depth;
+                cmp = (short)a->depth - (short)b->depth;
                 break;
             case 'p':
                 cmp = (long)a->path_index - (long)b->path_index;
                 break;
             case 'x': {
                 cmp = rm_pp_cmp_by_regex(
-                    g_ptr_array_index(session->pattern_cache, regex_cursor), 
-                    regex_cursor, 
+                    g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
                     (RmPatternBitmask *)&a->pattern_bitmask_basename, a_path,
-                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b_path
-                );
+                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b_path);
                 regex_cursor++;
                 break;
             }
             case 'r':
                 cmp = rm_pp_cmp_by_regex(
-                    g_ptr_array_index(session->pattern_cache, regex_cursor), 
-                    regex_cursor,
+                    g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
                     (RmPatternBitmask *)&a->pattern_bitmask_path, a_path,
-                    (RmPatternBitmask *)&b->pattern_bitmask_path, b_path
-                );
+                    (RmPatternBitmask *)&b->pattern_bitmask_path, b_path);
                 regex_cursor++;
                 break;
             }

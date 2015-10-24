@@ -86,12 +86,10 @@ typedef guint16 RmPatternBitmask;
 #define RM_PATTERN_N_MAX (sizeof(RmPatternBitmask) * 8 / 2)
 
 /* Check if a field has been set already in the RmPatternBitmask */
-#define RM_PATTERN_IS_CACHED(mask, idx) \
-    (!!((*mask) & (1 << (idx + RM_PATTERN_N_MAX))))
+#define RM_PATTERN_IS_CACHED(mask, idx) (!!((*mask) & (1 << (idx + RM_PATTERN_N_MAX))))
 
 /* If the field was set, this will retrieve the previous result */
-#define RM_PATTERN_GET_CACHED(mask, idx) \
-    (!!((*mask) & (1 << idx)))
+#define RM_PATTERN_GET_CACHED(mask, idx) (!!((*mask) & (1 << idx)))
 
 /* Set a field and remember that it was set. */
 #define RM_PATTERN_SET_CACHED(mask, idx, match) \
@@ -242,7 +240,7 @@ typedef struct RmFile {
     struct RmSignal *signal;
 
     /* Caching bitmasks to ensure each file is only matched once
-     * for every GRegex combination. 
+     * for every GRegex combination.
      * See also preprocess.c for more explanation.
      * */
     RmPatternBitmask pattern_bitmask_path;
