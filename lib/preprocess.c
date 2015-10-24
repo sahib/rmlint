@@ -242,7 +242,7 @@ void rm_file_tables_destroy(RmFileTables *tables) {
 
 static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **error) {
     if(*pattern != '<') {
-        g_set_error(error, RM_ERROR_QUARK, 0, "Pattern has to start with `<`");
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Pattern has to start with `<`"));
         return 0;
     }
 
@@ -270,14 +270,14 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
     }
 
     if(balance != 0) {
-        g_set_error(error, RM_ERROR_QUARK, 0, "`<` or `>` imbalance: %d", balance);
+        g_set_error(error, RM_ERROR_QUARK, 0, _("`<` or `>` imbalance: %d"), balance);
         return 0;
     }
 
     size_t src_len = (last - pattern - 1);
 
     if(src_len == 0) {
-        g_set_error(error, RM_ERROR_QUARK, 0, "empty pattern");
+        g_set_error(error, RM_ERROR_QUARK, 0, _("empty pattern"));
         return 0;
     }
 
@@ -289,6 +289,8 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
     *regex = g_regex_new(part->str, G_REGEX_RAW | G_REGEX_OPTIMIZE, 0, error);
 
     g_string_free(part, TRUE);
+
+    /* Include <> in the result len */
     return src_len + 2;
 }
 
@@ -299,7 +301,7 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
  */
 char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
     /* Total of encountered patterns */
-    size_t pattern_count = 0;
+    int pattern_count = 0;
     
     /* Copy of the sortcriteria without pattern specs in <> */
     size_t minified_cursor = 0;
@@ -316,17 +318,25 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
             /* Jump over the regex pattern part */
             i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
 
-            if(regex != NULL && pattern_count < RM_PATTERN_N_MAX) {
-                if(pattern_count < RM_PATTERN_N_MAX) {
+            if(regex != NULL) {
+                if(pattern_count < (int)RM_PATTERN_N_MAX && pattern_count != -1) {
                     /* Append to already compiled patterns */
                     g_ptr_array_add(session->pattern_cache, regex);
                     pattern_count++;
-                } else {
-                    rm_log_warning_line("Cannot add more than %ld regex patterns.", RM_PATTERN_N_MAX);
+                } else if(pattern_count != -1) {
+                    rm_log_warning_line(
+                            _("Cannot add more than %ld regex patterns."),
+                            RM_PATTERN_N_MAX
+                    );
+
+                    /* Make sure to print the warning only once */
+                    pattern_count = -1;
                 }
             }
         }
     }
+
+    g_prefix_error(error, _("Error while parsing sortcriteria patterns: "));
 
     minified_sortcrit[minified_cursor] = 0;
     return minified_sortcrit;
