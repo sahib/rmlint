@@ -1,16 +1,16 @@
-========
-Cautions
-========
+===================================================
+Cautions (or "why it's hard to write a dupefinder")
+===================================================
 
 This section covers good practice for safe duplicate removal.  It is not intended to
 be specifically related to ``rmlint``.  It includes general discussion on duplicate
 detection and shows, by example, some of the traps that duplicate finders can fall into.
 
-1.  Good Practice when Deleting Duplicates
-------------------------------------------
+Good Practice when Deleting Duplicates
+--------------------------------------
 
 Backup your data
-----------------
+~~~~~~~~~~~~~~~~
 
 There is a wise adage, "if it's not backed up, it's not important".  It's just good
 practice to keep your important data backed up.  In particular, any time you are
@@ -24,20 +24,20 @@ to the original data.  This still frees up the space, but makes it easier to fin
 if and when it comes time to restore files from backup.
 
 Measure twice cut once
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 This is a popular saying amongst builders; the same goes for your files.  Do at least some
 sort of sanity check on which files are going to be deleted.  All duplicate file finders
 (including rmlint) are capable of identifying false positives or more serious bugs.
 
 Beware of unusual filename characters
--------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Even a space in a filename is capable of causing grief.  Make sure your file deletion command
 (or the one used by your duplicate finder) has the filename properly escaped.
 
 Consider safe removal options
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Rather than deleting duplicates, consider moving them to a holding area or trash folder.  The
 trash-cli utility (http://github.com/andreafrancia/trash-cli) is one option for this.  Alternatively
@@ -75,12 +75,14 @@ If your duplicate finder has found a false positive, it is possible that you may
 your data.
 
 
-2. Attributes of a Robust Duplicate Finder
-------------------------------------------
+Attributes of a Robust Duplicate Finder
+---------------------------------------
+
 (also known as "Traps for young dupe finders")
 
 Traversal Robustness
---------------------
+~~~~~~~~~~~~~~~~~~~~
+
 (Path doubles, symlinks, and filesystem loops)
 
 One simple trap for a dupe finder is to not realise that it has reached the same file
@@ -195,7 +197,7 @@ false positives.  For example, using ``rdfind``'s  the ``-makehardlinks`` option
 
 
 Collision Robustness
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 If a duplicate finder uses file hashes to identify duplicates, there is a very small
 risk that two different files have the same hash value.  This is called a "hash collision"
@@ -232,11 +234,11 @@ hardlinked copies of order.ps
 The default
 
 Unusual characters in file name
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 Disk Thrash
-------------
+~~~~~~~~~~~~
 
 
 
