@@ -298,6 +298,10 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
  * consist only of single letters.
  */
 char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
+    /* Total of encountered patterns */
+    size_t pattern_count = 0;
+    
+    /* Copy of the sortcriteria without pattern specs in <> */
     size_t minified_cursor = 0;
     char *minified_sortcrit = g_strdup(sortcrit);
 
@@ -306,15 +310,20 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
         minified_sortcrit[minified_cursor++] = sortcrit[i];
         char curr_crit = tolower(sortcrit[i]);
 
-        if((curr_crit == 'r' || curr_crit =='x') && sortcrit[i + 1] == '<') {
+        if((curr_crit == 'r' || curr_crit == 'x') && sortcrit[i + 1] == '<') {
             GRegex *regex = NULL;
 
             /* Jump over the regex pattern part */
             i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
 
-            if(regex != NULL) {
-                /* Append to already compiled patterns */
-                g_ptr_array_add(session->pattern_cache, regex);
+            if(regex != NULL && pattern_count < RM_PATTERN_N_MAX) {
+                if(pattern_count < RM_PATTERN_N_MAX) {
+                    /* Append to already compiled patterns */
+                    g_ptr_array_add(session->pattern_cache, regex);
+                    pattern_count++;
+                } else {
+                    rm_log_warning_line("Cannot add more than %ld regex patterns.", RM_PATTERN_N_MAX);
+                }
             }
         }
     }
@@ -323,16 +332,40 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
     return minified_sortcrit;
 }
 
-static int rm_pp_cmp_by_regex(GRegex *regex, const char *path_a, const char *path_b) {
-    // TODO: Cache matches.
-    if(g_regex_match(regex, path_a, 0, NULL)) {
+static int rm_pp_cmp_by_regex(
+        GRegex *regex, int idx,
+        RmPatternBitmask *mask_a, const char *path_a,
+        RmPatternBitmask *mask_b, const char *path_b) {
+    int result = 0;
+
+
+    if(RM_PATTERN_IS_CACHED(mask_a, idx)) {
+        /* Get the previous match result */
+        result = RM_PATTERN_GET_CACHED(mask_a, idx);
+    } else {
+        /* Match for the first time */
+        result = g_regex_match(regex, path_a, 0, NULL);
+        RM_PATTERN_SET_CACHED(mask_a, idx, result);
+    }
+
+    if(result) {
         return -1;
     }
 
-    if(g_regex_match(regex, path_b, 0, NULL)) {
+    if(RM_PATTERN_IS_CACHED(mask_b, idx)) {
+        /* Get the previous match result */
+        result = RM_PATTERN_GET_CACHED(mask_b, idx);
+    } else {
+        /* Match for the first time */
+        result = g_regex_match(regex, path_b, 0, NULL);
+        RM_PATTERN_SET_CACHED(mask_b, idx, result);
+    }
+
+    if(result) {
         return +1;
     }
 
+    /* Both match or none of the both match */
     return 0;
 }
 
@@ -379,16 +412,22 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 break;
             case 'x': {
                 cmp = rm_pp_cmp_by_regex(
-                    g_ptr_array_index(session->pattern_cache, regex_cursor++), 
-                    a_basename, b_basename
+                    g_ptr_array_index(session->pattern_cache, regex_cursor), 
+                    regex_cursor, 
+                    (RmPatternBitmask *)&a->pattern_bitmask_basename, a_path,
+                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b_path
                 );
+                regex_cursor++;
                 break;
             }
             case 'r':
                 cmp = rm_pp_cmp_by_regex(
-                    g_ptr_array_index(session->pattern_cache, regex_cursor++), 
-                    a_path, b_path
+                    g_ptr_array_index(session->pattern_cache, regex_cursor), 
+                    regex_cursor,
+                    (RmPatternBitmask *)&a->pattern_bitmask_path, a_path,
+                    (RmPatternBitmask *)&b->pattern_bitmask_path, b_path
                 );
+                regex_cursor++;
                 break;
             }
             if(cmp) {
