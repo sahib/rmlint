@@ -98,7 +98,6 @@ def test_sort_by_regex():
     create_file('xxx', 'd')
 
     head, *data, footer = run_rmlint("-S 'r<1/c>x<d$>a'")
-    import time
 
     paths = [p['path'] for p in data]
 
@@ -108,3 +107,33 @@ def test_sort_by_regex():
     assert paths[3].endswith('aaab')
     assert paths[4].endswith('b')
     assert paths[5].endswith('c')
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_sort_by_regex_bad_input():
+    create_file('xxx', 'aaaa')
+    create_file('xxx', 'aaab')
+
+    # Should work:
+    run_rmlint("-S '{}'".format('r<.>' * 8))
+
+    # More than 8 is bad:
+    try:
+        run_rmlint("-S '{}'".format('r<.>' * 9))
+        assert False
+    except subprocess.CalledProcessError:
+        pass
+
+    # Empty patterns are sill also:
+    try:
+        run_rmlint("-S 'r<>'")
+        assert False
+    except subprocess.CalledProcessError:
+        pass
+
+    # A bad regex is bad too:
+    try:
+        run_rmlint("-S 'r<*>'")
+        assert False
+    except subprocess.CalledProcessError:
+        pass
