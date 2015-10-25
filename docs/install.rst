@@ -94,7 +94,7 @@ Here's a list of readily prepared commands for known distributions:
   .. code-block:: bash
 
     $ pkg install git scons py27-sphinx
-    $ pkg install glib gettext libelf
+    $ pkg install glib gettext libelf json-glib
 
   Also ``rmlint`` is maintained as port:
 
