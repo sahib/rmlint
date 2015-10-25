@@ -1000,6 +1000,8 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
         return 0;
     }
 
+#if HAVE_GIO_UNIX && HAVE_BLKID
+
     RmPartitionInfo *part =
         g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
     if(part) {
@@ -1044,6 +1046,10 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
             rm_assert_gentle(strcmp(prev, ".") != 0);
         }
     }
+#else
+    (void) partition;
+    (void) path;
+#endif
 }
 
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
