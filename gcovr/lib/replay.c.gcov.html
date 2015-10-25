@@ -1,0 +1,648 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/replay.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - replay.c<span style="font-size: 80%;"> (source / <a href="replay.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">214</td>
+            <td class="headerCovTableEntry">263</td>
+            <td class="headerCovTableEntryMed">81.4 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-10-25 15:30:11</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">20</td>
+            <td class="headerCovTableEntry">20</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /**</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : /* Internal headers */
+<span class="lineNum">      27 </span>            : #include &quot;config.h&quot;
+<span class="lineNum">      28 </span>            : #include &quot;replay.h&quot;
+<span class="lineNum">      29 </span>            : #include &quot;session.h&quot;
+<span class="lineNum">      30 </span>            : #include &quot;formats.h&quot;
+<span class="lineNum">      31 </span>            : #include &quot;file.h&quot;
+<span class="lineNum">      32 </span>            : #include &quot;preprocess.h&quot;
+<span class="lineNum">      33 </span>            : #include &quot;shredder.h&quot;
+<span class="lineNum">      34 </span>            : 
+<span class="lineNum">      35 </span>            : /* External libraries */
+<span class="lineNum">      36 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      37 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      38 </span>            : #include &lt;glib/gstdio.h&gt;
+<span class="lineNum">      39 </span>            : 
+<span class="lineNum">      40 </span>            : #if HAVE_JSON_GLIB
+<span class="lineNum">      41 </span>            : #include &lt;json-glib/json-glib.h&gt;
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span>            : /////////////////////////////////////////////////
+<span class="lineNum">      44 </span>            : //  POLLY THE PARROT REPEATS WHAT RMLINT SAID  //
+<span class="lineNum">      45 </span>            : /////////////////////////////////////////////////
+<span class="lineNum">      46 </span>            : 
+<span class="lineNum">      47 </span>            : typedef struct RmParrot {
+<span class="lineNum">      48 </span>            :     /* Global session */
+<span class="lineNum">      49 </span>            :     RmSession *session;
+<span class="lineNum">      50 </span>            : 
+<span class="lineNum">      51 </span>            :     /* Json parser instance */
+<span class="lineNum">      52 </span>            :     JsonParser *parser;
+<span class="lineNum">      53 </span>            : 
+<span class="lineNum">      54 </span>            :     /* Root array of the json document */
+<span class="lineNum">      55 </span>            :     JsonArray *root;
+<span class="lineNum">      56 </span>            : 
+<span class="lineNum">      57 </span>            :     /* Last original file that we encountered */
+<span class="lineNum">      58 </span>            :     RmFile *last_original;
+<span class="lineNum">      59 </span>            : 
+<span class="lineNum">      60 </span>            :     /* Index inside the document
+<span class="lineNum">      61 </span>            :      * (0 is header, 1 first element, len(root) is footer)
+<span class="lineNum">      62 </span>            :      * */
+<span class="lineNum">      63 </span>            :     guint index;
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span>            :     /* Set of diskids in cfg-&gt;paths */
+<span class="lineNum">      66 </span>            :     GHashTable *disk_ids;
+<a name="67"><span class="lineNum">      67 </span>            : } RmParrot;</a>
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span><span class="lineCov">      17280 : static void rm_parrot_close(RmParrot *polly) {</span>
+<span class="lineNum">      70 </span><span class="lineCov">      17280 :     if(polly-&gt;parser) {</span>
+<span class="lineNum">      71 </span><span class="lineCov">      17280 :         g_object_unref(polly-&gt;parser);</span>
+<span class="lineNum">      72 </span>            :     }
+<span class="lineNum">      73 </span>            : 
+<span class="lineNum">      74 </span><span class="lineCov">      17280 :     g_hash_table_unref(polly-&gt;disk_ids);</span>
+<span class="lineNum">      75 </span><span class="lineCov">      17280 :     g_free(polly);</span>
+<a name="76"><span class="lineNum">      76 </span><span class="lineCov">      17280 : }</span></a>
+<span class="lineNum">      77 </span>            : 
+<span class="lineNum">      78 </span><span class="lineCov">      17280 : static RmParrot *rm_parrot_open(RmSession *session, const char *json_path,</span>
+<span class="lineNum">      79 </span>            :                                 GError **error) {
+<span class="lineNum">      80 </span><span class="lineCov">      17280 :     RmParrot *polly = g_malloc0(sizeof(RmParrot));</span>
+<span class="lineNum">      81 </span><span class="lineCov">      17280 :     polly-&gt;session = session;</span>
+<span class="lineNum">      82 </span><span class="lineCov">      17280 :     polly-&gt;parser = json_parser_new();</span>
+<span class="lineNum">      83 </span><span class="lineCov">      17280 :     polly-&gt;disk_ids = g_hash_table_new(NULL, NULL);</span>
+<span class="lineNum">      84 </span><span class="lineCov">      17280 :     polly-&gt;index = 1;</span>
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span><span class="lineCov">      68820 :     for(int idx = 0; session-&gt;cfg-&gt;paths[idx]; ++idx) {</span>
+<span class="lineNum">      87 </span>            :         RmStat stat_buf;
+<span class="lineNum">      88 </span><span class="lineCov">      51540 :         const char *path = session-&gt;cfg-&gt;paths[idx];</span>
+<span class="lineNum">      89 </span>            : 
+<span class="lineNum">      90 </span><span class="lineCov">      51540 :         if(rm_sys_stat(path, &amp;stat_buf) != -1) {</span>
+<span class="lineNum">      91 </span><span class="lineCov">      51540 :             g_hash_table_add(polly-&gt;disk_ids, GUINT_TO_POINTER(stat_buf.st_dev));</span>
+<span class="lineNum">      92 </span>            :         }
+<span class="lineNum">      93 </span>            :     }
+<span class="lineNum">      94 </span>            : 
+<span class="lineNum">      95 </span><span class="lineCov">      17280 :     if(!json_parser_load_from_file(polly-&gt;parser, json_path, error)) {</span>
+<span class="lineNum">      96 </span><span class="lineNoCov">          0 :         goto failure;</span>
+<span class="lineNum">      97 </span>            :     }
+<span class="lineNum">      98 </span>            : 
+<span class="lineNum">      99 </span><span class="lineCov">      17280 :     JsonNode *root = json_parser_get_root(polly-&gt;parser);</span>
+<span class="lineNum">     100 </span><span class="lineCov">      17280 :     if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {</span>
+<span class="lineNum">     101 </span><span class="lineNoCov">          0 :         g_set_error(error, RM_ERROR_QUARK, 0, _(&quot;No valid json cache (no array in /)&quot;));</span>
+<span class="lineNum">     102 </span><span class="lineNoCov">          0 :         goto failure;</span>
+<span class="lineNum">     103 </span>            :     }
+<span class="lineNum">     104 </span>            : 
+<span class="lineNum">     105 </span><span class="lineCov">      17280 :     polly-&gt;root = json_node_get_array(root);</span>
+<span class="lineNum">     106 </span><span class="lineCov">      17280 :     return polly;</span>
+<span class="lineNum">     107 </span>            : 
+<span class="lineNum">     108 </span>            : failure:
+<span class="lineNum">     109 </span><span class="lineNoCov">          0 :     rm_parrot_close(polly);</span>
+<span class="lineNum">     110 </span><span class="lineNoCov">          0 :     return NULL;</span>
+<a name="111"><span class="lineNum">     111 </span>            : }</a>
+<span class="lineNum">     112 </span>            : 
+<span class="lineNum">     113 </span><span class="lineCov">     446850 : static bool rm_parrot_has_next(RmParrot *polly) {</span>
+<span class="lineNum">     114 </span><span class="lineCov">     446850 :     return (polly-&gt;index &lt; json_array_get_length(polly-&gt;root));</span>
+<a name="115"><span class="lineNum">     115 </span>            : }</a>
+<span class="lineNum">     116 </span>            : 
+<span class="lineNum">     117 </span><span class="lineCov">     137430 : static RmFile *rm_parrot_try_next(RmParrot *polly) {</span>
+<span class="lineNum">     118 </span><span class="lineCov">     137430 :     if(!rm_parrot_has_next(polly)) {</span>
+<span class="lineNum">     119 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     120 </span>            :     }
+<span class="lineNum">     121 </span>            : 
+<span class="lineNum">     122 </span><span class="lineCov">     137430 :     RmFile *file = NULL;</span>
+<span class="lineNum">     123 </span><span class="lineCov">     137430 :     const char *path = NULL;</span>
+<span class="lineNum">     124 </span><span class="lineCov">     137430 :     size_t path_len = 0;</span>
+<span class="lineNum">     125 </span>            : 
+<span class="lineNum">     126 </span><span class="lineCov">     137430 :     JsonObject *object = json_array_get_object_element(polly-&gt;root, polly-&gt;index);</span>
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span>            :     /* Deliver a higher index the next time, even if it fails */
+<span class="lineNum">     129 </span><span class="lineCov">     137430 :     polly-&gt;index += 1;</span>
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span>            :     /* Read the path (without generating a warning if it's not there) */
+<span class="lineNum">     132 </span><span class="lineCov">     137430 :     JsonNode *path_node = json_object_get_member(object, &quot;path&quot;);</span>
+<span class="lineNum">     133 </span><span class="lineCov">     137430 :     if(path_node == NULL) {</span>
+<span class="lineNum">     134 </span><span class="lineCov">      17280 :         return NULL;</span>
+<span class="lineNum">     135 </span>            :     }
+<span class="lineNum">     136 </span>            : 
+<span class="lineNum">     137 </span><span class="lineCov">     120150 :     path = json_node_get_string(path_node);</span>
+<span class="lineNum">     138 </span><span class="lineCov">     120150 :     path_len = strlen(path);</span>
+<span class="lineNum">     139 </span>            : 
+<span class="lineNum">     140 </span><span class="lineCov">     120150 :     if(rm_trie_search_node(&amp;polly-&gt;session-&gt;cfg-&gt;file_trie, path)) {</span>
+<span class="lineNum">     141 </span>            :         /* We have this node already */
+<span class="lineNum">     142 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     143 </span>            :     }
+<span class="lineNum">     144 </span>            : 
+<span class="lineNum">     145 </span>            :     /* Check for the lint type */
+<span class="lineNum">     146 </span><span class="lineCov">     120150 :     RmLintType type =</span>
+<span class="lineNum">     147 </span><span class="lineCov">     120150 :         rm_file_string_to_lint_type(json_object_get_string_member(object, &quot;type&quot;));</span>
+<span class="lineNum">     148 </span>            : 
+<span class="lineNum">     149 </span><span class="lineCov">     120150 :     if(type == RM_LINT_TYPE_UNKNOWN) {</span>
+<span class="lineNum">     150 </span><span class="lineNoCov">          0 :         rm_log_warning_line(_(&quot;lint type '%s' not recognised&quot;),</span>
+<span class="lineNum">     151 </span>            :                             json_object_get_string_member(object, &quot;type&quot;));
+<span class="lineNum">     152 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     153 </span>            :     }
+<span class="lineNum">     154 </span>            : 
+<span class="lineNum">     155 </span>            :     /* Collect file information (for rm_file_new) */
+<span class="lineNum">     156 </span>            :     RmStat lstat_buf, stat_buf;
+<span class="lineNum">     157 </span><span class="lineCov">     120150 :     RmStat *stat_info = &amp;lstat_buf;</span>
+<span class="lineNum">     158 </span><span class="lineCov">     120150 :     if(rm_sys_lstat(path, &amp;lstat_buf) == -1) {</span>
+<span class="lineNum">     159 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     160 </span>            :     }
+<span class="lineNum">     161 </span>            : 
+<span class="lineNum">     162 </span>            :     /* use stat() after lstat() to find out if it's an symlink.
+<span class="lineNum">     163 </span>            :      * If it's a bad link, this will fail with stat_info still pointing to lstat.
+<span class="lineNum">     164 </span>            :      * */
+<span class="lineNum">     165 </span><span class="lineCov">     120150 :     if(rm_sys_stat(path, &amp;stat_buf) != -1) {</span>
+<span class="lineNum">     166 </span><span class="lineCov">     120150 :         stat_info = &amp;stat_buf;</span>
+<span class="lineNum">     167 </span>            :     }
+<span class="lineNum">     168 </span>            : 
+<span class="lineNum">     169 </span>            :     /* Check if we're late and issue an warning */
+<span class="lineNum">     170 </span><span class="lineCov">     120150 :     JsonNode *mtime_node = json_object_get_member(object, &quot;mtime&quot;);</span>
+<span class="lineNum">     171 </span><span class="lineCov">     240300 :     if(mtime_node &amp;&amp;</span>
+<span class="lineNum">     172 </span><span class="lineCov">     120150 :        json_node_get_int(mtime_node) &lt; rm_sys_stat_mtime_seconds(stat_info)) {</span>
+<span class="lineNum">     173 </span><span class="lineNoCov">          0 :         rm_log_warning_line(_(&quot;modification time of `%s` changed. Ignoring.&quot;), path);</span>
+<span class="lineNum">     174 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     175 </span>            :     }
+<span class="lineNum">     176 </span>            : 
+<span class="lineNum">     177 </span>            :     /* Fill up the RmFile */
+<span class="lineNum">     178 </span><span class="lineCov">     120150 :     file = rm_file_new(polly-&gt;session, path, path_len, stat_info, type, 0, 0, 0);</span>
+<span class="lineNum">     179 </span><span class="lineCov">     120150 :     file-&gt;is_original = json_object_get_boolean_member(object, &quot;is_original&quot;);</span>
+<span class="lineNum">     180 </span><span class="lineCov">     120150 :     file-&gt;is_symlink = (lstat_buf.st_mode &amp; S_IFLNK);</span>
+<span class="lineNum">     181 </span><span class="lineCov">     120150 :     file-&gt;digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, FALSE);</span>
+<span class="lineNum">     182 </span><span class="lineCov">     120150 :     file-&gt;free_digest = true;</span>
+<span class="lineNum">     183 </span>            : 
+<span class="lineNum">     184 </span><span class="lineCov">     120150 :     if(file-&gt;is_original) {</span>
+<span class="lineNum">     185 </span><span class="lineCov">      34380 :         polly-&gt;last_original = file;</span>
+<span class="lineNum">     186 </span>            :     }
+<span class="lineNum">     187 </span>            : 
+<span class="lineNum">     188 </span><span class="lineCov">     120150 :     JsonNode *depth_node = json_object_get_member(object, &quot;depth&quot;);</span>
+<span class="lineNum">     189 </span><span class="lineCov">     120150 :     if(depth_node != NULL) {</span>
+<span class="lineNum">     190 </span><span class="lineCov">     120150 :         file-&gt;depth = json_node_get_int(depth_node);</span>
+<span class="lineNum">     191 </span>            :     }
+<span class="lineNum">     192 </span>            : 
+<span class="lineNum">     193 </span>            :     /* Fake the checksum using RM_DIGEST_EXT */
+<span class="lineNum">     194 </span><span class="lineCov">     120150 :     JsonNode *cksum_node = json_object_get_member(object, &quot;checksum&quot;);</span>
+<span class="lineNum">     195 </span><span class="lineCov">     120150 :     if(cksum_node != NULL) {</span>
+<span class="lineNum">     196 </span><span class="lineCov">     120150 :         const char *cksum = json_object_get_string_member(object, &quot;checksum&quot;);</span>
+<span class="lineNum">     197 </span><span class="lineCov">     120150 :         if(cksum != NULL) {</span>
+<span class="lineNum">     198 </span><span class="lineCov">     120150 :             rm_digest_update(file-&gt;digest, (unsigned char *)cksum, strlen(cksum));</span>
+<span class="lineNum">     199 </span>            :         }
+<span class="lineNum">     200 </span>            :     }
+<span class="lineNum">     201 </span>            : 
+<span class="lineNum">     202 </span>            :     /* Fix the hardlink relationship */
+<span class="lineNum">     203 </span><span class="lineCov">     120150 :     JsonNode *hardlink_of = json_object_get_member(object, &quot;hardlink_of&quot;);</span>
+<span class="lineNum">     204 </span><span class="lineCov">     120150 :     if(hardlink_of != NULL) {</span>
+<span class="lineNum">     205 </span><span class="lineNoCov">          0 :         file-&gt;hardlinks.is_head = false;</span>
+<span class="lineNum">     206 </span><span class="lineNoCov">          0 :         file-&gt;hardlinks.hardlink_head = polly-&gt;last_original;</span>
+<span class="lineNum">     207 </span>            :     } else {
+<span class="lineNum">     208 </span><span class="lineCov">     120150 :         file-&gt;hardlinks.is_head = true;</span>
+<span class="lineNum">     209 </span>            :     }
+<span class="lineNum">     210 </span>            : 
+<span class="lineNum">     211 </span><span class="lineCov">     120150 :     return file;</span>
+<a name="212"><span class="lineNum">     212 </span>            : }</a>
+<span class="lineNum">     213 </span>            : 
+<span class="lineNum">     214 </span><span class="lineCov">     137430 : static RmFile *rm_parrot_next(RmParrot *polly) {</span>
+<span class="lineNum">     215 </span>            :     /* Skip NULL entries */
+<span class="lineNum">     216 </span><span class="lineCov">     292140 :     while(rm_parrot_has_next(polly)) {</span>
+<span class="lineNum">     217 </span><span class="lineCov">     137430 :         RmFile *file = NULL;</span>
+<span class="lineNum">     218 </span><span class="lineCov">     137430 :         if((file = rm_parrot_try_next(polly))) {</span>
+<span class="lineNum">     219 </span><span class="lineCov">     120150 :             return file;</span>
+<span class="lineNum">     220 </span>            :         }
+<span class="lineNum">     221 </span>            :     }
+<span class="lineNum">     222 </span>            : 
+<span class="lineNum">     223 </span><span class="lineCov">      17280 :     return NULL;</span>
+<span class="lineNum">     224 </span>            : }
+<span class="lineNum">     225 </span>            : 
+<span class="lineNum">     226 </span>            : //////////////////////////////////
+<span class="lineNum">     227 </span>            : //   OPTION FILTERING CHECKS    //
+<span class="lineNum">     228 </span>            : //////////////////////////////////
+<span class="lineNum">     229 </span>            : 
+<a name="230"><span class="lineNum">     230 </span>            : #define FAIL_MSG(msg) rm_log_debug(RED &quot;[&quot; msg &quot;]\n&quot; RESET)</a>
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span><span class="lineCov">     120150 : static bool rm_parrot_check_depth(RmCfg *cfg, RmFile *file) {</span>
+<span class="lineNum">     233 </span><span class="lineCov">     120150 :     return (file-&gt;depth == 0 || file-&gt;depth &lt;= cfg-&gt;depth);</span>
+<a name="234"><span class="lineNum">     234 </span>            : }</a>
+<span class="lineNum">     235 </span>            : 
+<span class="lineNum">     236 </span><span class="lineCov">     120150 : static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {</span>
+<span class="lineNum">     237 </span><span class="lineCov">     120150 :     if(cfg-&gt;limits_specified == false) {</span>
+<span class="lineNum">     238 </span><span class="lineCov">     120150 :         return true;</span>
+<span class="lineNum">     239 </span>            :     }
+<span class="lineNum">     240 </span>            : 
+<span class="lineNum">     241 </span><span class="lineNoCov">          0 :     return ((cfg-&gt;minsize == (RmOff)-1 || cfg-&gt;minsize &lt;= file-&gt;file_size) &amp;&amp;</span>
+<span class="lineNum">     242 </span><span class="lineNoCov">          0 :             (cfg-&gt;maxsize == (RmOff)-1 || file-&gt;file_size &lt;= cfg-&gt;maxsize));</span>
+<a name="243"><span class="lineNum">     243 </span>            : }</a>
+<span class="lineNum">     244 </span>            : 
+<span class="lineNum">     245 </span><span class="lineCov">     120150 : static bool rm_parrot_check_hidden(RmCfg *cfg, _U RmFile *file, const char *file_path) {</span>
+<span class="lineNum">     246 </span><span class="lineCov">     120150 :     if(!cfg-&gt;ignore_hidden) {</span>
+<span class="lineNum">     247 </span><span class="lineCov">         60 :         return true;</span>
+<span class="lineNum">     248 </span>            :     }
+<span class="lineNum">     249 </span>            : 
+<span class="lineNum">     250 </span><span class="lineCov">     120090 :     if(rm_util_path_is_hidden(file_path)) {</span>
+<span class="lineNum">     251 </span><span class="lineCov">         60 :         FAIL_MSG(&quot;nope: hidden&quot;);</span>
+<span class="lineNum">     252 </span><span class="lineCov">         60 :         return false;</span>
+<span class="lineNum">     253 </span>            :     }
+<span class="lineNum">     254 </span>            : 
+<span class="lineNum">     255 </span><span class="lineCov">     120030 :     return true;</span>
+<a name="256"><span class="lineNum">     256 </span>            : }</a>
+<span class="lineNum">     257 </span>            : 
+<span class="lineNum">     258 </span><span class="lineCov">     120090 : static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file,</span>
+<span class="lineNum">     259 </span>            :                                         const char *file_path) {
+<span class="lineNum">     260 </span><span class="lineCov">     120090 :     if(!cfg-&gt;permissions) {</span>
+<span class="lineNum">     261 </span><span class="lineCov">     120090 :         return true;</span>
+<span class="lineNum">     262 </span>            :     }
+<span class="lineNum">     263 </span>            : 
+<span class="lineNum">     264 </span><span class="lineNoCov">          0 :     if(g_access(file_path, cfg-&gt;permissions) == -1) {</span>
+<span class="lineNum">     265 </span><span class="lineNoCov">          0 :         FAIL_MSG(&quot;nope: permissions&quot;);</span>
+<span class="lineNum">     266 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     267 </span>            :     }
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span><span class="lineNoCov">          0 :     return true;</span>
+<a name="270"><span class="lineNum">     270 </span>            : }</a>
+<span class="lineNum">     271 </span>            : 
+<span class="lineNum">     272 </span><span class="lineCov">     120090 : static bool rm_parrot_check_crossdev(RmParrot *polly, _U RmFile *file) {</span>
+<span class="lineNum">     273 </span><span class="lineCov">     120090 :     if(polly-&gt;session-&gt;cfg-&gt;crossdev) {</span>
+<span class="lineNum">     274 </span><span class="lineCov">     120090 :         return true;</span>
+<span class="lineNum">     275 </span>            :     }
+<span class="lineNum">     276 </span>            : 
+<span class="lineNum">     277 </span><span class="lineNoCov">          0 :     if(!g_hash_table_contains(polly-&gt;disk_ids, GUINT_TO_POINTER(file-&gt;dev))) {</span>
+<span class="lineNum">     278 </span><span class="lineNoCov">          0 :         FAIL_MSG(&quot;nope: on other device&quot;);</span>
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     280 </span>            :     }
+<span class="lineNum">     281 </span>            : 
+<span class="lineNum">     282 </span><span class="lineNoCov">          0 :     return true;</span>
+<a name="283"><span class="lineNum">     283 </span>            : }</a>
+<span class="lineNum">     284 </span>            : 
+<span class="lineNum">     285 </span><span class="lineCov">     120090 : static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file_path) {</span>
+<span class="lineNum">     286 </span><span class="lineCov">     120090 :     RmCfg *cfg = polly-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     287 </span>            : 
+<span class="lineNum">     288 </span><span class="lineCov">     120090 :     size_t highest_match = 0;</span>
+<span class="lineNum">     289 </span>            : 
+<span class="lineNum">     290 </span>            :     /* Find the highest matching path given on the commandline.
+<span class="lineNum">     291 </span>            :      * If found, the path_index and is_prefd information is taken from it.
+<span class="lineNum">     292 </span>            :      * If not found, the file will be discarded.
+<span class="lineNum">     293 </span>            :      *
+<span class="lineNum">     294 </span>            :      * If this turns out to be an performance problem, we could turn cfg-&gt;paths
+<span class="lineNum">     295 </span>            :      * into a RmTrie and use it to find the longest prefix easily.
+<span class="lineNum">     296 </span>            :      */
+<span class="lineNum">     297 </span><span class="lineCov">     479700 :     for(int i = 0; cfg-&gt;paths[i]; ++i) {</span>
+<span class="lineNum">     298 </span><span class="lineCov">     359610 :         char *path = cfg-&gt;paths[i];</span>
+<span class="lineNum">     299 </span><span class="lineCov">     359610 :         size_t path_len = strlen(path);</span>
+<span class="lineNum">     300 </span>            : 
+<span class="lineNum">     301 </span><span class="lineCov">     359610 :         if(strncmp(file_path, path, path_len) == 0) {</span>
+<span class="lineNum">     302 </span><span class="lineCov">     120150 :             if(path_len &gt; highest_match) {</span>
+<span class="lineNum">     303 </span><span class="lineCov">     120150 :                 highest_match = path_len;</span>
+<span class="lineNum">     304 </span>            : 
+<span class="lineNum">     305 </span><span class="lineCov">     120150 :                 file-&gt;is_prefd = cfg-&gt;is_prefd[i];</span>
+<span class="lineNum">     306 </span><span class="lineCov">     120150 :                 file-&gt;path_index = i;</span>
+<span class="lineNum">     307 </span>            :             }
+<span class="lineNum">     308 </span>            :         }
+<span class="lineNum">     309 </span>            :     }
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span><span class="lineCov">     120090 :     if(highest_match == 0) {</span>
+<span class="lineNum">     312 </span><span class="lineNoCov">          0 :         FAIL_MSG(&quot;nope: no prefix&quot;);</span>
+<span class="lineNum">     313 </span>            :     }
+<span class="lineNum">     314 </span>            : 
+<span class="lineNum">     315 </span><span class="lineCov">     120090 :     return (highest_match &gt; 0);</span>
+<a name="316"><span class="lineNum">     316 </span>            : }</a>
+<span class="lineNum">     317 </span>            : 
+<span class="lineNum">     318 </span><span class="lineCov">     120090 : static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {</span>
+<span class="lineNum">     319 </span><span class="lineCov">     120090 :     switch(file-&gt;lint_type) {</span>
+<span class="lineNum">     320 </span>            :     case RM_LINT_TYPE_DUPE_CANDIDATE:
+<span class="lineNum">     321 </span><span class="lineCov">     120090 :         return cfg-&gt;find_duplicates;</span>
+<span class="lineNum">     322 </span>            :     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+<span class="lineNum">     323 </span><span class="lineNoCov">          0 :         return cfg-&gt;merge_directories;</span>
+<span class="lineNum">     324 </span>            :     case RM_LINT_TYPE_BADLINK:
+<span class="lineNum">     325 </span><span class="lineNoCov">          0 :         return cfg-&gt;find_badlinks;</span>
+<span class="lineNum">     326 </span>            :     case RM_LINT_TYPE_EMPTY_DIR:
+<span class="lineNum">     327 </span><span class="lineNoCov">          0 :         return cfg-&gt;find_emptydirs;</span>
+<span class="lineNum">     328 </span>            :     case RM_LINT_TYPE_EMPTY_FILE:
+<span class="lineNum">     329 </span><span class="lineNoCov">          0 :         return cfg-&gt;find_emptyfiles;</span>
+<span class="lineNum">     330 </span>            :     case RM_LINT_TYPE_NONSTRIPPED:
+<span class="lineNum">     331 </span><span class="lineNoCov">          0 :         return cfg-&gt;find_nonstripped;</span>
+<span class="lineNum">     332 </span>            :     case RM_LINT_TYPE_BADUID:
+<span class="lineNum">     333 </span>            :     case RM_LINT_TYPE_BADGID:
+<span class="lineNum">     334 </span>            :     case RM_LINT_TYPE_BADUGID:
+<span class="lineNum">     335 </span><span class="lineNoCov">          0 :         return cfg-&gt;find_badids;</span>
+<span class="lineNum">     336 </span>            :     case RM_LINT_TYPE_UNFINISHED_CKSUM:
+<span class="lineNum">     337 </span><span class="lineNoCov">          0 :         return cfg-&gt;write_unfinished;</span>
+<span class="lineNum">     338 </span>            :     case RM_LINT_TYPE_UNKNOWN:
+<span class="lineNum">     339 </span>            :     default:
+<span class="lineNum">     340 </span><span class="lineNoCov">          0 :         FAIL_MSG(&quot;nope: invalid lint type.&quot;);</span>
+<span class="lineNum">     341 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     342 </span>            :     }
+<span class="lineNum">     343 </span>            : }
+<span class="lineNum">     344 </span>            : 
+<span class="lineNum">     345 </span>            : /////////////////////////////////////////////
+<span class="lineNum">     346 </span>            : //   GROUPWISE FIXES (SORT, FILTER, ...)   //
+<a name="347"><span class="lineNum">     347 </span>            : /////////////////////////////////////////////</a>
+<span class="lineNum">     348 </span>            : 
+<span class="lineNum">     349 </span><span class="lineCov">      34350 : static void rm_parrot_fix_match_opts(RmParrotCage *cage, GQueue *group) {</span>
+<span class="lineNum">     350 </span><span class="lineCov">      34350 :     RmCfg *cfg = cage-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     351 </span><span class="lineCov">     103020 :     if(!(cfg-&gt;match_with_extension || cfg-&gt;match_without_extension ||</span>
+<span class="lineNum">     352 </span><span class="lineCov">      68670 :          cfg-&gt;match_basename || cfg-&gt;unmatched_basenames)) {</span>
+<span class="lineNum">     353 </span><span class="lineCov">      34290 :         return;</span>
+<span class="lineNum">     354 </span>            :     }
+<span class="lineNum">     355 </span>            : 
+<span class="lineNum">     356 </span>            :     /* That's probably a sucky way to do it, due to n^2,
+<span class="lineNum">     357 </span>            :      * but I doubt that will make a large performance difference.
+<span class="lineNum">     358 </span>            :      */
+<span class="lineNum">     359 </span>            : 
+<span class="lineNum">     360 </span><span class="lineCov">         60 :     GList *iter = group-&gt;head;</span>
+<span class="lineNum">     361 </span><span class="lineCov">        300 :     while(iter) {</span>
+<span class="lineNum">     362 </span><span class="lineCov">        180 :         RmFile *file_a = iter-&gt;data;</span>
+<span class="lineNum">     363 </span><span class="lineCov">        180 :         bool delete = true;</span>
+<span class="lineNum">     364 </span>            : 
+<span class="lineNum">     365 </span><span class="lineCov">        330 :         for(GList *sub_iter = group-&gt;head; sub_iter; sub_iter = sub_iter-&gt;next) {</span>
+<span class="lineNum">     366 </span><span class="lineCov">        300 :             RmFile *file_b = sub_iter-&gt;data;</span>
+<span class="lineNum">     367 </span><span class="lineCov">        300 :             if(file_a == file_b) {</span>
+<span class="lineNum">     368 </span><span class="lineCov">         90 :                 continue;</span>
+<span class="lineNum">     369 </span>            :             }
+<span class="lineNum">     370 </span>            : 
+<span class="lineNum">     371 </span><span class="lineCov">        210 :             if(rm_file_cmp(file_a, file_b) == 0) {</span>
+<span class="lineNum">     372 </span><span class="lineCov">        150 :                 delete = false;</span>
+<span class="lineNum">     373 </span><span class="lineCov">        150 :                 break;</span>
+<span class="lineNum">     374 </span>            :             }
+<span class="lineNum">     375 </span>            :         }
+<span class="lineNum">     376 </span>            : 
+<span class="lineNum">     377 </span>            :         /* Remove this file */
+<span class="lineNum">     378 </span><span class="lineCov">        180 :         if(delete) {</span>
+<span class="lineNum">     379 </span><span class="lineCov">         30 :             GList *tmp = iter;</span>
+<span class="lineNum">     380 </span><span class="lineCov">         30 :             iter = iter-&gt;next;</span>
+<span class="lineNum">     381 </span><span class="lineCov">         30 :             rm_file_destroy(file_a);</span>
+<span class="lineNum">     382 </span><span class="lineCov">         30 :             g_queue_delete_link(group, tmp);</span>
+<span class="lineNum">     383 </span>            :         } else {
+<span class="lineNum">     384 </span><span class="lineCov">        150 :             iter = iter-&gt;next;</span>
+<span class="lineNum">     385 </span>            :         }
+<span class="lineNum">     386 </span>            :     }
+<a name="387"><span class="lineNum">     387 </span>            : }</a>
+<span class="lineNum">     388 </span>            : 
+<span class="lineNum">     389 </span><span class="lineCov">      34350 : static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {</span>
+<span class="lineNum">     390 </span><span class="lineCov">      34350 :     RmCfg *cfg = cage-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     391 </span><span class="lineCov">      34350 :     if(!(cfg-&gt;must_match_tagged || cfg-&gt;must_match_untagged)) {</span>
+<span class="lineNum">     392 </span><span class="lineCov">      34320 :         return;</span>
+<span class="lineNum">     393 </span>            :     }
+<span class="lineNum">     394 </span>            : 
+<span class="lineNum">     395 </span><span class="lineCov">         30 :     bool has_prefd = false, has_non_prefd = false;</span>
+<span class="lineNum">     396 </span>            : 
+<span class="lineNum">     397 </span><span class="lineCov">         60 :     for(GList *iter = group-&gt;head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     398 </span><span class="lineCov">         60 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     399 </span>            : 
+<span class="lineNum">     400 </span><span class="lineCov">         60 :         has_prefd |= file-&gt;is_prefd;</span>
+<span class="lineNum">     401 </span><span class="lineCov">         60 :         has_non_prefd |= !file-&gt;is_prefd;</span>
+<span class="lineNum">     402 </span><span class="lineCov">         60 :         if(has_prefd &amp;&amp; has_non_prefd) {</span>
+<span class="lineNum">     403 </span><span class="lineCov">         30 :             break;</span>
+<span class="lineNum">     404 </span>            :         }
+<span class="lineNum">     405 </span>            :     }
+<span class="lineNum">     406 </span>            : 
+<span class="lineNum">     407 </span><span class="lineCov">         60 :     if((!has_prefd &amp;&amp; cfg-&gt;must_match_tagged) ||</span>
+<span class="lineNum">     408 </span><span class="lineCov">         30 :        (!has_non_prefd &amp;&amp; cfg-&gt;must_match_untagged)) {</span>
+<span class="lineNum">     409 </span><span class="lineNoCov">          0 :         g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);</span>
+<span class="lineNum">     410 </span><span class="lineNoCov">          0 :         g_queue_clear(group);</span>
+<span class="lineNum">     411 </span>            :     }
+<a name="412"><span class="lineNum">     412 </span>            : }</a>
+<span class="lineNum">     413 </span>            : 
+<span class="lineNum">     414 </span><span class="lineCov">     120060 : static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {</span>
+<span class="lineNum">     415 </span><span class="lineCov">     120060 :     RmSession *session = cage-&gt;session;</span>
+<span class="lineNum">     416 </span>            : 
+<span class="lineNum">     417 </span><span class="lineCov">     120060 :     session-&gt;total_files += 1;</span>
+<span class="lineNum">     418 </span><span class="lineCov">     120060 :     if(file-&gt;lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {</span>
+<span class="lineNum">     419 </span><span class="lineCov">     120060 :         session-&gt;dup_group_counter += file-&gt;is_original;</span>
+<span class="lineNum">     420 </span><span class="lineCov">     120060 :         if(!file-&gt;is_original) {</span>
+<span class="lineNum">     421 </span><span class="lineCov">      85710 :             session-&gt;dup_counter += 1;</span>
+<span class="lineNum">     422 </span><span class="lineCov">      85710 :             session-&gt;total_lint_size += file-&gt;file_size;</span>
+<span class="lineNum">     423 </span>            :         }
+<span class="lineNum">     424 </span>            :     } else {
+<span class="lineNum">     425 </span><span class="lineNoCov">          0 :         session-&gt;other_lint_cnt += 1;</span>
+<span class="lineNum">     426 </span>            :     }
+<a name="427"><span class="lineNum">     427 </span><span class="lineCov">     120060 : }</span></a>
+<span class="lineNum">     428 </span>            : 
+<span class="lineNum">     429 </span><span class="lineCov">      34350 : static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {</span>
+<span class="lineNum">     430 </span><span class="lineCov">      34350 :     RmCfg *cfg = cage-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     431 </span>            : 
+<span class="lineNum">     432 </span><span class="lineCov">      34350 :     if(cfg-&gt;filter_mtime) {</span>
+<span class="lineNum">     433 </span><span class="lineNoCov">          0 :         gsize older = 0;</span>
+<span class="lineNum">     434 </span><span class="lineNoCov">          0 :         for(GList *iter = group-&gt;head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     435 </span><span class="lineNoCov">          0 :             RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     436 </span><span class="lineNoCov">          0 :             older += (file-&gt;mtime &gt;= cfg-&gt;min_mtime);</span>
+<span class="lineNum">     437 </span>            :         }
+<span class="lineNum">     438 </span>            : 
+<span class="lineNum">     439 </span><span class="lineNoCov">          0 :         if(older == group-&gt;length) {</span>
+<span class="lineNum">     440 </span><span class="lineNoCov">          0 :             g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);</span>
+<span class="lineNum">     441 </span><span class="lineNoCov">          0 :             g_queue_clear(group);</span>
+<span class="lineNum">     442 </span><span class="lineNoCov">          0 :             return;</span>
+<span class="lineNum">     443 </span>            :         }
+<span class="lineNum">     444 </span>            :     }
+<span class="lineNum">     445 </span>            : 
+<span class="lineNum">     446 </span><span class="lineCov">      34350 :     rm_parrot_fix_match_opts(cage, group);</span>
+<span class="lineNum">     447 </span><span class="lineCov">      34350 :     rm_parrot_fix_must_match_tagged(cage, group);</span>
+<span class="lineNum">     448 </span>            : 
+<span class="lineNum">     449 </span><span class="lineCov">      34350 :     g_queue_sort(group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, cage-&gt;session);</span>
+<span class="lineNum">     450 </span>            : 
+<span class="lineNum">     451 </span><span class="lineCov">     154410 :     for(GList *iter = group-&gt;head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     452 </span><span class="lineCov">     120060 :         RmFile *file = iter-&gt;data;</span>
+<span class="lineNum">     453 </span>            : 
+<span class="lineNum">     454 </span><span class="lineCov">     205770 :         if(file == group-&gt;head-&gt;data || (cfg-&gt;keep_all_tagged &amp;&amp; file-&gt;is_prefd) ||</span>
+<span class="lineNum">     455 </span><span class="lineCov">      85710 :            (cfg-&gt;keep_all_untagged &amp;&amp; !file-&gt;is_prefd)) {</span>
+<span class="lineNum">     456 </span><span class="lineCov">      34350 :             file-&gt;is_original = true;</span>
+<span class="lineNum">     457 </span>            :         } else {
+<span class="lineNum">     458 </span><span class="lineCov">      85710 :             file-&gt;is_original = false;</span>
+<span class="lineNum">     459 </span>            :         }
+<span class="lineNum">     460 </span>            : 
+<span class="lineNum">     461 </span><span class="lineCov">     120060 :         rm_parrot_update_stats(cage, file);</span>
+<span class="lineNum">     462 </span><span class="lineCov">     120060 :         rm_fmt_write(file, cage-&gt;session-&gt;formats, group-&gt;length);</span>
+<span class="lineNum">     463 </span>            :     }
+<span class="lineNum">     464 </span>            : }
+<span class="lineNum">     465 </span>            : 
+<span class="lineNum">     466 </span>            : /////////////////////////////////////////
+<span class="lineNum">     467 </span>            : //  ENTRY POINT TO TRIGGER THE PARROT  //
+<a name="468"><span class="lineNum">     468 </span>            : /////////////////////////////////////////</a>
+<span class="lineNum">     469 </span>            : 
+<span class="lineNum">     470 </span><span class="lineCov">      34380 : static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref,</span>
+<span class="lineNum">     471 </span>            :                                       bool is_last) {
+<span class="lineNum">     472 </span><span class="lineCov">      34380 :     GQueue *group = *group_ref;</span>
+<span class="lineNum">     473 </span><span class="lineCov">      34380 :     if(group-&gt;length &gt; 1) {</span>
+<span class="lineNum">     474 </span><span class="lineCov">      34350 :         g_queue_push_tail(cage-&gt;groups, group);</span>
+<span class="lineNum">     475 </span>            :     } else {
+<span class="lineNum">     476 </span><span class="lineCov">         30 :         g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);</span>
+<span class="lineNum">     477 </span>            :     }
+<span class="lineNum">     478 </span>            : 
+<span class="lineNum">     479 </span><span class="lineCov">      34380 :     if(!is_last) {</span>
+<span class="lineNum">     480 </span><span class="lineCov">      17100 :         *group_ref = g_queue_new();</span>
+<span class="lineNum">     481 </span>            :     }
+<a name="482"><span class="lineNum">     482 </span><span class="lineCov">      34380 : }</span></a>
+<span class="lineNum">     483 </span>            : 
+<span class="lineNum">     484 </span><span class="lineCov">      17280 : bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path) {</span>
+<span class="lineNum">     485 </span><span class="lineCov">      17280 :     GError *error = NULL;</span>
+<span class="lineNum">     486 </span>            : 
+<span class="lineNum">     487 </span><span class="lineCov">      17280 :     rm_log_info_line(_(&quot;Loading json-results `%s'&quot;), json_path);</span>
+<span class="lineNum">     488 </span><span class="lineCov">      17280 :     RmParrot *polly = rm_parrot_open(cage-&gt;session, json_path, &amp;error);</span>
+<span class="lineNum">     489 </span>            : 
+<span class="lineNum">     490 </span><span class="lineCov">      17280 :     if(polly == NULL || error != NULL) {</span>
+<span class="lineNum">     491 </span><span class="lineNoCov">          0 :         rm_log_warning_line(&quot;Error: %s&quot;, error-&gt;message);</span>
+<span class="lineNum">     492 </span><span class="lineNoCov">          0 :         g_error_free(error);</span>
+<span class="lineNum">     493 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     494 </span>            :     }
+<span class="lineNum">     495 </span>            : 
+<span class="lineNum">     496 </span><span class="lineCov">      17280 :     RmCfg *cfg = cage-&gt;session-&gt;cfg;</span>
+<span class="lineNum">     497 </span><span class="lineCov">      17280 :     GQueue *group = g_queue_new();</span>
+<span class="lineNum">     498 </span><span class="lineCov">      17280 :     RmDigest *last_digest = NULL;</span>
+<span class="lineNum">     499 </span>            : 
+<span class="lineNum">     500 </span>            :     /* group of files; first group is &quot;other lint&quot; */
+<span class="lineNum">     501 </span><span class="lineCov">     171990 :     while(rm_parrot_has_next(polly)) {</span>
+<span class="lineNum">     502 </span><span class="lineCov">     137430 :         RmFile *file = rm_parrot_next(polly);</span>
+<span class="lineNum">     503 </span><span class="lineCov">     137430 :         if(file == NULL) {</span>
+<span class="lineNum">     504 </span><span class="lineCov">      34620 :             continue;</span>
+<span class="lineNum">     505 </span>            :         }
+<span class="lineNum">     506 </span>            : 
+<span class="lineNum">     507 </span><span class="lineCov">     120150 :         RM_DEFINE_PATH(file);</span>
+<span class="lineNum">     508 </span><span class="lineCov">     120150 :         rm_log_debug(&quot;Checking `%s`: &quot;, file_path);</span>
+<span class="lineNum">     509 </span>            : 
+<span class="lineNum">     510 </span>            :         /* Check --size, --perms, --hidden */
+<span class="lineNum">     511 </span><span class="lineCov">     360390 :         if(!(rm_parrot_check_depth(cfg, file) &amp;&amp; rm_parrot_check_size(cfg, file) &amp;&amp;</span>
+<span class="lineNum">     512 </span><span class="lineCov">     240240 :              rm_parrot_check_hidden(cfg, file, file_path) &amp;&amp;</span>
+<span class="lineNum">     513 </span><span class="lineCov">     240180 :              rm_parrot_check_permissions(cfg, file, file_path) &amp;&amp;</span>
+<span class="lineNum">     514 </span><span class="lineCov">     360270 :              rm_parrot_check_types(cfg, file) &amp;&amp; rm_parrot_check_crossdev(polly, file) &amp;&amp;</span>
+<span class="lineNum">     515 </span><span class="lineCov">     120090 :              rm_parrot_check_path(polly, file, file_path))) {</span>
+<span class="lineNum">     516 </span><span class="lineCov">         60 :             rm_file_destroy(file);</span>
+<span class="lineNum">     517 </span><span class="lineCov">         60 :             continue;</span>
+<span class="lineNum">     518 </span>            :         }
+<span class="lineNum">     519 </span>            : 
+<span class="lineNum">     520 </span><span class="lineCov">     120090 :         if(last_digest == NULL) {</span>
+<span class="lineNum">     521 </span><span class="lineCov">      17250 :             last_digest = rm_digest_copy(file-&gt;digest);</span>
+<span class="lineNum">     522 </span>            :         }
+<span class="lineNum">     523 </span>            : 
+<span class="lineNum">     524 </span><span class="lineCov">     120090 :         rm_log_debug(&quot;[okay]\n&quot;);</span>
+<span class="lineNum">     525 </span>            : 
+<span class="lineNum">     526 </span><span class="lineCov">     120090 :         if(!rm_digest_equal(file-&gt;digest, last_digest)) {</span>
+<span class="lineNum">     527 </span><span class="lineCov">      17100 :             rm_digest_free(last_digest);</span>
+<span class="lineNum">     528 </span><span class="lineCov">      17100 :             last_digest = rm_digest_copy(file-&gt;digest);</span>
+<span class="lineNum">     529 </span><span class="lineCov">      17100 :             rm_parrot_cage_push_group(cage, &amp;group, false);</span>
+<span class="lineNum">     530 </span>            :         }
+<span class="lineNum">     531 </span>            : 
+<span class="lineNum">     532 </span><span class="lineCov">     120090 :         g_queue_push_tail(group, file);</span>
+<span class="lineNum">     533 </span>            :     }
+<span class="lineNum">     534 </span>            : 
+<span class="lineNum">     535 </span><span class="lineCov">      17280 :     rm_parrot_cage_push_group(cage, &amp;group, true);</span>
+<span class="lineNum">     536 </span><span class="lineCov">      17280 :     rm_parrot_close(polly);</span>
+<span class="lineNum">     537 </span><span class="lineCov">      17280 :     return true;</span>
+<a name="538"><span class="lineNum">     538 </span>            : }</a>
+<span class="lineNum">     539 </span>            : 
+<span class="lineNum">     540 </span><span class="lineCov">      17280 : void rm_parrot_cage_open(RmParrotCage *cage, RmSession *session) {</span>
+<span class="lineNum">     541 </span><span class="lineCov">      17280 :     cage-&gt;session = session;</span>
+<span class="lineNum">     542 </span><span class="lineCov">      17280 :     cage-&gt;groups = g_queue_new();</span>
+<a name="543"><span class="lineNum">     543 </span><span class="lineCov">      17280 : }</span></a>
+<span class="lineNum">     544 </span>            : 
+<span class="lineNum">     545 </span><span class="lineCov">      17280 : void rm_parrot_cage_close(RmParrotCage *cage) {</span>
+<span class="lineNum">     546 </span><span class="lineCov">      51630 :     for(GList *iter = cage-&gt;groups-&gt;head; iter; iter = iter-&gt;next) {</span>
+<span class="lineNum">     547 </span><span class="lineCov">      34350 :         GQueue *group = iter-&gt;data;</span>
+<span class="lineNum">     548 </span><span class="lineCov">      34350 :         if(group-&gt;length &gt; 1) {</span>
+<span class="lineNum">     549 </span><span class="lineCov">      34350 :             rm_parrot_write_group(cage, group);</span>
+<span class="lineNum">     550 </span>            :         } else {
+<span class="lineNum">     551 </span><span class="lineNoCov">          0 :             g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);</span>
+<span class="lineNum">     552 </span>            :         }
+<span class="lineNum">     553 </span>            :     }
+<span class="lineNum">     554 </span>            : 
+<span class="lineNum">     555 </span><span class="lineCov">      17280 :     g_queue_free_full(cage-&gt;groups, (GDestroyNotify)g_queue_free);</span>
+<span class="lineNum">     556 </span><span class="lineCov">      17280 : }</span>
+<span class="lineNum">     557 </span>            : 
+<span class="lineNum">     558 </span>            : #else
+<span class="lineNum">     559 </span>            : 
+<span class="lineNum">     560 </span>            : bool rm_parrot_cage_load(_U RmParrotCage *cage, _U const char *json_path) {
+<span class="lineNum">     561 </span>            :     return false;
+<span class="lineNum">     562 </span>            : }
+<span class="lineNum">     563 </span>            : 
+<span class="lineNum">     564 </span>            : void rm_parrot_cage_open(_U RmParrotCage *cage, _U RmSession *session) {
+<span class="lineNum">     565 </span>            :     rm_log_error_line(_(&quot;json-glib is needed for using --replay.&quot;));
+<span class="lineNum">     566 </span>            :     rm_log_error_line(_(&quot;Please recompile `rmlint` with it installed.&quot;));
+<span class="lineNum">     567 </span>            : }
+<span class="lineNum">     568 </span>            : 
+<span class="lineNum">     569 </span>            : void rm_parrot_cage_close(_U RmParrotCage *cage) {
+<span class="lineNum">     570 </span>            : }
+<span class="lineNum">     571 </span>            : 
+<span class="lineNum">     572 </span>            : #endif
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

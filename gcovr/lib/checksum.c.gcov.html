@@ -1,0 +1,926 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/checksum.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - checksum.c<span style="font-size: 80%;"> (source / <a href="checksum.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">375</td>
+            <td class="headerCovTableEntry">405</td>
+            <td class="headerCovTableEntryHi">92.6 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-10-25 15:30:11</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">26</td>
+            <td class="headerCovTableEntry">27</td>
+            <td class="headerCovTableEntryHi">96.3 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            :  *  This file is part of rmlint.
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            :  *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            :  *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            :  *  (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            :  *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            :  *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  *
+<span class="lineNum">      17 </span>            :  * Authors:
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            :  *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            :  *
+<span class="lineNum">      22 </span>            :  * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            :  *
+<span class="lineNum">      24 </span>            :  */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #include &lt;stdio.h&gt;
+<span class="lineNum">      27 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      28 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      29 </span>            : 
+<span class="lineNum">      30 </span>            : #include &lt;sys/mman.h&gt;
+<span class="lineNum">      31 </span>            : #include &lt;sys/stat.h&gt;
+<span class="lineNum">      32 </span>            : #include &lt;unistd.h&gt;
+<span class="lineNum">      33 </span>            : #include &lt;fcntl.h&gt;
+<span class="lineNum">      34 </span>            : 
+<span class="lineNum">      35 </span>            : #include &quot;checksum.h&quot;
+<span class="lineNum">      36 </span>            : 
+<span class="lineNum">      37 </span>            : #include &quot;checksums/city.h&quot;
+<span class="lineNum">      38 </span>            : #include &quot;checksums/citycrc.h&quot;
+<span class="lineNum">      39 </span>            : #include &quot;checksums/murmur3.h&quot;
+<span class="lineNum">      40 </span>            : #include &quot;checksums/spooky-c.h&quot;
+<span class="lineNum">      41 </span>            : #include &quot;checksums/cfarmhash.h&quot;
+<span class="lineNum">      42 </span>            : #include &quot;checksums/xxhash/xxhash.h&quot;
+<span class="lineNum">      43 </span>            : 
+<span class="lineNum">      44 </span>            : #define _RM_CHECKSUM_DEBUG 0
+<span class="lineNum">      45 </span>            : 
+<span class="lineNum">      46 </span>            : ///////////////////////////////////////
+<span class="lineNum">      47 </span>            : //    BUFFER POOL IMPLEMENTATION     //
+<a name="48"><span class="lineNum">      48 </span>            : ///////////////////////////////////////</a>
+<span class="lineNum">      49 </span>            : 
+<span class="lineNum">      50 </span><span class="lineCov">        150 : RmOff rm_buffer_size(RmBufferPool *pool) {</span>
+<span class="lineNum">      51 </span><span class="lineCov">        150 :     return pool-&gt;buffer_size;</span>
+<a name="52"><span class="lineNum">      52 </span>            : }</a>
+<span class="lineNum">      53 </span>            : 
+<span class="lineNum">      54 </span><span class="lineCov">     297640 : RmBuffer *rm_buffer_new(RmBufferPool *pool) {</span>
+<span class="lineNum">      55 </span><span class="lineCov">     297640 :     RmBuffer *self = g_slice_new0(RmBuffer);</span>
+<span class="lineNum">      56 </span><span class="lineCov">     297640 :     self-&gt;pool = pool;</span>
+<span class="lineNum">      57 </span><span class="lineCov">     297640 :     self-&gt;data = g_slice_alloc(pool-&gt;buffer_size);</span>
+<span class="lineNum">      58 </span><span class="lineCov">     297640 :     return self;</span>
+<a name="59"><span class="lineNum">      59 </span>            : }</a>
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span><span class="lineCov">     297566 : static void rm_buffer_free(RmBuffer *buf) {</span>
+<span class="lineNum">      62 </span><span class="lineCov">     297566 :     g_slice_free1(buf-&gt;pool-&gt;buffer_size, buf-&gt;data);</span>
+<span class="lineNum">      63 </span><span class="lineCov">     297566 :     g_slice_free(RmBuffer, buf);</span>
+<a name="64"><span class="lineNum">      64 </span><span class="lineCov">     297566 : }</span></a>
+<span class="lineNum">      65 </span>            : 
+<span class="lineNum">      66 </span><span class="lineCov">      38836 : RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_kept_mem) {</span>
+<span class="lineNum">      67 </span><span class="lineCov">      38836 :     RmBufferPool *self = g_slice_new(RmBufferPool);</span>
+<span class="lineNum">      68 </span><span class="lineCov">      38836 :     self-&gt;stack = NULL;</span>
+<span class="lineNum">      69 </span><span class="lineCov">      38836 :     self-&gt;buffer_size = buffer_size;</span>
+<span class="lineNum">      70 </span><span class="lineCov">      38836 :     self-&gt;avail_buffers = MAX(max_mem / buffer_size, 1);</span>
+<span class="lineNum">      71 </span><span class="lineCov">      38836 :     self-&gt;min_kept_buffers = self-&gt;avail_buffers;</span>
+<span class="lineNum">      72 </span><span class="lineCov">      38836 :     self-&gt;max_kept_buffers = MAX(max_kept_mem / buffer_size, 1);</span>
+<span class="lineNum">      73 </span><span class="lineCov">      38836 :     self-&gt;kept_buffers = 0;</span>
+<span class="lineNum">      74 </span>            : 
+<span class="lineNum">      75 </span><span class="lineCov">      38836 :     rm_log_debug_line(&quot;rm_buffer_pool_init: allocated max %&quot; G_GSIZE_FORMAT</span>
+<span class="lineNum">      76 </span>            :                       &quot; buffers of %&quot; G_GSIZE_FORMAT &quot; bytes each&quot;,
+<span class="lineNum">      77 </span>            :                       self-&gt;avail_buffers, self-&gt;buffer_size);
+<span class="lineNum">      78 </span><span class="lineCov">      38836 :     g_cond_init(&amp;self-&gt;change);</span>
+<span class="lineNum">      79 </span><span class="lineCov">      38836 :     g_mutex_init(&amp;self-&gt;lock);</span>
+<span class="lineNum">      80 </span><span class="lineCov">      38836 :     return self;</span>
+<a name="81"><span class="lineNum">      81 </span>            : }</a>
+<span class="lineNum">      82 </span>            : 
+<span class="lineNum">      83 </span><span class="lineCov">      38836 : void rm_buffer_pool_destroy(RmBufferPool *pool) {</span>
+<span class="lineNum">      84 </span><span class="lineCov">      38836 :     rm_log_debug_line(&quot;had %&quot; G_GSIZE_FORMAT &quot; unused read buffers&quot;,</span>
+<span class="lineNum">      85 </span>            :                       pool-&gt;min_kept_buffers);
+<span class="lineNum">      86 </span>            : 
+<span class="lineNum">      87 </span>            :     /* Wait for all buffers to come back */
+<span class="lineNum">      88 </span><span class="lineCov">      38836 :     g_mutex_lock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">      89 </span>            :     {
+<span class="lineNum">      90 </span>            :         /* Free 'em */
+<span class="lineNum">      91 </span><span class="lineCov">      38836 :         g_slist_free_full(pool-&gt;stack, (GDestroyNotify)rm_buffer_free);</span>
+<span class="lineNum">      92 </span>            :     }
+<span class="lineNum">      93 </span><span class="lineCov">      38836 :     g_mutex_unlock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">      94 </span>            : 
+<span class="lineNum">      95 </span><span class="lineCov">      38836 :     g_mutex_clear(&amp;pool-&gt;lock);</span>
+<span class="lineNum">      96 </span><span class="lineCov">      38836 :     g_cond_clear(&amp;pool-&gt;change);</span>
+<span class="lineNum">      97 </span><span class="lineCov">      38836 :     g_slice_free(RmBufferPool, pool);</span>
+<a name="98"><span class="lineNum">      98 </span><span class="lineCov">      38836 : }</span></a>
+<span class="lineNum">      99 </span>            : 
+<span class="lineNum">     100 </span><span class="lineCov">     790864 : RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {</span>
+<span class="lineNum">     101 </span><span class="lineCov">     790864 :     RmBuffer *buffer = NULL;</span>
+<span class="lineNum">     102 </span><span class="lineCov">     790864 :     g_mutex_lock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">     103 </span>            :     {
+<span class="lineNum">     104 </span><span class="lineCov">    2373900 :         while(!buffer) {</span>
+<span class="lineNum">     105 </span><span class="lineCov">     791388 :             if(pool-&gt;stack) {</span>
+<span class="lineNum">     106 </span><span class="lineCov">     493616 :                 buffer = pool-&gt;stack-&gt;data;</span>
+<span class="lineNum">     107 </span><span class="lineCov">     493616 :                 pool-&gt;stack = g_slist_delete_link(pool-&gt;stack, pool-&gt;stack);</span>
+<span class="lineNum">     108 </span><span class="lineCov">     297772 :             } else if(pool-&gt;avail_buffers &gt; 0) {</span>
+<span class="lineNum">     109 </span><span class="lineCov">     297640 :                 buffer = rm_buffer_new(pool);</span>
+<span class="lineNum">     110 </span>            :             } else {
+<span class="lineNum">     111 </span><span class="lineCov">        132 :                 if(!pool-&gt;mem_warned) {</span>
+<span class="lineNum">     112 </span><span class="lineCov">          2 :                     rm_log_warning_line(</span>
+<span class="lineNum">     113 </span>            :                         &quot;read buffer limit reached - waiting for &quot;
+<span class="lineNum">     114 </span>            :                         &quot;processing to catch up&quot;);
+<span class="lineNum">     115 </span><span class="lineCov">          2 :                     pool-&gt;mem_warned = true;</span>
+<span class="lineNum">     116 </span>            :                 }
+<span class="lineNum">     117 </span><span class="lineCov">        132 :                 g_cond_wait(&amp;pool-&gt;change, &amp;pool-&gt;lock);</span>
+<span class="lineNum">     118 </span>            :             }
+<span class="lineNum">     119 </span>            :         }
+<span class="lineNum">     120 </span><span class="lineCov">     791256 :         pool-&gt;avail_buffers--;</span>
+<span class="lineNum">     121 </span>            : 
+<span class="lineNum">     122 </span><span class="lineCov">     791256 :         if(pool-&gt;avail_buffers &lt; pool-&gt;min_kept_buffers) {</span>
+<span class="lineNum">     123 </span><span class="lineCov">     293581 :             pool-&gt;min_kept_buffers = pool-&gt;avail_buffers;</span>
+<span class="lineNum">     124 </span>            :         }
+<span class="lineNum">     125 </span>            :     }
+<span class="lineNum">     126 </span><span class="lineCov">     791256 :     g_mutex_unlock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span><span class="lineCov">     791211 :     rm_assert_gentle(buffer);</span>
+<span class="lineNum">     129 </span><span class="lineCov">     791172 :     return buffer;</span>
+<a name="130"><span class="lineNum">     130 </span>            : }</a>
+<span class="lineNum">     131 </span>            : 
+<span class="lineNum">     132 </span><span class="lineCov">     770613 : void rm_buffer_pool_release(RmBuffer *buf) {</span>
+<span class="lineNum">     133 </span><span class="lineCov">     770613 :     RmBufferPool *pool = buf-&gt;pool;</span>
+<span class="lineNum">     134 </span><span class="lineCov">     770613 :     g_mutex_lock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">     135 </span>            :     {
+<span class="lineNum">     136 </span><span class="lineCov">     771486 :         pool-&gt;avail_buffers++;</span>
+<span class="lineNum">     137 </span><span class="lineCov">     771486 :         g_cond_signal(&amp;pool-&gt;change);</span>
+<span class="lineNum">     138 </span><span class="lineCov">     771486 :         pool-&gt;stack = g_slist_prepend(pool-&gt;stack, buf);</span>
+<span class="lineNum">     139 </span>            :     }
+<span class="lineNum">     140 </span><span class="lineCov">     771486 :     g_mutex_unlock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">     141 </span><span class="lineCov">     771237 : }</span>
+<a name="142"><span class="lineNum">     142 </span>            : </a>
+<span class="lineNum">     143 </span>            : /* make another buffer available if one is being kept (in paranoid digest) */
+<span class="lineNum">     144 </span><span class="lineCov">      19764 : static void rm_buffer_pool_signal_keeping(_U RmBuffer *buf) {</span>
+<span class="lineNum">     145 </span><span class="lineCov">      19764 :     RmBufferPool *pool = buf-&gt;pool;</span>
+<span class="lineNum">     146 </span>            : 
+<span class="lineNum">     147 </span><span class="lineCov">      19764 :     g_mutex_lock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">     148 </span>            :     {
+<span class="lineNum">     149 </span><span class="lineCov">      19770 :         pool-&gt;avail_buffers++;</span>
+<span class="lineNum">     150 </span><span class="lineCov">      19770 :         pool-&gt;kept_buffers++;</span>
+<span class="lineNum">     151 </span><span class="lineCov">      19770 :         g_cond_signal(&amp;pool-&gt;change);</span>
+<span class="lineNum">     152 </span>            :     }
+<span class="lineNum">     153 </span><span class="lineCov">      19770 :     g_mutex_unlock(&amp;pool-&gt;lock);</span>
+<a name="154"><span class="lineNum">     154 </span><span class="lineCov">      19769 : }</span></a>
+<span class="lineNum">     155 </span>            : 
+<span class="lineNum">     156 </span><span class="lineCov">      19695 : static void rm_buffer_pool_release_kept(RmBuffer *buf) {</span>
+<span class="lineNum">     157 </span><span class="lineCov">      19695 :     RmBufferPool *pool = buf-&gt;pool;</span>
+<span class="lineNum">     158 </span><span class="lineCov">      19695 :     g_mutex_lock(&amp;pool-&gt;lock);</span>
+<span class="lineNum">     159 </span>            :     {
+<span class="lineNum">     160 </span><span class="lineCov">      19696 :         if(pool-&gt;kept_buffers &gt; pool-&gt;max_kept_buffers) {</span>
+<span class="lineNum">     161 </span><span class="lineNoCov">          0 :             rm_buffer_free(buf);</span>
+<span class="lineNum">     162 </span>            :         } else {
+<span class="lineNum">     163 </span><span class="lineCov">      19696 :             pool-&gt;stack = g_slist_prepend(pool-&gt;stack, buf);</span>
+<span class="lineNum">     164 </span>            :         }
+<span class="lineNum">     165 </span><span class="lineCov">      19696 :         pool-&gt;kept_buffers--;</span>
+<span class="lineNum">     166 </span><span class="lineCov">      19696 :         g_cond_signal(&amp;pool-&gt;change);</span>
+<span class="lineNum">     167 </span>            :     }
+<span class="lineNum">     168 </span><span class="lineCov">      19696 :     g_mutex_unlock(&amp;pool-&gt;lock);</span>
+<a name="169"><span class="lineNum">     169 </span><span class="lineCov">      19696 : }</span></a>
+<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     171 </span><span class="lineCov">      14825 : static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {</span>
+<span class="lineNum">     172 </span><span class="lineCov">      14825 :     return (a-&gt;len == b-&gt;len &amp;&amp; memcmp(a-&gt;data, b-&gt;data, a-&gt;len) == 0);</span>
+<span class="lineNum">     173 </span>            : }
+<span class="lineNum">     174 </span>            : 
+<span class="lineNum">     175 </span>            : ///////////////////////////////////////
+<span class="lineNum">     176 </span>            : //      RMDIGEST IMPLEMENTATION      //
+<a name="177"><span class="lineNum">     177 </span>            : ///////////////////////////////////////</a>
+<span class="lineNum">     178 </span>            : 
+<span class="lineNum">     179 </span><span class="lineCov">      33930 : RmDigestType rm_string_to_digest_type(const char *string) {</span>
+<span class="lineNum">     180 </span><span class="lineCov">      33930 :     if(string == NULL) {</span>
+<span class="lineNum">     181 </span><span class="lineNoCov">          0 :         return RM_DIGEST_UNKNOWN;</span>
+<span class="lineNum">     182 </span><span class="lineCov">      33930 :     } else if(!strcasecmp(string, &quot;md5&quot;)) {</span>
+<span class="lineNum">     183 </span><span class="lineCov">       1885 :         return RM_DIGEST_MD5;</span>
+<span class="lineNum">     184 </span>            : #if HAVE_SHA512
+<span class="lineNum">     185 </span><span class="lineCov">      32045 :     } else if(!strcasecmp(string, &quot;sha512&quot;)) {</span>
+<span class="lineNum">     186 </span><span class="lineCov">       1885 :         return RM_DIGEST_SHA512;</span>
+<span class="lineNum">     187 </span>            : #endif
+<span class="lineNum">     188 </span><span class="lineCov">      30160 :     } else if(!strcasecmp(string, &quot;city512&quot;)) {</span>
+<span class="lineNum">     189 </span><span class="lineCov">       1885 :         return RM_DIGEST_CITY512;</span>
+<span class="lineNum">     190 </span><span class="lineCov">      28275 :     } else if(!strcasecmp(string, &quot;xxhash&quot;)) {</span>
+<span class="lineNum">     191 </span><span class="lineCov">       1885 :         return RM_DIGEST_XXHASH;</span>
+<span class="lineNum">     192 </span><span class="lineCov">      26390 :     } else if(!strcasecmp(string, &quot;farmhash&quot;)) {</span>
+<span class="lineNum">     193 </span><span class="lineCov">       1885 :         return RM_DIGEST_XXHASH;</span>
+<span class="lineNum">     194 </span><span class="lineCov">      24505 :     } else if(!strcasecmp(string, &quot;murmur512&quot;)) {</span>
+<span class="lineNum">     195 </span><span class="lineCov">       1885 :         return RM_DIGEST_MURMUR512;</span>
+<span class="lineNum">     196 </span><span class="lineCov">      22620 :     } else if(!strcasecmp(string, &quot;sha256&quot;)) {</span>
+<span class="lineNum">     197 </span><span class="lineCov">       1885 :         return RM_DIGEST_SHA256;</span>
+<span class="lineNum">     198 </span><span class="lineCov">      20735 :     } else if(!strcasecmp(string, &quot;city256&quot;)) {</span>
+<span class="lineNum">     199 </span><span class="lineCov">       1885 :         return RM_DIGEST_CITY256;</span>
+<span class="lineNum">     200 </span><span class="lineCov">      18850 :     } else if(!strcasecmp(string, &quot;murmur256&quot;)) {</span>
+<span class="lineNum">     201 </span><span class="lineCov">       1885 :         return RM_DIGEST_MURMUR256;</span>
+<span class="lineNum">     202 </span><span class="lineCov">      16965 :     } else if(!strcasecmp(string, &quot;sha1&quot;)) {</span>
+<span class="lineNum">     203 </span><span class="lineCov">       1885 :         return RM_DIGEST_SHA1;</span>
+<span class="lineNum">     204 </span><span class="lineCov">      15080 :     } else if(!strcasecmp(string, &quot;spooky32&quot;)) {</span>
+<span class="lineNum">     205 </span><span class="lineCov">       1885 :         return RM_DIGEST_SPOOKY32;</span>
+<span class="lineNum">     206 </span><span class="lineCov">      13195 :     } else if(!strcasecmp(string, &quot;spooky64&quot;)) {</span>
+<span class="lineNum">     207 </span><span class="lineCov">       1885 :         return RM_DIGEST_SPOOKY64;</span>
+<span class="lineNum">     208 </span><span class="lineCov">      11310 :     } else if(!strcasecmp(string, &quot;murmur&quot;) || !strcasecmp(string, &quot;murmur128&quot;)) {</span>
+<span class="lineNum">     209 </span><span class="lineCov">       1885 :         return RM_DIGEST_MURMUR;</span>
+<span class="lineNum">     210 </span><span class="lineCov">       9425 :     } else if(!strcasecmp(string, &quot;spooky&quot;) || !strcasecmp(string, &quot;spooky128&quot;)) {</span>
+<span class="lineNum">     211 </span><span class="lineCov">       1885 :         return RM_DIGEST_SPOOKY;</span>
+<span class="lineNum">     212 </span><span class="lineCov">       7540 :     } else if(!strcasecmp(string, &quot;city&quot;) || !strcasecmp(string, &quot;city128&quot;)) {</span>
+<span class="lineNum">     213 </span><span class="lineCov">       1885 :         return RM_DIGEST_CITY;</span>
+<span class="lineNum">     214 </span><span class="lineCov">       5655 :     } else if(!strcasecmp(string, &quot;bastard&quot;) || !strcasecmp(string, &quot;bastard256&quot;)) {</span>
+<span class="lineNum">     215 </span><span class="lineCov">       1885 :         return RM_DIGEST_BASTARD;</span>
+<span class="lineNum">     216 </span><span class="lineCov">       3770 :     } else if(!strcasecmp(string, &quot;ext&quot;)) {</span>
+<span class="lineNum">     217 </span><span class="lineNoCov">          0 :         return RM_DIGEST_EXT;</span>
+<span class="lineNum">     218 </span><span class="lineCov">       3770 :     } else if(!strcasecmp(string, &quot;cumulative&quot;)) {</span>
+<span class="lineNum">     219 </span><span class="lineNoCov">          0 :         return RM_DIGEST_CUMULATIVE;</span>
+<span class="lineNum">     220 </span><span class="lineCov">       3770 :     } else if(!strcasecmp(string, &quot;paranoid&quot;)) {</span>
+<span class="lineNum">     221 </span><span class="lineCov">       3770 :         return RM_DIGEST_PARANOID;</span>
+<span class="lineNum">     222 </span>            :     } else {
+<span class="lineNum">     223 </span><span class="lineNoCov">          0 :         return RM_DIGEST_UNKNOWN;</span>
+<span class="lineNum">     224 </span>            :     }
+<a name="225"><span class="lineNum">     225 </span>            : }</a>
+<span class="lineNum">     226 </span>            : 
+<span class="lineNum">     227 </span><span class="lineCov">      77496 : const char *rm_digest_type_to_string(RmDigestType type) {</span>
+<span class="lineNum">     228 </span>            :     static const char *names[] = {[RM_DIGEST_UNKNOWN] = &quot;unknown&quot;,
+<span class="lineNum">     229 </span>            :                                   [RM_DIGEST_MURMUR] = &quot;murmur&quot;,
+<span class="lineNum">     230 </span>            :                                   [RM_DIGEST_SPOOKY] = &quot;spooky&quot;,
+<span class="lineNum">     231 </span>            :                                   [RM_DIGEST_SPOOKY32] = &quot;spooky32&quot;,
+<span class="lineNum">     232 </span>            :                                   [RM_DIGEST_SPOOKY64] = &quot;spooky64&quot;,
+<span class="lineNum">     233 </span>            :                                   [RM_DIGEST_CITY] = &quot;city&quot;,
+<span class="lineNum">     234 </span>            :                                   [RM_DIGEST_MD5] = &quot;md5&quot;,
+<span class="lineNum">     235 </span>            :                                   [RM_DIGEST_SHA1] = &quot;sha1&quot;,
+<span class="lineNum">     236 </span>            :                                   [RM_DIGEST_SHA256] = &quot;sha256&quot;,
+<span class="lineNum">     237 </span>            :                                   [RM_DIGEST_SHA512] = &quot;sha512&quot;,
+<span class="lineNum">     238 </span>            :                                   [RM_DIGEST_MURMUR256] = &quot;murmur256&quot;,
+<span class="lineNum">     239 </span>            :                                   [RM_DIGEST_CITY256] = &quot;city256&quot;,
+<span class="lineNum">     240 </span>            :                                   [RM_DIGEST_BASTARD] = &quot;bastard&quot;,
+<span class="lineNum">     241 </span>            :                                   [RM_DIGEST_MURMUR512] = &quot;murmur512&quot;,
+<span class="lineNum">     242 </span>            :                                   [RM_DIGEST_CITY512] = &quot;city512&quot;,
+<span class="lineNum">     243 </span>            :                                   [RM_DIGEST_EXT] = &quot;ext&quot;,
+<span class="lineNum">     244 </span>            :                                   [RM_DIGEST_CUMULATIVE] = &quot;cumulative&quot;,
+<span class="lineNum">     245 </span>            :                                   [RM_DIGEST_PARANOID] = &quot;paranoid&quot;,
+<span class="lineNum">     246 </span>            :                                   [RM_DIGEST_FARMHASH] = &quot;farmhash&quot;,
+<span class="lineNum">     247 </span>            :                                   [RM_DIGEST_XXHASH] = &quot;xxhash&quot;};
+<span class="lineNum">     248 </span>            : 
+<span class="lineNum">     249 </span><span class="lineCov">      77496 :     return names[MIN(type, sizeof(names) / sizeof(names[0]))];</span>
+<a name="250"><span class="lineNum">     250 </span>            : }</a>
+<span class="lineNum">     251 </span>            : 
+<span class="lineNum">     252 </span><span class="lineNoCov">          0 : int rm_digest_type_to_multihash_id(RmDigestType type) {</span>
+<span class="lineNum">     253 </span>            :     static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,  [RM_DIGEST_MURMUR] = 17,
+<span class="lineNum">     254 </span>            :                         [RM_DIGEST_SPOOKY] = 14,   [RM_DIGEST_SPOOKY32] = 16,
+<span class="lineNum">     255 </span>            :                         [RM_DIGEST_SPOOKY64] = 18, [RM_DIGEST_CITY] = 15,
+<span class="lineNum">     256 </span>            :                         [RM_DIGEST_MD5] = 1,       [RM_DIGEST_SHA1] = 2,
+<span class="lineNum">     257 </span>            :                         [RM_DIGEST_SHA256] = 4,    [RM_DIGEST_SHA512] = 6,
+<span class="lineNum">     258 </span>            :                         [RM_DIGEST_MURMUR256] = 7, [RM_DIGEST_CITY256] = 8,
+<span class="lineNum">     259 </span>            :                         [RM_DIGEST_BASTARD] = 9,   [RM_DIGEST_MURMUR512] = 10,
+<span class="lineNum">     260 </span>            :                         [RM_DIGEST_CITY512] = 11,  [RM_DIGEST_EXT] = 12,
+<span class="lineNum">     261 </span>            :                         [RM_DIGEST_FARMHASH] = 19, [RM_DIGEST_CUMULATIVE] = 13,
+<span class="lineNum">     262 </span>            :                         [RM_DIGEST_PARANOID] = 14};
+<span class="lineNum">     263 </span>            : 
+<span class="lineNum">     264 </span><span class="lineNoCov">          0 :     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];</span>
+<span class="lineNum">     265 </span>            : }
+<span class="lineNum">     266 </span>            : 
+<span class="lineNum">     267 </span>            : #define ADD_SEED(digest, seed)                                              \
+<span class="lineNum">     268 </span>            :     {                                                                       \
+<span class="lineNum">     269 </span>            :         if(seed) {                                                          \
+<span class="lineNum">     270 </span>            :             g_checksum_update(digest-&gt;glib_checksum, (const guchar *)&amp;seed, \
+<span class="lineNum">     271 </span>            :                               sizeof(RmOff));                               \
+<span class="lineNum">     272 </span>            :         }                                                                   \
+<a name="273"><span class="lineNum">     273 </span>            :     }</a>
+<span class="lineNum">     274 </span>            : 
+<span class="lineNum">     275 </span><span class="lineCov">     418469 : RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,</span>
+<span class="lineNum">     276 </span>            :                         bool use_shadow_hash) {
+<span class="lineNum">     277 </span><span class="lineCov">     418469 :     RmDigest *digest = g_slice_new0(RmDigest);</span>
+<span class="lineNum">     278 </span>            : 
+<span class="lineNum">     279 </span><span class="lineCov">     418473 :     digest-&gt;checksum = NULL;</span>
+<span class="lineNum">     280 </span><span class="lineCov">     418473 :     digest-&gt;type = type;</span>
+<span class="lineNum">     281 </span><span class="lineCov">     418473 :     digest-&gt;bytes = 0;</span>
+<span class="lineNum">     282 </span>            : 
+<span class="lineNum">     283 </span><span class="lineCov">     418473 :     switch(type) {</span>
+<span class="lineNum">     284 </span>            :     case RM_DIGEST_SPOOKY32:
+<span class="lineNum">     285 </span>            :         /* cannot go lower than 64, since we read 8 byte in some places.
+<span class="lineNum">     286 </span>            :          * simulate by leaving the part at the end empty
+<span class="lineNum">     287 </span>            :          */
+<span class="lineNum">     288 </span><span class="lineCov">       7885 :         digest-&gt;bytes = 64 / 8;</span>
+<span class="lineNum">     289 </span><span class="lineCov">       7885 :         break;</span>
+<span class="lineNum">     290 </span>            :     case RM_DIGEST_XXHASH:
+<span class="lineNum">     291 </span>            :     case RM_DIGEST_FARMHASH:
+<span class="lineNum">     292 </span>            :     case RM_DIGEST_SPOOKY64:
+<span class="lineNum">     293 </span><span class="lineCov">      47559 :         digest-&gt;bytes = 64 / 8;</span>
+<span class="lineNum">     294 </span><span class="lineCov">      47559 :         break;</span>
+<span class="lineNum">     295 </span>            :     case RM_DIGEST_MD5:
+<span class="lineNum">     296 </span><span class="lineCov">       7873 :         digest-&gt;glib_checksum = g_checksum_new(G_CHECKSUM_MD5);</span>
+<span class="lineNum">     297 </span><span class="lineCov">       7870 :         ADD_SEED(digest, seed1);</span>
+<span class="lineNum">     298 </span><span class="lineCov">       7870 :         digest-&gt;bytes = 128 / 8;</span>
+<span class="lineNum">     299 </span><span class="lineCov">       7870 :         return digest;</span>
+<span class="lineNum">     300 </span>            : #if HAVE_SHA512
+<span class="lineNum">     301 </span>            :     case RM_DIGEST_SHA512:
+<span class="lineNum">     302 </span><span class="lineCov">       7929 :         digest-&gt;glib_checksum = g_checksum_new(G_CHECKSUM_SHA512);</span>
+<span class="lineNum">     303 </span><span class="lineCov">       7927 :         ADD_SEED(digest, seed1);</span>
+<span class="lineNum">     304 </span><span class="lineCov">       7929 :         digest-&gt;bytes = 512 / 8;</span>
+<span class="lineNum">     305 </span><span class="lineCov">       7929 :         return digest;</span>
+<span class="lineNum">     306 </span>            : #endif
+<span class="lineNum">     307 </span>            :     case RM_DIGEST_SHA256:
+<span class="lineNum">     308 </span><span class="lineCov">       7873 :         digest-&gt;glib_checksum = g_checksum_new(G_CHECKSUM_SHA256);</span>
+<span class="lineNum">     309 </span><span class="lineCov">       7872 :         ADD_SEED(digest, seed1);</span>
+<span class="lineNum">     310 </span><span class="lineCov">       7871 :         digest-&gt;bytes = 256 / 8;</span>
+<span class="lineNum">     311 </span><span class="lineCov">       7871 :         return digest;</span>
+<span class="lineNum">     312 </span>            :     case RM_DIGEST_SHA1:
+<span class="lineNum">     313 </span><span class="lineCov">      93281 :         digest-&gt;glib_checksum = g_checksum_new(G_CHECKSUM_SHA1);</span>
+<span class="lineNum">     314 </span><span class="lineCov">      93273 :         ADD_SEED(digest, seed1);</span>
+<span class="lineNum">     315 </span><span class="lineCov">      93274 :         digest-&gt;bytes = 160 / 8;</span>
+<span class="lineNum">     316 </span><span class="lineCov">      93274 :         return digest;</span>
+<span class="lineNum">     317 </span>            :     case RM_DIGEST_MURMUR512:
+<span class="lineNum">     318 </span>            :     case RM_DIGEST_CITY512:
+<span class="lineNum">     319 </span><span class="lineCov">      15769 :         digest-&gt;bytes = 512 / 8;</span>
+<span class="lineNum">     320 </span><span class="lineCov">      15769 :         break;</span>
+<span class="lineNum">     321 </span>            :     case RM_DIGEST_EXT:
+<span class="lineNum">     322 </span>            :         /* gets allocated on rm_digest_update() */
+<span class="lineNum">     323 </span><span class="lineCov">     154500 :         digest-&gt;bytes = ext_size;</span>
+<span class="lineNum">     324 </span><span class="lineCov">     154500 :         break;</span>
+<span class="lineNum">     325 </span>            :     case RM_DIGEST_MURMUR256:
+<span class="lineNum">     326 </span>            :     case RM_DIGEST_CITY256:
+<span class="lineNum">     327 </span>            :     case RM_DIGEST_BASTARD:
+<span class="lineNum">     328 </span><span class="lineCov">      31511 :         digest-&gt;bytes = 256 / 8;</span>
+<span class="lineNum">     329 </span><span class="lineCov">      31511 :         break;</span>
+<span class="lineNum">     330 </span>            :     case RM_DIGEST_SPOOKY:
+<span class="lineNum">     331 </span>            :     case RM_DIGEST_MURMUR:
+<span class="lineNum">     332 </span>            :     case RM_DIGEST_CITY:
+<span class="lineNum">     333 </span>            :     case RM_DIGEST_CUMULATIVE:
+<span class="lineNum">     334 </span><span class="lineCov">      28243 :         digest-&gt;bytes = 128 / 8;</span>
+<span class="lineNum">     335 </span><span class="lineCov">      28243 :         break;</span>
+<span class="lineNum">     336 </span>            :     case RM_DIGEST_PARANOID:
+<span class="lineNum">     337 </span><span class="lineCov">      16050 :         digest-&gt;bytes = 0;</span>
+<span class="lineNum">     338 </span><span class="lineCov">      16050 :         digest-&gt;paranoid = g_slice_new0(RmParanoid);</span>
+<span class="lineNum">     339 </span><span class="lineCov">      16048 :         digest-&gt;paranoid-&gt;incoming_twin_candidates = g_async_queue_new();</span>
+<span class="lineNum">     340 </span><span class="lineCov">      16049 :         if(use_shadow_hash) {</span>
+<span class="lineNum">     341 </span><span class="lineCov">      32098 :             digest-&gt;paranoid-&gt;shadow_hash =</span>
+<span class="lineNum">     342 </span><span class="lineCov">      16049 :                 rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);</span>
+<span class="lineNum">     343 </span>            :         }
+<span class="lineNum">     344 </span><span class="lineCov">      16049 :         break;</span>
+<span class="lineNum">     345 </span>            :     default:
+<span class="lineNum">     346 </span><span class="lineNoCov">          0 :         rm_assert_gentle_not_reached();</span>
+<span class="lineNum">     347 </span>            :     }
+<span class="lineNum">     348 </span>            : 
+<span class="lineNum">     349 </span>            :     /* starting values to let us generate up to 4 different hashes in parallel with
+<span class="lineNum">     350 </span>            :      * different starting seeds:
+<span class="lineNum">     351 </span>            :      * */
+<span class="lineNum">     352 </span>            :     static const RmOff seeds[4] = {0x0000000000000000, 0xf0f0f0f0f0f0f0f0,
+<span class="lineNum">     353 </span>            :                                    0x3333333333333333, 0xaaaaaaaaaaaaaaaa};
+<span class="lineNum">     354 </span>            : 
+<span class="lineNum">     355 </span><span class="lineCov">     301520 :     if(digest-&gt;bytes &gt; 0 &amp;&amp; type != RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     356 </span><span class="lineCov">     165321 :         const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);</span>
+<span class="lineNum">     357 </span>            : 
+<span class="lineNum">     358 </span>            :         /* checksum type - allocate memory and initialise */
+<span class="lineNum">     359 </span><span class="lineCov">     165321 :         digest-&gt;checksum = g_slice_alloc0(digest-&gt;bytes);</span>
+<span class="lineNum">     360 </span><span class="lineCov">     457054 :         for(gsize block = 0; block &lt; (digest-&gt;bytes / 16); block++) {</span>
+<span class="lineNum">     361 </span><span class="lineCov">     291735 :             digest-&gt;checksum[block].first = seeds[block % n_seeds] ^ seed1;</span>
+<span class="lineNum">     362 </span><span class="lineCov">     291735 :             digest-&gt;checksum[block].second = seeds[block % n_seeds] ^ seed2;</span>
+<span class="lineNum">     363 </span>            :         }
+<span class="lineNum">     364 </span>            :     }
+<span class="lineNum">     365 </span>            : 
+<span class="lineNum">     366 </span><span class="lineCov">     301518 :     if(digest-&gt;type == RM_DIGEST_BASTARD) {</span>
+<span class="lineNum">     367 </span>            :         /* bastard type *always* has *pure* murmur hash for first checksum
+<span class="lineNum">     368 </span>            :          * and seeded city for second checksum */
+<span class="lineNum">     369 </span><span class="lineCov">      15742 :         digest-&gt;checksum[0].first = digest-&gt;checksum[0].second = 0;</span>
+<span class="lineNum">     370 </span>            :     }
+<span class="lineNum">     371 </span><span class="lineCov">     301518 :     return digest;</span>
+<a name="372"><span class="lineNum">     372 </span>            : }</a>
+<span class="lineNum">     373 </span>            : 
+<span class="lineNum">     374 </span><span class="lineCov">         30 : void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {</span>
+<span class="lineNum">     375 </span><span class="lineCov">         30 :     rm_assert_gentle(digest-&gt;type == RM_DIGEST_PARANOID);</span>
+<span class="lineNum">     376 </span><span class="lineCov">         30 :     digest-&gt;bytes = new_size;</span>
+<a name="377"><span class="lineNum">     377 </span><span class="lineCov">         30 : }</span></a>
+<span class="lineNum">     378 </span>            : 
+<span class="lineNum">     379 </span><span class="lineCov">      17398 : void rm_digest_release_buffers(RmDigest *digest) {</span>
+<span class="lineNum">     380 </span><span class="lineCov">      17398 :     if(digest-&gt;paranoid &amp;&amp; digest-&gt;paranoid-&gt;buffers) {</span>
+<span class="lineNum">     381 </span><span class="lineCov">      15976 :         g_slist_free_full(digest-&gt;paranoid-&gt;buffers,</span>
+<span class="lineNum">     382 </span>            :                           (GDestroyNotify)rm_buffer_pool_release_kept);
+<span class="lineNum">     383 </span><span class="lineCov">      15976 :         digest-&gt;paranoid-&gt;buffers = NULL;</span>
+<span class="lineNum">     384 </span>            :     }
+<a name="385"><span class="lineNum">     385 </span><span class="lineCov">      17398 : }</span></a>
+<span class="lineNum">     386 </span>            : 
+<span class="lineNum">     387 </span><span class="lineCov">     861565 : void rm_digest_free(RmDigest *digest) {</span>
+<span class="lineNum">     388 </span><span class="lineCov">     861565 :     switch(digest-&gt;type) {</span>
+<span class="lineNum">     389 </span>            :     case RM_DIGEST_MD5:
+<span class="lineNum">     390 </span>            :     case RM_DIGEST_SHA512:
+<span class="lineNum">     391 </span>            :     case RM_DIGEST_SHA256:
+<span class="lineNum">     392 </span>            :     case RM_DIGEST_SHA1:
+<span class="lineNum">     393 </span><span class="lineCov">     598342 :         g_checksum_free(digest-&gt;glib_checksum);</span>
+<span class="lineNum">     394 </span><span class="lineCov">     598350 :         digest-&gt;glib_checksum = NULL;</span>
+<span class="lineNum">     395 </span><span class="lineCov">     598350 :         break;</span>
+<span class="lineNum">     396 </span>            :     case RM_DIGEST_PARANOID:
+<span class="lineNum">     397 </span><span class="lineCov">      13688 :         if(digest-&gt;paranoid-&gt;shadow_hash) {</span>
+<span class="lineNum">     398 </span><span class="lineCov">      13688 :             rm_digest_free(digest-&gt;paranoid-&gt;shadow_hash);</span>
+<span class="lineNum">     399 </span>            :         }
+<span class="lineNum">     400 </span><span class="lineCov">      13688 :         rm_digest_release_buffers(digest);</span>
+<span class="lineNum">     401 </span><span class="lineCov">      13688 :         if(digest-&gt;paranoid-&gt;incoming_twin_candidates) {</span>
+<span class="lineNum">     402 </span><span class="lineCov">      13688 :             g_async_queue_unref(digest-&gt;paranoid-&gt;incoming_twin_candidates);</span>
+<span class="lineNum">     403 </span>            :         }
+<span class="lineNum">     404 </span><span class="lineCov">      13688 :         g_slist_free(digest-&gt;paranoid-&gt;rejects);</span>
+<span class="lineNum">     405 </span><span class="lineCov">      13688 :         g_slice_free(RmParanoid, digest-&gt;paranoid);</span>
+<span class="lineNum">     406 </span><span class="lineCov">      13688 :         break;</span>
+<span class="lineNum">     407 </span>            :     case RM_DIGEST_EXT:
+<span class="lineNum">     408 </span>            :     case RM_DIGEST_CUMULATIVE:
+<span class="lineNum">     409 </span>            :     case RM_DIGEST_MURMUR512:
+<span class="lineNum">     410 </span>            :     case RM_DIGEST_XXHASH:
+<span class="lineNum">     411 </span>            :     case RM_DIGEST_CITY512:
+<span class="lineNum">     412 </span>            :     case RM_DIGEST_MURMUR256:
+<span class="lineNum">     413 </span>            :     case RM_DIGEST_CITY256:
+<span class="lineNum">     414 </span>            :     case RM_DIGEST_BASTARD:
+<span class="lineNum">     415 </span>            :     case RM_DIGEST_SPOOKY:
+<span class="lineNum">     416 </span>            :     case RM_DIGEST_SPOOKY32:
+<span class="lineNum">     417 </span>            :     case RM_DIGEST_SPOOKY64:
+<span class="lineNum">     418 </span>            :     case RM_DIGEST_FARMHASH:
+<span class="lineNum">     419 </span>            :     case RM_DIGEST_MURMUR:
+<span class="lineNum">     420 </span>            :     case RM_DIGEST_CITY:
+<span class="lineNum">     421 </span><span class="lineCov">     249535 :         if(digest-&gt;checksum) {</span>
+<span class="lineNum">     422 </span><span class="lineCov">     249535 :             g_slice_free1(digest-&gt;bytes, digest-&gt;checksum);</span>
+<span class="lineNum">     423 </span><span class="lineCov">     249543 :             digest-&gt;checksum = NULL;</span>
+<span class="lineNum">     424 </span>            :         }
+<span class="lineNum">     425 </span><span class="lineCov">     249543 :         break;</span>
+<span class="lineNum">     426 </span>            :     default:
+<span class="lineNum">     427 </span><span class="lineNoCov">          0 :         rm_assert_gentle_not_reached();</span>
+<span class="lineNum">     428 </span>            :     }
+<span class="lineNum">     429 </span><span class="lineCov">     861557 :     g_slice_free(RmDigest, digest);</span>
+<a name="430"><span class="lineNum">     430 </span><span class="lineCov">     861612 : }</span></a>
+<span class="lineNum">     431 </span>            : 
+<span class="lineNum">     432 </span><span class="lineCov">     434122 : void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {</span>
+<span class="lineNum">     433 </span><span class="lineCov">     434122 :     switch(digest-&gt;type) {</span>
+<span class="lineNum">     434 </span>            :     case RM_DIGEST_EXT:
+<span class="lineNum">     435 </span>            : /* Data is assumed to be a hex representation of a cchecksum.
+<span class="lineNum">     436 </span>            :  * Needs to be compressed in pure memory first.
+<span class="lineNum">     437 </span>            :  *
+<span class="lineNum">     438 </span>            :  * Checksum is not updated but rather overwritten.
+<span class="lineNum">     439 </span>            :  * */
+<span class="lineNum">     440 </span>            : #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
+<span class="lineNum">     441 </span>            : 
+<span class="lineNum">     442 </span><span class="lineCov">     120150 :         rm_assert_gentle(data);</span>
+<span class="lineNum">     443 </span>            : 
+<span class="lineNum">     444 </span><span class="lineCov">     120150 :         digest-&gt;bytes = size / 2;</span>
+<span class="lineNum">     445 </span><span class="lineCov">     120150 :         digest-&gt;checksum = g_slice_alloc0(digest-&gt;bytes);</span>
+<span class="lineNum">     446 </span>            : 
+<span class="lineNum">     447 </span><span class="lineCov">    7809739 :         for(unsigned i = 0; i &lt; digest-&gt;bytes; ++i) {</span>
+<span class="lineNum">     448 </span><span class="lineCov">   38448000 :             ((guint8 *)digest-&gt;checksum)[i] =</span>
+<span class="lineNum">     449 </span><span class="lineCov">   30758400 :                 (CHAR_TO_NUM(data[2 * i]) &lt;&lt; 4) + CHAR_TO_NUM(data[2 * i + 1]);</span>
+<span class="lineNum">     450 </span>            :         }
+<span class="lineNum">     451 </span>            : 
+<span class="lineNum">     452 </span><span class="lineCov">     554308 :         break;</span>
+<span class="lineNum">     453 </span>            :     case RM_DIGEST_MD5:
+<span class="lineNum">     454 </span>            :     case RM_DIGEST_SHA512:
+<span class="lineNum">     455 </span>            :     case RM_DIGEST_SHA256:
+<span class="lineNum">     456 </span>            :     case RM_DIGEST_SHA1:
+<span class="lineNum">     457 </span><span class="lineCov">     145600 :         g_checksum_update(digest-&gt;glib_checksum, (const guchar *)data, size);</span>
+<span class="lineNum">     458 </span><span class="lineCov">     145616 :         break;</span>
+<span class="lineNum">     459 </span>            :     case RM_DIGEST_SPOOKY32:
+<span class="lineNum">     460 </span><span class="lineCov">       9738 :         digest-&gt;checksum[0].first = spooky_hash32(data, size, digest-&gt;checksum[0].first);</span>
+<span class="lineNum">     461 </span><span class="lineCov">       9744 :         break;</span>
+<span class="lineNum">     462 </span>            :     case RM_DIGEST_SPOOKY64:
+<span class="lineNum">     463 </span><span class="lineCov">       9739 :         digest-&gt;checksum[0].first = spooky_hash64(data, size, digest-&gt;checksum[0].first);</span>
+<span class="lineNum">     464 </span><span class="lineCov">       9740 :         break;</span>
+<span class="lineNum">     465 </span>            :     case RM_DIGEST_SPOOKY:
+<span class="lineNum">     466 </span><span class="lineCov">       9742 :         spooky_hash128(data, size, (uint64_t *)&amp;digest-&gt;checksum[0].first,</span>
+<span class="lineNum">     467 </span><span class="lineCov">       9742 :                        (uint64_t *)&amp;digest-&gt;checksum[0].second);</span>
+<span class="lineNum">     468 </span><span class="lineCov">       9742 :         break;</span>
+<span class="lineNum">     469 </span>            :     case RM_DIGEST_XXHASH:
+<span class="lineNum">     470 </span><span class="lineCov">      48963 :         digest-&gt;checksum[0].first = XXH64(data, size, digest-&gt;checksum[0].first);</span>
+<span class="lineNum">     471 </span><span class="lineCov">      48967 :         break;</span>
+<span class="lineNum">     472 </span>            :     case RM_DIGEST_FARMHASH:
+<span class="lineNum">     473 </span><span class="lineNoCov">          0 :         digest-&gt;checksum[0].first = cfarmhash((const char *)data, size);</span>
+<span class="lineNum">     474 </span><span class="lineNoCov">          0 :         break;</span>
+<span class="lineNum">     475 </span>            :     case RM_DIGEST_MURMUR512:
+<span class="lineNum">     476 </span>            :     case RM_DIGEST_MURMUR256:
+<span class="lineNum">     477 </span>            :     case RM_DIGEST_MURMUR:
+<span class="lineNum">     478 </span><span class="lineCov">      97419 :         for(guint8 block = 0; block &lt; (digest-&gt;bytes / 16); block++) {</span>
+<span class="lineNum">     479 </span>            : #if RM_PLATFORM_32
+<span class="lineNum">     480 </span>            :             MurmurHash3_x86_128(data, size, (uint32_t)digest-&gt;checksum[block].first,
+<span class="lineNum">     481 </span>            :                                 &amp;digest-&gt;checksum[block]);  //&amp;
+<span class="lineNum">     482 </span>            : #elif RM_PLATFORM_64
+<span class="lineNum">     483 </span><span class="lineCov">     136368 :             MurmurHash3_x64_128(data, size, (uint32_t)digest-&gt;checksum[block].first,</span>
+<span class="lineNum">     484 </span><span class="lineCov">     136368 :                                 &amp;digest-&gt;checksum[block]);</span>
+<span class="lineNum">     485 </span>            : #else
+<span class="lineNum">     486 </span>            : #error &quot;Probably not a good idea to compile rmlint on 16bit.&quot;
+<span class="lineNum">     487 </span>            : #endif
+<span class="lineNum">     488 </span>            :         }
+<span class="lineNum">     489 </span><span class="lineCov">      29235 :         break;</span>
+<span class="lineNum">     490 </span>            :     case RM_DIGEST_CITY:
+<span class="lineNum">     491 </span>            :     case RM_DIGEST_CITY256:
+<span class="lineNum">     492 </span>            :     case RM_DIGEST_CITY512:
+<span class="lineNum">     493 </span><span class="lineCov">      97405 :         for(guint8 block = 0; block &lt; (digest-&gt;bytes / 16); block++) {</span>
+<span class="lineNum">     494 </span>            :             /* Opt out for the more optimized version.
+<span class="lineNum">     495 </span>            :             * This needs the crc command of sse4.2
+<span class="lineNum">     496 </span>            :             * (available on Intel Nehalem and up; my amd box doesn't have this though)
+<span class="lineNum">     497 </span>            :             */
+<span class="lineNum">     498 </span><span class="lineCov">      68175 :             uint128 old = {digest-&gt;checksum[block].first, digest-&gt;checksum[block].second};</span>
+<span class="lineNum">     499 </span><span class="lineCov">      68175 :             old = CityHash128WithSeed((const char *)data, size, old);</span>
+<span class="lineNum">     500 </span><span class="lineCov">      68189 :             memcpy(&amp;digest-&gt;checksum[block], &amp;old, sizeof(uint128));</span>
+<span class="lineNum">     501 </span>            :         }
+<span class="lineNum">     502 </span><span class="lineCov">      29230 :         break;</span>
+<span class="lineNum">     503 </span>            :     case RM_DIGEST_BASTARD:
+<span class="lineNum">     504 </span><span class="lineCov">      19457 :         MurmurHash3_x86_128(data, size, (uint32_t)digest-&gt;checksum[0].first,</span>
+<span class="lineNum">     505 </span><span class="lineCov">      19457 :                             &amp;digest-&gt;checksum[0]);</span>
+<span class="lineNum">     506 </span>            : 
+<span class="lineNum">     507 </span><span class="lineCov">      19461 :         uint128 old = {digest-&gt;checksum[1].first, digest-&gt;checksum[1].second};</span>
+<span class="lineNum">     508 </span><span class="lineCov">      19461 :         old = CityHash128WithSeed((const char *)data, size, old);</span>
+<span class="lineNum">     509 </span><span class="lineCov">      19456 :         memcpy(&amp;digest-&gt;checksum[1], &amp;old, sizeof(uint128));</span>
+<span class="lineNum">     510 </span><span class="lineCov">      19456 :         break;</span>
+<span class="lineNum">     511 </span>            :     case RM_DIGEST_CUMULATIVE: {
+<span class="lineNum">     512 </span>            :         /* This is basically FNV1a, it is just important that the order of
+<span class="lineNum">     513 </span>            :          * adding data to the hash has no effect on the result, so it can
+<span class="lineNum">     514 </span>            :          * be used as a lookup key:
+<span class="lineNum">     515 </span>            :          *
+<span class="lineNum">     516 </span>            :          * http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+<span class="lineNum">     517 </span>            :          * */
+<span class="lineNum">     518 </span><span class="lineCov">      12300 :         RmOff hash = 0xcbf29ce484222325;</span>
+<span class="lineNum">     519 </span><span class="lineCov">     209100 :         for(gsize i = 0; i &lt; digest-&gt;bytes; ++i) {</span>
+<span class="lineNum">     520 </span><span class="lineCov">     196800 :             hash ^= ((guint8 *)data)[i % size];</span>
+<span class="lineNum">     521 </span><span class="lineCov">     196800 :             hash *= 0x100000001b3;</span>
+<span class="lineNum">     522 </span><span class="lineCov">     196800 :             ((guint8 *)digest-&gt;checksum)[i] += hash;</span>
+<span class="lineNum">     523 </span>            :         }
+<span class="lineNum">     524 </span><span class="lineCov">      12300 :     } break;</span>
+<span class="lineNum">     525 </span>            :     case RM_DIGEST_PARANOID:
+<span class="lineNum">     526 </span>            :     default:
+<span class="lineNum">     527 </span><span class="lineNoCov">          0 :         rm_assert_gentle_not_reached();</span>
+<span class="lineNum">     528 </span>            :     }
+<a name="529"><span class="lineNum">     529 </span><span class="lineCov">     434169 : }</span></a>
+<span class="lineNum">     530 </span>            : 
+<span class="lineNum">     531 </span><span class="lineCov">     301717 : void rm_digest_buffered_update(RmBuffer *buffer) {</span>
+<span class="lineNum">     532 </span><span class="lineCov">     301717 :     RmDigest *digest = buffer-&gt;digest;</span>
+<span class="lineNum">     533 </span><span class="lineCov">     301717 :     if(digest-&gt;type != RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     534 </span><span class="lineCov">     281952 :         rm_digest_update(digest, buffer-&gt;data, buffer-&gt;len);</span>
+<span class="lineNum">     535 </span><span class="lineCov">     281949 :         rm_buffer_pool_release(buffer);</span>
+<span class="lineNum">     536 </span>            :     } else {
+<span class="lineNum">     537 </span><span class="lineCov">      19765 :         RmParanoid *paranoid = digest-&gt;paranoid;</span>
+<span class="lineNum">     538 </span>            : 
+<span class="lineNum">     539 </span>            :         /* efficiently append buffer to buffers GSList */
+<span class="lineNum">     540 </span><span class="lineCov">      19765 :         if(!paranoid-&gt;buffers) {</span>
+<span class="lineNum">     541 </span>            :             /* first buffer */
+<span class="lineNum">     542 </span><span class="lineCov">      16046 :             paranoid-&gt;buffers = g_slist_prepend(NULL, buffer);</span>
+<span class="lineNum">     543 </span><span class="lineCov">      16046 :             paranoid-&gt;buffer_tail = paranoid-&gt;buffers;</span>
+<span class="lineNum">     544 </span>            :         } else {
+<span class="lineNum">     545 </span><span class="lineCov">       3719 :             paranoid-&gt;buffer_tail = g_slist_append(paranoid-&gt;buffer_tail, buffer)-&gt;next;</span>
+<span class="lineNum">     546 </span>            :         }
+<span class="lineNum">     547 </span>            : 
+<span class="lineNum">     548 </span><span class="lineCov">      19766 :         digest-&gt;bytes += buffer-&gt;len;</span>
+<span class="lineNum">     549 </span><span class="lineCov">      19766 :         rm_buffer_pool_signal_keeping(buffer);</span>
+<span class="lineNum">     550 </span>            : 
+<span class="lineNum">     551 </span><span class="lineCov">      19770 :         if(paranoid-&gt;shadow_hash) {</span>
+<span class="lineNum">     552 </span><span class="lineCov">      19770 :             rm_digest_update(paranoid-&gt;shadow_hash, buffer-&gt;data, buffer-&gt;len);</span>
+<span class="lineNum">     553 </span>            :         }
+<span class="lineNum">     554 </span>            : 
+<span class="lineNum">     555 </span><span class="lineCov">      19764 :         if(paranoid-&gt;twin_candidate) {</span>
+<span class="lineNum">     556 </span>            :             /* do a running check that digest remains the same as its candidate twin */
+<span class="lineNum">     557 </span><span class="lineCov">       1003 :             if(rm_buffer_equal(buffer, paranoid-&gt;twin_candidate_buffer-&gt;data)) {</span>
+<span class="lineNum">     558 </span>            :                 /* buffers match; move ptr to next one ready for next buffer */
+<span class="lineNum">     559 </span><span class="lineCov">       1001 :                 paranoid-&gt;twin_candidate_buffer = paranoid-&gt;twin_candidate_buffer-&gt;next;</span>
+<span class="lineNum">     560 </span>            :             } else {
+<span class="lineNum">     561 </span>            :                 /* buffers don't match - delete candidate (new candidate might be added on
+<span class="lineNum">     562 </span>            :                  * next
+<span class="lineNum">     563 </span>            :                  * call to rm_digest_buffered_update) */
+<span class="lineNum">     564 </span><span class="lineCov">          2 :                 paranoid-&gt;twin_candidate = NULL;</span>
+<span class="lineNum">     565 </span><span class="lineCov">          2 :                 paranoid-&gt;twin_candidate_buffer = NULL;</span>
+<span class="lineNum">     566 </span>            : #if _RM_CHECKSUM_DEBUG
+<span class="lineNum">     567 </span>            :                 rm_log_debug_line(&quot;Ejected candidate match at buffer #%u&quot;,
+<span class="lineNum">     568 </span>            :                                   g_slist_length(paranoid-&gt;buffers));
+<span class="lineNum">     569 </span>            : #endif
+<span class="lineNum">     570 </span>            :             }
+<span class="lineNum">     571 </span>            :         }
+<span class="lineNum">     572 </span>            : 
+<span class="lineNum">     573 </span><span class="lineCov">      70519 :         while(!paranoid-&gt;twin_candidate &amp;&amp; paranoid-&gt;incoming_twin_candidates &amp;&amp;</span>
+<span class="lineNum">     574 </span><span class="lineCov">      19140 :               (paranoid-&gt;twin_candidate =</span>
+<span class="lineNum">     575 </span><span class="lineCov">      19141 :                    g_async_queue_try_pop(paranoid-&gt;incoming_twin_candidates))) {</span>
+<span class="lineNum">     576 </span>            :             /* validate the new candidate by comparing the previous buffers (not
+<span class="lineNum">     577 </span>            :              * including current)*/
+<span class="lineNum">     578 </span><span class="lineCov">      11848 :             paranoid-&gt;twin_candidate_buffer = paranoid-&gt;twin_candidate-&gt;paranoid-&gt;buffers;</span>
+<span class="lineNum">     579 </span><span class="lineCov">      11848 :             GSList *iter_self = paranoid-&gt;buffers;</span>
+<span class="lineNum">     580 </span><span class="lineCov">      11848 :             gboolean match = TRUE;</span>
+<span class="lineNum">     581 </span><span class="lineCov">      37019 :             while(match &amp;&amp; iter_self) {</span>
+<span class="lineNum">     582 </span><span class="lineCov">      13320 :                 match = (rm_buffer_equal(paranoid-&gt;twin_candidate_buffer-&gt;data,</span>
+<span class="lineNum">     583 </span><span class="lineCov">      13320 :                                          iter_self-&gt;data));</span>
+<span class="lineNum">     584 </span><span class="lineCov">      13323 :                 iter_self = iter_self-&gt;next;</span>
+<span class="lineNum">     585 </span><span class="lineCov">      13323 :                 paranoid-&gt;twin_candidate_buffer = paranoid-&gt;twin_candidate_buffer-&gt;next;</span>
+<span class="lineNum">     586 </span>            :             }
+<span class="lineNum">     587 </span><span class="lineCov">      11851 :             if(paranoid-&gt;twin_candidate &amp;&amp; !match) {</span>
+<span class="lineNum">     588 </span>            : /* reject the twin candidate, also add to rejects list to speed up rm_digest_equal() */
+<span class="lineNum">     589 </span>            : #if _RM_CHECKSUM_DEBUG
+<span class="lineNum">     590 </span>            :                 rm_log_debug_line(&quot;Rejected twin candidate %p for %p&quot;,
+<span class="lineNum">     591 </span>            :                                   paranoid-&gt;twin_candidate, paranoid);
+<span class="lineNum">     592 </span>            : #endif
+<span class="lineNum">     593 </span><span class="lineCov">        378 :                 if(!paranoid-&gt;shadow_hash) {</span>
+<span class="lineNum">     594 </span>            :                     /* we use the rejects file to speed up rm_digest_equal */
+<span class="lineNum">     595 </span><span class="lineNoCov">          0 :                     paranoid-&gt;rejects =</span>
+<span class="lineNum">     596 </span><span class="lineNoCov">          0 :                         g_slist_prepend(paranoid-&gt;rejects, paranoid-&gt;twin_candidate);</span>
+<span class="lineNum">     597 </span>            :                 }
+<span class="lineNum">     598 </span><span class="lineCov">        378 :                 paranoid-&gt;twin_candidate = NULL;</span>
+<span class="lineNum">     599 </span><span class="lineCov">        378 :                 paranoid-&gt;twin_candidate_buffer = NULL;</span>
+<span class="lineNum">     600 </span>            : #if _RM_CHECKSUM_DEBUG
+<span class="lineNum">     601 </span>            :             } else {
+<span class="lineNum">     602 </span>            :                 rm_log_debug_line(&quot;Added twin candidate %p for %p&quot;,
+<span class="lineNum">     603 </span>            :                                   paranoid-&gt;twin_candidate, paranoid);
+<span class="lineNum">     604 </span>            : #endif
+<span class="lineNum">     605 </span>            :             }
+<span class="lineNum">     606 </span>            :         }
+<span class="lineNum">     607 </span>            :     }
+<a name="608"><span class="lineNum">     608 </span><span class="lineCov">     301758 : }</span></a>
+<span class="lineNum">     609 </span>            : 
+<span class="lineNum">     610 </span><span class="lineCov">     532198 : RmDigest *rm_digest_copy(RmDigest *digest) {</span>
+<span class="lineNum">     611 </span><span class="lineCov">     532198 :     rm_assert_gentle(digest);</span>
+<span class="lineNum">     612 </span>            : 
+<span class="lineNum">     613 </span><span class="lineCov">     532201 :     RmDigest *self = NULL;</span>
+<span class="lineNum">     614 </span>            : 
+<span class="lineNum">     615 </span><span class="lineCov">     532201 :     switch(digest-&gt;type) {</span>
+<span class="lineNum">     616 </span>            :     case RM_DIGEST_MD5:
+<span class="lineNum">     617 </span>            :     case RM_DIGEST_SHA512:
+<span class="lineNum">     618 </span>            :     case RM_DIGEST_SHA256:
+<span class="lineNum">     619 </span>            :     case RM_DIGEST_SHA1:
+<span class="lineNum">     620 </span><span class="lineCov">     497683 :         self = g_slice_new0(RmDigest);</span>
+<span class="lineNum">     621 </span><span class="lineCov">     497735 :         self-&gt;bytes = digest-&gt;bytes;</span>
+<span class="lineNum">     622 </span><span class="lineCov">     497735 :         self-&gt;type = digest-&gt;type;</span>
+<span class="lineNum">     623 </span><span class="lineCov">     497735 :         self-&gt;glib_checksum = g_checksum_copy(digest-&gt;glib_checksum);</span>
+<span class="lineNum">     624 </span><span class="lineCov">     497722 :         break;</span>
+<span class="lineNum">     625 </span>            :     case RM_DIGEST_SPOOKY:
+<span class="lineNum">     626 </span>            :     case RM_DIGEST_SPOOKY32:
+<span class="lineNum">     627 </span>            :     case RM_DIGEST_SPOOKY64:
+<span class="lineNum">     628 </span>            :     case RM_DIGEST_MURMUR:
+<span class="lineNum">     629 </span>            :     case RM_DIGEST_CITY:
+<span class="lineNum">     630 </span>            :     case RM_DIGEST_CITY256:
+<span class="lineNum">     631 </span>            :     case RM_DIGEST_MURMUR256:
+<span class="lineNum">     632 </span>            :     case RM_DIGEST_CITY512:
+<span class="lineNum">     633 </span>            :     case RM_DIGEST_MURMUR512:
+<span class="lineNum">     634 </span>            :     case RM_DIGEST_XXHASH:
+<span class="lineNum">     635 </span>            :     case RM_DIGEST_FARMHASH:
+<span class="lineNum">     636 </span>            :     case RM_DIGEST_BASTARD:
+<span class="lineNum">     637 </span>            :     case RM_DIGEST_CUMULATIVE:
+<span class="lineNum">     638 </span>            :     case RM_DIGEST_EXT:
+<span class="lineNum">     639 </span><span class="lineCov">      34518 :         self = rm_digest_new(digest-&gt;type, 0, 0, digest-&gt;bytes, FALSE);</span>
+<span class="lineNum">     640 </span>            : 
+<span class="lineNum">     641 </span><span class="lineCov">      34518 :         if(self-&gt;checksum &amp;&amp; digest-&gt;checksum) {</span>
+<span class="lineNum">     642 </span><span class="lineCov">      34518 :             memcpy((char *)self-&gt;checksum, (char *)digest-&gt;checksum, self-&gt;bytes);</span>
+<span class="lineNum">     643 </span>            :         }
+<span class="lineNum">     644 </span>            : 
+<span class="lineNum">     645 </span><span class="lineCov">      34518 :         break;</span>
+<span class="lineNum">     646 </span>            :     case RM_DIGEST_PARANOID:
+<span class="lineNum">     647 </span>            :     default:
+<span class="lineNum">     648 </span><span class="lineNoCov">          0 :         rm_assert_gentle_not_reached();</span>
+<span class="lineNum">     649 </span>            :     }
+<span class="lineNum">     650 </span>            : 
+<span class="lineNum">     651 </span><span class="lineCov">     532239 :     return self;</span>
+<a name="652"><span class="lineNum">     652 </span>            : }</a>
+<span class="lineNum">     653 </span>            : 
+<span class="lineNum">     654 </span><span class="lineCov">    1280105 : static gboolean rm_digest_needs_steal(RmDigestType digest_type) {</span>
+<span class="lineNum">     655 </span><span class="lineCov">    1280105 :     switch(digest_type) {</span>
+<span class="lineNum">     656 </span>            :     case RM_DIGEST_MD5:
+<span class="lineNum">     657 </span>            :     case RM_DIGEST_SHA512:
+<span class="lineNum">     658 </span>            :     case RM_DIGEST_SHA256:
+<span class="lineNum">     659 </span>            :     case RM_DIGEST_SHA1:
+<span class="lineNum">     660 </span>            :         /* for all of the above, reading the digest is destructive, so we
+<span class="lineNum">     661 </span>            :          * need to take a copy */
+<span class="lineNum">     662 </span><span class="lineCov">     582852 :         return TRUE;</span>
+<span class="lineNum">     663 </span>            :     case RM_DIGEST_SPOOKY32:
+<span class="lineNum">     664 </span>            :     case RM_DIGEST_SPOOKY64:
+<span class="lineNum">     665 </span>            :     case RM_DIGEST_SPOOKY:
+<span class="lineNum">     666 </span>            :     case RM_DIGEST_MURMUR:
+<span class="lineNum">     667 </span>            :     case RM_DIGEST_CITY:
+<span class="lineNum">     668 </span>            :     case RM_DIGEST_CITY256:
+<span class="lineNum">     669 </span>            :     case RM_DIGEST_CITY512:
+<span class="lineNum">     670 </span>            :     case RM_DIGEST_XXHASH:
+<span class="lineNum">     671 </span>            :     case RM_DIGEST_FARMHASH:
+<span class="lineNum">     672 </span>            :     case RM_DIGEST_MURMUR256:
+<span class="lineNum">     673 </span>            :     case RM_DIGEST_MURMUR512:
+<span class="lineNum">     674 </span>            :     case RM_DIGEST_BASTARD:
+<span class="lineNum">     675 </span>            :     case RM_DIGEST_CUMULATIVE:
+<span class="lineNum">     676 </span>            :     case RM_DIGEST_EXT:
+<span class="lineNum">     677 </span>            :     case RM_DIGEST_PARANOID:
+<span class="lineNum">     678 </span><span class="lineCov">     697253 :         return FALSE;</span>
+<span class="lineNum">     679 </span>            :     default:
+<span class="lineNum">     680 </span><span class="lineNoCov">          0 :         rm_assert_gentle_not_reached();</span>
+<span class="lineNum">     681 </span><span class="lineNoCov">          0 :         return FALSE;</span>
+<span class="lineNum">     682 </span>            :     }
+<a name="683"><span class="lineNum">     683 </span>            : }</a>
+<span class="lineNum">     684 </span>            : 
+<span class="lineNum">     685 </span><span class="lineCov">     986305 : guint8 *rm_digest_steal(RmDigest *digest) {</span>
+<span class="lineNum">     686 </span><span class="lineCov">     986305 :     guint8 *result = g_slice_alloc0(digest-&gt;bytes);</span>
+<span class="lineNum">     687 </span><span class="lineCov">     986329 :     gsize buflen = digest-&gt;bytes;</span>
+<span class="lineNum">     688 </span>            : 
+<span class="lineNum">     689 </span><span class="lineCov">     986329 :     if(rm_digest_needs_steal(digest-&gt;type)) {</span>
+<span class="lineNum">     690 </span>            :         /* reading the digest is destructive, so we need to take a copy */
+<span class="lineNum">     691 </span><span class="lineCov">     497257 :         RmDigest *copy = rm_digest_copy(digest);</span>
+<span class="lineNum">     692 </span><span class="lineCov">     497280 :         g_checksum_get_digest(copy-&gt;glib_checksum, result, &amp;buflen);</span>
+<span class="lineNum">     693 </span><span class="lineCov">     497292 :         rm_assert_gentle(buflen == digest-&gt;bytes);</span>
+<span class="lineNum">     694 </span><span class="lineCov">     497292 :         rm_digest_free(copy);</span>
+<span class="lineNum">     695 </span>            :     } else {
+<span class="lineNum">     696 </span><span class="lineCov">     489039 :         memcpy(result, digest-&gt;checksum, digest-&gt;bytes);</span>
+<span class="lineNum">     697 </span>            :     }
+<span class="lineNum">     698 </span><span class="lineCov">     986333 :     return result;</span>
+<a name="699"><span class="lineNum">     699 </span>            : }</a>
+<span class="lineNum">     700 </span>            : 
+<span class="lineNum">     701 </span><span class="lineCov">     329101 : guint rm_digest_hash(RmDigest *digest) {</span>
+<span class="lineNum">     702 </span><span class="lineCov">     329101 :     guint8 *buf = NULL;</span>
+<span class="lineNum">     703 </span><span class="lineCov">     329101 :     gsize bytes = 0;</span>
+<span class="lineNum">     704 </span><span class="lineCov">     329101 :     guint hash = 0;</span>
+<span class="lineNum">     705 </span>            : 
+<span class="lineNum">     706 </span><span class="lineCov">     329101 :     if(digest-&gt;type == RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     707 </span><span class="lineCov">      22082 :         if(digest-&gt;paranoid-&gt;shadow_hash) {</span>
+<span class="lineNum">     708 </span><span class="lineCov">      22082 :             buf = rm_digest_steal(digest-&gt;paranoid-&gt;shadow_hash);</span>
+<span class="lineNum">     709 </span><span class="lineCov">      22083 :             bytes = digest-&gt;paranoid-&gt;shadow_hash-&gt;bytes;</span>
+<span class="lineNum">     710 </span>            :         } else {
+<span class="lineNum">     711 </span>            :             /* steal the first few bytes of the first buffer */
+<span class="lineNum">     712 </span><span class="lineNoCov">          0 :             if(digest-&gt;paranoid-&gt;buffers) {</span>
+<span class="lineNum">     713 </span><span class="lineNoCov">          0 :                 RmBuffer *buffer = digest-&gt;paranoid-&gt;buffers-&gt;data;</span>
+<span class="lineNum">     714 </span><span class="lineNoCov">          0 :                 if(buffer-&gt;len &gt;= sizeof(guint)) {</span>
+<span class="lineNum">     715 </span><span class="lineNoCov">          0 :                     hash = *(guint *)buffer-&gt;data;</span>
+<span class="lineNum">     716 </span><span class="lineNoCov">          0 :                     return hash;</span>
+<span class="lineNum">     717 </span>            :                 }
+<span class="lineNum">     718 </span>            :             }
+<span class="lineNum">     719 </span>            :         }
+<span class="lineNum">     720 </span>            :     } else {
+<span class="lineNum">     721 </span><span class="lineCov">     307019 :         buf = rm_digest_steal(digest);</span>
+<span class="lineNum">     722 </span><span class="lineCov">     307016 :         bytes = digest-&gt;bytes;</span>
+<span class="lineNum">     723 </span>            :     }
+<span class="lineNum">     724 </span>            : 
+<span class="lineNum">     725 </span><span class="lineCov">     329099 :     if(buf != NULL) {</span>
+<span class="lineNum">     726 </span><span class="lineCov">     329102 :         rm_assert_gentle(bytes &gt;= sizeof(guint));</span>
+<span class="lineNum">     727 </span><span class="lineCov">     329102 :         hash = *(guint *)buf;</span>
+<span class="lineNum">     728 </span><span class="lineCov">     329102 :         g_slice_free1(bytes, buf);</span>
+<span class="lineNum">     729 </span>            :     }
+<span class="lineNum">     730 </span><span class="lineCov">     329107 :     return hash;</span>
+<a name="731"><span class="lineNum">     731 </span>            : }</a>
+<span class="lineNum">     732 </span>            : 
+<span class="lineNum">     733 </span><span class="lineCov">     307082 : gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {</span>
+<span class="lineNum">     734 </span><span class="lineCov">     307082 :     rm_assert_gentle(a &amp;&amp; b);</span>
+<span class="lineNum">     735 </span>            : 
+<span class="lineNum">     736 </span><span class="lineCov">     307084 :     if(a-&gt;type != b-&gt;type) {</span>
+<span class="lineNum">     737 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     738 </span>            :     }
+<span class="lineNum">     739 </span>            : 
+<span class="lineNum">     740 </span><span class="lineCov">     307084 :     if(a-&gt;bytes != b-&gt;bytes) {</span>
+<span class="lineNum">     741 </span><span class="lineNoCov">          0 :         return false;</span>
+<span class="lineNum">     742 </span>            :     }
+<span class="lineNum">     743 </span>            : 
+<span class="lineNum">     744 </span><span class="lineCov">     307084 :     if(a-&gt;type == RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     745 </span><span class="lineCov">      12928 :         if(!a-&gt;paranoid-&gt;buffers) {</span>
+<span class="lineNum">     746 </span>            :             /* buffers have been freed so we need to rely on shadow hash */
+<span class="lineNum">     747 </span><span class="lineCov">        958 :             return rm_digest_equal(a-&gt;paranoid-&gt;shadow_hash, b-&gt;paranoid-&gt;shadow_hash);</span>
+<span class="lineNum">     748 </span>            :         }
+<span class="lineNum">     749 </span>            :         /* check if pre-matched twins */
+<span class="lineNum">     750 </span><span class="lineCov">      11970 :         if(a-&gt;paranoid-&gt;twin_candidate == b || b-&gt;paranoid-&gt;twin_candidate == a) {</span>
+<span class="lineNum">     751 </span><span class="lineCov">      11472 :             return true;</span>
+<span class="lineNum">     752 </span>            :         }
+<span class="lineNum">     753 </span>            :         /* check if already rejected */
+<span class="lineNum">     754 </span><span class="lineCov">        996 :         if(g_slist_find(a-&gt;paranoid-&gt;rejects, b) ||</span>
+<span class="lineNum">     755 </span><span class="lineCov">        498 :            g_slist_find(b-&gt;paranoid-&gt;rejects, a)) {</span>
+<span class="lineNum">     756 </span>            :             // rm_log_error_line(&quot;Optimisation sufficiently optimised&quot;);
+<span class="lineNum">     757 </span><span class="lineNoCov">          0 :             return false;</span>
+<span class="lineNum">     758 </span>            :         }
+<span class="lineNum">     759 </span>            :         /* all the &quot;easy&quot; ways failed... do manual check of all buffers */
+<span class="lineNum">     760 </span><span class="lineCov">        498 :         GSList *a_iter = a-&gt;paranoid-&gt;buffers;</span>
+<span class="lineNum">     761 </span><span class="lineCov">        498 :         GSList *b_iter = b-&gt;paranoid-&gt;buffers;</span>
+<span class="lineNum">     762 </span><span class="lineCov">        498 :         guint bytes = 0;</span>
+<span class="lineNum">     763 </span><span class="lineCov">       1494 :         while(a_iter &amp;&amp; b_iter) {</span>
+<span class="lineNum">     764 </span><span class="lineCov">        498 :             if(!rm_buffer_equal(a_iter-&gt;data, b_iter-&gt;data)) {</span>
+<span class="lineNum">     765 </span><span class="lineNoCov">          0 :                 rm_log_error_line(</span>
+<span class="lineNum">     766 </span>            :                     &quot;Paranoid digest compare found mismatch - must be hash collision in &quot;
+<span class="lineNum">     767 </span>            :                     &quot;shadow hash&quot;);
+<span class="lineNum">     768 </span><span class="lineNoCov">          0 :                 return false;</span>
+<span class="lineNum">     769 </span>            :             }
+<span class="lineNum">     770 </span><span class="lineCov">        498 :             bytes += ((RmBuffer *)a_iter-&gt;data)-&gt;len;</span>
+<span class="lineNum">     771 </span><span class="lineCov">        498 :             a_iter = a_iter-&gt;next;</span>
+<span class="lineNum">     772 </span><span class="lineCov">        498 :             b_iter = b_iter-&gt;next;</span>
+<span class="lineNum">     773 </span>            :         }
+<span class="lineNum">     774 </span>            : 
+<span class="lineNum">     775 </span><span class="lineCov">        498 :         return (!a_iter &amp;&amp; !b_iter &amp;&amp; bytes == a-&gt;bytes);</span>
+<span class="lineNum">     776 </span>            : 
+<span class="lineNum">     777 </span><span class="lineCov">     294156 :     } else if(rm_digest_needs_steal(a-&gt;type)) {</span>
+<span class="lineNum">     778 </span><span class="lineCov">      85941 :         guint8 *buf_a = rm_digest_steal(a);</span>
+<span class="lineNum">     779 </span><span class="lineCov">      85942 :         guint8 *buf_b = rm_digest_steal(b);</span>
+<span class="lineNum">     780 </span>            : 
+<span class="lineNum">     781 </span>            :         gboolean result;
+<span class="lineNum">     782 </span>            : 
+<span class="lineNum">     783 </span><span class="lineCov">      85944 :         if(a-&gt;bytes != b-&gt;bytes) {</span>
+<span class="lineNum">     784 </span><span class="lineNoCov">          0 :             result = false;</span>
+<span class="lineNum">     785 </span>            :         } else {
+<span class="lineNum">     786 </span><span class="lineCov">      85944 :             result = !memcmp(buf_a, buf_b, MIN(a-&gt;bytes, b-&gt;bytes));</span>
+<span class="lineNum">     787 </span>            :         }
+<span class="lineNum">     788 </span>            : 
+<span class="lineNum">     789 </span><span class="lineCov">      85944 :         g_slice_free1(a-&gt;bytes, buf_a);</span>
+<span class="lineNum">     790 </span><span class="lineCov">      85943 :         g_slice_free1(b-&gt;bytes, buf_b);</span>
+<span class="lineNum">     791 </span>            : 
+<span class="lineNum">     792 </span><span class="lineCov">      85945 :         return result;</span>
+<span class="lineNum">     793 </span>            :     } else {
+<span class="lineNum">     794 </span><span class="lineCov">     208215 :         return !memcmp(a-&gt;checksum, b-&gt;checksum, MIN(a-&gt;bytes, b-&gt;bytes));</span>
+<span class="lineNum">     795 </span>            :     }
+<a name="796"><span class="lineNum">     796 </span>            : }</a>
+<span class="lineNum">     797 </span>            : 
+<span class="lineNum">     798 </span><span class="lineCov">     473821 : int rm_digest_hexstring(RmDigest *digest, char *buffer) {</span>
+<span class="lineNum">     799 </span>            :     static const char *hex = &quot;0123456789abcdef&quot;;
+<span class="lineNum">     800 </span><span class="lineCov">     473821 :     guint8 *input = NULL;</span>
+<span class="lineNum">     801 </span><span class="lineCov">     473821 :     gsize bytes = 0;</span>
+<span class="lineNum">     802 </span><span class="lineCov">     473821 :     if(digest == NULL) {</span>
+<span class="lineNum">     803 </span><span class="lineCov">        760 :         return 0;</span>
+<span class="lineNum">     804 </span>            :     }
+<span class="lineNum">     805 </span>            : 
+<span class="lineNum">     806 </span><span class="lineCov">     473061 :     if(digest-&gt;type == RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     807 </span><span class="lineCov">      23562 :         if(digest-&gt;paranoid-&gt;shadow_hash) {</span>
+<span class="lineNum">     808 </span><span class="lineCov">      23562 :             input = rm_digest_steal(digest-&gt;paranoid-&gt;shadow_hash);</span>
+<span class="lineNum">     809 </span><span class="lineCov">      23562 :             bytes = digest-&gt;paranoid-&gt;shadow_hash-&gt;bytes;</span>
+<span class="lineNum">     810 </span>            :         }
+<span class="lineNum">     811 </span>            :     } else {
+<span class="lineNum">     812 </span><span class="lineCov">     449499 :         input = rm_digest_steal(digest);</span>
+<span class="lineNum">     813 </span><span class="lineCov">     449499 :         bytes = digest-&gt;bytes;</span>
+<span class="lineNum">     814 </span>            :     }
+<span class="lineNum">     815 </span>            : 
+<span class="lineNum">     816 </span><span class="lineCov">   16285234 :     for(gsize i = 0; i &lt; bytes; ++i) {</span>
+<span class="lineNum">     817 </span><span class="lineCov">   15812173 :         buffer[0] = hex[input[i] / 16];</span>
+<span class="lineNum">     818 </span><span class="lineCov">   15812173 :         buffer[1] = hex[input[i] % 16];</span>
+<span class="lineNum">     819 </span>            : 
+<span class="lineNum">     820 </span><span class="lineCov">   15812173 :         if(i == bytes - 1) {</span>
+<span class="lineNum">     821 </span><span class="lineCov">     473061 :             buffer[2] = '\0';</span>
+<span class="lineNum">     822 </span>            :         }
+<span class="lineNum">     823 </span>            : 
+<span class="lineNum">     824 </span><span class="lineCov">   15812173 :         buffer += 2;</span>
+<span class="lineNum">     825 </span>            :     }
+<span class="lineNum">     826 </span>            : 
+<span class="lineNum">     827 </span><span class="lineCov">     473061 :     g_slice_free1(bytes, input);</span>
+<span class="lineNum">     828 </span><span class="lineCov">     473061 :     return bytes * 2 + 1;</span>
+<a name="829"><span class="lineNum">     829 </span>            : }</a>
+<span class="lineNum">     830 </span>            : 
+<span class="lineNum">     831 </span><span class="lineCov">     473821 : int rm_digest_get_bytes(RmDigest *self) {</span>
+<span class="lineNum">     832 </span><span class="lineCov">     473821 :     if(self == NULL) {</span>
+<span class="lineNum">     833 </span><span class="lineCov">        760 :         return 0;</span>
+<span class="lineNum">     834 </span>            :     }
+<span class="lineNum">     835 </span>            : 
+<span class="lineNum">     836 </span><span class="lineCov">     473061 :     if(self-&gt;type != RM_DIGEST_PARANOID) {</span>
+<span class="lineNum">     837 </span><span class="lineCov">     449471 :         return self-&gt;bytes;</span>
+<span class="lineNum">     838 </span><span class="lineCov">      23590 :     } else if(self-&gt;paranoid-&gt;shadow_hash) {</span>
+<span class="lineNum">     839 </span><span class="lineCov">      23590 :         return self-&gt;paranoid-&gt;shadow_hash-&gt;bytes;</span>
+<span class="lineNum">     840 </span>            :     } else {
+<span class="lineNum">     841 </span><span class="lineNoCov">          0 :         return 0;</span>
+<span class="lineNum">     842 </span>            :     }
+<a name="843"><span class="lineNum">     843 </span>            : }</a>
+<span class="lineNum">     844 </span>            : 
+<span class="lineNum">     845 </span><span class="lineCov">      12476 : void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {</span>
+<span class="lineNum">     846 </span><span class="lineCov">      12476 :     if(!target-&gt;paranoid-&gt;incoming_twin_candidates) {</span>
+<span class="lineNum">     847 </span><span class="lineNoCov">          0 :         target-&gt;paranoid-&gt;incoming_twin_candidates = g_async_queue_new();</span>
+<span class="lineNum">     848 </span>            :     }
+<span class="lineNum">     849 </span><span class="lineCov">      12476 :     g_async_queue_push(target-&gt;paranoid-&gt;incoming_twin_candidates, candidate);</span>
+<span class="lineNum">     850 </span><span class="lineCov">      12476 : }</span>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

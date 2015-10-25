@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - /usr/include/glib-2.0/glib/gtrashstack.h</title>
+  <link rel="stylesheet" type="text/css" href="../../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../../index.html">top level</a> - <a href="index.html">usr/include/glib-2.0/glib</a> - gtrashstack.h<span style="font-size: 80%;"> (source / <a href="gtrashstack.h.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-05-07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /* GLIB - Library of useful routines for C programming</a>
+<span class="lineNum">       2 </span>            :  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
+<span class="lineNum">       3 </span>            :  *
+<span class="lineNum">       4 </span>            :  * This library is free software; you can redistribute it and/or
+<span class="lineNum">       5 </span>            :  * modify it under the terms of the GNU Lesser General Public
+<span class="lineNum">       6 </span>            :  * License as published by the Free Software Foundation; either
+<span class="lineNum">       7 </span>            :  * version 2 of the License, or (at your option) any later version.
+<span class="lineNum">       8 </span>            :  *
+<span class="lineNum">       9 </span>            :  * This library is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+<span class="lineNum">      12 </span>            :  * Lesser General Public License for more details.
+<span class="lineNum">      13 </span>            :  *
+<span class="lineNum">      14 </span>            :  * You should have received a copy of the GNU Lesser General Public
+<span class="lineNum">      15 </span>            :  * License along with this library; if not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            :  */
+<span class="lineNum">      17 </span>            : 
+<span class="lineNum">      18 </span>            : /*
+<span class="lineNum">      19 </span>            :  * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
+<span class="lineNum">      20 </span>            :  * file for a list of people on the GLib Team.  See the ChangeLog
+<span class="lineNum">      21 </span>            :  * files for a list of changes.  These files are distributed with
+<span class="lineNum">      22 </span>            :  * GLib at ftp://ftp.gtk.org/pub/gtk/.
+<span class="lineNum">      23 </span>            :  */
+<span class="lineNum">      24 </span>            : 
+<span class="lineNum">      25 </span>            : #ifndef __G_TRASH_STACK_H__
+<span class="lineNum">      26 </span>            : #define __G_TRASH_STACK_H__
+<span class="lineNum">      27 </span>            : 
+<span class="lineNum">      28 </span>            : #if !defined (__GLIB_H_INSIDE__) &amp;&amp; !defined (GLIB_COMPILATION)
+<span class="lineNum">      29 </span>            : #error &quot;Only &lt;glib.h&gt; can be included directly.&quot;
+<span class="lineNum">      30 </span>            : #endif
+<span class="lineNum">      31 </span>            : 
+<span class="lineNum">      32 </span>            : #include &lt;glib/gutils.h&gt;
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            : G_BEGIN_DECLS
+<span class="lineNum">      35 </span>            : 
+<span class="lineNum">      36 </span>            : typedef struct _GTrashStack GTrashStack;
+<span class="lineNum">      37 </span>            : struct _GTrashStack
+<span class="lineNum">      38 </span>            : {
+<span class="lineNum">      39 </span>            :   GTrashStack *next;
+<span class="lineNum">      40 </span>            : };
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span>            : G_INLINE_FUNC void      g_trash_stack_push   (GTrashStack **stack_p,
+<span class="lineNum">      43 </span>            :                                               gpointer      data_p);
+<span class="lineNum">      44 </span>            : G_INLINE_FUNC gpointer  g_trash_stack_pop    (GTrashStack **stack_p);
+<span class="lineNum">      45 </span>            : G_INLINE_FUNC gpointer  g_trash_stack_peek   (GTrashStack **stack_p);
+<span class="lineNum">      46 </span>            : G_INLINE_FUNC guint     g_trash_stack_height (GTrashStack **stack_p);
+<span class="lineNum">      47 </span>            : 
+<span class="lineNum">      48 </span>            : #if defined (G_CAN_INLINE) || defined (__G_TRASH_STACK_C__)
+<a name="49"><span class="lineNum">      49 </span>            : </a>
+<span class="lineNum">      50 </span>            : G_INLINE_FUNC void
+<span class="lineNum">      51 </span><span class="lineCov">     200164 : g_trash_stack_push (GTrashStack **stack_p,</span>
+<span class="lineNum">      52 </span>            :                     gpointer      data_p)
+<span class="lineNum">      53 </span>            : {
+<span class="lineNum">      54 </span><span class="lineCov">     200164 :   GTrashStack *data = (GTrashStack *) data_p;</span>
+<span class="lineNum">      55 </span>            : 
+<span class="lineNum">      56 </span><span class="lineCov">     200164 :   data-&gt;next = *stack_p;</span>
+<span class="lineNum">      57 </span><span class="lineCov">     200164 :   *stack_p = data;</span>
+<a name="58"><span class="lineNum">      58 </span><span class="lineCov">     200164 : }</span></a>
+<span class="lineNum">      59 </span>            : G_INLINE_FUNC gpointer
+<span class="lineNum">      60 </span><span class="lineCov">     200164 : g_trash_stack_pop (GTrashStack **stack_p)</span>
+<span class="lineNum">      61 </span>            : {
+<span class="lineNum">      62 </span>            :   GTrashStack *data;
+<span class="lineNum">      63 </span>            : 
+<span class="lineNum">      64 </span><span class="lineCov">     200164 :   data = *stack_p;</span>
+<span class="lineNum">      65 </span><span class="lineCov">     200164 :   if (data)</span>
+<span class="lineNum">      66 </span>            :     {
+<span class="lineNum">      67 </span><span class="lineCov">     200164 :       *stack_p = data-&gt;next;</span>
+<span class="lineNum">      68 </span>            :       /* NULLify private pointer here, most platforms store NULL as
+<span class="lineNum">      69 </span>            :        * subsequent 0 bytes
+<span class="lineNum">      70 </span>            :        */
+<span class="lineNum">      71 </span><span class="lineCov">     200164 :       data-&gt;next = NULL;</span>
+<span class="lineNum">      72 </span>            :     }
+<span class="lineNum">      73 </span>            : 
+<span class="lineNum">      74 </span><span class="lineCov">     200164 :   return data;</span>
+<span class="lineNum">      75 </span>            : }
+<span class="lineNum">      76 </span>            : G_INLINE_FUNC gpointer
+<span class="lineNum">      77 </span>            : g_trash_stack_peek (GTrashStack **stack_p)
+<span class="lineNum">      78 </span>            : {
+<span class="lineNum">      79 </span>            :   GTrashStack *data;
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span>            :   data = *stack_p;
+<span class="lineNum">      82 </span>            : 
+<span class="lineNum">      83 </span>            :   return data;
+<span class="lineNum">      84 </span>            : }
+<span class="lineNum">      85 </span>            : G_INLINE_FUNC guint
+<span class="lineNum">      86 </span>            : g_trash_stack_height (GTrashStack **stack_p)
+<span class="lineNum">      87 </span>            : {
+<span class="lineNum">      88 </span>            :   GTrashStack *data;
+<span class="lineNum">      89 </span>            :   guint i = 0;
+<span class="lineNum">      90 </span>            : 
+<span class="lineNum">      91 </span>            :   for (data = *stack_p; data; data = data-&gt;next)
+<span class="lineNum">      92 </span>            :     i++;
+<span class="lineNum">      93 </span>            : 
+<span class="lineNum">      94 </span>            :   return i;
+<span class="lineNum">      95 </span>            : }
+<span class="lineNum">      96 </span>            : 
+<span class="lineNum">      97 </span>            : #endif  /* G_CAN_INLINE || __G_TRASH_STACK_C__ */
+<span class="lineNum">      98 </span>            : 
+<span class="lineNum">      99 </span>            : G_END_DECLS
+<span class="lineNum">     100 </span>            : 
+<span class="lineNum">     101 </span>            : #endif /* __G_UTILS_H__ */
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

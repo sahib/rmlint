@@ -1,0 +1,495 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/utilities.h</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - utilities.h<span style="font-size: 80%;"> (source / <a href="utilities.h.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntry">15</td>
+            <td class="headerCovTableEntryHi">93.3 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-10-25 15:30:11</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /**</a>
+<span class="lineNum">       2 </span>            : * This file is part of rmlint.
+<span class="lineNum">       3 </span>            : *
+<span class="lineNum">       4 </span>            : *  rmlint is free software: you can redistribute it and/or modify
+<span class="lineNum">       5 </span>            : *  it under the terms of the GNU General Public License as published by
+<span class="lineNum">       6 </span>            : *  the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       7 </span>            : *  (at your option) any later version.
+<span class="lineNum">       8 </span>            : *
+<span class="lineNum">       9 </span>            : *  rmlint is distributed in the hope that it will be useful,
+<span class="lineNum">      10 </span>            : *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      11 </span>            : *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      12 </span>            : *  GNU General Public License for more details.
+<span class="lineNum">      13 </span>            : *
+<span class="lineNum">      14 </span>            : *  You should have received a copy of the GNU General Public License
+<span class="lineNum">      15 </span>            : *  along with rmlint.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      16 </span>            : *
+<span class="lineNum">      17 </span>            : * Authors:
+<span class="lineNum">      18 </span>            : *
+<span class="lineNum">      19 </span>            : *  - Christopher &lt;sahib&gt; Pahl 2010-2015 (https://github.com/sahib)
+<span class="lineNum">      20 </span>            : *  - Daniel &lt;SeeSpotRun&gt; T.   2014-2015 (https://github.com/SeeSpotRun)
+<span class="lineNum">      21 </span>            : *
+<span class="lineNum">      22 </span>            : * Hosted on http://github.com/sahib/rmlint
+<span class="lineNum">      23 </span>            : *
+<span class="lineNum">      24 </span>            : */
+<span class="lineNum">      25 </span>            : 
+<span class="lineNum">      26 </span>            : #ifndef RM_UTILITIES_H_INCLUDE
+<span class="lineNum">      27 </span>            : #define RM_UTILITIES_H_INCLUDE
+<span class="lineNum">      28 </span>            : 
+<span class="lineNum">      29 </span>            : #include &lt;glib.h&gt;
+<span class="lineNum">      30 </span>            : #include &lt;stdbool.h&gt;
+<span class="lineNum">      31 </span>            : 
+<span class="lineNum">      32 </span>            : #include &lt;time.h&gt;
+<span class="lineNum">      33 </span>            : #include &lt;unistd.h&gt;
+<span class="lineNum">      34 </span>            : #include &lt;sys/stat.h&gt;
+<span class="lineNum">      35 </span>            : #include &lt;fcntl.h&gt;
+<span class="lineNum">      36 </span>            : #include &lt;sys/uio.h&gt;
+<span class="lineNum">      37 </span>            : 
+<span class="lineNum">      38 </span>            : /* Pat(h)tricia Trie implementation */
+<span class="lineNum">      39 </span>            : #include &quot;pathtricia.h&quot;
+<span class="lineNum">      40 </span>            : 
+<span class="lineNum">      41 </span>            : #if HAVE_STAT64 &amp;&amp; !RM_IS_APPLE
+<span class="lineNum">      42 </span>            : typedef struct stat64 RmStat;
+<span class="lineNum">      43 </span>            : #else
+<span class="lineNum">      44 </span>            : typedef struct stat RmStat;
+<span class="lineNum">      45 </span>            : #endif
+<span class="lineNum">      46 </span>            : 
+<span class="lineNum">      47 </span>            : ////////////////////////
+<span class="lineNum">      48 </span>            : //  MATHS SHORTCUTS   //
+<span class="lineNum">      49 </span>            : ////////////////////////
+<span class="lineNum">      50 </span>            : 
+<span class="lineNum">      51 </span>            : #define SIGN_DIFF(X, Y) (((X) &gt; (Y)) - ((X) &lt; (Y))) /* handy for comparing unit64's */
+<span class="lineNum">      52 </span>            : 
+<span class="lineNum">      53 </span>            : ////////////////////////////////////
+<span class="lineNum">      54 </span>            : //       SYSCALL WRAPPERS         //
+<a name="55"><span class="lineNum">      55 </span>            : ////////////////////////////////////</a>
+<span class="lineNum">      56 </span>            : 
+<span class="lineNum">      57 </span><span class="lineCov">    3100961 : static inline int rm_sys_stat(const char *path, RmStat *buf) {</span>
+<span class="lineNum">      58 </span>            : #if HAVE_STAT64 &amp;&amp; !RM_IS_APPLE
+<span class="lineNum">      59 </span><span class="lineCov">    3100961 :     return stat64(path, buf);</span>
+<span class="lineNum">      60 </span>            : #else
+<span class="lineNum">      61 </span>            :     return stat(path, buf);
+<span class="lineNum">      62 </span>            : #endif
+<a name="63"><span class="lineNum">      63 </span>            : }</a>
+<span class="lineNum">      64 </span>            : 
+<span class="lineNum">      65 </span><span class="lineCov">     228199 : static inline int rm_sys_lstat(const char *path, RmStat *buf) {</span>
+<span class="lineNum">      66 </span>            : #if HAVE_STAT64 &amp;&amp; !RM_IS_APPLE
+<span class="lineNum">      67 </span><span class="lineCov">     228199 :     return lstat64(path, buf);</span>
+<span class="lineNum">      68 </span>            : #else
+<span class="lineNum">      69 </span>            :     return lstat(path, buf);
+<span class="lineNum">      70 </span>            : #endif
+<a name="71"><span class="lineNum">      71 </span>            : }</a>
+<span class="lineNum">      72 </span>            : 
+<span class="lineNum">      73 </span><span class="lineCov">     522694 : static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {</span>
+<span class="lineNum">      74 </span>            : #if RM_IS_APPLE
+<span class="lineNum">      75 </span>            :     return stat-&gt;st_mtimespec.tv_sec;
+<span class="lineNum">      76 </span>            : #else
+<span class="lineNum">      77 </span><span class="lineCov">     522694 :     return stat-&gt;st_mtim.tv_sec;</span>
+<span class="lineNum">      78 </span>            : #endif
+<a name="79"><span class="lineNum">      79 </span>            : }</a>
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">     268406 : static inline int rm_sys_open(const char *path, int mode) {</span>
+<span class="lineNum">      82 </span>            : #if HAVE_STAT64
+<span class="lineNum">      83 </span>            : #ifdef O_LARGEFILE
+<span class="lineNum">      84 </span><span class="lineCov">     268406 :     mode |= O_LARGEFILE;</span>
+<span class="lineNum">      85 </span>            : #endif
+<span class="lineNum">      86 </span>            : #endif
+<span class="lineNum">      87 </span>            : 
+<span class="lineNum">      88 </span><span class="lineCov">     268406 :     return open(path, mode, (S_IRUSR | S_IWUSR));</span>
+<a name="89"><span class="lineNum">      89 </span>            : }</a>
+<span class="lineNum">      90 </span>            : 
+<span class="lineNum">      91 </span><span class="lineCov">     268439 : static inline void rm_sys_close(int fd) {</span>
+<span class="lineNum">      92 </span><span class="lineCov">     268439 :     if(close(fd) == -1) {</span>
+<span class="lineNum">      93 </span><span class="lineNoCov">          0 :         rm_log_perror(&quot;close(2) failed&quot;);</span>
+<span class="lineNum">      94 </span>            :     }
+<a name="95"><span class="lineNum">      95 </span><span class="lineCov">     268429 : }</span></a>
+<span class="lineNum">      96 </span>            : 
+<span class="lineNum">      97 </span><span class="lineCov">     249303 : static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,</span>
+<span class="lineNum">      98 </span>            :                                    RmOff offset) {
+<span class="lineNum">      99 </span>            : #if RM_IS_APPLE
+<span class="lineNum">     100 </span>            :     if(lseek(fd, offset, SEEK_SET) == -1) {
+<span class="lineNum">     101 </span>            :         rm_log_perror(&quot;seek in emulated preadv failed&quot;);
+<span class="lineNum">     102 </span>            :     }
+<span class="lineNum">     103 </span>            :     return readv(fd, iov, iovcnt);
+<span class="lineNum">     104 </span>            : #elif RM_PLATFORM_32
+<span class="lineNum">     105 </span>            :     if(lseek64(fd, offset, SEEK_SET) == -1) {
+<span class="lineNum">     106 </span>            :         rm_log_perror(&quot;seek in emulated preadv failed&quot;);
+<span class="lineNum">     107 </span>            :     }
+<span class="lineNum">     108 </span>            :     return readv(fd, iov, iovcnt);
+<span class="lineNum">     109 </span>            : #else
+<span class="lineNum">     110 </span><span class="lineCov">     249303 :     return preadv(fd, iov, iovcnt, offset);</span>
+<span class="lineNum">     111 </span>            : #endif
+<span class="lineNum">     112 </span>            : }
+<span class="lineNum">     113 </span>            : 
+<span class="lineNum">     114 </span>            : /////////////////////////////////////
+<span class="lineNum">     115 </span>            : //   UID/GID VALIDITY CHECKING     //
+<span class="lineNum">     116 </span>            : /////////////////////////////////////
+<span class="lineNum">     117 </span>            : 
+<span class="lineNum">     118 </span>            : typedef struct RmUserList {
+<span class="lineNum">     119 </span>            :     GSequence *users;
+<span class="lineNum">     120 </span>            :     GSequence *groups;
+<span class="lineNum">     121 </span>            :     GMutex lock;
+<span class="lineNum">     122 </span>            : } RmUserList;
+<span class="lineNum">     123 </span>            : 
+<span class="lineNum">     124 </span>            : /**
+<span class="lineNum">     125 </span>            :  * @brief Create a new list of users.
+<span class="lineNum">     126 </span>            :  */
+<span class="lineNum">     127 </span>            : RmUserList *rm_userlist_new(void);
+<span class="lineNum">     128 </span>            : 
+<span class="lineNum">     129 </span>            : /**
+<span class="lineNum">     130 </span>            :  * @brief Check if a uid and gid is contained in the list.
+<span class="lineNum">     131 </span>            :  *
+<span class="lineNum">     132 </span>            :  * @param valid_uid (out)
+<span class="lineNum">     133 </span>            :  * @param valid_gid (out)
+<span class="lineNum">     134 </span>            :  *
+<span class="lineNum">     135 </span>            :  * @return true if both are valid.
+<span class="lineNum">     136 </span>            :  */
+<span class="lineNum">     137 </span>            : bool rm_userlist_contains(RmUserList *list, unsigned long uid, unsigned gid,
+<span class="lineNum">     138 </span>            :                           bool *valid_uid, bool *valid_gid);
+<span class="lineNum">     139 </span>            : 
+<span class="lineNum">     140 </span>            : /**
+<span class="lineNum">     141 </span>            :  * @brief Deallocate the memory allocated by rm_userlist_new()
+<span class="lineNum">     142 </span>            :  */
+<span class="lineNum">     143 </span>            : void rm_userlist_destroy(RmUserList *list);
+<span class="lineNum">     144 </span>            : 
+<span class="lineNum">     145 </span>            : /**
+<span class="lineNum">     146 </span>            :  * @brief Get the name of the user running rmlint.
+<span class="lineNum">     147 </span>            :  */
+<span class="lineNum">     148 </span>            : char *rm_util_get_username(void);
+<span class="lineNum">     149 </span>            : 
+<span class="lineNum">     150 </span>            : /**
+<span class="lineNum">     151 </span>            :  * @brief Get the group of the user running rmlint.
+<span class="lineNum">     152 </span>            :  */
+<span class="lineNum">     153 </span>            : char *rm_util_get_groupname(void);
+<span class="lineNum">     154 </span>            : 
+<span class="lineNum">     155 </span>            : ////////////////////////////////////
+<span class="lineNum">     156 </span>            : //       GENERAL UTILITES         //
+<span class="lineNum">     157 </span>            : ////////////////////////////////////
+<span class="lineNum">     158 </span>            : 
+<span class="lineNum">     159 </span>            : #define RM_LIST_NEXT(node) ((node) ? node-&gt;next : NULL)
+<span class="lineNum">     160 </span>            : 
+<span class="lineNum">     161 </span>            : /**
+<span class="lineNum">     162 </span>            :  * @brief Replace {subs} with {with} in {string}
+<span class="lineNum">     163 </span>            :  *
+<span class="lineNum">     164 </span>            :  * @return a newly allocated string, g_free it.
+<span class="lineNum">     165 </span>            :  */
+<span class="lineNum">     166 </span>            : char *rm_util_strsub(const char *string, const char *subs, const char *with);
+<span class="lineNum">     167 </span>            : 
+<span class="lineNum">     168 </span>            : /**
+<span class="lineNum">     169 </span>            :  * @brief Check if a file has a invalid gid/uid or both.
+<span class="lineNum">     170 </span>            :  *
+<span class="lineNum">     171 </span>            :  * @return the appropiate RmLintType for the file
+<span class="lineNum">     172 </span>            :  */
+<span class="lineNum">     173 </span>            : int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist);
+<span class="lineNum">     174 </span>            : 
+<span class="lineNum">     175 </span>            : /**
+<span class="lineNum">     176 </span>            :  * @brief Check if a file is a binary that is not stripped.
+<span class="lineNum">     177 </span>            :  *
+<span class="lineNum">     178 </span>            :  * @path: Path to the file to be checked.
+<span class="lineNum">     179 </span>            :  * @statp: valid stat pointer with st_mode filled (allow-none).
+<span class="lineNum">     180 </span>            :  *
+<span class="lineNum">     181 </span>            :  * @return: if it is a binary with debug symbols.
+<span class="lineNum">     182 </span>            :   */
+<span class="lineNum">     183 </span>            : bool rm_util_is_nonstripped(const char *path, RmStat *statp);
+<span class="lineNum">     184 </span>            : 
+<span class="lineNum">     185 </span>            : /**
+<span class="lineNum">     186 </span>            :  * @brief Get the basename part of the file. It does not change filename.
+<span class="lineNum">     187 </span>            :  *
+<span class="lineNum">     188 </span>            :  * @return NULL on failure, the pointer after the last / on success.
+<span class="lineNum">     189 </span>            :  */
+<span class="lineNum">     190 </span>            : char *rm_util_basename(const char *filename);
+<span class="lineNum">     191 </span>            : 
+<span class="lineNum">     192 </span>            : /**
+<span class="lineNum">     193 </span>            :  * @brief Check if the file or any components of it are hidden.
+<span class="lineNum">     194 </span>            :  *
+<span class="lineNum">     195 </span>            :  * @return true if it is.
+<span class="lineNum">     196 </span>            :  */
+<span class="lineNum">     197 </span>            : bool rm_util_path_is_hidden(const char *path);
+<span class="lineNum">     198 </span>            : 
+<span class="lineNum">     199 </span>            : /**
+<span class="lineNum">     200 </span>            :  * @brief Get the depth of a path
+<span class="lineNum">     201 </span>            :  *
+<span class="lineNum">     202 </span>            :  * @param path
+<span class="lineNum">     203 </span>            :  *
+<span class="lineNum">     204 </span>            :  * @return depth of path or 0.
+<span class="lineNum">     205 </span>            :  */
+<span class="lineNum">     206 </span>            : int rm_util_path_depth(const char *path);
+<span class="lineNum">     207 </span>            : 
+<span class="lineNum">     208 </span>            : typedef gpointer (*RmNewFunc)(void);
+<span class="lineNum">     209 </span>            : 
+<span class="lineNum">     210 </span>            : /**
+<span class="lineNum">     211 </span>            :  * @brief A setdefault supplementary function for GHashTable.
+<span class="lineNum">     212 </span>            :  *
+<span class="lineNum">     213 </span>            :  * This is about the same as dict.setdefault in python.
+<span class="lineNum">     214 </span>            :  *
+<span class="lineNum">     215 </span>            :  * @param table the table to use
+<span class="lineNum">     216 </span>            :  * @param key key to lookup
+<span class="lineNum">     217 </span>            :  * @param default_func if the key does not exist in table, return default_func
+<span class="lineNum">     218 </span>            :  * and insert it into table
+<span class="lineNum">     219 </span>            :  *
+<span class="lineNum">     220 </span>            :  * @return value, which may be default_func() if key does not exist.
+<span class="lineNum">     221 </span>            :  */
+<span class="lineNum">     222 </span>            : GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key, RmNewFunc default_func);
+<span class="lineNum">     223 </span>            : 
+<span class="lineNum">     224 </span>            : /**
+<span class="lineNum">     225 </span>            :  * @brief Push all elements in `src` at the tail of `dst`
+<span class="lineNum">     226 </span>            :  *
+<span class="lineNum">     227 </span>            :  * @param dest The queue to append to.
+<span class="lineNum">     228 </span>            :  * @param src The queue to append from. Will be empty afterwards.
+<span class="lineNum">     229 </span>            :  */
+<span class="lineNum">     230 </span>            : void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src);
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span>            : /**
+<span class="lineNum">     233 </span>            :  * @brief Function prototype for remove-iterating over a GQueue.
+<span class="lineNum">     234 </span>            :  *
+<span class="lineNum">     235 </span>            :  * @param data current element
+<span class="lineNum">     236 </span>            :  * @param user_data optional user_data
+<span class="lineNum">     237 </span>            :  *
+<span class="lineNum">     238 </span>            :  * @return True if the element should be removed.
+<span class="lineNum">     239 </span>            :  */
+<span class="lineNum">     240 </span>            : typedef gboolean (*RmQRFunc)(gpointer data, gpointer user_data);
+<span class="lineNum">     241 </span>            : 
+<span class="lineNum">     242 </span>            : /**
+<span class="lineNum">     243 </span>            :  * @brief Iterate over a GQueue and call `func` on each element.
+<span class="lineNum">     244 </span>            :  *
+<span class="lineNum">     245 </span>            :  * If func returns true, the element is removed from the queue.
+<span class="lineNum">     246 </span>            :  *
+<span class="lineNum">     247 </span>            :  * @param queue GQueue to iterate
+<span class="lineNum">     248 </span>            :  * @param func Function that evaluates the removal of the item
+<span class="lineNum">     249 </span>            :  * @param user_data optional user data
+<span class="lineNum">     250 </span>            :  *
+<span class="lineNum">     251 </span>            :  * @return Number of removed items.
+<span class="lineNum">     252 </span>            :  */
+<span class="lineNum">     253 </span>            : gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data);
+<span class="lineNum">     254 </span>            : 
+<span class="lineNum">     255 </span>            : /**
+<span class="lineNum">     256 </span>            :  * @brief Return a pointer to the extension part of the file or NULL if none.
+<span class="lineNum">     257 </span>            :  *
+<span class="lineNum">     258 </span>            :  * @return: a pointer &gt;= basename or NULL.
+<span class="lineNum">     259 </span>            :  */
+<span class="lineNum">     260 </span>            : char *rm_util_path_extension(const char *basename);
+<span class="lineNum">     261 </span>            : 
+<span class="lineNum">     262 </span>            : /**
+<span class="lineNum">     263 </span>            :  * @brief Get the inode of the directory of the file specified in path.
+<span class="lineNum">     264 </span>            :  */
+<span class="lineNum">     265 </span>            : ino_t rm_util_parent_node(const char *path);
+<span class="lineNum">     266 </span>            : 
+<span class="lineNum">     267 </span>            : /*
+<span class="lineNum">     268 </span>            :  * @brief Takes num and converts into some human readable string. 1024 -&gt; 1KB
+<span class="lineNum">     269 </span>            :  */
+<span class="lineNum">     270 </span>            : void rm_util_size_to_human_readable(RmOff num, char *in, gsize len);
+<span class="lineNum">     271 </span>            : 
+<span class="lineNum">     272 </span>            : /////////////////////////////////////
+<span class="lineNum">     273 </span>            : //    MOUNTTABLE IMPLEMENTATION    //
+<span class="lineNum">     274 </span>            : /////////////////////////////////////
+<span class="lineNum">     275 </span>            : 
+<span class="lineNum">     276 </span>            : typedef struct RmMountTable {
+<span class="lineNum">     277 </span>            :     GHashTable *part_table;
+<span class="lineNum">     278 </span>            :     GHashTable *disk_table;
+<span class="lineNum">     279 </span>            :     GHashTable *nfs_table;
+<span class="lineNum">     280 </span>            :     GHashTable *evilfs_table;
+<span class="lineNum">     281 </span>            :     GHashTable *reflinkfs_table;
+<span class="lineNum">     282 </span>            : } RmMountTable;
+<span class="lineNum">     283 </span>            : 
+<span class="lineNum">     284 </span>            : /**
+<span class="lineNum">     285 </span>            :  * @brief Allocates a new mounttable.
+<span class="lineNum">     286 </span>            :  * @param force_fiemap Create random fiemap data always. Useful for testing.
+<span class="lineNum">     287 </span>            :  *
+<span class="lineNum">     288 </span>            :  * @return The mounttable. Free with rm_mounts_table_destroy.
+<span class="lineNum">     289 </span>            :  */
+<span class="lineNum">     290 </span>            : RmMountTable *rm_mounts_table_new(bool force_fiemap);
+<span class="lineNum">     291 </span>            : 
+<span class="lineNum">     292 </span>            : /**
+<span class="lineNum">     293 </span>            :  * @brief Destroy a previously allocated mounttable.
+<span class="lineNum">     294 </span>            :  *
+<span class="lineNum">     295 </span>            :  * @param self the table to destroy.
+<span class="lineNum">     296 </span>            :  */
+<span class="lineNum">     297 </span>            : void rm_mounts_table_destroy(RmMountTable *self);
+<span class="lineNum">     298 </span>            : 
+<span class="lineNum">     299 </span>            : /**
+<span class="lineNum">     300 </span>            :  * @brief Check if the device is or is part of a nonrotational device.
+<span class="lineNum">     301 </span>            :  *
+<span class="lineNum">     302 </span>            :  * This operation has constant time.
+<span class="lineNum">     303 </span>            :  *
+<span class="lineNum">     304 </span>            :  * @param self the table to lookup from.
+<span class="lineNum">     305 </span>            :  * @param device the dev_t of a file, e.g. looked up from rm_sys_stat(2)
+<span class="lineNum">     306 </span>            :  *
+<span class="lineNum">     307 </span>            :  * @return true if it is non a nonrational device.
+<span class="lineNum">     308 </span>            :  */
+<span class="lineNum">     309 </span>            : bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span>            : /**
+<span class="lineNum">     312 </span>            :  * @brief Get the disk behind the partition.
+<span class="lineNum">     313 </span>            :  *
+<span class="lineNum">     314 </span>            :  * @param self the table to lookup from.
+<span class="lineNum">     315 </span>            :  * @param partition the dev_t of a partition (sda1 -&gt; 8:1), e.g. looked up from
+<span class="lineNum">     316 </span>            :  *rm_sys_stat(2)
+<span class="lineNum">     317 </span>            :  *
+<span class="lineNum">     318 </span>            :  * @return the dev_t of the whole disk. (sda 8:0)
+<span class="lineNum">     319 </span>            :  */
+<span class="lineNum">     320 </span>            : dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path);
+<span class="lineNum">     321 </span>            : 
+<span class="lineNum">     322 </span>            : /**
+<span class="lineNum">     323 </span>            :  * @brief Same as above, but calls rm_sys_stat(2) on path for you.
+<span class="lineNum">     324 </span>            :  */
+<span class="lineNum">     325 </span>            : dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path);
+<span class="lineNum">     326 </span>            : 
+<span class="lineNum">     327 </span>            : /**
+<span class="lineNum">     328 </span>            :  * @brief Indicates true if dev_t points to a filesystem that might confuse
+<span class="lineNum">     329 </span>            :  * rmlint.
+<span class="lineNum">     330 </span>            :  */
+<span class="lineNum">     331 </span>            : bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check);
+<span class="lineNum">     332 </span>            : 
+<span class="lineNum">     333 </span>            : /**
+<span class="lineNum">     334 </span>            :  * @brief Indicates true if source and dest are on same partition, and the
+<span class="lineNum">     335 </span>            :  * partition supports reflink copies (cp --reflink).
+<span class="lineNum">     336 </span>            :  */
+<span class="lineNum">     337 </span>            : bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
+<span class="lineNum">     338 </span>            : 
+<span class="lineNum">     339 </span>            : /////////////////////////////////
+<span class="lineNum">     340 </span>            : //    FIEMAP IMPLEMENATION     //
+<span class="lineNum">     341 </span>            : /////////////////////////////////
+<span class="lineNum">     342 </span>            : 
+<span class="lineNum">     343 </span>            : /**
+<span class="lineNum">     344 </span>            :  * @brief Lookup the physical offset of a file fd at any given offset.
+<span class="lineNum">     345 </span>            :  *
+<span class="lineNum">     346 </span>            :  * @return the physical offset starting from the disk.
+<span class="lineNum">     347 </span>            :  */
+<span class="lineNum">     348 </span>            : RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next);
+<span class="lineNum">     349 </span>            : 
+<span class="lineNum">     350 </span>            : /**
+<span class="lineNum">     351 </span>            :  * @brief Lookup the physical offset of a file path at any given offset.
+<span class="lineNum">     352 </span>            :  *
+<span class="lineNum">     353 </span>            :  * @return the physical offset starting from the disk.
+<span class="lineNum">     354 </span>            :  */
+<span class="lineNum">     355 </span>            : RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
+<span class="lineNum">     356 </span>            :                               RmOff *file_offset_next);
+<span class="lineNum">     357 </span>            : 
+<span class="lineNum">     358 </span>            : /**
+<span class="lineNum">     359 </span>            :  * @brief Test if two files have identical fiemaps.
+<span class="lineNum">     360 </span>            :  */
+<span class="lineNum">     361 </span>            : bool rm_offsets_match(char *path1, char *path2);
+<span class="lineNum">     362 </span>            : 
+<span class="lineNum">     363 </span>            : //////////////////////////////
+<span class="lineNum">     364 </span>            : //    TIMESTAMP HELPERS     //
+<span class="lineNum">     365 </span>            : //////////////////////////////
+<span class="lineNum">     366 </span>            : 
+<span class="lineNum">     367 </span>            : /**
+<span class="lineNum">     368 </span>            :  * @brief Parse a ISO8601 timestamp to a unix timestamp.
+<span class="lineNum">     369 </span>            :  */
+<span class="lineNum">     370 </span>            : time_t rm_iso8601_parse(const char *string);
+<span class="lineNum">     371 </span>            : 
+<span class="lineNum">     372 </span>            : /**
+<span class="lineNum">     373 </span>            :  * @brief convert a unix timestamp as iso8601 timestamp string.
+<span class="lineNum">     374 </span>            :  *
+<span class="lineNum">     375 </span>            :  * @param stamp unix timestamp
+<span class="lineNum">     376 </span>            :  * @param buf result buffer to hold the string.
+<span class="lineNum">     377 </span>            :  * @param buf_size sizeof buf.
+<span class="lineNum">     378 </span>            :  *
+<span class="lineNum">     379 </span>            :  * @return true if conversion succeeded.
+<span class="lineNum">     380 </span>            :  */
+<span class="lineNum">     381 </span>            : bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size);
+<span class="lineNum">     382 </span>            : 
+<span class="lineNum">     383 </span>            : ///////////////////////////////
+<span class="lineNum">     384 </span>            : //    THREADPOOL HELPERS     //
+<span class="lineNum">     385 </span>            : ///////////////////////////////
+<span class="lineNum">     386 </span>            : 
+<span class="lineNum">     387 </span>            : /**
+<span class="lineNum">     388 </span>            :  * @brief Create a new GThreadPool with default cfg.
+<span class="lineNum">     389 </span>            :  *
+<span class="lineNum">     390 </span>            :  * @param func func to execute
+<span class="lineNum">     391 </span>            :  * @param data user_data to pass
+<span class="lineNum">     392 </span>            :  * @param threads how many threads at max to use.
+<span class="lineNum">     393 </span>            :  *
+<span class="lineNum">     394 </span>            :  * @return newly allocated GThreadPool
+<span class="lineNum">     395 </span>            :  */
+<span class="lineNum">     396 </span>            : GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads);
+<span class="lineNum">     397 </span>            : 
+<span class="lineNum">     398 </span>            : /**
+<span class="lineNum">     399 </span>            :  * @brief Push a new job to a threadpool.
+<span class="lineNum">     400 </span>            :  *
+<span class="lineNum">     401 </span>            :  * @return true on success.
+<span class="lineNum">     402 </span>            :  */
+<span class="lineNum">     403 </span>            : bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
+<span class="lineNum">     404 </span>            : 
+<span class="lineNum">     405 </span>            : /////////////////////////////////////
+<span class="lineNum">     406 </span>            : //    JSON CACHE IMPLEMENTATION    //
+<span class="lineNum">     407 </span>            : /////////////////////////////////////
+<span class="lineNum">     408 </span>            : 
+<span class="lineNum">     409 </span>            : /**
+<span class="lineNum">     410 </span>            :  * @brief Read json_path and write (path:cksum) into cksum_table.
+<span class="lineNum">     411 </span>            :  *
+<span class="lineNum">     412 </span>            :  * @param file_trie to set read cksums in.
+<span class="lineNum">     413 </span>            :  * @param json_path path with .json file.
+<span class="lineNum">     414 </span>            :  *
+<span class="lineNum">     415 </span>            :  * @return 0 on success.
+<span class="lineNum">     416 </span>            :  */
+<span class="lineNum">     417 </span>            : int rm_json_cache_read(RmTrie *file_trie, const char *json_path);
+<span class="lineNum">     418 </span>            : 
+<span class="lineNum">     419 </span>            : #endif /* RM_UTILITIES_H_INCLUDE*/
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

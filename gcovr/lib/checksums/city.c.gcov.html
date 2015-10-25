@@ -1,0 +1,465 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/checksums/city.c</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/checksums</a> - city.c<span style="font-size: 80%;"> (source / <a href="city.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">131</td>
+            <td class="headerCovTableEntry">205</td>
+            <td class="headerCovTableEntryLo">63.9 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-10-25 15:30:11</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntry">20</td>
+            <td class="headerCovTableEntryLo">70.0 %</td>
+          </tr>
+          <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : // city.c - cityhash-c</a>
+<span class="lineNum">       2 </span>            : // CityHash on C
+<span class="lineNum">       3 </span>            : // Copyright (c) 2011-2012, Alexander Nusov
+<span class="lineNum">       4 </span>            : //
+<span class="lineNum">       5 </span>            : // - original copyright notice -
+<span class="lineNum">       6 </span>            : // Copyright (c) 2011 Google, Inc.
+<span class="lineNum">       7 </span>            : //
+<span class="lineNum">       8 </span>            : // Permission is hereby granted, free of charge, to any person obtaining a copy
+<span class="lineNum">       9 </span>            : // of this software and associated documentation files (the &quot;Software&quot;), to deal
+<span class="lineNum">      10 </span>            : // in the Software without restriction, including without limitation the rights
+<span class="lineNum">      11 </span>            : // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+<span class="lineNum">      12 </span>            : // copies of the Software, and to permit persons to whom the Software is
+<span class="lineNum">      13 </span>            : // furnished to do so, subject to the following conditions:
+<span class="lineNum">      14 </span>            : //
+<span class="lineNum">      15 </span>            : // The above copyright notice and this permission notice shall be included in
+<span class="lineNum">      16 </span>            : // all copies or substantial portions of the Software.
+<span class="lineNum">      17 </span>            : //
+<span class="lineNum">      18 </span>            : // THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+<span class="lineNum">      19 </span>            : // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+<span class="lineNum">      20 </span>            : // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+<span class="lineNum">      21 </span>            : // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+<span class="lineNum">      22 </span>            : // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+<span class="lineNum">      23 </span>            : // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+<span class="lineNum">      24 </span>            : // THE SOFTWARE.
+<span class="lineNum">      25 </span>            : //
+<span class="lineNum">      26 </span>            : // CityHash, by Geoff Pike and Jyrki Alakuijala
+<span class="lineNum">      27 </span>            : //
+<span class="lineNum">      28 </span>            : // This file provides CityHash64() and related functions.
+<span class="lineNum">      29 </span>            : //
+<span class="lineNum">      30 </span>            : // It's probably possible to create even faster hash functions by
+<span class="lineNum">      31 </span>            : // writing a program that systematically explores some of the space of
+<span class="lineNum">      32 </span>            : // possible hash functions, by using SIMD instructions, or by
+<span class="lineNum">      33 </span>            : // compromising on hash quality.
+<span class="lineNum">      34 </span>            : 
+<span class="lineNum">      35 </span>            : #include &lt;string.h&gt;
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;city.h&quot;</a>
+<span class="lineNum">      37 </span>            : 
+<span class="lineNum">      38 </span><span class="lineCov">   33908134 : static uint64 UNALIGNED_LOAD64(const char *p) {</span>
+<span class="lineNum">      39 </span>            :     uint64 result;
+<span class="lineNum">      40 </span><span class="lineCov">   33908134 :     memcpy(&amp;result, p, sizeof(result));</span>
+<span class="lineNum">      41 </span><span class="lineCov">   33908134 :     return result;</span>
+<a name="42"><span class="lineNum">      42 </span>            : }</a>
+<span class="lineNum">      43 </span>            : 
+<span class="lineNum">      44 </span><span class="lineCov">      41506 : static uint32 UNALIGNED_LOAD32(const char *p) {</span>
+<span class="lineNum">      45 </span>            :     uint32 result;
+<span class="lineNum">      46 </span><span class="lineCov">      41506 :     memcpy(&amp;result, p, sizeof(result));</span>
+<span class="lineNum">      47 </span><span class="lineCov">      41506 :     return result;</span>
+<span class="lineNum">      48 </span>            : }
+<span class="lineNum">      49 </span>            : 
+<span class="lineNum">      50 </span>            : #if !defined(WORDS_BIGENDIAN)
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span>            : #define uint32_in_expected_order(x) (x)
+<span class="lineNum">      53 </span>            : #define uint64_in_expected_order(x) (x)
+<span class="lineNum">      54 </span>            : 
+<span class="lineNum">      55 </span>            : #else
+<span class="lineNum">      56 </span>            : 
+<span class="lineNum">      57 </span>            : #ifdef _MSC_VER
+<span class="lineNum">      58 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      59 </span>            : #define bswap_32(x) _byteswap_ulong(x)
+<span class="lineNum">      60 </span>            : #define bswap_64(x) _byteswap_uint64(x)
+<span class="lineNum">      61 </span>            : 
+<span class="lineNum">      62 </span>            : #elif defined(__APPLE__)
+<span class="lineNum">      63 </span>            : // Mac OS X / Darwin features
+<span class="lineNum">      64 </span>            : #include &lt;libkern/OSByteOrder.h&gt;
+<span class="lineNum">      65 </span>            : #define bswap_32(x) OSSwapInt32(x)
+<span class="lineNum">      66 </span>            : #define bswap_64(x) OSSwapInt64(x)
+<span class="lineNum">      67 </span>            : 
+<span class="lineNum">      68 </span>            : #else
+<span class="lineNum">      69 </span>            : #include &lt;byteswap.h&gt;
+<span class="lineNum">      70 </span>            : #endif
+<span class="lineNum">      71 </span>            : 
+<span class="lineNum">      72 </span>            : #define uint32_in_expected_order(x) (bswap_32(x))
+<span class="lineNum">      73 </span>            : #define uint64_in_expected_order(x) (bswap_64(x))
+<span class="lineNum">      74 </span>            : 
+<span class="lineNum">      75 </span>            : #endif  // WORDS_BIGENDIAN
+<span class="lineNum">      76 </span>            : 
+<span class="lineNum">      77 </span>            : #if !defined(LIKELY)
+<span class="lineNum">      78 </span>            : #if HAVE_BUILTIN_EXPECT
+<span class="lineNum">      79 </span>            : #define LIKELY(x) (__builtin_expect(!!(x), 1))
+<span class="lineNum">      80 </span>            : #else
+<span class="lineNum">      81 </span>            : #define LIKELY(x) (x)
+<span class="lineNum">      82 </span>            : #endif
+<a name="83"><span class="lineNum">      83 </span>            : #endif</a>
+<span class="lineNum">      84 </span>            : 
+<span class="lineNum">      85 </span><span class="lineCov">   32265361 : static uint64 Fetch64(const char *p) {</span>
+<span class="lineNum">      86 </span><span class="lineCov">   32265361 :     return uint64_in_expected_order(UNALIGNED_LOAD64(p));</span>
+<a name="87"><span class="lineNum">      87 </span>            : }</a>
+<span class="lineNum">      88 </span>            : 
+<span class="lineNum">      89 </span><span class="lineCov">      41512 : static uint32 Fetch32(const char *p) {</span>
+<span class="lineNum">      90 </span><span class="lineCov">      41512 :     return uint32_in_expected_order(UNALIGNED_LOAD32(p));</span>
+<span class="lineNum">      91 </span>            : }
+<span class="lineNum">      92 </span>            : 
+<span class="lineNum">      93 </span>            : // Some primes between 2^63 and 2^64 for various uses.
+<span class="lineNum">      94 </span>            : static const uint64 k0 = 0xc3a5c85c97cb3127ULL;
+<span class="lineNum">      95 </span>            : static const uint64 k1 = 0xb492b66fbe98f273ULL;
+<span class="lineNum">      96 </span>            : static const uint64 k2 = 0x9ae16a3b2f90404fULL;
+<span class="lineNum">      97 </span>            : static const uint64 k3 = 0xc949d7c7509e6557ULL;
+<span class="lineNum">      98 </span>            : 
+<a name="99"><span class="lineNum">      99 </span>            : // Hash 128 input bits down to 64 bits of output.</a>
+<span class="lineNum">     100 </span>            : // This is intended to be a reasonably good hash function.
+<span class="lineNum">     101 </span><span class="lineCov">     302920 : static inline uint64 Hash128to64(const uint128 x) {</span>
+<span class="lineNum">     102 </span>            :     // Murmur-inspired hashing.
+<span class="lineNum">     103 </span><span class="lineCov">     302920 :     const uint64 kMul = 0x9ddfea08eb382d69ULL;</span>
+<span class="lineNum">     104 </span><span class="lineCov">     302920 :     uint64 a = (Uint128Low64(x) ^ Uint128High64(x)) * kMul;</span>
+<span class="lineNum">     105 </span><span class="lineCov">     302920 :     a ^= (a &gt;&gt; 47);</span>
+<span class="lineNum">     106 </span><span class="lineCov">     302920 :     uint64 b = (Uint128High64(x) ^ a) * kMul;</span>
+<span class="lineNum">     107 </span><span class="lineCov">     302920 :     b ^= (b &gt;&gt; 47);</span>
+<span class="lineNum">     108 </span><span class="lineCov">     302920 :     b *= kMul;</span>
+<span class="lineNum">     109 </span><span class="lineCov">     302920 :     return b;</span>
+<span class="lineNum">     110 </span>            : }
+<span class="lineNum">     111 </span>            : 
+<a name="112"><span class="lineNum">     112 </span>            : // Bitwise right rotate.  Normally this will compile to a single</a>
+<span class="lineNum">     113 </span>            : // instruction, especially if the shift is a manifest constant.
+<span class="lineNum">     114 </span><span class="lineCov">   23269030 : static uint64 Rotate(uint64 val, int shift) {</span>
+<span class="lineNum">     115 </span>            :     // Avoid shifting by 64: doing so yields an undefined result.
+<span class="lineNum">     116 </span><span class="lineCov">   23269030 :     return shift == 0 ? val : ((val &gt;&gt; shift) | (val &lt;&lt; (64 - shift)));</span>
+<span class="lineNum">     117 </span>            : }
+<span class="lineNum">     118 </span>            : 
+<span class="lineNum">     119 </span>            : // Equivalent to Rotate(), but requires the second arg to be non-zero.
+<a name="120"><span class="lineNum">     120 </span>            : // On x86-64, and probably others, it's possible for this to compile</a>
+<span class="lineNum">     121 </span>            : // to a single instruction if both args are already in registers.
+<span class="lineNum">     122 </span><span class="lineCov">        117 : static uint64 RotateByAtLeast1(uint64 val, int shift) {</span>
+<span class="lineNum">     123 </span><span class="lineCov">        117 :     return (val &gt;&gt; shift) | (val &lt;&lt; (64 - shift));</span>
+<a name="124"><span class="lineNum">     124 </span>            : }</a>
+<span class="lineNum">     125 </span>            : 
+<span class="lineNum">     126 </span><span class="lineCov">     186881 : static uint64 ShiftMix(uint64 val) {</span>
+<span class="lineNum">     127 </span><span class="lineCov">     186881 :     return val ^ (val &gt;&gt; 47);</span>
+<a name="128"><span class="lineNum">     128 </span>            : }</a>
+<span class="lineNum">     129 </span>            : 
+<span class="lineNum">     130 </span><span class="lineCov">     302784 : static uint64 HashLen16(uint64 u, uint64 v) {</span>
+<span class="lineNum">     131 </span>            :     uint128 result;
+<span class="lineNum">     132 </span><span class="lineCov">     302784 :     result.first = u;</span>
+<span class="lineNum">     133 </span><span class="lineCov">     302784 :     result.second = v;</span>
+<span class="lineNum">     134 </span><span class="lineCov">     302784 :     return Hash128to64(result);</span>
+<a name="135"><span class="lineNum">     135 </span>            : }</a>
+<span class="lineNum">     136 </span>            : 
+<span class="lineNum">     137 </span><span class="lineCov">      69244 : static uint64 HashLen0to16(const char *s, size_t len) {</span>
+<span class="lineNum">     138 </span><span class="lineCov">      69244 :     if(len &gt; 8) {</span>
+<span class="lineNum">     139 </span><span class="lineCov">        117 :         uint64 a = Fetch64(s);</span>
+<span class="lineNum">     140 </span><span class="lineCov">        117 :         uint64 b = Fetch64(s + len - 8);</span>
+<span class="lineNum">     141 </span><span class="lineCov">        117 :         return HashLen16(a, RotateByAtLeast1(b + len, len)) ^ b;</span>
+<span class="lineNum">     142 </span>            :     }
+<span class="lineNum">     143 </span><span class="lineCov">      69127 :     if(len &gt;= 4) {</span>
+<span class="lineNum">     144 </span><span class="lineCov">      20752 :         uint64 a = Fetch32(s);</span>
+<span class="lineNum">     145 </span><span class="lineCov">      20759 :         return HashLen16(len + (a &lt;&lt; 3), Fetch32(s + len - 4));</span>
+<span class="lineNum">     146 </span>            :     }
+<span class="lineNum">     147 </span><span class="lineCov">      48375 :     if(len &gt; 0) {</span>
+<span class="lineNum">     148 </span><span class="lineCov">      48375 :         uint8 a = s[0];</span>
+<span class="lineNum">     149 </span><span class="lineCov">      48375 :         uint8 b = s[len &gt;&gt; 1];</span>
+<span class="lineNum">     150 </span><span class="lineCov">      48375 :         uint8 c = s[len - 1];</span>
+<span class="lineNum">     151 </span><span class="lineCov">      48375 :         uint32 y = (uint32)(a) + ((uint32)(b) &lt;&lt; 8);</span>
+<span class="lineNum">     152 </span><span class="lineCov">      48375 :         uint32 z = len + ((uint32)(c) &lt;&lt; 2);</span>
+<span class="lineNum">     153 </span><span class="lineCov">      48375 :         return ShiftMix(y * k2 ^ z * k3) * k2;</span>
+<span class="lineNum">     154 </span>            :     }
+<span class="lineNum">     155 </span><span class="lineNoCov">          0 :     return k2;</span>
+<span class="lineNum">     156 </span>            : }
+<span class="lineNum">     157 </span>            : 
+<a name="158"><span class="lineNum">     158 </span>            : // This probably works well for 16-byte strings as well, but it may be overkill</a>
+<span class="lineNum">     159 </span>            : // in that case.
+<span class="lineNum">     160 </span><span class="lineNoCov">          0 : static uint64 HashLen17to32(const char *s, size_t len) {</span>
+<span class="lineNum">     161 </span><span class="lineNoCov">          0 :     uint64 a = Fetch64(s) * k1;</span>
+<span class="lineNum">     162 </span><span class="lineNoCov">          0 :     uint64 b = Fetch64(s + 8);</span>
+<span class="lineNum">     163 </span><span class="lineNoCov">          0 :     uint64 c = Fetch64(s + len - 8) * k2;</span>
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :     uint64 d = Fetch64(s + len - 16) * k0;</span>
+<span class="lineNum">     165 </span><span class="lineNoCov">          0 :     return HashLen16(Rotate(a - b, 43) + Rotate(c, 30) + d,</span>
+<span class="lineNum">     166 </span><span class="lineNoCov">          0 :                      a + Rotate(b ^ k3, 20) - c + len);</span>
+<span class="lineNum">     167 </span>            : }
+<span class="lineNum">     168 </span>            : 
+<span class="lineNum">     169 </span>            : // Return a 16-byte hash for 48 bytes.  Quick and dirty.
+<a name="170"><span class="lineNum">     170 </span>            : // Callers do best to use &quot;random-looking&quot; values for a and b.</a>
+<span class="lineNum">     171 </span>            : // static pair&lt;uint64, uint64&gt; WeakHashLen32WithSeeds(
+<span class="lineNum">     172 </span><span class="lineCov">    7697965 : uint128 WeakHashLen32WithSeeds6(uint64 w, uint64 x, uint64 y, uint64 z, uint64 a,</span>
+<span class="lineNum">     173 </span>            :                                 uint64 b) {
+<span class="lineNum">     174 </span><span class="lineCov">    7697965 :     a += w;</span>
+<span class="lineNum">     175 </span><span class="lineCov">    7697965 :     b = Rotate(b + a + z, 21);</span>
+<span class="lineNum">     176 </span><span class="lineCov">    7913948 :     uint64 c = a;</span>
+<span class="lineNum">     177 </span><span class="lineCov">    7913948 :     a += x;</span>
+<span class="lineNum">     178 </span><span class="lineCov">    7913948 :     a += y;</span>
+<span class="lineNum">     179 </span><span class="lineCov">    7913948 :     b += Rotate(a, 44);</span>
+<span class="lineNum">     180 </span>            : 
+<span class="lineNum">     181 </span>            :     uint128 result;
+<span class="lineNum">     182 </span><span class="lineCov">    7963790 :     result.first = (uint64)(a + z);</span>
+<span class="lineNum">     183 </span><span class="lineCov">    7963790 :     result.second = (uint64)(b + c);</span>
+<span class="lineNum">     184 </span><span class="lineCov">    7963790 :     return result;</span>
+<span class="lineNum">     185 </span>            : }
+<span class="lineNum">     186 </span>            : 
+<a name="187"><span class="lineNum">     187 </span>            : // Return a 16-byte hash for s[0] ... s[31], a, and b.  Quick and dirty.</a>
+<span class="lineNum">     188 </span>            : // static pair&lt;uint64, uint64&gt; WeakHashLen32WithSeeds(
+<span class="lineNum">     189 </span><span class="lineCov">    7489756 : uint128 WeakHashLen32WithSeeds(const char *s, uint64 a, uint64 b) {</span>
+<span class="lineNum">     190 </span><span class="lineCov">    7489756 :     return WeakHashLen32WithSeeds6(Fetch64(s), Fetch64(s + 8), Fetch64(s + 16),</span>
+<span class="lineNum">     191 </span>            :                                    Fetch64(s + 24), a, b);
+<span class="lineNum">     192 </span>            : }
+<a name="193"><span class="lineNum">     193 </span>            : </a>
+<span class="lineNum">     194 </span>            : // Return an 8-byte hash for 33 to 64 bytes.
+<span class="lineNum">     195 </span><span class="lineNoCov">          0 : static uint64 HashLen33to64(const char *s, size_t len) {</span>
+<span class="lineNum">     196 </span><span class="lineNoCov">          0 :     uint64 z = Fetch64(s + 24);</span>
+<span class="lineNum">     197 </span><span class="lineNoCov">          0 :     uint64 a = Fetch64(s) + (len + Fetch64(s + len - 16)) * k0;</span>
+<span class="lineNum">     198 </span><span class="lineNoCov">          0 :     uint64 b = Rotate(a + z, 52);</span>
+<span class="lineNum">     199 </span><span class="lineNoCov">          0 :     uint64 c = Rotate(a, 37);</span>
+<span class="lineNum">     200 </span><span class="lineNoCov">          0 :     a += Fetch64(s + 8);</span>
+<span class="lineNum">     201 </span><span class="lineNoCov">          0 :     c += Rotate(a, 7);</span>
+<span class="lineNum">     202 </span><span class="lineNoCov">          0 :     a += Fetch64(s + 16);</span>
+<span class="lineNum">     203 </span><span class="lineNoCov">          0 :     uint64 vf = a + z;</span>
+<span class="lineNum">     204 </span><span class="lineNoCov">          0 :     uint64 vs = b + Rotate(a, 31) + c;</span>
+<span class="lineNum">     205 </span><span class="lineNoCov">          0 :     a = Fetch64(s + 16) + Fetch64(s + len - 32);</span>
+<span class="lineNum">     206 </span><span class="lineNoCov">          0 :     z = Fetch64(s + len - 8);</span>
+<span class="lineNum">     207 </span><span class="lineNoCov">          0 :     b = Rotate(a + z, 52);</span>
+<span class="lineNum">     208 </span><span class="lineNoCov">          0 :     c = Rotate(a, 37);</span>
+<span class="lineNum">     209 </span><span class="lineNoCov">          0 :     a += Fetch64(s + len - 24);</span>
+<span class="lineNum">     210 </span><span class="lineNoCov">          0 :     c += Rotate(a, 7);</span>
+<span class="lineNum">     211 </span><span class="lineNoCov">          0 :     a += Fetch64(s + len - 16);</span>
+<span class="lineNum">     212 </span><span class="lineNoCov">          0 :     uint64 wf = a + z;</span>
+<span class="lineNum">     213 </span><span class="lineNoCov">          0 :     uint64 ws = b + Rotate(a, 31) + c;</span>
+<span class="lineNum">     214 </span><span class="lineNoCov">          0 :     uint64 r = ShiftMix((vf + ws) * k2 + (wf + vs) * k0);</span>
+<span class="lineNum">     215 </span><span class="lineNoCov">          0 :     return ShiftMix(r * k0 + vs) * k2;</span>
+<a name="216"><span class="lineNum">     216 </span>            : }</a>
+<span class="lineNum">     217 </span>            : 
+<span class="lineNum">     218 </span><span class="lineNoCov">          0 : uint64 CityHash64(const char *s, size_t len) {</span>
+<span class="lineNum">     219 </span><span class="lineNoCov">          0 :     if(len &lt;= 32) {</span>
+<span class="lineNum">     220 </span><span class="lineNoCov">          0 :         if(len &lt;= 16) {</span>
+<span class="lineNum">     221 </span><span class="lineNoCov">          0 :             return HashLen0to16(s, len);</span>
+<span class="lineNum">     222 </span>            :         } else {
+<span class="lineNum">     223 </span><span class="lineNoCov">          0 :             return HashLen17to32(s, len);</span>
+<span class="lineNum">     224 </span>            :         }
+<span class="lineNum">     225 </span><span class="lineNoCov">          0 :     } else if(len &lt;= 64) {</span>
+<span class="lineNum">     226 </span><span class="lineNoCov">          0 :         return HashLen33to64(s, len);</span>
+<span class="lineNum">     227 </span>            :     }
+<span class="lineNum">     228 </span>            : 
+<span class="lineNum">     229 </span>            :     // For strings over 64 bytes we hash the end first, and then as we
+<span class="lineNum">     230 </span>            :     // loop we keep 56 bytes of state: v, w, x, y, and z.
+<span class="lineNum">     231 </span><span class="lineNoCov">          0 :     uint64 x = Fetch64(s + len - 40);</span>
+<span class="lineNum">     232 </span><span class="lineNoCov">          0 :     uint64 y = Fetch64(s + len - 16) + Fetch64(s + len - 56);</span>
+<span class="lineNum">     233 </span><span class="lineNoCov">          0 :     uint64 z = HashLen16(Fetch64(s + len - 48) + len, Fetch64(s + len - 24));</span>
+<span class="lineNum">     234 </span>            :     uint64 temp;
+<span class="lineNum">     235 </span><span class="lineNoCov">          0 :     uint128 v = WeakHashLen32WithSeeds(s + len - 64, len, z);</span>
+<span class="lineNum">     236 </span><span class="lineNoCov">          0 :     uint128 w = WeakHashLen32WithSeeds(s + len - 32, y + k1, x);</span>
+<span class="lineNum">     237 </span><span class="lineNoCov">          0 :     x = x * k1 + Fetch64(s);</span>
+<span class="lineNum">     238 </span>            : 
+<span class="lineNum">     239 </span>            :     // Decrease len to the nearest multiple of 64, and operate on 64-byte chunks.
+<span class="lineNum">     240 </span><span class="lineNoCov">          0 :     len = (len - 1) &amp; ~(size_t)(63);</span>
+<span class="lineNum">     241 </span>            :     do {
+<span class="lineNum">     242 </span><span class="lineNoCov">          0 :         x = Rotate(x + y + v.first + Fetch64(s + 8), 37) * k1;</span>
+<span class="lineNum">     243 </span><span class="lineNoCov">          0 :         y = Rotate(y + v.second + Fetch64(s + 48), 42) * k1;</span>
+<span class="lineNum">     244 </span><span class="lineNoCov">          0 :         x ^= w.second;</span>
+<span class="lineNum">     245 </span><span class="lineNoCov">          0 :         y += v.first + Fetch64(s + 40);</span>
+<span class="lineNum">     246 </span><span class="lineNoCov">          0 :         z = Rotate(z + w.first, 33) * k1;</span>
+<span class="lineNum">     247 </span><span class="lineNoCov">          0 :         v = WeakHashLen32WithSeeds(s, v.second * k1, x + w.first);</span>
+<span class="lineNum">     248 </span><span class="lineNoCov">          0 :         w = WeakHashLen32WithSeeds(s + 32, z + w.second, y + Fetch64(s + 16));</span>
+<span class="lineNum">     249 </span><span class="lineNoCov">          0 :         temp = z;</span>
+<span class="lineNum">     250 </span><span class="lineNoCov">          0 :         z = x;</span>
+<span class="lineNum">     251 </span><span class="lineNoCov">          0 :         x = temp;</span>
+<span class="lineNum">     252 </span><span class="lineNoCov">          0 :         s += 64;</span>
+<span class="lineNum">     253 </span><span class="lineNoCov">          0 :         len -= 64;</span>
+<span class="lineNum">     254 </span><span class="lineNoCov">          0 :     } while(len != 0);</span>
+<span class="lineNum">     255 </span><span class="lineNoCov">          0 :     return HashLen16(HashLen16(v.first, w.first) + ShiftMix(y) * k1 + z,</span>
+<span class="lineNum">     256 </span><span class="lineNoCov">          0 :                      HashLen16(v.second, w.second) + x);</span>
+<a name="257"><span class="lineNum">     257 </span>            : }</a>
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span><span class="lineNoCov">          0 : uint64 CityHash64WithSeed(const char *s, size_t len, uint64 seed) {</span>
+<span class="lineNum">     260 </span><span class="lineNoCov">          0 :     return CityHash64WithSeeds(s, len, k2, seed);</span>
+<a name="261"><span class="lineNum">     261 </span>            : }</a>
+<span class="lineNum">     262 </span>            : 
+<span class="lineNum">     263 </span><span class="lineNoCov">          0 : uint64 CityHash64WithSeeds(const char *s, size_t len, uint64 seed0, uint64 seed1) {</span>
+<span class="lineNum">     264 </span><span class="lineNoCov">          0 :     return HashLen16(CityHash64(s, len) - seed0, seed1);</span>
+<span class="lineNum">     265 </span>            : }
+<span class="lineNum">     266 </span>            : 
+<a name="267"><span class="lineNum">     267 </span>            : // A subroutine for CityHash128().  Returns a decent 128-bit hash for strings</a>
+<span class="lineNum">     268 </span>            : // of any length representable in signed long.  Based on City and Murmur.
+<span class="lineNum">     269 </span><span class="lineCov">      69250 : static uint128 CityMurmur(const char *s, size_t len, uint128 seed) {</span>
+<span class="lineNum">     270 </span><span class="lineCov">      69250 :     uint64 a = Uint128Low64(seed);</span>
+<span class="lineNum">     271 </span><span class="lineCov">      69250 :     uint64 b = Uint128High64(seed);</span>
+<span class="lineNum">     272 </span><span class="lineCov">      69250 :     uint64 c = 0;</span>
+<span class="lineNum">     273 </span><span class="lineCov">      69250 :     uint64 d = 0;</span>
+<span class="lineNum">     274 </span><span class="lineCov">      69250 :     signed long l = len - 16;</span>
+<span class="lineNum">     275 </span><span class="lineCov">      69250 :     if(l &lt;= 0) {  // len &lt;= 16</span>
+<span class="lineNum">     276 </span><span class="lineCov">      69232 :         a = ShiftMix(a * k1) * k1;</span>
+<span class="lineNum">     277 </span><span class="lineCov">      69233 :         c = b * k1 + HashLen0to16(s, len);</span>
+<span class="lineNum">     278 </span><span class="lineCov">      69247 :         d = ShiftMix(a + (len &gt;= 8 ? Fetch64(s) : c));</span>
+<span class="lineNum">     279 </span>            :     } else {  // len &gt; 16
+<span class="lineNum">     280 </span><span class="lineCov">         18 :         c = HashLen16(Fetch64(s + len - 8) + k1, a);</span>
+<span class="lineNum">     281 </span><span class="lineCov">         18 :         d = HashLen16(b + len, c + Fetch64(s + len - 16));</span>
+<span class="lineNum">     282 </span><span class="lineCov">         18 :         a += d;</span>
+<span class="lineNum">     283 </span>            :         do {
+<span class="lineNum">     284 </span><span class="lineCov">         54 :             a ^= ShiftMix(Fetch64(s) * k1) * k1;</span>
+<span class="lineNum">     285 </span><span class="lineCov">         54 :             a *= k1;</span>
+<span class="lineNum">     286 </span><span class="lineCov">         54 :             b ^= a;</span>
+<span class="lineNum">     287 </span><span class="lineCov">         54 :             c ^= ShiftMix(Fetch64(s + 8) * k1) * k1;</span>
+<span class="lineNum">     288 </span><span class="lineCov">         54 :             c *= k1;</span>
+<span class="lineNum">     289 </span><span class="lineCov">         54 :             d ^= c;</span>
+<span class="lineNum">     290 </span><span class="lineCov">         54 :             s += 16;</span>
+<span class="lineNum">     291 </span><span class="lineCov">         54 :             l -= 16;</span>
+<span class="lineNum">     292 </span><span class="lineCov">         54 :         } while(l &gt; 0);</span>
+<span class="lineNum">     293 </span>            :     }
+<span class="lineNum">     294 </span><span class="lineCov">      69251 :     a = HashLen16(a, c);</span>
+<span class="lineNum">     295 </span><span class="lineCov">      69260 :     b = HashLen16(d, b);</span>
+<span class="lineNum">     296 </span>            : 
+<span class="lineNum">     297 </span>            :     uint128 result;
+<span class="lineNum">     298 </span><span class="lineCov">      69256 :     result.first = (uint64)(a ^ b);</span>
+<span class="lineNum">     299 </span><span class="lineCov">      69256 :     result.second = (uint64)(HashLen16(b, a));</span>
+<span class="lineNum">     300 </span><span class="lineCov">      69261 :     return result;</span>
+<a name="301"><span class="lineNum">     301 </span>            : }</a>
+<span class="lineNum">     302 </span>            : 
+<span class="lineNum">     303 </span><span class="lineCov">      87831 : uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed) {</span>
+<span class="lineNum">     304 </span><span class="lineCov">      87831 :     if(len &lt; 128) {</span>
+<span class="lineNum">     305 </span><span class="lineCov">      69246 :         return CityMurmur(s, len, seed);</span>
+<span class="lineNum">     306 </span>            :     }
+<span class="lineNum">     307 </span>            : 
+<span class="lineNum">     308 </span>            :     // We expect len &gt;= 128 to be the common case.  Keep 56 bytes of state:
+<span class="lineNum">     309 </span>            :     // v, w, x, y, and z.
+<span class="lineNum">     310 </span>            :     uint128 v, w;
+<span class="lineNum">     311 </span><span class="lineCov">      18585 :     uint64 x = Uint128Low64(seed);</span>
+<span class="lineNum">     312 </span><span class="lineCov">      18585 :     uint64 y = Uint128High64(seed);</span>
+<span class="lineNum">     313 </span><span class="lineCov">      18585 :     uint64 z = len * k1;</span>
+<span class="lineNum">     314 </span>            :     uint64 temp;
+<span class="lineNum">     315 </span><span class="lineCov">      18585 :     v.first = Rotate(y ^ k1, 49) * k1 + Fetch64(s);</span>
+<span class="lineNum">     316 </span><span class="lineCov">      18583 :     v.second = Rotate(v.first, 42) * k1 + Fetch64(s + 8);</span>
+<span class="lineNum">     317 </span><span class="lineCov">      18587 :     w.first = Rotate(y + z, 35) * k1 + x;</span>
+<span class="lineNum">     318 </span><span class="lineCov">      18585 :     w.second = Rotate(x + Fetch64(s + 88), 53) * k1;</span>
+<span class="lineNum">     319 </span>            : 
+<span class="lineNum">     320 </span>            :     // This is the same inner loop as CityHash64(), manually unrolled.
+<span class="lineNum">     321 </span>            :     do {
+<span class="lineNum">     322 </span><span class="lineCov">    2118259 :         x = Rotate(x + y + v.first + Fetch64(s + 8), 37) * k1;</span>
+<span class="lineNum">     323 </span><span class="lineCov">    2106376 :         y = Rotate(y + v.second + Fetch64(s + 48), 42) * k1;</span>
+<span class="lineNum">     324 </span><span class="lineCov">    2078438 :         x ^= w.second;</span>
+<span class="lineNum">     325 </span><span class="lineCov">    2078438 :         y += v.first + Fetch64(s + 40);</span>
+<span class="lineNum">     326 </span><span class="lineCov">    2081732 :         z = Rotate(z + w.first, 33) * k1;</span>
+<span class="lineNum">     327 </span><span class="lineCov">    2073079 :         v = WeakHashLen32WithSeeds(s, v.second * k1, x + w.first);</span>
+<span class="lineNum">     328 </span><span class="lineCov">    2114394 :         w = WeakHashLen32WithSeeds(s + 32, z + w.second, y + Fetch64(s + 16));</span>
+<span class="lineNum">     329 </span><span class="lineCov">    2120857 :         temp = z;</span>
+<span class="lineNum">     330 </span><span class="lineCov">    2120857 :         z = x;</span>
+<span class="lineNum">     331 </span><span class="lineCov">    2120857 :         x = temp;</span>
+<span class="lineNum">     332 </span><span class="lineCov">    2120857 :         s += 64;</span>
+<span class="lineNum">     333 </span><span class="lineCov">    2120857 :         x = Rotate(x + y + v.first + Fetch64(s + 8), 37) * k1;</span>
+<span class="lineNum">     334 </span><span class="lineCov">    2100256 :         y = Rotate(y + v.second + Fetch64(s + 48), 42) * k1;</span>
+<span class="lineNum">     335 </span><span class="lineCov">    2089618 :         x ^= w.second;</span>
+<span class="lineNum">     336 </span><span class="lineCov">    2089618 :         y += v.first + Fetch64(s + 40);</span>
+<span class="lineNum">     337 </span><span class="lineCov">    2078831 :         z = Rotate(z + w.first, 33) * k1;</span>
+<span class="lineNum">     338 </span><span class="lineCov">    2083770 :         v = WeakHashLen32WithSeeds(s, v.second * k1, x + w.first);</span>
+<span class="lineNum">     339 </span><span class="lineCov">    2114071 :         w = WeakHashLen32WithSeeds(s + 32, z + w.second, y + Fetch64(s + 16));</span>
+<span class="lineNum">     340 </span><span class="lineCov">    2118263 :         temp = z;</span>
+<span class="lineNum">     341 </span><span class="lineCov">    2118263 :         z = x;</span>
+<span class="lineNum">     342 </span><span class="lineCov">    2118263 :         x = temp;</span>
+<span class="lineNum">     343 </span><span class="lineCov">    2118263 :         s += 64;</span>
+<span class="lineNum">     344 </span><span class="lineCov">    2118263 :         len -= 128;</span>
+<span class="lineNum">     345 </span><span class="lineCov">    2118263 :     } while(LIKELY(len &gt;= 128));</span>
+<span class="lineNum">     346 </span><span class="lineCov">      18588 :     x += Rotate(v.first + z, 49) * k0;</span>
+<span class="lineNum">     347 </span><span class="lineCov">      18586 :     z += Rotate(w.first, 37) * k0;</span>
+<span class="lineNum">     348 </span>            :     // If 0 &lt; len &lt; 128, hash up to 4 chunks of 32 bytes each from the end of s.
+<span class="lineNum">     349 </span>            :     size_t tail_done;
+<span class="lineNum">     350 </span><span class="lineCov">      37226 :     for(tail_done = 0; tail_done &lt; len;) {</span>
+<span class="lineNum">     351 </span><span class="lineCov">         54 :         tail_done += 32;</span>
+<span class="lineNum">     352 </span><span class="lineCov">         54 :         y = Rotate(x + y, 42) * k0 + v.second;</span>
+<span class="lineNum">     353 </span><span class="lineCov">         54 :         w.first += Fetch64(s + len - tail_done + 16);</span>
+<span class="lineNum">     354 </span><span class="lineCov">         54 :         x = x * k0 + w.first;</span>
+<span class="lineNum">     355 </span><span class="lineCov">         54 :         z += w.second + Fetch64(s + len - tail_done);</span>
+<span class="lineNum">     356 </span><span class="lineCov">         54 :         w.second += v.first;</span>
+<span class="lineNum">     357 </span><span class="lineCov">         54 :         v = WeakHashLen32WithSeeds(s + len - tail_done, v.first + z, v.second);</span>
+<span class="lineNum">     358 </span>            :     }
+<span class="lineNum">     359 </span>            :     // At this point our 56 bytes of state should contain more than
+<span class="lineNum">     360 </span>            :     // enough information for a strong 128-bit hash.  We use two
+<span class="lineNum">     361 </span>            :     // different 56-byte-to-8-byte hashes to get a 16-byte final result.
+<span class="lineNum">     362 </span><span class="lineCov">      18586 :     x = HashLen16(x, v.first);</span>
+<span class="lineNum">     363 </span><span class="lineCov">      18588 :     y = HashLen16(y + z, w.first);</span>
+<span class="lineNum">     364 </span>            : 
+<span class="lineNum">     365 </span>            :     uint128 result;
+<span class="lineNum">     366 </span><span class="lineCov">      18589 :     result.first = (uint64)(HashLen16(x + v.second, w.second) + y);</span>
+<span class="lineNum">     367 </span><span class="lineCov">      18589 :     result.second = (uint64)HashLen16(x + w.second, y + v.second);</span>
+<span class="lineNum">     368 </span><span class="lineCov">      18587 :     return result;</span>
+<a name="369"><span class="lineNum">     369 </span>            : }</a>
+<span class="lineNum">     370 </span>            : 
+<span class="lineNum">     371 </span><span class="lineNoCov">          0 : uint128 CityHash128(const char *s, size_t len) {</span>
+<span class="lineNum">     372 </span>            :     uint128 r;
+<span class="lineNum">     373 </span><span class="lineNoCov">          0 :     if(len &gt;= 16) {</span>
+<span class="lineNum">     374 </span><span class="lineNoCov">          0 :         r.first = (uint64)(Fetch64(s) ^ k3);</span>
+<span class="lineNum">     375 </span><span class="lineNoCov">          0 :         r.second = (uint64)(Fetch64(s + 8));</span>
+<span class="lineNum">     376 </span>            : 
+<span class="lineNum">     377 </span><span class="lineNoCov">          0 :         return CityHash128WithSeed(s + 16, len - 16, r);</span>
+<span class="lineNum">     378 </span>            : 
+<span class="lineNum">     379 </span><span class="lineNoCov">          0 :     } else if(len &gt;= 8) {</span>
+<span class="lineNum">     380 </span><span class="lineNoCov">          0 :         r.first = (uint64)(Fetch64(s) ^ (len * k0));</span>
+<span class="lineNum">     381 </span><span class="lineNoCov">          0 :         r.second = (uint64)(Fetch64(s + len - 8) ^ k1);</span>
+<span class="lineNum">     382 </span>            : 
+<span class="lineNum">     383 </span><span class="lineNoCov">          0 :         return CityHash128WithSeed(NULL, 0, r);</span>
+<span class="lineNum">     384 </span>            :     } else {
+<span class="lineNum">     385 </span><span class="lineNoCov">          0 :         r.first = (uint64)k0;</span>
+<span class="lineNum">     386 </span><span class="lineNoCov">          0 :         r.second = (uint64)k1;</span>
+<span class="lineNum">     387 </span><span class="lineNoCov">          0 :         return CityHash128WithSeed(s, len, r);</span>
+<span class="lineNum">     388 </span>            :     }
+<span class="lineNum">     389 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

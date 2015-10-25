@@ -1,0 +1,1268 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/fts/fts.c</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">lib/fts</a> - fts.c<span style="font-size: 80%;"> (source / <a href="fts.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">257</td>
+            <td class="headerCovTableEntry">442</td>
+            <td class="headerCovTableEntryLo">58.1 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-10-25 15:30:11</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntryMed">82.4 %</td>
+          </tr>
+          <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*      $NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $    */</a>
+<span class="lineNum">       2 </span>            : 
+<span class="lineNum">       3 </span>            : /*-
+<span class="lineNum">       4 </span>            :  * Copyright (c) 1990, 1993, 1994
+<span class="lineNum">       5 </span>            :  *      The Regents of the University of California.  All rights reserved.
+<span class="lineNum">       6 </span>            :  *
+<span class="lineNum">       7 </span>            :  * Redistribution and use in source and binary forms, with or without
+<span class="lineNum">       8 </span>            :  * modification, are permitted provided that the following conditions
+<span class="lineNum">       9 </span>            :  * are met:
+<span class="lineNum">      10 </span>            :  * 1. Redistributions of source code must retain the above copyright
+<span class="lineNum">      11 </span>            :  *    notice, this list of conditions and the following disclaimer.
+<span class="lineNum">      12 </span>            :  * 2. Redistributions in binary form must reproduce the above copyright
+<span class="lineNum">      13 </span>            :  *    notice, this list of conditions and the following disclaimer in the
+<span class="lineNum">      14 </span>            :  *    documentation and/or other materials provided with the distribution.
+<span class="lineNum">      15 </span>            :  * 3. Neither the name of the University nor the names of its contributors
+<span class="lineNum">      16 </span>            :  *    may be used to endorse or promote products derived from this software
+<span class="lineNum">      17 </span>            :  *    without specific prior written permission.
+<span class="lineNum">      18 </span>            :  *
+<span class="lineNum">      19 </span>            :  * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+<span class="lineNum">      20 </span>            :  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+<span class="lineNum">      21 </span>            :  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+<span class="lineNum">      22 </span>            :  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+<span class="lineNum">      23 </span>            :  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+<span class="lineNum">      24 </span>            :  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+<span class="lineNum">      25 </span>            :  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+<span class="lineNum">      26 </span>            :  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+<span class="lineNum">      27 </span>            :  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+<span class="lineNum">      28 </span>            :  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+<span class="lineNum">      29 </span>            :  * SUCH DAMAGE.
+<span class="lineNum">      30 </span>            :  */
+<span class="lineNum">      31 </span>            : 
+<span class="lineNum">      32 </span>            : #if defined(LIBC_SCCS) &amp;&amp; !defined(lint)
+<span class="lineNum">      33 </span>            : #if 0
+<span class="lineNum">      34 </span>            : static char sccsid[] = &quot;@(#)fts.c  8.6 (Berkeley) 8/14/94&quot;;
+<span class="lineNum">      35 </span>            : #else
+<span class="lineNum">      36 </span>            : __RCSID(&quot;$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $&quot;);
+<span class="lineNum">      37 </span>            : #endif
+<span class="lineNum">      38 </span>            : #endif /* LIBC_SCCS and not lint */
+<span class="lineNum">      39 </span>            : 
+<span class="lineNum">      40 </span>            : #include &lt;sys/param.h&gt;
+<span class="lineNum">      41 </span>            : #include &lt;sys/stat.h&gt;
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span>            : #include &lt;assert.h&gt;
+<span class="lineNum">      44 </span>            : #define _DIAGASSERT(e)
+<span class="lineNum">      45 </span>            : #include &lt;dirent.h&gt;
+<span class="lineNum">      46 </span>            : #include &lt;errno.h&gt;
+<span class="lineNum">      47 </span>            : #include &lt;fcntl.h&gt;
+<span class="lineNum">      48 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      49 </span>            : #include &lt;string.h&gt;
+<span class="lineNum">      50 </span>            : #include &lt;unistd.h&gt;
+<span class="lineNum">      51 </span>            : 
+<span class="lineNum">      52 </span>            : #include &quot;fts.h&quot;
+<span class="lineNum">      53 </span>            : 
+<span class="lineNum">      54 </span>            : static FTSENT *fts_alloc(FTS *, const char *, size_t);
+<span class="lineNum">      55 </span>            : static FTSENT *fts_build(FTS *, int);
+<span class="lineNum">      56 </span>            : static void fts_free(FTSENT *);
+<span class="lineNum">      57 </span>            : static void fts_lfree(FTSENT *);
+<span class="lineNum">      58 </span>            : static void fts_load(FTS *, FTSENT *);
+<span class="lineNum">      59 </span>            : static size_t fts_maxarglen(char *const *);
+<span class="lineNum">      60 </span>            : static size_t fts_pow2(size_t);
+<span class="lineNum">      61 </span>            : static int fts_palloc(FTS *, size_t);
+<span class="lineNum">      62 </span>            : static void fts_padjust(FTS *, FTSENT *);
+<span class="lineNum">      63 </span>            : static FTSENT *fts_sort(FTS *, FTSENT *, size_t);
+<span class="lineNum">      64 </span>            : static unsigned short fts_stat(FTS *, FTSENT *, int);
+<span class="lineNum">      65 </span>            : static int fts_safe_changedir(const FTS *, const FTSENT *, int, const char *);
+<span class="lineNum">      66 </span>            : 
+<span class="lineNum">      67 </span>            : #if defined(ALIGNBYTES) &amp;&amp; defined(ALIGN)
+<span class="lineNum">      68 </span>            : #define FTS_ALLOC_ALIGNED 1
+<span class="lineNum">      69 </span>            : #else
+<span class="lineNum">      70 </span>            : #undef FTS_ALLOC_ALIGNED
+<span class="lineNum">      71 </span>            : #endif
+<span class="lineNum">      72 </span>            : 
+<span class="lineNum">      73 </span>            : #ifndef ftsent_namelen_truncate
+<span class="lineNum">      74 </span>            : #define ftsent_namelen_truncate(a) ((a) &gt; UINT_MAX ? UINT_MAX : (unsigned int)(a))
+<span class="lineNum">      75 </span>            : #endif
+<span class="lineNum">      76 </span>            : #ifndef ftsent_pathlen_truncate
+<span class="lineNum">      77 </span>            : #define ftsent_pathlen_truncate(a) ((a) &gt; UINT_MAX ? UINT_MAX : (unsigned int)(a))
+<span class="lineNum">      78 </span>            : #endif
+<span class="lineNum">      79 </span>            : #ifndef fts_pathlen_truncate
+<span class="lineNum">      80 </span>            : #define fts_pathlen_truncate(a) ((a) &gt; UINT_MAX ? UINT_MAX : (unsigned int)(a))
+<span class="lineNum">      81 </span>            : #endif
+<span class="lineNum">      82 </span>            : #ifndef fts_nitems_truncate
+<span class="lineNum">      83 </span>            : #define fts_nitems_truncate(a) ((a) &gt; UINT_MAX ? UINT_MAX : (unsigned int)(a))
+<span class="lineNum">      84 </span>            : #endif
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span>            : #define ISDOT(a) (a[0] == '.' &amp;&amp; (!a[1] || (a[1] == '.' &amp;&amp; !a[2])))
+<span class="lineNum">      87 </span>            : 
+<span class="lineNum">      88 </span>            : #define CLR(opt) (sp-&gt;fts_options &amp;= ~(opt))
+<span class="lineNum">      89 </span>            : #define ISSET(opt) (sp-&gt;fts_options &amp; (opt))
+<span class="lineNum">      90 </span>            : #define SET(opt) (sp-&gt;fts_options |= (opt))
+<span class="lineNum">      91 </span>            : 
+<span class="lineNum">      92 </span>            : #define CHDIR(sp, path) (!ISSET(FTS_NOCHDIR) &amp;&amp; chdir(path))
+<span class="lineNum">      93 </span>            : #define FCHDIR(sp, fd) (!ISSET(FTS_NOCHDIR) &amp;&amp; fchdir(fd))
+<span class="lineNum">      94 </span>            : 
+<span class="lineNum">      95 </span>            : /* fts_build flags */
+<span class="lineNum">      96 </span>            : #define BCHILD 1 /* fts_children */
+<span class="lineNum">      97 </span>            : #define BNAMES 2 /* fts_children, names only */
+<span class="lineNum">      98 </span>            : #define BREAD 3  /* fts_read */
+<span class="lineNum">      99 </span>            : 
+<span class="lineNum">     100 </span>            : #ifndef DTF_HIDEW
+<span class="lineNum">     101 </span>            : #undef FTS_WHITEOUT
+<a name="102"><span class="lineNum">     102 </span>            : #endif</a>
+<span class="lineNum">     103 </span>            : 
+<span class="lineNum">     104 </span><span class="lineCov">     113310 : FTS *fts_open(char *const *argv, int options,</span>
+<span class="lineNum">     105 </span>            :               int (*compar)(const FTSENT **, const FTSENT **)) {
+<span class="lineNum">     106 </span>            :     FTS *sp;
+<span class="lineNum">     107 </span>            :     FTSENT *p, *root;
+<span class="lineNum">     108 </span>            :     size_t nitems;
+<span class="lineNum">     109 </span><span class="lineCov">     113310 :     FTSENT *parent, *tmp = NULL; /* pacify gcc */</span>
+<span class="lineNum">     110 </span>            :     size_t len;
+<span class="lineNum">     111 </span>            : 
+<span class="lineNum">     112 </span>            :     _DIAGASSERT(argv != NULL);
+<span class="lineNum">     113 </span>            : 
+<span class="lineNum">     114 </span>            :     /* Options check. */
+<span class="lineNum">     115 </span><span class="lineCov">     113310 :     if(options &amp; ~FTS_OPTIONMASK) {</span>
+<span class="lineNum">     116 </span><span class="lineNoCov">          0 :         errno = EINVAL;</span>
+<span class="lineNum">     117 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     118 </span>            :     }
+<span class="lineNum">     119 </span>            : 
+<span class="lineNum">     120 </span>            :     /* Allocate/initialize the stream */
+<span class="lineNum">     121 </span><span class="lineCov">     113310 :     if((sp = malloc(sizeof(FTS))) == NULL)</span>
+<span class="lineNum">     122 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     123 </span><span class="lineCov">     113310 :     memset(sp, 0, sizeof(FTS));</span>
+<span class="lineNum">     124 </span><span class="lineCov">     113310 :     sp-&gt;fts_compar = compar;</span>
+<span class="lineNum">     125 </span><span class="lineCov">     113310 :     sp-&gt;fts_options = options;</span>
+<span class="lineNum">     126 </span>            : 
+<span class="lineNum">     127 </span>            :     /* Logical walks turn on NOCHDIR; symbolic links are too hard. */
+<span class="lineNum">     128 </span><span class="lineCov">     113310 :     if(ISSET(FTS_LOGICAL))</span>
+<span class="lineNum">     129 </span><span class="lineCov">         32 :         SET(FTS_NOCHDIR);</span>
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span>            :     /*
+<span class="lineNum">     132 </span>            :      * Start out with 1K of path space, and enough, in any case,
+<span class="lineNum">     133 </span>            :      * to hold the user's paths.
+<span class="lineNum">     134 </span>            :      */
+<span class="lineNum">     135 </span><span class="lineCov">     113310 :     if(fts_palloc(sp, MAX(fts_maxarglen(argv), MAXPATHLEN)))</span>
+<span class="lineNum">     136 </span><span class="lineNoCov">          0 :         goto mem1;</span>
+<span class="lineNum">     137 </span>            : 
+<span class="lineNum">     138 </span>            :     /* Allocate/initialize root's parent. */
+<span class="lineNum">     139 </span><span class="lineCov">     116958 :     if((parent = fts_alloc(sp, &quot;&quot;, 0)) == NULL)</span>
+<span class="lineNum">     140 </span><span class="lineNoCov">          0 :         goto mem2;</span>
+<span class="lineNum">     141 </span><span class="lineCov">     117220 :     parent-&gt;fts_level = FTS_ROOTPARENTLEVEL;</span>
+<span class="lineNum">     142 </span>            : 
+<span class="lineNum">     143 </span>            :     /* Allocate/initialize root(s). */
+<span class="lineNum">     144 </span><span class="lineCov">     234746 :     for(root = NULL, nitems = 0; *argv; ++argv, ++nitems) {</span>
+<span class="lineNum">     145 </span>            :         /* Don't allow zero-length paths. */
+<span class="lineNum">     146 </span><span class="lineCov">     117461 :         if((len = strlen(*argv)) == 0) {</span>
+<span class="lineNum">     147 </span><span class="lineCov">        138 :             errno = ENOENT;</span>
+<span class="lineNum">     148 </span><span class="lineNoCov">          0 :             goto mem3;</span>
+<span class="lineNum">     149 </span>            :         }
+<span class="lineNum">     150 </span>            : 
+<span class="lineNum">     151 </span><span class="lineCov">     117323 :         if((p = fts_alloc(sp, *argv, len)) == NULL)</span>
+<span class="lineNum">     152 </span><span class="lineNoCov">          0 :             goto mem3;</span>
+<span class="lineNum">     153 </span><span class="lineCov">     117323 :         p-&gt;fts_level = FTS_ROOTLEVEL;</span>
+<span class="lineNum">     154 </span><span class="lineCov">     117323 :         p-&gt;fts_parent = parent;</span>
+<span class="lineNum">     155 </span><span class="lineCov">     117323 :         p-&gt;fts_accpath = p-&gt;fts_name;</span>
+<span class="lineNum">     156 </span><span class="lineCov">     117323 :         p-&gt;fts_info = fts_stat(sp, p, ISSET(FTS_COMFOLLOW));</span>
+<span class="lineNum">     157 </span>            : 
+<span class="lineNum">     158 </span>            :         /* Command-line &quot;.&quot; and &quot;..&quot; are real directories. */
+<span class="lineNum">     159 </span><span class="lineCov">     117526 :         if(p-&gt;fts_info == FTS_DOT)</span>
+<span class="lineNum">     160 </span><span class="lineNoCov">          0 :             p-&gt;fts_info = FTS_D;</span>
+<span class="lineNum">     161 </span>            : 
+<span class="lineNum">     162 </span>            :         /*
+<span class="lineNum">     163 </span>            :          * If comparison routine supplied, traverse in sorted
+<span class="lineNum">     164 </span>            :          * order; otherwise traverse in the order specified.
+<span class="lineNum">     165 </span>            :          */
+<span class="lineNum">     166 </span><span class="lineCov">     117526 :         if(compar) {</span>
+<span class="lineNum">     167 </span><span class="lineCov">          7 :             p-&gt;fts_link = root;</span>
+<span class="lineNum">     168 </span><span class="lineCov">          7 :             root = p;</span>
+<span class="lineNum">     169 </span>            :         } else {
+<span class="lineNum">     170 </span><span class="lineCov">     117519 :             p-&gt;fts_link = NULL;</span>
+<span class="lineNum">     171 </span><span class="lineCov">     117519 :             if(root == NULL)</span>
+<span class="lineNum">     172 </span><span class="lineCov">     117263 :                 tmp = root = p;</span>
+<span class="lineNum">     173 </span>            :             else {
+<span class="lineNum">     174 </span><span class="lineCov">        256 :                 tmp-&gt;fts_link = p;</span>
+<span class="lineNum">     175 </span><span class="lineCov">        256 :                 tmp = p;</span>
+<span class="lineNum">     176 </span>            :             }
+<span class="lineNum">     177 </span>            :         }
+<span class="lineNum">     178 </span>            :     }
+<span class="lineNum">     179 </span><span class="lineCov">     117285 :     if(compar &amp;&amp; nitems &gt; 1)</span>
+<span class="lineNum">     180 </span><span class="lineNoCov">          0 :         root = fts_sort(sp, root, nitems);</span>
+<span class="lineNum">     181 </span>            : 
+<span class="lineNum">     182 </span>            :     /*
+<span class="lineNum">     183 </span>            :      * Allocate a dummy pointer and make fts_read think that we've just
+<span class="lineNum">     184 </span>            :      * finished the node before the root(s); set p-&gt;fts_info to FTS_INIT
+<span class="lineNum">     185 </span>            :      * so that everything about the &quot;current&quot; node is ignored.
+<span class="lineNum">     186 </span>            :      */
+<span class="lineNum">     187 </span><span class="lineCov">     117285 :     if((sp-&gt;fts_cur = fts_alloc(sp, &quot;&quot;, 0)) == NULL)</span>
+<span class="lineNum">     188 </span><span class="lineNoCov">          0 :         goto mem3;</span>
+<span class="lineNum">     189 </span><span class="lineCov">     117248 :     sp-&gt;fts_cur-&gt;fts_link = root;</span>
+<span class="lineNum">     190 </span><span class="lineCov">     117248 :     sp-&gt;fts_cur-&gt;fts_info = FTS_INIT;</span>
+<span class="lineNum">     191 </span>            : 
+<span class="lineNum">     192 </span>            : /*
+<span class="lineNum">     193 </span>            :  * If using chdir(2), grab a file descriptor pointing to dot to ensure
+<span class="lineNum">     194 </span>            :  * that we can get back here; this could be avoided for some paths,
+<span class="lineNum">     195 </span>            :  * but almost certainly not worth the effort.  Slashes, symbolic links,
+<span class="lineNum">     196 </span>            :  * and &quot;..&quot; are all fairly nasty problems.  Note, if we can't get the
+<span class="lineNum">     197 </span>            :  * descriptor we run anyway, just more slowly.
+<span class="lineNum">     198 </span>            :  */
+<span class="lineNum">     199 </span>            : #ifndef O_CLOEXEC
+<span class="lineNum">     200 </span>            : #define O_CLOEXEC 0
+<span class="lineNum">     201 </span>            : #endif
+<span class="lineNum">     202 </span><span class="lineCov">     117248 :     if(!ISSET(FTS_NOCHDIR)) {</span>
+<span class="lineNum">     203 </span><span class="lineCov">       1578 :         if((sp-&gt;fts_rfd = open(&quot;.&quot;, O_RDONLY | O_CLOEXEC, 0)) == -1)</span>
+<span class="lineNum">     204 </span><span class="lineNoCov">          0 :             SET(FTS_NOCHDIR);</span>
+<span class="lineNum">     205 </span>            :     }
+<span class="lineNum">     206 </span>            : 
+<span class="lineNum">     207 </span><span class="lineCov">     117248 :     if(nitems == 0)</span>
+<span class="lineNum">     208 </span><span class="lineNoCov">          0 :         fts_free(parent);</span>
+<span class="lineNum">     209 </span>            : 
+<span class="lineNum">     210 </span><span class="lineCov">     117255 :     return (sp);</span>
+<span class="lineNum">     211 </span>            : 
+<span class="lineNum">     212 </span>            : mem3:
+<span class="lineNum">     213 </span><span class="lineNoCov">          0 :     fts_lfree(root);</span>
+<span class="lineNum">     214 </span><span class="lineNoCov">          0 :     fts_free(parent);</span>
+<span class="lineNum">     215 </span>            : mem2:
+<span class="lineNum">     216 </span><span class="lineNoCov">          0 :     free(sp-&gt;fts_path);</span>
+<span class="lineNum">     217 </span>            : mem1:
+<span class="lineNum">     218 </span><span class="lineNoCov">          0 :     free(sp);</span>
+<span class="lineNum">     219 </span><span class="lineNoCov">          0 :     return (NULL);</span>
+<a name="220"><span class="lineNum">     220 </span>            : }</a>
+<span class="lineNum">     221 </span>            : 
+<span class="lineNum">     222 </span><span class="lineCov">     117501 : static void fts_load(FTS *sp, FTSENT *p) {</span>
+<span class="lineNum">     223 </span>            :     size_t len;
+<span class="lineNum">     224 </span>            :     char *cp;
+<span class="lineNum">     225 </span>            : 
+<span class="lineNum">     226 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     227 </span>            :     _DIAGASSERT(p != NULL);
+<span class="lineNum">     228 </span>            : 
+<span class="lineNum">     229 </span>            :     /*
+<span class="lineNum">     230 </span>            :      * Load the stream structure for the next traversal.  Since we don't
+<span class="lineNum">     231 </span>            :      * actually enter the directory until after the preorder visit, set
+<span class="lineNum">     232 </span>            :      * the fts_accpath field specially so the chdir gets done to the right
+<span class="lineNum">     233 </span>            :      * place and the user can access the first node.  From fts_open it's
+<span class="lineNum">     234 </span>            :      * known that the path will fit.
+<span class="lineNum">     235 </span>            :      */
+<span class="lineNum">     236 </span><span class="lineCov">     117501 :     len = p-&gt;fts_pathlen = p-&gt;fts_namelen;</span>
+<span class="lineNum">     237 </span><span class="lineCov">     117501 :     memmove(sp-&gt;fts_path, p-&gt;fts_name, len + 1);</span>
+<span class="lineNum">     238 </span><span class="lineCov">     117501 :     if((cp = strrchr(p-&gt;fts_name, '/')) &amp;&amp; (cp != p-&gt;fts_name || cp[1])) {</span>
+<span class="lineNum">     239 </span><span class="lineCov">     117446 :         len = strlen(++cp);</span>
+<span class="lineNum">     240 </span><span class="lineCov">     117446 :         memmove(p-&gt;fts_name, cp, len + 1);</span>
+<span class="lineNum">     241 </span><span class="lineCov">     117446 :         p-&gt;fts_namelen = ftsent_namelen_truncate(len);</span>
+<span class="lineNum">     242 </span>            :     }
+<span class="lineNum">     243 </span><span class="lineCov">     117501 :     p-&gt;fts_accpath = p-&gt;fts_path = sp-&gt;fts_path;</span>
+<span class="lineNum">     244 </span><span class="lineCov">     117501 :     sp-&gt;fts_dev = p-&gt;fts_dev;</span>
+<a name="245"><span class="lineNum">     245 </span><span class="lineCov">     117501 : }</span></a>
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span><span class="lineCov">     117310 : int fts_close(FTS *sp) {</span>
+<span class="lineNum">     248 </span>            :     FTSENT *freep, *p;
+<span class="lineNum">     249 </span><span class="lineCov">     117310 :     int saved_errno = 0;</span>
+<span class="lineNum">     250 </span>            : 
+<span class="lineNum">     251 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     252 </span>            : 
+<span class="lineNum">     253 </span>            :     /*
+<span class="lineNum">     254 </span>            :      * This still works if we haven't read anything -- the dummy structure
+<span class="lineNum">     255 </span>            :      * points to the root list, so we step through to the end of the root
+<span class="lineNum">     256 </span>            :      * list which has a valid parent pointer.
+<span class="lineNum">     257 </span>            :      */
+<span class="lineNum">     258 </span><span class="lineCov">     117310 :     if(sp-&gt;fts_cur) {</span>
+<span class="lineNum">     259 </span><span class="lineNoCov">          0 :         if(sp-&gt;fts_cur-&gt;fts_flags &amp; FTS_SYMFOLLOW)</span>
+<span class="lineNum">     260 </span><span class="lineNoCov">          0 :             (void)close(sp-&gt;fts_cur-&gt;fts_symfd);</span>
+<span class="lineNum">     261 </span><span class="lineNoCov">          0 :         for(p = sp-&gt;fts_cur; p-&gt;fts_level &gt;= FTS_ROOTLEVEL;) {</span>
+<span class="lineNum">     262 </span><span class="lineNoCov">          0 :             freep = p;</span>
+<span class="lineNum">     263 </span><span class="lineNoCov">          0 :             p = p-&gt;fts_link ? p-&gt;fts_link : p-&gt;fts_parent;</span>
+<span class="lineNum">     264 </span><span class="lineNoCov">          0 :             fts_free(freep);</span>
+<span class="lineNum">     265 </span>            :         }
+<span class="lineNum">     266 </span><span class="lineNoCov">          0 :         fts_free(p);</span>
+<span class="lineNum">     267 </span>            :     }
+<span class="lineNum">     268 </span>            : 
+<span class="lineNum">     269 </span>            :     /* Free up child linked list, sort array, path buffer. */
+<span class="lineNum">     270 </span><span class="lineCov">     117307 :     if(sp-&gt;fts_child)</span>
+<span class="lineNum">     271 </span><span class="lineNoCov">          0 :         fts_lfree(sp-&gt;fts_child);</span>
+<span class="lineNum">     272 </span><span class="lineCov">     117307 :     if(sp-&gt;fts_array)</span>
+<span class="lineNum">     273 </span><span class="lineNoCov">          0 :         free(sp-&gt;fts_array);</span>
+<span class="lineNum">     274 </span><span class="lineCov">     117307 :     free(sp-&gt;fts_path);</span>
+<span class="lineNum">     275 </span>            : 
+<span class="lineNum">     276 </span>            :     /* Return to original directory, save errno if necessary. */
+<span class="lineNum">     277 </span><span class="lineCov">     117307 :     if(!ISSET(FTS_NOCHDIR)) {</span>
+<span class="lineNum">     278 </span><span class="lineCov">       1578 :         if(fchdir(sp-&gt;fts_rfd) == -1)</span>
+<span class="lineNum">     279 </span><span class="lineNoCov">          0 :             saved_errno = errno;</span>
+<span class="lineNum">     280 </span><span class="lineCov">       1578 :         (void)close(sp-&gt;fts_rfd);</span>
+<span class="lineNum">     281 </span>            :     }
+<span class="lineNum">     282 </span>            : 
+<span class="lineNum">     283 </span>            :     /* Free up the stream pointer. */
+<span class="lineNum">     284 </span><span class="lineCov">     117307 :     free(sp);</span>
+<span class="lineNum">     285 </span><span class="lineCov">     117307 :     if(saved_errno) {</span>
+<span class="lineNum">     286 </span><span class="lineNoCov">          0 :         errno = saved_errno;</span>
+<span class="lineNum">     287 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     288 </span>            :     }
+<span class="lineNum">     289 </span>            : 
+<span class="lineNum">     290 </span><span class="lineCov">     117307 :     return 0;</span>
+<span class="lineNum">     291 </span>            : }
+<span class="lineNum">     292 </span>            : 
+<span class="lineNum">     293 </span>            : #if !defined(__FTS_COMPAT_TAILINGSLASH)
+<span class="lineNum">     294 </span>            : 
+<span class="lineNum">     295 </span>            : /*
+<span class="lineNum">     296 </span>            :  * Special case of &quot;/&quot; at the end of the path so that slashes aren't
+<span class="lineNum">     297 </span>            :  * appended which would cause paths to be written as &quot;....//foo&quot;.
+<span class="lineNum">     298 </span>            :  */
+<span class="lineNum">     299 </span>            : #define NAPPEND(p) \
+<span class="lineNum">     300 </span>            :     (p-&gt;fts_path[p-&gt;fts_pathlen - 1] == '/' ? p-&gt;fts_pathlen - 1 : p-&gt;fts_pathlen)
+<span class="lineNum">     301 </span>            : 
+<span class="lineNum">     302 </span>            : #else /* !defined(__FTS_COMPAT_TAILINGSLASH) */
+<span class="lineNum">     303 </span>            : 
+<span class="lineNum">     304 </span>            : /*
+<span class="lineNum">     305 </span>            :  * compatibility with the old behaviour.
+<span class="lineNum">     306 </span>            :  *
+<span class="lineNum">     307 </span>            :  * Special case a root of &quot;/&quot; so that slashes aren't appended which would
+<span class="lineNum">     308 </span>            :  * cause paths to be written as &quot;//foo&quot;.
+<span class="lineNum">     309 </span>            :  */
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span>            : #define NAPPEND(p)                                                                 \
+<span class="lineNum">     312 </span>            :     (p-&gt;fts_level == FTS_ROOTLEVEL &amp;&amp; p-&gt;fts_pathlen == 1 &amp;&amp; p-&gt;fts_path[0] == '/' \
+<span class="lineNum">     313 </span>            :          ? 0                                                                       \
+<span class="lineNum">     314 </span>            :          : p-&gt;fts_pathlen)
+<span class="lineNum">     315 </span>            : 
+<a name="316"><span class="lineNum">     316 </span>            : #endif /* !defined(__FTS_COMPAT_TAILINGSLASH) */</a>
+<span class="lineNum">     317 </span>            : 
+<span class="lineNum">     318 </span><span class="lineCov">     684095 : FTSENT *fts_read(FTS *sp) {</span>
+<span class="lineNum">     319 </span>            :     FTSENT *p, *tmp;
+<span class="lineNum">     320 </span>            :     int instr;
+<span class="lineNum">     321 </span>            :     char *t;
+<span class="lineNum">     322 </span>            :     int saved_errno;
+<span class="lineNum">     323 </span>            : 
+<span class="lineNum">     324 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     325 </span>            : 
+<span class="lineNum">     326 </span>            :     /* If finished or unrecoverable error, return NULL. */
+<span class="lineNum">     327 </span><span class="lineCov">     684095 :     if(sp-&gt;fts_cur == NULL || ISSET(FTS_STOP))</span>
+<span class="lineNum">     328 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     329 </span>            : 
+<span class="lineNum">     330 </span>            :     /* Set current node pointer. */
+<span class="lineNum">     331 </span><span class="lineCov">     684095 :     p = sp-&gt;fts_cur;</span>
+<span class="lineNum">     332 </span>            : 
+<span class="lineNum">     333 </span>            :     /* Save and zero out user instructions. */
+<span class="lineNum">     334 </span><span class="lineCov">     684095 :     instr = p-&gt;fts_instr;</span>
+<span class="lineNum">     335 </span><span class="lineCov">     684095 :     p-&gt;fts_instr = FTS_NOINSTR;</span>
+<span class="lineNum">     336 </span>            : 
+<span class="lineNum">     337 </span>            :     /* Any type of file may be re-visited; re-stat and re-turn. */
+<span class="lineNum">     338 </span><span class="lineCov">     684095 :     if(instr == FTS_AGAIN) {</span>
+<span class="lineNum">     339 </span><span class="lineNoCov">          0 :         p-&gt;fts_info = fts_stat(sp, p, 0);</span>
+<span class="lineNum">     340 </span><span class="lineNoCov">          0 :         return (p);</span>
+<span class="lineNum">     341 </span>            :     }
+<span class="lineNum">     342 </span>            : 
+<span class="lineNum">     343 </span>            :     /*
+<span class="lineNum">     344 </span>            :      * Following a symlink -- SLNONE test allows application to see
+<span class="lineNum">     345 </span>            :      * SLNONE and recover.  If indirecting through a symlink, have
+<span class="lineNum">     346 </span>            :      * keep a pointer to current location.  If unable to get that
+<span class="lineNum">     347 </span>            :      * pointer, follow fails.
+<span class="lineNum">     348 </span>            :      */
+<span class="lineNum">     349 </span><span class="lineCov">     684095 :     if(instr == FTS_FOLLOW &amp;&amp; (p-&gt;fts_info == FTS_SL || p-&gt;fts_info == FTS_SLNONE)) {</span>
+<span class="lineNum">     350 </span><span class="lineNoCov">          0 :         p-&gt;fts_info = fts_stat(sp, p, 1);</span>
+<span class="lineNum">     351 </span><span class="lineCov">        192 :         if(p-&gt;fts_info == FTS_D &amp;&amp; !ISSET(FTS_NOCHDIR)) {</span>
+<span class="lineNum">     352 </span><span class="lineNoCov">          0 :             if((p-&gt;fts_symfd = open(&quot;.&quot;, O_RDONLY | O_CLOEXEC, 0)) == -1) {</span>
+<span class="lineNum">     353 </span><span class="lineNoCov">          0 :                 p-&gt;fts_errno = errno;</span>
+<span class="lineNum">     354 </span><span class="lineNoCov">          0 :                 p-&gt;fts_info = FTS_ERR;</span>
+<span class="lineNum">     355 </span>            :             } else
+<span class="lineNum">     356 </span><span class="lineNoCov">          0 :                 p-&gt;fts_flags |= FTS_SYMFOLLOW;</span>
+<span class="lineNum">     357 </span>            :         }
+<span class="lineNum">     358 </span><span class="lineCov">        192 :         return (p);</span>
+<span class="lineNum">     359 </span>            :     }
+<span class="lineNum">     360 </span>            : 
+<span class="lineNum">     361 </span>            :     /* Directory in pre-order. */
+<span class="lineNum">     362 </span><span class="lineCov">     685979 :     if(p-&gt;fts_info == FTS_D) {</span>
+<span class="lineNum">     363 </span>            :         /* If skipped or crossed mount point, do post-order visit. */
+<span class="lineNum">     364 </span><span class="lineCov">     129783 :         if(instr == FTS_SKIP || (ISSET(FTS_XDEV) &amp;&amp; p-&gt;fts_dev != sp-&gt;fts_dev)) {</span>
+<span class="lineNum">     365 </span><span class="lineCov">         76 :             if(p-&gt;fts_flags &amp; FTS_SYMFOLLOW)</span>
+<span class="lineNum">     366 </span><span class="lineNoCov">          0 :                 (void)close(p-&gt;fts_symfd);</span>
+<span class="lineNum">     367 </span><span class="lineCov">         87 :             if(sp-&gt;fts_child) {</span>
+<span class="lineNum">     368 </span><span class="lineNoCov">          0 :                 fts_lfree(sp-&gt;fts_child);</span>
+<span class="lineNum">     369 </span><span class="lineNoCov">          0 :                 sp-&gt;fts_child = NULL;</span>
+<span class="lineNum">     370 </span>            :             }
+<span class="lineNum">     371 </span><span class="lineCov">         87 :             p-&gt;fts_info = FTS_DP;</span>
+<span class="lineNum">     372 </span><span class="lineCov">         87 :             return (p);</span>
+<span class="lineNum">     373 </span>            :         }
+<span class="lineNum">     374 </span>            : 
+<span class="lineNum">     375 </span>            :         /* Rebuild if only read the names and now traversing. */
+<span class="lineNum">     376 </span><span class="lineCov">     129707 :         if(sp-&gt;fts_child &amp;&amp; ISSET(FTS_NAMEONLY)) {</span>
+<span class="lineNum">     377 </span><span class="lineNoCov">          0 :             CLR(FTS_NAMEONLY);</span>
+<span class="lineNum">     378 </span><span class="lineNoCov">          0 :             fts_lfree(sp-&gt;fts_child);</span>
+<span class="lineNum">     379 </span><span class="lineNoCov">          0 :             sp-&gt;fts_child = NULL;</span>
+<span class="lineNum">     380 </span>            :         }
+<span class="lineNum">     381 </span>            : 
+<span class="lineNum">     382 </span>            :         /*
+<span class="lineNum">     383 </span>            :          * Cd to the subdirectory.
+<span class="lineNum">     384 </span>            :          *
+<span class="lineNum">     385 </span>            :          * If have already read and now fail to chdir, whack the list
+<span class="lineNum">     386 </span>            :          * to make the names come out right, and set the parent errno
+<span class="lineNum">     387 </span>            :          * so the application will eventually get an error condition.
+<span class="lineNum">     388 </span>            :          * Set the FTS_DONTCHDIR flag so that when we logically change
+<span class="lineNum">     389 </span>            :          * directories back to the parent we don't do a chdir.
+<span class="lineNum">     390 </span>            :          *
+<span class="lineNum">     391 </span>            :          * If haven't read do so.  If the read fails, fts_build sets
+<span class="lineNum">     392 </span>            :          * FTS_STOP or the fts_info field of the node.
+<span class="lineNum">     393 </span>            :          */
+<span class="lineNum">     394 </span><span class="lineCov">     129707 :         if(sp-&gt;fts_child) {</span>
+<span class="lineNum">     395 </span><span class="lineNoCov">          0 :             if(fts_safe_changedir(sp, p, -1, p-&gt;fts_accpath)) {</span>
+<span class="lineNum">     396 </span><span class="lineNoCov">          0 :                 p-&gt;fts_errno = errno;</span>
+<span class="lineNum">     397 </span><span class="lineNoCov">          0 :                 p-&gt;fts_flags |= FTS_DONTCHDIR;</span>
+<span class="lineNum">     398 </span><span class="lineNoCov">          0 :                 for(p = sp-&gt;fts_child; p; p = p-&gt;fts_link)</span>
+<span class="lineNum">     399 </span><span class="lineNoCov">          0 :                     p-&gt;fts_accpath = p-&gt;fts_parent-&gt;fts_accpath;</span>
+<span class="lineNum">     400 </span>            :             }
+<span class="lineNum">     401 </span><span class="lineCov">     129707 :         } else if((sp-&gt;fts_child = fts_build(sp, BREAD)) == NULL) {</span>
+<span class="lineNum">     402 </span><span class="lineCov">        100 :             if(ISSET(FTS_STOP))</span>
+<span class="lineNum">     403 </span><span class="lineNoCov">          0 :                 return (NULL);</span>
+<span class="lineNum">     404 </span><span class="lineCov">        100 :             return (p);</span>
+<span class="lineNum">     405 </span>            :         }
+<span class="lineNum">     406 </span><span class="lineCov">     129698 :         p = sp-&gt;fts_child;</span>
+<span class="lineNum">     407 </span><span class="lineCov">     129698 :         sp-&gt;fts_child = NULL;</span>
+<span class="lineNum">     408 </span><span class="lineCov">     129698 :         goto name;</span>
+<span class="lineNum">     409 </span>            :     }
+<span class="lineNum">     410 </span>            : 
+<span class="lineNum">     411 </span>            : next:
+<span class="lineNum">     412 </span>            :     /* Move to the next node on this level. */
+<span class="lineNum">     413 </span><span class="lineCov">     556196 :     tmp = p;</span>
+<span class="lineNum">     414 </span>            : 
+<span class="lineNum">     415 </span>            :     /*
+<span class="lineNum">     416 </span>            :      * We are going to free sp-&gt;fts_cur, set it to NULL so
+<span class="lineNum">     417 </span>            :      * that fts_close() does not attempt to free it again
+<span class="lineNum">     418 </span>            :      * if we exit without setting it to a new value because
+<span class="lineNum">     419 </span>            :      * FCHDIR() failed below.
+<span class="lineNum">     420 </span>            :      */
+<span class="lineNum">     421 </span><span class="lineCov">     556196 :     assert(tmp == sp-&gt;fts_cur);</span>
+<span class="lineNum">     422 </span><span class="lineCov">     556196 :     sp-&gt;fts_cur = NULL;</span>
+<span class="lineNum">     423 </span>            : 
+<span class="lineNum">     424 </span><span class="lineCov">     556196 :     if((p = p-&gt;fts_link) != NULL) {</span>
+<span class="lineNum">     425 </span><span class="lineCov">     309270 :         fts_free(tmp);</span>
+<span class="lineNum">     426 </span>            : 
+<span class="lineNum">     427 </span>            :         /*
+<span class="lineNum">     428 </span>            :          * If reached the top, return to the original directory, and
+<span class="lineNum">     429 </span>            :          * load the paths for the next root.
+<span class="lineNum">     430 </span>            :          */
+<span class="lineNum">     431 </span><span class="lineCov">     309349 :         if(p-&gt;fts_level == FTS_ROOTLEVEL) {</span>
+<span class="lineNum">     432 </span><span class="lineCov">     117493 :             if(FCHDIR(sp, sp-&gt;fts_rfd)) {</span>
+<span class="lineNum">     433 </span><span class="lineNoCov">          0 :                 SET(FTS_STOP);</span>
+<span class="lineNum">     434 </span><span class="lineNoCov">          0 :                 return (NULL);</span>
+<span class="lineNum">     435 </span>            :             }
+<span class="lineNum">     436 </span><span class="lineCov">     117493 :             fts_load(sp, p);</span>
+<span class="lineNum">     437 </span><span class="lineCov">     117432 :             return (sp-&gt;fts_cur = p);</span>
+<span class="lineNum">     438 </span>            :         }
+<span class="lineNum">     439 </span>            : 
+<span class="lineNum">     440 </span>            :         /*
+<span class="lineNum">     441 </span>            :          * User may have called fts_set on the node.  If skipped,
+<span class="lineNum">     442 </span>            :          * ignore.  If followed, get a file descriptor so we can
+<span class="lineNum">     443 </span>            :          * get back if necessary.
+<span class="lineNum">     444 </span>            :          */
+<span class="lineNum">     445 </span><span class="lineCov">     191856 :         if(p-&gt;fts_instr == FTS_SKIP)</span>
+<span class="lineNum">     446 </span><span class="lineNoCov">          0 :             goto next;</span>
+<span class="lineNum">     447 </span><span class="lineCov">     191856 :         if(p-&gt;fts_instr == FTS_FOLLOW) {</span>
+<span class="lineNum">     448 </span><span class="lineNoCov">          0 :             p-&gt;fts_info = fts_stat(sp, p, 1);</span>
+<span class="lineNum">     449 </span><span class="lineNoCov">          0 :             if(p-&gt;fts_info == FTS_D &amp;&amp; !ISSET(FTS_NOCHDIR)) {</span>
+<span class="lineNum">     450 </span><span class="lineNoCov">          0 :                 if((p-&gt;fts_symfd = open(&quot;.&quot;, O_RDONLY | O_CLOEXEC, 0)) == -1) {</span>
+<span class="lineNum">     451 </span><span class="lineNoCov">          0 :                     p-&gt;fts_errno = errno;</span>
+<span class="lineNum">     452 </span><span class="lineNoCov">          0 :                     p-&gt;fts_info = FTS_ERR;</span>
+<span class="lineNum">     453 </span>            :                 } else
+<span class="lineNum">     454 </span><span class="lineNoCov">          0 :                     p-&gt;fts_flags |= FTS_SYMFOLLOW;</span>
+<span class="lineNum">     455 </span>            :             }
+<span class="lineNum">     456 </span><span class="lineNoCov">          0 :             p-&gt;fts_instr = FTS_NOINSTR;</span>
+<span class="lineNum">     457 </span>            :         }
+<span class="lineNum">     458 </span>            : 
+<span class="lineNum">     459 </span>            :     name:
+<span class="lineNum">     460 </span><span class="lineCov">     321554 :         t = sp-&gt;fts_path + NAPPEND(p-&gt;fts_parent);</span>
+<span class="lineNum">     461 </span><span class="lineCov">     321554 :         *t++ = '/';</span>
+<span class="lineNum">     462 </span><span class="lineCov">     321554 :         memmove(t, p-&gt;fts_name, (size_t)(p-&gt;fts_namelen + 1));</span>
+<span class="lineNum">     463 </span><span class="lineCov">     321554 :         return (sp-&gt;fts_cur = p);</span>
+<span class="lineNum">     464 </span>            :     }
+<span class="lineNum">     465 </span>            : 
+<span class="lineNum">     466 </span>            :     /* Move up to the parent node. */
+<span class="lineNum">     467 </span><span class="lineCov">     246926 :     p = tmp-&gt;fts_parent;</span>
+<span class="lineNum">     468 </span><span class="lineCov">     246926 :     fts_free(tmp);</span>
+<span class="lineNum">     469 </span>            : 
+<span class="lineNum">     470 </span><span class="lineCov">     247054 :     if(p-&gt;fts_level == FTS_ROOTPARENTLEVEL) {</span>
+<span class="lineNum">     471 </span>            :         /*
+<span class="lineNum">     472 </span>            :          * Done; free everything up and set errno to 0 so the user
+<span class="lineNum">     473 </span>            :          * can distinguish between error and EOF.
+<span class="lineNum">     474 </span>            :          */
+<span class="lineNum">     475 </span><span class="lineCov">     117313 :         fts_free(p);</span>
+<span class="lineNum">     476 </span><span class="lineCov">     117312 :         errno = 0;</span>
+<span class="lineNum">     477 </span><span class="lineCov">     117312 :         return (sp-&gt;fts_cur = NULL);</span>
+<span class="lineNum">     478 </span>            :     }
+<span class="lineNum">     479 </span>            : 
+<span class="lineNum">     480 </span>            :     /* NUL terminate the pathname. */
+<span class="lineNum">     481 </span><span class="lineCov">     129741 :     sp-&gt;fts_path[p-&gt;fts_pathlen] = '\0';</span>
+<span class="lineNum">     482 </span>            : 
+<span class="lineNum">     483 </span>            :     /*
+<span class="lineNum">     484 </span>            :      * Return to the parent directory.  If at a root node or came through
+<span class="lineNum">     485 </span>            :      * a symlink, go back through the file descriptor.  Otherwise, cd up
+<span class="lineNum">     486 </span>            :      * one directory.
+<span class="lineNum">     487 </span>            :      */
+<span class="lineNum">     488 </span><span class="lineCov">     129741 :     if(p-&gt;fts_level == FTS_ROOTLEVEL) {</span>
+<span class="lineNum">     489 </span><span class="lineCov">     117474 :         if(FCHDIR(sp, sp-&gt;fts_rfd)) {</span>
+<span class="lineNum">     490 </span><span class="lineNoCov">          0 :             SET(FTS_STOP);</span>
+<span class="lineNum">     491 </span><span class="lineNoCov">          0 :             return (NULL);</span>
+<span class="lineNum">     492 </span>            :         }
+<span class="lineNum">     493 </span><span class="lineCov">      12267 :     } else if(p-&gt;fts_flags &amp; FTS_SYMFOLLOW) {</span>
+<span class="lineNum">     494 </span><span class="lineNoCov">          0 :         if(FCHDIR(sp, p-&gt;fts_symfd)) {</span>
+<span class="lineNum">     495 </span><span class="lineNoCov">          0 :             saved_errno = errno;</span>
+<span class="lineNum">     496 </span><span class="lineNoCov">          0 :             (void)close(p-&gt;fts_symfd);</span>
+<span class="lineNum">     497 </span><span class="lineNoCov">          0 :             errno = saved_errno;</span>
+<span class="lineNum">     498 </span><span class="lineNoCov">          0 :             SET(FTS_STOP);</span>
+<span class="lineNum">     499 </span><span class="lineNoCov">          0 :             return (NULL);</span>
+<span class="lineNum">     500 </span>            :         }
+<span class="lineNum">     501 </span><span class="lineNoCov">          0 :         (void)close(p-&gt;fts_symfd);</span>
+<span class="lineNum">     502 </span><span class="lineCov">      24534 :     } else if(!(p-&gt;fts_flags &amp; FTS_DONTCHDIR) &amp;&amp;</span>
+<span class="lineNum">     503 </span><span class="lineCov">      12267 :               fts_safe_changedir(sp, p-&gt;fts_parent, -1, &quot;..&quot;)) {</span>
+<span class="lineNum">     504 </span><span class="lineNoCov">          0 :         SET(FTS_STOP);</span>
+<span class="lineNum">     505 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     506 </span>            :     }
+<span class="lineNum">     507 </span><span class="lineCov">     129740 :     p-&gt;fts_info = p-&gt;fts_errno ? FTS_ERR : FTS_DP;</span>
+<span class="lineNum">     508 </span><span class="lineCov">     129740 :     return (sp-&gt;fts_cur = p);</span>
+<span class="lineNum">     509 </span>            : }
+<span class="lineNum">     510 </span>            : 
+<span class="lineNum">     511 </span>            : /*
+<span class="lineNum">     512 </span>            :  * Fts_set takes the stream as an argument although it's not used in this
+<span class="lineNum">     513 </span>            :  * implementation; it would be necessary if anyone wanted to add global
+<span class="lineNum">     514 </span>            :  * semantics to fts using fts_set.  An error return is allowed for similar
+<span class="lineNum">     515 </span>            :  * reasons.
+<a name="516"><span class="lineNum">     516 </span>            :  */</a>
+<span class="lineNum">     517 </span>            : /* ARGSUSED */
+<span class="lineNum">     518 </span><span class="lineCov">        279 : int fts_set(FTS *sp, FTSENT *p, int instr) {</span>
+<span class="lineNum">     519 </span>            :     (void)sp;
+<span class="lineNum">     520 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     521 </span>            :     _DIAGASSERT(p != NULL);
+<span class="lineNum">     522 </span>            : 
+<span class="lineNum">     523 </span><span class="lineCov">        279 :     if(instr &amp;&amp; instr != FTS_AGAIN &amp;&amp; instr != FTS_FOLLOW &amp;&amp; instr != FTS_NOINSTR &amp;&amp;</span>
+<span class="lineNum">     524 </span>            :        instr != FTS_SKIP) {
+<span class="lineNum">     525 </span><span class="lineNoCov">          0 :         errno = EINVAL;</span>
+<span class="lineNum">     526 </span><span class="lineNoCov">          0 :         return (1);</span>
+<span class="lineNum">     527 </span>            :     }
+<span class="lineNum">     528 </span><span class="lineCov">        279 :     p-&gt;fts_instr = instr;</span>
+<span class="lineNum">     529 </span><span class="lineCov">        279 :     return (0);</span>
+<a name="530"><span class="lineNum">     530 </span>            : }</a>
+<span class="lineNum">     531 </span>            : 
+<span class="lineNum">     532 </span><span class="lineCov">     115679 : FTSENT *fts_children(FTS *sp, int instr) {</span>
+<span class="lineNum">     533 </span>            :     FTSENT *p;
+<span class="lineNum">     534 </span>            :     int fd;
+<span class="lineNum">     535 </span>            : 
+<span class="lineNum">     536 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     537 </span>            : 
+<span class="lineNum">     538 </span><span class="lineCov">     115679 :     if(instr &amp;&amp; instr != FTS_NAMEONLY) {</span>
+<span class="lineNum">     539 </span><span class="lineNoCov">          0 :         errno = EINVAL;</span>
+<span class="lineNum">     540 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     541 </span>            :     }
+<span class="lineNum">     542 </span>            : 
+<span class="lineNum">     543 </span>            :     /* Set current node pointer. */
+<span class="lineNum">     544 </span><span class="lineCov">     115679 :     p = sp-&gt;fts_cur;</span>
+<span class="lineNum">     545 </span>            : 
+<span class="lineNum">     546 </span>            :     /*
+<span class="lineNum">     547 </span>            :      * Errno set to 0 so user can distinguish empty directory from
+<span class="lineNum">     548 </span>            :      * an error.
+<span class="lineNum">     549 </span>            :      */
+<span class="lineNum">     550 </span><span class="lineCov">     115679 :     errno = 0;</span>
+<span class="lineNum">     551 </span>            : 
+<span class="lineNum">     552 </span>            :     /* Fatal errors stop here. */
+<span class="lineNum">     553 </span><span class="lineCov">     115607 :     if(ISSET(FTS_STOP))</span>
+<span class="lineNum">     554 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     555 </span>            : 
+<span class="lineNum">     556 </span>            :     /* Return logical hierarchy of user's arguments. */
+<span class="lineNum">     557 </span><span class="lineCov">     115607 :     if(p-&gt;fts_info == FTS_INIT)</span>
+<span class="lineNum">     558 </span><span class="lineCov">     115607 :         return (p-&gt;fts_link);</span>
+<span class="lineNum">     559 </span>            : 
+<span class="lineNum">     560 </span>            :     /*
+<span class="lineNum">     561 </span>            :      * If not a directory being visited in pre-order, stop here.  Could
+<span class="lineNum">     562 </span>            :      * allow FTS_DNR, assuming the user has fixed the problem, but the
+<span class="lineNum">     563 </span>            :      * same effect is available with FTS_AGAIN.
+<span class="lineNum">     564 </span>            :      */
+<span class="lineNum">     565 </span><span class="lineNoCov">          0 :     if(p-&gt;fts_info != FTS_D /* &amp;&amp; p-&gt;fts_info != FTS_DNR */)</span>
+<span class="lineNum">     566 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     567 </span>            : 
+<span class="lineNum">     568 </span>            :     /* Free up any previous child list. */
+<span class="lineNum">     569 </span><span class="lineNoCov">          0 :     if(sp-&gt;fts_child)</span>
+<span class="lineNum">     570 </span><span class="lineNoCov">          0 :         fts_lfree(sp-&gt;fts_child);</span>
+<span class="lineNum">     571 </span>            : 
+<span class="lineNum">     572 </span><span class="lineNoCov">          0 :     if(instr == FTS_NAMEONLY) {</span>
+<span class="lineNum">     573 </span><span class="lineNoCov">          0 :         SET(FTS_NAMEONLY);</span>
+<span class="lineNum">     574 </span><span class="lineNoCov">          0 :         instr = BNAMES;</span>
+<span class="lineNum">     575 </span>            :     } else
+<span class="lineNum">     576 </span><span class="lineNoCov">          0 :         instr = BCHILD;</span>
+<span class="lineNum">     577 </span>            : 
+<span class="lineNum">     578 </span>            :     /*
+<span class="lineNum">     579 </span>            :      * If using chdir on a relative path and called BEFORE fts_read does
+<span class="lineNum">     580 </span>            :      * its chdir to the root of a traversal, we can lose -- we need to
+<span class="lineNum">     581 </span>            :      * chdir into the subdirectory, and we don't know where the current
+<span class="lineNum">     582 </span>            :      * directory is, so we can't get back so that the upcoming chdir by
+<span class="lineNum">     583 </span>            :      * fts_read will work.
+<span class="lineNum">     584 </span>            :      */
+<span class="lineNum">     585 </span><span class="lineNoCov">          0 :     if(p-&gt;fts_level != FTS_ROOTLEVEL || p-&gt;fts_accpath[0] == '/' || ISSET(FTS_NOCHDIR))</span>
+<span class="lineNum">     586 </span><span class="lineNoCov">          0 :         return (sp-&gt;fts_child = fts_build(sp, instr));</span>
+<span class="lineNum">     587 </span>            : 
+<span class="lineNum">     588 </span><span class="lineNoCov">          0 :     if((fd = open(&quot;.&quot;, O_RDONLY | O_CLOEXEC, 0)) == -1)</span>
+<span class="lineNum">     589 </span><span class="lineNoCov">          0 :         return (sp-&gt;fts_child = NULL);</span>
+<span class="lineNum">     590 </span><span class="lineNoCov">          0 :     sp-&gt;fts_child = fts_build(sp, instr);</span>
+<span class="lineNum">     591 </span><span class="lineNoCov">          0 :     if(fchdir(fd)) {</span>
+<span class="lineNum">     592 </span><span class="lineNoCov">          0 :         (void)close(fd);</span>
+<span class="lineNum">     593 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     594 </span>            :     }
+<span class="lineNum">     595 </span><span class="lineNoCov">          0 :     (void)close(fd);</span>
+<span class="lineNum">     596 </span><span class="lineNoCov">          0 :     return (sp-&gt;fts_child);</span>
+<span class="lineNum">     597 </span>            : }
+<span class="lineNum">     598 </span>            : 
+<span class="lineNum">     599 </span>            : /*
+<span class="lineNum">     600 </span>            :  * This is the tricky part -- do not casually change *anything* in here.  The
+<span class="lineNum">     601 </span>            :  * idea is to build the linked list of entries that are used by fts_children
+<span class="lineNum">     602 </span>            :  * and fts_read.  There are lots of special cases.
+<span class="lineNum">     603 </span>            :  *
+<span class="lineNum">     604 </span>            :  * The real slowdown in walking the tree is the stat calls.  If FTS_NOSTAT is
+<span class="lineNum">     605 </span>            :  * set and it's a physical walk (so that symbolic links can't be directories),
+<span class="lineNum">     606 </span>            :  * we can do things quickly.  First, if it's a 4.4BSD file system, the type
+<span class="lineNum">     607 </span>            :  * of the file is in the directory entry.  Otherwise, we assume that the number
+<span class="lineNum">     608 </span>            :  * of subdirectories in a node is equal to the number of links to the parent.
+<span class="lineNum">     609 </span>            :  * The former skips all stat calls.  The latter skips stat calls in any leaf
+<span class="lineNum">     610 </span>            :  * directories and for any files after the subdirectories in the directory have
+<a name="611"><span class="lineNum">     611 </span>            :  * been found, cutting the stat calls by about 2/3.</a>
+<span class="lineNum">     612 </span>            :  */
+<span class="lineNum">     613 </span><span class="lineCov">     129674 : static FTSENT *fts_build(FTS *sp, int type) {</span>
+<span class="lineNum">     614 </span>            :     struct dirent *dp;
+<span class="lineNum">     615 </span>            :     FTSENT *p, *head;
+<span class="lineNum">     616 </span>            :     size_t nitems;
+<span class="lineNum">     617 </span>            :     FTSENT *cur, *tail;
+<span class="lineNum">     618 </span>            :     DIR *dirp;
+<span class="lineNum">     619 </span>            :     void *oldaddr;
+<span class="lineNum">     620 </span>            :     size_t dnamlen;
+<span class="lineNum">     621 </span>            :     int cderrno, descend, level, nlinks, saved_errno, nostat, doadjust;
+<span class="lineNum">     622 </span>            :     size_t len, maxlen;
+<span class="lineNum">     623 </span>            : #ifdef FTS_WHITEOUT
+<span class="lineNum">     624 </span>            :     int oflag;
+<span class="lineNum">     625 </span>            : #endif
+<span class="lineNum">     626 </span><span class="lineCov">     129674 :     char *cp = NULL; /* pacify gcc */</span>
+<span class="lineNum">     627 </span>            : 
+<span class="lineNum">     628 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     629 </span>            : 
+<span class="lineNum">     630 </span>            :     /* Set current node pointer. */
+<span class="lineNum">     631 </span><span class="lineCov">     129674 :     cur = sp-&gt;fts_cur;</span>
+<span class="lineNum">     632 </span>            : 
+<span class="lineNum">     633 </span>            : /*
+<span class="lineNum">     634 </span>            :  * Open the directory for reading.  If this fails, we're done.
+<span class="lineNum">     635 </span>            :  * If being called from fts_read, set the fts_info field.
+<span class="lineNum">     636 </span>            :  */
+<span class="lineNum">     637 </span>            : #ifdef FTS_WHITEOUT
+<span class="lineNum">     638 </span>            :     if(ISSET(FTS_WHITEOUT))
+<span class="lineNum">     639 </span>            :         oflag = DTF_NODUP | DTF_REWIND;
+<span class="lineNum">     640 </span>            :     else
+<span class="lineNum">     641 </span>            :         oflag = DTF_HIDEW | DTF_NODUP | DTF_REWIND;
+<span class="lineNum">     642 </span>            : #else
+<span class="lineNum">     643 </span>            : #define __opendir2(path, flag) opendir(path)
+<span class="lineNum">     644 </span>            : #endif
+<span class="lineNum">     645 </span><span class="lineCov">     129674 :     if((dirp = __opendir2(cur-&gt;fts_accpath, oflag)) == NULL) {</span>
+<span class="lineNum">     646 </span><span class="lineNoCov">          0 :         if(type == BREAD) {</span>
+<span class="lineNum">     647 </span><span class="lineNoCov">          0 :             cur-&gt;fts_info = FTS_DNR;</span>
+<span class="lineNum">     648 </span><span class="lineNoCov">          0 :             cur-&gt;fts_errno = errno;</span>
+<span class="lineNum">     649 </span>            :         }
+<span class="lineNum">     650 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     651 </span>            :     }
+<span class="lineNum">     652 </span>            : 
+<span class="lineNum">     653 </span>            :     /*
+<span class="lineNum">     654 </span>            :      * Nlinks is the number of possible entries of type directory in the
+<span class="lineNum">     655 </span>            :      * directory if we're cheating on stat calls, 0 if we're not doing
+<span class="lineNum">     656 </span>            :      * any stat calls at all, -1 if we're doing stats on everything.
+<span class="lineNum">     657 </span>            :      */
+<span class="lineNum">     658 </span><span class="lineCov">     129772 :     if(type == BNAMES) {</span>
+<span class="lineNum">     659 </span><span class="lineNoCov">          0 :         nlinks = 0;</span>
+<span class="lineNum">     660 </span><span class="lineNoCov">          0 :         nostat = 1;</span>
+<span class="lineNum">     661 </span><span class="lineCov">     129772 :     } else if(ISSET(FTS_NOSTAT) &amp;&amp; ISSET(FTS_PHYSICAL)) {</span>
+<span class="lineNum">     662 </span><span class="lineNoCov">          0 :         nlinks = cur-&gt;fts_nlink - (ISSET(FTS_SEEDOT) ? 0 : 2);</span>
+<span class="lineNum">     663 </span><span class="lineNoCov">          0 :         nostat = 1;</span>
+<span class="lineNum">     664 </span>            :     } else {
+<span class="lineNum">     665 </span><span class="lineCov">     129772 :         nlinks = -1;</span>
+<span class="lineNum">     666 </span><span class="lineCov">     129772 :         nostat = 0;</span>
+<span class="lineNum">     667 </span>            :     }
+<span class="lineNum">     668 </span>            : 
+<span class="lineNum">     669 </span>            : #ifdef notdef
+<span class="lineNum">     670 </span>            :     (void)printf(&quot;nlinks == %d (cur: %d)\n&quot;, nlinks, cur-&gt;fts_nlink);
+<span class="lineNum">     671 </span>            :     (void)printf(&quot;NOSTAT %d PHYSICAL %d SEEDOT %d\n&quot;, ISSET(FTS_NOSTAT),
+<span class="lineNum">     672 </span>            :                  ISSET(FTS_PHYSICAL), ISSET(FTS_SEEDOT));
+<span class="lineNum">     673 </span>            : #endif
+<span class="lineNum">     674 </span>            :     /*
+<span class="lineNum">     675 </span>            :      * If we're going to need to stat anything or we want to descend
+<span class="lineNum">     676 </span>            :      * and stay in the directory, chdir.  If this fails we keep going,
+<span class="lineNum">     677 </span>            :      * but set a flag so we don't chdir after the post-order visit.
+<span class="lineNum">     678 </span>            :      * We won't be able to stat anything, but we can still return the
+<span class="lineNum">     679 </span>            :      * names themselves.  Note, that since fts_read won't be able to
+<span class="lineNum">     680 </span>            :      * chdir into the directory, it will have to return different path
+<span class="lineNum">     681 </span>            :      * names than before, i.e. &quot;a/b&quot; instead of &quot;b&quot;.  Since the node
+<span class="lineNum">     682 </span>            :      * has already been visited in pre-order, have to wait until the
+<span class="lineNum">     683 </span>            :      * post-order visit to return the error.  There is a special case
+<span class="lineNum">     684 </span>            :      * here, if there was nothing to stat then it's not an error to
+<span class="lineNum">     685 </span>            :      * not be able to stat.  This is all fairly nasty.  If a program
+<span class="lineNum">     686 </span>            :      * needed sorted entries or stat information, they had better be
+<span class="lineNum">     687 </span>            :      * checking FTS_NS on the returned nodes.
+<span class="lineNum">     688 </span>            :      */
+<span class="lineNum">     689 </span><span class="lineCov">     129772 :     cderrno = 0;</span>
+<span class="lineNum">     690 </span><span class="lineCov">     129772 :     if(nlinks || type == BREAD) {</span>
+<span class="lineNum">     691 </span><span class="lineCov">     259582 :         if(fts_safe_changedir(sp, cur, dirfd(dirp), NULL)) {</span>
+<span class="lineNum">     692 </span><span class="lineNoCov">          0 :             if(nlinks &amp;&amp; type == BREAD)</span>
+<span class="lineNum">     693 </span><span class="lineNoCov">          0 :                 cur-&gt;fts_errno = errno;</span>
+<span class="lineNum">     694 </span><span class="lineNoCov">          0 :             cur-&gt;fts_flags |= FTS_DONTCHDIR;</span>
+<span class="lineNum">     695 </span><span class="lineNoCov">          0 :             descend = 0;</span>
+<span class="lineNum">     696 </span><span class="lineNoCov">          0 :             cderrno = errno;</span>
+<span class="lineNum">     697 </span>            :         } else
+<span class="lineNum">     698 </span><span class="lineCov">     129712 :             descend = 1;</span>
+<span class="lineNum">     699 </span>            :     } else
+<span class="lineNum">     700 </span><span class="lineNoCov">          0 :         descend = 0;</span>
+<span class="lineNum">     701 </span>            : 
+<span class="lineNum">     702 </span>            :     /*
+<span class="lineNum">     703 </span>            :      * Figure out the max file name length that can be stored in the
+<span class="lineNum">     704 </span>            :      * current path -- the inner loop allocates more path as necessary.
+<span class="lineNum">     705 </span>            :      * We really wouldn't have to do the maxlen calculations here, we
+<span class="lineNum">     706 </span>            :      * could do them in fts_read before returning the path, but it's a
+<span class="lineNum">     707 </span>            :      * lot easier here since the length is part of the dirent structure.
+<span class="lineNum">     708 </span>            :      *
+<span class="lineNum">     709 </span>            :      * If not changing directories set a pointer so that can just append
+<span class="lineNum">     710 </span>            :      * each new name into the path.
+<span class="lineNum">     711 </span>            :      */
+<span class="lineNum">     712 </span><span class="lineCov">     129810 :     len = NAPPEND(cur);</span>
+<span class="lineNum">     713 </span><span class="lineCov">     129810 :     if(ISSET(FTS_NOCHDIR)) {</span>
+<span class="lineNum">     714 </span><span class="lineCov">     124533 :         cp = sp-&gt;fts_path + len;</span>
+<span class="lineNum">     715 </span><span class="lineCov">     124533 :         *cp++ = '/';</span>
+<span class="lineNum">     716 </span>            :     }
+<span class="lineNum">     717 </span><span class="lineCov">     129810 :     len++;</span>
+<span class="lineNum">     718 </span><span class="lineCov">     129810 :     maxlen = sp-&gt;fts_pathlen - len;</span>
+<span class="lineNum">     719 </span>            : 
+<span class="lineNum">     720 </span>            : #if defined(__FTS_COMPAT_LEVEL)
+<span class="lineNum">     721 </span>            :     if(cur-&gt;fts_level == SHRT_MAX) {
+<span class="lineNum">     722 </span>            :         (void)closedir(dirp);
+<span class="lineNum">     723 </span>            :         cur-&gt;fts_info = FTS_ERR;
+<span class="lineNum">     724 </span>            :         SET(FTS_STOP);
+<span class="lineNum">     725 </span>            :         errno = ENAMETOOLONG;
+<span class="lineNum">     726 </span>            :         return (NULL);
+<span class="lineNum">     727 </span>            :     }
+<span class="lineNum">     728 </span>            : #endif
+<span class="lineNum">     729 </span>            : 
+<span class="lineNum">     730 </span><span class="lineCov">     129810 :     level = cur-&gt;fts_level + 1;</span>
+<span class="lineNum">     731 </span>            : 
+<span class="lineNum">     732 </span>            :     /* Read the directory, attaching each entry to the `link' pointer. */
+<span class="lineNum">     733 </span><span class="lineCov">     129810 :     doadjust = 0;</span>
+<span class="lineNum">     734 </span><span class="lineCov">     839289 :     for(head = tail = NULL, nitems = 0; (dp = readdir(dirp)) != NULL;) {</span>
+<span class="lineNum">     735 </span><span class="lineCov">     579214 :         if(!ISSET(FTS_SEEDOT) &amp;&amp; ISDOT(dp-&gt;d_name))</span>
+<span class="lineNum">     736 </span><span class="lineCov">     258932 :             continue;</span>
+<span class="lineNum">     737 </span>            : 
+<span class="lineNum">     738 </span>            : #if defined(HAVE_STRUCT_DIRENT_D_NAMLEN)
+<span class="lineNum">     739 </span>            :         dnamlen = dp-&gt;d_namlen;
+<span class="lineNum">     740 </span>            : #else
+<span class="lineNum">     741 </span><span class="lineCov">     320282 :         dnamlen = strlen(dp-&gt;d_name);</span>
+<span class="lineNum">     742 </span>            : #endif
+<span class="lineNum">     743 </span><span class="lineCov">     320282 :         if((p = fts_alloc(sp, dp-&gt;d_name, dnamlen)) == NULL)</span>
+<span class="lineNum">     744 </span><span class="lineNoCov">          0 :             goto mem1;</span>
+<span class="lineNum">     745 </span><span class="lineCov">     321156 :         if(dnamlen &gt;= maxlen) { /* include space for NUL */</span>
+<span class="lineNum">     746 </span><span class="lineNoCov">          0 :             oldaddr = sp-&gt;fts_path;</span>
+<span class="lineNum">     747 </span><span class="lineNoCov">          0 :             if(fts_palloc(sp, dnamlen + len + 1)) {</span>
+<span class="lineNum">     748 </span>            :             /*
+<span class="lineNum">     749 </span>            :              * No more memory for path or structures.  Save
+<span class="lineNum">     750 </span>            :              * errno, free up the current structure and the
+<span class="lineNum">     751 </span>            :              * structures already allocated.
+<span class="lineNum">     752 </span>            :              */
+<span class="lineNum">     753 </span>            :             mem1:
+<span class="lineNum">     754 </span><span class="lineNoCov">          0 :                 saved_errno = errno;</span>
+<span class="lineNum">     755 </span><span class="lineNoCov">          0 :                 if(p)</span>
+<span class="lineNum">     756 </span><span class="lineNoCov">          0 :                     fts_free(p);</span>
+<span class="lineNum">     757 </span><span class="lineNoCov">          0 :                 fts_lfree(head);</span>
+<span class="lineNum">     758 </span><span class="lineNoCov">          0 :                 (void)closedir(dirp);</span>
+<span class="lineNum">     759 </span><span class="lineNoCov">          0 :                 errno = saved_errno;</span>
+<span class="lineNum">     760 </span><span class="lineNoCov">          0 :                 cur-&gt;fts_info = FTS_ERR;</span>
+<span class="lineNum">     761 </span><span class="lineNoCov">          0 :                 SET(FTS_STOP);</span>
+<span class="lineNum">     762 </span><span class="lineNoCov">          0 :                 return (NULL);</span>
+<span class="lineNum">     763 </span>            :             }
+<span class="lineNum">     764 </span>            :             /* Did realloc() change the pointer? */
+<span class="lineNum">     765 </span><span class="lineNoCov">          0 :             if(oldaddr != sp-&gt;fts_path) {</span>
+<span class="lineNum">     766 </span><span class="lineNoCov">          0 :                 doadjust = 1;</span>
+<span class="lineNum">     767 </span><span class="lineNoCov">          0 :                 if(ISSET(FTS_NOCHDIR))</span>
+<span class="lineNum">     768 </span><span class="lineNoCov">          0 :                     cp = sp-&gt;fts_path + len;</span>
+<span class="lineNum">     769 </span>            :             }
+<span class="lineNum">     770 </span><span class="lineNoCov">          0 :             maxlen = sp-&gt;fts_pathlen - len;</span>
+<span class="lineNum">     771 </span>            :         }
+<span class="lineNum">     772 </span>            : 
+<span class="lineNum">     773 </span>            : #if defined(__FTS_COMPAT_LENGTH)
+<span class="lineNum">     774 </span>            :         if(len + dnamlen &gt;= USHRT_MAX) {
+<span class="lineNum">     775 </span>            :             /*
+<span class="lineNum">     776 </span>            :              * In an FTSENT, fts_pathlen is an unsigned short
+<span class="lineNum">     777 </span>            :              * so it is possible to wraparound here.
+<span class="lineNum">     778 </span>            :              * If we do, free up the current structure and the
+<span class="lineNum">     779 </span>            :              * structures already allocated, then error out
+<span class="lineNum">     780 </span>            :              * with ENAMETOOLONG.
+<span class="lineNum">     781 </span>            :              */
+<span class="lineNum">     782 </span>            :             fts_free(p);
+<span class="lineNum">     783 </span>            :             fts_lfree(head);
+<span class="lineNum">     784 </span>            :             (void)closedir(dirp);
+<span class="lineNum">     785 </span>            :             cur-&gt;fts_info = FTS_ERR;
+<span class="lineNum">     786 </span>            :             SET(FTS_STOP);
+<span class="lineNum">     787 </span>            :             errno = ENAMETOOLONG;
+<span class="lineNum">     788 </span>            :             return (NULL);
+<span class="lineNum">     789 </span>            :         }
+<span class="lineNum">     790 </span>            : #endif
+<span class="lineNum">     791 </span><span class="lineCov">     321156 :         p-&gt;fts_level = level;</span>
+<span class="lineNum">     792 </span><span class="lineCov">     321156 :         p-&gt;fts_pathlen = ftsent_pathlen_truncate(len + dnamlen);</span>
+<span class="lineNum">     793 </span><span class="lineCov">     321156 :         p-&gt;fts_parent = sp-&gt;fts_cur;</span>
+<span class="lineNum">     794 </span>            : 
+<span class="lineNum">     795 </span>            : #ifdef FTS_WHITEOUT
+<span class="lineNum">     796 </span>            :         if(dp-&gt;d_type == DT_WHT)
+<span class="lineNum">     797 </span>            :             p-&gt;fts_flags |= FTS_ISW;
+<span class="lineNum">     798 </span>            : #endif
+<span class="lineNum">     799 </span>            : 
+<span class="lineNum">     800 </span><span class="lineCov">     321156 :         if(cderrno) {</span>
+<span class="lineNum">     801 </span><span class="lineNoCov">          0 :             if(nlinks) {</span>
+<span class="lineNum">     802 </span><span class="lineNoCov">          0 :                 p-&gt;fts_info = FTS_NS;</span>
+<span class="lineNum">     803 </span><span class="lineNoCov">          0 :                 p-&gt;fts_errno = cderrno;</span>
+<span class="lineNum">     804 </span>            :             } else
+<span class="lineNum">     805 </span><span class="lineNoCov">          0 :                 p-&gt;fts_info = FTS_NSOK;</span>
+<span class="lineNum">     806 </span><span class="lineNoCov">          0 :             p-&gt;fts_accpath = cur-&gt;fts_accpath;</span>
+<span class="lineNum">     807 </span><span class="lineCov">     321216 :         } else if(nlinks == 0</span>
+<span class="lineNum">     808 </span>            : #ifdef DT_DIR
+<span class="lineNum">     809 </span><span class="lineCov">     321180 :                   ||</span>
+<span class="lineNum">     810 </span><span class="lineNoCov">          0 :                   (nostat &amp;&amp; dp-&gt;d_type != DT_DIR &amp;&amp; dp-&gt;d_type != DT_UNKNOWN)</span>
+<span class="lineNum">     811 </span>            : #endif
+<span class="lineNum">     812 </span>            :                       ) {
+<span class="lineNum">     813 </span><span class="lineNoCov">          0 :             p-&gt;fts_accpath = ISSET(FTS_NOCHDIR) ? p-&gt;fts_path : p-&gt;fts_name;</span>
+<span class="lineNum">     814 </span><span class="lineNoCov">          0 :             p-&gt;fts_info = FTS_NSOK;</span>
+<span class="lineNum">     815 </span>            :         } else {
+<span class="lineNum">     816 </span>            :             /* Build a file name for fts_stat to stat. */
+<span class="lineNum">     817 </span><span class="lineCov">     321216 :             if(ISSET(FTS_NOCHDIR)) {</span>
+<span class="lineNum">     818 </span><span class="lineCov">     310377 :                 p-&gt;fts_accpath = p-&gt;fts_path;</span>
+<span class="lineNum">     819 </span><span class="lineCov">     310377 :                 memmove(cp, p-&gt;fts_name, (size_t)(p-&gt;fts_namelen + 1));</span>
+<span class="lineNum">     820 </span>            :             } else
+<span class="lineNum">     821 </span><span class="lineCov">      10839 :                 p-&gt;fts_accpath = p-&gt;fts_name;</span>
+<span class="lineNum">     822 </span>            :             /* Stat it. */
+<span class="lineNum">     823 </span><span class="lineCov">     321216 :             p-&gt;fts_info = fts_stat(sp, p, 0);</span>
+<span class="lineNum">     824 </span>            : 
+<span class="lineNum">     825 </span>            :             /* Decrement link count if applicable. */
+<span class="lineNum">     826 </span><span class="lineCov">     320797 :             if(nlinks &gt; 0 &amp;&amp;</span>
+<span class="lineNum">     827 </span><span class="lineNoCov">          0 :                (p-&gt;fts_info == FTS_D || p-&gt;fts_info == FTS_DC || p-&gt;fts_info == FTS_DOT))</span>
+<span class="lineNum">     828 </span><span class="lineNoCov">          0 :                 --nlinks;</span>
+<span class="lineNum">     829 </span>            :         }
+<span class="lineNum">     830 </span>            : 
+<span class="lineNum">     831 </span>            :         /* We walk in directory order so &quot;ls -f&quot; doesn't get upset. */
+<span class="lineNum">     832 </span><span class="lineCov">     320737 :         p-&gt;fts_link = NULL;</span>
+<span class="lineNum">     833 </span><span class="lineCov">     320737 :         if(head == NULL)</span>
+<span class="lineNum">     834 </span><span class="lineCov">     129108 :             head = tail = p;</span>
+<span class="lineNum">     835 </span>            :         else {
+<span class="lineNum">     836 </span><span class="lineCov">     191629 :             tail-&gt;fts_link = p;</span>
+<span class="lineNum">     837 </span><span class="lineCov">     191629 :             tail = p;</span>
+<span class="lineNum">     838 </span>            :         }
+<span class="lineNum">     839 </span><span class="lineCov">     320737 :         ++nitems;</span>
+<span class="lineNum">     840 </span>            :     }
+<span class="lineNum">     841 </span><span class="lineCov">     129797 :     (void)closedir(dirp);</span>
+<span class="lineNum">     842 </span>            : 
+<span class="lineNum">     843 </span>            :     /*
+<span class="lineNum">     844 </span>            :      * If had to realloc the path, adjust the addresses for the rest
+<span class="lineNum">     845 </span>            :      * of the tree.
+<span class="lineNum">     846 </span>            :      */
+<span class="lineNum">     847 </span><span class="lineCov">     129725 :     if(doadjust)</span>
+<span class="lineNum">     848 </span><span class="lineNoCov">          0 :         fts_padjust(sp, head);</span>
+<span class="lineNum">     849 </span>            : 
+<span class="lineNum">     850 </span>            :     /*
+<span class="lineNum">     851 </span>            :      * If not changing directories, reset the path back to original
+<span class="lineNum">     852 </span>            :      * state.
+<span class="lineNum">     853 </span>            :      */
+<span class="lineNum">     854 </span><span class="lineCov">     129750 :     if(ISSET(FTS_NOCHDIR)) {</span>
+<span class="lineNum">     855 </span><span class="lineCov">     124490 :         if(len == sp-&gt;fts_pathlen || nitems == 0)</span>
+<span class="lineNum">     856 </span><span class="lineCov">        100 :             --cp;</span>
+<span class="lineNum">     857 </span><span class="lineCov">     124490 :         *cp = '\0';</span>
+<span class="lineNum">     858 </span>            :     }
+<span class="lineNum">     859 </span>            : 
+<span class="lineNum">     860 </span>            :     /*
+<span class="lineNum">     861 </span>            :      * If descended after called from fts_children or after called from
+<span class="lineNum">     862 </span>            :      * fts_read and nothing found, get back.  At the root level we use
+<span class="lineNum">     863 </span>            :      * the saved fd; if one of fts_open()'s arguments is a relative path
+<span class="lineNum">     864 </span>            :      * to an empty directory, we wind up here with no other way back.  If
+<span class="lineNum">     865 </span>            :      * can't get back, we're done.
+<span class="lineNum">     866 </span>            :      */
+<span class="lineNum">     867 </span><span class="lineCov">     129950 :     if(descend &amp;&amp; (type == BCHILD || !nitems) &amp;&amp;</span>
+<span class="lineNum">     868 </span><span class="lineCov">        100 :        (cur-&gt;fts_level == FTS_ROOTLEVEL</span>
+<span class="lineNum">     869 </span><span class="lineNoCov">          0 :             ? FCHDIR(sp, sp-&gt;fts_rfd)</span>
+<span class="lineNum">     870 </span><span class="lineCov">        100 :             : fts_safe_changedir(sp, cur-&gt;fts_parent, -1, &quot;..&quot;))) {</span>
+<span class="lineNum">     871 </span><span class="lineNoCov">          0 :         cur-&gt;fts_info = FTS_ERR;</span>
+<span class="lineNum">     872 </span><span class="lineNoCov">          0 :         SET(FTS_STOP);</span>
+<span class="lineNum">     873 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">     874 </span>            :     }
+<span class="lineNum">     875 </span>            : 
+<span class="lineNum">     876 </span>            :     /* If didn't find anything, return NULL. */
+<span class="lineNum">     877 </span><span class="lineCov">     129750 :     if(!nitems) {</span>
+<span class="lineNum">     878 </span><span class="lineCov">        100 :         if(type == BREAD)</span>
+<span class="lineNum">     879 </span><span class="lineCov">        100 :             cur-&gt;fts_info = FTS_DP;</span>
+<span class="lineNum">     880 </span><span class="lineCov">        100 :         return (NULL);</span>
+<span class="lineNum">     881 </span>            :     }
+<span class="lineNum">     882 </span>            : 
+<span class="lineNum">     883 </span>            :     /* Sort the entries. */
+<span class="lineNum">     884 </span><span class="lineCov">     129650 :     if(sp-&gt;fts_compar &amp;&amp; nitems &gt; 1)</span>
+<span class="lineNum">     885 </span><span class="lineNoCov">          0 :         head = fts_sort(sp, head, nitems);</span>
+<span class="lineNum">     886 </span><span class="lineCov">     129635 :     return (head);</span>
+<a name="887"><span class="lineNum">     887 </span>            : }</a>
+<span class="lineNum">     888 </span>            : 
+<span class="lineNum">     889 </span><span class="lineCov">     438675 : static unsigned short fts_stat(FTS *sp, FTSENT *p, int follow) {</span>
+<span class="lineNum">     890 </span>            :     FTSENT *t;
+<span class="lineNum">     891 </span>            :     dev_t dev;
+<span class="lineNum">     892 </span>            :     __fts_ino_t ino;
+<span class="lineNum">     893 </span>            :     __fts_stat_t *sbp, sb;
+<span class="lineNum">     894 </span>            :     int saved_errno;
+<span class="lineNum">     895 </span>            : 
+<span class="lineNum">     896 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     897 </span>            :     _DIAGASSERT(p != NULL);
+<span class="lineNum">     898 </span>            : 
+<span class="lineNum">     899 </span>            :     /* If user needs stat info, stat buffer already allocated. */
+<span class="lineNum">     900 </span><span class="lineCov">     438675 :     sbp = ISSET(FTS_NOSTAT) ? &amp;sb : p-&gt;fts_statp;</span>
+<span class="lineNum">     901 </span>            : 
+<span class="lineNum">     902 </span>            : #ifdef FTS_WHITEOUT
+<span class="lineNum">     903 </span>            :     /* check for whiteout */
+<span class="lineNum">     904 </span>            :     if(p-&gt;fts_flags &amp; FTS_ISW) {
+<span class="lineNum">     905 </span>            :         if(sbp != &amp;sb) {
+<span class="lineNum">     906 </span>            :             memset(sbp, '\0', sizeof(*sbp));
+<span class="lineNum">     907 </span>            :             sbp-&gt;st_mode = S_IFWHT;
+<span class="lineNum">     908 </span>            :         }
+<span class="lineNum">     909 </span>            :         return (FTS_W);
+<span class="lineNum">     910 </span>            :     }
+<span class="lineNum">     911 </span>            : #endif
+<span class="lineNum">     912 </span>            : 
+<span class="lineNum">     913 </span>            :     /*
+<span class="lineNum">     914 </span>            :      * If doing a logical walk, or application requested FTS_FOLLOW, do
+<span class="lineNum">     915 </span>            :      * a stat(2).  If that fails, check for a non-existent symlink.  If
+<span class="lineNum">     916 </span>            :      * fail, set the errno from the stat call.
+<span class="lineNum">     917 </span>            :      */
+<span class="lineNum">     918 </span><span class="lineCov">     438675 :     if(ISSET(FTS_LOGICAL) || follow) {</span>
+<span class="lineNum">     919 </span><span class="lineCov">     235638 :         if(stat(p-&gt;fts_accpath, sbp)) {</span>
+<span class="lineNum">     920 </span><span class="lineCov">         32 :             saved_errno = errno;</span>
+<span class="lineNum">     921 </span><span class="lineCov">         32 :             if(!lstat(p-&gt;fts_accpath, sbp)) {</span>
+<span class="lineNum">     922 </span><span class="lineCov">         32 :                 errno = 0;</span>
+<span class="lineNum">     923 </span><span class="lineNoCov">          0 :                 return (FTS_SLNONE);</span>
+<span class="lineNum">     924 </span>            :             }
+<span class="lineNum">     925 </span><span class="lineNoCov">          0 :             p-&gt;fts_errno = saved_errno;</span>
+<span class="lineNum">     926 </span><span class="lineNoCov">          0 :             goto err;</span>
+<span class="lineNum">     927 </span>            :         }
+<span class="lineNum">     928 </span><span class="lineCov">     320953 :     } else if(lstat(p-&gt;fts_accpath, sbp)) {</span>
+<span class="lineNum">     929 </span><span class="lineNoCov">          0 :         p-&gt;fts_errno = errno;</span>
+<span class="lineNum">     930 </span>            :     err:
+<span class="lineNum">     931 </span><span class="lineNoCov">          0 :         memset(sbp, 0, sizeof(*sbp));</span>
+<span class="lineNum">     932 </span><span class="lineNoCov">          0 :         return (FTS_NS);</span>
+<span class="lineNum">     933 </span>            :     }
+<span class="lineNum">     934 </span>            : 
+<span class="lineNum">     935 </span><span class="lineCov">     438630 :     if(S_ISDIR(sbp-&gt;st_mode)) {</span>
+<span class="lineNum">     936 </span>            :         /*
+<span class="lineNum">     937 </span>            :          * Set the device/inode.  Used to find cycles and check for
+<span class="lineNum">     938 </span>            :          * crossing mount points.  Also remember the link count, used
+<span class="lineNum">     939 </span>            :          * in fts_build to limit the number of stat calls.  It is
+<span class="lineNum">     940 </span>            :          * understood that these fields are only referenced if fts_info
+<span class="lineNum">     941 </span>            :          * is set to FTS_D.
+<span class="lineNum">     942 </span>            :          */
+<span class="lineNum">     943 </span><span class="lineCov">     129943 :         dev = p-&gt;fts_dev = sbp-&gt;st_dev;</span>
+<span class="lineNum">     944 </span><span class="lineCov">     129943 :         ino = p-&gt;fts_ino = sbp-&gt;st_ino;</span>
+<span class="lineNum">     945 </span><span class="lineCov">     129943 :         p-&gt;fts_nlink = sbp-&gt;st_nlink;</span>
+<span class="lineNum">     946 </span>            : 
+<span class="lineNum">     947 </span><span class="lineCov">     129943 :         if(ISDOT(p-&gt;fts_name))</span>
+<span class="lineNum">     948 </span><span class="lineNoCov">          0 :             return (FTS_DOT);</span>
+<span class="lineNum">     949 </span>            : 
+<span class="lineNum">     950 </span>            :         /*
+<span class="lineNum">     951 </span>            :          * Cycle detection is done by brute force when the directory
+<span class="lineNum">     952 </span>            :          * is first encountered.  If the tree gets deep enough or the
+<span class="lineNum">     953 </span>            :          * number of symbolic links to directories is high enough,
+<span class="lineNum">     954 </span>            :          * something faster might be worthwhile.
+<span class="lineNum">     955 </span>            :          */
+<span class="lineNum">     956 </span><span class="lineCov">     159872 :         for(t = p-&gt;fts_parent; t-&gt;fts_level &gt;= FTS_ROOTLEVEL; t = t-&gt;fts_parent)</span>
+<span class="lineNum">     957 </span><span class="lineCov">      29959 :             if(ino == t-&gt;fts_ino &amp;&amp; dev == t-&gt;fts_dev) {</span>
+<span class="lineNum">     958 </span><span class="lineCov">         30 :                 p-&gt;fts_cycle = t;</span>
+<span class="lineNum">     959 </span><span class="lineCov">         30 :                 return (FTS_DC);</span>
+<span class="lineNum">     960 </span>            :             }
+<span class="lineNum">     961 </span><span class="lineCov">     129913 :         return (FTS_D);</span>
+<span class="lineNum">     962 </span>            :     }
+<span class="lineNum">     963 </span><span class="lineCov">     308687 :     if(S_ISLNK(sbp-&gt;st_mode))</span>
+<span class="lineNum">     964 </span><span class="lineCov">        734 :         return (FTS_SL);</span>
+<span class="lineNum">     965 </span><span class="lineCov">     307953 :     if(S_ISREG(sbp-&gt;st_mode))</span>
+<span class="lineNum">     966 </span><span class="lineCov">     307953 :         return (FTS_F);</span>
+<span class="lineNum">     967 </span><span class="lineNoCov">          0 :     return (FTS_DEFAULT);</span>
+<a name="968"><span class="lineNum">     968 </span>            : }</a>
+<span class="lineNum">     969 </span>            : 
+<span class="lineNum">     970 </span><span class="lineNoCov">          0 : static FTSENT *fts_sort(FTS *sp, FTSENT *head, size_t nitems) {</span>
+<span class="lineNum">     971 </span>            :     FTSENT **ap, *p;
+<span class="lineNum">     972 </span>            : 
+<span class="lineNum">     973 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">     974 </span>            :     _DIAGASSERT(head != NULL);
+<span class="lineNum">     975 </span>            : 
+<span class="lineNum">     976 </span>            :     /*
+<span class="lineNum">     977 </span>            :      * Construct an array of pointers to the structures and call qsort(3).
+<span class="lineNum">     978 </span>            :      * Reassemble the array in the order returned by qsort.  If unable to
+<span class="lineNum">     979 </span>            :      * sort for memory reasons, return the directory entries in their
+<span class="lineNum">     980 </span>            :      * current order.  Allocate enough space for the current needs plus
+<span class="lineNum">     981 </span>            :      * 40 so don't realloc one entry at a time.
+<span class="lineNum">     982 </span>            :      */
+<span class="lineNum">     983 </span><span class="lineNoCov">          0 :     if(nitems &gt; sp-&gt;fts_nitems) {</span>
+<span class="lineNum">     984 </span>            :         FTSENT **new;
+<span class="lineNum">     985 </span>            : 
+<span class="lineNum">     986 </span><span class="lineNoCov">          0 :         new = realloc(sp-&gt;fts_array, sizeof(FTSENT *) * (nitems + 40));</span>
+<span class="lineNum">     987 </span><span class="lineNoCov">          0 :         if(new == 0)</span>
+<span class="lineNum">     988 </span><span class="lineNoCov">          0 :             return (head);</span>
+<span class="lineNum">     989 </span><span class="lineNoCov">          0 :         sp-&gt;fts_array = new;</span>
+<span class="lineNum">     990 </span><span class="lineNoCov">          0 :         sp-&gt;fts_nitems = fts_nitems_truncate(nitems + 40);</span>
+<span class="lineNum">     991 </span>            :     }
+<span class="lineNum">     992 </span><span class="lineNoCov">          0 :     for(ap = sp-&gt;fts_array, p = head; p; p = p-&gt;fts_link)</span>
+<span class="lineNum">     993 </span><span class="lineNoCov">          0 :         *ap++ = p;</span>
+<span class="lineNum">     994 </span><span class="lineNoCov">          0 :     qsort((void *)sp-&gt;fts_array, nitems, sizeof(FTSENT *),</span>
+<span class="lineNum">     995 </span><span class="lineNoCov">          0 :           (int (*)(const void *, const void *))sp-&gt;fts_compar);</span>
+<span class="lineNum">     996 </span><span class="lineNoCov">          0 :     for(head = *(ap = sp-&gt;fts_array); --nitems; ++ap)</span>
+<span class="lineNum">     997 </span><span class="lineNoCov">          0 :         ap[0]-&gt;fts_link = ap[1];</span>
+<span class="lineNum">     998 </span><span class="lineNoCov">          0 :     ap[0]-&gt;fts_link = NULL;</span>
+<span class="lineNum">     999 </span><span class="lineNoCov">          0 :     return (head);</span>
+<a name="1000"><span class="lineNum">    1000 </span>            : }</a>
+<span class="lineNum">    1001 </span>            : 
+<span class="lineNum">    1002 </span><span class="lineCov">     672070 : static FTSENT *fts_alloc(FTS *sp, const char *name, size_t namelen) {</span>
+<span class="lineNum">    1003 </span>            :     FTSENT *p;
+<span class="lineNum">    1004 </span>            : #if defined(FTS_ALLOC_ALIGNED)
+<span class="lineNum">    1005 </span>            :     size_t len;
+<span class="lineNum">    1006 </span>            : #endif
+<span class="lineNum">    1007 </span>            : 
+<span class="lineNum">    1008 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">    1009 </span>            :     _DIAGASSERT(name != NULL);
+<span class="lineNum">    1010 </span>            : 
+<span class="lineNum">    1011 </span>            : #if defined(FTS_ALLOC_ALIGNED)
+<span class="lineNum">    1012 </span>            :     /*
+<span class="lineNum">    1013 </span>            :      * The file name is a variable length array and no stat structure is
+<span class="lineNum">    1014 </span>            :      * necessary if the user has set the nostat bit.  Allocate the FTSENT
+<span class="lineNum">    1015 </span>            :      * structure, the file name and the stat structure in one chunk, but
+<span class="lineNum">    1016 </span>            :      * be careful that the stat structure is reasonably aligned.  Since the
+<span class="lineNum">    1017 </span>            :      * fts_name field is declared to be of size 1, the fts_name pointer is
+<span class="lineNum">    1018 </span>            :      * namelen + 2 before the first possible address of the stat structure.
+<span class="lineNum">    1019 </span>            :      */
+<span class="lineNum">    1020 </span>            :     len = sizeof(FTSENT) + namelen;
+<span class="lineNum">    1021 </span>            :     if(!ISSET(FTS_NOSTAT))
+<span class="lineNum">    1022 </span>            :         len += sizeof(*(p-&gt;fts_statp)) + ALIGNBYTES;
+<span class="lineNum">    1023 </span>            :     if((p = malloc(len)) == NULL)
+<span class="lineNum">    1024 </span>            :         return (NULL);
+<span class="lineNum">    1025 </span>            : 
+<span class="lineNum">    1026 </span>            :     if(!ISSET(FTS_NOSTAT))
+<span class="lineNum">    1027 </span>            :         p-&gt;fts_statp = (__fts_stat_t *)ALIGN((unsigned long)(p-&gt;fts_name + namelen + 2));
+<span class="lineNum">    1028 </span>            : #else
+<span class="lineNum">    1029 </span><span class="lineCov">     672070 :     if((p = malloc(sizeof(FTSENT) + namelen)) == NULL)</span>
+<span class="lineNum">    1030 </span><span class="lineNoCov">          0 :         return (NULL);</span>
+<span class="lineNum">    1031 </span>            : 
+<span class="lineNum">    1032 </span><span class="lineCov">     672070 :     if(!ISSET(FTS_NOSTAT))</span>
+<span class="lineNum">    1033 </span><span class="lineCov">     672653 :         if((p-&gt;fts_statp = malloc(sizeof(*(p-&gt;fts_statp)))) == NULL) {</span>
+<span class="lineNum">    1034 </span><span class="lineNoCov">          0 :             free(p);</span>
+<span class="lineNum">    1035 </span><span class="lineNoCov">          0 :             return (NULL);</span>
+<span class="lineNum">    1036 </span>            :         }
+<span class="lineNum">    1037 </span>            : #endif
+<span class="lineNum">    1038 </span>            : 
+<span class="lineNum">    1039 </span><span class="lineCov">     672070 :     if(ISSET(FTS_NOSTAT))</span>
+<span class="lineNum">    1040 </span><span class="lineNoCov">          0 :         p-&gt;fts_statp = NULL;</span>
+<span class="lineNum">    1041 </span>            : 
+<span class="lineNum">    1042 </span>            :     /* Copy the name plus the trailing NULL. */
+<span class="lineNum">    1043 </span><span class="lineCov">     672070 :     memmove(p-&gt;fts_name, name, namelen + 1);</span>
+<span class="lineNum">    1044 </span>            : 
+<span class="lineNum">    1045 </span><span class="lineCov">     672070 :     p-&gt;fts_namelen = ftsent_namelen_truncate(namelen);</span>
+<span class="lineNum">    1046 </span><span class="lineCov">     672070 :     p-&gt;fts_path = sp-&gt;fts_path;</span>
+<span class="lineNum">    1047 </span><span class="lineCov">     672070 :     p-&gt;fts_errno = 0;</span>
+<span class="lineNum">    1048 </span><span class="lineCov">     672070 :     p-&gt;fts_flags = 0;</span>
+<span class="lineNum">    1049 </span><span class="lineCov">     672070 :     p-&gt;fts_instr = FTS_NOINSTR;</span>
+<span class="lineNum">    1050 </span><span class="lineCov">     672070 :     p-&gt;fts_number = 0;</span>
+<span class="lineNum">    1051 </span><span class="lineCov">     672070 :     p-&gt;fts_pointer = NULL;</span>
+<span class="lineNum">    1052 </span><span class="lineCov">     672070 :     return (p);</span>
+<a name="1053"><span class="lineNum">    1053 </span>            : }</a>
+<span class="lineNum">    1054 </span>            : 
+<span class="lineNum">    1055 </span><span class="lineCov">     672381 : static void fts_free(FTSENT *p) {</span>
+<span class="lineNum">    1056 </span>            : #if !defined(FTS_ALLOC_ALIGNED)
+<span class="lineNum">    1057 </span><span class="lineCov">     672381 :     if(p-&gt;fts_statp)</span>
+<span class="lineNum">    1058 </span><span class="lineCov">     672882 :         free(p-&gt;fts_statp);</span>
+<span class="lineNum">    1059 </span>            : #endif
+<span class="lineNum">    1060 </span><span class="lineCov">     672381 :     free(p);</span>
+<a name="1061"><span class="lineNum">    1061 </span><span class="lineCov">     672381 : }</span></a>
+<span class="lineNum">    1062 </span>            : 
+<span class="lineNum">    1063 </span><span class="lineNoCov">          0 : static void fts_lfree(FTSENT *head) {</span>
+<span class="lineNum">    1064 </span>            :     FTSENT *p;
+<span class="lineNum">    1065 </span>            : 
+<span class="lineNum">    1066 </span>            :     /* XXX: head may be NULL ? */
+<span class="lineNum">    1067 </span>            : 
+<span class="lineNum">    1068 </span>            :     /* Free a linked list of structures. */
+<span class="lineNum">    1069 </span><span class="lineNoCov">          0 :     while((p = head) != NULL) {</span>
+<span class="lineNum">    1070 </span><span class="lineNoCov">          0 :         head = head-&gt;fts_link;</span>
+<span class="lineNum">    1071 </span><span class="lineNoCov">          0 :         fts_free(p);</span>
+<span class="lineNum">    1072 </span>            :     }
+<a name="1073"><span class="lineNum">    1073 </span><span class="lineNoCov">          0 : }</span></a>
+<span class="lineNum">    1074 </span>            : 
+<span class="lineNum">    1075 </span><span class="lineCov">     117173 : static size_t fts_pow2(size_t x) {</span>
+<span class="lineNum">    1076 </span><span class="lineCov">     117173 :     x--;</span>
+<span class="lineNum">    1077 </span><span class="lineCov">     117173 :     x |= x &gt;&gt; 1;</span>
+<span class="lineNum">    1078 </span><span class="lineCov">     117173 :     x |= x &gt;&gt; 2;</span>
+<span class="lineNum">    1079 </span><span class="lineCov">     117173 :     x |= x &gt;&gt; 4;</span>
+<span class="lineNum">    1080 </span><span class="lineCov">     117173 :     x |= x &gt;&gt; 8;</span>
+<span class="lineNum">    1081 </span><span class="lineCov">     117173 :     x |= x &gt;&gt; 16;</span>
+<span class="lineNum">    1082 </span>            : #if LONG_BIT &gt; 32
+<span class="lineNum">    1083 </span><span class="lineCov">     117173 :     x |= x &gt;&gt; 32;</span>
+<span class="lineNum">    1084 </span>            : #endif
+<span class="lineNum">    1085 </span>            : #if LONG_BIT &gt; 64
+<span class="lineNum">    1086 </span>            :     x |= x &gt;&gt; 64;
+<span class="lineNum">    1087 </span>            : #endif
+<span class="lineNum">    1088 </span><span class="lineCov">     117173 :     x++;</span>
+<span class="lineNum">    1089 </span><span class="lineCov">     117173 :     return (x);</span>
+<span class="lineNum">    1090 </span>            : }
+<span class="lineNum">    1091 </span>            : 
+<span class="lineNum">    1092 </span>            : /*
+<span class="lineNum">    1093 </span>            :  * Allow essentially unlimited paths; find, rm, ls should all work on any tree.
+<span class="lineNum">    1094 </span>            :  * Most systems will allow creation of paths much longer than MAXPATHLEN, even
+<span class="lineNum">    1095 </span>            :  * though the kernel won't resolve them.  Round up the new size to a power of 2,
+<a name="1096"><span class="lineNum">    1096 </span>            :  * so we don't realloc the path 2 bytes at a time.</a>
+<span class="lineNum">    1097 </span>            :  */
+<span class="lineNum">    1098 </span><span class="lineCov">     117017 : static int fts_palloc(FTS *sp, size_t size) {</span>
+<span class="lineNum">    1099 </span>            :     char *new;
+<span class="lineNum">    1100 </span>            : 
+<span class="lineNum">    1101 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">    1102 </span>            : 
+<span class="lineNum">    1103 </span>            : #ifdef __FTS_COMPAT_LENGTH
+<span class="lineNum">    1104 </span>            :     /* Protect against fts_pathlen overflow. */
+<span class="lineNum">    1105 </span>            :     if(size &gt; USHRT_MAX + 1) {
+<span class="lineNum">    1106 </span>            :         errno = ENAMETOOLONG;
+<span class="lineNum">    1107 </span>            :         return (1);
+<span class="lineNum">    1108 </span>            :     }
+<span class="lineNum">    1109 </span>            : #endif
+<span class="lineNum">    1110 </span><span class="lineCov">     117017 :     size = fts_pow2(size);</span>
+<span class="lineNum">    1111 </span><span class="lineCov">     117054 :     new = realloc(sp-&gt;fts_path, size);</span>
+<span class="lineNum">    1112 </span><span class="lineCov">     117054 :     if(new == 0)</span>
+<span class="lineNum">    1113 </span><span class="lineNoCov">          0 :         return (1);</span>
+<span class="lineNum">    1114 </span><span class="lineCov">     117054 :     sp-&gt;fts_path = new;</span>
+<span class="lineNum">    1115 </span><span class="lineCov">     117054 :     sp-&gt;fts_pathlen = fts_pathlen_truncate(size);</span>
+<span class="lineNum">    1116 </span><span class="lineCov">     117054 :     return (0);</span>
+<span class="lineNum">    1117 </span>            : }
+<span class="lineNum">    1118 </span>            : 
+<span class="lineNum">    1119 </span>            : /*
+<span class="lineNum">    1120 </span>            :  * When the path is realloc'd, have to fix all of the pointers in structures
+<a name="1121"><span class="lineNum">    1121 </span>            :  * already returned.</a>
+<span class="lineNum">    1122 </span>            :  */
+<span class="lineNum">    1123 </span><span class="lineNoCov">          0 : static void fts_padjust(FTS *sp, FTSENT *head) {</span>
+<span class="lineNum">    1124 </span>            :     FTSENT *p;
+<span class="lineNum">    1125 </span>            :     char *addr;
+<span class="lineNum">    1126 </span>            : 
+<span class="lineNum">    1127 </span>            :     _DIAGASSERT(sp != NULL);
+<span class="lineNum">    1128 </span>            : 
+<span class="lineNum">    1129 </span>            : #define ADJUST(p)                                                         \
+<span class="lineNum">    1130 </span>            :     do {                                                                  \
+<span class="lineNum">    1131 </span>            :         if((p)-&gt;fts_accpath != (p)-&gt;fts_name)                             \
+<span class="lineNum">    1132 </span>            :             (p)-&gt;fts_accpath = addr + ((p)-&gt;fts_accpath - (p)-&gt;fts_path); \
+<span class="lineNum">    1133 </span>            :         (p)-&gt;fts_path = addr;                                             \
+<span class="lineNum">    1134 </span>            :     } while(/*CONSTCOND*/ 0)
+<span class="lineNum">    1135 </span>            : 
+<span class="lineNum">    1136 </span><span class="lineNoCov">          0 :     addr = sp-&gt;fts_path;</span>
+<span class="lineNum">    1137 </span>            : 
+<span class="lineNum">    1138 </span>            :     /* Adjust the current set of children. */
+<span class="lineNum">    1139 </span><span class="lineNoCov">          0 :     for(p = sp-&gt;fts_child; p; p = p-&gt;fts_link)</span>
+<span class="lineNum">    1140 </span><span class="lineNoCov">          0 :         ADJUST(p);</span>
+<span class="lineNum">    1141 </span>            : 
+<span class="lineNum">    1142 </span>            :     /* Adjust the rest of the tree, including the current level. */
+<span class="lineNum">    1143 </span><span class="lineNoCov">          0 :     for(p = head; p-&gt;fts_level &gt;= FTS_ROOTLEVEL;) {</span>
+<span class="lineNum">    1144 </span><span class="lineNoCov">          0 :         ADJUST(p);</span>
+<span class="lineNum">    1145 </span><span class="lineNoCov">          0 :         p = p-&gt;fts_link ? p-&gt;fts_link : p-&gt;fts_parent;</span>
+<span class="lineNum">    1146 </span>            :     }
+<a name="1147"><span class="lineNum">    1147 </span><span class="lineNoCov">          0 : }</span></a>
+<span class="lineNum">    1148 </span>            : 
+<span class="lineNum">    1149 </span><span class="lineCov">     116952 : static size_t fts_maxarglen(char *const *argv) {</span>
+<span class="lineNum">    1150 </span>            :     size_t len, max;
+<span class="lineNum">    1151 </span>            : 
+<span class="lineNum">    1152 </span>            :     _DIAGASSERT(argv != NULL);
+<span class="lineNum">    1153 </span>            : 
+<span class="lineNum">    1154 </span><span class="lineCov">     233984 :     for(max = 0; *argv; ++argv)</span>
+<span class="lineNum">    1155 </span><span class="lineCov">     117032 :         if((len = strlen(*argv)) &gt; max)</span>
+<span class="lineNum">    1156 </span><span class="lineCov">     117129 :             max = len;</span>
+<span class="lineNum">    1157 </span><span class="lineCov">     116952 :     return (max + 1);</span>
+<span class="lineNum">    1158 </span>            : }
+<span class="lineNum">    1159 </span>            : 
+<span class="lineNum">    1160 </span>            : /*
+<span class="lineNum">    1161 </span>            :  * Change to dir specified by fd or p-&gt;fts_accpath without getting
+<span class="lineNum">    1162 </span>            :  * tricked by someone changing the world out from underneath us.
+<a name="1163"><span class="lineNum">    1163 </span>            :  * Assumes p-&gt;fts_dev and p-&gt;fts_ino are filled in.</a>
+<span class="lineNum">    1164 </span>            :  */
+<span class="lineNum">    1165 </span><span class="lineCov">     142061 : static int fts_safe_changedir(const FTS *sp, const FTSENT *p, int fd, const char *path) {</span>
+<span class="lineNum">    1166 </span><span class="lineCov">     142061 :     int oldfd = fd, ret = -1;</span>
+<span class="lineNum">    1167 </span>            :     __fts_stat_t sb;
+<span class="lineNum">    1168 </span>            : 
+<span class="lineNum">    1169 </span><span class="lineCov">     142061 :     if(ISSET(FTS_NOCHDIR))</span>
+<span class="lineNum">    1170 </span><span class="lineCov">     133273 :         return 0;</span>
+<span class="lineNum">    1171 </span>            : 
+<span class="lineNum">    1172 </span><span class="lineCov">       8788 :     if(oldfd &lt; 0 &amp;&amp; (fd = open(path, O_RDONLY | O_CLOEXEC)) == -1)</span>
+<span class="lineNum">    1173 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">    1174 </span>            : 
+<span class="lineNum">    1175 </span><span class="lineCov">       8788 :     if(fstat(fd, &amp;sb) == -1)</span>
+<span class="lineNum">    1176 </span><span class="lineNoCov">          0 :         goto bail;</span>
+<span class="lineNum">    1177 </span>            : 
+<span class="lineNum">    1178 </span><span class="lineCov">       8788 :     if(sb.st_ino != p-&gt;fts_ino || sb.st_dev != p-&gt;fts_dev) {</span>
+<span class="lineNum">    1179 </span><span class="lineNoCov">          0 :         errno = ENOENT;</span>
+<span class="lineNum">    1180 </span><span class="lineNoCov">          0 :         goto bail;</span>
+<span class="lineNum">    1181 </span>            :     }
+<span class="lineNum">    1182 </span>            : 
+<span class="lineNum">    1183 </span><span class="lineCov">       8788 :     ret = fchdir(fd);</span>
+<span class="lineNum">    1184 </span>            : 
+<span class="lineNum">    1185 </span>            : bail:
+<span class="lineNum">    1186 </span><span class="lineCov">       8788 :     if(oldfd &lt; 0) {</span>
+<span class="lineNum">    1187 </span><span class="lineCov">       3525 :         int save_errno = errno;</span>
+<span class="lineNum">    1188 </span><span class="lineCov">       3525 :         (void)close(fd);</span>
+<span class="lineNum">    1189 </span><span class="lineCov">       3525 :         errno = save_errno;</span>
+<span class="lineNum">    1190 </span>            :     }
+<span class="lineNum">    1191 </span><span class="lineCov">       8788 :     return ret;</span>
+<span class="lineNum">    1192 </span>            : }
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

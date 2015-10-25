@@ -1,0 +1,432 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - lib/swap-table.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">lib</a> - swap-table.c<span style="font-size: 80%;"> (source / <a href="swap-table.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">123</td>
+            <td class="headerCovTableEntry">138</td>
+            <td class="headerCovTableEntryMed">89.1 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2015-10-25 15:30:11</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : #include &lt;string.h&gt;</a>
+<span class="lineNum">       2 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">       3 </span>            : #include &lt;unistd.h&gt;
+<span class="lineNum">       4 </span>            : #include &lt;errno.h&gt;
+<span class="lineNum">       5 </span>            : 
+<span class="lineNum">       6 </span>            : #include &quot;config.h&quot;
+<span class="lineNum">       7 </span>            : #include &quot;swap-table.h&quot;
+<span class="lineNum">       8 </span>            : 
+<span class="lineNum">       9 </span>            : #if HAVE_SQLITE3
+<span class="lineNum">      10 </span>            : 
+<span class="lineNum">      11 </span>            : #define SET_ERROR(...) g_set_error(error, RM_ERROR_QUARK, 0, __VA_ARGS__);
+<span class="lineNum">      12 </span>            : 
+<span class="lineNum">      13 </span>            : /////////////////////
+<span class="lineNum">      14 </span>            : //  GENERAL TYPES  //
+<span class="lineNum">      15 </span>            : /////////////////////
+<span class="lineNum">      16 </span>            : 
+<span class="lineNum">      17 </span>            : enum { STMT_CREATE_ATTR, STMT_INSERT_DATA, STMT_SELECT_DATA, N_STMTS };
+<span class="lineNum">      18 </span>            : 
+<span class="lineNum">      19 </span>            : static const char *STATEMENTS[] =
+<span class="lineNum">      20 </span>            :     {[STMT_CREATE_ATTR] = &quot;CREATE TABLE %s_vec (%s BLOB NOT NULL);&quot;,
+<span class="lineNum">      21 </span>            :      [STMT_INSERT_DATA] = &quot;INSERT INTO %s_vec VALUES(?); -- %s&quot;,
+<span class="lineNum">      22 </span>            :      [STMT_SELECT_DATA] = &quot;SELECT %s FROM %s_vec WHERE rowid = ?;&quot;, [N_STMTS] = NULL};
+<span class="lineNum">      23 </span>            : 
+<span class="lineNum">      24 </span>            : typedef struct RmSwapAttr {
+<span class="lineNum">      25 </span>            :     int id;
+<span class="lineNum">      26 </span>            :     const char *name;
+<span class="lineNum">      27 </span>            :     sqlite3_stmt *stmts[N_STMTS];
+<span class="lineNum">      28 </span>            : } RmSwapAttr;
+<span class="lineNum">      29 </span>            : 
+<span class="lineNum">      30 </span>            : /////////////////////////
+<span class="lineNum">      31 </span>            : //  UTILITY FUNCTIONS  //
+<a name="32"><span class="lineNum">      32 </span>            : /////////////////////////</a>
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span><span class="lineCov">       2618 : static RmSwapAttr *rm_swap_attr_create(sqlite3 *handle, int id, const char *name,</span>
+<span class="lineNum">      35 </span>            :                                        GError **error) {
+<span class="lineNum">      36 </span><span class="lineCov">       2618 :     rm_assert_gentle(name);</span>
+<span class="lineNum">      37 </span>            : 
+<span class="lineNum">      38 </span><span class="lineCov">       2618 :     RmSwapAttr *self = g_malloc0(sizeof(RmSwapAttr));</span>
+<span class="lineNum">      39 </span><span class="lineCov">       2618 :     self-&gt;name = name;</span>
+<span class="lineNum">      40 </span><span class="lineCov">       2618 :     self-&gt;id = id;</span>
+<span class="lineNum">      41 </span>            : 
+<span class="lineNum">      42 </span><span class="lineCov">      10472 :     for(int idx = 0; idx &lt; N_STMTS; ++idx) {</span>
+<span class="lineNum">      43 </span><span class="lineCov">       7854 :         char *dynamic_sql = sqlite3_mprintf(STATEMENTS[idx], name, name);</span>
+<span class="lineNum">      44 </span>            : 
+<span class="lineNum">      45 </span><span class="lineCov">       7854 :         if(sqlite3_prepare_v2(handle, dynamic_sql, -1, &amp;self-&gt;stmts[idx], NULL) !=</span>
+<span class="lineNum">      46 </span>            :            SQLITE_OK) {
+<span class="lineNum">      47 </span><span class="lineNoCov">          0 :             SET_ERROR(&quot;Unable to prepare statement&quot;);</span>
+<span class="lineNum">      48 </span>            :         }
+<span class="lineNum">      49 </span>            : 
+<span class="lineNum">      50 </span><span class="lineCov">       7854 :         if(idx == STMT_CREATE_ATTR) {</span>
+<span class="lineNum">      51 </span><span class="lineCov">       2618 :             sqlite3_stmt *stmt = self-&gt;stmts[idx];</span>
+<span class="lineNum">      52 </span><span class="lineCov">       2618 :             if(sqlite3_step(stmt) != SQLITE_DONE) {</span>
+<span class="lineNum">      53 </span><span class="lineNoCov">          0 :                 SET_ERROR(&quot;Unable to create attr table&quot;);</span>
+<span class="lineNum">      54 </span>            :             }
+<span class="lineNum">      55 </span>            : 
+<span class="lineNum">      56 </span><span class="lineCov">       2618 :             if(sqlite3_reset(stmt) != SQLITE_OK) {</span>
+<span class="lineNum">      57 </span><span class="lineNoCov">          0 :                 SET_ERROR(&quot;Unable to reset attr attr table stmt&quot;);</span>
+<span class="lineNum">      58 </span>            :             }
+<span class="lineNum">      59 </span>            :         }
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span><span class="lineCov">       7854 :         if(dynamic_sql != NULL) {</span>
+<span class="lineNum">      62 </span><span class="lineCov">       7854 :             sqlite3_free(dynamic_sql);</span>
+<span class="lineNum">      63 </span>            :         }
+<span class="lineNum">      64 </span>            :     }
+<span class="lineNum">      65 </span>            : 
+<span class="lineNum">      66 </span><span class="lineCov">       2618 :     return self;</span>
+<a name="67"><span class="lineNum">      67 </span>            : }</a>
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span><span class="lineCov">       2618 : static void rm_swap_attr_destroy(RmSwapAttr *self, RmSwapTable *table) {</span>
+<span class="lineNum">      70 </span><span class="lineCov">       2618 :     rm_assert_gentle(self);</span>
+<span class="lineNum">      71 </span><span class="lineCov">       2618 :     rm_assert_gentle(table);</span>
+<span class="lineNum">      72 </span>            : 
+<span class="lineNum">      73 </span><span class="lineCov">      10472 :     for(int idx = 0; idx &lt; N_STMTS; ++idx) {</span>
+<span class="lineNum">      74 </span><span class="lineCov">       7854 :         sqlite3_stmt *stmt = self-&gt;stmts[idx];</span>
+<span class="lineNum">      75 </span><span class="lineCov">       7854 :         sqlite3_finalize(stmt);</span>
+<span class="lineNum">      76 </span>            :     }
+<span class="lineNum">      77 </span>            : 
+<span class="lineNum">      78 </span><span class="lineCov">       2618 :     g_free(self);</span>
+<a name="79"><span class="lineNum">      79 </span><span class="lineCov">       2618 : }</span></a>
+<span class="lineNum">      80 </span>            : 
+<span class="lineNum">      81 </span><span class="lineCov">      90557 : static void rm_swap_table_clean_stmt(RmSwapTable *self, sqlite3_stmt *stmt,</span>
+<span class="lineNum">      82 </span>            :                                      GError **error) {
+<span class="lineNum">      83 </span><span class="lineCov">      90557 :     rm_assert_gentle(self);</span>
+<span class="lineNum">      84 </span><span class="lineCov">      90557 :     rm_assert_gentle(stmt);</span>
+<span class="lineNum">      85 </span>            : 
+<span class="lineNum">      86 </span><span class="lineCov">      90557 :     if(sqlite3_errcode(self-&gt;cache) != SQLITE_DONE) {</span>
+<span class="lineNum">      87 </span><span class="lineNoCov">          0 :         SET_ERROR(&quot;stmt failed: %s&quot;, sqlite3_errmsg(self-&gt;cache));</span>
+<span class="lineNum">      88 </span>            :     }
+<span class="lineNum">      89 </span>            : 
+<span class="lineNum">      90 </span><span class="lineCov">      90557 :     if(sqlite3_reset(stmt) != SQLITE_OK) {</span>
+<span class="lineNum">      91 </span><span class="lineNoCov">          0 :         SET_ERROR(&quot;Unable to reset prepared statement&quot;);</span>
+<span class="lineNum">      92 </span>            :     }
+<span class="lineNum">      93 </span>            : 
+<span class="lineNum">      94 </span><span class="lineCov">      90557 :     if(sqlite3_clear_bindings(stmt) != SQLITE_OK) {</span>
+<span class="lineNum">      95 </span><span class="lineNoCov">          0 :         SET_ERROR(&quot;Unable to clear prepared statement&quot;);</span>
+<span class="lineNum">      96 </span>            :     }
+<a name="97"><span class="lineNum">      97 </span><span class="lineCov">      90557 : }</span></a>
+<span class="lineNum">      98 </span>            : 
+<span class="lineNum">      99 </span><span class="lineCov">       1309 : static void rm_swap_table_create_cachedir(GError **error) {</span>
+<span class="lineNum">     100 </span><span class="lineCov">       1309 :     char *path = g_build_filename(g_get_user_cache_dir(), &quot;rmlint&quot;, NULL);</span>
+<span class="lineNum">     101 </span>            : 
+<span class="lineNum">     102 </span><span class="lineCov">       1309 :     if(g_mkdir_with_parents(path, 0775) == -1) {</span>
+<span class="lineNum">     103 </span><span class="lineNoCov">          0 :         SET_ERROR(&quot;cannot create cache dir %s: %s&quot;, path, g_strerror(errno));</span>
+<span class="lineNum">     104 </span>            :     }
+<span class="lineNum">     105 </span>            : 
+<span class="lineNum">     106 </span><span class="lineCov">       1309 :     g_free(path);</span>
+<span class="lineNum">     107 </span><span class="lineCov">       1309 : }</span>
+<span class="lineNum">     108 </span>            : 
+<span class="lineNum">     109 </span>            : //////////////////////
+<span class="lineNum">     110 </span>            : //  SWAP TABLE API  //
+<a name="111"><span class="lineNum">     111 </span>            : //////////////////////</a>
+<span class="lineNum">     112 </span>            : 
+<span class="lineNum">     113 </span><span class="lineCov">       1309 : RmSwapTable *rm_swap_table_open(gboolean in_memory, GError **error) {</span>
+<span class="lineNum">     114 </span><span class="lineCov">       1309 :     RmSwapTable *self = NULL;</span>
+<span class="lineNum">     115 </span>            : 
+<span class="lineNum">     116 </span><span class="lineCov">       1309 :     char *path = NULL;</span>
+<span class="lineNum">     117 </span>            : 
+<span class="lineNum">     118 </span><span class="lineCov">       1309 :     if(in_memory) {</span>
+<span class="lineNum">     119 </span><span class="lineNoCov">          0 :         path = g_strdup(&quot;:memory:&quot;);</span>
+<span class="lineNum">     120 </span>            :     } else {
+<span class="lineNum">     121 </span><span class="lineCov">       1309 :         char pid[20] = {0};</span>
+<span class="lineNum">     122 </span><span class="lineCov">       1309 :         memset(pid, 0, sizeof(pid));</span>
+<span class="lineNum">     123 </span>            : 
+<span class="lineNum">     124 </span><span class="lineCov">       1309 :         g_snprintf(pid, sizeof(pid), &quot;%d&quot;, getpid());</span>
+<span class="lineNum">     125 </span><span class="lineCov">       1309 :         path = g_build_filename(g_get_user_cache_dir(), &quot;rmlint&quot;, pid, NULL);</span>
+<span class="lineNum">     126 </span>            : 
+<span class="lineNum">     127 </span>            :         /* Make sure that path actually exists */
+<span class="lineNum">     128 </span><span class="lineCov">       1309 :         rm_swap_table_create_cachedir(error);</span>
+<span class="lineNum">     129 </span>            :     }
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span>            :     /* Might happen if no tmp file could be created */
+<span class="lineNum">     132 </span><span class="lineCov">       1309 :     if(error &amp;&amp; *error) {</span>
+<span class="lineNum">     133 </span><span class="lineNoCov">          0 :         goto cleanup;</span>
+<span class="lineNum">     134 </span>            :     }
+<span class="lineNum">     135 </span>            : 
+<span class="lineNum">     136 </span>            :     /* We do locking ourselves */
+<span class="lineNum">     137 </span><span class="lineCov">       1309 :     sqlite3_config(SQLITE_CONFIG_SINGLETHREAD);</span>
+<span class="lineNum">     138 </span>            : 
+<span class="lineNum">     139 </span><span class="lineCov">       1309 :     sqlite3 *handle = NULL;</span>
+<span class="lineNum">     140 </span><span class="lineCov">       1309 :     if(sqlite3_open(path, &amp;handle) != SQLITE_OK) {</span>
+<span class="lineNum">     141 </span><span class="lineNoCov">          0 :         SET_ERROR(&quot;Cannot open swap table db&quot;);</span>
+<span class="lineNum">     142 </span><span class="lineNoCov">          0 :         goto cleanup;</span>
+<span class="lineNum">     143 </span>            :     }
+<span class="lineNum">     144 </span>            : 
+<span class="lineNum">     145 </span>            :     /* Finetune sqlite (quite slow without these) */
+<span class="lineNum">     146 </span><span class="lineCov">       1309 :     sqlite3_extended_result_codes(handle, TRUE);</span>
+<span class="lineNum">     147 </span><span class="lineCov">       1309 :     sqlite3_exec(handle, &quot;PRAGMA cache_size = 8000;&quot;, 0, 0, 0);</span>
+<span class="lineNum">     148 </span><span class="lineCov">       1309 :     sqlite3_exec(handle, &quot;PRAGMA synchronous = OFF;&quot;, 0, 0, 0);</span>
+<span class="lineNum">     149 </span><span class="lineCov">       1309 :     sqlite3_exec(handle, &quot;PRAGMA journal_mode = MEMORY;&quot;, 0, 0, 0);</span>
+<span class="lineNum">     150 </span>            : 
+<span class="lineNum">     151 </span>            : #if !RM_IS_APPLE
+<span class="lineNum">     152 </span><span class="lineCov">       1309 :     sqlite3_enable_shared_cache(TRUE);</span>
+<span class="lineNum">     153 </span>            : #endif
+<span class="lineNum">     154 </span>            : 
+<span class="lineNum">     155 </span><span class="lineCov">       1309 :     size_t path_len = strlen(path) + 1;</span>
+<span class="lineNum">     156 </span><span class="lineCov">       1309 :     self = g_malloc(sizeof(RmSwapTable) + path_len);</span>
+<span class="lineNum">     157 </span><span class="lineCov">       1309 :     self-&gt;cache = handle;</span>
+<span class="lineNum">     158 </span><span class="lineCov">       1309 :     self-&gt;attrs = g_ptr_array_new();</span>
+<span class="lineNum">     159 </span><span class="lineCov">       1309 :     self-&gt;transaction_running = FALSE;</span>
+<span class="lineNum">     160 </span><span class="lineCov">       1309 :     strncpy(self-&gt;path, path, path_len);</span>
+<span class="lineNum">     161 </span><span class="lineCov">       1309 :     g_mutex_init(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     162 </span>            : 
+<span class="lineNum">     163 </span>            : cleanup:
+<span class="lineNum">     164 </span><span class="lineCov">       1309 :     g_free(path);</span>
+<span class="lineNum">     165 </span><span class="lineCov">       1309 :     return self;</span>
+<a name="166"><span class="lineNum">     166 </span>            : }</a>
+<span class="lineNum">     167 </span>            : 
+<span class="lineNum">     168 </span><span class="lineCov">       1309 : void rm_swap_table_close(RmSwapTable *self, GError **error) {</span>
+<span class="lineNum">     169 </span><span class="lineCov">       1309 :     rm_assert_gentle(self);</span>
+<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     171 </span><span class="lineCov">       1309 :     g_mutex_lock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     172 </span>            :     {
+<span class="lineNum">     173 </span><span class="lineCov">       1309 :         g_ptr_array_foreach(self-&gt;attrs, (GFunc)rm_swap_attr_destroy, self);</span>
+<span class="lineNum">     174 </span><span class="lineCov">       1309 :         g_ptr_array_free(self-&gt;attrs, TRUE);</span>
+<span class="lineNum">     175 </span>            : 
+<span class="lineNum">     176 </span><span class="lineCov">       1309 :         if(sqlite3_close(self-&gt;cache) != SQLITE_OK) {</span>
+<span class="lineNum">     177 </span><span class="lineNoCov">          0 :             SET_ERROR(&quot;Unable to close swap table db&quot;);</span>
+<span class="lineNum">     178 </span>            :         }
+<span class="lineNum">     179 </span>            : 
+<span class="lineNum">     180 </span><span class="lineCov">       1309 :         if(unlink(self-&gt;path) == -1) {</span>
+<span class="lineNum">     181 </span><span class="lineNoCov">          0 :             SET_ERROR(&quot;cannot delete temp cache %s: %s&quot;, self-&gt;path, g_strerror(errno));</span>
+<span class="lineNum">     182 </span>            :         }
+<span class="lineNum">     183 </span>            :     }
+<span class="lineNum">     184 </span><span class="lineCov">       1309 :     g_mutex_unlock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     185 </span><span class="lineCov">       1309 :     g_mutex_clear(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     186 </span><span class="lineCov">       1309 :     self-&gt;cache = NULL;</span>
+<span class="lineNum">     187 </span><span class="lineCov">       1309 :     self-&gt;attrs = NULL;</span>
+<span class="lineNum">     188 </span><span class="lineCov">       1309 :     g_free(self);</span>
+<a name="189"><span class="lineNum">     189 </span><span class="lineCov">       1309 : }</span></a>
+<span class="lineNum">     190 </span>            : 
+<span class="lineNum">     191 </span><span class="lineCov">       2618 : int rm_swap_table_create_attr(RmSwapTable *self, const char *name, GError **error) {</span>
+<span class="lineNum">     192 </span><span class="lineCov">       2618 :     rm_assert_gentle(self);</span>
+<span class="lineNum">     193 </span>            : 
+<span class="lineNum">     194 </span><span class="lineCov">       2618 :     RmSwapAttr *attribute = NULL;</span>
+<span class="lineNum">     195 </span><span class="lineCov">       2618 :     g_mutex_lock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     196 </span>            :     {
+<span class="lineNum">     197 </span><span class="lineCov">       2618 :         attribute = rm_swap_attr_create(self-&gt;cache, self-&gt;attrs-&gt;len, name, error);</span>
+<span class="lineNum">     198 </span><span class="lineCov">       2618 :         g_ptr_array_add(self-&gt;attrs, attribute);</span>
+<span class="lineNum">     199 </span>            :     }
+<span class="lineNum">     200 </span><span class="lineCov">       2618 :     g_mutex_unlock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     201 </span>            : 
+<span class="lineNum">     202 </span>            :     /* Create RmSwapAttr, return id, add it to table, create table. */
+<span class="lineNum">     203 </span><span class="lineCov">       2618 :     return (attribute) ? attribute-&gt;id : 0;</span>
+<a name="204"><span class="lineNum">     204 </span>            : }</a>
+<span class="lineNum">     205 </span>            : 
+<span class="lineNum">     206 </span><span class="lineCov">       4280 : static void rm_swap_table_begin(RmSwapTable *self) {</span>
+<span class="lineNum">     207 </span><span class="lineCov">       4280 :     rm_assert_gentle(self);</span>
+<span class="lineNum">     208 </span>            : 
+<span class="lineNum">     209 </span><span class="lineCov">       4280 :     if(sqlite3_exec(self-&gt;cache, &quot;BEGIN IMMEDIATE;&quot;, 0, 0, 0) == SQLITE_OK) {</span>
+<span class="lineNum">     210 </span><span class="lineCov">       4280 :         self-&gt;transaction_running = TRUE;</span>
+<span class="lineNum">     211 </span>            :     }
+<a name="212"><span class="lineNum">     212 </span><span class="lineCov">       4280 : }</span></a>
+<span class="lineNum">     213 </span>            : 
+<span class="lineNum">     214 </span><span class="lineCov">       4278 : static void rm_swap_table_commit(RmSwapTable *self) {</span>
+<span class="lineNum">     215 </span><span class="lineCov">       4278 :     rm_assert_gentle(self);</span>
+<span class="lineNum">     216 </span>            : 
+<span class="lineNum">     217 </span><span class="lineCov">       4278 :     if(sqlite3_exec(self-&gt;cache, &quot;COMMIT;&quot;, 0, 0, 0) == SQLITE_OK) {</span>
+<span class="lineNum">     218 </span><span class="lineCov">       4278 :         self-&gt;transaction_running = FALSE;</span>
+<span class="lineNum">     219 </span>            :     }
+<a name="220"><span class="lineNum">     220 </span><span class="lineCov">       4278 : }</span></a>
+<span class="lineNum">     221 </span>            : 
+<span class="lineNum">     222 </span><span class="lineCov">      78893 : size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf,</span>
+<span class="lineNum">     223 </span>            :                             size_t buf_size) {
+<span class="lineNum">     224 </span><span class="lineCov">      78893 :     rm_assert_gentle(self);</span>
+<span class="lineNum">     225 </span>            : 
+<span class="lineNum">     226 </span><span class="lineCov">      78893 :     size_t bytes_written = 0;</span>
+<span class="lineNum">     227 </span>            : 
+<span class="lineNum">     228 </span><span class="lineCov">      78893 :     g_mutex_lock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     229 </span>            :     {
+<span class="lineNum">     230 </span>            :         /* Commit any stalled transactions */
+<span class="lineNum">     231 </span><span class="lineCov">      78896 :         if(self-&gt;transaction_running) {</span>
+<span class="lineNum">     232 </span><span class="lineCov">       4278 :             rm_swap_table_commit(self);</span>
+<span class="lineNum">     233 </span>            :         }
+<span class="lineNum">     234 </span>            : 
+<span class="lineNum">     235 </span><span class="lineCov">      78896 :         RmSwapAttr *attribute = self-&gt;attrs-&gt;pdata[attr];</span>
+<span class="lineNum">     236 </span><span class="lineCov">      78896 :         sqlite3_stmt *stmt = attribute-&gt;stmts[STMT_SELECT_DATA];</span>
+<span class="lineNum">     237 </span>            : 
+<span class="lineNum">     238 </span><span class="lineCov">      78896 :         if(sqlite3_bind_int64(stmt, 1, id) != SQLITE_OK) {</span>
+<span class="lineNum">     239 </span><span class="lineNoCov">          0 :             rm_assert_gentle_not_reached();</span>
+<span class="lineNum">     240 </span>            :         }
+<span class="lineNum">     241 </span>            : 
+<span class="lineNum">     242 </span><span class="lineCov">      78896 :         if(sqlite3_step(stmt) == SQLITE_ROW) {</span>
+<span class="lineNum">     243 </span><span class="lineCov">      78896 :             bytes_written = MIN((size_t)sqlite3_column_bytes(stmt, 0), buf_size);</span>
+<span class="lineNum">     244 </span><span class="lineCov">      78896 :             memcpy(buf, sqlite3_column_blob(stmt, 0), bytes_written);</span>
+<span class="lineNum">     245 </span>            :         }
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span><span class="lineCov">      78896 :         sqlite3_step(stmt); /* == SQLITE_DONE */</span>
+<span class="lineNum">     248 </span>            : 
+<span class="lineNum">     249 </span><span class="lineCov">      78896 :         rm_swap_table_clean_stmt(self, stmt, NULL);</span>
+<span class="lineNum">     250 </span>            :     }
+<span class="lineNum">     251 </span><span class="lineCov">      78896 :     g_mutex_unlock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     252 </span>            : 
+<span class="lineNum">     253 </span><span class="lineCov">      78896 :     return bytes_written;</span>
+<a name="254"><span class="lineNum">     254 </span>            : }</a>
+<span class="lineNum">     255 </span>            : 
+<span class="lineNum">     256 </span><span class="lineCov">      11661 : RmOff rm_swap_table_insert(RmSwapTable *self, int attr, char *data, size_t data_len) {</span>
+<span class="lineNum">     257 </span><span class="lineCov">      11661 :     rm_assert_gentle(self);</span>
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span><span class="lineCov">      11661 :     RmOff id = 0;</span>
+<span class="lineNum">     260 </span>            : 
+<span class="lineNum">     261 </span><span class="lineCov">      11661 :     g_mutex_lock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     262 </span>            :     {
+<span class="lineNum">     263 </span>            :         /* Begin an transaction if none is running yet */
+<span class="lineNum">     264 </span><span class="lineCov">      11661 :         if(self-&gt;transaction_running == FALSE) {</span>
+<span class="lineNum">     265 </span><span class="lineCov">       4280 :             rm_swap_table_begin(self);</span>
+<span class="lineNum">     266 </span>            :         }
+<span class="lineNum">     267 </span>            : 
+<span class="lineNum">     268 </span><span class="lineCov">      11661 :         RmSwapAttr *attribute = self-&gt;attrs-&gt;pdata[attr];</span>
+<span class="lineNum">     269 </span><span class="lineCov">      11661 :         sqlite3_stmt *stmt = attribute-&gt;stmts[STMT_INSERT_DATA];</span>
+<span class="lineNum">     270 </span>            : 
+<span class="lineNum">     271 </span><span class="lineCov">      11661 :         if(sqlite3_bind_text(stmt, 1, data, data_len, NULL) != SQLITE_OK) {</span>
+<span class="lineNum">     272 </span><span class="lineNoCov">          0 :             rm_assert_gentle_not_reached();</span>
+<span class="lineNum">     273 </span>            :         }
+<span class="lineNum">     274 </span>            : 
+<span class="lineNum">     275 </span><span class="lineCov">      11661 :         if(sqlite3_step(stmt) == SQLITE_DONE) {</span>
+<span class="lineNum">     276 </span><span class="lineCov">      11661 :             id = sqlite3_last_insert_rowid(self-&gt;cache);</span>
+<span class="lineNum">     277 </span>            :         }
+<span class="lineNum">     278 </span>            : 
+<span class="lineNum">     279 </span><span class="lineCov">      11661 :         rm_swap_table_clean_stmt(self, stmt, NULL);</span>
+<span class="lineNum">     280 </span>            :     }
+<span class="lineNum">     281 </span><span class="lineCov">      11661 :     g_mutex_unlock(&amp;self-&gt;mtx);</span>
+<span class="lineNum">     282 </span>            : 
+<span class="lineNum">     283 </span><span class="lineCov">      11661 :     return id;</span>
+<span class="lineNum">     284 </span>            : }
+<span class="lineNum">     285 </span>            : 
+<span class="lineNum">     286 </span>            : #else /* HAVE_SQLITE3 */
+<span class="lineNum">     287 </span>            : 
+<span class="lineNum">     288 </span>            : RmSwapTable *rm_swap_table_open(_U gboolean in_memory, _U GError **error) {
+<span class="lineNum">     289 </span>            :     return NULL;
+<span class="lineNum">     290 </span>            : }
+<span class="lineNum">     291 </span>            : 
+<span class="lineNum">     292 </span>            : void rm_swap_table_close(_U RmSwapTable *self, _U GError **error) {
+<span class="lineNum">     293 </span>            :     return;
+<span class="lineNum">     294 </span>            : }
+<span class="lineNum">     295 </span>            : 
+<span class="lineNum">     296 </span>            : int rm_swap_table_create_attr(_U RmSwapTable *self, _U const char *name,
+<span class="lineNum">     297 </span>            :                               _U GError **error) {
+<span class="lineNum">     298 </span>            :     return 0;
+<span class="lineNum">     299 </span>            : }
+<span class="lineNum">     300 </span>            : 
+<span class="lineNum">     301 </span>            : RmOff rm_swap_table_insert(_U RmSwapTable *self, _U int attr, _U char *data,
+<span class="lineNum">     302 </span>            :                            _U size_t data_len) {
+<span class="lineNum">     303 </span>            :     return 0;
+<span class="lineNum">     304 </span>            : }
+<span class="lineNum">     305 </span>            : 
+<span class="lineNum">     306 </span>            : size_t rm_swap_table_lookup(_U RmSwapTable *self, _U int attr, _U RmOff id, _U char *buf,
+<span class="lineNum">     307 </span>            :                             _U size_t buf_size) {
+<span class="lineNum">     308 </span>            :     return 0;
+<span class="lineNum">     309 </span>            : }
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span>            : #endif
+<span class="lineNum">     312 </span>            : 
+<span class="lineNum">     313 </span>            : //////////////////////
+<span class="lineNum">     314 </span>            : //  UGLY TEST MAIN  //
+<span class="lineNum">     315 </span>            : //////////////////////
+<span class="lineNum">     316 </span>            : 
+<span class="lineNum">     317 </span>            : // #define _RM_COMPILE_SWAP_TABLE_MAIN
+<span class="lineNum">     318 </span>            : #ifdef _RM_COMPILE_SWAP_TABLE_MAIN
+<span class="lineNum">     319 </span>            : 
+<span class="lineNum">     320 </span>            : int main(void) {
+<span class="lineNum">     321 </span>            :     GError *error = NULL;
+<span class="lineNum">     322 </span>            :     RmSwapTable *table = rm_swap_table_open(FALSE, &amp;error);
+<span class="lineNum">     323 </span>            : 
+<span class="lineNum">     324 </span>            :     if(error != NULL) {
+<span class="lineNum">     325 </span>            :         return EXIT_FAILURE;
+<span class="lineNum">     326 </span>            :     }
+<span class="lineNum">     327 </span>            : 
+<span class="lineNum">     328 </span>            :     int PATH_ATTR = rm_swap_table_create_attr(table, &quot;path&quot;, &amp;error);
+<span class="lineNum">     329 </span>            : 
+<span class="lineNum">     330 </span>            :     const int N = 1000000;
+<span class="lineNum">     331 </span>            :     const int PATH_LEN = 80; /* Typical average path len */
+<span class="lineNum">     332 </span>            : 
+<span class="lineNum">     333 </span>            :     for(int i = 0; i &lt; (N); i++) {
+<span class="lineNum">     334 </span>            :         char buf[PATH_LEN + 1];
+<span class="lineNum">     335 </span>            :         memset(buf, (i % ('~' - '!')) + '!', PATH_LEN);
+<span class="lineNum">     336 </span>            : 
+<span class="lineNum">     337 </span>            :         buf[PATH_LEN] = 0;
+<span class="lineNum">     338 </span>            : 
+<span class="lineNum">     339 </span>            :         rm_swap_table_insert(table, PATH_ATTR, buf, sizeof(buf));
+<span class="lineNum">     340 </span>            :     }
+<span class="lineNum">     341 </span>            : 
+<span class="lineNum">     342 </span>            :     for(int i = 0; i &lt; (N); i++) {
+<span class="lineNum">     343 </span>            :         char buf[PATH_MAX];
+<span class="lineNum">     344 </span>            :         rm_swap_table_lookup(table, PATH_ATTR, i + 1, buf, sizeof(buf));
+<span class="lineNum">     345 </span>            :     }
+<span class="lineNum">     346 </span>            : 
+<span class="lineNum">     347 </span>            :     rm_swap_table_close(table, &amp;error);
+<span class="lineNum">     348 </span>            : 
+<span class="lineNum">     349 </span>            :     if(error != NULL) {
+<span class="lineNum">     350 </span>            :         g_error_free(error);
+<span class="lineNum">     351 </span>            :     }
+<span class="lineNum">     352 </span>            : 
+<span class="lineNum">     353 </span>            :     return EXIT_SUCCESS;
+<span class="lineNum">     354 </span>            : }
+<span class="lineNum">     355 </span>            : 
+<span class="lineNum">     356 </span>            : #endif
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.11</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
