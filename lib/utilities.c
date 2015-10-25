@@ -805,6 +805,8 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
             return 0;
         }
     }
+
+    return -1;
 #else
     return -1;
 #endif
