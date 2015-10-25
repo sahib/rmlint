@@ -1580,7 +1580,7 @@ int rm_cmd_main(RmSession *session) {
     }
 
     session->mds = rm_mds_new(cfg->threads, session->mounts,
-                              cfg->fake_pathindex_as_disk || !(cfg->list_mounts));
+                              cfg->fake_pathindex_as_disk);
 
     rm_traverse_tree(session);
 

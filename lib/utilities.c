@@ -503,7 +503,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
-#if(HAVE_GIO_UNIX)
+#if HAVE_GIO_UNIX && HAVE_BLKID
 
 RmPartitionInfo *rm_part_info_new(char *name, char *fsname, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
