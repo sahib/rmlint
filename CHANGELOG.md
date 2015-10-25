@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.4.0 Myopic Micrathene] -- [unreleased]
+## [2.4.0 Myopic Micrathene] -- 2015-10-25
 
 ### Fixed
 
