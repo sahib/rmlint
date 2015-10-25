@@ -353,17 +353,23 @@ Caching
     to reformat, refilter or resort the output you got from an previous run.
     Usage is simple: Just pass ``--replay`` on the second run, with other
     changed to the new formatters or filters. You can also merge several previous
-	runs by using --replay more than once, in this case it will merge all files
-	given and output them as one big run.
+    runs by using ``--replay`` more than once, in this case it will merge all files
+    given and output them as one big run.
 
     If you want to view only the duplicates of certain subdirectories, just pass
     them on the commandline as usual.
  
     If ``path.json`` is not given then `./rmlint.json` is used as default.
 
-    By design, some options will not have any effect. Those are: `--followlinks`
-    `--algorithm and --paranoid` `--clamp-low` `--hardlinked`
-    `--write-unfinished` and all other caching options below.
+    By design, some options will not have any effect. Those are:
+    
+    - `--followlinks`
+    - `--algorithm`
+    - `--paranoid`
+    - `--clamp-low`
+    - `--hardlinked`
+    - `--write-unfinished`
+    - ... and all other caching options below.
 
 :``--xattr-read`` / ``--xattr-write`` / ``--xattr-clear``:
 
@@ -410,7 +416,7 @@ Caching
 
     This option also applies for ``--xattr-write``. 
 
-Rarely used, miscellaneous Options
+Rarely used, miscellaneous options
 ----------------------------------
 
 :``-t --threads=N`` (*default\:* 16):
@@ -484,7 +490,7 @@ FORMATTERS
     The command can be any valid ``/bin/sh``-expression. The duplicate 
     path and original path can be accessed via ``"$1"`` and ``"$2"``. 
     The command will be written to the ``user_command`` function in the
-	``sh``-file produced by rmlint.
+    ``sh``-file produced by rmlint.
 
   * *handler* Define a comma separated list of handlers to try on duplicate
     files in that given order until one handler succeeds. Handlers are just the
@@ -658,7 +664,7 @@ SEE ALSO
 
 Extended documentation and an in-depth tutorial can be found at:
 
-    * http://rmlint.rtfd.org
+* http://rmlint.rtfd.org
 
 BUGS
 ====

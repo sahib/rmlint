@@ -1,6 +1,6 @@
-========
-Cautions
-========
+===================================================
+Cautions (or *why it's hard to write a dupefinder*)
+===================================================
 
 This section covers good practice for safe duplicate removal.  It is not intended to
 be specifically related to ``rmlint``.  It includes general discussion on duplicate
@@ -333,7 +333,7 @@ of potential duplicates.  This avoids the need to read the whole file if the fil
 so this can give a major speedup in some cases.  However, in the case of hard disk drives, constantly reading small
 increments from several files at the same time causes the hard drive head to have to jump around ("seek thrash").
 
-Here are some speed test results showing relative speed for scanning my /usr folder (on SSD) and a HDD copy of same.
+Here are some speed test results showing relative speed for scanning my ``/usr`` folder (on SSD) and a HDD copy of same.
 The speed ratio gives an indication of how effectively the search algorithm manages disk seek overheads:
 
 +----------------+----------------+---------------------+---------+
