@@ -450,13 +450,17 @@ class OverlaySaveButton(Gtk.Overlay):
             Gtk.STYLE_CLASS_LINKED
         )
 
-        perm = Polkit.Permission.new_sync(
-            'org.freedesktop.accounts.user-administration',
-            Polkit.UnixProcess.new_for_owner(os.getpid(), 0, -1),
-            None
-        )
+        try:
+            perm = Polkit.Permission.new_sync(
+                'org.freedesktop.accounts.user-administration',
+                Polkit.UnixProcess.new_for_owner(os.getpid(), 0, -1),
+                None
+            )
+            self._lock_button.set_permission(perm)
+        except GLib.Error as err:
+            LOGGER.warning('Unable to get polkit permissions: ' + str(err))
+
         self._lock_button = Gtk.LockButton()
-        self._lock_button.set_permission(perm)
         self._lock_button.props.margin = 20
         self._lock_button.props.margin_end = 0
         self._lock_button.connect(
