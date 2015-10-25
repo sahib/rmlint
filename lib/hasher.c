@@ -98,7 +98,8 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
     } else if(buffer->user_data) {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
-        rm_assert_gentle(task->digest == buffer->digest); /* TODO: do we need both? */
+        rm_assert_gentle(task->digest == buffer->digest);
+
         hasher->callback(hasher, task->digest, hasher->session_user_data,
                          task->task_user_data);
         rm_hasher_task_free(task);

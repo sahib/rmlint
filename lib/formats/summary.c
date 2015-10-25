@@ -40,10 +40,6 @@ typedef struct RmFmtHandlerSummary {
 #define ARROW \
     fprintf(out, "%s==>%s ", MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));
 
-static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {
-    return strcmp((char *)key, *(char **)value);
-}
-
 static void rm_fmt_prog(RmSession *session,
                         _U RmFmtHandler *parent,
                         _U FILE *out,
@@ -73,10 +69,12 @@ static void rm_fmt_prog(RmSession *session,
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
 
-    if(rm_fmt_has_formatter(session->formats, "pretty") && rm_fmt_has_formatter(session->formats, "sh")) {
-        ARROW fprintf(out, _("Note: Please use the saved script below for removal, not the above output."));
+    if(rm_fmt_has_formatter(session->formats, "pretty") &&
+       rm_fmt_has_formatter(session->formats, "sh")) {
+        ARROW fprintf(out, _("Note: Please use the saved script below for removal, not "
+                             "the above output."));
         fprintf(out, "\n");
-    } 
+    }
 
     char numbers[3][512];
     snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(out, session),
@@ -113,9 +111,16 @@ static void rm_fmt_prog(RmSession *session,
     while(g_hash_table_iter_next(&iter, (gpointer *)&path, (gpointer *)&handler)) {
         static const char *forbidden[] = {"stdout", "stderr", "stdin"};
         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);
+        bool forbidden_found = false;
 
-        if(lfind(path, forbidden, &forbidden_len, sizeof(const char *),
-                 rm_fmt_summary_cmp)) {
+        for(gsize i = 0; i < forbidden_len; i++) {
+            if(g_strcmp0(forbidden[i], path) == 0) {
+                forbidden_found = true;
+                break;
+            }
+        }
+
+        if(forbidden_found) {
             continue;
         }
 

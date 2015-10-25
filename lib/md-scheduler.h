@@ -217,6 +217,4 @@ void rm_mds_push_task(RmMDSDevice *device,
  **/
 gint rm_mds_elevator_cmp(const RmMDSTask *task_a, const RmMDSTask *task_b);
 
-// TODO: sort function based on most recently accessed dev/inode??
-
 #endif /* end of include guard */

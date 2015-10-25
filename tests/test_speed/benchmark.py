@@ -25,7 +25,7 @@ CFG = namedtuple('Config', [
 
     # Output directory
     'output'
-])(1, 1, 'bench-output-{stamp}'.format(
+])(3, 2, 'bench-output-{stamp}'.format(
     stamp=time.strftime('%FT%T%z', time.localtime())
 ))
 
@@ -281,21 +281,22 @@ class RmlintSpotParanoid(RmlintSpot):
         return 'rmlint-spot-paranoid'
 
 
-class RmlintMaster(Rmlint):
-    script = 'rmlint-master.sh'
+class Rmlint222(Rmlint):
+    script = 'rmlint-v2.2.2.sh'
 
     def get_binary(self):
-        return 'rmlint/rmlint-master'
+        return 'rmlint/rmlint-v2.2.2'
 
     def get_benchid(self):
-        return 'rmlint-master'
+        return 'rmlint-v2.2.2'
 
-class RmlintMasterParanoid(RmlintMaster):
+
+class Rmlint222Paranoid(Rmlint222):
     def get_options(self, paths):
-        return '-pp ' + RmlintMaster.get_options(self, paths)
+        return '-pp ' + Rmlint222.get_options(self, paths)
 
     def get_benchid(self):
-        return 'rmlint-master-paranoid'
+        return Rmlint222.get_benchid(self) + '-paranoid'
 
 
 class RmlintMaster(Rmlint):
@@ -636,7 +637,7 @@ def parse_arguments():
 
 def main():
     datasets = [
-        ExistingDataset('usr', ['/mnt/ext4raid1/temp/usr']),
+        ExistingDataset('usr', ['/usr']),
         ExistingDataset('tmp', ['/tmp']),
         ExistingDataset('tmpvar', ['/tmp', '/var']),
         ExistingDataset('usrvar', ['/usr', '/var']),
@@ -664,12 +665,11 @@ def main():
         # Baseline(),
         # Current:
         Rmlint(),
-        RmlintSpot(),
-        RmlintSpotParanoid(),
-        RmlintMaster(),
-        RmlintMasterParanoid(),
-        RmlintMaster(),
         RmlintParanoid(),
+        # RmlintSpot(),
+        # RmlintSpotParanoid(),
+        Rmlint222(),
+        Rmlint222Paranoid(),
         RmlintXXHash(),
         # RmlintSpooky(),
         # RmlintCity(),

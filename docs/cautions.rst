@@ -6,12 +6,11 @@ This section covers good practice for safe duplicate removal.  It is not intende
 be specifically related to ``rmlint``.  It includes general discussion on duplicate
 detection and shows, by example, some of the traps that duplicate finders can fall into.
 
-======================================
 Good Practice when Deleting Duplicates
-======================================
+--------------------------------------
 
 Backup your data
-----------------
+~~~~~~~~~~~~~~~~
 
 There is a wise adage, "if it's not backed up, it's not important".  It's just good
 practice to keep your important data backed up.  In particular, any time you are
@@ -25,20 +24,20 @@ to the original data.  This still frees up the space, but makes it easier to fin
 if and when it comes time to restore files from backup.
 
 Measure twice cut once
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 This is a popular saying amongst builders; the same goes for your files.  Do at least some
 sort of sanity check on which files are going to be deleted.  All duplicate file finders
 (including rmlint) are capable of identifying false positives or more serious bugs.
 
 Beware of unusual filename characters
--------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Even a space in a filename is capable of causing grief.  Make sure your file deletion command
 (or the one used by your duplicate finder) has the filename properly escaped.
 
 Consider safe removal options
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Rather than deleting duplicates, consider moving them to a holding area or trash folder.  The
 trash-cli utility (http://github.com/andreafrancia/trash-cli) is one option for this.  Alternatively
@@ -76,13 +75,14 @@ If your duplicate finder has found a false positive, it is possible that you may
 your data.
 
 
-=======================================
 Attributes of a Robust Duplicate Finder
-=======================================
+---------------------------------------
+
 (also known as "Traps for young dupe finders")
 
 Traversal Robustness
---------------------
+~~~~~~~~~~~~~~~~~~~~
+
 (Path doubles, symlinks, and filesystem loops)
 
 **Path Doubles**
@@ -234,7 +234,7 @@ temporarily rename the duplicate before creating the hardlink and then deleting 
 
 
 Collision Robustness
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 **Duplicate detection by file hash**
 
@@ -286,7 +286,7 @@ refer to `Benchmarks` chapter for speed and memory overhead implications.
 
 
 Unusual Characters Robustness
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Spaces, commas, nonprinting characters etc can all potentially trip up a duplicate finder or the subsequent file
 deletion command.  For example:
@@ -313,7 +313,7 @@ Be careful!
 
 
 "Seek Thrash" Robustness
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Duplicate finders use a range of strategies to find duplicates.  It is common to reading and compare small increments
 of potential duplicates.  This avoids the need to read the whole file if the files differ in the first few megabytes,
@@ -345,16 +345,13 @@ files into an order that reduces disk seek times.
 
 
 Memory Usage Robustness
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 When scanning very large filesystems, duplicate finders may have to hold a large amount of information in
 memory at the same time.  Once this information exceeds the computers' RAM, performance will suffer
 signficantly.  ``dupd`` handles this quite nicely by storing a lot of the data in a sqlite database file,
 although this may have a slight performance penalty due to disk read/write time to the database file.
 ``rmlint`` uses a path tree structure to reduce the memory required to store all traversed paths.
-
-TODO: add some test results for memory usage with large data sets.
-
 
 
 

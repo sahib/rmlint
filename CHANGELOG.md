@@ -15,6 +15,9 @@ The format follows [keepachangelog.com]. Please stick to it.
 - Smaller compile time troubles fixed.
 - Progressbar uses timeout-based redraws which leads to much smoother drawing
   and less cpu footprint.
+- ``pretty`` formatter (default) produces now valid escaped commands.
+  It is still intented for visual output only. That's why a note for this was
+  added.
 
 ### Added
 
