@@ -31,6 +31,7 @@ CFG = namedtuple('Config', [
 
 
 def flush_fs_caches():
+    os.sync()
     try:
         with open('/proc/sys/vm/drop_caches', 'w') as handle:
             handle.write('3\n')

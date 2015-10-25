@@ -77,7 +77,7 @@ software developer.
 Buildsystem Helpers
 -------------------
 
-Environement Variables
+Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~~
 
 :CFLAGS:
@@ -103,7 +103,7 @@ Variables
 :DEBUG:
 
     Enable debugging symbols for ``rmlint``. This should always be enabled during
-    developement. Backtraces wouldn't be useful elsewhise.
+    development. Backtraces wouldn't be useful elsewhise.
 
 :VERBOSE:
 
@@ -222,7 +222,7 @@ Hashfunctions
 Here is a short comparasion of the existing hashfunctions_ in ``rmlint`` (linear_ scale).
 For reference: Those plots were rendered with these_ sources - which are very ugly, sorry.
 
-If you want to add new hashfunctions, you should have some arguments why it is valueable and possiblye
+If you want to add new hashfunctions, you should have some arguments why it is valueable and possibly
 even benchmark it with the above scripts to see if it's really that much faster.
 
 Also keep in mind that most of the time the hashfunction is not the bottleneck.
@@ -244,8 +244,13 @@ Obvious ones
 - Only compare files of same size with each other. 
 - Use incremental hashing, i.e. hash block-wise each size group and stop 
   as soon a difference occurs or the file is read fully.
-- Create one hashing thread for each physical disk.  This gives a big speedup if
-  files are roughly evenly spread over multiple physical disks.
+- Create one reading thread for each physical disk.  This gives a big speedup if
+  files are roughly evenly spread over multiple physical disks [note: currently
+  using 2 reading threads per disk as a workaround for a speed regression but
+  hoping to fix this for rmlint 2.5].
+- Disk traversal is similarly multi-threaded, one thread per disk.
+- Create separate hashing threads (one for each file) so that the reader threads
+  don't have to wait for hashing to catch up.
 
 Subtle ones
 ~~~~~~~~~~~
@@ -257,18 +262,18 @@ Subtle ones
 Insane ones
 ~~~~~~~~~~~
 
-- Check the device ID of each file to see if it on a rotational (normal hard
-  disks) or on a non-rotational device (like a SSD). On the latter the file
-  might be processed by several threads.
 - Use ``fiemap ioctl(2)`` to analyze the harddisk layout of each file, so each
   block can read it in *perfect* order on a rotational device.
-- Use a common buffer pool for IO buffers.
+- Check the device ID of each file to see if it on a rotational (normal hard
+  disks) or on a non-rotational device (like a SSD). On the latter the fiemap
+  optimisation is bypassed.
+- Use a common buffer pool for IO buffers and recycle used buffers to reduce
+  memory allocation overheads.
 - Use only one hashsum per group of same-sized files.
 - Implement paranoia check using the same algorithm as the incremental hash.  The
   difference is that large chunks of the file are read and kept in memory instead
   of just keeping the hash in memory.  This avoids the need for a two-pass algorithm
   (find matches using hashes then confirm via bytewise comparison).  Each file is
-  read once only.  To our knowledge this is the first dupefinder which achieves
-  bytewise comparison in O(N) time, even if there are large clusters of same-size
-  files.  The downside is that it is somewhat memory-intensive (the total memory used
-  is set to 256 MB by default but can be configured by ``--max-paranoid-mem`` option.
+  read once only.  This achieves bytewise comparison in O(N) time, even if there are
+  large clusters of same-size files.  The downside is that it is somewhat memory-intensive
+  (can be configured by ``--max-paranoid-mem`` option).

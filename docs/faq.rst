@@ -60,7 +60,7 @@ As a rule of thumb, ``rmlint`` will allocate *~150 bytes* for every file it will
 investigate. Additionally paths are stored in a patricia trie, which will
 compress paths and save memory therefore.
 
-The memory peak is usually short after it finished traversing all
+The memory peak is usually shortly after it finished traversing all
 files. For example, 5 million files will result in a memory footprint of roughly
 1.0GB of memory in average. 
 
@@ -76,9 +76,6 @@ If that's still not enough read on.
   
   This option will most likely only make sense if you files with long basenames.
   You might expect 10%-20% less memory as a rule of thumb.
-- Use ``--without-fiemap`` on rotational disk to disable this optimization. With
-  it enabled a table of the file's extents is stored to optimize disk access
-  patterns. This lowers the memory footprint per file by around 50 bytes.
 - Enable the progress bar with ``-g`` to keep track of how much data is left to
   scan.
 

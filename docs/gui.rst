@@ -17,7 +17,7 @@ dependencies beside ``gtk+`` :math:`\geq` and ``PyGObject``.
 
 .. warning::
 
-    The user interface is still in developement. Use at your own risk!
+    The user interface is still in development. Use at your own risk!
     There is a safety net though: Every file will be re-checked before it's
     deletion.  
 
